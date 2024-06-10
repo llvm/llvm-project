@@ -1472,6 +1472,10 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   return storeOps;
 }
 
+std::optional<MutableArrayRef<OpOperand>> ForallOp::getYieldedValuesMutable() {
+  return getOutputsMutable();
+}
+
 std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
   return SmallVector<Value>{getBody()->getArguments().take_front(getRank())};
 }

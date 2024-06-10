@@ -1090,86 +1090,62 @@ bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface &target,
 }
 
 template <typename LoopTy>
-void fuseTerminator(RewriterBase &rewriter, LoopTy target, LoopTy source,
-                    LoopTy &fused, IRMapping &mapping) {}
+void fuseTerminator(RewriterBase &rewriter, LoopTy source, LoopTy &fused,
+                    IRMapping &mapping) {}
 
 template <>
-void fuseTerminator(RewriterBase &rewriter, scf::ForallOp target,
-                    scf::ForallOp source, scf::ForallOp &fused,
-                    IRMapping &mapping) {
+void fuseTerminator(RewriterBase &rewriter, scf::ForallOp source,
+                    scf::ForallOp &fused, IRMapping &mapping) {
   // Fuse the old terminator in_parallel ops into the new one.
-  scf::InParallelOp targetTerm = target.getTerminator();
-  scf::InParallelOp sourceTerm = source.getTerminator();
   scf::InParallelOp fusedTerm = fused.getTerminator();
-  rewriter.setInsertionPointToStart(fusedTerm.getBody());
-  for (Operation &op : targetTerm.getYieldingOps())
-    rewriter.clone(op, mapping);
-  for (Operation &op : sourceTerm.getYieldingOps())
+  rewriter.setInsertionPointToEnd(fusedTerm.getBody());
+  for (Operation &op : source.getTerminator().getYieldingOps())
     rewriter.clone(op, mapping);
 }
 
 template <>
-void fuseTerminator(RewriterBase &rewriter, scf::ForOp target,
-                    scf::ForOp source, scf::ForOp &fused, IRMapping &mapping) {
+void fuseTerminator(RewriterBase &rewriter, scf::ForOp source,
+                    scf::ForOp &fused, IRMapping &mapping) {
   // Build fused yield results by appropriately mapping original yield operands.
-  SmallVector<Value> yieldResults;
-  for (Value operand : target.getBody()->getTerminator()->getOperands())
-    yieldResults.push_back(mapping.lookupOrDefault(operand));
-  for (Value operand : source.getBody()->getTerminator()->getOperands())
-    yieldResults.push_back(mapping.lookupOrDefault(operand));
-  if (!yieldResults.empty())
-    rewriter.create<scf::YieldOp>(source.getLoc(), yieldResults);
+  auto newTerm = rewriter.clone(*fused.getBody()->getTerminator(), mapping);
+  rewriter.replaceOp(fused.getBody()->getTerminator(), newTerm);
 }
 
 template <typename LoopTy>
-LoopTy createFused(LoopLikeOpInterface target, LoopLikeOpInterface source,
-                   RewriterBase &rewriter) {
-  auto targetResults = target.getLoopResults();
-  auto sourceResults = source.getLoopResults();
-  int64_t numTargetOuts = (*targetResults).size();
-  int64_t numSourceOuts = (*sourceResults).size();
-
-  // Create fused shared_outs.
-  SmallVector<Value> fusedOuts;
-  llvm::append_range(fusedOuts, *targetResults);
-  llvm::append_range(fusedOuts, *sourceResults);
-
-  // Create a new scf.forall op after the source loop.
-  rewriter.setInsertionPointAfter(source);
-  // LoopTy fusedLoop = builder.create<LoopTy>(
-  //     source.getLoc(), source.getLoopLowerBounds(),
-  //     source.getLoopUpperBounds(), source.getLoopSteps(), fusedOuts,
-  //     source->getAttrs());
-  LoopTy fusedLoop = rewriter.cloneWithoutRegions(cast<LoopTy>(source));
+LoopLikeOpInterface
+createFused(LoopLikeOpInterface target, LoopLikeOpInterface source,
+            RewriterBase &rewriter, NewYieldValuesFn newYieldValuesFn) {
+  auto targetIterArgs = target.getRegionIterArgs();
+  auto targetInductionVar = *target.getLoopInductionVars();
+  SmallVector<Value> targetYieldOperands(target.getYieldedValues());
+  auto sourceIterArgs = source.getRegionIterArgs();
+  auto sourceInductionVar = *source.getLoopInductionVars();
+  SmallVector<Value> sourceYieldOperands(source.getYieldedValues());
+  auto sourceRegion = source.getLoopRegions().front();
+  LoopLikeOpInterface fusedLoop = *target.replaceWithAdditionalYields(
+      rewriter, source.getInits(), /*replaceInitOperandUsesInLoop=*/false,
+      newYieldValuesFn);
 
   // Map control operands.
   IRMapping mapping;
-  mapping.map(*target.getLoopInductionVars(),
-              *fusedLoop.getLoopInductionVars());
-  mapping.map(*source.getLoopInductionVars(),
-              *fusedLoop.getLoopInductionVars());
-
-  // Map shared outs.
-  mapping.map(target.getRegionIterArgs(),
-              fusedLoop.getRegionIterArgs().take_front(numTargetOuts));
-  mapping.map(source.getRegionIterArgs(),
-              fusedLoop.getRegionIterArgs().take_back(numSourceOuts));
-
+  mapping.map(targetInductionVar, *fusedLoop.getLoopInductionVars());
+  mapping.map(targetIterArgs,
+              fusedLoop.getRegionIterArgs().take_front(targetIterArgs.size()));
+  mapping.map(targetYieldOperands,
+              fusedLoop.getYieldedValues().take_front(targetIterArgs.size()));
+  mapping.map(sourceInductionVar, *fusedLoop.getLoopInductionVars());
+  mapping.map(sourceIterArgs,
+              fusedLoop.getRegionIterArgs().take_back(sourceIterArgs.size()));
+  mapping.map(sourceYieldOperands,
+              fusedLoop.getYieldedValues().take_back(sourceIterArgs.size()));
   // Append everything except the terminator into the fused operation.
-  rewriter.setInsertionPointToStart(
-      &fusedLoop.getLoopRegions().front()->front());
-  for (Operation &op :
-       target.getLoopRegions().front()->front().without_terminator())
-    rewriter.clone(op, mapping);
-  for (Operation &op :
-       source.getLoopRegions().front()->front().without_terminator())
+  rewriter.setInsertionPoint(
+      fusedLoop.getLoopRegions().front()->front().getTerminator());
+  for (Operation &op : sourceRegion->front().without_terminator())
     rewriter.clone(op, mapping);
 
-  fuseTerminator<LoopTy>(rewriter, cast<LoopTy>(target), cast<LoopTy>(source),
+  fuseTerminator<LoopTy>(rewriter, cast<LoopTy>(source),
                          cast<LoopTy>(fusedLoop), mapping);
-
-  rewriter.replaceOp(target, fusedLoop.getResults().take_front(numTargetOuts));
-  rewriter.replaceOp(source, fusedLoop.getResults().take_back(numSourceOuts));
 
   return fusedLoop;
 }
@@ -1177,47 +1153,13 @@ LoopTy createFused(LoopLikeOpInterface target, LoopLikeOpInterface source,
 scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
                                                       scf::ForallOp source,
                                                       RewriterBase &rewriter) {
-  auto targetIterArgs = target.getRegionIterArgs();
-  auto targetInductionVar = target.getInductionVars();
-  SmallVector<Value> targetYieldOperands(target.getYieldedValues());
-  auto sourceIterArgs = source.getRegionIterArgs();
-  auto sourceInductionVar = source.getInductionVars();
-  scf::InParallelOp sourceTerm = source.getTerminator();
-  auto sourceYieldOps = sourceTerm.getYieldingOps();
-  auto sourceBody = source.getBody();
-  SmallVector<Value> sourceYieldOperands(llvm::map_range(
-      sourceTerm.getDests(), [](auto arg) { return cast<Value>(arg); }));
-  scf::ForallOp fusedLoop =
-      cast<scf::ForallOp>(*target.replaceWithAdditionalYields(
-          rewriter, source.getOutputs(), /*replaceInitOperandUsesInLoop=*/false,
-          [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
-            for (Operation &op : sourceYieldOps)
-              b.clone(op);
-            return sourceYieldOperands;
-          }));
-  // Map control operands.
-  IRMapping mapping;
-  mapping.map(targetInductionVar, fusedLoop.getInductionVars());
-  mapping.map(targetIterArgs,
-              fusedLoop.getRegionIterArgs().take_front(targetIterArgs.size()));
-  mapping.map(targetYieldOperands,
-              fusedLoop.getYieldedValues().take_front(targetIterArgs.size()));
-  mapping.map(sourceInductionVar, fusedLoop.getInductionVars());
-  mapping.map(sourceIterArgs,
-              fusedLoop.getRegionIterArgs().take_back(sourceIterArgs.size()));
-  mapping.map(sourceYieldOperands,
-              fusedLoop.getYieldedValues().take_back(sourceIterArgs.size()));
-  // Append everything except the terminator into the fused operation.
-  rewriter.setInsertionPoint(fusedLoop.getBody()->getTerminator());
-  for (Operation &op : sourceBody->without_terminator())
-    rewriter.clone(op, mapping);
-
-  // Fuse the old terminator in_parallel ops into the new one.
-  scf::InParallelOp fusedTerm = fusedLoop.getTerminator();
-  rewriter.setInsertionPointToEnd(fusedTerm.getBody());
-  for (Operation &op : sourceTerm.getYieldingOps())
-    rewriter.clone(op, mapping);
-
+  scf::ForallOp fusedLoop = cast<scf::ForallOp>(createFused<scf::ForallOp>(
+      target, source, rewriter,
+      [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
+        for (Operation &op : source.getTerminator().getYieldingOps())
+          b.clone(op);
+        return source.getYieldedValues();
+      }));
   rewriter.replaceOp(source,
                      fusedLoop.getResults().take_back(source.getNumResults()));
 
@@ -1227,35 +1169,11 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
 scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
                                                 scf::ForOp source,
                                                 RewriterBase &rewriter) {
-  auto targetIterArgs = target.getRegionIterArgs();
-  auto targetInductionVar = target.getInductionVar();
-  SmallVector<Value> targetYieldOperands(source.getYieldedValues());
-  auto sourceIterArgs = source.getRegionIterArgs();
-  auto sourceInductionVar = source.getInductionVar();
-  SmallVector<Value> sourceYieldOperands(source.getYieldedValues());
-  scf::ForOp fusedLoop = cast<scf::ForOp>(*target.replaceWithAdditionalYields(
-      rewriter, source.getInitArgs(), /*replaceInitOperandUsesInLoop=*/false,
+  scf::ForOp fusedLoop = cast<scf::ForOp>(createFused<scf::ForOp>(
+      target, source, rewriter,
       [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
-        return sourceYieldOperands;
+        return source.getYieldedValues();
       }));
-  // Map original induction variables and operands to those of the fused loop.
-  IRMapping mapping;
-  mapping.map(targetInductionVar, fusedLoop.getInductionVar());
-  mapping.map(targetIterArgs,
-              fusedLoop.getRegionIterArgs().take_front(targetIterArgs.size()));
-  mapping.map(targetYieldOperands,
-              fusedLoop.getYieldedValues().take_front(targetIterArgs.size()));
-  mapping.map(sourceInductionVar, fusedLoop.getInductionVar());
-  mapping.map(sourceIterArgs,
-              fusedLoop.getRegionIterArgs().take_back(sourceIterArgs.size()));
-  mapping.map(sourceYieldOperands,
-              fusedLoop.getYieldedValues().take_back(sourceIterArgs.size()));
-  // Merge target's body into the new (fused) for loop and then source's body.
-  rewriter.setInsertionPoint(fusedLoop.getBody()->getTerminator());
-  for (Operation &op : source.getBody()->without_terminator())
-    rewriter.clone(op, mapping);
-  auto newTerm = rewriter.clone(*fusedLoop.getBody()->getTerminator(), mapping);
-  rewriter.replaceOp(fusedLoop.getBody()->getTerminator(), newTerm);
   rewriter.replaceOp(source,
                      fusedLoop.getResults().take_back(source.getNumResults()));
   return fusedLoop;
