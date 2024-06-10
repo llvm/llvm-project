@@ -4939,8 +4939,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (JA.isDeviceOffloading(Action::OFK_HIP) &&
         (getToolChain().getTriple().isAMDGPU() ||
-        (getToolChain().getTriple().isSPIRV() &&
-         getToolChain().getTriple().getVendor() == llvm::Triple::AMD))) {
+         (getToolChain().getTriple().isSPIRV() &&
+          getToolChain().getTriple().getVendor() == llvm::Triple::AMD))) {
       // Device side compilation printf
       if (Args.getLastArg(options::OPT_mprintf_kind_EQ)) {
         CmdArgs.push_back(Args.MakeArgString(

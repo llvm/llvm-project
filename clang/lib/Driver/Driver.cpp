@@ -6518,9 +6518,9 @@ const ToolChain &Driver::getOffloadingDeviceToolChain(
     switch (TargetDeviceOffloadKind) {
     case Action::OFK_HIP: {
       if (((Target.getArch() == llvm::Triple::amdgcn ||
-           Target.getArch() == llvm::Triple::spirv64) &&
-          Target.getVendor() == llvm::Triple::AMD &&
-          Target.getOS() == llvm::Triple::AMDHSA) ||
+            Target.getArch() == llvm::Triple::spirv64) &&
+           Target.getVendor() == llvm::Triple::AMD &&
+           Target.getOS() == llvm::Triple::AMDHSA) ||
           !Args.hasArgNoClaim(options::OPT_offload_EQ))
         TC = std::make_unique<toolchains::HIPAMDToolChain>(*this, Target,
                                                            HostTC, Args);
