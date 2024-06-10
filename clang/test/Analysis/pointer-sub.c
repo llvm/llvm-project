@@ -62,10 +62,10 @@ void f4(void) {
   int (*p)[m] = a; // p == &a[0]
   p += 1; // p == &a[1]
 
-  // FIXME: This is a known problem with -Wpointer-arith
+  // FIXME: This is a known problem with -Wpointer-arith (https://github.com/llvm/llvm-project/issues/28328)
   int d = p - a; // d == 1 // expected-warning{{subtraction of pointers to type 'int[m]' of zero size has undefined behavior}}
 
-  // FIXME: This is a known problem with -Wpointer-arith
+  // FIXME: This is a known problem with -Wpointer-arith (https://github.com/llvm/llvm-project/issues/28328)
   d = &(a[2]) - &(a[1]); // expected-warning{{subtraction of pointers to type 'int[m]' of zero size has undefined behavior}}
 
   d = a[2] - a[1]; // expected-warning{{Subtraction of two pointers that}}
