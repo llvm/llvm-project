@@ -3521,3 +3521,15 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.totalorderf16
 )
+
+add_fp_unittest(
+  totalordermagf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalordermagf16_test.cpp
+  HDRS
+    TotalOrderMagTest.h
+  DEPENDS
+    libc.src.math.totalordermagf16
+)

@@ -283,6 +283,14 @@ totalorder(const T *x, const T *y) {
   return xbits.get_val() <= ybits.get_val();
 }
 
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+totalordermag(const T *x, const T *y) {
+  T abs_x = abs(*x);
+  T abs_y = abs(*y);
+  return totalorder(&abs_x, &abs_y);
+}
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
