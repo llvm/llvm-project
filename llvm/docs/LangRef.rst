@@ -16112,18 +16112,17 @@ on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
      - +0.0 > -0.0
      - +0.0 > -0.0
 
-   * - ``NUM vs sNaN``
+   * - ``NUM/qNaN vs sNaN``
      - qNaN, invalid exception
      - qNaN, invalid exception
      - qNaN, invalid exception
-     - NUM, invalid exception
+     - NUM/qNaN, invalid exception
 
-   * - ``NUM vs qNaN``
-     - NUM, no excpetion
-     - NUM, no excpetion
+   * - ``NUM/qNaN vs qNaN``
+     - NUM/qNaN, no excpetion
+     - NUM/qNaN, no excpetion
      - qNaN, no excpetion
-     - NUM, no excpetion
-
+     - NUM/qNaN, no excpetion
 
 LLVM Implementation:
 """"""""""""""""""""
