@@ -130,7 +130,7 @@ Args:
 def update_documentation_list(checkers):
     with open(os.path.join(__location__, "list.rst"), "r+") as f:
         f_text = f.read()
-        check_text = f_text.split(".. csv-table:: Aliases..\n")[1]
+        check_text = f_text.split(':header: "Name", "Redirect", "Offers fixes"\n')[1]
         checks = [x for x in check_text.split("\n") if ":header:" not in x and x]
         old_check_text = "\n".join(checks)
         checks = [x for x in checks if "clang-analyzer-" not in x]
