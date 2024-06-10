@@ -4,72 +4,158 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-unknown-elf"
 
-define void @partial_reduce_add(<vscale x 16 x i8> %wide.load.pre, <vscale x 16 x i32> %0, <vscale x 16 x i32> %1, i64 %index) #0 {
+define <4 x i32> @partial_reduce_add_fixed(<4 x i32> %accumulator, <4 x i32> %0) #0 {
+; CHECK-LABEL: partial_reduce_add_fixed:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv s1, v1.4s
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    mov v0.s[0], w8
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v4i32(<4 x i32> %accumulator, <4 x i32> %0)
+  ret <4 x i32> %partial.reduce
+}
+
+define <4 x i32> @partial_reduce_add_fixed_half(<4 x i32> %accumulator, <8 x i32> %0) #0 {
+; CHECK-LABEL: partial_reduce_add_fixed_half:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    addv s1, v1.4s
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    mov w10, v0.s[1]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    add w9, w9, w8
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    mov v0.s[0], w9
+; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %accumulator, <8 x i32> %0)
+  ret <4 x i32> %partial.reduce
+}
+
+define <vscale x 4 x i32> @partial_reduce_add(<vscale x 4 x i32> %accumulator, <vscale x 4 x i32> %0) #0 {
 ; CHECK-LABEL: partial_reduce_add:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    uaddv d1, p0, z1.s
+; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    add w8, w8, w9
+; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv4i32(<vscale x 4 x i32> %accumulator, <vscale x 4 x i32> %0)
+  ret <vscale x 4 x i32> %partial.reduce
+}
+
+define <vscale x 4 x i32> @partial_reduce_add_half(<vscale x 4 x i32> %accumulator, <vscale x 8 x i32> %0) #0 {
+; CHECK-LABEL: partial_reduce_add_half:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    index z2.s, #0, #1
-; CHECK-NEXT:    mov z4.s, w8
-; CHECK-NEXT:    mov w8, #2 // =0x2
-; CHECK-NEXT:    ptrue p2.s, vl1
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1w { z5.s }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    mov z6.s, w8
-; CHECK-NEXT:    cmpeq p1.s, p0/z, z2.s, z4.s
-; CHECK-NEXT:    uaddv d3, p0, z0.s
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
-; CHECK-NEXT:    uaddv d7, p0, z1.s
-; CHECK-NEXT:    uaddv d4, p0, z5.s
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    fmov x8, d3
-; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x0, #3, mul vl]
-; CHECK-NEXT:    mov z1.s, p2/m, w8
-; CHECK-NEXT:    mov w8, #3 // =0x3
-; CHECK-NEXT:    cmpeq p2.s, p0/z, z2.s, z6.s
-; CHECK-NEXT:    mov z5.s, w8
-; CHECK-NEXT:    fmov x8, d7
-; CHECK-NEXT:    uaddv d3, p0, z3.s
-; CHECK-NEXT:    mov z1.s, p1/m, w8
-; CHECK-NEXT:    fmov x8, d4
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z5.s
-; CHECK-NEXT:    mov z1.s, p2/m, w8
-; CHECK-NEXT:    fmov x8, d3
-; CHECK-NEXT:    mov z1.s, p0/m, w8
-; CHECK-NEXT:    addvl x8, x1, #1
-; CHECK-NEXT:  .LBB0_1: // %vector.body
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
-; CHECK-NEXT:    cbnz x8, .LBB0_1
-; CHECK-NEXT:  // %bb.2: // %middle.block
+; CHECK-NEXT:    mov z3.s, w8
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    mov w9, v0.s[1]
+; CHECK-NEXT:    uaddv d1, p0, z1.s
+; CHECK-NEXT:    ptrue p1.s, vl1
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z3.s
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    add w10, w10, w8
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    mov z0.s, p1/m, w10
+; CHECK-NEXT:    mov z0.s, p0/m, w8
 ; CHECK-NEXT:    ret
 entry:
-  %2 = call i64 @llvm.vscale.i64()
-  %3 = mul i64 %2, 16
-  br label %vector.body
+  %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %accumulator, <vscale x 8 x i32> %0)
+  ret <vscale x 4 x i32> %partial.reduce
+}
 
-vector.body:                                      ; preds = %vector.body, %entry
-  %vec.phi = phi <vscale x 4 x i32> [ zeroinitializer, %entry ], [ %4, %vector.body ]
-  %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 16 x i32> %1)
-  %4 = or <vscale x 4 x i32> %partial.reduce, %vec.phi
-  %index.next = add i64 %index, %3
-  %5 = icmp eq i64 %index.next, 0
-  br i1 %5, label %middle.block, label %vector.body
+define <vscale x 4 x i32> @partial_reduce_add_quart(<vscale x 4 x i32> %accumulator, <vscale x 16 x i32> %0) #0 {
+; CHECK-LABEL: partial_reduce_add_quart:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    mov z6.s, w8
+; CHECK-NEXT:    index z5.s, #0, #1
+; CHECK-NEXT:    ptrue p2.s, vl1
+; CHECK-NEXT:    uaddv d1, p0, z1.s
+; CHECK-NEXT:    mov w9, v0.s[1]
+; CHECK-NEXT:    uaddv d2, p0, z2.s
+; CHECK-NEXT:    uaddv d3, p0, z3.s
+; CHECK-NEXT:    cmpeq p1.s, p0/z, z5.s, z6.s
+; CHECK-NEXT:    uaddv d4, p0, z4.s
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    add w8, w10, w8
+; CHECK-NEXT:    mov w10, #2 // =0x2
+; CHECK-NEXT:    mov z1.s, p2/m, w8
+; CHECK-NEXT:    fmov x8, d2
+; CHECK-NEXT:    mov z6.s, w10
+; CHECK-NEXT:    mov w10, v0.s[2]
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    mov w9, #3 // =0x3
+; CHECK-NEXT:    cmpeq p2.s, p0/z, z5.s, z6.s
+; CHECK-NEXT:    mov z2.s, w9
+; CHECK-NEXT:    fmov x9, d3
+; CHECK-NEXT:    mov z1.s, p1/m, w8
+; CHECK-NEXT:    mov w8, v0.s[3]
+; CHECK-NEXT:    add w9, w10, w9
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z5.s, z2.s
+; CHECK-NEXT:    mov z1.s, p2/m, w9
+; CHECK-NEXT:    fmov x9, d4
+; CHECK-NEXT:    add w8, w8, w9
+; CHECK-NEXT:    mov z1.s, p0/m, w8
+; CHECK-NEXT:    mov z0.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %accumulator, <vscale x 16 x i32> %0)
+  ret <vscale x 4 x i32> %partial.reduce
+}
 
-middle.block:                                     ; preds = %vector.body
-  %6 = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %4)
-  ret void
+define <vscale x 8 x i32> @partial_reduce_add_half_8(<vscale x 8 x i32> %accumulator, <vscale x 16 x i32> %0) #0 {
+; CHECK-LABEL: partial_reduce_add_half_8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add z2.s, z2.s, z3.s
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    index z3.s, #0, #1
+; CHECK-NEXT:    mov z4.s, w8
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    mov w9, v0.s[1]
+; CHECK-NEXT:    ptrue p1.s, vl1
+; CHECK-NEXT:    uaddv d2, p0, z2.s
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z3.s, z4.s
+; CHECK-NEXT:    fmov x8, d2
+; CHECK-NEXT:    add w10, w10, w8
+; CHECK-NEXT:    add w8, w9, w8
+; CHECK-NEXT:    mov z0.s, p1/m, w10
+; CHECK-NEXT:    mov z0.s, p0/m, w8
+; CHECK-NEXT:    ret
+entry:
+  %partial.reduce = call <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add.nxv8i32.nxv8i32.nxv16i32(<vscale x 8 x i32> %accumulator, <vscale x 16 x i32> %0)
+  ret <vscale x 8 x i32> %partial.reduce
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare i64 @llvm.vscale.i64() #1
+declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 16 x i32>) #1
+declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32>, <vscale x 8 x i32>) #1
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32>, <vscale x 16 x i32>) #1
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
+declare <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add.nxv8i32.nxv8i32.nxv16i32(<vscale x 8 x i32>, <vscale x 16 x i32>) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>) #2
+declare i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32>) #2
 
 attributes #0 = { "target-features"="+fp-armv8,+fullfp16,+neon,+sve,+sve2,+v8a" }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }

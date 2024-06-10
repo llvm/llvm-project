@@ -19218,24 +19218,26 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v2i32.v8i32(<8 x i32> %in)
-      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<16 x i32> %in)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 8 x i32> %in)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 16 x i32> %in)
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %accum, <8 x i32> %in)
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %accum, <16 x i32> %in)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %accum, <vscale x 8 x i32> %in)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %accum, <vscale x 16 x i32> %in)
 
 Overview:
 """""""""
 
-The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics do an integer
-``ADD`` reduction of subvectors within a vector, returning each scalar result as
-a lane within a vector. The return type is a vector type with an
-element-type of the vector input and a width a factor of the vector input
-(typically either half or quarter).
+The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics perform an integer
+``ADD`` reduction of subvectors within a vector, before adding the resulting vector
+to the provided accumulator vector. The return type is a vector type that matches
+the type of the accumulator vector.
 
 Arguments:
 """"""""""
 
-The argument to this intrinsic must be a vector of integer values.
+The first argument is the accumulator vector, or a `zeroinitializer`. The type of
+this argument must match the return type. The second argument is the vector to reduce
+into the accumulator, the width of this vector must be a positive integer multiple of
+the accumulator vector/return type.
 
 
 '``llvm.experimental.vector.histogram.*``' Intrinsic

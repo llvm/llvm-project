@@ -7917,22 +7917,23 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::experimental_vector_partial_reduce_add: {
     auto DL = getCurSDLoc();
     auto ReducedTy = EVT::getEVT(I.getType());
-    auto OpNode = getValue(I.getOperand(0));
-    auto Index = DAG.getVectorIdxConstant(0, DL);
+    auto OpNode = getValue(I.getOperand(1));
     auto FullTy = OpNode.getValueType();
 
-    auto ResultVector = DAG.getSplat(ReducedTy, DL, DAG.getConstant(0, DL, ReducedTy.getScalarType()));
+    auto Accumulator = getValue(I.getOperand(0));
     unsigned ScaleFactor = FullTy.getVectorMinNumElements() / ReducedTy.getVectorMinNumElements();
 
     for(unsigned i = 0; i < ScaleFactor; i++) {
       auto SourceIndex = DAG.getVectorIdxConstant(i * ScaleFactor, DL);
       auto TargetIndex = DAG.getVectorIdxConstant(i, DL);
+      auto ExistingValue = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ReducedTy.getScalarType(), {Accumulator, TargetIndex});
       auto N = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {OpNode, SourceIndex});
       N = DAG.getNode(ISD::VECREDUCE_ADD, DL, ReducedTy.getScalarType(), N);
-      ResultVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ReducedTy, {ResultVector, N, TargetIndex});
+      N = DAG.getNode(ISD::ADD, DL, ReducedTy.getScalarType(), ExistingValue, N);
+      Accumulator = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ReducedTy, {Accumulator, N, TargetIndex});
     }
 
-    setValue(&I, ResultVector);
+    setValue(&I, Accumulator);
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
