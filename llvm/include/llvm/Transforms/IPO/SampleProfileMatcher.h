@@ -79,10 +79,7 @@ class SampleProfileMatcher {
   // the profile is unused(to be matched) or not.
   HashKeyMap<std::unordered_map, FunctionId, Function *> *SymbolMap;
 
-  // A map from the caller to its new callees, this is used as a cache for the
-  // candidate callees.
-  std::unordered_map<Function *, std::vector<Function *>> FuncToNewCalleesMap;
-
+  // The new functions from IR.
   HashKeyMap<std::unordered_map, FunctionId, Function *> NewIRFunctions;
 
   // Pointer to the Profile Symbol List in the reader.
@@ -101,6 +98,10 @@ class SampleProfileMatcher {
   uint64_t MismatchedFunctionSamples = 0;
   uint64_t MismatchedCallsiteSamples = 0;
   uint64_t RecoveredCallsiteSamples = 0;
+
+  // Profile call-graph matching statstics:
+  uint64_t NumRecoveredUnusedSamples = 0;
+  uint64_t NumRecoveredUnusedFunc = 0;
 
   // A dummy name for unknown indirect callee, used to differentiate from a
   // non-call instruction that also has an empty callee name.
@@ -121,6 +122,10 @@ public:
     // will be used for sample loader.
     FuncCallsiteMatchStates.clear();
     FlattenedProfiles.clear();
+
+    NewIRFunctions.clear();
+    FunctionProfileNameMap.clear();
+    ProfileNameToFuncMap.clear();
   }
 
 private:
@@ -224,11 +229,6 @@ private:
   void findNewIRFunctions();
   void updateProfillesAndSymbolMap();
   void updateProfileWithNewName(FunctionSamples &FuncProfile);
-
-  void clearCacheData() {
-    FunctionProfileNameMap.clear();
-    ProfileNameToFuncMap.clear();
-  }
   void runCallGraphMatching();
   void reportOrPersistProfileStats();
 };

@@ -592,6 +592,14 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   if (!ReportProfileStaleness && !PersistProfileStaleness)
     return;
 
+  if (SalvageUnusedProfile) {
+    for (const auto &I : ProfileNameToFuncMap) {
+      if (GlobalValue::isAvailableExternallyLinkage(I.second->getLinkage()))
+        continue;
+      NumRecoveredUnusedFunc++;
+    }
+  }
+
   // Count profile mismatches for profile staleness report.
   for (const auto &F : M) {
     if (skipProfileForFunction(F))
@@ -622,6 +630,13 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
              << MismatchedFunctionSamples << "/" << TotalFunctionSamples
              << ") of samples are discarded due to function hash mismatch.\n";
     }
+    if (SalvageUnusedProfile) {
+      errs() << "(" << NumRecoveredUnusedFunc << "/" << TotalProfiledFunc
+             << ") of functions' profile are matched and ("
+             << NumRecoveredUnusedSamples << "/" << TotalFunctionSamples
+             << ") of samples are reused by call graph matching.\n";
+    }
+
     errs() << "(" << (NumMismatchedCallsites + NumRecoveredCallsites) << "/"
            << TotalProfiledCallsites
            << ") of callsites' profile are invalid and ("
@@ -646,6 +661,13 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
       ProfStatsVec.emplace_back("MismatchedFunctionSamples",
                                 MismatchedFunctionSamples);
       ProfStatsVec.emplace_back("TotalFunctionSamples", TotalFunctionSamples);
+    }
+
+    if (SalvageUnusedProfile) {
+      ProfStatsVec.emplace_back("NumRecoveredUnusedFunc",
+                                NumRecoveredUnusedFunc);
+      ProfStatsVec.emplace_back("NumRecoveredUnusedSamples",
+                                NumRecoveredUnusedSamples);
     }
 
     ProfStatsVec.emplace_back("NumMismatchedCallsites", NumMismatchedCallsites);
@@ -746,7 +768,7 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // Use the diff algorithm to find the LCS between IR and profile.
 
   // Don't recursively match the callee function to avoid infinite matching,
-  // callee functions should be handled later since it's processed in top-down
+  // callee functions will be handled later since it's processed in top-down
   // order .
   LocToLocMap MatchedAnchors = longestCommonSequence(
       FilteredIRAnchorsList, FilteredProfileAnchorList, false);
@@ -814,7 +836,10 @@ void SampleProfileMatcher::updateProfileWithNewName(
       FindNewMatch(TS.first, MatchResult, FuncProfile.getFunction());
     // Update the CallTargetMap.
     for (const auto &P : MatchResult) {
-      CTM[P.first] = CTM[P.second];
+      uint64_t Samples = CTM[P.second];
+      if (ReportProfileStaleness || PersistProfileStaleness)
+        NumRecoveredUnusedSamples += Samples;
+      CTM[P.first] = Samples;
       CTM.erase(P.second);
     }
   }
@@ -835,6 +860,8 @@ void SampleProfileMatcher::updateProfileWithNewName(
       assert(P.first != P.second &&
              "Renamed function name should be different from the old map key");
       FunctionSamples &FS = CalleeMap[P.second];
+      if (ReportProfileStaleness || PersistProfileStaleness)
+        NumRecoveredUnusedSamples += FS.getTotalSamples();
       FS.setFunction(P.first);
       CalleeMap[P.first] = FS;
       CalleeMap.erase(P.second);
