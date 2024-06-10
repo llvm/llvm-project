@@ -345,7 +345,12 @@ bool HipBinAmd::detectPlatform() {
   const EnvVariables& var = getEnvVariables();
   bool detected = false;
   if (var.hipPlatformEnv_.empty()) {
-    if (canRunCompiler(cmdAmd.string(), out)){
+    string cmd = cmdAmd.string();
+    if (getOSInfo() == windows) {
+      cmd = "\"" + cmd + "\"";
+    }
+
+    if (canRunCompiler(cmd, out)){
       detected = true;
     }
   } else {
