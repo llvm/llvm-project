@@ -957,7 +957,7 @@ private:
 template <class _Array, class _Alloc, class... _Arg>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Array>
 __allocate_shared_unbounded_array(const _Alloc& __a, size_t __n, _Arg&&... __arg) {
-  static_assert(__libcpp_is_unbounded_array<_Array>::value);
+  static_assert(__is_unbounded_array_v<_Array>);
   // We compute the number of bytes necessary to hold the control block and the
   // array elements. Then, we allocate an array of properly-aligned dummy structs
   // large enough to hold the control block and array. This allows shifting the
@@ -1034,7 +1034,7 @@ private:
 
 template <class _Array, class _Alloc, class... _Arg>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Array> __allocate_shared_bounded_array(const _Alloc& __a, _Arg&&... __arg) {
-  static_assert(__libcpp_is_bounded_array<_Array>::value);
+  static_assert(__is_bounded_array_v<_Array>);
   using _ControlBlock      = __bounded_array_control_block<_Array, _Alloc>;
   using _ControlBlockAlloc = __allocator_traits_rebind_t<_Alloc, _ControlBlock>;
 
