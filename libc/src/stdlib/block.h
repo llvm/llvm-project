@@ -39,8 +39,8 @@ LIBC_INLINE constexpr size_t align_down(size_t value, size_t alignment) {
 }
 
 /// Returns the value rounded down to the nearest multiple of alignment.
-LIBC_INLINE template <typename T>
-constexpr T *align_down(T *value, size_t alignment) {
+template <typename T>
+LIBC_INLINE constexpr T *align_down(T *value, size_t alignment) {
   return reinterpret_cast<T *>(
       align_down(reinterpret_cast<size_t>(value), alignment));
 }
