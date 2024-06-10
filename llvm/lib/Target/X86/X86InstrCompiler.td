@@ -1125,7 +1125,9 @@ multiclass ATOMIC_LOAD_FP_BINOP_MI<string Name, SDNode op> {
             Requires<[HasAVX512]>;
 }
 defm : ATOMIC_LOAD_FP_BINOP_MI<"ADD", fadd>;
-// FIXME: Add fsub, fmul, fdiv, ...
+defm : ATOMIC_LOAD_FP_BINOP_MI<"SUB", fsub>;
+defm : ATOMIC_LOAD_FP_BINOP_MI<"MUL", fmul>;
+defm : ATOMIC_LOAD_FP_BINOP_MI<"DIV", fdiv>;
 
 multiclass RELEASE_UNOP<string Name, dag dag8, dag dag16, dag dag32,
                         dag dag64> {
@@ -1570,21 +1572,21 @@ let Predicates = [HasNDD] in {
 }
 
 // Depositing value to 8/16 bit subreg:
-def : Pat<(or (and GR64:$dst, -256), 
+def : Pat<(or (and GR64:$dst, -256),
               (i64 (zextloadi8 addr:$src))),
-          (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>; 
+          (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-def : Pat<(or (and GR32:$dst, -256), 
+def : Pat<(or (and GR32:$dst, -256),
               (i32 (zextloadi8 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>; 
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-def : Pat<(or (and GR64:$dst, -65536), 
+def : Pat<(or (and GR64:$dst, -65536),
               (i64 (zextloadi16 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
-def : Pat<(or (and GR32:$dst, -65536), 
+def : Pat<(or (and GR32:$dst, -65536),
               (i32 (zextloadi16 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>; 
+          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
 // To avoid needing to materialize an immediate in a register, use a 32-bit and
 // with implicit zero-extension instead of a 64-bit and if the immediate has at

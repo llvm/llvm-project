@@ -131,7 +131,8 @@ public:
 
   /// For a given symbol, check if it is present in the inner-most
   /// level of the symbol map.
-  virtual bool isPresentShallowLookup(Fortran::semantics::Symbol &sym) = 0;
+  virtual bool
+  isPresentShallowLookup(const Fortran::semantics::Symbol &sym) = 0;
 
   /// Collect the set of symbols with \p flag in \p eval
   /// region if \p collectSymbols is true. Otherwise, collect the

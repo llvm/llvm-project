@@ -419,7 +419,8 @@ struct AAReturnedFromReturnedValues : public BaseType {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     StateType S(StateType::getBestState(this->getState()));
-    clampReturnedValueStates<AAType, StateType, IRAttributeKind, RecurseForSelectAndPHI>(
+    clampReturnedValueStates<AAType, StateType, IRAttributeKind,
+                             RecurseForSelectAndPHI>(
         A, *this, S,
         PropagateCallBaseContext ? this->getCallBaseContext() : nullptr);
     // TODO: If we know we visited all returned values, thus no are assumed
@@ -1634,8 +1635,6 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
       if (CE->isCast())
         return HandlePassthroughUser(Usr, CurPtr, Follow);
-      if (CE->isCompare())
-        return true;
       if (!isa<GEPOperator>(CE)) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
                           << "\n");
@@ -5690,6 +5689,9 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     return V.use_empty();
 
   // You cannot "capture" null in the default address space.
+  //
+  // FIXME: This should use NullPointerIsDefined to account for the function
+  // attribute.
   if (isa<UndefValue>(V) || (isa<ConstantPointerNull>(V) &&
                              V.getType()->getPointerAddressSpace() == 0)) {
     return true;
@@ -5899,10 +5901,13 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
 
   const Function *F =
       isArgumentPosition() ? IRP.getAssociatedFunction() : IRP.getAnchorScope();
-  assert(F && "Expected a function!");
-  const IRPosition &FnPos = IRPosition::function(*F);
+
+  // TODO: Is the checkForAllUses below useful for constants?
+  if (!F)
+    return indicatePessimisticFixpoint();
 
   AANoCapture::StateType T;
+  const IRPosition &FnPos = IRPosition::function(*F);
 
   // Readonly means we cannot capture through memory.
   bool IsKnown;
@@ -6969,10 +6974,9 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared) {
       Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
       if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
-        LLVM_DEBUG(
-            dbgs()
-            << "[H2S] unique free call might not be executed with the allocation "
-            << *UniqueFree << "\n");
+        LLVM_DEBUG(dbgs() << "[H2S] unique free call might not be executed "
+                             "with the allocation "
+                          << *UniqueFree << "\n");
         return false;
       }
     }
@@ -10332,48 +10336,25 @@ struct AANoFPClassImpl : AANoFPClass {
   /// See followUsesInMBEC
   bool followUseInMBEC(Attributor &A, const Use *U, const Instruction *I,
                        AANoFPClass::StateType &State) {
-    const Value *UseV = U->get();
-    const DominatorTree *DT = nullptr;
-    AssumptionCache *AC = nullptr;
-    const TargetLibraryInfo *TLI = nullptr;
-    InformationCache &InfoCache = A.getInfoCache();
-
-    if (Function *F = getAnchorScope()) {
-      DT = InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F);
-      AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
-      TLI = InfoCache.getTargetLibraryInfoForFunction(*F);
-    }
-
-    const DataLayout &DL = A.getDataLayout();
-
-    KnownFPClass KnownFPClass =
-        computeKnownFPClass(UseV, DL,
-                            /*InterestedClasses=*/fcAllFlags,
-                            /*Depth=*/0, TLI, AC, I, DT);
-    State.addKnownBits(~KnownFPClass.KnownFPClasses);
-
-    if (auto *CI = dyn_cast<CallInst>(UseV)) {
-      // Special case FP intrinsic with struct return type.
-      switch (CI->getIntrinsicID()) {
-      case Intrinsic::frexp:
-        return true;
-      case Intrinsic::not_intrinsic:
-        // TODO: Could recognize math libcalls
-        return false;
-      default:
-        break;
-      }
-    }
-
-    if (!UseV->getType()->isFPOrFPVectorTy())
+    // TODO: Determine what instructions can be looked through.
+    auto *CB = dyn_cast<CallBase>(I);
+    if (!CB)
       return false;
-    return !isa<LoadInst, AtomicRMWInst>(UseV);
+
+    if (!CB->isArgOperand(U))
+      return false;
+
+    unsigned ArgNo = CB->getArgOperandNo(U);
+    IRPosition IRP = IRPosition::callsite_argument(*CB, ArgNo);
+    if (auto *NoFPAA = A.getAAFor<AANoFPClass>(*this, IRP, DepClassTy::NONE))
+      State.addKnownBits(NoFPAA->getState().getKnown());
+    return false;
   }
 
   const std::string getAsStr(Attributor *A) const override {
     std::string Result = "nofpclass";
     raw_string_ostream OS(Result);
-    OS << getAssumedNoFPClass();
+    OS << getKnownNoFPClass() << '/' << getAssumedNoFPClass();
     return Result;
   }
 
@@ -10425,11 +10406,12 @@ struct AANoFPClassFloating : public AANoFPClassImpl {
 
 struct AANoFPClassReturned final
     : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl,
-                                   AANoFPClassImpl::StateType, false, Attribute::None, false> {
+                                   AANoFPClassImpl::StateType, false,
+                                   Attribute::None, false> {
   AANoFPClassReturned(const IRPosition &IRP, Attributor &A)
       : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl,
-                                     AANoFPClassImpl::StateType, false, Attribute::None, false>(
-            IRP, A) {}
+                                     AANoFPClassImpl::StateType, false,
+                                     Attribute::None, false>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -10778,9 +10760,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       return;
     }
     Value *Stripped = getAssociatedValue().stripPointerCasts();
-    auto *CE = dyn_cast<ConstantExpr>(Stripped);
-    if (isa<Constant>(Stripped) &&
-        (!CE || CE->getOpcode() != Instruction::ICmp)) {
+    if (isa<Constant>(Stripped) && !isa<ConstantExpr>(Stripped)) {
       addValue(A, getState(), *Stripped, getCtxI(), AA::AnyScope,
                getAnchorScope());
       indicateOptimisticFixpoint();
@@ -11372,13 +11352,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       if (NewV && NewV != V) {
         Worklist.push_back({{*NewV, CtxI}, S});
         continue;
-      }
-
-      if (auto *CE = dyn_cast<ConstantExpr>(V)) {
-        if (CE->getOpcode() == Instruction::ICmp)
-          if (handleCmp(A, *CE, CE->getOperand(0), CE->getOperand(1),
-                        CmpInst::Predicate(CE->getPredicate()), II, Worklist))
-            continue;
       }
 
       if (auto *I = dyn_cast<Instruction>(V)) {

@@ -1079,13 +1079,13 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(IsAIX && TM.getCodeModel() == CodeModel::Small &&
            "PseudoOp only valid for small code model AIX");
 
-    // Transform %rN = ADDItoc/8 @op1, %r2.
+    // Transform %rN = ADDItoc/8 %r2, @op1.
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to load address.
     TmpInst.setOpcode((!IsPPC64) ? (PPC::LA) : (PPC::LA8));
 
-    const MachineOperand &MO = MI->getOperand(1);
+    const MachineOperand &MO = MI->getOperand(2);
     assert(MO.isGlobal() && "Invalid operand for ADDItoc[8].");
 
     // Map the operand to its corresponding MCSymbol.
@@ -1094,7 +1094,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MCExpr *Exp =
         MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_None, OutContext);
 
-    TmpInst.getOperand(1) = TmpInst.getOperand(2);
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -2831,8 +2830,10 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
 
   // When -fdata-sections is enabled, every GlobalVariable will
   // be put into its own csect; therefore, label is not necessary here.
-  if (!TM.getDataSections() || GV->hasSection())
-    OutStreamer->emitLabel(EmittedInitSym);
+  if (!TM.getDataSections() || GV->hasSection()) {
+    if (Csect->getMappingClass() != XCOFF::XMC_TD)
+      OutStreamer->emitLabel(EmittedInitSym);
+  }
 
   // No alias to emit.
   if (!GOAliasMap[GV].size()) {

@@ -65,19 +65,17 @@ struct TransferReadToArmSMELowering
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "not inbounds transfer read");
 
-    arm_sme::TileSliceLayout layout;
-
-    AffineExpr d0, d1;
-    bindDims(transferReadOp.getContext(), d0, d1);
     AffineMap map = transferReadOp.getPermutationMap();
-    if (map.isIdentity())
-      layout = arm_sme::TileSliceLayout::Horizontal;
-    else if (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
-                                   transferReadOp.getContext()))
-      layout = arm_sme::TileSliceLayout::Vertical;
-    else
+    if (!map.isPermutation())
       return rewriter.notifyMatchFailure(transferReadOp,
                                          "unsupported permutation map");
+
+    // Note: For 2D vector types the only non-identity permutation is a simple
+    // transpose [1, 0].
+    bool transposed = !map.isIdentity();
+    arm_sme::TileSliceLayout layout =
+        transposed ? arm_sme::TileSliceLayout::Vertical
+                   : arm_sme::TileSliceLayout::Horizontal;
 
     // Padding isn't optional for transfer_read, but is only used in the case
     // of out-of-bounds accesses (not supported here) and/or masking. Mask is
@@ -137,19 +135,17 @@ struct TransferWriteToArmSMELowering
       return rewriter.notifyMatchFailure(writeOp,
                                          "not inbounds transfer write");
 
-    AffineExpr d0, d1;
-    bindDims(writeOp.getContext(), d0, d1);
     AffineMap map = writeOp.getPermutationMap();
-    bool isTranspose = (map == AffineMap::get(map.getNumDims(), 0, {d1, d0},
-                                              writeOp.getContext()));
-
-    if (!map.isIdentity() && !isTranspose)
+    if (!map.isPermutation())
       return rewriter.notifyMatchFailure(writeOp,
                                          "unsupported permutation map");
 
+    // Note: For 2D vector types the only non-identity permutation is a simple
+    // transpose [1, 0].
+    bool transposed = !map.isIdentity();
     arm_sme::TileSliceLayout layout =
-        isTranspose ? arm_sme::TileSliceLayout::Vertical
-                    : arm_sme::TileSliceLayout::Horizontal;
+        transposed ? arm_sme::TileSliceLayout::Vertical
+                   : arm_sme::TileSliceLayout::Horizontal;
 
     rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
         writeOp, writeOp.getVector(), writeOp.getSource(), writeOp.getIndices(),

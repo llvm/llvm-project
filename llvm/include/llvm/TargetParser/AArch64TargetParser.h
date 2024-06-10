@@ -132,48 +132,6 @@ struct ExtensionInfo {
 #define EMIT_EXTENSIONS
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
-struct ExtensionSet {
-  // Set of extensions which are currently enabled.
-  ExtensionBitset Enabled;
-  // Set of extensions which have been enabled or disabled at any point. Used
-  // to avoid cluttering the cc1 command-line with lots of unneeded features.
-  ExtensionBitset Touched;
-  // Base architecture version, which we need to know because some feature
-  // dependencies change depending on this.
-  const ArchInfo *BaseArch;
-
-  ExtensionSet() : Enabled(), Touched(), BaseArch(nullptr) {}
-
-  // Enable the given architecture extension, and any other extensions it
-  // depends on. Does not change the base architecture, or follow dependencies
-  // between features which are only related by required arcitecture versions.
-  void enable(ArchExtKind E);
-
-  // Disable the given architecture extension, and any other extensions which
-  // depend on it. Does not change the base architecture, or follow
-  // dependencies between features which are only related by required
-  // arcitecture versions.
-  void disable(ArchExtKind E);
-
-  // Add default extensions for the given CPU. Records the base architecture,
-  // to later resolve dependencies which depend on it.
-  void addCPUDefaults(const CpuInfo &CPU);
-
-  // Add default extensions for the given architecture version. Records the
-  // base architecture, to later resolve dependencies which depend on it.
-  void addArchDefaults(const ArchInfo &Arch);
-
-  // Add or remove a feature based on a modifier string. The string must be of
-  // the form "<name>" to enable a feature or "no<name>" to disable it. This
-  // will also enable or disable any features as required by the dependencies
-  // between them.
-  bool parseModifier(StringRef Modifier);
-
-  // Convert the set of enabled extension to an LLVM feature list, appending
-  // them to Features.
-  void toLLVMFeatureList(std::vector<StringRef> &Features) const;
-};
-
 // Represents a dependency between two architecture extensions. Later is the
 // feature which was added to the architecture after Earlier, and expands the
 // functionality provided by it. If Later is enabled, then Earlier will also be
@@ -183,55 +141,8 @@ struct ExtensionDependency {
   ArchExtKind Later;
 };
 
-// clang-format off
-// Each entry here is a link in the dependency chain starting from the
-// extension that was added to the architecture first.
-inline constexpr ExtensionDependency ExtensionDependencies[] = {
-  {AEK_FP, AEK_FP16},
-  {AEK_FP, AEK_SIMD},
-  {AEK_FP, AEK_JSCVT},
-  {AEK_FP, AEK_FP8},
-  {AEK_SIMD, AEK_CRYPTO},
-  {AEK_SIMD, AEK_AES},
-  {AEK_SIMD, AEK_SHA2},
-  {AEK_SIMD, AEK_SHA3},
-  {AEK_SIMD, AEK_SM4},
-  {AEK_SIMD, AEK_RDM},
-  {AEK_SIMD, AEK_DOTPROD},
-  {AEK_SIMD, AEK_FCMA},
-  {AEK_FP16, AEK_FP16FML},
-  {AEK_FP16, AEK_SVE},
-  {AEK_BF16, AEK_SME},
-  {AEK_BF16, AEK_B16B16},
-  {AEK_SVE, AEK_SVE2},
-  {AEK_SVE, AEK_F32MM},
-  {AEK_SVE, AEK_F64MM},
-  {AEK_SVE2, AEK_SVE2P1},
-  {AEK_SVE2, AEK_SVE2BITPERM},
-  {AEK_SVE2, AEK_SVE2AES},
-  {AEK_SVE2, AEK_SVE2SHA3},
-  {AEK_SVE2, AEK_SVE2SM4},
-  {AEK_SVE2, AEK_SMEFA64},
-  {AEK_SVE2, AEK_SMEFA64},
-  {AEK_SME, AEK_SME2},
-  {AEK_SME, AEK_SMEF16F16},
-  {AEK_SME, AEK_SMEF64F64},
-  {AEK_SME, AEK_SMEI16I64},
-  {AEK_SME, AEK_SMEFA64},
-  {AEK_SME2, AEK_SME2P1},
-  {AEK_SME2, AEK_SSVE_FP8FMA},
-  {AEK_SME2, AEK_SSVE_FP8DOT2},
-  {AEK_SME2, AEK_SSVE_FP8DOT4},
-  {AEK_SME2, AEK_SMEF8F16},
-  {AEK_SME2, AEK_SMEF8F32},
-  {AEK_FP8, AEK_SMEF8F16},
-  {AEK_FP8, AEK_SMEF8F32},
-  {AEK_LSE, AEK_LSE128},
-  {AEK_PREDRES, AEK_SPECRES2},
-  {AEK_RAS, AEK_RASV2},
-  {AEK_RCPC, AEK_RCPC3},
-};
-// clang-format on
+#define EMIT_EXTENSION_DEPENDENCIES
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 enum ArchProfile { AProfile = 'A', RProfile = 'R', InvalidProfile = '?' };
 
@@ -624,6 +535,70 @@ inline constexpr CpuInfo CpuInfos[] = {
                                AArch64::AEK_SHA2, AArch64::AEK_AES,
                                AArch64::AEK_MTE, AArch64::AEK_SB,
                                AArch64::AEK_SSBS, AArch64::AEK_CSSC})},
+    {"oryon-1", ARMV8_6A,
+     (AArch64::ExtensionBitset({AArch64::AEK_AES, AArch64::AEK_CRYPTO,
+                                AArch64::AEK_RAND, AArch64::AEK_SM4,
+                                AArch64::AEK_SHA3, AArch64::AEK_SHA2,
+                                AArch64::AEK_PROFILE}))},
+};
+
+struct ExtensionSet {
+  // Set of extensions which are currently enabled.
+  ExtensionBitset Enabled;
+  // Set of extensions which have been enabled or disabled at any point. Used
+  // to avoid cluttering the cc1 command-line with lots of unneeded features.
+  ExtensionBitset Touched;
+  // Base architecture version, which we need to know because some feature
+  // dependencies change depending on this.
+  const ArchInfo *BaseArch;
+
+  ExtensionSet() : Enabled(), Touched(), BaseArch(nullptr) {}
+
+  // Enable the given architecture extension, and any other extensions it
+  // depends on. Does not change the base architecture, or follow dependencies
+  // between features which are only related by required arcitecture versions.
+  void enable(ArchExtKind E);
+
+  // Disable the given architecture extension, and any other extensions which
+  // depend on it. Does not change the base architecture, or follow
+  // dependencies between features which are only related by required
+  // arcitecture versions.
+  void disable(ArchExtKind E);
+
+  // Add default extensions for the given CPU. Records the base architecture,
+  // to later resolve dependencies which depend on it.
+  void addCPUDefaults(const CpuInfo &CPU);
+
+  // Add default extensions for the given architecture version. Records the
+  // base architecture, to later resolve dependencies which depend on it.
+  void addArchDefaults(const ArchInfo &Arch);
+
+  // Add or remove a feature based on a modifier string. The string must be of
+  // the form "<name>" to enable a feature or "no<name>" to disable it. This
+  // will also enable or disable any features as required by the dependencies
+  // between them.
+  bool parseModifier(StringRef Modifier, const bool AllowNoDashForm = false);
+
+  // Constructs a new ExtensionSet by toggling the corresponding bits for every
+  // feature in the \p Features list without expanding their dependencies. Used
+  // for reconstructing an ExtensionSet from the output of toLLVMFeatures().
+  void reconstructFromParsedFeatures(const std::vector<std::string> &Features);
+
+  // Convert the set of enabled extension to an LLVM feature list, appending
+  // them to Features.
+  template <typename T> void toLLVMFeatureList(std::vector<T> &Features) const {
+    if (BaseArch && !BaseArch->ArchFeature.empty())
+      Features.emplace_back(T(BaseArch->ArchFeature));
+
+    for (const auto &E : Extensions) {
+      if (E.Feature.empty() || !Touched.test(E.ID))
+        continue;
+      if (Enabled.test(E.ID))
+        Features.emplace_back(T(E.Feature));
+      else
+        Features.emplace_back(T(E.NegFeature));
+    }
+  }
 };
 
 // Name alias.
@@ -649,7 +624,13 @@ const ArchInfo *getArchForCpu(StringRef CPU);
 
 // Parser
 const ArchInfo *parseArch(StringRef Arch);
+
+// Return the extension which has the given -target-feature name.
+std::optional<ExtensionInfo> targetFeatureToExtension(StringRef TargetFeature);
+
+// Parse a name as defined by the Extension class in tablegen.
 std::optional<ExtensionInfo> parseArchExtension(StringRef Extension);
+
 // Given the name of a CPU or alias, return the correponding CpuInfo.
 std::optional<CpuInfo> parseCpu(StringRef Name);
 // Used by target parser tests

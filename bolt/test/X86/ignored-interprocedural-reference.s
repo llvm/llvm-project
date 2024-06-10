@@ -1,5 +1,5 @@
-# This reproduces a bug with not processing interprocedural references from
-# ignored functions.
+## This reproduces a bug with not processing interprocedural references from
+## ignored functions.
 
 # REQUIRES: system-linux
 
@@ -16,7 +16,7 @@
 # CHECK-YAML: calls: {{.*}} disc: 1
 
 # PREAGG: B #main# #foo_secondary# 1 1
-# main calls foo at valid instruction offset past nops that are to be stripped.
+## main calls foo at valid instruction offset past nops that are to be stripped.
   .globl main
 main:
   .cfi_startproc
@@ -25,7 +25,7 @@ main:
   .cfi_endproc
 .size main,.-main
 
-# Placeholder cold fragment to force main to be ignored in non-relocation mode.
+## Placeholder cold fragment to force main to be ignored in non-relocation mode.
   .globl main.cold
 main.cold:
   .cfi_startproc
@@ -33,8 +33,8 @@ main.cold:
   .cfi_endproc
 .size main.cold,.-main.cold
 
-# foo is set up to contain a valid instruction at called offset, and trapping
-# instructions past that.
+## foo is set up to contain a valid instruction at called offset, and trapping
+## instructions past that.
   .globl foo
 foo:
   .cfi_startproc

@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -1736,16 +1737,47 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
     Ops[Idx] = generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx),
                                    Ty, IdentityLeafs, SplatLeafs, Builder);
   }
+
+  SmallVector<Value *, 8> ValueList;
+  for (const auto &Lane : Item)
+    if (Lane.first)
+      ValueList.push_back(Lane.first);
+
   Builder.SetInsertPoint(I);
   Type *DstTy =
       FixedVectorType::get(I->getType()->getScalarType(), Ty->getNumElements());
-  if (auto *BI = dyn_cast<BinaryOperator>(I))
-    return Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(), Ops[0],
-                               Ops[1]);
-  if (II)
-    return Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
+  if (auto *BI = dyn_cast<BinaryOperator>(I)) {
+    auto *Value = Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(),
+                                      Ops[0], Ops[1]);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *CI = dyn_cast<CmpInst>(I)) {
+    auto *Value = Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *SI = dyn_cast<SelectInst>(I)) {
+    auto *Value = Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *CI = dyn_cast<CastInst>(I)) {
+    auto *Value = Builder.CreateCast((Instruction::CastOps)CI->getOpcode(),
+                                     Ops[0], DstTy);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (II) {
+    auto *Value = Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
   assert(isa<UnaryInstruction>(I) && "Unexpected instruction type in Generate");
-  return Builder.CreateUnOp((Instruction::UnaryOps)I->getOpcode(), Ops[0]);
+  auto *Value =
+      Builder.CreateUnOp((Instruction::UnaryOps)I->getOpcode(), Ops[0]);
+  propagateIRFlags(Value, ValueList);
+  return Value;
 }
 
 // Starting from a shuffle, look up through operands tracking the shuffled index
@@ -1753,8 +1785,7 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
 // do so.
 bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   auto *Ty = dyn_cast<FixedVectorType>(I.getType());
-  if (!Ty || !isa<Instruction>(I.getOperand(0)) ||
-      !isa<Instruction>(I.getOperand(1)))
+  if (!Ty)
     return false;
 
   SmallVector<InstLane> Start(Ty->getNumElements());
@@ -1789,6 +1820,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       IdentityLeafs.insert(FrontV);
       continue;
     }
+    // Look for constants, for the moment only supporting constant splats.
+    if (auto *C = dyn_cast<Constant>(FrontV);
+        C && C->getSplatValue() &&
+        all_of(drop_begin(Item), [Item](InstLane &IL) {
+          Value *FrontV = Item.front().first;
+          Value *V = IL.first;
+          return !V || V == FrontV;
+        })) {
+      SplatLeafs.insert(FrontV);
+      continue;
+    }
     // Look for a splat value.
     if (all_of(drop_begin(Item), [Item](InstLane &IL) {
           auto [FrontV, FrontLane] = Item.front();
@@ -1810,6 +1852,12 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             return false;
           if (V->getValueID() != FrontV->getValueID())
             return false;
+          if (auto *CI = dyn_cast<CmpInst>(V))
+            if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
+              return false;
+          if (auto *SI = dyn_cast<SelectInst>(V))
+            if (!isa<VectorType>(SI->getOperand(0)->getType()))
+              return false;
           if (isa<CallInst>(V) && !isa<IntrinsicInst>(V))
             return false;
           auto *II = dyn_cast<IntrinsicInst>(V);
@@ -1821,12 +1869,17 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
     // Check the operator is one that we support. We exclude div/rem in case
     // they hit UB from poison lanes.
-    if (isa<BinaryOperator>(FrontV) &&
-        !cast<BinaryOperator>(FrontV)->isIntDivRem()) {
+    if ((isa<BinaryOperator>(FrontV) &&
+         !cast<BinaryOperator>(FrontV)->isIntDivRem()) ||
+        isa<CmpInst>(FrontV)) {
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
-    } else if (isa<UnaryOperator>(FrontV)) {
+    } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst>(FrontV)) {
       Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+    } else if (isa<SelectInst>(FrontV)) {
+      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
+      Worklist.push_back(generateInstLaneVectorFromOperand(Item, 2));
     } else if (auto *II = dyn_cast<IntrinsicInst>(FrontV);
                II && isTriviallyVectorizable(II->getIntrinsicID())) {
       for (unsigned Op = 0, E = II->getNumOperands() - 1; Op < E; Op++) {

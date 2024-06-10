@@ -3501,15 +3501,17 @@ void MachORebaseEntry::moveNext() {
     --RemainingLoopCount;
     return;
   }
-  // REBASE_OPCODE_DONE is only used for padding if we are not aligned to
-  // pointer size. Therefore it is possible to reach the end without ever having
-  // seen REBASE_OPCODE_DONE.
-  if (Ptr == Opcodes.end()) {
-    Done = true;
-    return;
-  }
+
   bool More = true;
   while (More) {
+    // REBASE_OPCODE_DONE is only used for padding if we are not aligned to
+    // pointer size. Therefore it is possible to reach the end without ever
+    // having seen REBASE_OPCODE_DONE.
+    if (Ptr == Opcodes.end()) {
+      Done = true;
+      return;
+    }
+
     // Parse next opcode and set up next loop.
     const uint8_t *OpcodeStart = Ptr;
     uint8_t Byte = *Ptr++;
@@ -3838,15 +3840,17 @@ void MachOBindEntry::moveNext() {
     --RemainingLoopCount;
     return;
   }
-  // BIND_OPCODE_DONE is only used for padding if we are not aligned to
-  // pointer size. Therefore it is possible to reach the end without ever having
-  // seen BIND_OPCODE_DONE.
-  if (Ptr == Opcodes.end()) {
-    Done = true;
-    return;
-  }
+
   bool More = true;
   while (More) {
+    // BIND_OPCODE_DONE is only used for padding if we are not aligned to
+    // pointer size. Therefore it is possible to reach the end without ever
+    // having seen BIND_OPCODE_DONE.
+    if (Ptr == Opcodes.end()) {
+      Done = true;
+      return;
+    }
+
     // Parse next opcode and set up next loop.
     const uint8_t *OpcodeStart = Ptr;
     uint8_t Byte = *Ptr++;

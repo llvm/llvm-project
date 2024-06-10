@@ -2704,7 +2704,7 @@ QualType Sema::BuildFunctionType(QualType T,
 
   if (EPI.ExtInfo.getProducesResult()) {
     // This is just a warning, so we can't fail to build if we see it.
-    checkNSReturnsRetainedReturnType(Loc, T);
+    ObjC().checkNSReturnsRetainedReturnType(Loc, T);
   }
 
   if (Invalid)
@@ -6005,12 +6005,16 @@ namespace {
       DeclarationNameInfo DNI = DeclarationNameInfo(
           TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
           TemplateId->TemplateNameLoc);
-      auto TN = TemplateId->Template.get();
+
+      NamedDecl *FoundDecl;
+      if (auto TN = TemplateId->Template.get();
+          UsingShadowDecl *USD = TN.getAsUsingShadowDecl())
+        FoundDecl = cast<NamedDecl>(USD);
+      else
+        FoundDecl = cast_if_present<NamedDecl>(TN.getAsTemplateDecl());
+
       auto *CR = ConceptReference::Create(
-          Context, NNS, TemplateId->TemplateKWLoc, DNI,
-          /*FoundDecl=*/TN.getKind() == TemplateName::NameKind::UsingTemplate
-              ? cast<NamedDecl>(TN.getAsUsingShadowDecl())
-              : cast_if_present<NamedDecl>(TN.getAsTemplateDecl()),
+          Context, NNS, TemplateId->TemplateKWLoc, DNI, FoundDecl,
           /*NamedDecl=*/TL.getTypePtr()->getTypeConstraintConcept(),
           ASTTemplateArgumentListInfo::Create(Context, TemplateArgsInfo));
       TL.setConceptReference(CR);
@@ -7635,8 +7639,8 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       return false;
 
     // Check whether the return type is reasonable.
-    if (S.checkNSReturnsRetainedReturnType(attr.getLoc(),
-                                           unwrapped.get()->getReturnType()))
+    if (S.ObjC().checkNSReturnsRetainedReturnType(
+            attr.getLoc(), unwrapped.get()->getReturnType()))
       return true;
 
     // Only actually change the underlying type in ARC builds.
@@ -9345,9 +9349,9 @@ BuildTypeCoupledDecls(Expr *E,
   Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
 }
 
-QualType Sema::BuildCountAttributedArrayType(QualType WrappedTy,
-                                             Expr *CountExpr) {
-  assert(WrappedTy->isIncompleteArrayType());
+QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
+                                                      Expr *CountExpr) {
+  assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);

@@ -588,7 +588,10 @@ class LLVMConfig(object):
             if getattr(self.config, pp, None)
         ]
 
-        self.with_environment("LD_LIBRARY_PATH", lib_paths, append_path=True)
+        if platform.system() == "AIX":
+            self.with_environment("LIBPATH", lib_paths, append_path=True)
+        else:
+            self.with_environment("LD_LIBRARY_PATH", lib_paths, append_path=True)
 
         shl = getattr(self.config, "llvm_shlib_dir", None)
         pext = getattr(self.config, "llvm_plugin_ext", None)

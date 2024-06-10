@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -pedantic
 ! OpenMP Version 5.1
 ! Check OpenMP construct validity for the following directives:

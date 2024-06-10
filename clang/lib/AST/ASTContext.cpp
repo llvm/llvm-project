@@ -87,6 +87,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -5006,9 +5007,6 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
                                           QualType Underlying) const {
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
-  // Look through qualified template names.
-  if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    Template = QTN->getUnderlyingTemplate();
 
   const auto *TD = Template.getAsTemplateDecl();
   bool IsTypeAlias = TD && TD->isTypeAlias();
@@ -5043,10 +5041,6 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
     TemplateName Template, ArrayRef<TemplateArgument> Args) const {
   assert(!Template.getAsDependentTemplateName() &&
          "No dependent template names here!");
-
-  // Look through qualified template names.
-  if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    Template = TemplateName(QTN->getUnderlyingTemplate());
 
   // Build the canonical template specialization type.
   TemplateName CanonTemplate = getCanonicalTemplateName(Template);
@@ -5262,10 +5256,12 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     Arg = TemplateArgument(E);
   } else {
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
+    TemplateName Name = getQualifiedTemplateName(
+        nullptr, /*TemplateKeyword=*/false, TemplateName(TTP));
     if (TTP->isParameterPack())
-      Arg = TemplateArgument(TemplateName(TTP), std::optional<unsigned>());
+      Arg = TemplateArgument(Name, std::optional<unsigned>());
     else
-      Arg = TemplateArgument(TemplateName(TTP));
+      Arg = TemplateArgument(Name);
   }
 
   if (Param->isTemplateParameterPack())
@@ -6503,8 +6499,10 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
     if (!NTTPX->hasDefaultArgument() || !NTTPY->hasDefaultArgument())
       return false;
 
-    Expr *DefaultArgumentX = NTTPX->getDefaultArgument()->IgnoreImpCasts();
-    Expr *DefaultArgumentY = NTTPY->getDefaultArgument()->IgnoreImpCasts();
+    Expr *DefaultArgumentX =
+        NTTPX->getDefaultArgument().getArgument().getAsExpr()->IgnoreImpCasts();
+    Expr *DefaultArgumentY =
+        NTTPY->getDefaultArgument().getArgument().getAsExpr()->IgnoreImpCasts();
     llvm::FoldingSetNodeID XID, YID;
     DefaultArgumentX->Profile(XID, *this, /*Canonical=*/true);
     DefaultArgumentY->Profile(YID, *this, /*Canonical=*/true);
@@ -6797,7 +6795,7 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   // Using shadow declarations with the same target match.
   if (const auto *USX = dyn_cast<UsingShadowDecl>(X)) {
     const auto *USY = cast<UsingShadowDecl>(Y);
-    return USX->getTargetDecl() == USY->getTargetDecl();
+    return declaresSameEntity(USX->getTargetDecl(), USY->getTargetDecl());
   }
 
   // Using declarations with the same qualifier match. (We already know that
@@ -9302,7 +9300,8 @@ TemplateName ASTContext::getAssumedTemplateName(DeclarationName Name) const {
 TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                                   bool TemplateKeyword,
                                                   TemplateName Template) const {
-  assert(NNS && "Missing nested-name-specifier in qualified template name");
+  assert(Template.getKind() == TemplateName::Template ||
+         Template.getKind() == TemplateName::UsingTemplate);
 
   // FIXME: Canonicalization?
   llvm::FoldingSetNodeID ID;
@@ -12020,7 +12019,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables in other module units shouldn't be forced to be emitted.
-  if (VD->isInAnotherModuleUnit())
+  if (VD->shouldEmitInExternalSource())
     return false;
 
   // Variables that can be needed in other TUs are required.
@@ -13665,17 +13664,20 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
   }
 }
 
-std::vector<std::string> ASTContext::filterFunctionTargetVersionAttrs(
-    const TargetVersionAttr *TV) const {
-  assert(TV != nullptr);
-  llvm::SmallVector<StringRef, 8> Feats;
-  std::vector<std::string> ResFeats;
-  TV->getFeatures(Feats);
-  for (auto &Feature : Feats)
-    if (Target->validateCpuSupports(Feature.str()))
-      // Use '?' to mark features that came from TargetVersion.
-      ResFeats.push_back("?" + Feature.str());
-  return ResFeats;
+// Given a list of FMV features, return a concatenated list of the
+// corresponding backend features (which may contain duplicates).
+static std::vector<std::string> getFMVBackendFeaturesFor(
+    const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
+  std::vector<std::string> BackendFeats;
+  for (StringRef F : FMVFeatStrings) {
+    if (auto FMVExt = llvm::AArch64::parseArchExtension(F)) {
+      SmallVector<StringRef, 8> Feats;
+      FMVExt->DependentFeatures.split(Feats, ',', -1, false);
+      for (StringRef F : Feats)
+        BackendFeats.push_back(F.str());
+    }
+  }
+  return BackendFeats;
 }
 
 ParsedTargetAttr
@@ -13710,10 +13712,12 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
 
     // Make a copy of the features as passed on the command line into the
     // beginning of the additional features from the function to override.
-    ParsedAttr.Features.insert(
-        ParsedAttr.Features.begin(),
-        Target->getTargetOpts().FeaturesAsWritten.begin(),
-        Target->getTargetOpts().FeaturesAsWritten.end());
+    // AArch64 handles command line option features in parseTargetAttr().
+    if (!Target->getTriple().isAArch64())
+      ParsedAttr.Features.insert(
+          ParsedAttr.Features.begin(),
+          Target->getTargetOpts().FeaturesAsWritten.begin(),
+          Target->getTargetOpts().FeaturesAsWritten.end());
 
     if (ParsedAttr.CPU != "" && Target->isValidCPUName(ParsedAttr.CPU))
       TargetCPU = ParsedAttr.CPU;
@@ -13734,32 +13738,31 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                     Target->getTargetOpts().FeaturesAsWritten.end());
     Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TC = FD->getAttr<TargetClonesAttr>()) {
-    std::vector<std::string> Features;
     if (Target->getTriple().isAArch64()) {
-      // TargetClones for AArch64
       llvm::SmallVector<StringRef, 8> Feats;
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
-      for (StringRef Feat : Feats)
-        if (Target->validateCpuSupports(Feat.str()))
-          // Use '?' to mark features that came from AArch64 TargetClones.
-          Features.push_back("?" + Feat.str());
+      std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     } else {
+      std::vector<std::string> Features;
       StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
       if (VersionStr.starts_with("arch="))
         TargetCPU = VersionStr.drop_front(sizeof("arch=") - 1);
       else if (VersionStr != "default")
         Features.push_back((StringRef{"+"} + VersionStr).str());
+      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
-    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
-    std::vector<std::string> Feats = filterFunctionTargetVersionAttrs(TV);
-    Feats.insert(Feats.begin(),
-                 Target->getTargetOpts().FeaturesAsWritten.begin(),
-                 Target->getTargetOpts().FeaturesAsWritten.end());
-    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Feats);
+    llvm::SmallVector<StringRef, 8> Feats;
+    TV->getFeatures(Feats);
+    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+    Features.insert(Features.begin(),
+                    Target->getTargetOpts().FeaturesAsWritten.begin(),
+                    Target->getTargetOpts().FeaturesAsWritten.end());
+    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else {
     FeatureMap = Target->getTargetOpts().FeatureMap;
   }

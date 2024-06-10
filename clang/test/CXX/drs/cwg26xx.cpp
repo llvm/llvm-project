@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -pedantic-errors %s -verify=expected
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors %s -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors %s -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 namespace std {
 #if __cplusplus >= 202002L
@@ -81,10 +81,10 @@ struct D {
 template<typename T, int N>
 D<T, N> d();
 
-std::int32_t d1{ d<std::int64_t, 63>().i };
-std::int32_t d2{ d<std::int64_t, 64>().i };
-std::int32_t d3{ d<std::int64_t, 65>().i };
-// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'std::int32_t' (aka 'int') to 'std::int64_t' (aka 'long long') in initializer list}}
+std::int32_t d1{ d<std::int64_t, 31>().i };
+std::int32_t d2{ d<std::int64_t, 32>().i };
+std::int32_t d3{ d<std::int64_t, 33>().i };
+// since-cxx11-error@-1 {{non-constant-expression cannot be narrowed from type 'long long' to 'std::int32_t' (aka 'int') in initializer lis}}
 //   since-cxx11-note@-2 {{insert an explicit cast to silence this issue}}
 
 std::int16_t d6{ d<int, 16>().i };
@@ -231,7 +231,7 @@ int y = cwg2640_a\N{LOTUS});
 namespace cwg2644 { // cwg2644: 8
 #if __cplusplus >= 201103L
 auto z = [a = 42](int a) {
-// cxx11-warning@-1 {{initialized lambda captures are a C++14 extension}}
+// cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
 // since-cxx11-error@-2 {{a lambda parameter cannot shadow an explicitly captured entity}}
 //   since-cxx11-note@-3 {{variable 'a' is explicitly captured here}}
      return 1;
@@ -342,3 +342,30 @@ void test() {
 }
 }
 #endif
+
+
+namespace cwg2692 { // cwg2692: 19
+#if __cplusplus >= 202302L
+
+ struct A {
+    static void f(A); // #cwg2692-1
+    void f(this A); // #cwg2692-2
+
+    void g();
+  };
+
+  void A::g() {
+    (&A::f)(A());
+    // expected-error@-1 {{call to 'f' is ambiguous}}
+    // expected-note@#cwg2692-1 {{candidate}}
+    // expected-note@#cwg2692-2 {{candidate}}
+
+
+
+    (&A::f)();
+    // expected-error@-1 {{no matching function for call to 'f'}}
+    // expected-note@#cwg2692-1 {{candidate function not viable: requires 1 argument, but 0 were provided}}
+    // expected-note@#cwg2692-2 {{candidate function not viable: requires 1 argument, but 0 were provided}}
+  }
+#endif
+}

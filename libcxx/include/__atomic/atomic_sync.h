@@ -13,7 +13,6 @@
 #include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/to_gcc_order.h>
-#include <__availability>
 #include <__chrono/duration.h>
 #include <__config>
 #include <__memory/addressof.h>

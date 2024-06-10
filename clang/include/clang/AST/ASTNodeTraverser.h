@@ -704,9 +704,9 @@ public:
     if (const auto *E = D->getPlaceholderTypeConstraint())
       Visit(E);
     if (D->hasDefaultArgument())
-      Visit(D->getDefaultArgument(), SourceRange(),
-            D->getDefaultArgStorage().getInheritedFrom(),
-            D->defaultArgumentWasInherited() ? "inherited from" : "previous");
+      dumpTemplateArgumentLoc(
+          D->getDefaultArgument(), D->getDefaultArgStorage().getInheritedFrom(),
+          D->defaultArgumentWasInherited() ? "inherited from" : "previous");
   }
 
   void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *D) {
