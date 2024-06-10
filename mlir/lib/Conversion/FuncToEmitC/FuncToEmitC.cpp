@@ -38,7 +38,7 @@ public:
 
     rewriter.replaceOpWithNewOp<emitc::CallOp>(
         callOp,
-        callOp.getNumResults() ? callOp.getResult(0).getType() : nullptr,
+        callOp.getNumResults() ? callOp.getResult(0).getType() : TypeRange{},
         adaptor.getOperands(), callOp->getAttrs());
 
     return success();
