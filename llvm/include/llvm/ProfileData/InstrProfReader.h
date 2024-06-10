@@ -697,10 +697,8 @@ private:
   /// A compiler that reads indexed profiles could construct symtab from module
   /// IR so it doesn't need the decompressed names.
   StringRef VTableName;
-  /// Total size of binary ids.
-  uint64_t BinaryIdsSize{0};
-  /// Start address of binary id length and data pairs.
-  const uint8_t *BinaryIdsStart = nullptr;
+  /// A memory buffer holding binary ids.
+  ArrayRef<uint8_t> BinaryIdsBuffer;
 
   // Index to the current record in the record array.
   unsigned RecordIndex = 0;
