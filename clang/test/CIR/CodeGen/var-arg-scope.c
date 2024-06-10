@@ -4,36 +4,25 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // XFAIL: *
 
-#include <stdarg.h>
-
-int f1(int n, ...) {
-  va_list valist;
-  va_start(valist, n);
-  int res = va_arg(valist, int);
-  va_end(valist);
-  return res;
+void f1(__builtin_va_list c) {
+  { __builtin_va_arg(c, void *); }
 }
 
-// BEFORE: !ty_22__va_list22 = !cir.struct<struct "__va_list" {!cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.int<s, 32>, !cir.int<s, 32>}
-// BEFORE:  cir.func @f1(%arg0: !s32i, ...) -> !s32i
-// BEFORE:  [[RETP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// BEFORE:  [[RESP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
-// BEFORE:  cir.va.start [[VARLIST:%.*]] : !cir.ptr<!ty_22__va_list22>
-// BEFORE:  [[TMP0:%.*]] = cir.va.arg [[VARLIST]] : (!cir.ptr<!ty_22__va_list22>) -> !s32i
-// BEFORE:  cir.store [[TMP0]], [[RESP]] : !s32i, !cir.ptr<!s32i>
-// BEFORE:  cir.va.end [[VARLIST]] : !cir.ptr<!ty_22__va_list22>
-// BEFORE:  [[RES:%.*]] = cir.load [[RESP]] : !cir.ptr<!s32i>, !s32i
-// BEFORE:   cir.store [[RES]], [[RETP]] : !s32i, !cir.ptr<!s32i>
-// BEFORE:  [[RETV:%.*]] = cir.load [[RETP]] : !cir.ptr<!s32i>, !s32i
-// BEFORE:   cir.return [[RETV]] : !s32i
+// BEFORE: cir.func @f1(%arg0: !ty_22__va_list22) attributes
+// BEFORE: [[VAR_LIST:%.*]] = cir.alloca !ty_22__va_list22, !cir.ptr<!ty_22__va_list22>, ["c", init] {alignment = 8 : i64}
+// BEFORE: cir.store %arg0, [[VAR_LIST]] : !ty_22__va_list22, !cir.ptr<!ty_22__va_list22>
+// BEFORE: cir.scope {
+// BEFORE-NEXT: [[TMP:%.*]] = cir.va.arg [[VAR_LIST]] : (!cir.ptr<!ty_22__va_list22>) -> !cir.ptr<!void>
+// BEFORE-NEXT: }
+// BEFORE-NEXT: cir.return
 
-// AFTER: !ty_22__va_list22 = !cir.struct<struct "__va_list" {!cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.ptr<!cir.void>, !cir.int<s, 32>, !cir.int<s, 32>}
-// AFTER:  cir.func @f1(%arg0: !s32i, ...) -> !s32i
-// AFTER:  [[RETP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// AFTER:  [[RESP:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["res", init]
-// AFTER:  cir.va.start [[VARLIST:%.*]] : !cir.ptr<!ty_22__va_list22>
-// AFTER:  [[GR_OFFS_P:%.*]] = cir.get_member [[VARLIST]][3] {name = "gr_offs"} : !cir.ptr<!ty_22__va_list22> -> !cir.ptr<!s32i>
-// AFTER:  [[GR_OFFS:%.*]] = cir.load [[GR_OFFS_P]] : !cir.ptr<!s32i>, !s32i
+// AFTER: cir.func @f1(%arg0: !ty_22__va_list22) attributes
+// AFTER: [[VARLIST:%.*]] = cir.alloca !ty_22__va_list22, !cir.ptr<!ty_22__va_list22>, ["c", init] {alignment = 8 : i64}
+// AFTER: cir.store %arg0, [[VARLIST]] : !ty_22__va_list22, !cir.ptr<!ty_22__va_list22>
+// AFTER: cir.scope {
+//
+// AFTER-NEXT: [[GR_OFFS_P:%.*]] = cir.get_member [[VARLIST]][3] {name = "gr_offs"} : !cir.ptr<!ty_22__va_list22> -> !cir.ptr<!s32i>
+// AFTER-NEXT: [[GR_OFFS:%.*]] = cir.load [[GR_OFFS_P]] : !cir.ptr<!s32i>
 // AFTER:  [[ZERO:%.*]] = cir.const #cir.int<0> : !s32i
 // AFTER:  [[CMP0:%.*]] = cir.cmp(ge, [[GR_OFFS]], [[ZERO]]) : !s32i, !cir.bool
 // AFTER-NEXT:  cir.brcond [[CMP0]] [[BB_ON_STACK:\^bb.*]], [[BB_MAY_REG:\^bb.*]]
@@ -71,21 +60,18 @@ int f1(int n, ...) {
 // stack's argument saving area.
 // Or from ON_STACK block which means arg is passed in from caller's stack area.
 // AFTER-NEXT: [[BB_END]]([[BLK_ARG:%.*]]: !cir.ptr<!void>):  // 2 preds: [[BB_IN_REG]], [[BB_ON_STACK]]
-// AFTER-NEXT:  [[TMP0:%.*]] = cir.cast(bitcast, [[BLK_ARG]] : !cir.ptr<!void>), !cir.ptr<!s32i>
-// AFTER-NEXT:  [[TMP1:%.*]] = cir.load [[TMP0]] : !cir.ptr<!s32i>, !s32i
-// AFTER:   cir.store [[TMP1]], [[RESP]] : !s32i, !cir.ptr<!s32i>
-// AFTER:   cir.va.end [[VARLIST]] : !cir.ptr<!ty_22__va_list22>
-// AFTER:   [[RES:%.*]] = cir.load [[RESP]] : !cir.ptr<!s32i>, !s32i
-// AFTER:   cir.store [[RES]], [[RETP]] : !s32i, !cir.ptr<!s32i>
-// AFTER:  [[RETV:%.*]] = cir.load [[RETP]] : !cir.ptr<!s32i>, !s32i
-// AFTER:   cir.return [[RETV]] : !s32i
+// AFTER-NEXT:  [[TMP0:%.*]] = cir.cast(bitcast, [[BLK_ARG]] : !cir.ptr<!void>), !cir.ptr<!cir.ptr<!void>>
+// AFTER-NEXT:  [[TMP1:%.*]] = cir.load [[TMP0]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// AFTER-NEXT: cir.yield
+// AFTER-NEXT: }
+// AFTER-NEXT: cir.return
 
 // LLVM: %struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
-// LLVM: define i32 @f1(i32 %0, ...)
-// LLVM: [[ARGN:%.*]] = alloca i32, i64 1, align 4,
-// LLVM: [[RETP:%.*]] = alloca i32, i64 1, align 4,
-// LLVM: [[RESP:%.*]] = alloca i32, i64 1, align 4,
-// LLVM: call void @llvm.va_start.p0(ptr [[VARLIST:%.*]]),
+// LLVM: define void @f1(%struct.__va_list %0)
+// LLVM: [[VARLIST:%.*]] = alloca %struct.__va_list, i64 1, align 8,
+// LLVM: br label %[[SCOPE_FRONT:.*]],
+
+// LLVM: [[SCOPE_FRONT]]: ; preds = %1
 // LLVM: [[GR_OFFS_P:%.*]] = getelementptr %struct.__va_list, ptr [[VARLIST]], i32 0, i32 3
 // LLVM: [[GR_OFFS:%.*]] = load i32, ptr [[GR_OFFS_P]], align 4,
 // LLVM-NEXT: [[CMP0:%.*]] = icmp sge i32 [[GR_OFFS]], 0,
@@ -113,10 +99,8 @@ int f1(int n, ...) {
 
 // LLVM: [[BB_END]]: ; preds = %[[BB_ON_STACK]], %[[BB_IN_REG]]
 // LLVM-NEXT: [[PHIP:%.*]] = phi ptr [ [[IN_REG_OUTPUT]], %[[BB_IN_REG]] ], [ [[STACK_V]], %[[BB_ON_STACK]] ]
-// LLVM-NEXT: [[PHIV:%.*]] = load i32, ptr [[PHIP]], align 4,
-// LLVM-NEXT: store i32 [[PHIV]], ptr [[RESP]], align 4,
-// LLVM: call void @llvm.va_end.p0(ptr [[VARLIST]]),
-// LLVM: [[RES:%.*]] = load i32, ptr [[RESP]], align 4,
-// LLVM: store i32 [[RES]], ptr [[RETP]], align 4,
-// LLVM: [[RETV:%.*]] = load i32, ptr [[RETP]], align 4,
-// LLVM-NEXT: ret i32 [[RETV]],
+// LLVM-NEXT: [[PHIV:%.*]] = load ptr, ptr [[PHIP]], align 8,
+// LLVM-NEXT: br label %[[OUT_SCOPE:.*]],
+
+// LLVM: [[OUT_SCOPE]]: ; preds = %[[BB_END]]
+// LLVM-NEXT:  ret void,
