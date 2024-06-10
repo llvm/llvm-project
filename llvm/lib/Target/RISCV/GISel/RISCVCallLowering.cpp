@@ -106,12 +106,10 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     // anyextend before copying.
     if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
         ((VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::i64) &&
-         VA.getValVT() == MVT::f16))
-      ValVReg =
-          MIRBuilder
-              .buildAnyExt(LLT::scalar(VA.getLocVT().getScalarSizeInBits()),
-                           ValVReg)
-              .getReg(0);
+         VA.getValVT() == MVT::f16)) {
+      LLT DstTy = LLT::scalar(VA.getLocVT().getScalarSizeInBits());
+      ValVReg = MIRBuilder.buildAnyExt(DstTy, ValVReg).getReg(0);
+    }
 
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
