@@ -208,10 +208,7 @@ BlockT *LoopBase<BlockT, LoopT>::getLoopPreheader() const {
     return nullptr;
 
   // Make sure there is only one exit out of the preheader.
-  typedef GraphTraits<BlockT *> BlockTraits;
-  typename BlockTraits::ChildIteratorType SI = BlockTraits::child_begin(Out);
-  ++SI;
-  if (SI != BlockTraits::child_end(Out))
+  if (!llvm::hasSingleElement(llvm::children<BlockT *>(Out)))
     return nullptr; // Multiple exits from the block, must not be a preheader.
 
   // The predecessor has exactly one successor, so it is a preheader.
