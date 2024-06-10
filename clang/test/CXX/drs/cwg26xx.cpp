@@ -1,10 +1,15 @@
-// RUN: %clang_cc1 -std=c++98 -pedantic-errors %s -verify=expected
+// RUN: %clang_cc1 -std=c++98 -pedantic-errors %s -verify=expected,cxx98
 // RUN: %clang_cc1 -std=c++11 -pedantic-errors %s -verify=expected,since-cxx11,cxx11
 // RUN: %clang_cc1 -std=c++14 -pedantic-errors %s -verify=expected,since-cxx11
 // RUN: %clang_cc1 -std=c++17 -pedantic-errors %s -verify=expected,since-cxx11
 // RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
 
 namespace std {
 #if __cplusplus >= 202002L
@@ -22,8 +27,10 @@ namespace std {
   typedef int int32_t;
   typedef unsigned uint32_t;
   typedef long long int64_t;
+  // cxx98-error@-1 {{'long long' is a C++11 extension}}
   typedef unsigned long long uint64_t;
-  __extension__ _Static_assert(sizeof(int16_t) == 2 && sizeof(int32_t) == 4 && sizeof(int64_t) == 8, "Some tests rely on these sizes");
+  // cxx98-error@-1 {{'long long' is a C++11 extension}}
+  static_assert(sizeof(int16_t) == 2 && sizeof(int32_t) == 4 && sizeof(int64_t) == 8, "Some tests rely on these sizes");
 
   template<typename T> T declval();
 }
