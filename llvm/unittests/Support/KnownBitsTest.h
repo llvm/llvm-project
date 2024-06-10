@@ -38,6 +38,12 @@ void ForeachNumInKnownBits(const KnownBits &Known, FnTy Fn) {
   unsigned Max = 1u << Bits;
   unsigned Zero = Known.Zero.getZExtValue();
   unsigned One = Known.One.getZExtValue();
+
+  if (Zero & One) {
+    // Known has a conflict. No values will satisfy it.
+    return;
+  }
+
   for (unsigned N = 0; N < Max; ++N) {
     if ((N & Zero) == 0 && (~N & One) == 0)
       Fn(APInt(Bits, N));
