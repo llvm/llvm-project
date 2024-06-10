@@ -14426,10 +14426,9 @@ Overview:
 The '``llvm.instrprof.mcdc.tvbitmap.update``' intrinsic is used to track MC/DC
 test vector execution after each boolean expression has been fully executed.
 The overall value of the condition bitmap, after it has been successively
-updated using the '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic with
-the true or false evaluation of each condition, uniquely identifies an executed
-MC/DC test vector and is used as a bit index into the global test vector
-bitmap.
+updated with the true or false evaluation of each condition, uniquely identifies
+an executed MC/DC test vector and is used as a bit index into the global test
+vector bitmap.
 
 Arguments:
 """"""""""
