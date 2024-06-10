@@ -40,15 +40,11 @@ class ModuleLoadedNotifysTestCase(TestBase):
     def test_launch_notifications(self):
         """Test that lldb broadcasts newly loaded libraries in batches."""
 
-        ext = "so"
-        if self.platformIsDarwin():
-            ext = "dylib"
-
         expected_solibs = [
-            "libloadunload_a." + ext,
-            "libloadunload_b." + ext,
-            "libloadunload_c." + ext,
-            "libloadunload_d." + ext,
+            "lib_a." + self.platformContext.shlib_extension,
+            "lib_b." + self.platformContext.shlib_extension,
+            "lib_c." + self.platformContext.shlib_extension,
+            "lib_d." + self.platformContext.shlib_extension,
         ]
 
         self.build()
@@ -154,7 +150,4 @@ class ModuleLoadedNotifysTestCase(TestBase):
         # On Linux we get events for ld.so, [vdso], the binary and then all libraries,
         # but the different configurations could load a different number of .so modules
         # per event.
-        self.assertGreaterEqual(
-            len(set(max_solib_chunk_per_event).intersection(expected_solibs)),
-            len(expected_solibs),
-        )
+        self.assertLessEqual(set(expected_solibs), set(max_solib_chunk_per_event))
