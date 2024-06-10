@@ -684,8 +684,6 @@ defm atomic_load_xor : binary_atomic_op_all_as<atomic_load_xor>;
 defm atomic_load_fadd : binary_atomic_op_fp_all_as<atomic_load_fadd>;
 defm atomic_load_uinc_wrap : binary_atomic_op_all_as<atomic_load_uinc_wrap>;
 defm atomic_load_udec_wrap : binary_atomic_op_all_as<atomic_load_udec_wrap>;
-let MemoryVT = v2f16 in
-defm atomic_load_fadd_v2f16 : binary_atomic_op_fp_all_as<atomic_load_fadd>;
 defm AMDGPUatomic_cmp_swap : binary_atomic_op_all_as<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,
