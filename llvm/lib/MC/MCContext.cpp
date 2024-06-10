@@ -264,13 +264,9 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
 }
 
 MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
-                                  bool CanBeUnnamed) {
-  if (CanBeUnnamed && !UseNamesOnTempLabels)
-    return createSymbolImpl(nullptr, true);
-
+                                  bool IsTemporary) {
   // Determine whether this is a user written assembler temporary or normal
   // label, if used.
-  bool IsTemporary = CanBeUnnamed;
   if (AllowTemporaryLabels && !IsTemporary)
     IsTemporary = Name.starts_with(MAI->getPrivateGlobalPrefix());
 
@@ -298,6 +294,9 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
 }
 
 MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
+  if (!UseNamesOnTempLabels)
+    return createSymbolImpl(nullptr, /*IsTemporary=*/true);
+
   SmallString<128> NameSV;
   raw_svector_ostream(NameSV) << MAI->getPrivateGlobalPrefix() << Name;
   return createSymbol(NameSV, AlwaysAddSuffix, true);
