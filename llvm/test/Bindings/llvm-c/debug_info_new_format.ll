@@ -11,7 +11,10 @@
 ; CHECK-NEXT:     #dbg_declare(i64 0, !40, !DIExpression(), !43)
 ; CHECK-NEXT:   br label %vars
 ; CHECK:      vars:
+; CHECK-NEXT:   %p1 = phi i64 [ 0, %entry ]
+; CHECK-NEXT:   %p2 = phi i64 [ 0, %entry ]
 ; CHECK-NEXT:     #dbg_value(i64 0, !41, !DIExpression(DW_OP_constu, 0, DW_OP_stack_value), !44)
+; CHECK-NEXT:   %a = add i64 %p1, %p2
 ; CHECK-NEXT:   ret i64 0
 ; CHECK-NEXT: }
 
