@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-int-range-inference -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -int-range-optimizations -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @launch_func
 func.func @launch_func(%arg0 : index) {
