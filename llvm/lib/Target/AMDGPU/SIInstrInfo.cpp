@@ -5662,6 +5662,26 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
     default:
       break;
     }
+  } else if (IsAllocatable) {
+    switch (RCID) {
+    case AMDGPU::VGPR_32_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_32RegClassID;
+      break;
+    case AMDGPU::VGPR_32_Lo256_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_32_Lo256RegClassID;
+      break;
+    case AMDGPU::VGPR_32_Lo128_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_32_Lo128RegClassID;
+      break;
+    case AMDGPU::VGPR_16_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_16RegClassID;
+      break;
+    case AMDGPU::VGPR_16_Lo128_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_16_Lo128RegClassID;
+      break;
+    default:
+      break;
+    }
   }
 
   return RI.getProperlyAlignedRC(RI.getRegClass(RCID));
