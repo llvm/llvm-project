@@ -34,7 +34,30 @@ namespace json {
 } // namespace json
 
 
-// RUN: %check_clang_tidy %s cppcoreguidelines-prefer-at-over-subscript-operator %t
+class ExcludedClass1 {
+  public:
+    int operator[](unsigned i) {
+      return 1;
+    }
+    int at(unsigned i) {
+      return 1;
+    }
+};
+
+class ExcludedClass2 {
+  public:
+    int operator[](unsigned i) {
+      return 1;
+    }
+    int at(unsigned i) {
+      return 1;
+    }
+};
+
+
+// RUN: %check_clang_tidy %s \
+// RUN: cppcoreguidelines-prefer-at-over-subscript-operator %t -- \
+// RUN: -config='{CheckOptions: {cppcoreguidelines-prefer-at-over-subscript-operator.ExcludeClasses: "ExcludedClass1;ExcludedClass2"}}'
 std::array<int, 3> a;
 
 auto b = a[0];
@@ -63,3 +86,14 @@ auto t = s[0];
 
 json::node<int> n;
 auto m = n[0];
+
+//explicitely excluded classes / struct / template
+ExcludedClass1 E1;
+auto x1 = E1[0];
+
+ExcludedClass2 E2;
+auto x2 = E1[0];
+
+std::map<int,int> TestMap;
+auto y = TestMap[0];
+
