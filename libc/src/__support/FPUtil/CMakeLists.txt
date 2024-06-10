@@ -217,7 +217,6 @@ add_header_library(
     .nearest_integer_operations
     .normal_float
     libc.hdr.math_macros
-    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
