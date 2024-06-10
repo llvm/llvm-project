@@ -1159,12 +1159,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, ConstantInt::getFalse(II.getType()));
     break;
   }
-  case Intrinsic::amdgcn_buffer_store_format:
   case Intrinsic::amdgcn_raw_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
   case Intrinsic::amdgcn_raw_tbuffer_store:
   case Intrinsic::amdgcn_struct_tbuffer_store:
-  case Intrinsic::amdgcn_tbuffer_store:
   case Intrinsic::amdgcn_image_store_1d:
   case Intrinsic::amdgcn_image_store_1darray:
   case Intrinsic::amdgcn_image_store_2d:
@@ -1383,8 +1381,6 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {
-  case Intrinsic::amdgcn_buffer_load:
-  case Intrinsic::amdgcn_buffer_load_format:
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:
@@ -1398,7 +1394,6 @@ std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
   case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
   case Intrinsic::amdgcn_struct_tbuffer_load:
   case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-  case Intrinsic::amdgcn_tbuffer_load:
     return simplifyAMDGCNMemoryIntrinsicDemanded(IC, II, DemandedElts);
   default: {
     if (getAMDGPUImageDMaskIntrinsic(II.getIntrinsicID())) {
