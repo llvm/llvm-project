@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbplatformutil
+from lldbgdbserverutils import Pipe
 import lldbdap_testcase
 import os
 import shutil
@@ -16,28 +17,6 @@ import tempfile
 import threading
 import sys
 import socket
-import select
-
-
-# A class representing a pipe for communicating with debug server.
-# This class includes menthods to open the pipe and read the port number from it.
-class Pipe(object):
-    def __init__(self, prefix):
-        self.name = os.path.join(prefix, "stub_port_number")
-        os.mkfifo(self.name)
-        self._fd = os.open(self.name, os.O_RDONLY | os.O_NONBLOCK)
-
-    def finish_connection(self, timeout):
-        pass
-
-    def read(self, size, timeout):
-        (readers, _, _) = select.select([self._fd], [], [], timeout)
-        if self._fd not in readers:
-            raise TimeoutError
-        return os.read(self._fd, size)
-
-    def close(self):
-        os.close(self._fd)
 
 
 class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
@@ -119,7 +98,8 @@ class TestDAP_attachByPortNum(lldbdap_testcase.DAPTestCaseBase):
         # It is not necessary to launch "lldb-server" to obtain the actual port and pid for attaching.
         # However, when providing the port number and pid directly, "lldb-dap" throws an error message, which is expected.
         # So, used random pid and port numbers here.
-	pid = 1354
+
+        pid = 1354
         port = 1234
 
         response = self.attach(
