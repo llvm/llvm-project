@@ -42,7 +42,7 @@ Additions:
   * rsqrt*
   * __STDC_IEC_60559_DFP__ functions (_Decimal32, _Decimal64, _Decimal128)
   * compoundn*
-  * totalorder*
+  * totalorder* |check|
   * totalordermag*
   * getpayload*
   * setpayload*

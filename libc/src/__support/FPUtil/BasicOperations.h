@@ -240,6 +240,49 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
   return 0;
 }
 
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+totalorder(const T *x, const T *y) {
+  using FPBits = FPBits<T>;
+  FPBits xbits(*x);
+  FPBits ybits(*y);
+
+  if (LIBC_UNLIKELY(xbits.is_zero() && ybits.is_zero() || xbits.is_nan() ||
+                    ybits.is_nan())) {
+    // totalOrder(−0, +0) is true. totalOrder(+0, -0) is false.
+    if (xbits.is_zero() && ybits.is_zero()) {
+      Sign xsign = xbits.sign();
+      Sign ysign = ybits.sign();
+      return (xsign == Sign::NEG && ysign == Sign::POS) || xsign == ysign;
+    }
+
+    // totalOrder(−NaN, y) is true. totalOrder(+NaN, y) is false.
+    if (!ybits.is_nan())
+      return xbits.is_neg();
+    // totalOrder(x, +NaN) is true. totalOrder(x, -NaN) is false.
+    if (!xbits.is_nan())
+      return ybits.is_pos();
+
+    // Negative sign orders below positive sign.
+    if (xbits.is_neg() && ybits.is_pos())
+      return true;
+    if (xbits.is_pos() && ybits.is_neg())
+      return false;
+
+    // Signaling orders below quiet for +NaN, reverse for −NaN.
+    if (xbits.is_quiet_nan() && ybits.is_signaling_nan())
+      return xbits.is_neg();
+    if (xbits.is_signaling_nan() && ybits.is_quiet_nan())
+      return ybits.is_pos();
+
+    // Otherwise, the order of NaNs is implementation-defined (IEEE 754-2019).
+    // We order by payload.
+    return xbits.get_nan_payload() <= ybits.get_nan_payload();
+  }
+
+  return xbits.get_val() <= ybits.get_val();
+}
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 

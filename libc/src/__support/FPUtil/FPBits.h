@@ -708,6 +708,10 @@ public:
   LIBC_INLINE constexpr void set_significand(StorageType sigVal) {
     bits = UP::merge(bits, sigVal, SIG_MASK);
   }
+
+  LIBC_INLINE constexpr StorageType get_nan_payload() const {
+    return bits & (FRACTION_MASK >> 1);
+  }
   // Unsafe function to create a floating point representation.
   // It simply packs the sign, biased exponent and mantissa values without
   // checking bound nor normalization.

@@ -3509,3 +3509,15 @@ add_fp_unittest(
     libc.src.math.powf
     libc.src.__support.FPUtil.fp_bits
 )
+
+add_fp_unittest(
+  totalorderf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    totalorderf16_test.cpp
+  HDRS
+    TotalOrderTest.h
+  DEPENDS
+    libc.src.math.totalorderf16
+)
