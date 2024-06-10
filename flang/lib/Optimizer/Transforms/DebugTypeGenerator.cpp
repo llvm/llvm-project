@@ -28,7 +28,7 @@ template <int DescriptorField>
 std::uint64_t getComponentOffset(const mlir::DataLayout &dl,
                                  mlir::MLIRContext *context,
                                  mlir::Type llvmFieldType) {
-  assert(DescriptorField > 0 && DescriptorField < 10);
+  static_assert(DescriptorField > 0 && DescriptorField < 10);
   mlir::Type previousFieldType =
       getDescFieldTypeModel<DescriptorField - 1>()(context);
   std::uint64_t previousOffset =
@@ -61,7 +61,7 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m)
   // descriptors like lower_bound and extent for each dimension.
   mlir::Type llvmDimsType = getDescFieldTypeModel<kDimsPosInBox>()(context);
   dimsOffset = getComponentOffset<kDimsPosInBox>(*dl, context, llvmDimsType);
-  dimsSize = dl->getTypeSize(getDescFieldTypeModel<kDimsPosInBox>()(context));
+  dimsSize = dl->getTypeSize(llvmDimsType);
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
