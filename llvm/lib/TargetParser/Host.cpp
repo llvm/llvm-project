@@ -2005,14 +2005,23 @@ struct RISCVHwProbe {
   uint64_t Value;
 };
 bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
-  RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0}};
+  RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
+                       {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
   if (Ret != 0)
     return false;
 
-  uint64_t ExtMask = Query[0].Value;
+  uint64_t BaseMask = Query[0].Value;
+  // Check whether RISCV_HWPROBE_BASE_BEHAVIOR_IMA is set.
+  if (BaseMask & 1) {
+    Features["i"] = true;
+    Features["m"] = true;
+    Features["a"] = true;
+  }
+
+  uint64_t ExtMask = Query[1].Value;
   Features["f"] = ExtMask & (1 << 0);           // RISCV_HWPROBE_IMA_FD
   Features["d"] = ExtMask & (1 << 0);           // RISCV_HWPROBE_IMA_FD
   Features["c"] = ExtMask & (1 << 1);           // RISCV_HWPROBE_IMA_C
