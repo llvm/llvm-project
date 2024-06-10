@@ -482,11 +482,13 @@ class MachineBlockPlacement : public MachineFunctionPass {
       MachineBasicBlock *BB, MachineBasicBlock *&LPred,
       const MachineBasicBlock *LoopHeaderBB,
       BlockChain &Chain, BlockFilterSet *BlockFilter,
-      MachineFunction::iterator &PrevUnplacedBlockIt);
+      MachineFunction::iterator &PrevUnplacedBlockIt,
+      BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt);
   bool maybeTailDuplicateBlock(
       MachineBasicBlock *BB, MachineBasicBlock *LPred,
       BlockChain &Chain, BlockFilterSet *BlockFilter,
       MachineFunction::iterator &PrevUnplacedBlockIt,
+      BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
       bool &DuplicatedToLPred);
   bool hasBetterLayoutPredecessor(
       const MachineBasicBlock *BB, const MachineBasicBlock *Succ,
@@ -1900,7 +1902,8 @@ void MachineBlockPlacement::buildChain(
     // Check for that now.
     if (allowTailDupPlacement() && BestSucc && ShouldTailDup) {
       repeatedlyTailDuplicateBlock(BestSucc, BB, LoopHeaderBB, Chain,
-                                       BlockFilter, PrevUnplacedBlockIt);
+                                   BlockFilter, PrevUnplacedBlockIt,
+                                   PrevUnplacedBlockInFilterIt);
       // If the chosen successor was duplicated into BB, don't bother laying
       // it out, just go round the loop again with BB as the chain end.
       if (!BB->isSuccessor(BestSucc))
@@ -3052,11 +3055,13 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
     MachineBasicBlock *BB, MachineBasicBlock *&LPred,
     const MachineBasicBlock *LoopHeaderBB,
     BlockChain &Chain, BlockFilterSet *BlockFilter,
-    MachineFunction::iterator &PrevUnplacedBlockIt) {
+    MachineFunction::iterator &PrevUnplacedBlockIt,
+    BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt) {
   bool Removed, DuplicatedToLPred;
   bool DuplicatedToOriginalLPred;
   Removed = maybeTailDuplicateBlock(BB, LPred, Chain, BlockFilter,
                                     PrevUnplacedBlockIt,
+                                    PrevUnplacedBlockInFilterIt,
                                     DuplicatedToLPred);
   if (!Removed)
     return false;
@@ -3080,6 +3085,7 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
     DupPred = *std::prev(ChainEnd);
     Removed = maybeTailDuplicateBlock(DupBB, DupPred, Chain, BlockFilter,
                                       PrevUnplacedBlockIt,
+                                      PrevUnplacedBlockInFilterIt,
                                       DuplicatedToLPred);
   }
   // If BB was duplicated into LPred, it is now scheduled. But because it was
@@ -3110,6 +3116,7 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     MachineBasicBlock *BB, MachineBasicBlock *LPred,
     BlockChain &Chain, BlockFilterSet *BlockFilter,
     MachineFunction::iterator &PrevUnplacedBlockIt,
+    BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
     bool &DuplicatedToLPred) {
   DuplicatedToLPred = false;
   if (!shouldTailDuplicate(BB))
@@ -3151,7 +3158,16 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
 
         // Handle the filter set
         if (BlockFilter) {
-          BlockFilter->remove(RemBB);
+          auto It = llvm::find(*BlockFilter, RemBB);
+          if (It != BlockFilter->end()) {
+            if (It < PrevUnplacedBlockInFilterIt) {
+              auto Distance = PrevUnplacedBlockInFilterIt - It - 1;
+              PrevUnplacedBlockInFilterIt = BlockFilter->erase(It) + Distance;
+            } else if (It == PrevUnplacedBlockInFilterIt)
+              PrevUnplacedBlockInFilterIt = BlockFilter->erase(It);
+            else
+              BlockFilter->erase(It);
+          }
         }
 
         // Remove the block from loop info.
