@@ -326,12 +326,11 @@ static cl::opt<bool> KeepARanges(
         "keep or generate .debug_aranges section if .gdb_index is written"),
     cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool>
-DeterministicDebugInfo("deterministic-debuginfo",
-  cl::desc("disables parallel execution of tasks that may produce "
-           "nondeterministic debug info"),
-  cl::init(true),
-  cl::cat(BoltCategory));
+static cl::opt<bool> DeterministicDebugInfo(
+    "deterministic-debuginfo",
+    cl::desc("disables parallel execution of tasks that may produce "
+             "nondeterministic debug info"),
+    cl::init(true), cl::cat(BoltCategory));
 
 static cl::opt<std::string> DwarfOutputPath(
     "dwarf-output-path",
@@ -1870,8 +1869,7 @@ void DWARFRewriter::updateDWP(DWARFUnit &CU,
 
   DebugRangeListsSectionWriter *RangeListssWriter = nullptr;
   if (CU.getVersion() == 5) {
-    assert(RangeListsWriter &&
-           "No RangeListsWriter for DWO ID.");
+    assert(RangeListsWriter && "No RangeListsWriter for DWO ID.");
     RangeListssWriter = RangeListsWriter.get();
   }
   auto AddType = [&](unsigned int Index, uint32_t IndexVersion, uint64_t Offset,
@@ -2019,8 +2017,7 @@ void DWARFRewriter::writeDWOFiles(
 
   DebugRangeListsSectionWriter *RangeListssWriter = nullptr;
   if (CU.getVersion() == 5) {
-    assert(RangeListsWriter &&
-           "No RangeListsWriter for DWO ID.");
+    assert(RangeListsWriter && "No RangeListsWriter for DWO ID.");
     RangeListssWriter = RangeListsWriter.get();
 
     // Handling .debug_rnglists.dwo separately. The original .o/.dwo might not

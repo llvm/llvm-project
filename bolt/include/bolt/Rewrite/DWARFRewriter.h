@@ -82,7 +82,7 @@ private:
   using LocWriters = std::map<uint64_t, std::unique_ptr<DebugLocWriter>>;
   /// Use a separate location list writer for each compilation unit
   LocWriters LocListWritersByCU;
-  
+
   /// Stores and serializes information that will be put in to the
   /// .debug_rnglists DWARF section.
   /// Instance is created per DWO.
