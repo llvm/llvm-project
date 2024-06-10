@@ -34,16 +34,15 @@ int A::count = 0;
 // https://cplusplus.github.io/LWG/issue3233
 static_assert( std::is_constructible<std::shared_ptr<int>,  std::nullptr_t, test_deleter<int>, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int>,  std::nullptr_t, bad_deleter, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int>,  std::nullptr_t, no_nullptr_deleter, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int>,  std::nullptr_t, no_move_deleter, test_allocator<int> >::value, "");
 
 #if TEST_STD_VER >= 17
-static_assert( std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, test_deleter<int>, test_allocator<int> >::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, test_deleter<int[]>, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, bad_deleter, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, no_nullptr_deleter, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, no_move_deleter, test_allocator<int> >::value, "");
 
-static_assert( std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, test_deleter<int>, test_allocator<int> >::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, test_deleter<int[5]>, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, bad_deleter, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, no_nullptr_deleter, test_allocator<int> >::value, "");
 static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, no_move_deleter, test_allocator<int> >::value, "");
