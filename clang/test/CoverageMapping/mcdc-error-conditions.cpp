@@ -1,7 +1,23 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,COND7,TV
+
+// RUN: %clang_cc1 -fmcdc-max-test-vectors=8 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,COND7,TV
+// RUN: %clang_cc1 -fmcdc-max-test-vectors=7 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,TV7,TV
+
+// RUN: %clang_cc1 -fmcdc-max-conditions=287 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,COND7,TV
+// RUN: %clang_cc1 -fmcdc-max-conditions=286 -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,COND7,COND
+// RUN: %clang_cc1 -fmcdc-max-conditions=7   -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,COND7,COND
+// RUN: %clang_cc1 -fmcdc-max-conditions=6   -triple %itanium_abi_triple -std=c++11 -fcoverage-mcdc -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only %s 2>&1| FileCheck %s --check-prefixes=CHECK,COND6,COND
+
+bool func_conditions(bool a, bool b, bool c, bool d, bool e, bool f, bool g) {
+  //   TV7: :[[@LINE+2]]:10: warning: unsupported MC/DC boolean expression; number of test vectors (8) exceeds max
+  // COND6: :[[@LINE+1]]:10: warning: unsupported MC/DC boolean expression; number of conditions (7) exceeds max
+  return a && b && c && d && e && f && g;
+}
 
 // From clang-tidy/misc/MisleadingIdentifier.cpp
-bool func_conditions(unsigned CP) {
+bool func_isR(unsigned CP) {
+  //   TV: :[[@LINE+2]]:10: warning: unsupported MC/DC boolean expression; number of test vectors (2147483647) exceeds max
+  // COND: :[[@LINE+1]]:10: warning: unsupported MC/DC boolean expression; number of conditions (287) exceeds max
   return (CP == 0x0590) || (CP == 0x05BE) || (CP == 0x05C0) || (CP == 0x05C3) ||
          (CP == 0x05C6) || (0x05C8 <= CP && CP <= 0x05CF) ||
          (0x05D0 <= CP && CP <= 0x05EA) || (0x05EB <= CP && CP <= 0x05EE) ||
@@ -82,6 +98,11 @@ bool func_conditions(unsigned CP) {
          (0x1ECC0 <= CP && CP <= 0x1ECFF) || (0x1ED50 <= CP && CP <= 0x1EDFF);
 }
 
-// CHECK: warning: unsupported MC/DC boolean expression; number of test vectors{{.*}} exceeds max
+// CHECK: _Z15func_conditionsbbbbbbb:
+//   TV8-NOT: Decision,
+// COND6-NOT: Decision,
+//     COND7: Decision,File 0, {{[0-9]+}}:10 -> {{[0-9]+}}:41 = M:8, C:7
+// CHECK: _Z8func_isRj:
 // CHECK-NOT: Decision,
 // CHECK-NOT: Branch,{{.*}}]
+//     CHECK: Branch,File 0, [[@LINE-10]]:64 -> [[@LINE-10]]:77 =
