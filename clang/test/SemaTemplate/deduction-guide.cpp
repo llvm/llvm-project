@@ -336,6 +336,50 @@ namespace TTP {
 // CHECK-NEXT:        `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0{{$}}
 // CHECK-NEXT:          `-TemplateTypeParm {{.+}} 'T'{{$}}
 
+namespace GH64625 {
+
+template <class T> struct X {
+  T t[2];
+};
+
+X x = {{1, 2}}, y = {1, 2};
+
+// CHECK-LABEL: Dumping GH64625::<deduction guide for X>:
+// CHECK-NEXT: FunctionTemplateDecl {{.+}} <{{.+}}:[[#@LINE - 7]]:1, col:27> col:27 implicit <deduction guide for X>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} <col:11, col:17> col:17 referenced class depth 0 index 0 T
+// CHECK:      |-CXXDeductionGuideDecl {{.+}} <col:27> col:27 implicit <deduction guide for X> 'auto (T (&&)[2]) -> X<T>' aggregate 
+// CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:27> col:27 'T (&&)[2]'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:27> col:27 implicit used <deduction guide for X> 'auto (int (&&)[2]) -> GH64625::X<int>' implicit_instantiation aggregate 
+// CHECK-NEXT:  |-TemplateArgument type 'int'
+// CHECK-NEXT:  | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:  `-ParmVarDecl {{.+}} <col:27> col:27 'int (&&)[2]'
+// CHECK-NEXT: FunctionProtoType {{.+}} 'auto (T (&&)[2]) -> X<T>' dependent trailing_return
+// CHECK-NEXT: |-InjectedClassNameType {{.+}} 'X<T>' dependent
+// CHECK-NEXT: | `-CXXRecord {{.+}} 'X'
+// CHECK-NEXT: `-RValueReferenceType {{.+}} 'T (&&)[2]' dependent
+// CHECK-NEXT:  `-ConstantArrayType {{.+}} 'T[2]' dependent 2 
+// CHECK-NEXT:    `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT:      `-TemplateTypeParm {{.+}} 'T'
+
+// Brace-elision version:
+// CHECK:      |-CXXDeductionGuideDecl {{.+}} <col:27> col:27 implicit <deduction guide for X> 'auto (T, T) -> X<T>' aggregate 
+// CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:27> col:27 'T'
+// CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:27> col:27 'T'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:27> col:27 implicit used <deduction guide for X> 'auto (int, int) -> GH64625::X<int>' implicit_instantiation aggregate 
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.+}} <col:27> col:27 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.+}} <col:27> col:27 'int'
+// CHECK-NEXT: FunctionProtoType {{.+}} 'auto (T, T) -> X<T>' dependent trailing_return
+// CHECK-NEXT: |-InjectedClassNameType {{.+}} 'X<T>' dependent
+// CHECK-NEXT: | `-CXXRecord {{.+}} 'X'
+// CHECK-NEXT: |-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT: | `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT: `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT:  `-TemplateTypeParm {{.+}} 'T'
+
+} // namespace GH64625
+
 namespace GH83368 {
 
 template <int N> struct A {
@@ -344,13 +388,20 @@ template <int N> struct A {
 
 A a{.f1 = {1}};
 
+// CHECK-LABEL: Dumping GH83368::<deduction guide for A>:
+// CHECK-NEXT: FunctionTemplateDecl 0x{{.+}} <{{.+}}:[[#@LINE - 7]]:1, col:25> col:25 implicit <deduction guide for A>
+// CHECK-NEXT: |-NonTypeTemplateParmDecl {{.+}} <col:11, col:15> col:15 referenced 'int' depth 0 index 0 N
+// CHECK:      |-CXXDeductionGuideDecl {{.+}} <col:25> col:25 implicit <deduction guide for A> 'auto (int (&&)[N]) -> A<N>' aggregate
+// CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:25> col:25 'int (&&)[N]'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:25> col:25 implicit used <deduction guide for A> 'auto (int (&&)[1]) -> GH83368::A<1>' implicit_instantiation aggregate 
+// CHECK-NEXT:   |-TemplateArgument integral '1'
+// CHECK-NEXT:   `-ParmVarDecl {{.+}} <col:25> col:25 'int (&&)[1]'
+// CHECK-NEXT: FunctionProtoType {{.+}} 'auto (int (&&)[N]) -> A<N>' dependent trailing_return
+// CHECK-NEXT: |-InjectedClassNameType {{.+}} 'A<N>' dependent
+// CHECK-NEXT: | `-CXXRecord {{.+}} 'A'
+// CHECK-NEXT: `-RValueReferenceType {{.+}} 'int (&&)[N]' dependent
+// CHECK-NEXT:   `-DependentSizedArrayType {{.+}} 'int[N]' dependent
+// CHECK-NEXT:     |-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:     `-DeclRefExpr {{.+}} <col:10> 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
+
 } // namespace GH83368
-
-namespace GH64625 {
-template <class T> struct X {
-  T t[2];
-};
-
-X x = {{1, 2}};
-
-} // namespace GH64625
