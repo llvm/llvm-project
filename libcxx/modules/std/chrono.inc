@@ -223,8 +223,11 @@ export namespace std {
 #  if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM) &&                            \
       !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 
+#    if 0
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
+#    endif // if 0
+
     using std::chrono::time_zone;
 
 #    if 0
