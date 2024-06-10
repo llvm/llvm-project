@@ -507,9 +507,8 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
   }
 
   for (MachineInstr *MI : toErase) {
-    if (Indexes) {
+    if (Indexes)
       Indexes->removeMachineInstrFromMaps(*MI);
-    }
     MI->eraseFromParent();
   }
 
