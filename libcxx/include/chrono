@@ -786,6 +786,9 @@ class time_zone {
 bool operator==(const time_zone& x, const time_zone& y) noexcept;                // C++20
 strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;    // C++20
 
+// [time.zone.zonedtraits], class template zoned_traits
+template<class T> struct zoned_traits;                                           // C++20
+
 // [time.zone.leap], leap second support
 class leap_second {                                                              // C++20
 public:
@@ -959,6 +962,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #    include <__chrono/time_zone_link.h>
 #    include <__chrono/tzdb.h>
 #    include <__chrono/tzdb_list.h>
+#    include <__chrono/zoned_time.h>
 #  endif
 
 #endif
