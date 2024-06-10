@@ -4786,8 +4786,6 @@ public:
 
   static bool MayBeDependent(SourceLocIdentKind Kind) {
     switch (Kind) {
-    case SourceLocIdentKind::Function:
-    case SourceLocIdentKind::FuncSig:
     case SourceLocIdentKind::SourceLocStruct:
       return true;
     default:
