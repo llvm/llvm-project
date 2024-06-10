@@ -16,7 +16,6 @@
 #include "rounding_mode.h"
 
 #include "hdr/math_macros.h"
-#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/__support/CPP/type_traits.h"
@@ -103,7 +102,7 @@ intlogb(U x) {
     return IntLogbConstants<T>::T_MAX;
   }
 
-  DyadicFloat<cpp::max(FPBits<U>::STORAGE_LEN, 32)> normal(bits.get_val());
+  DyadicFloat<FPBits<U>::STORAGE_LEN> normal(bits.get_val());
   int exponent = normal.get_unbiased_exponent();
   // The C standard does not specify the return value when an exponent is
   // out of int range. However, XSI conformance required that INT_MAX or
@@ -139,7 +138,7 @@ LIBC_INLINE constexpr T logb(T x) {
     return FPBits<T>::inf().get_val();
   }
 
-  DyadicFloat<cpp::max(FPBits<T>::STORAGE_LEN, 32)> normal(bits.get_val());
+  DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
   return static_cast<T>(normal.get_unbiased_exponent());
 }
 
