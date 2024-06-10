@@ -774,6 +774,10 @@ class time_zone {
   template<class Duration>
   sys_time<common_type_t<Duration, seconds>>
     to_sys(const local_time<Duration>& tp) const;
+
+  template<class Duration>
+  sys_time<common_type_t<Duration, seconds>>
+    to_sys(const local_time<Duration>& tp, choose z) const;
 };
 bool operator==(const time_zone& x, const time_zone& y) noexcept;                // C++20
 strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;    // C++20
