@@ -385,3 +385,13 @@ void TypeSystemMap::RemoveTypeSystemsForLanguage(lldb::LanguageType language) {
   }
 }
 // END SWIFT
+bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
+  if (language == eLanguageTypeUnknown)
+    return false;
+
+  LanguageSet languages =
+      PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
+  if (languages.Empty())
+    return false;
+  return languages[language];
+}
