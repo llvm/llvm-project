@@ -423,12 +423,15 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
 /// Return true if we can prove that all callees pass in a valid pointer for the
 /// specified function argument.
-static bool allCallersPassValidPointerForArgument(Argument *Arg,
-                                                  Align NeededAlign,
-                                                  uint64_t NeededDerefBytes) {
+static bool allCallersPassValidPointerForArgument(
+    Argument *Arg, SmallPtrSet<CallBase *, 4> &RecursiveCalls,
+    Align NeededAlign, uint64_t NeededDerefBytes) {
   Function *Callee = Arg->getParent();
   const DataLayout &DL = Callee->getDataLayout();
   APInt Bytes(64, NeededDerefBytes);
+
+  if (RecursiveCalls.size())
+    return true;
 
   // Check if the argument itself is marked dereferenceable and aligned.
   if (isDereferenceableAndAlignedPointer(Arg, NeededAlign, Bytes, DL))
@@ -571,6 +574,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   SmallVector<const Use *, 16> Worklist;
   SmallPtrSet<const Use *, 16> Visited;
   SmallVector<LoadInst *, 16> Loads;
+  SmallPtrSet<CallBase *, 4> RecursiveCalls;
   auto AppendUses = [&](const Value *V) {
     for (const Use &U : V->uses())
       if (Visited.insert(&U).second)
@@ -644,8 +648,9 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
         return false;
 
       int64_t Off = Offset.getSExtValue();
-      auto Pair = ArgParts.try_emplace(Off, ArgPart{PtrTy, PtrAlign, nullptr});
-      ArgPart &Part = Pair.first->second;
+      if (Off)
+        LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
+                          << "pointer offset is not equal to zero\n");
 
       // We limit promotion to only promoting up to a fixed number of elements
       // of the aggregate.
@@ -655,7 +660,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
         return false;
       }
 
-      Part.Alignment = std::max(Part.Alignment, PtrAlign);
+      RecursiveCalls.insert(CB);
       continue;
     }
     // Unknown user.
@@ -682,9 +687,9 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   //   %resbar = call i32 @fun(ptr %x)
   //   ...
   // }
-  if (!IsRecursive && (NeededDerefBytes || NeededAlign > 1)) {
+  if (NeededDerefBytes || NeededAlign > 1) {
     // Try to prove a required deref / aligned requirement.
-    if (!allCallersPassValidPointerForArgument(Arg, NeededAlign,
+    if (!allCallersPassValidPointerForArgument(Arg, RecursiveCalls, NeededAlign,
                                                NeededDerefBytes)) {
       LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                         << "not dereferenceable or aligned\n");
