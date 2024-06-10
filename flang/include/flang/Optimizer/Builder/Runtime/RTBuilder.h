@@ -309,7 +309,7 @@ constexpr TypeBuilderFunc getModel<std::int64_t>() {
   };
 }
 template <>
-constexpr TypeBuilderFunc getModel<const std::int64_t*>() {
+constexpr TypeBuilderFunc getModel<const std::int64_t *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     TypeBuilderFunc f{getModel<std::int64_t>()};
     return fir::ReferenceType::get(f(context));
