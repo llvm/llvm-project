@@ -1360,7 +1360,7 @@ public:
 
     MacroState &S = CurSubmoduleState->Macros[II];
     auto *MD = S.getLatest();
-    while (MD && isa<VisibilityMacroDirective>(MD))
+    while (isa_and_nonnull<VisibilityMacroDirective>(MD))
       MD = MD->getPrevious();
     return MacroDefinition(dyn_cast_or_null<DefMacroDirective>(MD),
                            S.getActiveModuleMacros(*this, II),

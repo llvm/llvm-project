@@ -2130,7 +2130,7 @@ static bool IsWeakLValue(const LValue &Value) {
 
 static bool isZeroSized(const LValue &Value) {
   const ValueDecl *Decl = GetLValueBaseDecl(Value);
-  if (Decl && isa<VarDecl>(Decl)) {
+  if (isa_and_nonnull<VarDecl>(Decl)) {
     QualType Ty = Decl->getType();
     if (Ty->isArrayType())
       return Ty->isIncompleteType() ||
