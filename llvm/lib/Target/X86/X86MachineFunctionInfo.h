@@ -16,12 +16,42 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <set>
 
 namespace llvm {
 
 enum AMXProgModelEnum { None = 0, DirectReg = 1, ManagedRA = 2 };
+
+class X86MachineFunctionInfo;
+
+namespace yaml {
+template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
+  static void enumeration(IO &YamlIO, AMXProgModelEnum &Value) {
+    YamlIO.enumCase(Value, "None", AMXProgModelEnum::None);
+    YamlIO.enumCase(Value, "DirectReg", AMXProgModelEnum::DirectReg);
+    YamlIO.enumCase(Value, "ManagedRA", AMXProgModelEnum::ManagedRA);
+  }
+};
+
+struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
+  AMXProgModelEnum AMXProgModel;
+
+  X86MachineFunctionInfo() = default;
+  X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~X86MachineFunctionInfo() = default;
+};
+
+template <> struct MappingTraits<X86MachineFunctionInfo> {
+  static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
+    YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
+  }
+};
+} // end namespace yaml
 
 /// X86MachineFunctionInfo - This class is derived from MachineFunction and
 /// contains private X86 target-specific information for each MachineFunction.
@@ -159,6 +189,8 @@ public:
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
+
+  void initializeBaseYamlFields(const yaml::X86MachineFunctionInfo &YamlMFI);
 
   bool getForceFramePointer() const { return ForceFramePointer;}
   void setForceFramePointer(bool forceFP) { ForceFramePointer = forceFP; }
