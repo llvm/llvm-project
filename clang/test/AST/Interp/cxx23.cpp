@@ -1,6 +1,6 @@
 // UNSUPPORTED:  target={{.*}}-zos{{.*}}
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=ref20,all,all20 %s
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=ref23,all %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=ref,ref20,all,all20 %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=ref,ref23,all %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=expected23,all %s -fexperimental-new-constant-interpreter
 
@@ -199,4 +199,16 @@ namespace UndefinedThreeWay {
   constexpr std::strong_ordering (*test_a_threeway)(const A&, const A&) = &operator<=>;
   static_assert(!(*test_a_threeway)(A(), A())); // all-error {{static assertion expression is not an integral constant expression}} \
                                                 // all-note {{undefined function 'operator<=>' cannot be used in a constant expression}}
+}
+
+/// FIXME: The new interpreter is missing the "initializer of q is not a constant expression" diagnostics.a
+/// That's because the cast from void* to int* is considered fine, but diagnosed. So we don't consider
+/// q to be uninitialized.
+namespace VoidCast {
+  constexpr void* p = nullptr;
+  constexpr int* q = static_cast<int*>(p); // all-error {{must be initialized by a constant expression}} \
+                                           // all-note {{cast from 'void *' is not allowed in a constant expression}} \
+                                           // ref-note {{declared here}}
+  static_assert(q == nullptr); // ref-error {{not an integral constant expression}} \
+                               // ref-note {{initializer of 'q' is not a constant expression}}
 }
