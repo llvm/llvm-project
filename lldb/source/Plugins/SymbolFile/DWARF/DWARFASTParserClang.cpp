@@ -1760,7 +1760,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 
   if (attrs.is_forward_declaration) {
     Progress progress(llvm::formatv(
-        "Parsing forward declaration {0}: {1}",
+        "Parsing type in {0}: '{1}'",
         dwarf->GetObjectFile()->GetFileSpec().GetFilename().GetString(),
         attrs.name.GetString()));
 
