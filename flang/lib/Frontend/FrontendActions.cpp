@@ -50,7 +50,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
@@ -81,8 +80,6 @@ using namespace Fortran::frontend;
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
-
-extern llvm::cl::opt<bool> WriteNewDbgInfoFormat;
 
 /// Save the given \c mlirModule to a temporary .mlir file, in a location
 /// decided by the -save-temps flag. No files are produced if the flag is not
@@ -1274,12 +1271,6 @@ void CodeGenAction::executeAction() {
   runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
 
   if (action == BackendActionTy::Backend_EmitLL) {
-    // When printing LLVM IR, we should convert the module to the debug info
-    // format that LLVM expects us to print.
-    llvm::ScopedDbgInfoFormatSetter FormatSetter(*llvmModule,
-                                                 WriteNewDbgInfoFormat);
-    if (WriteNewDbgInfoFormat)
-      llvmModule->removeDebugIntrinsicDeclarations();
     llvmModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream(),
                       /*AssemblyAnnotationWriter=*/nullptr);
     return;
