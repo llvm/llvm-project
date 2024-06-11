@@ -38,6 +38,8 @@ namespace __hwasan {
 
 // We cannot call anything in libc here (see comment above), so we need to
 // assume the biggest allowed page size.
+// Android max page size is defined as 16k here:
+// https://android.googlesource.com/platform/bionic/+/main/libc/platform/bionic/page.h#41
 static constexpr uptr kMaxGranularity = 16384;
 
 // Conservative upper limit.
