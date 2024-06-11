@@ -72,8 +72,7 @@ protected:
 
   DIEToVariableSP &GetDIEToVariable() override;
 
-  llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
-  GetForwardDeclCompilerTypeToDIE() override;
+  CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() override;
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 

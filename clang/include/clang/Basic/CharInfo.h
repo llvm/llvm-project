@@ -151,8 +151,7 @@ LLVM_READONLY inline bool isHexDigit(unsigned char c) {
 /// Note that '_' is both a punctuation character and an identifier character!
 LLVM_READONLY inline bool isPunctuation(unsigned char c) {
   using namespace charinfo;
-  return (InfoTable[c] &
-          (CHAR_UNDER | CHAR_PERIOD | CHAR_PUNCT | CHAR_PUNCT)) != 0;
+  return (InfoTable[c] & (CHAR_UNDER | CHAR_PERIOD | CHAR_PUNCT)) != 0;
 }
 
 /// Return true if this character is an ASCII printable character; that is, a
@@ -177,7 +176,7 @@ LLVM_READONLY inline bool isRawStringDelimBody(unsigned char c) {
   using namespace charinfo;
   return (InfoTable[c] & (CHAR_UPPER | CHAR_LOWER | CHAR_PERIOD | CHAR_DIGIT |
                           CHAR_UNDER | CHAR_PUNCT)) != 0 &&
-         c != '(' && c != ')';
+         c != '(' && c != ')' && c != '\\';
 }
 
 enum class EscapeChar {

@@ -282,7 +282,7 @@ std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
 static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
   uint32_t Count = NumPrefix;
   uint32_t Pos = 0, LastPos = 0;
-  for (auto & CI : PathNameStr) {
+  for (const auto &CI : PathNameStr) {
     ++Pos;
     if (llvm::sys::path::is_separator(CI)) {
       LastPos = Pos;
@@ -1176,16 +1176,6 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
   }
 }
 
-template <class T>
-static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
-  using namespace support;
-
-  if (Orig == llvm::endianness::little)
-    return endian::readNext<T, llvm::endianness::little>(D);
-  else
-    return endian::readNext<T, llvm::endianness::big>(D);
-}
-
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
   return std::unique_ptr<ValueProfData>(new (::operator new(TotalSize))
                                             ValueProfData());
@@ -1224,7 +1214,8 @@ ValueProfData::getValueProfData(const unsigned char *D,
     return make_error<InstrProfError>(instrprof_error::truncated);
 
   const unsigned char *Header = D;
-  uint32_t TotalSize = swapToHostOrder<uint32_t>(Header, Endianness);
+  uint32_t TotalSize = endian::readNext<uint32_t>(Header, Endianness);
+
   if (D + TotalSize > BufferEnd)
     return make_error<InstrProfError>(instrprof_error::too_large);
 
@@ -1308,7 +1299,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
   // Value Profile Data
   uint32_t MDCount = MaxMDCount;
-  for (auto &VD : VDs) {
+  for (const auto &VD : VDs) {
     Vals.push_back(MDHelper.createConstant(
         ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
     Vals.push_back(MDHelper.createConstant(
@@ -1627,91 +1618,72 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
 }
 
 namespace IndexedInstrProf {
-// A C++14 compatible version of the offsetof macro.
-template <typename T1, typename T2>
-inline size_t constexpr offsetOf(T1 T2::*Member) {
-  constexpr T2 Object{};
-  return size_t(&(Object.*Member)) - size_t(&Object);
-}
-
-// Read a uint64_t from the specified buffer offset, and swap the bytes in
-// native endianness if necessary.
-static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
-  using namespace ::support;
-  return endian::read<uint64_t, llvm::endianness::little, unaligned>(Buffer +
-                                                                     Offset);
-}
-
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   using namespace support;
   static_assert(std::is_standard_layout_v<Header>,
-                "The header should be standard layout type since we use offset "
-                "of fields to read.");
+                "Use standard layout for Header for simplicity");
   Header H;
 
-  H.Magic = read(Buffer, offsetOf(&Header::Magic));
+  H.Magic = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   // Check the magic number.
   if (H.Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
-  H.Version = read(Buffer, offsetOf(&Header::Version));
-  if (GET_VERSION(H.Version) > IndexedInstrProf::ProfVersion::CurrentVersion)
+  H.Version = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >
+      IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  switch (GET_VERSION(H.Version)) {
-    // When a new field is added in the header add a case statement here to
-    // populate it.
-    static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
-        "Please update the reading code below if a new field has been added, "
-        "if not add a case statement to fall through to the latest version.");
-  case 12ull:
-    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
-    [[fallthrough]];
-  case 11ull:
-    [[fallthrough]];
-  case 10ull:
-    H.TemporalProfTracesOffset =
-        read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
-    [[fallthrough]];
-  case 9ull:
-    H.BinaryIdOffset = read(Buffer, offsetOf(&Header::BinaryIdOffset));
-    [[fallthrough]];
-  case 8ull:
-    H.MemProfOffset = read(Buffer, offsetOf(&Header::MemProfOffset));
-    [[fallthrough]];
-  default: // Version7 (when the backwards compatible header was introduced).
-    H.HashType = read(Buffer, offsetOf(&Header::HashType));
-    H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));
-  }
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+                "Please update the reader as needed when a new field is added "
+                "or when indexed profile version gets bumped.");
 
+  Buffer += sizeof(uint64_t); // Skip Header.Unused field.
+  H.HashType = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  H.HashOffset = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 8)
+    H.MemProfOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 9)
+    H.BinaryIdOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  // Version 11 is handled by this condition.
+  if (H.getIndexedProfileVersion() >= 10)
+    H.TemporalProfTracesOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 12)
+    H.VTableNamesOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   return H;
 }
 
+uint64_t Header::getIndexedProfileVersion() const {
+  return GET_VERSION(Version);
+}
+
 size_t Header::size() const {
-  switch (GET_VERSION(Version)) {
-    // When a new field is added to the header add a case statement here to
-    // compute the size as offset of the new field + size of the new field. This
-    // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
-                  "Please update the size computation below if a new field has "
-                  "been added to the header, if not add a case statement to "
-                  "fall through to the latest version.");
+  switch (getIndexedProfileVersion()) {
+    // To retain backward compatibility, new fields must be appended to the end
+    // of the header, and byte offset of existing fields shouldn't change when
+    // indexed profile version gets incremented.
+    static_assert(
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+        "Please update the size computation below if a new field has "
+        "been added to the header; for a version bump without new "
+        "fields, add a case statement to fall through to the latest version.");
   case 12ull:
-    return offsetOf(&Header::VTableNamesOffset) +
-           sizeof(Header::VTableNamesOffset);
+    return 72;
   case 11ull:
     [[fallthrough]];
   case 10ull:
-    return offsetOf(&Header::TemporalProfTracesOffset) +
-           sizeof(Header::TemporalProfTracesOffset);
+    return 64;
   case 9ull:
-    return offsetOf(&Header::BinaryIdOffset) + sizeof(Header::BinaryIdOffset);
+    return 56;
   case 8ull:
-    return offsetOf(&Header::MemProfOffset) + sizeof(Header::MemProfOffset);
+    return 48;
   default: // Version7 (when the backwards compatible header was introduced).
-    return offsetOf(&Header::HashOffset) + sizeof(Header::HashOffset);
+    return 40;
   }
 }
 

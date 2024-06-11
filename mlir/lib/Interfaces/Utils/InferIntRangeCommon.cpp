@@ -76,7 +76,7 @@ static ConstantIntRanges minMaxBy(ConstArithFn op, ArrayRef<APInt> lhs,
 //===----------------------------------------------------------------------===//
 
 ConstantIntRanges
-mlir::intrange::inferIndexOp(InferRangeFn inferFn,
+mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
                              ArrayRef<ConstantIntRanges> argRanges,
                              intrange::CmpMode mode) {
   ConstantIntRanges sixtyFour = inferFn(argRanges);

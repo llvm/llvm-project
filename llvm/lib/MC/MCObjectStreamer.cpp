@@ -175,8 +175,11 @@ void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 }
 
 void MCObjectStreamer::reset() {
-  if (Assembler)
+  if (Assembler) {
     Assembler->reset();
+    if (getContext().getTargetOptions())
+      Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
+  }
   CurInsertionPoint = MCSection::iterator();
   EmitEHFrame = true;
   EmitDebugFrame = false;
@@ -199,7 +202,7 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 MCFragment *MCObjectStreamer::getCurrentFragment() const {
   assert(getCurrentSectionOnly() && "No current section!");
 
-  if (CurInsertionPoint != getCurrentSectionOnly()->getFragmentList().begin())
+  if (CurInsertionPoint != getCurrentSectionOnly()->begin())
     return &*std::prev(CurInsertionPoint);
 
   return nullptr;

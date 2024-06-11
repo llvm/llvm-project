@@ -14,6 +14,7 @@
 //   b. Promoted instruction (EVEX) -> pre-promotion instruction (legacy/VEX)
 //   c. NDD (EVEX) -> non-NDD (legacy)
 //   d. NF_ND (EVEX) -> NF (EVEX)
+//   e. NonNF (EVEX) -> NF (EVEX)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -30,6 +31,9 @@
 //
 // Compression d can help hardware decode (HW may skip reading the NDD
 // register) although the instruction length remains unchanged.
+//
+// Compression e can help hardware skip updating EFLAGS although the instruction
+// length remains unchanged.
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
@@ -177,7 +181,8 @@ static bool isRedundantNewDataDest(MachineInstr &MI, const X86Subtarget &ST) {
   const MCInstrDesc &Desc = MI.getDesc();
   Register Reg0 = MI.getOperand(0).getReg();
   const MachineOperand &Op1 = MI.getOperand(1);
-  if (!Op1.isReg() || X86::getFirstAddrOperandIdx(MI) == 1)
+  if (!Op1.isReg() || X86::getFirstAddrOperandIdx(MI) == 1 ||
+      X86::isCFCMOVCC(MI.getOpcode()))
     return false;
   Register Reg1 = Op1.getReg();
   if (Reg1 == Reg0)
@@ -219,25 +224,36 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     return false;
   // MOVBE*rr is special because it has semantic of NDD but not set EVEX_B.
   bool IsNDLike = IsND || Opc == X86::MOVBE32rr || Opc == X86::MOVBE64rr;
-  if (IsNDLike && !isRedundantNewDataDest(MI, ST))
+  bool IsRedundantNDD = IsNDLike ? isRedundantNewDataDest(MI, ST) : false;
+  // NonNF -> NF only if it's not a compressible NDD instruction and eflags is
+  // dead.
+  unsigned NFOpc = (ST.hasNF() && !IsRedundantNDD &&
+                    MI.registerDefIsDead(X86::EFLAGS, /*TRI=*/nullptr))
+                       ? X86::getNFVariant(Opc)
+                       : 0U;
+  if (IsNDLike && !IsRedundantNDD && !NFOpc)
     return false;
 
-  ArrayRef<X86TableEntry> Table = ArrayRef(X86CompressEVEXTable);
+  unsigned NewOpc = NFOpc;
+  if (!NewOpc) {
+    ArrayRef<X86TableEntry> Table = ArrayRef(X86CompressEVEXTable);
 
-  Opc = MI.getOpcode();
-  const auto *I = llvm::lower_bound(Table, Opc);
-  if (I == Table.end() || I->OldOpc != Opc) {
-    assert(!IsNDLike && "Missing entry for ND-like instruction");
-    return false;
-  }
-
-  if (!IsNDLike) {
-    if (usesExtendedRegister(MI) || !checkPredicate(I->NewOpc, &ST) ||
-        !performCustomAdjustments(MI, I->NewOpc))
+    Opc = MI.getOpcode();
+    const auto I = llvm::lower_bound(Table, Opc);
+    if (I == Table.end() || I->OldOpc != Opc) {
+      assert(!IsNDLike && "Missing entry for ND-like instruction");
       return false;
+    }
+
+    if (!IsNDLike) {
+      if (usesExtendedRegister(MI) || !checkPredicate(I->NewOpc, &ST) ||
+          !performCustomAdjustments(MI, I->NewOpc))
+        return false;
+    }
+    NewOpc = I->NewOpc;
   }
 
-  const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(I->NewOpc);
+  const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(NewOpc);
   MI.setDesc(NewDesc);
   unsigned AsmComment;
   switch (NewDesc.TSFlags & X86II::EncodingMask) {
@@ -256,7 +272,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
     llvm_unreachable("Unknown EVEX compression");
   }
   MI.setAsmPrinterFlag(AsmComment);
-  if (IsNDLike)
+  if (IsRedundantNDD)
     MI.tieOperands(0, 1);
 
   return true;

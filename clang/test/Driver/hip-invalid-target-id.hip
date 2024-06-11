@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --offload-arch=gfx908 \
 // RUN:   --offload-arch=gfx908xnack \

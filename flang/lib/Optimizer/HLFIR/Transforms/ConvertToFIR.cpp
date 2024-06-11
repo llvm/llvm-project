@@ -348,7 +348,17 @@ public:
       // Helper to generate the hlfir fir.box with the local lower bounds and
       // type parameters.
       auto genHlfirBox = [&]() -> mlir::Value {
-        if (!mlir::isa<fir::BaseBoxType>(firBase.getType())) {
+        if (auto baseBoxType =
+                mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
+          // Rebox so that lower bounds are correct.
+          if (baseBoxType.isAssumedRank())
+            return builder.create<fir::ReboxAssumedRankOp>(
+                loc, hlfirBaseType, firBase,
+                fir::LowerBoundModifierAttribute::SetToOnes);
+          return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
+                                              declareOp.getShape(),
+                                              /*slice=*/mlir::Value{});
+        } else {
           llvm::SmallVector<mlir::Value> typeParams;
           auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(
               fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType)));
@@ -358,11 +368,6 @@ public:
           return builder.create<fir::EmboxOp>(
               loc, hlfirBaseType, firBase, declareOp.getShape(),
               /*slice=*/mlir::Value{}, typeParams);
-        } else {
-          // Rebox so that lower bounds are correct.
-          return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
-                                              declareOp.getShape(),
-                                              /*slice=*/mlir::Value{});
         }
       };
       if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())

@@ -18,7 +18,7 @@ llvm::MutableArrayRef<int> MutableArrayRef(Array);
 llvm::DenseMap<int, int> DenseMap = {{4, 5}, {6, 7}};
 llvm::StringMap<int> StringMap = {{"foo", 123}, {"bar", 456}};
 llvm::Expected<int> ExpectedValue(8);
-llvm::Expected<int> ExpectedError(llvm::createStringError({}, ""));
+llvm::Expected<int> ExpectedError(llvm::createStringError(""));
 std::optional<int> OptionalValue(9);
 std::optional<int> OptionalNone(std::nullopt);
 llvm::SmallVector<int, 5> SmallVector = {10, 11, 12};

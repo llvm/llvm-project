@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // By default FE assumes -fhip-new-launch-api.
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -offload-arch=gfx906 \ 

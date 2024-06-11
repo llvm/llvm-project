@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
 #define _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
 
-#include <__availability>
 #include <__config>
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
