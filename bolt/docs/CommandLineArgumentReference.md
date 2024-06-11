@@ -614,6 +614,17 @@
 
 - `--lite-threshold-pct=<uint>`
 
+  Threshold (in percent) of matched profile at which stale profile inference is
+  applied to functions. Argument corresponds to the sum of matched execution
+  counts of function blocks divided by the sum of execution counts of function
+  blocks. E.g if the sum of a function blocks' execution counts is 100, the sum
+  of the function blocks' matched execution counts is 10, and the argument is 15
+  (15%), profile inference will not be applied to that function. A higher
+  threshold will correlate with fewer functions to process in cases of stale
+  profile. Default set to %5.
+
+- `--matched-profile-threshold=<uint>`
+
   Threshold (in percent) for selecting functions to process in lite mode. Higher
   threshold means fewer functions to process. E.g threshold of 90 means only top
   10 percent of functions with profile will be processed.
