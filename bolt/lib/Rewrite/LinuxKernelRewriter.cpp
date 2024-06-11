@@ -1362,6 +1362,14 @@ Error LinuxKernelRewriter::readAltInstructions() {
 
       LLVM_DEBUG(dbgs() << "Matched .altinstructions format\n");
 
+      if (!opts::AltInstHasPadLen.getNumOccurrences())
+        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstHasPadLen.ArgStr
+                  << '=' << AltInstHasPadLen << '\n';
+
+      if (!opts::AltInstFeatureSize.getNumOccurrences())
+        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstFeatureSize.ArgStr
+                  << '=' << AltInstFeatureSize << '\n';
+
       return tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
                                     /*ParseOnly*/ false);
     }
