@@ -91,9 +91,12 @@ void populateSimplifyPackAndUnpackPatterns(RewritePatternSet &patterns);
 /// respectively.
 void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
 
+using ControlFoldFn = std::function<bool(OpOperand *)>;
+
 /// Populates `patterns` with patterns that replace tensor ops (such as
 /// tensor.generate) with constants when possible.
-void populateRewriteAsConstantPatterns(RewritePatternSet &patterns);
+void populateRewriteAsConstantPatterns(RewritePatternSet &patterns,
+                                       const ControlFoldFn &controlFn);
 
 //===----------------------------------------------------------------------===//
 // Transform helpers

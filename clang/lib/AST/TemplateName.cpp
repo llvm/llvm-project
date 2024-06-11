@@ -214,23 +214,6 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
   return nullptr;
 }
 
-TemplateName TemplateName::getNameToSubstitute() const {
-  TemplateDecl *Decl = getAsTemplateDecl();
-
-  // Substituting a dependent template name: preserve it as written.
-  if (!Decl)
-    return *this;
-
-  // If we have a template declaration, use the most recent non-friend
-  // declaration of that template.
-  Decl = cast<TemplateDecl>(Decl->getMostRecentDecl());
-  while (Decl->getFriendObjectKind()) {
-    Decl = cast<TemplateDecl>(Decl->getPreviousDecl());
-    assert(Decl && "all declarations of template are friends");
-  }
-  return TemplateName(Decl);
-}
-
 TemplateNameDependence TemplateName::getDependence() const {
   auto D = TemplateNameDependence::None;
   switch (getKind()) {
@@ -376,15 +359,4 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
   OS << '\'';
   OS.flush();
   return DB << NameStr;
-}
-
-void TemplateName::dump(raw_ostream &OS) const {
-  LangOptions LO;  // FIXME!
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  print(OS, PrintingPolicy(LO));
-}
-
-LLVM_DUMP_METHOD void TemplateName::dump() const {
-  dump(llvm::errs());
 }
