@@ -46,7 +46,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTree>();
     AU.addRequired<MachineUniformityAnalysisPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -192,7 +192,7 @@ void DivergenceLoweringHelper::constrainAsLaneMask(Incoming &In) {
 
 INITIALIZE_PASS_BEGIN(AMDGPUGlobalISelDivergenceLowering, DEBUG_TYPE,
                       "AMDGPU GlobalISel divergence lowering", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
 INITIALIZE_PASS_END(AMDGPUGlobalISelDivergenceLowering, DEBUG_TYPE,
@@ -209,7 +209,8 @@ FunctionPass *llvm::createAMDGPUGlobalISelDivergenceLoweringPass() {
 
 bool AMDGPUGlobalISelDivergenceLowering::runOnMachineFunction(
     MachineFunction &MF) {
-  MachineDominatorTree &DT = getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree &DT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachinePostDominatorTree &PDT = getAnalysis<MachinePostDominatorTree>();
   MachineUniformityInfo &MUI =
       getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
