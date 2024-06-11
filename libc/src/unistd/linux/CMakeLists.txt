@@ -116,7 +116,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-    libc.src.unistd.pathconf_utils
+    libc.src.unistd.linux.pathconf_utils
 )
 
 add_entrypoint_object(
@@ -298,7 +298,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
-    libc.src.unistd.pathconf_utils
+    libc.src.unistd.linux.pathconf_utils
 )
 
 add_object_library(
