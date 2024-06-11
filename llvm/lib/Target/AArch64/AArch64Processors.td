@@ -741,11 +741,12 @@ def ProcessorFeatures {
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
                                      FeatureFP16FML, FeatureSHA3];
   list<SubtargetFeature> AppleA14 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
-                                     FeatureNEON, FeaturePerfMon, FeatureFRInt3264,
-                                     FeatureSpecRestrict, FeatureSSBS, FeatureSB,
-                                     FeaturePredRes, FeatureCacheDeepPersist,
+                                     FeatureNEON, FeaturePerfMon,
                                      FeatureFullFP16, FeatureFP16FML, FeatureSHA3,
-                                     FeatureAltFPCmp];
+                                     // ArmV8.5-a extensions, excluding BTI:
+                                     FeatureAltFPCmp, FeatureFRInt3264,
+                                     FeatureSpecRestrict, FeatureSSBS, FeatureSB,
+                                     FeaturePredRes, FeatureCacheDeepPersist];
   list<SubtargetFeature> AppleA15 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML];

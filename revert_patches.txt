@@ -76,3 +76,12 @@ Revert: Breaks check-clang test 'clang/test/Modules/pr60085.cppm'
 99873b35da7e [NFC] [AST] Introduce Decl::isInAnotherModuleUnit and Decl::shouldEmitInExternalSource
 contact : mhalk (Michael Halkenhaeuser)
 ---
+Revert:  breaks composableKernel
+53d2f4d96783 [CUDA][HIP] warn incompatible redeclare (#77359)     
+contact : Ronl or Sam
+---
+Revert: breaks MIOpen 
+18ec885a2604 [RFC][AMDGPU] Remove old llvm.amdgcn.buffer.* and tbuffer intrinsics (#93801)     
+contact: Ron and Jay
+---
+

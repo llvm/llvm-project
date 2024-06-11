@@ -122,6 +122,14 @@ AArch64::parseArchExtension(StringRef ArchExt) {
   return {};
 }
 
+std::optional<AArch64::ExtensionInfo>
+AArch64::targetFeatureToExtension(StringRef TargetFeature) {
+  for (const auto &E : Extensions)
+    if (TargetFeature == E.Feature)
+      return E;
+  return {};
+}
+
 std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
   // Resolve aliases first.
   Name = resolveCPUAlias(Name);
@@ -213,21 +221,6 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
       disable(Dep.Later);
 }
 
-void AArch64::ExtensionSet::toLLVMFeatureList(
-    std::vector<StringRef> &Features) const {
-  if (BaseArch && !BaseArch->ArchFeature.empty())
-    Features.push_back(BaseArch->ArchFeature);
-
-  for (const auto &E : Extensions) {
-    if (E.Feature.empty() || !Touched.test(E.ID))
-      continue;
-    if (Enabled.test(E.ID))
-      Features.push_back(E.Feature);
-    else
-      Features.push_back(E.NegFeature);
-  }
-}
-
 void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
   LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << CPU.Name << ")\n");
   BaseArch = &CPU.Arch;
@@ -247,11 +240,18 @@ void AArch64::ExtensionSet::addArchDefaults(const ArchInfo &Arch) {
       enable(E.ID);
 }
 
-bool AArch64::ExtensionSet::parseModifier(StringRef Modifier) {
+bool AArch64::ExtensionSet::parseModifier(StringRef Modifier,
+                                          const bool AllowNoDashForm) {
   LLVM_DEBUG(llvm::dbgs() << "parseModifier(" << Modifier << ")\n");
 
-  bool IsNegated = Modifier.starts_with("no");
-  StringRef ArchExt = IsNegated ? Modifier.drop_front(2) : Modifier;
+  size_t NChars = 0;
+  // The "no-feat" form is allowed in the target attribute but nowhere else.
+  if (AllowNoDashForm && Modifier.starts_with("no-"))
+    NChars = 3;
+  else if (Modifier.starts_with("no"))
+    NChars = 2;
+  bool IsNegated = NChars != 0;
+  StringRef ArchExt = Modifier.drop_front(NChars);
 
   if (auto AE = parseArchExtension(ArchExt)) {
     if (AE->Feature.empty() || AE->NegFeature.empty())
@@ -263,6 +263,21 @@ bool AArch64::ExtensionSet::parseModifier(StringRef Modifier) {
     return true;
   }
   return false;
+}
+
+void AArch64::ExtensionSet::reconstructFromParsedFeatures(
+    const std::vector<std::string> &Features) {
+  assert(Touched.none() && "Bitset already initialized");
+  for (auto &F : Features) {
+    bool IsNegated = F[0] == '-';
+    if (auto AE = targetFeatureToExtension(F)) {
+      Touched.set(AE->ID);
+      if (IsNegated)
+        Enabled.reset(AE->ID);
+      else
+        Enabled.set(AE->ID);
+    }
+  }
 }
 
 const AArch64::ExtensionInfo &
