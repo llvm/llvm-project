@@ -265,6 +265,17 @@ totalordermag(T x, T y) {
   return FPBits<T>(x).abs().uintval() <= FPBits<T>(y).abs().uintval();
 }
 
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
+  using FPBits = FPBits<T>;
+  FPBits x_bits(x);
+
+  if (!x_bits.is_nan())
+    return T(-1.0);
+
+  return T(x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
+}
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 

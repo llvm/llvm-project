@@ -44,7 +44,7 @@ Additions:
   * compoundn*
   * totalorder* |check|
   * totalordermag* |check|
-  * getpayload*
+  * getpayload* |check|
   * setpayload*
   * iscannonical
   * issignaling

@@ -210,6 +210,8 @@ add_math_entrypoint_object(fromfpxl)
 add_math_entrypoint_object(fromfpxf16)
 add_math_entrypoint_object(fromfpxf128)
 
+add_math_entrypoint_object(getpayloadf16)
+
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
 
