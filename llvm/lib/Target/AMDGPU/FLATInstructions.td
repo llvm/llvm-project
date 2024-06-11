@@ -193,6 +193,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{95-72} = !if(ps.has_offset, offset, ?);
 }
 
+// TODO: Rename to FlatSaddrTable, it now handles both global and flat GVS addressing mode.
 class GlobalSaddrTable <bit is_saddr, string Name = ""> {
   bit IsSaddr = is_saddr;
   string SaddrOp = Name;
@@ -227,9 +228,11 @@ class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
 }
 
 multiclass FLAT_Flat_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
-  def "" : FLAT_Load_Pseudo<opName, regClass, HasTiedInput>;
+  def "" : FLAT_Load_Pseudo<opName, regClass, HasTiedInput>,
+    GlobalSaddrTable<0, opName>;
   let OtherPredicates = [HasFlatGVSMode] in
-  def _SADDR : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1>;
+  def _SADDR : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1>,
+    GlobalSaddrTable<1, opName>;
 }
 
 class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
@@ -250,9 +253,11 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
 }
 
 multiclass FLAT_Flat_Store_Pseudo<string opName, RegisterClass regClass> {
-  def "" : FLAT_Store_Pseudo<opName, regClass>;
+  def "" : FLAT_Store_Pseudo<opName, regClass>,
+    GlobalSaddrTable<0, opName>;
   let OtherPredicates = [HasFlatGVSMode] in
-  def _SADDR : FLAT_Store_Pseudo<opName, regClass, 1, 1>;
+  def _SADDR : FLAT_Store_Pseudo<opName, regClass, 1, 1>,
+    GlobalSaddrTable<1, opName>;
 }
 
 multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
@@ -444,8 +449,10 @@ class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), strin
 }
 
 multiclass FLAT_Flat_Prefetch_Pseudo<string opName> {
-  def "" : FLAT_Prefetch_Pseudo<opName>;
-  def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr"> {
+  def "" : FLAT_Prefetch_Pseudo<opName>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Prefetch_Pseudo<opName, (ins SReg_64:$saddr, VGPR_32:$vaddr), " $vaddr, $saddr">,
+    GlobalSaddrTable<1, opName> {
     let OtherPredicates = [HasFlatGVSMode];
     let enabled_saddr = 1;
   }
@@ -639,7 +646,8 @@ multiclass FLAT_Atomic_Pseudo_NO_RTN<
   def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
     (outs),
     (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_0:$cpol),
-    " $vaddr, $vdata, $saddr$offset$cpol"> {
+    " $vaddr, $vdata, $saddr$offset$cpol">,
+    GlobalSaddrTable<1, opName> {
     let OtherPredicates = [HasFlatGVSMode];
     let has_saddr = 1;
     let enabled_saddr = 1;
@@ -668,7 +676,8 @@ multiclass FLAT_Atomic_Pseudo_RTN<
   def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_op:$vdst),
       (ins VGPR_32:$vaddr, data_op:$vdata, SReg_64:$saddr, flat_offset:$offset, CPol_GLC1:$cpol),
-    " $vdst, $vaddr, $vdata, $saddr$offset$cpol"> {
+    " $vdst, $vaddr, $vdata, $saddr$offset$cpol">,
+    GlobalSaddrTable<1, opName#"_rtn"> {
     let OtherPredicates = [HasFlatGVSMode];
     let has_saddr = 1;
     let enabled_saddr = 1;
