@@ -111,7 +111,8 @@ TargetStats::ToJSON(Target &target,
   const bool include_targets = options.include_targets;
   const bool include_modules = options.include_modules;
   const bool include_transcript = options.include_transcript;
-  const bool include_default_sections = !summary_only && !include_targets && !include_modules && !include_transcript;
+  const bool include_default_sections = !summary_only && !include_targets &&
+                                        !include_modules && !include_transcript;
   if (!summary_only) {
     CollectStats(target);
 
@@ -234,7 +235,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   const bool include_targets = options.include_targets;
   const bool include_modules = options.include_modules;
   const bool include_transcript = options.include_transcript;
-  const bool include_default_sections = !summary_only && !include_targets && !include_modules && !include_transcript;
+  const bool include_default_sections = !summary_only && !include_targets &&
+                                        !include_modules && !include_transcript;
 
   json::Array json_targets;
   json::Array json_modules;
