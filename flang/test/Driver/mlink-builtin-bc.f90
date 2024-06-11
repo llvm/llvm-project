@@ -1,15 +1,12 @@
-
-!----------
-! RUN lines
-!----------
-! Embed something that can be easily checked
-! RUN: %flang_fc1 -emit-llvm -triple x86_64-unknown-linux-gnu -o - -mlink-builtin-bitcode %S/Inputs/bclib.bc %s 2>&1 | FileCheck %s
+! Test -mlink-builtin-bitcode flag
+! RUN: %flang -emit-llvm -c -o %t.bc %S/Inputs/libfun.f90
+! RUN: %flang_fc1 -emit-llvm -o - -mlink-builtin-bitcode %t.bc %s 2>&1 | FileCheck %s
 
 ! CHECK: define internal void @libfun_
 
-! RUN1: not %flang_fc1 -emit-llvm -triple x86_64-unknown-linux-gnu -o - -mlink-builtin-bitcode %S/Inputs/no-bclib.bc %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -emit-llvm -triple x86_64-unknown-linux-gnu -o - -mlink-builtin-bitcode %no-%t.bc %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-! ERROR1: error: could not open {{.*}} no-bclib.bc
+! ERROR: error: could not open {{.*}}.bc
 
 external libfun
 parameter(i=1)
