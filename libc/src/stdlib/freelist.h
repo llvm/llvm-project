@@ -99,7 +99,7 @@ bool FreeList<NUM_BUCKETS>::add_chunk(span<cpp::byte> chunk) {
 
   aliased.bytes = chunk.data();
 
-  unsigned short chunk_ptr = find_chunk_ptr_for_size(chunk.size(), false);
+  size_t chunk_ptr = find_chunk_ptr_for_size(chunk.size(), false);
 
   // Add it to the correct list.
   aliased.node->size = chunk.size();
@@ -114,7 +114,7 @@ span<cpp::byte> FreeList<NUM_BUCKETS>::find_chunk(size_t size) const {
   if (size == 0)
     return span<cpp::byte>();
 
-  unsigned short chunk_ptr = find_chunk_ptr_for_size(size, true);
+  size_t chunk_ptr = find_chunk_ptr_for_size(size, true);
 
   // Check that there's data. This catches the case where we run off the
   // end of the array
@@ -144,7 +144,7 @@ span<cpp::byte> FreeList<NUM_BUCKETS>::find_chunk(size_t size) const {
 
 template <size_t NUM_BUCKETS>
 bool FreeList<NUM_BUCKETS>::remove_chunk(span<cpp::byte> chunk) {
-  unsigned short chunk_ptr = find_chunk_ptr_for_size(chunk.size(), true);
+  size_t chunk_ptr = find_chunk_ptr_for_size(chunk.size(), true);
 
   // Walk that list, finding the chunk.
   union {
