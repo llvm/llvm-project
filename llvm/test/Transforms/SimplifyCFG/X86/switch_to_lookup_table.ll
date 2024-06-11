@@ -39,11 +39,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.covered_switch_with_bit_tests = private unnamed_addr constant [8 x i32] [i32 2, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 1], align 4
 ; CHECK: @switch.table.signed_overflow1 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 1111, i32 2222], align 4
 ; CHECK: @switch.table.signed_overflow2 = private unnamed_addr constant [4 x i32] [i32 3333, i32 4444, i32 poison, i32 2222], align 4
-; CHECK: @switch.table.linearmap_hole_unreachable_default = private unnamed_addr constant [5 x i32] [i32 1, i32 poison, i32 5, i32 7, i32 9], align 4
-; CHECK: @switch.table.linearmap_unreachable_holes_noconsecutive = private unnamed_addr constant [7 x i32] [i32 1, i32 poison, i32 5, i32 poison, i32 9, i32 poison, i32 13], align 4
-; CHECK: @switch.table.linearmap_unreachable_holes_noconsecutive_neg = private unnamed_addr constant [8 x i32] [i32 -1, i32 poison, i32 poison, i32 5, i32 poison, i32 9, i32 poison, i32 13], align 4
 ; CHECK: @switch.table.linearmap_unreachable_holes_noconsecutive_signed_overflow_negative1 = private unnamed_addr constant [7 x i32] [i32 1111, i32 poison, i32 2222, i32 poison, i32 3333, i32 poison, i32 4444], align 4
-; CHECK: @switch.table.linearmap_unreachable_holes_noconsecutive_signed_overflow_negative2 = private unnamed_addr constant [7 x i32] [i32 1111, i32 poison, i32 3333, i32 poison, i32 5555, i32 poison, i32 7777], align 4
 ;.
 define i32 @f(i32 %c) {
 ; CHECK-LABEL: @f(
@@ -2232,9 +2228,9 @@ return:
 define i32 @linearmap_hole_unreachable_default(i32 %x) {
 ; CHECK-LABEL: @linearmap_hole_unreachable_default(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.linearmap_hole_unreachable_default, i32 0, i32 [[X:%.*]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 1
+; CHECK-NEXT:    ret i32 [[SWITCH_OFFSET]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -2259,9 +2255,9 @@ return:
 define i32 @linearmap_unreachable_holes_noconsecutive(i32 %x) {
 ; CHECK-LABEL: @linearmap_unreachable_holes_noconsecutive(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.linearmap_unreachable_holes_noconsecutive, i32 0, i32 [[X:%.*]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 1
+; CHECK-NEXT:    ret i32 [[SWITCH_OFFSET]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -2288,9 +2284,9 @@ define i32 @linearmap_unreachable_holes_noconsecutive_neg(i32 %x) {
 ; CHECK-LABEL: @linearmap_unreachable_holes_noconsecutive_neg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.linearmap_unreachable_holes_noconsecutive_neg, i32 0, i32 [[SWITCH_TABLEIDX]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[SWITCH_TABLEIDX]], 2
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], -1
+; CHECK-NEXT:    ret i32 [[SWITCH_OFFSET]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -2350,10 +2346,10 @@ define i32 @linearmap_unreachable_holes_noconsecutive_signed_overflow_negative2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[X:%.*]] to i3
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i3 [[TRUNC]], -4
-; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i4
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], ptr @switch.table.linearmap_unreachable_holes_noconsecutive_signed_overflow_negative2, i32 0, i4 [[SWITCH_TABLEIDX_ZEXT]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
-; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i3 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[SWITCH_IDX_CAST]], 1111
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 1111
+; CHECK-NEXT:    ret i32 [[SWITCH_OFFSET]]
 ;
 entry:
   %trunc = trunc i32 %x to i3
@@ -2379,11 +2375,10 @@ return:
 define i8 @linearmap_unreachable_holes_noconsecutive_signed_linearmap_inc_nsw(i32 %x) {
 ; CHECK-LABEL: @linearmap_unreachable_holes_noconsecutive_signed_linearmap_inc_nsw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i32 [[X:%.*]] to i56
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i56 [[SWITCH_CAST]], 8
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i56 34058863028011039, [[SWITCH_SHIFTAMT]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i56 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    ret i8 [[SWITCH_MASKED]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i8 [[SWITCH_IDX_CAST]], 15
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i8 [[SWITCH_IDX_MULT]], 31
+; CHECK-NEXT:    ret i8 [[SWITCH_OFFSET]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -2408,11 +2403,10 @@ return:
 define i8 @linearmap_unreachable_holes_noconsecutive_signed_linearmap_inc_wrapped(i32 %x) {
 ; CHECK-LABEL: @linearmap_unreachable_holes_noconsecutive_signed_linearmap_inc_wrapped(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i32 [[X:%.*]] to i56
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i56 [[SWITCH_CAST]], 8
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i56 -36028384697909216, [[SWITCH_SHIFTAMT]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i56 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    ret i8 [[SWITCH_MASKED]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i8 [[SWITCH_IDX_CAST]], 16
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i8 [[SWITCH_IDX_MULT]], 32
+; CHECK-NEXT:    ret i8 [[SWITCH_OFFSET]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -2437,11 +2431,10 @@ return:
 define i8 @linearmap_unreachable_holes_noconsecutive_signed_linearmap_dec_nsw(i32 %x) {
 ; CHECK-LABEL: @linearmap_unreachable_holes_noconsecutive_signed_linearmap_dec_nsw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i32 [[X:%.*]] to i56
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i56 [[SWITCH_CAST]], 8
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i56 -36028109811613472, [[SWITCH_SHIFTAMT]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i56 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    ret i8 [[SWITCH_MASKED]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i8 [[SWITCH_IDX_CAST]], -16
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i8 [[SWITCH_IDX_MULT]], -32
+; CHECK-NEXT:    ret i8 [[SWITCH_OFFSET]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -2466,11 +2459,10 @@ return:
 define i8 @linearmap_unreachable_holes_noconsecutive_signed_linearmap_dec_wrapped(i32 %x) {
 ; CHECK-LABEL: @linearmap_unreachable_holes_noconsecutive_signed_linearmap_dec_wrapped(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i32 [[X:%.*]] to i56
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i56 [[SWITCH_CAST]], 8
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i56 34059137914306783, [[SWITCH_SHIFTAMT]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i56 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    ret i8 [[SWITCH_MASKED]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul i8 [[SWITCH_IDX_CAST]], -17
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i8 [[SWITCH_IDX_MULT]], -33
+; CHECK-NEXT:    ret i8 [[SWITCH_OFFSET]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -2496,11 +2488,8 @@ return:
 define i1 @bitset_hole_unreachable_default1(i32 %x) {
 ; CHECK-LABEL: @bitset_hole_unreachable_default1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X:%.*]] to i5
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i5 [[SWITCH_CAST]], 1
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i5 8, [[SWITCH_SHIFTAMT]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i5 [[SWITCH_DOWNSHIFT]] to i1
-; CHECK-NEXT:    ret i1 [[SWITCH_MASKED]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    ret i1 [[SWITCH_IDX_CAST]]
 ;
 entry:
   switch i32 %x, label %sw.default [
@@ -2524,11 +2513,8 @@ return:
 define i1 @bitset_hole_unreachable_default2(i32 %x) {
 ; CHECK-LABEL: @bitset_hole_unreachable_default2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i32 [[X:%.*]] to i6
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i6 [[SWITCH_CAST]], 1
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i6 -32, [[SWITCH_SHIFTAMT]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i6 [[SWITCH_DOWNSHIFT]] to i1
-; CHECK-NEXT:    ret i1 [[SWITCH_MASKED]]
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    ret i1 [[SWITCH_IDX_CAST]]
 ;
 entry:
   switch i32 %x, label %sw.default [
