@@ -35,6 +35,7 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/Z3CrosscheckVisitor.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
@@ -85,6 +86,14 @@ STATISTIC(MaxBugClassSize,
 STATISTIC(MaxValidBugClassSize,
           "The maximum number of bug reports in the same equivalence class "
           "where at least one report is valid (not suppressed)");
+
+STATISTIC(NumTimesReportPassesZ3, "Number of reports passed Z3");
+STATISTIC(NumTimesReportRefuted, "Number of reports refuted by Z3");
+STATISTIC(NumTimesReportEQClassAborted,
+          "Number of times a report equivalence class was aborted by the Z3 "
+          "oracle heuristic");
+STATISTIC(NumTimesReportEQClassWasExhausted,
+          "Number of times all reports of an equivalence class was refuted");
 
 BugReporterVisitor::~BugReporterVisitor() = default;
 
@@ -2834,6 +2843,7 @@ generateVisitorsDiagnostics(PathSensitiveBugReport *R,
 std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
     ArrayRef<PathSensitiveBugReport *> &bugReports,
     PathSensitiveBugReporter &Reporter) {
+  Z3CrosscheckOracle Z3Oracle(Reporter.getAnalyzerOptions());
 
   BugPathGetter BugGraph(&Reporter.getGraph(), bugReports);
 
@@ -2864,21 +2874,35 @@ std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
         // If crosscheck is enabled, remove all visitors, add the refutation
         // visitor and check again
         R->clearVisitors();
-        R->addVisitor<FalsePositiveRefutationBRVisitor>();
+        Z3CrosscheckVisitor::Z3Result CrosscheckResult;
+        R->addVisitor<Z3CrosscheckVisitor>(CrosscheckResult,
+                                           Reporter.getAnalyzerOptions());
 
         // We don't overwrite the notes inserted by other visitors because the
         // refutation manager does not add any new note to the path
         generateVisitorsDiagnostics(R, BugPath->ErrorNode, BRC);
+        switch (Z3Oracle.interpretQueryResult(CrosscheckResult)) {
+        case Z3CrosscheckOracle::RejectReport:
+          ++NumTimesReportRefuted;
+          R->markInvalid("Infeasible constraints", /*Data=*/nullptr);
+          continue;
+        case Z3CrosscheckOracle::RejectEQClass:
+          ++NumTimesReportEQClassAborted;
+          return {};
+        case Z3CrosscheckOracle::AcceptReport:
+          ++NumTimesReportPassesZ3;
+          break;
+        }
       }
 
-      // Check if the bug is still valid
-      if (R->isValid())
-        return PathDiagnosticBuilder(
-            std::move(BRC), std::move(BugPath->BugPath), BugPath->Report,
-            BugPath->ErrorNode, std::move(visitorNotes));
+      assert(R->isValid());
+      return PathDiagnosticBuilder(std::move(BRC), std::move(BugPath->BugPath),
+                                   BugPath->Report, BugPath->ErrorNode,
+                                   std::move(visitorNotes));
     }
   }
 
+  ++NumTimesReportEQClassWasExhausted;
   return {};
 }
 
