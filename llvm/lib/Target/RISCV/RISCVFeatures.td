@@ -221,8 +221,8 @@ def HasStdExtAOrZaamo
                          "'Zaamo' (Atomic Memory Operations)">;
 
 def FeatureStdExtZabha
-    : RISCVExperimentalExtension<"zabha", 1, 0,
-                                 "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
+    : RISCVExtension<"zabha", 1, 0,
+                     "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
 def HasStdExtZabha : Predicate<"Subtarget->hasStdExtZabha()">,
                      AssemblerPredicate<(all_of FeatureStdExtZabha),
                          "'Zabha' (Byte and Halfword Atomic Memory Operations)">;
@@ -476,6 +476,14 @@ def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
                                       "'Zbs' (Single-Bit Instructions)">;
 
 // Bitmanip Extensions for Cryptography Extensions
+
+def FeatureStdExtB
+    : RISCVExtension<"b", 1, 0,
+                     "'B' (the collection of the Zba, Zbb, Zbs extensions)",
+                     [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
+def HasStdExtB : Predicate<"Subtarget->hasStdExtB()">,
+                           AssemblerPredicate<(all_of FeatureStdExtB),
+                           "'B' (the collection of the Zba, Zbb, Zbs extensions)">;
 
 def FeatureStdExtZbkb
     : RISCVExtension<"zbkb", 1, 0,

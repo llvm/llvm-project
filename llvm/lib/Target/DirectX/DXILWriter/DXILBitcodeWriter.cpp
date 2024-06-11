@@ -369,9 +369,8 @@ using namespace llvm::dxil;
 /// Begin dxil::BitcodeWriter Implementation
 ////////////////////////////////////////////////////////////////////////////////
 
-dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer,
-                                   raw_fd_stream *FS)
-    : Buffer(Buffer), Stream(new BitstreamWriter(Buffer, FS, 512)) {
+dxil::BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
+    : Buffer(Buffer), Stream(new BitstreamWriter(Buffer)) {
   // Emit the file header.
   Stream->Emit((unsigned)'B', 8);
   Stream->Emit((unsigned)'C', 8);
@@ -394,7 +393,7 @@ void dxil::WriteDXILToFile(const Module &M, raw_ostream &Out) {
   if (TT.isOSDarwin() || TT.isOSBinFormatMachO())
     Buffer.insert(Buffer.begin(), BWH_HeaderSize, 0);
 
-  BitcodeWriter Writer(Buffer, dyn_cast<raw_fd_stream>(&Out));
+  BitcodeWriter Writer(Buffer);
   Writer.writeModule(M);
 
   // Write the generated bitstream to "Out".
@@ -2160,14 +2159,6 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Record.push_back(VE.getValueID(C->getOperand(0)));
         Record.push_back(VE.getValueID(C->getOperand(1)));
         Record.push_back(VE.getValueID(C->getOperand(2)));
-        break;
-      case Instruction::ICmp:
-      case Instruction::FCmp:
-        Code = bitc::CST_CODE_CE_CMP;
-        Record.push_back(getTypeID(C->getOperand(0)->getType()));
-        Record.push_back(VE.getValueID(C->getOperand(0)));
-        Record.push_back(VE.getValueID(C->getOperand(1)));
-        Record.push_back(CE->getPredicate());
         break;
       }
     } else if (const BlockAddress *BA = dyn_cast<BlockAddress>(C)) {

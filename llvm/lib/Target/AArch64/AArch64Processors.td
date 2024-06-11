@@ -484,6 +484,7 @@ def TuneNeoverseV1 : SubtargetFeature<"neoversev1", "ARMProcFamily", "NeoverseV1
 def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2",
                                       "Neoverse V2 ARM processors", [
                                       FeatureFuseAES,
+                                      FeatureCmpBccFusion,
                                       FeatureFuseAdrpAdd,
                                       FeatureALULSLFast,
                                       FeaturePostRAScheduler,
@@ -616,6 +617,27 @@ def TuneAmpere1B : SubtargetFeature<"ampere1b", "ARMProcFamily", "Ampere1B",
                                     FeatureLdpAlignedOnly,
                                     FeatureStpAlignedOnly]>;
 
+def TuneOryon  : SubtargetFeature<"oryon-1", "ARMProcFamily",
+                                    "Oryon",
+                                    "Nuvia Inc Oryon processors", [
+                                    FeatureCrypto,
+                                    FeatureFPARMv8,
+                                    FeatureNEON,
+                                    FeatureFuseAES,
+                                    FeatureFuseAdrpAdd,
+                                    FeatureEnableSelectOptimize,
+                                    FeatureFuseCryptoEOR,
+                                    FeatureFuseAddress,
+                                    FeatureSM4,
+                                    FeatureSHA2,
+                                    FeatureSHA3,
+                                    FeatureAES,
+                                    FeatureFullFP16,
+                                    FeatureFP16FML,
+                                    FeaturePerfMon,
+                                    FeatureSPE,
+                                    FeaturePostRAScheduler,
+                                    HasV8_6aOps]>;
 
 def ProcessorFeatures {
   list<SubtargetFeature> A53  = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
@@ -719,11 +741,12 @@ def ProcessorFeatures {
                                      FeatureNEON, FeaturePerfMon, FeatureFullFP16,
                                      FeatureFP16FML, FeatureSHA3];
   list<SubtargetFeature> AppleA14 = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
-                                     FeatureNEON, FeaturePerfMon, FeatureFRInt3264,
-                                     FeatureSpecRestrict, FeatureSSBS, FeatureSB,
-                                     FeaturePredRes, FeatureCacheDeepPersist,
+                                     FeatureNEON, FeaturePerfMon,
                                      FeatureFullFP16, FeatureFP16FML, FeatureSHA3,
-                                     FeatureAltFPCmp];
+                                     // ArmV8.5-a extensions, excluding BTI:
+                                     FeatureAltFPCmp, FeatureFRInt3264,
+                                     FeatureSpecRestrict, FeatureSSBS, FeatureSB,
+                                     FeaturePredRes, FeatureCacheDeepPersist];
   list<SubtargetFeature> AppleA15 = [HasV8_6aOps, FeatureCrypto, FeatureFPARMv8,
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML];
@@ -804,6 +827,11 @@ def ProcessorFeatures {
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES, FeatureCSSC,
                                      FeatureWFxT, FeatureFullFP16];
+
+  list<SubtargetFeature> Oryon = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
+                                     FeatureCrypto, FeatureRandGen,
+                                     FeaturePAuth, FeatureSM4, FeatureSHA2,
+                                     FeatureSHA3, FeatureAES];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -987,3 +1015,7 @@ def : ProcessorModel<"ampere1a", Ampere1Model, ProcessorFeatures.Ampere1A,
 
 def : ProcessorModel<"ampere1b", Ampere1BModel, ProcessorFeatures.Ampere1B,
                      [TuneAmpere1B]>;
+
+// Qualcomm Oryon
+def : ProcessorModel<"oryon-1", OryonModel, ProcessorFeatures.Oryon,
+                       [TuneOryon]>;

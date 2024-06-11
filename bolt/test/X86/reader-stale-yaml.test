@@ -1,20 +1,20 @@
-# This script checks that YamlProfileReader in llvm-bolt is reading data
-# correctly and stale data is corrected by profile inference.
+## This script checks that YamlProfileReader in llvm-bolt is reading data
+## correctly and stale data is corrected by profile inference.
 
 REQUIRES: asserts
 RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --infer-stale-profile=0 --profile-ignore-hash=1 --profile-use-dfs=0 \
 RUN:   2>&1 | FileCheck %s -check-prefix=CHECK0
-# Testing "usqrt"
+## Testing "usqrt"
 RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=usqrt --infer-stale-profile=1 \
 RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 --debug-only=bolt-prof 2>&1 | FileCheck %s -check-prefix=CHECK1
-# Testing "SolveCubic"
+## Testing "SolveCubic"
 RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=SolveCubic --infer-stale-profile=1 \
 RUN:   --profile-ignore-hash=1 --profile-use-dfs=0 --debug-only=bolt-prof 2>&1 | FileCheck %s -check-prefix=CHECK2
-# Testing skipped function
+## Testing skipped function
 RUN: llvm-bolt %t.exe -o %t.null --b %p/Inputs/blarge_profile_stale.yaml \
 RUN:   --print-cfg --print-only=usqrt --infer-stale-profile=1 --skip-funcs=usqrt \
 RUN:   --profile-ignore-hash=1 --profile-use-dfs=0
@@ -23,12 +23,12 @@ CHECK0: BOLT-INFO: 2 out of 7 functions in the binary (28.6%) have non-empty exe
 CHECK0: BOLT-WARNING: 2 (100.0% of all profiled) functions have invalid (possibly stale) profile
 CHECK0: BOLT-WARNING: 1192 out of 1192 samples in the binary (100.0%) belong to functions with invalid (possibly stale) profile
 
-# Function "usqrt" has stale profile, since the number of blocks in the profile
-# (nblocks=6) does not match the size of the CFG in the binary. The entry
-# block (bid=0) has an incorrect (missing) count, which should be inferred by
-# the algorithm.
+## Function "usqrt" has stale profile, since the number of blocks in the profile
+## (nblocks=6) does not match the size of the CFG in the binary. The entry
+## block (bid=0) has an incorrect (missing) count, which should be inferred by
+## the algorithm.
 
-# Verify inference details.
+## Verify inference details.
 CHECK1:  pre-processing profile using YAML profile reader
 CHECK1:  applying profile inference for "usqrt"
 CHECK1: Matched yaml block (bid = 0) with hash 1111111111111111 to BB (index = 0) with hash 36007ba1d80c0000
@@ -38,7 +38,7 @@ CHECK1-NEXT: exact match
 CHECK1:  Matched yaml block (bid = 3) with hash 5c06705524800039 to BB (index = 3) with hash 5c06705524800039
 CHECK1-NEXT: exact match
 
-# Verify that yaml reader works as expected.
+## Verify that yaml reader works as expected.
 CHECK1:    Binary Function "usqrt" after building cfg {
 CHECK1:      State       : CFG constructed
 CHECK1:      Address     : 0x401170
@@ -50,7 +50,7 @@ CHECK1:      Exec Count  : 20
 CHECK1:      Branch Count: 640
 CHECK1:    }
 
-# Verify block counts.
+## Verify block counts.
 CHECK1:    .LBB01 (4 instructions, align : 1)
 CHECK1:      Successors: .Ltmp[[#BB13:]] (mispreds: 0, count: 20)
 CHECK1:    .Ltmp[[#BB13:]] (9 instructions, align : 1)
@@ -60,19 +60,19 @@ CHECK1:      Successors: .Ltmp[[#BB12:]] (mispreds: 0, count: 0)
 CHECK1:    .Ltmp[[#BB12:]] (2 instructions, align : 1)
 CHECK1:      Successors: .Ltmp[[#BB13:]] (mispreds: 0, count: 300), .LFT[[#BB1:]] (mispreds: 0, count: 20)
 CHECK1:    .LFT[[#BB1:]] (2 instructions, align : 1)
-# Check the overall inference stats.
+## Check the overall inference stats.
 CHECK1:  2 out of 7 functions in the binary (28.6%) have non-empty execution profile
 CHECK1:  BOLT-WARNING: 2 (100.0% of all profiled) functions have invalid (possibly stale) profile
 CHECK1:  BOLT-WARNING: 1192 out of 1192 samples in the binary (100.0%) belong to functions with invalid (possibly stale) profile
 CHECK1:  inferred profile for 2 (100.00% of profiled, 100.00% of stale) functions responsible for {{.*}} samples ({{.*}} out of {{.*}})
 
 
-# Function "SolveCubic" has stale profile, since there is one jump in the
-# profile (from bid=13 to bid=2) which is not in the CFG in the binary. The test
-# verifies that the inference is able to match two blocks (bid=1 and bid=13)
-# using "loose" hashes and then correctly propagate the counts.
+## Function "SolveCubic" has stale profile, since there is one jump in the
+## profile (from bid=13 to bid=2) which is not in the CFG in the binary. The test
+## verifies that the inference is able to match two blocks (bid=1 and bid=13)
+## using "loose" hashes and then correctly propagate the counts.
 
-# Verify inference details.
+## Verify inference details.
 CHECK2:  pre-processing profile using YAML profile reader
 CHECK2:  applying profile inference for "SolveCubic"
 CHECK2:  Matched yaml block (bid = 0) with hash 4600940a609c0000 to BB (index = 0) with hash 4600940a609c0000
@@ -86,7 +86,7 @@ CHECK2-NEXT:  loose match
 CHECK2:  Matched yaml block (bid = 5) with hash 6446e1ea500111 to BB (index = 5) with hash 6446e1ea500111
 CHECK2-NEXT:  exact match
 
-# Verify that yaml reader works as expected.
+## Verify that yaml reader works as expected.
 CHECK2:    Binary Function "SolveCubic" after building cfg {
 CHECK2:      State       : CFG constructed
 CHECK2:      Address     : 0x400e00
@@ -97,7 +97,7 @@ CHECK2:      BB Count    : 18
 CHECK2:      Exec Count  : 151
 CHECK2:      Branch Count: 552
 
-# Verify block counts.
+## Verify block counts.
 CHECK2:    .LBB00 (43 instructions, align : 1)
 CHECK2:      Successors: .Ltmp[[#BB7:]] (mispreds: 0, count: 0), .LFT[[#BB1:]] (mispreds: 0, count: 151)
 CHECK2:    .LFT[[#BB1:]] (5 instructions, align : 1)

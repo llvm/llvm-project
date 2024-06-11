@@ -40,7 +40,8 @@ endif()
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
-  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32)
+  # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
+  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)

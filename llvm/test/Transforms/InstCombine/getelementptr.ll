@@ -389,9 +389,8 @@ define ptr @test15(i64 %X) {
   ret ptr %A
 }
 
-
-define ptr @test16(ptr %X, i32 %Idx) {
-; CHECK-LABEL: @test16(
+define ptr @test_index_canon(ptr %X, i32 %Idx) {
+; CHECK-LABEL: @test_index_canon(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[X:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[R]]
@@ -400,6 +399,67 @@ define ptr @test16(ptr %X, i32 %Idx) {
   ret ptr %R
 }
 
+define ptr @test_index_canon_inbounds(ptr %X, i32 %Idx) {
+; CHECK-LABEL: @test_index_canon_inbounds(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %R = getelementptr inbounds i32, ptr %X, i32 %Idx
+  ret ptr %R
+}
+
+define ptr @test_index_canon_nusw_nuw(ptr %X, i32 %Idx) {
+; CHECK-LABEL: @test_index_canon_nusw_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
+; CHECK-NEXT:    [[R:%.*]] = getelementptr nusw nuw i32, ptr [[X:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %R = getelementptr nusw nuw i32, ptr %X, i32 %Idx
+  ret ptr %R
+}
+
+define ptr @test_index_canon_const_expr_inbounds() {
+; CHECK-LABEL: @test_index_canon_const_expr_inbounds(
+; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @Global, i64 123)
+;
+  ret ptr getelementptr inbounds (i8, ptr @Global, i32 123)
+}
+
+define ptr @test_index_canon_const_expr_nuw_nusw() {
+; CHECK-LABEL: @test_index_canon_const_expr_nuw_nusw(
+; CHECK-NEXT:    ret ptr getelementptr nusw nuw (i8, ptr @Global, i64 123)
+;
+  ret ptr getelementptr nusw nuw (i8, ptr @Global, i32 123)
+}
+
+define ptr @test_const_gep_gep_nuw() {
+; CHECK-LABEL: @test_const_gep_gep_nuw(
+; CHECK-NEXT:    ret ptr getelementptr nuw (i8, ptr @Global, i64 246)
+;
+  ret ptr getelementptr nuw (i8, ptr getelementptr nuw (i8, ptr @Global, i64 123), i64 123)
+}
+
+define ptr @test_const_gep_gep_nusw_no_overflow() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_no_overflow(
+; CHECK-NEXT:    ret ptr getelementptr nusw (i8, ptr @Global, i64 246)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 123), i64 123)
+}
+
+define ptr @test_const_gep_gep_nusw_no_overflow_neg() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_no_overflow_neg(
+; CHECK-NEXT:    ret ptr getelementptr nusw (i8, ptr @Global, i64 -246)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 -123), i64 -123)
+}
+
+define ptr @test_const_gep_gep_nusw_overflow() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_overflow(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @Global, i64 -2)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 u0x7fffffffffffffff), i64 u0x7fffffffffffffff)
+}
 
 define i1 @test17(ptr %P, i32 %I, i32 %J) {
 ; CHECK-LABEL: @test17(
@@ -537,7 +597,8 @@ define i32 @test21() {
 
 define i1 @test22() {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    ret i1 icmp ult (ptr getelementptr inbounds (i8, ptr @A, i64 4), ptr getelementptr (i8, ptr @B, i64 8))
+; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr getelementptr inbounds (i8, ptr @A, i64 4), getelementptr (i8, ptr @B, i64 8)
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %C = icmp ult ptr getelementptr (i32, ptr @A, i64 1),
   getelementptr (i32, ptr @B, i64 2)
@@ -1678,6 +1739,25 @@ if.then:
   ret i64 %val
 if.else:
   ret i64 0
+}
+
+
+@g = external global i8
+
+define ptr @constexpr_gep_of_gep_with_narrow_type() {
+; CHECK-LABEL: @constexpr_gep_of_gep_with_narrow_type(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @g, i64 254)
+;
+  ret ptr getelementptr (i8, ptr getelementptr (i8, ptr @g, i8 127), i8 127)
+}
+
+define ptr @gep_to_i8_nusw_nuw(ptr %p) {
+; CHECK-LABEL: @gep_to_i8_nusw_nuw(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr nusw nuw i32, ptr %p, i64 1
+  ret ptr %gep
 }
 
 !0 = !{!"branch_weights", i32 2, i32 10}

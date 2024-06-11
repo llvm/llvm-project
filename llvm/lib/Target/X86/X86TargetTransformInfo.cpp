@@ -169,6 +169,8 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   if (ST->is64Bit()) {
     if (Vector && ST->hasAVX512())
       return 32;
+    if (!Vector && ST->hasEGPR())
+      return 32;
     return 16;
   }
   return 8;
@@ -4059,7 +4061,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i8,      {  1, 1, 2, 2 } }, // popcnt(zext())
   };
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::ABS,        MVT::i64,     {  1,  2,  3,  4 } }, // SUB+CMOV
+    { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
     { ISD::BSWAP,      MVT::i64,     {  1,  2,  1,  2 } },
     { ISD::CTLZ,       MVT::i64,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
@@ -4080,9 +4082,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::UMULO,      MVT::i64,     {  2 } }, // mulq + seto
   };
   static const CostKindTblEntry X86CostTbl[] = { // 32 or 64-bit targets
-    { ISD::ABS,        MVT::i32,     {  1,  2,  3,  4 } }, // SUB+XOR+SRA or SUB+CMOV
-    { ISD::ABS,        MVT::i16,     {  2,  2,  3,  4 } }, // SUB+XOR+SRA or SUB+CMOV
-    { ISD::ABS,        MVT::i8,      {  2,  4,  4,  4 } }, // SUB+XOR+SRA
+    { ISD::ABS,        MVT::i32,     {  1,  2,  3,  3 } }, // SUB+XOR+SRA or SUB+CMOV
+    { ISD::ABS,        MVT::i16,     {  2,  2,  3,  3 } }, // SUB+XOR+SRA or SUB+CMOV
+    { ISD::ABS,        MVT::i8,      {  2,  4,  4,  3 } }, // SUB+XOR+SRA
     { ISD::BITREVERSE, MVT::i32,     {  9, 12, 17, 19 } },
     { ISD::BITREVERSE, MVT::i16,     {  9, 12, 17, 19 } },
     { ISD::BITREVERSE, MVT::i8,      {  7,  9, 13, 14 } },
@@ -5865,14 +5867,14 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *SrcVTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind,
     const Instruction *I = nullptr) {
-  if (((Opcode == Instruction::Load &&
-        (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
-         forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
-                                    Align(Alignment)))) ||
-       (Opcode == Instruction::Store &&
-        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
-         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
-                                     Align(Alignment))))))
+  if ((Opcode == Instruction::Load &&
+       (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
+        forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
+                                   Align(Alignment)))) ||
+      (Opcode == Instruction::Store &&
+       (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
+        forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
+                                    Align(Alignment)))))
     return BaseT::getGatherScatterOpCost(Opcode, SrcVTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
 
@@ -6257,7 +6259,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
                                 AddressSpace, CostKind);
 
   unsigned VF = VecTy->getNumElements() / Factor;
-  MVT VT = MVT::getVectorVT(MVT::getVT(VecTy->getScalarType()), VF);
+  MVT VT =
+      MVT::getVectorVT(TLI->getSimpleValueType(DL, VecTy->getScalarType()), VF);
 
   InstructionCost MaskCost;
   if (UseMaskedMemOp) {

@@ -16,33 +16,34 @@
 multiclass ABSTRACT_SIMD_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                            list<dag> pattern_r, string asmstr_r,
                            string asmstr_s, bits<32> simdop,
-                           Predicate simd_level> {
+                           list<Predicate> reqs> {
   defm "" : I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r, asmstr_s,
               !if(!ge(simdop, 0x100),
                   !or(0xfd0000, !and(0xffff, simdop)),
                   !or(0xfd00, !and(0xff, simdop)))>,
-            Requires<[simd_level]>;
+            Requires<reqs>;
 }
 
 multiclass SIMD_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                   list<dag> pattern_r, string asmstr_r = "",
-                  string asmstr_s = "", bits<32> simdop = -1> {
+                  string asmstr_s = "", bits<32> simdop = -1,
+                  list<Predicate> reqs = []> {
   defm "" : ABSTRACT_SIMD_I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r,
-                            asmstr_s, simdop, HasSIMD128>;
+                            asmstr_s, simdop, !listconcat([HasSIMD128], reqs)>;
 }
 
 multiclass RELAXED_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                      list<dag> pattern_r, string asmstr_r = "",
                      string asmstr_s = "", bits<32> simdop = -1> {
   defm "" : ABSTRACT_SIMD_I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r,
-                            asmstr_s, simdop, HasRelaxedSIMD>;
+                            asmstr_s, simdop, [HasRelaxedSIMD]>;
 }
 
 multiclass HALF_PRECISION_I<dag oops_r, dag iops_r, dag oops_s, dag iops_s,
                             list<dag> pattern_r, string asmstr_r = "",
                             string asmstr_s = "", bits<32> simdop = -1> {
   defm "" : ABSTRACT_SIMD_I<oops_r, iops_r, oops_s, iops_s, pattern_r, asmstr_r,
-                            asmstr_s, simdop, HasHalfPrecision>;
+                            asmstr_s, simdop, [HasHalfPrecision]>;
 }
 
 
@@ -152,6 +153,19 @@ def F64x2 : Vec {
   let prefix = "f64x2";
 }
 
+def F16x8 : Vec {
+ let vt = v8f16;
+ let int_vt = v8i16;
+ let lane_vt = f32;
+ let lane_rc = F32;
+ let lane_bits = 16;
+ let lane_idx = LaneIdx8;
+ let lane_load = int_wasm_loadf16_f32;
+ let splat = PatFrag<(ops node:$x), (v8f16 (splat_vector (f16 $x)))>;
+ let prefix = "f16x8";
+}
+
+// TODO: Include F16x8 here when half precision is better supported.
 defvar AllVecs = [I8x16, I16x8, I32x4, I64x2, F32x4, F64x2];
 defvar IntVecs = [I8x16, I16x8, I32x4, I64x2];
 
@@ -706,13 +720,19 @@ def : Pat<(vector_insert (v2f64 V128:$vec), F64:$x, undef),
 // Comparisons
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDCondition<Vec vec, string name, CondCode cond, bits<32> simdop> {
+multiclass SIMDCondition<Vec vec, string name, CondCode cond, bits<32> simdop,
+                         list<Predicate> reqs = []> {
   defm _#vec :
     SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
            [(set (vec.int_vt V128:$dst),
              (setcc (vec.vt V128:$lhs), (vec.vt V128:$rhs), cond))],
            vec.prefix#"."#name#"\t$dst, $lhs, $rhs",
-           vec.prefix#"."#name, simdop>;
+           vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionCondition<Vec vec, string name, CondCode cond,
+                                  bits<32> simdop> {
+  defm "" : SIMDCondition<vec, name, cond, simdop, [HasHalfPrecision]>;
 }
 
 multiclass SIMDConditionInt<string name, CondCode cond, bits<32> baseInst> {
@@ -724,6 +744,7 @@ multiclass SIMDConditionInt<string name, CondCode cond, bits<32> baseInst> {
 multiclass SIMDConditionFP<string name, CondCode cond, bits<32> baseInst> {
   defm "" : SIMDCondition<F32x4, name, cond, baseInst>;
   defm "" : SIMDCondition<F64x2, name, cond, !add(baseInst, 6)>;
+  defm "" : HalfPrecisionCondition<F16x8, name, cond, !add(baseInst, 255)>;
 }
 
 // Equality: eq
@@ -781,13 +802,19 @@ def : Pat<(v2i64 (nodes[0] (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
 // Bitwise operations
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDBinary<Vec vec, SDPatternOperator node, string name, bits<32> simdop> {
+multiclass SIMDBinary<Vec vec, SDPatternOperator node, string name,
+                      bits<32> simdop, list<Predicate> reqs = []> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs),
                       (outs), (ins),
                       [(set (vec.vt V128:$dst),
                         (node (vec.vt V128:$lhs), (vec.vt V128:$rhs)))],
                       vec.prefix#"."#name#"\t$dst, $lhs, $rhs",
-                      vec.prefix#"."#name, simdop>;
+                      vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionBinary<Vec vec, SDPatternOperator node, string name,
+                               bits<32> simdop> {
+  defm "" : SIMDBinary<vec, node, name, simdop, [HasHalfPrecision]>;
 }
 
 multiclass SIMDBitwise<SDPatternOperator node, string name, bits<32> simdop,
@@ -801,12 +828,18 @@ multiclass SIMDBitwise<SDPatternOperator node, string name, bits<32> simdop,
             (!cast<NI>(NAME) $lhs, $rhs)>;
 }
 
-multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name, bits<32> simdop> {
+multiclass SIMDUnary<Vec vec, SDPatternOperator node, string name,
+                     bits<32> simdop, list<Predicate> reqs = []> {
   defm _#vec : SIMD_I<(outs V128:$dst), (ins V128:$v), (outs), (ins),
                       [(set (vec.vt V128:$dst),
                         (vec.vt (node (vec.vt V128:$v))))],
                       vec.prefix#"."#name#"\t$dst, $v",
-                      vec.prefix#"."#name, simdop>;
+                      vec.prefix#"."#name, simdop, reqs>;
+}
+
+multiclass HalfPrecisionUnary<Vec vec, SDPatternOperator node, string name,
+                              bits<32> simdop> {
+  defm "" : SIMDUnary<vec, node, name, simdop, [HasHalfPrecision]>;
 }
 
 // Bitwise logic: v128.not
@@ -1163,6 +1196,10 @@ defm EXTMUL_HIGH_U :
 multiclass SIMDUnaryFP<SDNode node, string name, bits<32> baseInst> {
   defm "" : SIMDUnary<F32x4, node, name, baseInst>;
   defm "" : SIMDUnary<F64x2, node, name, !add(baseInst, 12)>;
+  // Unlike F32x4 and F64x2 there's not a gap in the opcodes between "neg" and
+  // "sqrt" so subtract one from the offset.
+  defm "" : HalfPrecisionUnary<F16x8, node, name,
+                               !add(baseInst,!if(!eq(name, "sqrt"), 80, 81))>;
 }
 
 // Absolute value: abs
@@ -1183,14 +1220,20 @@ defm CEIL : SIMDUnary<F64x2, fceil, "ceil", 0x74>;
 defm FLOOR : SIMDUnary<F64x2, ffloor, "floor", 0x75>;
 defm TRUNC: SIMDUnary<F64x2, ftrunc, "trunc", 0x7a>;
 defm NEAREST: SIMDUnary<F64x2, fnearbyint, "nearest", 0x94>;
+defm CEIL : HalfPrecisionUnary<F16x8, fceil, "ceil", 0x13c>;
+defm FLOOR : HalfPrecisionUnary<F16x8, ffloor, "floor", 0x13d>;
+defm TRUNC : HalfPrecisionUnary<F16x8, ftrunc, "trunc", 0x13e>;
+defm NEAREST : HalfPrecisionUnary<F16x8, fnearbyint, "nearest", 0x13f>;
 
 // WebAssembly doesn't expose inexact exceptions, so map frint to fnearbyint.
 def : Pat<(v4f32 (frint (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
 def : Pat<(v2f64 (frint (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+def : Pat<(v8f16 (frint (v8f16 V128:$src))), (NEAREST_F16x8 V128:$src)>;
 
 // WebAssembly always rounds ties-to-even, so map froundeven to fnearbyint.
 def : Pat<(v4f32 (froundeven (v4f32 V128:$src))), (NEAREST_F32x4 V128:$src)>;
 def : Pat<(v2f64 (froundeven (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
+def : Pat<(v8f16 (froundeven (v8f16 V128:$src))), (NEAREST_F16x8 V128:$src)>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point binary arithmetic
@@ -1199,6 +1242,7 @@ def : Pat<(v2f64 (froundeven (v2f64 V128:$src))), (NEAREST_F64x2 V128:$src)>;
 multiclass SIMDBinaryFP<SDPatternOperator node, string name, bits<32> baseInst> {
   defm "" : SIMDBinary<F32x4, node, name, baseInst>;
   defm "" : SIMDBinary<F64x2, node, name, !add(baseInst, 12)>;
+  defm "" : HalfPrecisionBinary<F16x8, node, name, !add(baseInst, 80)>;
 }
 
 // Addition: add
@@ -1242,7 +1286,7 @@ defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 // Also match the pmin/pmax cases where the operands are int vectors (but the
 // comparison is still a floating point comparison). This can happen when using
 // the wasm_simd128.h intrinsics because v128_t is an integer vector.
-foreach vec = [F32x4, F64x2] in {
+foreach vec = [F32x4, F64x2, F16x8] in {
 defvar pmin = !cast<NI>("PMIN_"#vec);
 defvar pmax = !cast<NI>("PMAX_"#vec);
 def : Pat<(vec.int_vt (vselect
@@ -1266,6 +1310,10 @@ def : Pat<(v2f64 (int_wasm_pmin (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
           (PMIN_F64x2 V128:$lhs, V128:$rhs)>;
 def : Pat<(v2f64 (int_wasm_pmax (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
           (PMAX_F64x2 V128:$lhs, V128:$rhs)>;
+def : Pat<(v8f16 (int_wasm_pmin (v8f16 V128:$lhs), (v8f16 V128:$rhs))),
+          (PMIN_F16x8 V128:$lhs, V128:$rhs)>;
+def : Pat<(v8f16 (int_wasm_pmax (v8f16 V128:$lhs), (v8f16 V128:$rhs))),
+          (PMAX_F16x8 V128:$lhs, V128:$rhs)>;
 
 //===----------------------------------------------------------------------===//
 // Conversions

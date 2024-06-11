@@ -299,6 +299,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefLoopAlignment = Align(64);
     MaxInterleaveFactor = 4;
     break;
+  case Oryon:
+    CacheLineSize = 64;
+    PrefFunctionAlignment = Align(16);
+    MaxInterleaveFactor = 4;
+    PrefetchDistance = 128;
+    MinPrefetchStride = 1024;
+    break;
   }
 
   if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)

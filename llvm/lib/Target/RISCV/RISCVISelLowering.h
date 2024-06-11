@@ -273,6 +273,10 @@ enum NodeType : unsigned {
   // Rounding averaging adds of unsigned integers.
   AVGCEILU_VL,
 
+  // Operands are (source, shift, merge, mask, roundmode, vl)
+  VNCLIPU_VL,
+  VNCLIP_VL,
+
   MULHS_VL,
   MULHU_VL,
   FADD_VL,

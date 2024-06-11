@@ -816,6 +816,9 @@ public:
   /// Combine zext of trunc.
   bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
+  /// Combine zext nneg to sext.
+  bool matchNonNegZext(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Match constant LHS FP ops that should be commuted.
   bool matchCommuteFPConstantToRHS(MachineInstr &MI);
 
@@ -839,10 +842,6 @@ public:
 
   /// Combine extract vector element.
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
-
-  /// Combine extract vector element with freeze on the vector register.
-  bool matchExtractVectorElementWithFreeze(const MachineOperand &MO,
-                                           BuildFnTy &MatchInfo);
 
   /// Combine extract vector element with a build vector on the vector register.
   bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
@@ -871,6 +870,14 @@ public:
 
   bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
                                              BuildFnTy &MatchInfo);
+
+  bool matchAddOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchMulOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchSubOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
