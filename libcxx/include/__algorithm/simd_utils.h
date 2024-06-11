@@ -11,11 +11,8 @@
 
 #include <__algorithm/min.h>
 #include <__bit/bit_cast.h>
-#if defined(_LIBCPP_BIG_ENDIAN)
-#  include <__bit/countl.h>
-#else
-#  include <__bit/countr.h>
-#endif
+#include <__bit/countl.h>
+#include <__bit/countr.h>
 #include <__config>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_same.h>
