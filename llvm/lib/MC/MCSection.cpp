@@ -130,10 +130,13 @@ LLVM_DUMP_METHOD void MCSection::dump() const {
 
   OS << "<MCSection Name:" << getName();
   OS << " Fragments:[\n      ";
-  for (auto it = begin(), ie = end(); it != ie; ++it) {
-    if (it != begin())
+  bool First = true;
+  for (auto &F : *this) {
+    if (First)
+      First = false;
+    else
       OS << ",\n      ";
-    it->dump();
+    F.dump();
   }
   OS << "]>";
 }

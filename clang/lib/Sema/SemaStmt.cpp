@@ -3701,7 +3701,7 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
   if (isLambdaConversionOperator(FD))
     return false;
 
-  if (RetExpr && isa<InitListExpr>(RetExpr)) {
+  if (isa_and_nonnull<InitListExpr>(RetExpr)) {
     //  If the deduction is for a return statement and the initializer is
     //  a braced-init-list, the program is ill-formed.
     Diag(RetExpr->getExprLoc(),
