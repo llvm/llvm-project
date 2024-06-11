@@ -3235,6 +3235,9 @@ public:
   /// valid feature names.
   ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD) const;
 
+  std::vector<std::string>
+  filterFunctionTargetVersionAttrs(const TargetVersionAttr *TV) const;
+
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                              const FunctionDecl *) const;
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
