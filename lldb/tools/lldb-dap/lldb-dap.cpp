@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 #include <sys/stat.h>
 #include <sys/types.h>
 #if defined(_WIN32)
@@ -1586,6 +1587,7 @@ void request_initialize(const llvm::json::Object &request) {
   bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
 
   g_dap.debugger = lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
+  g_dap.PopulateExceptionBreakpoints();
   auto cmd = g_dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
@@ -1621,7 +1623,7 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsEvaluateForHovers", true);
   // Available filters or options for the setExceptionBreakpoints request.
   llvm::json::Array filters;
-  for (const auto &exc_bp : g_dap.exception_breakpoints) {
+  for (const auto &exc_bp : *g_dap.exception_breakpoints) {
     filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
   }
   body.try_emplace("exceptionBreakpointFilters", std::move(filters));
@@ -2476,7 +2478,7 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
   // Keep a list of any exception breakpoint filter names that weren't set
   // so we can clear any exception breakpoints if needed.
   std::set<std::string> unset_filters;
-  for (const auto &bp : g_dap.exception_breakpoints)
+  for (const auto &bp : *g_dap.exception_breakpoints)
     unset_filters.insert(bp.filter);
 
   for (const auto &value : *filters) {
