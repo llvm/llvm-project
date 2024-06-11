@@ -595,9 +595,7 @@ bool canApplyInference(const FlowFunction &Func) {
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
     return false;
 
-  bool HasExitBlocks = llvm::any_of(
-      Func.Blocks, [&](const FlowBlock &Block) { return Block.isExit(); });
-  if (!HasExitBlocks)
+  if (Func.Blocks[Func.Sink].isEntry())
     return false;
 
   return true;
