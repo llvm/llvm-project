@@ -1293,7 +1293,7 @@ class DropInnerMostUnitDimsTransferRead
     if (dimsToDrop == 0)
       return failure();
 
-    // Make sure that the indixes to be dropped are equal 0.
+    // Make sure that the indices to be dropped are equal 0.
     // TODO: Deal with cases when the indices are not 0.
     if (!llvm::all_of(readOp.getIndices().take_back(dimsToDrop), isZeroIndex))
       return failure();
