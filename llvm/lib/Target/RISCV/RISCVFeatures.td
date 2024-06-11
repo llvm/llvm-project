@@ -861,7 +861,7 @@ def FeatureStdExtSmepmp
 
 def FeatureStdExtSmcdeleg
     : RISCVExtension<"smcdeleg", 1, 0,
-                     "'smcdeleg' (Counter Delegation Machine Level)">;
+                     "'Smcdeleg' (Counter Delegation Machine Level)">;
 def FeatureStdExtSsccfg
     : RISCVExtension<"ssccfg", 1, 0,
                      "'Ssccfg' (Counter Configuration Supervisor Level)">;
