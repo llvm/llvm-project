@@ -355,7 +355,7 @@ bool ThreadPlanStepOverRange::DoPlanExplainsStop(Event *event_ptr) {
       return_value = NextRangeBreakpointExplainsStop(stop_info_sp);
     } else {
       if (log)
-        log->PutCString("ThreadPlanStepInRange got asked if it explains the "
+        log->PutCString("ThreadPlanStepOverRange got asked if it explains the "
                         "stop for some reason other than step.");
       return_value = false;
     }

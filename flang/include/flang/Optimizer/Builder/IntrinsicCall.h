@@ -232,6 +232,8 @@ struct IntrinsicLibrary {
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
+  fir::ExtendedValue genGetCwd(std::optional<mlir::Type> resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
   void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genGetPID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
@@ -326,6 +328,8 @@ struct IntrinsicLibrary {
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReduce(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genReduceDim(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,

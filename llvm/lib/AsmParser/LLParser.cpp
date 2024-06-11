@@ -74,23 +74,6 @@ static std::string getTypeString(Type *T) {
   return Tmp.str();
 }
 
-// Whatever debug info format we parsed, we should convert to the expected debug
-// info format immediately afterwards.
-bool LLParser::finalizeDebugInfoFormat(Module *M) {
-  // We should have already returned an error if we observed both intrinsics and
-  // records in this IR.
-  assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
-         "Mixed debug intrinsics/records seen without a parsing error?");
-  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
-    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
-  } else if (M) {
-    M->setIsNewDbgInfoFormat(false);
-  }
-  return false;
-}
-
 /// Run: module ::= toplevelentity*
 bool LLParser::Run(bool UpgradeDebugInfo,
                    DataLayoutCallbackTy DataLayoutCallback) {
@@ -108,7 +91,7 @@ bool LLParser::Run(bool UpgradeDebugInfo,
   }
 
   return parseTopLevelEntities() || validateEndOfModule(UpgradeDebugInfo) ||
-         validateEndOfIndex() || finalizeDebugInfoFormat(M);
+         validateEndOfIndex();
 }
 
 bool LLParser::parseStandaloneConstantValue(Constant *&C,
@@ -207,6 +190,18 @@ void LLParser::dropUnknownMetadataReferences() {
 bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   if (!M)
     return false;
+
+  // We should have already returned an error if we observed both intrinsics and
+  // records in this IR.
+  assert(!(SeenNewDbgInfoFormat && SeenOldDbgInfoFormat) &&
+         "Mixed debug intrinsics/records seen without a parsing error?");
+  if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
+    UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
+    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
+    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
+    M->setNewDbgInfoFormatFlag(SeenNewDbgInfoFormat);
+  }
+
   // Handle any function attribute group forward references.
   for (const auto &RAG : ForwardRefAttrGroups) {
     Value *V = RAG.first;
@@ -438,6 +433,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
   UpgradeModuleFlags(*M);
   UpgradeSectionAttributes(*M);
+
+  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE)
+    M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
 
   if (!Slots)
     return false;
@@ -2153,6 +2151,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'aarch64_vector_pcs'
 ///   ::= 'aarch64_sve_vector_pcs'
 ///   ::= 'aarch64_sme_preservemost_from_x0'
+///   ::= 'aarch64_sme_preservemost_from_x1'
 ///   ::= 'aarch64_sme_preservemost_from_x2'
 ///   ::= 'msp430_intrcc'
 ///   ::= 'avr_intrcc'
@@ -2211,6 +2210,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     break;
   case lltok::kw_aarch64_sme_preservemost_from_x0:
     CC = CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0;
+    break;
+  case lltok::kw_aarch64_sme_preservemost_from_x1:
+    CC = CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1;
     break;
   case lltok::kw_aarch64_sme_preservemost_from_x2:
     CC = CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2;
@@ -4176,37 +4178,9 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_fptosi:
     return error(ID.Loc, "fptosi constexprs are no longer supported");
   case lltok::kw_icmp:
-  case lltok::kw_fcmp: {
-    unsigned PredVal, Opc = Lex.getUIntVal();
-    Constant *Val0, *Val1;
-    Lex.Lex();
-    if (parseCmpPredicate(PredVal, Opc) ||
-        parseToken(lltok::lparen, "expected '(' in compare constantexpr") ||
-        parseGlobalTypeAndValue(Val0) ||
-        parseToken(lltok::comma, "expected comma in compare constantexpr") ||
-        parseGlobalTypeAndValue(Val1) ||
-        parseToken(lltok::rparen, "expected ')' in compare constantexpr"))
-      return true;
-
-    if (Val0->getType() != Val1->getType())
-      return error(ID.Loc, "compare operands must have the same type");
-
-    CmpInst::Predicate Pred = (CmpInst::Predicate)PredVal;
-
-    if (Opc == Instruction::FCmp) {
-      if (!Val0->getType()->isFPOrFPVectorTy())
-        return error(ID.Loc, "fcmp requires floating point operands");
-      ID.ConstantVal = ConstantExpr::getFCmp(Pred, Val0, Val1);
-    } else {
-      assert(Opc == Instruction::ICmp && "Unexpected opcode for CmpInst!");
-      if (!Val0->getType()->isIntOrIntVectorTy() &&
-          !Val0->getType()->isPtrOrPtrVectorTy())
-        return error(ID.Loc, "icmp requires pointer or integer operands");
-      ID.ConstantVal = ConstantExpr::getICmp(Pred, Val0, Val1);
-    }
-    ID.Kind = ValID::t_Constant;
-    return false;
-  }
+    return error(ID.Loc, "icmp constexprs are no longer supported");
+  case lltok::kw_fcmp:
+    return error(ID.Loc, "fcmp constexprs are no longer supported");
 
   // Binary Operators.
   case lltok::kw_add:

@@ -1495,6 +1495,8 @@ static bool isConstExprSupported(const BitcodeConstant *BC) {
   switch (Opcode) {
   case Instruction::FNeg:
   case Instruction::Select:
+  case Instruction::ICmp:
+  case Instruction::FCmp:
     return false;
   default:
     return true;
@@ -1632,10 +1634,6 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           break;
         case BitcodeConstant::ConstantVectorOpcode:
           C = ConstantVector::get(ConstOps);
-          break;
-        case Instruction::ICmp:
-        case Instruction::FCmp:
-          C = ConstantExpr::getCompare(BC->Flags, ConstOps[0], ConstOps[1]);
           break;
         case Instruction::GetElementPtr:
           C = ConstantExpr::getGetElementPtr(
@@ -2130,6 +2128,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeThread;
   case bitc::ATTR_KIND_SANITIZE_MEMORY:
     return Attribute::SanitizeMemory;
+  case bitc::ATTR_KIND_SANITIZE_NUMERICAL_STABILITY:
+    return Attribute::SanitizeNumericalStability;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -4357,7 +4357,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
     TheModule->IsNewDbgInfoFormat =
         UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
+        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
   }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);

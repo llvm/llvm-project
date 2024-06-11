@@ -713,15 +713,14 @@ public:
   void finishLayout(MCAssembler const &Asm,
                     MCAsmLayout &Layout) const override {
     for (auto *I : Layout.getSectionOrder()) {
-      auto &Fragments = I->getFragmentList();
-      for (auto &J : Fragments) {
+      for (auto &J : *I) {
         switch (J.getKind()) {
         default:
           break;
         case MCFragment::FT_Align: {
           auto Size = Asm.computeFragmentSize(Layout, J);
           for (auto K = J.getIterator();
-               K != Fragments.begin() && Size >= HEXAGON_PACKET_SIZE;) {
+               K != I->begin() && Size >= HEXAGON_PACKET_SIZE;) {
             --K;
             switch (K->getKind()) {
             default:

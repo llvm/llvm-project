@@ -1325,20 +1325,7 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    if (getOperand(0) != Op)
-      return false;
-    switch (getOpcode()) {
-    default:
-      return false;
-    case VPInstruction::BranchOnCount:
-    case VPInstruction::CanonicalIVIncrementForPart:
-      return true;
-    };
-    llvm_unreachable("switch should return");
-  }
+  bool onlyFirstPartUsed(const VPValue *Op) const override;
 
   /// Returns true if this VPInstruction produces a scalar value from a vector,
   /// e.g. by performing a reduction or extracting a lane.
@@ -3166,7 +3153,9 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveInsToFree;
 
-  /// Values used outside the plan.
+  /// Values used outside the plan. It contains live-outs that need fixing. Any
+  /// live-out that is fixed outside VPlan needs to be removed. The remaining
+  /// live-outs are fixed via VPLiveOut::fixPhi.
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
   /// Mapping from SCEVs to the VPValues representing their expansions.

@@ -20,20 +20,20 @@
 
 ! CHECK-LABEL: define {{.*}}i64 @_QFPfn1
 ! CHECK-SAME: (ptr %[[ARG1:.*]], ptr %[[ARG2:.*]], ptr %[[ARG3:.*]])
-! CHECK-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[ARG1]], metadata ![[A1:.*]], metadata !DIExpression())
-! CHECK-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[ARG2]], metadata ![[B1:.*]], metadata !DIExpression())
-! CHECK-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[ARG3]], metadata ![[C1:.*]], metadata !DIExpression())
+! CHECK-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG1]], metadata ![[A1:.*]], metadata !DIExpression())
+! CHECK-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG2]], metadata ![[B1:.*]], metadata !DIExpression())
+! CHECK-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG3]], metadata ![[C1:.*]], metadata !DIExpression())
 ! CHECK-DAG: %[[AL2:.*]] = alloca i64
-! CHECK-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[AL2]], metadata ![[RES1:.*]], metadata !DIExpression())
+! CHECK-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL2]], metadata ![[RES1:.*]], metadata !DIExpression())
 ! CHECK-LABEL: }
 
 ! CHECK-LABEL: define {{.*}}i32 @_QFPfn2
 ! CHECK-SAME: (ptr %[[FN2ARG1:.*]], ptr %[[FN2ARG2:.*]], ptr %[[FN2ARG3:.*]])
-! CHECK-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[FN2ARG1]], metadata ![[A2:.*]], metadata !DIExpression())
-! CHECK-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[FN2ARG2]], metadata ![[B2:.*]], metadata !DIExpression())
-! CHECK-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[FN2ARG3]], metadata ![[C2:.*]], metadata !DIExpression())
+! CHECK-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG1]], metadata ![[A2:.*]], metadata !DIExpression())
+! CHECK-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG2]], metadata ![[B2:.*]], metadata !DIExpression())
+! CHECK-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG3]], metadata ![[C2:.*]], metadata !DIExpression())
 ! CHECK-DAG: %[[AL3:.*]] = alloca i32
-! CHECK-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[AL3]], metadata ![[RES2:.*]], metadata !DIExpression())
+! CHECK-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL3]], metadata ![[RES2:.*]], metadata !DIExpression())
 ! CHECK-LABEL: }
 
 program mn

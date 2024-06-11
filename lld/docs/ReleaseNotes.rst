@@ -44,6 +44,13 @@ ELF Improvements
   (typical for embedded). It also makes full LTO feasible in such cases, since
   IR merging currently prevents the linker script from referring to input
   files. (`#90007 <https://github.com/llvm/llvm-project/pull/90007>`_)
+* ``--force-group-allocation`` is implemented to discard ``SHT_GROUP`` sections
+  and combine relocation sections if their relocated section group members are
+  placed to the same output section.
+  (`#94704 <https://github.com/llvm/llvm-project/pull/94704>`_)
+* ``--build-id`` now defaults to generating a 20-byte digest ("sha1") instead
+  of 8-byte ("fast"). This improves compatibility with RPM packaging tools.
+  (`#93943 <https://github.com/llvm/llvm-project/pull/93943>`_)
 
 Breaking changes
 ----------------

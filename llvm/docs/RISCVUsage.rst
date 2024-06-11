@@ -85,6 +85,7 @@ on support follow.
      Extension         Status
      ================  =================================================================
      ``A``             Supported
+     ``B``             Supported
      ``C``             Supported
      ``D``             Supported
      ``F``             Supported
