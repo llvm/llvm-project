@@ -116,21 +116,20 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                     << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
 }
 
-static bool canUsePressureDiffs(SUnit *SU) {
-  if (SU->isInstr()) {
-    // Cannot use pressure diffs for subregister defs or with physregs, it's
-    // imprecise in both cases.
-    for (const auto &Op : SU->getInstr()->operands()) {
-      if (!Op.isReg() || Op.isImplicit())
-        continue;
-      if (Op.getReg().isPhysical() ||
-          (Op.isDef() && Op.getSubReg() != AMDGPU::NoSubRegister))
-        return false;
-    }
-    return true;
-  }
+static bool canUsePressureDiffs(const SUnit &SU) {
+  if (!SU.isInstr())
+    return false;
 
-  return false;
+  // Cannot use pressure diffs for subregister defs or with physregs, it's
+  // imprecise in both cases.
+  for (const auto &Op : SU.getInstr()->operands()) {
+    if (!Op.isReg() || Op.isImplicit())
+      continue;
+    if (Op.getReg().isPhysical() ||
+        (Op.isDef() && Op.getSubReg() != AMDGPU::NoSubRegister))
+      return false;
+  }
+  return true;
 }
 
 static void getRegisterPressures(bool AtTop,
@@ -161,7 +160,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   Pressure.clear();
   MaxPressure.clear();
 
-  if (AtTop || !canUsePressureDiffs(SU)) {
+  if (AtTop || !canUsePressureDiffs(*SU)) {
     getRegisterPressures(AtTop, RPTracker, SU, Pressure, MaxPressure);
   } else {
     // Reserve 4 slots.
@@ -185,7 +184,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
             CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] ||
         Pressure[AMDGPU::RegisterPressureSets::VGPR_32] !=
             CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32]) {
-      errs() << "Register Pressure is innaccurate when calculated through "
+      errs() << "Register Pressure is inaccurate when calculated through "
                 "PressureDiff\n";
       errs() << "SGPR got " << Pressure[AMDGPU::RegisterPressureSets::SReg_32]
              << ", expected "
@@ -193,7 +192,7 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
       errs() << "VGPR got " << Pressure[AMDGPU::RegisterPressureSets::VGPR_32]
              << ", expected "
              << CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n";
-      report_fatal_error("innaccurate register pressure calculation");
+      report_fatal_error("inaccurate register pressure calculation");
     }
 #endif
   }
@@ -318,7 +317,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
       BotCand.Policy != BotPolicy) {
     BotCand.reset(CandPolicy());
     pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), BotCand,
-                      /*IsBottomUp*/ true);
+                      /*IsBottomUp=*/true);
     assert(BotCand.Reason != NoCand && "failed to find the first candidate");
   } else {
     LLVM_DEBUG(traceCandidate(BotCand));
@@ -327,7 +326,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand,
-                        /*IsBottomUp*/ true);
+                        /*IsBottomUp=*/true);
       assert(TCand.SU == BotCand.SU &&
              "Last pick result should correspond to re-picking right now");
     }
@@ -340,7 +339,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
       TopCand.Policy != TopPolicy) {
     TopCand.reset(CandPolicy());
     pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TopCand,
-                      /*IsBottomUp*/ false);
+                      /*IsBottomUp=*/false);
     assert(TopCand.Reason != NoCand && "failed to find the first candidate");
   } else {
     LLVM_DEBUG(traceCandidate(TopCand));
@@ -349,7 +348,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand,
-                        /*IsBottomUp*/ false);
+                        /*IsBottomUp=*/false);
       assert(TCand.SU == TopCand.SU &&
            "Last pick result should correspond to re-picking right now");
     }
@@ -387,7 +386,7 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
         CandPolicy NoPolicy;
         TopCand.reset(NoPolicy);
         pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand,
-                          /*IsBottomUp*/ false);
+                          /*IsBottomUp=*/false);
         assert(TopCand.Reason != NoCand && "failed to find a candidate");
         SU = TopCand.SU;
       }
@@ -398,7 +397,7 @@ SUnit *GCNSchedStrategy::pickNode(bool &IsTopNode) {
         CandPolicy NoPolicy;
         BotCand.reset(NoPolicy);
         pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand,
-                          /*IsBottomUp*/ true);
+                          /*IsBottomUp=*/true);
         assert(BotCand.Reason != NoCand && "failed to find a candidate");
         SU = BotCand.SU;
       }
