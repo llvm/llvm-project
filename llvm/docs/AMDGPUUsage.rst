@@ -5975,24 +5975,26 @@ Fence and Address Spaces
 ++++++++++++++++++++++++++++++
 
 LLVM fences do not have address space information, thus, fence
-codegen usually needs to be conservative and fence all address spaces.
+codegen usually needs to conservatively synchronize all address spaces.
 
-In the case of OpenCL, where synchronization can only happen in the
-same address space, this can result in extra unnecessary waits.
-For instance, a fence that is supposed to only target local memory will
+In the case of OpenCL, where fences only needs to synchronize
+user-specified address spaces, this can result in extra unnecessary waits.
+For instance, a fence that is supposed to only synchronize local memory will
 also have to wait on all global memory operations, which is unnecessary.
 
 :doc:`Memory Model Relaxation Annotations <MemoryModelRelaxationAnnotations>` can
 be used as an optimization hint for fences to solve this problem.
-The AMDGPU backend handles the following tags on fences:
+The AMDGPU backend recognizes the following tags on fences:
 
 - ``amdgpu-as:local`` - fence only the local address space
 - ``amdgpu-as:global``- fence only the global address space
 
-This can avoid unnecessary waiting in many cases. However, those annotations are
-attached using metadata, which can always be dropped by the optimizer when it
-inhibits optimizations, and the cost of not performing that optimization is
-greater than the cost of dropping the metadata.
+.. note::
+
+  As an optimization hint, those tags are not guaranteed to survive until
+  code generation. Optimizations are free to drop the tags to allow for
+  better code optimization, at the cost of synchronizing additional address
+  spaces.
 
 .. _amdgpu-amdhsa-memory-model-gfx6-gfx9:
 
