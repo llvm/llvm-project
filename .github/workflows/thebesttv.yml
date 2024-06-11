@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
