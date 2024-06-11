@@ -5778,15 +5778,19 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
       return builder.create<fir::LoadOp>(loc, result);
     }
     if (fir::isa_char(eleTy)) {
-      // Create mutable fir.box to be passed to the runtime for the result.
-      fir::MutableBoxValue resultMutableBox =
-          fir::factory::createTempMutableBox(builder, loc, eleTy);
-      mlir::Value resultIrBox =
-          fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+      auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(resultType);
+      assert(charTy && "expect CharacterType");
+      fir::factory::CharacterExprHelper charHelper(builder, loc);
+      mlir::Value len;
+      if (charTy.hasDynamicLen())
+        len = charHelper.readLengthFromBox(fir::getBase(arrayTmp), charTy);
+      else
+        len = builder.createIntegerConstant(loc, builder.getI32Type(),
+                                            charTy.getLen());
+      fir::CharBoxValue temp = charHelper.createCharacterTemp(eleTy, len);
       fir::runtime::genReduce(builder, loc, array, operation, mask, identity,
-                              ordered, resultIrBox);
-      // Handle cleanup of allocatable result descriptor and return
-      return readAndAddCleanUp(resultMutableBox, resultType, "REDUCE");
+                              ordered, temp.getBuffer());
+      return temp;
     }
     return fir::runtime::genReduce(builder, loc, array, operation, mask,
                                    identity, ordered);
