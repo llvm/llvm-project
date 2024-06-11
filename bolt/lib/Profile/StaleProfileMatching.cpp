@@ -313,7 +313,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   EntryBlock.Index = 0;
   Func.Blocks.push_back(EntryBlock);
 
-  // Create FlowBlock for every basic block in the binary function
+  // Create FlowBlock for every basic block in the binary function.
   for (const BinaryBasicBlock *BB : BlockOrder) {
     Func.Blocks.emplace_back();
     FlowBlock &Block = Func.Blocks.back();
@@ -325,13 +325,13 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
            "incorrectly assigned basic block index");
   }
 
-  // Add a special "dummy" sink block so there is always a unique sink
+  // Add a special "dummy" sink block so there is always a unique sink.
   FlowBlock SinkBlock;
   SinkBlock.Index = Func.Blocks.size();
   Func.Blocks.push_back(SinkBlock);
   Func.Sink = SinkBlock.Index;
 
-  // Create FlowJump for each jump between basic blocks in the binary function
+  // Create FlowJump for each jump between basic blocks in the binary function.
   std::vector<uint64_t> InDegree(Func.Blocks.size(), 0);
   for (const BinaryBasicBlock *SrcBB : BlockOrder) {
     std::unordered_set<const BinaryBasicBlock *> UniqueSuccs;
@@ -380,13 +380,13 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 
   // Add dummy edges from the exit blocks to the sink block.
   for (uint64_t I = 1; I < BlockOrder.size() + 1; I++) {
-    FlowBlock &Block = Func.Blocks[I];
-    if (Block.IsExit) {
-      Func.Jumps.emplace_back();
-      FlowJump &Jump = Func.Jumps.back();
-      Jump.Source = I;
-      Jump.Target = Func.Sink;
-    }
+    if (!Func.Blocks[I].IsExit)
+      continue;
+
+    Func.Jumps.emplace_back();
+    FlowJump &Jump = Func.Jumps.back();
+    Jump.Source = I;
+    Jump.Target = Func.Sink;
   }
 
   // Create necessary metadata for the flow function

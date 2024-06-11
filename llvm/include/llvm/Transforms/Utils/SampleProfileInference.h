@@ -58,7 +58,7 @@ struct FlowFunction {
   std::vector<FlowJump> Jumps;
   /// The index of the entry block.
   uint64_t Entry{0};
-  uint64_t Sink{0};
+  uint64_t Sink{UINT64_MAX};
 };
 
 /// Various thresholds and options controlling the behavior of the profile
