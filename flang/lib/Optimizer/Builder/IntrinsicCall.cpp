@@ -224,6 +224,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
      /*isElemental=*/false},
+    {"erfc_scaled", &I::genErfcScaled},
     {"etime",
      &I::genEtime,
      {{{"values", asBox}, {"time", asBox}}},
@@ -5876,6 +5877,16 @@ mlir::Value IntrinsicLibrary::genRRSpacing(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genRRSpacing(builder, loc, fir::getBase(args[0])));
+}
+
+// ERFC_SCALED
+mlir::Value IntrinsicLibrary::genErfcScaled(mlir::Type resultType,
+                                            llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genErfcScaled(builder, loc, fir::getBase(args[0])));
 }
 
 // SAME_TYPE_AS
