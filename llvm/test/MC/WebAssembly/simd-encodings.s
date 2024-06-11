@@ -914,4 +914,10 @@ main:
     # CHECK: f16x8.nearest # encoding: [0xfd,0xbf,0x02]
     f16x8.nearest
 
+    # CHECK: f16x8.relaxed_madd # encoding: [0xfd,0xc6,0x02]
+    f16x8.relaxed_madd
+
+    # CHECK: f16x8.relaxed_nmadd # encoding: [0xfd,0xc7,0x02]
+    f16x8.relaxed_nmadd
+
     end_function
