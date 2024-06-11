@@ -98,8 +98,6 @@
 // and WCHAR_MAX. New helper class _FillHelper uses a boolean variable to indicate
 // whether the fill value has been initialized so that a fill value WEOF set
 // by the user won't be treated as indicating the fill value is uninitialized.
-// Undefining macro _LIBCXX_IOS_USE_FILL_HELPER to keep the ABI verson 1
-// behavior if needed.
 #  define _LIBCXX_IOS_USE_FILL_HELPER
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
