@@ -368,6 +368,23 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       if (Ty)
         break;
     }
+  } else if (auto *CI = dyn_cast<CallInst>(I)) {
+    static StringMap<unsigned> ResTypeByArg = {
+        {"to_global", 0},
+        {"to_local", 0},
+        {"to_private", 0},
+        {"__spirv_GenericCastToPtr_ToGlobal", 0},
+        {"__spirv_GenericCastToPtr_ToLocal", 0},
+        {"__spirv_GenericCastToPtr_ToPrivate", 0}};
+    // TODO: maybe improve performance by caching demangled names
+    if (Function *CalledF = CI->getCalledFunction()) {
+      std::string DemangledName =
+          getOclOrSpirvBuiltinDemangledName(CalledF->getName());
+      auto AsArgIt = ResTypeByArg.find(DemangledName);
+      if (AsArgIt != ResTypeByArg.end())
+        Ty = deduceElementTypeHelper(CI->getArgOperand(AsArgIt->second),
+                                     Visited);
+    }
   }
 
   // remember the found relationship

@@ -864,18 +864,6 @@ static bool buildAtomicFlagInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-/// Helper function for building OpGenericCastToPtr instruction.
-static bool buildCastToPtrInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
-                               MachineIRBuilder &MIRBuilder,
-                               SPIRVGlobalRegistry *GR) {
-  Register Src = Call->Arguments[0];
-  MIRBuilder.buildInstr(Opcode)
-      .addDef(Call->ReturnRegister)
-      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
-      .addUse(Src);
-  return true;
-}
-
 /// Helper function for building barriers, i.e., memory/control ordering
 /// operations.
 static bool buildBarrierInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
@@ -1450,14 +1438,11 @@ static bool generateBarrierInst(const SPIRV::IncomingCall *Call,
 }
 
 static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
-                                  MachineIRBuilder &MIRBuilder,
-                                  SPIRVGlobalRegistry *GR) {
-  // Lookup the instruction opcode in the TableGen records.
-  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
-  unsigned Opcode =
-      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
-
-  return buildCastToPtrInst(Call, Opcode, MIRBuilder, GR);
+                                  MachineIRBuilder &MIRBuilder) {
+  MIRBuilder.buildInstr(TargetOpcode::G_ADDRSPACE_CAST)
+      .addDef(Call->ReturnRegister)
+      .addUse(Call->Arguments[0]);
+  return true;
 }
 
 static bool generateDotOrFMulInst(const SPIRV::IncomingCall *Call,
@@ -2350,7 +2335,7 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
   case SPIRV::Barrier:
     return generateBarrierInst(Call.get(), MIRBuilder, GR);
   case SPIRV::CastToPtr:
-    return generateCastToPtrInst(Call.get(), MIRBuilder, GR);
+    return generateCastToPtrInst(Call.get(), MIRBuilder);
   case SPIRV::Dot:
     return generateDotOrFMulInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Wave:
