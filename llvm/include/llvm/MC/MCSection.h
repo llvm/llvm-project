@@ -63,9 +63,6 @@ public:
   using const_iterator = FragmentListType::const_iterator;
   using iterator = FragmentListType::iterator;
 
-  using const_reverse_iterator = FragmentListType::const_reverse_iterator;
-  using reverse_iterator = FragmentListType::reverse_iterator;
-
 private:
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
