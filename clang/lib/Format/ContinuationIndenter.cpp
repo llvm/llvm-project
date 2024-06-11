@@ -147,8 +147,7 @@ static bool startsNextParameter(const FormatToken &Current,
 }
 
 // Returns \c true if \c Current starts a new operand in a binary operation.
-static bool startsNextOperand(const FormatToken &Current,
-                              const FormatStyle &Style) {
+static bool startsNextOperand(const FormatToken &Current) {
   const FormatToken &Previous = *Current.Previous;
   return Previous.is(TT_BinaryOperator) && !Current.isTrailingComment() &&
          (Previous.getPrecedence() > prec::Conditional);
@@ -845,7 +844,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
   if (CurrentState.AvoidBinPacking && startsNextParameter(Current, Style))
     CurrentState.NoLineBreak = true;
-  if (!Style.BinPackBinaryOperations && startsNextOperand(Current, Style))
+  if (!Style.BinPackBinaryOperations && startsNextOperand(Current))
     CurrentState.NoLineBreak = true;
 
   if (startsSegmentOfBuilderTypeCall(Current) &&
@@ -1214,10 +1213,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     }
   }
 
-  if (!Style.BinPackBinaryOperations && Previous.is(TT_BinaryOperator) &&
-      (Previous.getPrecedence() > prec::Conditional)) {
+  if (!Style.BinPackBinaryOperations && startsNextOperand(Current))
     CurrentState.BreakBeforeParameter = true;
-  }
   return Penalty;
 }
 
