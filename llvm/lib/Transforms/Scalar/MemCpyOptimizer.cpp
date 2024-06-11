@@ -1117,7 +1117,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // Clear writeonly from the dest if it's an argument because we may now read
   // from it in the call.
-  if (auto*A = dyn_cast<Argument>(cpyDest))
+  if (auto *A = dyn_cast<Argument>(cpyDest))
     if (A->hasAttribute(Attribute::WriteOnly))
       A->removeAttr(Attribute::WriteOnly);
 
