@@ -157,8 +157,7 @@ Changes to the RISC-V Backend
 * Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
 * Zabha is no longer experimental.
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
-* Added smcdeleg and ssccfg extensions to -march.
-* Added smcsrind and sscsrind extensions to -march. CSR names for them were already supported.
+* Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 
 Changes to the WebAssembly Backend
 ----------------------------------
