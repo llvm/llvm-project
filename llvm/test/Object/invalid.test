@@ -20,9 +20,9 @@ Sections:
 ## .shstrtab has an invalid zero-size.
 
 # RUN: yaml2obj %s --docnum=2 -o %t2
-# RUN: not llvm-objdump -s %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=STRTAB-EMPTY
+# RUN: not llvm-objdump -s %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=STRTAB-EMPTY-TABLE
 
-# STRTAB-EMPTY: error: '[[FILE]]': SHT_STRTAB string table section [index 1] is empty
+# STRTAB-EMPTY-TABLE: error: '[[FILE]]': SHT_STRTAB string table section [index 1] is empty
 
 --- !ELF
 FileHeader:

@@ -1,6 +1,6 @@
 RUN: export LSAN_OPTIONS=detect_leaks=0
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
+RUN:   FileCheck --check-prefix=INVALID-EMPTY-FILE %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-ENCODING %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev.bc 2>&1 | \
@@ -22,7 +22,7 @@ RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-INVOKE %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-invoke-non-function-explicit-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NON-FUNCTION-EXPLICIT-INVOKE %s
 
-INVALID-EMPTY: error: file too small to contain bitcode header
+INVALID-EMPTY-FILE: error: file too small to contain bitcode header
 INVALID-ENCODING: Invalid encoding
 BAD-ABBREV: error: can't skip to bit
 UNEXPECTED-EOF: error: can't skip to bit

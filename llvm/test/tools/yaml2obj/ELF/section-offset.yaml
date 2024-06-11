@@ -75,15 +75,15 @@ Sections:
 
 ## Case 1: set the same value for 'Offset' and 'ShOffset' keys.
 # RUN: yaml2obj --docnum=3 %s -o %t5 -DSHOFFSET=0x100 -DOFFSET=0x100
-# RUN: llvm-readelf --headers --sections %t5 | FileCheck %s --check-prefix=BOTH-SAME
+# RUN: llvm-readelf --headers --sections %t5 | FileCheck %s --check-prefix=BOTH-EQUAL
 
 ## The same offset as in the Case 3.
-# BOTH-SAME: Start of section headers: 288 (bytes into file)
+# BOTH-EQUAL: Start of section headers: 288 (bytes into file)
 
-# BOTH-SAME:      [Nr] Name     Type     Address          Off
-# BOTH-SAME:      [ 1] .foo     PROGBITS 0000000000000000 000100
-# BOTH-SAME-NEXT: [ 2] .bar     PROGBITS 0000000000000000 000101
-# BOTH-SAME-NEXT: [ 3] .strtab  STRTAB   0000000000000000 000102
+# BOTH-EQUAL:      [Nr] Name     Type     Address          Off
+# BOTH-EQUAL:      [ 1] .foo     PROGBITS 0000000000000000 000100
+# BOTH-EQUAL-NEXT: [ 2] .bar     PROGBITS 0000000000000000 000101
+# BOTH-EQUAL-NEXT: [ 3] .strtab  STRTAB   0000000000000000 000102
 
 ## Case 2: set the 'Offset' value to be less than the 'ShOffset'.
 

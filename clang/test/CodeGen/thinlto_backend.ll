@@ -16,9 +16,9 @@
 ; would not import f2
 ; RUN: touch %t4.thinlto.bc
 ; RUN: %clang -target x86_64-unknown-linux-gnu -O2 -o %t4.o -x ir %t1.o -c -fthinlto-index=%t4.thinlto.bc
-; RUN: llvm-nm %t4.o | FileCheck --check-prefix=CHECK-OBJ-IGNORE-EMPTY %s
-; CHECK-OBJ-IGNORE-EMPTY: T f1
-; CHECK-OBJ-IGNORE-EMPTY: U f2
+; RUN: llvm-nm %t4.o | FileCheck --check-prefix=CHECK-OBJ-IGNORE-CLEAN %s
+; CHECK-OBJ-IGNORE-CLEAN: T f1
+; CHECK-OBJ-IGNORE-CLEAN: U f2
 
 ; Ensure we don't fail with index and non-ThinLTO object file, and output must
 ; be empty file.

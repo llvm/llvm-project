@@ -27,17 +27,17 @@
 ;; Index based WPD
 ; RUN: ld.lld %t1.o %t2.o -o %t3_index -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 ;; Hybrid WPD
 ; RUN: ld.lld %t1_hybrid.o %t2.o -o %t3_hybrid -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 ;; Regular LTO WPD
 ; RUN: ld.lld %t1_regular.o %t2.o -o %t3_regular -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t3_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t3_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1A1nEi
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1D1mEi
@@ -49,34 +49,34 @@
 ;; Index based WPD
 ; RUN: ld.lld %t1.o %t2.o -o %t4_index -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=VALIDATE
-; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
+; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-VALIDATE-IR
 
 ;; Hybrid WPD
 ; RUN: ld.lld %t1_hybrid.o %t2.o -o %t4_hybrid -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=VALIDATE
-; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
+; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-VALIDATE-IR
 
 ;; Regular LTO WPD
 ; RUN: ld.lld %t1_regular.o %t2.o -o %t4_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=VALIDATE
-; RUN: llvm-dis %t4_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
+; RUN: llvm-dis %t4_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-VALIDATE-IR
 
 ;; DSOs behave similarly
 
 ;; Index based WPD
 ; RUN: ld.lld %t1.o %t2.so -o %t5_index -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=VALIDATE
-; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
+; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-VALIDATE-IR
 
 ;; Hybrid WPD
 ; RUN: ld.lld %t1_hybrid.o %t2.so -o %t5_hybrid -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=VALIDATE
-; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
+; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-VALIDATE-IR
 
 ;; Regular LTO WPD
 ; RUN: ld.lld %t1_regular.o %t2.so -o %t5_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=VALIDATE
-; RUN: llvm-dis %t5_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-VALIDATE-IR
+; RUN: llvm-dis %t5_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-VALIDATE-IR
 
 ; VALIDATE-NOT: single-impl:
 ; VALIDATE:     single-impl: devirtualized a call to _ZN1D1mEi
@@ -88,34 +88,34 @@
 ;; Index based WPD
 ; RUN: ld.lld %t1.o %t2_nortti.o -o %t6_index -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=NO-RTTI
-; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-NO-RTTI-IR
+; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-NO-RTTI-IR
 
 ;; Hybrid WPD
 ; RUN: ld.lld %t1_hybrid.o %t2_nortti.o -o %t6_hybrid -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=NO-RTTI
-; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-NO-RTTI-IR
+; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-NO-RTTI-IR
 
 ;; Regular LTO WPD
 ; RUN: ld.lld %t1_regular.o %t2_nortti.o -o %t6_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=NO-RTTI
-; RUN: llvm-dis %t6_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-NO-RTTI-IR
+; RUN: llvm-dis %t6_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-NO-RTTI-IR
 
 ;; DSOs behave similarly
 
 ;; Index based WPD
 ; RUN: ld.lld %t1.o %t2_nortti.so -o %t7_index -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=NO-RTTI
-; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-NO-RTTI-IR
+; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-NO-RTTI-IR
 
 ;; Hybrid WPD
 ; RUN: ld.lld %t1_hybrid.o %t2_nortti.so -o %t7_hybrid -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=NO-RTTI
-; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-NO-RTTI-IR
+; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-NO-RTTI-IR
 
 ;; Regular LTO WPD
 ; RUN: ld.lld %t1_regular.o %t2_nortti.so -o %t7_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=NO-RTTI
-; RUN: llvm-dis %t7_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-NO-RTTI-IR
+; RUN: llvm-dis %t7_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-NO-RTTI-IR
 
 ; NO-RTTI-DAG: --lto-validate-all-vtables-have-type-infos: RTTI missing for vtable _ZTV6Native, --lto-whole-program-visibility disabled
 ; NO-RTTI-DAG: single-impl: devirtualized a call to _ZN1D1mEi
@@ -126,17 +126,17 @@
 ;; Index based WPD
 ; RUN: ld.lld %t1.o %t2_nortti.o -o %t8_index -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   --lto-known-safe-vtables='_ZTV6N*' -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 ;; Hybrid WPD
 ; RUN: ld.lld %t1_hybrid.o %t2_nortti.o -o %t8_hybrid -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   --lto-known-safe-vtables='_ZTV6N*' -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 ;; Regular LTO WPD
 ; RUN: ld.lld %t1_regular.o %t2_nortti.o -o %t8_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   --lto-known-safe-vtables='_ZTV6N*' -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t8_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t8_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 ;; Only check for definitions of vtables symbols, just having a reference does not allow a type to
 ;; be derived from
@@ -144,17 +144,17 @@
 ;; Index based WPD
 ; RUN: ld.lld %t1.o %t2_undef.o -o %t9_index -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t1.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 ;; Hybrid WPD
 ; RUN: ld.lld %t1_hybrid.o %t2_undef.o -o %t9_hybrid -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t1_hybrid.o.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 ;; Regular LTO WPD
 ; RUN: ld.lld %t1_regular.o %t2_undef.o -o %t9_regular -save-temps --lto-whole-program-visibility --lto-validate-all-vtables-have-type-infos \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t9_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR-LABEL,CHECK-IR
+; RUN: llvm-dis %t9_regular.0.4.opt.bc -o - | FileCheck %s --check-prefixes=CHECK-COMMON-IR,CHECK-IR
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

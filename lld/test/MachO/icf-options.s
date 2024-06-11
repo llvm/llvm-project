@@ -3,21 +3,21 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/main.o
 # RUN: %lld -lSystem --icf=all -o %t/all %t/main.o 2>&1 \
-# RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
+# RUN:     | FileCheck %s --check-prefix=DIAG-CLEAN --allow-empty
 # RUN: %lld -lSystem --icf=none -o %t/none %t/main.o 2>&1 \
-# RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
+# RUN:     | FileCheck %s --check-prefix=DIAG-CLEAN --allow-empty
 # RUN: %lld -lSystem -no_deduplicate -o %t/no_dedup %t/main.o 2>&1 \
-# RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
+# RUN:     | FileCheck %s --check-prefix=DIAG-CLEAN --allow-empty
 # RUN: %lld -lSystem --icf=safe -o %t/safe %t/main.o 2>&1 \
-# RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
+# RUN:     | FileCheck %s --check-prefix=DIAG-CLEAN --allow-empty
 # RUN: not %lld -lSystem --icf=junk -o %t/junk %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-JUNK
 # RUN: %lld -lSystem --icf=all -no_deduplicate -o %t/none2 %t/main.o 2>&1 \
-# RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
+# RUN:     | FileCheck %s --check-prefix=DIAG-CLEAN --allow-empty
 # RUN: %lld -lSystem -no_deduplicate --icf=all -o %t/all2 %t/main.o 2>&1 \
-# RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
+# RUN:     | FileCheck %s --check-prefix=DIAG-CLEAN --allow-empty
 
-# DIAG-EMPTY-NOT: {{.}}
+# DIAG-CLEAN-NOT: {{.}}
 # DIAG-JUNK: unknown --icf=OPTION `junk', defaulting to `none'
 
 # RUN: llvm-objdump -d --syms %t/all | FileCheck %s --check-prefix=FOLD

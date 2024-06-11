@@ -30,8 +30,8 @@
 //
 // RUN: FileCheck -input-file=%T/no-move-macro-helper/new_test.h -check-prefix=CHECK-NEW-TEST-CASE2-H %s
 // RUN: FileCheck -input-file=%T/no-move-macro-helper/new_test.cpp -check-prefix=CHECK-NEW-TEST-CASE2-CPP %s
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/macro_helper_test.h -allow-empty -check-prefix=CHECK-EMPTY %s
-// RUN: FileCheck -input-file=%T/no-move-macro-helper/macro_helper_test.cpp -allow-empty -check-prefix=CHECK-EMPTY %s
+// RUN: FileCheck -input-file=%T/no-move-macro-helper/macro_helper_test.h -allow-empty -check-prefix=CHECK-CLEAN %s
+// RUN: FileCheck -input-file=%T/no-move-macro-helper/macro_helper_test.cpp -allow-empty -check-prefix=CHECK-CLEAN %s
 
 // CHECK-NEW-TEST-CASE2-H: class A {};
 // CHECK-NEW-TEST-CASE2-H-NEXT:void f1();
@@ -40,4 +40,4 @@
 // CHECK-NEW-TEST-CASE2-CPP: DEFINE(test)
 // CHECK-NEW-TEST-CASE2-CPP: void f1() {}
 
-// CHECK-EMPTY: {{^}}{{$}}
+// CHECK-CLEAN: {{^}}{{$}}

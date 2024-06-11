@@ -2,8 +2,8 @@
 // RUN: cp %S/Inputs/template_class_test*  %T/move-template-class
 // RUN: cd %T/move-template-class
 // RUN: clang-move -names="A,B" -new_cc=%T/move-template-class/new_template_class_test.cpp -new_header=%T/move-template-class/new_template_class_test.h -old_cc=%T/move-template-class/template_class_test.cpp -old_header=../move-template-class/template_class_test.h %T/move-template-class/template_class_test.cpp --
-// RUN: FileCheck -input-file=%T/move-template-class/template_class_test.cpp -check-prefix=CHECK-OLD-TEST-EMPTY -allow-empty %s
-// RUN: FileCheck -input-file=%T/move-template-class/template_class_test.h -check-prefix=CHECK-OLD-TEST-EMPTY -allow-empty %s
+// RUN: FileCheck -input-file=%T/move-template-class/template_class_test.cpp -check-prefix=CHECK-OLD-TEST -allow-empty %s
+// RUN: FileCheck -input-file=%T/move-template-class/template_class_test.h -check-prefix=CHECK-OLD-TEST -allow-empty %s
 // RUN: FileCheck -input-file=%T/move-template-class/new_template_class_test.cpp -check-prefix=CHECK-NEW-TEST-CPP-CASE1 %s
 // RUN: FileCheck -input-file=%T/move-template-class/new_template_class_test.h -check-prefix=CHECK-NEW-TEST-H-CASE1 %s
 //
@@ -15,7 +15,7 @@
 // RUN: FileCheck -input-file=%T/move-template-class/new_template_class_test.cpp -check-prefix=CHECK-NEW-TEST-CPP-CASE2 %s
 //
 //
-// CHECK-OLD-TEST-EMPTY: {{^}}{{$}}
+// CHECK-OLD-TEST: {{^}}{{$}}
 //
 // CHECK-NEW-TEST-H-CASE1: #ifndef TEMPLATE_CLASS_TEST_H // comment 1
 // CHECK-NEW-TEST-H-CASE1: #define TEMPLATE_CLASS_TEST_H

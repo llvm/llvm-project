@@ -17,12 +17,12 @@
 // RUN: %clang -### -ffile-prefix-map=old=n=ew %s 2>&1 | FileCheck %s -check-prefix CHECK-MACRO-COMPLEX
 // RUN: %clang -### -ffile-prefix-map=old=n=ew %s 2>&1 | FileCheck %s -check-prefix CHECK-COVERAGE-COMPLEX
 
-// RUN: %clang -### -fdebug-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-DEBUG-EMPTY
-// RUN: %clang -### -fmacro-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-MACRO-EMPTY
-// RUN: %clang -### -fcoverage-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-COVERAGE-EMPTY
-// RUN: %clang -### -ffile-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-DEBUG-EMPTY
-// RUN: %clang -### -ffile-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-MACRO-EMPTY
-// RUN: %clang -### -ffile-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-COVERAGE-EMPTY
+// RUN: %clang -### -fdebug-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-DEBUG-CLEAN
+// RUN: %clang -### -fmacro-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-MACRO-CLEAN
+// RUN: %clang -### -fcoverage-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-COVERAGE-CLEAN
+// RUN: %clang -### -ffile-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-DEBUG-CLEAN
+// RUN: %clang -### -ffile-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-MACRO-CLEAN
+// RUN: %clang -### -ffile-prefix-map=old= %s 2>&1 | FileCheck %s -check-prefix CHECK-COVERAGE-CLEAN
 
 // CHECK-DEBUG-INVALID: error: invalid argument 'old' to -fdebug-prefix-map
 // CHECK-MACRO-INVALID: error: invalid argument 'old' to -fmacro-prefix-map
@@ -34,6 +34,6 @@
 // CHECK-DEBUG-COMPLEX: fdebug-prefix-map=old=n=ew
 // CHECK-MACRO-COMPLEX: fmacro-prefix-map=old=n=ew
 // CHECK-COVERAGE-COMPLEX: fcoverage-prefix-map=old=n=ew
-// CHECK-DEBUG-EMPTY: fdebug-prefix-map=old=
-// CHECK-MACRO-EMPTY: fmacro-prefix-map=old=
-// CHECK-COVERAGE-EMPTY: fcoverage-prefix-map=old=
+// CHECK-DEBUG-CLEAN: fdebug-prefix-map=old=
+// CHECK-MACRO-CLEAN: fmacro-prefix-map=old=
+// CHECK-COVERAGE-CLEAN: fcoverage-prefix-map=old=
