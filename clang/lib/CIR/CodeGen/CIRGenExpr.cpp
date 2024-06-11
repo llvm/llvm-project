@@ -596,10 +596,23 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
     return;
   }
 
+  mlir::Type SrcTy = Value.getType();
   if (const auto *ClangVecTy = Ty->getAs<clang::VectorType>()) {
+    auto VecTy = dyn_cast<mlir::cir::VectorType>(SrcTy);
     if (!CGM.getCodeGenOpts().PreserveVec3Type &&
-        ClangVecTy->getNumElements() == 3)
-      llvm_unreachable("NYI: Special treatment of 3-element vector store");
+        ClangVecTy->getNumElements() == 3) {
+      // Handle vec3 special.
+      if (VecTy && VecTy.getSize() == 3) {
+        // Our source is a vec3, do a shuffle vector to make it a vec4.
+        Value = builder.createVecShuffle(Value.getLoc(), Value,
+                                         ArrayRef<int64_t>{0, 1, 2, -1});
+        SrcTy = mlir::cir::VectorType::get(VecTy.getContext(),
+                                           VecTy.getEltType(), 4);
+      }
+      if (Addr.getElementType() != SrcTy) {
+        Addr = Addr.withElementType(SrcTy);
+      }
+    }
   }
 
   // Update the alloca with more info on initialization.
@@ -772,7 +785,7 @@ void CIRGenFunction::buildStoreThroughExtVectorComponentLValue(RValue Src,
       // of the Elts constant array will be one past the size of the vector.
       // Ignore the last element here, if it is greater than the mask size.
       if (getAccessedFieldNo(NumSrcElts - 1, Elts) == Mask.size())
-        llvm_unreachable("NYI");
+        NumSrcElts--;
 
       // modify when what gets shuffled in
       for (unsigned i = 0; i != NumSrcElts; ++i)
@@ -2770,14 +2783,28 @@ mlir::Value CIRGenFunction::buildLoadOfScalar(Address Addr, bool Volatile,
     llvm_unreachable("NYI");
   }
 
+  auto ElemTy = Addr.getElementType();
+
   if (const auto *ClangVecTy = Ty->getAs<clang::VectorType>()) {
+    // Handle vectors of size 3 like size 4 for better performance.
+    const auto VTy = cast<mlir::cir::VectorType>(ElemTy);
+
     if (!CGM.getCodeGenOpts().PreserveVec3Type &&
-        ClangVecTy->getNumElements() == 3)
-      llvm_unreachable("NYI: Special treatment of 3-element vector load");
+        ClangVecTy->getNumElements() == 3) {
+      auto loc = Addr.getPointer().getLoc();
+      auto vec4Ty =
+          mlir::cir::VectorType::get(VTy.getContext(), VTy.getEltType(), 4);
+      Address Cast = Addr.withElementType(vec4Ty);
+      // Now load value.
+      mlir::Value V = builder.createLoad(loc, Cast);
+
+      // Shuffle vector to get vec3.
+      V = builder.createVecShuffle(loc, V, ArrayRef<int64_t>{0, 1, 2});
+      return buildFromMemory(V, Ty);
+    }
   }
 
   auto Ptr = Addr.getPointer();
-  auto ElemTy = Addr.getElementType();
   if (ElemTy.isa<mlir::cir::VoidType>()) {
     ElemTy = mlir::cir::IntType::get(builder.getContext(), 8, true);
     auto ElemPtrTy = mlir::cir::PointerType::get(builder.getContext(), ElemTy);
