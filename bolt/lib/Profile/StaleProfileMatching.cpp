@@ -318,8 +318,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
     Func.Blocks.emplace_back();
     FlowBlock &Block = Func.Blocks.back();
     Block.Index = Func.Blocks.size() - 1;
-    if (BB->successors().empty())
-      Block.IsExit = true;
+    Block.IsExit = BB->successors().empty();
     (void)BB;
     assert(Block.Index == BB->getIndex() + 1 &&
            "incorrectly assigned basic block index");
