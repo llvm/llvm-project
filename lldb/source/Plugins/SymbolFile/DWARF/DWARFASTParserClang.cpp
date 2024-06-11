@@ -975,9 +975,9 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
   return clang::CC_C;
 }
 
-bool DWARFASTParserClang::HandleObjCMethod(
-    ObjCLanguage::MethodName const &objc_method, DWARFDIE const &die,
-    CompilerType clang_type, ParsedDWARFTypeAttributes const &attrs,
+bool DWARFASTParserClang::ParseObjCMethod(
+    const ObjCLanguage::MethodName &objc_method, const DWARFDIE &die,
+    CompilerType clang_type, const ParsedDWARFTypeAttributes &attrs,
     bool is_variadic) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
   const auto tag = die.Tag();
@@ -1020,14 +1020,13 @@ bool DWARFASTParserClang::HandleObjCMethod(
   return true;
 }
 
-std::pair<bool, TypeSP> DWARFASTParserClang::HandleCXXMethod(
-    DWARFDIE const &die, CompilerType clang_type,
-    ParsedDWARFTypeAttributes const &attrs, DWARFDIE const &decl_ctx_die,
+std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
+    const DWARFDIE &die, CompilerType clang_type,
+    const ParsedDWARFTypeAttributes &attrs, const DWARFDIE &decl_ctx_die,
     bool is_static, bool &ignore_containing_context) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   SymbolFileDWARF *dwarf = die.GetDWARF();
-  // Look at the parent of this DIE and see if it is a class or
-  // struct and see if this is actually a C++ method
+
   Type *class_type = dwarf->ResolveType(decl_ctx_die);
   if (!class_type)
     return {};
@@ -1114,12 +1113,6 @@ std::pair<bool, TypeSP> DWARFASTParserClang::HandleCXXMethod(
       // we will just skip it...
       return {true, nullptr};
     }
-
-    llvm::PrettyStackTraceFormat stack_trace(
-        "SymbolFileDWARF::ParseType() is adding a method "
-        "%s to class %s in DIE 0x%8.8" PRIx64 " from %s",
-        attrs.name.GetCString(), class_type->GetName().GetCString(),
-        die.GetID(), dwarf->GetObjectFile()->GetFileSpec().GetPath().c_str());
 
     const bool is_attr_used = false;
     // Neither GCC 4.2 nor clang++ currently set a valid
@@ -1283,10 +1276,10 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
               ObjCLanguage::MethodName::Create(attrs.name.GetStringRef(),
                                                true)) {
         type_handled =
-            HandleObjCMethod(*objc_method, die, clang_type, attrs, is_variadic);
+            ParseObjCMethod(*objc_method, die, clang_type, attrs, is_variadic);
       } else if (is_cxx_method) {
         auto [handled, type_sp] =
-            HandleCXXMethod(die, clang_type, attrs, decl_ctx_die, is_static,
+            ParseCXXMethod(die, clang_type, attrs, decl_ctx_die, is_static,
                             ignore_containing_context);
         if (type_sp)
           return type_sp;
