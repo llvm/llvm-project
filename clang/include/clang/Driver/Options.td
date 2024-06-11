@@ -3592,7 +3592,7 @@ def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
 def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Force behvaior as if the user specified pragma omp requires unified_shared_memory.">,
   MarshallingInfoFlag<LangOpts<"OpenMPForceUSM">>;
 def fopenmp_target_jit : Flag<["-"], "fopenmp-target-jit">, Group<f_Group>,
@@ -7724,8 +7724,8 @@ def pic_is_pie : Flag<["-"], "pic-is-pie">,
   MarshallingInfoFlag<LangOpts<"PIE">>;
 
 def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
-  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,none">,
-  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
+  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,reserved,none">,
+  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "Reserved", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
 
 

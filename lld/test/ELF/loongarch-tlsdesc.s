@@ -118,7 +118,6 @@ add $a2, $a0, $tp
 la.tls.desc $a0, c
 add $a3, $a0, $tp
 
-#.section .tbss
 .section .tbss,"awT",@nobits
 .globl a
 .zero 8
@@ -129,6 +128,5 @@ b:
 
 #--- c.s
 .section .tbss,"awT",@nobits
-#.tbss
 .globl c
 c: .zero 4

@@ -615,6 +615,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSIN, VT, Action);
     setOperationAction(ISD::FCOS, VT, Action);
     setOperationAction(ISD::FSINCOS, VT, Action);
+    setOperationAction(ISD::FTAN, VT, Action);
     setOperationAction(ISD::FSQRT, VT, Action);
     setOperationAction(ISD::FPOW, VT, Action);
     setOperationAction(ISD::FLOG, VT, Action);
@@ -833,9 +834,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     // Always expand sin/cos functions even though x87 has an instruction.
+    // clang-format off
     setOperationAction(ISD::FSIN   , MVT::f80, Expand);
     setOperationAction(ISD::FCOS   , MVT::f80, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f80, Expand);
+    setOperationAction(ISD::FTAN   , MVT::f80, Expand);
+    // clang-format on
 
     setOperationAction(ISD::FFLOOR, MVT::f80, Expand);
     setOperationAction(ISD::FCEIL,  MVT::f80, Expand);
@@ -888,11 +892,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FNEG, MVT::f128, Custom);
     setOperationAction(ISD::FCOPYSIGN, MVT::f128, Custom);
 
+    // clang-format off
     setOperationAction(ISD::FSIN,         MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FSIN,  MVT::f128, LibCall);
     setOperationAction(ISD::FCOS,         MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FCOS,  MVT::f128, LibCall);
     setOperationAction(ISD::FSINCOS,      MVT::f128, LibCall);
+    setOperationAction(ISD::FTAN,         MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FTAN,  MVT::f128, LibCall);
+    // clang-format on
     // No STRICT_FSINCOS
     setOperationAction(ISD::FSQRT,        MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f128, LibCall);
@@ -944,9 +952,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   for (auto VT : { MVT::v8f16, MVT::v16f16, MVT::v32f16,
                    MVT::v4f32, MVT::v8f32,  MVT::v16f32,
                    MVT::v2f64, MVT::v4f64,  MVT::v8f64 }) {
+    // clang-format off
     setOperationAction(ISD::FSIN,      VT, Expand);
     setOperationAction(ISD::FSINCOS,   VT, Expand);
     setOperationAction(ISD::FCOS,      VT, Expand);
+    setOperationAction(ISD::FTAN,      VT, Expand);
     setOperationAction(ISD::FREM,      VT, Expand);
     setOperationAction(ISD::FCOPYSIGN, VT, Expand);
     setOperationAction(ISD::FPOW,      VT, Expand);
@@ -956,6 +966,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FEXP,      VT, Expand);
     setOperationAction(ISD::FEXP2,     VT, Expand);
     setOperationAction(ISD::FEXP10,    VT, Expand);
+    // clang-format on
   }
 
   // First set operation action for all vector types to either promote
@@ -2473,7 +2484,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // function casting to f64 and calling `fmod`.
   if (Subtarget.is32Bit() &&
       (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()))
-    for (ISD::NodeType Op :
+    // clang-format off
+   for (ISD::NodeType Op :
          {ISD::FCEIL,  ISD::STRICT_FCEIL,
           ISD::FCOS,   ISD::STRICT_FCOS,
           ISD::FEXP,   ISD::STRICT_FEXP,
@@ -2482,9 +2494,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FLOG,   ISD::STRICT_FLOG,
           ISD::FLOG10, ISD::STRICT_FLOG10,
           ISD::FPOW,   ISD::STRICT_FPOW,
-          ISD::FSIN,   ISD::STRICT_FSIN})
+          ISD::FSIN,   ISD::STRICT_FSIN,
+          ISD::FTAN,   ISD::STRICT_FTAN})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
+  // clang-format on
 
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::VECTOR_SHUFFLE,
@@ -26776,7 +26790,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
     case Intrinsic::swift_async_context_addr: {
       SDLoc dl(Op);
       auto &MF = DAG.getMachineFunction();
-      auto X86FI = MF.getInfo<X86MachineFunctionInfo>();
+      auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
       if (X86::isExtendedSwiftAsyncFrameSupported(Subtarget, MF)) {
         MF.getFrameInfo().setFrameAddressIsTaken(true);
         X86FI->setHasSwiftAsyncContext(true);
@@ -36781,7 +36795,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case TargetOpcode::PREALLOCATED_SETUP: {
     assert(Subtarget.is32Bit() && "preallocated only used in 32-bit");
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
     MFI->setHasPreallocatedCall(true);
     int64_t PreallocatedId = MI.getOperand(0).getImm();
     size_t StackAdjustment = MFI->getPreallocatedStackSize(PreallocatedId);
@@ -36798,7 +36812,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     assert(Subtarget.is32Bit() && "preallocated calls only used in 32-bit");
     int64_t PreallocatedId = MI.getOperand(1).getImm();
     int64_t ArgIdx = MI.getOperand(2).getImm();
-    auto MFI = MF->getInfo<X86MachineFunctionInfo>();
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
     size_t ArgOffset = MFI->getPreallocatedArgOffsets(PreallocatedId)[ArgIdx];
     LLVM_DEBUG(dbgs() << "PREALLOCATED_ARG arg index " << ArgIdx
                       << ", arg offset " << ArgOffset << "\n");
@@ -36841,6 +36855,13 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned Imm = MI.getOperand(0).getImm();
     BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
     MI.eraseFromParent(); // The pseudo is gone now.
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::DirectReg);
+    return BB;
+  }
+  case X86::PTILEZEROV: {
+    auto *MFI = MF->getInfo<X86MachineFunctionInfo>();
+    MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
     return BB;
   }
   case X86::PTILELOADD:
@@ -42431,12 +42452,10 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     if (SimplifyDemandedBits(Op1, OriginalDemandedBits, OriginalDemandedElts,
                              Known, TLO, Depth + 1))
       return true;
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
     if (SimplifyDemandedBits(Op0, ~Known.Zero & OriginalDemandedBits,
                              OriginalDemandedElts, Known2, TLO, Depth + 1))
       return true;
-    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
     // If the RHS is a constant, see if we can simplify it.
     if (ShrinkDemandedConstant(Op, ~Known2.One & OriginalDemandedBits,
@@ -42487,7 +42506,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known.Zero <<= ShAmt;
     Known.One <<= ShAmt;
 
@@ -42506,7 +42524,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              OriginalDemandedElts, Known, TLO, Depth + 1))
       return true;
 
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known.Zero.lshrInPlace(ShAmt);
     Known.One.lshrInPlace(ShAmt);
 
@@ -42547,7 +42564,6 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                              TLO, Depth + 1))
       return true;
 
-    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
     Known.Zero.lshrInPlace(ShAmt);
     Known.One.lshrInPlace(ShAmt);
 
@@ -50168,12 +50184,12 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,
 /// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
 /// with CMP+{ADC, SBB}.
-static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
+                                         SelectionDAG &DAG) {
   bool IsSub = N->getOpcode() == ISD::SUB;
   SDValue X = N->getOperand(0);
   SDValue Y = N->getOperand(1);
   EVT VT = N->getValueType(0);
-  SDLoc DL(N);
 
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
     return ADCOrSBB;
@@ -52702,7 +52718,7 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
   return getSETCC(NewCC, LHS->getOperand(1), DL, DAG);
 }
 
-static SDValue combineXorSubCTLZ(SDNode *N, SelectionDAG &DAG,
+static SDValue combineXorSubCTLZ(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   assert((N->getOpcode() == ISD::XOR || N->getOpcode() == ISD::SUB) &&
          "Invalid opcode for combing with CTLZ");
@@ -52742,7 +52758,6 @@ static SDValue combineXorSubCTLZ(SDNode *N, SelectionDAG &DAG,
 
   if (C->getZExtValue() != uint64_t(OpCTLZ.getValueSizeInBits() - 1))
     return SDValue();
-  SDLoc DL(N);
   EVT OpVT = VT;
   SDValue Op = OpCTLZ.getOperand(0);
   if (VT == MVT::i8) {
@@ -52765,11 +52780,12 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // If this is SSE1 only convert to FXOR to avoid scalarization.
   if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32) {
     return DAG.getBitcast(MVT::v4i32,
-                          DAG.getNode(X86ISD::FXOR, SDLoc(N), MVT::v4f32,
+                          DAG.getNode(X86ISD::FXOR, DL, MVT::v4f32,
                                       DAG.getBitcast(MVT::v4f32, N0),
                                       DAG.getBitcast(MVT::v4f32, N1)));
   }
@@ -52789,7 +52805,7 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
     return FPLogic;
 
-  if (SDValue R = combineXorSubCTLZ(N, DAG, Subtarget))
+  if (SDValue R = combineXorSubCTLZ(N, DL, DAG, Subtarget))
     return R;
 
   if (DCI.isBeforeLegalizeOps())
@@ -52810,8 +52826,8 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
       N0.getOperand(0).getValueType().isVector() &&
       N0.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
       TLI.isTypeLegal(N0.getOperand(0).getValueType()) && N0.hasOneUse()) {
-    return DAG.getBitcast(VT, DAG.getNOT(SDLoc(N), N0.getOperand(0),
-                                         N0.getOperand(0).getValueType()));
+    return DAG.getBitcast(
+        VT, DAG.getNOT(DL, N0.getOperand(0), N0.getOperand(0).getValueType()));
   }
 
   // Handle AVX512 mask widening.
@@ -52821,8 +52837,8 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
       N0.getOpcode() == ISD::INSERT_SUBVECTOR && N0.getOperand(0).isUndef() &&
       TLI.isTypeLegal(N0.getOperand(1).getValueType())) {
     return DAG.getNode(
-        ISD::INSERT_SUBVECTOR, SDLoc(N), VT, N0.getOperand(0),
-        DAG.getNOT(SDLoc(N), N0.getOperand(1), N0.getOperand(1).getValueType()),
+        ISD::INSERT_SUBVECTOR, DL, VT, N0.getOperand(0),
+        DAG.getNOT(DL, N0.getOperand(1), N0.getOperand(1).getValueType()),
         N0.getOperand(2));
   }
 
@@ -52835,7 +52851,6 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
     auto *N1C = dyn_cast<ConstantSDNode>(N1);
     auto *N001C = dyn_cast<ConstantSDNode>(TruncExtSrc.getOperand(1));
     if (N1C && !N1C->isOpaque() && N001C && !N001C->isOpaque()) {
-      SDLoc DL(N);
       SDValue LHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(0), DL, VT);
       SDValue RHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(1), DL, VT);
       return DAG.getNode(ISD::XOR, DL, VT, LHS,
@@ -55403,7 +55418,8 @@ static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
 /// Try to fold those constants into an 'add' instruction to reduce instruction
 /// count. We do this with CMOV rather the generic 'select' because there are
 /// earlier folds that may be used to turn select-of-constants into logic hacks.
-static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG,
+static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
+                                       SelectionDAG &DAG,
                                        const X86Subtarget &Subtarget) {
   // If an operand is zero, add-of-0 gets simplified away, so that's clearly
   // better because we eliminate 1-2 instructions. This transform is still
@@ -55435,7 +55451,6 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   EVT VT = N->getValueType(0);
-  SDLoc DL(N);
   SDValue FalseOp = Cmov.getOperand(0);
   SDValue TrueOp = Cmov.getOperand(1);
 
@@ -55476,7 +55491,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
 
-  if (SDValue Select = pushAddIntoCmovOfConsts(N, DAG, Subtarget))
+  if (SDValue Select = pushAddIntoCmovOfConsts(N, DL, DAG, Subtarget))
     return Select;
 
   if (SDValue MAdd = matchPMADDWD(DAG, Op0, Op1, DL, VT, Subtarget))
@@ -55534,7 +55549,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                        Op0.getOperand(0), Op0.getOperand(2));
   }
 
-  return combineAddOrSubToADCOrSBB(N, DAG);
+  return combineAddOrSubToADCOrSBB(N, DL, DAG);
 }
 
 // Try to fold (sub Y, cmovns X, -X) -> (add Y, cmovns -X, X) if the cmov
@@ -55610,6 +55625,7 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+  SDLoc DL(N);
 
   // TODO: Add NoOpaque handling to isConstantIntBuildVectorOrConstantInt.
   auto IsNonOpaqueConstant = [&](SDValue Op) {
@@ -55629,7 +55645,6 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
       !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
       Op1->hasOneUse()) {
-    SDLoc DL(N);
     EVT VT = Op0.getValueType();
     SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
                                  DAG.getNOT(SDLoc(Op1), Op1.getOperand(1), VT));
@@ -55660,14 +55675,14 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     assert(!Op1->hasAnyUseOfValue(1) && "Overflow bit in use");
     SDValue ADC = DAG.getNode(X86ISD::ADC, SDLoc(Op1), Op1->getVTList(), Op0,
                               Op1.getOperand(1), Op1.getOperand(2));
-    return DAG.getNode(ISD::SUB, SDLoc(N), Op0.getValueType(), ADC.getValue(0),
+    return DAG.getNode(ISD::SUB, DL, Op0.getValueType(), ADC.getValue(0),
                        Op1.getOperand(0));
   }
 
-  if (SDValue V = combineXorSubCTLZ(N, DAG, Subtarget))
+  if (SDValue V = combineXorSubCTLZ(N, DL, DAG, Subtarget))
     return V;
 
-  if (SDValue V = combineAddOrSubToADCOrSBB(N, DAG))
+  if (SDValue V = combineAddOrSubToADCOrSBB(N, DL, DAG))
     return V;
 
   return combineSubSetcc(N, DAG);

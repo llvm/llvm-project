@@ -23,6 +23,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  canonicalizef16
+  SRCS
+    canonicalizef16.cpp
+  HDRS
+    ../canonicalizef16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
   canonicalizef128
   SRCS
     canonicalizef128.cpp
@@ -31,6 +44,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
 )
 
@@ -1226,6 +1240,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  copysignf16
+  SRCS
+    copysignf16.cpp
+  HDRS
+    ../copysignf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   copysignf128
   SRCS
     copysignf128.cpp
@@ -1271,6 +1298,19 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  frexpf16
+  SRCS
+    frexpf16.cpp
+  HDRS
+    ../frexpf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1324,6 +1364,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ilogbf16
+  SRCS
+    ilogbf16.cpp
+  HDRS
+    ../ilogbf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
   ilogbf128
   SRCS
     ilogbf128.cpp
@@ -1369,6 +1422,19 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
+  llogbf16
+  SRCS
+    llogbf16.cpp
+  HDRS
+    ../llogbf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1646,6 +1712,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  logbf16
+  SRCS
+    logbf16.cpp
+  HDRS
+    ../logbf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_entrypoint_object(
   logbf128
   SRCS
     logbf128.cpp
@@ -1654,6 +1733,7 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -1688,6 +1768,19 @@ add_entrypoint_object(
   HDRS
     ../modfl.h
   DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  modff16
+  SRCS
+    modff16.cpp
+  HDRS
+    ../modff16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -1756,6 +1849,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fminf16
+  SRCS
+    fminf16.cpp
+  HDRS
+    ../fminf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+
+add_entrypoint_object(
   fmax
   SRCS
     fmax.cpp
@@ -1805,6 +1912,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmaxf16
+  SRCS
+    fmaxf16.cpp
+  HDRS
+    ../fmaxf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fmaximum
   SRCS
     fmaximum.cpp
@@ -1838,6 +1958,19 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O2
+)
+
+add_entrypoint_object(
+  fmaximumf16
+  SRCS
+    fmaximumf16.cpp
+  HDRS
+    ../fmaximumf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -1890,6 +2023,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmaximum_numf16
+  SRCS
+    fmaximum_numf16.cpp
+  HDRS
+    ../fmaximum_numf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fmaximum_numf128
   SRCS
     fmaximum_numf128.cpp
@@ -1939,6 +2085,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmaximum_magf16
+  SRCS
+    fmaximum_magf16.cpp
+  HDRS
+    ../fmaximum_magf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fmaximum_magf128
   SRCS
     fmaximum_magf128.cpp
@@ -1950,7 +2109,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
 )
-
 
 add_entrypoint_object(
   fmaximum_mag_num
@@ -1986,6 +2144,19 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O2
+)
+
+add_entrypoint_object(
+  fmaximum_mag_numf16
+  SRCS
+    fmaximum_mag_numf16.cpp
+  HDRS
+    ../fmaximum_mag_numf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -2038,6 +2209,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fminimumf16
+  SRCS
+    fminimumf16.cpp
+  HDRS
+    ../fminimumf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fminimumf128
   SRCS
     fminimumf128.cpp
@@ -2084,6 +2268,19 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.basic_operations
   COMPILE_OPTIONS
     -O2
+)
+
+add_entrypoint_object(
+  fminimum_numf16
+  SRCS
+    fminimum_numf16.cpp
+  HDRS
+    ../fminimum_numf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -2136,6 +2333,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fminimum_magf16
+  SRCS
+    fminimum_magf16.cpp
+  HDRS
+    ../fminimum_magf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fminimum_magf128
   SRCS
     fminimum_magf128.cpp
@@ -2147,7 +2357,6 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
 )
-
 
 add_entrypoint_object(
   fminimum_mag_num
@@ -2186,6 +2395,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fminimum_mag_numf16
+  SRCS
+    fminimum_mag_numf16.cpp
+  HDRS
+    ../fminimum_mag_numf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   fminimum_mag_numf128
   SRCS
     fminimum_mag_numf128.cpp
@@ -2194,6 +2416,22 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmul
+  SRCS
+    fmul.cpp
+  HDRS
+    ../fmul.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.uint128
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
   COMPILE_OPTIONS
     -O3
 )
@@ -2257,7 +2495,19 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.division_and_remainder_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+)
+
+add_entrypoint_object(
+  remquof128
+  SRCS
+    remquof128.cpp
+  HDRS
+    ../remquof128.h
+  DEPENDS
+    libc.src.__support.FPUtil.division_and_remainder_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -2269,7 +2519,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.division_and_remainder_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -2281,7 +2531,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.division_and_remainder_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+)
+
+add_entrypoint_object(
+  remquof16
+  SRCS
+    remquof16.cpp
+  HDRS
+    ../remquof16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.division_and_remainder_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -2293,7 +2556,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.division_and_remainder_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -2305,7 +2568,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.division_and_remainder_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
 )
 
 add_entrypoint_object(
@@ -2317,7 +2580,20 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.division_and_remainder_operations
   COMPILE_OPTIONS
-    -O2
+    -O3
+)
+
+add_entrypoint_object(
+  remainderf16
+  SRCS
+    remainderf16.cpp
+  HDRS
+    ../remainderf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.division_and_remainder_operations
+  COMPILE_OPTIONS
+    -O3
 )
 
 add_entrypoint_object(
@@ -2367,6 +2643,19 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
   DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+)
+
+add_entrypoint_object(
+  fdimf16
+  SRCS
+    fdimf16.cpp
+  HDRS
+    ../fdimf16.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
 )
 
@@ -2435,6 +2724,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nanf16
+  SRCS
+    nanf16.cpp
+  HDRS
+    ../nanf16.h
+  DEPENDS
+    libc.src.__support.str_to_float
+    libc.src.errno.errno
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nanf128
   SRCS
     nanf128.cpp
@@ -2478,6 +2780,19 @@ add_entrypoint_object(
   HDRS
     ../nextafterl.h
   DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextafterf16
+  SRCS
+    nextafterf16.cpp
+  HDRS
+    ../nextafterf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2533,6 +2848,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nexttowardf16
+  SRCS
+    nexttowardf16.cpp
+  HDRS
+    ../nexttowardf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nextdown
   SRCS
     nextdown.cpp
@@ -2563,6 +2891,19 @@ add_entrypoint_object(
   HDRS
     ../nextdownf.h
   DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  nextdownf16
+  SRCS
+    nextdownf16.cpp
+  HDRS
+    ../nextdownf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
   COMPILE_OPTIONS
     -O3
@@ -2618,6 +2959,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nextupf16
+  SRCS
+    nextupf16.cpp
+  HDRS
+    ../nextupf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nextupf128
   SRCS
     nextupf128.cpp
@@ -2661,6 +3015,19 @@ add_entrypoint_object(
   HDRS
     ../fmodl.h
   DEPENDS
+    libc.src.__support.FPUtil.generic.fmod
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  fmodf16
+  SRCS
+    fmodf16.cpp
+  HDRS
+    ../fmodf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.generic.fmod
   COMPILE_OPTIONS
     -O3

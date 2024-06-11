@@ -2194,7 +2194,7 @@ void InitListChecker::CheckStructUnionTypes(
 
     // Designated inits always initialize fields, so if we see one, all
     // remaining base classes have no explicit initializer.
-    if (Init && isa<DesignatedInitExpr>(Init))
+    if (isa_and_nonnull<DesignatedInitExpr>(Init))
       Init = nullptr;
 
     // C++ [over.match.class.deduct]p1.6:
@@ -6350,7 +6350,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
     // class member of array type from a parenthesized initializer list.
     else if (S.getLangOpts().CPlusPlus &&
              Entity.getKind() == InitializedEntity::EK_Member &&
-             Initializer && isa<InitListExpr>(Initializer)) {
+             isa_and_nonnull<InitListExpr>(Initializer)) {
       TryListInitialization(S, Entity, Kind, cast<InitListExpr>(Initializer),
                             *this, TreatUnavailableAsInvalid);
       AddParenthesizedArrayInitStep(DestType);
@@ -8063,6 +8063,11 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
 enum PathLifetimeKind {
   /// Lifetime-extend along this path.
   Extend,
+  /// We should lifetime-extend, but we don't because (due to technical
+  /// limitations) we can't. This happens for default member initializers,
+  /// which we don't clone for every use, so we don't have a unique
+  /// MaterializeTemporaryExpr to update.
+  ShouldExtend,
   /// Do not lifetime extend along this path.
   NoExtend
 };
@@ -8074,7 +8079,7 @@ shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
   PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
-      Kind = PathLifetimeKind::Extend;
+      Kind = PathLifetimeKind::ShouldExtend;
     else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
@@ -8194,6 +8199,18 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                               ExtendingEntity->allocateManglingNumber());
         // Also visit the temporaries lifetime-extended by this initializer.
         return true;
+
+      case PathLifetimeKind::ShouldExtend:
+        // We're supposed to lifetime-extend the temporary along this path (per
+        // the resolution of DR1815), but we don't support that yet.
+        //
+        // FIXME: Properly handle this situation. Perhaps the easiest approach
+        // would be to clone the initializer expression on each use that would
+        // lifetime extend its temporaries.
+        Diag(DiagLoc, diag::warn_unsupported_lifetime_extension)
+            << RK << DiagRange;
+        break;
+
       case PathLifetimeKind::NoExtend:
         // If the path goes through the initialization of a variable or field,
         // it can't possibly reach a temporary created in this full-expression.
@@ -8776,7 +8793,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
   // constant expressions here in order to perform narrowing checks =(
   EnterExpressionEvaluationContext Evaluated(
       S, EnterExpressionEvaluationContext::InitList,
-      CurInit.get() && isa<InitListExpr>(CurInit.get()));
+      isa_and_nonnull<InitListExpr>(CurInit.get()));
 
   // C++ [class.abstract]p2:
   //   no objects of an abstract class can be created except as subobjects

@@ -509,6 +509,7 @@ def fneg       : SDNode<"ISD::FNEG"       , SDTFPUnaryOp>;
 def fsqrt      : SDNode<"ISD::FSQRT"      , SDTFPUnaryOp>;
 def fsin       : SDNode<"ISD::FSIN"       , SDTFPUnaryOp>;
 def fcos       : SDNode<"ISD::FCOS"       , SDTFPUnaryOp>;
+def ftan       : SDNode<"ISD::FTAN"       , SDTFPUnaryOp>;
 def fexp2      : SDNode<"ISD::FEXP2"      , SDTFPUnaryOp>;
 def fexp10     : SDNode<"ISD::FEXP10"     , SDTFPUnaryOp>;
 def fpow       : SDNode<"ISD::FPOW"       , SDTFPBinOp>;
@@ -561,6 +562,8 @@ def strict_fsqrt      : SDNode<"ISD::STRICT_FSQRT",
 def strict_fsin       : SDNode<"ISD::STRICT_FSIN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fcos       : SDNode<"ISD::STRICT_FCOS",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_ftan       : SDNode<"ISD::STRICT_FTAN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fexp2      : SDNode<"ISD::STRICT_FEXP2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
@@ -1517,6 +1520,9 @@ def any_fsin       : PatFrags<(ops node:$src),
 def any_fcos       : PatFrags<(ops node:$src),
                               [(strict_fcos node:$src),
                                (fcos node:$src)]>;
+def any_ftan       : PatFrags<(ops node:$src),
+                              [(strict_ftan node:$src),
+                               (ftan node:$src)]>;
 def any_fexp2      : PatFrags<(ops node:$src),
                               [(strict_fexp2 node:$src),
                                (fexp2 node:$src)]>;

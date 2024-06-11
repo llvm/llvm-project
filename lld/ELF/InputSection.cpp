@@ -76,12 +76,12 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
     invokeELFT(parseCompressedHeader,);
 }
 
-// Drop SHF_GROUP bit unless we are producing a re-linkable object file.
-// SHF_GROUP is a marker that a section belongs to some comdat group.
-// That flag doesn't make sense in an executable.
+// SHF_INFO_LINK and SHF_GROUP are normally resolved and not copied to the
+// output section. However, for relocatable linking without
+// --force-group-allocation, the SHF_GROUP flag and section groups are retained.
 static uint64_t getFlags(uint64_t flags) {
   flags &= ~(uint64_t)SHF_INFO_LINK;
-  if (!config->relocatable)
+  if (config->resolveGroups)
     flags &= ~(uint64_t)SHF_GROUP;
   return flags;
 }

@@ -12,6 +12,7 @@
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -50,10 +51,12 @@ private:
     // 0 for errno and exceptions, but this doesn't hold for
     // all math functions using RoundToInteger test:
     // https://github.com/llvm/llvm-project/pull/88816
+#ifndef LIBC_TARGET_ARCH_IS_GPU
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);
     }
+#endif
   }
 
 public:

@@ -402,8 +402,7 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   // If all promoted, we don't need the MD.prof metadata.
   if (SavedRemainCount > 0 || Version != NumVals) {
     // Otherwise we need update with the un-promoted records back.
-    ArrayRef<InstrProfValueData> RemVDs(RemainingVDs);
-    annotateValueSite(*Func.getParent(), *MO.I, RemVDs, SavedRemainCount,
+    annotateValueSite(*Func.getParent(), *MO.I, RemainingVDs, SavedRemainCount,
                       IPVK_MemOPSize, NumVals);
   }
 

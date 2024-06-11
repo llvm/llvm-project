@@ -1,7 +1,7 @@
 # REQUIRES: loongarch
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
-# RUN: llvm-readobj -r %t.so
+# RUN: llvm-readobj -r %t.so | FileCheck %s --check-prefix=RELA
 
 ## Both TLSDESC and DTPMOD64/DTPREL64 should be present.
 # RELA:      .rela.dyn {

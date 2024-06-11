@@ -282,7 +282,7 @@ std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
 static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
   uint32_t Count = NumPrefix;
   uint32_t Pos = 0, LastPos = 0;
-  for (auto & CI : PathNameStr) {
+  for (const auto &CI : PathNameStr) {
     ++Pos;
     if (llvm::sys::path::is_separator(CI)) {
       LastPos = Pos;
@@ -1176,16 +1176,6 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
   }
 }
 
-template <class T>
-static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
-  using namespace support;
-
-  if (Orig == llvm::endianness::little)
-    return endian::readNext<T, llvm::endianness::little>(D);
-  else
-    return endian::readNext<T, llvm::endianness::big>(D);
-}
-
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
   return std::unique_ptr<ValueProfData>(new (::operator new(TotalSize))
                                             ValueProfData());
@@ -1224,7 +1214,8 @@ ValueProfData::getValueProfData(const unsigned char *D,
     return make_error<InstrProfError>(instrprof_error::truncated);
 
   const unsigned char *Header = D;
-  uint32_t TotalSize = swapToHostOrder<uint32_t>(Header, Endianness);
+  uint32_t TotalSize = endian::readNext<uint32_t>(Header, Endianness);
+
   if (D + TotalSize > BufferEnd)
     return make_error<InstrProfError>(instrprof_error::too_large);
 
@@ -1308,7 +1299,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
   // Value Profile Data
   uint32_t MDCount = MaxMDCount;
-  for (auto &VD : VDs) {
+  for (const auto &VD : VDs) {
     Vals.push_back(MDHelper.createConstant(
         ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
     Vals.push_back(MDHelper.createConstant(
