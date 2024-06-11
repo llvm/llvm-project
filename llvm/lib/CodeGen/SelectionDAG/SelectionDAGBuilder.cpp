@@ -4482,7 +4482,12 @@ static const MDNode *getRangeMetadata(const Instruction &I) {
   // transforms that are known not to be poison-safe, such as folding logical
   // and/or to bitwise and/or. For now, only transfer !range if !noundef is
   // also present.
-  if (!I.hasMetadata(LLVMContext::MD_noundef))
+  bool NoUndef = false;
+  if (const auto *CB = dyn_cast<CallBase>(&I)) {
+    NoUndef = CB->hasRetAttr(Attribute::NoUndef);
+  }
+  NoUndef = NoUndef || I.hasMetadata(LLVMContext::MD_noundef);
+  if (!NoUndef)
     return nullptr;
   return I.getMetadata(LLVMContext::MD_range);
 }
