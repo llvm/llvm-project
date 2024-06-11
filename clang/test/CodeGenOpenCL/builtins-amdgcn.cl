@@ -605,9 +605,9 @@ void test_s_getreg(volatile global uint *out)
 }
 
 // CHECK-LABEL: @test_get_local_id(
-// CHECK: tail call range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.x(), !noundef
-// CHECK: tail call range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.y(), !noundef
-// CHECK: tail call range(i32 0, 1024{{.*}}) i32 @llvm.amdgcn.workitem.id.z(), !noundef
+// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.x()
+// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.y()
+// CHECK: tail call noundef range(i32 0, 1024){{.*}} i32 @llvm.amdgcn.workitem.id.z()
 void test_get_local_id(int d, global int *out)
 {
 	switch (d) {

@@ -740,8 +740,7 @@ static Value *emitRangedBuiltin(CodeGenFunction &CGF, unsigned IntrinsicID,
   llvm::CallInst *Call = CGF.Builder.CreateCall(F);
   llvm::ConstantRange CR(APInt(32, low), APInt(32, high));
   Call->addRangeRetAttr(CR);
-  Call->setMetadata(llvm::LLVMContext::MD_noundef,
-                    llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
+  Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
   return Call;
 }
 
