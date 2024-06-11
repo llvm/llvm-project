@@ -348,21 +348,25 @@ subroutine char1(a)
   res = reduce(a, red_char1)
 end subroutine
 
-! CHECK: fir.call @_FortranAReduceChar1
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1> {bindc_name = ".chrtmp"}
+! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
+! CHECK: fir.call @_FortranAReduceChar1(%[[RESULT]], {{.*}})
 
 pure function red_char2(a,b)
-  character(kind=2), intent(in) :: a, b
-  character(kind=2) :: red_char2
+  character(kind=2, len=10), intent(in) :: a, b
+  character(kind=2, len=10) :: red_char2
   red_char2 = a // b
 end function
 
 subroutine char2(a)
-  character(kind=2), intent(in) :: a(:)
-  character(kind=2) :: res
+  character(kind=2, len=10), intent(in) :: a(:)
+  character(kind=2, len=10) :: res
   res = reduce(a, red_char2)
 end subroutine
 
-! CHECK: fir.call @_FortranAReduceChar2
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<2,10> {bindc_name = ".chrtmp"}
+! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<2,10>>) -> !fir.ref<i16>
+! CHECK: fir.call @_FortranAReduceChar2(%[[RESULT]], {{.*}})
 
 pure function red_char4(a,b)
   character(kind=4), intent(in) :: a, b
@@ -598,8 +602,8 @@ end subroutine
 ! CHECK: fir.call @_FortranAReduceCharacter1Dim
 
 subroutine char2dim(a)
-  character(kind=2), intent(in) :: a(:, :)
-  character(kind=2), allocatable :: res(:)
+  character(kind=2, len=10), intent(in) :: a(:, :)
+  character(kind=2, len=10), allocatable :: res(:)
   res = reduce(a, red_char2, 2)
 end subroutine
 
@@ -612,5 +616,23 @@ subroutine char4dim(a)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceCharacter4Dim
+
+pure function red_char_dyn(a, b)
+  character(*), intent(In) :: a, b
+  character(max(len(a),len(b))) :: red_char_dyn
+  red_char_dyn = max(a, b)
+end function
+
+subroutine charDyn()
+  character(5) :: res
+  character(:), allocatable :: a(:)
+  allocate(character(10)::a(10))
+  res = reduce(a, red_char_dyn)
+end subroutine
+
+! CHECK: %[[BOX_ELESIZE:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1,?>(%[[BOX_ELESIZE]] : index) {bindc_name = ".chrtmp"}
+! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK: fir.call @_FortranAReduceChar1(%[[RESULT]], {{.*}})
 
 end module

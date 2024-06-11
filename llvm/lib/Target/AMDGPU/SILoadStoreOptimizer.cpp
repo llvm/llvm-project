@@ -86,6 +86,8 @@ enum InstClassEnum {
   GLOBAL_STORE_SADDR,
   FLAT_LOAD,
   FLAT_STORE,
+  FLAT_LOAD_SADDR,
+  FLAT_STORE_SADDR,
   GLOBAL_LOAD, // GLOBAL_LOAD/GLOBAL_STORE are never used as the InstClass of
   GLOBAL_STORE // any CombineInfo, they are only ever returned by
                // getCommonInstClass.
@@ -350,6 +352,8 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORD_SADDR:
   case AMDGPU::FLAT_LOAD_DWORD:
   case AMDGPU::FLAT_STORE_DWORD:
+  case AMDGPU::FLAT_LOAD_DWORD_SADDR:
+  case AMDGPU::FLAT_STORE_DWORD_SADDR:
     return 1;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
@@ -360,6 +364,8 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX2_SADDR:
   case AMDGPU::FLAT_LOAD_DWORDX2:
   case AMDGPU::FLAT_STORE_DWORDX2:
+  case AMDGPU::FLAT_LOAD_DWORDX2_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX2_SADDR:
     return 2;
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX3_SGPR_IMM:
@@ -370,6 +376,8 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
   case AMDGPU::FLAT_LOAD_DWORDX3:
   case AMDGPU::FLAT_STORE_DWORDX3:
+  case AMDGPU::FLAT_LOAD_DWORDX3_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX3_SADDR:
     return 3;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
@@ -380,6 +388,8 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
   case AMDGPU::FLAT_LOAD_DWORDX4:
   case AMDGPU::FLAT_STORE_DWORDX4:
+  case AMDGPU::FLAT_LOAD_DWORDX4_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX4_SADDR:
     return 4;
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
@@ -547,6 +557,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
     return GLOBAL_STORE_SADDR;
+  case AMDGPU::FLAT_LOAD_DWORD_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX2_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX3_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX4_SADDR:
+    return FLAT_LOAD_SADDR;
+  case AMDGPU::FLAT_STORE_DWORD_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX2_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX3_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX4_SADDR:
+    return FLAT_STORE_SADDR;
   }
 }
 
@@ -621,6 +641,16 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
     return AMDGPU::GLOBAL_STORE_DWORD_SADDR;
+  case AMDGPU::FLAT_LOAD_DWORD_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX2_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX3_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX4_SADDR:
+    return AMDGPU::FLAT_LOAD_DWORD_SADDR;
+  case AMDGPU::FLAT_STORE_DWORD_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX2_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX3_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX4_SADDR:
+    return AMDGPU::FLAT_STORE_DWORD_SADDR;
   }
 }
 
@@ -724,6 +754,14 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX2_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORD_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX2_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX3_SADDR:
+  case AMDGPU::FLAT_LOAD_DWORDX4_SADDR:
+  case AMDGPU::FLAT_STORE_DWORD_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX2_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX3_SADDR:
+  case AMDGPU::FLAT_STORE_DWORDX4_SADDR:
     Result.SAddr = true;
     [[fallthrough]];
   case AMDGPU::GLOBAL_LOAD_DWORD:
@@ -1782,6 +1820,28 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     case 4:
       return AMDGPU::FLAT_STORE_DWORDX4;
     }
+  case FLAT_LOAD_SADDR:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::FLAT_LOAD_DWORDX2_SADDR;
+    case 3:
+      return AMDGPU::FLAT_LOAD_DWORDX3_SADDR;
+    case 4:
+      return AMDGPU::FLAT_LOAD_DWORDX4_SADDR;
+    }
+  case FLAT_STORE_SADDR:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::FLAT_STORE_DWORDX2_SADDR;
+    case 3:
+      return AMDGPU::FLAT_STORE_DWORDX3_SADDR;
+    case 4:
+      return AMDGPU::FLAT_STORE_DWORDX4_SADDR;
+    }
   case MIMG:
     assert(((unsigned)llvm::popcount(CI.DMask | Paired.DMask) == Width) &&
            "No overlaps");
@@ -2407,12 +2467,14 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     case FLAT_LOAD:
+    case FLAT_LOAD_SADDR:
     case GLOBAL_LOAD:
     case GLOBAL_LOAD_SADDR:
       NewMI = mergeFlatLoadPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 4;
       break;
     case FLAT_STORE:
+    case FLAT_STORE_SADDR:
     case GLOBAL_STORE:
     case GLOBAL_STORE_SADDR:
       NewMI = mergeFlatStorePair(CI, Paired, Where->I);
