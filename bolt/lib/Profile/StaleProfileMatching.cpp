@@ -604,8 +604,8 @@ bool canApplyInference(const FlowFunction &Func,
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
     return false;
 
-  if (Func.MatchedExecCount / YamlBF.ExecCount >=
-      opts::MatchedProfileThreshold / 100)
+  if ((double)Func.MatchedExecCount / YamlBF.ExecCount >=
+      opts::MatchedProfileThreshold / 100.0)
     return false;
 
   bool HasExitBlocks = llvm::any_of(
