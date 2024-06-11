@@ -156,6 +156,7 @@ int fncall_reassignment(int *fncall_reassigned) {
   fncall_reassigned = external_fn();
 
   if (fncall_reassigned) {
+    // no-warning
     *fncall_reassigned = 42;
   }
   

@@ -211,6 +211,8 @@ void setUnknownValue(const Expr &E, Value &Val, Environment &Env) {
     Env.setValue(E, Val);
 }
 
+// Gets a pointer's value, and initializes it to (Unknown, Unknown) if it hasn't
+// been initialized already.
 Value *getValue(const Expr &Var, Environment &Env) {
   if (Value *EnvVal = Env.getValue(Var)) {
     // FIXME: The framework usually creates the values for us, but without the
@@ -220,13 +222,20 @@ Value *getValue(const Expr &Var, Environment &Env) {
     return EnvVal;
   }
 
-  Value *RootValue = Env.createValue(Var.getType());
+  return nullptr;
 
-  initializeRootValue(*RootValue, Env);
+  // Value *RootValue = Env.createValue(Var.getType());
+// 
+  // initializeRootValue(*RootValue, Env);
+// 
+  // setUnknownValue(Var, *RootValue, Env);
+// 
+  // return RootValue;
+}
 
-  setUnknownValue(Var, *RootValue, Env);
-
-  return RootValue;
+bool hasTopOrNullValue(const Value *Val, const Environment &Env) {
+  return !Val || isa_and_present<TopBoolValue>(Val->getProperty(kIsNull)) ||
+         isa_and_present<TopBoolValue>(Val->getProperty(kIsNonnull));
 }
 
 void matchDereferenceExpr(const Stmt *stmt,
@@ -236,11 +245,10 @@ void matchDereferenceExpr(const Stmt *stmt,
   assert(Var != nullptr);
 
   Value *RootValue = getValue(*Var, Env);
+  if (hasTopOrNullValue(RootValue, Env))
+    return;
 
   BoolValue &IsNull = getVal(kIsNull, *RootValue);
-
-  if (&IsNull == &Env.makeTopBoolValue())
-    return;
 
   Env.assume(Env.arena().makeNot(IsNull.formula()));
 }
@@ -259,14 +267,12 @@ void matchNullCheckExpr(const Expr *NullCheck,
   }
 
   Value *RootValue = getValue(*Var, Env);
+  if (hasTopOrNullValue(RootValue, Env))
+    return;
 
   Arena &A = Env.arena();
   BoolValue &IsNonnull = getVal(kIsNonnull, *RootValue);
   BoolValue &IsNull = getVal(kIsNull, *RootValue);
-
-  if (&IsNonnull == &Env.makeTopBoolValue() ||
-      &IsNull == &Env.makeTopBoolValue())
-    return;
 
   BoolValue *CondValue = cast_or_null<BoolValue>(Env.getValue(*NullCheck));
   if (!CondValue) {
@@ -296,16 +302,13 @@ void matchEqualExpr(const BinaryOperator *EqualExpr,
   Value *LHSValue = getValue(*LHSVar, Env);
   Value *RHSValue = getValue(*RHSVar, Env);
 
+  if (hasTopOrNullValue(LHSValue, Env) || hasTopOrNullValue(RHSValue, Env))
+    return;
+
   BoolValue &LHSNonnull = getVal(kIsNonnull, *LHSValue);
   BoolValue &LHSNull = getVal(kIsNull, *LHSValue);
   BoolValue &RHSNonnull = getVal(kIsNonnull, *RHSValue);
   BoolValue &RHSNull = getVal(kIsNull, *RHSValue);
-
-  if (&LHSNonnull == &Env.makeTopBoolValue() ||
-      &RHSNonnull == &Env.makeTopBoolValue() ||
-      &LHSNull == &Env.makeTopBoolValue() ||
-      &RHSNull == &Env.makeTopBoolValue())
-    return;
 
   BoolValue *CondValue = cast_or_null<BoolValue>(Env.getValue(*EqualExpr));
   if (!CondValue) {
@@ -349,6 +352,7 @@ void matchAddressofExpr(const Expr *expr,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
+  // FIXME: Use atoms or export to separate function
   Value *RootValue = Env.getValue(*Var);
   if (!RootValue) {
     RootValue = Env.createValue(Var->getType());
@@ -397,7 +401,8 @@ void matchPtrArgFunctionExpr(const CallExpr *fncall,
     }
   }
 
-  if (fncall->getCallReturnType(*Result.Context)->isPointerType()) {
+  if (fncall->getCallReturnType(*Result.Context)->isPointerType() &&
+      !Env.getValue(*fncall)) {
     Value *RootValue = Env.createValue( 
         fncall->getCallReturnType(*Result.Context));
     if (!RootValue)
@@ -415,13 +420,15 @@ void matchAnyPointerExpr(const Expr *fncall,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
-  // Initialize to (Unknown, Unknown)
+  // In some cases, prvalues are not automatically initialized
+  // Initialize these values, but don't set null-ness values for performance
   if (Env.getValue(*Var))
     return;
 
   Value *RootValue = Env.createValue(Var->getType());
+  if (!RootValue)
+    return;
 
-  // initializeRootValue(*RootValue, Env);
   setUnknownValue(*Var, *RootValue, Env);
 }
 
@@ -527,12 +534,14 @@ diagnoseEqualExpr(const Expr *PtrCheck, const MatchFinder::MatchResult &Result,
   std::vector<SourceLocation> NullVarLocations;
 
   if (Value *LHSValue = Env.getValue(*LHSVar);
+      LHSValue->getProperty(kIsNonnull) && 
       Env.proves(A.makeNot(getVal(kIsNonnull, *LHSValue).formula()))) {
     WarningLocToVal.try_emplace(LHSVar->getBeginLoc(), LHSValue);
     NullVarLocations.push_back(LHSVar->getBeginLoc());
   }
 
   if (Value *RHSValue = Env.getValue(*RHSVar);
+      RHSValue->getProperty(kIsNonnull) && 
       Env.proves(A.makeNot(getVal(kIsNonnull, *RHSValue).formula()))) {
     WarningLocToVal.try_emplace(RHSVar->getBeginLoc(), RHSValue);
     NullVarLocations.push_back(RHSVar->getBeginLoc());
@@ -647,8 +656,7 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
   BoolValue &NonnullValue = MergeValues(kIsNonnull);
   BoolValue &NullValue = MergeValues(kIsNull);
 
-  if (&NonnullValue == &MergedEnv.makeTopBoolValue() ||
-      &NullValue == &MergedEnv.makeTopBoolValue()) {
+  if (isa<TopBoolValue>(NonnullValue) || isa<TopBoolValue>(NullValue)) {
     MergedVal.setProperty(kIsNonnull, MergedEnv.makeTopBoolValue());
     MergedVal.setProperty(kIsNull, MergedEnv.makeTopBoolValue());
   } else {
@@ -673,8 +681,12 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
     auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
     auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
 
+    if (isa_and_present<TopBoolValue>(LHSVar) ||
+        isa_and_present<TopBoolValue>(RHSVar))
+      return CR::Top;
+
     if (LHSVar == RHSVar)
-      return (LHSVar == &Env1.makeTopBoolValue()) ? CR::Top : CR::Same;
+      return CR::Same;
 
     SatisfiabilityResult LHSResult = computeSatisfiability(LHSVar, Env1);
     SatisfiabilityResult RHSResult = computeSatisfiability(RHSVar, Env2);
