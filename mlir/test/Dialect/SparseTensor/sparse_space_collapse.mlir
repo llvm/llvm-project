@@ -8,15 +8,15 @@
 }>
 
 // CHECK-LABEL:   func.func @sparse_sparse_collapse(
-// CHECK-SAME:         %[[VAL_0:.*]]: tensor<4x8xf32, #sparse>,
-// CHECK-SAME:         %[[VAL_1:.*]]: index) {
-// CHECK:           %[[VAL_3:.*]] = sparse_tensor.extract_iteration_space %[[VAL_0]] lvls = 0 to 2 : tensor<4x8xf32, #sparse>
-// CHECK:           %[[VAL_4:.*]] = sparse_tensor.iterate %[[VAL_5:.*]] in %[[VAL_3]] at(%[[VAL_6:.*]], _) iter_args(%[[VAL_7:.*]] = %[[VAL_1]])
-// CHECK:             %[[VAL_8:.*]] = "test.op"(%[[VAL_7]]) : (index) -> index
-// CHECK:             sparse_tensor.yield %[[VAL_8]] : index
+// CHECK-SAME:        %[[VAL_0:.*]]: tensor<4x8xf32, #sparse>) -> index {
+// CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_3:.*]] = sparse_tensor.extract_iteration_space %[[VAL_0]] lvls = 0 to 2
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.iterate %[[VAL_5:.*]] in %[[VAL_3]] iter_args(%[[VAL_6:.*]] = %[[VAL_1]])
+// CHECK:             %[[VAL_7:.*]] = arith.addi %[[VAL_6]], %[[VAL_2]] : index
+// CHECK:             sparse_tensor.yield %[[VAL_7]] : index
 // CHECK:           }
-// CHECK:           "test.sink"(%[[VAL_4]]) : (index) -> ()
-// CHECK:           return
+// CHECK:           return %[[VAL_4]] : index
 // CHECK:         }
 func.func @sparse_sparse_collapse(%sp : tensor<4x8xf32, #COO>) -> index {
   %i = arith.constant 0 : index
