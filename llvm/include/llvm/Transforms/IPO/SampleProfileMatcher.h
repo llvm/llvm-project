@@ -58,7 +58,7 @@ class SampleProfileMatcher {
   StringMap<std::unordered_map<LineLocation, MatchState, LineLocationHash>>
       FuncCallsiteMatchStates;
 
-  struct FuncProfNameMapHash {
+  struct FuncToProfileNameMapHash {
     uint64_t
     operator()(const std::pair<const Function *, FunctionId> &P) const {
       return hash_combine(P.first, P.second);
@@ -68,7 +68,7 @@ class SampleProfileMatcher {
   // indicating whether they are matched. This is used as a cache for the
   // matching result.
   std::unordered_map<std::pair<const Function *, FunctionId>, bool,
-                     FuncProfNameMapHash>
+                     FuncToProfileNameMapHash>
       FuncToProfileNameMap;
   // The new functions found by the call graph matching. The map's key is the
   // old profile name and value is the new(renamed) function.
@@ -143,7 +143,6 @@ private:
                              const AnchorMap &ProfileAnchors,
                              AnchorList &FilteredIRAnchorsList,
                              AnchorList &FilteredProfileAnchorList);
-  void runCFGMatching(Function &F);
   void runOnFunction(Function &F);
   void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
   void findProfileAnchors(const FunctionSamples &FS,
@@ -189,11 +188,12 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
-  // Check if the two functions are equal. If MatchUnusedFunction is set and the
-  // two functions are both new, try to match the two functions.
+  // Check if the two functions are equal. If FindMatchedProfileOnly is set,
+  // only search the existing matched function. Otherwise, if the two functions
+  // are both new, try to match the two functions.
   bool isFunctionEqual(const FunctionId &IRFuncName,
                        const FunctionId &ProfileFuncName,
-                       bool MatchUnusedFunction);
+                       bool FindMatchedProfileOnly);
   // This function implements the Myers diff algorithm used for stale profile
   // matching. The algorithm provides a simple and efficient way to find the
   // Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
@@ -220,7 +220,7 @@ private:
   // between two callsite anchors extracted from function and profile. If it's
   // above the threshold, the function matches the profile.
   bool functionMatchesProfile(Function &IRFunc, const FunctionId &ProfFunc,
-                              bool FindOnly);
+                              bool FindMatchedProfileOnly);
   void matchProfileForNewFunctions(const StringMap<Function *> &NewIRFunctions,
                                    FunctionSamples &FS);
   // Find functions that don't show in the profile or profile symbol list,
