@@ -980,6 +980,8 @@ bool DWARFASTParserClang::ParseObjCMethod(
     CompilerType clang_type, const ParsedDWARFTypeAttributes &attrs,
     bool is_variadic) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
+  assert(dwarf);
+
   const auto tag = die.Tag();
   ConstString class_name(objc_method.GetClassName());
   if (!class_name)
@@ -1189,8 +1191,6 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
-  assert(dwarf);
-
   const dw_tag_t tag = die.Tag();
 
   bool is_variadic = false;
