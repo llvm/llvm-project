@@ -1329,7 +1329,7 @@ public:
     outputStream << "CompilerDirective: !";
     bool extraNewline =
         directive.get<parser::CompilerDirective>().source.ToString().back() ==
-        'n';
+        '\n';
     outputStream
         << directive.get<parser::CompilerDirective>().source.ToString();
     if (!extraNewline)
