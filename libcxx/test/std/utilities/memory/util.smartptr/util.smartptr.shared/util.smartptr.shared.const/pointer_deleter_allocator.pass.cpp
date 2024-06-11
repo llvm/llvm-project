@@ -166,9 +166,9 @@ int main(int, char**)
     }
 
     {
-        // See https://github.com/llvm/llvm-project/pull/93071#issuecomment-2158494851
-        auto deleter = [](auto pointer) { delete pointer; };
-        std::shared_ptr<int> p(new int, deleter, std::allocator<int>());
+      // See https://github.com/llvm/llvm-project/pull/93071#issuecomment-2158494851
+      auto deleter = [](auto pointer) { delete pointer; };
+      std::shared_ptr<int> p(new int, deleter, std::allocator<int>());
     }
 
   return 0;

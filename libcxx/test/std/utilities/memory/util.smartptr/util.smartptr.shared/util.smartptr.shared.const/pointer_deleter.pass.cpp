@@ -116,9 +116,9 @@ int main(int, char**)
 #endif // TEST_STD_VER >= 11
 
     {
-        // See https://github.com/llvm/llvm-project/pull/93071#issuecomment-2158494851
-        auto deleter = [](auto pointer) { delete pointer; };
-        std::shared_ptr<int> p(new int, deleter);
+      // See https://github.com/llvm/llvm-project/pull/93071#issuecomment-2158494851
+      auto deleter = [](auto pointer) { delete pointer; };
+      std::shared_ptr<int> p(new int, deleter);
     }
 
   test_function_type();
