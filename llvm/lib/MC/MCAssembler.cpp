@@ -831,6 +831,20 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
     MCSection *Sec = Layout.getSectionOrder()[i];
     Sec->setLayoutOrder(i);
 
+    // Chain together fragments from all subsections.
+    MCDummyFragment Dummy(Sec);
+    MCFragment *Tail = &Dummy;
+    for (auto &[_, Chain] : Sec->Subsections) {
+      if (!Chain->Head)
+        continue;
+      Tail->Next = Chain->Head;
+      Tail = Chain->Tail;
+    }
+    Sec->Subsections.resize(1);
+    Sec->Subsections[0].second->Head = Dummy.getNext();
+    Sec->Subsections[0].second->Tail = Tail;
+    Sec->CurFragList = Sec->Subsections[0].second.get();
+
     unsigned FragmentIndex = 0;
     for (MCFragment &Frag : *Sec)
       Frag.setLayoutOrder(FragmentIndex++);
@@ -1094,7 +1108,7 @@ bool MCAssembler::relaxBoundaryAlign(MCAsmLayout &Layout,
 
   uint64_t AlignedOffset = Layout.getFragmentOffset(&BF);
   uint64_t AlignedSize = 0;
-  for (const MCFragment *F = BF.getNextNode();; F = F->getNextNode()) {
+  for (const MCFragment *F = BF.getNext();; F = F->getNext()) {
     AlignedSize += computeFragmentSize(Layout, *F);
     if (F == BF.getLastFragment())
       break;

@@ -24,7 +24,11 @@ MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
                      MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
       HasLayout(false), IsRegistered(false), DummyFragment(this), Name(Name),
-      Variant(V), Kind(K) {}
+      Variant(V), Kind(K) {
+  // Create a fragment list for subsection 0 and set the active subsection to 0.
+  CurFragList =
+      &*Subsections.emplace_back(0u, std::make_unique<FragList>()).second;
+}
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)
@@ -34,7 +38,14 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
-MCSection::~MCSection() = default;
+MCSection::~MCSection() {
+  for (auto &[_, Chain] : Subsections) {
+    for (MCFragment *X = Chain->Head, *Y; X; X = Y) {
+      Y = X->Next;
+      X->destroy();
+    }
+  }
+}
 
 void MCSection::setBundleLockState(BundleLockStateType NewState) {
   if (NewState == NotBundleLocked) {
@@ -55,35 +66,17 @@ void MCSection::setBundleLockState(BundleLockStateType NewState) {
   ++BundleLockNestingDepth;
 }
 
-MCSection::iterator
-MCSection::getSubsectionInsertionPoint(unsigned Subsection) {
-  if (Subsection == 0 && SubsectionFragmentMap.empty())
-    return end();
-
-  SmallVectorImpl<std::pair<unsigned, MCFragment *>>::iterator MI = lower_bound(
-      SubsectionFragmentMap, std::make_pair(Subsection, (MCFragment *)nullptr));
-  bool ExactMatch = false;
-  if (MI != SubsectionFragmentMap.end()) {
-    ExactMatch = MI->first == Subsection;
-    if (ExactMatch)
-      ++MI;
+void MCSection::switchSubsection(unsigned Subsection) {
+  size_t I = 0, E = Subsections.size();
+  while (I != E && Subsections[I].first < Subsection)
+    ++I;
+  // If the subsection number is not in the sorted Subsections list, create a
+  // new fragment list.
+  if (I == E || Subsections[I].first != Subsection) {
+    Subsections.insert(Subsections.begin() + I,
+                       {Subsection, std::make_unique<FragList>()});
   }
-  iterator IP;
-  if (MI == SubsectionFragmentMap.end())
-    IP = end();
-  else
-    IP = MI->second->getIterator();
-  if (!ExactMatch && Subsection != 0) {
-    // The GNU as documentation claims that subsections have an alignment of 4,
-    // although this appears not to be the case.
-    MCFragment *F = new MCDataFragment();
-    SubsectionFragmentMap.insert(MI, std::make_pair(Subsection, F));
-    getFragmentList().insert(IP, F);
-    F->setParent(this);
-    F->setSubsectionNumber(Subsection);
-  }
-
-  return IP;
+  CurFragList = Subsections[I].second.get();
 }
 
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
@@ -111,13 +104,11 @@ void MCSection::flushPendingLabels() {
   // creating new empty data fragments for each Subsection with labels pending.
   while (!PendingLabels.empty()) {
     PendingLabel& Label = PendingLabels[0];
-    iterator CurInsertionPoint =
-      this->getSubsectionInsertionPoint(Label.Subsection);
-    const MCSymbol *Atom = nullptr;
-    if (CurInsertionPoint != begin())
-      Atom = std::prev(CurInsertionPoint)->getAtom();
+    switchSubsection(Label.Subsection);
+    const MCSymbol *Atom =
+        CurFragList->Tail ? CurFragList->Tail->getAtom() : nullptr;
     MCFragment *F = new MCDataFragment();
-    getFragmentList().insert(CurInsertionPoint, F);
+    addFragment(*F);
     F->setParent(this);
     F->setAtom(Atom);
     flushPendingLabels(F, 0, Label.Subsection);
