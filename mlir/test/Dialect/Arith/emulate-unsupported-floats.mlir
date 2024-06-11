@@ -30,10 +30,10 @@ func.func @chained(%x: bf16, %y: bf16, %z: bf16) -> i1 {
 // CHECK: [[Q_EXP2:%.+]] = arith.extf [[Q]] fastmath<contract> : bf16 to f32
 // CHECK: [[RES:%.+]] = arith.cmpf ole, [[P_EXP2]], [[Q_EXP2]] : f32
 // CHECK: return [[RES]]
-	%p = arith.addf %x, %y : bf16
-	%q = arith.mulf %p, %z : bf16
-	%res = arith.cmpf ole, %p, %q : bf16
-	func.return %res : i1
+  %p = arith.addf %x, %y : bf16
+  %q = arith.mulf %p, %z : bf16
+  %res = arith.cmpf ole, %p, %q : bf16
+  func.return %res : i1
 }
 
 // -----
@@ -48,14 +48,14 @@ func.func @memops(%a: memref<4xf8E4M3FNUZ>, %b: memref<4xf8E4M3FNUZ>) {
 // CHECK: [[X_EXP:%.+]] = arith.addf [[V_EXP]], [[W_EXP]] : f32
 // CHECK: [[X:%.+]] = arith.truncf [[X_EXP]] fastmath<contract> : f32 to f8E4M3FNUZ
 // CHECK: memref.store [[X]]
-	%c0 = arith.constant 0 : index
-	%c1 = arith.constant 1 : index
-	%v = memref.load %a[%c0] : memref<4xf8E4M3FNUZ>
-	memref.store %v, %b[%c0] : memref<4xf8E4M3FNUZ>
-	%w = memref.load %a[%c1] : memref<4xf8E4M3FNUZ>
-	%x = arith.addf %v, %w : f8E4M3FNUZ
-	memref.store %x, %b[%c1] : memref<4xf8E4M3FNUZ>
-	func.return
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %v = memref.load %a[%c0] : memref<4xf8E4M3FNUZ>
+  memref.store %v, %b[%c0] : memref<4xf8E4M3FNUZ>
+  %w = memref.load %a[%c1] : memref<4xf8E4M3FNUZ>
+  %x = arith.addf %v, %w : f8E4M3FNUZ
+  memref.store %x, %b[%c1] : memref<4xf8E4M3FNUZ>
+  func.return
 }
 
 // -----
@@ -68,9 +68,9 @@ func.func @vectors(%a: vector<4xf8E4M3FNUZ>) -> vector<4xf32> {
 // CHECK: [[B:%.+]] = arith.truncf [[B_EXP]] fastmath<contract> : vector<4xf32> to vector<4xf8E4M3FNUZ>
 // CHECK: [[RET:%.+]] = arith.extf [[B]] : vector<4xf8E4M3FNUZ> to vector<4xf32>
 // CHECK: return [[RET]]
-	%b = arith.mulf %a, %a : vector<4xf8E4M3FNUZ>
-	%ret = arith.extf %b : vector<4xf8E4M3FNUZ> to vector<4xf32>
-	func.return %ret : vector<4xf32>
+  %b = arith.mulf %a, %a : vector<4xf8E4M3FNUZ>
+  %ret = arith.extf %b : vector<4xf8E4M3FNUZ> to vector<4xf32>
+  func.return %ret : vector<4xf32>
 }
 
 // -----
@@ -81,8 +81,7 @@ func.func @no_expansion(%x: f32) -> f32 {
 // CHECK-DAG: [[C:%.+]] = arith.constant {{.*}} : f32
 // CHECK: [[Y:%.+]] = arith.addf [[X]], [[C]] : f32
 // CHECK: return [[Y]]
-	%c = arith.constant 1.0 : f32
-	%y = arith.addf %x, %c : f32
-	func.return %y : f32
+  %c = arith.constant 1.0 : f32
+  %y = arith.addf %x, %c : f32
+  func.return %y : f32
 }
-
