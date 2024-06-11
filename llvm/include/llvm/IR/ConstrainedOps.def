@@ -95,6 +95,7 @@ DAG_FUNCTION(round,           1, 0, experimental_constrained_round,      FROUND)
 DAG_FUNCTION(roundeven,       1, 0, experimental_constrained_roundeven,  FROUNDEVEN)
 DAG_FUNCTION(sin,             1, 1, experimental_constrained_sin,        FSIN)
 DAG_FUNCTION(sqrt,            1, 1, experimental_constrained_sqrt,       FSQRT)
+DAG_FUNCTION(tan,             1, 1, experimental_constrained_tan,        FTAN)
 DAG_FUNCTION(trunc,           1, 0, experimental_constrained_trunc,      FTRUNC)
 
 // This is definition for fmuladd intrinsic function, that is converted into

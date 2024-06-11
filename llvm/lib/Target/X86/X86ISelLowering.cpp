@@ -50184,12 +50184,12 @@ static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,
 /// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
 /// with CMP+{ADC, SBB}.
-static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineAddOrSubToADCOrSBB(SDNode *N, const SDLoc &DL,
+                                         SelectionDAG &DAG) {
   bool IsSub = N->getOpcode() == ISD::SUB;
   SDValue X = N->getOperand(0);
   SDValue Y = N->getOperand(1);
   EVT VT = N->getValueType(0);
-  SDLoc DL(N);
 
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
     return ADCOrSBB;
@@ -52718,7 +52718,7 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
   return getSETCC(NewCC, LHS->getOperand(1), DL, DAG);
 }
 
-static SDValue combineXorSubCTLZ(SDNode *N, SelectionDAG &DAG,
+static SDValue combineXorSubCTLZ(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   assert((N->getOpcode() == ISD::XOR || N->getOpcode() == ISD::SUB) &&
          "Invalid opcode for combing with CTLZ");
@@ -52758,7 +52758,6 @@ static SDValue combineXorSubCTLZ(SDNode *N, SelectionDAG &DAG,
 
   if (C->getZExtValue() != uint64_t(OpCTLZ.getValueSizeInBits() - 1))
     return SDValue();
-  SDLoc DL(N);
   EVT OpVT = VT;
   SDValue Op = OpCTLZ.getOperand(0);
   if (VT == MVT::i8) {
@@ -52781,11 +52780,12 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   // If this is SSE1 only convert to FXOR to avoid scalarization.
   if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32) {
     return DAG.getBitcast(MVT::v4i32,
-                          DAG.getNode(X86ISD::FXOR, SDLoc(N), MVT::v4f32,
+                          DAG.getNode(X86ISD::FXOR, DL, MVT::v4f32,
                                       DAG.getBitcast(MVT::v4f32, N0),
                                       DAG.getBitcast(MVT::v4f32, N1)));
   }
@@ -52805,7 +52805,7 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
     return FPLogic;
 
-  if (SDValue R = combineXorSubCTLZ(N, DAG, Subtarget))
+  if (SDValue R = combineXorSubCTLZ(N, DL, DAG, Subtarget))
     return R;
 
   if (DCI.isBeforeLegalizeOps())
@@ -52826,8 +52826,8 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
       N0.getOperand(0).getValueType().isVector() &&
       N0.getOperand(0).getValueType().getVectorElementType() == MVT::i1 &&
       TLI.isTypeLegal(N0.getOperand(0).getValueType()) && N0.hasOneUse()) {
-    return DAG.getBitcast(VT, DAG.getNOT(SDLoc(N), N0.getOperand(0),
-                                         N0.getOperand(0).getValueType()));
+    return DAG.getBitcast(
+        VT, DAG.getNOT(DL, N0.getOperand(0), N0.getOperand(0).getValueType()));
   }
 
   // Handle AVX512 mask widening.
@@ -52837,8 +52837,8 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
       N0.getOpcode() == ISD::INSERT_SUBVECTOR && N0.getOperand(0).isUndef() &&
       TLI.isTypeLegal(N0.getOperand(1).getValueType())) {
     return DAG.getNode(
-        ISD::INSERT_SUBVECTOR, SDLoc(N), VT, N0.getOperand(0),
-        DAG.getNOT(SDLoc(N), N0.getOperand(1), N0.getOperand(1).getValueType()),
+        ISD::INSERT_SUBVECTOR, DL, VT, N0.getOperand(0),
+        DAG.getNOT(DL, N0.getOperand(1), N0.getOperand(1).getValueType()),
         N0.getOperand(2));
   }
 
@@ -52851,7 +52851,6 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
     auto *N1C = dyn_cast<ConstantSDNode>(N1);
     auto *N001C = dyn_cast<ConstantSDNode>(TruncExtSrc.getOperand(1));
     if (N1C && !N1C->isOpaque() && N001C && !N001C->isOpaque()) {
-      SDLoc DL(N);
       SDValue LHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(0), DL, VT);
       SDValue RHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(1), DL, VT);
       return DAG.getNode(ISD::XOR, DL, VT, LHS,
@@ -55419,7 +55418,8 @@ static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
 /// Try to fold those constants into an 'add' instruction to reduce instruction
 /// count. We do this with CMOV rather the generic 'select' because there are
 /// earlier folds that may be used to turn select-of-constants into logic hacks.
-static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG,
+static SDValue pushAddIntoCmovOfConsts(SDNode *N, const SDLoc &DL,
+                                       SelectionDAG &DAG,
                                        const X86Subtarget &Subtarget) {
   // If an operand is zero, add-of-0 gets simplified away, so that's clearly
   // better because we eliminate 1-2 instructions. This transform is still
@@ -55451,7 +55451,6 @@ static SDValue pushAddIntoCmovOfConsts(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   EVT VT = N->getValueType(0);
-  SDLoc DL(N);
   SDValue FalseOp = Cmov.getOperand(0);
   SDValue TrueOp = Cmov.getOperand(1);
 
@@ -55492,7 +55491,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
 
-  if (SDValue Select = pushAddIntoCmovOfConsts(N, DAG, Subtarget))
+  if (SDValue Select = pushAddIntoCmovOfConsts(N, DL, DAG, Subtarget))
     return Select;
 
   if (SDValue MAdd = matchPMADDWD(DAG, Op0, Op1, DL, VT, Subtarget))
@@ -55550,7 +55549,7 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
                        Op0.getOperand(0), Op0.getOperand(2));
   }
 
-  return combineAddOrSubToADCOrSBB(N, DAG);
+  return combineAddOrSubToADCOrSBB(N, DL, DAG);
 }
 
 // Try to fold (sub Y, cmovns X, -X) -> (add Y, cmovns -X, X) if the cmov
@@ -55626,6 +55625,7 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
+  SDLoc DL(N);
 
   // TODO: Add NoOpaque handling to isConstantIntBuildVectorOrConstantInt.
   auto IsNonOpaqueConstant = [&](SDValue Op) {
@@ -55645,7 +55645,6 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
       !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
       Op1->hasOneUse()) {
-    SDLoc DL(N);
     EVT VT = Op0.getValueType();
     SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
                                  DAG.getNOT(SDLoc(Op1), Op1.getOperand(1), VT));
@@ -55676,14 +55675,14 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     assert(!Op1->hasAnyUseOfValue(1) && "Overflow bit in use");
     SDValue ADC = DAG.getNode(X86ISD::ADC, SDLoc(Op1), Op1->getVTList(), Op0,
                               Op1.getOperand(1), Op1.getOperand(2));
-    return DAG.getNode(ISD::SUB, SDLoc(N), Op0.getValueType(), ADC.getValue(0),
+    return DAG.getNode(ISD::SUB, DL, Op0.getValueType(), ADC.getValue(0),
                        Op1.getOperand(0));
   }
 
-  if (SDValue V = combineXorSubCTLZ(N, DAG, Subtarget))
+  if (SDValue V = combineXorSubCTLZ(N, DL, DAG, Subtarget))
     return V;
 
-  if (SDValue V = combineAddOrSubToADCOrSBB(N, DAG))
+  if (SDValue V = combineAddOrSubToADCOrSBB(N, DL, DAG))
     return V;
 
   return combineSubSetcc(N, DAG);
