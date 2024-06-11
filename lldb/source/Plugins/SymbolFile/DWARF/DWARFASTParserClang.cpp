@@ -985,9 +985,9 @@ bool DWARFASTParserClang::ParseObjCMethod(
   if (!class_name)
     return false;
 
-  TypeSP complete_objc_class_type_sp(
+  TypeSP complete_objc_class_type_sp =
       dwarf->FindCompleteObjCDefinitionTypeForDIE(DWARFDIE(), class_name,
-                                                  false));
+                                                  false);
 
   if (!complete_objc_class_type_sp)
     return false;
@@ -1026,6 +1026,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     bool is_static, bool &ignore_containing_context) {
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   SymbolFileDWARF *dwarf = die.GetDWARF();
+  assert(dwarf);
 
   Type *class_type = dwarf->ResolveType(decl_ctx_die);
   if (!class_type)
@@ -1037,9 +1038,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     // We uniqued the parent class of this function to another
     // class so we now need to associate all dies under
     // "decl_ctx_die" to DIEs in the DIE for "class_type"...
-    DWARFDIE class_type_die = dwarf->GetDIE(class_type->GetID());
-
-    if (class_type_die) {
+    if (DWARFDIE class_type_die = dwarf->GetDIE(class_type->GetID())) {
       std::vector<DWARFDIE> failures;
 
       CopyUniqueClassMethodTypes(decl_ctx_die, class_type_die, class_type,
@@ -1051,9 +1050,8 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
       // to them after their definitions are complete...
 
       Type *type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
-      if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
+      if (type_ptr && type_ptr != DIE_IS_BEING_PARSED)
         return {true, type_ptr->shared_from_this()};
-      }
     }
   }
 
@@ -1069,14 +1067,14 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     DWARFDIE spec_die = attrs.specification.Reference();
     clang::DeclContext *spec_clang_decl_ctx =
         GetClangDeclContextForDIE(spec_die);
-    if (spec_clang_decl_ctx) {
+    if (spec_clang_decl_ctx)
       LinkDeclContextToDIE(spec_clang_decl_ctx, die);
-    } else {
+    else
       dwarf->GetObjectFile()->GetModule()->ReportWarning(
           "{0:x8}: DW_AT_specification({1:x16}"
           ") has no decl\n",
           die.GetID(), spec_die.GetOffset());
-    }
+
     return {true, nullptr};
   }
 
@@ -1089,14 +1087,13 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
 
     DWARFDIE abs_die = attrs.abstract_origin.Reference();
     clang::DeclContext *abs_clang_decl_ctx = GetClangDeclContextForDIE(abs_die);
-    if (abs_clang_decl_ctx) {
+    if (abs_clang_decl_ctx)
       LinkDeclContextToDIE(abs_clang_decl_ctx, die);
-    } else {
+    else
       dwarf->GetObjectFile()->GetModule()->ReportWarning(
           "{0:x8}: DW_AT_abstract_origin({1:x16}"
           ") has no decl\n",
           die.GetID(), abs_die.GetOffset());
-    }
 
     return {true, nullptr};
   }
@@ -1106,13 +1103,12 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
     return {};
 
   if (class_opaque_type.IsBeingDefined()) {
-    if (!is_static && !die.HasChildren()) {
-      // We have a C++ member function with no children (this
-      // pointer!) and clang will get mad if we try and make
-      // a function that isn't well formed in the DWARF, so
-      // we will just skip it...
+    // We have a C++ member function with no children (this
+    // pointer!) and clang will get mad if we try and make
+    // a function that isn't well formed in the DWARF, so
+    // we will just skip it...
+    if (!is_static && !die.HasChildren())
       return {true, nullptr};
-    }
 
     const bool is_attr_used = false;
     // Neither GCC 4.2 nor clang++ currently set a valid
@@ -1176,9 +1172,8 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
   // The type for this DIE should have been filled in the
   // function call above.
   Type *type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
-  if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
+  if (type_ptr && type_ptr != DIE_IS_BEING_PARSED)
     return {true, type_ptr->shared_from_this()};
-  }
 
   // The previous comment isn't actually true if the class wasn't
   // resolved using the current method's parent DIE as source
@@ -1194,6 +1189,8 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
+  assert(dwarf);
+
   const dw_tag_t tag = die.Tag();
 
   bool is_variadic = false;
