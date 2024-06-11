@@ -8866,8 +8866,7 @@ bool CodeGenPrepare::splitBranchCondition(Function &F, ModifyDT &ModifiedDT) {
         scaleWeights(NewTrueWeight, NewFalseWeight);
         Br1->setMetadata(LLVMContext::MD_prof,
                          MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight,
-                                                  hasBranchWeightOrigin(*Br1)));
+                             .createBranchWeights(TrueWeight, FalseWeight));
 
         NewTrueWeight = TrueWeight;
         NewFalseWeight = 2 * FalseWeight;
