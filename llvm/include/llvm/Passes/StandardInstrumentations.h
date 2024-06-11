@@ -382,13 +382,13 @@ public:
 template <typename T>
 class FuncDataT : public OrderedChangedData<BlockDataT<T>> {
 public:
-  FuncDataT(std::string S) : EntryBlockName(S) {}
+  FuncDataT(StringRef S) : EntryBlockName(S) {}
 
   // Return the name of the entry block
-  std::string getEntryBlockName() const { return EntryBlockName; }
+  StringRef getEntryBlockName() const { return EntryBlockName; }
 
 protected:
-  std::string EntryBlockName;
+  StringRef EntryBlockName;
 };
 
 // The data saved for comparing IRs.
