@@ -668,7 +668,7 @@ class TestCase(TestBase):
         self.runCmd("settings set interpreter.save-transcript true")
 
         test_cases = [
-            {   # statistics dump
+            {  # statistics dump
                 "options": "",
                 "expect": {
                     "commands": True,
@@ -679,7 +679,7 @@ class TestCase(TestBase):
                     "transcript": True,
                 },
             },
-            {   # statistics dump --summary
+            {  # statistics dump --summary
                 "options": " --summary",
                 "expect": {
                     "commands": False,
@@ -690,7 +690,7 @@ class TestCase(TestBase):
                     "transcript": False,
                 },
             },
-            {   # statistics dump --targets
+            {  # statistics dump --targets
                 "options": " --targets",
                 "expect": {
                     "commands": True,
@@ -701,7 +701,7 @@ class TestCase(TestBase):
                     "transcript": False,
                 },
             },
-            {   # statistics dump --modules
+            {  # statistics dump --modules
                 "options": " --modules",
                 "expect": {
                     "commands": True,
@@ -712,7 +712,7 @@ class TestCase(TestBase):
                     "transcript": False,
                 },
             },
-            {   # statistics dump --targets --modules
+            {  # statistics dump --targets --modules
                 "options": " --targets --modules",
                 "expect": {
                     "commands": True,
@@ -723,7 +723,7 @@ class TestCase(TestBase):
                     "transcript": False,
                 },
             },
-            {   # statistics dump --transcript
+            {  # statistics dump --transcript
                 "options": " --transcript",
                 "expect": {
                     "commands": True,
@@ -740,7 +740,9 @@ class TestCase(TestBase):
             options = test_case["options"]
             debug_stats = self.get_stats(options)
             # The following fields should always exist
-            self.assertIn("totalDebugInfoEnabled", debug_stats, "Global stats should always exist")
+            self.assertIn(
+                "totalDebugInfoEnabled", debug_stats, "Global stats should always exist"
+            )
             self.assertIn("memory", debug_stats, "'memory' should always exist")
             # The following fields should exist/not exist depending on the test case
             for field_name in test_case["expect"]:
@@ -750,13 +752,25 @@ class TestCase(TestBase):
                     exists = field_name in debug_stats
                     should_exist = test_case["expect"][field_name]
                     should_exist_string = "" if should_exist else "not "
-                    self.assertEqual(exists, should_exist, f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'")
+                    self.assertEqual(
+                        exists,
+                        should_exist,
+                        f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
+                    )
                 else:
                     # `field` is a string of "<top-level field>.<second-level field>"
                     top_level_field_name = field_name[0:idx]
-                    second_level_field_name = field_name[idx+1:]
-                    for top_level_field in debug_stats[top_level_field_name] if top_level_field_name in debug_stats else []:
+                    second_level_field_name = field_name[idx + 1 :]
+                    for top_level_field in (
+                        debug_stats[top_level_field_name]
+                        if top_level_field_name in debug_stats
+                        else []
+                    ):
                         exists = second_level_field_name in top_level_field
                         should_exist = test_case["expect"][field_name]
                         should_exist_string = "" if should_exist else "not "
-                        self.assertEqual(exists, should_exist, f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'")
+                        self.assertEqual(
+                            exists,
+                            should_exist,
+                            f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
+                        )
