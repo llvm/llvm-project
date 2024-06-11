@@ -309,23 +309,29 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   FlowFunction Func;
 
   // Add a special "dummy" source so that there is always a unique entry point.
-  // Because of the extra source, for all other blocks in FlowFunction it holds
-  // that Block.Index == BB->getIndex() + 1
   FlowBlock EntryBlock;
   EntryBlock.Index = 0;
   Func.Blocks.push_back(EntryBlock);
 
-  // Create FlowBlock for every basic block in the binary function
+  // Create FlowBlock for every basic block in the binary function.
   for (const BinaryBasicBlock *BB : BlockOrder) {
     Func.Blocks.emplace_back();
     FlowBlock &Block = Func.Blocks.back();
     Block.Index = Func.Blocks.size() - 1;
+    if (BB->successors().empty())
+      Block.IsExit = true;
     (void)BB;
     assert(Block.Index == BB->getIndex() + 1 &&
            "incorrectly assigned basic block index");
   }
 
-  // Create FlowJump for each jump between basic blocks in the binary function
+  // Add a special "dummy" sink block so there is always a unique sink.
+  FlowBlock SinkBlock;
+  SinkBlock.Index = Func.Blocks.size();
+  Func.Blocks.push_back(SinkBlock);
+  Func.Sink = SinkBlock.Index;
+
+  // Create FlowJump for each jump between basic blocks in the binary function.
   std::vector<uint64_t> InDegree(Func.Blocks.size(), 0);
   for (const BinaryBasicBlock *SrcBB : BlockOrder) {
     std::unordered_set<const BinaryBasicBlock *> UniqueSuccs;
@@ -358,9 +364,9 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   }
 
   // Add dummy edges to the extra sources. If there are multiple entry blocks,
-  // add an unlikely edge from 0 to the subsequent ones
+  // add an unlikely edge from 0 to the subsequent ones. Skips the sink block.
   assert(InDegree[0] == 0 && "dummy entry blocks shouldn't have predecessors");
-  for (uint64_t I = 1; I < Func.Blocks.size(); I++) {
+  for (uint64_t I = 1; I < Func.Blocks.size() - 1; I++) {
     const BinaryBasicBlock *BB = BlockOrder[I - 1];
     if (BB->isEntryPoint() || InDegree[I] == 0) {
       Func.Jumps.emplace_back();
@@ -370,6 +376,17 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
       if (!BB->isEntryPoint())
         Jump.IsUnlikely = true;
     }
+  }
+
+  // Add dummy edges from the exit blocks to the sink block.
+  for (uint64_t I = 1; I < BlockOrder.size() + 1; I++) {
+    if (!Func.Blocks[I].IsExit)
+      continue;
+
+    Func.Jumps.emplace_back();
+    FlowJump &Jump = Func.Jumps.back();
+    Jump.Source = I;
+    Jump.Target = Func.Sink;
   }
 
   // Create necessary metadata for the flow function
@@ -395,7 +412,7 @@ void matchWeightsByHashes(BinaryContext &BC,
                           const BinaryFunction::BasicBlockOrderType &BlockOrder,
                           const yaml::bolt::BinaryFunctionProfile &YamlBF,
                           FlowFunction &Func) {
-  assert(Func.Blocks.size() == BlockOrder.size() + 1);
+  assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
   std::vector<FlowBlock *> Blocks;
   std::vector<BlendedBlockHash> BlendedHashes;
@@ -618,7 +635,7 @@ void assignProfile(BinaryFunction &BF,
                    FlowFunction &Func) {
   BinaryContext &BC = BF.getBinaryContext();
 
-  assert(Func.Blocks.size() == BlockOrder.size() + 1);
+  assert(Func.Blocks.size() == BlockOrder.size() + 2);
   for (uint64_t I = 0; I < BlockOrder.size(); I++) {
     FlowBlock &Block = Func.Blocks[I + 1];
     BinaryBasicBlock *BB = BlockOrder[I];
@@ -640,6 +657,9 @@ void assignProfile(BinaryFunction &BF,
       if (Jump->Flow == 0)
         continue;
 
+      // Skip the artificial sink block
+      if (Jump->Target == Func.Sink)
+        continue;
       BinaryBasicBlock &SuccBB = *BlockOrder[Jump->Target - 1];
       // Check if the edge corresponds to a regular jump or a landing pad
       if (BB->getSuccessor(SuccBB.getLabel())) {
