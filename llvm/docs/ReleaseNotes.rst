@@ -66,6 +66,10 @@ Changes to the LLVM IR
 
   * ``icmp``
   * ``fcmp``
+* LLVM has switched from using debug intrinsics in textual IR to using debug
+  records by default. Details of the change and instructions on how to update
+  any downstream tools and tests can be found in the `migration docs
+  <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to LLVM infrastructure
 ------------------------------
