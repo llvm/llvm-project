@@ -25,6 +25,8 @@
 namespace mlir {
 namespace cir {
 
+using CallArgList = SmallVector<Value, 8>;
+
 class LowerFunction {
   LowerFunction(const LowerFunction &) = delete;
   void operator=(const LowerFunction &) = delete;
@@ -50,6 +52,19 @@ public:
   ~LowerFunction() = default;
 
   LowerModule &LM; // Per-module state.
+
+  /// Rewrite a call operation to abide to the ABI calling convention.
+  LogicalResult rewriteCallOp(CallOp op,
+                              ReturnValueSlot retValSlot = ReturnValueSlot());
+  Value rewriteCallOp(FuncType calleeTy, FuncOp origCallee, CallOp callOp,
+                      ReturnValueSlot retValSlot, Value Chain = nullptr);
+  Value rewriteCallOp(const LowerFunctionInfo &CallInfo, FuncOp Callee,
+                      CallOp Caller, ReturnValueSlot ReturnValue,
+                      CallArgList &CallArgs, CallOp CallOrInvoke,
+                      bool isMustTail, Location loc);
+
+  /// Get an appropriate 'undef' value for the given type.
+  Value getUndefRValue(Type Ty);
 };
 
 } // namespace cir

@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_ABIINFO_H
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_ABIINFO_H
 
+#include "CIRCXXABI.h"
+#include "LowerFunctionInfo.h"
 #include "llvm/IR/CallingConv.h"
 
 namespace mlir {
@@ -32,6 +34,10 @@ protected:
 public:
   ABIInfo(LowerTypes &LT) : LT(LT), RuntimeCC(llvm::CallingConv::C) {}
   virtual ~ABIInfo();
+
+  CIRCXXABI &getCXXABI() const;
+
+  virtual void computeInfo(LowerFunctionInfo &FI) const = 0;
 };
 
 } // namespace cir

@@ -748,3 +748,7 @@ CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp) : layout{modOp} {
     }
   }
 }
+
+void CIRDataLayout::reset(StringRef Desc) { clear(); }
+
+void CIRDataLayout::clear() {}

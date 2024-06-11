@@ -6,6 +6,7 @@
 #include "CallingConv.h"
 
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CIR/Target/x86.h"
 
 using namespace cir;
 using namespace clang;
@@ -79,16 +80,7 @@ namespace {
 enum class X86AVXABILevel { None, AVX, AVX512 };
 
 class X86_64ABIInfo : public ABIInfo {
-  enum Class {
-    Integer = 0,
-    SSE,
-    SSEUp,
-    X87,
-    X87Up,
-    ComplexX87,
-    NoClass,
-    Memory
-  };
+  using Class = X86ArgClass;
 
   // X86AVXABILevel AVXLevel;
   // Some ABIs (e.g. X32 ABI and Native Client OS) use 32 bit pointers on 64-bit

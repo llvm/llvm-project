@@ -32,9 +32,23 @@ class ItaniumCXXABI : public CIRCXXABI {
 
 public:
   ItaniumCXXABI(LowerModule &LM) : CIRCXXABI(LM) {}
+
+  bool classifyReturnType(LowerFunctionInfo &FI) const override;
 };
 
 } // namespace
+
+bool ItaniumCXXABI::classifyReturnType(LowerFunctionInfo &FI) const {
+  const StructType RD = FI.getReturnType().dyn_cast<StructType>();
+  if (!RD)
+    return false;
+
+  // If C++ prohibits us from making a copy, return by address.
+  if (::cir::MissingFeatures::recordDeclCanPassInRegisters())
+    llvm_unreachable("NYI");
+
+  return false;
+}
 
 CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {
   switch (LM.getCXXABIKind()) {

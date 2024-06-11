@@ -60,7 +60,7 @@ public:
   // FIXME(cir): This would be in ASTContext, not CodeGenModule.
   clang::TargetCXXABI::Kind getCXXABIKind() const {
     auto kind = getTarget().getCXXABI().getKind();
-    assert(::cir::MissingFeatures::langOpts());
+    assert(!::cir::MissingFeatures::langOpts());
     return kind;
   }
 
@@ -68,7 +68,7 @@ public:
   LogicalResult rewriteGlobalFunctionDefinition(FuncOp op, LowerModule &state);
 
   // Rewrite CIR CallOp to match the target ABI.
-  LogicalResult rewriteFunctionCall(CallOp caller, FuncOp callee);
+  LogicalResult rewriteFunctionCall(CallOp callOp, FuncOp funcOp);
 };
 
 } // namespace cir
