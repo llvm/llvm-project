@@ -37,6 +37,19 @@ public:
   RequiredArgs(All_t _) : NumRequired(~0U) {}
   explicit RequiredArgs(unsigned n) : NumRequired(n) { assert(n != ~0U); }
 
+  /// Compute the arguments required by the given formal prototype,
+  /// given that there may be some additional, non-formal arguments
+  /// in play.
+  ///
+  /// If FD is not null, this will consider pass_object_size params in FD.
+  static RequiredArgs forPrototypePlus(const FuncType prototype,
+                                       unsigned additional) {
+    if (!prototype.isVarArg())
+      return All;
+
+    llvm_unreachable("Variadic function is NYI");
+  }
+
   bool allowsOptionalArgs() const { return NumRequired != ~0U; }
 };
 
