@@ -108,19 +108,18 @@ public:
     T neg_snan_123 = FPBits::signaling_nan(Sign::NEG, 0x123).get_val();
 
     EXPECT_TRUE(funcWrapper(func, aNaN, aNaN));
-    EXPECT_TRUE(funcWrapper(func, neg_aNaN, neg_aNaN));
     EXPECT_TRUE(funcWrapper(func, sNaN, sNaN));
-    EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_sNaN));
-
     EXPECT_TRUE(funcWrapper(func, aNaN, qnan_123));
-    EXPECT_TRUE(funcWrapper(func, neg_aNaN, neg_qnan_123));
     EXPECT_TRUE(funcWrapper(func, sNaN, snan_123));
-    EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_snan_123));
-
     EXPECT_FALSE(funcWrapper(func, qnan_123, aNaN));
-    EXPECT_FALSE(funcWrapper(func, neg_qnan_123, neg_aNaN));
     EXPECT_FALSE(funcWrapper(func, snan_123, sNaN));
-    EXPECT_FALSE(funcWrapper(func, neg_snan_123, neg_sNaN));
+
+    EXPECT_TRUE(funcWrapper(func, neg_aNaN, neg_aNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_sNaN, neg_sNaN));
+    EXPECT_FALSE(funcWrapper(func, neg_aNaN, neg_qnan_123));
+    EXPECT_FALSE(funcWrapper(func, neg_sNaN, neg_snan_123));
+    EXPECT_TRUE(funcWrapper(func, neg_qnan_123, neg_aNaN));
+    EXPECT_TRUE(funcWrapper(func, neg_snan_123, neg_sNaN));
   }
 };
 

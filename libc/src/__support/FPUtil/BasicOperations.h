@@ -242,53 +242,27 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
 
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
-totalorder(const T *x, const T *y) {
+totalorder(T x, T y) {
   using FPBits = FPBits<T>;
-  FPBits xbits(*x);
-  FPBits ybits(*y);
+  FPBits x_bits(x);
+  FPBits y_bits(y);
 
-  if (LIBC_UNLIKELY(xbits.is_zero() && ybits.is_zero() || xbits.is_nan() ||
-                    ybits.is_nan())) {
-    // totalOrder(−0, +0) is true. totalOrder(+0, -0) is false.
-    if (xbits.is_zero() && ybits.is_zero()) {
-      Sign xsign = xbits.sign();
-      Sign ysign = ybits.sign();
-      return (xsign == Sign::NEG && ysign == Sign::POS) || xsign == ysign;
-    }
+  using StorageType = typename FPBits::StorageType;
+  StorageType x_u = x_bits.uintval();
+  StorageType y_u = y_bits.uintval();
 
-    // totalOrder(−NaN, y) is true. totalOrder(+NaN, y) is false.
-    if (!ybits.is_nan())
-      return xbits.is_neg();
-    // totalOrder(x, +NaN) is true. totalOrder(x, -NaN) is false.
-    if (!xbits.is_nan())
-      return ybits.is_pos();
+  using signed_t = cpp::make_signed_t<StorageType>;
+  signed_t x_signed = static_cast<signed_t>(x_u);
+  signed_t y_signed = static_cast<signed_t>(y_u);
 
-    // Negative sign orders below positive sign.
-    if (xbits.is_neg() && ybits.is_pos())
-      return true;
-    if (xbits.is_pos() && ybits.is_neg())
-      return false;
-
-    // Signaling orders below quiet for +NaN, reverse for −NaN.
-    if (xbits.is_quiet_nan() && ybits.is_signaling_nan())
-      return xbits.is_neg();
-    if (xbits.is_signaling_nan() && ybits.is_quiet_nan())
-      return ybits.is_pos();
-
-    // Otherwise, the order of NaNs is implementation-defined (IEEE 754-2019).
-    // We order by payload.
-    return xbits.get_nan_payload() <= ybits.get_nan_payload();
-  }
-
-  return xbits.get_val() <= ybits.get_val();
+  bool both_neg = (x_u & y_u & FPBits::SIGN_MASK) != 0;
+  return x_signed == y_signed || ((x_signed <= y_signed) != both_neg);
 }
 
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
-totalordermag(const T *x, const T *y) {
-  T abs_x = abs(*x);
-  T abs_y = abs(*y);
-  return totalorder(&abs_x, &abs_y);
+totalordermag(T x, T y) {
+  return FPBits<T>(x).abs().uintval() <= FPBits<T>(y).abs().uintval();
 }
 
 } // namespace fputil
