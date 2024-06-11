@@ -25,6 +25,15 @@ public:
   void SetSummaryOnly(bool b);
   bool GetSummaryOnly();
 
+  void SetIncludeTargets(bool b);
+  bool GetIncludeTargets() const;
+
+  void SetIncludeModules(bool b);
+  bool GetIncludeModules() const;
+
+  void SetIncludeTranscript(bool b);
+  bool GetIncludeTranscript() const;
+
   /// If set to true, the debugger will load all debug info that is available
   /// and report statistics on the total amount. If this is set to false, then
   /// only report statistics on the currently loaded debug information.

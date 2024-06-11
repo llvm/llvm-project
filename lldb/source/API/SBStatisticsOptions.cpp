@@ -44,6 +44,30 @@ void SBStatisticsOptions::SetSummaryOnly(bool b) {
 
 bool SBStatisticsOptions::GetSummaryOnly() { return m_opaque_up->summary_only; }
 
+void SBStatisticsOptions::SetIncludeTargets(bool b) {
+  m_opaque_up->include_targets = b;
+}
+
+bool SBStatisticsOptions::GetIncludeTargets() const {
+  return m_opaque_up->include_targets;
+}
+
+void SBStatisticsOptions::SetIncludeModules(bool b) {
+  m_opaque_up->include_modules = b;
+}
+
+bool SBStatisticsOptions::GetIncludeModules() const {
+  return m_opaque_up->include_modules;
+}
+
+void SBStatisticsOptions::SetIncludeTranscript(bool b) {
+  m_opaque_up->include_transcript = b;
+}
+
+bool SBStatisticsOptions::GetIncludeTranscript() const {
+  return m_opaque_up->include_transcript;
+}
+
 void SBStatisticsOptions::SetReportAllAvailableDebugInfo(bool b) {
   m_opaque_up->load_all_debug_info = b;
 }
