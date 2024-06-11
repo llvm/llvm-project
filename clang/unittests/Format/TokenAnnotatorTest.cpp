@@ -1591,6 +1591,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[15], tok::arrow, TT_TrailingReturnArrow);
   EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
 
+  Tokens = annotate("auto l = [] -> struct S { return {}; };");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[5], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_LambdaLBrace);
+
   Tokens = annotate("[] <typename T> () {}");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);

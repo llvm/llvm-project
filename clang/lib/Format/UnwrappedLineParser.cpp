@@ -2257,6 +2257,8 @@ bool UnwrappedLineParser::tryToParseLambda() {
       break;
     case tok::kw_auto:
     case tok::kw_class:
+    case tok::kw_struct:
+    case tok::kw_union:
     case tok::kw_template:
     case tok::kw_typename:
     case tok::amp:
