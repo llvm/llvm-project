@@ -337,7 +337,7 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
 }
 
 bool TypeSystem::SupportsLanguageStatic(lldb::LanguageType language) {
-  if (language == eLanguageTypeUnknown)
+  if (language == eLanguageTypeUnknown || language >= eNumLanguageTypes)
     return false;
 
   LanguageSet languages =
