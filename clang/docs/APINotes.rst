@@ -161,12 +161,12 @@ declaration kind), all of which are optional:
 :SwiftImportAs:
 
   For a class, possible values are ``owned`` (equivalent to
-  ``SWIFT_SELF_CONTAINED``), ``reference`` (equivalent to
+  ``SWIFT_SELF_CONTAINED``) or ``reference`` (equivalent to
   ``SWIFT_SHARED_REFERENCE``, also requires specifying ``SwiftReleaseOp`` and
   ``SwiftRetainOp``).
 
   For a method, possible values are ``unsafe`` (equivalent
-  to ``SWIFT_RETURNS_INDEPENDENT_VALUE``), ``computed_property`` (equivalent to
+  to ``SWIFT_RETURNS_INDEPENDENT_VALUE``) or ``computed_property`` (equivalent to
   ``SWIFT_COMPUTED_PROPERTY``).
 
   ::
