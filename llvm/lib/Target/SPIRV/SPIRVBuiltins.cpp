@@ -1015,6 +1015,11 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   const SPIRV::GroupBuiltin *GroupBuiltin =
       SPIRV::lookupGroupBuiltin(Builtin->Name);
+
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, GroupBuiltin->Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   Register Arg0;
   if (GroupBuiltin->HasBoolArg) {
