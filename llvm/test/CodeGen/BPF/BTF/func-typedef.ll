@@ -71,16 +71,16 @@ entry:
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 ; CHECK-NEXT:        .long   20                      # FuncInfo section string offset=20
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Lfunc_begin0
+; CHECK-NEXT:        .long   Lfunc_begin0
 ; CHECK-NEXT:        .long   5
 ; CHECK-NEXT:        .long   16                      # LineInfo
 ; CHECK-NEXT:        .long   20                      # LineInfo section string offset=20
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   .Lfunc_begin0
+; CHECK-NEXT:        .long   Lfunc_begin0
 ; CHECK-NEXT:        .long   26
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   3072                    # Line 3 Col 0
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   26
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   3092                    # Line 3 Col 20

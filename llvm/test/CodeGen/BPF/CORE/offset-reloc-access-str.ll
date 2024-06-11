@@ -37,11 +37,11 @@ entry:
 ; CHECK:             .long   16                      # FieldReloc
 ; CHECK-NEXT:        .long   [[SEC_INDEX]]           # Field reloc section string offset=[[SEC_INDEX]]
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   {{[0-9]+}}
 ; CHECK-NEXT:        .long   [[ACCESS_STR]]
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   {{[0-9]+}}
 ; CHECK-NEXT:        .long   [[ACCESS_STR]]
 ; CHECK-NEXT:        .long   0

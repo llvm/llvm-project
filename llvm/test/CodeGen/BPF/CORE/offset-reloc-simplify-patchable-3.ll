@@ -52,27 +52,27 @@ entry:
 
 ; CHECK: buz:
 ; CHECK:      prologue_end
-; CHECK-NEXT: .Ltmp[[LABEL_SB:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_SB:.*]]:
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     r1 = *(s8 *)(r6 + 0)
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     call cs
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp[[LABEL_SH:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_SH:.*]]:
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     r1 = *(s16 *)(r6 + 2)
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     call cs
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp[[LABEL_SW:.*]]:
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp[[LABEL_SW:.*]]:
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     r1 = *(s32 *)(r6 + 4)
 ; CHECK-NEXT:     .loc
-; CHECK-NEXT: .Ltmp
+; CHECK-NEXT: Ltmp
 ; CHECK-NEXT:     call cs
 
 ; CHECK: .section .BTF
@@ -84,15 +84,15 @@ entry:
 ; CHECK: .ascii  "0:2"   # string offset=[[STR_SW:.*]]
 
 ; CHECK:     # FieldReloc
-; CHECK:      .long .Ltmp[[LABEL_SB]]
+; CHECK:      .long Ltmp[[LABEL_SB]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_SB]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL_SH]]
+; CHECK:      .long Ltmp[[LABEL_SH]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_SH]]
 ; CHECK-NEXT: .long 0
-; CHECK:      .long .Ltmp[[LABEL_SW]]
+; CHECK:      .long Ltmp[[LABEL_SW]]
 ; CHECK-NEXT: .long [[ID]]
 ; CHECK-NEXT: .long [[STR_SW]]
 ; CHECK-NEXT: .long 0

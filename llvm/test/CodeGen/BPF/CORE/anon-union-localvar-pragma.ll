@@ -50,7 +50,7 @@ entry:
 ; CHECK:             .long   16                              # FieldReloc
 ; CHECK-NEXT:        .long   10                              # Field reloc section string offset=10
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Ltmp[[#]]
+; CHECK-NEXT:        .long   Ltmp[[#]]
 ; CHECK-NEXT:        .long   7
 ; CHECK-NEXT:        .long   101
 ; CHECK-NEXT:        .long   1

@@ -53,12 +53,12 @@ entry:
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 ; CHECK-NEXT:        .long   3                       # FuncInfo section string offset=3
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Lfunc_begin0
+; CHECK-NEXT:        .long   Lfunc_begin0
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   16                      # LineInfo
 ; CHECK-NEXT:        .long   3                       # LineInfo section string offset=3
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   9
 ; CHECK-NEXT:        .long   18
 ; CHECK-NEXT:        .long   1040                    # Line 1 Col 16

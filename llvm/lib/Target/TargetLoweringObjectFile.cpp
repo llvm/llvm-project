@@ -129,7 +129,7 @@ MCSymbol *TargetLoweringObjectFile::getSymbolWithGlobalValueBase(
   assert(!Suffix.empty());
 
   SmallString<60> NameStr;
-  NameStr += GV->getParent()->getDataLayout().getPrivateGlobalPrefix();
+  NameStr += getContext().getAsmInfo()->getPrivateGlobalPrefix();
   TM.getNameWithPrefix(NameStr, GV, *Mang);
   NameStr.append(Suffix.begin(), Suffix.end());
   return getContext().getOrCreateSymbol(NameStr);

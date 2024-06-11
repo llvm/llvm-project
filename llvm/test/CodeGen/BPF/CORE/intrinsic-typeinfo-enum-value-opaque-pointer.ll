@@ -48,15 +48,15 @@ entry:
 ; CHECK:             .long   16                              # FieldReloc
 ; CHECK-NEXT:        .long   10                              # Field reloc section string offset=10
 ; CHECK-NEXT:        .long   3
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   29
 ; CHECK-NEXT:        .long   10
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   55
 ; CHECK-NEXT:        .long   11
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   5
 ; CHECK-NEXT:        .long   29
 ; CHECK-NEXT:        .long   11

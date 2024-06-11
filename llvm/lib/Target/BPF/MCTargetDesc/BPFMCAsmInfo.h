@@ -24,8 +24,6 @@ public:
     if (TT.getArch() == Triple::bpfeb)
       IsLittleEndian = false;
 
-    PrivateGlobalPrefix = ".L";
-    PrivateLabelPrefix = PrivateGlobalPrefix;
     WeakRefDirective = "\t.weak\t";
 
     UsesELFSectionDirectiveForBSS = true;

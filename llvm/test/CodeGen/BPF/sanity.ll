@@ -76,10 +76,10 @@ define signext i8 @foo_cmp(i8 signext %a, i8 signext %b) #0 {
 ; CHECK-LABEL: foo_cmp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    r0 = r1
-; CHECK-NEXT:    if r2 s> r0 goto .LBB5_2
+; CHECK-NEXT:    if r2 s> r0 goto LBB5_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    r0 = r2
-; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:  LBB5_2:
 ; CHECK-NEXT:    exit
   %1 = icmp slt i8 %a, %b
   %a.b = select i1 %1, i8 %a, i8 %b
@@ -91,18 +91,18 @@ define i32 @foo_muldiv(i8 signext %a, i16 signext %b, i32 %c, i64 %d) #0 {
 ; CHECK-LABEL: foo_muldiv:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    r0 = r2
-; CHECK-NEXT:    if r1 == 0 goto .LBB6_2
+; CHECK-NEXT:    if r1 == 0 goto LBB6_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    r0 *= r3
-; CHECK-NEXT:    goto .LBB6_3
-; CHECK-NEXT:  .LBB6_2:
+; CHECK-NEXT:    goto LBB6_3
+; CHECK-NEXT:  LBB6_2:
 ; CHECK-NEXT:    r3 <<= 32
 ; CHECK-NEXT:    r3 >>= 32
 ; CHECK-NEXT:    r4 <<= 32
 ; CHECK-NEXT:    r4 >>= 32
 ; CHECK-NEXT:    r4 /= r3
 ; CHECK-NEXT:    r0 = r4
-; CHECK-NEXT:  .LBB6_3:
+; CHECK-NEXT:  LBB6_3:
 ; CHECK-NEXT:    exit
   %1 = icmp eq i8 %a, 0
   br i1 %1, label %5, label %2

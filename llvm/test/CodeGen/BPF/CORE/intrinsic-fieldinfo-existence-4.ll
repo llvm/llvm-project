@@ -48,7 +48,7 @@ entry:
 ; CHECK:             .long   16                              # FieldReloc
 ; CHECK-NEXT:        .long   {{[0-9]+}}                      # Field reloc section string
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   36
 ; CHECK-NEXT:        .long   2

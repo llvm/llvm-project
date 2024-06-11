@@ -137,7 +137,7 @@ define dso_local i32 @bpf_prog(ptr) local_unnamed_addr #0 !dbg !15 {
 ; CHECK:             .long   16                      # FieldReloc
 ; CHECK-NEXT:        .long   77                      # Field reloc section string offset=77
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   120
 ; CHECK-NEXT:        .long   0

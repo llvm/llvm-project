@@ -47,12 +47,12 @@ define dso_local void @f1() local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 ; CHECK-NEXT:        .long   4                       # FuncInfo section string offset=4
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Lfunc_begin0
+; CHECK-NEXT:        .long   Lfunc_begin0
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   16                      # LineInfo
 ; CHECK-NEXT:        .long   4                       # LineInfo section string offset=4
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
+; CHECK-NEXT:        .long   Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   10
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1040                    # Line 1 Col 16

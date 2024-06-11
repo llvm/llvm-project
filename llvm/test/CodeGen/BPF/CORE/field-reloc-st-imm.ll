@@ -56,13 +56,13 @@ entry:
   ret void, !dbg !40
 }
 
-; CHECK: [[L0:.Ltmp.*]]:
+; CHECK: [[L0:Ltmp.*]]:
 ; CHECK:       *(u8 *)(r1 + 0) = 1
-; CHECK: [[L2:.Ltmp.*]]:
+; CHECK: [[L2:Ltmp.*]]:
 ; CHECK:       *(u16 *)(r1 + 2) = 2
-; CHECK: [[L4:.Ltmp.*]]:
+; CHECK: [[L4:Ltmp.*]]:
 ; CHECK:       *(u32 *)(r1 + 4) = 3
-; CHECK: [[L6:.Ltmp.*]]:
+; CHECK: [[L6:Ltmp.*]]:
 ; CHECK:       *(u64 *)(r1 + 8) = 4
 
 ; CHECK:       .section        .BTF
