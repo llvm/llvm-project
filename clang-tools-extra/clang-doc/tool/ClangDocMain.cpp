@@ -145,12 +145,11 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
        !Code && DirIt != DirEnd; DirIt.increment(Code)) {
     FilePath = llvm::SmallString<128>(DirIt->path());
     if (llvm::sys::fs::is_regular_file(FilePath)) {
-      if (llvm::sys::path::extension(FilePath) == ".css") {
+      if (llvm::sys::path::extension(FilePath) == ".css")
         CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
                                      std::string(FilePath));
-      } else if (llvm::sys::path::extension(FilePath) == ".js") {
+      else if (llvm::sys::path::extension(FilePath) == ".js")
         CDCtx.FilesToCopy.emplace_back(FilePath.str());
-      }
     }
   }
   if (Code)
