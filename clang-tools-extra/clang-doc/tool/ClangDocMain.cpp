@@ -153,9 +153,8 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
       }
     }
   }
-  if (Code) {
+  if (Code)
     return llvm::createFileError(FilePath, Code);
-  }
   return llvm::Error::success();
 }
 
@@ -177,18 +176,16 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   llvm::sys::path::native(AssetsPath, IndexJS);
   llvm::sys::path::append(IndexJS, "index.js");
 
-  if (!llvm::sys::fs::is_regular_file(IndexJS)) {
+  if (!llvm::sys::fs::is_regular_file(IndexJS))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "error default index.js file missing at " +
                                        IndexJS + "\n");
-  }
 
-  if (!llvm::sys::fs::is_regular_file(DefaultStylesheet)) {
+  if (!llvm::sys::fs::is_regular_file(DefaultStylesheet))
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         "error default clang-doc-default-stylesheet.css file missing at " +
             DefaultStylesheet + "\n");
-  }
 
   CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
                                std::string(DefaultStylesheet));
@@ -202,13 +199,11 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
 llvm::Error getHtmlAssetFiles(const char *Argv0,
                               clang::doc::ClangDocContext &CDCtx) {
   if (!UserAssetPath.empty() &&
-      !llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
+      !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
                  << " falling back to default\n";
-  }
-  if (llvm::sys::fs::is_directory(std::string(UserAssetPath))) {
+  if (llvm::sys::fs::is_directory(std::string(UserAssetPath)))
     return getAssetFiles(CDCtx);
-  }
   return getDefaultAssetFiles(Argv0, CDCtx);
 }
 
@@ -263,8 +258,7 @@ Example usage for a project using a compile commands database:
       {"index.js", "index_json.js"}};
 
   if (Format == "html") {
-    auto Err = getHtmlAssetFiles(argv[0], CDCtx);
-    if (Err) {
+    if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
       llvm::errs() << toString(std::move(Err)) << "\n";
       return 1;
     }
