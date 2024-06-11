@@ -305,32 +305,16 @@ namespace {
 /// structured list even in 'verify only' mode, so that we can track which
 /// elements need 'empty' initializtion.
 class InitListChecker {
-public:
-  struct CandidateParamTypesForAggregateDeduction {
-    /// Pointer to a container that would hold the parameter types of a
-    /// deduction guide for an aggregate.
-    SmallVectorImpl<QualType> *ParamTypes;
-    /// Pointer to a container that would hold the parameter types of a
-    /// deduction guide for an aggregate as if the brace elision were not
-    /// applied.
-    SmallVectorImpl<QualType> *ParamTypesWithoutBraceElision;
-
-    CandidateParamTypesForAggregateDeduction(
-        SmallVectorImpl<QualType> *ParamTypes = nullptr,
-        SmallVectorImpl<QualType> *ParamTypesWithoutBraceElision = nullptr)
-        : ParamTypes(ParamTypes),
-          ParamTypesWithoutBraceElision(ParamTypesWithoutBraceElision) {}
-  };
-
-private:
   Sema &SemaRef;
   bool hadError = false;
   bool VerifyOnly; // No diagnostics.
   bool TreatUnavailableAsInvalid; // Used only in VerifyOnly mode.
   bool InOverloadResolution;
+  bool BraceElisionOccurredForDeductionGuides = false;
+  bool NoBraceElisionForDeductionGuides;
   InitListExpr *FullyStructuredList = nullptr;
   NoInitExpr *DummyExpr = nullptr;
-  CandidateParamTypesForAggregateDeduction ParamTypesForAggregateDeduction;
+  SmallVectorImpl<QualType> *AggrDeductionCandidateParamTypes = nullptr;
 
   NoInitExpr *getDummyInit() {
     if (!DummyExpr)
@@ -524,22 +508,26 @@ public:
       Sema &S, const InitializedEntity &Entity, InitListExpr *IL, QualType &T,
       bool VerifyOnly, bool TreatUnavailableAsInvalid,
       bool InOverloadResolution = false,
-      CandidateParamTypesForAggregateDeduction ParamTypesForAggregateDeduction =
-          CandidateParamTypesForAggregateDeduction());
-  InitListChecker(
-      Sema &S, const InitializedEntity &Entity, InitListExpr *IL, QualType &T,
-      CandidateParamTypesForAggregateDeduction ParamTypesForAggregateDeduction)
+      bool NoBraceElisionForDeductionGuides = false,
+      SmallVectorImpl<QualType> *AggrDeductionCandidateParamTypes = nullptr);
+  InitListChecker(Sema &S, const InitializedEntity &Entity, InitListExpr *IL,
+                  QualType &T, bool NoBraceElisionForDeductionGuides,
+                  SmallVectorImpl<QualType> &AggrDeductionCandidateParamTypes)
       : InitListChecker(S, Entity, IL, T, /*VerifyOnly=*/true,
                         /*TreatUnavailableAsInvalid=*/false,
                         /*InOverloadResolution=*/false,
-                        /*ParamTypesForAggregateDeduction=*/
-                        std::move(ParamTypesForAggregateDeduction)) {}
+                        NoBraceElisionForDeductionGuides,
+                        &AggrDeductionCandidateParamTypes) {}
 
   bool HadError() { return hadError; }
 
   // Retrieves the fully-structured initializer list used for
   // semantic analysis and code generation.
   InitListExpr *getFullyStructuredList() const { return FullyStructuredList; }
+
+  bool HadBraceElisionOccurredForDeductionGuides() const {
+    return BraceElisionOccurredForDeductionGuides;
+  }
 };
 
 } // end anonymous namespace
@@ -1002,11 +990,13 @@ static bool hasAnyDesignatedInits(const InitListExpr *IL) {
 InitListChecker::InitListChecker(
     Sema &S, const InitializedEntity &Entity, InitListExpr *IL, QualType &T,
     bool VerifyOnly, bool TreatUnavailableAsInvalid, bool InOverloadResolution,
-    CandidateParamTypesForAggregateDeduction ParamsForDeduction)
+    bool NoBraceElisionForDeductionGuides,
+    SmallVectorImpl<QualType> *AggrDeductionCandidateParamTypes)
     : SemaRef(S), VerifyOnly(VerifyOnly),
       TreatUnavailableAsInvalid(TreatUnavailableAsInvalid),
       InOverloadResolution(InOverloadResolution),
-      ParamTypesForAggregateDeduction(std::move(ParamsForDeduction)) {
+      NoBraceElisionForDeductionGuides(NoBraceElisionForDeductionGuides),
+      AggrDeductionCandidateParamTypes(AggrDeductionCandidateParamTypes) {
   if (!VerifyOnly || hasAnyDesignatedInits(IL)) {
     FullyStructuredList =
         createInitListExpr(T, IL->getSourceRange(), IL->getNumInits());
@@ -1020,7 +1010,7 @@ InitListChecker::InitListChecker(
   CheckExplicitInitList(Entity, IL, T, FullyStructuredList,
                         /*TopLevelObject=*/true);
 
-  if (!hadError && !ParamsForDeduction.ParamTypes && FullyStructuredList) {
+  if (!hadError && !AggrDeductionCandidateParamTypes && FullyStructuredList) {
     bool RequiresSecondPass = false;
     FillInEmptyInitializations(Entity, FullyStructuredList, RequiresSecondPass,
                                /*OuterILE=*/nullptr, /*OuterIndex=*/0);
@@ -1404,8 +1394,8 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
     //   brace elision is not considered for any aggregate element that has a
     //   dependent non-array type or an array type with a value-dependent bound
     ++Index;
-    assert(ParamTypesForAggregateDeduction.ParamTypes);
-    ParamTypesForAggregateDeduction.ParamTypes->push_back(DeclType);
+    assert(AggrDeductionCandidateParamTypes);
+    AggrDeductionCandidateParamTypes->push_back(DeclType);
   } else {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(), diag::err_illegal_initializer_type)
@@ -1468,18 +1458,15 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       //   brace elision is not considered for any aggregate element that has a
       //   dependent non-array type or an array type with a value-dependent
       //   bound
-      assert(ParamTypesForAggregateDeduction.ParamTypes &&
-             ParamTypesForAggregateDeduction.ParamTypesWithoutBraceElision);
+      assert(AggrDeductionCandidateParamTypes);
       if (!isa_and_present<ConstantArrayType>(
-              SemaRef.Context.getAsArrayType(ElemType))) {
+              SemaRef.Context.getAsArrayType(ElemType)) ||
+          NoBraceElisionForDeductionGuides) {
         ++Index;
-        ParamTypesForAggregateDeduction.ParamTypes->push_back(ElemType);
+        AggrDeductionCandidateParamTypes->push_back(ElemType);
         return;
       }
-      // For array types with known bounds, we still want a deduction guide for
-      // the brace initializer even though the brace can be elided.
-      ParamTypesForAggregateDeduction.ParamTypesWithoutBraceElision->push_back(
-          ElemType);
+      BraceElisionOccurredForDeductionGuides = true;
     } else {
       InitializationSequence Seq(SemaRef, TmpEntity, Kind, expr,
                                  /*TopLevelOfInitList*/ true);
@@ -1504,8 +1491,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
                                       getDummyInit());
         }
         ++Index;
-        if (ParamTypesForAggregateDeduction.ParamTypes)
-          ParamTypesForAggregateDeduction.ParamTypes->push_back(ElemType);
+        if (AggrDeductionCandidateParamTypes)
+          AggrDeductionCandidateParamTypes->push_back(ElemType);
         return;
       }
     }
@@ -1725,8 +1712,8 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
   }
   UpdateStructuredListElement(StructuredList, StructuredIndex, ResultExpr);
   ++Index;
-  if (ParamTypesForAggregateDeduction.ParamTypes)
-    ParamTypesForAggregateDeduction.ParamTypes->push_back(DeclType);
+  if (AggrDeductionCandidateParamTypes)
+    AggrDeductionCandidateParamTypes->push_back(DeclType);
 }
 
 void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
@@ -1782,8 +1769,8 @@ void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
 
   UpdateStructuredListElement(StructuredList, StructuredIndex, expr);
   ++Index;
-  if (ParamTypesForAggregateDeduction.ParamTypes)
-    ParamTypesForAggregateDeduction.ParamTypes->push_back(DeclType);
+  if (AggrDeductionCandidateParamTypes)
+    AggrDeductionCandidateParamTypes->push_back(DeclType);
 }
 
 void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
@@ -1835,8 +1822,8 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
       }
       UpdateStructuredListElement(StructuredList, StructuredIndex, ResultExpr);
       ++Index;
-      if (ParamTypesForAggregateDeduction.ParamTypes)
-        ParamTypesForAggregateDeduction.ParamTypes->push_back(elementType);
+      if (AggrDeductionCandidateParamTypes)
+        AggrDeductionCandidateParamTypes->push_back(elementType);
       return;
     }
 
@@ -2000,8 +1987,8 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
         StructuredList->resizeInits(SemaRef.Context, StructuredIndex);
       }
       ++Index;
-      if (ParamTypesForAggregateDeduction.ParamTypes)
-        ParamTypesForAggregateDeduction.ParamTypes->push_back(DeclType);
+      if (AggrDeductionCandidateParamTypes)
+        AggrDeductionCandidateParamTypes->push_back(DeclType);
       return;
     }
   }
@@ -2239,8 +2226,8 @@ void InitListChecker::CheckStructUnionTypes(
     //   trailing sequence of parameters corresponding to a trailing
     //   aggregate element that is a pack expansion (if any) is replaced
     //   by a single parameter of the form T_n....
-    if (ParamTypesForAggregateDeduction.ParamTypes && Base.isPackExpansion()) {
-      ParamTypesForAggregateDeduction.ParamTypes->push_back(
+    if (AggrDeductionCandidateParamTypes && Base.isPackExpansion()) {
+      AggrDeductionCandidateParamTypes->push_back(
           SemaRef.Context.getPackExpansionType(Base.getType(), std::nullopt));
 
       // Trailing pack expansion
@@ -2477,7 +2464,7 @@ void InitListChecker::CheckStructUnionTypes(
     InitializedEntity::InitializeMember(*Field, &Entity);
 
   if (isa<InitListExpr>(IList->getInit(Index)) ||
-      ParamTypesForAggregateDeduction.ParamTypes)
+      AggrDeductionCandidateParamTypes)
     CheckSubElementType(MemberEntity, IList, Field->getType(), Index,
                         StructuredList, StructuredIndex);
   else
@@ -2629,9 +2616,8 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
                                     Result.get());
       }
       ++Index;
-      if (ParamTypesForAggregateDeduction.ParamTypes)
-        ParamTypesForAggregateDeduction.ParamTypes->push_back(
-            CurrentObjectType);
+      if (AggrDeductionCandidateParamTypes)
+        AggrDeductionCandidateParamTypes->push_back(CurrentObjectType);
       return !Seq;
     }
 
@@ -10982,15 +10968,23 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       };
       SmallVector<QualType, 8> ElementTypes, ElementTypesWithoutBraceElision;
 
-      InitListChecker CheckInitList(
-          *this, Entity, ListInit, Ty,
-          InitListChecker::CandidateParamTypesForAggregateDeduction(
-              &ElementTypes, &ElementTypesWithoutBraceElision));
+      InitListChecker CheckInitList(*this, Entity, ListInit, Ty,
+                                    /*NoBraceElisionForDeductionGuides=*/false,
+                                    ElementTypes);
       if (CheckInitList.HadError())
         return;
       BuildAggregateDeductionGuide(ElementTypes);
-      BuildAggregateDeductionGuide(ElementTypesWithoutBraceElision,
-                                   /*BracedVersion=*/true);
+      if (CheckInitList.HadBraceElisionOccurredForDeductionGuides()) {
+        // We still want a deduction guide for the brace initializer even though
+        // the brace can be elided.
+        InitListChecker CheckInitList(*this, Entity, ListInit, Ty,
+                                      /*NoBraceElisionForDeductionGuides=*/true,
+                                      ElementTypesWithoutBraceElision);
+        if (CheckInitList.HadError())
+          return;
+        BuildAggregateDeductionGuide(ElementTypesWithoutBraceElision,
+                                     /*BracedVersion=*/true);
+      }
     };
 
     for (auto I = Guides.begin(), E = Guides.end(); I != E; ++I) {
