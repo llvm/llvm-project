@@ -657,16 +657,106 @@ class TestCase(TestBase):
         # The second "statistics dump" in the transcript should have no output
         self.assertNotIn("output", transcript[2])
 
-    def test_transcript_should_not_exist_when_not_asked_for(self):
+    def test_sections_existence(self):
         """
-        Test "statistics dump" and the transcript information.
+        Test "statistics dump" and the existence of sections when different
+        options are given.
         """
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.createTestTarget(file_path=exe)
         self.runCmd("settings set interpreter.save-transcript true")
-        self.runCmd("version")
 
-        # Verify the output of a first "statistics dump"
-        debug_stats = self.get_stats()  # Not with "--transcript"
-        self.assertNotIn("transcript", debug_stats)
+        test_cases = [
+            {   # statistics dump
+                "options": "",
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": True,
+                    "targets.breakpoints": True,
+                    "modules": True,
+                    "transcript": True,
+                },
+            },
+            {   # statistics dump --summary
+                "options": " --summary",
+                "expect": {
+                    "commands": False,
+                    "targets": False,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {   # statistics dump --targets
+                "options": " --targets",
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": True,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {   # statistics dump --modules
+                "options": " --modules",
+                "expect": {
+                    "commands": True,
+                    "targets": False,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "modules": True,
+                    "transcript": False,
+                },
+            },
+            {   # statistics dump --targets --modules
+                "options": " --targets --modules",
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": True,
+                    "targets.breakpoints": True,
+                    "modules": True,
+                    "transcript": False,
+                },
+            },
+            {   # statistics dump --transcript
+                "options": " --transcript",
+                "expect": {
+                    "commands": True,
+                    "targets": False,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "modules": False,
+                    "transcript": True,
+                },
+            },
+        ]
+
+        for test_case in test_cases:
+            options = test_case["options"]
+            debug_stats = self.get_stats(options)
+            # The following fields should always exist
+            self.assertIn("totalDebugInfoEnabled", debug_stats, "Global stats should always exist")
+            self.assertIn("memory", debug_stats, "'memory' should always exist")
+            # The following fields should exist/not exist depending on the test case
+            for field_name in test_case["expect"]:
+                idx = field_name.find(".")
+                if idx == -1:
+                    # `field` is a top-level field
+                    exists = field_name in debug_stats
+                    should_exist = test_case["expect"][field_name]
+                    should_exist_string = "" if should_exist else "not "
+                    self.assertEqual(exists, should_exist, f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'")
+                else:
+                    # `field` is a string of "<top-level field>.<second-level field>"
+                    top_level_field_name = field_name[0:idx]
+                    second_level_field_name = field_name[idx+1:]
+                    for top_level_field in debug_stats[top_level_field_name] if top_level_field_name in debug_stats else []:
+                        exists = second_level_field_name in top_level_field
+                        should_exist = test_case["expect"][field_name]
+                        should_exist_string = "" if should_exist else "not "
+                        self.assertEqual(exists, should_exist, f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'")

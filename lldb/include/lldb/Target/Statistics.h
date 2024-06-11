@@ -133,6 +133,8 @@ struct ConstStringStats {
 struct StatisticsOptions {
   bool summary_only = false;
   bool load_all_debug_info = false;
+  bool include_targets = false;
+  bool include_modules = false;
   bool include_transcript = false;
 };
 

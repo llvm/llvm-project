@@ -81,6 +81,12 @@ class CommandObjectStatsDump : public CommandObjectParsed {
       case 'f':
         m_stats_options.load_all_debug_info = true;
         break;
+      case 'r':
+        m_stats_options.include_targets = true;
+        break;
+      case 'm':
+        m_stats_options.include_modules = true;
+        break;
       case 't':
         m_stats_options.include_transcript = true;
         break;
