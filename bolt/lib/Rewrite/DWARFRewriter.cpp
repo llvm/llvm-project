@@ -185,6 +185,7 @@ namespace bolt {
 class DIEStreamer : public DwarfStreamer {
   DIEBuilder *DIEBldr;
   DWARFRewriter &Rewriter;
+  GDBIndex &GDBIndexSection;
 
 private:
   /// Emit the compilation unit header for \p Unit in the debug_info
@@ -247,7 +248,7 @@ private:
     const uint64_t TypeSignature = cast<DWARFTypeUnit>(Unit).getTypeHash();
     DIE *TypeDIE = DIEBldr->getTypeDIE(Unit);
     const DIEBuilder::DWARFUnitInfo &UI = DIEBldr->getUnitInfoByDwarfUnit(Unit);
-    Rewriter.addGDBTypeUnitEntry(
+    GDBIndexSection.addGDBTypeUnitEntry(
         {UI.UnitOffset, TypeSignature, TypeDIE->getOffset()});
     if (Unit.getVersion() < 5) {
       // Switch the section to .debug_types section.
@@ -279,11 +280,12 @@ private:
 
 public:
   DIEStreamer(DIEBuilder *DIEBldr, DWARFRewriter &Rewriter,
+              GDBIndex &GDBIndexSection,
               DWARFLinkerBase::OutputFileType OutFileType,
               raw_pwrite_stream &OutFile,
               DWARFLinkerBase::MessageHandlerTy Warning)
       : DwarfStreamer(OutFileType, OutFile, Warning), DIEBldr(DIEBldr),
-        Rewriter(Rewriter){};
+        Rewriter(Rewriter), GDBIndexSection(GDBIndexSection) {};
 
   using DwarfStreamer::emitCompileUnitHeader;
 
@@ -326,12 +328,11 @@ static cl::opt<bool> KeepARanges(
         "keep or generate .debug_aranges section if .gdb_index is written"),
     cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool>
-DeterministicDebugInfo("deterministic-debuginfo",
-  cl::desc("disables parallel execution of tasks that may produce "
-           "nondeterministic debug info"),
-  cl::init(true),
-  cl::cat(BoltCategory));
+static cl::opt<bool> DeterministicDebugInfo(
+    "deterministic-debuginfo",
+    cl::desc("disables parallel execution of tasks that may produce "
+             "nondeterministic debug info"),
+    cl::init(true), cl::cat(BoltCategory));
 
 static cl::opt<std::string> DwarfOutputPath(
     "dwarf-output-path",
@@ -460,10 +461,11 @@ static std::optional<uint64_t> getAsAddress(const DWARFUnit &DU,
 static std::unique_ptr<DIEStreamer>
 createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
                   StringRef Swift5ReflectionSegmentName, DIEBuilder &DIEBldr,
-                  DWARFRewriter &Rewriter) {
+                  DWARFRewriter &Rewriter, GDBIndex &GDBIndexSection) {
 
   std::unique_ptr<DIEStreamer> Streamer = std::make_unique<DIEStreamer>(
-      &DIEBldr, Rewriter, DWARFLinkerBase::OutputFileType::Object, OutFile,
+      &DIEBldr, Rewriter, GDBIndexSection,
+      DWARFLinkerBase::OutputFileType::Object, OutFile,
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {});
   Error Err = Streamer->init(TheTriple, Swift5ReflectionSegmentName);
   if (Err)
@@ -484,13 +486,12 @@ emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
   return {U.UnitOffset, U.UnitLength, TypeHash};
 }
 
-static void emitDWOBuilder(const std::string &DWOName,
-                           DIEBuilder &DWODIEBuilder, DWARFRewriter &Rewriter,
-                           DWARFUnit &SplitCU, DWARFUnit &CU,
-                           DWARFRewriter::DWPState &State,
-                           DebugLocWriter &LocWriter,
-                           DebugStrOffsetsWriter &StrOffstsWriter,
-                           DebugStrWriter &StrWriter) {
+static void
+emitDWOBuilder(const std::string &DWOName, DIEBuilder &DWODIEBuilder,
+               DWARFRewriter &Rewriter, DWARFUnit &SplitCU, DWARFUnit &CU,
+               DWARFRewriter::DWPState &State, DebugLocWriter &LocWriter,
+               DebugStrOffsetsWriter &StrOffstsWriter,
+               DebugStrWriter &StrWriter, GDBIndex &GDBIndexSection) {
   // Populate debug_info and debug_abbrev for current dwo into StringRef.
   DWODIEBuilder.generateAbbrevs();
   DWODIEBuilder.finish();
@@ -500,8 +501,9 @@ static void emitDWOBuilder(const std::string &DWOName,
       std::make_shared<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = SplitCU.getContext().getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> Streamer = createDIEStreamer(
-      *TheTriple, *ObjOS, "DwoStreamerInitAug2", DWODIEBuilder, Rewriter);
+  std::unique_ptr<DIEStreamer> Streamer =
+      createDIEStreamer(*TheTriple, *ObjOS, "DwoStreamerInitAug2",
+                        DWODIEBuilder, Rewriter, GDBIndexSection);
   DWARFRewriter::UnitMetaVectorType TUMetaVector;
   DWARFRewriter::UnitMeta CUMI = {0, 0, 0};
   if (SplitCU.getContext().getMaxDWOVersion() >= 5) {
@@ -652,6 +654,7 @@ void DWARFRewriter::updateDebugInfo() {
 
   DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
                                          *StrWriter);
+  GDBIndex GDBIndexSection(BC);
   DWPState State;
   if (opts::WriteDWP)
     initDWPState(State);
@@ -704,7 +707,8 @@ void DWARFRewriter::updateDebugInfo() {
         TempRangesSectionWriter->finalizeSection();
 
       emitDWOBuilder(DWOName, DWODIEBuilder, *this, **SplitCU, *Unit, State,
-                     DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter);
+                     DebugLocDWoWriter, DWOStrOffstsWriter, DWOStrWriter,
+                     GDBIndexSection);
     }
 
     if (Unit->getVersion() >= 5) {
@@ -729,9 +733,10 @@ void DWARFRewriter::updateDebugInfo() {
       std::make_unique<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> Streamer =
-      createDIEStreamer(*TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this);
-  CUOffsetMap OffsetMap = finalizeTypeSections(DIEBlder, *Streamer);
+  std::unique_ptr<DIEStreamer> Streamer = createDIEStreamer(
+      *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this, GDBIndexSection);
+  CUOffsetMap OffsetMap =
+      finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
 
   const bool SingleThreadedMode =
       opts::NoThreads || opts::DeterministicDebugInfo;
@@ -761,7 +766,8 @@ void DWARFRewriter::updateDebugInfo() {
 
   finalizeDebugSections(DIEBlder, DebugNamesTable, *Streamer, *ObjOS,
                         OffsetMap);
-  updateGdbIndexSection(OffsetMap, CUIndex);
+  GDBIndexSection.updateGdbIndexSection(OffsetMap, CUIndex,
+                                        *ARangesSectionWriter);
 }
 
 void DWARFRewriter::updateUnitDebugInfo(
@@ -1429,7 +1435,8 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
 }
 
 CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
-                                                DIEStreamer &Streamer) {
+                                                DIEStreamer &Streamer,
+                                                GDBIndex &GDBIndexSection) {
   // update TypeUnit DW_AT_stmt_list with new .debug_line information.
   auto updateLineTable = [&](const DWARFUnit &Unit) -> void {
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(Unit);
@@ -1449,8 +1456,8 @@ CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
       std::make_shared<raw_svector_ostream>(OutBuffer);
   const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
   auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> TypeStreamer =
-      createDIEStreamer(*TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this);
+  std::unique_ptr<DIEStreamer> TypeStreamer = createDIEStreamer(
+      *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this, GDBIndexSection);
 
   // generate debug_info and CUMap
   CUOffsetMap CUMap;
