@@ -23,6 +23,8 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
+using ABIArgInfo = ::cir::ABIArgInfo;
+
 namespace mlir {
 namespace cir {
 
@@ -36,6 +38,110 @@ LowerFunction::LowerFunction(LowerModule &LM, PatternRewriter &rewriter,
                              FuncOp srcFn, CallOp callOp)
     : Target(LM.getTarget()), rewriter(rewriter), SrcFn(srcFn), callOp(callOp),
       LM(LM) {}
+
+/// This method has partial parity with CodeGenFunction::EmitFunctionProlog from
+/// the original codegen. However, it focuses on the ABI-specific details. On
+/// top of that, it is also responsible for rewriting the original function.
+LogicalResult
+LowerFunction::buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
+                                   MutableArrayRef<BlockArgument> Args) {
+  // NOTE(cir): Skipping naked and implicit-return-zero functions here. These
+  // are dealt with in CIRGen.
+
+  CIRToCIRArgMapping IRFunctionArgs(LM.getContext(), FI);
+  assert(Fn.getNumArguments() == IRFunctionArgs.totalIRArgs());
+
+  // If we're using inalloca, all the memory arguments are GEPs off of the last
+  // parameter, which is a pointer to the complete memory area.
+  assert(!::cir::MissingFeatures::inallocaArgs());
+
+  // Name the struct return parameter.
+  assert(!::cir::MissingFeatures::sretArgs());
+
+  // Track if we received the parameter as a pointer (indirect, byval, or
+  // inalloca). If already have a pointer, EmitParmDecl doesn't need to copy it
+  // into a local alloca for us.
+  SmallVector<Value, 8> ArgVals;
+  ArgVals.reserve(Args.size());
+
+  // Create a pointer value for every parameter declaration. This usually
+  // entails copying one or more LLVM IR arguments into an alloca. Don't push
+  // any cleanups or do anything that might unwind. We do that separately, so
+  // we can push the cleanups in the correct order for the ABI.
+  assert(FI.arg_size() == Args.size());
+  unsigned ArgNo = 0;
+  LowerFunctionInfo::const_arg_iterator info_it = FI.arg_begin();
+  for (MutableArrayRef<BlockArgument>::const_iterator i = Args.begin(),
+                                                      e = Args.end();
+       i != e; ++i, ++info_it, ++ArgNo) {
+    llvm_unreachable("NYI");
+  }
+
+  if (getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+    llvm_unreachable("NYI");
+  } else {
+    // FIXME(cir): In the original codegen, EmitParamDecl is called here. It is
+    // likely that said function considers ABI details during emission, so we
+    // migth have to add a counter part here. Currently, it is not needed.
+  }
+
+  return success();
+}
+
+LogicalResult LowerFunction::buildFunctionEpilog(const LowerFunctionInfo &FI) {
+  const ABIArgInfo &RetAI = FI.getReturnInfo();
+
+  switch (RetAI.getKind()) {
+
+  case ABIArgInfo::Ignore:
+    break;
+
+  default:
+    llvm_unreachable("Unhandled ABIArgInfo::Kind");
+  }
+
+  return success();
+}
+
+/// Generate code for a function based on the ABI-specific information.
+///
+/// This method has partial parity with CodeGenFunction::GenerateCode, but it
+/// focuses on the ABI-specific details. So a lot of codegen stuff is removed.
+LogicalResult LowerFunction::generateCode(FuncOp oldFn, FuncOp newFn,
+                                          const LowerFunctionInfo &FnInfo) {
+  assert(newFn && "generating code for null Function");
+  auto Args = oldFn.getArguments();
+
+  // Emit the ABI-specific function prologue.
+  assert(newFn.empty() && "Function already has a body");
+  rewriter.setInsertionPointToEnd(newFn.addEntryBlock());
+  if (buildFunctionProlog(FnInfo, newFn, oldFn.getArguments()).failed())
+    return failure();
+
+  // Ensure that old ABI-agnostic arguments uses were replaced.
+  const auto hasNoUses = [](Value val) { return val.getUses().empty(); };
+  assert(std::all_of(Args.begin(), Args.end(), hasNoUses) && "Missing RAUW?");
+
+  // Migrate function body to new ABI-aware function.
+  assert(oldFn.getBody().hasOneBlock() &&
+         "Multiple blocks in original function not supported");
+
+  // Move old function body to new function.
+  // FIXME(cir): The merge below is not very good: will not work if SrcFn has
+  // multiple blocks and it mixes the new and old prologues.
+  rewriter.mergeBlocks(&oldFn.getBody().front(), &newFn.getBody().front(),
+                       newFn.getArguments());
+
+  // FIXME(cir): What about saving parameters for corotines? Should we do
+  // something about it in this pass? If the change with the calling
+  // convention, we might have to handle this here.
+
+  // Emit the standard function epilogue.
+  if (buildFunctionEpilog(FnInfo).failed())
+    return failure();
+
+  return success();
+}
 
 /// Rewrite a call operation to abide to the ABI calling convention.
 ///
