@@ -13,14 +13,18 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
+
+using llvm::divideCeilSigned;
+using llvm::divideFloorSigned;
+using llvm::mod;
 
 MLIRContext *AffineExpr::getContext() const { return expr->context; }
 
@@ -847,7 +851,8 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
 
   if (lhsConst)
     return getAffineConstantExpr(
-        floorDiv(lhsConst.getValue(), rhsConst.getValue()), lhs.getContext());
+        divideFloorSigned(lhsConst.getValue(), rhsConst.getValue()),
+        lhs.getContext());
 
   // Fold floordiv of a multiply with a constant that is a multiple of the
   // divisor. Eg: (i * 128) floordiv 64 = i * 2.
@@ -902,7 +907,8 @@ static AffineExpr simplifyCeilDiv(AffineExpr lhs, AffineExpr rhs) {
 
   if (lhsConst)
     return getAffineConstantExpr(
-        ceilDiv(lhsConst.getValue(), rhsConst.getValue()), lhs.getContext());
+        divideCeilSigned(lhsConst.getValue(), rhsConst.getValue()),
+        lhs.getContext());
 
   // Fold ceildiv of a multiply with a constant that is a multiple of the
   // divisor. Eg: (i * 128) ceildiv 64 = i * 2.
@@ -1570,7 +1576,7 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
                                 constLowerBounds, constUpperBounds, isUpper);
       if (!bound)
         return std::nullopt;
-      return mlir::floorDiv(*bound, rhsConst.getValue());
+      return divideFloorSigned(*bound, rhsConst.getValue());
     }
     if (binOpExpr.getKind() == AffineExprKind::CeilDiv) {
       auto rhsConst = dyn_cast<AffineConstantExpr>(binOpExpr.getRHS());
@@ -1580,7 +1586,7 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
                                   constLowerBounds, constUpperBounds, isUpper);
         if (!bound)
           return std::nullopt;
-        return mlir::ceilDiv(*bound, rhsConst.getValue());
+        return divideCeilSigned(*bound, rhsConst.getValue());
       }
       return std::nullopt;
     }
@@ -1598,7 +1604,8 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
             getBoundForAffineExpr(binOpExpr.getLHS(), numDims, numSymbols,
                                   constLowerBounds, constUpperBounds, isUpper);
         if (ub && lb &&
-            floorDiv(*lb, rhsConstVal) == floorDiv(*ub, rhsConstVal))
+            divideFloorSigned(*lb, rhsConstVal) ==
+                divideFloorSigned(*ub, rhsConstVal))
           return isUpper ? mod(*ub, rhsConstVal) : mod(*lb, rhsConstVal);
         return isUpper ? rhsConstVal - 1 : 0;
       }
