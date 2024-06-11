@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -frame-pointer=non-leaf -verify-machineinstrs < %s | FileCheck %s --check-prefix=FP-CHECK
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2 -frame-pointer=non-leaf -verify-machineinstrs < %s | FileCheck %s --check-prefix=NO-SVE-CHECK
+; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -mattr=+sme2 -verify-machineinstrs -enable-machine-outliner < %s | FileCheck %s --check-prefix=OUTLINER-CHECK
 
 declare void @callee();
 declare void @fixed_callee(<4 x i32>);
@@ -97,6 +98,9 @@ define void @vg_unwind_simple() #0 {
 ; FP-CHECK-NEXT:    .cfi_restore b14
 ; FP-CHECK-NEXT:    .cfi_restore b15
 ; FP-CHECK-NEXT:    ret
+;
+; OUTLINER-CHECK-LABEL: vg_unwind_simple:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
 ;
   call void @callee();
   ret void;
@@ -203,6 +207,9 @@ define void @vg_unwind_needs_gap() #0 {
 ; FP-CHECK-NEXT:    .cfi_restore b15
 ; FP-CHECK-NEXT:    ret
 ;
+; OUTLINER-CHECK-LABEL: vg_unwind_needs_gap:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
+;
   call void asm sideeffect "", "~{x20}"()
   call void @callee();
   ret void;
@@ -302,6 +309,9 @@ define void @vg_unwind_with_fixed_args(<4 x i32> %x) #0 {
 ; FP-CHECK-NEXT:    .cfi_restore b14
 ; FP-CHECK-NEXT:    .cfi_restore b15
 ; FP-CHECK-NEXT:    ret
+;
+; OUTLINER-CHECK-LABEL: vg_unwind_with_fixed_args:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
 ;
   call void @fixed_callee(<4 x i32> %x);
   ret void;
@@ -494,6 +504,9 @@ define void @vg_unwind_with_sve_args(<vscale x 2 x i64> %x) #0 {
 ; FP-CHECK-NEXT:    .cfi_restore w29
 ; FP-CHECK-NEXT:    ret
 ;
+; OUTLINER-CHECK-LABEL: vg_unwind_with_sve_args:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
+;
   call void asm sideeffect "", "~{x28}"()
   call void @scalable_callee(<vscale x 2 x i64> %x);
   ret void;
@@ -620,6 +633,9 @@ define void @vg_unwind_multiple_scratch_regs(ptr %out) #1 {
 ; FP-CHECK-NEXT:    .cfi_restore b15
 ; FP-CHECK-NEXT:    ret
 ;
+; OUTLINER-CHECK-LABEL: vg_unwind_multiple_scratch_regs:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
+;
 entry:
   %v = alloca i8, i64 327680, align 1
   store ptr %v, ptr %out, align 8
@@ -741,6 +757,9 @@ define void @vg_locally_streaming_fn() #3 {
 ; FP-CHECK-NEXT:    .cfi_restore b15
 ; FP-CHECK-NEXT:    ret
 ;
+; OUTLINER-CHECK-LABEL: vg_locally_streaming_fn:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
+;
   call void @callee()
   call void @streaming_callee()
   call void @callee()
@@ -857,6 +876,9 @@ define void @streaming_compatible_to_streaming() #4 {
 ; FP-CHECK-NEXT:    .cfi_restore b15
 ; FP-CHECK-NEXT:    ret
 ;
+; OUTLINER-CHECK-LABEL: streaming_compatible_to_streaming:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
+;
   call void @streaming_callee()
   ret void
 }
@@ -971,6 +993,9 @@ define void @streaming_compatible_to_non_streaming() #4 {
 ; FP-CHECK-NEXT:    .cfi_restore b15
 ; FP-CHECK-NEXT:    ret
 ;
+; OUTLINER-CHECK-LABEL: streaming_compatible_to_non_streaming:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
+;
   call void @callee()
   ret void
 }
@@ -1041,6 +1066,9 @@ define void @streaming_compatible_no_sve(i32 noundef %x) #4 {
 ; NO-SVE-CHECK-NEXT:    .cfi_restore b14
 ; NO-SVE-CHECK-NEXT:    .cfi_restore b15
 ; NO-SVE-CHECK-NEXT:    ret
+;
+; OUTLINER-CHECK-LABEL: streaming_compatible_no_sve:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
 ;
   call void @streaming_callee_with_arg(i32 %x)
   ret void
@@ -1135,6 +1163,9 @@ define void @vg_unwind_noasync() #5 {
 ; FP-CHECK-NEXT:    .cfi_restore b14
 ; FP-CHECK-NEXT:    .cfi_restore b15
 ; FP-CHECK-NEXT:    ret
+; OUTLINER-CHECK-LABEL: vg_unwind_noasync:
+; OUTLINER-CHECK-NOT: OUTLINED_FUNCTION_
+;
   call void @callee();
   ret void;
 }
