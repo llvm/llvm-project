@@ -65,21 +65,23 @@ DebugNamesDWARFIndex::IsForeignTypeUnit(const DebugNames::Entry &entry) const {
   std::optional<uint64_t> type_sig = entry.getForeignTUTypeSignature();
   if (!type_sig.has_value())
     return std::nullopt;
+
+  // Ask the entry for the skeleton compile unit offset and fetch the .dwo
+  // file from it and get the type unit by signature from there. If we find
+  // the type unit in the .dwo file, we don't need to check that the
+  // DW_AT_dwo_name matches because each .dwo file can have its own type unit.
+  std::optional<uint64_t> cu_offset = entry.getForeignTUSkeletonCUOffset();
+  if (!cu_offset)
+    return nullptr; // Return NULL, this is a type unit, but couldn't find it.
+
+  DWARFUnit *cu =
+      m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
+  if (!cu)
+    return nullptr; // Return NULL, this is a type unit, but couldn't find it.
+
   auto dwp_sp = m_debug_info.GetDwpSymbolFile();
   if (!dwp_sp) {
     // No .dwp file, we need to load the .dwo file.
-
-    // Ask the entry for the skeleton compile unit offset and fetch the .dwo
-    // file from it and get the type unit by signature from there. If we find
-    // the type unit in the .dwo file, we don't need to check that the
-    // DW_AT_dwo_name matches because each .dwo file can have its own type unit.
-    std::optional<uint64_t> unit_offset = entry.getForeignTUSkeletonCUOffset();
-    if (!unit_offset)
-      return nullptr; // Return NULL, this is a type unit, but couldn't find it.
-    DWARFUnit *cu =
-        m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *unit_offset);
-    if (!cu)
-      return nullptr; // Return NULL, this is a type unit, but couldn't find it.
     DWARFUnit &dwo_cu = cu->GetNonSkeletonUnit();
     // We don't need the check if the type unit matches the .dwo file if we have
     // a .dwo file (not a .dwp), so we can just return the value here.
@@ -104,20 +106,14 @@ DebugNamesDWARFIndex::IsForeignTypeUnit(const DebugNames::Entry &entry) const {
   if (!foreign_tu)
     return nullptr; // Return NULL, this is a type unit, but couldn't find it.
 
-  std::optional<uint64_t> cu_offset = entry.getForeignTUSkeletonCUOffset();
-  if (cu_offset) {
-    DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::DebugInfo, *cu_offset);
-    if (cu) {
-      DWARFBaseDIE cu_die = cu->GetUnitDIEOnly();
-      DWARFBaseDIE tu_die = foreign_tu->GetUnitDIEOnly();
-      llvm::StringRef cu_dwo_name =
-          cu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
-      llvm::StringRef tu_dwo_name =
-          tu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
-      if (cu_dwo_name == tu_dwo_name)
-        return foreign_tu; // We found a match!
-    }
-  }
+  DWARFBaseDIE cu_die = cu->GetUnitDIEOnly();
+  DWARFBaseDIE tu_die = foreign_tu->GetUnitDIEOnly();
+  llvm::StringRef cu_dwo_name =
+      cu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
+  llvm::StringRef tu_dwo_name =
+      tu_die.GetAttributeValueAsString(DW_AT_dwo_name, nullptr);
+  if (cu_dwo_name == tu_dwo_name)
+    return foreign_tu; // We found a match!
   return nullptr; // Return NULL, this is a type unit, but couldn't find it.
 }
 
