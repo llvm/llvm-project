@@ -98,16 +98,20 @@
 #define LLVM_TRANSFORMS_IPO_ATTRIBUTOR_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DirectedGraph.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/DDG.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -140,6 +144,7 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <tuple>
 
 namespace llvm {
 
@@ -6372,6 +6377,107 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 
   using NewOffsetsTy = DenseMap<AA::RangeTy, AA::RangeTy>;
   virtual const NewOffsetsTy &getNewOffsets() const = 0;
+  struct BinAccessGraphEdge;
+  struct BinAccessGraphNode;
+
+  struct PriorityQueueGraphNode {
+    PriorityQueueGraphNode(int Priority, BinAccessGraphNode *Node)
+        : Priority(Priority), Node(Node) {}
+
+  public:
+    int Priority;
+    BinAccessGraphNode *Node;
+
+    int getPriority() { return Priority; }
+    BinAccessGraphNode *getNode() { return Node; }
+
+    bool operator<(const PriorityQueueGraphNode *A) {
+      return A->Priority > Priority;
+    }
+
+    bool operator==(const PriorityQueueGraphNode *A) {
+      return A->Priority == Priority;
+    }
+
+    bool operator>(const PriorityQueueGraphNode *A) {
+      return A->Priority > Priority;
+    }
+  };
+
+  // A Edge Type for the field access graph edge
+  struct BinAccessGraphEdge
+      : public DGEdge<BinAccessGraphNode, BinAccessGraphEdge> {
+    BinAccessGraphEdge(BinAccessGraphNode &TargetNode, int EdgeWeight)
+        : DGEdge<BinAccessGraphNode, BinAccessGraphEdge>(TargetNode),
+          EdgeWeight(EdgeWeight) {}
+
+  public:
+    BinAccessGraphNode *SrcNode;
+    int EdgeWeight;
+    int getEdgeWeight() { return EdgeWeight; }
+    void setSrcNode(BinAccessGraphNode *SourceNode) { SrcNode = SourceNode; }
+    BinAccessGraphNode *getSourceNode() { return SrcNode; }
+  };
+
+  // A node type for the field access graph node
+  struct BinAccessGraphNode
+      : public DGNode<BinAccessGraphNode, BinAccessGraphEdge> {
+    BinAccessGraphNode(const AA::RangeTy &Node, BinAccessGraphEdge &Edge)
+        : DGNode<BinAccessGraphNode, BinAccessGraphEdge>(Edge), BinRange(Node) {
+    }
+    BinAccessGraphNode(const AA::RangeTy &Node) : BinRange(Node) {}
+
+  public:
+    const AA::RangeTy BinRange;
+    const AA::RangeTy &getBinRange() const { return BinRange; }
+  };
+
+  struct FieldAccessGraph
+      : public DirectedGraph<BinAccessGraphNode, BinAccessGraphEdge> {
+    FieldAccessGraph() {}
+
+  public:
+    BinAccessGraphNode *getNode(const AA::RangeTy &Range) {
+      for (BinAccessGraphNode *N : Nodes) {
+        if (N->getBinRange() == Range) {
+          return N;
+        }
+      }
+      return nullptr;
+    }
+
+    bool findNode(const AA::RangeTy &Range) {
+      for (BinAccessGraphNode *N : Nodes) {
+        if (N->getBinRange() == Range) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    bool edgeExists(const AA::RangeTy &HeadNode,
+                    BinAccessGraphNode *TargetNode) {
+      for (BinAccessGraphNode *N : Nodes) {
+        if (N->getBinRange() == HeadNode) {
+          return N->hasEdgeTo(*TargetNode);
+        }
+      }
+      return false;
+    }
+
+    // return all nodes that have no incoming edges.
+    void getAllRoots(std::vector<BinAccessGraphNode *> &Roots) {
+      assert(Roots.empty() && "Root set should be empty at the begining!");
+      for (BinAccessGraphNode *N : Nodes) {
+        SmallVector<BinAccessGraphEdge *> EL;
+        if (!findIncomingEdgesToNode(*N, EL)) {
+          Roots.push_back(N);
+        }
+      }
+    }
+  };
+
+  virtual const FieldAccessGraph &getBinAccessGraph() const = 0;
 
   /// See AbstractAttribute::getName()
   const std::string getName() const override { return "AAAllocationInfo"; }
