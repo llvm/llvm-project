@@ -1218,6 +1218,10 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn, IntrStrictFP] in 
                                                     [ LLVMMatchType<0>,
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
+  def int_experimental_constrained_tan  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
+                                                    [ LLVMMatchType<0>,
+                                                      llvm_metadata_ty,
+                                                      llvm_metadata_ty ]>;
   def int_experimental_constrained_pow  : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
