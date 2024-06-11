@@ -8,7 +8,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestDelayInitDependencies(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
