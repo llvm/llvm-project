@@ -240,6 +240,31 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
   return 0;
 }
 
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+totalorder(T x, T y) {
+  using FPBits = FPBits<T>;
+  FPBits x_bits(x);
+  FPBits y_bits(y);
+
+  using StorageType = typename FPBits::StorageType;
+  StorageType x_u = x_bits.uintval();
+  StorageType y_u = y_bits.uintval();
+
+  using signed_t = cpp::make_signed_t<StorageType>;
+  signed_t x_signed = static_cast<signed_t>(x_u);
+  signed_t y_signed = static_cast<signed_t>(y_u);
+
+  bool both_neg = (x_u & y_u & FPBits::SIGN_MASK) != 0;
+  return x_signed == y_signed || ((x_signed <= y_signed) != both_neg);
+}
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+totalordermag(T x, T y) {
+  return FPBits<T>(x).abs().uintval() <= FPBits<T>(y).abs().uintval();
+}
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 
