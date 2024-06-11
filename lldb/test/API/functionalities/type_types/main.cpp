@@ -1,13 +1,12 @@
 namespace a {
-  struct Foo {};
+struct Foo {};
 
-  unsigned foo() {
-    typedef unsigned Foo;
-    Foo foo = 12;
-    return foo;
-  }
+unsigned foo() {
+  typedef unsigned Foo;
+  Foo foo = 12;
+  return foo;
+}
 } // namespace a
-
 
 int main() {
   a::Foo f = {};

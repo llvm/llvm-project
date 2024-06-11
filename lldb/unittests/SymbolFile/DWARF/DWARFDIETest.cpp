@@ -259,7 +259,6 @@ DWARF:
       testing::ElementsAre(make_namespace("NAMESPACE"), make_struct("STRUCT")));
 }
 
-
 TEST(DWARFDIETest, GetContextInFunction) {
   // Make sure we get the right context fo each "struct_t" type. The first
   // should be "a::struct_t" and the one defined in the "foo" function should be
@@ -363,7 +362,6 @@ DWARF:
   // Grab the "struct_t" defined in the "foo" function.
   DWARFDIE foo_struct_die =
       unit->DIE().GetFirstChild().GetFirstChild().GetSibling().GetFirstChild();
-  EXPECT_THAT(
-      foo_struct_die.GetTypeLookupContext(),
-      testing::ElementsAre(make_struct("struct_t")));
+  EXPECT_THAT(foo_struct_die.GetTypeLookupContext(),
+              testing::ElementsAre(make_struct("struct_t")));
 }
