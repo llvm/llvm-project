@@ -1874,9 +1874,21 @@ val builder_at_end : llcontext -> llbasicblock -> llbuilder
     See the constructor for [llvm::LLVMBuilder]. *)
 val position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
 
+(** [position_builder_before_dbg_records ip bb before_dbg_records] moves the
+    instruction builder [bb] to the position [ip], before any debug records
+    there.
+    See the constructor for [llvm::LLVMBuilder]. *)
+val position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
+                                          llbuilder -> unit
+
 (** [position_before ins b] moves the instruction builder [b] to before the
     instruction [isn]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
 val position_before : llvalue -> llbuilder -> unit
+
+(** [position_before_dbg_records ins b] moves the instruction builder [b]
+    to before the instruction [isn] and any debug records attached to it.
+    See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
+val position_before_dbg_records : llvalue -> llbuilder -> unit
 
 (** [position_at_end bb b] moves the instruction builder [b] to the end of the
     basic block [bb]. See the method [llvm::LLVMBuilder::SetInsertPoint]. *)
