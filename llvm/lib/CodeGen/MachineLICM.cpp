@@ -423,14 +423,14 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
   return false;
 }
 
-static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo *TRI,
+static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
                                                 BitVector &RUs,
                                                 const uint32_t *Mask) {
   // Iterate over the RegMask raw to avoid constructing a BitVector, which is
   // expensive as it implies dynamically allocating memory.
   //
   // We also work backwards.
-  const unsigned NumRegs = TRI->getNumRegs();
+  const unsigned NumRegs = TRI.getNumRegs();
   const unsigned MaskWords = (NumRegs + 31) / 32;
   for (unsigned K = 0; K < MaskWords; ++K) {
     // We want to set the bits that aren't in RegMask, so flip it.
@@ -453,7 +453,7 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo *TRI,
         return;
 
       if (PhysReg) {
-        for (MCRegUnitIterator RUI(PhysReg, TRI); RUI.isValid(); ++RUI)
+        for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
           RUs.set(*RUI);
       }
     }
@@ -485,7 +485,7 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     // We can't hoist an instruction defining a physreg that is clobbered in
     // the loop.
     if (MO.isRegMask()) {
-      applyBitsNotInRegMaskToRegUnitsMask(TRI, RUClobbers, MO.getRegMask());
+      applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, MO.getRegMask());
       continue;
     }
 
@@ -497,11 +497,15 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
     assert(Reg.isPhysical() && "Not expecting virtual register!");
 
     if (!MO.isDef()) {
-      for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
-        // If it's using a non-loop-invariant register, then it's obviously not
-        // safe to hoist.
-        if (RUDefs.test(*RUI) || RUClobbers.test(*RUI))
-          HasNonInvariantUse = true;
+      if (!HasNonInvariantUse) {
+        for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
+          // If it's using a non-loop-invariant register, then it's obviously
+          // not safe to hoist.
+          if (RUDefs.test(*RUI) || RUClobbers.test(*RUI)) {
+            HasNonInvariantUse = true;
+            break;
+          }
+        }
       }
       continue;
     }
@@ -583,9 +587,8 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
     }
 
     // Funclet entry blocks will clobber all registers
-    if (const uint32_t *Mask = BB->getBeginClobberMask(TRI)) {
-      applyBitsNotInRegMaskToRegUnitsMask(TRI, RUClobbers, Mask);
-    }
+    if (const uint32_t *Mask = BB->getBeginClobberMask(TRI))
+      applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, Mask);
 
     SpeculationState = SpeculateUnknown;
     for (MachineInstr &MI : *BB)
