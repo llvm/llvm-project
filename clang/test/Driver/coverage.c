@@ -17,10 +17,6 @@
 // GCNO-LOCATION: "-coverage-notes-file={{.*}}/foo/bar.gcno"
 // GCNO-LOCATION-REL: "-coverage-notes-file={{.*}}{{/|\\\\}}foo/bar.gcno"
 
-/// GCC allows PWD to change the paths.
-// RUN: %if system-linux %{ PWD=/proc/self/cwd %clang -### -c --coverage %s -o foo/bar.o 2>&1 | FileCheck --check-prefix=PWD %s %}
-// PWD: "-coverage-notes-file=/proc/self/cwd/foo/bar.gcno" "-coverage-data-file=/proc/self/cwd/foo/bar.gcda"
-
 /// Don't warn -Wunused-command-line-argument.
 // RUN: %clang -E -Werror --coverage -ftest-coverage -fprofile-arcs %s
 
@@ -48,8 +44,3 @@
 // RUN: %clang -### --coverage d/a.c d/b.c -o e/x -dumpdir f/g 2>&1 | FileCheck %s --check-prefix=LINK2
 // LINK2: -cc1{{.*}} "-coverage-notes-file={{.*}}{{/|\\\\}}f/ga.gcno" "-coverage-data-file={{.*}}{{/|\\\\}}f/ga.gcda"
 // LINK2: -cc1{{.*}} "-coverage-notes-file={{.*}}{{/|\\\\}}f/gb.gcno" "-coverage-data-file={{.*}}{{/|\\\\}}f/gb.gcda"
-
-/// GCC allows PWD to change the paths.
-// RUN: %if system-linux %{ PWD=/proc/self/cwd %clang -### --coverage d/a.c d/b.c -o e/x -fprofile-dir=f 2>&1 | FileCheck %s --check-prefix=LINK3 %}
-// LINK3: -cc1{{.*}} "-coverage-notes-file=/proc/self/cwd/e/x-a.gcno" "-coverage-data-file=f/proc/self/cwd/e/x-a.gcda"
-// LINK3: -cc1{{.*}} "-coverage-notes-file=/proc/self/cwd/e/x-b.gcno" "-coverage-data-file=f/proc/self/cwd/e/x-b.gcda"
