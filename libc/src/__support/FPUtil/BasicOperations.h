@@ -276,13 +276,15 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
   return T(x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
 }
 
-template <typename T>
+template <bool IsSignaling, typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 setpayload(T *res, T pl) {
   using FPBits = FPBits<T>;
   FPBits pl_bits(pl);
 
-  if (pl_bits.is_zero()) {
+  // Signaling NaNs don't have the mantissa's MSB set to 1, so they need a
+  // non-zero payload to distinguish them from infinities.
+  if (!IsSignaling && pl_bits.is_zero()) {
     *res = FPBits::quiet_nan(Sign::POS).get_val();
     return false;
   }
@@ -297,7 +299,11 @@ setpayload(T *res, T pl) {
 
   using StorageType = typename FPBits::StorageType;
   StorageType v(pl_bits.get_explicit_mantissa() >> (FPBits::SIG_LEN - pl_exp));
-  *res = FPBits::quiet_nan(Sign::POS, v).get_val();
+
+  if constexpr (IsSignaling)
+    *res = FPBits::signaling_nan(Sign::POS, v).get_val();
+  else
+    *res = FPBits::quiet_nan(Sign::POS, v).get_val();
   return false;
 }
 

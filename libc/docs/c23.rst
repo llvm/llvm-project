@@ -46,6 +46,7 @@ Additions:
   * totalordermag* |check|
   * getpayload* |check|
   * setpayload* |check|
+  * setpayloadsig* |check|
   * iscannonical
   * issignaling
   * issubnormal
