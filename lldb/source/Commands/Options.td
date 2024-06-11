@@ -1416,16 +1416,26 @@ let Command = "trace schema" in {
 }
 
 let Command = "statistics dump" in {
-  def statistics_dump_all: Option<"all-targets", "a">, Group<1>,
+  def statistics_dump_all: Option<"all-targets", "a">, GroupRange<1, 2>,
     Desc<"Include statistics for all targets.">;
   def statistics_dump_summary: Option<"summary", "s">, Group<1>,
     Desc<"Dump only high-level summary statistics. "
          "Exclude targets, modules, breakpoints etc... details.">;
-  def statistics_dump_force: Option<"load-all-debug-info", "f">, Group<1>,
+  def statistics_dump_force: Option<"load-all-debug-info", "f">, GroupRange<1, 2>,
     Desc<"Dump the total possible debug info statistics. "
     "Force loading all the debug information if not yet loaded, and collect "
     "statistics with those.">;
-  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
+  def statistics_dump_targets: Option<"targets", "r">, Group<2>,
+    Desc<"Dump statistics for the targets, including breakpoints, expression "
+    "evaluations, frame variables, etc. "
+    "If both the '--targets' and the '--modules' options are specified, a "
+    "list of module identifiers will be added to the 'targets' section.">;
+  def statistics_dump_modules: Option<"modules", "m">, Group<2>,
+    Desc<"Dump statistics for the modules, including time and size of various "
+    "aspects of the module and debug information, type system, path, etc. "
+    "If both the '--targets' and the '--modules' options are specified, a "
+    "list of module identifiers will be added to the 'targets' section.">;
+  def statistics_dump_transcript: Option<"transcript", "t">, Group<2>,
     Desc<"If the setting interpreter.save-transcript is enabled and this "
     "option is specified, include a JSON array with all commands the user and/"
     "or scripts executed during a debug session.">;

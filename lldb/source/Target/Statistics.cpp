@@ -226,6 +226,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
 
   const bool summary_only = options.summary_only;
   const bool load_all_debug_info = options.load_all_debug_info;
+  const bool include_targets = options.include_targets;
+  const bool include_modules = options.include_modules;
   const bool include_transcript = options.include_transcript;
 
   json::Array json_targets;
@@ -347,13 +349,15 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalSymbolTableStripped", num_stripped_modules},
   };
 
-  if (target) {
-    json_targets.emplace_back(target->ReportStatistics(options));
-  } else {
-    for (const auto &target : debugger.GetTargetList().Targets())
+  if (!summary_only || include_targets) {
+    if (target) {
       json_targets.emplace_back(target->ReportStatistics(options));
+    } else {
+      for (const auto &target : debugger.GetTargetList().Targets())
+        json_targets.emplace_back(target->ReportStatistics(options));
+    }
+    global_stats.try_emplace("targets", std::move(json_targets));
   }
-  global_stats.try_emplace("targets", std::move(json_targets));
 
   ConstStringStats const_string_stats;
   json::Object json_memory{
@@ -362,11 +366,14 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   global_stats.try_emplace("memory", std::move(json_memory));
   if (!summary_only) {
     json::Value cmd_stats = debugger.GetCommandInterpreter().GetStatistics();
-    global_stats.try_emplace("modules", std::move(json_modules));
     global_stats.try_emplace("commands", std::move(cmd_stats));
   }
 
-  if (include_transcript) {
+  if (!summary_only || include_modules) {
+    global_stats.try_emplace("modules", std::move(json_modules));
+  }
+
+  if (!summary_only || include_transcript) {
     // When transcript is available, add it to the to-be-returned statistics.
     //
     // NOTE:
