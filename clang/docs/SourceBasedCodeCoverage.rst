@@ -495,7 +495,7 @@ The number of test vectors (the maximum number of possible combinations of
 expressions) is limited to 2,147,483,646. In this case, approximately
 256MiB (==2GiB/8) is used to record test vectors.
 
-To reduce memory usage, you can limit the maximum number of test vectors per
+To reduce memory usage, users can limit the maximum number of test vectors per
 expression with ``-Xclang -fmcdc-max-test-vectors=m``.
 If the number of test vectors resulting from the analysis of an expression
 exceeds ``m``, a warning will be issued and the expression will be excluded
