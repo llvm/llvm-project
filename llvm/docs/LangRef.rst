@@ -26244,6 +26244,42 @@ same values as the libm ``cos`` functions would, and handles error
 conditions in the same way.
 
 
+'``llvm.experimental.constrained.tan``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.tan(<type> <op1>,
+                                         metadata <rounding mode>,
+                                         metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.tan``' intrinsic returns the tangent of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the tangent of the specified operand, returning the
+same values as the libm ``tan`` functions would, and handles error
+conditions in the same way.
+
+
 '``llvm.experimental.constrained.exp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
