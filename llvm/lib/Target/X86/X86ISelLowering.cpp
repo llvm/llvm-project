@@ -23816,6 +23816,20 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
       }
     }
 
+    // Look for X == INT_MIN or X != INT_MIN. We can use NEG and test for
+    // overflow.
+    if (isMinSignedConstant(Op1)) {
+      EVT VT = Op0.getValueType();
+      if (VT == MVT::i32 || VT == MVT::i64 || Op0->hasOneUse()) {
+        SDVTList CmpVTs = DAG.getVTList(VT, MVT::i32);
+        X86::CondCode CondCode = CC == ISD::SETEQ ? X86::COND_O : X86::COND_NO;
+        X86CC = DAG.getTargetConstant(CondCode, dl, MVT::i8);
+        SDValue Neg = DAG.getNode(X86ISD::SUB, dl, CmpVTs,
+                                  DAG.getConstant(0, dl, VT), Op0);
+        return SDValue(Neg.getNode(), 1);
+      }
+    }
+
     // Try to use the carry flag from the add in place of an separate CMP for:
     // (seteq (add X, -1), -1). Similar for setne.
     if (isAllOnesConstant(Op1) && Op0.getOpcode() == ISD::ADD &&
@@ -42792,6 +42806,19 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
                                 AssumeSingleUse) ||
            SimplifyDemandedBits(Op1, SignMask, KnownSrc, TLO, Depth + 1,
                                 AssumeSingleUse);
+  }
+  case X86ISD::CMOV: {
+    KnownBits Known2;
+    if (SimplifyDemandedBits(Op.getOperand(1), OriginalDemandedBits,
+                             OriginalDemandedElts, Known2, TLO, Depth + 1))
+      return true;
+    if (SimplifyDemandedBits(Op.getOperand(0), OriginalDemandedBits,
+                             OriginalDemandedElts, Known, TLO, Depth + 1))
+      return true;
+
+    // Only known if known in both the LHS and RHS.
+    Known = Known.intersectWith(Known2);
+    break;
   }
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI: {
