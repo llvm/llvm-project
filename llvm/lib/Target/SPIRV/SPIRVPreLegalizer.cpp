@@ -422,7 +422,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       unsigned MIOp = MI.getOpcode();
 
       // validate bit width of scalar registers
-      for (const auto& MOP : MI.operands())
+      for (const auto &MOP : MI.operands())
         if (MOP.isReg())
           widenScalarLLTNextPow2(MOP.getReg(), MRI);
 
