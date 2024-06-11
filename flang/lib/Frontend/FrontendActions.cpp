@@ -1274,6 +1274,8 @@ void CodeGenAction::executeAction() {
   runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
 
   if (action == BackendActionTy::Backend_EmitLL) {
+    // When printing LLVM IR, we should convert the module to the debug info
+    // format that LLVM expects us to print.
     llvm::ScopedDbgInfoFormatSetter FormatSetter(*llvmModule,
                                                  WriteNewDbgInfoFormat);
     if (WriteNewDbgInfoFormat)
