@@ -844,7 +844,8 @@ def EmitC_LValueLoadOp : EmitC_Op<"lvalue_load", [
   let summary = "load an lvalue by assigning it to a local variable";
   let description = [{}];
 
-  let arguments = (ins EmitC_LValueType:$operand);
+  let arguments = (ins 
+      Res<EmitC_LValueType, "", [MemRead<DefaultResource, 0, FullEffect>]>:$operand);
   let results = (outs AnyType:$result);
 
   let assemblyFormat = "$operand attr-dict `:` type($operand)"; 
@@ -1066,7 +1067,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   }];
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
-  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
+  let results = (outs Res<AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>, "",
+                          [MemAlloc<DefaultResource, 0, FullEffect>]>:$memref);
 
   let hasVerifier = 1;
 }
@@ -1194,7 +1196,9 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
     ```
   }];
 
-  let arguments = (ins EmitC_LValueType:$var, EmitCType:$value);
+  let arguments = (ins 
+      Res<EmitC_LValueType, "", [MemWrite<DefaultResource, 1, FullEffect>]>:$var,
+      Res<EmitCType, "", [MemRead<DefaultResource, 0, FullEffect>]>:$value);
   let results = (outs);
 
   let hasVerifier = 1;
