@@ -395,7 +395,6 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZicond,
                                         FeatureStdExtZmmul,
                                         FeatureStdExtZvfh,
-                                        FeatureStdExtZvfhmin,
                                         FeatureStdExtZvkt,
                                         FeatureStdExtZvl256b]),
                                        [TuneDLenFactor2]>;
