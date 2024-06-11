@@ -67,6 +67,18 @@ add_libc_test(
     libc.src.string.memcpy
 )
 
+add_libc_test(
+  freelist_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    freelist_test.cpp
+  DEPENDS
+    libc.src.stdlib.freelist
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.span
+)
+
 add_fp_unittest(
   strtod_test
   SUITE
