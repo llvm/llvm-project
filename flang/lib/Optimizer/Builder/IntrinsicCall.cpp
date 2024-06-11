@@ -5790,7 +5790,17 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
     return fir::runtime::genReduce(builder, loc, array, operation, mask,
                                    identity, ordered);
   }
-  TODO(loc, "reduce with array result");
+  // Handle cases that have an array result.
+  // Create mutable fir.box to be passed to the runtime for the result.
+  mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+  mlir::Value dim = fir::getBase(args[2]);
+  fir::runtime::genReduceDim(builder, loc, array, operation, dim, mask,
+                             identity, ordered, resultIrBox);
+  return readAndAddCleanUp(resultMutableBox, resultType, "REDUCE");
 }
 
 // REPEAT
