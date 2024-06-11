@@ -6288,11 +6288,11 @@ DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
-(such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
+expression language. They are used in :ref:`debug records <debugrecords>`
+(such as ``#dbg_declare`` and ``#dbg_value``) to describe how the
 referenced LLVM variable relates to the source language variable. Debug
-intrinsics are interpreted left-to-right: start by pushing the value/address
-operand of the intrinsic onto a stack, then repeatedly push and evaluate
+expressions are interpreted left-to-right: start by pushing the value/address
+operand of the record onto a stack, then repeatedly push and evaluate
 opcodes from the DIExpression until the final variable description is produced.
 
 The current supported opcode vocabulary is limited:
@@ -6389,23 +6389,24 @@ The current supported opcode vocabulary is limited:
 
     IR for "*ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
+      #dbg_value(i32 4, !17, !DIExpression(DW_OP_LLVM_implicit_pointer), !20)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
+    !20 = !DILocation(line: 10, scope: !12)
 
     IR for "**ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
+      #dbg_value(i32 4, !17,
+        !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer),
+        !21)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
     !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
-                        DW_OP_LLVM_implicit_pointer))
+    !21 = !DILocation(line: 10, scope: !12)
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -6416,45 +6417,48 @@ sense that a debugger might modify its value), whereas *implicit locations*
 describe merely the actual *value* of a source variable which might not exist
 in registers or in memory (see ``DW_OP_stack_value``).
 
-A ``llvm.dbg.declare`` intrinsic describes an indirect value (the address) of a
-source variable. The first operand of the intrinsic must be an address of some
-kind. A DIExpression attached to the intrinsic refines this address to produce a
+A ``#dbg_declare`` record describes an indirect value (the address) of a
+source variable. The first operand of the record must be an address of some
+kind. A DIExpression operand to the record refines this address to produce a
 concrete location for the source variable.
 
-A ``llvm.dbg.value`` intrinsic describes the direct value of a source variable.
-The first operand of the intrinsic may be a direct or indirect value. A
-DIExpression attached to the intrinsic refines the first operand to produce a
+A ``#dbg_value`` record describes the direct value of a source variable.
+The first operand of the record may be a direct or indirect value. A
+DIExpression operand to the record refines the first operand to produce a
 direct value. For example, if the first operand is an indirect value, it may be
 necessary to insert ``DW_OP_deref`` into the DIExpression in order to produce a
-valid debug intrinsic.
+valid debug record.
 
 .. note::
 
    A DIExpression is interpreted in the same way regardless of which kind of
-   debug intrinsic it's attached to.
+   debug record it's attached to.
+
+   DIExpressions are always printed and parsed inline; they can never be
+   referenced by an ID (e.g. ``!1``).
 
 .. code-block:: text
 
-    !0 = !DIExpression(DW_OP_deref)
-    !1 = !DIExpression(DW_OP_plus_uconst, 3)
-    !1 = !DIExpression(DW_OP_constu, 3, DW_OP_plus)
-    !2 = !DIExpression(DW_OP_bit_piece, 3, 7)
-    !3 = !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
-    !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
-    !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
+    !DIExpression(DW_OP_deref)
+    !DIExpression(DW_OP_plus_uconst, 3)
+    !DIExpression(DW_OP_constu, 3, DW_OP_plus)
+    !DIExpression(DW_OP_bit_piece, 3, 7)
+    !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
+    !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
+    !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
 DIAssignID
 """"""""""
 
 ``DIAssignID`` nodes have no operands and are always distinct. They are used to
-link together `@llvm.dbg.assign` intrinsics (:ref:`debug
-intrinsics<dbg_intrinsics>`) and instructions that store in IR. See `Debug Info
-Assignment Tracking <AssignmentTracking.html>`_ for more info.
+link together (:ref:`#dbg_assign records <debugrecords>`) and instructions
+that store in IR. See `Debug Info Assignment Tracking
+<AssignmentTracking.html>`_ for more info.
 
 .. code-block:: llvm
 
     store i32 %a, ptr %a.addr, align 4, !DIAssignID !2
-    llvm.dbg.assign(metadata %a, metadata !1, metadata !DIExpression(), !2, metadata %a.addr, metadata !DIExpression()), !dbg !3
+    #dbg_assign(%a, !1, !DIExpression(), !2, %a.addr, !DIExpression(), !3)
 
     !2 = distinct !DIAssignID()
 
@@ -6468,17 +6472,18 @@ DIArgList
    also be updated to mirror whatever we decide here.
 
 ``DIArgList`` nodes hold a list of constant or SSA value references. These are
-used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
-``llvm.dbg.value``) in combination with a ``DIExpression`` that uses the
+used in :ref:`debug records <debugrecords>` in combination with a
+``DIExpression`` that uses the
 ``DW_OP_LLVM_arg`` operator. Because a DIArgList may refer to local values
 within a function, it must only be used as a function argument, must always be
 inlined, and cannot appear in named metadata.
 
 .. code-block:: text
 
-    llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %b),
-                   metadata !16,
-                   metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus))
+    #dbg_value(!DIArgList(i32 %a, i32 %b),
+               !16,
+               !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus),
+               !26)
 
 DIFlags
 """""""
@@ -12957,12 +12962,12 @@ an extra level of indentation. As an example:
     #dbg_value(%inst1, !10, !DIExpression(), !11)
   %inst2 = op2 %inst1, %c
 
-These debug records are an optional replacement for
-:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output if the
-``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
-records and intrinsics to appear in the same module. More information about
-debug records can be found in the `LLVM Source Level Debugging
-<SourceLevelDebugging.html#format-common-intrinsics>`_ document.
+These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
+Debug records will be disabled if ``--write-experimental-debuginfo=false`` is
+passed to LLVM; it is an error for both records and intrinsics to appear in the
+same module. More information about debug records can be found in the `LLVM
+Source Level Debugging <SourceLevelDebugging.html#format-common-intrinsics>`_
+document.
 
 .. _intrinsics:
 

@@ -1689,6 +1689,17 @@ bool ByteCodeExprGen<Emitter>::VisitObjCStringLiteral(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCEncodeExpr(const ObjCEncodeExpr *E) {
+  auto &A = Ctx.getASTContext();
+  std::string Str;
+  A.getObjCEncodingForType(E->getEncodedType(), Str);
+  StringLiteral *SL =
+      StringLiteral::Create(A, Str, StringLiteralKind::Ordinary,
+                            /*Pascal=*/false, E->getType(), E->getAtLoc());
+  return this->delegate(SL);
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitSYCLUniqueStableNameExpr(
     const SYCLUniqueStableNameExpr *E) {
   if (DiscardResult)
