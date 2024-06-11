@@ -248,7 +248,7 @@ public:
   /// Calling this function will find the correct symbol file to use so that
   /// further lookups can be done on the correct symbol file so that the DIE
   /// offset makes sense in the DIERef.
-  SymbolFileDWARF *GetDIERefSymbolFile(const DIERef &die_ref);
+  virtual SymbolFileDWARF *GetDIERefSymbolFile(const DIERef &die_ref);
 
   virtual DWARFDIE GetDIE(const DIERef &die_ref);
 
