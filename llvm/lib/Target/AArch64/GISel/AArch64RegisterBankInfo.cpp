@@ -501,14 +501,12 @@ bool AArch64RegisterBankInfo::isPHIWithFPContraints(
   if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
     return false;
 
-  if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
-             [&](const MachineInstr &UseMI) {
-               if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
-                 return true;
-               return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
-             }))
-    return true;
-  return false;
+  return any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                [&](const MachineInstr &UseMI) {
+                  if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
+                    return true;
+                  return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+                });
 }
 
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
