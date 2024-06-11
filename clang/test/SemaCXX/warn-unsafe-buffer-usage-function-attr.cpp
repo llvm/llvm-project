@@ -142,13 +142,6 @@ struct SubclassUnsafeMembers : public UnsafeMembers {
     {}
 };
 
-// Without an explicit constructor, there is no CXXDefaultInitExpr to anchor on
-// in matchers.
-struct AggregateUnsafeMembers {
-    UnsafeMembers f1;
-    UnsafeMembers f2{3};  // expected-warning{{function introduces unsafe buffer manipulation}}
-};
-
 // https://github.com/llvm/llvm-project/issues/80482
 void testClassMembers() {
     UnsafeMembers(3);  // expected-warning{{function introduces unsafe buffer manipulation}}
@@ -166,22 +159,10 @@ void testClassMembers() {
 
     SubclassUnsafeMembers();
     SubclassUnsafeMembers(3);  // expected-warning{{function introduces unsafe buffer manipulation}}
-
-    (void)AggregateUnsafeMembers{
-        .f1 = UnsafeMembers(3),  // expected-warning{{function introduces unsafe buffer manipulation}}
-    };
-
-    (void)AggregateUnsafeMembers(3);  // expected-warning{{function introduces unsafe buffer manipulation}}
-
-    // FIXME: This should generate a warning but InitListExpr construction is
-    // treated as calling an implicit constructor, while ParentListInitExpr (the
-    // one above) is not. So `MatchDescendantVisitor::shouldVisitImplicitCode()`
-    // must return true for this to generate a warning. However that moves the
-    // SourceLocation of warnings from field initializers that construct through
-    // InitListExpr, preventing us from matching warnings against them.
-    (void)AggregateUnsafeMembers{3};
 }
 
+// Not an aggregate, so its constructor is not implicit code and will be
+// visited/checked for warnings.
 struct NotCalledHoldsUnsafeMembers {
     NotCalledHoldsUnsafeMembers()
         : FromCtor(3),  // expected-warning{{function introduces unsafe buffer manipulation}}
@@ -191,4 +172,76 @@ struct NotCalledHoldsUnsafeMembers {
     UnsafeMembers FromCtor;
     UnsafeMembers FromCtor2;
     UnsafeMembers FromField{3};  // expected-warning{{function introduces unsafe buffer manipulation}}
+};
+
+// An aggregate, so its constructor is implicit code. Since it's not called, it
+// is never generated.
+struct AggregateUnused {
+    UnsafeMembers f1;
+    // While this field would trigger the warning during initialization, since
+    // it's unused, there's no code generated that does the initialization, so
+    // no warning.
+    UnsafeMembers f2{3};
+};
+
+struct AggregateExplicitlyInitializedSafe {
+    UnsafeMembers f1;
+    // The warning is not fired as the field is always explicltly initialized
+    // elsewhere. This initializer is never used.
+    UnsafeMembers f2{3};
+};
+
+void testAggregateExplicitlyInitializedSafe() {
+    AggregateExplicitlyInitializedSafe A{
+        .f2 = UnsafeMembers(),  // A safe constructor.
+    };
+}
+
+struct AggregateExplicitlyInitializedUnsafe {
+    UnsafeMembers f1;
+    // The warning is not fired as the field is always explicltly initialized
+    // elsewhere. This initializer is never used.
+    UnsafeMembers f2{3};
+};
+
+void testAggregateExplicitlyInitializedUnsafe() {
+    AggregateExplicitlyInitializedUnsafe A{
+        .f2 = UnsafeMembers(3),  // expected-warning{{function introduces unsafe buffer manipulation}}
+    };
+}
+
+struct AggregateViaAggregateInit {
+    UnsafeMembers f1;
+    // FIXME: A construction of this class does initialize the field through
+    // this initializer, so it should warn. Ideally it should also point to
+    // where the site of the construction is in testAggregateViaAggregateInit().
+    UnsafeMembers f2{3};
+};
+
+void testAggregateViaAggregateInit() {
+    AggregateViaAggregateInit A{};
+};
+
+struct AggregateViaValueInit {
+    UnsafeMembers f1;
+    // FIXME: A construction of this class does initialize the field through
+    // this initializer, so it should warn. Ideally it should also point to
+    // where the site of the construction is in testAggregateViaValueInit().
+    UnsafeMembers f2{3};
+};
+
+void testAggregateViaValueInit() {
+    auto A = AggregateViaValueInit();
+};
+
+struct AggregateViaDefaultInit {
+    UnsafeMembers f1;
+    // FIXME: A construction of this class does initialize the field through
+    // this initializer, so it should warn. Ideally it should also point to
+    // where the site of the construction is in testAggregateViaValueInit().
+    UnsafeMembers f2{3};
+};
+
+void testAggregateViaDefaultInit() {
+    AggregateViaDefaultInit A;
 };

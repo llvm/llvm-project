@@ -2512,10 +2512,29 @@ public:
 
   bool VisitFieldDecl(FieldDecl *Node) {
     DeclContext *DeclCtx;
-    if (auto *ID = dyn_cast<ObjCIvarDecl>(Node))
+    if (auto *ID = dyn_cast<ObjCIvarDecl>(Node)) {
       DeclCtx = cast<DeclContext>(ID->getContainingInterface());
-    else
-      DeclCtx = cast<DeclContext>(Node->getParent());
+    } else {
+      RecordDecl *RD = Node->getParent();
+      if (auto *CCRD = dyn_cast<CXXRecordDecl>(RD);
+          CCRD && CCRD->isAggregate()) {
+        // Aggregates have implicitly generated constructors which are not
+        // traversed by our AST visitors at this time. The field initializers in
+        // an aggregate may never be used if the callers always explicitly
+        // initialize them, in which case we do not need to warn on unsafe
+        // buffer usage in the initializer.
+        //
+        // FIXME: We should go through the implicit aggregate initialization
+        // (either an implicit CXXConstructExpr for value-init or an implicit
+        // ListInitExpr for aggregate-init) to determine if a field's default
+        // initializer (CXXDefaultInitExpr) is actually used. If it is, then we
+        // should visit it, while retaining a reference to the caller for
+        // showing the path to the use of the default initializer in the
+        // warning.
+        return true;
+      }
+      DeclCtx = cast<DeclContext>(RD);
+    }
     if (DeclCtx->isDependentContext())
       return true; // Not to analyze dependent decl
     if (Node->hasInClassInitializer())
