@@ -617,12 +617,12 @@ bool isTrue16Inst(unsigned Opc) {
 
 bool isInvalidSingleUseConsumerInst(unsigned Opc) {
   const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
-  return Info ? Info->IsInvalidSingleUseConsumer : false;
+  return Info && Info->IsInvalidSingleUseConsumer;
 }
 
 bool isInvalidSingleUseProducerInst(unsigned Opc) {
   const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
-  return Info ? Info->IsInvalidSingleUseProducer : false;
+  return Info && Info->IsInvalidSingleUseProducer;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {

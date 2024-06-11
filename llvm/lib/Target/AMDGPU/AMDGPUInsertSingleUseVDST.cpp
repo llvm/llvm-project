@@ -133,14 +133,6 @@ public:
 
   AMDGPUInsertSingleUseVDST() : MachineFunctionPass(ID) {}
 
-  static bool isValidProducerInst(const MachineInstr &MI) {
-    // Only VALU instructions are valid producers.
-    if (!SIInstrInfo::isVALU(MI))
-      return false;
-
-    return !AMDGPU::isInvalidSingleUseProducerInst(MI.getOpcode());
-  }
-
   void insertSingleUseInstructions(
       ArrayRef<std::pair<unsigned, MachineInstr *>> SingleUseProducers) const {
     SmallVector<SingleUseInstruction> Instructions;
@@ -229,7 +221,8 @@ public:
             UsedReg.second = 2;
         }
 
-        if (!isValidProducerInst(MI))
+        if (!SIInstrInfo::isVALU(MI) ||
+            AMDGPU::isInvalidSingleUseProducerInst(MI.getOpcode()))
           continue;
         if (AllProducerOperandsAreSingleUse) {
           SingleUseProducerPositions.push_back({VALUInstrCount, &MI});
