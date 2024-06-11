@@ -200,6 +200,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/Utils/Local.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Constants.h"
@@ -1393,50 +1394,17 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   IRB.SetInsertPoint(&GEP);
 
   auto [Rsrc, Off] = getPtrParts(Ptr);
-  Type *OffTy = Off->getType();
   const DataLayout &DL = GEP.getModule()->getDataLayout();
   bool InBounds = GEP.isInBounds();
 
-  // In order to call collectOffset() and thus not have to reimplement it,
-  // we need the GEP's pointer operand to have ptr addrspace(7) type
-  GEP.setOperand(GEP.getPointerOperandIndex(),
-                 PoisonValue::get(IRB.getPtrTy(AMDGPUAS::BUFFER_FAT_POINTER)));
-  MapVector<Value *, APInt> VariableOffs;
-  APInt ConstOffVal = APInt::getZero(BufferOffsetWidth);
-  if (!GEP.collectOffset(DL, BufferOffsetWidth, VariableOffs, ConstOffVal))
-    report_fatal_error("Scalable vector or unsized struct in fat pointer GEP");
-  GEP.setOperand(GEP.getPointerOperandIndex(), Ptr);
-  Value *OffAccum = nullptr;
-  // Accumulate offsets together before adding to the base in order to preserve
-  // as many of the inbounds properties as possible.
-  for (auto [Arg, Multiple] : VariableOffs) {
-    if (auto *OffVecTy = dyn_cast<VectorType>(OffTy))
-      if (!Arg->getType()->isVectorTy())
-        Arg = IRB.CreateVectorSplat(OffVecTy->getElementCount(), Arg);
-    Arg = IRB.CreateIntCast(Arg, OffTy, /*isSigned=*/true);
-    if (!Multiple.isOne()) {
-      if (Multiple.isPowerOf2())
-        Arg = IRB.CreateShl(Arg, Multiple.logBase2(), "", /*hasNUW=*/InBounds,
-                            /*HasNSW=*/InBounds);
-      else
-        Arg = IRB.CreateMul(Arg, ConstantExpr::getIntegerValue(OffTy, Multiple),
-                            "", /*hasNUW=*/InBounds, /*hasNSW=*/InBounds);
-    }
-    if (OffAccum)
-      OffAccum = IRB.CreateAdd(OffAccum, Arg, "", /*hasNUW=*/InBounds,
-                               /*hasNSW=*/InBounds);
-    else
-      OffAccum = Arg;
-  }
-  if (!ConstOffVal.isZero()) {
-    Constant *ConstOff = ConstantExpr::getIntegerValue(OffTy, ConstOffVal);
-    if (OffAccum)
-      OffAccum = IRB.CreateAdd(OffAccum, ConstOff, "", /*hasNUW=*/InBounds,
-                               /*hasNSW=*/InBounds);
-    else
-      OffAccum = ConstOff;
-  }
-
+  // In order to call emitGEPOffset() and thus not have to reimplement it,
+  // we need the GEP result to have ptr addrspace(7) type.
+  Type *FatPtrTy = IRB.getPtrTy(AMDGPUAS::BUFFER_FAT_POINTER);
+  if (auto *VT = dyn_cast<VectorType>(Off->getType()))
+    FatPtrTy = VectorType::get(FatPtrTy, VT->getElementCount());
+  GEP.mutateType(FatPtrTy);
+  Value *OffAccum = emitGEPOffset(&IRB, DL, &GEP);
+  GEP.mutateType(Ptr->getType());
   if (!OffAccum) { // Constant-zero offset
     SplitUsers.insert(&GEP);
     return {Rsrc, Off};
