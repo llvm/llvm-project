@@ -486,8 +486,8 @@ MC/DC Instrumentation
 When instrumenting for Modified Condition/Decision Coverage (MC/DC) using the
 clang option ``-fcoverage-mcdc``, there are two hard limits.
 
-The maximum number of terms is limited to 32767. It would be practical for
-handwritten expressions. To be more retrictive in order to enfoce conding rules,
+The maximum number of terms is limited to 32767, which is practical for
+handwritten expressions. To be more restrictive in order to enforce coding rules,
 use ``-Xclang -fmcdc-max-conditions=n``. Expressions with exceeded condition
 counts ``n`` will generate warnings.
 
@@ -497,9 +497,9 @@ expressions) is limited to 2,147,483,646. In this case, approximately
 
 To reduce memory usage, you can limit the maximum number of test vectors per
 expression with ``-Xclang -fmcdc-max-test-vectors=m``.
-If the number of test vectors that result from analyzing an expression exceeds
-m, a warning will be issued and the expression will be excluded in the MC/DC
-coverage.
+If the number of test vectors resulting from the analysis of an expression
+exceeds ``m``, a warning will be issued and the expression will be excluded
+from the MC/DC coverage.
 
 The number of test vectors ``m``, for ``n`` terms in an expression, can be
 ``m <= 2^n`` in the theoretical worst case, but is usually much smaller.
@@ -507,8 +507,8 @@ In simple cases, such as expressions consisting of a sequence of single
 operators, ``m == n+1``. For example, ``(a && b && c && d && e && f && g)``
 requires 8 test vectors.
 
-Expressions like ``((a0 && b0) || (a1 && b1) || ...)`` can cause the number
-of test vectors to grow exponentially.
+Expressions such as ``((a0 && b0) || (a1 && b1) || ...)`` can cause the
+number of test vectors to increase exponentially.
 
 Also, if a boolean expression is embedded in the nest of another boolean
 expression but separated by a non-logical operator, this is also not supported.
