@@ -54,6 +54,19 @@ add_libc_test(
     libc.src.stdlib.atoll
 )
 
+add_libc_test(
+  block_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    block_test.cpp
+  DEPENDS
+    libc.src.stdlib.block
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.span
+    libc.src.string.memcpy
+)
+
 add_fp_unittest(
   strtod_test
   SUITE
