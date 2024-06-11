@@ -412,23 +412,6 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
     }
   }
 
-  // In order to preserve LiveStack analysis, the live ranges for dead spill
-  // stack slots would be merged with the live range of those stack slots that
-  // now share the spill object of the mentioned dead stack slot.
-  for (unsigned SS = 0, SE = SlotMapping.size(); SS != SE; ++SS) {
-    int NewFI = SlotMapping[SS];
-    if (SlotMapping[SS] == -1 || (NewFI == (int)SS)) {
-      continue;
-    }
-
-    LiveRange &lrToUpdateInto =
-        static_cast<LiveRange &>(LS->getInterval(NewFI));
-    const LiveRange &lrToUpdateFrom =
-        static_cast<LiveRange &>(LS->getInterval((int)SS));
-    lrToUpdateInto.MergeSegmentsInAsValue(lrToUpdateFrom,
-                                          lrToUpdateInto.getValNumInfo(0));
-  }
-
   return true;
 }
 
@@ -551,6 +534,12 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   ScanForSpillSlotRefs(MF);
   InitializeSlots();
   Changed = ColorSlots(MF);
+
+  // Clear LiveStack analysis as it has been changed in ways that it requires
+  // efforts to rectify  which is equivalent to do it all over again. Also,
+  // this current results would not be used later, so better to clear it &
+  // preserve analysis.
+  LS->releaseMemory();
 
   for (int &Next : NextColors)
     Next = -1;
