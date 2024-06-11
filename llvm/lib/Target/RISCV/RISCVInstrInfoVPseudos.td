@@ -4197,16 +4197,16 @@ class VPatBinaryMaskPolicy<string intrinsic_name,
                    (op2_type op2_kind:$rs2),
                    (mask_type V0), GPR:$vl, sew, (XLenVT timm:$policy))>;
 
-class VPatBinaryMaskTARoundingMode<string intrinsic_name,
-                                   string inst,
-                                   ValueType result_type,
-                                   ValueType op1_type,
-                                   ValueType op2_type,
-                                   ValueType mask_type,
-                                   int sew,
-                                   VReg result_reg_class,
-                                   VReg op1_reg_class,
-                                   DAGOperand op2_kind> :
+class VPatBinaryMaskPolicyRoundingMode<string intrinsic_name,
+                                       string inst,
+                                       ValueType result_type,
+                                       ValueType op1_type,
+                                       ValueType op2_type,
+                                       ValueType mask_type,
+                                       int sew,
+                                       VReg result_reg_class,
+                                       VReg op1_reg_class,
+                                       DAGOperand op2_kind> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
                    (result_type result_reg_class:$merge),
                    (op1_type op1_reg_class:$rs1),
@@ -4720,9 +4720,9 @@ multiclass VPatBinaryRoundingMode<string intrinsic,
                                   DAGOperand op2_kind> {
   def : VPatBinaryNoMaskTURoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
                                        sew, result_reg_class, op1_reg_class, op2_kind>;
-  def : VPatBinaryMaskTARoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
-                                     mask_type, sew, result_reg_class, op1_reg_class,
-                                     op2_kind>;
+  def : VPatBinaryMaskPolicyRoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
+                                         mask_type, sew, result_reg_class, op1_reg_class,
+                                         op2_kind>;
 }
 
 multiclass VPatBinaryMSwapped<string intrinsic,
@@ -5094,10 +5094,10 @@ multiclass VPatBinaryW_WV_RM<string intrinsic, string instruction,
                                            Wti.Vector, Vti.Vector, Vti.Mask,
                                            Vti.Log2SEW, Wti.RegClass, Vti.RegClass>;
       }
-      def : VPatBinaryMaskTARoundingMode<intrinsic, name,
-                                         Wti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
-                                         Vti.Log2SEW, Wti.RegClass,
-                                         Wti.RegClass, Vti.RegClass>;
+      def : VPatBinaryMaskPolicyRoundingMode<intrinsic, name,
+                                             Wti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
+                                             Vti.Log2SEW, Wti.RegClass,
+                                             Wti.RegClass, Vti.RegClass>;
     }
   }
 }
