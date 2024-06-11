@@ -108,7 +108,7 @@ function(link_bc)
   add_custom_command(
     OUTPUT ${ARG_TARGET}.bc
     COMMAND libclc::llvm-link -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
-    DEPENDS libclc::llvm-link ${ARG_DEPENDENCIES} ${RSP_FILE}
+    DEPENDS libclc::llvm-link ${ARG_DEPENDENCIES} ${ARG_INPUTS} ${RSP_FILE}
   )
 
   add_custom_target( ${ARG_TARGET} ALL DEPENDS ${ARG_TARGET}.bc )
