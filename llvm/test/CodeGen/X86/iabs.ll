@@ -10,22 +10,30 @@
 ;;       ret
 ; rdar://10695237
 define i8 @test_i8(i8 %a) nounwind {
-; X86-LABEL: test_i8:
-; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarb $7, %cl
-; X86-NEXT:    xorb %cl, %al
-; X86-NEXT:    subb %cl, %al
-; X86-NEXT:    retl
+; X86-NO-CMOV-LABEL: test_i8:
+; X86-NO-CMOV:       # %bb.0:
+; X86-NO-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NO-CMOV-NEXT:    movl %eax, %ecx
+; X86-NO-CMOV-NEXT:    sarb $7, %cl
+; X86-NO-CMOV-NEXT:    xorb %cl, %al
+; X86-NO-CMOV-NEXT:    subb %cl, %al
+; X86-NO-CMOV-NEXT:    retl
+;
+; X86-CMOV-LABEL: test_i8:
+; X86-CMOV:       # %bb.0:
+; X86-CMOV-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
+; X86-CMOV-NEXT:    movl %ecx, %eax
+; X86-CMOV-NEXT:    negl %eax
+; X86-CMOV-NEXT:    cmovsl %ecx, %eax
+; X86-CMOV-NEXT:    # kill: def $al killed $al killed $eax
+; X86-CMOV-NEXT:    retl
 ;
 ; X64-LABEL: test_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    sarb $7, %cl
-; X64-NEXT:    xorb %cl, %al
-; X64-NEXT:    subb %cl, %al
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %tmp1neg = sub i8 0, %a

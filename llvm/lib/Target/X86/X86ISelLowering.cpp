@@ -225,6 +225,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   // Integer absolute.
   if (Subtarget.canUseCMOV()) {
+    setOperationAction(ISD::ABS            , MVT::i8   , Custom);
     setOperationAction(ISD::ABS            , MVT::i16  , Custom);
     setOperationAction(ISD::ABS            , MVT::i32  , Custom);
     if (Subtarget.is64Bit())
@@ -28211,9 +28212,14 @@ static SDValue LowerABS(SDValue Op, const X86Subtarget &Subtarget,
   MVT VT = Op.getSimpleValueType();
   SDLoc DL(Op);
 
+  // Since X86 does not have CMOV for 8-bit integer, promote to 32-bit.
+  if (VT == MVT::i8)
+    return DAG.getNode(ISD::TRUNCATE, DL, VT,
+                       DAG.getNode(ISD::ABS, DL, MVT::i32,
+                                   DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i32,
+                                               Op.getOperand(0))));
+
   if (VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) {
-    // Since X86 does not have CMOV for 8-bit integer, we don't convert
-    // 8-bit integer abs to NEG and CMOV.
     SDValue N0 = Op.getOperand(0);
     SDValue Neg = DAG.getNode(X86ISD::SUB, DL, DAG.getVTList(VT, MVT::i32),
                               DAG.getConstant(0, DL, VT), N0);
@@ -55559,6 +55565,10 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
 static SDValue combineSubABS(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  EVT OriginalVT = N->getValueType(0);
+
+  if (N1.getOpcode() == ISD::TRUNCATE)
+    N1 = N1.getOperand(0);
 
   if (N1.getOpcode() != X86ISD::CMOV || !N1.hasOneUse())
     return SDValue();
@@ -55586,11 +55596,15 @@ static SDValue combineSubABS(SDNode *N, SelectionDAG &DAG) {
 
   // Build a new CMOV with the operands swapped.
   SDLoc DL(N);
-  MVT VT = N->getSimpleValueType(0);
+  MVT VT = N1.getSimpleValueType();
   SDValue Cmov = DAG.getNode(X86ISD::CMOV, DL, VT, TrueOp, FalseOp,
                              N1.getOperand(2), Cond);
+
+  if (OriginalVT != VT)
+    Cmov = DAG.getNode(ISD::TRUNCATE, DL, OriginalVT, Cmov);
+
   // Convert sub to add.
-  return DAG.getNode(ISD::ADD, DL, VT, N0, Cmov);
+  return DAG.getNode(ISD::ADD, DL, OriginalVT, N0, Cmov);
 }
 
 static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {

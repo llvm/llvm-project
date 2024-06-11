@@ -640,20 +640,20 @@ define i8 @abd_subnsw_i8(i8 %a, i8 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarb $7, %cl
-; X86-NEXT:    xorb %cl, %al
-; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_subnsw_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    subb %sil, %al
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    sarb $7, %cl
-; X64-NEXT:    xorb %cl, %al
-; X64-NEXT:    subb %cl, %al
+; X64-NEXT:    subb %sil, %dil
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %sub = sub nsw i8 %a, %b
@@ -666,20 +666,20 @@ define i8 @abd_subnsw_i8_undef(i8 %a, i8 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarb $7, %cl
-; X86-NEXT:    xorb %cl, %al
-; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: abd_subnsw_i8_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    subb %sil, %al
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    sarb $7, %cl
-; X64-NEXT:    xorb %cl, %al
-; X64-NEXT:    subb %cl, %al
+; X64-NEXT:    subb %sil, %dil
+; X64-NEXT:    movsbl %dil, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %sub = sub nsw i8 %a, %b
