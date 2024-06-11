@@ -424,9 +424,45 @@ template <uint64_t Align> constexpr inline uint64_t alignTo(uint64_t Value) {
   return (Value + Align - 1) / Align * Align;
 }
 
-/// Returns the integer ceil(Numerator / Denominator).
-inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
+/// Returns the integer ceil(Numerator / Denominator). Unsigned integer version.
+LLVM_ATTRIBUTE_ALWAYS_INLINE uint64_t divideCeil(uint64_t Numerator,
+                                                 uint64_t Denominator) {
   return alignTo(Numerator, Denominator) / Denominator;
+}
+
+/// Returns the integer ceil(Numerator / Denominator). Signed integer version.
+LLVM_ATTRIBUTE_ALWAYS_INLINE int64_t ceilDiv(int64_t Numerator,
+                                             int64_t Denominator) {
+  assert(Denominator);
+  if (!Numerator)
+    return 0;
+  // C's integer division rounds towards 0.
+  int64_t X = (Denominator > 0) ? -1 : 1;
+  bool SameSign = (Numerator > 0) == (Denominator > 0);
+  return SameSign ? ((Numerator + X) / Denominator) + 1
+                  : -(-Numerator / Denominator);
+}
+
+/// Returns the integer floor(Numerator / Denominator). Signed integer version.
+LLVM_ATTRIBUTE_ALWAYS_INLINE int64_t floorDiv(int64_t Numerator,
+                                              int64_t Denominator) {
+  assert(Denominator);
+  if (!Numerator)
+    return 0;
+  // C's integer division rounds towards 0.
+  int64_t X = (Denominator > 0) ? -1 : 1;
+  bool SameSign = (Numerator > 0) == (Denominator > 0);
+  return SameSign ? Numerator / Denominator
+                  : -((-Numerator + X) / Denominator) - 1;
+}
+
+/// Returns the remainder of the Euclidean division of LHS by RHS. Result is
+/// always non-negative.
+LLVM_ATTRIBUTE_ALWAYS_INLINE int64_t mod(int64_t Numerator,
+                                         int64_t Denominator) {
+  assert(Denominator >= 1);
+  return Numerator % Denominator < 0 ? Numerator % Denominator + Denominator
+                                     : Numerator % Denominator;
 }
 
 /// Returns the integer nearest(Numerator / Denominator).

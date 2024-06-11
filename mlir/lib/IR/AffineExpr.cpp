@@ -13,14 +13,18 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
+
+using llvm::ceilDiv;
+using llvm::floorDiv;
+using llvm::mod;
 
 MLIRContext *AffineExpr::getContext() const { return expr->context; }
 
@@ -1570,7 +1574,7 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
                                 constLowerBounds, constUpperBounds, isUpper);
       if (!bound)
         return std::nullopt;
-      return mlir::floorDiv(*bound, rhsConst.getValue());
+      return floorDiv(*bound, rhsConst.getValue());
     }
     if (binOpExpr.getKind() == AffineExprKind::CeilDiv) {
       auto rhsConst = dyn_cast<AffineConstantExpr>(binOpExpr.getRHS());
@@ -1580,7 +1584,7 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
                                   constLowerBounds, constUpperBounds, isUpper);
         if (!bound)
           return std::nullopt;
-        return mlir::ceilDiv(*bound, rhsConst.getValue());
+        return ceilDiv(*bound, rhsConst.getValue());
       }
       return std::nullopt;
     }

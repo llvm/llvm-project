@@ -17,7 +17,8 @@
 #define MLIR_ANALYSIS_PRESBURGER_MPINT_H
 
 #include "mlir/Analysis/Presburger/SlowMPInt.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
@@ -31,9 +32,10 @@ namespace presburger {
 /// from the mlir::presburger namespace. So to access the 64-bit overloads, an
 /// explict call to mlir::ceilDiv would be required. These using declarations
 /// allow overload resolution to transparently call the right function.
-using ::mlir::ceilDiv;
-using ::mlir::floorDiv;
-using ::mlir::mod;
+using ::llvm::ArrayRef;
+using ::llvm::ceilDiv;
+using ::llvm::floorDiv;
+using ::llvm::mod;
 
 namespace detail {
 /// If builtin intrinsics for overflow-checked arithmetic are available,
