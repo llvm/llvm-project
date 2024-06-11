@@ -1647,6 +1647,8 @@ public:
   }
 
 private:
+  bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
+
   llvm::Constant *GetOrCreateLLVMFunction(
       StringRef MangledName, llvm::Type *Ty, GlobalDecl D, bool ForVTable,
       bool DontDefer = false, bool IsThunk = false,
