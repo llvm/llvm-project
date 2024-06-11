@@ -90,6 +90,8 @@ public:
     return MCInstLowering.lowerOperand(MO, MCOp);
   }
 
+  const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) override;
+
   void emitStartOfAsmFile(Module &M) override;
   void emitJumpTableInfo() override;
   std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
@@ -1573,6 +1575,52 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
   ++InstsEmitted;
 
   assert(STI->getInstrInfo()->getInstSizeInBytes(*MI) >= InstsEmitted * 4);
+}
+
+const MCExpr *
+AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
+  MCContext &Ctx = OutContext;
+
+  // Figure out the base symbol and the addend, if any.
+  APInt Offset(64, 0);
+  const Value *BaseGV = CPA.getPointer()->stripAndAccumulateConstantOffsets(
+      getDataLayout(), Offset, /*AllowNonInbounds=*/true);
+
+  auto *BaseGVB = dyn_cast<GlobalValue>(BaseGV);
+
+  // If we can't understand the referenced ConstantExpr, there's nothing
+  // else we can do: emit an error.
+  if (!BaseGVB) {
+    BaseGV->getContext().emitError(
+        "cannot resolve target base/addend of ptrauth constant");
+    return nullptr;
+  }
+
+  // If there is an addend, turn that into the appropriate MCExpr.
+  const MCExpr *Sym = MCSymbolRefExpr::create(getSymbol(BaseGVB), Ctx);
+  if (Offset.sgt(0))
+    Sym = MCBinaryExpr::createAdd(
+        Sym, MCConstantExpr::create(Offset.getSExtValue(), Ctx), Ctx);
+  else if (Offset.slt(0))
+    Sym = MCBinaryExpr::createSub(
+        Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
+
+  uint64_t KeyID = CPA.getKey()->getZExtValue();
+  // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
+  // AArch64AuthMCExpr::printImpl, so fail fast.
+  if (KeyID > AArch64PACKey::LAST)
+    report_fatal_error("AArch64 PAC Key ID '" + Twine(KeyID) +
+                       "' out of range [0, " +
+                       Twine((unsigned)AArch64PACKey::LAST) + "]");
+
+  uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
+  if (!isUInt<16>(Disc))
+    report_fatal_error("AArch64 PAC Discriminator '" + Twine(Disc) +
+                       "' out of range [0, 0xFFFF]");
+
+  // Finally build the complete @AUTH expr.
+  return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),
+                                   CPA.hasAddressDiscriminator(), Ctx);
 }
 
 // Simple pseudo-instructions have their lowering (with expansion to real

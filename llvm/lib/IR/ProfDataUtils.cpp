@@ -40,6 +40,9 @@ namespace {
 // We maintain some constants here to ensure that we access the branch weights
 // correctly, and can change the behavior in the future if the layout changes
 
+// The index at which the weights vector starts
+constexpr unsigned WeightsIdx = 1;
+
 // the minimum number of operands for MD_prof nodes with branch weights
 constexpr unsigned MinBWOps = 3;
 
@@ -72,7 +75,6 @@ static void extractFromBranchWeightMD(const MDNode *ProfileData,
   assert(isBranchWeightMD(ProfileData) && "wrong metadata");
 
   unsigned NOps = ProfileData->getNumOperands();
-  unsigned WeightsIdx = getBranchWeightOffset(ProfileData);
   assert(WeightsIdx < NOps && "Weights Index must be less than NOps.");
   Weights.resize(NOps - WeightsIdx);
 
@@ -80,8 +82,8 @@ static void extractFromBranchWeightMD(const MDNode *ProfileData,
     ConstantInt *Weight =
         mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));
     assert(Weight && "Malformed branch_weight in MD_prof node");
-    assert(Weight->getValue().getActiveBits() <= (sizeof(T) * 8) &&
-           "Too many bits for MD_prof branch_weight");
+    assert(Weight->getValue().getActiveBits() <= 32 &&
+           "Too many bits for uint32_t");
     Weights[Idx - WeightsIdx] = Weight->getZExtValue();
   }
 }
@@ -121,26 +123,6 @@ bool hasValidBranchWeightMD(const Instruction &I) {
   return getValidBranchWeightMDNode(I);
 }
 
-bool hasBranchWeightOrigin(const Instruction &I) {
-  auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
-  return hasBranchWeightOrigin(ProfileData);
-}
-
-bool hasBranchWeightOrigin(const MDNode *ProfileData) {
-  if (!isBranchWeightMD(ProfileData))
-    return false;
-  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(1));
-  // NOTE: if we ever have more types of branch weight provenance,
-  // we need to check the string value is "expected". For now, we
-  // supply a more generic API, and avoid the spurious comparisons.
-  assert(ProfDataName == nullptr || ProfDataName->getString() == "expected");
-  return ProfDataName != nullptr;
-}
-
-unsigned getBranchWeightOffset(const MDNode *ProfileData) {
-  return hasBranchWeightOrigin(ProfileData) ? 2 : 1;
-}
-
 MDNode *getBranchWeightMDNode(const Instruction &I) {
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
   if (!isBranchWeightMD(ProfileData))
@@ -150,9 +132,7 @@ MDNode *getBranchWeightMDNode(const Instruction &I) {
 
 MDNode *getValidBranchWeightMDNode(const Instruction &I) {
   auto *ProfileData = getBranchWeightMDNode(I);
-  auto Offset = getBranchWeightOffset(ProfileData);
-  if (ProfileData &&
-      ProfileData->getNumOperands() == Offset + I.getNumSuccessors())
+  if (ProfileData && ProfileData->getNumOperands() == 1 + I.getNumSuccessors())
     return ProfileData;
   return nullptr;
 }
@@ -211,8 +191,7 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
     return false;
 
   if (ProfDataName->getString() == "branch_weights") {
-    unsigned Offset = getBranchWeightOffset(ProfileData);
-    for (unsigned Idx = Offset; Idx < ProfileData->getNumOperands(); ++Idx) {
+    for (unsigned Idx = 1; Idx < ProfileData->getNumOperands(); Idx++) {
       auto *V = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));
       assert(V && "Malformed branch_weight in MD_prof node");
       TotalVal += V->getValue().getZExtValue();
@@ -233,10 +212,9 @@ bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalVal) {
   return extractProfTotalWeight(I.getMetadata(LLVMContext::MD_prof), TotalVal);
 }
 
-void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
-                      bool IsExpected) {
+void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights) {
   MDBuilder MDB(I.getContext());
-  MDNode *BranchWeights = MDB.createBranchWeights(Weights, IsExpected);
+  MDNode *BranchWeights = MDB.createBranchWeights(Weights);
   I.setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
