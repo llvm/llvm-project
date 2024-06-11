@@ -156,6 +156,7 @@ Changes to the RISC-V Backend
 * Zaamo and Zalrsc are no longer experimental.
 * Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
 * Zabha is no longer experimental.
+* B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -217,6 +218,8 @@ Changes to the C API
 
   * ``LLVMConstICmp``
   * ``LLVMConstFCmp``
+
+* Added ``LLVMPositionBuilderBeforeDbgRecords`` and ``LLVMPositionBuilderBeforeInstrAndDbgRecords``. Same as ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` except the insertion position is set to before the debug records that precede the target instruction. See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info. ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` are unchanged; they insert before the indicated instruction but after any attached debug records.
 
 Changes to the CodeGen infrastructure
 -------------------------------------

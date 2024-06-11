@@ -237,6 +237,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check by eliminating
   false positives resulting from use of optionals in unevaluated context.
 
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
+  false positives and adding a new (off-by-default) option
+  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
+  (except for a few that are idiomatic).
+
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
   options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
@@ -376,8 +382,10 @@ Changes in existing checks
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by
   detecting more cases of constant access. In particular, pointers can be
-  analyzed, se the check now handles the common patterns
+  analyzed, so the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
+  Calls to mutable function where there exists a `const` overload are also
+  handled.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
