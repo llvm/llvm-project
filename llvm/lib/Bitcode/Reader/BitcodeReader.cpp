@@ -2382,8 +2382,6 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             return error("Too few records for constant range list");
           unsigned RangeSize = Record[i++];
           unsigned BitWidth = Record[i++];
-          if (i + 2 * RangeSize > e)
-            return error("Incomplete constant range list");
           for (unsigned Idx = 0; Idx < RangeSize; ++Idx) {
             Expected<ConstantRange> MaybeCR =
                 readConstantRange(Record, i, BitWidth);
