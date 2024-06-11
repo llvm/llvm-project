@@ -2926,7 +2926,7 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const BinaryOperator *E,
   //   If during the evaluation of an expression, the result is not
   //   mathematically defined [...], the behavior is undefined.
   // FIXME: C++ rules require us to not conform to IEEE 754 here.
-  if (!Info.getLangOpts().CPlusPlus23 && LHS.isNaN()) {
+  if (LHS.isNaN()) {
     Info.CCEDiag(E, diag::note_constexpr_float_arithmetic) << LHS.isNaN();
     return Info.noteUndefinedBehavior();
   }
@@ -14710,9 +14710,17 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   default:
     return false;
 
+  case Builtin::BIfrexp:
+  case Builtin::BIfrexpf:
+  case Builtin::BIfrexpl:
   case Builtin::BI__builtin_frexp:
   case Builtin::BI__builtin_frexpf:
   case Builtin::BI__builtin_frexpl: {
+    const auto *FDecl = E->getDirectCallee();
+    Builtin::Context BTC = Info.Ctx.BuiltinInfo;
+    if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
+        Info.Ctx.getLangOpts().LangStd)
+        return false;
     LValue Pointer;
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))
@@ -14800,12 +14808,20 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BIfmax:
+  case Builtin::BIfmaxf:
+  case Builtin::BIfmaxl:
   case Builtin::BI__builtin_fmax:
   case Builtin::BI__builtin_fmaxf:
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf16:
   case Builtin::BI__builtin_fmaxf128: {
     // TODO: Handle sNaN.
+    const auto *FDecl = E->getDirectCallee();
+    Builtin::Context BTC = Info.Ctx.BuiltinInfo;
+    if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
+        Info.Ctx.getLangOpts().LangStd)
+      return false;
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
@@ -14818,12 +14834,20 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BIfmin:
+  case Builtin::BIfminf:
+  case Builtin::BIfminl:
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminf128: {
     // TODO: Handle sNaN.
+    const auto *FDecl = E->getDirectCallee();
+    Builtin::Context BTC = Info.Ctx.BuiltinInfo;
+    if (BTC.isBuiltinConstant(FDecl->getBuiltinID()) >
+        Info.Ctx.getLangOpts().LangStd)
+        return false;
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))

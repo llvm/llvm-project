@@ -3419,7 +3419,7 @@ def Copysign : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+  let BuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Fabs : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -3427,7 +3427,7 @@ def Fabs : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+  let BuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Finite : FPMathTemplate, GNULibBuiltin<"math.h"> {
@@ -3452,10 +3452,11 @@ def Fmod : FPMathTemplate, LibBuiltin<"math.h"> {
 
 def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["frexp"];
-  let Attributes = [NoThrow, Constexpr];
+  let Attributes = [NoThrow, Const, ConstexprSince];
   let Prototype = "T(T, int*)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+  let BuiltinPrefixedAliasIsConstexpr = 1;
+  let UnprefixedOnlyConstexprSince = "lang_cxx23";
 }
 
 def Ldexp : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -3477,7 +3478,7 @@ def Nan : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [Pure, NoThrow];
   let Prototype = "T(char const*)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+  let BuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Pow : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -3623,18 +3624,20 @@ def Fma : FPMathTemplate, LibBuiltin<"math.h"> {
 
 def Fmax : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["fmax"];
-  let Attributes = [NoThrow, Const, Constexpr];
+  let Attributes = [NoThrow, Const, ConstexprSince];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+  let BuiltinPrefixedAliasIsConstexpr = 1;
+  let UnprefixedOnlyConstexprSince = "lang_cxx23";
 }
 
 def Fmin : FPMathTemplate, LibBuiltin<"math.h"> {
   let Spellings = ["fmin"];
-  let Attributes = [NoThrow, Const, Constexpr];
+  let Attributes = [NoThrow, Const, ConstexprSince];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
-  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
+  let BuiltinPrefixedAliasIsConstexpr = 1;
+  let UnprefixedOnlyConstexprSince = "lang_cxx23";
 }
 
 def Hypot : FPMathTemplate, LibBuiltin<"math.h"> {
