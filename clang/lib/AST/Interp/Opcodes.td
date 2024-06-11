@@ -139,7 +139,6 @@ class AluOpcode : Opcode {
 }
 
 class FloatOpcode : Opcode {
-  let Types = [];
   let Args = [ArgRoundingMode];
 }
 
@@ -195,17 +194,14 @@ def NoRet : Opcode {}
 
 def Call : Opcode {
   let Args = [ArgFunction, ArgUint32];
-  let Types = [];
 }
 
 def CallVirt : Opcode {
   let Args = [ArgFunction, ArgUint32];
-  let Types = [];
 }
 
 def CallBI : Opcode {
   let Args = [ArgFunction, ArgCallExpr];
-  let Types = [];
 }
 
 def CallPtr : Opcode {
@@ -214,7 +210,6 @@ def CallPtr : Opcode {
 
 def CallVar : Opcode {
   let Args = [ArgFunction, ArgUint32];
-  let Types = [];
 }
 
 def OffsetOf : Opcode {
@@ -399,8 +394,6 @@ def InitGlobalTemp : AccessOpcode {
 // [Pointer] -> [Pointer]
 def InitGlobalTempComp : Opcode {
   let Args = [ArgLETD];
-  let Types = [];
-  let HasGroup = 0;
 }
 // [Value] -> []
 def SetGlobal : AccessOpcode;
@@ -505,13 +498,9 @@ def SubPtr : Opcode {
 }
 
 // [Pointer] -> [Pointer]
-def IncPtr : Opcode {
-  let HasGroup = 0;
-}
+def IncPtr : Opcode;
 // [Pointer] -> [Pointer]
-def DecPtr : Opcode {
-  let HasGroup = 0;
-}
+def DecPtr : Opcode;
 
 //===----------------------------------------------------------------------===//
 // Function pointers.
@@ -607,7 +596,6 @@ def Cast: Opcode {
 }
 
 def CastFP : Opcode {
-  let Types = [];
   let Args = [ArgFltSemantics, ArgRoundingMode];
 }
 
@@ -642,12 +630,10 @@ def CastFloatingIntegral : Opcode {
 }
 
 def CastFloatingIntegralAP : Opcode {
-  let Types = [];
   let Args = [ArgUint32];
 }
 
 def CastFloatingIntegralAPS : Opcode {
-  let Types = [];
   let Args = [ArgUint32];
 }
 
@@ -656,13 +642,9 @@ def CastPointerIntegral : Opcode {
   let HasGroup = 1;
 }
 def CastPointerIntegralAP : Opcode {
-  let Types = [];
-  let HasGroup = 0;
   let Args = [ArgUint32];
 }
 def CastPointerIntegralAPS : Opcode {
-  let Types = [];
-  let HasGroup = 0;
   let Args = [ArgUint32];
 }
 def PtrPtrCast : Opcode {
