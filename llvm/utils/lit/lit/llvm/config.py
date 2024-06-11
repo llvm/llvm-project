@@ -88,9 +88,11 @@ class LLVMConfig(object):
             ]
         )
 
+        # Running on Darwin OS
         if platform.system() == "Darwin":
             features.add("system-darwin")
         elif platform.system() == "Windows":
+            # For tests that require Windows to run.
             features.add("system-windows")
         elif platform.system() == "Linux":
             features.add("system-linux")
