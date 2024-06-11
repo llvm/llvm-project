@@ -868,23 +868,9 @@ private:
 
   static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
 
-  union __ulx {
-    __long __lx;
-    __short __lxx;
-  };
-
-  enum { __n_words = sizeof(__ulx) / sizeof(size_type) };
-
-  struct __raw {
-    size_type __words[__n_words];
-  };
-
-  struct __rep {
-    union {
-      __short __s;
-      __long __l;
-      __raw __r;
-    };
+  union __rep {
+    __short __s;
+    __long __l;
   };
 
   __compressed_pair<__rep, allocator_type> __r_;
