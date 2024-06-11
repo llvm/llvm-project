@@ -300,6 +300,72 @@ lookupBuiltin(StringRef DemangledCall,
   return nullptr;
 }
 
+static MachineInstr *getBlockStructInstr(Register ParamReg,
+                                         MachineRegisterInfo *MRI) {
+  // We expect the following sequence of instructions:
+  //   %0:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.alloca)
+  //   or       = G_GLOBAL_VALUE @block_literal_global
+  //   %1:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.bitcast), %0
+  //   %2:_(p4) = G_ADDRSPACE_CAST %1:_(pN)
+  MachineInstr *MI = MRI->getUniqueVRegDef(ParamReg);
+  assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
+         MI->getOperand(1).isReg());
+  Register BitcastReg = MI->getOperand(1).getReg();
+  MachineInstr *BitcastMI = MRI->getUniqueVRegDef(BitcastReg);
+  assert(isSpvIntrinsic(*BitcastMI, Intrinsic::spv_bitcast) &&
+         BitcastMI->getOperand(2).isReg());
+  Register ValueReg = BitcastMI->getOperand(2).getReg();
+  MachineInstr *ValueMI = MRI->getUniqueVRegDef(ValueReg);
+  return ValueMI;
+}
+
+// Return an integer constant corresponding to the given register and
+// defined in spv_track_constant.
+// TODO: maybe unify with prelegalizer pass.
+static unsigned getConstFromIntrinsic(Register Reg, MachineRegisterInfo *MRI) {
+  MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
+  assert(isSpvIntrinsic(*DefMI, Intrinsic::spv_track_constant) &&
+         DefMI->getOperand(2).isReg());
+  MachineInstr *DefMI2 = MRI->getUniqueVRegDef(DefMI->getOperand(2).getReg());
+  assert(DefMI2->getOpcode() == TargetOpcode::G_CONSTANT &&
+         DefMI2->getOperand(1).isCImm());
+  return DefMI2->getOperand(1).getCImm()->getValue().getZExtValue();
+}
+
+// Return type of the instruction result from spv_assign_type intrinsic.
+// TODO: maybe unify with prelegalizer pass.
+static const Type *getMachineInstrType(MachineInstr *MI) {
+  MachineInstr *NextMI = MI->getNextNode();
+  if (!NextMI)
+    return nullptr;
+  if (isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_name))
+    if ((NextMI = NextMI->getNextNode()) == nullptr)
+      return nullptr;
+  Register ValueReg = MI->getOperand(0).getReg();
+  if ((!isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_type) &&
+       !isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_ptr_type)) ||
+      NextMI->getOperand(1).getReg() != ValueReg)
+    return nullptr;
+  Type *Ty = getMDOperandAsType(NextMI->getOperand(2).getMetadata(), 0);
+  assert(Ty && "Type is expected");
+  return Ty;
+}
+
+static const Type *getBlockStructType(Register ParamReg,
+                                      MachineRegisterInfo *MRI) {
+  // In principle, this information should be passed to us from Clang via
+  // an elementtype attribute. However, said attribute requires that
+  // the function call be an intrinsic, which is not. Instead, we rely on being
+  // able to trace this to the declaration of a variable: OpenCL C specification
+  // section 6.12.5 should guarantee that we can do this.
+  MachineInstr *MI = getBlockStructInstr(ParamReg, MRI);
+  if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE)
+    return MI->getOperand(1).getGlobal()->getType();
+  assert(isSpvIntrinsic(*MI, Intrinsic::spv_alloca) &&
+         "Blocks in OpenCL C must be traceable to allocation site");
+  return getMachineInstrType(MI);
+}
+
 //===----------------------------------------------------------------------===//
 // Helper functions for building misc instructions
 //===----------------------------------------------------------------------===//
@@ -1371,6 +1437,14 @@ static bool generateBarrierInst(const SPIRV::IncomingCall *Call,
   return buildBarrierInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
+                                  MachineIRBuilder &MIRBuilder) {
+  MIRBuilder.buildInstr(TargetOpcode::G_ADDRSPACE_CAST)
+      .addDef(Call->ReturnRegister)
+      .addUse(Call->Arguments[0]);
+  return true;
+}
+
 static bool generateDotOrFMulInst(const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
@@ -1847,68 +1921,6 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       .addUse(TmpReg);
 }
 
-static MachineInstr *getBlockStructInstr(Register ParamReg,
-                                         MachineRegisterInfo *MRI) {
-  // We expect the following sequence of instructions:
-  //   %0:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.alloca)
-  //   or       = G_GLOBAL_VALUE @block_literal_global
-  //   %1:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.bitcast), %0
-  //   %2:_(p4) = G_ADDRSPACE_CAST %1:_(pN)
-  MachineInstr *MI = MRI->getUniqueVRegDef(ParamReg);
-  assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
-         MI->getOperand(1).isReg());
-  Register BitcastReg = MI->getOperand(1).getReg();
-  MachineInstr *BitcastMI = MRI->getUniqueVRegDef(BitcastReg);
-  assert(isSpvIntrinsic(*BitcastMI, Intrinsic::spv_bitcast) &&
-         BitcastMI->getOperand(2).isReg());
-  Register ValueReg = BitcastMI->getOperand(2).getReg();
-  MachineInstr *ValueMI = MRI->getUniqueVRegDef(ValueReg);
-  return ValueMI;
-}
-
-// Return an integer constant corresponding to the given register and
-// defined in spv_track_constant.
-// TODO: maybe unify with prelegalizer pass.
-static unsigned getConstFromIntrinsic(Register Reg, MachineRegisterInfo *MRI) {
-  MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
-  assert(isSpvIntrinsic(*DefMI, Intrinsic::spv_track_constant) &&
-         DefMI->getOperand(2).isReg());
-  MachineInstr *DefMI2 = MRI->getUniqueVRegDef(DefMI->getOperand(2).getReg());
-  assert(DefMI2->getOpcode() == TargetOpcode::G_CONSTANT &&
-         DefMI2->getOperand(1).isCImm());
-  return DefMI2->getOperand(1).getCImm()->getValue().getZExtValue();
-}
-
-// Return type of the instruction result from spv_assign_type intrinsic.
-// TODO: maybe unify with prelegalizer pass.
-static const Type *getMachineInstrType(MachineInstr *MI) {
-  MachineInstr *NextMI = MI->getNextNode();
-  if (isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_name))
-    NextMI = NextMI->getNextNode();
-  Register ValueReg = MI->getOperand(0).getReg();
-  if (!isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_type) ||
-      NextMI->getOperand(1).getReg() != ValueReg)
-    return nullptr;
-  Type *Ty = getMDOperandAsType(NextMI->getOperand(2).getMetadata(), 0);
-  assert(Ty && "Type is expected");
-  return Ty;
-}
-
-static const Type *getBlockStructType(Register ParamReg,
-                                      MachineRegisterInfo *MRI) {
-  // In principle, this information should be passed to us from Clang via
-  // an elementtype attribute. However, said attribute requires that
-  // the function call be an intrinsic, which is not. Instead, we rely on being
-  // able to trace this to the declaration of a variable: OpenCL C specification
-  // section 6.12.5 should guarantee that we can do this.
-  MachineInstr *MI = getBlockStructInstr(ParamReg, MRI);
-  if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE)
-    return MI->getOperand(1).getGlobal()->getType();
-  assert(isSpvIntrinsic(*MI, Intrinsic::spv_alloca) &&
-         "Blocks in OpenCL C must be traceable to allocation site");
-  return getMachineInstrType(MI);
-}
-
 // TODO: maybe move to the global register.
 static SPIRVType *
 getOrCreateSPIRVDeviceEventPointer(MachineIRBuilder &MIRBuilder,
@@ -2322,6 +2334,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateAtomicFloatingInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Barrier:
     return generateBarrierInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::CastToPtr:
+    return generateCastToPtrInst(Call.get(), MIRBuilder);
   case SPIRV::Dot:
     return generateDotOrFMulInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Wave:
