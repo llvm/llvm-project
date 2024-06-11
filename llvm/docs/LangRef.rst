@@ -16096,13 +16096,11 @@ on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
 
    * - ``ISO C``
      - fmin/fmax
-     - none
      - fmininum/fmaximum
      - fminimum_num/fmaximum_num
 
    * - ``IEEE754``
-     - none
-     - nimNUM/maxNUM (2008)
+     - nimNum/maxNum (2008)
      - minimum/maximum (2019)
      - minimumNumber/maximumNumber (2019)
 
@@ -16110,24 +16108,32 @@ on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
      - either one
      - +0.0 > -0.0
      - +0.0 > -0.0
-     - +0.0 > -0.0
 
-   * - ``NUM/qNaN vs sNaN``
+   * - ``NUM vs sNaN``
      - qNaN, invalid exception
      - qNaN, invalid exception
-     - qNaN, invalid exception
-     - NUM/qNaN, invalid exception
+     - NUM, invalid exception
 
-   * - ``NUM/qNaN vs qNaN``
-     - NUM/qNaN, no excpetion
-     - NUM/qNaN, no excpetion
-     - qNaN, no excpetion
-     - NUM/qNaN, no excpetion
+   * - ``qNaN vs sNaN``
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+     - qNaN, invalid exception
+
+   * - ``NUM vs qNaN``
+     - NUM, no exception
+     - qNaN, no exception
+     - NUM, no exception
 
 LLVM Implementation:
 """"""""""""""""""""
 
 LLVM implements all ISO C flavors as listed in this table.
+Only basic intrinsics list here. The constrained version
+ones may have different behaivor on exception.
+
+Since some architectures implement minNum/maxNum with +0.0>-0.0,
+so we define internal ISD::MINNUM_IEEE and ISD::MAXNUM_IEEE.
+They will be helpful to implement minimumnum/maximumnum.
 
 .. list-table::
    :header-rows: 1
@@ -16167,7 +16173,6 @@ LLVM implements all ISO C flavors as listed in this table.
      - larger(max)/smaller(min)
      - larger(max)/smaller(min)
      - larger(max)/smaller(min)
-
 
 .. _i_minnum:
 
