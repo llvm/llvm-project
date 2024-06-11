@@ -367,20 +367,6 @@ lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
   return nullptr;
 }
 
-std::vector<DWARFDIE> DWARFDIE::GetDeclContextDIEs() const {
-  if (!IsValid())
-    return {};
-
-  std::vector<DWARFDIE> result;
-  DWARFDIE parent = GetParentDeclContextDIE();
-  while (parent.IsValid() && parent.GetDIE() != GetDIE()) {
-    result.push_back(std::move(parent));
-    parent = parent.GetParentDeclContextDIE();
-  }
-
-  return result;
-}
-
 static void GetDeclContextImpl(DWARFDIE die,
                                llvm::SmallSet<lldb::user_id_t, 4> &seen,
                                std::vector<CompilerContext> &context) {
