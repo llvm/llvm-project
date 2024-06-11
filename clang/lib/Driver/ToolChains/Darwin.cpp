@@ -3448,6 +3448,7 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Leak;
+  Res |= SanitizerKind::NumericalStability;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::ObjCCast;

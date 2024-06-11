@@ -1116,7 +1116,7 @@ bool Decl::isInExportDeclContext() const {
   while (DC && !isa<ExportDecl>(DC))
     DC = DC->getLexicalParent();
 
-  return DC && isa<ExportDecl>(DC);
+  return isa_and_nonnull<ExportDecl>(DC);
 }
 
 bool Decl::isInAnotherModuleUnit() const {

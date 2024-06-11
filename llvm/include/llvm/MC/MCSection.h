@@ -63,9 +63,6 @@ public:
   using const_iterator = FragmentListType::const_iterator;
   using iterator = FragmentListType::iterator;
 
-  using const_reverse_iterator = FragmentListType::const_reverse_iterator;
-  using reverse_iterator = FragmentListType::reverse_iterator;
-
 private:
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
@@ -192,6 +189,7 @@ public:
 
   iterator end() { return Fragments.end(); }
   const_iterator end() const { return Fragments.end(); }
+  bool empty() const { return Fragments.empty(); }
 
   void addFragment(MCFragment &F) { Fragments.push_back(&F); }
 

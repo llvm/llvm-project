@@ -202,7 +202,7 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 MCFragment *MCObjectStreamer::getCurrentFragment() const {
   assert(getCurrentSectionOnly() && "No current section!");
 
-  if (CurInsertionPoint != getCurrentSectionOnly()->getFragmentList().begin())
+  if (CurInsertionPoint != getCurrentSectionOnly()->begin())
     return &*std::prev(CurInsertionPoint);
 
   return nullptr;
