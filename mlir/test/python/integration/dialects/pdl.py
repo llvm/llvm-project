@@ -38,8 +38,8 @@ def test_add_to_mul(module_):
         m = Module.create()
         with InsertionPoint(m.body):
             # Change all arith.addi with index types to arith.muli.
-            pattern = pdl.PatternOp(1, "addi_to_mul")
-            with InsertionPoint(pattern.body):
+            @pdl.pattern(benefit=1, sym_name="addi_to_mul")
+            def pat():
                 # Match arith.addi with index types.
                 index_type = pdl.TypeOp(IndexType.get())
                 operand0 = pdl.OperandOp(index_type)
@@ -49,8 +49,8 @@ def test_add_to_mul(module_):
                 )
 
                 # Replace the matched op with arith.muli.
-                rewrite = pdl.RewriteOp(op0)
-                with InsertionPoint(rewrite.add_body()):
+                @pdl.rewrite()
+                def rew():
                     newOp = pdl.OperationOp(
                         name="arith.muli", args=[operand0, operand1], types=[index_type]
                     )

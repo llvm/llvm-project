@@ -206,7 +206,7 @@ struct type_caster<MlirFrozenRewritePatternSet> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule.ptr());
-    return !mlirModuleIsNull(value);
+    return value.ptr != nullptr;
   }
   static handle cast(MlirFrozenRewritePatternSet v, return_value_policy,
                      handle) {
