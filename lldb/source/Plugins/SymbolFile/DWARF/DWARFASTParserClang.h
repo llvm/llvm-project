@@ -397,10 +397,12 @@ private:
   /// \param[in] decl_ctx_die The DIE representing the DeclContext of the C++
   ///                         method being parsed.
   /// \param[in] is_static Is true iff we're parsing a static method.
-  /// \param[out] ignore_containing_context Will get set to true by this function
+  /// \param[out] ignore_containing_context Will get set to true by this
+  /// function
   ///             if the caller should treat this C++ method as-if it was not
-  ///             a C++ method. Currently used as a hack to work around templated
-  ///             C++ methods causing class definitions to mismatch between CUs.
+  ///             a C++ method. Currently used as a hack to work around
+  ///             templated C++ methods causing class definitions to mismatch
+  ///             between CUs.
   ///
   /// \returns A pair of <bool, TypeSP>. The first element is 'true' on success.
   ///          The second element is non-null if we have previously parsed this

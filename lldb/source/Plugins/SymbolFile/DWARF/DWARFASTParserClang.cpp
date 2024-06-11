@@ -1280,7 +1280,7 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       } else if (is_cxx_method) {
         auto [handled, type_sp] =
             ParseCXXMethod(die, clang_type, attrs, decl_ctx_die, is_static,
-                            ignore_containing_context);
+                           ignore_containing_context);
         if (type_sp)
           return type_sp;
 
