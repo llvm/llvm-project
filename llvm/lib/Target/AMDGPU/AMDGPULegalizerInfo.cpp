@@ -5401,35 +5401,6 @@ bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
   return true;
 }
 
-static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
-  switch (IID) {
-  case Intrinsic::amdgcn_ds_fmin:
-    return AMDGPU::G_ATOMICRMW_FMIN;
-  case Intrinsic::amdgcn_ds_fmax:
-    return AMDGPU::G_ATOMICRMW_FMAX;
-  default:
-    llvm_unreachable("not a DS FP intrinsic");
-  }
-}
-
-bool AMDGPULegalizerInfo::legalizeDSAtomicFPIntrinsic(LegalizerHelper &Helper,
-                                                      MachineInstr &MI,
-                                                      Intrinsic::ID IID) const {
-  GISelChangeObserver &Observer = Helper.Observer;
-  Observer.changingInstr(MI);
-
-  MI.setDesc(ST.getInstrInfo()->get(getDSFPAtomicOpcode(IID)));
-
-  // The remaining operands were used to set fields in the MemOperand on
-  // construction.
-  for (int I = 6; I > 3; --I)
-    MI.removeOperand(I);
-
-  MI.removeOperand(1); // Remove the intrinsic ID.
-  Observer.changedInstr(MI);
-  return true;
-}
-
 // TODO: Fix pointer type handling
 bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
                                          MachineInstr &MI,
@@ -7451,9 +7422,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
-  case Intrinsic::amdgcn_ds_fmin:
-  case Intrinsic::amdgcn_ds_fmax:
-    return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntrinsic(MI, B);
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
