@@ -134,6 +134,12 @@ New checks
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
 
+- New :doc:`bugprone-null-check-after-dereference
+  <clang-tidy/checks/bugprone/null-check-after-dereference>` check.
+
+  This check identifies redundant pointer null-checks, by finding cases where
+  the pointer cannot be null at the location of the null-check.
+
 - New :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
 
