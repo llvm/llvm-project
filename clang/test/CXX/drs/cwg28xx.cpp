@@ -6,6 +6,23 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
+namespace cwg2813 { // cwg2813: 19
+#if __cplusplus >= 202302L
+struct X {
+  X() = default;
+
+  X(const X&) = delete;
+  X& operator=(const X&) = delete;
+
+  void f(this X self) { }
+};
+
+void f() {
+  X{}.f();
+}
+#endif
+}
+
 namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;

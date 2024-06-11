@@ -9182,6 +9182,9 @@ def warn_unused_constructor : Warning<
 def warn_unused_constructor_msg : Warning<
   "ignoring temporary created by a constructor declared with %0 attribute: %1">,
   InGroup<UnusedValue>;
+def warn_discarded_class_member_access : Warning<
+  "left operand of dot in this class member access is discarded and has no effect">,
+  InGroup<UnusedValue>;
 def warn_side_effects_unevaluated_context : Warning<
   "expression with side effects has no effect in an unevaluated context">,
   InGroup<UnevaluatedExpression>;

@@ -262,19 +262,19 @@ void test7() {
   // CHECK-NEXT:  |           `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
   // CHECK-NEXT:  |             `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
   // CHECK-NEXT:  |               `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'A &&'
   // CHECK-NEXT:  |                   `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
   // CHECK-NEXT:  |                       `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
   // CHECK-NEXT:  |                         `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
   // CHECK-NEXT:  |                           `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                             `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                             `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'A &&'
   // CHECK-NEXT:  |                               `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |                                 `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
   // CHECK-NEXT:  |                                   `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
   // CHECK-NEXT:  |                                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
   // CHECK-NEXT:  |                                       `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'A &&'
   // CHECK-NEXT:  |                                           `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |                                             `-CallExpr {{.*}} 'A':'P2718R0::A'
   // CHECK-NEXT:  |                                               `-ImplicitCastExpr {{.*}} 'A (*)()' <FunctionToPointerDecay>
@@ -429,19 +429,19 @@ void test13() {
   // CHECK-NEXT:  |           `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
   // CHECK-NEXT:  |             `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
   // CHECK-NEXT:  |               `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                 `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'A &&'
   // CHECK-NEXT:  |                   `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
   // CHECK-NEXT:  |                       `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
   // CHECK-NEXT:  |                         `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
   // CHECK-NEXT:  |                           `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                             `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                             `-MaterializeTemporaryExpr {{.*}} 'A':'P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'A &&'
   // CHECK-NEXT:  |                               `-CXXBindTemporaryExpr {{.*}} 'A':'P2718R0::A' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |                                 `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A'
   // CHECK-NEXT:  |                                   `-MemberExpr {{.*}} '<bound member function type>' .g {{.*}}
   // CHECK-NEXT:  |                                     `-CXXMemberCallExpr {{.*}} 'A':'P2718R0::A' lvalue
   // CHECK-NEXT:  |                                       `-MemberExpr {{.*}} '<bound member function type>' .r {{.*}}
-  // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'P2718R0::A' xvalue extended by Var {{.*}} '__range1' 'A &&'
+  // CHECK-NEXT:  |                                         `-MaterializeTemporaryExpr {{.*}} 'P2718R0::A' lvalue extended by Var {{.*}} '__range1' 'A &&'
   // CHECK-NEXT:  |                                           `-CXXBindTemporaryExpr {{.*}} 'P2718R0::A' (CXXTemporary {{.*}})
   // CHECK-NEXT:  |                                             `-CallExpr {{.*}} 'P2718R0::A'
   // CHECK-NEXT:  |                                               `-ImplicitCastExpr {{.*}} 'P2718R0::A (*)()' <FunctionToPointerDecay>

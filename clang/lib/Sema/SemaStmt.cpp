@@ -223,6 +223,7 @@ static bool DiagnoseNoDiscard(Sema &S, const WarnUnusedResultAttr *A,
 }
 
 void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
+  const unsigned OrigDiagID = DiagID;
   if (const LabelStmt *Label = dyn_cast_or_null<LabelStmt>(S))
     return DiagnoseUnusedExprResult(Label->getSubStmt(), DiagID);
 
@@ -387,9 +388,16 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID) {
   // Do not diagnose use of a comma operator in a SFINAE context because the
   // type of the left operand could be used for SFINAE, so technically it is
   // *used*.
-  if (DiagID != diag::warn_unused_comma_left_operand || !isSFINAEContext())
-    DiagIfReachable(Loc, S ? llvm::ArrayRef(S) : std::nullopt,
-                    PDiag(DiagID) << R1 << R2);
+  if (DiagID == diag::warn_unused_comma_left_operand && isSFINAEContext())
+    return;
+
+  // Don't diagnose discarded left of dot in static class member access
+  // because its type is "used" to determine the class to access
+  if (OrigDiagID == diag::warn_discarded_class_member_access)
+    return;
+
+  DiagIfReachable(Loc, S ? llvm::ArrayRef(S) : std::nullopt,
+                  PDiag(DiagID) << R1 << R2);
 }
 
 void Sema::ActOnStartOfCompoundStmt(bool IsStmtExpr) {

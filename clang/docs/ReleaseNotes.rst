@@ -260,6 +260,11 @@ Resolutions to C++ Defect Reports
 - Clang now requires a template argument list after a template keyword.
   (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
 
+- Clang now allows calling explicit object member functions directly with prvalues
+  instead of always materializing a temporary, meaning by-value explicit object parameters
+  do not need to move from a temporary.
+  (`CWG2813: Class member access with prvalues <https://cplusplus.github.io/CWG/issues/2813.html>`_).
+
 C Language Changes
 ------------------
 

@@ -1015,15 +1015,6 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
               : !isDependentScopeSpecifier(SS) || computeDeclContext(SS)) &&
          "dependent lookup context that isn't the current instantiation?");
 
-  // C++1z [expr.ref]p2:
-  //   For the first option (dot) the first expression shall be a glvalue [...]
-  if (!IsArrow && BaseExpr && BaseExpr->isPRValue()) {
-    ExprResult Converted = TemporaryMaterializationConversion(BaseExpr);
-    if (Converted.isInvalid())
-      return ExprError();
-    BaseExpr = Converted.get();
-  }
-
   const DeclarationNameInfo &MemberNameInfo = R.getLookupNameInfo();
   DeclarationName MemberName = MemberNameInfo.getName();
   SourceLocation MemberLoc = MemberNameInfo.getLoc();
@@ -1140,26 +1131,68 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     BaseExpr = BuildCXXThisExpr(Loc, BaseExprType, /*IsImplicit=*/true);
   }
 
+  // C++17 [expr.ref]p2, per CWG2813:
+  //   For the first option (dot), if the id-expression names a static member or
+  //   an enumerator, the first expression is a discarded-value expression; if
+  //   the id-expression names a non-static data member, the first expression
+  //   shall be a glvalue.
+  auto MakeDiscardedValue = [&BaseExpr, IsArrow, this] {
+    assert(getLangOpts().CPlusPlus &&
+           "Static member / member enumerator outside of C++");
+    if (IsArrow)
+      return false;
+    ExprResult Converted = IgnoredValueConversions(BaseExpr);
+    if (Converted.isInvalid())
+      return true;
+    BaseExpr = Converted.get();
+    DiagnoseUnusedExprResult(BaseExpr,
+                             diag::warn_discarded_class_member_access);
+    return false;
+  };
+  auto MakeGLValue = [&BaseExpr, IsArrow, this] {
+    if (IsArrow || !BaseExpr->isPRValue())
+      return false;
+    ExprResult Converted = TemporaryMaterializationConversion(BaseExpr);
+    if (Converted.isInvalid())
+      return true;
+    BaseExpr = Converted.get();
+    return false;
+  };
+
   // Check the use of this member.
   if (DiagnoseUseOfDecl(MemberDecl, MemberLoc))
     return ExprError();
 
-  if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl))
+  if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl)) {
+    if (MakeGLValue())
+      return ExprError();
     return BuildFieldReferenceExpr(BaseExpr, IsArrow, OpLoc, SS, FD, FoundDecl,
                                    MemberNameInfo);
+  }
 
-  if (MSPropertyDecl *PD = dyn_cast<MSPropertyDecl>(MemberDecl))
+  if (MSPropertyDecl *PD = dyn_cast<MSPropertyDecl>(MemberDecl)) {
+    // Properties treated as non-static data members for the purpose of
+    // temporary materialization
+    if (MakeGLValue())
+      return ExprError();
     return BuildMSPropertyRefExpr(*this, BaseExpr, IsArrow, SS, PD,
                                   MemberNameInfo);
+  }
 
-  if (IndirectFieldDecl *FD = dyn_cast<IndirectFieldDecl>(MemberDecl))
+  if (IndirectFieldDecl *FD = dyn_cast<IndirectFieldDecl>(MemberDecl)) {
+    if (MakeGLValue())
+      return ExprError();
     // We may have found a field within an anonymous union or struct
     // (C++ [class.union]).
     return BuildAnonymousStructUnionMemberReference(SS, MemberLoc, FD,
                                                     FoundDecl, BaseExpr,
                                                     OpLoc);
+  }
 
+  // Static data member
   if (VarDecl *Var = dyn_cast<VarDecl>(MemberDecl)) {
+    if (MakeDiscardedValue())
+      return ExprError();
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc,
                            SS.getWithLocInContext(Context), TemplateKWLoc, Var,
                            FoundDecl, /*HadMultipleCandidates=*/false,
@@ -1174,6 +1207,9 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       valueKind = VK_PRValue;
       type = Context.BoundMemberTy;
     } else {
+      // Static member function
+      if (MakeDiscardedValue())
+        return ExprError();
       valueKind = VK_LValue;
       type = MemberFn->getType();
     }
@@ -1186,6 +1222,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
+    if (MakeDiscardedValue())
+      return ExprError();
     return BuildMemberExpr(
         BaseExpr, IsArrow, OpLoc, SS.getWithLocInContext(Context),
         TemplateKWLoc, Enum, FoundDecl, /*HadMultipleCandidates=*/false,
@@ -1193,6 +1231,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   }
 
   if (VarTemplateDecl *VarTempl = dyn_cast<VarTemplateDecl>(MemberDecl)) {
+    if (MakeDiscardedValue())
+      return ExprError();
     if (!TemplateArgs) {
       diagnoseMissingTemplateArguments(
           SS, /*TemplateKeyword=*/TemplateKWLoc.isValid(), VarTempl, MemberLoc);
