@@ -477,6 +477,18 @@ static void GetTypeLookupContextImpl(DWARFDIE die,
     case DW_TAG_base_type:
       push_ctx(CompilerContextKind::Builtin, name);
       break;
+    // If any of the tags below appear in the parent chain, stop the decl
+    // context and return. Prior to these being in here, if a type existed in a
+    // namespace "a" like "a::my_struct", but we also have a function in that
+    // same namespace "a" which contained a type named "my_struct", both would
+    // return "a::my_struct" as the declaration context since the
+    // DW_TAG_subprogram would be skipped and its parent would be found.
+    case DW_TAG_compile_unit:
+    case DW_TAG_type_unit:
+    case DW_TAG_subprogram:
+    case DW_TAG_lexical_block:
+    case DW_TAG_inlined_subroutine:
+      return;
     default:
       break;
     }
