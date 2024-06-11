@@ -27557,7 +27557,14 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                "         longOperand2 -\n"
                "         (longOperand3 + longOperand4) -\n"
                "         longOperand5 +\n"
-               "         longOperand6\n",
+               "         longOperand6;\n",
+               Style);
+  verifyFormat("result = operand1 +\n"
+               "         operand2 -\n"
+               "         operand3 +\n"
+               "         operand4 -\n"
+               "         operand5 +\n"
+               "         operand6;\n",
                Style);
 }
 
