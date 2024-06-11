@@ -426,15 +426,37 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
 static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo *TRI,
                                                 BitVector &RUs,
                                                 const uint32_t *Mask) {
-  // FIXME: Use RUs better here
-  BitVector MaskedRegs(TRI->getNumRegs());
-  MaskedRegs.setBitsNotInMask(Mask);
-  for (const auto &Set : MaskedRegs.set_bits()) {
-    if (!Set)
-      continue;
+  // Iterate over the RegMask raw to avoid constructing a BitVector, which is
+  // expensive as it implies dynamically allocating memory.
+  //
+  // We also work backwards.
+  const unsigned NumRegs = TRI->getNumRegs();
+  const unsigned MaskWords = (NumRegs + 31) / 32;
+  for (unsigned K = 0; K < MaskWords; ++K) {
+    // We want to set the bits that aren't in RegMask, so flip it.
+    uint32_t Word = ~Mask[K];
 
-    for (MCRegUnitIterator RUI(Set, TRI); RUI.isValid(); ++RUI)
-      RUs.set(*RUI);
+    // Iterate all set bits, starting from the right.
+    while (Word) {
+      const unsigned SetBitIdx = countr_zero(Word);
+
+      // The bits are numbered from the LSB in each word.
+      const unsigned PhysReg = (K * 32) + SetBitIdx;
+
+      // Clear the bit at SetBitIdx. Doing it this way appears to generate less
+      // instructions on x86. This works because negating a number will flip all
+      // the bits after SetBitIdx. So (Word & -Word) == (1 << SetBitIdx), but
+      // faster.
+      Word ^= Word & -Word;
+
+      if (PhysReg == NumRegs)
+        return;
+
+      if (PhysReg) {
+        for (MCRegUnitIterator RUI(PhysReg, TRI); RUI.isValid(); ++RUI)
+          RUs.set(*RUI);
+      }
+    }
   }
 }
 
