@@ -165,5 +165,13 @@ int main(int, char**)
                                              test_allocator<Derived[4]> >::value, "");
     }
 
+#if TEST_STD_VER >= 14
+    {
+      // See https://github.com/llvm/llvm-project/pull/93071#issuecomment-2158494851
+      auto deleter = [](auto pointer) { delete pointer; };
+      std::shared_ptr<int> p(new int, deleter, std::allocator<int>());
+    }
+#endif
+
   return 0;
 }
