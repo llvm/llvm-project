@@ -1,0 +1,104 @@
+{
+    "root": "/home/thebesttv/vul/llvm-project/graph-generation/same-name",
+    "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/compile_commands.json",
+    "results": [
+        {
+            "type": "test_1",
+            "nodes": [
+                1
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_1.cpp",
+                    "beginLine": 2,
+                    "beginColumn": 5,
+                    "endLine": 2,
+                    "endColumn": 15,
+                    "content": "int x = 1;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_1.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 5,
+                    "endLine": 3,
+                    "endColumn": 15,
+                    "content": "int y = 2;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_1.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 5,
+                    "endLine": 4,
+                    "endColumn": 17,
+                    "content": "return x + y",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        },
+        {
+            "type": "test_2",
+            "nodes": [
+                7,
+                5,
+                4
+            ],
+            "locations": [
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_2.cpp",
+                    "beginLine": 2,
+                    "beginColumn": 5,
+                    "endLine": 2,
+                    "endColumn": 15,
+                    "content": "int x = 1;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_2.cpp",
+                    "beginLine": 3,
+                    "beginColumn": 5,
+                    "endLine": 3,
+                    "endColumn": 15,
+                    "content": "int y = 2;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_2.cpp",
+                    "beginLine": 4,
+                    "beginColumn": 9,
+                    "endLine": 4,
+                    "endColumn": 19,
+                    "content": "x + y == 3",
+                    "stmtKind": "BinaryOperator"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_2.cpp",
+                    "beginLine": 7,
+                    "beginColumn": 9,
+                    "endLine": 7,
+                    "endColumn": 22,
+                    "content": "int z = 2048;",
+                    "stmtKind": "DeclStmt"
+                },
+                {
+                    "type": "stmt",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_2.cpp",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 9,
+                    "endColumn": 17,
+                    "content": "return x + y",
+                    "stmtKind": "ReturnStmt"
+                }
+            ]
+        }
+    ]
+}
