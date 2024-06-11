@@ -681,10 +681,11 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
       ompLoc, bodyCB, numTeamsLower, numTeamsUpper, threadLimit, ifExpr));
   return bodyGenStatus;
 }
+
 static void
 buildDependData(std::optional<ArrayAttr> depends, OperandRange dependVars,
                 LLVM::ModuleTranslation &moduleTranslation,
-                SmallVector<llvm::OpenMPIRBuilder::DependData> &dds) {
+                SmallVectorImpl<llvm::OpenMPIRBuilder::DependData> &dds) {
   for (auto dep : llvm::zip(dependVars, depends->getValue())) {
     llvm::omp::RTLDependenceKindTy type;
     switch (
