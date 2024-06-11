@@ -68,24 +68,24 @@ if.else:
   ret i32 %res
 }
 
-define i32 @mm3(i1 %pred, i32 %val, i32 %e1, i128 %e2, i128 %e3, i128 %e4, i128 %e5) {
+define i64 @mm3(i1 %pred, i64 %val, i64 %e1, i128 %e2, i128 %e3, i128 %e4, i128 %e5) {
 ; CHECK-LABEL: mm3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl %esi, %r10d
+; CHECK-NEXT:    movq %rsi, %r10
 ; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %if.false
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; CHECK-NEXT:    imull %edx, %edx
-; CHECK-NEXT:    movslq %edx, %r10
-; CHECK-NEXT:    movq %rcx, %rax
-; CHECK-NEXT:    movl %edx, %r9d
-; CHECK-NEXT:    mulq %r10
-; CHECK-NEXT:    imulq %r10, %r8
+; CHECK-NEXT:    imulq %rdx, %rdx
+; CHECK-NEXT:    movq %rdx, %r10
 ; CHECK-NEXT:    sarq $63, %r10
+; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    movq %rdx, %r9
+; CHECK-NEXT:    mulq %rdx
 ; CHECK-NEXT:    imulq %rcx, %r10
+; CHECK-NEXT:    imulq %r9, %r8
 ; CHECK-NEXT:    addq %rdx, %r8
 ; CHECK-NEXT:    addq %r10, %r8
 ; CHECK-NEXT:    addq {{[0-9]+}}(%rsp), %rax
@@ -106,9 +106,9 @@ define i32 @mm3(i1 %pred, i32 %val, i32 %e1, i128 %e2, i128 %e3, i128 %e4, i128 
 ; CHECK-NEXT:    orq %rdi, %r10
 ; CHECK-NEXT:    testb $64, %sil
 ; CHECK-NEXT:    cmovneq %rax, %r10
-; CHECK-NEXT:    movl %r9d, %eax
+; CHECK-NEXT:    movq %r9, %rax
 ; CHECK-NEXT:  .LBB2_2: # %if.endif
-; CHECK-NEXT:    addl %r10d, %eax
+; CHECK-NEXT:    addq %r10, %rax
 ; CHECK-NEXT:    retq
 entry:
   br i1 %pred, label %if.true, label %if.false
@@ -117,19 +117,19 @@ if.true:
   br label %if.endif
 
 if.false:
-  %f1 = mul i32 %e1, %e1
-  %f3 = sext i32 %f1 to i128
+  %f1 = mul i64 %e1, %e1
+  %f3 = sext i64 %f1 to i128
   %f4 = mul i128 %e2, %f3
   %f6 = add i128 %e3, %f4
   %f7 = xor i128 %e4, %f6
   %f8 = xor i128 %e5, %f7
   %a1 = ashr i128 %f8, %e5
-  %f5 = trunc i128 %a1 to i32
+  %f5 = trunc i128 %a1 to i64
   br label %if.endif
 
 if.endif:
-  %r1 = phi i32 [ %val, %if.true ], [ %f1, %if.false ]
-  %r2 = phi i32 [ %val, %if.true ], [ %f5, %if.false ]
-  %res = add i32 %r1, %r2
-  ret i32 %res
+  %r1 = phi i64 [ %val, %if.true ], [ %f1, %if.false ]
+  %r2 = phi i64 [ %val, %if.true ], [ %f5, %if.false ]
+  %res = add i64 %r1, %r2
+  ret i64 %res
 }
