@@ -3543,3 +3543,14 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.totalordermagf16
 )
+
+add_fp_unittest(
+  f16sqrtf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrtf_test.cpp
+  DEPENDS
+    libc.src.math.f16sqrtf
+    libc.src.__support.FPUtil.fp_bits
+)
