@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
 template <class _BackendFunction, class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE auto __handle_exception_impl(_Args&&... __args) noexcept {
+_LIBCPP_HIDE_FROM_ABI auto __handle_exception_impl(_Args&&... __args) noexcept {
   return _BackendFunction{}(std::forward<_Args>(__args)...);
 }
 

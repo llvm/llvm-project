@@ -27,13 +27,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
 template <template <class, class> class _Algorithm, class _Backend, class _ExecutionPolicy, class = void>
-struct __is_implemented : false_type {};
+constexpr bool __is_implemented_v = false;
 
 template <template <class, class> class _Algorithm, class _Backend, class _ExecutionPolicy>
-struct __is_implemented<_Algorithm,
-                        _Backend,
-                        _ExecutionPolicy,
-                        __enable_if_t<sizeof(_Algorithm<_Backend, _ExecutionPolicy>)>> : true_type {};
+constexpr bool __is_implemented_v<_Algorithm,
+                                  _Backend,
+                                  _ExecutionPolicy,
+                                  __enable_if_t<sizeof(_Algorithm<_Backend, _ExecutionPolicy>)>> = true;
 
 // Helpful to provide better error messages. This will show the algorithm and the execution policy
 // in the compiler diagnostic.
@@ -51,7 +51,7 @@ struct __find_first_implemented<_Algorithm, __backend_configuration<>, _Executio
 
 template <template <class, class> class _Algorithm, class _B1, class... _Bn, class _ExecutionPolicy>
 struct __find_first_implemented<_Algorithm, __backend_configuration<_B1, _Bn...>, _ExecutionPolicy>
-    : _If<__is_implemented<_Algorithm, _B1, _ExecutionPolicy>::value,
+    : _If<__is_implemented_v<_Algorithm, _B1, _ExecutionPolicy>,
           __type_identity<_Algorithm<_B1, _ExecutionPolicy>>,
           __find_first_implemented<_Algorithm, __backend_configuration<_Bn...>, _ExecutionPolicy> > {};
 
