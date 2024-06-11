@@ -71,7 +71,7 @@ public:
 
 protected:
   SparseTensorLevel(unsigned tid, unsigned lvl, LevelType lt, Value lvlSize)
-      : tid(tid), lvl(lvl), lt(lt), lvlSize(lvlSize){};
+      : tid(tid), lvl(lvl), lt(lt), lvlSize(lvlSize) {};
 
 public:
   const unsigned tid, lvl;
@@ -103,7 +103,7 @@ public:
   // Constructs a 1-D iteration space.
   SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,
                        Level lvl, ValueRange parentPos)
-      : SparseIterationSpace(loc, b, t, tid, {lvl, lvl + 1}, parentPos){};
+      : SparseIterationSpace(loc, b, t, tid, {lvl, lvl + 1}, parentPos) {};
 
   bool isUnique() const { return lvls.back()->isUnique(); }
 
@@ -150,13 +150,13 @@ protected:
                  unsigned cursorValsCnt,
                  SmallVectorImpl<Value> &cursorValStorage)
       : batchCrds(0), kind(kind), tid(tid), lvl(lvl), crd(nullptr),
-        cursorValsCnt(cursorValsCnt), cursorValsStorageRef(cursorValStorage){};
+        cursorValsCnt(cursorValsCnt), cursorValsStorageRef(cursorValStorage) {};
 
   SparseIterator(IterKind kind, unsigned cursorValsCnt,
                  SmallVectorImpl<Value> &cursorValStorage,
                  const SparseIterator &delegate)
       : SparseIterator(kind, delegate.tid, delegate.lvl, cursorValsCnt,
-                       cursorValStorage){};
+                       cursorValStorage) {};
 
   SparseIterator(IterKind kind, const SparseIterator &wrap,
                  unsigned extraCursorCnt = 0)
