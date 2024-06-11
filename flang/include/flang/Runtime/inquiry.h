@@ -24,9 +24,11 @@ extern "C" {
 std::int64_t RTDECL(LboundDim)(const Descriptor &array, int dim,
     const char *sourceFile = nullptr, int line = 0);
 
-void RTDECL(Shape)(void *result, const Descriptor &array, int kind,
+void RTDECL(Lbound)(void *result, const Descriptor &array, int kind,
     const char *sourceFile = nullptr, int line = 0);
 
+void RTDECL(Shape)(void *result, const Descriptor &array, int kind,
+    const char *sourceFile = nullptr, int line = 0);
 std::int64_t RTDECL(Size)(
     const Descriptor &array, const char *sourceFile = nullptr, int line = 0);
 
