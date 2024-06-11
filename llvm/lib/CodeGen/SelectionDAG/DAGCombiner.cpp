@@ -5236,6 +5236,21 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
     return DAG.getNode(ISD::SRL, DL, VT, X,
                        DAG.getShiftAmountConstant(1, VT, DL));
 
+  // fold avgu(zext(x), zext(y)) -> zext(avgu(x, y))
+  SDValue A;
+  SDValue B;
+  if (hasOperation(ISD::AVGFLOORU, VT) &&
+      sd_match(N, m_c_BinOp(ISD::AVGFLOORU, m_ZExt(m_Value(A)),
+                            m_ZExt(m_Value(B))))) {
+    SDValue AvgFloorU = DAG.getNode(ISD::AVGFLOORU, DL, A.getValueType(), A, B);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgFloorU);
+  }
+  if (hasOperation(ISD::AVGCEILU, VT) &&
+      sd_match(N, m_c_BinOp(ISD::AVGCEILU, m_ZExt(m_Value(A)),
+                            m_ZExt(m_Value(B))))) {
+    SDValue AvgCeilU = DAG.getNode(ISD::AVGCEILU, DL, A.getValueType(), A, B);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgCeilU);
+  }
   return SDValue();
 }
 
