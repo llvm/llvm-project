@@ -109,7 +109,7 @@ private:
   ///     doesn't match the originating skeleton compile unit's entry
   ///   Returns std::nullopt if this entry is not a foreign type unit entry.
   std::optional<DWARFTypeUnit *>
-  IsForeignTypeUnit(const DebugNames::Entry &entry) const;
+  GetForeignTypeUnit(const DebugNames::Entry &entry) const;
 
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);

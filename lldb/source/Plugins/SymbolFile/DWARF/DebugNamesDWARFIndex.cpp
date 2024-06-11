@@ -61,7 +61,7 @@ DebugNamesDWARFIndex::GetUnits(const DebugNames &debug_names) {
 }
 
 std::optional<DWARFTypeUnit *>
-DebugNamesDWARFIndex::IsForeignTypeUnit(const DebugNames::Entry &entry) const {
+DebugNamesDWARFIndex::GetForeignTypeUnit(const DebugNames::Entry &entry) const {
   std::optional<uint64_t> type_sig = entry.getForeignTUTypeSignature();
   if (!type_sig.has_value())
     return std::nullopt;
@@ -120,7 +120,7 @@ DebugNamesDWARFIndex::IsForeignTypeUnit(const DebugNames::Entry &entry) const {
 DWARFUnit *
 DebugNamesDWARFIndex::GetNonSkeletonUnit(const DebugNames::Entry &entry) const {
 
-  if (std::optional<DWARFTypeUnit *> foreign_tu = IsForeignTypeUnit(entry))
+  if (std::optional<DWARFTypeUnit *> foreign_tu = GetForeignTypeUnit(entry))
     return foreign_tu.value();
 
   // Look for a DWARF unit offset (CU offset or local TU offset) as they are
@@ -349,7 +349,7 @@ void DebugNamesDWARFIndex::GetFullyQualifiedType(
     // If we get a NULL foreign_tu back, the entry doesn't match the type unit
     // in the .dwp file, or we were not able to load the .dwo file or the DWO ID
     // didn't match.
-    std::optional<DWARFTypeUnit *> foreign_tu = IsForeignTypeUnit(entry);
+    std::optional<DWARFTypeUnit *> foreign_tu = GetForeignTypeUnit(entry);
     if (foreign_tu && foreign_tu.value() == nullptr)
       continue;
 

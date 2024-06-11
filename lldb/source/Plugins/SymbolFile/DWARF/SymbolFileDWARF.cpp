@@ -1748,7 +1748,7 @@ SymbolFileDWARF *SymbolFileDWARF::GetDIERefSymbolFile(const DIERef &die_ref) {
   // to let the base symbol file handle this.
   SymbolFileDWARFDwo *dwo = llvm::dyn_cast_or_null<SymbolFileDWARFDwo>(this);
   if (dwo)
-    return dwo->GetBaseSymbolFile().GetDIERefSymbolFile(die_ref);
+    return dwo->GetDIERefSymbolFile(die_ref);
 
   if (file_index) {
     SymbolFileDWARFDebugMap *debug_map = GetDebugMapSymfile();
