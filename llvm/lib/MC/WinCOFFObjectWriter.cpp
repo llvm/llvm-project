@@ -354,7 +354,7 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
   Section->MCSection = &MCSec;
   SectionMap[&MCSec] = Section;
 
-  if (UseOffsetLabels && !MCSec.getFragmentList().empty()) {
+  if (UseOffsetLabels && !MCSec.empty()) {
     const uint32_t Interval = 1 << OffsetLabelIntervalBits;
     uint32_t N = 1;
     for (uint32_t Off = Interval, E = Layout.getSectionAddressSize(&MCSec);
