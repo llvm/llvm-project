@@ -1541,8 +1541,6 @@ void LazyCallGraph::removeDeadFunctions(ArrayRef<Function *> DeadFs) {
   for (auto [RC, DeadNs] : RCs) {
     SmallVector<std::pair<Node *, Node *>> InternalEdgesToRemove;
     for (Node *DeadN : DeadNs) {
-      if (lookupRefSCC(*DeadN) != RC)
-        continue;
       for (Edge &E : **DeadN) {
         if (lookupRefSCC(E.getNode()) == RC)
           InternalEdgesToRemove.push_back({DeadN, &E.getNode()});
