@@ -36,6 +36,46 @@ A list of non-standard directives supported by Flang
   and is limited to 256.
   [This directive is currently recognised by the parser, but not
   handled by the other parts of the compiler].
-* `!dir$ vector always` forces vectorization on the following loop regardless 
+* `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+
+# Directive Details
+
+## Introduction
+Directives are commonly used in Fortran programs to specify additional actions 
+to be performed by the compiler. The directives are always specified with the 
+`!dir$` or `cdir$` prefix. 
+
+## Loop Directives
+Some directives are associated with the following construct, for example loop
+directives. Directives on loops are used to specify additional transformation to
+be performed by the compiler like enabling vectorisation, unrolling, interchange
+etc.
+
+### Array Expressions
+It is to be decided whether loop directives should also be able to be associated
+with array expressions.
+
+## Semantics
+Dirctives that are associated with constructs must appear in the same section as
+the construct they are associated with, for example loop directives must appear
+in the executable section as the loops appear there. To facilitate this the
+parse tree is corrected to move such directives that appear in the specification
+part into the execution part.
+When a directive that must be associated with a construct appears, a search 
+forward from that directive to the next non-directive construct is performed to
+check that that construct matches the expected construct for the directive.
+Skipping other intermediate directives allows multiple directives to appear on
+the same construct.
+
+## Lowering 
+Evaluation is extended with a new field called dirs for representing directives
+associated with that Evaluation. When lowering loop directives, the associated
+Do Loop's evaluation is found and the directive is added to it. This information
+is used only during the lowering of the loop.
+
+## Testing
+Since directives must maintain a flow from source to LLVM IR, an integration
+test is provided that tests the `vector always` directive, as well as individual
+lit tests for each of the parsing, semantics and lowering stages.

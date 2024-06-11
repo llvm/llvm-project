@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-fir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
 ! CHECK: #access_group = #llvm.access_group<id = distinct[0]<>>
 ! CHECK: #access_group1 = #llvm.access_group<id = distinct[1]<>>

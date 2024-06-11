@@ -1,4 +1,5 @@
-//===-- lib/Semantics/check-directives.cpp --------------------------------===//
+//===-- lib/Semantics/canonicalize-directives.cpp
+//--------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +14,9 @@ namespace Fortran::semantics {
 
 using namespace parser::literals;
 
-// Check that directives are associated with the correct constructs
+// Check that directives are associated with the correct constructs.
+// Directives that need to be associated with other constructs in the execution
+// part are moved to the execution part so they can be checked there.
 class CanonicalizationOfDirectives {
 public:
   CanonicalizationOfDirectives(parser::Messages &messages)
@@ -107,7 +110,7 @@ void CanonicalizationOfDirectives::CheckLoopDirective(
 }
 
 void CanonicalizationOfDirectives::Post(parser::Block &block) {
-  for (auto it = block.begin(); it != block.end(); ++it) {
+  for (auto it{block.begin()}; it != block.end(); ++it) {
     if (auto *dir{GetConstructIf<parser::CompilerDirective>(*it)}) {
       std::visit(
           common::visitors{[&](parser::CompilerDirective::VectorAlways &) {

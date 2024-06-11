@@ -2598,7 +2598,7 @@ private:
   }
 
   void attachDirectiveToLoop(const Fortran::parser::CompilerDirective &dir,
-                           Fortran::lower::pft::Evaluation *e) {
+                             Fortran::lower::pft::Evaluation *e) {
     while (e->isDirective())
       e = e->lexicalSuccessor;
 
