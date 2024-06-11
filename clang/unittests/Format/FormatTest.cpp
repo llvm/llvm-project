@@ -27493,7 +27493,37 @@ TEST_F(FormatTest, SpaceBetweenKeywordAndLiteral) {
 }
 
 TEST_F(FormatTest, BinPackBinaryOperations) {
-  auto Style = getLLVMStyle();
+  auto Style = getLLVMStyleWithColumns(60);
+  // Logical operations
+  verifyFormat("if (condition1 && condition2) {\n"
+               "}",
+               Style);
+
+  verifyFormat("if (condition1 && condition2 &&\n"
+               "    (condition3 || condition4) && condition5 &&\n"
+               "    condition6) {\n"
+               "}",
+               Style);
+
+  verifyFormat("if (loooooooooooooooooooooongcondition1 &&\n"
+               "    loooooooooooooooooooooongcondition2) {\n"
+               "}",
+               Style);
+
+  // Arithmetic
+  verifyFormat("const int result = lhs + rhs;\n", Style);
+
+  verifyFormat("const int result = loooooooongop1 + looooooooongop2 +\n"
+               "                   loooooooooooooooooooooongop3;\n",
+               Style);
+  verifyFormat("result = longOperand1 + longOperand2 -\n"
+               "         (longOperand3 + longOperand4) -\n"
+               "         longOperand5 * longOperand6;\n",
+               Style);
+  verifyFormat("const int result =\n"
+               "    operand1 + operand2 - (operand3 + operand4);\n",
+               Style);
+
   Style.BinPackBinaryOperations = false;
 
   // Logical operations
@@ -27514,62 +27544,21 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
 
   // Arithmetic
   verifyFormat("const int result = lhs + rhs;\n", Style);
-  verifyFormat("const int result = loooooooooooooooooooooongop1 +\n"
-               "                   loooooooooooooooooooooongop2 +\n"
-               "                   loooooooooooooooooooooongop3;\n",
+  verifyFormat("result = loooooooooooooooooooooongop1 +\n"
+               "         loooooooooooooooooooooongop2 +\n"
+               "         loooooooooooooooooooooongop3;\n",
                Style);
 
-  // clang-format off
   verifyFormat("const int result =\n"
-               "    operand1 + operand2 - (operand3 + operand4) - operand5 * operand6;\n",
-               Style);
-  // clang-format on
-
-  verifyFormat("const int result = longOperand1 +\n"
-               "                   longOperand2 -\n"
-               "                   (longOperand3 + longOperand4) -\n"
-               "                   longOperand5 * longOperand6;\n",
+               "    operand1 + operand2 - (operand3 + operand4);\n",
                Style);
 
-  Style.BinPackBinaryOperations = true;
-
-  // Logical operations
-  verifyFormat("if (condition1 && condition2) {\n"
-               "}",
+  verifyFormat("result = longOperand1 +\n"
+               "         longOperand2 -\n"
+               "         (longOperand3 + longOperand4) -\n"
+               "         longOperand5 +\n"
+               "         longOperand6\n",
                Style);
-
-  // clang-format off
-  verifyFormat("if (condition1 && condition2 && (condition3 || condition4) && condition5 &&\n"
-               "    condition6) {\n"
-               "}",
-               Style);
-  // clang-format on
-
-  verifyFormat("if (loooooooooooooooooooooongcondition1 &&\n"
-               "    loooooooooooooooooooooongcondition2) {\n"
-               "}",
-               Style);
-
-  // Arithmetic
-  verifyFormat("const int result = lhs + rhs;\n", Style);
-
-  // clang-format off
-  verifyFormat("const int result = loooooooooooooooooooooongop1 + loooooooooooooooooooooongop2 +\n"
-               "                   loooooooooooooooooooooongop3;\n",
-               Style);
-  // clang-format on
-
-  // clang-format off
-  verifyFormat("const int result = longOperand1 + longOperand2 - (longOperand3 + longOperand4) -\n"
-               "                   longOperand5 * longOperand6;\n",
-               Style);
-  // clang-format on
-
-  // clang-format off
-  verifyFormat("const int result =\n"
-               "    operand1 + operand2 - (operand3 + operand4) - operand5 * operand6;\n",
-               Style);
-  // clang-format on
 }
 
 } // namespace
