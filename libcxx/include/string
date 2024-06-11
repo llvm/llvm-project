@@ -3746,17 +3746,10 @@ template <class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
 operator==(const basic_string<char, char_traits<char>, _Allocator>& __lhs,
            const basic_string<char, char_traits<char>, _Allocator>& __rhs) _NOEXCEPT {
-  size_t __lhs_sz = __lhs.size();
-  if (__lhs_sz != __rhs.size())
+  size_t __sz = __lhs.size();
+  if (__sz != __rhs.size())
     return false;
-  const char* __lp = __lhs.data();
-  const char* __rp = __rhs.data();
-  if (__lhs.__is_long())
-    return char_traits<char>::compare(__lp, __rp, __lhs_sz) == 0;
-  for (; __lhs_sz != 0; --__lhs_sz, ++__lp, ++__rp)
-    if (*__lp != *__rp)
-      return false;
-  return true;
+  return char_traits<char>::compare(__lhs.data(), __rhs.data(), __sz) == 0;
 }
 
 #if _LIBCPP_STD_VER <= 17
