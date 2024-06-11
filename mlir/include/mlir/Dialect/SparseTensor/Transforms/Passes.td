@@ -462,6 +462,18 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
     "sparse_tensor::SparseTensorDialect",
     "vector::VectorDialect"
   ];
+  // Important optimization options are made visible to the mini-pipeline
+  // so that clients can set these (when not using the full pipeline).
+  let options = [
+    Option<"vectorLength", "vl", "int32_t", "0",
+           "Set the vector length (use 0 to disable vectorization)">,
+    Option<"enableVLAVectorization", "enable-vla-vectorization", "bool", "false",
+           "Enable vector length agnostic vectorization">,
+    Option<"enableSIMDIndex32", "enable-simd-index32", "bool", "false",
+           "Enable i32 indexing into vectors (for efficient gather/scatter)">,
+    Option<"enableGPULibgen", "enable-gpu-libgen", "bool", "false",
+           "Enable GPU acceleration by means of direct library calls">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
