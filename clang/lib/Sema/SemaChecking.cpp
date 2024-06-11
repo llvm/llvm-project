@@ -3839,11 +3839,11 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
   if (CallType != VariadicDoesNotApply &&
       (!FD || FD->getBuiltinID() != Builtin::BI__noop)) {
     unsigned NumParams = Proto ? Proto->getNumParams()
-                       : FDecl && isa<FunctionDecl>(FDecl)
-                           ? cast<FunctionDecl>(FDecl)->getNumParams()
-                       : FDecl && isa<ObjCMethodDecl>(FDecl)
-                           ? cast<ObjCMethodDecl>(FDecl)->param_size()
-                       : 0;
+                         : isa_and_nonnull<FunctionDecl>(FDecl)
+                             ? cast<FunctionDecl>(FDecl)->getNumParams()
+                         : isa_and_nonnull<ObjCMethodDecl>(FDecl)
+                             ? cast<ObjCMethodDecl>(FDecl)->param_size()
+                             : 0;
 
     for (unsigned ArgIdx = NumParams; ArgIdx < Args.size(); ++ArgIdx) {
       // Args[ArgIdx] can be null in malformed code.
