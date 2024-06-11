@@ -834,16 +834,15 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
     // Chain together fragments from all subsections.
     MCDummyFragment Dummy(Sec);
     MCFragment *Tail = &Dummy;
-    for (auto &[_, Chain] : Sec->Subsections) {
-      if (!Chain->Head)
+    for (auto &[_, List] : Sec->Subsections) {
+      if (!List.Head)
         continue;
-      Tail->Next = Chain->Head;
-      Tail = Chain->Tail;
+      Tail->Next = List.Head;
+      Tail = List.Tail;
     }
-    Sec->Subsections.resize(1);
-    Sec->Subsections[0].second->Head = Dummy.getNext();
-    Sec->Subsections[0].second->Tail = Tail;
-    Sec->CurFragList = Sec->Subsections[0].second.get();
+    Sec->Subsections.clear();
+    Sec->Subsections.push_back({0u, {Dummy.getNext(), Tail}});
+    Sec->CurFragList = &Sec->Subsections[0].second;
 
     unsigned FragmentIndex = 0;
     for (MCFragment &Frag : *Sec)

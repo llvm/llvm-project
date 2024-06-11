@@ -106,6 +106,11 @@ private:
 
   MCDummyFragment DummyFragment;
 
+  // Mapping from subsection number to fragment list. At layout time, the
+  // subsection 0 list is replaced with concatenated fragments from all
+  // subsections.
+  SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
+
   /// State for tracking labels that don't yet have Fragments
   struct PendingLabel {
     MCSymbol* Sym;
@@ -114,11 +119,6 @@ private:
       : Sym(Sym), Subsection(Subsection) {}
   };
   SmallVector<PendingLabel, 2> PendingLabels;
-
-  // Mapping from subsection number to fragment list. At layout time, the
-  // subsection 0 list is replaced with concatenated fragments from all
-  // subsections.
-  SmallVector<std::pair<unsigned, std::unique_ptr<FragList>>, 1> Subsections;
 
 protected:
   // TODO Make Name private when possible.

@@ -25,9 +25,8 @@ MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
       HasLayout(false), IsRegistered(false), DummyFragment(this), Name(Name),
       Variant(V), Kind(K) {
-  // Create a fragment list for subsection 0 and set the active subsection to 0.
-  CurFragList =
-      &*Subsections.emplace_back(0u, std::make_unique<FragList>()).second;
+  // The initial subsection number is 0. Create a fragment list.
+  CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
 }
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
@@ -40,7 +39,7 @@ bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
 MCSection::~MCSection() {
   for (auto &[_, Chain] : Subsections) {
-    for (MCFragment *X = Chain->Head, *Y; X; X = Y) {
+    for (MCFragment *X = Chain.Head, *Y; X; X = Y) {
       Y = X->Next;
       X->destroy();
     }
@@ -72,11 +71,9 @@ void MCSection::switchSubsection(unsigned Subsection) {
     ++I;
   // If the subsection number is not in the sorted Subsections list, create a
   // new fragment list.
-  if (I == E || Subsections[I].first != Subsection) {
-    Subsections.insert(Subsections.begin() + I,
-                       {Subsection, std::make_unique<FragList>()});
-  }
-  CurFragList = Subsections[I].second.get();
+  if (I == E || Subsections[I].first != Subsection)
+    Subsections.insert(Subsections.begin() + I, {Subsection, FragList{}});
+  CurFragList = &Subsections[I].second;
 }
 
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
