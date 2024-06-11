@@ -677,6 +677,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.roundeven();
   case Operation::Sin:
     return mpfrInput.sin();
+  case Operation::Sinpi:
+    return mpfrInput.sinpi();
   case Operation::Sinh:
     return mpfrInput.sinh();
   case Operation::Sqrt:
