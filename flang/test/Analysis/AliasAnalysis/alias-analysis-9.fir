@@ -43,6 +43,12 @@
 //       we are currently not comparing operands involved in offset computations
 // CHECK-DAG: xnext1#0 <-> xnext2#0: MayAlias
 
+// TODO: This should be NoAlias.  However, AliasAnalysis currently
+// indiscriminately treats all pointers as aliasing.  That makes sense for the
+// addresses within the pointers but not necessarily for the addresses of the
+// pointers.
+// CHECK-DAG: xnext1#0 <-> ynext#0: MayAlias
+
 func.func @_QMmPfoo(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "y"}) {
   %0 = fir.alloca i32 {bindc_name = "i1", uniq_name = "_QMmFfooEi1"}
   %1:2 = hlfir.declare %0 {uniq_name = "_QMmFfooEi1"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -63,6 +69,7 @@ func.func @_QMmPfoo(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir
   %14 = hlfir.designate %13{"i"} : (!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<i32>
   %15 = fir.load %14 : !fir.ref<i32>
   hlfir.assign %15 to %3#0 : i32, !fir.ref<i32>
+  %16 = hlfir.designate %5#0{"next"}   {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "ynext"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   return
 }
 
