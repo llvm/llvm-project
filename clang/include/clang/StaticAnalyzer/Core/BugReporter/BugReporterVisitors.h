@@ -597,29 +597,6 @@ public:
                                    PathSensitiveBugReport &BR) override;
 };
 
-/// The bug visitor will walk all the nodes in a path and collect all the
-/// constraints. When it reaches the root node, will create a refutation
-/// manager and check if the constraints are satisfiable
-class FalsePositiveRefutationBRVisitor final : public BugReporterVisitor {
-private:
-  /// Holds the constraints in a given path
-  ConstraintMap Constraints;
-
-public:
-  FalsePositiveRefutationBRVisitor();
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override;
-
-  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
-                                   BugReporterContext &BRC,
-                                   PathSensitiveBugReport &BR) override;
-
-  void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
-                       PathSensitiveBugReport &BR) override;
-  void addConstraints(const ExplodedNode *N,
-                      bool OverwriteConstraintsOnExistingSyms);
-};
-
 /// The visitor detects NoteTags and displays the event notes they contain.
 class TagVisitor : public BugReporterVisitor {
 public:
