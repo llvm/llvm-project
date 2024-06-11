@@ -469,7 +469,7 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
 //===----------------------------------------------------------------------===//
 
 def SparseSpaceCollapse : Pass<"sparse-space-collapse", "func::FuncOp"> {
-  let summary = "(experimental) sparse space collpasing pass";
+  let summary = "sparse space collapsing pass";
   let description = [{
      This pass collapses consecutive sparse spaces (extracted from the same tensor)
      into one multi-dimensional space. The pass is not yet stablized.
