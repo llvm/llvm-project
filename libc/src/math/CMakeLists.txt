@@ -352,6 +352,8 @@ add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
 add_math_entrypoint_object(scalbnf128)
 
+add_math_entrypoint_object(setpayloadf16)
+
 add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
 

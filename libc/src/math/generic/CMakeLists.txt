@@ -3616,6 +3616,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  setpayloadf16
+  SRCS
+    setpayloadf16.cpp
+  HDRS
+    ../setpayloadf16.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   f16fmaf
   SRCS
     f16fmaf.cpp

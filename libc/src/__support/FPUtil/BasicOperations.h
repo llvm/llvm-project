@@ -276,6 +276,31 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
   return T(x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
 }
 
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+setpayload(T *res, T pl) {
+  using FPBits = FPBits<T>;
+  FPBits pl_bits(pl);
+
+  if (pl_bits.is_zero()) {
+    *res = FPBits::quiet_nan(Sign::POS).get_val();
+    return false;
+  }
+
+  int pl_exp = pl_bits.get_exponent();
+
+  if (pl_bits.is_neg() || pl_exp < 0 || pl_exp >= FPBits::FRACTION_LEN - 1 ||
+      ((pl_bits.get_mantissa() << pl_exp) & FPBits::FRACTION_MASK) != 0) {
+    *res = T(0.0);
+    return true;
+  }
+
+  using StorageType = typename FPBits::StorageType;
+  StorageType v(pl_bits.get_explicit_mantissa() >> (FPBits::SIG_LEN - pl_exp));
+  *res = FPBits::quiet_nan(Sign::POS, v).get_val();
+  return false;
+}
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 

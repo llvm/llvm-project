@@ -575,6 +575,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.rintf16
     libc.src.math.roundf16
     libc.src.math.roundevenf16
+    libc.src.math.setpayloadf16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
     libc.src.math.truncf16
