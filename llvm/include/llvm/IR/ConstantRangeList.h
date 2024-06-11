@@ -33,13 +33,18 @@ class [[nodiscard]] ConstantRangeList {
 public:
   ConstantRangeList() = default;
   ConstantRangeList(ArrayRef<ConstantRange> RangesRef) {
+    assert(isOrderedRanges(RangesRef));
     for (const ConstantRange &R : RangesRef) {
       assert(R.getBitWidth() == getBitWidth());
       Ranges.push_back(R);
     }
   }
+
+  // Return true if the ranges are non-overlapping and increasing.
+  static bool isOrderedRanges(ArrayRef<ConstantRange> RangesRef);
   static std::optional<ConstantRangeList>
   getConstantRangeList(ArrayRef<ConstantRange> RangesRef);
+
   SmallVectorImpl<ConstantRange>::iterator begin() { return Ranges.begin(); }
   SmallVectorImpl<ConstantRange>::iterator end() { return Ranges.end(); }
   SmallVectorImpl<ConstantRange>::const_iterator begin() const {

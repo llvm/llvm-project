@@ -11,25 +11,27 @@
 
 using namespace llvm;
 
-std::optional<ConstantRangeList>
-ConstantRangeList::getConstantRangeList(ArrayRef<ConstantRange> RangesRef) {
+bool ConstantRangeList::isOrderedRanges(ArrayRef<ConstantRange> RangesRef) {
   if (RangesRef.empty())
-    return ConstantRangeList();
+    return true;
   auto Range = RangesRef[0];
   if (Range.getLower().sge(Range.getUpper()))
-    return std::nullopt;
-  if (RangesRef.size() == 1)
-    return ConstantRangeList(RangesRef);
+    return false;
   for (unsigned i = 1; i < RangesRef.size(); i++) {
     auto CurRange = RangesRef[i];
     auto PreRange = RangesRef[i - 1];
-    if (CurRange.getLower().sge(CurRange.getUpper()))
-      return std::nullopt;
-    if (CurRange.getLower().sle(PreRange.getLower()))
-      return std::nullopt;
-    if (CurRange.getLower().sle(PreRange.getUpper()))
-      return std::nullopt;
+    if (CurRange.getLower().sge(CurRange.getUpper()) ||
+        CurRange.getLower().sle(PreRange.getLower()) ||
+        CurRange.getLower().sle(PreRange.getUpper()))
+      return false;
   }
+  return true;
+}
+
+std::optional<ConstantRangeList>
+ConstantRangeList::getConstantRangeList(ArrayRef<ConstantRange> RangesRef) {
+  if (!isOrderedRanges(RangesRef))
+    return std::nullopt;
   return ConstantRangeList(RangesRef);
 }
 

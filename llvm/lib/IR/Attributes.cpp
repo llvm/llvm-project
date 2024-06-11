@@ -200,6 +200,7 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
   ID.AddInteger(CRL.size());
+  ID.AddInteger(CRL.getBitWidth());
   for (auto &CR : CRL) {
     CR.getLower().Profile(ID);
     CR.getUpper().Profile(ID);

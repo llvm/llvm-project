@@ -138,6 +138,7 @@ public:
                       const ConstantRangeList &CRL) {
     ID.AddInteger(Kind);
     ID.AddInteger(CRL.size());
+    ID.AddInteger(CRL.getBitWidth());
     for (auto &CR : CRL) {
       CR.getLower().Profile(ID);
       CR.getUpper().Profile(ID);

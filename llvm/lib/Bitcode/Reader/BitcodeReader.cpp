@@ -861,7 +861,7 @@ private:
 
   Expected<ConstantRange>
   readBitWidthAndConstantRange(ArrayRef<uint64_t> Record, unsigned &OpNum) {
-    if (Record.size() - OpNum < 3)
+    if (Record.size() - OpNum < 1)
       return error("Too few records for range");
     unsigned BitWidth = Record[OpNum++];
     return readConstantRange(Record, OpNum, BitWidth);
