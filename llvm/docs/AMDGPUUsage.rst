@@ -5977,7 +5977,7 @@ Fence and Address Spaces
 LLVM fences do not have address space information, thus, fence
 codegen usually needs to conservatively synchronize all address spaces.
 
-In the case of OpenCL, where fences only needs to synchronize
+In the case of OpenCL, where fences only need to synchronize
 user-specified address spaces, this can result in extra unnecessary waits.
 For instance, a fence that is supposed to only synchronize local memory will
 also have to wait on all global memory operations, which is unnecessary.
