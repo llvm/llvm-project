@@ -88,13 +88,6 @@ class AMDGPUCompiler {
   DataAction *ActionInfo;
   DataSet *InSet;
   amd_comgr_data_set_t OutSetT;
-  /// User supplied target triple.
-  std::string Triple;
-  /// User supplied target CPU.
-  std::string CPU;
-  /// User supplied target GPU Arch.
-  std::string GPUArch;
-  std::string OffloadArch;
   /// ROCM include Path
   std::string ROCMIncludePath;
   /// HIP and Clang Include Paths

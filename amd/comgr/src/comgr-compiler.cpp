@@ -1003,21 +1003,21 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
   if (auto Status = parseTargetIdentifier(IdentStr, Ident)) {
     return Status;
   }
-  Triple = (Twine(Ident.Arch) + "-" + Ident.Vendor + "-" + Ident.OS).str();
 
-  GPUArch = Twine(Ident.Processor).str();
+  std::string GPUArch = Twine(Ident.Processor).str();
   if (!Ident.Features.empty()) {
     GPUArch += ":" + join(Ident.Features, ":");
   }
 
   if (CompilingSrc && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
-    OffloadArch = (Twine("--offload-arch=") + GPUArch).str();
-    Args.push_back(OffloadArch.c_str());
+    // OffloadArch
+    Args.push_back(Saver.save(Twine("--offload-arch=") + GPUArch).data());
   } else {
-    CPU = (Twine("-mcpu=") + GPUArch).str();
+    // Triple and CPU
     Args.push_back("-target");
-    Args.push_back(Triple.c_str());
-    Args.push_back(CPU.c_str());
+    Args.push_back(Saver.save(Twine(Ident.Arch) + "-" + Ident.Vendor + "-" +
+                              Ident.OS).data());
+    Args.push_back(Saver.save(Twine("-mcpu=") + GPUArch).data());
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
