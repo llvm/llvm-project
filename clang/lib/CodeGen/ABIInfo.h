@@ -35,6 +35,7 @@ class CGFunctionInfo;
 class CodeGenFunction;
 class CodeGenTypes;
 class RValue;
+class AggValueSlot;
 
 // FIXME: All of this stuff should be part of the target interface
 // somehow. It is currently here because it is not clear how to factor
@@ -77,7 +78,8 @@ public:
   // VAArg handling it has to be at this level; there is no way to
   // abstract this out.
   virtual RValue EmitVAArg(CodeGen::CodeGenFunction &CGF,
-                           CodeGen::Address VAListAddr, QualType Ty) const = 0;
+                           CodeGen::Address VAListAddr, QualType Ty,
+                           AggValueSlot Slot) const = 0;
 
   bool isAndroid() const;
   bool isOHOSFamily() const;
@@ -85,7 +87,8 @@ public:
   /// Emit the target dependent code to load a value of
   /// \arg Ty from the \c __builtin_ms_va_list pointed to by \arg VAListAddr.
   virtual RValue EmitMSVAArg(CodeGen::CodeGenFunction &CGF,
-                             CodeGen::Address VAListAddr, QualType Ty) const;
+                             CodeGen::Address VAListAddr, QualType Ty,
+                             AggValueSlot Slot) const;
 
   virtual bool isHomogeneousAggregateBaseType(QualType Ty) const;
 

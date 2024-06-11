@@ -48,8 +48,8 @@ public:
                                   int &ArgFPRsLeft) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   ABIArgInfo extendType(QualType Ty) const;
 
@@ -490,14 +490,15 @@ ABIArgInfo RISCVABIInfo::classifyReturnType(QualType RetTy) const {
 }
 
 RValue RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                               QualType Ty) const {
+                               QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(XLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true)) {
     Address Addr = Address(CGF.Builder.CreateLoad(VAListAddr),
                            CGF.ConvertTypeForMem(Ty), SlotSize);
-    return RValue::getAggregate(Addr);
+
+    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, Ty), Slot);
   }
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
@@ -513,7 +514,7 @@ RValue RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   bool IsIndirect = TInfo.Width > 2 * SlotSize;
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TInfo,
-                          SlotSize, /*AllowHigherAlign=*/true);
+                          SlotSize, /*AllowHigherAlign=*/true, Slot);
 }
 
 ABIArgInfo RISCVABIInfo::extendType(QualType Ty) const {

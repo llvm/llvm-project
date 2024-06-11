@@ -52,9 +52,11 @@ public:
   }
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override {
-    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(
-        EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty));
+                   QualType Ty, AggValueSlot Slot) const override {
+    return CGF.EmitLoadOfAnyValue(
+        CGF.MakeAddrLValue(
+            EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty),
+        Slot);
   }
 };
 

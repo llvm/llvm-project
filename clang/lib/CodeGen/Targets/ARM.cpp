@@ -81,8 +81,8 @@ private:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   llvm::CallingConv::ID getLLVMDefaultCC() const;
   llvm::CallingConv::ID getABIDefaultCC() const;
@@ -754,7 +754,7 @@ bool ARMABIInfo::isEffectivelyAAPCS_VFP(unsigned callConvention,
 }
 
 RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                             QualType Ty) const {
+                             QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(4);
 
   // Empty records are ignored for parameter passing purposes.
@@ -762,7 +762,9 @@ RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
     auto *Load = CGF.Builder.CreateLoad(VAListAddr);
     Address Addr = Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-    return RValue::getAggregate(Addr);
+    LValue LV = CGF.MakeAddrLValue(Addr, Ty);
+    CGF.EmitAggFinalDestCopy(Ty, Slot, LV, CodeGenFunction::EVK_RValue);
+    return Slot.asRValue();
   }
 
   CharUnits TySize = getContext().getTypeSizeInChars(Ty);
@@ -799,8 +801,8 @@ RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   TypeInfoChars TyInfo(TySize, TyAlignForABI, AlignRequirementKind::None);
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo,
-                          SlotSize, /*AllowHigherAlign*/ true);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect, TyInfo, SlotSize,
+                          /*AllowHigherAlign*/ true, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo>

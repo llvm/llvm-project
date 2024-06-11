@@ -126,8 +126,8 @@ public:
       I.info = classifyArgumentType(I.type);
   }
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -237,7 +237,7 @@ CharUnits AIXABIInfo::getParamTypeAlignment(QualType Ty) const {
 }
 
 RValue AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                             QualType Ty) const {
+                             QualType Ty, AggValueSlot Slot) const {
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
   TypeInfo.Align = getParamTypeAlignment(Ty);
@@ -258,7 +258,7 @@ RValue AIXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
-                          SlotSize, /*AllowHigher*/ true);
+                          SlotSize, /*AllowHigher*/ true, Slot);
 }
 
 bool AIXTargetCodeGenInfo::initDwarfEHRegSizeTable(
@@ -346,7 +346,7 @@ public:
   }
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override;
+                   QualType Ty, AggValueSlot Slot) const override;
 };
 
 class PPC32TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -424,7 +424,7 @@ ABIArgInfo PPC32_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
 // TODO: this implementation is now likely redundant with
 // DefaultABIInfo::EmitVAArg.
 RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
-                                     QualType Ty) const {
+                                     QualType Ty, AggValueSlot Slot) const {
   if (getTarget().getTriple().isOSDarwin()) {
     auto TI = getContext().getTypeInfoInChars(Ty);
     TI.Align = getParamTypeAlignment(Ty);
@@ -432,7 +432,7 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
     CharUnits SlotSize = CharUnits::fromQuantity(4);
     return emitVoidPtrVAArg(CGF, VAList, Ty,
                             classifyArgumentType(Ty).isIndirect(), TI, SlotSize,
-                            /*AllowHigherAlign=*/true);
+                            /*AllowHigherAlign=*/true, Slot);
   }
 
   const unsigned OverflowLimit = 8;
@@ -574,7 +574,7 @@ RValue PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
                      getContext().getTypeAlignInChars(Ty));
   }
 
-  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Result, Ty));
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Result, Ty), Slot);
 }
 
 bool PPC32TargetCodeGenInfo::isStructReturnInRegABI(
@@ -655,8 +655,8 @@ public:
     }
   }
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class PPC64_SVR4_TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -956,7 +956,7 @@ PPC64_SVR4_ABIInfo::classifyReturnType(QualType RetTy) const {
 
 // Based on ARMABIInfo::EmitVAArg, adjusted for 64-bit machine.
 RValue PPC64_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                     QualType Ty) const {
+                                     QualType Ty, AggValueSlot Slot) const {
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
   TypeInfo.Align = getParamTypeAlignment(Ty);
 
@@ -988,7 +988,7 @@ RValue PPC64_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // types this way, and so right-alignment only applies to fundamental types.
   // So on PPC64, we must force the use of right-alignment even for aggregates.
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
-                          SlotSize, /*AllowHigher*/ true,
+                          SlotSize, /*AllowHigher*/ true, Slot,
                           /*ForceRightAdjust*/ true);
 }
 

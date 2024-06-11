@@ -40,7 +40,7 @@ bool ABIInfo::isOHOSFamily() const {
 }
 
 RValue ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                            QualType Ty) const {
+                            QualType Ty, AggValueSlot Slot) const {
   return RValue::getIgnored();
 }
 

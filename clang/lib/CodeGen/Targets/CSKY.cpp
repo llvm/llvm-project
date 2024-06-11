@@ -33,8 +33,8 @@ public:
                                   bool isReturnType = false) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 } // end anonymous namespace
@@ -58,20 +58,20 @@ void CSKYABIInfo::computeInfo(CGFunctionInfo &FI) const {
 }
 
 RValue CSKYABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType Ty) const {
+                              QualType Ty, AggValueSlot Slot) const {
   CharUnits SlotSize = CharUnits::fromQuantity(XLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true)) {
     Address Addr = Address(CGF.Builder.CreateLoad(VAListAddr),
                            CGF.ConvertTypeForMem(Ty), SlotSize);
-    return RValue::getAggregate(Addr);
+    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, Ty), Slot);
   }
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, false, TInfo, SlotSize,
-                          /*AllowHigherAlign=*/true);
+                          /*AllowHigherAlign=*/true, Slot);
 }
 
 ABIArgInfo CSKYABIInfo::classifyArgumentType(QualType Ty, int &ArgGPRsLeft,

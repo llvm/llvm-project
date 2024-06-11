@@ -72,9 +72,11 @@ void DefaultABIInfo::computeInfo(CGFunctionInfo &FI) const {
 }
 
 RValue DefaultABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                 QualType Ty) const {
-  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(
-      EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty));
+                                 QualType Ty, AggValueSlot Slot) const {
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(
+          EmitVAArgInstr(CGF, VAListAddr, Ty, classifyArgumentType(Ty)), Ty),
+      Slot);
 }
 
 ABIArgInfo CodeGen::coerceToIntArray(QualType Ty, ASTContext &Context,
@@ -204,7 +206,8 @@ RValue CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                  QualType ValueTy, bool IsIndirect,
                                  TypeInfoChars ValueInfo,
                                  CharUnits SlotSizeAndAlign,
-                                 bool AllowHigherAlign, bool ForceRightAdjust) {
+                                 bool AllowHigherAlign, AggValueSlot Slot,
+                                 bool ForceRightAdjust) {
   // The size and alignment of the value that was passed directly.
   CharUnits DirectSize, DirectAlign;
   if (IsIndirect) {
@@ -230,7 +233,7 @@ RValue CodeGen::emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Addr = Address(CGF.Builder.CreateLoad(Addr), ElementTy, ValueInfo.Align);
   }
 
-  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, ValueTy));
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, ValueTy), Slot);
 }
 
 Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,

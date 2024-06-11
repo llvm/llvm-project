@@ -1325,17 +1325,13 @@ void AggExprEmitter::VisitChooseExpr(const ChooseExpr *CE) {
 
 void AggExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
   Address ArgValue = Address::invalid();
-  RValue Res = CGF.EmitVAArg(VE, ArgValue);
+  CGF.EmitVAArg(VE, ArgValue, Dest);
 
   // If EmitVAArg fails, emit an error.
   if (!ArgValue.isValid()) {
     CGF.ErrorUnsupported(VE, "aggregate va_arg expression");
     return;
   }
-
-  LValue ResLV = CGF.MakeAddrLValue(Res.getAggregateAddress(), VE->getType());
-  CGF.EmitAggFinalDestCopy(VE->getType(), Dest, ResLV,
-                           CodeGenFunction::EVK_RValue);
 }
 
 void AggExprEmitter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {

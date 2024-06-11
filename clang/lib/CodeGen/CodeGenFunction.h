@@ -3016,7 +3016,8 @@ public:
   /// \returns A pointer to the argument.
   // FIXME: We should be able to get rid of this method and use the va_arg
   // instruction in LLVM instead once it works well enough.
-  RValue EmitVAArg(VAArgExpr *VE, Address &VAListAddr);
+  RValue EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
+                   AggValueSlot Slot = AggValueSlot::ignored());
 
   /// emitArrayLength - Compute the length of an array, even if it's a
   /// VLA, and drill down to the base element type.
@@ -4218,7 +4219,9 @@ public:
   RValue EmitLoadOfGlobalRegLValue(LValue LV);
 
   /// Like EmitLoadOfLValue but also handles complex and aggregate types.
-  RValue EmitLoadOfAnyValue(LValue V, SourceLocation Loc = {});
+  RValue EmitLoadOfAnyValue(LValue V,
+                            AggValueSlot Slot = AggValueSlot::ignored(),
+                            SourceLocation Loc = {});
 
   /// EmitStoreThroughLValue - Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type

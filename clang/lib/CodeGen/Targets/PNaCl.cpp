@@ -27,8 +27,8 @@ class PNaClABIInfo : public ABIInfo {
   ABIArgInfo classifyArgumentType(QualType RetTy) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 class PNaClTargetCodeGenInfo : public TargetCodeGenInfo {
@@ -46,15 +46,17 @@ void PNaClABIInfo::computeInfo(CGFunctionInfo &FI) const {
 }
 
 RValue PNaClABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                               QualType Ty) const {
+                               QualType Ty, AggValueSlot Slot) const {
   // The PNaCL ABI is a bit odd, in that varargs don't use normal
   // function classification. Structs get passed directly for varargs
   // functions, through a rewriting transform in
   // pnacl-llvm/lib/Transforms/NaCl/ExpandVarArgs.cpp, which allows
   // this target to actually support a va_arg instructions with an
   // aggregate type, unlike other targets.
-  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(
-      EmitVAArgInstr(CGF, VAListAddr, Ty, ABIArgInfo::getDirect()), Ty));
+  return CGF.EmitLoadOfAnyValue(
+      CGF.MakeAddrLValue(
+          EmitVAArgInstr(CGF, VAListAddr, Ty, ABIArgInfo::getDirect()), Ty),
+      Slot);
 }
 
 /// Classify argument of given type \p Ty.

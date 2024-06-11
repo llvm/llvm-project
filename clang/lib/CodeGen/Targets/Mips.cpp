@@ -34,8 +34,8 @@ public:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType RetTy, uint64_t &Offset) const;
   void computeInfo(CGFunctionInfo &FI) const override;
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
   ABIArgInfo extendType(QualType Ty) const;
 };
 
@@ -347,7 +347,7 @@ void MipsABIInfo::computeInfo(CGFunctionInfo &FI) const {
 }
 
 RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                              QualType OrigTy) const {
+                              QualType OrigTy, AggValueSlot Slot) const {
   QualType Ty = OrigTy;
 
   // Integer arguments are promoted to 32-bit on O32 and 64-bit on N32/N64.
@@ -374,7 +374,7 @@ RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits ArgSlotSize = CharUnits::fromQuantity(MinABIStackAlignInBytes);
 
   RValue Res = emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*indirect*/ false, TyInfo,
-                                ArgSlotSize, /*AllowHigherAlign*/ true);
+                                ArgSlotSize, /*AllowHigherAlign*/ true, Slot);
 
   // If there was a promotion, "unpromote".
   // TODO: can we just use a pointer into a subset of the original slot?

@@ -2161,7 +2161,8 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
   return RValue::get(CGF.EmitLoadOfScalar(LV, Loc));
 }
 
-RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, SourceLocation Loc) {
+RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,
+                                           SourceLocation Loc) {
   QualType Ty = LV.getType();
   switch (getEvaluationKind(Ty)) {
   case TEK_Scalar:
@@ -2169,7 +2170,8 @@ RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, SourceLocation Loc) {
   case TEK_Complex:
     return RValue::getComplex(EmitLoadOfComplex(LV, Loc));
   case TEK_Aggregate:
-    return RValue::getAggregate(LV.getAddress());
+    EmitAggFinalDestCopy(Ty, Slot, LV, EVK_RValue);
+    return Slot.asRValue();
   }
   llvm_unreachable("bad evaluation kind");
 }
