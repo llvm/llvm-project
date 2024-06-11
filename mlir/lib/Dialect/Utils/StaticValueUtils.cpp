@@ -248,7 +248,7 @@ std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
   if (!stepConstant)
     return std::nullopt;
 
-  return llvm::ceilDiv(*ubConstant - *lbConstant, *stepConstant);
+  return llvm::divideCeilSigned(*ubConstant - *lbConstant, *stepConstant);
 }
 
 bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets) {

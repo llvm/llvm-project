@@ -434,22 +434,22 @@ TEST(MathExtras, IsShiftedInt) {
   EXPECT_FALSE((isShiftedInt<6, 10>(int64_t(1) << 15)));
 }
 
-TEST(MathExtras, CeilDivTest) {
-  EXPECT_EQ(ceilDiv(14, 3), 5);
-  EXPECT_EQ(ceilDiv(14, -3), -4);
-  EXPECT_EQ(ceilDiv(-14, -3), 5);
-  EXPECT_EQ(ceilDiv(-14, 3), -4);
-  EXPECT_EQ(ceilDiv(0, 3), 0);
-  EXPECT_EQ(ceilDiv(0, -3), 0);
+TEST(MathExtras, DivideCeilSigned) {
+  EXPECT_EQ(divideCeilSigned(14, 3), 5);
+  EXPECT_EQ(divideCeilSigned(14, -3), -4);
+  EXPECT_EQ(divideCeilSigned(-14, -3), 5);
+  EXPECT_EQ(divideCeilSigned(-14, 3), -4);
+  EXPECT_EQ(divideCeilSigned(0, 3), 0);
+  EXPECT_EQ(divideCeilSigned(0, -3), 0);
 }
 
-TEST(MathExtras, FloorDivTest) {
-  EXPECT_EQ(floorDiv(14, 3), 4);
-  EXPECT_EQ(floorDiv(14, -3), -5);
-  EXPECT_EQ(floorDiv(-14, -3), 4);
-  EXPECT_EQ(floorDiv(-14, 3), -5);
-  EXPECT_EQ(floorDiv(0, 3), 0);
-  EXPECT_EQ(floorDiv(0, -3), 0);
+TEST(MathExtras, DivideFloorSigned) {
+  EXPECT_EQ(divideFloorSigned(14, 3), 4);
+  EXPECT_EQ(divideFloorSigned(14, -3), -5);
+  EXPECT_EQ(divideFloorSigned(-14, -3), 4);
+  EXPECT_EQ(divideFloorSigned(-14, 3), -5);
+  EXPECT_EQ(divideFloorSigned(0, 3), 0);
+  EXPECT_EQ(divideFloorSigned(0, -3), 0);
 }
 
 template <typename T> class OverflowTest : public ::testing::Test {};

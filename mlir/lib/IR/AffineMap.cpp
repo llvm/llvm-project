@@ -27,8 +27,8 @@
 
 using namespace mlir;
 
-using llvm::ceilDiv;
-using llvm::floorDiv;
+using llvm::divideCeilSigned;
+using llvm::divideFloorSigned;
 using llvm::mod;
 
 namespace {
@@ -77,7 +77,7 @@ private:
               hasPoison_ = true;
               return std::nullopt;
             }
-            return floorDiv(lhs, rhs);
+            return divideFloorSigned(lhs, rhs);
           });
     case AffineExprKind::CeilDiv:
       return constantFoldBinExpr(
@@ -86,7 +86,7 @@ private:
               hasPoison_ = true;
               return std::nullopt;
             }
-            return ceilDiv(lhs, rhs);
+            return divideCeilSigned(lhs, rhs);
           });
     case AffineExprKind::Constant:
       return cast<AffineConstantExpr>(expr).getValue();

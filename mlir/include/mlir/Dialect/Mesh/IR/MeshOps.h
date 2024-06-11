@@ -114,7 +114,7 @@ inline int64_t shardDimension(int64_t dimSize, int64_t shardCount) {
     return ShapedType::kDynamic;
 
   assert(dimSize % shardCount == 0);
-  return llvm::ceilDiv(dimSize, shardCount);
+  return llvm::divideCeilSigned(dimSize, shardCount);
 }
 
 // Get the size of an unsharded dimension.

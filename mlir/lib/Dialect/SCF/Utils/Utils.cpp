@@ -382,7 +382,7 @@ LogicalResult mlir::loopUnrollByFactor(
     int64_t stepCst = stepCstOp.value();
     assert(lbCst >= 0 && ubCst >= 0 && stepCst >= 0 &&
            "expected positive loop bounds and step");
-    int64_t tripCount = llvm::ceilDiv(ubCst - lbCst, stepCst);
+    int64_t tripCount = llvm::divideCeilSigned(ubCst - lbCst, stepCst);
 
     if (unrollFactor == 1) {
       if (tripCount == 1 && failed(forOp.promoteIfSingleIteration(rewriter)))

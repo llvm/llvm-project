@@ -33,8 +33,8 @@ namespace presburger {
 /// explict call to mlir::ceilDiv would be required. These using declarations
 /// allow overload resolution to transparently call the right function.
 using ::llvm::ArrayRef;
-using ::llvm::ceilDiv;
-using ::llvm::floorDiv;
+using ::llvm::divideCeilSigned;
+using ::llvm::divideFloorSigned;
 using ::llvm::mod;
 
 namespace detail {
@@ -377,7 +377,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt ceilDiv(const MPInt &lhs, const MPInt &rhs) {
   if (LLVM_LIKELY(lhs.isSmall() && rhs.isSmall())) {
     if (LLVM_UNLIKELY(detail::divWouldOverflow(lhs.getSmall(), rhs.getSmall())))
       return -lhs;
-    return MPInt(ceilDiv(lhs.getSmall(), rhs.getSmall()));
+    return MPInt(divideCeilSigned(lhs.getSmall(), rhs.getSmall()));
   }
   return MPInt(ceilDiv(detail::SlowMPInt(lhs), detail::SlowMPInt(rhs)));
 }
@@ -386,7 +386,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt floorDiv(const MPInt &lhs,
   if (LLVM_LIKELY(lhs.isSmall() && rhs.isSmall())) {
     if (LLVM_UNLIKELY(detail::divWouldOverflow(lhs.getSmall(), rhs.getSmall())))
       return -lhs;
-    return MPInt(floorDiv(lhs.getSmall(), rhs.getSmall()));
+    return MPInt(divideFloorSigned(lhs.getSmall(), rhs.getSmall()));
   }
   return MPInt(floorDiv(detail::SlowMPInt(lhs), detail::SlowMPInt(rhs)));
 }

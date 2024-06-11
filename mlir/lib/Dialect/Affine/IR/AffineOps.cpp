@@ -31,8 +31,8 @@
 using namespace mlir;
 using namespace mlir::affine;
 
-using llvm::ceilDiv;
-using llvm::floorDiv;
+using llvm::divideCeilSigned;
+using llvm::divideFloorSigned;
 using llvm::mod;
 
 #define DEBUG_TYPE "affine-ops"
@@ -828,19 +828,19 @@ static void simplifyExprAndOperands(AffineExpr &expr, unsigned numDims,
     // lhs floordiv c is a single value lhs is bounded in a range `c` that has
     // the same quotient.
     if (binExpr.getKind() == AffineExprKind::FloorDiv &&
-        floorDiv(lhsLbConstVal, rhsConstVal) ==
-            floorDiv(lhsUbConstVal, rhsConstVal)) {
-      expr =
-          getAffineConstantExpr(floorDiv(lhsLbConstVal, rhsConstVal), context);
+        divideFloorSigned(lhsLbConstVal, rhsConstVal) ==
+            divideFloorSigned(lhsUbConstVal, rhsConstVal)) {
+      expr = getAffineConstantExpr(
+          divideFloorSigned(lhsLbConstVal, rhsConstVal), context);
       return;
     }
     // lhs ceildiv c is a single value if the entire range has the same ceil
     // quotient.
     if (binExpr.getKind() == AffineExprKind::CeilDiv &&
-        ceilDiv(lhsLbConstVal, rhsConstVal) ==
-            ceilDiv(lhsUbConstVal, rhsConstVal)) {
-      expr =
-          getAffineConstantExpr(ceilDiv(lhsLbConstVal, rhsConstVal), context);
+        divideCeilSigned(lhsLbConstVal, rhsConstVal) ==
+            divideCeilSigned(lhsUbConstVal, rhsConstVal)) {
+      expr = getAffineConstantExpr(divideCeilSigned(lhsLbConstVal, rhsConstVal),
+                                   context);
       return;
     }
     // lhs mod c is lhs if the entire range has quotient 0 w.r.t the rhs.

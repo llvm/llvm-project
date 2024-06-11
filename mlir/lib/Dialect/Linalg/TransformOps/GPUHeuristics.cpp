@@ -76,7 +76,7 @@ transform::gpu::CopyMappingInfo::CopyMappingInfo(MLIRContext *ctx,
       llvm::map_range(llvm::zip(copySizes, this->numThreads), [](auto &&pair) {
         int64_t size, numThreads;
         std::tie(size, numThreads) = pair;
-        return llvm::ceilDiv(size, numThreads);
+        return llvm::divideCeilSigned(size, numThreads);
       }));
   SmallVector<Attribute> allThreadMappings{linearId2(ctx), linearId1(ctx),
                                            linearId0(ctx)};

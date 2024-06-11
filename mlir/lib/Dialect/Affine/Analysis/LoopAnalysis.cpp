@@ -47,8 +47,8 @@ void mlir::affine::getTripCountMapAndOperands(
     loopSpan = ub - lb;
     if (loopSpan < 0)
       loopSpan = 0;
-    *tripCountMap =
-        AffineMap::getConstantMap(llvm::ceilDiv(loopSpan, step), context);
+    *tripCountMap = AffineMap::getConstantMap(
+        llvm::divideCeilSigned(loopSpan, step), context);
     tripCountOperands->clear();
     return;
   }
