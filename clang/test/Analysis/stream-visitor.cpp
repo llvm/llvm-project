@@ -40,7 +40,7 @@ void expectedClose(FILE *f) {
     printf("%s", log);
     fclose(f);
   }
-} // expected-note{{Returning without freeing stream object or storing the pointer for later release}}
+} // expected-note{{Returning without freeing stream object or storing it for later release}}
 
 void f() {
   FILE *f = fopen("input.txt", "w"); // expected-note{{Stream opened here}}
@@ -67,7 +67,7 @@ void sink(FILE *f) {
               // expected-note@-1 {{Taking false branch}}
     fclose(f);
   (void)Q;
-} // expected-note{{Returning without freeing stream object or storing the pointer for later release}}
+} // expected-note{{Returning without freeing stream object or storing it for later release}}
 
 void foo() {
   FILE *f = fopen("input.txt", "w"); // expected-note{{Stream opened here}}
