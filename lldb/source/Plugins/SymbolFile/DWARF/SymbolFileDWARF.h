@@ -461,8 +461,6 @@ protected:
   FindBlockContainingSpecification(const DWARFDIE &die,
                                    dw_offset_t spec_block_die_offset);
 
-  bool DIEDeclContextsMatch(const DWARFDIE &die1, const DWARFDIE &die2);
-
   bool ClassContainsSelector(const DWARFDIE &class_die, ConstString selector);
 
   /// Parse call site entries (DW_TAG_call_site), including any nested call site
