@@ -242,7 +242,7 @@ public:
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachinePostDominatorTree>();
+    AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -260,7 +260,7 @@ INITIALIZE_PASS_BEGIN(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                     false)
 
@@ -785,7 +785,7 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
     if (MDT)
       MDT->getBase().applyUpdates(DTUpdates);
     if (PDT)
-      PDT->getBase().applyUpdates(DTUpdates);
+      PDT->applyUpdates(DTUpdates);
 
     // Link blocks
     MachineInstr *MI =
@@ -1689,7 +1689,9 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   LIS = &getAnalysis<LiveIntervals>();
   auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
   MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
-  PDT = getAnalysisIfAvailable<MachinePostDominatorTree>();
+  auto *PDTWrapper =
+      getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
+  PDT = PDTWrapper ? &PDTWrapper->getPostDomTree() : nullptr;
 
   if (ST->isWave32()) {
     AndOpc = AMDGPU::S_AND_B32;
