@@ -1277,7 +1277,7 @@ private:
       TemplateDeclarationDepth--;
       if (CurrentToken &&
           (TemplateDeclarationDepth == 0 ||
-            !CurrentToken->isOneOf(tok::kw_typename, tok::kw_class))) {
+           !CurrentToken->isOneOf(tok::kw_typename, tok::kw_class))) {
         CurrentToken->Previous->ClosesTemplateDeclaration = true;
       }
       return true;
