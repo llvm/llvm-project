@@ -841,7 +841,7 @@ def EmitC_LValueLoadOp : EmitC_Op<"lvalue_load", [
                   "operand", "result",
                   "::llvm::cast<LValueType>($_self).getValue()">
 ]> {
-  let summary = "load an lvalue by assigning it to a local variable";
+  let summary = "Load an lvalue into an SSA value.";
   let description = [{}];
 
   let arguments = (ins 
