@@ -87,7 +87,6 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -13664,20 +13663,17 @@ QualType ASTContext::getCorrespondingSignedFixedPointType(QualType Ty) const {
   }
 }
 
-// Given a list of FMV features, return a concatenated list of the
-// corresponding backend features (which may contain duplicates).
-static std::vector<std::string> getFMVBackendFeaturesFor(
-    const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
-  std::vector<std::string> BackendFeats;
-  for (StringRef F : FMVFeatStrings) {
-    if (auto FMVExt = llvm::AArch64::parseArchExtension(F)) {
-      SmallVector<StringRef, 8> Feats;
-      FMVExt->DependentFeatures.split(Feats, ',', -1, false);
-      for (StringRef F : Feats)
-        BackendFeats.push_back(F.str());
-    }
-  }
-  return BackendFeats;
+std::vector<std::string> ASTContext::filterFunctionTargetVersionAttrs(
+    const TargetVersionAttr *TV) const {
+  assert(TV != nullptr);
+  llvm::SmallVector<StringRef, 8> Feats;
+  std::vector<std::string> ResFeats;
+  TV->getFeatures(Feats);
+  for (auto &Feature : Feats)
+    if (Target->validateCpuSupports(Feature.str()))
+      // Use '?' to mark features that came from TargetVersion.
+      ResFeats.push_back("?" + Feature.str());
+  return ResFeats;
 }
 
 ParsedTargetAttr
@@ -13712,12 +13708,10 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
 
     // Make a copy of the features as passed on the command line into the
     // beginning of the additional features from the function to override.
-    // AArch64 handles command line option features in parseTargetAttr().
-    if (!Target->getTriple().isAArch64())
-      ParsedAttr.Features.insert(
-          ParsedAttr.Features.begin(),
-          Target->getTargetOpts().FeaturesAsWritten.begin(),
-          Target->getTargetOpts().FeaturesAsWritten.end());
+    ParsedAttr.Features.insert(
+        ParsedAttr.Features.begin(),
+        Target->getTargetOpts().FeaturesAsWritten.begin(),
+        Target->getTargetOpts().FeaturesAsWritten.end());
 
     if (ParsedAttr.CPU != "" && Target->isValidCPUName(ParsedAttr.CPU))
       TargetCPU = ParsedAttr.CPU;
@@ -13738,31 +13732,32 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                     Target->getTargetOpts().FeaturesAsWritten.end());
     Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
   } else if (const auto *TC = FD->getAttr<TargetClonesAttr>()) {
+    std::vector<std::string> Features;
     if (Target->getTriple().isAArch64()) {
+      // TargetClones for AArch64
       llvm::SmallVector<StringRef, 8> Feats;
       TC->getFeatures(Feats, GD.getMultiVersionIndex());
-      std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
+      for (StringRef Feat : Feats)
+        if (Target->validateCpuSupports(Feat.str()))
+          // Use '?' to mark features that came from AArch64 TargetClones.
+          Features.push_back("?" + Feat.str());
       Features.insert(Features.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.begin(),
                       Target->getTargetOpts().FeaturesAsWritten.end());
-      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     } else {
-      std::vector<std::string> Features;
       StringRef VersionStr = TC->getFeatureStr(GD.getMultiVersionIndex());
       if (VersionStr.starts_with("arch="))
         TargetCPU = VersionStr.drop_front(sizeof("arch=") - 1);
       else if (VersionStr != "default")
         Features.push_back((StringRef{"+"} + VersionStr).str());
-      Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
     }
-  } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
-    llvm::SmallVector<StringRef, 8> Feats;
-    TV->getFeatures(Feats);
-    std::vector<std::string> Features = getFMVBackendFeaturesFor(Feats);
-    Features.insert(Features.begin(),
-                    Target->getTargetOpts().FeaturesAsWritten.begin(),
-                    Target->getTargetOpts().FeaturesAsWritten.end());
     Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Features);
+  } else if (const auto *TV = FD->getAttr<TargetVersionAttr>()) {
+    std::vector<std::string> Feats = filterFunctionTargetVersionAttrs(TV);
+    Feats.insert(Feats.begin(),
+                 Target->getTargetOpts().FeaturesAsWritten.begin(),
+                 Target->getTargetOpts().FeaturesAsWritten.end());
+    Target->initFeatureMap(FeatureMap, getDiagnostics(), TargetCPU, Feats);
   } else {
     FeatureMap = Target->getTargetOpts().FeatureMap;
   }
