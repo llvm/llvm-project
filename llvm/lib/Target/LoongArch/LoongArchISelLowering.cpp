@@ -946,7 +946,8 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
   if (DAG.getTarget().useEmulatedTLS())
-    DAG.getContext()->emitError("the emulated TLS is prohibited");
+    report_fatal_error("the emulated TLS is prohibited",
+                       /*GenCrashDiag=*/false);
 
   bool IsDesc = DAG.getTarget().useTLSDESC();
 

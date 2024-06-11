@@ -740,6 +740,15 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
       });
+
+  PB.registerRegClassFilterParsingCallback(
+      [](StringRef FilterName) -> RegClassFilterFunc {
+        if (FilterName == "sgpr")
+          return onlyAllocateSGPRs;
+        if (FilterName == "vgpr")
+          return onlyAllocateVGPRs;
+        return nullptr;
+      });
 }
 
 int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {

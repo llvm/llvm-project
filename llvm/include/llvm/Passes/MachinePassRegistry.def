@@ -133,6 +133,19 @@ MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
 MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 #undef MACHINE_FUNCTION_PASS
 
+#ifndef MACHINE_FUNCTION_PASS_WITH_PARAMS
+#define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
+                                          PARAMS)
+#endif
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "regallocfast", "RegAllocFast",
+    [](RegAllocFastPassOptions Opts) { return RegAllocFastPass(Opts); },
+    [PB = this](StringRef Params) {
+      return parseRegAllocFastPassOptions(*PB, Params);
+    },
+    "filter=reg-filter;no-clear-vregs")
+#undef MACHINE_FUNCTION_PASS_WITH_PARAMS
+
 // After a pass is converted to new pass manager, its entry should be moved from
 // dummy table to the normal one. For example, for a machine function pass,
 // DUMMY_MACHINE_FUNCTION_PASS to MACHINE_FUNCTION_PASS.
@@ -211,7 +224,6 @@ DUMMY_MACHINE_FUNCTION_PASS("processimpdefs", ProcessImplicitDefsPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog", PrologEpilogInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("prologepilog-code", PrologEpilogCodeInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-basic", RABasicPass)
-DUMMY_MACHINE_FUNCTION_PASS("ra-fast", RAFastPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-greedy", RAGreedyPass)
 DUMMY_MACHINE_FUNCTION_PASS("ra-pbqp", RAPBQPPass)
 DUMMY_MACHINE_FUNCTION_PASS("reg-usage-collector", RegUsageInfoCollectorPass)

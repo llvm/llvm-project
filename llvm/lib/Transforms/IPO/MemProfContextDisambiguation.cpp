@@ -402,7 +402,7 @@ public:
     ContextEdge(ContextNode *Callee, ContextNode *Caller, uint8_t AllocType,
                 DenseSet<uint32_t> ContextIds)
         : Callee(Callee), Caller(Caller), AllocTypes(AllocType),
-          ContextIds(ContextIds) {}
+          ContextIds(std::move(ContextIds)) {}
 
     DenseSet<uint32_t> &getContextIds() { return ContextIds; }
 
@@ -568,13 +568,13 @@ private:
   /// unioning their recorded alloc types.
   uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds);
 
-  /// Returns the alloction type of the intersection of the contexts of two
+  /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets), optimized for the case
   /// when Node1Ids is smaller than Node2Ids.
   uint8_t intersectAllocTypesImpl(const DenseSet<uint32_t> &Node1Ids,
                                   const DenseSet<uint32_t> &Node2Ids);
 
-  /// Returns the alloction type of the intersection of the contexts of two
+  /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets).
   uint8_t intersectAllocTypes(const DenseSet<uint32_t> &Node1Ids,
                               const DenseSet<uint32_t> &Node2Ids);
@@ -1127,15 +1127,15 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::connectNewNode(
       continue;
     }
     if (TowardsCallee) {
+      uint8_t NewAllocType = computeAllocType(NewEdgeContextIds);
       auto NewEdge = std::make_shared<ContextEdge>(
-          Edge->Callee, NewNode, computeAllocType(NewEdgeContextIds),
-          NewEdgeContextIds);
+          Edge->Callee, NewNode, NewAllocType, std::move(NewEdgeContextIds));
       NewNode->CalleeEdges.push_back(NewEdge);
       NewEdge->Callee->CallerEdges.push_back(NewEdge);
     } else {
+      uint8_t NewAllocType = computeAllocType(NewEdgeContextIds);
       auto NewEdge = std::make_shared<ContextEdge>(
-          NewNode, Edge->Caller, computeAllocType(NewEdgeContextIds),
-          NewEdgeContextIds);
+          NewNode, Edge->Caller, NewAllocType, std::move(NewEdgeContextIds));
       NewNode->CallerEdges.push_back(NewEdge);
       NewEdge->Caller->CalleeEdges.push_back(NewEdge);
     }
