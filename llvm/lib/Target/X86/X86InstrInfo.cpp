@@ -10324,7 +10324,8 @@ struct LDTLSCleanup : public MachineFunctionPass {
       return false;
     }
 
-    MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
+    MachineDominatorTree *DT =
+        &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
     return VisitNode(DT->getRootNode(), 0);
   }
 
@@ -10411,7 +10412,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
