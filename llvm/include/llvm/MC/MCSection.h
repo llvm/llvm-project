@@ -189,6 +189,7 @@ public:
 
   iterator end() { return Fragments.end(); }
   const_iterator end() const { return Fragments.end(); }
+  bool empty() const { return Fragments.empty(); }
 
   void addFragment(MCFragment &F) { Fragments.push_back(&F); }
 
