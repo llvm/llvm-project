@@ -88,6 +88,10 @@ enum class IterKind : uint8_t {
   kPad,
 };
 
+/// A `SparseIterationSpace` represents a sparse set of coordinates defined by
+/// (possibly multiple) levels of a specific sparse tensor.
+/// TODO: remove `SparseTensorLevel` and switch to SparseIterationSpace when
+/// feature complete.
 class SparseIterationSpace {
 public:
   SparseIterationSpace() = default;
@@ -345,7 +349,7 @@ std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(OpBuilder &b,
 std::unique_ptr<SparseTensorLevel> makeSparseTensorLevel(LevelType lt, Value sz,
                                                          ValueRange buffers,
                                                          unsigned tid, Level l);
-/// Helper function to create a simple SparseIterator object that iterate
+/// Helper function to create a simple SparseIterator object that iterates
 /// over the SparseTensorLevel.
 std::unique_ptr<SparseIterator> makeSimpleIterator(
     const SparseTensorLevel &stl,

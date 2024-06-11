@@ -154,7 +154,6 @@ struct LowerForeachToSCFPass
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     populateLowerForeachToSCFPatterns(patterns);
-
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
