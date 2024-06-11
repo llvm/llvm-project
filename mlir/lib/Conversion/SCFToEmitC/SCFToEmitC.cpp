@@ -84,7 +84,7 @@ static void assignValues(ValueRange values, SmallVector<Value> &variables,
 SmallVector<Value> loadValues(const SmallVector<Value> &variables,
                               PatternRewriter &rewriter, Location loc) {
   return llvm::map_to_vector<>(variables, [&](Value var) {
-    Type type = cast<emitc::LValueType>(var.getType()).getValue();
+    Type type = cast<emitc::LValueType>(var.getType()).getValueType();
     return rewriter.create<emitc::LValueLoadOp>(loc, type, var).getResult();
   });
 }
@@ -151,7 +151,7 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   lowerYield(resultVariables, rewriter,
              cast<scf::YieldOp>(loweredBody->getTerminator()));
 
-  // Copy iterArgs into results after the for loop.
+  // Load variables into SSA values after the for loop.
   SmallVector<Value> resultValues = loadValues(resultVariables, rewriter, loc);
 
   rewriter.replaceOp(forOp, resultValues);

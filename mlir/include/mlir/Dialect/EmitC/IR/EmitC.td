@@ -839,10 +839,14 @@ def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", [CExpression]> {
 def EmitC_LValueLoadOp : EmitC_Op<"lvalue_load", [
   TypesMatchWith<"result type matches value type of 'operand'",
                   "operand", "result",
-                  "::llvm::cast<LValueType>($_self).getValue()">
+                  "::llvm::cast<LValueType>($_self).getValueType()">
 ]> {
   let summary = "Load an lvalue into an SSA value.";
-  let description = [{}];
+  let description = [{
+    This operation loads the content of a modifiable lvalue into an SSA value. 
+    Modifications of the lvalue executed after the load are not observable on 
+    the produced value.
+  }];
 
   let arguments = (ins 
       Res<EmitC_LValueType, "", [MemRead<DefaultResource, 0, FullEffect>]>:$operand);
@@ -1198,7 +1202,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 
   let arguments = (ins 
       Res<EmitC_LValueType, "", [MemWrite<DefaultResource, 1, FullEffect>]>:$var,
-      Res<EmitCType, "", [MemRead<DefaultResource, 0, FullEffect>]>:$value);
+      EmitCType:$value);
   let results = (outs);
 
   let hasVerifier = 1;

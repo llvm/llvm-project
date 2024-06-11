@@ -1684,7 +1684,7 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
     return success();
   }
   if (auto lType = dyn_cast<emitc::LValueType>(type))
-    return emitType(loc, lType.getValue());
+    return emitType(loc, lType.getValueType());
   if (auto pType = dyn_cast<emitc::PointerType>(type)) {
     if (isa<ArrayType>(pType.getPointee()))
       return emitError(loc, "cannot emit pointer to array type ") << type;

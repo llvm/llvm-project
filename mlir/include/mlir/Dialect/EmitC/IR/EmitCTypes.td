@@ -91,13 +91,13 @@ def EmitC_LValueType : EmitC_Type<"LValue", "lvalue"> {
     Values of this type can be assigned to and their address can be taken.
   }];
 
-  let parameters = (ins "Type":$value);
+  let parameters = (ins "Type":$valueType);
   let builders = [
-    TypeBuilderWithInferredContext<(ins "Type":$value), [{
-      return $_get(value.getContext(), value);
+    TypeBuilderWithInferredContext<(ins "Type":$valueType), [{
+      return $_get(valueType.getContext(), valueType);
     }]>
   ];
-  let assemblyFormat = "`<` qualified($value) `>`";
+  let assemblyFormat = "`<` qualified($valueType) `>`";
   let genVerifyDecl = 1;
 }
 

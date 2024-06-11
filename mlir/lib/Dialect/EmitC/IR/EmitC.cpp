@@ -149,7 +149,7 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
 
   Type resultType = op->getResult(0).getType();
   if (auto lType = dyn_cast<LValueType>(resultType))
-    resultType = lType.getValue();
+    resultType = lType.getValueType();
   Type attrType = cast<TypedAttr>(value).getType();
 
   if (isPointerWideType(resultType) && attrType.isIndex())
@@ -229,7 +229,7 @@ LogicalResult emitc::AssignOp::verify() {
     return emitOpError() << "cannot assign to block argument";
 
   Type valueType = getValue().getType();
-  Type variableType = variable.getType().getValue();
+  Type variableType = variable.getType().getValueType();
   if (variableType != valueType)
     return emitOpError() << "requires value's type (" << valueType
                          << ") to match variable's type (" << variableType
@@ -862,7 +862,7 @@ LogicalResult emitc::SubscriptOp::verify() {
     }
     // Check element type.
     Type elementType = arrayType.getElementType();
-    Type resultType = getType().getValue();
+    Type resultType = getType().getValueType();
     if (elementType != resultType) {
       return emitOpError() << "on array operand requires element type ("
                            << elementType << ") and result type (" << resultType
@@ -889,7 +889,7 @@ LogicalResult emitc::SubscriptOp::verify() {
     }
     // Check pointee type.
     Type pointeeType = pointerType.getPointee();
-    Type resultType = getType().getValue();
+    Type resultType = getType().getValueType();
     if (pointeeType != resultType) {
       return emitOpError() << "on pointer operand requires pointee type ("
                            << pointeeType << ") and result type (" << resultType
@@ -1144,9 +1144,9 @@ GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
   // global has non-array type
   auto lvalueType = dyn_cast<LValueType>(resultType);
-  if (!lvalueType || lvalueType.getValue() != globalType)
+  if (!lvalueType || lvalueType.getValueType() != globalType)
     return emitOpError("on non-array type expects result inner type ")
-           << lvalueType.getValue() << " to match type " << globalType
+           << lvalueType.getValueType() << " to match type " << globalType
            << " of the global @" << getName();
   return success();
 }
