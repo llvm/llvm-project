@@ -1864,15 +1864,14 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
     if (EmptyFrag.getKind() != MCFragment::FT_Data)
       report_fatal_error(".init_array section should be aligned");
 
-    IT = std::next(IT);
-    const MCFragment &AlignFrag = *IT;
+    const MCFragment &AlignFrag = *EmptyFrag.getNext();
     if (AlignFrag.getKind() != MCFragment::FT_Align)
       report_fatal_error(".init_array section should be aligned");
     if (cast<MCAlignFragment>(AlignFrag).getAlignment() !=
         Align(is64Bit() ? 8 : 4))
       report_fatal_error(".init_array section should be aligned for pointers");
 
-    const MCFragment &Frag = *std::next(IT);
+    const MCFragment &Frag = *AlignFrag.getNext();
     if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
       report_fatal_error("only data supported in .init_array section");
 

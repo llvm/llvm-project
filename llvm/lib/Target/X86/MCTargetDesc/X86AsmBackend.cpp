@@ -530,7 +530,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
   if (!canPadInst(Inst, OS))
     return;
 
-  if (PendingBA && PendingBA->getNextNode() == OS.getCurrentFragment()) {
+  if (PendingBA && PendingBA->getNext() == OS.getCurrentFragment()) {
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction.
     //
@@ -978,8 +978,8 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
   // The layout is done. Mark every fragment as valid.
   for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
     MCSection &Section = *Layout.getSectionOrder()[i];
-    Layout.getFragmentOffset(&*Section.getFragmentList().rbegin());
-    Asm.computeFragmentSize(Layout, *Section.getFragmentList().rbegin());
+    Layout.getFragmentOffset(&*Section.curFragList()->Tail);
+    Asm.computeFragmentSize(Layout, *Section.curFragList()->Tail);
   }
 }
 

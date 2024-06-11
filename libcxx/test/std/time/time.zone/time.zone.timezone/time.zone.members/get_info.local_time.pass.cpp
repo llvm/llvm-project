@@ -12,7 +12,7 @@
 // XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 // Times out under HWASan
-// XFAIL: hwasan
+// UNSUPPORTED: hwasan
 
 // <chrono>
 
