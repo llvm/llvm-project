@@ -13,6 +13,7 @@
 
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
 
