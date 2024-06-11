@@ -35,73 +35,73 @@ using TypeBuilderFunc = mlir::Type (*)(mlir::MLIRContext *);
 
 /// Get the LLVM IR dialect model for building a particular C++ type, `T`.
 template <typename T>
-TypeBuilderFunc getModel();
+static TypeBuilderFunc getModel();
 
 template <>
-TypeBuilderFunc getModel<void *>() {
+constexpr TypeBuilderFunc getModel<void *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::LLVM::LLVMPointerType::get(context);
   };
 }
 template <>
-TypeBuilderFunc getModel<unsigned>() {
+constexpr TypeBuilderFunc getModel<unsigned>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, sizeof(unsigned) * 8);
   };
 }
 template <>
-TypeBuilderFunc getModel<int>() {
+constexpr TypeBuilderFunc getModel<int>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, sizeof(int) * 8);
   };
 }
 template <>
-TypeBuilderFunc getModel<unsigned long>() {
+constexpr TypeBuilderFunc getModel<unsigned long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, sizeof(unsigned long) * 8);
   };
 }
 template <>
-TypeBuilderFunc getModel<unsigned long long>() {
+constexpr TypeBuilderFunc getModel<unsigned long long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, sizeof(unsigned long long) * 8);
   };
 }
 template <>
-TypeBuilderFunc getModel<long long>() {
+constexpr TypeBuilderFunc getModel<long long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, sizeof(long long) * 8);
   };
 }
 template <>
-TypeBuilderFunc getModel<Fortran::ISO::CFI_rank_t>() {
+constexpr TypeBuilderFunc getModel<Fortran::ISO::CFI_rank_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context,
                                   sizeof(Fortran::ISO::CFI_rank_t) * 8);
   };
 }
 template <>
-TypeBuilderFunc getModel<Fortran::ISO::CFI_type_t>() {
+constexpr TypeBuilderFunc getModel<Fortran::ISO::CFI_type_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context,
                                   sizeof(Fortran::ISO::CFI_type_t) * 8);
   };
 }
 template <>
-TypeBuilderFunc getModel<long>() {
+constexpr TypeBuilderFunc getModel<long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, sizeof(long) * 8);
   };
 }
 template <>
-TypeBuilderFunc getModel<Fortran::ISO::CFI_dim_t>() {
+constexpr TypeBuilderFunc getModel<Fortran::ISO::CFI_dim_t>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     auto indexTy = getModel<Fortran::ISO::CFI_index_t>()(context);
     return mlir::LLVM::LLVMArrayType::get(indexTy, 3);
   };
 }
 template <>
-TypeBuilderFunc
+constexpr TypeBuilderFunc
 getModel<Fortran::ISO::cfi_internal::FlexibleArray<Fortran::ISO::CFI_dim_t>>() {
   return getModel<Fortran::ISO::CFI_dim_t>();
 }

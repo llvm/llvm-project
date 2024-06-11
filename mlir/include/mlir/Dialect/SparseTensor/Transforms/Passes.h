@@ -249,6 +249,12 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen);
 
 //===----------------------------------------------------------------------===//
+// Sparse Iteration Transform Passes
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass> createSparseSpaceCollapsePass();
+
+//===----------------------------------------------------------------------===//
 // Registration.
 //===----------------------------------------------------------------------===//
 

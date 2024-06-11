@@ -318,7 +318,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (DiscardResult)
       return this->discard(SubExpr);
 
-    std::optional<PrimType> FromT = classify(SubExpr->getType());
+    QualType SubExprTy = SubExpr->getType();
+    std::optional<PrimType> FromT = classify(SubExprTy);
     std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
       return false;
@@ -326,9 +327,14 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(isPtrType(*FromT));
     assert(isPtrType(*ToT));
     if (FromT == ToT) {
-      if (SubExpr->getType()->isVoidPointerType())
-        return this->visit(SubExpr) && this->emitVoidPtrCast(CE);
-      return this->delegate(SubExpr);
+      if (CE->getType()->isVoidPointerType())
+        return this->delegate(SubExpr);
+
+      if (!this->visit(SubExpr))
+        return false;
+      if (FromT == PT_Ptr)
+        return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), CE);
+      return true;
     }
 
     if (!this->visit(SubExpr))
@@ -1488,6 +1494,9 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     return false;
   }
 
+  if (!isa<FieldDecl>(Member))
+    return this->discard(Base) && this->visitDeclRef(Member, E);
+
   if (Initializing) {
     if (!this->delegate(Base))
       return false;
@@ -1497,19 +1506,16 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   }
 
   // Base above gives us a pointer on the stack.
-  if (const auto *FD = dyn_cast<FieldDecl>(Member)) {
-    const RecordDecl *RD = FD->getParent();
-    const Record *R = getRecord(RD);
-    if (!R)
-      return false;
-    const Record::Field *F = R->getField(FD);
-    // Leave a pointer to the field on the stack.
-    if (F->Decl->getType()->isReferenceType())
-      return this->emitGetFieldPop(PT_Ptr, F->Offset, E) && maybeLoadValue();
-    return this->emitGetPtrFieldPop(F->Offset, E) && maybeLoadValue();
-  }
-
-  return false;
+  const auto *FD = cast<FieldDecl>(Member);
+  const RecordDecl *RD = FD->getParent();
+  const Record *R = getRecord(RD);
+  if (!R)
+    return false;
+  const Record::Field *F = R->getField(FD);
+  // Leave a pointer to the field on the stack.
+  if (F->Decl->getType()->isReferenceType())
+    return this->emitGetFieldPop(PT_Ptr, F->Offset, E) && maybeLoadValue();
+  return this->emitGetPtrFieldPop(F->Offset, E) && maybeLoadValue();
 }
 
 template <class Emitter>
@@ -1680,6 +1686,17 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitObjCStringLiteral(
     const ObjCStringLiteral *E) {
   return this->delegate(E->getString());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitObjCEncodeExpr(const ObjCEncodeExpr *E) {
+  auto &A = Ctx.getASTContext();
+  std::string Str;
+  A.getObjCEncodingForType(E->getEncodedType(), Str);
+  StringLiteral *SL =
+      StringLiteral::Create(A, Str, StringLiteralKind::Ordinary,
+                            /*Pascal=*/false, E->getType(), E->getAtLoc());
+  return this->delegate(SL);
 }
 
 template <class Emitter>

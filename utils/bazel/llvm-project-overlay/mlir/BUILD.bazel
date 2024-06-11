@@ -420,6 +420,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/Interfaces.h",
         "include/mlir-c/Pass.h",
         "include/mlir-c/RegisterEverything.h",
+        "include/mlir-c/Rewrite.h",
         "include/mlir-c/Support.h",
         "include/mlir/CAPI/AffineExpr.h",
         "include/mlir/CAPI/AffineMap.h",
@@ -866,7 +867,10 @@ mlir_c_api_cc_library(
 
 mlir_c_api_cc_library(
     name = "CAPITransforms",
-    srcs = ["lib/CAPI/Transforms/Passes.cpp"],
+    srcs = [
+        "lib/CAPI/Transforms/Passes.cpp",
+        "lib/CAPI/Transforms/Rewrite.cpp",
+    ],
     hdrs = ["include/mlir-c/Transforms.h"],
     capi_deps = [
         ":CAPIIR",
@@ -876,7 +880,10 @@ mlir_c_api_cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":IR",
         ":Pass",
+        ":Rewrite",
+        ":TransformUtils",
         ":Transforms",
     ],
 )
@@ -939,6 +946,7 @@ cc_library(
     textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
     deps = [
         ":CAPIIRHeaders",
+        ":CAPITransformsHeaders",
         "@local_config_python//:python_headers",
         "@pybind11",
     ],
@@ -957,6 +965,7 @@ cc_library(
     textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
     deps = [
         ":CAPIIR",
+        ":CAPITransforms",
         "@local_config_python//:python_headers",
         "@pybind11",
     ],
@@ -981,6 +990,7 @@ MLIR_PYTHON_BINDINGS_SOURCES = [
     "lib/Bindings/Python/IRModule.cpp",
     "lib/Bindings/Python/IRTypes.cpp",
     "lib/Bindings/Python/Pass.cpp",
+    "lib/Bindings/Python/Rewrite.cpp",
 ]
 
 cc_library(
