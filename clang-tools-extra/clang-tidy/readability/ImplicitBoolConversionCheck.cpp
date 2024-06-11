@@ -50,7 +50,9 @@ StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
 
   case CK_PointerToBoolean:
   case CK_MemberPointerToBoolean: // Fall-through on purpose.
-    return Context.getLangOpts().CPlusPlus11 ? "nullptr" : "0";
+    return (Context.getLangOpts().CPlusPlus11 || Context.getLangOpts().C23)
+               ? "nullptr"
+               : "0";
 
   default:
     llvm_unreachable("Unexpected cast kind");
@@ -165,6 +167,12 @@ bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
 void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
                                 const ImplicitCastExpr *Cast,
                                 ASTContext &Context, StringRef OtherType) {
+  if (!Context.getLangOpts().CPlusPlus) {
+    Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(),
+                                       (Twine("(") + OtherType + ")").str());
+    return;
+  }
+
   const Expr *SubExpr = Cast->getSubExpr();
   const bool NeedParens = !isa<ParenExpr>(SubExpr->IgnoreImplicit());
   const bool NeedSpace = needsSpacePrefix(Cast->getBeginLoc(), Context);
@@ -267,6 +275,10 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto BoolXor =
       binaryOperator(hasOperatorName("^"), hasLHS(ImplicitCastFromBool),
                      hasRHS(ImplicitCastFromBool));
+  auto ComparisonInCall = allOf(
+      hasParent(callExpr()),
+      hasSourceExpression(binaryOperator(hasAnyOperatorName("==", "!="))));
+
   Finder->addMatcher(
       traverse(TK_AsIs,
                implicitCastExpr(
@@ -281,6 +293,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                        stmt(anyOf(ifStmt(), whileStmt()), has(declStmt())))),
                    // Exclude cases common to implicit cast to and from bool.
                    unless(ExceptionCases), unless(has(BoolXor)),
+                   // Exclude C23 cases common to implicit cast to bool.
+                   unless(ComparisonInCall),
                    // Retrieve also parent statement, to check if we need
                    // additional parens in replacement.
                    optionally(hasParent(stmt().bind("parentStmt"))),

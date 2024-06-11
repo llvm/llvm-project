@@ -765,6 +765,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fopenmp");
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
 
+      if (Args.hasArg(options::OPT_fopenmp_force_usm))
+        CmdArgs.push_back("-fopenmp-force-usm");
+
       // FIXME: Clang supports a whole bunch more flags here.
       break;
     default:

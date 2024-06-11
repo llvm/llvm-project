@@ -73,6 +73,10 @@ public:
   getPredicatedAddrSpace(const Value *V) const override;
 
   unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const override;
+
+  bool splitModule(Module &M, unsigned NumParts,
+                   function_ref<void(std::unique_ptr<Module> MPart)>
+                       ModuleCallback) const override;
 };
 
 //===----------------------------------------------------------------------===//

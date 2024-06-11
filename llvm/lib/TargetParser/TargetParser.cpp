@@ -131,6 +131,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
     {{"gfx10-3-generic"},   {"gfx10-3-generic"}, GK_GFX10_3_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx11-generic"},     {"gfx11-generic"},   GK_GFX11_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
+    {{"gfx12-generic"},     {"gfx12-generic"},   GK_GFX12_GENERIC,   FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     // clang-format on
 };
 
@@ -158,6 +159,8 @@ StringRef llvm::AMDGPU::getArchFamilyNameAMDGCN(GPUKind AK) {
     return "gfx10";
   case AMDGPU::GK_GFX11_GENERIC:
     return "gfx11";
+  case AMDGPU::GK_GFX12_GENERIC:
+    return "gfx12";
   default: {
     StringRef ArchName = getArchNameAMDGCN(AK);
     return ArchName.empty() ? "" : ArchName.drop_back(2);
@@ -292,6 +295,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX10_1_GENERIC: return {10, 1, 0};
   case GK_GFX10_3_GENERIC: return {10, 3, 0};
   case GK_GFX11_GENERIC:   return {11, 0, 3};
+  case GK_GFX12_GENERIC:   return {12, 0, 0};
   default:         return {0, 0, 0};
   }
   // clang-format on
@@ -313,6 +317,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     switch (parseArchAMDGCN(GPU)) {
     case GK_GFX1201:
     case GK_GFX1200:
+    case GK_GFX12_GENERIC:
       Features["ci-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
@@ -554,6 +559,7 @@ static bool isWave32Capable(StringRef GPU, const Triple &T) {
     case GK_GFX1011:
     case GK_GFX1013:
     case GK_GFX1010:
+    case GK_GFX12_GENERIC:
     case GK_GFX11_GENERIC:
     case GK_GFX10_3_GENERIC:
     case GK_GFX10_1_GENERIC:

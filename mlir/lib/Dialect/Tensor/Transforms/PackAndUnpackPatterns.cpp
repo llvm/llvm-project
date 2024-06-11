@@ -91,7 +91,8 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
     RankedTensorType sourceType = packOp.getSourceType();
     if (failed(isPackOnInnerMostDim(rewriter, packOp)) &&
         failed(isPackOn1D(rewriter, packOp, sourceType.getShape(),
-                          packOp.getStaticTiles()))) {
+                          packOp.getStaticTiles())) &&
+        !packOp.isLikePad()) {
       return failure();
     }
 
@@ -152,7 +153,8 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
     RankedTensorType destType = unpackOp.getDestType();
     if (failed(isUnpackOnInnerMostDim(rewriter, unpackOp)) &&
         failed(isPackOn1D(rewriter, unpackOp, destType.getShape(),
-                          unpackOp.getStaticTiles()))) {
+                          unpackOp.getStaticTiles())) &&
+        !unpackOp.isLikeUnPad()) {
       return failure();
     }
 

@@ -829,29 +829,29 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
 /// Return the corresponding enum value for the mlir::acc::ReductionOperator
 /// from the parser representation.
 static mlir::acc::ReductionOperator
-getReductionOperator(const Fortran::parser::AccReductionOperator &op) {
+getReductionOperator(const Fortran::parser::ReductionOperator &op) {
   switch (op.v) {
-  case Fortran::parser::AccReductionOperator::Operator::Plus:
+  case Fortran::parser::ReductionOperator::Operator::Plus:
     return mlir::acc::ReductionOperator::AccAdd;
-  case Fortran::parser::AccReductionOperator::Operator::Multiply:
+  case Fortran::parser::ReductionOperator::Operator::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
-  case Fortran::parser::AccReductionOperator::Operator::Max:
+  case Fortran::parser::ReductionOperator::Operator::Max:
     return mlir::acc::ReductionOperator::AccMax;
-  case Fortran::parser::AccReductionOperator::Operator::Min:
+  case Fortran::parser::ReductionOperator::Operator::Min:
     return mlir::acc::ReductionOperator::AccMin;
-  case Fortran::parser::AccReductionOperator::Operator::Iand:
+  case Fortran::parser::ReductionOperator::Operator::Iand:
     return mlir::acc::ReductionOperator::AccIand;
-  case Fortran::parser::AccReductionOperator::Operator::Ior:
+  case Fortran::parser::ReductionOperator::Operator::Ior:
     return mlir::acc::ReductionOperator::AccIor;
-  case Fortran::parser::AccReductionOperator::Operator::Ieor:
+  case Fortran::parser::ReductionOperator::Operator::Ieor:
     return mlir::acc::ReductionOperator::AccXor;
-  case Fortran::parser::AccReductionOperator::Operator::And:
+  case Fortran::parser::ReductionOperator::Operator::And:
     return mlir::acc::ReductionOperator::AccLand;
-  case Fortran::parser::AccReductionOperator::Operator::Or:
+  case Fortran::parser::ReductionOperator::Operator::Or:
     return mlir::acc::ReductionOperator::AccLor;
-  case Fortran::parser::AccReductionOperator::Operator::Eqv:
+  case Fortran::parser::ReductionOperator::Operator::Eqv:
     return mlir::acc::ReductionOperator::AccEqv;
-  case Fortran::parser::AccReductionOperator::Operator::Neqv:
+  case Fortran::parser::ReductionOperator::Operator::Neqv:
     return mlir::acc::ReductionOperator::AccNeqv;
   }
   llvm_unreachable("unexpected reduction operator");
@@ -1356,8 +1356,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
               llvm::SmallVector<mlir::Attribute> &reductionRecipes) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const auto &objects = std::get<Fortran::parser::AccObjectList>(objectList.t);
-  const auto &op =
-      std::get<Fortran::parser::AccReductionOperator>(objectList.t);
+  const auto &op = std::get<Fortran::parser::ReductionOperator>(objectList.t);
   mlir::acc::ReductionOperator mlirOp = getReductionOperator(op);
   Fortran::evaluate::ExpressionAnalyzer ea{semanticsContext};
   for (const auto &accObject : objects.v) {

@@ -4725,94 +4725,102 @@ define i32 @full(ptr %p1, i32 noundef %s1, ptr %p2, i32 noundef %s2) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-GI-NEXT:    // kill: def $w3 killed $w3 def $x3
-; CHECK-GI-NEXT:    sxtw x8, w3
 ; CHECK-GI-NEXT:    sxtw x9, w1
+; CHECK-GI-NEXT:    sxtw x8, w3
 ; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x2]
 ; CHECK-GI-NEXT:    add x10, x0, x9
 ; CHECK-GI-NEXT:    add x11, x2, x8
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    ldr d2, [x10]
-; CHECK-GI-NEXT:    add x10, x10, x9
-; CHECK-GI-NEXT:    add x12, x11, x8
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ldr d3, [x11]
-; CHECK-GI-NEXT:    ldr d4, [x10]
-; CHECK-GI-NEXT:    ldr d5, [x12]
-; CHECK-GI-NEXT:    add x10, x10, x9
-; CHECK-GI-NEXT:    add x11, x12, x8
-; CHECK-GI-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-GI-NEXT:    ushll v3.8h, v3.8b, #0
-; CHECK-GI-NEXT:    ushll v4.8h, v4.8b, #0
-; CHECK-GI-NEXT:    ushll v5.8h, v5.8b, #0
-; CHECK-GI-NEXT:    uabdl v6.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    uabdl2 v0.4s, v0.8h, v1.8h
+; CHECK-GI-NEXT:    usubl v0.8h, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    ldr d1, [x10]
-; CHECK-GI-NEXT:    ldr d7, [x11]
+; CHECK-GI-NEXT:    ldr d2, [x11]
 ; CHECK-GI-NEXT:    add x10, x10, x9
 ; CHECK-GI-NEXT:    add x11, x11, x8
-; CHECK-GI-NEXT:    uabdl v16.4s, v2.4h, v3.4h
-; CHECK-GI-NEXT:    uabdl2 v2.4s, v2.8h, v3.8h
-; CHECK-GI-NEXT:    uabdl v3.4s, v4.4h, v5.4h
-; CHECK-GI-NEXT:    uabdl2 v4.4s, v4.8h, v5.8h
-; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ushll v7.8h, v7.8b, #0
-; CHECK-GI-NEXT:    ldr d5, [x10]
+; CHECK-GI-NEXT:    usubl v1.8h, v1.8b, v2.8b
+; CHECK-GI-NEXT:    ldr d3, [x10]
+; CHECK-GI-NEXT:    ldr d4, [x11]
+; CHECK-GI-NEXT:    sshll v5.4s, v0.4h, #0
+; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-GI-NEXT:    add x10, x10, x9
+; CHECK-GI-NEXT:    add x11, x11, x8
+; CHECK-GI-NEXT:    ldr d2, [x10]
+; CHECK-GI-NEXT:    add x10, x10, x9
+; CHECK-GI-NEXT:    sshll v7.4s, v1.4h, #0
+; CHECK-GI-NEXT:    sshll2 v1.4s, v1.8h, #0
+; CHECK-GI-NEXT:    ldr d6, [x11]
+; CHECK-GI-NEXT:    add x11, x11, x8
+; CHECK-GI-NEXT:    usubl v3.8h, v3.8b, v4.8b
+; CHECK-GI-NEXT:    abs v5.4s, v5.4s
+; CHECK-GI-NEXT:    abs v0.4s, v0.4s
+; CHECK-GI-NEXT:    ldr d4, [x10]
+; CHECK-GI-NEXT:    ldr d16, [x11]
+; CHECK-GI-NEXT:    abs v7.4s, v7.4s
+; CHECK-GI-NEXT:    abs v1.4s, v1.4s
+; CHECK-GI-NEXT:    add x10, x10, x9
+; CHECK-GI-NEXT:    add x11, x11, x8
+; CHECK-GI-NEXT:    usubl v2.8h, v2.8b, v6.8b
+; CHECK-GI-NEXT:    ldr d6, [x10]
 ; CHECK-GI-NEXT:    ldr d17, [x11]
 ; CHECK-GI-NEXT:    add x10, x10, x9
 ; CHECK-GI-NEXT:    add x11, x11, x8
-; CHECK-GI-NEXT:    add v0.4s, v6.4s, v0.4s
-; CHECK-GI-NEXT:    ushll v5.8h, v5.8b, #0
-; CHECK-GI-NEXT:    ushll v17.8h, v17.8b, #0
-; CHECK-GI-NEXT:    add v2.4s, v16.4s, v2.4s
-; CHECK-GI-NEXT:    add v3.4s, v3.4s, v4.4s
-; CHECK-GI-NEXT:    uabdl v4.4s, v1.4h, v7.4h
-; CHECK-GI-NEXT:    uabdl2 v1.4s, v1.8h, v7.8h
-; CHECK-GI-NEXT:    ldr d7, [x10]
-; CHECK-GI-NEXT:    ldr d16, [x11]
-; CHECK-GI-NEXT:    add x10, x10, x9
-; CHECK-GI-NEXT:    add x11, x11, x8
-; CHECK-GI-NEXT:    ldr d18, [x10]
-; CHECK-GI-NEXT:    ldr d20, [x10, x9]
-; CHECK-GI-NEXT:    ldr d19, [x11]
-; CHECK-GI-NEXT:    ldr d21, [x11, x8]
-; CHECK-GI-NEXT:    uabdl v6.4s, v5.4h, v17.4h
-; CHECK-GI-NEXT:    ushll v7.8h, v7.8b, #0
-; CHECK-GI-NEXT:    ushll v16.8h, v16.8b, #0
-; CHECK-GI-NEXT:    uabdl2 v5.4s, v5.8h, v17.8h
-; CHECK-GI-NEXT:    ushll v17.8h, v18.8b, #0
-; CHECK-GI-NEXT:    ushll v18.8h, v19.8b, #0
-; CHECK-GI-NEXT:    add v1.4s, v4.4s, v1.4s
-; CHECK-GI-NEXT:    ushll v4.8h, v20.8b, #0
-; CHECK-GI-NEXT:    ushll v19.8h, v21.8b, #0
-; CHECK-GI-NEXT:    addv s2, v2.4s
-; CHECK-GI-NEXT:    addv s0, v0.4s
-; CHECK-GI-NEXT:    addv s3, v3.4s
-; CHECK-GI-NEXT:    uabdl v20.4s, v7.4h, v16.4h
-; CHECK-GI-NEXT:    uabdl2 v7.4s, v7.8h, v16.8h
-; CHECK-GI-NEXT:    add v5.4s, v6.4s, v5.4s
-; CHECK-GI-NEXT:    uabdl v6.4s, v17.4h, v18.4h
-; CHECK-GI-NEXT:    uabdl2 v16.4s, v17.8h, v18.8h
-; CHECK-GI-NEXT:    uabdl v17.4s, v4.4h, v19.4h
-; CHECK-GI-NEXT:    uabdl2 v4.4s, v4.8h, v19.8h
-; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    usubl v4.8h, v4.8b, v16.8b
+; CHECK-GI-NEXT:    sshll v16.4s, v3.4h, #0
+; CHECK-GI-NEXT:    sshll2 v3.4s, v3.8h, #0
+; CHECK-GI-NEXT:    add v0.4s, v5.4s, v0.4s
+; CHECK-GI-NEXT:    add v1.4s, v7.4s, v1.4s
+; CHECK-GI-NEXT:    ldr d5, [x10]
+; CHECK-GI-NEXT:    ldr d7, [x11]
+; CHECK-GI-NEXT:    sshll v18.4s, v2.4h, #0
+; CHECK-GI-NEXT:    sshll2 v2.4s, v2.8h, #0
+; CHECK-GI-NEXT:    usubl v6.8h, v6.8b, v17.8b
+; CHECK-GI-NEXT:    ldr d17, [x11, x8]
+; CHECK-GI-NEXT:    sshll v19.4s, v4.4h, #0
+; CHECK-GI-NEXT:    usubl v5.8h, v5.8b, v7.8b
+; CHECK-GI-NEXT:    ldr d7, [x10, x9]
+; CHECK-GI-NEXT:    sshll2 v4.4s, v4.8h, #0
+; CHECK-GI-NEXT:    abs v16.4s, v16.4s
+; CHECK-GI-NEXT:    abs v3.4s, v3.4s
+; CHECK-GI-NEXT:    abs v18.4s, v18.4s
+; CHECK-GI-NEXT:    abs v2.4s, v2.4s
+; CHECK-GI-NEXT:    usubl v7.8h, v7.8b, v17.8b
+; CHECK-GI-NEXT:    sshll v17.4s, v6.4h, #0
+; CHECK-GI-NEXT:    sshll2 v6.4s, v6.8h, #0
+; CHECK-GI-NEXT:    abs v19.4s, v19.4s
+; CHECK-GI-NEXT:    abs v4.4s, v4.4s
+; CHECK-GI-NEXT:    add v3.4s, v16.4s, v3.4s
+; CHECK-GI-NEXT:    sshll v16.4s, v5.4h, #0
+; CHECK-GI-NEXT:    sshll2 v5.4s, v5.8h, #0
+; CHECK-GI-NEXT:    add v2.4s, v18.4s, v2.4s
+; CHECK-GI-NEXT:    abs v17.4s, v17.4s
 ; CHECK-GI-NEXT:    addv s1, v1.4s
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    fmov w10, s3
-; CHECK-GI-NEXT:    add v7.4s, v20.4s, v7.4s
-; CHECK-GI-NEXT:    add v0.4s, v17.4s, v4.4s
-; CHECK-GI-NEXT:    addv s4, v5.4s
-; CHECK-GI-NEXT:    add v2.4s, v6.4s, v16.4s
-; CHECK-GI-NEXT:    add w8, w8, w9
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    add w8, w10, w8
-; CHECK-GI-NEXT:    addv s3, v7.4s
-; CHECK-GI-NEXT:    addv s1, v2.4s
+; CHECK-GI-NEXT:    abs v6.4s, v6.4s
 ; CHECK-GI-NEXT:    addv s0, v0.4s
-; CHECK-GI-NEXT:    add w8, w9, w8
-; CHECK-GI-NEXT:    fmov w9, s4
+; CHECK-GI-NEXT:    add v4.4s, v19.4s, v4.4s
+; CHECK-GI-NEXT:    addv s3, v3.4s
+; CHECK-GI-NEXT:    sshll v18.4s, v7.4h, #0
+; CHECK-GI-NEXT:    sshll2 v7.4s, v7.8h, #0
+; CHECK-GI-NEXT:    abs v16.4s, v16.4s
+; CHECK-GI-NEXT:    abs v5.4s, v5.4s
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    add v6.4s, v17.4s, v6.4s
+; CHECK-GI-NEXT:    addv s2, v2.4s
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    addv s4, v4.4s
+; CHECK-GI-NEXT:    fmov w10, s3
+; CHECK-GI-NEXT:    abs v18.4s, v18.4s
+; CHECK-GI-NEXT:    abs v7.4s, v7.4s
+; CHECK-GI-NEXT:    add v1.4s, v16.4s, v5.4s
+; CHECK-GI-NEXT:    add w8, w8, w9
+; CHECK-GI-NEXT:    addv s3, v6.4s
+; CHECK-GI-NEXT:    fmov w9, s2
+; CHECK-GI-NEXT:    add w8, w10, w8
+; CHECK-GI-NEXT:    fmov w10, s4
+; CHECK-GI-NEXT:    add v0.4s, v18.4s, v7.4s
+; CHECK-GI-NEXT:    addv s1, v1.4s
 ; CHECK-GI-NEXT:    add w8, w9, w8
 ; CHECK-GI-NEXT:    fmov w9, s3
+; CHECK-GI-NEXT:    add w8, w10, w8
+; CHECK-GI-NEXT:    addv s0, v0.4s
 ; CHECK-GI-NEXT:    add w8, w9, w8
 ; CHECK-GI-NEXT:    fmov w9, s1
 ; CHECK-GI-NEXT:    add w8, w9, w8

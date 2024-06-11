@@ -55,12 +55,13 @@ Additions:
   * powr*
   * rootn*
   * roundeven* |check|
-  * fromfp*
-  * ufromfp*
-  * fromfpx*
-  * nextup*
-  * nextdown*
-  * canonicalize*
+  * fromfp* |check|
+  * ufromfp* |check|
+  * fromfpx* |check|
+  * ufromfpx* |check|
+  * nextup* |check|
+  * nextdown* |check|
+  * canonicalize* |check|
   * fmaximum*
   * fminimum*
   * fmaximum_mag*

@@ -245,7 +245,7 @@ def have_host_jit_feature_support(feature_name):
 if have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
 
-if config.run_cuda_tests:
+if config.run_nvptx_tests:
     config.available_features.add("host-supports-nvptx")
 
 if config.run_rocm_tests:

@@ -586,15 +586,13 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   Type *SVELoadType = ScalableVectorType::get(Builder.getInt8Ty(), 16);
   Value *Passthru = ConstantInt::getNullValue(SVELoadType);
 
-  Value *SVELhsGep = Builder.CreateGEP(LoadType, PtrA, SVEIndexPhi);
-  if (GEPA->isInBounds())
-    cast<GetElementPtrInst>(SVELhsGep)->setIsInBounds(true);
+  Value *SVELhsGep =
+      Builder.CreateGEP(LoadType, PtrA, SVEIndexPhi, "", GEPA->isInBounds());
   Value *SVELhsLoad = Builder.CreateMaskedLoad(SVELoadType, SVELhsGep, Align(1),
                                                LoopPred, Passthru);
 
-  Value *SVERhsGep = Builder.CreateGEP(LoadType, PtrB, SVEIndexPhi);
-  if (GEPB->isInBounds())
-    cast<GetElementPtrInst>(SVERhsGep)->setIsInBounds(true);
+  Value *SVERhsGep =
+      Builder.CreateGEP(LoadType, PtrB, SVEIndexPhi, "", GEPB->isInBounds());
   Value *SVERhsLoad = Builder.CreateMaskedLoad(SVELoadType, SVERhsGep, Align(1),
                                                LoopPred, Passthru);
 
@@ -670,14 +668,12 @@ Value *AArch64LoopIdiomTransform::expandFindMismatch(
   // Load bytes from each array and compare them.
   Value *GepOffset = Builder.CreateZExt(IndexPhi, I64Type);
 
-  Value *LhsGep = Builder.CreateGEP(LoadType, PtrA, GepOffset);
-  if (GEPA->isInBounds())
-    cast<GetElementPtrInst>(LhsGep)->setIsInBounds(true);
+  Value *LhsGep =
+      Builder.CreateGEP(LoadType, PtrA, GepOffset, "", GEPA->isInBounds());
   Value *LhsLoad = Builder.CreateLoad(LoadType, LhsGep);
 
-  Value *RhsGep = Builder.CreateGEP(LoadType, PtrB, GepOffset);
-  if (GEPB->isInBounds())
-    cast<GetElementPtrInst>(RhsGep)->setIsInBounds(true);
+  Value *RhsGep =
+      Builder.CreateGEP(LoadType, PtrB, GepOffset, "", GEPB->isInBounds());
   Value *RhsLoad = Builder.CreateLoad(LoadType, RhsGep);
 
   Value *MatchCmp = Builder.CreateICmpEQ(LhsLoad, RhsLoad);

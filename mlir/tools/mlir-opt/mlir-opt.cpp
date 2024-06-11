@@ -71,6 +71,7 @@ namespace test {
 void registerTestCompositePass();
 void registerCommutativityUtils();
 void registerConvertCallOpPass();
+void registerConvertFuncOpPass();
 void registerInliner();
 void registerMemRefBoundCheck();
 void registerPatternsTestPass();
@@ -199,6 +200,7 @@ void registerTestPasses() {
   mlir::test::registerTestCompositePass();
   mlir::test::registerCommutativityUtils();
   mlir::test::registerConvertCallOpPass();
+  mlir::test::registerConvertFuncOpPass();
   mlir::test::registerInliner();
   mlir::test::registerMemRefBoundCheck();
   mlir::test::registerPatternsTestPass();

@@ -81,7 +81,7 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    // There won't be a tile copy if no tile register live in.
+    // There won't be a tile copy if neither tile register live in nor live out.
     bool HasTileCopy = false;
     for (const auto &LI : MBB.liveins()) {
       if (TILERegs.test(LI.PhysReg)) {
@@ -89,10 +89,18 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
     }
-    if (!HasTileCopy)
-      continue;
     LiveRegUnits UsedRegs(*TRI);
     UsedRegs.addLiveOuts(MBB);
+    if (!HasTileCopy) {
+      for (auto RegT : TILERegs.set_bits()) {
+        if (UsedRegs.available(RegT)) {
+          HasTileCopy = true;
+          break;
+        }
+      }
+    }
+    if (!HasTileCopy)
+      continue;
     for (MachineInstr &MI : llvm::make_early_inc_range(reverse(MBB))) {
       UsedRegs.stepBackward(MI);
       if (!MI.isCopy())

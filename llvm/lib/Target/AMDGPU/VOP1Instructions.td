@@ -178,8 +178,8 @@ multiclass VOP1Inst_t16<string opName, VOPProfile P,
 class VOPProfileI2F<ValueType dstVt, ValueType srcVt> :
   VOPProfile<[dstVt, srcVt, untyped, untyped]> {
 
-  let Ins64 = (ins Src0RC64:$src0, clampmod:$clamp, omod:$omod);
-  let InsVOP3Base = (ins Src0VOP3DPP:$src0, clampmod:$clamp, omod:$omod);
+  let Ins64 = (ins Src0RC64:$src0, Clamp:$clamp, omod:$omod);
+  let InsVOP3Base = (ins Src0VOP3DPP:$src0, Clamp:$clamp, omod:$omod);
   let AsmVOP3Base = "$vdst, $src0$clamp$omod";
 
   let HasModifiers = 0;
@@ -189,8 +189,8 @@ class VOPProfileI2F<ValueType dstVt, ValueType srcVt> :
 class VOPProfileI2F_True16<ValueType dstVt, ValueType srcVt> :
   VOPProfile_Fake16<VOPProfile<[dstVt, srcVt, untyped, untyped]>> {
 
-  let Ins64 = (ins Src0RC64:$src0, clampmod:$clamp, omod:$omod);
-  let InsVOP3Base = (ins Src0VOP3DPP:$src0, clampmod:$clamp, omod:$omod);
+  let Ins64 = (ins Src0RC64:$src0, Clamp:$clamp, omod:$omod);
+  let InsVOP3Base = (ins Src0VOP3DPP:$src0, Clamp:$clamp, omod:$omod);
   let AsmVOP3Base = "$vdst, $src0$clamp$omod";
 
   let HasModifiers = 0;
@@ -379,7 +379,7 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
 
   let OutsSDWA = (outs Src0RC32:$vdst);
   let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
-                     clampmod:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
+                     Clamp:$clamp, dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel);
   let AsmSDWA9 = getAsmSDWA9<1, 0, 1>.ret;
 
@@ -563,7 +563,7 @@ class VOPProfile_Base_CVT_F32_F8<ValueType vt> : VOPProfileI2F <vt, i32> {
   let HasExt = 1;
   let DstRCSDWA = getVALUDstForVT<vt>.ret;
   let InsSDWA = (ins Bin32SDWAInputMods:$src0_modifiers, Src0SDWA:$src0,
-                     clampmod:$clamp, omod:$omod, src0_sel:$src0_sel);
+                     Clamp:$clamp, omod:$omod, src0_sel:$src0_sel);
   let AsmSDWA = "$vdst, $src0_modifiers$clamp$omod $src0_sel"; // No dst_sel
   let AsmSDWA9 = AsmSDWA;
   let EmitDstSel = 0;

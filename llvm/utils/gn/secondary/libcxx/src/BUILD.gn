@@ -291,7 +291,7 @@ if (libcxx_enable_static) {
     if (libcxx_hermetic_static_library) {
       cflags = [ "-fvisibility=hidden" ]
       if (libcxx_enable_new_delete_definitions) {
-        cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
+        cflags_cc = [ "-fvisibility-global-new-delete=force-hidden" ]
       }
       defines = [ "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS" ]
     }

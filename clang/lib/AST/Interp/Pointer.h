@@ -314,11 +314,13 @@ public:
   /// Returns the type of the innermost field.
   QualType getType() const {
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
-      // Unfortunately, complex types are not array types in clang, but they are
-      // for us.
+      // Unfortunately, complex and vector types are not array types in clang,
+      // but they are for us.
       if (const auto *AT = getFieldDesc()->getType()->getAsArrayTypeUnsafe())
         return AT->getElementType();
       if (const auto *CT = getFieldDesc()->getType()->getAs<ComplexType>())
+        return CT->getElementType();
+      if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
     return getFieldDesc()->getType();
@@ -535,9 +537,6 @@ public:
     if (isZero())
       return 0;
 
-    if (isElementPastEnd())
-      return 1;
-
     // narrow()ed element in a composite array.
     if (asBlockPointer().Base > sizeof(InlineDescriptor) &&
         asBlockPointer().Base == Offset)
@@ -621,6 +620,7 @@ public:
 private:
   friend class Block;
   friend class DeadBlock;
+  friend class MemberPointer;
   friend struct InitMap;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);

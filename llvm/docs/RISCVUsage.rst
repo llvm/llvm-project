@@ -120,6 +120,7 @@ on support follow.
      ``Za128rs``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Za64rs``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zaamo``         Assembly Support
+     ``Zabha``         Supported
      ``Zacas``         Supported (`See note <#riscv-zacas-note>`__)
      ``Zalrsc``        Assembly Support
      ``Zama16b``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -261,9 +262,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-ssqosid``
   LLVM implements assembler support for the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-ssqosid/releases/tag/v1.0-rc1>`_.
-
-``experimental-zabha``
-  LLVM implements the `v1.0-rc1 draft specification <https://github.com/riscv/riscv-zabha/tree/v1.0-rc1>`__.
 
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.

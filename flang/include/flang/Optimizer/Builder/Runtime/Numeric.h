@@ -46,9 +46,17 @@ mlir::Value genRRSpacing(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genScale(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value x, mlir::Value i);
 
+/// Generate call to Selected_char_kind intrinsic runtime routine.
+mlir::Value genSelectedCharKind(fir::FirOpBuilder &builder, mlir::Location loc,
+                                mlir::Value name, mlir::Value length);
+
 /// Generate call to Selected_int_kind intrinsic runtime routine.
 mlir::Value genSelectedIntKind(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value x);
+
+/// Generate call to Selected_logical_kind intrinsic runtime routine.
+mlir::Value genSelectedLogicalKind(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value x);
 
 /// Generate call to Selected_real_kind intrinsic runtime routine.
 mlir::Value genSelectedRealKind(fir::FirOpBuilder &builder, mlir::Location loc,

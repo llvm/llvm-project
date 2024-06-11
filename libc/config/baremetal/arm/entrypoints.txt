@@ -183,6 +183,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.difftime
+
+    # internal entrypoints
+    libc.startup.baremetal.init
+    libc.startup.baremetal.fini
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

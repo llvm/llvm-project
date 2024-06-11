@@ -1224,18 +1224,6 @@ value llvm_const_xor(value LHS, value RHS) {
   return to_val(Value);
 }
 
-/* Icmp.t -> llvalue -> llvalue -> llvalue */
-value llvm_const_icmp(value Pred, value LHSConstant, value RHSConstant) {
-  return to_val(LLVMConstICmp(Int_val(Pred) + LLVMIntEQ, Value_val(LHSConstant),
-                              Value_val(RHSConstant)));
-}
-
-/* Fcmp.t -> llvalue -> llvalue -> llvalue */
-value llvm_const_fcmp(value Pred, value LHSConstant, value RHSConstant) {
-  return to_val(LLVMConstFCmp(Int_val(Pred), Value_val(LHSConstant),
-                              Value_val(RHSConstant)));
-}
-
 /* llvalue -> llvalue -> llvalue */
 value llvm_const_shl(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstShl(Value_val(LHS), Value_val(RHS));

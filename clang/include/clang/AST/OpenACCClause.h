@@ -54,6 +54,149 @@ public:
   virtual ~OpenACCClause() = default;
 };
 
+// Represents the 'auto' clause.
+class OpenACCAutoClause : public OpenACCClause {
+protected:
+  OpenACCAutoClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::Auto, BeginLoc, EndLoc) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Auto;
+  }
+
+  static OpenACCAutoClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+// Represents the 'independent' clause.
+class OpenACCIndependentClause : public OpenACCClause {
+protected:
+  OpenACCIndependentClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::Independent, BeginLoc, EndLoc) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Independent;
+  }
+
+  static OpenACCIndependentClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+// Represents the 'seq' clause.
+class OpenACCSeqClause : public OpenACCClause {
+protected:
+  OpenACCSeqClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::Seq, BeginLoc, EndLoc) {}
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Seq;
+  }
+
+  static OpenACCSeqClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+// Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
+// this provides a basic, do-nothing implementation. We still need to add this
+// type to the visitors/etc, as well as get it to take its proper arguments.
+class OpenACCGangClause : public OpenACCClause {
+protected:
+  OpenACCGangClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::Gang, BeginLoc, EndLoc) {
+    llvm_unreachable("Not yet implemented");
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Gang;
+  }
+
+  static OpenACCGangClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+// Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
+// this provides a basic, do-nothing implementation. We still need to add this
+// type to the visitors/etc, as well as get it to take its proper arguments.
+class OpenACCVectorClause : public OpenACCClause {
+protected:
+  OpenACCVectorClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::Vector, BeginLoc, EndLoc) {
+    llvm_unreachable("Not yet implemented");
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Gang;
+  }
+
+  static OpenACCVectorClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+// Not yet implemented, but the type name is necessary for 'seq' diagnostics, so
+// this provides a basic, do-nothing implementation. We still need to add this
+// type to the visitors/etc, as well as get it to take its proper arguments.
+class OpenACCWorkerClause : public OpenACCClause {
+protected:
+  OpenACCWorkerClause(SourceLocation BeginLoc, SourceLocation EndLoc)
+      : OpenACCClause(OpenACCClauseKind::Gang, BeginLoc, EndLoc) {
+    llvm_unreachable("Not yet implemented");
+  }
+
+public:
+  static bool classof(const OpenACCClause *C) {
+    return C->getClauseKind() == OpenACCClauseKind::Gang;
+  }
+
+  static OpenACCWorkerClause *
+  Create(const ASTContext &Ctx, SourceLocation BeginLoc, SourceLocation EndLoc);
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
 /// Represents a clause that has a list of parameters.
 class OpenACCClauseWithParams : public OpenACCClause {
   /// Location of the '('.
@@ -724,7 +867,7 @@ public:
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
     Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
     return;
-#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)                                  \
+#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME, DEPRECATED)                      \
   case OpenACCClauseKind::ALIAS_NAME:                                          \
     Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
     return;

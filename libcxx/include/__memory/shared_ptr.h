@@ -403,6 +403,9 @@ struct __shared_ptr_deleter_ctor_reqs {
                             __well_formed_deleter<_Dp, _Yp*>::value;
 };
 
+template <class _Dp, class _Tp>
+using __shared_ptr_nullptr_deleter_ctor_reqs = _And<is_move_constructible<_Dp>, __well_formed_deleter<_Dp, nullptr_t> >;
+
 #if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((__trivial_abi__))
 #else
@@ -498,7 +501,7 @@ public:
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
   }
 
-  template <class _Dp>
+  template <class _Dp, __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp, _Tp>::value, int> = 0 >
   _LIBCPP_HIDE_FROM_ABI shared_ptr(nullptr_t __p, _Dp __d) : __ptr_(nullptr) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
@@ -518,7 +521,7 @@ public:
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
   }
 
-  template <class _Dp, class _Alloc>
+  template <class _Dp, class _Alloc, __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp, _Tp>::value, int> = 0 >
   _LIBCPP_HIDE_FROM_ABI shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a) : __ptr_(nullptr) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {

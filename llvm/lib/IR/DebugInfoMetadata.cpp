@@ -1880,9 +1880,9 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
     }
     Op.appendToVector(NewOps);
   }
-
   NewOps.append(Ops.begin(), Ops.end());
-  auto *result = DIExpression::get(Expr->getContext(), NewOps);
+  auto *result =
+      DIExpression::get(Expr->getContext(), NewOps)->foldConstantMath();
   assert(result->isValid() && "concatenated expression is not valid");
   return result;
 }

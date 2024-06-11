@@ -505,9 +505,6 @@ private:
   ContextNode *getNodeForAlloc(const CallInfo &C);
   ContextNode *getNodeForStackId(uint64_t StackId);
 
-  /// Removes the node information recorded for the given call.
-  void unsetNodeForInst(const CallInfo &C);
-
   /// Computes the alloc type corresponding to the given context ids, by
   /// unioning their recorded alloc types.
   uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds);
@@ -552,13 +549,13 @@ private:
                       const DenseSet<uint32_t> &AllocContextIds);
 
   /// Map from each context ID to the AllocationType assigned to that context.
-  std::map<uint32_t, AllocationType> ContextIdToAllocationType;
+  DenseMap<uint32_t, AllocationType> ContextIdToAllocationType;
 
   /// Identifies the context node created for a stack id when adding the MIB
   /// contexts to the graph. This is used to locate the context nodes when
   /// trying to assign the corresponding callsites with those stack ids to these
   /// nodes.
-  std::map<uint64_t, ContextNode *> StackEntryIdToContextNodeMap;
+  DenseMap<uint64_t, ContextNode *> StackEntryIdToContextNodeMap;
 
   /// Maps to track the calls to their corresponding nodes in the graph.
   MapVector<CallInfo, ContextNode *> AllocationCallToContextNodeMap;
@@ -811,15 +808,6 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::getNodeForStackId(
   if (StackEntryNode != StackEntryIdToContextNodeMap.end())
     return StackEntryNode->second;
   return nullptr;
-}
-
-template <typename DerivedCCG, typename FuncTy, typename CallTy>
-void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::unsetNodeForInst(
-    const CallInfo &C) {
-  AllocationCallToContextNodeMap.erase(C) ||
-      NonAllocationCallToContextNodeMap.erase(C);
-  assert(!AllocationCallToContextNodeMap.count(C) &&
-         !NonAllocationCallToContextNodeMap.count(C));
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
@@ -1693,12 +1681,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
   // from the profiled contexts.
   MapVector<CallInfo, ContextNode *> TailCallToContextNodeMap;
 
-  for (auto Entry = NonAllocationCallToContextNodeMap.begin();
-       Entry != NonAllocationCallToContextNodeMap.end();) {
-    auto *Node = Entry->second;
+  for (auto &Entry : NonAllocationCallToContextNodeMap) {
+    auto *Node = Entry.second;
     assert(Node->Clones.empty());
     // Check all node callees and see if in the same function.
-    bool Removed = false;
     auto Call = Node->Call.call();
     for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();) {
       auto Edge = *EI;
@@ -1714,14 +1700,17 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
       // Work around by setting Node to have a null call, so it gets
       // skipped during cloning. Otherwise assignFunctions will assert
       // because its data structures are not designed to handle this case.
-      Entry = NonAllocationCallToContextNodeMap.erase(Entry);
       Node->setCall(CallInfo());
-      Removed = true;
       break;
     }
-    if (!Removed)
-      Entry++;
   }
+
+  // Remove all mismatched nodes identified in the above loop from the node map
+  // (checking whether they have a null call which is set above). For a
+  // MapVector like NonAllocationCallToContextNodeMap it is much more efficient
+  // to do the removal via remove_if than by individually erasing entries above.
+  NonAllocationCallToContextNodeMap.remove_if(
+      [](const auto &it) { return !it.second->hasCall(); });
 
   // Add the new nodes after the above loop so that the iteration is not
   // invalidated.
@@ -1889,15 +1878,17 @@ bool ModuleCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       } else if (findProfiledCalleeThroughTailCalls(
                      ProfiledCallee, CalledFunction, Depth + 1,
                      FoundCalleeChain, FoundMultipleCalleeChains)) {
-        if (FoundMultipleCalleeChains)
-          return false;
+        // findProfiledCalleeThroughTailCalls should not have returned
+        // true if FoundMultipleCalleeChains.
+        assert(!FoundMultipleCalleeChains);
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
           return false;
         }
         FoundSingleCalleeChain = true;
         SaveCallsiteInfo(&I, CalleeFunc);
-      }
+      } else if (FoundMultipleCalleeChains)
+        return false;
     }
   }
 
@@ -2004,8 +1995,9 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
       } else if (findProfiledCalleeThroughTailCalls(
                      ProfiledCallee, CallEdge.first, Depth + 1,
                      FoundCalleeChain, FoundMultipleCalleeChains)) {
-        if (FoundMultipleCalleeChains)
-          return false;
+        // findProfiledCalleeThroughTailCalls should not have returned
+        // true if FoundMultipleCalleeChains.
+        assert(!FoundMultipleCalleeChains);
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
           return false;
@@ -2015,7 +2007,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
         FSToVIMap[FS] = FSVI;
-      }
+      } else if (FoundMultipleCalleeChains)
+        return false;
     }
   }
 

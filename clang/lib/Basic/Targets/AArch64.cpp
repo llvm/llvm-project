@@ -1203,6 +1203,7 @@ AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_SwiftAsync:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_PreserveNone:
   case CC_OpenCLKernel:
   case CC_AArch64VectorCall:
   case CC_AArch64SVEPCS:

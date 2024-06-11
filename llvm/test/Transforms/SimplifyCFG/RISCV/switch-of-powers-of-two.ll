@@ -11,11 +11,11 @@ define i32 @switch_of_powers(i32 %x) {
 ; RV64I-LABEL: @switch_of_powers(
 ; RV64I-NEXT:  entry:
 ; RV64I-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT_CASE:%.*]] [
-; RV64I-NEXT:    i32 1, label [[RETURN:%.*]]
-; RV64I-NEXT:    i32 8, label [[BB2:%.*]]
-; RV64I-NEXT:    i32 16, label [[BB3:%.*]]
-; RV64I-NEXT:    i32 32, label [[BB4:%.*]]
-; RV64I-NEXT:    i32 64, label [[BB5:%.*]]
+; RV64I-NEXT:      i32 1, label [[RETURN:%.*]]
+; RV64I-NEXT:      i32 8, label [[BB2:%.*]]
+; RV64I-NEXT:      i32 16, label [[BB3:%.*]]
+; RV64I-NEXT:      i32 32, label [[BB4:%.*]]
+; RV64I-NEXT:      i32 64, label [[BB5:%.*]]
 ; RV64I-NEXT:    ]
 ; RV64I:       default_case:
 ; RV64I-NEXT:    unreachable
@@ -69,11 +69,11 @@ define i32 @switch_of_powers_reachable_default(i32 %x) {
 ; CHECK-LABEL: @switch_of_powers_reachable_default(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[RETURN:%.*]] [
-; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
-; CHECK-NEXT:    i32 8, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 16, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 32, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 64, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 8, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 16, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 32, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 64, label [[BB5:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -116,11 +116,11 @@ define i32 @switch_of_non_powers(i32 %x) {
 ; CHECK-LABEL: @switch_of_non_powers(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT_CASE:%.*]] [
-; CHECK-NEXT:    i32 0, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 16, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 32, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 64, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 0, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 16, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 32, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 64, label [[BB5:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default_case:
 ; CHECK-NEXT:    unreachable
@@ -162,10 +162,10 @@ define i32 @unable_to_create_dense_switch(i32 %x) {
 ; CHECK-LABEL: @unable_to_create_dense_switch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT_CASE:%.*]] [
-; CHECK-NEXT:    i32 1, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 4096, label [[BB5:%.*]]
+; CHECK-NEXT:      i32 1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 4096, label [[BB5:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default_case:
 ; CHECK-NEXT:    unreachable
@@ -205,10 +205,10 @@ define i32 @unable_to_generate_lookup_table(i32 %x, i32 %y) {
 ; RV64I-LABEL: @unable_to_generate_lookup_table(
 ; RV64I-NEXT:  entry:
 ; RV64I-NEXT:    switch i32 [[Y:%.*]], label [[DEFAULT_CASE:%.*]] [
-; RV64I-NEXT:    i32 1, label [[BB2:%.*]]
-; RV64I-NEXT:    i32 2, label [[BB3:%.*]]
-; RV64I-NEXT:    i32 8, label [[BB4:%.*]]
-; RV64I-NEXT:    i32 64, label [[BB5:%.*]]
+; RV64I-NEXT:      i32 1, label [[BB2:%.*]]
+; RV64I-NEXT:      i32 2, label [[BB3:%.*]]
+; RV64I-NEXT:      i32 8, label [[BB4:%.*]]
+; RV64I-NEXT:      i32 64, label [[BB5:%.*]]
 ; RV64I-NEXT:    ]
 ; RV64I:       default_case:
 ; RV64I-NEXT:    unreachable
@@ -239,10 +239,10 @@ define i32 @unable_to_generate_lookup_table(i32 %x, i32 %y) {
 ; RV64ZBB-NEXT:  entry:
 ; RV64ZBB-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[Y:%.*]], i1 true)
 ; RV64ZBB-NEXT:    switch i32 [[TMP0]], label [[DEFAULT_CASE:%.*]] [
-; RV64ZBB-NEXT:    i32 0, label [[BB2:%.*]]
-; RV64ZBB-NEXT:    i32 1, label [[BB3:%.*]]
-; RV64ZBB-NEXT:    i32 3, label [[BB4:%.*]]
-; RV64ZBB-NEXT:    i32 6, label [[BB5:%.*]]
+; RV64ZBB-NEXT:      i32 0, label [[BB2:%.*]]
+; RV64ZBB-NEXT:      i32 1, label [[BB3:%.*]]
+; RV64ZBB-NEXT:      i32 3, label [[BB4:%.*]]
+; RV64ZBB-NEXT:      i32 6, label [[BB5:%.*]]
 ; RV64ZBB-NEXT:    ]
 ; RV64ZBB:       default_case:
 ; RV64ZBB-NEXT:    unreachable
@@ -314,10 +314,10 @@ define i128 @switch_with_long_condition(i128 %x) {
 ; CHECK-LABEL: @switch_with_long_condition(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i128 [[X:%.*]], label [[DEFAULT_CASE:%.*]] [
-; CHECK-NEXT:    i128 1, label [[RETURN:%.*]]
-; CHECK-NEXT:    i128 2, label [[BB3:%.*]]
-; CHECK-NEXT:    i128 4, label [[BB4:%.*]]
-; CHECK-NEXT:    i128 32, label [[BB5:%.*]]
+; CHECK-NEXT:      i128 1, label [[RETURN:%.*]]
+; CHECK-NEXT:      i128 2, label [[BB3:%.*]]
+; CHECK-NEXT:      i128 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i128 32, label [[BB5:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default_case:
 ; CHECK-NEXT:    unreachable

@@ -264,7 +264,6 @@ let test_constants () =
    * CHECK: @const_nsw_mul = global i64 mul nsw
    * CHECK: @const_nuw_mul = global i64 mul nuw
    * CHECK: @const_xor = global i64 xor
-   * CHECK: @const_icmp = global i1 icmp sle
    *)
   let void_ptr = pointer_type context in
   let five = const_int i64_type 5 in
@@ -284,7 +283,6 @@ let test_constants () =
   ignore (define_global "const_nsw_mul" (const_nsw_mul foldbomb five) m);
   ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
   ignore (define_global "const_xor" (const_xor foldbomb five) m);
-  ignore (define_global "const_icmp" (const_icmp Icmp.Sle foldbomb five) m);
 
   group "constant casts";
   (* CHECK: const_trunc{{.*}}trunc

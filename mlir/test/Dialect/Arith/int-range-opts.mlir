@@ -75,7 +75,7 @@ func.func @test() -> i1 {
 // -----
 
 // CHECK-LABEL: func @test
-// CHECK: test.reflect_bounds {smax = 24 : i8, smin = 0 : i8, umax = 24 : i8, umin = 0 : i8}
+// CHECK: test.reflect_bounds {smax = 24 : si8, smin = 0 : si8, umax = 24 : ui8, umin = 0 : ui8}
 func.func @test() -> i8 {
   %cst1 = arith.constant 1 : i8
   %i8val = test.with_bounds { umin = 0 : i8, umax = 12 : i8, smin = 0 : i8, smax = 12 : i8 } : i8
@@ -87,7 +87,7 @@ func.func @test() -> i8 {
 // -----
 
 // CHECK-LABEL: func @test
-// CHECK: test.reflect_bounds {smax = 127 : i8, smin = -128 : i8, umax = -1 : i8, umin = 0 : i8}
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 254 : ui8, umin = 0 : ui8}
 func.func @test() -> i8 {
   %cst1 = arith.constant 1 : i8
   %i8val = test.with_bounds { umin = 0 : i8, umax = 127 : i8, smin = 0 : i8, smax = 127 : i8 } : i8

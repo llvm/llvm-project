@@ -96,6 +96,7 @@ if (NOT CMAKE_CROSSCOMPILING)
 endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
+set_target_properties(module_files PROPERTIES FOLDER "Flang/Resources")
 
 # TODO Move this to a more suitable location
 # Copy the generated omp_lib.h header file, if OpenMP support has been configured.

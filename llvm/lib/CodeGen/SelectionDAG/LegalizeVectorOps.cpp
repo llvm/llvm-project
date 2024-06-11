@@ -397,6 +397,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FSQRT:
   case ISD::FSIN:
   case ISD::FCOS:
+  case ISD::FTAN:
   case ISD::FLDEXP:
   case ISD::FPOWI:
   case ISD::FPOW:
@@ -506,7 +507,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         break;                                                                 \
     }                                                                          \
     /* Defer non-vector results to LegalizeDAG. */                             \
-    if (!Node->getValueType(0).isVector()) {                                   \
+    if (!Node->getValueType(0).isVector() &&                                   \
+        Node->getValueType(0) != MVT::Other) {                                 \
       Action = TargetLowering::Legal;                                          \
       break;                                                                   \
     }                                                                          \

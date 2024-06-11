@@ -55,7 +55,7 @@ void genObjectList(const ObjectList &objects,
                    lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {
   for (const Object &object : objects) {
-    const semantics::Symbol *sym = object.id();
+    const semantics::Symbol *sym = object.sym();
     assert(sym && "Expected Symbol");
     if (mlir::Value variable = converter.getSymbolAddress(*sym)) {
       operands.push_back(variable);
@@ -107,7 +107,7 @@ void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause) {
   for (const Object &object : objects)
-    symbolAndClause.emplace_back(clause, *object.id());
+    symbolAndClause.emplace_back(clause, *object.sym());
 }
 
 mlir::omp::MapInfoOp
@@ -175,7 +175,7 @@ generateMemberPlacementIndices(const Object &object,
                                semantics::SemanticsContext &semaCtx) {
   auto compObj = getComponentObject(object, semaCtx);
   while (compObj) {
-    indices.push_back(getComponentPlacementInParent(compObj->id()));
+    indices.push_back(getComponentPlacementInParent(compObj->sym()));
     compObj =
         getComponentObject(getBaseObject(compObj.value(), semaCtx), semaCtx);
   }
