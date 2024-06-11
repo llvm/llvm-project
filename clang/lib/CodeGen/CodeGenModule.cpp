@@ -3222,8 +3222,7 @@ void CodeGenModule::EmitVTablesOpportunistically() {
   for (const CXXRecordDecl *RD : OpportunisticVTables) {
     assert(getVTables().isVTableExternal(RD) &&
            "This queue should only contain external vtables");
-    if (getCXXABI().canSpeculativelyEmitVTable(RD) &&
-        !RD->shouldEmitInExternalSource())
+    if (getCXXABI().canSpeculativelyEmitVTable(RD))
       VTables.GenerateClassData(RD);
   }
   OpportunisticVTables.clear();
