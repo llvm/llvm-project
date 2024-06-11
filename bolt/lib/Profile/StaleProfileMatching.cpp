@@ -656,7 +656,7 @@ void assignProfile(BinaryFunction &BF,
       if (Jump->Flow == 0)
         continue;
 
-      // Skip the artificial sink block
+      // Skips the artificial sink block.
       if (Jump->Target == Func.Sink)
         continue;
       BinaryBasicBlock &SuccBB = *BlockOrder[Jump->Target - 1];
