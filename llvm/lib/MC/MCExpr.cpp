@@ -667,18 +667,10 @@ static void AttemptToFoldSymbolOffsetDifference(
     // Try to find a constant displacement from FA to FB, add the displacement
     // between the offset in FA of SA and the offset in FB of SB.
     bool Reverse = false;
-    if (FA == FB) {
+    if (FA == FB)
       Reverse = SA.getOffset() < SB.getOffset();
-    } else if (!isa<MCDummyFragment>(FA)) {
-      // Testing FA < FB is slow. Use setLayoutOrder to speed up computation.
-      // The formal layout order will be finalized in MCAssembler::layout.
-      if (FA->getLayoutOrder() == 0 || FB->getLayoutOrder()== 0) {
-        unsigned LayoutOrder = 0;
-        for (MCFragment &F : *FA->getParent())
-          F.setLayoutOrder(++LayoutOrder);
-      }
+    else if (!isa<MCDummyFragment>(FA))
       Reverse = FA->getLayoutOrder() < FB->getLayoutOrder();
-    }
 
     uint64_t SAOffset = SA.getOffset(), SBOffset = SB.getOffset();
     int64_t Displacement = SA.getOffset() - SB.getOffset();

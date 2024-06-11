@@ -193,10 +193,14 @@ public:
   bool empty() const { return !CurFragList->Head; }
 
   void addFragment(MCFragment &F) {
-    if (CurFragList->Tail)
+    // The formal layout order will be finalized in MCAssembler::layout.
+    if (CurFragList->Tail) {
       CurFragList->Tail->Next = &F;
-    else
+      F.setLayoutOrder(CurFragList->Tail->getLayoutOrder() + 1);
+    } else {
       CurFragList->Head = &F;
+      assert(F.getLayoutOrder() == 0);
+    }
     CurFragList->Tail = &F;
   }
 
