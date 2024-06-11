@@ -104,10 +104,10 @@ struct KernelArgsTy {
     uint64_t NoWait : 1; // Was this kernel spawned with a `nowait` clause.
     uint64_t Unused : 63;
   } Flags = {0, 0};
-  uint32_t NumTeams[3] = {0, 0,
-                          0}; // The number of teams (for x,y,z dimension).
-  uint32_t ThreadLimit[3] = {0, 0,
-                             0}; // The number of threads (for x,y,z dimension).
+  // The number of teams (for x,y,z dimension).
+  uint32_t NumTeams[3] = {0, 0, 0};
+   // The number of threads (for x,y,z dimension).
+  uint32_t ThreadLimit[3] = {0, 0, 0};
   uint32_t DynCGroupMem = 0;     // Amount of dynamic cgroup memory requested.
 };
 static_assert(sizeof(KernelArgsTy().Flags) == sizeof(uint64_t),
