@@ -9,7 +9,7 @@
 typedef half __attribute__((ext_vector_type(2))) half2;
 
 // CHECK-LABEL: test_global_add_f64
-// CHECK: call double @llvm.amdgcn.global.atomic.fadd.f64.p1.f64(ptr addrspace(1) %{{.*}}, double %{{.*}})
+// CHECK: = atomicrmw fadd ptr addrspace(1) %{{.+}}, double %{{.+}} syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
 // GFX90A-LABEL:  test_global_add_f64$local:
 // GFX90A:  global_atomic_add_f64
 void test_global_add_f64(__global double *addr, double x) {
@@ -117,7 +117,7 @@ void test_ds_addf_local_f32(__local float *addr, float x){
 }
 
 // CHECK-LABEL: @test_global_add_f32
-// CHECK: call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %{{.*}}, float %{{.*}})
+// CHECK: = atomicrmw fadd ptr addrspace(1) %{{.+}}, float %{{.+}} syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
 void test_global_add_f32(float *rtn, global float *addr, float x) {
   *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
 }

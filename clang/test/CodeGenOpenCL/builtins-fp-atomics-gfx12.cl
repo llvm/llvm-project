@@ -11,7 +11,7 @@ typedef short __attribute__((ext_vector_type(2))) short2;
 
 // CHECK-LABEL: test_local_add_2bf16
 // CHECK: [[BC0:%.+]] = bitcast <2 x i16> {{.+}} to <2 x bfloat>
-// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] seq_cst, align 4
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] syncscope("agent") seq_cst, align 4
 // CHECK-NEXT: bitcast <2 x bfloat> [[RMW]] to <2 x i16>
 
 // GFX12-LABEL:  test_local_add_2bf16
@@ -22,7 +22,7 @@ short2 test_local_add_2bf16(__local short2 *addr, short2 x) {
 
 // CHECK-LABEL: test_local_add_2bf16_noret
 // CHECK: [[BC0:%.+]] = bitcast <2 x i16> {{.+}} to <2 x bfloat>
-// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] seq_cst, align 4
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] syncscope("agent") seq_cst, align 4
 // CHECK-NEXT: bitcast <2 x bfloat> [[RMW]] to <2 x i16>
 
 // GFX12-LABEL:  test_local_add_2bf16_noret

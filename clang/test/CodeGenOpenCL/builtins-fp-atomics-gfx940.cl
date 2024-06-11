@@ -44,7 +44,7 @@ short2 test_global_add_2bf16(__global short2 *addr, short2 x) {
 // CHECK-LABEL: test_local_add_2bf16
 
 // CHECK: [[BC0:%.+]] = bitcast <2 x i16> {{.+}} to <2 x bfloat>
-// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] seq_cst, align 4
+// CHECK: [[RMW:%.+]] = atomicrmw fadd ptr addrspace(3) %{{.+}}, <2 x bfloat> [[BC0]] syncscope("agent") seq_cst, align 4{{$}}
 // CHECK-NEXT: bitcast <2 x bfloat> [[RMW]] to <2 x i16>
 
 // GFX940-LABEL:  test_local_add_2bf16
@@ -70,7 +70,7 @@ void test_local_add_2f16_noret(__local half2 *addr, half2 x) {
 }
 
 // CHECK-LABEL: @test_global_add_f32
-// CHECK: call float @llvm.amdgcn.global.atomic.fadd.f32.p1.f32(ptr addrspace(1) %{{.*}}, float %{{.*}})
+// CHECK: = atomicrmw fadd ptr addrspace(1) %{{.+}}, float %{{.+}} syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.ignore.denormal.mode !{{[0-9]+$}}
 void test_global_add_f32(float *rtn, global float *addr, float x) {
   *rtn = __builtin_amdgcn_global_atomic_fadd_f32(addr, x);
 }
