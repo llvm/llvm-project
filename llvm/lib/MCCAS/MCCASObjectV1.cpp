@@ -2135,10 +2135,11 @@ static Expected<CUInfo> getAndSetDebugAbbrevOffsetAndSkip(
 /// If any fragment is not an MCDataFragment, or the fragment is an
 /// MCDwarfLineAddrFragment and the section containing that fragment is not a
 /// debug_line section, an error is returned.
-Expected<SmallVector<char, 0>> MCCASBuilder::mergeMCFragmentContents(
-    const MCSection::FragmentListType &FragmentList, bool IsDebugLineSection) {
+Expected<SmallVector<char, 0>>
+MCCASBuilder::mergeMCFragmentContents(const MCSection *Section,
+                                      bool IsDebugLineSection) {
   SmallVector<char, 0> mergedData;
-  for (const MCFragment &Fragment : FragmentList) {
+  for (const MCFragment &Fragment : *Section) {
     if (const auto *DataFragment = dyn_cast<MCDataFragment>(&Fragment))
       llvm::append_range(mergedData, DataFragment->getContents());
     else if (const auto *CompactEncodedInstFragment =
@@ -2205,8 +2206,8 @@ Error MCCASBuilder::createDebugInfoSection() {
   startSection(DwarfSections.DebugInfo);
 
   if (DebugInfoUnopt) {
-    Expected<SmallVector<char, 0>> DebugInfoData = mergeMCFragmentContents(
-        DwarfSections.DebugInfo->getFragmentList(), true);
+    Expected<SmallVector<char, 0>> DebugInfoData =
+        mergeMCFragmentContents(DwarfSections.DebugInfo, true);
     if (!DebugInfoData)
       return DebugInfoData.takeError();
     auto DbgInfoUnoptRef =
@@ -2228,7 +2229,7 @@ Error MCCASBuilder::createDebugAbbrevSection() {
   startSection(DwarfSections.Abbrev);
   if (DebugInfoUnopt) {
     Expected<SmallVector<char, 0>> DebugAbbrevData =
-        mergeMCFragmentContents(DwarfSections.Abbrev->getFragmentList(), true);
+        mergeMCFragmentContents(DwarfSections.Abbrev, true);
     if (!DebugAbbrevData)
       return DebugAbbrevData.takeError();
     auto DbgAbbrevUnoptRef =
@@ -2413,8 +2414,7 @@ Error MCCASBuilder::splitDebugInfoAndAbbrevSections() {
   if (!DwarfSections.DebugInfo)
     return Error::success();
 
-  const MCSection::FragmentListType &FragmentList =
-      DwarfSections.DebugInfo->getFragmentList();
+  const MCSection *FragmentList = DwarfSections.DebugInfo;
   Expected<SmallVector<char, 0>> DebugInfoData =
       mergeMCFragmentContents(FragmentList);
   if (!DebugInfoData)
@@ -2424,8 +2424,7 @@ Error MCCASBuilder::splitDebugInfoAndAbbrevSections() {
   if (!SplitInfo)
     return SplitInfo.takeError();
 
-  const MCSection::FragmentListType &AbbrevFragmentList =
-      DwarfSections.Abbrev->getFragmentList();
+  const MCSection *AbbrevFragmentList = DwarfSections.Abbrev;
 
   Expected<SmallVector<char, 0>> FullAbbrevData =
       mergeMCFragmentContents(AbbrevFragmentList);
@@ -2433,8 +2432,7 @@ Error MCCASBuilder::splitDebugInfoAndAbbrevSections() {
   if (!FullAbbrevData)
     return FullAbbrevData.takeError();
 
-  const MCSection::FragmentListType &StringOffsetsFragmentList =
-      DwarfSections.StrOffsets->getFragmentList();
+  const MCSection *StringOffsetsFragmentList = DwarfSections.StrOffsets;
 
   Expected<SmallVector<char, 0>> FullStringOffsetsData =
       mergeMCFragmentContents(StringOffsetsFragmentList);
@@ -2578,7 +2576,7 @@ Error MCCASBuilder::createLineSection() {
     return Error::success();
 
   Expected<SmallVector<char, 0>> DebugLineData =
-      mergeMCFragmentContents(DwarfSections.Line->getFragmentList(), true);
+      mergeMCFragmentContents(DwarfSections.Line, true);
   if (!DebugLineData)
     return DebugLineData.takeError();
 
@@ -2620,10 +2618,10 @@ Error MCCASBuilder::createDebugStrSection() {
 }
 
 Expected<SmallVector<DebugStrRef, 0>> MCCASBuilder::createDebugStringRefs() {
-  if (!DwarfSections.Str || !DwarfSections.Str->getFragmentList().size())
+  if (!DwarfSections.Str || DwarfSections.Str->empty())
     return SmallVector<DebugStrRef, 0>();
 
-  assert(DwarfSections.Str->getFragmentList().size() == 1 &&
+  assert(DwarfSections.Str->curFragList()->Head->getNext() == nullptr &&
          "One fragment in debug str section");
 
   SmallVector<DebugStrRef, 0> DebugStringRefs;
@@ -2644,11 +2642,10 @@ Expected<SmallVector<DebugStrRef, 0>> MCCASBuilder::createDebugStringRefs() {
 template <typename SectionTy>
 std::optional<Expected<SectionTy>>
 MCCASBuilder::createGenericDebugRef(MCSection *Section) {
-  if (!Section || !Section->getFragmentList().size())
+  if (!Section || Section->empty())
     return std::nullopt;
 
-  auto DebugCASData =
-      mergeMCFragmentContents(Section->getFragmentList(), false);
+  auto DebugCASData = mergeMCFragmentContents(Section, false);
 
   if (!DebugCASData)
     return DebugCASData.takeError();
@@ -2665,12 +2662,11 @@ MCCASBuilder::createGenericDebugRef(MCSection *Section) {
 std::optional<Expected<DebugStrOffsetsRef>>
 MCCASBuilder::createDebugStrOffsetsRef() {
 
-  if (!DwarfSections.StrOffsets ||
-      !DwarfSections.StrOffsets->getFragmentList().size())
+  if (!DwarfSections.StrOffsets || DwarfSections.StrOffsets->empty())
     return std::nullopt;
 
-  auto DebugStrOffsetsData = mergeMCFragmentContents(
-      DwarfSections.StrOffsets->getFragmentList(), false);
+  auto DebugStrOffsetsData =
+      mergeMCFragmentContents(DwarfSections.StrOffsets, false);
 
   if (!DebugStrOffsetsData)
     return DebugStrOffsetsData.takeError();
@@ -2982,7 +2978,7 @@ Error MCCASBuilder::buildFragments() {
   startGroup();
 
   for (const MCSection &Sec : Asm) {
-    if (Sec.isVirtualSection() || Sec.getFragmentList().empty())
+    if (Sec.isVirtualSection() || Sec.empty())
       continue;
 
     // Handle Debug Info sections separately.
@@ -3094,7 +3090,7 @@ Error MCCASBuilder::buildFragments() {
     startSection(&Sec);
 
     // Start subsection for first Atom.
-    startAtom(Sec.getFragmentList().front().getAtom());
+    startAtom(Sec.curFragList()->Head->getAtom());
 
     SmallVector<char, 0> Addends;
     ArrayRef<MachO::any_relocation_info> RelocationBuffer;

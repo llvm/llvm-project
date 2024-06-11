@@ -554,7 +554,7 @@ private:
   friend class MCAssemblerRef;
 
   Expected<SmallVector<char, 0>>
-  mergeMCFragmentContents(const MCSection::FragmentListType &FragmentList,
+  mergeMCFragmentContents(const MCSection *Section,
                           bool IsDebugLineSection = false);
 
   // Helper functions.
