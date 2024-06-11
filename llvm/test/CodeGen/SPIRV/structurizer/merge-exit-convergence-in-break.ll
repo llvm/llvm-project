@@ -75,7 +75,7 @@ while.end:
 
 ; CHECK:   %[[#new_end]] = OpLabel
 ; CHECK:    %[[#route:]] = OpPhi %[[#int_ty]] %[[#int_0]] %[[#while_cond]] %[[#int_1]] %[[#tail]]
-; CHECK:                   OpSwitch %[[#route]] %[[#while_end]] 0 %[[#while_end_loopexit]]
+; CHECK:                   OpSwitch %[[#route]] %[[#while_end_loopexit]] 1 %[[#while_end]]
 }
 
 declare token @llvm.experimental.convergence.entry() #2
