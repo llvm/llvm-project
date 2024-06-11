@@ -23820,12 +23820,14 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
     // overflow.
     if (isMinSignedConstant(Op1)) {
       EVT VT = Op0.getValueType();
-      SDVTList CmpVTs = DAG.getVTList(VT, MVT::i32);
-      X86::CondCode CondCode = CC == ISD::SETEQ ? X86::COND_O : X86::COND_NO;
-      X86CC = DAG.getTargetConstant(CondCode, dl, MVT::i8);
-      SDValue Neg =
-          DAG.getNode(X86ISD::SUB, dl, CmpVTs, DAG.getConstant(0, dl, VT), Op0);
-      return SDValue(Neg.getNode(), 1);
+      if (VT == MVT::i32 || VT == MVT::i64 || Op0->hasOneUse()) {
+        SDVTList CmpVTs = DAG.getVTList(VT, MVT::i32);
+        X86::CondCode CondCode = CC == ISD::SETEQ ? X86::COND_O : X86::COND_NO;
+        X86CC = DAG.getTargetConstant(CondCode, dl, MVT::i8);
+        SDValue Neg = DAG.getNode(X86ISD::SUB, dl, CmpVTs,
+                                  DAG.getConstant(0, dl, VT), Op0);
+        return SDValue(Neg.getNode(), 1);
+      }
     }
 
     // Try to use the carry flag from the add in place of an separate CMP for:
