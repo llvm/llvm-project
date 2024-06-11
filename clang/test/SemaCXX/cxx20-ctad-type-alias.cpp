@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-c++11-narrowing -Wno-literal-conversion -std=c++20 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple x86_64-unknown-linux -Wno-c++11-narrowing -Wno-literal-conversion -std=c++20 -verify %s
 
 namespace test1 {
 template <typename T>
@@ -74,7 +74,7 @@ struct Foo {
 template <typename T>
 using AF = Foo<T, 1>;
 
-AF b{0}; 
+AF b{0};
 }  // namespace test6
 
 namespace test7 {
@@ -86,8 +86,8 @@ struct Foo {
 template <typename U>
 using AF1 = Foo<U>;
 template <typename K>
-using AF2 = AF1<K>;  
-AF2 b = 1;  
+using AF2 = AF1<K>;
+AF2 b = 1;
 }  // namespace test7
 
 namespace test8 {
@@ -109,10 +109,12 @@ struct Foo {
 };
 
 template <typename X, int Y>
-using Bar = Foo<X, sizeof(X)>;
+using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: couldn't infer template argument 'X'}} \
+                               // expected-note {{candidate template ignored: constraints not satisfied [with X = int]}} \
+                               // expected-note {{cannot deduce template arguments for 'Bar' from 'Foo<int, 4UL>'}}
 
-// FIXME: we should reject this case? GCC rejects it, MSVC accepts it.
-Bar s = {{1}};
+
+Bar s = {{1}}; // expected-error {{no viable constructor or deduction guide }}
 }  // namespace test9
 
 namespace test10 {
@@ -133,9 +135,13 @@ A a(2);  // Foo<int*>
 namespace test11 {
 struct A {};
 template<class T> struct Foo { T c; };
-template<class X, class Y=A> using AFoo = Foo<Y>;
+template<class X, class Y=A>
+using AFoo = Foo<Y>; // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0>' against 'int'}} \
+                    // expected-note {{candidate template ignored: constraints not satisfied [with Y = int]}} \
+                    // expected-note {{cannot deduce template arguments for 'AFoo' from 'Foo<int>'}} \
+                    // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
 
-AFoo s = {1};
+AFoo s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'AFoo'}}
 } // namespace test11
 
 namespace test12 {
@@ -143,7 +149,7 @@ namespace test12 {
 template<typename X>
 struct Foo {
   template<typename K>
-  struct Bar { 
+  struct Bar {
     Bar(K);
   };
 
@@ -167,6 +173,11 @@ template <typename... Ts>
 using AFoo = Foo<Ts...>;
 
 auto b = AFoo{};
+AFoo a(1, 2);
+
+template <typename T>
+using BFoo = Foo<T, T>;
+BFoo b2(1.0, 2.0);
 } // namespace test13
 
 namespace test14 {
@@ -190,13 +201,15 @@ template <class T> struct Foo { Foo(T); };
 
 template<class V> using AFoo = Foo<V *>;
 template<typename> concept False = false;
-template<False W> using BFoo = AFoo<W>;
+template<False W>
+using BFoo = AFoo<W>; // expected-note {{candidate template ignored: constraints not satisfied [with V = int]}} \
+                      // expected-note {{cannot deduce template arguments for 'BFoo' from 'Foo<int *>'}} \
+                      // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0 *>' against 'int *'}}
 int i = 0;
 AFoo a1(&i); // OK, deduce Foo<int *>
 
-// FIXME: we should reject this case as the W is not deduced from the deduced
-// type Foo<int *>.
-BFoo b2(&i); 
+// the W is not deduced from the deduced type Foo<int *>.
+BFoo b2(&i); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'BFoo'}}
 } // namespace test15
 
 namespace test16 {
@@ -271,7 +284,7 @@ class Foo {};
 // Verify that template template type parameter TTP is referenced/used in the
 // template arguments of the RHS.
 template <template<typename> typename TTP>
-using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<>>' against 'int'}}
+using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<template-parameter-0-0>>' against 'int'}}
 
 template <class T>
 class Container {};

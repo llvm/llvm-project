@@ -70,7 +70,7 @@ INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,
                       "Load MIR Sample Profile",
                       /* cfg = */ false, /* is_analysis = */ false)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
@@ -365,7 +365,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
                     << MF.getFunction().getName() << "\n");
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   MIRSampleLoader->setInitVals(
-      &getAnalysis<MachineDominatorTree>(),
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree(),
       &getAnalysis<MachinePostDominatorTree>(), &getAnalysis<MachineLoopInfo>(),
       MBFI, &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE());
 
@@ -400,7 +400,7 @@ bool MIRProfileLoaderPass::doInitialization(Module &M) {
 void MIRProfileLoaderPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineBlockFrequencyInfo>();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachinePostDominatorTree>();
   AU.addRequiredTransitive<MachineLoopInfo>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();

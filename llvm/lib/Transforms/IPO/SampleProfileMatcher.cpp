@@ -24,8 +24,8 @@ extern cl::opt<bool> SalvageStaleProfile;
 extern cl::opt<bool> PersistProfileStaleness;
 extern cl::opt<bool> ReportProfileStaleness;
 
-void SampleProfileMatcher::findIRAnchors(
-    const Function &F, std::map<LineLocation, StringRef> &IRAnchors) {
+void SampleProfileMatcher::findIRAnchors(const Function &F,
+                                         AnchorMap &IRAnchors) {
   // For inlined code, recover the original callsite and callee by finding the
   // top-level inline frame. e.g. For frame stack "main:1 @ foo:2 @ bar:3", the
   // top-level frame is "main:1", the callsite is "1" and the callee is "foo".
@@ -40,7 +40,7 @@ void SampleProfileMatcher::findIRAnchors(
     LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(
         DIL, FunctionSamples::ProfileIsFS);
     StringRef CalleeName = PrevDIL->getSubprogramLinkageName();
-    return std::make_pair(Callsite, CalleeName);
+    return std::make_pair(Callsite, FunctionId(CalleeName));
   };
 
   auto GetCanonicalCalleeName = [](const CallBase *CB) {
@@ -70,7 +70,8 @@ void SampleProfileMatcher::findIRAnchors(
               if (!isa<IntrinsicInst>(&I))
                 CalleeName = GetCanonicalCalleeName(CB);
             }
-            IRAnchors.emplace(LineLocation(Probe->Id, 0), CalleeName);
+            LineLocation Loc = LineLocation(Probe->Id, 0);
+            IRAnchors.emplace(Loc, FunctionId(CalleeName));
           }
         }
       } else {
@@ -86,84 +87,127 @@ void SampleProfileMatcher::findIRAnchors(
           LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(
               DIL, FunctionSamples::ProfileIsFS);
           StringRef CalleeName = GetCanonicalCalleeName(dyn_cast<CallBase>(&I));
-          IRAnchors.emplace(Callsite, CalleeName);
+          IRAnchors.emplace(Callsite, FunctionId(CalleeName));
         }
       }
     }
   }
 }
 
-void SampleProfileMatcher::findProfileAnchors(
-    const FunctionSamples &FS,
-    std::map<LineLocation, std::unordered_set<FunctionId>> &ProfileAnchors) {
+void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
+                                              AnchorMap &ProfileAnchors) {
   auto isInvalidLineOffset = [](uint32_t LineOffset) {
     return LineOffset & 0x8000;
+  };
+
+  auto InsertAnchor = [](const LineLocation &Loc, const FunctionId &CalleeName,
+                         AnchorMap &ProfileAnchors) {
+    auto Ret = ProfileAnchors.try_emplace(Loc, CalleeName);
+    if (!Ret.second) {
+      // For multiple callees, which indicates it's an indirect call, we use a
+      // dummy name(UnknownIndirectCallee) as the indrect callee name.
+      Ret.first->second = FunctionId(UnknownIndirectCallee);
+    }
   };
 
   for (const auto &I : FS.getBodySamples()) {
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    for (const auto &I : I.second.getCallTargets()) {
-      auto Ret =
-          ProfileAnchors.try_emplace(Loc, std::unordered_set<FunctionId>());
-      Ret.first->second.insert(I.first);
-    }
+    for (const auto &C : I.second.getCallTargets())
+      InsertAnchor(Loc, C.first, ProfileAnchors);
   }
 
   for (const auto &I : FS.getCallsiteSamples()) {
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    const auto &CalleeMap = I.second;
-    for (const auto &I : CalleeMap) {
-      auto Ret =
-          ProfileAnchors.try_emplace(Loc, std::unordered_set<FunctionId>());
-      Ret.first->second.insert(I.first);
-    }
+    for (const auto &C : I.second)
+      InsertAnchor(Loc, C.first, ProfileAnchors);
   }
 }
 
-// Call target name anchor based profile fuzzy matching.
-// Input:
-// For IR locations, the anchor is the callee name of direct callsite; For
-// profile locations, it's the call target name for BodySamples or inlinee's
-// profile name for CallsiteSamples.
-// Matching heuristic:
-// First match all the anchors in lexical order, then split the non-anchor
-// locations between the two anchors evenly, first half are matched based on the
-// start anchor, second half are matched based on the end anchor.
-// For example, given:
-// IR locations:      [1, 2(foo), 3, 5, 6(bar), 7]
-// Profile locations: [1, 2, 3(foo), 4, 7, 8(bar), 9]
-// The matching gives:
-//   [1,    2(foo), 3,  5,  6(bar), 7]
-//    |     |       |   |     |     |
-//   [1, 2, 3(foo), 4,  7,  8(bar), 9]
-// The output mapping: [2->3, 3->4, 5->7, 6->8, 7->9].
-void SampleProfileMatcher::runStaleProfileMatching(
-    const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-    const std::map<LineLocation, std::unordered_set<FunctionId>>
-        &ProfileAnchors,
-    LocToLocMap &IRToProfileLocationMap) {
-  LLVM_DEBUG(dbgs() << "Run stale profile matching for " << F.getName()
-                    << "\n");
-  assert(IRToProfileLocationMap.empty() &&
-         "Run stale profile matching only once per function");
+LocToLocMap SampleProfileMatcher::longestCommonSequence(
+    const AnchorList &AnchorList1, const AnchorList &AnchorList2) const {
+  int32_t Size1 = AnchorList1.size(), Size2 = AnchorList2.size(),
+          MaxDepth = Size1 + Size2;
+  auto Index = [&](int32_t I) { return I + MaxDepth; };
 
-  std::unordered_map<FunctionId, std::set<LineLocation>> CalleeToCallsitesMap;
-  for (const auto &I : ProfileAnchors) {
-    const auto &Loc = I.first;
-    const auto &Callees = I.second;
-    // Filter out possible indirect calls, use direct callee name as anchor.
-    if (Callees.size() == 1) {
-      FunctionId CalleeName = *Callees.begin();
-      const auto &Candidates = CalleeToCallsitesMap.try_emplace(
-          CalleeName, std::set<LineLocation>());
-      Candidates.first->second.insert(Loc);
+  LocToLocMap EqualLocations;
+  if (MaxDepth == 0)
+    return EqualLocations;
+
+  // Backtrack the SES result.
+  auto Backtrack = [&](const std::vector<std::vector<int32_t>> &Trace,
+                       const AnchorList &AnchorList1,
+                       const AnchorList &AnchorList2,
+                       LocToLocMap &EqualLocations) {
+    int32_t X = Size1, Y = Size2;
+    for (int32_t Depth = Trace.size() - 1; X > 0 || Y > 0; Depth--) {
+      const auto &P = Trace[Depth];
+      int32_t K = X - Y;
+      int32_t PrevK = K;
+      if (K == -Depth || (K != Depth && P[Index(K - 1)] < P[Index(K + 1)]))
+        PrevK = K + 1;
+      else
+        PrevK = K - 1;
+
+      int32_t PrevX = P[Index(PrevK)];
+      int32_t PrevY = PrevX - PrevK;
+      while (X > PrevX && Y > PrevY) {
+        X--;
+        Y--;
+        EqualLocations.insert({AnchorList1[X].first, AnchorList2[Y].first});
+      }
+
+      if (Depth == 0)
+        break;
+
+      if (Y == PrevY)
+        X--;
+      else if (X == PrevX)
+        Y--;
+      X = PrevX;
+      Y = PrevY;
+    }
+  };
+
+  // The greedy LCS/SES algorithm.
+
+  // An array contains the endpoints of the furthest reaching D-paths.
+  std::vector<int32_t> V(2 * MaxDepth + 1, -1);
+  V[Index(1)] = 0;
+  // Trace is used to backtrack the SES result.
+  std::vector<std::vector<int32_t>> Trace;
+  for (int32_t Depth = 0; Depth <= MaxDepth; Depth++) {
+    Trace.push_back(V);
+    for (int32_t K = -Depth; K <= Depth; K += 2) {
+      int32_t X = 0, Y = 0;
+      if (K == -Depth || (K != Depth && V[Index(K - 1)] < V[Index(K + 1)]))
+        X = V[Index(K + 1)];
+      else
+        X = V[Index(K - 1)] + 1;
+      Y = X - K;
+      while (X < Size1 && Y < Size2 &&
+             AnchorList1[X].second == AnchorList2[Y].second)
+        X++, Y++;
+
+      V[Index(K)] = X;
+
+      if (X >= Size1 && Y >= Size2) {
+        // Length of an SES is D.
+        Backtrack(Trace, AnchorList1, AnchorList2, EqualLocations);
+        return EqualLocations;
+      }
     }
   }
+  // Length of an SES is greater than MaxDepth.
+  return EqualLocations;
+}
 
+void SampleProfileMatcher::matchNonCallsiteLocs(
+    const LocToLocMap &MatchedAnchors, const AnchorMap &IRAnchors,
+    LocToLocMap &IRToProfileLocationMap) {
   auto InsertMatching = [&](const LineLocation &From, const LineLocation &To) {
     // Skip the unchanged location mapping to save memory.
     if (From != To)
@@ -173,43 +217,35 @@ void SampleProfileMatcher::runStaleProfileMatching(
   // Use function's beginning location as the initial anchor.
   int32_t LocationDelta = 0;
   SmallVector<LineLocation> LastMatchedNonAnchors;
-
   for (const auto &IR : IRAnchors) {
     const auto &Loc = IR.first;
-    auto CalleeName = IR.second;
     bool IsMatchedAnchor = false;
     // Match the anchor location in lexical order.
-    if (!CalleeName.empty()) {
-      auto CandidateAnchors =
-          CalleeToCallsitesMap.find(getRepInFormat(CalleeName));
-      if (CandidateAnchors != CalleeToCallsitesMap.end() &&
-          !CandidateAnchors->second.empty()) {
-        auto CI = CandidateAnchors->second.begin();
-        const auto Candidate = *CI;
-        CandidateAnchors->second.erase(CI);
-        InsertMatching(Loc, Candidate);
-        LLVM_DEBUG(dbgs() << "Callsite with callee:" << CalleeName
-                          << " is matched from " << Loc << " to " << Candidate
-                          << "\n");
-        LocationDelta = Candidate.LineOffset - Loc.LineOffset;
+    auto R = MatchedAnchors.find(Loc);
+    if (R != MatchedAnchors.end()) {
+      const auto &Candidate = R->second;
+      InsertMatching(Loc, Candidate);
+      LLVM_DEBUG(dbgs() << "Callsite with callee:" << IR.second.stringRef()
+                        << " is matched from " << Loc << " to " << Candidate
+                        << "\n");
+      LocationDelta = Candidate.LineOffset - Loc.LineOffset;
 
-        // Match backwards for non-anchor locations.
-        // The locations in LastMatchedNonAnchors have been matched forwards
-        // based on the previous anchor, spilt it evenly and overwrite the
-        // second half based on the current anchor.
-        for (size_t I = (LastMatchedNonAnchors.size() + 1) / 2;
-             I < LastMatchedNonAnchors.size(); I++) {
-          const auto &L = LastMatchedNonAnchors[I];
-          uint32_t CandidateLineOffset = L.LineOffset + LocationDelta;
-          LineLocation Candidate(CandidateLineOffset, L.Discriminator);
-          InsertMatching(L, Candidate);
-          LLVM_DEBUG(dbgs() << "Location is rematched backwards from " << L
-                            << " to " << Candidate << "\n");
-        }
-
-        IsMatchedAnchor = true;
-        LastMatchedNonAnchors.clear();
+      // Match backwards for non-anchor locations.
+      // The locations in LastMatchedNonAnchors have been matched forwards
+      // based on the previous anchor, spilt it evenly and overwrite the
+      // second half based on the current anchor.
+      for (size_t I = (LastMatchedNonAnchors.size() + 1) / 2;
+           I < LastMatchedNonAnchors.size(); I++) {
+        const auto &L = LastMatchedNonAnchors[I];
+        uint32_t CandidateLineOffset = L.LineOffset + LocationDelta;
+        LineLocation Candidate(CandidateLineOffset, L.Discriminator);
+        InsertMatching(L, Candidate);
+        LLVM_DEBUG(dbgs() << "Location is rematched backwards from " << L
+                          << " to " << Candidate << "\n");
       }
+
+      IsMatchedAnchor = true;
+      LastMatchedNonAnchors.clear();
     }
 
     // Match forwards for non-anchor locations.
@@ -222,6 +258,57 @@ void SampleProfileMatcher::runStaleProfileMatching(
       LastMatchedNonAnchors.emplace_back(Loc);
     }
   }
+}
+
+// Call target name anchor based profile fuzzy matching.
+// Input:
+// For IR locations, the anchor is the callee name of direct callsite; For
+// profile locations, it's the call target name for BodySamples or inlinee's
+// profile name for CallsiteSamples.
+// Matching heuristic:
+// First match all the anchors using the diff algorithm, then split the
+// non-anchor locations between the two anchors evenly, first half are matched
+// based on the start anchor, second half are matched based on the end anchor.
+// For example, given:
+// IR locations:      [1, 2(foo), 3, 5, 6(bar), 7]
+// Profile locations: [1, 2, 3(foo), 4, 7, 8(bar), 9]
+// The matching gives:
+//   [1,    2(foo), 3,  5,  6(bar), 7]
+//    |     |       |   |     |     |
+//   [1, 2, 3(foo), 4,  7,  8(bar), 9]
+// The output mapping: [2->3, 3->4, 5->7, 6->8, 7->9].
+void SampleProfileMatcher::runStaleProfileMatching(
+    const Function &F, const AnchorMap &IRAnchors,
+    const AnchorMap &ProfileAnchors, LocToLocMap &IRToProfileLocationMap) {
+  LLVM_DEBUG(dbgs() << "Run stale profile matching for " << F.getName()
+                    << "\n");
+  assert(IRToProfileLocationMap.empty() &&
+         "Run stale profile matching only once per function");
+
+  AnchorList FilteredProfileAnchorList;
+  for (const auto &I : ProfileAnchors)
+    FilteredProfileAnchorList.emplace_back(I);
+
+  AnchorList FilteredIRAnchorsList;
+  // Filter the non-callsite from IRAnchors.
+  for (const auto &I : IRAnchors) {
+    if (I.second.stringRef().empty())
+      continue;
+    FilteredIRAnchorsList.emplace_back(I);
+  }
+
+  if (FilteredIRAnchorsList.empty() || FilteredProfileAnchorList.empty())
+    return;
+
+  // Match the callsite anchors by finding the longest common subsequence
+  // between IR and profile. Note that we need to use IR anchor as base(A side)
+  // to align with the order of IRToProfileLocationMap.
+  LocToLocMap MatchedAnchors =
+      longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList);
+
+  // Match the non-callsite locations and write the result to
+  // IRToProfileLocationMap.
+  matchNonCallsiteLocs(MatchedAnchors, IRAnchors, IRToProfileLocationMap);
 }
 
 void SampleProfileMatcher::runOnFunction(Function &F) {
@@ -238,11 +325,11 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   // Anchors for IR. It's a map from IR location to callee name, callee name is
   // empty for non-call instruction and use a dummy name(UnknownIndirectCallee)
   // for unknown indrect callee name.
-  std::map<LineLocation, StringRef> IRAnchors;
+  AnchorMap IRAnchors;
   findIRAnchors(F, IRAnchors);
   // Anchors for profile. It's a map from callsite location to a set of callee
   // name.
-  std::map<LineLocation, std::unordered_set<FunctionId>> ProfileAnchors;
+  AnchorMap ProfileAnchors;
   findProfileAnchors(*FSFlattened, ProfileAnchors);
 
   // Compute the callsite match states for profile staleness report.
@@ -274,9 +361,8 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
 }
 
 void SampleProfileMatcher::recordCallsiteMatchStates(
-    const Function &F, const std::map<LineLocation, StringRef> &IRAnchors,
-    const std::map<LineLocation, std::unordered_set<FunctionId>>
-        &ProfileAnchors,
+    const Function &F, const AnchorMap &IRAnchors,
+    const AnchorMap &ProfileAnchors,
     const LocToLocMap *IRToProfileLocationMap) {
   bool IsPostMatch = IRToProfileLocationMap != nullptr;
   auto &CallsiteMatchStates =
@@ -297,23 +383,12 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     // After fuzzy profile matching, use the matching result to remap the
     // current IR callsite.
     const auto &ProfileLoc = MapIRLocToProfileLoc(I.first);
-    const auto &IRCalleeName = I.second;
+    const auto &IRCalleeId = I.second;
     const auto &It = ProfileAnchors.find(ProfileLoc);
     if (It == ProfileAnchors.end())
       continue;
-    const auto &Callees = It->second;
-
-    bool IsCallsiteMatched = false;
-    // Since indirect call does not have CalleeName, check conservatively if
-    // callsite in the profile is a callsite location. This is to reduce num of
-    // false positive since otherwise all the indirect call samples will be
-    // reported as mismatching.
-    if (IRCalleeName == SampleProfileMatcher::UnknownIndirectCallee)
-      IsCallsiteMatched = true;
-    else if (Callees.size() == 1 && Callees.count(getRepInFormat(IRCalleeName)))
-      IsCallsiteMatched = true;
-
-    if (IsCallsiteMatched) {
+    const auto &ProfCalleeId = It->second;
+    if (IRCalleeId == ProfCalleeId) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
         CallsiteMatchStates.emplace(ProfileLoc, MatchState::InitialMatch);
@@ -330,8 +405,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
   // IR callsites.
   for (const auto &I : ProfileAnchors) {
     const auto &Loc = I.first;
-    [[maybe_unused]] const auto &Callees = I.second;
-    assert(!Callees.empty() && "Callees should not be empty");
+    assert(!I.second.stringRef().empty() && "Callees should not be empty");
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
       CallsiteMatchStates.emplace(Loc, MatchState::InitialMismatch);

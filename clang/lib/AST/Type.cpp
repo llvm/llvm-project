@@ -632,6 +632,16 @@ bool Type::isStructureType() const {
   return false;
 }
 
+bool Type::isStructureTypeWithFlexibleArrayMember() const {
+  const auto *RT = getAs<RecordType>();
+  if (!RT)
+    return false;
+  const auto *Decl = RT->getDecl();
+  if (!Decl->isStruct())
+    return false;
+  return Decl->hasFlexibleArrayMember();
+}
+
 bool Type::isObjCBoxableRecordType() const {
   if (const auto *RT = getAs<RecordType>())
     return RT->getDecl()->hasAttr<ObjCBoxableAttr>();
@@ -2372,6 +2382,14 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
       *Def = Rec;
     return !Rec->isCompleteDefinition();
   }
+  case InjectedClassName: {
+    CXXRecordDecl *Rec = cast<InjectedClassNameType>(CanonicalType)->getDecl();
+    if (!Rec->isBeingDefined())
+      return false;
+    if (Def)
+      *Def = Rec;
+    return true;
+  }
   case ConstantArray:
   case VariableArray:
     // An array is incomplete if its element type is incomplete
@@ -2729,6 +2747,43 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
 bool QualType::isTriviallyCopyableType(const ASTContext &Context) const {
   return isTriviallyCopyableTypeImpl(*this, Context,
                                      /*IsCopyConstructible=*/false);
+}
+
+// FIXME: each call will trigger a full computation, cache the result.
+bool QualType::isBitwiseCloneableType(const ASTContext &Context) const {
+  auto CanonicalType = getCanonicalType();
+  if (CanonicalType.hasNonTrivialObjCLifetime())
+    return false;
+  if (CanonicalType->isArrayType())
+    return Context.getBaseElementType(CanonicalType)
+        .isBitwiseCloneableType(Context);
+
+  if (CanonicalType->isIncompleteType())
+    return false;
+  const auto *RD = CanonicalType->getAsRecordDecl(); // struct/union/class
+  if (!RD)
+    return true;
+
+  // Never allow memcpy when we're adding poisoned padding bits to the struct.
+  // Accessing these posioned bits will trigger false alarms on
+  // SanitizeAddressFieldPadding etc.
+  if (RD->mayInsertExtraPadding())
+    return false;
+
+  for (auto *const Field : RD->fields()) {
+    if (!Field->getType().isBitwiseCloneableType(Context))
+      return false;
+  }
+
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    for (auto Base : CXXRD->bases())
+      if (!Base.getType().isBitwiseCloneableType(Context))
+        return false;
+    for (auto VBase : CXXRD->vbases())
+      if (!VBase.getType().isBitwiseCloneableType(Context))
+        return false;
+  }
+  return true;
 }
 
 bool QualType::isTriviallyCopyConstructibleType(
@@ -4233,7 +4288,8 @@ TemplateSpecializationType::TemplateSpecializationType(
   assert((T.getKind() == TemplateName::Template ||
           T.getKind() == TemplateName::SubstTemplateTemplateParm ||
           T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
-          T.getKind() == TemplateName::UsingTemplate) &&
+          T.getKind() == TemplateName::UsingTemplate ||
+          T.getKind() == TemplateName::QualifiedTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
   auto *TemplateArgs = reinterpret_cast<TemplateArgument *>(this + 1);
@@ -4425,7 +4481,6 @@ static CachedProperties computeCachedProperties(const Type *T) {
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class,Base) case Type::Class:
 #include "clang/AST/TypeNodes.inc"
     // Treat instantiation-dependent types as external.
-    if (!T->isInstantiationDependentType()) T->dump();
     assert(T->isInstantiationDependentType());
     return CachedProperties(Linkage::External, false);
 

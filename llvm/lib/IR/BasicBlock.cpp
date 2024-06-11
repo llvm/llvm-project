@@ -181,7 +181,7 @@ template class llvm::SymbolTableListTraits<Instruction,
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
     : Value(Type::getLabelTy(C), Value::BasicBlockVal),
-      IsNewDbgInfoFormat(UseNewDbgInfoFormat), Parent(nullptr) {
+      IsNewDbgInfoFormat(false), Parent(nullptr) {
 
   if (NewParent)
     insertInto(NewParent, InsertBefore);

@@ -15,6 +15,19 @@ typedef enum {
   ptrauth_key_asib = 1,
   ptrauth_key_asda = 2,
   ptrauth_key_asdb = 3,
+
+  /* A process-independent key which can be used to sign code pointers. */
+  ptrauth_key_process_independent_code = ptrauth_key_asia,
+
+  /* A process-specific key which can be used to sign code pointers. */
+  ptrauth_key_process_dependent_code = ptrauth_key_asib,
+
+  /* A process-independent key which can be used to sign data pointers. */
+  ptrauth_key_process_independent_data = ptrauth_key_asda,
+
+  /* A process-specific key which can be used to sign data pointers. */
+  ptrauth_key_process_dependent_data = ptrauth_key_asdb,
+
 } ptrauth_key;
 
 /* An integer type of the appropriate size for a discriminator argument. */

@@ -30,13 +30,13 @@
 ; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
 ; RUN: -current_version 1.2.3  -compatibility_version 1 -fapplication-extension \
 ; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=APPEXTSAFE %s
-; APPEXTSAFE: error: ApplicationExtensionSafe flag does not match: 'true' (provided) vs 'false' (found)
+; APPEXTSAFE: error: the ApplicationExtensionSafe flag does not match: 'true' (provided) vs 'false' (found)
 
 ; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
 ; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \
 ; RUN: -current_version 1.2.3  -compatibility_version 1 -not_for_dyld_shared_cache \
 ; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=SHARED_CACHE %s
-; SHARED_CACHE: error: NotForDyldSharedCache flag does not match: 'true' (provided) vs 'false' (found)
+; SHARED_CACHE: error: the NotForDyldSharedCache flag does not match: 'true' (provided) vs 'false' (found)
 
 ; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
 ; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \

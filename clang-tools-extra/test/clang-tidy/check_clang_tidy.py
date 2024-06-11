@@ -99,6 +99,7 @@ class CheckRunner:
         self.has_check_fixes = False
         self.has_check_messages = False
         self.has_check_notes = False
+        self.expect_no_diagnosis = False
         self.export_fixes = args.export_fixes
         self.fixes = MessagePrefix("CHECK-FIXES")
         self.messages = MessagePrefix("CHECK-MESSAGES")
@@ -172,12 +173,21 @@ class CheckRunner:
                 )
 
             if not has_check_fix and not has_check_message and not has_check_note:
-                sys.exit(
-                    "%s, %s or %s not found in the input"
-                    % (self.fixes.prefix, self.messages.prefix, self.notes.prefix)
-                )
+                self.expect_no_diagnosis = True
 
-        assert self.has_check_fixes or self.has_check_messages or self.has_check_notes
+        expect_diagnosis = (
+            self.has_check_fixes or self.has_check_messages or self.has_check_notes
+        )
+        if self.expect_no_diagnosis and expect_diagnosis:
+            sys.exit(
+                "%s, %s or %s not found in the input"
+                % (
+                    self.fixes.prefix,
+                    self.messages.prefix,
+                    self.notes.prefix,
+                )
+            )
+        assert expect_diagnosis or self.expect_no_diagnosis
 
     def prepare_test_inputs(self):
         # Remove the contents of the CHECK lines to avoid CHECKs matching on
@@ -225,6 +235,10 @@ class CheckRunner:
         print(diff_output)
         print("------------------------------------------------------------------")
         return clang_tidy_output
+
+    def check_no_diagnosis(self, clang_tidy_output):
+        if clang_tidy_output != "":
+            sys.exit("No diagnostics were expected, but found the ones above")
 
     def check_fixes(self):
         if self.has_check_fixes:
@@ -277,7 +291,9 @@ class CheckRunner:
             self.get_prefixes()
         self.prepare_test_inputs()
         clang_tidy_output = self.run_clang_tidy()
-        if self.export_fixes is None:
+        if self.expect_no_diagnosis:
+            self.check_no_diagnosis(clang_tidy_output)
+        elif self.export_fixes is None:
             self.check_fixes()
             self.check_messages(clang_tidy_output)
             self.check_notes(clang_tidy_output)

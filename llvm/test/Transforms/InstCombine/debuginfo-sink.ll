@@ -62,7 +62,7 @@ sink2:
 ; CHECK:       call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}},
 ; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value))
 ; CHECK-NEXT:  call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}},
-; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_plus_uconst, 5, DW_OP_stack_value))
+; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 9, DW_OP_stack_value))
 ; CHECK-NEXT:  br label %sink1
 
 define i32 @baz(ptr %a) !dbg !80 {

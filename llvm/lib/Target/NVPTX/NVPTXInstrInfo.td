@@ -2637,25 +2637,46 @@ class LoadParamRegInst<NVPTXRegClass regclass, string opstr> :
                 [(set regclass:$dst, (LoadParam (i32 0), (i32 imm:$b)))]>;
 
 let mayStore = true in {
-  class StoreParamInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, i32imm:$a, i32imm:$b),
-                  !strconcat("st.param", opstr, " \t[param$a+$b], $val;"),
-                  []>;
 
-  class StoreParamV2Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, regclass:$val2,
+  multiclass StoreParamInst<NVPTXRegClass regclass, Operand IMMType, string opstr, bit support_imm = true> {
+    foreach op = [IMMType, regclass] in
+      if !or(support_imm, !isa<NVPTXRegClass>(op)) then
+        def _ # !if(!isa<NVPTXRegClass>(op), "r", "i")
+          : NVPTXInst<(outs),
+                      (ins op:$val, i32imm:$a, i32imm:$b),
+                      "st.param" # opstr # " \t[param$a+$b], $val;",
+                      []>;
+  }
+
+  multiclass StoreParamV2Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
+    foreach op1 = [IMMType, regclass] in
+      foreach op2 = [IMMType, regclass] in
+        def _ # !if(!isa<NVPTXRegClass>(op1), "r", "i")
+              # !if(!isa<NVPTXRegClass>(op2), "r", "i")
+          : NVPTXInst<(outs),
+                      (ins op1:$val1, op2:$val2,
+                           i32imm:$a, i32imm:$b),
+                      "st.param.v2" # opstr # " \t[param$a+$b], {{$val1, $val2}};",
+                      []>;
+  }
+
+  multiclass StoreParamV4Inst<NVPTXRegClass regclass, Operand IMMType, string opstr> {
+    foreach op1 = [IMMType, regclass] in
+      foreach op2 = [IMMType, regclass] in
+        foreach op3 = [IMMType, regclass] in
+          foreach op4 = [IMMType, regclass] in
+            def _ # !if(!isa<NVPTXRegClass>(op1), "r", "i")
+                  # !if(!isa<NVPTXRegClass>(op2), "r", "i")
+                  # !if(!isa<NVPTXRegClass>(op3), "r", "i")
+                  # !if(!isa<NVPTXRegClass>(op4), "r", "i")
+
+              : NVPTXInst<(outs),
+                          (ins op1:$val1, op2:$val2, op3:$val3, op4:$val4,
                                i32imm:$a, i32imm:$b),
-                  !strconcat("st.param.v2", opstr,
-                             " \t[param$a+$b], {{$val, $val2}};"),
-                  []>;
-
-  class StoreParamV4Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, regclass:$val2, regclass:$val3,
-                               regclass:$val4, i32imm:$a,
-                               i32imm:$b),
-                  !strconcat("st.param.v4", opstr,
-                             " \t[param$a+$b], {{$val, $val2, $val3, $val4}};"),
-                  []>;
+                          "st.param.v4" # opstr #
+                          " \t[param$a+$b], {{$val1, $val2, $val3, $val4}};",
+                          []>;
+  }
 
   class StoreRetvalInst<NVPTXRegClass regclass, string opstr> :
         NVPTXInst<(outs), (ins regclass:$val, i32imm:$a),
@@ -2735,27 +2756,30 @@ def LoadParamMemV2F32  : LoadParamV2MemInst<Float32Regs, ".f32">;
 def LoadParamMemV2F64  : LoadParamV2MemInst<Float64Regs, ".f64">;
 def LoadParamMemV4F32  : LoadParamV4MemInst<Float32Regs, ".f32">;
 
-def StoreParamI64    : StoreParamInst<Int64Regs, ".b64">;
-def StoreParamI32    : StoreParamInst<Int32Regs, ".b32">;
+defm StoreParamI64    : StoreParamInst<Int64Regs, i64imm, ".b64">;
+defm StoreParamI32    : StoreParamInst<Int32Regs, i32imm, ".b32">;
+defm StoreParamI16    : StoreParamInst<Int16Regs, i16imm, ".b16">;
+defm StoreParamI8     : StoreParamInst<Int16Regs, i8imm,  ".b8">;
 
-def StoreParamI16    : StoreParamInst<Int16Regs, ".b16">;
-def StoreParamI8     : StoreParamInst<Int16Regs, ".b8">;
-def StoreParamI8TruncI32 : StoreParamInst<Int32Regs, ".b8">;
-def StoreParamI8TruncI64 : StoreParamInst<Int64Regs, ".b8">;
-def StoreParamV2I64  : StoreParamV2Inst<Int64Regs, ".b64">;
-def StoreParamV2I32  : StoreParamV2Inst<Int32Regs, ".b32">;
-def StoreParamV2I16  : StoreParamV2Inst<Int16Regs, ".b16">;
-def StoreParamV2I8   : StoreParamV2Inst<Int16Regs, ".b8">;
+defm StoreParamI8TruncI32 : StoreParamInst<Int32Regs, i8imm, ".b8", /* support_imm */ false>;
+defm StoreParamI8TruncI64 : StoreParamInst<Int64Regs, i8imm, ".b8", /* support_imm */ false>;
 
-def StoreParamV4I32  : StoreParamV4Inst<Int32Regs, ".b32">;
-def StoreParamV4I16  : StoreParamV4Inst<Int16Regs, ".b16">;
-def StoreParamV4I8   : StoreParamV4Inst<Int16Regs, ".b8">;
+defm StoreParamV2I64  : StoreParamV2Inst<Int64Regs, i64imm, ".b64">;
+defm StoreParamV2I32  : StoreParamV2Inst<Int32Regs, i32imm, ".b32">;
+defm StoreParamV2I16  : StoreParamV2Inst<Int16Regs, i16imm, ".b16">;
+defm StoreParamV2I8   : StoreParamV2Inst<Int16Regs, i8imm,  ".b8">;
 
-def StoreParamF32      : StoreParamInst<Float32Regs, ".f32">;
-def StoreParamF64      : StoreParamInst<Float64Regs, ".f64">;
-def StoreParamV2F32    : StoreParamV2Inst<Float32Regs, ".f32">;
-def StoreParamV2F64    : StoreParamV2Inst<Float64Regs, ".f64">;
-def StoreParamV4F32    : StoreParamV4Inst<Float32Regs, ".f32">;
+defm StoreParamV4I32  : StoreParamV4Inst<Int32Regs, i32imm, ".b32">;
+defm StoreParamV4I16  : StoreParamV4Inst<Int16Regs, i16imm, ".b16">;
+defm StoreParamV4I8   : StoreParamV4Inst<Int16Regs, i8imm,  ".b8">;
+
+defm StoreParamF32    : StoreParamInst<Float32Regs, f32imm, ".f32">;
+defm StoreParamF64    : StoreParamInst<Float64Regs, f64imm, ".f64">;
+
+defm StoreParamV2F32  : StoreParamV2Inst<Float32Regs, f32imm, ".f32">;
+defm StoreParamV2F64  : StoreParamV2Inst<Float64Regs, f64imm, ".f64">;
+
+defm StoreParamV4F32  : StoreParamV4Inst<Float32Regs, f32imm, ".f32">;
 
 def StoreRetvalI64    : StoreRetvalInst<Int64Regs, ".b64">;
 def StoreRetvalI32    : StoreRetvalInst<Int32Regs, ".b32">;

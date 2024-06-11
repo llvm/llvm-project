@@ -23,6 +23,10 @@
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
 
+namespace cuf {
+class DataAttributeAttr;
+}
+
 namespace fir {
 class ExtendedValue;
 class FirOpBuilder;
@@ -146,9 +150,9 @@ translateSymbolAttributes(mlir::MLIRContext *mlirContext,
 
 /// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
 /// representation.
-fir::CUDADataAttributeAttr
-translateSymbolCUDADataAttribute(mlir::MLIRContext *mlirContext,
-                                 const Fortran::semantics::Symbol &sym);
+cuf::DataAttributeAttr
+translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
+                                const Fortran::semantics::Symbol &sym);
 
 /// Map a symbol to a given fir::ExtendedValue. This will generate an
 /// hlfir.declare when lowering to HLFIR and map the hlfir.declare result to the

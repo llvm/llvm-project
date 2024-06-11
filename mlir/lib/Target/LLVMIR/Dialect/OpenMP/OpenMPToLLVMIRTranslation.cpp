@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -22,6 +23,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/RegionUtils.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -198,7 +200,7 @@ static llvm::BasicBlock *convertOmpOpRegions(
 
   // Convert blocks one by one in topological order to ensure
   // defs are converted before uses.
-  SetVector<Block *> blocks = getTopologicallySortedBlocks(region);
+  SetVector<Block *> blocks = getBlocksSortedByDominance(region);
   for (Block *bb : blocks) {
     llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(bb);
     // Retarget the branch of the entry block to the entry block of the
@@ -330,54 +332,6 @@ convertOmpCritical(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createCritical(
       ompLoc, bodyGenCB, finiCB, criticalOp.getName().value_or(""), hint));
   return success();
-}
-
-/// Returns a reduction declaration that corresponds to the given reduction
-/// operation in the given container. Currently only supports reductions inside
-/// WsloopOp and ParallelOp but can be easily extended as long as the given
-/// construct implements getNumReductionVars.
-template <typename T>
-static std::optional<omp::DeclareReductionOp>
-findReductionDeclInContainer(T container, omp::ReductionOp reduction) {
-  for (unsigned i = 0, e = container.getNumReductionVars(); i < e; ++i) {
-    if (container.getReductionVars()[i] != reduction.getAccumulator())
-      continue;
-
-    SymbolRefAttr reductionSymbol =
-        cast<SymbolRefAttr>((*container.getReductions())[i]);
-    auto declareOp =
-        SymbolTable::lookupNearestSymbolFrom<omp::DeclareReductionOp>(
-            container, reductionSymbol);
-    return declareOp;
-  }
-  return std::nullopt;
-}
-
-/// Searches for a reduction in a provided region and the regions
-/// it is nested in
-static omp::DeclareReductionOp findReductionDecl(Operation &containerOp,
-                                                 omp::ReductionOp reduction) {
-  std::optional<omp::DeclareReductionOp> declareOp = std::nullopt;
-  Operation *container = &containerOp;
-
-  while (!declareOp.has_value() && container) {
-    // Check if current container is supported for reductions searches
-    if (auto par = dyn_cast<omp::ParallelOp>(*container)) {
-      declareOp = findReductionDeclInContainer(par, reduction);
-    } else if (auto loop = dyn_cast<omp::WsloopOp>(*container)) {
-      declareOp = findReductionDeclInContainer(loop, reduction);
-    } else {
-      break;
-    }
-
-    // See if we can search parent for reductions as well
-    container = containerOp.getParentOp();
-  }
-
-  assert(declareOp.has_value() &&
-         "reduction operation must be associated with a declaration");
-
-  return *declareOp;
 }
 
 /// Populates `reductions` with reduction declarations used in the given loop.
@@ -813,13 +767,16 @@ static void allocByValReductionVars(
     llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
     SmallVectorImpl<omp::DeclareReductionOp> &reductionDecls,
     SmallVectorImpl<llvm::Value *> &privateReductionVariables,
-    DenseMap<Value, llvm::Value *> &reductionVariableMap) {
+    DenseMap<Value, llvm::Value *> &reductionVariableMap,
+    llvm::ArrayRef<bool> isByRefs) {
   llvm::IRBuilderBase::InsertPointGuard guard(builder);
   builder.restoreIP(allocaIP);
   auto args =
       loop.getRegion().getArguments().take_back(loop.getNumReductionVars());
 
   for (std::size_t i = 0; i < loop.getNumReductionVars(); ++i) {
+    if (isByRefs[i])
+      continue;
     llvm::Value *var = builder.CreateAlloca(
         moduleTranslation.convertType(reductionDecls[i].getType()));
     moduleTranslation.mapValue(args[i], var);
@@ -919,17 +876,21 @@ inlineOmpRegionCleanup(llvm::SmallVectorImpl<Region *> &cleanupRegions,
   return success();
 }
 
+static ArrayRef<bool> getIsByRef(std::optional<ArrayRef<bool>> attr) {
+  if (!attr)
+    return {};
+  return *attr;
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto wsloopOp = cast<omp::WsloopOp>(opInst);
   auto loopOp = cast<omp::LoopNestOp>(wsloopOp.getWrappedLoop());
-  const bool isByRef = wsloopOp.getByref();
 
-  // TODO: this should be in the op verifier instead.
-  if (loopOp.getLowerBound().empty())
-    return failure();
+  llvm::ArrayRef<bool> isByRef = getIsByRef(wsloopOp.getReductionVarsByref());
+  assert(isByRef.size() == wsloopOp.getNumReductionVars());
 
   // Static is the default.
   auto schedule =
@@ -952,11 +913,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
   SmallVector<llvm::Value *> privateReductionVariables;
   DenseMap<Value, llvm::Value *> reductionVariableMap;
-  if (!isByRef) {
-    allocByValReductionVars(wsloopOp, builder, moduleTranslation, allocaIP,
-                            reductionDecls, privateReductionVariables,
-                            reductionVariableMap);
-  }
+  allocByValReductionVars(wsloopOp, builder, moduleTranslation, allocaIP,
+                          reductionDecls, privateReductionVariables,
+                          reductionVariableMap, isByRef);
 
   // Before the loop, store the initial values of reductions into reduction
   // variables. Although this could be done after allocas, we don't want to mess
@@ -974,7 +933,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       return failure();
     assert(phis.size() == 1 && "expected one value to be yielded from the "
                                "reduction neutral element declaration region");
-    if (isByRef) {
+    if (isByRef[i]) {
       // Allocate reduction variable (which is a pointer to the real reduction
       // variable allocated in the inlined region)
       llvm::Value *var = builder.CreateAlloca(
@@ -1108,7 +1067,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.SetInsertPoint(tempTerminator);
   llvm::OpenMPIRBuilder::InsertPointTy contInsertPoint =
       ompBuilder->createReductions(builder.saveIP(), allocaIP, reductionInfos,
-                                   wsloopOp.getNowait(), isByRef);
+                                   isByRef, wsloopOp.getNowait());
   if (!contInsertPoint.getBlock())
     return wsloopOp->emitOpError() << "failed to convert reductions";
   auto nextInsertionPoint =
@@ -1170,7 +1129,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   OmpParallelOpConversionManager raii(opInst);
-  const bool isByRef = opInst.getByref();
+  ArrayRef<bool> isByRef = getIsByRef(opInst.getReductionVarsByref());
+  assert(isByRef.size() == opInst.getNumReductionVars());
 
   // TODO: support error propagation in OpenMPIRBuilder and use it instead of
   // relying on captured variables.
@@ -1185,11 +1145,9 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   auto bodyGenCB = [&](InsertPointTy allocaIP, InsertPointTy codeGenIP) {
     // Allocate reduction vars
     DenseMap<Value, llvm::Value *> reductionVariableMap;
-    if (!isByRef) {
-      allocByValReductionVars(opInst, builder, moduleTranslation, allocaIP,
-                              reductionDecls, privateReductionVariables,
-                              reductionVariableMap);
-    }
+    allocByValReductionVars(opInst, builder, moduleTranslation, allocaIP,
+                            reductionDecls, privateReductionVariables,
+                            reductionVariableMap, isByRef);
 
     // Initialize reduction vars
     builder.restoreIP(allocaIP);
@@ -1210,7 +1168,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
              "reduction neutral element declaration region");
       builder.restoreIP(allocaIP);
 
-      if (isByRef) {
+      if (isByRef[i]) {
         // Allocate reduction variable (which is a pointer to the real reduciton
         // variable allocated in the inlined region)
         llvm::Value *var = builder.CreateAlloca(
@@ -1269,7 +1227,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
       llvm::OpenMPIRBuilder::InsertPointTy contInsertPoint =
           ompBuilder->createReductions(builder.saveIP(), allocaIP,
-                                       reductionInfos, false, isByRef);
+                                       reductionInfos, isByRef, false);
       if (!contInsertPoint.getBlock()) {
         bodyGenStatus = opInst->emitOpError() << "failed to convert reductions";
         return;
@@ -1623,31 +1581,33 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
 
   // Convert values and types.
   auto &innerOpList = opInst.getRegion().front().getOperations();
-  bool isRegionArgUsed{false}, isXBinopExpr{false};
+  bool isXBinopExpr{false};
   llvm::AtomicRMWInst::BinOp binop;
   mlir::Value mlirExpr;
-  // Find the binary update operation that uses the region argument
-  // and get the expression to update
-  for (Operation &innerOp : innerOpList) {
-    if (innerOp.getNumOperands() == 2) {
-      binop = convertBinOpToAtomic(innerOp);
-      if (!llvm::is_contained(innerOp.getOperands(),
-                              opInst.getRegion().getArgument(0)))
-        continue;
-      isRegionArgUsed = true;
-      isXBinopExpr = innerOp.getNumOperands() > 0 &&
-                     innerOp.getOperand(0) == opInst.getRegion().getArgument(0);
-      mlirExpr = (isXBinopExpr ? innerOp.getOperand(1) : innerOp.getOperand(0));
-      break;
+  llvm::Value *llvmExpr = nullptr;
+  llvm::Value *llvmX = nullptr;
+  llvm::Type *llvmXElementType = nullptr;
+  if (innerOpList.size() == 2) {
+    // The two operations here are the update and the terminator.
+    // Since we can identify the update operation, there is a possibility
+    // that we can generate the atomicrmw instruction.
+    mlir::Operation &innerOp = *opInst.getRegion().front().begin();
+    if (!llvm::is_contained(innerOp.getOperands(),
+                            opInst.getRegion().getArgument(0))) {
+      return opInst.emitError("no atomic update operation with region argument"
+                              " as operand found inside atomic.update region");
     }
+    binop = convertBinOpToAtomic(innerOp);
+    isXBinopExpr = innerOp.getOperand(0) == opInst.getRegion().getArgument(0);
+    mlirExpr = (isXBinopExpr ? innerOp.getOperand(1) : innerOp.getOperand(0));
+    llvmExpr = moduleTranslation.lookupValue(mlirExpr);
+  } else {
+    // Since the update region includes more than one operation
+    // we will resort to generating a cmpxchg loop.
+    binop = llvm::AtomicRMWInst::BinOp::BAD_BINOP;
   }
-  if (!isRegionArgUsed)
-    return opInst.emitError("no atomic update operation with region argument"
-                            " as operand found inside atomic.update region");
-
-  llvm::Value *llvmExpr = moduleTranslation.lookupValue(mlirExpr);
-  llvm::Value *llvmX = moduleTranslation.lookupValue(opInst.getX());
-  llvm::Type *llvmXElementType = moduleTranslation.convertType(
+  llvmX = moduleTranslation.lookupValue(opInst.getX());
+  llvmXElementType = moduleTranslation.convertType(
       opInst.getRegion().getArgument(0).getType());
   llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicX = {llvmX, llvmXElementType,
                                                       /*isSigned=*/false,
@@ -1776,62 +1736,6 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
       ompLoc, allocaIP, llvmAtomicX, llvmAtomicV, llvmExpr, atomicOrdering,
       binop, updateFn, atomicUpdateOp, isPostfixUpdate, isXBinopExpr));
   return updateGenStatus;
-}
-
-/// Converts an OpenMP reduction operation using OpenMPIRBuilder. Expects the
-/// mapping between reduction variables and their private equivalents to have
-/// been stored on the ModuleTranslation stack. Currently only supports
-/// reduction within WsloopOp and ParallelOp, but can be easily extended.
-static LogicalResult
-convertOmpReductionOp(omp::ReductionOp reductionOp,
-                      llvm::IRBuilderBase &builder,
-                      LLVM::ModuleTranslation &moduleTranslation) {
-  // Find the declaration that corresponds to the reduction op.
-  omp::DeclareReductionOp declaration;
-  Operation *reductionParent = reductionOp->getParentOp();
-  if (dyn_cast<omp::ParallelOp>(reductionParent) ||
-      dyn_cast<omp::WsloopOp>(reductionParent)) {
-    declaration = findReductionDecl(*reductionParent, reductionOp);
-  } else {
-    llvm_unreachable("Unhandled reduction container");
-  }
-  assert(declaration && "could not find reduction declaration");
-
-  // Retrieve the mapping between reduction variables and their private
-  // equivalents.
-  const DenseMap<Value, llvm::Value *> *reductionVariableMap = nullptr;
-  moduleTranslation.stackWalk<OpenMPVarMappingStackFrame>(
-      [&](const OpenMPVarMappingStackFrame &frame) {
-        if (frame.mapping.contains(reductionOp.getAccumulator())) {
-          reductionVariableMap = &frame.mapping;
-          return WalkResult::interrupt();
-        }
-        return WalkResult::advance();
-      });
-  assert(reductionVariableMap && "couldn't find private reduction variables");
-  // Translate the reduction operation by emitting the body of the corresponding
-  // reduction declaration.
-  Region &reductionRegion = declaration.getReductionRegion();
-  llvm::Value *privateReductionVar =
-      reductionVariableMap->lookup(reductionOp.getAccumulator());
-  llvm::Value *reductionVal = builder.CreateLoad(
-      moduleTranslation.convertType(reductionOp.getOperand().getType()),
-      privateReductionVar);
-
-  moduleTranslation.mapValue(reductionRegion.front().getArgument(0),
-                             reductionVal);
-  moduleTranslation.mapValue(
-      reductionRegion.front().getArgument(1),
-      moduleTranslation.lookupValue(reductionOp.getOperand()));
-
-  SmallVector<llvm::Value *> phis;
-  if (failed(inlineConvertOmpRegions(reductionRegion, "omp.reduction.body",
-                                     builder, moduleTranslation, &phis)))
-    return failure();
-  assert(phis.size() == 1 && "expected one value to be yielded from "
-                             "the reduction body declaration region");
-  builder.CreateStore(phis[0], privateReductionVar);
-  return success();
 }
 
 /// Converts an OpenMP Threadprivate operation into LLVM IR using
@@ -2146,40 +2050,38 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
   llvm::SmallVector<size_t> indices(shape[0]);
   std::iota(indices.begin(), indices.end(), 0);
 
-  llvm::sort(
-      indices.begin(), indices.end(), [&](const size_t a, const size_t b) {
-        auto indexValues = indexAttr.getValues<int32_t>();
-        for (int i = 0;
-             i < shape[1];
-             ++i) {
-          int aIndex = indexValues[a * shape[1] + i];
-          int bIndex = indexValues[b * shape[1] + i];
+  llvm::sort(indices.begin(), indices.end(),
+             [&](const size_t a, const size_t b) {
+               auto indexValues = indexAttr.getValues<int32_t>();
+               for (int i = 0; i < shape[1]; ++i) {
+                 int aIndex = indexValues[a * shape[1] + i];
+                 int bIndex = indexValues[b * shape[1] + i];
 
-          if (aIndex == bIndex)
-            continue;
+                 if (aIndex == bIndex)
+                   continue;
 
-          if (aIndex != -1 && bIndex == -1)
-            return false;
+                 if (aIndex != -1 && bIndex == -1)
+                   return false;
 
-          if (aIndex == -1 && bIndex != -1)
-            return true;
+                 if (aIndex == -1 && bIndex != -1)
+                   return true;
 
-          // A is earlier in the record type layout than B
-          if (aIndex < bIndex)
-            return first;
+                 // A is earlier in the record type layout than B
+                 if (aIndex < bIndex)
+                   return first;
 
-          if (bIndex < aIndex)
-            return !first;
-        }
+                 if (bIndex < aIndex)
+                   return !first;
+               }
 
-        // Iterated the entire list and couldn't make a decision, all elements
-        // were likely the same. Return false, since the sort comparator should
-        // return false for equal elements.
-        return false;
-      });
+               // Iterated the entire list and couldn't make a decision, all
+               // elements were likely the same. Return false, since the sort
+               // comparator should return false for equal elements.
+               return false;
+             });
 
-    return llvm::cast<mlir::omp::MapInfoOp>(
-          mapInfo.getMembers()[indices.front()].getDefiningOp());
+  return llvm::cast<mlir::omp::MapInfoOp>(
+      mapInfo.getMembers()[indices.front()].getDefiningOp());
 }
 
 /// This function calculates the array/pointer offset for map data provided
@@ -3343,9 +3245,6 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
       })
       .Case([&](omp::ParallelOp op) {
         return convertOmpParallel(op, builder, moduleTranslation);
-      })
-      .Case([&](omp::ReductionOp reductionOp) {
-        return convertOmpReductionOp(reductionOp, builder, moduleTranslation);
       })
       .Case([&](omp::MasterOp) {
         return convertOmpMaster(*op, builder, moduleTranslation);

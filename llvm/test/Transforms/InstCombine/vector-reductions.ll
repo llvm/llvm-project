@@ -3,11 +3,28 @@
 
 declare float @llvm.vector.reduce.fadd.f32.v4f32(float, <4 x float>)
 declare float @llvm.vector.reduce.fadd.f32.v8f32(float, <8 x float>)
+declare float @llvm.vector.reduce.fmul.f32.nxv4f32(float, <vscale x 4 x float>)
+declare float @llvm.vector.reduce.fmin.f32.v4f32(float, <4 x float>)
+declare float @llvm.vector.reduce.fmax.f32.nxv4f32(float, <vscale x 4 x float>)
 declare void @use_f32(float)
 
 declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>)
 declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 declare void @use_i32(i32)
+
+declare i32 @llvm.vector.reduce.mul.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32>)
+
+declare i32 @llvm.vector.reduce.smin.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32>)
+declare i32 @llvm.vector.reduce.umin.v4i32(<4 x i32>)
+declare i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32>)
+
+declare <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32>)
+declare <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float>)
+declare <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32>)
+declare <4 x float> @llvm.vector.reverse.v4f32(<4 x float>)
 
 define float @diff_of_sums_v4f32(float %a0, <4 x float> %v0, float %a1, <4 x float> %v1) {
 ; CHECK-LABEL: @diff_of_sums_v4f32(
@@ -21,6 +38,71 @@ define float @diff_of_sums_v4f32(float %a0, <4 x float> %v0, float %a1, <4 x flo
   %r = fsub reassoc nsz float %r0, %r1
   ret float %r
 }
+
+define float @reassoc_sum_of_reverse_v4f32(<4 x float> %v0) {
+; CHECK-LABEL: @reassoc_sum_of_reverse_v4f32(
+; CHECK-NEXT:    [[RED:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[V0:%.*]])
+; CHECK-NEXT:    ret float [[RED]]
+;
+  %rev = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %v0)
+  %red = call reassoc float @llvm.vector.reduce.fadd.v4f32(float zeroinitializer, <4 x float> %rev)
+  ret float %red
+}
+
+define float @reassoc_mul_reduction_of_reverse_nxv4f32(<vscale x 4 x float> %v0) {
+; CHECK-LABEL: @reassoc_mul_reduction_of_reverse_nxv4f32(
+; CHECK-NEXT:    [[RED:%.*]] = call reassoc float @llvm.vector.reduce.fmul.nxv4f32(float 1.000000e+00, <vscale x 4 x float> [[V0:%.*]])
+; CHECK-NEXT:    ret float [[RED]]
+;
+  %rev = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %v0)
+  %red = call reassoc float @llvm.vector.reduce.fmul.nxv4f32(float 1.0, <vscale x 4 x float> %rev)
+  ret float %red
+}
+
+define float @fmax_of_reverse_v4f32(<4 x float> %v0) {
+; CHECK-LABEL: @fmax_of_reverse_v4f32(
+; CHECK-NEXT:    [[RED:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[V0:%.*]])
+; CHECK-NEXT:    ret float [[RED]]
+;
+  %rev = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %v0)
+  %red = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> %rev)
+  ret float %red
+}
+
+define float @fmin_of_reverse_nxv4f32(<vscale x 4 x float> %v0) {
+; CHECK-LABEL: @fmin_of_reverse_nxv4f32(
+; CHECK-NEXT:    [[RED:%.*]] = call float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> [[V0:%.*]])
+; CHECK-NEXT:    ret float [[RED]]
+;
+  %rev = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %v0)
+  %red = call float @llvm.vector.reduce.fmin.nxv4f32(<vscale x 4 x float> %rev)
+  ret float %red
+}
+
+; negative test - fadd cannot be folded with reverse due to lack of reassoc
+define float @sum_of_reverse_v4f32(<4 x float> %v0) {
+; CHECK-LABEL: @sum_of_reverse_v4f32(
+; CHECK-NEXT:    [[REV:%.*]] = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> [[V0:%.*]])
+; CHECK-NEXT:    [[RED:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[REV]])
+; CHECK-NEXT:    ret float [[RED]]
+;
+  %rev = call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> %v0)
+  %red = call float @llvm.vector.reduce.fadd.v4f32(float zeroinitializer, <4 x float> %rev)
+  ret float %red
+}
+
+; negative test - fmul cannot be folded with reverse due to lack of reassoc
+define float @mul_reduction_of_reverse_nxv4f32(<vscale x 4 x float> %v0) {
+; CHECK-LABEL: @mul_reduction_of_reverse_nxv4f32(
+; CHECK-NEXT:    [[REV:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[V0:%.*]])
+; CHECK-NEXT:    [[RED:%.*]] = call float @llvm.vector.reduce.fmul.nxv4f32(float 0.000000e+00, <vscale x 4 x float> [[REV]])
+; CHECK-NEXT:    ret float [[RED]]
+;
+  %rev = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %v0)
+  %red = call float @llvm.vector.reduce.fmul.nxv4f32(float zeroinitializer, <vscale x 4 x float> %rev)
+  ret float %red
+}
+
 
 ; negative test - fsub must allow reassociation
 
@@ -96,6 +178,86 @@ define i32 @diff_of_sums_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
   %r1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v1)
   %r = sub i32 %r0, %r1
   ret i32 %r
+}
+
+define i32 @sum_of_reverse_v4i32(<4 x i32> %v0) {
+; CHECK-LABEL: @sum_of_reverse_v4i32(
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+  %rev = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> %v0)
+  %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %rev)
+  ret i32 %red
+}
+
+define i32 @sum_of_reverse_nxv4i32(<vscale x 4 x i32> %v0) {
+; CHECK-LABEL: @sum_of_reverse_nxv4i32(
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+  %rev = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %v0)
+  %red = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %rev)
+  ret i32 %red
+}
+
+define i32 @mul_reduce_of_reverse_v4i32(<4 x i32> %v0) {
+; CHECK-LABEL: @mul_reduce_of_reverse_v4i32(
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+  %rev = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> %v0)
+  %red = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> %rev)
+  ret i32 %red
+}
+
+define i32 @mul_reduce_of_reverse_nxv4i32(<vscale x 4 x i32> %v0) {
+; CHECK-LABEL: @mul_reduce_of_reverse_nxv4i32(
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+  %rev = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %v0)
+  %red = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %rev)
+  ret i32 %red
+}
+
+define i32 @smin_reduce_of_reverse_v4i32(<4 x i32> %v0) {
+; CHECK-LABEL: @smin_reduce_of_reverse_v4i32(
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+  %rev = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> %v0)
+  %red = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> %rev)
+  ret i32 %red
+}
+
+define i32 @smax_reduce_of_reverse_nxv4i32(<vscale x 4 x i32> %v0) {
+; CHECK-LABEL: @smax_reduce_of_reverse_nxv4i32(
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+  %rev = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %v0)
+  %red = call i32 @llvm.vector.reduce.smax.nxv4i32(<vscale x 4 x i32> %rev)
+  ret i32 %red
+}
+
+define i32 @umin_reduce_of_reverse_v4i32(<4 x i32> %v0) {
+; CHECK-LABEL: @umin_reduce_of_reverse_v4i32(
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+  %rev = call <4 x i32> @llvm.vector.reverse.v4i32(<4 x i32> %v0)
+  %red = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> %rev)
+  ret i32 %red
+}
+
+define i32 @umax_reduce_of_reverse_nxv4i32(<vscale x 4 x i32> %v0) {
+; CHECK-LABEL: @umax_reduce_of_reverse_nxv4i32(
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> [[V0:%.*]])
+; CHECK-NEXT:    ret i32 [[RED]]
+;
+  %rev = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> %v0)
+  %red = call i32 @llvm.vector.reduce.umax.nxv4i32(<vscale x 4 x i32> %rev)
+  ret i32 %red
 }
 
 ; negative test - extra uses could create extra instructions

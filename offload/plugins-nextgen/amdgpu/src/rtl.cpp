@@ -307,6 +307,15 @@ struct AMDGPUMemoryPoolTy {
     return Plugin::check(Status, "Error in hsa_amd_memory_pool_free: %s");
   }
 
+  /// Returns if the \p Agent can access the memory pool.
+  bool canAccess(hsa_agent_t Agent) {
+    hsa_amd_memory_pool_access_t Access;
+    if (hsa_amd_agent_memory_pool_get_info(
+            Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &Access))
+      return false;
+    return Access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
+  }
+
   /// Allow the device to access a specific allocation.
   Error enableAccess(void *Ptr, int64_t Size,
                      const llvm::SmallVector<hsa_agent_t> &Agents) const {
@@ -1670,10 +1679,10 @@ private:
   hsa_agent_t Agent;
 
   /// The maximum number of queues.
-  int MaxNumQueues;
+  uint32_t MaxNumQueues;
 
   /// The size of created queues.
-  int QueueSize;
+  uint32_t QueueSize;
 };
 
 /// Abstract class that holds the common members of the actual kernel devices
@@ -1847,8 +1856,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   // Create an AMDGPU device with a device id and default AMDGPU grid values.
   AMDGPUDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
                  AMDHostDeviceTy &HostDevice, hsa_agent_t Agent)
-      : GenericDeviceTy(Plugin, DeviceId, NumDevices, {0}),
-        AMDGenericDeviceTy(),
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, {}), AMDGenericDeviceTy(),
         OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4),
         OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 4),
@@ -2015,9 +2023,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  const uint64_t getStreamBusyWaitMicroseconds() const {
-    return OMPX_StreamBusyWait;
-  }
+  uint64_t getStreamBusyWaitMicroseconds() const { return OMPX_StreamBusyWait; }
 
   Expected<std::unique_ptr<MemoryBuffer>>
   doJITPostProcessing(std::unique_ptr<MemoryBuffer> MB) const override {
@@ -3157,25 +3163,24 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
   /// Check whether the image is compatible with an AMDGPU device.
-  Expected<bool> isELFCompatible(StringRef Image) const override {
+  Expected<bool> isELFCompatible(uint32_t DeviceId,
+                                 StringRef Image) const override {
     // Get the associated architecture and flags from the ELF.
     auto ElfOrErr = ELF64LEObjectFile::create(
         MemoryBufferRef(Image, /*Identifier=*/""), /*InitContent=*/false);
     if (!ElfOrErr)
       return ElfOrErr.takeError();
     std::optional<StringRef> Processor = ElfOrErr->tryGetCPUName();
+    if (!Processor)
+      return false;
 
-    for (hsa_agent_t Agent : KernelAgents) {
-      auto TargeTripleAndFeaturesOrError =
-          utils::getTargetTripleAndFeatures(Agent);
-      if (!TargeTripleAndFeaturesOrError)
-        return TargeTripleAndFeaturesOrError.takeError();
-      if (!utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
+    auto TargeTripleAndFeaturesOrError =
+        utils::getTargetTripleAndFeatures(getKernelAgent(DeviceId));
+    if (!TargeTripleAndFeaturesOrError)
+      return TargeTripleAndFeaturesOrError.takeError();
+    return utils::isImageCompatibleWithEnv(Processor ? *Processor : "",
                                            ElfOrErr->getPlatformFlags(),
-                                           *TargeTripleAndFeaturesOrError))
-        return false;
-    }
-    return true;
+                                           *TargeTripleAndFeaturesOrError);
   }
 
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
@@ -3267,19 +3272,13 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (ArgsSize < KernelArgsSize)
     return Plugin::error("Mismatch of kernel arguments size");
 
-  // The args size reported by HSA may or may not contain the implicit args.
-  // For now, assume that HSA does not consider the implicit arguments when
-  // reporting the arguments of a kernel. In the worst case, we can waste
-  // 56 bytes per allocation.
-  uint32_t AllArgsSize = KernelArgsSize + ImplicitArgsSize;
-
   AMDGPUPluginTy &AMDGPUPlugin =
       static_cast<AMDGPUPluginTy &>(GenericDevice.Plugin);
   AMDHostDeviceTy &HostDevice = AMDGPUPlugin.getHostDevice();
   AMDGPUMemoryManagerTy &ArgsMemoryManager = HostDevice.getArgsMemoryManager();
 
   void *AllArgs = nullptr;
-  if (auto Err = ArgsMemoryManager.allocate(AllArgsSize, &AllArgs))
+  if (auto Err = ArgsMemoryManager.allocate(ArgsSize, &AllArgs))
     return Err;
 
   // Account for user requested dynamic shared memory.
@@ -3410,10 +3409,14 @@ void *AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
   }
   assert(Ptr && "Invalid pointer");
 
-  auto &KernelAgents = Plugin.getKernelAgents();
+  // Get a list of agents that can access this memory pool.
+  llvm::SmallVector<hsa_agent_t> Agents;
+  llvm::copy_if(
+      Plugin.getKernelAgents(), std::back_inserter(Agents),
+      [&](hsa_agent_t Agent) { return MemoryPool->canAccess(Agent); });
 
-  // Allow all kernel agents to access the allocation.
-  if (auto Err = MemoryPool->enableAccess(Ptr, Size, KernelAgents)) {
+  // Allow all valid kernel agents to access the allocation.
+  if (auto Err = MemoryPool->enableAccess(Ptr, Size, Agents)) {
     REPORT("%s\n", toString(std::move(Err)).data());
     return nullptr;
   }
@@ -3453,13 +3456,17 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   }
 
   if (Alloc) {
-    auto &KernelAgents =
-        static_cast<AMDGPUPluginTy &>(Plugin).getKernelAgents();
-    // Inherently necessary for host or shared allocations
-    // Also enabled for device memory to allow device to device memcpy
+    // Get a list of agents that can access this memory pool. Inherently
+    // necessary for host or shared allocations Also enabled for device memory
+    // to allow device to device memcpy
+    llvm::SmallVector<hsa_agent_t> Agents;
+    llvm::copy_if(static_cast<AMDGPUPluginTy &>(Plugin).getKernelAgents(),
+                  std::back_inserter(Agents), [&](hsa_agent_t Agent) {
+                    return MemoryPool->canAccess(Agent);
+                  });
 
-    // Enable all kernel agents to access the buffer.
-    if (auto Err = MemoryPool->enableAccess(Alloc, Size, KernelAgents)) {
+    // Enable all valid kernel agents to access the buffer.
+    if (auto Err = MemoryPool->enableAccess(Alloc, Size, Agents)) {
       REPORT("%s\n", toString(std::move(Err)).data());
       return nullptr;
     }

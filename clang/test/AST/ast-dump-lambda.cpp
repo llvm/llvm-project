@@ -81,7 +81,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |         | | `-CompoundStmt {{.*}} <col:15, col:16>
 // CHECK-NEXT:    |         | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'V'
 // CHECK-NEXT:    |         |-ParenListExpr {{.*}} <col:8> 'NULL TYPE'
-// CHECK-NEXT:    |         | `-UnaryOperator {{.*}} <col:8> '<dependent type>' prefix '*' cannot overflow
+// CHECK-NEXT:    |         | `-UnaryOperator {{.*}} <col:8> 'V' lvalue prefix '*' cannot overflow
 // CHECK-NEXT:    |         |   `-CXXThisExpr {{.*}} <col:8> 'V *' this
 // CHECK-NEXT:    |         `-CompoundStmt {{.*}} <col:15, col:16>
 // CHECK-NEXT:    |-DeclStmt {{.*}} <line:22:3, col:11>
