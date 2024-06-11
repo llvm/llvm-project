@@ -14,7 +14,6 @@
 #define LLVM_MC_MCSECTION_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/ilist.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Alignment.h"
@@ -24,20 +23,18 @@
 namespace llvm {
 
 class MCAsmInfo;
+class MCAssembler;
 class MCContext;
 class MCExpr;
 class MCSymbol;
 class raw_ostream;
 class Triple;
 
-template <> struct ilist_alloc_traits<MCFragment> {
-  static void deleteNode(MCFragment *V);
-};
-
 /// Instances of this class represent a uniqued identifier for a section in the
 /// current translation unit.  The MCContext class uniques and creates these.
 class MCSection {
 public:
+  friend MCAssembler;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -58,12 +55,29 @@ public:
     BundleLockedAlignToEnd
   };
 
-  using FragmentListType = iplist<MCFragment>;
+  struct iterator {
+    MCFragment *F = nullptr;
+    iterator() = default;
+    explicit iterator(MCFragment *F) : F(F) {}
+    MCFragment &operator*() const { return *F; }
+    bool operator==(const iterator &O) const { return F == O.F; }
+    bool operator!=(const iterator &O) const { return F != O.F; }
+    iterator &operator++() {
+      F = F->Next;
+      return *this;
+    }
+    iterator operator++(int) { return iterator(F->Next); }
+  };
 
-  using const_iterator = FragmentListType::const_iterator;
-  using iterator = FragmentListType::iterator;
+  struct FragList {
+    MCFragment *Head = nullptr;
+    MCFragment *Tail = nullptr;
+  };
 
 private:
+  // At parse time, this holds the fragment list of the current subsection. At
+  // layout time, this holds the concatenated fragment lists of all subsections.
+  FragList *CurFragList;
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
@@ -92,11 +106,10 @@ private:
 
   MCDummyFragment DummyFragment;
 
-  FragmentListType Fragments;
-
-  /// Mapping from subsection number to insertion point for subsection numbers
-  /// below that number.
-  SmallVector<std::pair<unsigned, MCFragment *>, 1> SubsectionFragmentMap;
+  // Mapping from subsection number to fragment list. At layout time, the
+  // subsection 0 list is replaced with concatenated fragments from all
+  // subsections.
+  SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
 
   /// State for tracking labels that don't yet have Fragments
   struct PendingLabel {
@@ -171,29 +184,27 @@ public:
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
 
-  MCSection::FragmentListType &getFragmentList() { return Fragments; }
-  const MCSection::FragmentListType &getFragmentList() const {
-    return const_cast<MCSection *>(this)->getFragmentList();
-  }
-
-  /// Support for MCFragment::getNextNode().
-  static FragmentListType MCSection::*getSublistAccess(MCFragment *) {
-    return &MCSection::Fragments;
-  }
-
   const MCDummyFragment &getDummyFragment() const { return DummyFragment; }
   MCDummyFragment &getDummyFragment() { return DummyFragment; }
 
-  iterator begin() { return Fragments.begin(); }
-  const_iterator begin() const { return Fragments.begin(); }
+  FragList *curFragList() const { return CurFragList; }
+  iterator begin() const { return iterator(CurFragList->Head); }
+  iterator end() const { return {}; }
+  bool empty() const { return !CurFragList->Head; }
 
-  iterator end() { return Fragments.end(); }
-  const_iterator end() const { return Fragments.end(); }
-  bool empty() const { return Fragments.empty(); }
+  void addFragment(MCFragment &F) {
+    // The formal layout order will be finalized in MCAssembler::layout.
+    if (CurFragList->Tail) {
+      CurFragList->Tail->Next = &F;
+      F.setLayoutOrder(CurFragList->Tail->getLayoutOrder() + 1);
+    } else {
+      CurFragList->Head = &F;
+      assert(F.getLayoutOrder() == 0);
+    }
+    CurFragList->Tail = &F;
+  }
 
-  void addFragment(MCFragment &F) { Fragments.push_back(&F); }
-
-  MCSection::iterator getSubsectionInsertionPoint(unsigned Subsection);
+  void switchSubsection(unsigned Subsection);
 
   void dump() const;
 
