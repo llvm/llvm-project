@@ -36,8 +36,8 @@ decltype(__hwasan_shadow)* __hwasan_premap_shadow();
 
 namespace __hwasan {
 
-// We cannot call anything in libc here (see comment above), so we need to assume
-// the biggest allowed page size.
+// We cannot call anything in libc here (see comment above), so we need to
+// assume the biggest allowed page size.
 static constexpr uptr kMaxGranularity = 16384;
 
 // Conservative upper limit.
