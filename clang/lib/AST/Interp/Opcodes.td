@@ -665,7 +665,10 @@ def CastPointerIntegralAPS : Opcode {
   let HasGroup = 0;
   let Args = [ArgUint32];
 }
-def VoidPtrCast : Opcode;
+def PtrPtrCast : Opcode {
+  let Args = [ArgBool];
+
+}
 
 def DecayPtr : Opcode {
   let Types = [PtrTypeClass, PtrTypeClass];
