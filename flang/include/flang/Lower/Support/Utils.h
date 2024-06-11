@@ -502,7 +502,7 @@ public:
     return std::visit(
                [&](const auto &p, const auto &q) { return isEqual(p, q); },
                x.parent(), y.parent()) &&
-           isEqual(x.lower(), y.lower()) && isEqual(x.lower(), y.lower());
+           isEqual(x.lower(), y.lower()) && isEqual(x.upper(), y.upper());
   }
   static bool isEqual(const Fortran::evaluate::StaticDataObject::Pointer &x,
                       const Fortran::evaluate::StaticDataObject::Pointer &y) {
