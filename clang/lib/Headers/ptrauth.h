@@ -10,8 +10,6 @@
 #ifndef __PTRAUTH_H
 #define __PTRAUTH_H
 
-#include <stdint.h>
-
 typedef enum {
   ptrauth_key_asia = 0,
   ptrauth_key_asib = 1,
@@ -126,7 +124,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 
    The first argument must be an expression of pointer type.
    The second argument must be an expression of integer type.
-   The result will have type uintptr_t. */
+   The result will have type ptrauth_extra_data_t. */
 #define ptrauth_blend_discriminator(__pointer, __integer) \
   __builtin_ptrauth_blend_discriminator(__pointer, __integer)
 
@@ -260,7 +258,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
    if the arguments were a pointer and a discriminator.
 
    The arguments must be either pointers or integers; if integers, they
-   will be coerce to uintptr_t. */
+   will be coerce to ptrauth_extra_data_t. */
 #define ptrauth_sign_generic_data(__value, __data) \
   __builtin_ptrauth_sign_generic_data(__value, __data)
 
@@ -349,8 +347,8 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 
 #define ptrauth_sign_constant(__value, __key, __data) __value
 #define ptrauth_auth_function(__value, __old_key, __old_data) __value
-#define ptrauth_string_discriminator(__string) ((uintptr_t)0)
-#define ptrauth_type_discriminator(__type) ((uintptr_t)0)
+#define ptrauth_string_discriminator(__string) ((ptrauth_extra_data_t)0)
+#define ptrauth_type_discriminator(__type) ((ptrauth_extra_data_t)0)
 
 #define __ptrauth_function_pointer
 #define __ptrauth_return_address
