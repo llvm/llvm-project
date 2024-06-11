@@ -90,9 +90,6 @@ class LLVMConfig(object):
 
         # Running on Darwin OS
         if platform.system() == "Darwin":
-            # FIXME: lld uses the first, other projects use the second.
-            # We should standardize on the former.
-            features.add("system-linker-mach-o")
             features.add("system-darwin")
         elif platform.system() == "Windows":
             # For tests that require Windows to run.
