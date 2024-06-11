@@ -241,7 +241,7 @@ public:
     AU.addRequired<LiveIntervals>();
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveIntervals>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTree>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -259,7 +259,7 @@ char SIWholeQuadMode::ID = 0;
 INITIALIZE_PASS_BEGIN(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_END(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                     false)
@@ -1687,7 +1687,8 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   LIS = &getAnalysis<LiveIntervals>();
-  MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
   PDT = getAnalysisIfAvailable<MachinePostDominatorTree>();
 
   if (ST->isWave32()) {
