@@ -17,7 +17,7 @@ void convertLevelType(SparseTensorEncodingAttr enc, Level lvl,
     fields.push_back(enc.getPosMemRefType());
   if (enc.getLvlType(lvl).isWithCrdLT())
     fields.push_back(enc.getCrdMemRefType());
-  // One index for shape bound (result from lvlOp)
+  // One index for shape bound (result from lvlOp).
   fields.push_back(IndexType::get(enc.getContext()));
 }
 
