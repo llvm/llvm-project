@@ -763,6 +763,9 @@ class time_zone {
 
   template<class Duration>
   sys_info get_info(const sys_time<Duration>& st) const;
+
+  template<class Duration>
+  local_info get_info(const local_time<Duration>& tp) const;
 };
 bool operator==(const time_zone& x, const time_zone& y) noexcept;                // C++20
 strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;    // C++20
