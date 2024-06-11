@@ -31,4 +31,7 @@ _Static_assert(sizeof(clock_t) == sizeof(long), "ABI mismatch!");
 
 #endif
 
+#else
+#include_next <time.h>
+
 #endif // __CLANG_LLVM_LIBC_WRAPPERS_TIME_H__
