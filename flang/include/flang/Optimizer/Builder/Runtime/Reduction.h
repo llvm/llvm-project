@@ -240,6 +240,13 @@ mlir::Value genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value maskBox, mlir::Value identity,
                       mlir::Value ordered);
 
+/// Generate call to `Reduce` intrinsic runtime routine. This is the version
+/// that takes arrays of any rank with a dim argument specified.
+void genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                  mlir::Value arrayBox, mlir::Value operation, mlir::Value dim,
+                  mlir::Value maskBox, mlir::Value identity,
+                  mlir::Value ordered, mlir::Value resultBox);
+
 } // namespace fir::runtime
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_REDUCTION_H
