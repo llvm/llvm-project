@@ -3210,6 +3210,10 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))
     return MCConstantExpr::create(CI->getZExtValue(), Ctx);
 
+  if (const ConstantPtrAuth *CPA = dyn_cast<ConstantPtrAuth>(CV))
+    return lowerConstantPtrAuth(*CPA);
+
+  // FIXME: temporary support for both ConstantPtrAuth + llvm.ptrauth globals
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
     if (auto *GVB = dyn_cast<GlobalVariable>(GV)) {
       if (GVB->getSection() == "llvm.ptrauth") {
