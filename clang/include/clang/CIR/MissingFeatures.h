@@ -156,7 +156,6 @@ struct MissingFeatures {
   static bool zeroInitializer() { return false; }
   static bool targetCodeGenInfoIsProtoCallVariadic() { return false; }
   static bool targetCodeGenInfoGetNullPointer() { return false; }
-  static bool chainCalls() { return false; }
   static bool operandBundles() { return false; }
   static bool exceptions() { return false; }
   static bool metaDataNode() { return false; }
@@ -190,24 +189,50 @@ struct MissingFeatures {
 
   //===--- ABI lowering --===//
 
+  //-- Missing AST queries
+
+  static bool recordDeclCanPassInRegisters() { return false; }
+
+  //-- Missing types
+
+  static bool vectorType() { return false; }
+
+  //-- Other missing features
+
+  // Calls with a static chain pointer argument may be optimized (p.e. freeing
+  // up argument registers), but we do not yet track such cases.
+  static bool chainCall() { return false; }
+
+  // ABI-lowering has special handling for regcall calling convention (tries to
+  // pass every argument in regs). We don't support it just yet.
+  static bool regCall() { return false; }
+
+  // Some ABIs (e.g. x86) require special handling for returning large structs
+  // by value. The sret argument parameter aids in this, but it is current NYI.
+  static bool sretArgs() { return false; }
+
+  // Inalloca parameter attributes are mostly used for Windows x86_32 ABI. We
+  // do not yet support this yet.
+  static bool inallocaArgs() { return false; }
+
   // Parameters may have additional attributes (e.g. [[noescape]]) that affect
   // the compiler. This is not yet supported in CIR.
-  static bool extParamInfo() { return true; }
+  static bool extParamInfo() { return false; }
 
   // LangOpts may affect lowering, but we do not carry this information into CIR
   // just yet. Right now, it only instantiates the default lang options.
-  static bool langOpts() { return true; }
+  static bool langOpts() { return false; }
 
   // Several type qualifiers are not yet supported in CIR, but important when
   // evaluating ABI-specific lowering.
-  static bool qualifiedTypes() { return true; }
+  static bool qualifiedTypes() { return false; }
 
   // We're ignoring several details regarding ABI-halding for Swift.
-  static bool swift() { return true; }
+  static bool swift() { return false; }
 
   // Despite carrying some information about variadics, we are currently
   // ignoring this to focus only on the code necessary to lower non-variadics.
-  static bool variadicFunctions() { return true; }
+  static bool variadicFunctions() { return false; }
 };
 
 } // namespace cir

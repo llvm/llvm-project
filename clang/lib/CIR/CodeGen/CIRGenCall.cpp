@@ -23,6 +23,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/FnInfoOpts.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 

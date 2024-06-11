@@ -22,6 +22,8 @@ namespace cir {
 /// Contains the address where the return value of a function can be stored, and
 /// whether the address is volatile or not.
 class ReturnValueSlot {
+  // FIXME(cir): We should be able to query this directly from CIR at some
+  // point. This class can then be removed.
   Value Addr = {};
 
   // Return value slot flags

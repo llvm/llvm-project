@@ -45,7 +45,7 @@ LowerModule createLowerModule(FuncOp op, PatternRewriter &rewriter) {
   // FIXME(cir): This just uses the default language options. We need to account
   // for custom options.
   // Create context.
-  assert(::cir::MissingFeatures::langOpts());
+  assert(!::cir::MissingFeatures::langOpts());
   clang::LangOptions langOpts;
   auto context = CIRLowerContext(module.getContext(), langOpts);
   context.initBuiltinTypes(*targetInfo);
@@ -64,11 +64,27 @@ struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
 
   LogicalResult matchAndRewrite(FuncOp op,
                                 PatternRewriter &rewriter) const final {
+    const auto module = op->getParentOfType<mlir::ModuleOp>();
+
     if (!op.getAst())
       return op.emitError("function has no AST information");
 
     LowerModule lowerModule = createLowerModule(op, rewriter);
 
+    // Rewrite function calls before definitions. This should be done before
+    // lowering the definition.
+    auto calls = op.getSymbolUses(module);
+    if (calls.has_value()) {
+      for (auto call : calls.value()) {
+        auto callOp = cast<CallOp>(call.getUser());
+        if (lowerModule.rewriteFunctionCall(callOp, op).failed())
+          return failure();
+      }
+    }
+
+    // Rewrite function definition.
+    // FIXME(cir): This is a workaround to avoid an infinite loop in the driver.
+    rewriter.replaceOp(op, rewriter.clone(*op));
     return success();
   }
 };

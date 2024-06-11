@@ -13,6 +13,7 @@
 
 #include "LowerModule.h"
 #include "CIRLowerContext.h"
+#include "LowerFunction.h"
 #include "TargetInfo.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -81,10 +82,19 @@ LogicalResult LowerModule::rewriteGlobalFunctionDefinition(FuncOp op,
   return failure();
 }
 
-LogicalResult LowerModule::rewriteFunctionCall(CallOp caller, FuncOp callee) {
+LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp, FuncOp funcOp) {
   mlir::OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(caller);
-  return failure();
+  rewriter.setInsertionPoint(callOp);
+
+  // Create a new function with the ABI-specific calling convention.
+  if (LowerFunction(*this, rewriter, funcOp, callOp)
+          .rewriteCallOp(callOp)
+          .failed())
+    return failure();
+
+  // Erase original ABI-agnostic call.
+  rewriter.eraseOp(callOp);
+  return success();
 }
 
 } // namespace cir

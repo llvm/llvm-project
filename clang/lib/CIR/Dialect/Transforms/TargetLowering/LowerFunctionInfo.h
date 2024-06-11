@@ -18,6 +18,7 @@
 #include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/TrailingObjects.h"
 
 namespace mlir {
@@ -46,6 +47,8 @@ struct LowerFunctionInfoArgInfo {
   ::cir::ABIArgInfo info; // ABI-specific information.
 };
 
+// FIXME(cir): We could likely encode this information within CIR/MLIR, allowing
+// us to eliminate this class.
 class LowerFunctionInfo final
     : private llvm::TrailingObjects<LowerFunctionInfo,
                                     LowerFunctionInfoArgInfo> {
@@ -89,7 +92,7 @@ public:
                                    ArrayRef<mlir::Type> argTypes,
                                    RequiredArgs required) {
     // TODO(cir): Add assertions?
-    assert(::cir::MissingFeatures::extParamInfo());
+    assert(!::cir::MissingFeatures::extParamInfo());
     void *buffer = operator new(totalSizeToAlloc<ArgInfo>(argTypes.size() + 1));
 
     LowerFunctionInfo *FI = new (buffer) LowerFunctionInfo();
@@ -115,10 +118,22 @@ public:
     return NumArgs + 1;
   }
 
+  typedef const ArgInfo *const_arg_iterator;
+  typedef ArgInfo *arg_iterator;
+
+  MutableArrayRef<ArgInfo> arguments() {
+    return MutableArrayRef<ArgInfo>(arg_begin(), NumArgs);
+  }
+
+  const_arg_iterator arg_begin() const { return getArgsBuffer() + 1; }
+  const_arg_iterator arg_end() const { return getArgsBuffer() + 1 + NumArgs; }
+  arg_iterator arg_begin() { return getArgsBuffer() + 1; }
+  arg_iterator arg_end() { return getArgsBuffer() + 1 + NumArgs; }
+
   unsigned arg_size() const { return NumArgs; }
 
   bool isVariadic() const {
-    assert(::cir::MissingFeatures::variadicFunctions());
+    assert(!::cir::MissingFeatures::variadicFunctions());
     return false;
   }
   unsigned getNumRequiredArgs() const {
@@ -126,6 +141,20 @@ public:
       llvm_unreachable("NYI");
     return arg_size();
   }
+
+  Type getReturnType() const { return getArgsBuffer()[0].type; }
+
+  ::cir::ABIArgInfo &getReturnInfo() { return getArgsBuffer()[0].info; }
+  const ::cir::ABIArgInfo &getReturnInfo() const {
+    return getArgsBuffer()[0].info;
+  }
+
+  /// Return the user specified callingconvention, which has been translated
+  /// into an LLVM CC.
+  unsigned getCallingConvention() const { return CallingConvention; }
+
+  /// Get the struct type used to represent all the arguments in memory.
+  StructType getArgStruct() const { return ArgStruct; }
 };
 
 } // namespace cir
