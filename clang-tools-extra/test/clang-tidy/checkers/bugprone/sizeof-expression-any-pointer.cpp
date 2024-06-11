@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: {bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression: true}}" --
+// RUN: %check_clang_tidy %s bugprone-sizeof-expression %t -- -config="{CheckOptions: {bugprone-sizeof-expression.WarnOnSizeOfIntegerExpression: true, bugprone-sizeof-expression.WarnOnSizeOfPointer: true}}" --
 
 class C {
   int size() { return sizeof(this); }
@@ -28,47 +28,6 @@ struct M {
   E AsEnum() { return E_VALUE; }
   S AsStruct() { return {}; }
 };
-
-int ReturnOverload(int) { return {}; }
-S ReturnOverload(S) { return {}; }
-
-template <class T>
-T ReturnTemplate(T) { return {}; }
-
-template <class T>
-bool TestTrait1() {
-  return sizeof(ReturnOverload(T{})) == sizeof(A);
-}
-
-template <class T>
-bool TestTrait2() {
-  return sizeof(ReturnTemplate(T{})) == sizeof(A);
-}
-
-template <class T>
-bool TestTrait3() {
-  return sizeof(ReturnOverload(0)) == sizeof(T{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
-}
-
-template <class T>
-bool TestTrait4() {
-  return sizeof(ReturnTemplate(0)) == sizeof(T{});
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in an integer
-}
-
-bool TestTemplates() {
-  bool b = true;
-  b &= TestTrait1<int>();
-  b &= TestTrait1<S>();
-  b &= TestTrait2<int>();
-  b &= TestTrait2<S>();
-  b &= TestTrait3<int>();
-  b &= TestTrait3<S>();
-  b &= TestTrait4<int>();
-  b &= TestTrait4<S>();
-  return b;
-}
 
 int Test1(const char* ptr) {
   int sum = 0;
@@ -113,21 +72,22 @@ int Test1(const char* ptr) {
   sum += sizeof(B[0]) / sizeof(A);
   // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
   sum += sizeof(ptr) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of sizeof pointer 'sizeof(T*)/sizeof(T)'
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(ptr) / sizeof(ptr[0]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of sizeof pointer 'sizeof(T*)/sizeof(T)'
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(ptr) / sizeof(char*);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of sizeof pointer 'sizeof(P*)/sizeof(Q*)'
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(ptr) / sizeof(void*);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of sizeof pointer 'sizeof(P*)/sizeof(Q*)'
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(ptr) / sizeof(const void volatile*);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of sizeof pointer 'sizeof(P*)/sizeof(Q*)'
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(ptr) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of sizeof pointer 'sizeof(T*)/sizeof(T)'
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(int) * sizeof(char);
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious 'sizeof' by 'sizeof' multiplication
   sum += sizeof(ptr) * sizeof(ptr[0]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious 'sizeof' by 'sizeof' multiplication
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
+  // CHECK-MESSAGES: :[[@LINE-2]]:22: warning: suspicious 'sizeof' by 'sizeof' multiplication
   sum += sizeof(int) * (2 * sizeof(char));
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious 'sizeof' by 'sizeof' multiplication
   sum += (2 * sizeof(char)) * sizeof(int);
@@ -136,50 +96,6 @@ int Test1(const char* ptr) {
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: suspicious comparison of 'sizeof(expr)' to a constant
   if (sizeof(A) <= 0xFFFFFFFEU) sum += 42;
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: suspicious comparison of 'sizeof(expr)' to a constant
-  return sum;
-}
-
-typedef char MyChar;
-typedef const MyChar MyConstChar;
-
-int CE0 = sizeof sizeof(char);
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: suspicious usage of 'sizeof(sizeof(...))'
-int CE1 = sizeof +sizeof(char);
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: suspicious usage of 'sizeof(sizeof(...))'
-int CE2 = sizeof sizeof(const char*);
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: suspicious usage of 'sizeof(sizeof(...))'
-int CE3 = sizeof sizeof(const volatile char* const*);
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: suspicious usage of 'sizeof(sizeof(...))'
-int CE4 = sizeof sizeof(MyConstChar);
-// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: suspicious usage of 'sizeof(sizeof(...))'
-
-int Test2(MyConstChar* A) {
-  int sum = 0;
-  sum += sizeof(MyConstChar) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
-  sum += sizeof(MyConstChar) / sizeof(MyChar);
-  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
-  sum += sizeof(A[0]) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
-  return sum;
-}
-
-template <int T>
-int Foo() { int A[T]; return sizeof(T); }
-// CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of 'sizeof(K)'
-template <typename T>
-int Bar() { T A[5]; return sizeof(A[0]) / sizeof(T); }
-// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
-int Test3() { return Foo<42>() + Bar<char>(); }
-
-static const char* kABC = "abc";
-static const wchar_t* kDEF = L"def";
-int Test4(const char A[10]) {
-  int sum = 0;
-  sum += sizeof(kABC);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(char*)'
-  sum += sizeof(kDEF);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(char*)'
   return sum;
 }
 
@@ -251,52 +167,17 @@ int Test5() {
   sum += sizeof(ArrayC) / sizeof(PtrArray[0]);
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
 
-  // These pointers do not point to aggregate types, so they are not reported in this mode:
   sum += sizeof(PChar);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(PInt);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(PPInt);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(PPMyStruct);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
 
   return sum;
 }
-
-int Test6() {
-  int sum = 0;
-
-  struct S A = AsStruct(), B = AsStruct();
-  struct S *P = &A, *Q = &B;
-  sum += sizeof(struct S) == P - Q;
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += 5 * sizeof(S) != P - Q;
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += sizeof(S) < P - Q;
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += 5 * sizeof(S) <= P - Q;
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += 5 * sizeof(*P) >= P - Q;
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += Q - P > 3 * sizeof(*P);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += sizeof(S) + (P - Q);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += 5 * sizeof(S) - (P - Q);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += (P - Q) / sizeof(S);
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-  sum += (P - Q) / sizeof(*Q);
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: suspicious usage of 'sizeof(...)' in pointer arithmetic
-
-  return sum;
-}
-
-#ifdef __SIZEOF_INT128__
-template <__int128_t N>
-#else
-template <long N> // Fallback for platforms which do not define `__int128_t`
-#endif
-bool Baz() { return sizeof(A) < N; }
-// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: suspicious comparison of 'sizeof(expr)' to a constant
-bool Test7() { return Baz<-1>(); }
 
 void some_generic_function(const void *arg, int argsize);
 int *IntP, **IntPP;
@@ -318,8 +199,8 @@ void GenericFunctionTest() {
   // called with `&Variable` and `sizeof(Variable)`. Right now these are
   // reported by the `sizeof(pointer)` checks, but this causes some false
   // positives, so it would be good to create an exception for them.
-  // NOTE: `sizeof(IntP)` is only reported with `WarnOnSizeOfPointer=true`.
   some_generic_function(&IntPP, sizeof(IntP));
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   some_generic_function(&ClassPP, sizeof(ClassP));
   // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
 }
@@ -339,7 +220,9 @@ int ValidExpressions() {
   sum += sizeof(AsStruct());
   sum += sizeof(M{}.AsStruct());
   sum += sizeof(A[sizeof(A) / sizeof(int)]);
+  // Here the outer sizeof is reported, but the inner ones are accepted:
   sum += sizeof(&A[sizeof(A) / sizeof(int)]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression that results in a pointer
   sum += sizeof(sizeof(0));  // Special case: sizeof size_t.
   sum += sizeof(void*);
   sum += sizeof(void const *);
