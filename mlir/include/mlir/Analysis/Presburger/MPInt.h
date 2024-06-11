@@ -17,23 +17,17 @@
 #define MLIR_ANALYSIS_PRESBURGER_MPINT_H
 
 #include "mlir/Analysis/Presburger/SlowMPInt.h"
-#include "mlir/Support/MathExtras.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
 namespace mlir {
 namespace presburger {
-
-/// Redefine these functions, which operate on 64-bit ints, to also be part of
-/// the mlir::presburger namespace. This is useful because this file defines
-/// identically-named functions that operate on MPInts, which would otherwie
-/// become the only candidates of overload resolution when calling e.g. ceilDiv
-/// from the mlir::presburger namespace. So to access the 64-bit overloads, an
-/// explict call to mlir::ceilDiv would be required. These using declarations
-/// allow overload resolution to transparently call the right function.
-using ::mlir::ceilDiv;
-using ::mlir::floorDiv;
-using ::mlir::mod;
+using ::llvm::ArrayRef;
+using ::llvm::divideCeilSigned;
+using ::llvm::divideFloorSigned;
+using ::llvm::mod;
 
 namespace detail {
 /// If builtin intrinsics for overflow-checked arithmetic are available,
@@ -375,7 +369,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt ceilDiv(const MPInt &lhs, const MPInt &rhs) {
   if (LLVM_LIKELY(lhs.isSmall() && rhs.isSmall())) {
     if (LLVM_UNLIKELY(detail::divWouldOverflow(lhs.getSmall(), rhs.getSmall())))
       return -lhs;
-    return MPInt(ceilDiv(lhs.getSmall(), rhs.getSmall()));
+    return MPInt(divideCeilSigned(lhs.getSmall(), rhs.getSmall()));
   }
   return MPInt(ceilDiv(detail::SlowMPInt(lhs), detail::SlowMPInt(rhs)));
 }
@@ -384,7 +378,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt floorDiv(const MPInt &lhs,
   if (LLVM_LIKELY(lhs.isSmall() && rhs.isSmall())) {
     if (LLVM_UNLIKELY(detail::divWouldOverflow(lhs.getSmall(), rhs.getSmall())))
       return -lhs;
-    return MPInt(floorDiv(lhs.getSmall(), rhs.getSmall()));
+    return MPInt(divideFloorSigned(lhs.getSmall(), rhs.getSmall()));
   }
   return MPInt(floorDiv(detail::SlowMPInt(lhs), detail::SlowMPInt(rhs)));
 }
