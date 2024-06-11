@@ -16,4 +16,10 @@ std::string HelloString;
 int FooBarResult = foobar();
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: no header providing "foobar" is directly included [misc-include-cleaner]
 
+namespace valid {
+
+namespace gh93335 {
 void log2() {}
+} // namespace gh93335
+
+} // namespace valid
