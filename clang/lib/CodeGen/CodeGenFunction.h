@@ -2466,7 +2466,7 @@ public:
   llvm::Value *
   GetVTablePtr(Address This, llvm::Type *VTableTy,
                const CXXRecordDecl *VTableClass,
-               VTableAuthMode authMode = VTableAuthMode::Authenticate);
+               VTableAuthMode AuthMode = VTableAuthMode::Authenticate);
 
   enum CFITypeCheckKind {
     CFITCK_VCall,
@@ -4428,17 +4428,17 @@ public:
   bool isPointerKnownNonNull(const Expr *E);
 
   /// Create the discriminator from the storage address and the entity hash.
-  llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *storageAddress,
-                                                 llvm::Value *discriminator);
+  llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
+                                                 llvm::Value *Discriminator);
   CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &schema,
                                         llvm::Value *storageAddress,
                                         GlobalDecl calleeDecl,
                                         QualType calleeType);
-  llvm::Value *EmitPointerAuthSign(QualType pointeeType, llvm::Value *pointer);
-  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &info,
-                                   llvm::Value *pointer);
-  llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &info,
-                                   llvm::Value *pointer);
+  llvm::Value *EmitPointerAuthSign(QualType PointeeType, llvm::Value *Pointer);
+  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &Info,
+                                   llvm::Value *Pointer);
+  llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &Info,
+                                   llvm::Value *Pointer);
 
   void EmitPointerAuthOperandBundle(
       const CGPointerAuthInfo &Info,

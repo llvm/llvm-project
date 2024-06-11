@@ -7043,6 +7043,21 @@ void ItaniumMangleContextImpl::mangleCXXDtorComdat(const CXXDestructorDecl *D,
   Mangler.mangle(GlobalDecl(D, Dtor_Comdat));
 }
 
+/// Mangles the pointer authentication override attribute for classes
+/// that have explicit overrides for the vtable authentication schema.
+///
+/// The override is mangled as a parameterized vendor extension as follows
+///
+///   <type> ::= U "__vtptrauth" I
+///                 <key>
+///                 <addressDiscriminated>
+///                 <extraDiscriminator>
+///              E
+///
+/// The extra discriminator encodes the explicit value derived from the
+/// override schema, e.g. if the override has specified type based
+/// discrimination the encoded value will be the discriminator derived from the
+/// type name.
 static void mangleOverrideDiscrimination(CXXNameMangler &mangler,
                                          ASTContext &context,
                                          const ThunkInfo &thunk) {

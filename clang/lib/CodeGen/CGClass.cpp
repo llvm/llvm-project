@@ -2588,10 +2588,10 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
   // the same addr space. Note that this might not be LLVM address space 0.
   VTableField = VTableField.withElementType(PtrTy);
 
-  if (auto authenticationInfo = CGM.getVTablePointerAuthInfo(
+  if (auto AuthenticationInfo = CGM.getVTablePointerAuthInfo(
           this, Vptr.Base.getBase(), VTableField.emitRawPointer(*this))) {
     VTableAddressPoint =
-        EmitPointerAuthSign(*authenticationInfo, VTableAddressPoint);
+        EmitPointerAuthSign(*AuthenticationInfo, VTableAddressPoint);
   }
 
   llvm::StoreInst *Store = Builder.CreateStore(VTableAddressPoint, VTableField);
@@ -2688,18 +2688,18 @@ void CodeGenFunction::InitializeVTablePointers(const CXXRecordDecl *RD) {
 llvm::Value *CodeGenFunction::GetVTablePtr(Address This,
                                            llvm::Type *VTableTy,
                                            const CXXRecordDecl *RD,
-                                           VTableAuthMode authMode) {
+                                           VTableAuthMode AuthMode) {
   Address VTablePtrSrc = This.withElementType(VTableTy);
   llvm::Instruction *VTable = Builder.CreateLoad(VTablePtrSrc, "vtable");
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(VTableTy);
   CGM.DecorateInstructionWithTBAA(VTable, TBAAInfo);
 
-  if (auto authenticationInfo =
+  if (auto AuthenticationInfo =
             CGM.getVTablePointerAuthInfo(this, RD, This.emitRawPointer(*this))) {
-    if (authMode != VTableAuthMode::UnsafeUbsanStrip) {
+    if (AuthMode != VTableAuthMode::UnsafeUbsanStrip) {
       VTable = cast<llvm::Instruction>(
-          EmitPointerAuthAuth(*authenticationInfo, VTable));
-      if (authMode == VTableAuthMode::MustTrap) {
+          EmitPointerAuthAuth(*AuthenticationInfo, VTable));
+      if (AuthMode == VTableAuthMode::MustTrap) {
         // This is clearly suboptimal but until we have an ability
         // to rely on the authentication intrinsic trapping and force
         // an authentication to occur we don't really have a choice.

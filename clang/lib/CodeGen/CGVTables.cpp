@@ -220,9 +220,9 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
   // Adjust "this", if necessary.
   Builder.SetInsertPoint(&*ThisStore);
 
-  const CXXRecordDecl *thisValueClass = Thunk.ThisType->getPointeeCXXRecordDecl();
+  const CXXRecordDecl *ThisValueClass = Thunk.ThisType->getPointeeCXXRecordDecl();
   llvm::Value *AdjustedThisPtr = CGM.getCXXABI().performThisAdjustment(
-      *this, ThisPtr, thisValueClass, Thunk);
+      *this, ThisPtr, ThisValueClass, Thunk);
   AdjustedThisPtr = Builder.CreateBitCast(AdjustedThisPtr,
                                           ThisStore->getOperand(0)->getType());
   ThisStore->setOperand(0, AdjustedThisPtr);
@@ -309,14 +309,14 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(CurGD.getDecl());
 
   // Adjust the 'this' pointer if necessary
-  const CXXRecordDecl *thisValueClass =
+  const CXXRecordDecl *ThisValueClass =
       MD->getThisType()->getPointeeCXXRecordDecl();
   if (Thunk)
-    thisValueClass = Thunk->ThisType->getPointeeCXXRecordDecl();
+    ThisValueClass = Thunk->ThisType->getPointeeCXXRecordDecl();
 
   llvm::Value *AdjustedThisPtr =
       Thunk ? CGM.getCXXABI().performThisAdjustment(*this, LoadCXXThisAddress(),
-                                                    thisValueClass, *Thunk)
+                                                    ThisValueClass, *Thunk)
             : LoadCXXThis();
 
   // If perfect forwarding is required a variadic method, a method using
@@ -866,9 +866,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       if (FnAS != GVAS)
         fnPtr =
             llvm::ConstantExpr::getAddrSpaceCast(fnPtr, CGM.GlobalsInt8PtrTy);
-      if (auto &schema =
+      if (const auto &Schema =
           CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers)
-        return builder.addSignedPointer(fnPtr, schema, GD, QualType());
+        return builder.addSignedPointer(fnPtr, Schema, GD, QualType());
       return builder.add(fnPtr);
     }
   }

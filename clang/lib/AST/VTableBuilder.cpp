@@ -3190,8 +3190,7 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
     }
     auto ThisType = (OverriddenMD ? OverriddenMD : MD)->getThisType().getTypePtr();
     AddMethod(FinalOverriderMD,
-              ThunkInfo(ThisAdjustmentOffset, ReturnAdjustment,
-                        thisType,
+              ThunkInfo(ThisAdjustmentOffset, ReturnAdjustment, ThisType,
                         ForceReturnAdjustmentMangling ? MD : nullptr));
   }
 }
