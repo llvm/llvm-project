@@ -180,7 +180,6 @@ void MCObjectStreamer::reset() {
     if (getContext().getTargetOptions())
       Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
   }
-  CurInsertionPoint = MCSection::iterator();
   EmitEHFrame = true;
   EmitDebugFrame = false;
   PendingLabels.clear();
@@ -200,12 +199,7 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 }
 
 MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  assert(getCurrentSectionOnly() && "No current section!");
-
-  if (CurInsertionPoint != getCurrentSectionOnly()->begin())
-    return &*std::prev(CurInsertionPoint);
-
-  return nullptr;
+  return getCurrentSectionOnly()->curFragList()->Tail;
 }
 
 static bool canReuseDataFragment(const MCDataFragment &F,
@@ -391,8 +385,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   }
 
   CurSubsectionIdx = unsigned(IntSubsection);
-  CurInsertionPoint =
-      Section->getSubsectionInsertionPoint(CurSubsectionIdx);
+  Section->switchSubsection(CurSubsectionIdx);
   return Created;
 }
 
