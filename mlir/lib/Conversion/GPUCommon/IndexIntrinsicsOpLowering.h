@@ -57,11 +57,7 @@ public:
       break;
     }
 
-    Operation *function;
-    if (auto gpuFunc = op->template getParentOfType<gpu::GPUFuncOp>())
-      function = gpuFunc;
-    if (auto llvmFunc = op->template getParentOfType<LLVM::LLVMFuncOp>())
-      function = llvmFunc;
+    Operation *function = op->template getParentOfType<FunctionOpInterface>();
     if (!boundsAttrName.empty() && function) {
       if (auto attr = function->template getAttrOfType<DenseI32ArrayAttr>(
               boundsAttrName)) {

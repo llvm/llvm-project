@@ -215,3 +215,36 @@ module attributes {gpu.container_module} {
   }
 }
 
+// -----
+
+// CHECK-LABEL: func @annotated_kernel
+module {
+  func.func @annotated_kernel()
+    attributes {gpu.known_block_size = array<i32: 8, 12, 16>,
+        gpu.known_grid_size = array<i32: 20, 24, 28>} {
+
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
+    %block_id_z = gpu.block_id z
+
+    // CHECK: test.reflect_bounds {smax = 19 : index, smin = 0 : index, umax = 19 : index, umin = 0 : index}
+    // CHECK: test.reflect_bounds {smax = 23 : index, smin = 0 : index, umax = 23 : index, umin = 0 : index}
+    // CHECK: test.reflect_bounds {smax = 27 : index, smin = 0 : index, umax = 27 : index, umin = 0 : index}
+    %block_id_x0 = test.reflect_bounds %block_id_x : index
+    %block_id_y0 = test.reflect_bounds %block_id_y : index
+    %block_id_z0 = test.reflect_bounds %block_id_z : index
+
+    %thread_id_x = gpu.thread_id x
+    %thread_id_y = gpu.thread_id y
+    %thread_id_z = gpu.thread_id z
+
+    // CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+    // CHECK: test.reflect_bounds {smax = 11 : index, smin = 0 : index, umax = 11 : index, umin = 0 : index}
+    // CHECK: test.reflect_bounds {smax = 15 : index, smin = 0 : index, umax = 15 : index, umin = 0 : index}
+    %thread_id_x0 = test.reflect_bounds %thread_id_x : index
+    %thread_id_y0 = test.reflect_bounds %thread_id_y : index
+    %thread_id_z0 = test.reflect_bounds %thread_id_z : index
+
+    return
+  }
+}

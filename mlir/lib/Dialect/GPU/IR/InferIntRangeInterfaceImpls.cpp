@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -54,6 +55,17 @@ static Value valueByDim(KernelDim3 dims, Dimension dim) {
 
 static uint64_t zext(uint32_t arg) { return static_cast<uint64_t>(arg); }
 
+static std::optional<uint32_t> getKnownLaunchAttr(FunctionOpInterface func,
+                                                  StringRef attrName,
+                                                  Dimension dim) {
+  auto bounds = func.getOperation()->getAttrOfType<DenseI32ArrayAttr>(attrName);
+  if (!bounds)
+    return std::nullopt;
+  if (bounds.size() < static_cast<uint32_t>(dim))
+    return std::nullopt;
+  return bounds[static_cast<uint32_t>(dim)];
+}
+
 template <typename Op>
 static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
   Dimension dim = op.getDimension();
@@ -73,12 +85,16 @@ static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
       return value.getZExtValue();
   }
 
-  if (auto func = op->template getParentOfType<GPUFuncOp>()) {
+  if (auto func = op->template getParentOfType<FunctionOpInterface>()) {
     switch (type) {
     case LaunchDims::Block:
-      return llvm::transformOptional(func.getKnownBlockSize(dim), zext);
+      return llvm::transformOptional(
+          getKnownLaunchAttr(func, GPUFuncOp::getKnownBlockSizeAttrName(), dim),
+          zext);
     case LaunchDims::Grid:
-      return llvm::transformOptional(func.getKnownGridSize(dim), zext);
+      return llvm::transformOptional(
+          getKnownLaunchAttr(func, GPUFuncOp::getKnownGridSizeAttrName(), dim),
+          zext);
     }
   }
   return std::nullopt;
