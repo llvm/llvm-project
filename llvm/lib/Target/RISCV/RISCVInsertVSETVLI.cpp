@@ -249,6 +249,13 @@ struct DemandedFields {
     VLZeroness = true;
   }
 
+  static DemandedFields all() {
+    DemandedFields DF;
+    DF.demandVTYPE();
+    DF.demandVL();
+    return DF;
+  }
+
   // Make this the result of demanding both the fields in this and B.
   void doUnion(const DemandedFields &B) {
     VLAny |= B.VLAny;
@@ -609,7 +616,7 @@ public:
   bool hasNonZeroAVL(const LiveIntervals *LIS) const {
     if (hasAVLImm())
       return getAVLImm() > 0;
-    if (hasAVLReg()) {
+    if (hasAVLReg() && LIS) {
       if (auto *DefMI = getAVLDefMI(LIS))
         return isNonZeroLoadImmediate(*DefMI);
     }
@@ -713,14 +720,12 @@ public:
                     const LiveIntervals *LIS) const {
     assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
-    assert(!Require.SEWLMULRatioOnly &&
-           "Expected a valid VTYPE for instruction!");
     // Nothing is compatible with Unknown.
     if (isUnknown() || Require.isUnknown())
       return false;
 
     // If only our VLMAX ratio is valid, then this isn't compatible.
-    if (SEWLMULRatioOnly)
+    if (SEWLMULRatioOnly || Require.SEWLMULRatioOnly)
       return false;
 
     if (Used.VLAny && !(hasSameAVL(Require) && hasSameVLMAX(Require)))
@@ -730,16 +735,6 @@ public:
       return false;
 
     return hasCompatibleVTYPE(Used, Require);
-  }
-
-  bool isKnownSame(const VSETVLIInfo &Other) const {
-    if (!isValid() || !Other.isValid())
-      return false;
-    if (isUnknown() || Other.isUnknown())
-      return false;
-    if (SEWLMULRatioOnly || Other.SEWLMULRatioOnly)
-      return false;
-    return hasSameAVL(Other) && hasSameVTYPE(Other);
   }
 
   // Whether or not two VSETVLIInfos are the same. Note that this does
@@ -799,7 +794,7 @@ public:
       return VSETVLIInfo::getUnknown();
 
     // If we have an exact, match return this.
-    if (isKnownSame(Other))
+    if (isCompatible(DemandedFields::all(), Other, nullptr))
       return *this;
 
     // Not an exact match, but maybe the AVL and VLMAX are the same. If so,
@@ -1394,7 +1389,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     // We found a VSET(I)VLI make sure it matches the output of the
     // predecessor block.
     VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-    if (!DefInfo.isKnownSame(PBBExit))
+    if (!DefInfo.isCompatible(DemandedFields::all(), PBBExit, nullptr))
       return true;
 
     // Require has the same VL as PBBExit, so if the exit from the
@@ -1431,7 +1426,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 
     uint64_t TSFlags = MI.getDesc().TSFlags;
     if (RISCVII::hasSEWOp(TSFlags)) {
-      if (!PrevInfo.isKnownSame(CurInfo)) {
+      if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, nullptr)) {
         // If this is the first implicit state change, and the state change
         // requested can be proven to produce the same register contents, we
         // can skip emitting the actual state change and continue as if we
