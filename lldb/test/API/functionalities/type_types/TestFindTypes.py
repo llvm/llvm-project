@@ -45,7 +45,7 @@ class TypeFindFirstTestCase(TestBase):
             types = api.FindTypes("a::Foo")
             self.assertEqual(types.GetSize(), 1)
             type_str0 = str(types.GetTypeAtIndex(0))
-            self.assertIn('struct Foo', type_str0)
+            self.assertIn('struct Foo {', type_str0)
 
             # When we search by type basename, we should find any type whose
             # basename matches "Foo", so "a::Foo" and the "Foo" type in the
@@ -55,10 +55,7 @@ class TypeFindFirstTestCase(TestBase):
             type_str0 = str(types.GetTypeAtIndex(0))
             type_str1 = str(types.GetTypeAtIndex(1))
             # We don't know which order the types will come back as, so
-            if 'struct Foo' in type_str0:
-                self.assertIn('typedef Foo', type_str1)
-            else:
-                self.assertIn('struct Foo', type_str1)
+            self.assertEqual(set([str(t).split('\n')[0] for t in types]), set(["typedef Foo", "struct Foo {"]))
 
             # When we search by type basename with "::" prepended, we should
             # only types in the root namespace which means only "Foo" type in
