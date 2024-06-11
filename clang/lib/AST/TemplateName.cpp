@@ -360,14 +360,3 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
   OS.flush();
   return DB << NameStr;
 }
-
-void TemplateName::dump(raw_ostream &OS) const {
-  LangOptions LO;  // FIXME!
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  print(OS, PrintingPolicy(LO));
-}
-
-LLVM_DUMP_METHOD void TemplateName::dump() const {
-  dump(llvm::errs());
-}
