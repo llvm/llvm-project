@@ -155,6 +155,7 @@ llvm::Error GetAssetFiles(clang::doc::ClangDocContext &CDCtx) {
       }
     }
   }
+  return llvm::Error::success();
 }
 
 llvm::Error GetDefaultAssetFiles(const char *Argv0,
