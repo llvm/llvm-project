@@ -2544,7 +2544,6 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           .Case([](arith::MulIOp op) { return AtomicRMWKind::muli; })
           .Default([](Operation *op) { return std::nullopt; });
   if (!maybeKind) {
-    op->emitError() << "Unknown neutral element for: " << *op;
     return std::nullopt;
   }
 
