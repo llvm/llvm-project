@@ -24,14 +24,6 @@
 
 namespace mlir {
 namespace presburger {
-
-/// Redefine these functions, which operate on 64-bit ints, to also be part of
-/// the mlir::presburger namespace. This is useful because this file defines
-/// identically-named functions that operate on MPInts, which would otherwie
-/// become the only candidates of overload resolution when calling e.g. ceilDiv
-/// from the mlir::presburger namespace. So to access the 64-bit overloads, an
-/// explict call to llvm::ceilDiv would be required. These using declarations
-/// allow overload resolution to transparently call the right function.
 using ::llvm::ArrayRef;
 using ::llvm::divideCeilSigned;
 using ::llvm::divideFloorSigned;
