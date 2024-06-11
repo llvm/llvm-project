@@ -3342,6 +3342,38 @@ def int_amdgcn_wmma_f16_16x16x32_bf8_fp8_clamp : AMDGPUWmmaIntrinsicClamp<llvm_v
 def int_amdgcn_wmma_f16_16x16x32_fp8_fp8_clamp : AMDGPUWmmaIntrinsicClamp<llvm_v4i32_ty, llvm_v8f16_ty>;
 def int_amdgcn_wmma_f16_16x16x32_fp8_bf8_clamp : AMDGPUWmmaIntrinsicClamp<llvm_v4i32_ty, llvm_v8f16_ty>;
 
+class AMDGPUWmmaIntrinsicIUClamp<LLVMType D, LLVMType AB, LLVMType C> :
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [D], // %D
+    [
+      llvm_i1_ty,       // %A_sign
+      AB,               // %A
+      llvm_i1_ty,       // %A_sign
+      AB,               // %B
+      C,                // %C
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]
+>;
+
+def int_amdgcn_wmma_f32_16x16x16_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x16_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x32_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x32_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32_16x16x64_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x16_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x16_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x32_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x32_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_f32i32_16x16x64_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x16_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x32_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x32_iu8_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_wmma_i32_16x16x64_iu4_clamp : AMDGPUWmmaIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

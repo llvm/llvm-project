@@ -191,6 +191,8 @@ public:
     ImmTyScaleSel,
     ImmTyAuxData,
     ImmTyByteSel,
+    ImmTySignedA,
+    ImmTySignedB,
   };
 
   // Immediate operand kind.
@@ -1203,6 +1205,8 @@ public:
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyAuxData: OS << "ImmTyAuxData"; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
+    case ImmTySignedA: OS << "SignedA"; break;
+    case ImmTySignedB: OS << "SignedB"; break;
     }
     // clang-format on
   }
