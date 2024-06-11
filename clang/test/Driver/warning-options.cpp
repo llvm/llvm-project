@@ -9,4 +9,4 @@
 
 // Check for proper warning with -Wmissing-include-dirs
 // RUN: %clang -### -Wmissing-include-dirs -I %t/warning-options %s 2>&1 | FileCheck --check-prefix=CHECK-MISSING-INCLUDE-DIRS %s
-// CHECK-MISSING-INCLUDE-DIRS: warning: the included directory {{.*}}/warning-options is missing [-Wmissing-include-dirs]
+// CHECK-MISSING-INCLUDE-DIRS: warning: no such include directory: '{{.*}}/warning-options'
