@@ -1452,7 +1452,10 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<BoolAttr>:$no_infs_fp_math,
     OptionalAttr<BoolAttr>:$no_nans_fp_math,
     OptionalAttr<BoolAttr>:$approx_func_fp_math,
-    OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math
+    OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math,
+    OptionalAttr<UnitAttr>:$no_inline,
+    OptionalAttr<UnitAttr>:$always_inline,
+    OptionalAttr<UnitAttr>:$optimize_none
   );
 
   let regions = (region AnyRegion:$body);
@@ -1490,6 +1493,15 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     /// Returns the callable region, which is the function body. If the function
     /// is external, returns null.
     Region *getCallableRegion();
+
+    /// Returns true if the `no_inline` attribute is set, false otherwise.
+    bool isNoInline() { return bool(getNoInlineAttr()); }
+
+    /// Returns true if the `always_inline` attribute is set, false otherwise.
+    bool isAlwaysInline() { return bool(getAlwaysInlineAttr()); }
+
+    /// Returns true if the `optimize_none` attribute is set, false otherwise.
+    bool isOptimizeNone() { return bool(getOptimizeNoneAttr()); }
   }];
 
   let hasCustomAssemblyFormat = 1;
