@@ -34,6 +34,21 @@ define i64 @widen_assertzext(ptr %x) nounwind {
   ret i64 %d
 }
 
+define i64 @widen_assertzext_noundef_ret_attr(ptr %x) nounwind {
+; CHECK-LABEL: widen_assertzext_noundef_ret_attr:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq test2@PLT
+; CHECK-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; CHECK-NEXT:    vmovq %xmm0, %rax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %e = call noundef <7 x i64> @test2(), !range !0
+  %d = extractelement <7 x i64> %e, i32 6
+  ret i64 %d
+}
+
 declare  <16 x i64> @test()
 declare  <7 x i64> @test2()
 !0 = !{ i64 0, i64 2 }
