@@ -23,12 +23,15 @@
 
 namespace llvm {
 
+class MCAssembler;
 class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 
-class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
+class MCFragment {
   friend class MCAsmLayout;
+  friend class MCAssembler;
+  friend class MCSection;
 
 public:
   enum FragmentType : uint8_t {
@@ -51,6 +54,9 @@ public:
   };
 
 private:
+  // The next fragment within the section.
+  MCFragment *Next = nullptr;
+
   /// The data for the section this fragment is in.
   MCSection *Parent;
 
@@ -63,10 +69,6 @@ private:
 
   /// The layout order of this fragment.
   unsigned LayoutOrder;
-
-  /// The subsection this fragment belongs to. This is 0 if the fragment is not
-  // in any subsection.
-  unsigned SubsectionNumber = 0;
 
   FragmentType Kind;
 
@@ -88,6 +90,8 @@ public:
   /// This method will dispatch to the appropriate subclass.
   void destroy();
 
+  MCFragment *getNext() const { return Next; }
+
   FragmentType getKind() const { return Kind; }
 
   MCSection *getParent() const { return Parent; }
@@ -104,9 +108,6 @@ public:
   bool hasInstructions() const { return HasInstructions; }
 
   void dump() const;
-
-  void setSubsectionNumber(unsigned Value) { SubsectionNumber = Value; }
-  unsigned getSubsectionNumber() const { return SubsectionNumber; }
 };
 
 class MCDummyFragment : public MCFragment {
