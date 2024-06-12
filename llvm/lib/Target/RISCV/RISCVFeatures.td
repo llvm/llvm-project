@@ -859,6 +859,13 @@ def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
 
+def FeatureStdExtSmcdeleg
+    : RISCVExtension<"smcdeleg", 1, 0,
+                     "'Smcdeleg' (Counter Delegation Machine Level)">;
+def FeatureStdExtSsccfg
+    : RISCVExtension<"ssccfg", 1, 0,
+                     "'Ssccfg' (Counter Configuration Supervisor Level)">;
+
 def FeatureStdExtSsccptr
     : RISCVExtension<"ssccptr", 1, 0,
                      "'Ssccptr' (Main memory supports page table reads)">;

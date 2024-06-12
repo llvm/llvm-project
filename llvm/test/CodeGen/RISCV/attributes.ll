@@ -42,6 +42,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+shcounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV32SHCOUNTERENW %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shgatpa %s -o - | FileCheck --check-prefixes=CHECK,RV32SHGATPA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+shvsatpa %s -o - | FileCheck --check-prefixes=CHECK,RV32SHVSATPA %s
+; RUN: llc -mtriple=riscv32 -mattr=+ssccfg %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCCFG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssccptr %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCCPTR %s
 ; RUN: llc -mtriple=riscv32 -mattr=+sscofpmf %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCOFPMF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+sscounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCOUNTERENW %s
@@ -111,6 +112,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zcmop %s -o - | FileCheck --check-prefix=RV32ZCMOP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smaia %s -o - | FileCheck --check-prefixes=CHECK,RV32SMAIA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssaia %s -o - | FileCheck --check-prefixes=CHECK,RV32SSAIA %s
+; RUN: llc -mtriple=riscv32 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCDELEG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV32SMEPMP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFBFMIN %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZVFBFMIN %s
@@ -170,6 +172,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+shcounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV64SHCOUNTERENW %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shgatpa %s -o - | FileCheck --check-prefixes=CHECK,RV64SHGATPA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+shvsatpa %s -o - | FileCheck --check-prefixes=CHECK,RV64SHVSATPA %s
+; RUN: llc -mtriple=riscv64 -mattr=+ssccfg %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCCFG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssccptr %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCCPTR %s
 ; RUN: llc -mtriple=riscv64 -mattr=+sscofpmf %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCOFPMF %s
 ; RUN: llc -mtriple=riscv64 -mattr=+sscounterenw %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCOUNTERENW %s
@@ -245,6 +248,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zcmop %s -o - | FileCheck --check-prefix=RV64ZCMOP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smaia %s -o - | FileCheck --check-prefixes=CHECK,RV64SMAIA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssaia %s -o - | FileCheck --check-prefixes=CHECK,RV64SSAIA %s
+; RUN: llc -mtriple=riscv64 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCDELEG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV64SMEPMP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFBFMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zvfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZVFBFMIN %s
@@ -316,6 +320,7 @@
 ; RV32SHCOUNTERENW: .attribute 5, "rv32i2p1_shcounterenw1p0"
 ; RV32SHGATPA: .attribute 5, "rv32i2p1_shgatpa1p0"
 ; RV32SHVSATPA: .attribute 5, "rv32i2p1_shvsatpa1p0"
+; RV32SSCCFG: .attribute 5, "rv32i2p1_ssccfg1p0"
 ; RV32SSCCPTR: .attribute 5, "rv32i2p1_ssccptr1p0"
 ; RV32SSCOFPMF: .attribute 5, "rv32i2p1_sscofpmf1p0"
 ; RV32SSCOUNTERENW: .attribute 5, "rv32i2p1_sscounterenw1p0"
@@ -385,6 +390,7 @@
 ; RV32ZCMOP: .attribute 5, "rv32i2p1_zca1p0_zcmop1p0"
 ; RV32SMAIA: .attribute 5, "rv32i2p1_smaia1p0"
 ; RV32SSAIA: .attribute 5, "rv32i2p1_ssaia1p0"
+; RV32SMCDELEG: .attribute 5, "rv32i2p1_smcdeleg1p0"
 ; RV32SMEPMP: .attribute 5, "rv32i2p1_smepmp1p0"
 ; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
 ; RV32ZVFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0"
@@ -447,6 +453,7 @@
 ; RV64SHCOUNTERENW: .attribute 5, "rv64i2p1_shcounterenw1p0"
 ; RV64SHGATPA: .attribute 5, "rv64i2p1_shgatpa1p0"
 ; RV64SHVSATPA: .attribute 5, "rv64i2p1_shvsatpa1p0"
+; RV64SSCCFG: .attribute 5, "rv64i2p1_ssccfg1p0"
 ; RV64SSCCPTR: .attribute 5, "rv64i2p1_ssccptr1p0"
 ; RV64SSCOFPMF: .attribute 5, "rv64i2p1_sscofpmf1p0"
 ; RV64SSCOUNTERENW: .attribute 5, "rv64i2p1_sscounterenw1p0"
@@ -518,6 +525,7 @@
 ; RV64ZCMOP: .attribute 5, "rv64i2p1_zca1p0_zcmop1p0"
 ; RV64SMAIA: .attribute 5, "rv64i2p1_smaia1p0"
 ; RV64SSAIA: .attribute 5, "rv64i2p1_ssaia1p0"
+; RV64SMCDELEG: .attribute 5, "rv64i2p1_smcdeleg1p0"
 ; RV64SMEPMP: .attribute 5, "rv64i2p1_smepmp1p0"
 ; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0"
 ; RV64ZVFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvl32b1p0"
