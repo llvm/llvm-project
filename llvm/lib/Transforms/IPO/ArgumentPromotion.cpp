@@ -660,6 +660,13 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
         return false;
       }
 
+      unsigned int ArgNo = Arg->getArgNo();
+      if (CB->getArgOperand(ArgNo) != Arg) {
+        LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
+                          << "arg position is different in callee\n");
+        return false;
+      }
+
       // We limit promotion to only promoting up to a fixed number of elements
       // of the aggregate.
       if (MaxElements > 0 && ArgParts.size() > MaxElements) {
