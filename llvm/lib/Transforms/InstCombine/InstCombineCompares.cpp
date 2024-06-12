@@ -7909,7 +7909,8 @@ static Instruction *foldFCmpFNegCommonOp(FCmpInst &I) {
 static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
                                          Constant *RHSC, InstCombinerImpl &CI) {
   const CmpInst::Predicate Pred = I.getPredicate();
-  Value *X, *Y;
+  Value *X = LHSI->getOperand(0);
+  Value *Y = LHSI->getOperand(1);
   switch (Pred) {
   default:
     break;
@@ -7919,8 +7920,10 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
   case FCmpInst::FCMP_OEQ:
   case FCmpInst::FCMP_OGE:
   case FCmpInst::FCMP_OLE:
-    // Skip optimization: fsub x, y unless guaranteed !isinf(x) ||
-    // !isinf(y).
+    // The optimization is not valid if X and Y are infinities of the same
+    // sign, i.e. the inf - inf = nan case. If the fsub has the ninf or nnan
+    // flag then we can assume we do not have that case. Otherwise we might be
+    // able to prove that either X or Y is not infinity.
     if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
         !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
                               CI.getSimplifyQuery().getWithInstruction(&I)) &&
@@ -7937,7 +7940,6 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
   case FCmpInst::FCMP_ULE:
     // fcmp pred (x - y), 0 --> fcmp pred x, y
     if (match(RHSC, m_AnyZeroFP()) &&
-        match(LHSI, m_FSub(m_Value(X), m_Value(Y))) &&
         I.getFunction()->getDenormalMode(
             LHSI->getType()->getScalarType()->getFltSemantics()) ==
             DenormalMode::getIEEE()) {
