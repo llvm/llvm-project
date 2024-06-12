@@ -1449,8 +1449,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       //   dependent non-array type or an array type with a value-dependent
       //   bound
       assert(AggrDeductionCandidateParamTypes);
-      // Don't consider the brace elision version if the initializer is in brace
-      // form.
+      // Don't consider the brace elision if the initializer is a
+      // braced-init-list.
       if (isa<InitListExpr, DesignatedInitExpr>(expr) ||
           !isa_and_present<ConstantArrayType>(
               SemaRef.Context.getAsArrayType(ElemType))) {
