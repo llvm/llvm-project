@@ -98,11 +98,10 @@ void PreferAtOverSubscriptOperatorCheck::registerMatchers(MatchFinder *Finder) {
 
 void PreferAtOverSubscriptOperatorCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const CallExpr *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
-  const CXXMethodDecl *MatchedOperator =
+  const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
+  const auto *MatchedOperator =
       Result.Nodes.getNodeAs<CXXMethodDecl>("operator");
-  const CXXRecordDecl *MatchedParent =
-      Result.Nodes.getNodeAs<CXXRecordDecl>("parent");
+  const auto *MatchedParent = Result.Nodes.getNodeAs<CXXRecordDecl>("parent");
 
   std::string ClassIdentifier = MatchedParent->getQualifiedNameAsString();
 
