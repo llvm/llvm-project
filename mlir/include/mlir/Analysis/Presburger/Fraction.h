@@ -52,14 +52,23 @@ struct Fraction {
     return num / den;
   }
 
-  llvm::raw_ostream &print(llvm::raw_ostream &os) const {
-    return os << "(" << num << "/" << den << ")";
-  }
-
   /// The numerator and denominator, respectively. The denominator is always
   /// positive.
   DynamicAPInt num{0}, den{1};
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  llvm::raw_ostream &print(llvm::raw_ostream &os) const {
+    return os << "(" << num << "/" << den << ")";
+  }
+#endif
 };
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
+  x.print(os);
+  return os;
+}
+#endif
 
 /// Three-way comparison between two fractions.
 /// Returns +1, 0, and -1 if the first fraction is greater than, equal to, or
@@ -156,12 +165,6 @@ inline Fraction &operator*=(Fraction &x, const Fraction &y) {
   x = x * y;
   return x;
 }
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
-  x.print(os);
-  return os;
-}
-
 } // namespace presburger
 } // namespace mlir
 
