@@ -319,8 +319,6 @@ class Symbolizer:
     m = re.match(r'.*?(0x[0-9a-f]+):' + '([ ]*[\[ ][0-9a-f][0-9a-f]\]?)' * 16, line)
     if m is None:
       return False
-    if self.__matched_stack_uas:
-      return True
     addr = m.group(1)
     tags = m.group(*range(2, 18))
     fault = [i for i, x in enumerate(tags) if '[' in x]
