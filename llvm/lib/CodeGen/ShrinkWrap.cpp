@@ -226,7 +226,7 @@ class ShrinkWrap : public MachineFunctionPass {
   void init(MachineFunction &MF) {
     RCI.runOnMachineFunction(MF);
     MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    MPDT = &getAnalysis<MachinePostDominatorTree>();
+    MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     Save = nullptr;
     Restore = nullptr;
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
@@ -263,7 +263,7 @@ public:
     AU.setPreservesAll();
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachinePostDominatorTree>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfo>();
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -290,7 +290,7 @@ char &llvm::ShrinkWrapID = ShrinkWrap::ID;
 INITIALIZE_PASS_BEGIN(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_END(ShrinkWrap, DEBUG_TYPE, "Shrink Wrap Pass", false, false)
@@ -671,7 +671,7 @@ bool ShrinkWrap::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
   Restore = NewRestore;
 
   MDT->recalculate(MF);
-  MPDT->runOnMachineFunction(MF);
+  MPDT->recalculate(MF);
 
   assert((MDT->dominates(Save, Restore) && MPDT->dominates(Restore, Save)) &&
          "Incorrect save or restore point due to dominance relations");
