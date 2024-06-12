@@ -506,6 +506,7 @@ public:
   }
 
   Value *VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E);
+  Value *VisitEmbedExpr(EmbedExpr *E);
 
   Value *VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
@@ -1796,6 +1797,12 @@ ScalarExprEmitter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
                                                      "usn_addr_cast");
 }
 
+Value *ScalarExprEmitter::VisitEmbedExpr(EmbedExpr *E) {
+  assert(E->getDataElementCount() == 1);
+  auto It = E->begin();
+  return Builder.getInt((*It)->getValue());
+}
+
 Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
   // Vector Mask Case
   if (E->getNumSubExprs() == 2) {
@@ -1937,26 +1944,7 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
     }
   }
 
-  llvm::Value *Result = EmitLoadOfLValue(E);
-
-  // If -fdebug-info-for-profiling is specified, emit a pseudo variable and its
-  // debug info for the pointer, even if there is no variable associated with
-  // the pointer's expression.
-  if (CGF.CGM.getCodeGenOpts().DebugInfoForProfiling && CGF.getDebugInfo()) {
-    if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Result)) {
-      if (llvm::GetElementPtrInst *GEP =
-              dyn_cast<llvm::GetElementPtrInst>(Load->getPointerOperand())) {
-        if (llvm::Instruction *Pointer =
-                dyn_cast<llvm::Instruction>(GEP->getPointerOperand())) {
-          QualType Ty = E->getBase()->getType();
-          if (!E->isArrow())
-            Ty = CGF.getContext().getPointerType(Ty);
-          CGF.getDebugInfo()->EmitPseudoVariable(Builder, Pointer, Ty);
-        }
-      }
-    }
-  }
-  return Result;
+  return EmitLoadOfLValue(E);
 }
 
 Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {

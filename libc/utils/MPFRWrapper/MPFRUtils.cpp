@@ -1085,6 +1085,9 @@ template <typename T> bool round_to_long(T x, long &result) {
 template bool round_to_long<float>(float, long &);
 template bool round_to_long<double>(double, long &);
 template bool round_to_long<long double>(long double, long &);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template bool round_to_long<float16>(float16, long &);
+#endif
 
 template <typename T> bool round_to_long(T x, RoundingMode mode, long &result) {
   MPFRNumber mpfr(x);
@@ -1094,6 +1097,9 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result) {
 template bool round_to_long<float>(float, RoundingMode, long &);
 template bool round_to_long<double>(double, RoundingMode, long &);
 template bool round_to_long<long double>(long double, RoundingMode, long &);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template bool round_to_long<float16>(float16, RoundingMode, long &);
+#endif
 
 template <typename T> T round(T x, RoundingMode mode) {
   MPFRNumber mpfr(x);
@@ -1104,6 +1110,9 @@ template <typename T> T round(T x, RoundingMode mode) {
 template float round<float>(float, RoundingMode);
 template double round<double>(double, RoundingMode);
 template long double round<long double>(long double, RoundingMode);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template float16 round<float16>(float16, RoundingMode);
+#endif
 
 } // namespace mpfr
 } // namespace testing

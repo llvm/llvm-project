@@ -820,7 +820,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   for (MCSection &Sec : *this) {
     // Create dummy fragments to eliminate any empty sections, this simplifies
     // layout.
-    if (Sec.getFragmentList().empty())
+    if (Sec.empty())
       new MCDataFragment(&Sec);
 
     Sec.setOrdinal(SectionIndex++);
@@ -830,6 +830,19 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   for (unsigned i = 0, e = Layout.getSectionOrder().size(); i != e; ++i) {
     MCSection *Sec = Layout.getSectionOrder()[i];
     Sec->setLayoutOrder(i);
+
+    // Chain together fragments from all subsections.
+    MCDummyFragment Dummy(Sec);
+    MCFragment *Tail = &Dummy;
+    for (auto &[_, List] : Sec->Subsections) {
+      if (!List.Head)
+        continue;
+      Tail->Next = List.Head;
+      Tail = List.Tail;
+    }
+    Sec->Subsections.clear();
+    Sec->Subsections.push_back({0u, {Dummy.getNext(), Tail}});
+    Sec->CurFragList = &Sec->Subsections[0].second;
 
     unsigned FragmentIndex = 0;
     for (MCFragment &Frag : *Sec)
@@ -1094,7 +1107,7 @@ bool MCAssembler::relaxBoundaryAlign(MCAsmLayout &Layout,
 
   uint64_t AlignedOffset = Layout.getFragmentOffset(&BF);
   uint64_t AlignedSize = 0;
-  for (const MCFragment *F = BF.getNextNode();; F = F->getNextNode()) {
+  for (const MCFragment *F = BF.getNext();; F = F->getNext()) {
     AlignedSize += computeFragmentSize(Layout, *F);
     if (F == BF.getLastFragment())
       break;

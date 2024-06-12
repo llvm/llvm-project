@@ -1432,7 +1432,8 @@ bool fir::ConvertOp::canBeConverted(mlir::Type inType, mlir::Type outType) {
 mlir::LogicalResult fir::ConvertOp::verify() {
   if (canBeConverted(getValue().getType(), getType()))
     return mlir::success();
-  return emitOpError("invalid type conversion");
+  return emitOpError("invalid type conversion")
+         << getValue().getType() << " / " << getType();
 }
 
 //===----------------------------------------------------------------------===//

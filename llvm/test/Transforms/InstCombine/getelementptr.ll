@@ -419,18 +419,46 @@ define ptr @test_index_canon_nusw_nuw(ptr %X, i32 %Idx) {
   ret ptr %R
 }
 
-define ptr @test_index_canon_const_expr_inbounds(ptr %X, i32 %Idx) {
+define ptr @test_index_canon_const_expr_inbounds() {
 ; CHECK-LABEL: @test_index_canon_const_expr_inbounds(
 ; CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @Global, i64 123)
 ;
   ret ptr getelementptr inbounds (i8, ptr @Global, i32 123)
 }
 
-define ptr @test_index_canon_const_expr_nuw_nusw(ptr %X, i32 %Idx) {
+define ptr @test_index_canon_const_expr_nuw_nusw() {
 ; CHECK-LABEL: @test_index_canon_const_expr_nuw_nusw(
-; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @Global, i64 123)
+; CHECK-NEXT:    ret ptr getelementptr nusw nuw (i8, ptr @Global, i64 123)
 ;
   ret ptr getelementptr nusw nuw (i8, ptr @Global, i32 123)
+}
+
+define ptr @test_const_gep_gep_nuw() {
+; CHECK-LABEL: @test_const_gep_gep_nuw(
+; CHECK-NEXT:    ret ptr getelementptr nuw (i8, ptr @Global, i64 246)
+;
+  ret ptr getelementptr nuw (i8, ptr getelementptr nuw (i8, ptr @Global, i64 123), i64 123)
+}
+
+define ptr @test_const_gep_gep_nusw_no_overflow() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_no_overflow(
+; CHECK-NEXT:    ret ptr getelementptr nusw (i8, ptr @Global, i64 246)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 123), i64 123)
+}
+
+define ptr @test_const_gep_gep_nusw_no_overflow_neg() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_no_overflow_neg(
+; CHECK-NEXT:    ret ptr getelementptr nusw (i8, ptr @Global, i64 -246)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 -123), i64 -123)
+}
+
+define ptr @test_const_gep_gep_nusw_overflow() {
+; CHECK-LABEL: @test_const_gep_gep_nusw_overflow(
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @Global, i64 -2)
+;
+  ret ptr getelementptr nusw (i8, ptr getelementptr nusw (i8, ptr @Global, i64 u0x7fffffffffffffff), i64 u0x7fffffffffffffff)
 }
 
 define i1 @test17(ptr %P, i32 %I, i32 %J) {
