@@ -188,6 +188,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SUB:
   case ISD::VP_MUL:      Res = PromoteIntRes_SimpleIntBinOp(N); break;
 
+  case ISD::AVGCEILS:
+  case ISD::AVGFLOORS:
   case ISD::VP_SMIN:
   case ISD::VP_SMAX:
   case ISD::SDIV:
@@ -195,6 +197,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SDIV:
   case ISD::VP_SREM:     Res = PromoteIntRes_SExtIntBinOp(N); break;
 
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORU:
   case ISD::VP_UMIN:
   case ISD::VP_UMAX:
   case ISD::UDIV:
@@ -2818,6 +2822,11 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SSHLSAT:
   case ISD::USHLSAT: ExpandIntRes_SHLSAT(N, Lo, Hi); break;
 
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU: 
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU: ExpandIntRes_AVG(N, Lo, Hi); break;
+
   case ISD::SMULFIX:
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
@@ -4118,6 +4127,11 @@ void DAGTypeLegalizer::ExpandIntRes_READCOUNTER(SDNode *N, SDValue &Lo,
   Lo = R.getValue(0);
   Hi = R.getValue(1);
   ReplaceValueWith(SDValue(N, 1), R.getValue(2));
+}
+
+void DAGTypeLegalizer::ExpandIntRes_AVG(SDNode *N, SDValue &Lo, SDValue &Hi) {
+  SDValue Result = TLI.expandAVG(N, DAG);
+  SplitInteger(Result, Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_ADDSUBSAT(SDNode *N, SDValue &Lo,
