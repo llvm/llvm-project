@@ -224,6 +224,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
      /*isElemental=*/false},
+    {"erfc_scaled", &I::genErfcScaled},
     {"etime",
      &I::genEtime,
      {{{"values", asBox}, {"time", asBox}}},
@@ -5777,15 +5778,19 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
       return builder.create<fir::LoadOp>(loc, result);
     }
     if (fir::isa_char(eleTy)) {
-      // Create mutable fir.box to be passed to the runtime for the result.
-      fir::MutableBoxValue resultMutableBox =
-          fir::factory::createTempMutableBox(builder, loc, eleTy);
-      mlir::Value resultIrBox =
-          fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+      auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(resultType);
+      assert(charTy && "expect CharacterType");
+      fir::factory::CharacterExprHelper charHelper(builder, loc);
+      mlir::Value len;
+      if (charTy.hasDynamicLen())
+        len = charHelper.readLengthFromBox(fir::getBase(arrayTmp), charTy);
+      else
+        len = builder.createIntegerConstant(loc, builder.getI32Type(),
+                                            charTy.getLen());
+      fir::CharBoxValue temp = charHelper.createCharacterTemp(eleTy, len);
       fir::runtime::genReduce(builder, loc, array, operation, mask, identity,
-                              ordered, resultIrBox);
-      // Handle cleanup of allocatable result descriptor and return
-      return readAndAddCleanUp(resultMutableBox, resultType, "REDUCE");
+                              ordered, temp.getBuffer());
+      return temp;
     }
     return fir::runtime::genReduce(builder, loc, array, operation, mask,
                                    identity, ordered);
@@ -5876,6 +5881,16 @@ mlir::Value IntrinsicLibrary::genRRSpacing(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genRRSpacing(builder, loc, fir::getBase(args[0])));
+}
+
+// ERFC_SCALED
+mlir::Value IntrinsicLibrary::genErfcScaled(mlir::Type resultType,
+                                            llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genErfcScaled(builder, loc, fir::getBase(args[0])));
 }
 
 // SAME_TYPE_AS
@@ -6362,16 +6377,17 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
                             llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2 || args.size() == 3);
   const fir::ExtendedValue &array = args[0];
-  if (const auto *boxValue = array.getBoxOf<fir::BoxValue>())
-    if (boxValue->hasAssumedRank())
-      TODO(loc, "intrinsic: lbound with assumed rank argument");
+  // Semantics builds signatures for LBOUND calls as either
+  // LBOUND(array, dim, [kind]) or LBOUND(array, [kind]).
+  const bool dimIsAbsent = args.size() == 2 || isStaticallyAbsent(args, 1);
+  if (array.hasAssumedRank() && dimIsAbsent)
+    return genAssumedRankBoundInquiry(builder, loc, resultType, args,
+                                      /*kindPos=*/1, fir::runtime::genLbound);
 
   mlir::Type indexType = builder.getIndexType();
 
-  // Semantics builds signatures for LBOUND calls as either
-  // LBOUND(array, dim, [kind]) or LBOUND(array, [kind]).
-  if (args.size() == 2 || isStaticallyAbsent(args, 1)) {
-    // DIM is absent.
+  if (dimIsAbsent) {
+    // DIM is absent and the rank of array is a compile time constant.
     mlir::Type lbType = fir::unwrapSequenceType(resultType);
     unsigned rank = array.rank();
     mlir::Type lbArrayType = fir::SequenceType::get(
@@ -6396,13 +6412,16 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
   // DIM is present.
   mlir::Value dim = fir::getBase(args[1]);
 
-  // If it is a compile time constant, skip the runtime call.
-  if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
-    mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
-    mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
-    mlir::Value lb = computeLBOUND(builder, loc, array, *cstDim - 1, zero, one);
-    return builder.createConvert(loc, resultType, lb);
-  }
+  // If it is a compile time constant and the rank is known, skip the runtime
+  // call.
+  if (!array.hasAssumedRank())
+    if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
+      mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
+      mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
+      mlir::Value lb =
+          computeLBOUND(builder, loc, array, *cstDim - 1, zero, one);
+      return builder.createConvert(loc, resultType, lb);
+    }
 
   fir::ExtendedValue box = createBoxForRuntimeBoundInquiry(loc, builder, array);
   return builder.createConvert(

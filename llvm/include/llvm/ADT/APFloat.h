@@ -189,6 +189,14 @@ struct APFloatBase {
     // improved range compared to half (16-bit) formats, at (potentially)
     // greater throughput than single precision (32-bit) formats.
     S_FloatTF32,
+    // 6-bit floating point number with bit layout S1E3M2. Unlike IEEE-754
+    // types, there are no infinity or NaN values. The format is detailed in
+    // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+    S_Float6E3M2FN,
+    // 6-bit floating point number with bit layout S1E2M3. Unlike IEEE-754
+    // types, there are no infinity or NaN values. The format is detailed in
+    // https://www.opencompute.org/documents/ocp-microscaling-formats-mx-v1-0-spec-final-pdf
+    S_Float6E2M3FN,
 
     S_x87DoubleExtended,
     S_MaxSemantics = S_x87DoubleExtended,
@@ -209,6 +217,8 @@ struct APFloatBase {
   static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
   static const fltSemantics &FloatTF32() LLVM_READNONE;
+  static const fltSemantics &Float6E3M2FN() LLVM_READNONE;
+  static const fltSemantics &Float6E2M3FN() LLVM_READNONE;
   static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
@@ -627,6 +637,8 @@ private:
   APInt convertFloat8E4M3FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3B11FNUZAPFloatToAPInt() const;
   APInt convertFloatTF32APFloatToAPInt() const;
+  APInt convertFloat6E3M2FNAPFloatToAPInt() const;
+  APInt convertFloat6E2M3FNAPFloatToAPInt() const;
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
   void initFromHalfAPInt(const APInt &api);
@@ -642,6 +654,8 @@ private:
   void initFromFloat8E4M3FNUZAPInt(const APInt &api);
   void initFromFloat8E4M3B11FNUZAPInt(const APInt &api);
   void initFromFloatTF32APInt(const APInt &api);
+  void initFromFloat6E3M2FNAPInt(const APInt &api);
+  void initFromFloat6E2M3FNAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
@@ -1045,6 +1059,17 @@ public:
   ///
   /// \param Semantics - type float semantics
   static APFloat getAllOnesValue(const fltSemantics &Semantics);
+
+  static bool hasNanOrInf(const fltSemantics &Sem) {
+    switch (SemanticsToEnum(Sem)) {
+    default:
+      return true;
+    // Below Semantics do not support {NaN or Inf}
+    case APFloat::S_Float6E3M2FN:
+    case APFloat::S_Float6E2M3FN:
+      return false;
+    }
+  }
 
   /// Used to insert APFloat objects, or objects that contain APFloat objects,
   /// into FoldingSets.

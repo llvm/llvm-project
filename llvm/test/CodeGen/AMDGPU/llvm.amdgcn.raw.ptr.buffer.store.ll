@@ -307,6 +307,82 @@ define amdgpu_ps void @raw_ptr_buffer_store_x1_offset_swizzled_not_merged(ptr ad
   ret void
 }
 
+define void @buffer_store_f64__voffset_add(ptr addrspace(8) inreg %rsrc, double %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_f64__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[4:7], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_f64__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[4:7], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f64(double %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2f64__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x double> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2f64__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[4:7], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2f64__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[4:7], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2f64(<2 x double> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_i64__voffset_add(ptr addrspace(8) inreg %rsrc, i64 %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_i64__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[4:7], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_i64__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    buffer_store_dwordx2 v[0:1], v2, s[4:7], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.i64(i64 %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
+define void @buffer_store_v2i64__voffset_add(ptr addrspace(8) inreg %rsrc, <2 x i64> %data, i32 %voffset) #0 {
+; VERDE-LABEL: buffer_store_v2i64__voffset_add:
+; VERDE:       ; %bb.0:
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VERDE-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[4:7], 0 offen offset:60
+; VERDE-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; VERDE-NEXT:    s_setpc_b64 s[30:31]
+;
+; CHECK-LABEL: buffer_store_v2i64__voffset_add:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[4:7], 0 offen offset:60
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %voffset.add = add i32 %voffset, 60
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2i64(<2 x i64> %data, ptr addrspace(8) %rsrc, i32 %voffset.add, i32 0, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32) #0
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32) #0
 declare void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float>, ptr addrspace(8), i32, i32, i32) #0
