@@ -109,20 +109,20 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
   const bool sym_status2 = bool(options & copy_options::copy_symlinks);
 
   error_code m_ec1;
-  StatT f_st = {};
+  StatT f_st;
   const file_status f =
       sym_status || sym_status2 ? detail::posix_lstat(from, f_st, &m_ec1) : detail::posix_stat(from, f_st, &m_ec1);
   if (m_ec1)
     return err.report(m_ec1);
 
-  StatT t_st          = {};
+  StatT t_st;
   const file_status t = sym_status ? detail::posix_lstat(to, t_st, &m_ec1) : detail::posix_stat(to, t_st, &m_ec1);
 
   if (not status_known(t))
     return err.report(m_ec1);
 
   if (!exists(f) || is_other(f) || is_other(t) || (is_directory(f) && is_regular_file(t)) ||
-      detail::stat_equivalent(f_st, t_st)) {
+      (exists(t) && detail::stat_equivalent(f_st, t_st))) {
     return err.report(errc::function_not_supported);
   }
 
