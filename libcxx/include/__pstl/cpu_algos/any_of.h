@@ -10,13 +10,12 @@
 #define _LIBCPP___PSTL_CPU_ALGOS_ANY_OF_H
 
 #include <__algorithm/any_of.h>
-#include <__algorithm/find_if.h>
+#include <__assert>
 #include <__atomic/atomic.h>
 #include <__atomic/memory_order.h>
 #include <__config>
-#include <__functional/operations.h>
 #include <__iterator/concepts.h>
-#include <__pstl/configuration_fwd.h>
+#include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>
@@ -70,25 +69,28 @@ _LIBCPP_HIDE_FROM_ABI bool __simd_or(_Index __first, _DifferenceType __n, _Pred 
   return false;
 }
 
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
-_LIBCPP_HIDE_FROM_ABI optional<bool>
-__pstl_any_of(__cpu_backend_tag, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
-  if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
-                __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return std::__parallel_or<__cpu_backend_tag>(
-        __first, __last, [&__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
-          auto __res = std::__pstl_any_of<__remove_parallel_policy_t<_ExecutionPolicy>>(
-              __cpu_backend_tag{}, __brick_first, __brick_last, __pred);
-          _LIBCPP_ASSERT_INTERNAL(__res, "unseq/seq should never try to allocate!");
-          return *std::move(__res);
-        });
-  } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
-                       __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return std::__simd_or(__first, __last - __first, __pred);
-  } else {
-    return std::any_of(__first, __last, __pred);
+template <class _Backend, class _RawExecutionPolicy>
+struct __cpu_parallel_any_of {
+  template <class _Policy, class _ForwardIterator, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<bool>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
+    if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      return std::__parallel_or<_Backend>(
+          __first, __last, [&__policy, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
+            using _AnyOfUnseq = __pstl::__any_of<_Backend, __remove_parallel_policy_t<_RawExecutionPolicy>>;
+            auto __res = _AnyOfUnseq()(std::__remove_parallel_policy(__policy), __brick_first, __brick_last, __pred);
+            _LIBCPP_ASSERT_INTERNAL(__res, "unseq/seq should never try to allocate!");
+            return *std::move(__res);
+          });
+    } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
+                         __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+      return std::__simd_or(__first, __last - __first, __pred);
+    } else {
+      return std::any_of(__first, __last, __pred);
+    }
   }
-}
+};
 
 _LIBCPP_END_NAMESPACE_STD
 
