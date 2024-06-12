@@ -134,7 +134,7 @@ enum class CudaArch {
   LAST,
 
   CudaDefault = CudaArch::SM_52,
-  HIPDefault = CudaArch::AMDGCNSPIRV,
+  HIPDefault = CudaArch::GFX906,
 };
 
 enum class CUDAFunctionTarget {

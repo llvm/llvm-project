@@ -152,7 +152,7 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
         return llvm::Triple("spirv64-amd-amdhsa");
       return llvm::Triple("amdgcn-amd-amdhsa");
     }
-    return llvm::Triple("spirv64-amd-amdhsa"); // Default HIP triple.
+    return llvm::Triple("amdgcn-amd-amdhsa"); // Default HIP triple.
   }
   auto TT = getOffloadTargetTriple(D, Args);
   if (!TT)
