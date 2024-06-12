@@ -284,4 +284,3 @@ SlowDynamicAPInt &SlowDynamicAPInt::operator--() {
 void SlowDynamicAPInt::print(raw_ostream &OS) const { OS << Val; }
 
 void SlowDynamicAPInt::dump() const { print(dbgs()); }
-

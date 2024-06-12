@@ -25,4 +25,3 @@ raw_ostream &DynamicAPInt::print(raw_ostream &OS) const {
 }
 
 void DynamicAPInt::dump() const { print(dbgs()); }
-
