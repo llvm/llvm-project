@@ -155,7 +155,7 @@ namespace {
     }
 
     // Track 'estimated' register pressure.
-    SmallSet<Register, 32> RegSeen;
+    SmallDenseSet<Register> RegSeen;
     SmallVector<unsigned, 8> RegPressure;
 
     // Register pressure "limit" per register pressure set. If the pressure
@@ -224,7 +224,7 @@ namespace {
                      MachineBasicBlock *CurPreheader);
 
     void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
-                   SmallSet<int, 32> &StoredFIs,
+                   SmallDenseSet<int> &StoredFIs,
                    SmallVectorImpl<CandidateInfo> &Candidates,
                    MachineLoop *CurLoop);
 
@@ -464,7 +464,7 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
 /// gather register def and frame object update information.
 void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
                                 BitVector &RUClobbers,
-                                SmallSet<int, 32> &StoredFIs,
+                                SmallDenseSet<int> &StoredFIs,
                                 SmallVectorImpl<CandidateInfo> &Candidates,
                                 MachineLoop *CurLoop) {
   bool RuledOut = false;
@@ -568,7 +568,7 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
   BitVector RUClobbers(NumRegUnits); // RUs defined more than once.
 
   SmallVector<CandidateInfo, 32> Candidates;
-  SmallSet<int, 32> StoredFIs;
+  SmallDenseSet<int> StoredFIs;
 
   // Walk the entire region, count number of defs for each register, and
   // collect potential LICM candidates.
