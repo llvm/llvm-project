@@ -951,9 +951,8 @@ RISC-V Support
 - Profile names in ``-march`` option are now supported.
 - ``-m[no-]scalar-strict-align`` and ``-m[no-]vector-strict-align`` options have
   been added to give separate control of whether scalar or vector misaligned
-  accesses may be created.
-- ``-mi[no-]strict-align`` is now an alias of ``-m[no-]scalar-strict-align`` and
-  only affects scalar memory accesses.
+  accesses may be created. ``-m[no-]strict-align`` applies to both scalar and
+  vector.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

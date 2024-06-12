@@ -189,12 +189,15 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+unaligned-scalar-mem");
   }
 
-  // If -mvector-strict-align or -mno-vector-strict-align is passed, use it.
-  // Otherwise, the unaligned-vector-mem is enabled if the CPU supports it or
-  // the target is Android.
-  if (const Arg *A = Args.getLastArg(options::OPT_mno_vector_strict_align,
-                                     options::OPT_mvector_strict_align)) {
-    if (A->getOption().matches(options::OPT_mno_vector_strict_align)) {
+  // If -mstrict-align, -mno-strict-align, -mvector-strict-align, or
+  // -mno-vector-strict-align is passed, use it. Otherwise, the
+  // unaligned-vector-mem is enabled if the CPU supports it or the target is
+  // Android.
+  if (const Arg *A = Args.getLastArg(
+          options::OPT_mno_strict_align, options::OPT_mvector_strict_align,
+          options::OPT_mstrict_align, options::OPT_mno_vector_strict_align)) {
+    if (A->getOption().matches(options::OPT_mno_strict_align) ||
+        A->getOption().matches(options::OPT_mno_vector_strict_align)) {
       Features.push_back("+unaligned-vector-mem");
     } else {
       Features.push_back("-unaligned-vector-mem");

@@ -35,10 +35,11 @@
 // NO-FORCE-SW-SCS: "-target-feature" "-forced-sw-shadow-stack"
 // DEFAULT-NOT: "-target-feature" "+forced-sw-shadow-stack"
 
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-SCALAR-UNALIGNED-ACCESS
-// RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-SCALAR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align 2>&1 | FileCheck %s -check-prefixes=FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mstrict-align 2>&1 | FileCheck %s -check-prefixes=NO-FAST-SCALAR-UNALIGNED-ACCESS,NO-FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-scalar-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-SCALAR-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mscalar-strict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-SCALAR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-scalar-strict-align -mstrict-align 2>&1 | FileCheck %s -check-prefixes=NO-FAST-SCALAR-UNALIGNED-ACCESS,NO-FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: touch %t.o
 // RUN: %clang --target=riscv32-unknown-elf -### %t.o -mno-strict-align -mstrict-align
 
@@ -47,6 +48,8 @@
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-vector-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mvector-strict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-vector-strict-align -mstrict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-VECTOR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-strict-align -mvector-strict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-VECTOR-UNALIGNED-ACCESS
 // FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "+unaligned-vector-mem"
 // NO-FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "-unaligned-vector-mem"
 
