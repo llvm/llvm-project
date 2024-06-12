@@ -369,3 +369,21 @@ csrrs t2, 0x15C, zero
 csrrs t1, stopi, zero
 # uimm12
 csrrs t2, 0xDB0, zero
+
+#########################################
+# Counter Configuration (Ssccfg)
+#########################################
+
+# scountinhibit
+# name
+# CHECK-INST: csrrs t1, scountinhibit, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x12]
+# CHECK-INST-ALIAS: csrr t1, scountinhibit
+# uimm12
+# CHECK-INST: csrrs t2, scountinhibit, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x12]
+# CHECK-INST-ALIAS: csrr t2, scountinhibit
+# name
+csrrs t1, scountinhibit, zero
+# uimm12
+csrrs t2, 0x120, zero
