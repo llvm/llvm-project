@@ -3289,6 +3289,75 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Convert `Mask` into `<n x i1>`.
+  Constant *createDppMask(unsigned Width, unsigned Mask) {
+    SmallVector<Constant *, 4> R(Width);
+    for (auto &M : R) {
+      M = ConstantInt::getBool(F.getContext(), Mask & 1);
+      Mask >>= 1;
+    }
+    return ConstantVector::get(R);
+  }
+
+  // Calculate output shadow as array of booleans `<n x i1>`, assuming if any
+  // arg is poisoned, entire dot product is poisoned.
+  Value *findDppPoisonedOutput(IRBuilder<> &IRB, Value *S, unsigned SrcMask,
+                               unsigned DstMask) {
+    const unsigned Width =
+        cast<FixedVectorType>(S->getType())->getNumElements();
+
+    S = IRB.CreateSelect(createDppMask(Width, SrcMask), S,
+                         Constant::getNullValue(S->getType()));
+    Value *SElem = IRB.CreateOrReduce(S);
+    Value *IsClean = IRB.CreateIsNull(SElem, "_msdpp");
+    Value *DstMaskV = createDppMask(Width, DstMask);
+
+    return IRB.CreateSelect(
+        IsClean, Constant::getNullValue(DstMaskV->getType()), DstMaskV);
+  }
+
+  // See `Intel Intrinsics Guide` for `_dp_p*` instructions.
+  //
+  // 2 and 4 element versions produce single scalar of dot product, and then
+  // puts it into elements of output vector, selected by 4 lowest bits of the
+  // mask. Top 4 bits of the mask control which elements of input to use for dot
+  // product.
+  //
+  // 8 element version mask still has only 4 bit for input, and 4 bit for output
+  // mask. According to the spec it just operates as 4 element version on first
+  // 4 elements of inputs and output, and then on last 4 elements of inputs and
+  // output.
+  void handleDppIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    Value *S0 = getShadow(&I, 0);
+    Value *S1 = getShadow(&I, 1);
+    Value *S = IRB.CreateOr(S0, S1);
+
+    const unsigned Width =
+        cast<FixedVectorType>(S->getType())->getNumElements();
+    assert(Width == 2 || Width == 4 || Width == 8);
+
+    const unsigned Mask = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
+    const unsigned SrcMask = Mask >> 4;
+    const unsigned DstMask = Mask & 0xf;
+
+    // Calculate shadow as `<n x i1>`.
+    Value *SI1 = findDppPoisonedOutput(IRB, S, SrcMask, DstMask);
+    if (Width == 8) {
+      // First 4 elements of shadow are already calculated. `makeDppShadow`
+      // operats on 32 bit masks, so we can just shift masks, and repeat.
+      SI1 = IRB.CreateOr(
+          SI1, findDppPoisonedOutput(IRB, S, SrcMask << 4, DstMask << 4));
+    }
+    // Extend to real size of shadow, poisoning either all or none bits of an
+    // element.
+    S = IRB.CreateSExt(SI1, S->getType(), "_msdpp");
+
+    setShadow(&I, S);
+    setOriginForNaryOp(I);
+  }
+
   // Instrument sum-of-absolute-differences intrinsic.
   void handleVectorSadIntrinsic(IntrinsicInst &I) {
     const unsigned SignificantBitsPerResultElement = 16;
@@ -3644,7 +3713,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  SmallVector<int, 8> getPclmulMask(unsigned Width, bool OddElements) {
+  static SmallVector<int, 8> getPclmulMask(unsigned Width, bool OddElements) {
     SmallVector<int, 8> Mask;
     for (unsigned X = OddElements ? 1 : 0; X < Width; X += 2) {
       Mask.append(2, X);
@@ -3958,6 +4027,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_packuswb:
     case Intrinsic::x86_avx2_packusdw:
       handleVectorPackIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_avx_dp_ps_256:
+    case Intrinsic::x86_sse41_dppd:
+    case Intrinsic::x86_sse41_dpps:
+      handleDppIntrinsic(I);
       break;
 
     case Intrinsic::x86_mmx_packsswb:
