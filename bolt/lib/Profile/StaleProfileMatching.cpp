@@ -595,6 +595,8 @@ bool canApplyInference(const FlowFunction &Func) {
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
     return false;
 
+  // Returns false if the artificial sink block has no predecessors meaning
+  // there are no exit blocks.  
   if (Func.Blocks[Func.Sink].isEntry())
     return false;
 
