@@ -1660,6 +1660,9 @@ enum StmtCode {
   /// A SourceLocExpr record.
   EXPR_SOURCE_LOC,
 
+  /// A EmbedExpr record.
+  EXPR_BUILTIN_PP_EMBED,
+
   /// A ShuffleVectorExpr record.
   EXPR_SHUFFLE_VECTOR,
 

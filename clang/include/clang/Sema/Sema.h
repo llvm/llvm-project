@@ -5730,6 +5730,10 @@ public:
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
 
+  // #embed
+  ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
+                            StringLiteral *Filename, StringLiteral *BinaryData);
+
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
                                 SourceLocation BuiltinLoc, SourceLocation RPLoc,

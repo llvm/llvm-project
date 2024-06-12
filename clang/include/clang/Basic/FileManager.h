@@ -287,13 +287,16 @@ public:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(FileEntryRef Entry, bool isVolatile = false,
                    bool RequiresNullTerminator = true,
+                   std::optional<int64_t> MaybeLimit = std::nullopt,
                    std::optional<cas::ObjectRef> *CASContents = nullptr);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
                    bool RequiresNullTerminator = true,
+                   std::optional<int64_t> MaybeLimit = std::nullopt,
                    std::optional<cas::ObjectRef> *CASContents = nullptr) const {
-    return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile,
-                                RequiresNullTerminator, CASContents);
+    return getBufferForFileImpl(Filename,
+                                /*FileSize=*/(MaybeLimit ? *MaybeLimit : -1),
+                                isVolatile, RequiresNullTerminator, CASContents);
   }
 
   /// This is a convenience method that opens a file, gets the \p cas::ObjectRef
