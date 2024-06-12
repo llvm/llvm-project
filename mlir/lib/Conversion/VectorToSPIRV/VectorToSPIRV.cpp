@@ -636,6 +636,7 @@ struct VectorDeinterleaveOpConvert final
     Location loc = deinterleaveOp->getLoc();
 
     // Deinterleave the indices.
+    Value sourceVector = adaptor.getSource();
     VectorType sourceType = deinterleaveOp.getSourceVectorType();
     int n = sourceType.getNumElements();
 
@@ -643,15 +644,11 @@ struct VectorDeinterleaveOpConvert final
     // We cannot use `spirv::VectorShuffleOp` directly in this case, and need to
     // use `spirv::CompositeExtractOp`.
     if (n == 2) {
-      auto elem0 =
-          rewriter.create<spirv::CompositeExtractOp>(
-              loc, newResultType, adaptor.getSource(),
-              rewriter.getI32ArrayAttr({0}));
+      auto elem0 = rewriter.create<spirv::CompositeExtractOp>(
+          loc, newResultType, sourceVector, rewriter.getI32ArrayAttr({0}));
 
-      auto elem1 =
-          rewriter.create<spirv::CompositeExtractOp>(
-              loc, newResultType, adaptor.getSource(),
-              rewriter.getI32ArrayAttr({1}));
+      auto elem1 = rewriter.create<spirv::CompositeExtractOp>(
+          loc, newResultType, sourceVector, rewriter.getI32ArrayAttr({1}));
 
       rewriter.replaceOp(deinterleaveOp, {elem0, elem1});
       return success();
@@ -670,11 +667,11 @@ struct VectorDeinterleaveOpConvert final
     // Create two SPIR-V shuffles.
     spirv::VectorShuffleOp shuffleEven =
         rewriter.create<spirv::VectorShuffleOp>(
-            loc, newResultType, adaptor.getSource(), adaptor.getSource(),
+            loc, newResultType, sourceVector, sourceVector,
             rewriter.getI32ArrayAttr(indicesEven));
 
     spirv::VectorShuffleOp shuffleOdd = rewriter.create<spirv::VectorShuffleOp>(
-        loc, newResultType, adaptor.getSource(), adaptor.getSource(),
+        loc, newResultType, sourceVector, sourceVector,
         rewriter.getI32ArrayAttr(indicesOdd));
 
     rewriter.replaceOp(deinterleaveOp, {shuffleEven, shuffleOdd});
