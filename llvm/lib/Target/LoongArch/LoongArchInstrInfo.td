@@ -751,7 +751,8 @@ def XOR  : ALU_3R<0x00158000>;
 def ANDN : ALU_3R<0x00168000>;
 def ORN  : ALU_3R<0x00160000>;
 def ANDI : ALU_2RI12<0x03400000, uimm12>;
-let isReMaterializable = 1 in {
+// See LoongArchInstrInfo::isAsCheapAsAMove for more details.
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def ORI  : ALU_2RI12<0x03800000, uimm12_ori>;
 def XORI : ALU_2RI12<0x03c00000, uimm12>;
 }
@@ -858,7 +859,8 @@ def ADD_D : ALU_3R<0x00108000>;
 def SUB_D : ALU_3R<0x00118000>;
 // ADDI_D isn't always rematerializable, but isReMaterializable will be used as
 // a hint which is verified in isReallyTriviallyReMaterializable.
-let isReMaterializable = 1 in {
+// See LoongArchInstrInfo::isAsCheapAsAMove for more details.
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def ADDI_D : ALU_2RI12<0x02c00000, simm12_addlike>;
 }
 def ADDU16I_D : ALU_2RI16<0x10000000, simm16>;
