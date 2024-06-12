@@ -53,6 +53,10 @@ directives. Directives on loops are used to specify additional transformation to
 be performed by the compiler like enabling vectorisation, unrolling, interchange
 etc.
 
+Currently loop directives are not accepted in the presence of OpenMP or OpenACC
+constructs on the loop. This should be implemented as it is used in some
+applications.
+
 ### Array Expressions
 It is to be decided whether loop directives should also be able to be associated
 with array expressions.
