@@ -870,9 +870,7 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 /// may occur after a #if or #elif directive.  If the expression is equivalent
 /// to "!defined(X)" return X in IfNDefMacro.
 Preprocessor::DirectiveEvalResult
-Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
-                                          Token &Tok, bool &EvaluatedDefined,
-                                          bool CheckForEoD) {
+Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
   SaveAndRestore PPDir(ParsingIfOrElifDirective, true);
   // Save the current state of 'DisableMacroExpansion' and reset it to false. If
   // 'DisableMacroExpansion' is true, then we must be in a macro argument list
@@ -884,6 +882,7 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
   DisableMacroExpansion = false;
 
   // Peek ahead one token.
+  Token Tok;
   LexNonComment(Tok);
 
   // C99 6.10.1p3 - All expressions are evaluated as intmax_t or uintmax_t.
@@ -896,7 +895,7 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     // Parse error, skip the rest of the macro line.
     SourceRange ConditionRange = ExprStartLoc;
     if (Tok.isNot(tok::eod))
-      ConditionRange = DiscardUntilEndOfDirective(Tok);
+      ConditionRange = DiscardUntilEndOfDirective();
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
@@ -904,13 +903,10 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
     // We cannot trust the source range from the value because there was a
     // parse error. Track the range manually -- the end of the directive is the
     // end of the condition range.
-    return {std::nullopt,
-            false,
+    return {false,
             DT.IncludedUndefinedIds,
             {ExprStartLoc, ConditionRange.getEnd()}};
   }
-
-  EvaluatedDefined = DT.State != DefinedTracker::Unknown;
 
   // If we are at the end of the expression after just parsing a value, there
   // must be no (unparenthesized) binary operators involved, so we can exit
@@ -923,10 +919,7 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    bool IsNonZero = ResVal.Val != 0;
-    SourceRange ValRange = ResVal.getRange();
-    return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds,
-            ValRange};
+    return {ResVal.Val != 0, DT.IncludedUndefinedIds, ResVal.getRange()};
   }
 
   // Otherwise, we must have a binary operator (e.g. "#if 1 < 2"), so parse the
@@ -935,37 +928,21 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
                                Tok, true, DT.IncludedUndefinedIds, *this)) {
     // Parse error, skip the rest of the macro line.
     if (Tok.isNot(tok::eod))
-      DiscardUntilEndOfDirective(Tok);
+      DiscardUntilEndOfDirective();
 
     // Restore 'DisableMacroExpansion'.
     DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-    SourceRange ValRange = ResVal.getRange();
-    return {std::nullopt, false, DT.IncludedUndefinedIds, ValRange};
+    return {false, DT.IncludedUndefinedIds, ResVal.getRange()};
   }
 
-  if (CheckForEoD) {
-    // If we aren't at the tok::eod token, something bad happened, like an extra
-    // ')' token.
-    if (Tok.isNot(tok::eod)) {
-      Diag(Tok, diag::err_pp_expected_eol);
-      DiscardUntilEndOfDirective(Tok);
-    }
+  // If we aren't at the tok::eod token, something bad happened, like an extra
+  // ')' token.
+  if (Tok.isNot(tok::eod)) {
+    Diag(Tok, diag::err_pp_expected_eol);
+    DiscardUntilEndOfDirective();
   }
-
-  EvaluatedDefined = EvaluatedDefined || DT.State != DefinedTracker::Unknown;
 
   // Restore 'DisableMacroExpansion'.
   DisableMacroExpansion = DisableMacroExpansionAtStartOfDirective;
-  bool IsNonZero = ResVal.Val != 0;
-  SourceRange ValRange = ResVal.getRange();
-  return {std::move(ResVal.Val), IsNonZero, DT.IncludedUndefinedIds, ValRange};
-}
-
-Preprocessor::DirectiveEvalResult
-Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
-                                          bool CheckForEoD) {
-  Token Tok;
-  bool EvaluatedDefined;
-  return EvaluateDirectiveExpression(IfNDefMacro, Tok, EvaluatedDefined,
-                                     CheckForEoD);
+  return {ResVal.Val != 0, DT.IncludedUndefinedIds, ResVal.getRange()};
 }
