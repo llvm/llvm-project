@@ -13,7 +13,7 @@
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 using LlvmLibcF16sqrtfExhaustiveTest =
-    LlvmLibcUnaryNarrowerOpExhaustiveMathTest<
+    LlvmLibcUnaryNarrowingOpExhaustiveMathTest<
         float16, float, mpfr::Operation::Sqrt, LIBC_NAMESPACE::f16sqrtf>;
 
 // Range: [0, Inf];

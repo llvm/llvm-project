@@ -17,7 +17,8 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/uint128.h"
-#include <fenv.h>
+
+#include "hdr/fenv_macros.h"
 
 namespace LIBC_NAMESPACE {
 namespace fputil {

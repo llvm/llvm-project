@@ -69,16 +69,16 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
 };
 
 template <typename OutType, typename InType>
-using UnaryNarrowerOp = OutType(InType);
+using UnaryNarrowingOp = OutType(InType);
 
 template <typename OutType, typename InType, mpfr::Operation Op,
-          UnaryNarrowerOp<OutType, InType> Func>
-struct UnaryNarrowerOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
+          UnaryNarrowingOp<OutType, InType> Func>
+struct UnaryNarrowingOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = InType;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
   using StorageType = typename FPBits::StorageType;
 
-  static constexpr UnaryNarrowerOp<OutType, FloatType> *FUNC = Func;
+  static constexpr UnaryNarrowingOp<OutType, FloatType> *FUNC = Func;
 
   // Check in a range, return the number of failures.
   uint64_t check(StorageType start, StorageType stop,
@@ -95,9 +95,9 @@ struct UnaryNarrowerOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
           TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, x, FUNC(x), 0.5, rounding);
       failed += (!correct);
       // Uncomment to print out failed values.
-      if (!correct) {
-        EXPECT_MPFR_MATCH_ROUNDING(Op, x, FUNC(x), 0.5, rounding);
-      }
+      // if (!correct) {
+      //   EXPECT_MPFR_MATCH_ROUNDING(Op, x, FUNC(x), 0.5, rounding);
+      // }
     } while (bits++ < stop);
     return failed;
   }
@@ -207,6 +207,6 @@ using LlvmLibcUnaryOpExhaustiveMathTest =
     LlvmLibcExhaustiveMathTest<UnaryOpChecker<FloatType, Op, Func>>;
 
 template <typename OutType, typename InType, mpfr::Operation Op,
-          UnaryNarrowerOp<OutType, InType> Func>
-using LlvmLibcUnaryNarrowerOpExhaustiveMathTest = LlvmLibcExhaustiveMathTest<
-    UnaryNarrowerOpChecker<OutType, InType, Op, Func>>;
+          UnaryNarrowingOp<OutType, InType> Func>
+using LlvmLibcUnaryNarrowingOpExhaustiveMathTest = LlvmLibcExhaustiveMathTest<
+    UnaryNarrowingOpChecker<OutType, InType, Op, Func>>;
