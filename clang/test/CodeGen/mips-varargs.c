@@ -39,8 +39,8 @@ int test_i32(char *fmt, ...) {
 //
 // N32:   [[TMP:%.+]] = load i64, ptr [[AP_CUR]], align [[CHUNKALIGN:8]]
 // N64:   [[TMP:%.+]] = load i64, ptr [[AP_CUR]], align [[CHUNKALIGN:8]]
-// NEW:   [[TMP2:%.+]] = trunc i64 [[TMP]] to i32
-// NEW:   store i32 [[TMP2]], ptr [[V]], align 4
+// NEW:   [[ARG:%.+]] = trunc i64 [[TMP]] to i32
+// ALL:   store i32 [[ARG]], ptr [[V]], align 4
 //
 // ALL:   call void @llvm.va_end.p0(ptr %va)
 // ALL: }
@@ -98,7 +98,9 @@ char *test_ptr(char *fmt, ...) {
 // N32:   [[TMP2:%.+]] = load i64, ptr [[AP_CUR]], align 8
 // N32:   [[TMP3:%.+]] = trunc i64 [[TMP2]] to i32
 // N32:   [[PTR:%.+]] = inttoptr i32 [[TMP3]] to ptr
-// N32:   store ptr [[PTR]], ptr [[V]], align 4
+// O32:   [[PTR:%.+]] = load ptr, ptr [[AP_CUR]], align [[$PTRALIGN]]
+// N64:   [[PTR:%.+]] = load ptr, ptr [[AP_CUR]], align [[$PTRALIGN]]
+// ALL:   store ptr [[PTR]], ptr [[V]], align [[$PTRALIGN]]
 //
 // ALL:   call void @llvm.va_end.p0(ptr %va)
 // ALL: }
