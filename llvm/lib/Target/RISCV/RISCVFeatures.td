@@ -905,7 +905,7 @@ def FeatureStdExtSstc
     : RISCVExtension<"sstc", 1, 0,
                      "'Sstc' (Supervisor-mode timer interrupts)">;
 
-def FeaturesSsqosid
+def FeaturesStdExtSsqosid
     : RISCVExperimentalExtension<"ssqosid", 1, 0,
                                  "'Ssqosid' (Quality-of-Service (QoS) Identifiers)">;
 
