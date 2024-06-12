@@ -341,6 +341,9 @@ Changes to the LLVM tools
   jumping in reverse direction with shift+L/R/B). (`#95662
   <https://github.com/llvm/llvm-project/pull/95662>`).
 
+* llvm-readobj now supports ``--coff-output-style=<value>``. Valid options are ``LLVM``,
+  and ``JSON``. (`#95074 <https://github.com/llvm/llvm-project/pull/95074>`)
+
 Changes to LLDB
 ---------------------------------
 

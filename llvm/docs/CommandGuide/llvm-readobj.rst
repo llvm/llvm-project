@@ -347,9 +347,20 @@ The following options are implemented only for the PE/COFF file format.
 
  Display the load config.
 
+.. option:: --coff-output-style=<value>
+
+ Format COFF information in the specified style. Valid options are ``LLVM``,
+ and ``JSON``. ``LLVM`` output (the default) is an expanded and
+ structured format. ``JSON`` is JSON formatted output intended for machine consumption.
+
 .. option:: --coff-resources
 
  Display the .rsrc section.
+
+.. option:: --pretty-print
+
+ When used with :option:`--coff-output-style`, JSON output will be formatted in
+ a more readable format.
 
 XCOFF SPECIFIC OPTIONS
 ----------------------

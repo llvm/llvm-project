@@ -309,6 +309,18 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::COFFLoadConfig = Args.hasArg(OPT_coff_load_config);
   opts::COFFResources = Args.hasArg(OPT_coff_resources);
   opts::COFFTLSDirectory = Args.hasArg(OPT_coff_tls_directory);
+  if (Arg *A = Args.getLastArg(OPT_coff_output_style_EQ)) {
+    std::string OutputStyleChoice = A->getValue();
+    opts::Output = StringSwitch<opts::OutputStyleTy>(OutputStyleChoice)
+                       .Case("LLVM", opts::OutputStyleTy::LLVM)
+                       .Case("JSON", opts::OutputStyleTy::JSON)
+                       .Default(opts::OutputStyleTy::UNKNOWN);
+    if (opts::Output == opts::OutputStyleTy::UNKNOWN) {
+      error("--coff-output-style value should be either 'LLVM' or "
+            "'JSON', but was '" +
+            OutputStyleChoice + "'");
+    }
+  }
 
   // XCOFF specific options.
   opts::XCOFFAuxiliaryHeader = Args.hasArg(OPT_auxiliary_header);
