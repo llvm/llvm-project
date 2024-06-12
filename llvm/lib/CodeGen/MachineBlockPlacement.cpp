@@ -3159,11 +3159,17 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
         // Handle the filter set
         if (BlockFilter) {
           auto It = llvm::find(*BlockFilter, RemBB);
+          // Erase RemBB from BlockFilter, and keep PrevUnplacedBlockInFilterIt
+          // pointing to the same element as before.
           if (It != BlockFilter->end()) {
             if (It < PrevUnplacedBlockInFilterIt) {
+              // BlockFilter is a SmallVector so all elements after RemBB are
+              // shifted to the front by 1 after its deletion.
               auto Distance = PrevUnplacedBlockInFilterIt - It - 1;
               PrevUnplacedBlockInFilterIt = BlockFilter->erase(It) + Distance;
             } else if (It == PrevUnplacedBlockInFilterIt)
+              // The block pointed by PrevUnplacedBlockInFilterIt is erased, we
+              // have to set it to the next element.
               PrevUnplacedBlockInFilterIt = BlockFilter->erase(It);
             else
               BlockFilter->erase(It);
