@@ -19,6 +19,10 @@
 
 #include "properties/architectures.h"
 
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+
 #define LIBC_INLINE inline
 #define LIBC_INLINE_VAR inline
 #define LIBC_INLINE_ASM __asm__ __volatile__
@@ -28,6 +32,14 @@
 #define LIBC_THREAD_LOCAL
 #else
 #define LIBC_THREAD_LOCAL thread_local
+#endif
+
+#if __cplusplus >= 202002L
+#define LIBC_CONSTINIT constinit
+#elif __has_attribute(__require_constant_initialization__)
+#define LIBC_CONSTINIT __attribute__((__require_constant_initialization__))
+#else
+#define LIBC_CONSTINIT
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
