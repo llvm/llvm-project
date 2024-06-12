@@ -1510,6 +1510,46 @@ define i8 @add_like_or_t2_extrause(i8 %x) {
   %r = add i8 %i1, 42
   ret i8 %r
 }
+define i8 @fold_add_constant_preserve_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], -120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, 8
+  ret i8 %add
+}
+define i8 @fold_add_constant_no_nsw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_no_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 120
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, -128
+  %add = add nsw i8 %or, -8
+  ret i8 %add
+}
+define i8 @fold_add_constant_preserve_nuw(i8 %x) {
+; CHECK-LABEL: @fold_add_constant_preserve_nuw(
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], -116
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %or = or disjoint i8 %x, 128
+  %add = add nuw i8 %or, 12
+  ret i8 %add
+}
+define i32 @sdiv_to_udiv(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @sdiv_to_udiv(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw nsw i32 [[ARG0:%.*]], 8
+; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw i32 [[T0]], 6242049
+; CHECK-NEXT:    [[T3:%.*]] = udiv i32 [[T2]], 192
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t0 = shl nuw nsw i32 %arg0, 8
+  %t1 = or disjoint i32 %t0, 1
+  %t2 = add nuw nsw i32 %t1, 6242048
+  %t3 = sdiv i32 %t2, 192
+  ret i32 %t3
+}
 
 define i8 @add_like_or_disjoint(i8 %x) {
 ; CHECK-LABEL: @add_like_or_disjoint(

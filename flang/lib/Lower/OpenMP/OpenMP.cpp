@@ -1114,7 +1114,7 @@ static void genTargetClauses(
                                          llvm::omp::Directive::OMPD_target);
 
   // `target private(..)` is only supported in delayed privatization mode.
-  if (!enableDelayedPrivatization)
+  if (!enableDelayedPrivatizationStaging)
     cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
 }
 

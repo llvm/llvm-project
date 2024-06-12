@@ -25,8 +25,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Support/MathExtras.h"
 #include <optional>
 
 namespace mlir {
@@ -971,8 +971,8 @@ struct MemorySpaceCastOpLowering
                                resultUnderlyingDesc, resultElemPtrType);
 
       int64_t bytesToSkip =
-          2 *
-          ceilDiv(getTypeConverter()->getPointerBitwidth(resultAddrSpace), 8);
+          2 * llvm::divideCeilSigned(
+                  getTypeConverter()->getPointerBitwidth(resultAddrSpace), 8);
       Value bytesToSkipConst = rewriter.create<LLVM::ConstantOp>(
           loc, getIndexType(), rewriter.getIndexAttr(bytesToSkip));
       Value copySize = rewriter.create<LLVM::SubOp>(

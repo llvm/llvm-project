@@ -165,7 +165,8 @@ td_library(
 )
 
 llvm_config_target_defines = [
-  "LLVM_HAS_{}_TARGET=1".format(t) for t in llvm_targets
+    "LLVM_HAS_{}_TARGET=1".format(t)
+    for t in llvm_targets
 ]
 
 cc_library(
@@ -1479,6 +1480,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
