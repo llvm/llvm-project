@@ -942,20 +942,17 @@ Status MinidumpFileBuilder::AddMemoryList_32(
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   Log *log = GetLog(LLDBLog::Object);
-  int region_index = 0;
+  size_t region_index = 0;
   for (const auto &core_range : ranges) {
     // Take the offset before we write.
     const size_t offset_for_data = GetCurrentDataEndOffset();
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
-    std::cout << "Adding Memory Desciptor at " << std::hex
-              << core_range.range.start() << std::dec << " with size "
-              << core_range.range.size() << std::endl;
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
 
     LLDB_LOGF(
         log,
-        "AddMemoryList %d/%d reading memory for region (%zu bytes) [%zx, %zx)",
+        "AddMemoryList %zu/%zu reading memory for region (%zu bytes) [%zx, %zx)",
         region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
@@ -1042,14 +1039,14 @@ Status MinidumpFileBuilder::AddMemoryList_64(
 
   Status error;
   Log *log = GetLog(LLDBLog::Object);
-  int region_index = 0;
+  size_t region_index = 0;
   for (const auto &core_range : ranges) {
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
 
     LLDB_LOGF(log,
-              "AddMemoryList_64 %d/%d reading memory for region (%zu bytes) "
+              "AddMemoryList_64 %zu/%zu reading memory for region (%zu bytes) "
               "[%zx, %zx)",
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
