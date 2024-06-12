@@ -1,4 +1,3 @@
-# RUN: %{python} %s %{libcxx-dir}/utils %{libcxx-dir}/utils/data/feature_test_macros/test_data.json
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,19 +6,21 @@
 #
 # ===----------------------------------------------------------------------===##
 
+# RUN: %{python} %s %{libcxx-dir}/utils %{libcxx-dir}/utils/data/feature_test_macros/test_data.json
+
 import sys
 
 sys.path.append(sys.argv[1])
-from generate_feature_test_macro_components import feature_test_macros
+from generate_feature_test_macro_components import FeatureTestMacros
 
 
 def test(output, expected):
     assert output == expected, f"expected\n{expected}\n\noutput\n{output}"
 
 
-fmt = feature_test_macros(sys.argv[2])
+ftm = FeatureTestMacros(sys.argv[2])
 test(
-    fmt.get_std_dialect_versions(),
+    ftm.standard_ftms,
     {
         "__cpp_lib_any": {
             "c++17": "201606L",

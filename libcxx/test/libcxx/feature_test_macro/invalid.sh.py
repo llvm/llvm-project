@@ -1,4 +1,3 @@
-# RUN: %{python} %s %{libcxx-dir}/utils %t
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,11 +6,13 @@
 #
 # ===----------------------------------------------------------------------===##
 
+# RUN: %{python} %s %{libcxx-dir}/utils %t
+
 import sys
 import json
 
 sys.path.append(sys.argv[1])
-from generate_feature_test_macro_components import feature_test_macros
+from generate_feature_test_macro_components import FeatureTestMacros
 
 
 def test(output, expected):
@@ -22,9 +23,9 @@ def test_error(data, type, message):
     tmp = sys.argv[2]
     with open(tmp, "w") as file:
         file.write(json.dumps(data))
-    fmt = feature_test_macros(tmp)
+    ftm = FeatureTestMacros(tmp)
     try:
-        fmt.get_dialect_versions()
+        ftm.implemented_ftms
     except type as error:
         test(str(error), message)
     else:

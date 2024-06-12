@@ -3,6 +3,7 @@
 import os
 from builtins import range
 from functools import reduce
+import functools
 import json
 
 
@@ -1868,17 +1869,6 @@ Status
         f.write(doc_str)
 
 
-def get_std_dialects(data):
-    """Impementation for feature_test_macros.get_std_dialects()."""
-    dialects = set()
-    for feature in data:
-        keys = feature["values"].keys()
-        assert len(keys) > 0, "'values' is empty"
-        dialects |= keys
-
-    return sorted(dialects)
-
-
 def get_dialect_versions(data, std_dialects, use_implemented_status):
     """Impementation for feature_test_macros.get_(std_|)dialect_versions()."""
     result = dict()
@@ -1916,8 +1906,8 @@ def get_dialect_versions(data, std_dialects, use_implemented_status):
     return result
 
 
-class feature_test_macros:
-    """Provides all feature-test macro (FMT) output components.
+class FeatureTestMacros:
+    """Provides all feature-test macro (FTM) output components.
 
     The class has several generators to use the feature-test macros in libc++:
     - FTM status page
@@ -2007,20 +1997,15 @@ class feature_test_macros:
     ]
     """
 
-    # The JSON data structor.
+    # The JSON data structure.
     __data = None
-
-    # These values are used internally multiple times. They are lazily loaded
-    # and cached. Values that are expected to be used once are not cached.
-    __std_dialects = None
-    __std_dialect_versions = None
-    __dialect_versions = None
 
     def __init__(self, filename):
         """Initializes the class with the JSON data in the file 'filename'."""
         self.__data = json.load(open(filename))
 
-    def get_std_dialects(self):
+    @functools.cached_property
+    def std_dialects(self):
         """Returns the C++ dialects avaiable.
 
         The available dialects are based on the 'c++xy' keys found the 'values'
@@ -2030,12 +2015,16 @@ class feature_test_macros:
         The return value is a sorted list with the C++ dialects used. Since FTM
         were added in C++14 the list will not contain C++98 or C++11.
         """
-        if not self.__std_dialects:
-            self.__std_dialects = get_std_dialects(self.__data)
+        dialects = set()
+        for feature in self.__data:
+            keys = feature["values"].keys()
+            assert len(keys) > 0, "'values' is empty"
+            dialects |= keys
 
-        return self.__std_dialects
+        return sorted(list(dialects))
 
-    def get_std_dialect_versions(self):
+    @functools.cached_property
+    def standard_ftms(self):
         """Returns the FTM versions per dialect in the Standard.
 
         This function does not use the 'implemented' flag. The output contains
@@ -2049,14 +2038,10 @@ class feature_test_macros:
           * key: The version of the C++ dialect.
           * value: The value of the feature-test macro.
         """
-        if not self.__std_dialect_versions:
-            self.__std_dialect_versions = get_dialect_versions(
-                self.__data, self.get_std_dialects(), False
-            )
+        return get_dialect_versions(self.__data, self.std_dialects, False)
 
-        return self.__std_dialect_versions
-
-    def get_dialect_versions(self):
+    @functools.cached_property
+    def implemented_ftms(self):
         """Returns the FTM versions per dialect implemented in libc++.
 
         Unlike `get_std_dialect_versions` this function uses the 'implemented'
@@ -2069,12 +2054,8 @@ class feature_test_macros:
           * value: The value of the feature-test macro. When a feature-test
             macro is not implemented its value is None.
         """
-        if not self.__dialect_versions:
-            self.__dialect_versions = get_dialect_versions(
-                self.__data, self.get_std_dialects(), True
-            )
 
-        return self.__dialect_versions
+        return get_dialect_versions(self.__data, self.std_dialects, True)
 
 
 def main():
