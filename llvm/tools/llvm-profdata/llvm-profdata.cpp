@@ -2696,7 +2696,8 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
   Stats.TotalNumValueSites += NS;
   for (size_t I = 0; I < NS; ++I) {
     uint32_t NV = Func.getNumValueDataForSite(VK, I);
-    std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, I);
+    std::unique_ptr<InstrProfValueData[]> VD =
+        Func.getValueForSiteLegacy(VK, I);
     Stats.TotalNumValues += NV;
     if (NV) {
       Stats.TotalNumValueSitesWithValueProfile++;

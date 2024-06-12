@@ -1040,7 +1040,8 @@ Error InstrProfWriter::validateRecord(const InstrProfRecord &Func) {
       continue;
     for (uint32_t S = 0; S < NS; S++) {
       uint32_t ND = Func.getNumValueDataForSite(VK, S);
-      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
+      std::unique_ptr<InstrProfValueData[]> VD =
+          Func.getValueForSiteLegacy(VK, S);
       DenseSet<uint64_t> SeenValues;
       for (uint32_t I = 0; I < ND; I++)
         if ((VK != IPVK_IndirectCallTarget && VK != IPVK_VTableTarget) &&
@@ -1090,7 +1091,8 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
     for (uint32_t S = 0; S < NS; S++) {
       uint32_t ND = Func.getNumValueDataForSite(VK, S);
       OS << ND << "\n";
-      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
+      std::unique_ptr<InstrProfValueData[]> VD =
+          Func.getValueForSiteLegacy(VK, S);
       for (uint32_t I = 0; I < ND; I++) {
         if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
           OS << Symtab.getFuncOrVarNameIfDefined(VD[I].Value) << ":"
