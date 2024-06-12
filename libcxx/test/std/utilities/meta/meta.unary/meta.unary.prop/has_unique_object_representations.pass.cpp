@@ -14,95 +14,95 @@
 
 #include <type_traits>
 
-#include "test_macros.h"
+template <bool ExpectedValue, class T>
+void test() {
+  static_assert(std::has_unique_object_representations<T>::value == ExpectedValue);
+  static_assert(std::has_unique_object_representations<const T>::value == ExpectedValue);
+  static_assert(std::has_unique_object_representations<volatile T>::value == ExpectedValue);
+  static_assert(std::has_unique_object_representations<const volatile T>::value == ExpectedValue);
 
-template <class T>
-void test_has_unique_object_representations()
-{
-    static_assert( std::has_unique_object_representations<T>::value, "");
-    static_assert( std::has_unique_object_representations<const T>::value, "");
-    static_assert( std::has_unique_object_representations<volatile T>::value, "");
-    static_assert( std::has_unique_object_representations<const volatile T>::value, "");
-
-    static_assert( std::has_unique_object_representations_v<T>, "");
-    static_assert( std::has_unique_object_representations_v<const T>, "");
-    static_assert( std::has_unique_object_representations_v<volatile T>, "");
-    static_assert( std::has_unique_object_representations_v<const volatile T>, "");
+  static_assert(std::has_unique_object_representations_v<T> == ExpectedValue);
+  static_assert(std::has_unique_object_representations_v<const T> == ExpectedValue);
+  static_assert(std::has_unique_object_representations_v<volatile T> == ExpectedValue);
+  static_assert(std::has_unique_object_representations_v<const volatile T> == ExpectedValue);
 }
 
-template <class T>
-void test_has_not_has_unique_object_representations()
-{
-    static_assert(!std::has_unique_object_representations<T>::value, "");
-    static_assert(!std::has_unique_object_representations<const T>::value, "");
-    static_assert(!std::has_unique_object_representations<volatile T>::value, "");
-    static_assert(!std::has_unique_object_representations<const volatile T>::value, "");
-
-    static_assert(!std::has_unique_object_representations_v<T>, "");
-    static_assert(!std::has_unique_object_representations_v<const T>, "");
-    static_assert(!std::has_unique_object_representations_v<volatile T>, "");
-    static_assert(!std::has_unique_object_representations_v<const volatile T>, "");
-}
-
-class Empty
-{
-};
-
-class NotEmpty
-{
-    virtual ~NotEmpty();
-};
+class Empty {};
 
 union EmptyUnion {};
-struct NonEmptyUnion {int x; unsigned y;};
 
-struct bit_zero
-{
-    int :  0;
+struct NonEmptyUnion {
+  int x;
+  unsigned y;
 };
 
-class Abstract
-{
-    virtual ~Abstract() = 0;
+struct ZeroWidthBitfield {
+  int : 0;
 };
 
-struct A
-{
-    ~A();
-    unsigned foo;
+class Virtual {
+  virtual ~Virtual();
 };
 
-struct B
-{
-   char bar;
-   int foo;
+class Abstract {
+  virtual ~Abstract() = 0;
 };
 
+struct UnsignedInt {
+  unsigned foo;
+};
 
-int main(int, char**)
-{
-    test_has_not_has_unique_object_representations<void>();
-    test_has_not_has_unique_object_representations<Empty>();
-    test_has_not_has_unique_object_representations<EmptyUnion>();
-    test_has_not_has_unique_object_representations<NotEmpty>();
-    test_has_not_has_unique_object_representations<bit_zero>();
-    test_has_not_has_unique_object_representations<Abstract>();
-    test_has_not_has_unique_object_representations<B>();
+struct WithoutPadding {
+  int x;
+  int y;
+};
 
-//  I would expect all three of these to have unique representations.
-//  I would also expect that there are systems where they do not.
-//     test_has_not_has_unique_object_representations<int&>();
-//     test_has_not_has_unique_object_representations<int *>();
-//     test_has_not_has_unique_object_representations<double>();
+struct WithPadding {
+  char bar;
+  int foo;
+};
 
+template <int>
+class NTTP_ClassType_WithoutPadding {
+  int x;
+};
 
-    test_has_unique_object_representations<unsigned>();
-    test_has_unique_object_representations<NonEmptyUnion>();
-    test_has_unique_object_representations<char[3]>();
-    test_has_unique_object_representations<char[3][4]>();
-    test_has_unique_object_representations<char[3][4][5]>();
-    test_has_unique_object_representations<char[]>();
+int main(int, char**) {
+  test<false, void>();
+  test<false, Empty>();
+  test<false, EmptyUnion>();
+  test<false, Virtual>();
+  test<false, ZeroWidthBitfield>();
+  test<false, Abstract>();
+  test<false, WithPadding>();
+  test<false, WithPadding[]>();
+  test<false, WithPadding[][3]>();
 
+  // I would also expect that there are systems where they do not.
+  // I would expect all three of these to have unique representations.
+  //   test<false, int&>();
+  //   test<false, int *>();
+  //   test<false, double>();
+
+  test<true, unsigned>();
+  test<true, UnsignedInt>();
+  test<true, WithoutPadding>();
+  test<true, NonEmptyUnion>();
+  test<true, char[3]>();
+  test<true, char[3][4]>();
+  test<true, char[3][4][5]>();
+  test<true, char[]>();
+  test<true, char[][2]>();
+  test<true, char[][2][3]>();
+
+  // Important test case for https://github.com/llvm/llvm-project/issues/95311.
+  // Note that the order is important here, we want to instantiate the array
+  // variants before the non-array ones, otherwise we don't trigger the bug.
+  {
+    test<true, NTTP_ClassType_WithoutPadding<0>[]>();
+    test<true, NTTP_ClassType_WithoutPadding<0>[][3]>();
+    test<true, NTTP_ClassType_WithoutPadding<0>>();
+  }
 
   return 0;
 }

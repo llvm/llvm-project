@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/remove_all_extents.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,7 +23,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
-    : public integral_constant<bool, __has_unique_object_representations(_Tp)> {};
+    // TODO: We work around a Clang bug in __has_unique_object_representations by instantiating the
+    //       builtin on the non-array type first and discarding that. This is issue #95311.
+    //       This workaround can be removed once the bug has been fixed in all supported Clangs.
+    : public integral_constant<bool,
+                               ((void)__has_unique_object_representations(remove_all_extents_t<_Tp>),
+                                __has_unique_object_representations(_Tp))> {};
 
 template <class _Tp>
 inline constexpr bool has_unique_object_representations_v = __has_unique_object_representations(_Tp);
