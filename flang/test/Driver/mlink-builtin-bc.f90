@@ -4,7 +4,7 @@
 
 ! CHECK: define internal void @libfun_
 
-! RUN: not %flang_fc1 -emit-llvm -triple x86_64-unknown-linux-gnu -o - -mlink-builtin-bitcode %no-%t.bc %s 2>&1 | FileCheck %s --check-prefix=ERROR
+! RUN: not %flang_fc1 -emit-llvm -o - -mlink-builtin-bitcode %no-%t.bc %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
 ! ERROR: error: could not open {{.*}}.bc
 
