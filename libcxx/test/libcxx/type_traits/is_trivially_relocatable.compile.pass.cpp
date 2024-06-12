@@ -136,7 +136,9 @@ static_assert(
 #endif
 
 // locale
+#ifndef TEST_HAS_NO_LOCALIZATION
 static_assert(std::__libcpp_is_trivially_relocatable<std::locale>::value, "");
+#endif
 
 // optional
 #if TEST_STD_VER >= 17
