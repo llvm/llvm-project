@@ -1395,6 +1395,24 @@ struct LinalgGeneralizationPattern
   }
 };
 
+struct LinalgSpecializationPattern
+    : public OpInterfaceRewritePattern<LinalgOp> {
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
+
+  FailureOr<LinalgOp>
+  returningMatchAndRewrite(LinalgOp op, PatternRewriter &rewriter) const {
+    auto genericOp = dyn_cast<GenericOp>(op.getOperation());
+    if (!genericOp)
+      return failure();
+    return specializeGenericOp(rewriter, genericOp);
+  }
+
+  LogicalResult matchAndRewrite(LinalgOp op,
+                                PatternRewriter &rewriter) const override {
+    return returningMatchAndRewrite(op, rewriter);
+  }
+};
+
 /// Vectorization pattern for memref::CopyOp.
 struct CopyVectorizationPattern : public OpRewritePattern<memref::CopyOp> {
   using OpRewritePattern<memref::CopyOp>::OpRewritePattern;
@@ -1545,6 +1563,11 @@ void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 /// Populates `patterns` with patterns to convert spec-generated named ops to
 /// linalg.generic ops.
 void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
+
+/// Populates `patterns` with patterns to convert linalg.generic ops to named
+/// ops where possible.
+void populateLinalgGenericOpsSpecializationPatterns(
+    RewritePatternSet &patterns);
 
 /// Linalg decompose convolutions patterns
 
