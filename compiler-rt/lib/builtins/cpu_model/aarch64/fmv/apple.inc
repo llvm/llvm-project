@@ -36,7 +36,7 @@ void __init_cpu_features_resolver(void) {
 
 #define CHECK_BIT(FROM, TO)                                                    \
   do {                                                                         \
-    if (feats_bitvec[FROM / 8] & (1u << ((FROM)&7))) {                         \
+    if (feats_bitvec[FROM / 8] & (1u << ((FROM) & 7))) {                       \
       features |= (1ULL << TO);                                                \
     }                                                                          \
   } while (0)
