@@ -679,7 +679,6 @@ struct VectorDeinterleaveOpConvert final
 
     // Replace deinterleaveOp with SPIR-V shuffles.
     rewriter.replaceOp(deinterleaveOp, {shuffleEven, shuffleOdd});
-
     return success();
   }
 };
