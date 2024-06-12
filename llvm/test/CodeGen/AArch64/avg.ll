@@ -4,12 +4,9 @@
 define <16 x i16> @zext_avgflooru(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: zext_avgflooru:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    uhadd v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uhadd v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    uhadd v1.8b, v2.8b, v3.8b
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    ret
   %x0 = zext <16 x i8> %a0 to <16 x i16>
   %x1 = zext <16 x i8> %a1 to <16 x i16>
@@ -20,17 +17,14 @@ define <16 x i16> @zext_avgflooru(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i16> %avg
 }
 
-define <16 x i16> @zext_avgflooru_negative(<16 x i8> %a0, <16 x i4> %a1) {
-; CHECK-LABEL: zext_avgflooru_negative:
+define <16 x i16> @zext_avgflooru_mismatch(<16 x i8> %a0, <16 x i4> %a1) {
+; CHECK-LABEL: zext_avgflooru_mismatch:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.16b, #15
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    uhadd v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uhadd v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    uhadd v1.8b, v3.8b, v2.8b
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    ret
   %x0 = zext <16 x i8> %a0 to <16 x i16>
   %x1 = zext <16 x i4> %a1 to <16 x i16>
@@ -44,12 +38,9 @@ define <16 x i16> @zext_avgflooru_negative(<16 x i8> %a0, <16 x i4> %a1) {
 define <16 x i16> @zext_avgceilu(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: zext_avgceilu:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    urhadd v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    urhadd v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    urhadd v1.8b, v2.8b, v3.8b
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    ret
   %x0 = zext <16 x i8> %a0 to <16 x i16>
   %x1 = zext <16 x i8> %a1 to <16 x i16>
@@ -60,17 +51,14 @@ define <16 x i16> @zext_avgceilu(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i16> %avg
 }
 
-define <16 x i16> @zext_avgceilu_negative(<16 x i4> %a0, <16 x i8> %a1) {
-; CHECK-LABEL: zext_avgceilu_negative:
+define <16 x i16> @zext_avgceilu_mismatch(<16 x i4> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: zext_avgceilu_mismatch:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v2.16b, #15
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    urhadd v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    urhadd v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ushll2 v1.8h, v0.16b, #0
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    urhadd v1.8b, v2.8b, v3.8b
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-NEXT:    ret
   %x0 = zext <16 x i4> %a0 to <16 x i16>
   %x1 = zext <16 x i8> %a1 to <16 x i16>
