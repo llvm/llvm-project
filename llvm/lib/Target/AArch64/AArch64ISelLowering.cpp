@@ -3024,7 +3024,7 @@ AArch64TargetLowering::EmitInitTPIDR2Object(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
+AArch64TargetLowering::EmitAllocateZABuffer(MachineInstr &MI,
                                           MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
@@ -3099,8 +3099,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     llvm_unreachable("Unexpected instruction for custom inserter!");
   case AArch64::InitTPIDR2Obj:
     return EmitInitTPIDR2Object(MI, BB);
-  case AArch64::ExpandZABuffer:
-    return EmitExpandZABuffer(MI, BB);
+  case AArch64::AllocateZABuffer:
+    return EmitAllocateZABuffer(MI, BB);
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
   case TargetOpcode::STATEPOINT:

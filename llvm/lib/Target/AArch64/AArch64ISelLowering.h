@@ -662,7 +662,7 @@ public:
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitExpandZABuffer(MachineInstr &MI,
+  MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
