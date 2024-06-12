@@ -9,7 +9,6 @@
 
 // REQUIRES: pointer-tagging
 
-#include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
 
 static volatile char sink;
