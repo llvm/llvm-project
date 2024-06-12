@@ -1649,6 +1649,9 @@ enum StmtCode {
   /// A SourceLocExpr record.
   EXPR_SOURCE_LOC,
 
+  /// A EmbedExpr record.
+  EXPR_BUILTIN_PP_EMBED,
+
   /// A ShuffleVectorExpr record.
   EXPR_SHUFFLE_VECTOR,
 
@@ -1995,11 +1998,9 @@ struct ObjCCategoriesInfo {
 
   ObjCCategoriesInfo() = default;
   ObjCCategoriesInfo(LocalDeclID ID, unsigned Offset)
-    : DefinitionID(ID.get()), Offset(Offset) {}
+      : DefinitionID(ID.get()), Offset(Offset) {}
 
-  LocalDeclID getDefinitionID() const {
-    return LocalDeclID(DefinitionID);
-  }
+  LocalDeclID getDefinitionID() const { return LocalDeclID(DefinitionID); }
 
   friend bool operator<(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {

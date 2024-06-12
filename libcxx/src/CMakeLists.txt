@@ -340,6 +340,9 @@ if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TI
     include/tzdb/types_private.h
     include/tzdb/tzdb_list_private.h
     include/tzdb/tzdb_private.h
+    # TODO TZDB The exception could be moved in chrono once the TZDB library
+    # is no longer experimental.
+    chrono_exception.cpp
     time_zone.cpp
     tzdb.cpp
     tzdb_list.cpp

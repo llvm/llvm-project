@@ -9196,7 +9196,7 @@ void ASTRecordReader::readUnresolvedSet(LazyASTUnresolvedSet &Set) {
   while (NumDecls--) {
     GlobalDeclID ID = readDeclID();
     AccessSpecifier AS = (AccessSpecifier) readInt();
-    Set.addLazyDecl(getContext(), ID.get(), AS);
+    Set.addLazyDecl(getContext(), ID, AS);
   }
 }
 

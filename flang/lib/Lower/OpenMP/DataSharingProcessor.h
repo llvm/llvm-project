@@ -44,7 +44,9 @@ private:
     void Post(const T &) {}
 
     bool Pre(const parser::OpenMPConstruct &omp) {
-      currentConstruct = &omp;
+      // Skip constructs that may not have privatizations.
+      if (!std::holds_alternative<parser::OpenMPCriticalConstruct>(omp.u))
+        currentConstruct = &omp;
       return true;
     }
 
@@ -103,18 +105,15 @@ private:
   void collectDefaultSymbols();
   void collectImplicitSymbols();
   void collectPreDeterminedSymbols();
-  void privatize(mlir::omp::PrivateClauseOps *clauseOps,
-                 llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
+  void privatize(mlir::omp::PrivateClauseOps *clauseOps);
   void defaultPrivatize(
       mlir::omp::PrivateClauseOps *clauseOps,
       llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
   void implicitPrivatize(
       mlir::omp::PrivateClauseOps *clauseOps,
       llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
-  void
-  doPrivatize(const semantics::Symbol *sym,
-              mlir::omp::PrivateClauseOps *clauseOps,
-              llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms);
+  void doPrivatize(const semantics::Symbol *sym,
+                   mlir::omp::PrivateClauseOps *clauseOps);
   void copyLastPrivatize(mlir::Operation *op);
   void insertLastPrivateCompare(mlir::Operation *op);
   void cloneSymbol(const semantics::Symbol *sym);
@@ -145,14 +144,17 @@ public:
   // Step2 performs the copying for lastprivates and requires knowledge of the
   // MLIR operation to insert the last private update. Step2 adds
   // dealocation code as well.
-  void processStep1(
-      mlir::omp::PrivateClauseOps *clauseOps = nullptr,
-      llvm::SmallVectorImpl<const semantics::Symbol *> *privateSyms = nullptr);
+  void processStep1(mlir::omp::PrivateClauseOps *clauseOps = nullptr);
   void processStep2(mlir::Operation *op, bool isLoop);
 
   void setLoopIV(mlir::Value iv) {
     assert(!loopIV && "Loop iteration variable already set");
     loopIV = iv;
+  }
+
+  const llvm::SetVector<const semantics::Symbol *> &
+  getAllSymbolsToPrivatize() const {
+    return allPrivatizedSymbols;
   }
 };
 
