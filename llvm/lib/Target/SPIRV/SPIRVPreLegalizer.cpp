@@ -123,8 +123,9 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     MI->eraseFromParent();
 }
 
-static void foldConstantsIntoIntrinsics(MachineFunction &MF,
-                                        SmallSet<Register, 4> &TrackedConstRegs) {
+static void
+foldConstantsIntoIntrinsics(MachineFunction &MF,
+                            const SmallSet<Register, 4> &TrackedConstRegs) {
   SmallVector<MachineInstr *, 10> ToErase;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const unsigned AssignNameOperandShift = 2;
