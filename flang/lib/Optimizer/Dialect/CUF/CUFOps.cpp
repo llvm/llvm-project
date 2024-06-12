@@ -227,7 +227,9 @@ mlir::LogicalResult cuf::KernelOp::verify() {
       getLowerbound().size() != getStep().size())
     return emitOpError(
         "expect same number of values in lowerbound, upperbound and step");
-
+  if (getReduceOperands().size() != getReduceAttrs()->size())
+    return emitOpError("expect same number of values in reduce operands and "
+                       "reduce attributes");
   return mlir::success();
 }
 
