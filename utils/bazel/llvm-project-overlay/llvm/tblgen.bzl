@@ -41,24 +41,15 @@ def gentbl(
         td_srcs += [td_file]
     for (opts, out) in tbl_outs:
         rule_suffix = "_".join(opts.replace("-", "_").replace("=", "_").split(" "))
-        native.genrule(
-            name = "%s_%s_genrule" % (name, rule_suffix),
-            srcs = td_srcs,
-            outs = [out],
-            tools = [tblgen],
-            message = "Generating code from table: %s" % td_file,
-            cmd = (("$(location %s) -I %s/llvm/include " +
-                    "-I %s/clang/include " +
-                    "-I $$(dirname $(location %s)) " +
-                    "%s $(location %s) %s -o $@") % (
-                tblgen,
-                llvm_project_execroot_path,
-                llvm_project_execroot_path,
-                td_file,
-                opts,
-                td_file,
-                tblgen_args,
-            )),
+        _gentbl(
+            name = "%s_%s_rule" % (name, rule_suffix),
+            tblgen = tblgen,
+            td_file = td_file,
+            td_srcs = td_srcs,
+            opts = opts,
+            out = out,
+            tblgen_args = tblgen_args,
+            llvm_project_execroot_path = llvm_project_execroot_path,
         )
 
     # For now, all generated files can be assumed to comprise public interfaces.
@@ -79,3 +70,44 @@ def gentbl(
             features = ["-parse_headers", "-header_modules"],
             **kwargs
         )
+
+def _gentbl_impl(ctx):
+    inputs = depset(ctx.files.td_srcs)
+
+    args = ctx.actions.args()
+    args.add("-I", "%s/llvm/include" % ctx.attr.llvm_project_execroot_path)
+    args.add("-I", "%s/clang/include" % ctx.attr.llvm_project_execroot_path)
+    args.add("-I", ctx.file.td_file.dirname)
+    
+    parsed_opts = ctx.attr.opts.split(' ')
+    for opt in parsed_opts:
+        args.add(opt)
+
+    if ctx.attr.tblgen_args:
+        parsed_args = ctx.attr.tblgen_args.split(' ')
+        for tblgen_arg in parsed_args:
+            args.add(tblgen_arg)
+
+    args.add(ctx.file.td_file)
+    args.add("-o", ctx.outputs.out)
+
+    ctx.actions.run(
+        mnemonic = "tblgen",
+        executable = ctx.executable.tblgen,
+        arguments = [args],
+        inputs = inputs,
+        outputs = [ctx.outputs.out],
+    )
+
+_gentbl = rule(
+    implementation = _gentbl_impl,
+    attrs = {
+        "tblgen": attr.label(executable = True, cfg = "exec", doc = "The binary used to produce the output."),
+        "td_file": attr.label(allow_single_file = True, doc = "The binary used to produce the output"),
+        "td_srcs": attr.label_list(allow_files = True, doc = "A list of table definition files included transitively."),
+        "opts": attr.string(doc = "String of options passed to tblgen."),
+        "out": attr.output(doc = "Corresponding to opts output file."),
+        "llvm_project_execroot_path": attr.string(doc = "Path to llvm-project execroot."),
+        "tblgen_args": attr.string(default = "", doc = "Extra arguments string to pass to the tblgen binary."),
+    }
+)
