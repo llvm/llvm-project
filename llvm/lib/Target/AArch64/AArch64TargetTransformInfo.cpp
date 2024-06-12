@@ -985,6 +985,33 @@ static bool isAllActivePredicate(Value *Pred) {
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
 }
 
+// Simplify unary operation where predicate has all inactive lanes by replacing
+// instruction with zeroed object
+static std::optional<Instruction *>
+instCombineSVENoActiveUnaryZero(InstCombiner &IC, IntrinsicInst &II) {
+  if (match(II.getOperand(0), m_ZeroInt())) {
+    Constant *Node;
+    Type *RetTy = II.getType();
+    if (RetTy->isStructTy()) {
+      auto StructT = cast<StructType>(RetTy);
+      auto VecT = StructT->getElementType(0);
+      SmallVector<llvm::Constant *, 4> ZerVec;
+      for (unsigned i = 0; i < StructT->getNumElements(); i++) {
+        ZerVec.push_back(VecT->isFPOrFPVectorTy() ? ConstantFP::get(VecT, 0.0)
+                                                  : ConstantInt::get(VecT, 0));
+      }
+      Node = ConstantStruct::get(StructT, ZerVec);
+    } else if (RetTy->isFPOrFPVectorTy())
+      Node = ConstantFP::get(RetTy, 0.0);
+    else
+      Node = ConstantInt::get(II.getType(), 0);
+
+    IC.replaceInstUsesWith(II, Node);
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
+}
+
 static std::optional<Instruction *> instCombineSVESel(InstCombiner &IC,
                                                       IntrinsicInst &II) {
   // svsel(ptrue, x, y) => x
@@ -1398,6 +1425,10 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *PtrOp = II.getOperand(1);
   Type *VecTy = II.getType();
 
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
+
   if (isAllActivePredicate(Pred)) {
     LoadInst *Load = IC.Builder.CreateLoad(VecTy, PtrOp);
     Load->copyMetadata(II);
@@ -1745,6 +1776,10 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   Type *Ty = II.getType();
   Value *PassThru = ConstantAggregateZero::get(Ty);
 
+  // Replace by zero constant when all lanes are inactive
+  if (auto II_NA = instCombineSVENoActiveUnaryZero(IC, II))
+    return II_NA;
+
   // Contiguous gather => masked load.
   // (sve.ld1.gather.index Mask BasePtr (sve.index IndexBase 1))
   // => (masked.load (gep BasePtr IndexBase) Align Mask zeroinitializer)
@@ -1971,6 +2006,41 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
+
+  case Intrinsic::aarch64_sve_ld1_gather:
+  case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ld1_gather_sxtw:
+  case Intrinsic::aarch64_sve_ld1_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_ld1_gather_uxtw:
+  case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_ld1q_gather_index:
+  case Intrinsic::aarch64_sve_ld1q_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ld1q_gather_vector_offset:
+  case Intrinsic::aarch64_sve_ld1ro:
+  case Intrinsic::aarch64_sve_ld1rq:
+  case Intrinsic::aarch64_sve_ld1udq:
+  case Intrinsic::aarch64_sve_ld1uwq:
+  case Intrinsic::aarch64_sve_ld2_sret:
+  case Intrinsic::aarch64_sve_ld2q_sret:
+  case Intrinsic::aarch64_sve_ld3_sret:
+  case Intrinsic::aarch64_sve_ld3q_sret:
+  case Intrinsic::aarch64_sve_ld4_sret:
+  case Intrinsic::aarch64_sve_ld4q_sret:
+  case Intrinsic::aarch64_sve_ldff1:
+  case Intrinsic::aarch64_sve_ldff1_gather:
+  case Intrinsic::aarch64_sve_ldff1_gather_index:
+  case Intrinsic::aarch64_sve_ldff1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ldff1_gather_sxtw:
+  case Intrinsic::aarch64_sve_ldff1_gather_sxtw_index:
+  case Intrinsic::aarch64_sve_ldff1_gather_uxtw:
+  case Intrinsic::aarch64_sve_ldff1_gather_uxtw_index:
+  case Intrinsic::aarch64_sve_ldnf1:
+  case Intrinsic::aarch64_sve_ldnt1:
+  case Intrinsic::aarch64_sve_ldnt1_gather:
+  case Intrinsic::aarch64_sve_ldnt1_gather_index:
+  case Intrinsic::aarch64_sve_ldnt1_gather_scalar_offset:
+  case Intrinsic::aarch64_sve_ldnt1_gather_uxtw:
+    return instCombineSVENoActiveUnaryZero(IC, II);
   case Intrinsic::aarch64_neon_fmaxnm:
   case Intrinsic::aarch64_neon_fminnm:
     return instCombineMaxMinNM(IC, II);
