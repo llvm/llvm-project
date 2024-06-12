@@ -3592,8 +3592,7 @@ void DwarfDebug::addAccelNameImpl(
                "Kind is TU but CU is being processed.");
     // The type unit can be discarded, so need to add references to final
     // acceleration table once we know it's complete and we emit it.
-    Current.addName(Ref, Die, Unit.getUniqueID(),
-                    Unit.getUnitDie().getTag() == dwarf::DW_TAG_type_unit);
+    Current.addName(Ref, Die, Unit.getUniqueID());
     break;
   }
   case AccelTableKind::Default:
