@@ -849,7 +849,7 @@ static bool findRetainCycleOwner(Sema &S, Expr *e, RetainCycleOwner &owner) {
       owner.Indirect = true;
       if (pre->isSuperReceiver()) {
         if (const auto *CurMethodDecl = S.getCurMethodDecl()) {
-          owner.Variable = CurMethodDecl()->getSelfDecl();
+          owner.Variable = CurMethodDecl->getSelfDecl();
           if (!owner.Variable)
             return false;
           owner.Loc = pre->getLocation();
