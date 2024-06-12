@@ -41,14 +41,11 @@ A. Properties consumed in DXIL backend passes
    6. Required DXIL Version with support for the operation.
    7. A string that documents the operation (``doc``) - This is not strictly necessary but is included
       for readability and documentation of the operation.
-
-B. Properties consumed in other usage scenarios
-
-   1. Required minimum Shader Model (``shader_model``).
-   2. Minimum shader model required with translation by linker (``shader_model_translated``)
-   3.  List of shader stages applicable to (``shader_stages``), empty for all.
-   4.  Memory access attributes of the operation (``fn_attr``).
-   5.  Boolean attributes of operation to indicate if it
+   8. Required minimum Shader Model (``shader_model``).
+   9. Minimum shader model required with translation by linker (``shader_model_translated``)
+   10.  List of shader stages applicable to (``shader_stages``), empty for all.
+   11.  Memory access attributes of the operation (``fn_attr``).
+   12.  Boolean attributes of operation to indicate if it
 
        * is some kind of a derivative (``is_derivative``)
        * requires gradient calculation (``is_gradient``)
@@ -70,86 +67,170 @@ analogous to ``hctdb.py`` for ``DirectXShadeCompiler`` repo. It needs to have a 
 representation capabilities that TableGen backends (such as ``DXILEmitter``) can rely on.
 Additionally, the DXIL Op specification should be easy to read and comprehend.
 
-This note focuses on specification of the set of properties consumed by DXIL backend
-passes identified above in category A. Any of the properties from category B are expected to be
-included as deemed necessary during implementation.
+This note provides the design of the specification DXIL Ops as TableGen class ``DXILOp``
+by specifying its properties identified above.
 
-Design
-======
+DXIL Operation Specification
+============================
+
+The DXIL Operation is represented using the TableGen ``class DXILOp``. The DXIL operation
+properties are specified as fields of the ``DXILOp`` class as described below.
 
 1. Each DXIL Operation is represented as a TableGen record. The name of each of the records
    signifies operation name.
-2. The LLVM Intrinsic that maps to the operation is represented using ``Intrinsic::*``.
-3. The unique operation id is represented by an integer.
-4. DXIL Operation Class is represented as follows
+2. A documentation string for the operation.
+3. The LLVM Intrinsic that maps to the operation is represented as ``Intrinsic`` defined in
+   `Intrinsics.td <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/Intrinsics.td>`_.
+4. The unique operation id is represented by an integer.
+5. DXIL Operation Class is represented as follows
 
    .. code-block::
 
         // Abstraction of DXIL Operation class.
-        // It encapsulates an associated function signature viz.,
-        // returnTy(param1Ty, param2Ty, ...) represented as a list of LLVMTypes.
-        // DXIL Ops that belong to a DXILOpClass record the signature of that DXILOpClass
-
-        class DXILOpClass<list<LLVMType> OpSig> {
-          list<LLVMType> OpSignature = OpSig;
-        }
+        class DXILOpClass;
 
    Concrete operation classes, such as ``unary`` are defined inheriting from ``DXILOpClass``.
-5. Valid overload types are represented as a list of ``LLVMType``.
-6. Concrete records of DXIL versions and are defined by inheriting from the class
+6. Return and argument types of the operation are represented as ``dag``s using the
+   special markers ``out`` and ``ins``. An overload type, if supported by the operation, is
+   denoted as the positional type ``dxil_overload_ty`` in the argument or in the result, where
+   ``dxil_overload_ty`` is defined to be synonymous to ``llvm_any_ty``.
 
    .. code-block::
 
-        // Abstract class to represent major and minor version values
-        class Version<int major, int minor> {
-          int Major = major;
-          int Minor = minor;
-        }
+      defvar dxil_overload_ty = llvm_any_ty
 
-7. A documentation string for the operation.
 
+7. Valid overload types and shader stages predicated on Shader Model version are specified
+   as a list of ``Constraint`` records. Representation of ``Constraints`` class is described
+   a later section.
+8. Various attributes of the DXIL Operation that are not predicated on Shader Model version
+   are represented as a ``dag`` using the special marker
+   ``attrs``. Representation of ``Attributes`` class is described in a later section.
 
 A DXIL Operation is represented by the following TableGen class by encapsulating the various
 TableGen representations of its properties described above.
 
 .. code-block::
 
-  // Abstraction DXIL Operation
-  class DXILOpPropertiesBase {
-    int OpCode = 0;                           // Opcode of DXIL Operation
-    DXILOpClass OpClass = UnknownOpClass;     // Class of DXIL Operation.
-    Intrinsic LLVMIntrinsic = ?;              // LLVM Intrinsic DXIL Operation maps to
-    list<LLVMType> OpOverloadTypes = ?; // Valid overload type
-                                              // of DXIL Operation
-    Version DXILVer = ?;                      // Min DXIL version
-    string Doc = "";                          // A short description of the operation
-  }
+   // Abstraction DXIL Operation
+   class DXILOp {
+      // A short description of the operation
+      string Doc = "";
+
+      // Opcode of DXIL Operation
+      int OpCode = 0;
+
+      // Class of DXIL Operation.
+      DXILOpClass OpClass = UnknownOpClass;
+
+      // LLVM Intrinsic DXIL Operation maps to
+      Intrinsic LLVMIntrinsic = ?;
+
+      // Dag containing the arguments of the op. Default to 0 arguments.
+      dag arguments = (ins);
+
+      // Results of the op. Default to 0 results.
+      dag result = (out);
+
+      // List of constraints predicated on Shader Model version
+     list<SMVersionConstraints> sm_constraints;
+
+     // Non-predicated operation attributes
+     dag attrtibutes = (attrs);
+     Version DXILVersion = ?;
+   }
+
+Constraint Specification
+========================
+
+DXIL Operation properties such as valid overload types and valid shader stages are
+predicated on Shader Model version.
+
+Following is the definition of a generic constraint and the associated predicate
+
+.. code-block::
+
+   // Generic constraint
+   class Constraint<Pred pred> {
+      Pred predicate = pred;
+   }
+
+Shader Model version is represented as follows:
+
+.. code-block::
+
+   // Abstract class to represent major and minor version values
+   class Version<int major, int minor> {
+      int Major = major;
+      int Minor = minor;
+   }
+
+   // Valid Shader model version records
+
+   // Definition of Shader Model 6.0 - 6.8 and DXIL Version 1.0 - 1.8
+   foreach i = 0...8 in {
+     def SM6_#i : Version<6, i>;
+     def DX1_#i : Version<1, i>;
+   }
+
+A shader model version predicate class is defined as
+
+.. code-block::
+
+   class SMVersion<Version ver> : Pred {
+      Version SMVersion = ver;
+   }
+
+A constraint class to represent overload types and shader stages predicated on shader
+model version is defined as
+
+.. code-block::
+
+   class SMVersionConstraints<SMVersion smver, dag oloads, dag stages> : Constraint<smver> {
+      dag overload_types = oloads;
+      dag stage_kinds = stages;
+   }
+
+The ``dag overload_types`` and ``dag shader_kinds``use a special markers ``overloads``
+and ``stages``, respectively.
 
 
-The following convenience class, definitions of ``unary`` and ``DXVer1_0`` are used to
-illustrate the definitions of ``Sin`` and ``Cos`` operations:
+Examples
+--------
 
-  .. code-block::
+Consider a DXIL operation that is valid in Shader Model version 6.2 and later
 
-      class DXILOpProperties<int opCode,
-                    Intrinsic intrinsic,
-                    list<LLVMType> overloadTypes,
-                    string doc> : DXILOpPropertiesBase {
-        int OpCode = opCode;
-        Intrinsic LLVMIntrinsic = intrinsic;
-        list<LLVMType> OpOverloadTypes = overloadTypes;
-        string Doc = doc;
-      }
+   1. wiith valid overload types ``half``, ``float``, ``i16`` and ``i32``
+   2. is valid for stages ``pixel`` and ``compute``
+   3. with valid overload types ``double`` and ``i614`` if Shader Model version 6.3 and later
+   4. is valid for all stages if Shader Model version 6.3 and later
 
-      def unary : DXILOpClass<[llvm_any_ty, LLVMMatchType<0>]>;
-      def DXVer1_0 : Version<1, 0>;
+This is represented as
 
-      let OpClass = unary, DXILVer = DXVer1_0 in {
-        def Cos  : DXILOpProperties<12, int_cos, [llvm_half_ty, llvm_float_ty],
-                                   "Returns cosine(theta) for theta in radians.">;
-        def Sin  : DXILOpProperties<13, int_sin, [llvm_half_ty, llvm_float_ty],
-                                   "Returns sine(theta) for theta in radians.">;
-      }
+.. code-block::
+
+   [SMVersionConstraints<SMVersion<SM6_2>,
+                          (overloads llvm_half_ty, llvm_float_ty, llvm_i16_ty, llvm_i32_ty),
+                          (stages pixel, compute)>,
+    SMVersionConstraints<SMVersion<SM6_3>,
+                          (overloads llvm_half_ty, llvm_float_ty, llvm_double_ty,
+                                 llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
+                          (stages allKinds)>];
+
+Consider a DXIL operation that is valid in Shader Model version 6.2 and later
+
+   1. with no overload types, i.e., types of all arguments and result are fixed.
+   2. is valid for all stages.
+
+This is represented as
+
+.. code-block::
+
+      [SMVersionConstraints<SMVersion<SM6_2>, (overloads), (stages allKinds)>];
+
+
+Attribute Specification
+=======================
 
 Summary
 =======
