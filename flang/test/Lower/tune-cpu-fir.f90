@@ -6,7 +6,8 @@
 ! ALL: module attributes {
 
 ! CPU-SAME:      fir.target_cpu = "x86-64"
-
+! CPU-NOT:       fir.tune_cpu = "pentium4"
+  
 ! TUNE-SAME:     fir.tune_cpu = "pentium4"
 
 ! BOTH-SAME: fir.target_cpu = "x86-64"
