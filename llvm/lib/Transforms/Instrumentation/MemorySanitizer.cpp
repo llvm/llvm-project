@@ -3358,6 +3358,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  Value *convertBlendvToSelectMask(IRBuilder<> &IRB, Value *C) {
+    C = CreateAppToShadowCast(IRB, C);
+    FixedVectorType *FVT = cast<FixedVectorType>(C->getType());
+    unsigned ElSize = FVT->getElementType()->getPrimitiveSizeInBits();
+    C = IRB.CreateAShr(C, ElSize - 1);
+    FVT = FixedVectorType::get(IRB.getInt1Ty(), FVT->getNumElements());
+    return IRB.CreateTrunc(C, FVT);
+  }
+
+  // `blendv(f, t, c)` is effectively `select(c[top_bit], t, f)`.
+  void handleBlendvIntrinsic(IntrinsicInst &I) {
+    Value *C = I.getOperand(2);
+    Value *T = I.getOperand(1);
+    Value *F = I.getOperand(0);
+
+    Value *Sc = getShadow(&I, 2);
+    Value *Oc = MS.TrackOrigins ? getOrigin(C) : nullptr;
+
+    {
+      IRBuilder<> IRB(&I);
+      // Extract top bit from condition and its shadow.
+      C = convertBlendvToSelectMask(IRB, C);
+      Sc = convertBlendvToSelectMask(IRB, Sc);
+
+      setShadow(C, Sc);
+      setOrigin(C, Oc);
+    }
+
+    handleSelectLikeInst(I, C, T, F);
+  }
+
   // Instrument sum-of-absolute-differences intrinsic.
   void handleVectorSadIntrinsic(IntrinsicInst &I) {
     const unsigned SignificantBitsPerResultElement = 16;
@@ -4027,6 +4058,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_packuswb:
     case Intrinsic::x86_avx2_packusdw:
       handleVectorPackIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_sse41_pblendvb:
+    case Intrinsic::x86_sse41_blendvpd:
+    case Intrinsic::x86_sse41_blendvps:
+    case Intrinsic::x86_avx_blendv_pd_256:
+    case Intrinsic::x86_avx_blendv_ps_256:
+    case Intrinsic::x86_avx2_pblendvb:
+      handleBlendvIntrinsic(I);
       break;
 
     case Intrinsic::x86_avx_dp_ps_256:
