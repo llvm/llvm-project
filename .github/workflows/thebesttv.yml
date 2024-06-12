@@ -22,7 +22,12 @@ jobs:
           python-version: '3.11'
       - name: Generate CMake
         run: |
-          ./build-release.sh
+          mkdir build-release && cd build-release
+          cmake -G Ninja -DLLVM_PARALLEL_LINK_JOBS=1 \
+                -DLLVM_ENABLE_PROJECTS='clang' \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX=/usr \
+                ../llvm
       - name: Build tool
         run: |
           ./graph-generation/tool -h
