@@ -100,6 +100,7 @@ on support follow.
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
      ``Smcdeleg``      Supported
+     ``Smcsrind``      Supported
      ``Smepmp``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
@@ -107,6 +108,7 @@ on support follow.
      ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscsrind``      Supported
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sstc``          Assembly Support
