@@ -798,7 +798,7 @@ struct InstrProfValueSiteRecord {
   /// Value profiling data pairs at a given value site.
   std::list<InstrProfValueData> ValueData;
 
-  InstrProfValueSiteRecord() { ValueData.clear(); }
+  InstrProfValueSiteRecord() = default;
   template <class InputIterator>
   InstrProfValueSiteRecord(InputIterator F, InputIterator L)
       : ValueData(F, L) {}
