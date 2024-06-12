@@ -154,10 +154,10 @@ bool SampleProfileMatcher::isFunctionEqual(const FunctionId &IRFuncName,
     return true;
   if (!SalvageUnusedProfile)
     return false;
-  // If both IR function and profile function are new, try to match the profile
-  // function.
+  // If IR function and profile function don't appear on either side, try
+  // matching the profile function.
 
-  // Check whether IR function is new.
+  // Check whether IR function appears in profile.
   auto R = NewIRFunctions.find(IRFuncName);
   if (R == NewIRFunctions.end() || !R->second)
     return false;
@@ -165,7 +165,7 @@ bool SampleProfileMatcher::isFunctionEqual(const FunctionId &IRFuncName,
   assert(FunctionId(IRFunc.getName()) != ProfileFuncName &&
          "IR function should be different from profile function to match");
 
-  // Check whether profile function is new.
+  // Check whether profile function appears in IR.
   auto F = SymbolMap->find(ProfileFuncName);
   if (F != SymbolMap->end())
     return false;
@@ -362,19 +362,22 @@ void SampleProfileMatcher::runStaleProfileMatching(
     return;
 
   // Match the callsite anchors by finding the longest common subsequence
-  // between IR and profile. Note that we need to use IR anchor as base(A side)
-  // to align with the order of IRToProfileLocationMap.
-  // This is also used for call graph matching. During the searching, if both
-  // the anchor from IR and prfile are new functions but they are not same
-  // function, it could be due to the function is renamed, we run the matching
-  // for them and consider the anchor is equal if it's matched. The matching
-  // result is also used later to update the profile with new name.
+  // between IR and profile.
+  // Define a match between two anchors as follows:
+  // 1) The function names of anchors are the same.
+  // 2) The similarity between the anchor functions is above a threshold if
+  // RunCGMatching is set.
+  // For 2), we only consider the anchor functions from IR and profile don't
+  // appear on either side to reduce the matching scope. Note that we need to
+  // use IR anchor as base(A side) to align with the order of
+  // IRToProfileLocationMap.
   LocToLocMap MatchedAnchors = longestCommonSequence(
       FilteredIRAnchorsList, FilteredProfileAnchorList, RunCGMatching);
 
-  // Apply the CFG matching results: match the non-callsite locations and write
-  // the result to IRToProfileLocationMap. Note that CFG matching won't take
-  // effect if it's not written into IRToProfileLocationMap.
+  // CFG level matching:
+  // Apply the callsite matchings to infer matching for the basic
+  // block(non-callsite) locations and write the result to
+  // IRToProfileLocationMap.
   if (RunCFGMatching)
     matchNonCallsiteLocs(MatchedAnchors, IRAnchors, IRToProfileLocationMap);
 }
@@ -869,7 +872,7 @@ void SampleProfileMatcher::updateProfileWithNewName(
   }
 }
 
-void SampleProfileMatcher::updateProfillesAndSymbolMap() {
+void SampleProfileMatcher::updateProfilesAndSymbolMap() {
   if (ProfileNameToFuncMap.empty())
     return;
   for (auto &P : Reader.getProfiles())
@@ -900,7 +903,7 @@ void SampleProfileMatcher::runOnModule(
 
   // Update the profile map and symbol map with the new function name.
   if (SalvageUnusedProfile)
-    updateProfillesAndSymbolMap();
+    updateProfilesAndSymbolMap();
 
   if (SalvageStaleProfile)
     distributeIRToProfileLocationMap();

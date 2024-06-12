@@ -189,8 +189,8 @@ private:
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
   // Check if the two functions are equal. If FindMatchedProfileOnly is set,
-  // only search the existing matched function. Otherwise, if the two functions
-  // are both new, try to match the two functions.
+  // only search the existing matched function. Otherwise, try matching the two
+  // functions.
   bool isFunctionEqual(const FunctionId &IRFuncName,
                        const FunctionId &ProfileFuncName,
                        bool FindMatchedProfileOnly);
@@ -227,7 +227,7 @@ private:
   // which are supposed to be new functions. We use them as the targets for
   // renaming matching.
   void findNewIRFunctions();
-  void updateProfillesAndSymbolMap();
+  void updateProfilesAndSymbolMap();
   void updateProfileWithNewName(FunctionSamples &FuncProfile);
   void runCallGraphMatching();
   void reportOrPersistProfileStats();
