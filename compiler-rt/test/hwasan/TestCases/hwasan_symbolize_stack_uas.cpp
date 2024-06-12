@@ -1,5 +1,7 @@
 // RUN: %clang_hwasan -Wl,--build-id -g %s -o %t
-// RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s
+// RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | tee /tmp/stuff2  | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s
+
+// REQUIRES: pointer-tagging
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
