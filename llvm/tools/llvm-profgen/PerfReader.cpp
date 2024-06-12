@@ -1243,6 +1243,9 @@ void PerfScriptReader::warnInvalidRange() {
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
+  if (Binary->IsKernel() && !Binary->GetIsLoadedByMMap()) {
+    exitWithError("Kernel is requested, but no kernel is found in mmap events."
+  }
 
   emitWarningSummary(NumLeafExternalFrame, NumTotalSample,
                      "of samples have leaf external frame in call stack.");
