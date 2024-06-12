@@ -38,7 +38,7 @@ void mlir::populateEmitCSizeTTypeConversions(TypeConverter &converter) {
   converter.addArgumentMaterialization(materializeAsUnrealizedCast);
 }
 
-/// Get an unsigned data type as wide as \p ty.
+/// Get an unsigned integer or size data type corresponding to \p ty.
 std::optional<Type> mlir::emitc::getUnsignedTypeFor(Type ty) {
   if (ty.isInteger())
     return IntegerType::get(ty.getContext(), ty.getIntOrFloatBitWidth(),
@@ -50,8 +50,8 @@ std::optional<Type> mlir::emitc::getUnsignedTypeFor(Type ty) {
   return {};
 }
 
-/// Get a signed data type as wide as \p ty that supports arithmetic on negative
-/// values.
+/// Get a signed integer or size data type corresponding to \p ty that supports
+/// arithmetic on negative values.
 std::optional<Type> mlir::emitc::getSignedTypeFor(Type ty) {
   if (ty.isInteger())
     return IntegerType::get(ty.getContext(), ty.getIntOrFloatBitWidth(),
