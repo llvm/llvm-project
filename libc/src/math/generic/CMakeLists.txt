@@ -3577,3 +3577,27 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
 )
+
+add_entrypoint_object(
+  totalorderf16
+  SRCS
+    totalorderf16.cpp
+  HDRS
+    ../totalorderf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  totalordermagf16
+  SRCS
+    totalordermagf16.cpp
+  HDRS
+    ../totalordermagf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
