@@ -1243,8 +1243,8 @@ void PerfScriptReader::warnInvalidRange() {
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
-  if (Binary->IsKernel() && !Binary->GetIsLoadedByMMap()) {
-    exitWithError("Kernel is requested, but no kernel is found in mmap events."
+  if (Binary->isKernel() && !Binary->getIsLoadedByMMap()) {
+    exitWithError("Kernel is requested, but no kernel is found in mmap events.");
   }
 
   emitWarningSummary(NumLeafExternalFrame, NumTotalSample,
