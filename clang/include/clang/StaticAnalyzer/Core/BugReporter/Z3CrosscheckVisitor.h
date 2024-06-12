@@ -56,6 +56,7 @@ private:
 class Z3CrosscheckOracle {
 public:
   explicit Z3CrosscheckOracle(const AnalyzerOptions &Opts) : Opts(Opts) {}
+
   enum Z3Decision {
     AcceptReport,  // The report was SAT.
     RejectReport,  // The report was UNSAT or UNDEF.

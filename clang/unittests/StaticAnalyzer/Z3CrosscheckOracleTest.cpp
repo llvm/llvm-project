@@ -125,7 +125,7 @@ TEST_F(Z3CrosscheckOracleTest, SATWhenIfAttemptsManySmallQueries) {
   }
   // Do one more to trigger the heuristic, but given this was SAT, we still
   // accept the query.
-  ASSERT_EQ(AcceptReport, interpretQueryResult({SAT, 20_ms, 1000_step}));
+  ASSERT_EQ(AcceptReport, interpretQueryResult({SAT, 200_ms, 1000_step}));
 }
 
 TEST_F(Z3CrosscheckOracleTest, RejectEQClassIfHitsRLimitTooManyTimes) {
