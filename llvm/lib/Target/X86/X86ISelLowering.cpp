@@ -7330,9 +7330,8 @@ static SDValue lowerBuildVectorAsBroadcast(BuildVectorSDNode *BVOp,
     unsigned SeqLen = Sequence.size();
     bool UpperZeroOrUndef =
         SeqLen == 1 ||
-        llvm::all_of(ArrayRef(Sequence).drop_front(), [](SDValue V) {
-          return !V || V.isUndef() || isNullConstant(V);
-        });
+        llvm::all_of(ArrayRef(Sequence).drop_front(),
+                     [](SDValue V) { return !V || isNullConstantOrUndef(V); });
     SDValue Op0 = Sequence[0];
     if (UpperZeroOrUndef && ((Op0.getOpcode() == ISD::BITCAST) ||
                              (Op0.getOpcode() == ISD::ZERO_EXTEND &&
@@ -43741,7 +43740,7 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
       for (unsigned i = 1, e = SrcVT.getVectorNumElements(); i != e; ++i) {
         SDValue Op = N0.getOperand(i);
         LowUndef &= Op.isUndef() || (i >= e/2);
-        AllUndefOrZero &= (Op.isUndef() || isNullConstant(Op));
+        AllUndefOrZero &= isNullConstantOrUndef(Op);
       }
       if (AllUndefOrZero) {
         SDValue N00 = N0.getOperand(0);

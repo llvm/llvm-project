@@ -18,4 +18,16 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
     libc.src.__support.arg_list
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  putchar
+  SRCS
+    putchar.cpp
+  HDRS
+    ../putchar.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
 )
