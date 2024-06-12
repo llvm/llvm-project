@@ -23,8 +23,16 @@
 #include <__memory/construct_at.h>
 #include <__memory/unique_ptr.h>
 #include <__numeric/reduce.h>
-#include <__pstl/configuration_fwd.h>
+#include <__pstl/backend_fwd.h>
+#include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
+#include <__pstl/cpu_algos/fill.h>
+#include <__pstl/cpu_algos/find_if.h>
+#include <__pstl/cpu_algos/for_each.h>
+#include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/stable_sort.h>
+#include <__pstl/cpu_algos/transform.h>
+#include <__pstl/cpu_algos/transform_reduce.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -341,21 +349,53 @@ struct __cpu_traits<__libdispatch_backend_tag> {
   static constexpr size_t __lane_size = 64;
 };
 
+// Mandatory implementations of the computational basis
+template <class _ExecutionPolicy>
+struct __find_if<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_find_if<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __for_each<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_for_each<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __merge<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_merge<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __stable_sort<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_stable_sort<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_binary<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_binary<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+// Not mandatory, but better optimized
+template <class _ExecutionPolicy>
+struct __any_of<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_any_of<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_fill<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
-
-// Implement PSTL algorithms based on the __cpu_traits specialized above
-#include <__pstl/cpu_algos/any_of.h>
-#include <__pstl/cpu_algos/fill.h>
-#include <__pstl/cpu_algos/find_if.h>
-#include <__pstl/cpu_algos/for_each.h>
-#include <__pstl/cpu_algos/merge.h>
-#include <__pstl/cpu_algos/stable_sort.h>
-#include <__pstl/cpu_algos/transform.h>
-#include <__pstl/cpu_algos/transform_reduce.h>
 
 #endif // _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
