@@ -757,7 +757,6 @@ InstructionCost VPBasicBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (!isReplicator()) {
     InstructionCost Cost = 0;
-    Cost += Ctx.getLoopExitCost(VF);
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
     return Cost;

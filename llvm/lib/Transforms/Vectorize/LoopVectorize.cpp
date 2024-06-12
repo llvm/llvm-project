@@ -7300,23 +7300,6 @@ InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
   return CM.getInstructionCost(UI, VF).first;
 }
 
-InstructionCost VPCostContext::getLoopExitCost(ElementCount VF) {
-  SmallVector<BasicBlock *> Exiting;
-  CM.TheLoop->getExitingBlocks(Exiting);
-  InstructionCost Cost = 0;
-  // Add the cost of all exit conditions.
-  for (BasicBlock *EB : Exiting) {
-    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
-    if (!Term)
-      continue;
-    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
-      SkipCostComputation.insert(CondI);
-      Cost += CM.getInstructionCost(CondI, VF).first;
-    }
-  }
-  return Cost;
-}
-
 bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
   return (IsVector && CM.VecValuesToIgnore.contains(UI)) ||
          SkipCostComputation.contains(UI);
@@ -7344,7 +7327,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
     assert(!CostCtx.SkipCostComputation.contains(IVInc) &&
            "Same IV increment for multiple inductions?");
     CostCtx.SkipCostComputation.insert(IVInc);
-    InstructionCost InductionCost = CM.getInstructionCost(IVInc, VF).first;
+    InstructionCost InductionCost = CostCtx.getLegacyCost(IVInc, VF);
     LLVM_DEBUG({
       dbgs() << "Cost of " << InductionCost << " for VF " << VF
              << ":\n induction increment " << *IVInc << "\n";
@@ -7353,9 +7336,30 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
     Cost += InductionCost;
   }
 
+  /// Compute the cost of all exiting conditions of the loop using the legacy
+  /// cost model. This is to match the legacy behavior, which adds the cost of
+  /// all exit conditions. Note that this over-estimates the cost, as there will
+  /// be a single condition to control the vector loop.
+  SmallVector<BasicBlock *> Exiting;
+  CM.TheLoop->getExitingBlocks(Exiting);
+  // Add the cost of all exit conditions.
+  for (BasicBlock *EB : Exiting) {
+    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
+    if (!Term)
+      continue;
+    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
+      assert(!CostCtx.SkipCostComputation.contains(CondI) &&
+             "Condition alrady skipped?");
+      CostCtx.SkipCostComputation.insert(CondI);
+      Cost += CostCtx.getLegacyCost(CondI, VF);
+    }
+  }
+
   // The legacy cost model has special logic to compute the cost of in-loop
   // reductions, which may be smaller than the sum of all instructions involved
-  // in the reduction. Pre-compute the cost for now.
+  // in the reduction. For AnyOf reductions, VPlan codegen may remove the select
+  // which the legacy cost model uses to assign cost. Pre-compute their costs
+  // for now.
   // TODO: Switch to costing based on VPlan once the logic has been ported.
   for (const auto &[RedPhi, RdxDesc] : Legal->getReductionVars()) {
     if (!CM.isInLoopReduction(RedPhi) &&
@@ -7367,7 +7371,8 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
     // model, pre-compute the cost for AnyOf reductions here.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
-      auto *Select = cast<SelectInst>(*RedPhi->user_begin());
+      auto *Select = cast<SelectInst>(*find_if(
+          RedPhi->users(), [](User *U) { return isa<SelectInst>(U); }));
       assert(!CostCtx.SkipCostComputation.contains(Select) &&
              "reduction op visited multiple times");
       CostCtx.SkipCostComputation.insert(Select);
