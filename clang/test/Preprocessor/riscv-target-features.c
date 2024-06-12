@@ -27,9 +27,11 @@
 // CHECK-NOT: __riscv_shvstvala {{.*$}}
 // CHECK-NOT: __riscv_shvstvecd {{.*$}}
 // CHECK-NOT: __riscv_smaia {{.*$}}
+// CHECK-NOT: __riscv_smcdeleg {{.*$}}
 // CHECK-NOT: __riscv_smepmp {{.*$}}
 // CHECK-NOT: __riscv_smstateen {{.*$}}
 // CHECK-NOT: __riscv_ssaia {{.*$}}
+// CHECK-NOT: __riscv_ssccfg {{.*$}}
 // CHECK-NOT: __riscv_ssccptr {{.*$}}
 // CHECK-NOT: __riscv_sscofpmf {{.*$}}
 // CHECK-NOT: __riscv_sscounterenw {{.*$}}
@@ -361,6 +363,14 @@
 // RUN:   -march=rv64ishvstvecd -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SHVSTVECD-EXT %s
 // CHECK-SHVSTVECD-EXT: __riscv_shvstvecd 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32issccfg -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCCFG-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64issccfg -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SSCCFG-EXT %s
+// CHECK-SSCCFG-EXT: __riscv_ssccfg 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32issccptr -E -dM %s \
@@ -1392,6 +1402,14 @@
 // RUN:   -march=rv64issaia1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SSAIA-EXT %s
 // CHECK-SSAIA-EXT: __riscv_ssaia  1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32ismcdeleg1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMCDELEG-EXT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64ismcdeleg1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-SMCDELEG-EXT %s
+// CHECK-SMCDELEG-EXT: __riscv_smcdeleg  1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32ismepmp1p0 -E -dM %s \

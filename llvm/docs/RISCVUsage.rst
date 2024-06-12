@@ -99,9 +99,11 @@ on support follow.
      ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
+     ``Smcdeleg``      Supported
      ``Smepmp``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
+     ``Ssccfg``        Supported
      ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
