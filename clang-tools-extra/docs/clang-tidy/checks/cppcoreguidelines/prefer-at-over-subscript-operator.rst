@@ -1,7 +1,7 @@
 .. title:: clang-tidy - cppcoreguidelines-prefer-at-over-subscript-operator
 
 cppcoreguidelines-prefer-at-over-subscript-operator
-=====================================
+===================================================
 
 This check flags all uses of ``operator[]`` where an equivalent (same parameter and return types) ``at()`` method exists and suggest using that instead.
 
