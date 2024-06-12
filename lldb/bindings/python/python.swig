@@ -110,6 +110,7 @@ def lldb_iter(obj, getsize, getelem):
 
 %include <std_string.i>
 %include "python-typemaps.swig"
+%include "python-callbacks-typemaps.swig"
 %include "macros.swig"
 %include "headers.swig"
 
@@ -125,6 +126,7 @@ using namespace lldb;
 %include "interfaces.swig"
 %include "python-extensions.swig"
 %include "python-wrapper.swig"
+%include "python-callbacks-wrapper.swig"
 
 %pythoncode%{
 debugger_unique_id = 0
