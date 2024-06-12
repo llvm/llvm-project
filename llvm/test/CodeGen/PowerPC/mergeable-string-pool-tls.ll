@@ -258,3 +258,116 @@ entry:
   tail call void @callee2(ptr noundef nonnull @e) #4
   ret void
 }
+
+; Check the contents of the TLS data and the __ModuleStringPool structure to
+; check that TLS data has been skipped during string pool merging.
+
+; CHECK64: 	.csect a[TL],2
+; CHECK64-NEXT:	.lglobl	a[TL]
+; CHECK64-NEXT:	.string	"tls1"
+; CHECK64:	.csect b[TL],2
+; CHECK64-NEXT:	.lglobl	b[TL]
+; CHECK64-NEXT:	.string	"tls2"
+; CHECK64:	.csect L..__ModuleStringPool[RO],2
+; CHECK64-NEXT:	.align	2
+; CHECK64-NEXT:	.vbyte	4, 0x42af999a
+; CHECK64-NEXT:	.vbyte	4, 0x42b1999a
+; CHECK64-NEXT:	.vbyte	4, 0x42b3cccd
+; CHECK64-NEXT:	.vbyte	4, 0x42b5999a
+; CHECK64-NEXT:	.vbyte	4, 1
+; CHECK64-NEXT:	.vbyte	4, 2
+; CHECK64-NEXT:	.vbyte	4, 3
+; CHECK64-NEXT:	.vbyte	4, 4
+; CHECK64-NEXT:	.vbyte	4, 5
+; CHECK64-NEXT:	.vbyte	4, 6
+; CHECK64-NEXT:	.vbyte	4, 7
+; CHECK64-NEXT:	.vbyte	4, 8
+; CHECK64-NEXT:	.vbyte	4, 9
+; CHECK64-NEXT:	.vbyte	4, 10
+; CHECK64-NEXT:	.string	"Regular global"
+; CHECK64-NEXT:	.byte	'T,'L,'S,' ,'v,'a,'r,'i,'a,'b,'l,'e,' ,'1,',,' ,'2,' ,'a,'n,'d,' ,'n,'o,'n,'-,'T,'L,'S,' ,'v,'a,'r,':,' ,'%,'s,',,' ,'%,'s,',,' ,'%,'s,0012,0000
+; CHECK64: L..C1:
+; CHECK64-NEXT:	.tc L..__ModuleStringPool[TC],L..__ModuleStringPool[RO]
+; CHECK64: L..C2:
+; CHECK64-NEXT:	.tc a[TC],a[TL]@ld
+; CHECK64: L..C3:
+; CHECK64-NEXT:	.tc b[TC],b[TL]@ld
+
+; CHECK32: 	.csect a[TL],2
+; CHECK32-NEXT:	.lglobl	a[TL]
+; CHECK32-NEXT:	.string	"tls1"
+; CHECK32:	.csect b[TL],2
+; CHECK32-NEXT:	.lglobl	b[TL]
+; CHECK32-NEXT:	.string	"tls2"
+; CHECK32:	.csect L..__ModuleStringPool[RO],2
+; CHECK32-NEXT:	.align	2
+; CHECK32-NEXT:	.vbyte	4, 0x42af999a
+; CHECK32-NEXT:	.vbyte	4, 0x42b1999a
+; CHECK32-NEXT:	.vbyte	4, 0x42b3cccd
+; CHECK32-NEXT:	.vbyte	4, 0x42b5999a
+; CHECK32-NEXT:	.vbyte	4, 1
+; CHECK32-NEXT:	.vbyte	4, 2
+; CHECK32-NEXT:	.vbyte	4, 3
+; CHECK32-NEXT:	.vbyte	4, 4
+; CHECK32-NEXT:	.vbyte	4, 5
+; CHECK32-NEXT:	.vbyte	4, 6
+; CHECK32-NEXT:	.vbyte	4, 7
+; CHECK32-NEXT:	.vbyte	4, 8
+; CHECK32-NEXT:	.vbyte	4, 9
+; CHECK32-NEXT:	.vbyte	4, 10
+; CHECK32-NEXT:	.string	"Regular global"
+; CHECK32-NEXT:	.byte	'T,'L,'S,' ,'v,'a,'r,'i,'a,'b,'l,'e,' ,'1,',,' ,'2,' ,'a,'n,'d,' ,'n,'o,'n,'-,'T,'L,'S,' ,'v,'a,'r,':,' ,'%,'s,',,' ,'%,'s,',,' ,'%,'s,0012,0000
+; CHECK32: L..C1:
+; CHECK32-NEXT:	.tc L..__ModuleStringPool[TC],L..__ModuleStringPool[RO]
+; CHECK32: L..C2:
+; CHECK32-NEXT:	.tc a[TC],a[TL]@ld
+; CHECK32: L..C3:
+; CHECK32-NEXT:	.tc b[TC],b[TL]@ld
+
+; LINUX64LE: a:
+; LINUX64LE-NEXT:	.asciz	"tls1"
+; LINUX64LE-NEXT:	.size	a, 5
+; LINUX64LE: b:
+; LINUX64LE-NEXT:	.asciz	"tls2"
+; LINUX64LE-NEXT:	.size	b, 5
+; LINUX64LE: .L__ModuleStringPool:
+; LINUX64LE-NEXT:	.long	0x42af999a
+; LINUX64LE-NEXT:	.long	0x42b1999a
+; LINUX64LE-NEXT:	.long	0x42b3cccd
+; LINUX64LE-NEXT:	.long	0x42b5999a
+; LINUX64LE-NEXT:	.long	1
+; LINUX64LE-NEXT:	.long	2
+; LINUX64LE-NEXT:	.long	3
+; LINUX64LE-NEXT:	.long	4
+; LINUX64LE-NEXT:	.long	5
+; LINUX64LE-NEXT:	.long	6
+; LINUX64LE-NEXT:	.long	7
+; LINUX64LE-NEXT:	.long	8
+; LINUX64LE-NEXT:	.long	9
+; LINUX64LE-NEXT:	.long	10
+; LINUX64LE-NEXT:	.asciz	"Regular global"
+; LINUX64LE-NEXT:	.asciz	"TLS variable 1, 2 and non-TLS var: %s, %s, %s\n"
+
+; LINUX64BE: a:
+; LINUX64BE-NEXT:	.asciz	"tls1"
+; LINUX64BE-NEXT:	.size	a, 5
+; LINUX64BE: b:
+; LINUX64BE-NEXT:	.asciz	"tls2"
+; LINUX64BE-NEXT:	.size	b, 5
+; LINUX64BE: .L__ModuleStringPool:
+; LINUX64BE-NEXT:	.long	0x42af999a
+; LINUX64BE-NEXT:	.long	0x42b1999a
+; LINUX64BE-NEXT:	.long	0x42b3cccd
+; LINUX64BE-NEXT:	.long	0x42b5999a
+; LINUX64BE-NEXT:	.long	1
+; LINUX64BE-NEXT:	.long	2
+; LINUX64BE-NEXT:	.long	3
+; LINUX64BE-NEXT:	.long	4
+; LINUX64BE-NEXT:	.long	5
+; LINUX64BE-NEXT:	.long	6
+; LINUX64BE-NEXT:	.long	7
+; LINUX64BE-NEXT:	.long	8
+; LINUX64BE-NEXT:	.long	9
+; LINUX64BE-NEXT:	.long	10
+; LINUX64BE-NEXT:	.asciz	"Regular global"
+; LINUX64BE-NEXT:	.asciz	"TLS variable 1, 2 and non-TLS var: %s, %s, %s\n"
