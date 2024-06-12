@@ -338,6 +338,7 @@ void dumpICFGNode(int u, ordered_json &jPath) {
     }
 
 dumpICFGNodeExit:
+    return;
 }
 
 /**
