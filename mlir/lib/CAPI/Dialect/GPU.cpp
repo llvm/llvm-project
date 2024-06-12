@@ -82,3 +82,15 @@ MlirAttribute mlirGPUObjectAttrGetProperties(MlirAttribute mlirObjectAttr) {
       llvm::cast<gpu::ObjectAttr>(unwrap(mlirObjectAttr));
   return wrap(objectAttr.getProperties());
 }
+
+bool mlirGPUObjectAttrHasKernels(MlirAttribute mlirObjectAttr) {
+  gpu::ObjectAttr objectAttr =
+      llvm::cast<gpu::ObjectAttr>(unwrap(mlirObjectAttr));
+  return objectAttr.getKernels() != nullptr;
+}
+
+MlirAttribute mlirGPUObjectAttrGetKernels(MlirAttribute mlirObjectAttr) {
+  gpu::ObjectAttr objectAttr =
+      llvm::cast<gpu::ObjectAttr>(unwrap(mlirObjectAttr));
+  return wrap(objectAttr.getKernels());
+}
