@@ -45,6 +45,12 @@ mlirGPUObjectAttrHasProperties(MlirAttribute mlirObjectAttr);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirGPUObjectAttrGetProperties(MlirAttribute mlirObjectAttr);
 
+MLIR_CAPI_EXPORTED bool
+mlirGPUObjectAttrHasKernels(MlirAttribute mlirObjectAttr);
+
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirGPUObjectAttrGetKernels(MlirAttribute mlirObjectAttr);
+
 #ifdef __cplusplus
 }
 #endif
