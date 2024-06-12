@@ -8084,6 +8084,27 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
         AuxTI && (AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM());
   }
 
+  // Target must have NEON (or MVE, whose vectors are similar enough
+  // not to need a separate attribute)
+  if (!(S.Context.getTargetInfo().hasFeature("mve") ||
+        IsTargetCUDAAndHostARM) &&
+      VecKind == VectorKind::Neon && 
+      S.Context.getTargetInfo().getTriple().isArmMClass()) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
+        << Attr << "'mve'";
+    Attr.setInvalid();
+    return;
+  }
+  if (!(S.Context.getTargetInfo().hasFeature("mve") ||
+        IsTargetCUDAAndHostARM) &&
+      VecKind == VectorKind::NeonPoly &&
+      S.Context.getTargetInfo().getTriple().isArmMClass()) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
+        << Attr << "'mve'";
+    Attr.setInvalid();
+    return;
+  }
+
   // Check the attribute arguments.
   if (Attr.getNumArgs() != 1) {
     S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
