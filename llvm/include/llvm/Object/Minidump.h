@@ -52,13 +52,6 @@ public:
     return getDataSlice(getData(), Desc.RVA, Desc.DataSize);
   }
 
-  /// Returns the raw contents of an object given by the LocationDescriptor. An
-  /// error is returned if the descriptor points outside of the minidump file.
-  Expected<ArrayRef<uint8_t>>
-  getRawData(minidump::LocationDescriptor_64 Desc) const {
-    return getDataSlice(getData(), Desc.RVA, Desc.DataSize);
-  }
-
   /// Returns the minidump string at the given offset. An error is returned if
   /// we fail to parse the string, or the string is invalid UTF16.
   Expected<std::string> getString(size_t Offset) const;

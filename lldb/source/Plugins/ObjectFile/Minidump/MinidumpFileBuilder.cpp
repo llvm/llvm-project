@@ -38,10 +38,13 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
+#include <algorithm>
 #include <cinttypes>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -584,9 +587,8 @@ findStackHelper(const lldb::ProcessSP &process_sp, uint64_t rsp) {
 Status MinidumpFileBuilder::FixThreads() {
   Status error;
   // If we have anything in the heap flush it.
-  DumpToFile();
-
-  m_core_file->SeekFromStart(thread_list_file_offset);
+  FlushToDisk();
+  m_core_file->SeekFromStart(m_thread_list_start);
   for (auto &pair : m_thread_by_range_start) {
     // The thread objects will get a new memory descriptor added
     // When we are emitting the memory list and then we write it here
@@ -602,8 +604,6 @@ Status MinidumpFileBuilder::FixThreads() {
     }
   }
 
-  // Seek the core file back to the end.
-  m_core_file->SeekFromEnd(0);
   return error;
 }
 
@@ -624,10 +624,11 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
       static_cast<llvm::support::ulittle32_t>(thread_list.GetSize());
   m_data.AppendData(&thread_count, sizeof(llvm::support::ulittle32_t));
 
+  // Take the offset after the thread count.
+  m_thread_list_start = GetCurrentDataEndOffset();
   DataBufferHeap helper_data;
 
   const uint32_t num_threads = thread_list.GetSize();
-  thread_list_file_offset = GetCurrentDataEndOffset();
   Log *log = GetLog(LLDBLog::Object);
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
     ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
@@ -824,29 +825,34 @@ void MinidumpFileBuilder::AddLinuxFileStreams(
 Status MinidumpFileBuilder::AddMemory(const ProcessSP &process_sp, SaveCoreStyle core_style) {
   Status error;
 
+  Process::CoreFileMemoryRanges ranges_for_memory_list;
+  error = process_sp->CalculateCoreFileSaveRanges(SaveCoreStyle::eSaveCoreStackOnly, ranges_for_memory_list);
+  if (error.Fail()) {
+    return error;
+  }
+
+  std::set<addr_t> stack_ranges;
+  for (const auto &core_range : ranges_for_memory_list) {
+    stack_ranges.insert(core_range.range.start());
+  }
+  // We leave a little padding for dictionary and any other metadata we would want.
+  // Also so that we can put the header of the memory list 64 in 32b land, because the directory
+  // requires a 32b RVA.
   Process::CoreFileMemoryRanges ranges;
   error = process_sp->CalculateCoreFileSaveRanges(core_style, ranges);
   if (error.Fail()) {
     return error;
   }
 
-  Process::CoreFileMemoryRanges ranges_for_memory_list;
-  // We leave a little padding for dictionary and any other metadata we would want.
-  // Also so that we can put the header of the memory list 64 in 32b land, because the directory
-  // requires a 32b RVA.
   uint64_t total_size = 256 + (ranges.size() * sizeof(llvm::minidump::MemoryDescriptor_64));
-  // Enumerate all threads and save them off for the 32b range first
-  for (int i = ranges.size() - 1; i >= 0; i--) {
-    ranges_for_memory_list.push_back(ranges[i]);
-    total_size += ranges[i].range.size();
-    total_size += sizeof(llvm::minidump::MemoryDescriptor);
-    ranges.erase(ranges.begin() + i);
-  }
-
   // Take all the memory that will fit in the 32b range.
   for (int i = ranges.size() - 1; i >= 0; i--) {
     addr_t size_to_add = ranges[i].range.size() + sizeof(llvm::minidump::MemoryDescriptor);
-    if (total_size + size_to_add < UINT32_MAX) {
+    // filter out the stacks and check if it's below 32b max.
+    if (stack_ranges.count(ranges[i].range.start()) > 0) {
+      ranges.erase(ranges.begin() + i);
+    }
+    else if (total_size + size_to_add < UINT32_MAX) {
       ranges_for_memory_list.push_back(ranges[i]);
       total_size += ranges[i].range.size();
       total_size += sizeof(llvm::minidump::MemoryDescriptor);
@@ -948,16 +954,14 @@ Status MinidumpFileBuilder::AddMemoryList_32(const ProcessSP &process_sp, const 
 
     const size_t bytes_read =
         process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
-    if (error.Fail()) {
+    if (error.Fail() || bytes_read == 0) {
       LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
                 bytes_read, error.AsCString());
-      // Add the cleanup offset as the difference of bytes not read
-      descriptors.at(region_index).Memory.DataSize = 0;
+      // Just skip sections with errors or zero bytes in 32b mode
+      continue; 
     }
     else if (bytes_read != size) {
       LLDB_LOGF(log, "Memory region at: %zu failed to read %zu bytes", addr, size);
-      // Add the cleanup offset as the difference of bytes not read
-      descriptors.at(region_index).Memory.DataSize = bytes_read;
     }
 
     MemoryDescriptor descriptor;
@@ -965,6 +969,9 @@ Status MinidumpFileBuilder::AddMemoryList_32(const ProcessSP &process_sp, const 
     descriptor.Memory.DataSize = static_cast<llvm::support::ulittle32_t>(bytes_read);
     descriptor.Memory.RVA = static_cast<llvm::support::ulittle32_t>(offset_for_data);
     descriptors.push_back(descriptor);
+    if (m_thread_by_range_start.count(addr) > 0) {
+      m_thread_by_range_start[addr].Stack = descriptor;
+    }
 
     // Add the data to the buffer, flush as needed.
     error = AddData(data_up->GetBytes(), bytes_read);
@@ -977,10 +984,10 @@ Status MinidumpFileBuilder::AddMemoryList_32(const ProcessSP &process_sp, const 
   // And then the size of all the ranges
   AddDirectory(StreamType::MemoryList,
             sizeof(llvm::support::ulittle32_t) +
-                ranges.size() *
+                descriptors.size() *
                     sizeof(llvm::minidump::MemoryDescriptor));
 
-  llvm::support::ulittle32_t memory_ranges_num = static_cast<llvm::support::ulittle32_t>(ranges.size());
+  llvm::support::ulittle32_t memory_ranges_num = static_cast<llvm::support::ulittle32_t>(descriptors.size());
   m_data.AppendData(&memory_ranges_num, sizeof(llvm::support::ulittle32_t));
   // For 32b we can get away with writing off the descriptors after the data. This means no cleanup loop needed.
   m_data.AppendData(descriptors.data(), descriptors.size() * sizeof(MemoryDescriptor));
@@ -989,41 +996,30 @@ Status MinidumpFileBuilder::AddMemoryList_32(const ProcessSP &process_sp, const 
 }
 
 Status MinidumpFileBuilder::AddMemoryList_64(const ProcessSP &process_sp, const Process::CoreFileMemoryRanges &ranges) {
-  // Add a directory that references this list
-  // With a size of the number of ranges as a 32 bit num
-  // And then the size of all the ranges
-  // This is done first so that we can keep Directories are 32b.
   AddDirectory(StreamType::Memory64List,
-            sizeof(llvm::support::ulittle32_t) +
+            (sizeof(llvm::support::ulittle64_t) * 2) +
                 ranges.size() *
                     sizeof(llvm::minidump::MemoryDescriptor_64));
 
-  llvm::support::ulittle32_t memory_ranges_num = static_cast<llvm::support::ulittle32_t>(ranges.size());
-  m_data.AppendData(&memory_ranges_num, sizeof(llvm::support::ulittle32_t));
-  uint64_t current_offset = 0;
-  // Capture the starting offset, so we don't depend on the expansion of m_data.
+  llvm::support::ulittle64_t memory_ranges_num = static_cast<llvm::support::ulittle64_t>(ranges.size());
+  m_data.AppendData(&memory_ranges_num, sizeof(llvm::support::ulittle64_t));
+  llvm::support::ulittle64_t memory_ranges_base_rva = static_cast<llvm::support::ulittle64_t>(GetCurrentDataEndOffset());
+  m_data.AppendData(&memory_ranges_base_rva, sizeof(llvm::support::ulittle64_t));
+  // Capture the starting offset, so we can do cleanup later if needed.
   uint64_t starting_offset = GetCurrentDataEndOffset();
 
-  std::map<uint32_t, addr_t> descriptors_to_clean_up_with_offset_fixes;
+  bool cleanup_required = false;
   std::vector<MemoryDescriptor_64> descriptors;
   // Enumerate the ranges and create the memory descriptors so we can append them first
   for (const auto core_range : ranges) {
     // Add the space required to store the memory descriptor
-    current_offset += sizeof(MemoryDescriptor_64);
-    LocationDescriptor_64 memory_dump;
-    memory_dump.DataSize = static_cast<llvm::support::ulittle64_t>(core_range.range.size());
-    memory_dump.RVA =
-        static_cast<llvm::support::ulittle64_t>(starting_offset + current_offset);
     MemoryDescriptor_64 memory_desc;
     memory_desc.StartOfMemoryRange =
         static_cast<llvm::support::ulittle64_t>(core_range.range.start());
-    memory_desc.Memory = memory_dump;
+    memory_desc.DataSize = static_cast<llvm::support::ulittle64_t>(core_range.range.size());
     descriptors.push_back(memory_desc);
     // Now write this memory descriptor to the buffer.
     m_data.AppendData(&memory_desc, sizeof(MemoryDescriptor_64));
-    // Add the data size to the current offset
-    // so subsequent RVA's are accurate.
-    current_offset += core_range.range.size();
   }
 
   Status error;
@@ -1034,25 +1030,23 @@ Status MinidumpFileBuilder::AddMemoryList_64(const ProcessSP &process_sp, const 
     const addr_t size = core_range.range.size();
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
 
-
-    LLDB_LOGF(log, "AddMemoryList %d/%d reading memory for region (%zu bytes) [%zx, %zx)",
+    LLDB_LOGF(log, "AddMemoryList_64 %d/%d reading memory for region (%zu bytes) [%zx, %zx)",
               region_index, ranges.size(), size, addr, addr+ size);
     ++region_index;
 
-    // TODO: Add a fixup functionality, when we fail to read the correct number of bytes or anything at all
-    // we need to go back and fix the memory descriptors and the subsequent RVA's.
     const size_t bytes_read =
         process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail()) {
       LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
                 bytes_read, error.AsCString());
-      descriptors_to_clean_up_with_offset_fixes[region_index] = size;
-      descriptors[region_index].Memory.DataSize = 0;
+      error.Clear();
+      cleanup_required = true;
+      descriptors[region_index].DataSize = 0;
     }
     if (bytes_read != size) {
-      error.SetErrorStringWithFormat("Memory region at: %zu failed to read %zu bytes", addr, size);
-      descriptors_to_clean_up_with_offset_fixes[region_index] = size - bytes_read;
-      descriptors[region_index].Memory.DataSize = bytes_read;
+      LLDB_LOGF(log, "Memory region at: %zu failed to read %zu bytes", addr, size);
+      cleanup_required = true;
+      descriptors[region_index].DataSize = bytes_read;
     }
 
     // Add the data to the buffer, flush as needed.
@@ -1062,65 +1056,64 @@ Status MinidumpFileBuilder::AddMemoryList_64(const ProcessSP &process_sp, const 
   }
 
   // Early return if there is no cleanup needed.
-  if (descriptors.size() == 0) {
+  if (!cleanup_required) {
     return error;
   }
   else {
     // Flush to disk we can make the fixes in place.
-    DumpToFile();
-    // Iterate through the list, moving up (subtracting) the RVA by the current fix up offset
-    // Then check if the current item is in the map
-    // If it is, add it's offset to the fix up delta.
-    // This is so if we fail to write a certain number of bytes, we fix the rest of the RVA's
-    //
-    addr_t current_shiftup_delta = 0;
-    for (uint i = 0; i < descriptors.size(); i++) {
-      MemoryDescriptor_64 &desc = descriptors[i];
-      desc.Memory.RVA -= current_shiftup_delta;
-      // We update the delta afterwards because the RVA of the current 
-      // descriptor doesn't depend on it's size. Only the subsequent Descriptors
-      // would depend on this delta.
-      if (descriptors_to_clean_up_with_offset_fixes.count(i) > 0) {
-        current_shiftup_delta += descriptors_to_clean_up_with_offset_fixes[i];
-      }
-    }
-
+    FlushToDisk();
     // Fixup the descriptors that were not read correctly.
     m_core_file->SeekFromStart(starting_offset);
-    size_t bytes_written = sizeof(MemoryDescriptor) * descriptors.size();
+    size_t bytes_written = sizeof(MemoryDescriptor_64) * descriptors.size();
     error = m_core_file->Write(descriptors.data(), bytes_written);
-    if (error.Fail() || bytes_written != sizeof(MemoryDescriptor) * descriptors.size()) {
+    if (error.Fail() || bytes_written != sizeof(MemoryDescriptor_64) * descriptors.size()) {
         error.SetErrorStringWithFormat(
             "unable to write the memory descriptors (written %zd/%zd)",
-            bytes_written, sizeof(MemoryDescriptor) * descriptors.size());
+            bytes_written, sizeof(MemoryDescriptor_64) * descriptors.size());
     }
 
     return error;
   }
 }
 
-Status MinidumpFileBuilder::AddData(const void* data, size_t size) {
+Status MinidumpFileBuilder::AddData(const void* data, addr_t size) {
+  // This should also get chunked, because worst case we copy over a big 
+  // object / memory range, say 5gb. In that case, we'd have to allocate 10gb
+  // 5 gb for the buffer we're copying from, and then 5gb for the buffer we're copying to.
+  // Which will be short lived and immedaitely go to disk, the goal here is to limit the number
+  // of bytes we need to host in memory at any given time.
   m_data.AppendData(data, size);
-  // TODO: Refactor to be a parameter.
-  if (m_data.GetByteSize() > 1024 * 1024 * 1024) {
+  if (m_data.GetByteSize() > m_write_chunk_max) {
     return FlushToDisk();
   }
 
   return Status();
 }
 
-Status MinidumpFileBuilder::FlushToDisk() const {
+Status MinidumpFileBuilder::FlushToDisk() {
   Status error;
-  size_t bytes_to_write = m_data.GetByteSize();
-  size_t bytes_written = bytes_to_write;
-  error = m_core_file->Write(m_data.GetBytes(), bytes_to_write);
-  if (error.Fail() || bytes_written != bytes_to_write) {
-      error.SetErrorStringWithFormat(
-          "Wrote incorrect number of bytes to minidump file. (written %zd/%zd)", bytes_written,
-          bytes_to_write);
-    return error;
+  // Set the stream to it's end.
+  m_core_file->SeekFromEnd(0);
+  addr_t starting_size = m_data.GetByteSize();
+  addr_t remaining_bytes = starting_size;
+  size_t offset = 0;
+  while (remaining_bytes > 0) {
+    size_t chunk_size = std::min(remaining_bytes, m_write_chunk_max);
+    size_t bytes_written = chunk_size;
+    error = m_core_file->Write(m_data.GetBytes() + offset, bytes_written);
+    if (error.Fail() || bytes_written != chunk_size) {
+        error.SetErrorStringWithFormat(
+            "Wrote incorrect number of bytes to minidump file. (written %zd/%zd)", bytes_written,
+            chunk_size);
+      return error;
+    }
+
+    offset += bytes_written;
+    remaining_bytes -= bytes_written;
   }
 
+  m_saved_data_size += starting_size;
+  m_data.Clear();
   return error;
 }
 

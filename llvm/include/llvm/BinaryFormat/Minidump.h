@@ -62,12 +62,6 @@ struct LocationDescriptor {
 };
 static_assert(sizeof(LocationDescriptor) == 8);
 
-struct LocationDescriptor_64 {
-  support::ulittle64_t DataSize;
-  support::ulittle64_t RVA;
-};
-static_assert(sizeof(LocationDescriptor_64) == 16);
-
 /// Describes a single memory range (both its VM address and where to find it in
 /// the file) of the process from which this minidump file was generated.
 struct MemoryDescriptor {
@@ -78,7 +72,7 @@ static_assert(sizeof(MemoryDescriptor) == 16);
 
 struct MemoryDescriptor_64 {
   support::ulittle64_t StartOfMemoryRange;
-  LocationDescriptor_64 Memory;
+  support::ulittle64_t DataSize;
 };
 
 struct MemoryInfoListHeader {

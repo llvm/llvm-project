@@ -88,7 +88,7 @@ private:
   lldb_private::Status AddMemoryList_64(const lldb::ProcessSP &process_sp, const lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status AddMemoryList_32(const lldb::ProcessSP &process_sp, const lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status FixThreads();
-  lldb_private::Status FlushToDisk() const;
+  lldb_private::Status FlushToDisk();
 
   lldb_private::Status DumpHeader() const;
   lldb_private::Status DumpDirectories() const;
@@ -107,7 +107,12 @@ private:
   lldb_private::DataBufferHeap m_data;
   uint m_expected_directories = 0;
   uint64_t m_saved_data_size = 0;
-  size_t thread_list_file_offset = 0;
+  size_t m_thread_list_start = 0;
+  // We set the max write amount to 128 mb
+  // Linux has a signed 32b - some buffer on writes
+  // and we have guarauntee a user memory region / 'object' could be over 2gb
+  // now that we support 64b memory dumps.
+  static constexpr size_t m_write_chunk_max = (1024 * 1024 * 128);
 
   static constexpr size_t header_size = sizeof(llvm::minidump::Header);
   static constexpr size_t directory_size = sizeof(llvm::minidump::Directory);
