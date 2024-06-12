@@ -1262,17 +1262,6 @@ void ASTStmtWriter::VisitSourceLocExpr(SourceLocExpr *E) {
   Code = serialization::EXPR_SOURCE_LOC;
 }
 
-void ASTStmtWriter::VisitEmbedExpr(EmbedExpr *E) {
-  VisitExpr(E);
-  Record.AddSourceLocation(E->getBeginLoc());
-  Record.AddSourceLocation(E->getEndLoc());
-  Record.AddStmt(E->getFilenameStringLiteral());
-  Record.AddStmt(E->getDataStringLiteral());
-  Record.writeUInt32(E->getStartingElementPos());
-  Record.writeUInt32(E->getDataElementCount());
-  Code = serialization::EXPR_BUILTIN_PP_EMBED;
-}
-
 void ASTStmtWriter::VisitAddrLabelExpr(AddrLabelExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getAmpAmpLoc());
