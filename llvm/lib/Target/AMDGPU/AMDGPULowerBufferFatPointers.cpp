@@ -1388,6 +1388,7 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
 }
 
 PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
+  using namespace llvm::PatternMatch;
   Value *Ptr = GEP.getPointerOperand();
   if (!isSplitFatPtr(Ptr->getType()))
     return {nullptr, nullptr};
@@ -1405,7 +1406,7 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   GEP.mutateType(FatPtrTy);
   Value *OffAccum = emitGEPOffset(&IRB, DL, &GEP);
   GEP.mutateType(Ptr->getType());
-  if (!OffAccum) { // Constant-zero offset
+  if (match(OffAccum, m_Zero())) { // Constant-zero offset
     SplitUsers.insert(&GEP);
     return {Rsrc, Off};
   }
@@ -1415,7 +1416,7 @@ PtrParts SplitPtrStructs::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     HasNonNegativeOff = !CI->isNegative();
   }
   Value *NewOff;
-  if (PatternMatch::match(Off, PatternMatch::is_zero())) {
+  if (match(Off, m_Zero())) {
     NewOff = OffAccum;
   } else {
     NewOff = IRB.CreateAdd(Off, OffAccum, "",
