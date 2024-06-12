@@ -270,3 +270,36 @@ entry:
 
 declare spir_func i32 @_Z20work_group_broadcastjj(i32 noundef, i32 noundef) local_unnamed_addr
 declare spir_func i32 @__spirv_GroupBroadcast(i32 noundef, i32 noundef, i32 noundef) local_unnamed_addr
+
+; CHECK-SPIRV: OpFunction
+; CHECK-SPIRV: %[[#]] = OpGroupFAdd %[[#float]] %[[#ScopeCrossWorkgroup]] Reduce %[[#FValue:]]
+; CHECK-SPIRV: %[[#]] = OpGroupFMin %[[#float]] %[[#ScopeWorkgroup]] InclusiveScan %[[#FValue]]
+; CHECK-SPIRV: %[[#]] = OpGroupFMax %[[#float]] %[[#ScopeSubgroup]] ExclusiveScan %[[#FValue]]
+; CHECK-SPIRV: %[[#]] = OpGroupIAdd %[[#int]] %[[#ScopeCrossWorkgroup]] Reduce %[[#IValue:]]
+; CHECK-SPIRV: %[[#]] = OpGroupUMin %[[#int]] %[[#ScopeWorkgroup]] InclusiveScan %[[#IValue]]
+; CHECK-SPIRV: %[[#]] = OpGroupSMin %[[#int]] %[[#ScopeSubgroup]] ExclusiveScan %[[#IValue]]
+; CHECK-SPIRV: %[[#]] = OpGroupUMax %[[#int]] %[[#ScopeCrossWorkgroup]] Reduce %[[#IValue]]
+; CHECK-SPIRV: %[[#]] = OpGroupSMax %[[#int]] %[[#ScopeWorkgroup]] InclusiveScan %[[#IValue]]
+; CHECK-SPIRV: OpFunctionEnd
+
+define spir_kernel void @foo(float %a, i32 %b) {
+entry:
+  %f1 = call spir_func float @__spirv_GroupFAdd(i32 0, i32 0, float %a)
+  %f2 = call spir_func float @__spirv_GroupFMin(i32 2, i32 1, float %a)
+  %f3 = call spir_func float @__spirv_GroupFMax(i32 3, i32 2, float %a)
+  %i1 = call spir_func i32 @__spirv_GroupIAdd(i32 0, i32 0, i32 %b)
+  %i2 = call spir_func i32 @__spirv_GroupUMin(i32 2, i32 1, i32 %b)
+  %i3 = call spir_func i32 @__spirv_GroupSMin(i32 3, i32 2, i32 %b)
+  %i4 = call spir_func i32 @__spirv_GroupUMax(i32 0, i32 0, i32 %b)
+  %i5 = call spir_func i32 @__spirv_GroupSMax(i32 2, i32 1, i32 %b)
+  ret void
+}
+
+declare spir_func float @__spirv_GroupFAdd(i32, i32, float)
+declare spir_func float @__spirv_GroupFMin(i32, i32, float)
+declare spir_func float @__spirv_GroupFMax(i32, i32, float)
+declare spir_func i32 @__spirv_GroupIAdd(i32, i32, i32)
+declare spir_func i32 @__spirv_GroupUMin(i32, i32, i32)
+declare spir_func i32 @__spirv_GroupSMin(i32, i32, i32)
+declare spir_func i32 @__spirv_GroupUMax(i32, i32, i32)
+declare spir_func i32 @__spirv_GroupSMax(i32, i32, i32)
