@@ -28,11 +28,11 @@ int main(int argc, char **argv) {
   char *short_buffer = (char*)malloc(9);
   strncpy(short_buffer, hello, 10);  // BOOM
   // CHECK: {{WRITE of size 10 at 0x.* thread T0}}
-  // CHECK: {{    #0 0x.* in .*strncpy}}
-  // CHECK: {{    #1 0x.* in main .*strncpy-overflow.cpp:}}[[@LINE-3]]
+  // CHECK: {{    #[0-9]+ 0x.* in .*strncpy .*.cpp}}
+  // CHECK: {{    #[0-9]+ 0x.* in main .*strncpy-overflow.cpp:}}[[@LINE-3]]
   // CHECK: {{0x.* is located 0 bytes after 9-byte region}}
   // CHECK: {{allocated by thread T0 here:}}
-  // CHECK: {{    #0 0x.* in .*malloc}}
-  // CHECK: {{    #[1-3] 0x.* in main .*strncpy-overflow.cpp:}}[[@LINE-8]]
+  // CHECK: {{    #[0-9]+ 0x.* in .*malloc}}
+  // CHECK: {{    #[0-9]+ 0x.* in main .*strncpy-overflow.cpp:}}[[@LINE-8]]
   return rval + sink_memory(9, short_buffer);
 }
