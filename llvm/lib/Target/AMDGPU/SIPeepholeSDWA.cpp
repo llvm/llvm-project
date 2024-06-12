@@ -337,20 +337,16 @@ uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
 MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
                                                  const GCNSubtarget &ST,
                                                  SDWAOperandsMap *PotentialMatches) {
-  // If PotentialMatches is not null, then fill out the map for all uses,
-  // if all can be converted
   if (PotentialMatches != nullptr) {
+    // Fill out the map for all uses if all can be converted
     MachineOperand *Reg = getReplacedOperand();
-    if (!Reg->isReg() || !Reg->isDef()) {
+    if (!Reg->isReg() || !Reg->isDef())
       return nullptr;
-    }
 
-    for (MachineInstr &UseMI : getMRI()->use_nodbg_instructions(Reg->getReg())) {
+    for (MachineInstr &UseMI : getMRI()->use_nodbg_instructions(Reg->getReg()))
       // Check that all instructions that use Reg can be converted
-      if (!isConvertibleToSDWA(UseMI, ST, TII)) {
+      if (!isConvertibleToSDWA(UseMI, ST, TII))
         return nullptr;
-      }
-    }
 
     // Now that it's guaranteed all uses are legal, iterate over the uses again
     // to add them for later conversion.
@@ -358,8 +354,8 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
       // Should not get a subregister here
       assert(isSameReg(UseMO, *Reg));
 
-      SDWAOperandsMap& potentialMatchesMap = *PotentialMatches;
-      MachineInstr* UseMI = UseMO.getParent();
+      SDWAOperandsMap &potentialMatchesMap = *PotentialMatches;
+      MachineInstr *UseMI = UseMO.getParent();
       potentialMatchesMap[UseMI].push_back(this);
     }
     return nullptr;
