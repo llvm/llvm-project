@@ -648,7 +648,7 @@ struct VectorDeinterleaveOpConvert final
               loc, newResultType, adaptor.getSource(),
               rewriter.getI32ArrayAttr({0}));
 
-      spirv::CompositeExtractOp compositeExtractOne =
+      auto elem1 =
           rewriter.create<spirv::CompositeExtractOp>(
               loc, newResultType, adaptor.getSource(),
               rewriter.getI32ArrayAttr({1}));
