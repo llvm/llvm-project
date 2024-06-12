@@ -795,7 +795,7 @@ struct OverlapFuncFilters {
 
 struct InstrProfValueSiteRecord {
   /// Value profiling data pairs at a given value site.
-  std::list<InstrProfValueData> ValueData;
+  std::vector<InstrProfValueData> ValueData;
 
   InstrProfValueSiteRecord() = default;
   template <class InputIterator>
@@ -804,10 +804,10 @@ struct InstrProfValueSiteRecord {
 
   /// Sort ValueData ascending by Value
   void sortByTargetValues() {
-    ValueData.sort(
-        [](const InstrProfValueData &left, const InstrProfValueData &right) {
-          return left.Value < right.Value;
-        });
+    llvm::sort(ValueData,
+               [](const InstrProfValueData &L, const InstrProfValueData &R) {
+                 return L.Value < R.Value;
+               });
   }
   /// Sort ValueData Descending by Count
   inline void sortByCount();
@@ -1093,9 +1093,9 @@ void InstrProfRecord::reserveSites(uint32_t ValueKind, uint32_t NumValueSites) {
 #include "llvm/ProfileData/InstrProfData.inc"
 
 void InstrProfValueSiteRecord::sortByCount() {
-  ValueData.sort(
-      [](const InstrProfValueData &left, const InstrProfValueData &right) {
-        return left.Count > right.Count;
+  llvm::stable_sort(
+      ValueData, [](const InstrProfValueData &L, const InstrProfValueData &R) {
+        return L.Count > R.Count;
       });
   // Now truncate
   size_t max_s = INSTR_PROF_MAX_NUM_VAL_PER_SITE;

@@ -41934,7 +41934,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   case X86ISD::CVTPH2PS:
   case X86ISD::CVTPS2PH: {
     SDValue Src = Op.getOperand(0);
-    MVT SrcVT = Src.getSimpleValueType();
+    EVT SrcVT = Src.getValueType();
     APInt SrcUndef, SrcZero;
     APInt SrcElts = DemandedElts.zextOrTrunc(SrcVT.getVectorNumElements());
     if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,

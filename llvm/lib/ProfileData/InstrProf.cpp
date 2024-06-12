@@ -847,19 +847,26 @@ void InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
   Input.sortByTargetValues();
   auto I = ValueData.begin();
   auto IE = ValueData.end();
+  std::vector<InstrProfValueData> Merged;
+  Merged.reserve(std::max(ValueData.size(), Input.ValueData.size()));
   for (const InstrProfValueData &J : Input.ValueData) {
-    while (I != IE && I->Value < J.Value)
+    while (I != IE && I->Value < J.Value) {
+      Merged.push_back(*I);
       ++I;
+    }
     if (I != IE && I->Value == J.Value) {
       bool Overflowed;
       I->Count = SaturatingMultiplyAdd(J.Count, Weight, I->Count, &Overflowed);
       if (Overflowed)
         Warn(instrprof_error::counter_overflow);
+      Merged.push_back(*I);
       ++I;
       continue;
     }
-    ValueData.insert(I, J);
+    Merged.push_back(J);
   }
+  Merged.insert(Merged.end(), I, IE);
+  ValueData = std::move(Merged);
 }
 
 void InstrProfValueSiteRecord::scale(uint64_t N, uint64_t D,
