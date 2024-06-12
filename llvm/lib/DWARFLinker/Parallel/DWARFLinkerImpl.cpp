@@ -1356,10 +1356,9 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
       case DwarfUnit::AccelType::Name:
       case DwarfUnit::AccelType::Namespace:
       case DwarfUnit::AccelType::Type: {
-        DebugNames->addName(
-            *DebugStrStrings.getExistingEntry(Info.String), Info.OutOffset,
-            std::nullopt /*ParentDIEOffset*/, Info.Tag, CU->getUniqueID(),
-            CU->getOutUnitDIE()->getTag() == dwarf::DW_TAG_type_unit);
+        DebugNames->addName(*DebugStrStrings.getExistingEntry(Info.String),
+                            Info.OutOffset, std::nullopt /*ParentDIEOffset*/,
+                            Info.Tag, CU->getUniqueID());
       } break;
 
       default:

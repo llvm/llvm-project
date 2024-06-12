@@ -2247,20 +2247,17 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
         DebugNames.addName(
             Namespace.Name, Namespace.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Namespace.Die),
-            Namespace.Die->getTag(), Unit.getUniqueID(),
-            Unit.getOutputUnitDIE()->getTag() == dwarf::DW_TAG_type_unit);
+            Namespace.Die->getTag(), Unit.getUniqueID());
       for (const auto &Pubname : Unit.getPubnames())
         DebugNames.addName(
             Pubname.Name, Pubname.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Pubname.Die),
-            Pubname.Die->getTag(), Unit.getUniqueID(),
-            Unit.getOutputUnitDIE()->getTag() == dwarf::DW_TAG_type_unit);
+            Pubname.Die->getTag(), Unit.getUniqueID());
       for (const auto &Pubtype : Unit.getPubtypes())
         DebugNames.addName(
             Pubtype.Name, Pubtype.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Pubtype.Die),
-            Pubtype.Die->getTag(), Unit.getUniqueID(),
-            Unit.getOutputUnitDIE()->getTag() == dwarf::DW_TAG_type_unit);
+            Pubtype.Die->getTag(), Unit.getUniqueID());
     } break;
     }
   }
