@@ -1216,14 +1216,16 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     if (mustSetDynamicTypeToDummyType) {
       // Note: this is important to do this before any copy-in or copy so
       // that the dummy is contiguous according to the dummy type.
-      if (actualIsAssumedRank)
-        TODO(loc, "passing polymorphic assumed-rank to non polymorphic dummy "
-                  "argument");
       mlir::Type boxType = fir::BoxType::get(
           hlfir::getFortranElementOrSequenceType(dummyTypeWithActualRank));
-      entity = hlfir::Entity{builder.create<fir::ReboxOp>(
-          loc, boxType, entity, /*shape=*/mlir::Value{},
-          /*slice=*/mlir::Value{})};
+      if (actualIsAssumedRank) {
+        entity = hlfir::Entity{builder.create<fir::ReboxAssumedRankOp>(
+            loc, boxType, entity, fir::LowerBoundModifierAttribute::SetToOnes)};
+      } else {
+        entity = hlfir::Entity{builder.create<fir::ReboxOp>(
+            loc, boxType, entity, /*shape=*/mlir::Value{},
+            /*slice=*/mlir::Value{})};
+      }
     }
     if (arg.hasValueAttribute() ||
         // Constant expressions might be lowered as variables with
@@ -1330,19 +1332,19 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     if (needToAddAddendum || actualBoxHasAllocatableOrPointerFlag ||
         needsZeroLowerBounds) {
       if (actualIsAssumedRank) {
-        if (needToAddAddendum)
-          TODO(loc, "passing intrinsic assumed-rank to unlimited polymorphic "
-                    "assumed-rank");
-        else
-          TODO(loc, "passing pointer or allocatable assumed-rank to non "
-                    "pointer non allocatable assumed-rank");
+        auto lbModifier = needsZeroLowerBounds
+                              ? fir::LowerBoundModifierAttribute::SetToZeroes
+                              : fir::LowerBoundModifierAttribute::SetToOnes;
+        entity = hlfir::Entity{builder.create<fir::ReboxAssumedRankOp>(
+            loc, dummyTypeWithActualRank, entity, lbModifier)};
+      } else {
+        mlir::Value shift{};
+        if (needsZeroLowerBounds)
+          shift = getZeroLowerBounds(loc, builder, entity);
+        entity = hlfir::Entity{builder.create<fir::ReboxOp>(
+            loc, dummyTypeWithActualRank, entity, /*shape=*/shift,
+            /*slice=*/mlir::Value{})};
       }
-      mlir::Value shift{};
-      if (needsZeroLowerBounds)
-        shift = getZeroLowerBounds(loc, builder, entity);
-      entity = hlfir::Entity{builder.create<fir::ReboxOp>(
-          loc, dummyTypeWithActualRank, entity, /*shape=*/shift,
-          /*slice=*/mlir::Value{})};
     }
     addr = entity;
   } else {
