@@ -416,6 +416,15 @@ def BBSI : RRI8_Inst<0x07, (outs),
   let imm8 = target;
 }
 
+def : Pat<(brcc SETGT, AR:$s, AR:$t, bb:$target),
+          (BLT AR:$t, AR:$s, bb:$target)>;
+def : Pat<(brcc SETUGT, AR:$s, AR:$t, bb:$target),
+          (BLTU AR:$t, AR:$s, bb:$target)>;
+def : Pat<(brcc SETLE, AR:$s, AR:$t, bb:$target),
+          (BGE AR:$t, AR:$s, bb:$target)>;
+def : Pat<(brcc SETULE, AR:$s, AR:$t, bb:$target),
+          (BGEU AR:$t, AR:$s, bb:$target)>;
+
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
 //===----------------------------------------------------------------------===//
@@ -470,6 +479,12 @@ def : Pat<(Xtensa_call (i32 texternalsym:$dst)),
           (CALL0 texternalsym:$dst)>;
 def : Pat<(Xtensa_call AR:$dst),
           (CALLX0 AR:$dst)>;
+
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Size = 3 in {
+  def BR_JT: Pseudo<(outs), (ins AR:$s, i32imm:$jt),
+                    "!br_jt_p, $s, $jt",
+                    [(Xtensa_brjt AR:$s, tjumptable:$jt)]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Mem barrier instructions
