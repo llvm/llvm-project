@@ -6447,7 +6447,7 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   if (Inst.isInvalid())
     return false;
 
-  bool AtLeastAsSpecialized;
+  bool AtLeastAsSpecialized = false;
   runWithSufficientStackSpace(Info.getLocation(), [&] {
     AtLeastAsSpecialized =
         ::FinishTemplateArgumentDeduction(
