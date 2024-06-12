@@ -718,7 +718,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       TypeSize Size = getSizeInBits(DstReg, MRI, TRI);
       return getInstructionMapping(
           DefaultMappingID, copyCost(*DstRB, *SrcRB, Size),
-          getCopyMapping(DstRB->getID(), SrcRB->getID(), Size.getKnownMinValue()),
+          getCopyMapping(DstRB->getID(), SrcRB->getID(),
+                         Size.getKnownMinValue()),
           // We only care about the mapping of the destination.
           /*NumOperands*/ 1);
     }

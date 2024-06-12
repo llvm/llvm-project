@@ -600,11 +600,11 @@ static const TargetRegisterClass *
 getMinClassForRegBank(const RegisterBank &RB, TypeSize SizeInBits,
                       bool GetAllRegSet = false) {
   if (SizeInBits.isScalable()) {
-    assert(RB.getID() == AArch64::FPRRegBankID
-           && "Expected FPR regbank for scalable type size");
+    assert(RB.getID() == AArch64::FPRRegBankID &&
+           "Expected FPR regbank for scalable type size");
     return &AArch64::ZPRRegClass;
   }
-  
+
   unsigned RegBankID = RB.getID();
 
   if (RegBankID == AArch64::GPRRegBankID) {
