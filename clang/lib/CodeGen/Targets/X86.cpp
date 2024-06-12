@@ -1084,8 +1084,8 @@ RValue X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   TypeInfo.Align = CharUnits::fromQuantity(
                 getTypeStackAlignInBytes(Ty, TypeInfo.Align.getQuantity()));
 
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false,
-                          TypeInfo, CharUnits::fromQuantity(4),
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
+                          CharUnits::fromQuantity(4),
                           /*AllowHigherAlign*/ true, Slot);
 }
 
@@ -1367,8 +1367,8 @@ public:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty, AggValueSlot Slot) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
   RValue EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                      AggValueSlot Slot) const override;
 
@@ -1386,8 +1386,8 @@ public:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                   QualType Ty, AggValueSlot Slot) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   bool isHomogeneousAggregateBaseType(QualType Ty) const override {
     // FIXME: Assumes vectorcall is in use.
