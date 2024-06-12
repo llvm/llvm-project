@@ -19210,7 +19210,7 @@ This intrinsic will only return 0 if the input count is also 0. A non-zero input
 count will produce a non-zero result.
 
 '``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
