@@ -388,7 +388,7 @@ public:
   const std::string &getEntryBlockName() const { return EntryBlockName; }
 
 protected:
-  const std::string &EntryBlockName;
+  std::string EntryBlockName;
 };
 
 // The data saved for comparing IRs.
