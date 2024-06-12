@@ -4531,17 +4531,18 @@ struct FoldTensorCastProducerOp
     if (!hasTensorCastOperand)
       return failure();
 
-    SmallVector<Type, 4> newResultTypes;
-    newResultTypes.reserve(op->getNumResults());
+    SmallVector<Type, 4> newResultTypes(op->getResultTypes());
     SmallVector<Value, 4> newOperands;
     newOperands.reserve(op->getNumOperands());
+    // Assumes that the result has dpsInits followed by nonDpsInits.
+    int64_t dpsInitIdx = 0;
     for (OpOperand &opOperand : op->getOpOperands()) {
       auto tensorCastOp = opOperand.get().getDefiningOp<tensor::CastOp>();
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : opOperand.get());
       if (op.isDpsInit(&opOperand) &&
           !llvm::isa<MemRefType>(newOperands.back().getType()))
-        newResultTypes.push_back(newOperands.back().getType());
+        newResultTypes[dpsInitIdx++] = newOperands.back().getType();
     }
 
     // Clone op.
