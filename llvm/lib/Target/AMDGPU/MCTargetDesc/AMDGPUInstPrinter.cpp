@@ -43,6 +43,7 @@ void AMDGPUInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
 void AMDGPUInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                   StringRef Annot, const MCSubtargetInfo &STI,
                                   raw_ostream &OS) {
+  OS.flush();
   printInstruction(MI, Address, STI, OS);
   printAnnotation(OS, Annot);
 }
