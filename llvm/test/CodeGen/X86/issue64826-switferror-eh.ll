@@ -4,10 +4,12 @@
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx"
 
+declare void @issue64826(i64, ptr, ptr swifterror)
+
 define swiftcc void @rdar113994760() personality ptr @__gcc_personality_v0 {
 entry:
   %swifterror = alloca swifterror ptr, align 8
-  invoke swiftcc void null(i64 0, ptr null, ptr swifterror %swifterror)
+  invoke swiftcc void @issue64826(i64 0, ptr null, ptr swifterror %swifterror)
           to label %.noexc unwind label %tsan_cleanup
 
 .noexc:                                           ; preds = %entry
@@ -23,7 +25,8 @@ declare i32 @__gcc_personality_v0(...)
 
 ; RELOC-LABEL: Relocations [
 ; RELOC-NEXT:    Section __text {
-; RELOC-NEXT:      0x18 1 2 1 X86_64_RELOC_BRANCH 0 __Unwind_Resume
+; RELOC-NEXT:      0x19 1 2 1 X86_64_RELOC_BRANCH 0 __Unwind_Resume
+; RELOC-NEXT:      0xB 1 2 1 X86_64_RELOC_BRANCH 0 _issue64826
 ; RELOC-NEXT:    }
 ; RELOC-NEXT:    Section __eh_frame {
 ; RELOC-NEXT:      0x13 1 2 1 X86_64_RELOC_GOT 0 ___gcc_personality_v0
@@ -38,10 +41,9 @@ declare i32 @__gcc_personality_v0(...)
 ; ASM-NEXT:    .cfi_def_cfa_offset 32
 ; ASM-NEXT:    .cfi_offset %r12, -16
 ; ASM-NEXT:  Ltmp0:
-; ASM-NEXT:    xorl %eax, %eax
 ; ASM-NEXT:    xorl %edi, %edi
 ; ASM-NEXT:    xorl %esi, %esi
-; ASM-NEXT:    callq *%rax
+; ASM-NEXT:    callq   _issue64826
 ; ASM-NEXT:  Ltmp1:
 ; ASM-NEXT:  ## %bb.1: ## %.noexc
 ; ASM-NEXT:    addq $16, %rsp
