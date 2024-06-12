@@ -74,9 +74,8 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   }
   MinidumpFileBuilder builder(std::move(maybe_core_file.get()));
 
-
   Target &target = process_sp->GetTarget();
-    builder.AddHeaderAndCalculateDirectories(target, process_sp);
+  builder.AddHeaderAndCalculateDirectories(target, process_sp);
 
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddSystemInfo(target.GetArchitecture().GetTriple());
@@ -101,8 +100,8 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   // Add any exceptions but only if there are any in any threads.
   builder.AddExceptions(process_sp);
 
-  // Note: add memory HAS to be the last thing we do. It can overflow into 64b land
-  // and many RVA's only support 32b
+  // Note: add memory HAS to be the last thing we do. It can overflow into 64b
+  // land and many RVA's only support 32b
   error = builder.AddMemory(process_sp, core_style);
   if (error.Fail()) {
     LLDB_LOGF(log, "AddMemoryList failed: %s", error.AsCString());

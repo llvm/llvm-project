@@ -56,7 +56,9 @@ public:
 
   ~MinidumpFileBuilder() = default;
 
-  lldb_private::Status AddHeaderAndCalculateDirectories(const lldb_private::Target &target, const lldb::ProcessSP &process_sp);
+  lldb_private::Status
+  AddHeaderAndCalculateDirectories(const lldb_private::Target &target,
+                                   const lldb::ProcessSP &process_sp);
   // Add SystemInfo stream, used for storing the most basic information
   // about the system, platform etc...
   lldb_private::Status AddSystemInfo(const llvm::Triple &target_triple);
@@ -77,16 +79,21 @@ public:
   lldb_private::Status AddThreadList(const lldb::ProcessSP &process_sp);
 
   lldb_private::Status AddMemory(const lldb::ProcessSP &process_sp,
-                                     lldb::SaveCoreStyle core_style);
+                                 lldb::SaveCoreStyle core_style);
 
   lldb_private::Status DumpToFile();
 
 private:
-  // Add data to the end of the buffer, if the buffer exceeds the flush level, trigger a flush.
+  // Add data to the end of the buffer, if the buffer exceeds the flush level,
+  // trigger a flush.
   lldb_private::Status AddData(const void *data, size_t size);
   // Add MemoryList stream, containing dumps of important memory segments
-  lldb_private::Status AddMemoryList_64(const lldb::ProcessSP &process_sp, const lldb_private::Process::CoreFileMemoryRanges &ranges);
-  lldb_private::Status AddMemoryList_32(const lldb::ProcessSP &process_sp, const lldb_private::Process::CoreFileMemoryRanges &ranges);
+  lldb_private::Status
+  AddMemoryList_64(const lldb::ProcessSP &process_sp,
+                   const lldb_private::Process::CoreFileMemoryRanges &ranges);
+  lldb_private::Status
+  AddMemoryList_32(const lldb::ProcessSP &process_sp,
+                   const lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status FixThreads();
   lldb_private::Status FlushToDisk();
 
