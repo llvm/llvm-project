@@ -28,7 +28,7 @@ class MemoryBuffer;
 class CachedFileStream {
 public:
   CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS,
-                   std::string OSPath = "")
+                   const std::string &OSPath = "")
       : OS(std::move(OS)), ObjectPathName(OSPath) {}
   std::unique_ptr<raw_pwrite_stream> OS;
   std::string ObjectPathName;

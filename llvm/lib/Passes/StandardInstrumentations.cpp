@@ -2242,7 +2242,7 @@ void DotCfgChangeReporter::handleFunctionCompare(
 
   DotCfgDiff Diff(Text, Before, After);
   std::string EntryBlockName = After.getEntryBlockName();
-  /*// Use the before entry block if the after entry block was removed.*/
+  // Use the before entry block if the after entry block was removed.
   if (EntryBlockName == "")
     EntryBlockName = Before.getEntryBlockName();
   assert(EntryBlockName != "" && "Expected to find entry block");
