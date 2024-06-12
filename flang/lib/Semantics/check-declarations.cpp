@@ -138,7 +138,7 @@ private:
   void CheckGlobalName(const Symbol &);
   void CheckProcedureAssemblyName(const Symbol &symbol);
   void CheckExplicitSave(const Symbol &);
-  parser::Messages WhyNotInteroperableDerivedType(const Symbol &, bool isError);
+  parser::Messages WhyNotInteroperableDerivedType(const Symbol &);
   parser::Messages WhyNotInteroperableObject(const Symbol &, bool isError);
   parser::Messages WhyNotInteroperableFunctionResult(const Symbol &);
   parser::Messages WhyNotInteroperableProcedure(const Symbol &, bool isError);
@@ -2892,13 +2892,12 @@ void CheckHelper::CheckProcedureAssemblyName(const Symbol &symbol) {
 }
 
 parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
-    const Symbol &symbol, bool isError) {
+    const Symbol &symbol) {
   parser::Messages msgs;
   if (examinedByWhyNotInteroperable_.find(symbol) !=
       examinedByWhyNotInteroperable_.end()) {
     return msgs;
   }
-  isError |= symbol.attrs().test(Attr::BIND_C);
   examinedByWhyNotInteroperable_.insert(symbol);
   if (const auto *derived{symbol.detailsIf<DerivedTypeDetails>()}) {
     if (derived->sequence()) { // C1801
@@ -2909,14 +2908,13 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
           "An interoperable derived type cannot have a type parameter"_err_en_US);
     } else if (const auto *parent{
                    symbol.scope()->GetDerivedTypeParent()}) { // C1803
-      if (isError) {
+      if (symbol.attrs().test(Attr::BIND_C)) {
         msgs.Say(symbol.name(),
             "A derived type with the BIND attribute cannot be an extended derived type"_err_en_US);
       } else {
         bool interoperableParent{true};
         if (parent->symbol()) {
-          auto bad{WhyNotInteroperableDerivedType(
-              *parent->symbol(), /*isError=*/false)};
+          auto bad{WhyNotInteroperableDerivedType(*parent->symbol())};
           if (bad.AnyFatalError()) {
             auto &msg{msgs.Say(symbol.name(),
                 "The parent of an interoperable type is not interoperable"_err_en_US)};
@@ -2946,8 +2944,7 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
             "An interoperable derived type cannot have a pointer or allocatable component"_err_en_US);
       } else if (const auto *type{component.GetType()}) {
         if (const auto *derived{type->AsDerived()}) {
-          auto bad{
-              WhyNotInteroperableDerivedType(derived->typeSymbol(), isError)};
+          auto bad{WhyNotInteroperableDerivedType(derived->typeSymbol())};
           if (bad.AnyFatalError()) {
             auto &msg{msgs.Say(component.name(),
                 "Component '%s' of an interoperable derived type must have an interoperable type but does not"_err_en_US,
@@ -2996,13 +2993,6 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
       if (context_.ShouldWarn(common::LanguageFeature::EmptyBindCDerivedType)) {
         msgs.Say(symbol.name(),
             "A derived type with the BIND attribute should not be empty"_warn_en_US);
-      }
-    }
-  }
-  if (isError) {
-    for (auto &m : msgs.messages()) {
-      if (!m.IsFatal()) {
-        m.set_severity(parser::Severity::Error);
       }
     }
   }
@@ -3055,8 +3045,8 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(
         msgs.Say(symbol.name(),
                 "The derived type of a BIND(C) object must also be BIND(C)"_err_en_US)
             .Attach(derived->typeSymbol().name(), "Non-BIND(C) type"_en_US);
-      } else if (auto bad{WhyNotInteroperableDerivedType(
-                     derived->typeSymbol(), /*isError=*/false)};
+      } else if (auto bad{
+                     WhyNotInteroperableDerivedType(derived->typeSymbol())};
                  bad.AnyFatalError()) {
         bad.AttachTo(
             msgs.Say(symbol.name(),
@@ -3261,8 +3251,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
       symbol.has<SubprogramDetails>()) {
     whyNot = WhyNotInteroperableProcedure(symbol, /*isError=*/isExplicitBindC);
   } else if (symbol.has<DerivedTypeDetails>()) {
-    whyNot =
-        WhyNotInteroperableDerivedType(symbol, /*isError=*/isExplicitBindC);
+    whyNot = WhyNotInteroperableDerivedType(symbol);
   }
   if (!whyNot.empty()) {
     bool anyFatal{whyNot.AnyFatalError()};
