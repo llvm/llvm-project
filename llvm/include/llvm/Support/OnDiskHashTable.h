@@ -321,8 +321,8 @@ public:
 
   class iterator {
     internal_key_type Key;
-    const unsigned char *const Data;
-    const offset_type Len;
+    const unsigned char *Data;
+    offset_type Len;
     Info *InfoObj;
 
   public:
