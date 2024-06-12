@@ -347,7 +347,8 @@ ProvenanceRange TokenSequence::GetProvenanceRange() const {
 }
 
 const TokenSequence &TokenSequence::CheckBadFortranCharacters(
-    Messages &messages, const Prescanner &prescanner) const {
+    Messages &messages, const Prescanner &prescanner,
+    bool allowAmpersand) const {
   std::size_t tokens{SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
     CharBlock token{TokenAt(j)};
@@ -362,6 +363,8 @@ const TokenSequence &TokenSequence::CheckBadFortranCharacters(
           ++j;
           continue;
         }
+      } else if (ch == '&' && allowAmpersand) {
+        continue;
       }
       if (ch < ' ' || ch >= '\x7f') {
         messages.Say(GetTokenProvenanceRange(j),
