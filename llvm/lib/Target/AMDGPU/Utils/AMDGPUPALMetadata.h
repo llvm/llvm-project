@@ -39,7 +39,7 @@ private:
   msgpack::DocNode ComputeRegisters;
   msgpack::DocNode GraphicsRegisters;
 
-  DelayedMCExpr DelayedExprs;
+  DelayedMCExprs DelayedExprs;
   RegisterExprMap REM;
   bool ResolvedAll = true;
 

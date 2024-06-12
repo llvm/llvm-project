@@ -27,25 +27,25 @@ static msgpack::DocNode getNode(msgpack::DocNode DN, msgpack::Type Type,
   }
 }
 
-void DelayedMCExpr::assignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
-                                  const MCExpr *Expr) {
+void DelayedMCExprs::assignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
+                                   const MCExpr *ExprValue) {
   MCValue Res;
-  if (Expr->evaluateAsRelocatable(Res, nullptr, nullptr)) {
+  if (ExprValue->evaluateAsRelocatable(Res, nullptr, nullptr)) {
     if (Res.isAbsolute()) {
       DN = getNode(DN, Type, Res);
       return;
     }
   }
 
-  DelayedExprs.push_back(DelayedExpr{DN, Type, Expr});
+  DelayedExprs.push_back(Expr{DN, Type, ExprValue});
 }
 
-bool DelayedMCExpr::resolveDelayedExpressions() {
+bool DelayedMCExprs::resolveDelayedExpressions() {
   while (!DelayedExprs.empty()) {
-    DelayedExpr DE = DelayedExprs.front();
+    Expr DE = DelayedExprs.front();
     MCValue Res;
 
-    if (!DE.Expr->evaluateAsRelocatable(Res, nullptr, nullptr) ||
+    if (!DE.ExprValue->evaluateAsRelocatable(Res, nullptr, nullptr) ||
         !Res.isAbsolute())
       return false;
 
@@ -56,6 +56,6 @@ bool DelayedMCExpr::resolveDelayedExpressions() {
   return true;
 }
 
-void DelayedMCExpr::clear() { DelayedExprs.clear(); }
+void DelayedMCExprs::clear() { DelayedExprs.clear(); }
 
-bool DelayedMCExpr::empty() { return DelayedExprs.empty(); }
+bool DelayedMCExprs::empty() { return DelayedExprs.empty(); }

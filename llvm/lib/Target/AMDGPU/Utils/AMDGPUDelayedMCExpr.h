@@ -15,21 +15,21 @@
 namespace llvm {
 class MCExpr;
 
-class DelayedMCExpr {
-  struct DelayedExpr {
+class DelayedMCExprs {
+  struct Expr {
     msgpack::DocNode &DN;
     msgpack::Type Type;
-    const MCExpr *Expr;
-    DelayedExpr(msgpack::DocNode &DN, msgpack::Type Type, const MCExpr *Expr)
-        : DN(DN), Type(Type), Expr(Expr) {}
+    const MCExpr *ExprValue;
+    Expr(msgpack::DocNode &DN, msgpack::Type Type, const MCExpr *ExprValue)
+        : DN(DN), Type(Type), ExprValue(ExprValue) {}
   };
 
-  std::deque<DelayedExpr> DelayedExprs;
+  std::deque<Expr> DelayedExprs;
 
 public:
   bool resolveDelayedExpressions();
   void assignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
-                     const MCExpr *Expr);
+                     const MCExpr *ExprValue);
   void clear();
   bool empty();
 };
