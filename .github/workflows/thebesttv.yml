@@ -26,3 +26,6 @@ jobs:
       - name: Build tool
         run: |
           ./graph-generation/tool -h
+      - name: Run test
+        run: |
+          ./graph-generation/test.py
