@@ -58,12 +58,13 @@ It is to be decided whether loop directives should also be able to be associated
 with array expressions.
 
 ## Semantics
-Dirctives that are associated with constructs must appear in the same section as
-the construct they are associated with, for example loop directives must appear
-in the executable section as the loops appear there. To facilitate this the
-parse tree is corrected to move such directives that appear in the specification
-part into the execution part.
-When a directive that must be associated with a construct appears, a search 
+Directives that are associated with constructs must appear in the same section
+as the construct they are associated with, for example loop directives must
+appear in the executable section as the loops appear there. To facilitate this
+the parse tree is corrected to move such directives that appear in the
+specification part into the execution part.
+
+When a directive that must be associated with a construct appears, a search
 forward from that directive to the next non-directive construct is performed to
 check that that construct matches the expected construct for the directive.
 Skipping other intermediate directives allows multiple directives to appear on
@@ -74,6 +75,17 @@ Evaluation is extended with a new field called dirs for representing directives
 associated with that Evaluation. When lowering loop directives, the associated
 Do Loop's evaluation is found and the directive is added to it. This information
 is used only during the lowering of the loop.
+
+### Representation in LLVM
+The `llvm.loop` metadata is used in LLVM to provide information to the optimizer
+about the loop. For example, the `llvm.loop.vectorize.enable` metadata informs
+the optimizer that a loop can be vectorized without considering its cost-model.
+This attribute is added to the loop condition branch.
+
+### Representation in MLIR 
+The MLIR LLVM dialect models this by an attribute called LoopAnnotation
+Attribute. The attribute can be added to the latch of the loop in the cf
+dialect and is then carried through lowering to the LLVM dialect.
 
 ## Testing
 Since directives must maintain a flow from source to LLVM IR, an integration

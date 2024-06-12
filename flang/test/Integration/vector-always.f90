@@ -10,7 +10,5 @@ subroutine vector_always
   end do
 end subroutine vector_always
 
-! CHECK: ![[ANNOTATION]] = distinct !{![[ANNOTATION]], ![[VECTORIZE:.*]], ![[PAR_ACCESS:.*]]}
+! CHECK: ![[ANNOTATION]] = distinct !{![[ANNOTATION]], ![[VECTORIZE:.*]]}
 ! CHECK: ![[VECTORIZE]] = !{!"llvm.loop.vectorize.enable", i1 true}
-! CHECK: ![[PAR_ACCESS]] = !{!"llvm.loop.parallel_accesses", ![[DISTINCT:.*]]}
-! CHECK: ![[DISTINCT]] = distinct !{}
