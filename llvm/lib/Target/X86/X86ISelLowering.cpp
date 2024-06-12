@@ -2516,6 +2516,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::SRL,
                        ISD::OR,
                        ISD::AND,
+                       ISD::AVGCEILS,
+                       ISD::AVGCEILU,
+                       ISD::AVGFLOORS,
+                       ISD::AVGFLOORU,
                        ISD::BITREVERSE,
                        ISD::ADD,
                        ISD::FADD,
@@ -50735,157 +50739,6 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
   return SDValue();
 }
 
-/// This function detects the AVG pattern between vectors of unsigned i8/i16,
-/// which is c = (a + b + 1) / 2, and replace this operation with the efficient
-/// ISD::AVGCEILU (AVG) instruction.
-static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
-                                const X86Subtarget &Subtarget,
-                                const SDLoc &DL) {
-  if (!VT.isVector())
-    return SDValue();
-  EVT InVT = In.getValueType();
-  unsigned NumElems = VT.getVectorNumElements();
-
-  EVT ScalarVT = VT.getVectorElementType();
-  if (!((ScalarVT == MVT::i8 || ScalarVT == MVT::i16) && NumElems >= 2))
-    return SDValue();
-
-  // InScalarVT is the intermediate type in AVG pattern and it should be greater
-  // than the original input type (i8/i16).
-  EVT InScalarVT = InVT.getVectorElementType();
-  if (InScalarVT.getFixedSizeInBits() <= ScalarVT.getFixedSizeInBits())
-    return SDValue();
-
-  if (!Subtarget.hasSSE2())
-    return SDValue();
-
-  // Detect the following pattern:
-  //
-  //   %1 = zext <N x i8> %a to <N x i32>
-  //   %2 = zext <N x i8> %b to <N x i32>
-  //   %3 = add nuw nsw <N x i32> %1, <i32 1 x N>
-  //   %4 = add nuw nsw <N x i32> %3, %2
-  //   %5 = lshr <N x i32> %N, <i32 1 x N>
-  //   %6 = trunc <N x i32> %5 to <N x i8>
-  //
-  // In AVX512, the last instruction can also be a trunc store.
-  if (In.getOpcode() != ISD::SRL)
-    return SDValue();
-
-  // A lambda checking the given SDValue is a constant vector and each element
-  // is in the range [Min, Max].
-  auto IsConstVectorInRange = [](SDValue V, unsigned Min, unsigned Max) {
-    return ISD::matchUnaryPredicate(V, [Min, Max](ConstantSDNode *C) {
-      return !(C->getAPIntValue().ult(Min) || C->getAPIntValue().ugt(Max));
-    });
-  };
-
-  auto IsZExtLike = [DAG = &DAG, ScalarVT](SDValue V) {
-    unsigned MaxActiveBits = DAG->computeKnownBits(V).countMaxActiveBits();
-    return MaxActiveBits <= ScalarVT.getSizeInBits();
-  };
-
-  // Check if each element of the vector is right-shifted by one.
-  SDValue LHS = In.getOperand(0);
-  SDValue RHS = In.getOperand(1);
-  if (!IsConstVectorInRange(RHS, 1, 1))
-    return SDValue();
-  if (LHS.getOpcode() != ISD::ADD)
-    return SDValue();
-
-  // Detect a pattern of a + b + 1 where the order doesn't matter.
-  SDValue Operands[3];
-  Operands[0] = LHS.getOperand(0);
-  Operands[1] = LHS.getOperand(1);
-
-  auto AVGBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                       ArrayRef<SDValue> Ops) {
-    return DAG.getNode(ISD::AVGCEILU, DL, Ops[0].getValueType(), Ops);
-  };
-
-  auto AVGSplitter = [&](std::array<SDValue, 2> Ops) {
-    for (SDValue &Op : Ops)
-      if (Op.getValueType() != VT)
-        Op = DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
-    // Pad to a power-of-2 vector, split+apply and extract the original vector.
-    unsigned NumElemsPow2 = PowerOf2Ceil(NumElems);
-    EVT Pow2VT = EVT::getVectorVT(*DAG.getContext(), ScalarVT, NumElemsPow2);
-    if (NumElemsPow2 != NumElems) {
-      for (SDValue &Op : Ops) {
-        SmallVector<SDValue, 32> EltsOfOp(NumElemsPow2, DAG.getUNDEF(ScalarVT));
-        for (unsigned i = 0; i != NumElems; ++i) {
-          SDValue Idx = DAG.getIntPtrConstant(i, DL);
-          EltsOfOp[i] =
-              DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Op, Idx);
-        }
-        Op = DAG.getBuildVector(Pow2VT, DL, EltsOfOp);
-      }
-    }
-    SDValue Res = SplitOpsAndApply(DAG, Subtarget, DL, Pow2VT, Ops, AVGBuilder);
-    if (NumElemsPow2 == NumElems)
-      return Res;
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                       DAG.getIntPtrConstant(0, DL));
-  };
-
-  // Take care of the case when one of the operands is a constant vector whose
-  // element is in the range [1, 256].
-  if (IsConstVectorInRange(Operands[1], 1, ScalarVT == MVT::i8 ? 256 : 65536) &&
-      IsZExtLike(Operands[0])) {
-    // The pattern is detected. Subtract one from the constant vector, then
-    // demote it and emit X86ISD::AVG instruction.
-    SDValue VecOnes = DAG.getConstant(1, DL, InVT);
-    Operands[1] = DAG.getNode(ISD::SUB, DL, InVT, Operands[1], VecOnes);
-    return AVGSplitter({Operands[0], Operands[1]});
-  }
-
-  // Matches 'add like' patterns: add(Op0,Op1) + zext(or(Op0,Op1)).
-  // Match the or case only if its 'add-like' - can be replaced by an add.
-  auto FindAddLike = [&](SDValue V, SDValue &Op0, SDValue &Op1) {
-    if (ISD::ADD == V.getOpcode()) {
-      Op0 = V.getOperand(0);
-      Op1 = V.getOperand(1);
-      return true;
-    }
-    if (ISD::ZERO_EXTEND != V.getOpcode())
-      return false;
-    V = V.getOperand(0);
-    if (V.getValueType() != VT || ISD::OR != V.getOpcode() ||
-        !DAG.haveNoCommonBitsSet(V.getOperand(0), V.getOperand(1)))
-      return false;
-    Op0 = V.getOperand(0);
-    Op1 = V.getOperand(1);
-    return true;
-  };
-
-  SDValue Op0, Op1;
-  if (FindAddLike(Operands[0], Op0, Op1))
-    std::swap(Operands[0], Operands[1]);
-  else if (!FindAddLike(Operands[1], Op0, Op1))
-    return SDValue();
-  Operands[2] = Op0;
-  Operands[1] = Op1;
-
-  // Now we have three operands of two additions. Check that one of them is a
-  // constant vector with ones, and the other two can be promoted from i8/i16.
-  for (SDValue &Op : Operands) {
-    if (!IsConstVectorInRange(Op, 1, 1))
-      continue;
-    std::swap(Op, Operands[2]);
-
-    // Check if Operands[0] and Operands[1] are results of type promotion.
-    for (int j = 0; j < 2; ++j)
-      if (Operands[j].getValueType() != VT)
-        if (!IsZExtLike(Operands[j]))
-          return SDValue();
-
-    // The pattern is detected, emit X86ISD::AVG instruction(s).
-    return AVGSplitter({Operands[0], Operands[1]});
-  }
-
-  return SDValue();
-}
-
 static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
                                         SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
@@ -51525,16 +51378,6 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // First, pack all of the elements in one place. Next, store to memory
   // in fewer chunks.
   if (St->isTruncatingStore() && VT.isVector()) {
-    // Check if we can detect an AVG pattern from the truncation. If yes,
-    // replace the trunc store by a normal store with the result of X86ISD::AVG
-    // instruction.
-    if (DCI.isBeforeLegalize() || TLI.isTypeLegal(St->getMemoryVT()))
-      if (SDValue Avg = detectAVGPattern(St->getValue(), St->getMemoryVT(), DAG,
-                                         Subtarget, dl))
-        return DAG.getStore(St->getChain(), dl, Avg, St->getBasePtr(),
-                            St->getPointerInfo(), St->getOriginalAlign(),
-                            St->getMemOperand()->getFlags());
-
     if (TLI.isTruncStoreLegal(VT, StVT)) {
       if (SDValue Val = detectSSatPattern(St->getValue(), St->getMemoryVT()))
         return EmitTruncSStore(true /* Signed saturation */, St->getChain(),
@@ -52390,10 +52233,6 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineTruncatedArithmetic(N, DAG, Subtarget, DL))
     return V;
 
-  // Try to detect AVG pattern first.
-  if (SDValue Avg = detectAVGPattern(Src, VT, DAG, Subtarget, DL))
-    return Avg;
-
   // Try to detect PMADD
   if (SDValue PMAdd = detectPMADDUBSW(Src, VT, DAG, Subtarget, DL))
     return PMAdd;
@@ -52913,6 +52752,31 @@ static SDValue combineBITREVERSE(SDNode *N, SelectionDAG &DAG,
           DAG.getVectorShuffle(SrcVT, SDLoc(N), Src, Src, ReverseMask);
       return DAG.getBitcast(VT, Rev);
     }
+  }
+
+  return SDValue();
+}
+
+// Various combines to try to convert to avgceilu.
+static SDValue combineAVG(SDNode *N, SelectionDAG &DAG,
+                          TargetLowering::DAGCombinerInfo &DCI,
+                          const X86Subtarget &Subtarget) {
+  unsigned Opcode = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  EVT SVT = VT.getScalarType();
+  SDLoc DL(N);
+
+  // avgceils(x,y) -> flipsign(avgceilu(flipsign(x),flipsign(y)))
+  // Only useful on vXi8 which doesn't have good SRA handling.
+  if (Opcode == ISD::AVGCEILS && VT.isVector() && SVT == MVT::i8) {
+    APInt SignBit = APInt::getSignMask(VT.getScalarSizeInBits());
+    SDValue SignMask = DAG.getConstant(SignBit, DL, VT);
+    N0 = DAG.getNode(ISD::XOR, DL, VT, N0, SignMask);
+    N1 = DAG.getNode(ISD::XOR, DL, VT, N1, SignMask);
+    return DAG.getNode(ISD::XOR, DL, VT,
+                       DAG.getNode(ISD::AVGCEILU, DL, VT, N0, N1), SignMask);
   }
 
   return SDValue();
@@ -57364,6 +57228,10 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
   case ISD::BITREVERSE:     return combineBITREVERSE(N, DAG, DCI, Subtarget);
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:      return combineAVG(N, DAG, DCI, Subtarget);
   case X86ISD::BEXTR:
   case X86ISD::BEXTRI:      return combineBEXTR(N, DAG, DCI, Subtarget);
   case ISD::LOAD:           return combineLoad(N, DAG, DCI, Subtarget);
