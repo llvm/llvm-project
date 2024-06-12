@@ -3,7 +3,6 @@
 
 ; Make sure that interaction of "writable" with various passes does not
 ; result in the elimination of the store prior to @j().
-; FIXME: This is a miscompile.
 
 declare void @use(i64)
 
@@ -46,7 +45,8 @@ define void @g(ptr dead_on_unwind noalias writable dereferenceable(8) align 8 %p
 define void @f(ptr dead_on_unwind noalias %p) {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ptr dead_on_unwind noalias [[P:%.*]]) local_unnamed_addr {
-; CHECK-NEXT:    tail call void @j(ptr nonnull writeonly [[P]])
+; CHECK-NEXT:    store i64 3, ptr [[P]], align 4
+; CHECK-NEXT:    tail call void @j(ptr nonnull [[P]])
 ; CHECK-NEXT:    store i64 43, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
