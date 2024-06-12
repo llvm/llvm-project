@@ -236,7 +236,8 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       }
     }
     if (auto scaleSize = genAllocationScaleSize(alloc, ity, rewriter))
-      size = rewriter.createOrFold<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+      size =
+          rewriter.createOrFold<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
     if (alloc.hasShapeOperands()) {
       unsigned end = operands.size();
       for (; i < end; ++i)
@@ -252,7 +253,8 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       // Set the Block in which the llvm alloca should be inserted.
       mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
-      mlir::Block *insertBlock = getBlockForAllocaInsert(parentOp, parentRegion);
+      mlir::Block *insertBlock =
+          getBlockForAllocaInsert(parentOp, parentRegion);
       size.getDefiningOp()->moveAfter(insertBlock, insertBlock->begin());
       rewriter.setInsertionPointAfter(size.getDefiningOp());
     }

@@ -62,10 +62,9 @@ mlir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genConstantOffset(
 /// to the specific target may involve some sign-extending or truncation of
 /// values, particularly to fit them from abstract box types to the
 /// appropriate reified structures.
-mlir::Value
-ConvertFIRToLLVMPattern::integerCast(mlir::Location loc,
-                                     mlir::ConversionPatternRewriter &rewriter,
-                                     mlir::Type ty, mlir::Value val, bool fold) const {
+mlir::Value ConvertFIRToLLVMPattern::integerCast(
+    mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
+    mlir::Type ty, mlir::Value val, bool fold) const {
   auto valTy = val.getType();
   // If the value was not yet lowered, lower its type so that it can
   // be used in getPrimitiveTypeSizeInBits.
