@@ -1257,7 +1257,17 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
   if ((isTargetMacOSBased() && isMacosxVersionLT(10, 11)) ||
       (isTargetIOSBased() && isIPhoneOSVersionLT(9)))
     return 2;
-  return 4;
+  // Default to use DWARF 4 on OS X 10.11 - macOS 14 / iOS 9 - iOS 17.
+  if ((isTargetMacOSBased() && isMacosxVersionLT(15)) ||
+      (isTargetIOSBased() && isIPhoneOSVersionLT(18)) ||
+      (isTargetWatchOSBased() && TargetVersion < llvm::VersionTuple(11)) ||
+      (isTargetXROS() && TargetVersion < llvm::VersionTuple(2)) ||
+      (isTargetDriverKit() && TargetVersion < llvm::VersionTuple(24)) ||
+      (isTargetMacOSBased() &&
+       TargetVersion.empty()) || // apple-darwin, no version.
+      (TargetPlatform == llvm::Triple::BridgeOS))
+    return 4;
+  return 5;
 }
 
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
