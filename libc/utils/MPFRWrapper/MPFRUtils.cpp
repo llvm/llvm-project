@@ -8,8 +8,10 @@
 
 #include "MPFRUtils.h"
 
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/CPP/stringstream.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/properties/types.h"
@@ -790,6 +792,37 @@ template void explain_unary_operation_single_output_error<float16>(
     Operation op, float16, float16, double, RoundingMode);
 #endif
 
+template <typename OutType, typename InType>
+void explain_unary_narrower_operation_single_output_error(
+    Operation op, InType input, OutType matchValue, double ulp_tolerance,
+    RoundingMode rounding) {
+  unsigned int precision = get_precision<InType>(ulp_tolerance);
+  MPFRNumber mpfrInput(input, precision);
+  MPFRNumber mpfr_result;
+  mpfr_result = unary_operation(op, input, precision, rounding);
+  MPFRNumber mpfrMatchValue(matchValue);
+  cpp::array<char, 4096> msg_data;
+  cpp::StringStream msg(msg_data);
+  msg << "Match value not within tolerance value of MPFR result:\n"
+      << "  Input decimal: " << mpfrInput.str() << '\n';
+  msg << "     Input bits: " << str(FPBits<InType>(input)) << '\n';
+  msg << '\n' << "  Match decimal: " << mpfrMatchValue.str() << '\n';
+  msg << "     Match bits: " << str(FPBits<OutType>(matchValue)) << '\n';
+  msg << '\n' << "    MPFR result: " << mpfr_result.str() << '\n';
+  msg << "   MPFR rounded: " << str(FPBits<OutType>(mpfr_result.as<OutType>()))
+      << '\n';
+  msg << '\n';
+  msg << "      ULP error: " << mpfr_result.ulp_as_mpfr_number(matchValue).str()
+      << '\n';
+  tlog << msg.str();
+}
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template void
+explain_unary_narrower_operation_single_output_error<float16, float>(
+    Operation op, float, float16, double, RoundingMode);
+#endif
+
 template <typename T>
 void explain_unary_operation_two_outputs_error(
     Operation op, T input, const BinaryOutput<T> &libc_result,
@@ -972,6 +1005,22 @@ template bool compare_unary_operation_single_output<long double>(
 template bool compare_unary_operation_single_output<float16>(Operation, float16,
                                                              float16, double,
                                                              RoundingMode);
+#endif
+
+template <typename OutType, typename InType>
+bool compare_unary_narrower_operation_single_output(Operation op, InType input,
+                                                    OutType libc_result,
+                                                    double ulp_tolerance,
+                                                    RoundingMode rounding) {
+  unsigned int precision = get_precision<InType>(ulp_tolerance);
+  MPFRNumber mpfr_result;
+  mpfr_result = unary_operation(op, input, precision, rounding);
+  double ulp = mpfr_result.ulp(libc_result);
+  return (ulp <= ulp_tolerance);
+}
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template bool compare_unary_narrower_operation_single_output<float16, float>(
+    Operation, float, float16, double, RoundingMode);
 #endif
 
 template <typename T>

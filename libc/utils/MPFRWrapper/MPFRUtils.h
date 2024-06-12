@@ -133,6 +133,11 @@ template <typename T>
 bool compare_unary_operation_single_output(Operation op, T input, T libc_output,
                                            double ulp_tolerance,
                                            RoundingMode rounding);
+template <typename OutType, typename InType>
+bool compare_unary_narrower_operation_single_output(Operation op, InType input,
+                                                    OutType libc_output,
+                                                    double ulp_tolerance,
+                                                    RoundingMode rounding);
 template <typename T>
 bool compare_unary_operation_two_outputs(Operation op, T input,
                                          const BinaryOutput<T> &libc_output,
@@ -162,6 +167,10 @@ void explain_unary_operation_single_output_error(Operation op, T input,
                                                  T match_value,
                                                  double ulp_tolerance,
                                                  RoundingMode rounding);
+template <typename OutType, typename InType>
+void explain_unary_narrower_operation_single_output_error(
+    Operation op, InType input, OutType match_value, double ulp_tolerance,
+    RoundingMode rounding);
 template <typename T>
 void explain_unary_operation_two_outputs_error(
     Operation op, T input, const BinaryOutput<T> &match_value,
@@ -217,6 +226,11 @@ private:
                                                  rounding);
   }
 
+  template <typename T, typename U> bool match(T in, U out) {
+    return compare_unary_narrower_operation_single_output(
+        op, in, out, ulp_tolerance, rounding);
+  }
+
   template <typename T> bool match(T in, const BinaryOutput<T> &out) {
     return compare_unary_operation_two_outputs(op, in, out, ulp_tolerance,
                                                rounding);
@@ -241,6 +255,11 @@ private:
   template <typename T> void explain_error(T in, T out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
                                                 rounding);
+  }
+
+  template <typename T, typename U> void explain_error(T in, U out) {
+    explain_unary_narrower_operation_single_output_error(
+        op, in, out, ulp_tolerance, rounding);
   }
 
   template <typename T> void explain_error(T in, const BinaryOutput<T> &out) {
@@ -271,7 +290,8 @@ private:
 // types.
 template <Operation op, typename InputType, typename OutputType>
 constexpr bool is_valid_operation() {
-  return (Operation::BeginUnaryOperationsSingleOutput < op &&
+  return (op == Operation::Sqrt) ||
+         (Operation::BeginUnaryOperationsSingleOutput < op &&
           op < Operation::EndUnaryOperationsSingleOutput &&
           cpp::is_same_v<InputType, OutputType> &&
           cpp::is_floating_point_v<InputType>) ||
