@@ -24,33 +24,34 @@ class BufferViewFlowAnalysis;
 class ViewLikeOpInterface;
 namespace memref {
 
-// Usually ticks should be non-negative numbers. There are two special ticks
-// defined here.
+/// Usually ticks should be non-negative numbers. There are two special ticks
+/// defined here.
 namespace special_ticks {
-// the memref is not accessed
+/// the memref is not accessed
 static constexpr int64_t NO_ACCESS = -1;
-// complex access happens on this memref
+/// complex access happens on this memref, like func.return
 static constexpr int64_t COMPLEX_ACCESS = -2;
 } // namespace special_ticks
 
-// the collected tick [first, last] for a memref
+/// the collected tick [first, last] for a memref allocation
 struct Tick {
-  // The tick when the buffer is allocated. allocTick is only used to stablize
-  // the sorting results of the buffers when ticks of different buffers are the
-  // same
+  /// The tick when the buffer is allocated. allocTick is only used to stablize
+  /// the sorting results of the buffers when ticks of different buffers are the
+  /// same
   int64_t allocTick = special_ticks::NO_ACCESS;
   int64_t firstAccess = special_ticks::NO_ACCESS;
   int64_t lastAccess = special_ticks::NO_ACCESS;
 
-  // access the memref at the tick, will update firstAccess and lastAccess based
-  // on the tick
+  /// access the memref at the tick, will update firstAccess and lastAccess
+  /// based on the tick
   void access(int64_t tick);
 };
 
-// A complex scope object is addition info for a RegionBranchOpInterface or
-// LoopLikeOpInterface. It contains the scope itself, and the referenced alloc
-// ops inside this scope. We use this object to track which buffers this scope
-// accesses. These buffers must have overlapped lifetime
+/// A complex scope object is addition info for a RegionBranchOpInterface or
+/// LoopLikeOpInterface. It contains the scope itself, and the referenced alloc
+/// ops inside this scope. It is used in TickCollecter and TickCollecterStates
+/// internally to track which buffers this scope accesses. These buffers must
+/// have overlapped lifetime
 struct ComplexScope {
   Operation *scope;
   int64_t startTick;
@@ -59,7 +60,7 @@ struct ComplexScope {
       : scope{scope}, startTick{startTick} {}
 };
 
-// the top-level collected lifetime trace for merge-alloc pass
+/// the top-level collected lifetime trace for merge-alloc pass
 struct TickTraceResult : public LifetimeTrace {
   memoryplan::Traces traces;
   TickTraceResult() : LifetimeTrace{TK_TICK} {}
@@ -68,25 +69,33 @@ struct TickTraceResult : public LifetimeTrace {
   }
 };
 
-// the internal states for TickCollecter analysis for a function
+/// the internal states for TickCollecter analysis for a function
 struct TickCollecterStates {
-  // the alias analysis result for the function
+  /// the alias analysis result for the function
   const mlir::BufferViewFlowAnalysis &aliasAnaly;
   const MergeAllocationOptions &opt;
-  // the current tick for the current callback of walk(). It will be by default
-  // incremented by 1 for each visited op
+  /// the current tick for the current callback of walk(). It will be by default
+  /// incremented by 1 for each visited op
   int64_t curTick = 0;
-  // the currently collected AllocOp -> [start, end] map
+  /// the currently collected AllocOp -> [start, end] map
   llvm::DenseMap<Operation *, Tick> allocTicks;
-  // the stack of ComplexScopes for the current visited position in the IR
+  /// the stack of ComplexScopes for the current visited position in the IR
   llvm::SmallVector<ComplexScope> complexScopeStack;
   TickCollecterStates(const mlir::BufferViewFlowAnalysis &aliasAnaly,
                       const MergeAllocationOptions &opt)
       : aliasAnaly{aliasAnaly}, opt{opt} {}
 };
 
+/// the tick-based memory lifetime collector. This class overrides operator() so
+/// that a TickCollecter object can be passed to a TraceCollectorFunc. This
+/// collector assigns a monotonically increasing "tick" for each operation, by
+/// Operaion::walk<WalkOrder::PreOrder>() order. It collects the first reference
+/// tick and the last reference tick for each `memref.alloc` operation as the
+/// lifetime trace stored in `TickTraceResult`
 struct TickCollecter {
   TickCollecter() = default;
+  /// called on each operation before calling onXXXX() below. If may call
+  /// onPopComplexScope internally when walk() runs out of a ComplexScope
   virtual LogicalResult popScopeIfNecessary(TickCollecterStates *s,
                                             Operation *op) const;
 
@@ -105,27 +114,35 @@ struct TickCollecter {
 
   virtual void pushComplexScope(TickCollecterStates *s, Operation *op) const;
 
-  // called when walk() runs outside of the scope
+  /// called when walk() runs outside of the scope
   LogicalResult onPopComplexScope(TickCollecterStates *s,
                                   int64_t endTick) const;
 
-  // returns true of an allocation either is not defined in the scope, or the
-  // allocation escapes from the scope
-  bool needsResetTick(TickCollecterStates *s, Operation *scope,
-                      Operation *allocation) const;
-
+  /// returns true of an allocation either is not defined in the scope, or the
+  /// allocation escapes from the scope
+  virtual bool needsResetTick(TickCollecterStates *s, Operation *scope,
+                              Operation *allocation) const;
+  /// returns true if the memref.alloc op is "merge-able". If false is returned,
+  /// this memref.alloc will be untouched by merge-alloc
   virtual bool isMergeableAlloc(TickCollecterStates *s, Operation *op,
                                 int64_t tick) const;
 
-  // find the closest surrounding parent operation with AutomaticAllocationScope
-  // trait, and is not scf.for
+  /// gets the "AllocScope" op of a memref.alloc op. The default implementation
+  /// finds the closest surrounding parent operation with
+  /// AutomaticAllocationScope trait, and is not scf.for
   virtual Operation *getAllocScope(TickCollecterStates *s, Operation *op) const;
-
+  /// returns the allocation size in bytes of a memref.alloc op. May fail when
+  /// the shape is not static
   virtual FailureOr<size_t> getAllocSize(TickCollecterStates *s,
                                          Operation *op) const;
-
+  // consolidate the traces for each buffer in each scope, recorded in
+  // TickCollecterStates. It is called after walk() in operator()
   virtual FailureOr<MemoryTraceScopes> getTrace(TickCollecterStates *s) const;
 
+  /// the top-level entry for the collector. It creates a TickCollecterStates
+  /// and applies Operaion::walk<WalkOrder::PreOrder>() on the root function Op.
+  /// And it finally calls getTrace() to collect the `TickTraceResult` for each
+  /// scope in MemoryTraceScopes.
   virtual FailureOr<MemoryTraceScopes>
   operator()(Operation *root, const mlir::BufferViewFlowAnalysis &aliasAnaly,
              const MergeAllocationOptions &option) const;
@@ -133,9 +150,15 @@ struct TickCollecter {
   virtual ~TickCollecter() = default;
 };
 
+// the default merge-alloc IR mutator. It can be passes to a
+// MemoryMergeMutatorFunc as argument of merge-alloc
 struct MergeAllocDefaultMutator {
+  /// builds an memory alloc op at the scope with given size and alignment in
+  /// bytes
   virtual Value buildAlloc(OpBuilder &build, Operation *scope, int64_t size,
                            int64_t alignment) const;
+  /// builds an memory view op for original memref.alloc op (origAllocOp) and
+  /// the merged single allocation (mergedAlloc)
   virtual Value buildView(OpBuilder &build, Operation *scope,
                           Operation *origAllocOp, Value mergedAlloc,
                           int64_t byteOffset) const;
