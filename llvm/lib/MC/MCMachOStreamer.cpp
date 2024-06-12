@@ -199,7 +199,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
   if (getAssembler().isSymbolLinkerVisible(*Symbol))
-    insert(new MCDataFragment());
+    allocAndAdd<MCDataFragment>();
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
