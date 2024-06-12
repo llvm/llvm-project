@@ -372,7 +372,7 @@ class Symbolizer:
         tag_offset = local[5]
         if not ignore_tags and (tag_offset is None or base_tag ^ tag_offset != self.__last_access_tag):
           continue
-        if obj_offset <= 0 or obj_offset >= size:
+        if obj_offset < 0 or obj_offset >= size:
           self.__offsets.append((obj_offset, size, local))
           continue
         self.print('')
