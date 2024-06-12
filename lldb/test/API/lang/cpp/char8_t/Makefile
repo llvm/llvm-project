@@ -1,7 +1,7 @@
 CXX_SOURCES := main.cpp
 CXXFLAGS_EXTRAS := -std=c++2a -fchar8_t
 ifndef PIE
-	LDFLAGS := -no-pie
+	LD_EXTRAS := -no-pie
 endif
 
 include Makefile.rules

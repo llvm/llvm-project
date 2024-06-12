@@ -4,7 +4,7 @@
 # EXE := b.out
 
 ifndef PIE
-	LDFLAGS := -no-pie
+	LD_EXTRAS := -no-pie
 endif
 
 include Makefile.rules
