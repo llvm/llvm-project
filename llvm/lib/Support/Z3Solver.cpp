@@ -28,10 +28,10 @@ namespace {
 class Z3Config {
   friend class Z3Context;
 
-  Z3_config Config;
+  Z3_config Config = Z3_mk_config();
 
 public:
-  Z3Config() : Config(Z3_mk_config()) {}
+  Z3Config() = default;
 
   ~Z3Config() { Z3_del_config(Config); }
 }; // end class Z3Config
@@ -949,6 +949,7 @@ std::unique_ptr<SMTSolverStatistics> Z3Solver::getStatistics() const {
   Z3_stats_inc_ref(C, S);
   auto StatsGuard = llvm::make_scope_exit([&C, &S] { Z3_stats_dec_ref(C, S); });
   Z3Statistics Result;
+
   unsigned NumKeys = Z3_stats_size(C, S);
   for (unsigned Idx = 0; Idx < NumKeys; ++Idx) {
     const char *Key = Z3_stats_get_key(C, S, Idx);
