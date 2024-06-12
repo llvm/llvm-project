@@ -1173,9 +1173,13 @@ void SemaObjC::checkRetainCycles(ObjCMessageExpr *msg) {
       return;
   } else {
     assert(msg->getReceiverKind() == ObjCMessageExpr::SuperInstance);
-    owner.Variable = SemaRef.getCurMethodDecl()->getSelfDecl();
-    owner.Loc = msg->getSuperLoc();
-    owner.Range = msg->getSuperLoc();
+    if (const auto *CurMethodDecl = SemaRef.getCurMethodDecl()) {
+      owner.Variable = CurMethodDecl->getSelfDecl();
+      owner.Loc = msg->getSuperLoc();
+      owner.Range = msg->getSuperLoc();
+    } else {
+      return;
+    }
   }
 
   // Check whether the receiver is captured by any of the arguments.
