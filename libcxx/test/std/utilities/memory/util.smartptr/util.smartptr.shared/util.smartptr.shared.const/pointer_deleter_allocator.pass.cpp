@@ -167,7 +167,7 @@ int main(int, char**)
 
 #if TEST_STD_VER >= 14
     {
-      // See https://github.com/llvm/llvm-project/pull/93071#issuecomment-2158494851
+      // LWG 4110
       auto deleter = [](auto pointer) { delete pointer; };
       std::shared_ptr<int> p(new int, deleter, std::allocator<int>());
     }
