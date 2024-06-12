@@ -359,6 +359,7 @@ enum NodeType : unsigned {
   INSR,
   PTEST,
   PTEST_ANY,
+  PTEST_FIRST,
   PTRUE,
 
   CTTZ_ELTS,

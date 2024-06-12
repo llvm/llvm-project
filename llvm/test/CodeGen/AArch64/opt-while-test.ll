@@ -8,10 +8,7 @@ define void @f_while(i32 %i, i32 %n) #0 {
 ; CHECK:       // %bb.0: // %E
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    whilelo p0.b, w0, w1
-; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tbz w8, #0, .LBB0_2
+; CHECK-NEXT:    b.pl .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %A
 ; CHECK-NEXT:    bl g0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -25,10 +22,7 @@ define void @f_while(i32 %i, i32 %n) #0 {
 ; CHECK-SVE2p1:       // %bb.0: // %E
 ; CHECK-SVE2p1-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2p1-NEXT:    whilelo p0.b, w0, w1
-; CHECK-SVE2p1-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2p1-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-SVE2p1-NEXT:    fmov w8, s0
-; CHECK-SVE2p1-NEXT:    tbz w8, #0, .LBB0_2
+; CHECK-SVE2p1-NEXT:    b.pl .LBB0_2
 ; CHECK-SVE2p1-NEXT:  // %bb.1: // %A
 ; CHECK-SVE2p1-NEXT:    bl g0
 ; CHECK-SVE2p1-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -54,12 +48,9 @@ define void @f_while_x2(i32 %i, i32 %n) #0 {
 ; CHECK-LABEL: f_while_x2:
 ; CHECK:       // %bb.0: // %E
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    whilelo p1.b, w0, w1
-; CHECK-NEXT:    punpkhi p0.h, p1.b
-; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    mov z0.h, p1/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tbz w8, #0, .LBB1_2
+; CHECK-NEXT:    whilelo p0.b, w0, w1
+; CHECK-NEXT:    punpkhi p0.h, p0.b
+; CHECK-NEXT:    b.pl .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %A
 ; CHECK-NEXT:    bl g0
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -75,15 +66,14 @@ define void @f_while_x2(i32 %i, i32 %n) #0 {
 ; CHECK-SVE2p1-NEXT:    mov w8, w1
 ; CHECK-SVE2p1-NEXT:    mov w9, w0
 ; CHECK-SVE2p1-NEXT:    whilelo { p0.h, p1.h }, x9, x8
-; CHECK-SVE2p1-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-SVE2p1-NEXT:    mov p0.b, p1.b
-; CHECK-SVE2p1-NEXT:    fmov w8, s0
-; CHECK-SVE2p1-NEXT:    tbz w8, #0, .LBB1_2
+; CHECK-SVE2p1-NEXT:    b.pl .LBB1_2
 ; CHECK-SVE2p1-NEXT:  // %bb.1: // %A
+; CHECK-SVE2p1-NEXT:    mov p0.b, p1.b
 ; CHECK-SVE2p1-NEXT:    bl g0
 ; CHECK-SVE2p1-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2p1-NEXT:    ret
 ; CHECK-SVE2p1-NEXT:  .LBB1_2: // %B
+; CHECK-SVE2p1-NEXT:    mov p0.b, p1.b
 ; CHECK-SVE2p1-NEXT:    bl g1
 ; CHECK-SVE2p1-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2p1-NEXT:    ret
