@@ -1516,11 +1516,7 @@ class Foo {
   mutable Mutex mu;
   int a GUARDED_BY(mu);
 
-  static int si GUARDED_BY(mu);
-//FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
-#if __cplusplus <= 199711L
-  // expected-error@-3 {{invalid use of non-static data member 'mu'}}
-#endif
+  static int si GUARDED_BY(mu); // expected-error {{invalid use of non-static data member 'mu'}}
 
   static void foo() EXCLUSIVE_LOCKS_REQUIRED(mu);
 //FIXME: Bug 32066 - Error should be emitted irrespective of C++ dialect
