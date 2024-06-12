@@ -1887,11 +1887,34 @@ void CheckHelper::CheckSpecifics(
   helper.Check(generic.owner());
 }
 
+static bool CUDAHostDeviceDiffer(
+    const Procedure &proc, const DummyDataObject &arg) {
+  auto procCUDA{
+      proc.cudaSubprogramAttrs.value_or(common::CUDASubprogramAttrs::Host)};
+  bool procIsHostOnly{procCUDA == common::CUDASubprogramAttrs::Host};
+  bool procIsDeviceOnly{
+      !procIsHostOnly && procCUDA != common::CUDASubprogramAttrs::HostDevice};
+  const auto &argCUDA{arg.cudaDataAttr};
+  bool argIsHostOnly{!argCUDA || *argCUDA == common::CUDADataAttr::Pinned};
+  bool argIsDeviceOnly{(!argCUDA && procIsDeviceOnly) ||
+      (argCUDA &&
+          (*argCUDA != common::CUDADataAttr::Managed &&
+              *argCUDA != common::CUDADataAttr::Pinned &&
+              *argCUDA != common::CUDADataAttr::Unified))};
+  return (procIsHostOnly && argIsDeviceOnly) ||
+      (procIsDeviceOnly && argIsHostOnly);
+}
+
 static bool ConflictsWithIntrinsicAssignment(const Procedure &proc) {
-  auto lhs{std::get<DummyDataObject>(proc.dummyArguments[0].u).type};
-  auto rhs{std::get<DummyDataObject>(proc.dummyArguments[1].u).type};
-  return Tristate::No ==
-      IsDefinedAssignment(lhs.type(), lhs.Rank(), rhs.type(), rhs.Rank());
+  const auto &lhsData{std::get<DummyDataObject>(proc.dummyArguments[0].u)};
+  const auto &lhsTnS{lhsData.type};
+  const auto &rhsData{std::get<DummyDataObject>(proc.dummyArguments[1].u)};
+  const auto &rhsTnS{rhsData.type};
+  return !CUDAHostDeviceDiffer(proc, lhsData) &&
+      !CUDAHostDeviceDiffer(proc, rhsData) &&
+      Tristate::No ==
+      IsDefinedAssignment(
+          lhsTnS.type(), lhsTnS.Rank(), rhsTnS.type(), rhsTnS.Rank());
 }
 
 static bool ConflictsWithIntrinsicOperator(
@@ -1899,8 +1922,12 @@ static bool ConflictsWithIntrinsicOperator(
   if (!kind.IsIntrinsicOperator()) {
     return false;
   }
-  auto arg0{std::get<DummyDataObject>(proc.dummyArguments[0].u).type};
-  auto type0{arg0.type()};
+  const auto &arg0Data{std::get<DummyDataObject>(proc.dummyArguments[0].u)};
+  if (CUDAHostDeviceDiffer(proc, arg0Data)) {
+    return false;
+  }
+  const auto &arg0TnS{arg0Data.type};
+  auto type0{arg0TnS.type()};
   if (proc.dummyArguments.size() == 1) { // unary
     return common::visit(
         common::visitors{
@@ -1910,10 +1937,14 @@ static bool ConflictsWithIntrinsicOperator(
         },
         kind.u);
   } else { // binary
-    int rank0{arg0.Rank()};
-    auto arg1{std::get<DummyDataObject>(proc.dummyArguments[1].u).type};
-    auto type1{arg1.type()};
-    int rank1{arg1.Rank()};
+    int rank0{arg0TnS.Rank()};
+    const auto &arg1Data{std::get<DummyDataObject>(proc.dummyArguments[1].u)};
+    if (CUDAHostDeviceDiffer(proc, arg1Data)) {
+      return false;
+    }
+    const auto &arg1TnS{arg1Data.type};
+    auto type1{arg1TnS.type()};
+    int rank1{arg1TnS.Rank()};
     return common::visit(
         common::visitors{
             [&](common::NumericOperator) {
@@ -2087,8 +2118,8 @@ bool CheckHelper::CheckDefinedAssignment(
     if (!(ok0 && ok1)) {
       return false; // error was reported
     } else if (ConflictsWithIntrinsicAssignment(proc)) {
-      msg = "Defined assignment subroutine '%s' conflicts with"
-            " intrinsic assignment"_err_en_US;
+      msg =
+          "Defined assignment subroutine '%s' conflicts with intrinsic assignment"_err_en_US;
     } else {
       return true; // OK
     }
