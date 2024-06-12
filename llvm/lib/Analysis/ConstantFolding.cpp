@@ -2095,8 +2095,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
     LibFunc Fp128Func = NotLibFunc;
     if (Ty->isFP128Ty() && TLI->getLibFunc(Name, Fp128Func) &&
-        TLI->has(Fp128Func) && Fp128Func == LibFunc_logl &&
-        !Op->getValueAPF().isNegative() && !Op->getValueAPF().isZero())
+        TLI->has(Fp128Func) && Fp128Func == LibFunc_logl)
       return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
 #endif
 
