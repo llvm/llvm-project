@@ -67,9 +67,7 @@ public:
   /// Get a matrix with each row representing row^th output expression.
   const IntMatrix &getOutputMatrix() const { return output; }
   /// Get the `i^th` output expression.
-  ArrayRef<DynamicAPInt> getOutputExpr(unsigned i) const {
-    return output.getRow(i);
-  }
+  ArrayRef<MPInt> getOutputExpr(unsigned i) const { return output.getRow(i); }
 
   /// Get the divisions used in this function.
   const DivisionRepr &getDivs() const { return divs; }
@@ -82,9 +80,9 @@ public:
   void mergeDivs(MultiAffineFunction &other);
 
   //// Return the output of the function at the given point.
-  SmallVector<DynamicAPInt, 8> valueAt(ArrayRef<DynamicAPInt> point) const;
-  SmallVector<DynamicAPInt, 8> valueAt(ArrayRef<int64_t> point) const {
-    return valueAt(getDynamicAPIntVec(point));
+  SmallVector<MPInt, 8> valueAt(ArrayRef<MPInt> point) const;
+  SmallVector<MPInt, 8> valueAt(ArrayRef<int64_t> point) const {
+    return valueAt(getMPIntVec(point));
   }
 
   /// Return whether the `this` and `other` are equal when the domain is
@@ -193,11 +191,9 @@ public:
   PresburgerSet getDomain() const;
 
   /// Return the output of the function at the given point.
-  std::optional<SmallVector<DynamicAPInt, 8>>
-  valueAt(ArrayRef<DynamicAPInt> point) const;
-  std::optional<SmallVector<DynamicAPInt, 8>>
-  valueAt(ArrayRef<int64_t> point) const {
-    return valueAt(getDynamicAPIntVec(point));
+  std::optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<MPInt> point) const;
+  std::optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<int64_t> point) const {
+    return valueAt(getMPIntVec(point));
   }
 
   /// Return all the pieces of this piece-wise function.

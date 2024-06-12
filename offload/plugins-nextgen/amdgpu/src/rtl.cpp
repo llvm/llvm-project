@@ -4508,9 +4508,10 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads, uint64_t NumBlocks,
                                  KernelArgsTy &KernelArgs, void *Args,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
-  const uint32_t KernelArgsSize = KernelArgs.NumArgs * sizeof(void *);
+  const uint32_t LaunchParamsSize = KernelArgs.NumArgs * sizeof(void *);
 
-  if (ArgsSize < KernelArgsSize)
+  if (ArgsSize != LaunchParamsSize &&
+      ArgsSize != LaunchParamsSize + getImplicitArgsSize())
     return Plugin::error("Mismatch of kernel arguments size");
 
   AMDGPUPluginTy &AMDGPUPlugin =
@@ -4533,20 +4534,21 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
     return Err;
 
-  // Initialize implicit arguments.
-  utils::AMDGPUImplicitArgsTy *ImplArgs =
-      reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
-          advanceVoidPtr(AllArgs, KernelArgsSize));
+  utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
+  if (ArgsSize == LaunchParamsSize + getImplicitArgsSize()) {
+    // Initialize implicit arguments.
+    ImplArgs = reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
+        advanceVoidPtr(AllArgs, LaunchParamsSize));
 
-  // Initialize the implicit arguments to zero.
-  std::memset(ImplArgs, 0, ImplicitArgsSize);
+    // Initialize the implicit arguments to zero.
+    std::memset(ImplArgs, 0, getImplicitArgsSize());
+  }
 
   // Copy the explicit arguments.
   // TODO: We should expose the args memory manager alloc to the common part as
   // 	   alternative to copying them twice.
-  if (KernelArgs.NumArgs)
-    std::memcpy(AllArgs, *static_cast<void **>(Args),
-                sizeof(void *) * KernelArgs.NumArgs);
+  if (LaunchParamsSize)
+    std::memcpy(AllArgs, *static_cast<void **>(Args), LaunchParamsSize);
 
   uint64_t Buffer = 0;
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
@@ -4581,7 +4583,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (GenericDevice.getRPCServer())
     Stream->setRPCServer(GenericDevice.getRPCServer());
 
-  if (getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
+  // Only COV5 implicitargs needs to be set. COV4 implicitargs are not used.
+  if (ImplArgs &&
+      getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
     DP("Setting fields of ImplicitArgs for COV5\n");
     ImplArgs->BlockCountX = NumBlocks;
     ImplArgs->BlockCountY = 1;
