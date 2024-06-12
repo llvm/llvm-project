@@ -869,18 +869,14 @@ struct InstrProfRecord {
   inline uint32_t getNumValueDataForSite(uint32_t ValueKind,
                                          uint32_t Site) const;
 
-  /// Return the array of profiled values at \p Site. If \p TotalC
-  /// is not null, the total count of all target values at this site
-  /// will be stored in \c *TotalC.
+  /// Return the array of profiled values at \p Site.
   inline std::unique_ptr<InstrProfValueData[]>
-  getValueForSite(uint32_t ValueKind, uint32_t Site,
-                  uint64_t *TotalC = nullptr) const;
+  getValueForSite(uint32_t ValueKind, uint32_t Site) const;
 
   /// Get the target value/counts of kind \p ValueKind collected at site
-  /// \p Site and store the result in array \p Dest. Return the total
-  /// counts of all target values at this site.
-  inline uint64_t getValueForSite(InstrProfValueData Dest[], uint32_t ValueKind,
-                                  uint32_t Site) const;
+  /// \p Site and store the result in array \p Dest.
+  inline void getValueForSite(InstrProfValueData Dest[], uint32_t ValueKind,
+                              uint32_t Site) const;
 
   /// Reserve space for NumValueSites sites.
   inline void reserveSites(uint32_t ValueKind, uint32_t NumValueSites);
@@ -1065,34 +1061,25 @@ uint32_t InstrProfRecord::getNumValueDataForSite(uint32_t ValueKind,
 }
 
 std::unique_ptr<InstrProfValueData[]>
-InstrProfRecord::getValueForSite(uint32_t ValueKind, uint32_t Site,
-                                 uint64_t *TotalC) const {
-  uint64_t Dummy = 0;
-  uint64_t &TotalCount = (TotalC == nullptr ? Dummy : *TotalC);
+InstrProfRecord::getValueForSite(uint32_t ValueKind, uint32_t Site) const {
   uint32_t N = getNumValueDataForSite(ValueKind, Site);
-  if (N == 0) {
-    TotalCount = 0;
+  if (N == 0)
     return std::unique_ptr<InstrProfValueData[]>(nullptr);
-  }
 
   auto VD = std::make_unique<InstrProfValueData[]>(N);
-  TotalCount = getValueForSite(VD.get(), ValueKind, Site);
+  getValueForSite(VD.get(), ValueKind, Site);
 
   return VD;
 }
 
-uint64_t InstrProfRecord::getValueForSite(InstrProfValueData Dest[],
-                                          uint32_t ValueKind,
-                                          uint32_t Site) const {
+void InstrProfRecord::getValueForSite(InstrProfValueData Dest[],
+                                      uint32_t ValueKind, uint32_t Site) const {
   uint32_t I = 0;
-  uint64_t TotalCount = 0;
   for (auto V : getValueSitesForKind(ValueKind)[Site].ValueData) {
     Dest[I].Value = V.Value;
     Dest[I].Count = V.Count;
-    TotalCount = SaturatingAdd(TotalCount, V.Count);
     I++;
   }
-  return TotalCount;
 }
 
 void InstrProfRecord::reserveSites(uint32_t ValueKind, uint32_t NumValueSites) {
