@@ -653,8 +653,7 @@ struct VectorDeinterleaveOpConvert final
               loc, newResultType, adaptor.getSource(),
               rewriter.getI32ArrayAttr({1}));
 
-      rewriter.replaceOp(deinterleaveOp,
-                         {compositeExtractZero, compositeExtractOne});
+      rewriter.replaceOp(deinterleaveOp, {elem0, elem1});
       return success();
     }
 
