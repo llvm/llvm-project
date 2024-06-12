@@ -18,7 +18,7 @@ contains
       adev = ahost 
       add_reduce_var = 0.0
       mul_reduce_var = 1.0
-      ! CHECK:     } reduce_oprnds %[[VAL_0:.*]], %[[VAL_1:.*]] : !fir.ref<i32>, !fir.ref<i32> {reduceAttrs = [#fir.reduce_attr<add>, #fir.reduce_attr<multiply>]}
+      ! CHECK:     } reduce(%[[VAL_0:.*]], %[[VAL_1:.*]] : !fir.ref<i32>, !fir.ref<i32>) {reduceAttrs = [#fir.reduce_attr<add>, #fir.reduce_attr<multiply>]}
       !$cuf kernel do <<< *, * >>> reduce(+:add_reduce_var) reduce(*:mul_reduce_var)
       do i = 1, asize
          add_reduce_var = add_reduce_var + adev(i)

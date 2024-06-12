@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -227,9 +228,17 @@ mlir::LogicalResult cuf::KernelOp::verify() {
       getLowerbound().size() != getStep().size())
     return emitOpError(
         "expect same number of values in lowerbound, upperbound and step");
-  if (getReduceOperands().size() != getReduceAttrs()->size())
-    return emitOpError("expect same number of values in reduce operands and "
-                       "reduce attributes");
+  auto reduceAttrs = getReduceAttrs();
+  std::size_t reduceAttrsSize = reduceAttrs ? reduceAttrs->size() : 0;
+  if (getReduceOperands().size() != reduceAttrsSize)
+      return emitOpError("expect same number of values in reduce operands and "
+                         "reduce attributes");
+  if (reduceAttrs) {
+      for (const auto &attr : reduceAttrs.value()) {
+          if (!mlir::isa<fir::ReduceAttr>(attr))
+              return emitOpError("expect reduce attributes to be ReduceAttr");
+      }
+  }
   return mlir::success();
 }
 
