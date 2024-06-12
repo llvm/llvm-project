@@ -17,6 +17,7 @@
 #include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/Support/FileSystem.h"
+#include <unistd.h>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -65,37 +66,40 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   if (!process_sp)
     return false;
 
-  MinidumpFileBuilder builder;
+  llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
+      outfile, File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
+  if (!maybe_core_file) {
+    error = maybe_core_file.takeError();
+    return false;
+  }
+  MinidumpFileBuilder builder(std::move(maybe_core_file.get()));
+
 
   Target &target = process_sp->GetTarget();
+    builder.AddHeaderAndCalculateDirectories(target, process_sp);
 
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddSystemInfo(target.GetArchitecture().GetTriple());
   if (error.Fail()) {
-    LLDB_LOG(log, "AddSystemInfo failed: %s", error.AsCString());
+    LLDB_LOGF(log, "AddSystemInfo failed: %s", error.AsCString());
     return false;
   }
 
-  error = builder.AddModuleList(target);
-  if (error.Fail()) {
-    LLDB_LOG(log, "AddModuleList failed: %s", error.AsCString());
-    return false;
-  }
-
+  builder.AddModuleList(target);
   builder.AddMiscInfo(process_sp);
 
   error = builder.AddThreadList(process_sp);
   if (error.Fail()) {
-    LLDB_LOG(log, "AddThreadList failed: %s", error.AsCString());
+    LLDB_LOGF(log, "AddThreadList failed: %s", error.AsCString());
     return false;
   }
 
   // Add any exceptions but only if there are any in any threads.
   builder.AddExceptions(process_sp);
 
-  error = builder.AddMemoryList(process_sp, core_style);
+  error = builder.AddMemory(process_sp, core_style);
   if (error.Fail()) {
-    LLDB_LOG(log, "AddMemoryList failed: %s", error.AsCString());
+    LLDB_LOGF(log, "AddMemoryList failed: %s", error.AsCString());
     return false;
   }
 
@@ -104,17 +108,11 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
     builder.AddLinuxFileStreams(process_sp);
   }
 
-  llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
-      outfile, File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
-  if (!maybe_core_file) {
-    error = maybe_core_file.takeError();
+  error = builder.DumpToFile();
+  if (error.Fail()) {
+    LLDB_LOGF(log, "DumpToFile failed: %s", error.AsCString());
     return false;
   }
-  lldb::FileUP core_file = std::move(maybe_core_file.get());
-
-  error = builder.Dump(core_file);
-  if (error.Fail())
-    return false;
 
   return true;
 }

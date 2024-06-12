@@ -20,35 +20,106 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/ThreadList.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 #include "Plugins/Process/minidump/MinidumpTypes.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
 
 #include <cinttypes>
+#include <climits>
+#include <cstdint>
+#include <iostream>
+#include <utility>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::minidump;
 
-void MinidumpFileBuilder::AddDirectory(StreamType type, size_t stream_size) {
+Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories(const lldb_private::Target &target, const lldb::ProcessSP &process_sp) {
+  // First set the offset on the file, and on the bytes saved
+  //TODO: advance the core file.
+  m_saved_data_size += header_size;
+  // We know we will have at least Misc, SystemInfo, Modules, and ThreadList (corresponding memory list for stacks)
+  // And an additional memory list for non-stacks.
+  m_expected_directories = 6;
+  // Check if OS is linux
+  if (target.GetArchitecture().GetTriple().getOS() ==
+      llvm::Triple::OSType::Linux)
+    m_expected_directories += 9;
+
+  // Go through all of the threads and check for exceptions.
+  lldb_private::ThreadList thread_list = process_sp->GetThreadList();
+  const uint32_t num_threads = thread_list.GetSize();
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
+    StopInfoSP stop_info_sp = thread_sp->GetStopInfo();
+    if (stop_info_sp && stop_info_sp->GetStopReason() == StopReason::eStopReasonException) {
+      m_expected_directories++;
+    }
+  }
+
+  // Now offset the file by the directores so we can write them in later.
+  offset_t directory_offset = m_expected_directories * directory_size;
+  //TODO: advance the core file.
+  m_saved_data_size += directory_offset;
+  // Replace this when we make a better way to do this.
+  Status error;
+  Header empty_header;
+  size_t bytes_written;
+  bytes_written = header_size;
+  error = m_core_file->Write(&empty_header, bytes_written);
+  if (error.Fail() || bytes_written != header_size) {
+    if (bytes_written != header_size)
+      error.SetErrorStringWithFormat(
+          "unable to write the header (written %zd/%zd)", bytes_written,
+          header_size);
+    return error;
+  }
+
+  for (uint i = 0; i < m_expected_directories; i++) {
+    size_t bytes_written;
+    bytes_written = directory_size;
+    Directory empty_directory;
+    error = m_core_file->Write(&empty_directory, bytes_written);
+    if (error.Fail() || bytes_written != directory_size) {
+      if (bytes_written != directory_size)
+        error.SetErrorStringWithFormat(
+            "unable to write the directory (written %zd/%zd)", bytes_written,
+            directory_size);
+      return error;
+    }
+  }
+
+  return error;
+}
+
+
+void MinidumpFileBuilder::AddDirectory(StreamType type, uint64_t stream_size) {
   LocationDescriptor loc;
-  loc.DataSize = static_cast<llvm::support::ulittle32_t>(stream_size);
+  loc.DataSize = static_cast<llvm::support::ulittle64_t>(stream_size);
   // Stream will begin at the current end of data section
-  loc.RVA = static_cast<llvm::support::ulittle32_t>(GetCurrentDataEndOffset());
+  loc.RVA = static_cast<llvm::support::ulittle64_t>(GetCurrentDataEndOffset());
 
   Directory dir;
   dir.Type = static_cast<llvm::support::little_t<StreamType>>(type);
   dir.Location = loc;
 
   m_directories.push_back(dir);
+  assert (m_expected_directories >= m_directories.size());
 }
 
 Status MinidumpFileBuilder::AddSystemInfo(const llvm::Triple &target_triple) {
@@ -114,7 +185,7 @@ Status MinidumpFileBuilder::AddSystemInfo(const llvm::Triple &target_triple) {
   sys_info.ProcessorArch =
       static_cast<llvm::support::little_t<ProcessorArchitecture>>(arch);
   // Global offset to beginning of a csd_string in a data section
-  sys_info.CSDVersionRVA = static_cast<llvm::support::ulittle32_t>(
+  sys_info.CSDVersionRVA = static_cast<llvm::support::ulittle64_t>(
       GetCurrentDataEndOffset() + sizeof(llvm::minidump::SystemInfo));
   sys_info.PlatformId = platform_id;
   m_data.AppendData(&sys_info, sizeof(llvm::minidump::SystemInfo));
@@ -165,7 +236,6 @@ llvm::Expected<uint64_t> getModuleFileSize(Target &target,
     }
     return SizeOfImage;
   }
-
   SectionSP sect_sp = mod->GetObjectFile()->GetBaseAddress().GetSection();
 
   if (!sect_sp) {
@@ -238,12 +308,10 @@ Status MinidumpFileBuilder::AddModuleList(Target &target) {
     auto maybe_mod_size = getModuleFileSize(target, mod);
     if (!maybe_mod_size) {
       llvm::Error mod_size_err = maybe_mod_size.takeError();
-      llvm::handleAllErrors(std::move(mod_size_err),
-                            [&](const llvm::ErrorInfoBase &E) {
-                              error.SetErrorStringWithFormat(
-                                  "Unable to get the size of module %s: %s.",
-                                  module_name.c_str(), E.message().c_str());
-                            });
+      llvm::handleAllErrors(std::move(mod_size_err), [&](const llvm::ErrorInfoBase &E) {
+        error.SetErrorStringWithFormat("Unable to get the size of module %s: %s.",
+                                     module_name.c_str(), E.message().c_str());
+      });
       return error;
     }
 
@@ -513,6 +581,32 @@ findStackHelper(const lldb::ProcessSP &process_sp, uint64_t rsp) {
   return std::make_pair(addr, size);
 }
 
+Status MinidumpFileBuilder::FixThreads() {
+  Status error;
+  // If we have anything in the heap flush it.
+  DumpToFile();
+
+  m_core_file->SeekFromStart(thread_list_file_offset);
+  for (auto &pair : m_thread_by_range_start) {
+    // The thread objects will get a new memory descriptor added
+    // When we are emitting the memory list and then we write it here
+    llvm::minidump::Thread thread = pair.second;
+    size_t bytes_to_write = sizeof(llvm::minidump::Thread);
+    size_t bytes_written = bytes_to_write;
+    error = m_core_file->Write(&thread, bytes_written);
+    if (error.Fail() || bytes_to_write != bytes_written) {
+        error.SetErrorStringWithFormat(
+                  "Wrote incorrect number of bytes to minidump file. (written %zd/%zd)", bytes_written,
+                  bytes_to_write);
+      return error;
+    }
+  }
+
+  // Seek the core file back to the end.
+  m_core_file->SeekFromEnd(0);
+  return error;
+}
+
 Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
   constexpr size_t minidump_thread_size = sizeof(llvm::minidump::Thread);
   lldb_private::ThreadList thread_list = process_sp->GetThreadList();
@@ -533,7 +627,8 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
   DataBufferHeap helper_data;
 
   const uint32_t num_threads = thread_list.GetSize();
-
+  thread_list_file_offset = GetCurrentDataEndOffset();
+  Log *log = GetLog(LLDBLog::Object);
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
     ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
     RegisterContextSP reg_ctx_sp(thread_sp->GetRegisterContext());
@@ -553,38 +648,18 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
           arch.GetTriple().getArchName().str().c_str());
       return error;
     }
+
     uint64_t sp = reg_ctx->GetSP();
-    auto expected_address_range = findStackHelper(process_sp, sp);
+    MemoryRegionInfo sp_region;
+    process_sp->GetMemoryRegionInfo(sp, sp_region);
 
-    if (!expected_address_range) {
-      consumeError(expected_address_range.takeError());
-      error.SetErrorString("Unable to get the stack address.");
-      return error;
-    }
-
-    std::pair<uint64_t, uint64_t> range = std::move(*expected_address_range);
-    uint64_t addr = range.first;
-    uint64_t size = range.second;
-
-    auto data_up = std::make_unique<DataBufferHeap>(size, 0);
-    const size_t stack_bytes_read =
-        process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
-
-    if (error.Fail())
-      return error;
-
-    LocationDescriptor stack_memory;
-    stack_memory.DataSize =
-        static_cast<llvm::support::ulittle32_t>(stack_bytes_read);
-    stack_memory.RVA = static_cast<llvm::support::ulittle32_t>(
-        size_before + thread_stream_size + helper_data.GetByteSize());
-
+    // Emit a blank descriptor
     MemoryDescriptor stack;
-    stack.StartOfMemoryRange = static_cast<llvm::support::ulittle64_t>(addr);
-    stack.Memory = stack_memory;
-
-    helper_data.AppendData(data_up->GetBytes(), stack_bytes_read);
-
+    LocationDescriptor empty_label;
+    empty_label.DataSize = 0;
+    empty_label.RVA = 0;
+    stack.Memory = empty_label;
+    stack.StartOfMemoryRange = 0;
     LocationDescriptor thread_context_memory_locator;
     thread_context_memory_locator.DataSize =
         static_cast<llvm::support::ulittle32_t>(thread_context.size());
@@ -593,6 +668,8 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
     // Cache thie thread context memory so we can reuse for exceptions.
     m_tid_to_reg_ctx[thread_sp->GetID()] = thread_context_memory_locator;
 
+    LLDB_LOGF(log, "AddThreadList for thread %d: thread_context %zu bytes",
+              thread_idx, thread_context.size());
     helper_data.AppendData(thread_context.data(), thread_context.size());
 
     llvm::minidump::Thread t;
@@ -604,9 +681,13 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
     t.EnvironmentBlock = static_cast<llvm::support::ulittle64_t>(0);
     t.Stack = stack, t.Context = thread_context_memory_locator;
 
+    // We save off the stack object so we can circle back and clean it up.
+    m_thread_by_range_start[sp_region.GetRange().GetRangeBase()] = t;
     m_data.AppendData(&t, sizeof(llvm::minidump::Thread));
   }
 
+  LLDB_LOGF(log, "AddThreadList(): total helper_data %zu bytes",
+            helper_data.GetByteSize());
   m_data.AppendData(helper_data.GetBytes(), helper_data.GetByteSize());
   return Status();
 }
@@ -660,64 +741,6 @@ void MinidumpFileBuilder::AddExceptions(const lldb::ProcessSP &process_sp) {
       m_data.AppendData(&exp_stream, minidump_exception_size);
     }
   }
-}
-
-lldb_private::Status
-MinidumpFileBuilder::AddMemoryList(const lldb::ProcessSP &process_sp,
-                                   lldb::SaveCoreStyle core_style) {
-  Status error;
-  Process::CoreFileMemoryRanges core_ranges;
-  error = process_sp->CalculateCoreFileSaveRanges(core_style, core_ranges);
-  if (error.Fail()) {
-    error.SetErrorString("Process doesn't support getting memory region info.");
-    return error;
-  }
-
-  DataBufferHeap helper_data;
-  std::vector<MemoryDescriptor> mem_descriptors;
-  for (const auto &core_range : core_ranges) {
-    // Skip empty memory regions.
-    if (core_range.range.empty())
-      continue;
-    const addr_t addr = core_range.range.start();
-    const addr_t size = core_range.range.size();
-    auto data_up = std::make_unique<DataBufferHeap>(size, 0);
-    const size_t bytes_read =
-        process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
-    if (error.Fail()) {
-      Log *log = GetLog(LLDBLog::Object);
-      LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
-                bytes_read, error.AsCString());
-      error.Clear();
-    }
-    if (bytes_read == 0)
-      continue;
-    // We have a good memory region with valid bytes to store.
-    LocationDescriptor memory_dump;
-    memory_dump.DataSize = static_cast<llvm::support::ulittle32_t>(bytes_read);
-    memory_dump.RVA =
-        static_cast<llvm::support::ulittle32_t>(GetCurrentDataEndOffset());
-    MemoryDescriptor memory_desc;
-    memory_desc.StartOfMemoryRange =
-        static_cast<llvm::support::ulittle64_t>(addr);
-    memory_desc.Memory = memory_dump;
-    mem_descriptors.push_back(memory_desc);
-    m_data.AppendData(data_up->GetBytes(), bytes_read);
-  }
-
-  AddDirectory(StreamType::MemoryList,
-               sizeof(llvm::support::ulittle32_t) +
-                   mem_descriptors.size() *
-                       sizeof(llvm::minidump::MemoryDescriptor));
-  llvm::support::ulittle32_t memory_ranges_num(mem_descriptors.size());
-
-  m_data.AppendData(&memory_ranges_num, sizeof(llvm::support::ulittle32_t));
-  for (auto memory_descriptor : mem_descriptors) {
-    m_data.AppendData(&memory_descriptor,
-                      sizeof(llvm::minidump::MemoryDescriptor));
-  }
-
-  return error;
 }
 
 void MinidumpFileBuilder::AddMiscInfo(const lldb::ProcessSP &process_sp) {
@@ -782,6 +805,7 @@ void MinidumpFileBuilder::AddLinuxFileStreams(
         {StreamType::LinuxProcFD, "/proc/" + pid_str + "/fd"});
   }
 
+  Status error;
   for (const auto &entry : files_with_stream_types) {
     StreamType stream = entry.first;
     std::string path = entry.second;
@@ -797,10 +821,57 @@ void MinidumpFileBuilder::AddLinuxFileStreams(
   }
 }
 
-Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
-  constexpr size_t header_size = sizeof(llvm::minidump::Header);
-  constexpr size_t directory_size = sizeof(llvm::minidump::Directory);
+Status MinidumpFileBuilder::AddMemory(const ProcessSP &process_sp, SaveCoreStyle core_style) {
+  Status error;
 
+  Process::CoreFileMemoryRanges ranges;
+  error = process_sp->CalculateCoreFileSaveRanges(core_style, ranges);
+  if (error.Fail()) {
+    return error;
+  }
+
+  Process::CoreFileMemoryRanges ranges_for_memory_list;
+  // We leave a little padding for dictionary and any other metadata we would want.
+  // Also so that we can put the header of the memory list 64 in 32b land, because the directory
+  // requires a 32b RVA.
+  uint64_t total_size = 256 + (ranges.size() * sizeof(llvm::minidump::MemoryDescriptor_64));
+  // Enumerate all threads and save them off for the 32b range first
+  for (int i = ranges.size() - 1; i >= 0; i--) {
+    ranges_for_memory_list.push_back(ranges[i]);
+    total_size += ranges[i].range.size();
+    total_size += sizeof(llvm::minidump::MemoryDescriptor);
+    ranges.erase(ranges.begin() + i);
+  }
+
+  // Take all the memory that will fit in the 32b range.
+  for (int i = ranges.size() - 1; i >= 0; i--) {
+    addr_t size_to_add = ranges[i].range.size() + sizeof(llvm::minidump::MemoryDescriptor);
+    if (total_size + size_to_add < UINT32_MAX) {
+      ranges_for_memory_list.push_back(ranges[i]);
+      total_size += ranges[i].range.size();
+      total_size += sizeof(llvm::minidump::MemoryDescriptor);
+      ranges.erase(ranges.begin() + i);
+    }
+    else {
+      break;
+    }
+  }
+
+  error = AddMemoryList_32(process_sp, ranges_for_memory_list);
+  if (error.Fail()) 
+    return error;
+
+  // Add the remaining memory as a 64b range.
+  if (ranges.size() > 0) {
+    error = AddMemoryList_64(process_sp, ranges);
+    if (error.Fail()) 
+      return error;
+  }
+
+  return FixThreads();
+}
+
+Status MinidumpFileBuilder::DumpHeader() const {
   // write header
   llvm::minidump::Header header;
   header.Signature = static_cast<llvm::support::ulittle32_t>(
@@ -808,9 +879,10 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
   header.Version = static_cast<llvm::support::ulittle32_t>(
       llvm::minidump::Header::MagicVersion);
   header.NumberOfStreams =
-      static_cast<llvm::support::ulittle32_t>(GetDirectoriesNum());
+      static_cast<llvm::support::ulittle32_t>(m_directories.size());
+  // We write the directories right after the header.
   header.StreamDirectoryRVA =
-      static_cast<llvm::support::ulittle32_t>(GetCurrentDataEndOffset());
+      static_cast<llvm::support::ulittle32_t>(header_size);
   header.Checksum = static_cast<llvm::support::ulittle32_t>(
       0u), // not used in most of the writers
       header.TimeDateStamp =
@@ -821,8 +893,9 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
   Status error;
   size_t bytes_written;
 
+  m_core_file->SeekFromStart(0);
   bytes_written = header_size;
-  error = core_file->Write(&header, bytes_written);
+  error = m_core_file->Write(&header, bytes_written);
   if (error.Fail() || bytes_written != header_size) {
     if (bytes_written != header_size)
       error.SetErrorStringWithFormat(
@@ -830,22 +903,20 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
           header_size);
     return error;
   }
+  return error;
+}
 
-  // write data
-  bytes_written = m_data.GetByteSize();
-  error = core_file->Write(m_data.GetBytes(), bytes_written);
-  if (error.Fail() || bytes_written != m_data.GetByteSize()) {
-    if (bytes_written != m_data.GetByteSize())
-      error.SetErrorStringWithFormat(
-          "unable to write the data (written %zd/%" PRIu64 ")", bytes_written,
-          m_data.GetByteSize());
-    return error;
-  }
+size_t MinidumpFileBuilder::GetCurrentDataEndOffset() const {
+  return m_data.GetByteSize() + m_saved_data_size;
+}
 
-  // write directories
+Status MinidumpFileBuilder::DumpDirectories() const {
+  Status error;
+  size_t bytes_written;
+  m_core_file->SeekFromStart(header_size);
   for (const Directory &dir : m_directories) {
     bytes_written = directory_size;
-    error = core_file->Write(&dir, bytes_written);
+    error = m_core_file->Write(&dir, bytes_written);
     if (error.Fail() || bytes_written != directory_size) {
       if (bytes_written != directory_size)
         error.SetErrorStringWithFormat(
@@ -858,10 +929,217 @@ Status MinidumpFileBuilder::Dump(lldb::FileUP &core_file) const {
   return error;
 }
 
-size_t MinidumpFileBuilder::GetDirectoriesNum() const {
-  return m_directories.size();
+Status MinidumpFileBuilder::AddMemoryList_32(const ProcessSP &process_sp, const Process::CoreFileMemoryRanges &ranges) {
+  std::vector<MemoryDescriptor> descriptors;
+  Status error;
+  Log *log = GetLog(LLDBLog::Object);
+  int region_index = 0;
+  for (const auto &core_range : ranges) {
+    // Take the offset before we write.
+    const size_t offset_for_data = GetCurrentDataEndOffset();
+    const addr_t addr = core_range.range.start();
+    const addr_t size = core_range.range.size();
+    std::cout << "Adding Memory Desciptor at " << std::hex << core_range.range.start() << std::dec << " with size " << core_range.range.size() << std::endl;
+    auto data_up = std::make_unique<DataBufferHeap>(size, 0);
+
+    LLDB_LOGF(log, "AddMemoryList %d/%d reading memory for region (%zu bytes) [%zx, %zx)",
+              region_index, ranges.size(), size, addr, addr+ size);
+    ++region_index;
+
+    const size_t bytes_read =
+        process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
+    if (error.Fail()) {
+      LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
+                bytes_read, error.AsCString());
+      // Add the cleanup offset as the difference of bytes not read
+      descriptors.at(region_index).Memory.DataSize = 0;
+    }
+    else if (bytes_read != size) {
+      LLDB_LOGF(log, "Memory region at: %zu failed to read %zu bytes", addr, size);
+      // Add the cleanup offset as the difference of bytes not read
+      descriptors.at(region_index).Memory.DataSize = bytes_read;
+    }
+
+    MemoryDescriptor descriptor;
+    descriptor.StartOfMemoryRange = static_cast<llvm::support::ulittle64_t>(addr);
+    descriptor.Memory.DataSize = static_cast<llvm::support::ulittle32_t>(bytes_read);
+    descriptor.Memory.RVA = static_cast<llvm::support::ulittle32_t>(offset_for_data);
+    descriptors.push_back(descriptor);
+
+    // Add the data to the buffer, flush as needed.
+    error = AddData(data_up->GetBytes(), bytes_read);
+    if (error.Fail())
+      return error;
+  }
+
+  // Add a directory that references this list
+  // With a size of the number of ranges as a 32 bit num
+  // And then the size of all the ranges
+  AddDirectory(StreamType::MemoryList,
+            sizeof(llvm::support::ulittle32_t) +
+                ranges.size() *
+                    sizeof(llvm::minidump::MemoryDescriptor));
+
+  llvm::support::ulittle32_t memory_ranges_num = static_cast<llvm::support::ulittle32_t>(ranges.size());
+  m_data.AppendData(&memory_ranges_num, sizeof(llvm::support::ulittle32_t));
+  // For 32b we can get away with writing off the descriptors after the data. This means no cleanup loop needed.
+  m_data.AppendData(descriptors.data(), descriptors.size() * sizeof(MemoryDescriptor));
+
+  return error;
 }
 
-size_t MinidumpFileBuilder::GetCurrentDataEndOffset() const {
-  return sizeof(llvm::minidump::Header) + m_data.GetByteSize();
+Status MinidumpFileBuilder::AddMemoryList_64(const ProcessSP &process_sp, const Process::CoreFileMemoryRanges &ranges) {
+  // Add a directory that references this list
+  // With a size of the number of ranges as a 32 bit num
+  // And then the size of all the ranges
+  // This is done first so that we can keep Directories are 32b.
+  AddDirectory(StreamType::Memory64List,
+            sizeof(llvm::support::ulittle32_t) +
+                ranges.size() *
+                    sizeof(llvm::minidump::MemoryDescriptor_64));
+
+  llvm::support::ulittle32_t memory_ranges_num = static_cast<llvm::support::ulittle32_t>(ranges.size());
+  m_data.AppendData(&memory_ranges_num, sizeof(llvm::support::ulittle32_t));
+  uint64_t current_offset = 0;
+  // Capture the starting offset, so we don't depend on the expansion of m_data.
+  uint64_t starting_offset = GetCurrentDataEndOffset();
+
+  std::map<uint32_t, addr_t> descriptors_to_clean_up_with_offset_fixes;
+  std::vector<MemoryDescriptor_64> descriptors;
+  // Enumerate the ranges and create the memory descriptors so we can append them first
+  for (const auto core_range : ranges) {
+    // Add the space required to store the memory descriptor
+    current_offset += sizeof(MemoryDescriptor_64);
+    LocationDescriptor_64 memory_dump;
+    memory_dump.DataSize = static_cast<llvm::support::ulittle64_t>(core_range.range.size());
+    memory_dump.RVA =
+        static_cast<llvm::support::ulittle64_t>(starting_offset + current_offset);
+    MemoryDescriptor_64 memory_desc;
+    memory_desc.StartOfMemoryRange =
+        static_cast<llvm::support::ulittle64_t>(core_range.range.start());
+    memory_desc.Memory = memory_dump;
+    descriptors.push_back(memory_desc);
+    // Now write this memory descriptor to the buffer.
+    m_data.AppendData(&memory_desc, sizeof(MemoryDescriptor_64));
+    // Add the data size to the current offset
+    // so subsequent RVA's are accurate.
+    current_offset += core_range.range.size();
+  }
+
+  Status error;
+  Log *log = GetLog(LLDBLog::Object);
+  int region_index = 0;
+  for (const auto &core_range : ranges) {
+    const addr_t addr = core_range.range.start();
+    const addr_t size = core_range.range.size();
+    auto data_up = std::make_unique<DataBufferHeap>(size, 0);
+
+
+    LLDB_LOGF(log, "AddMemoryList %d/%d reading memory for region (%zu bytes) [%zx, %zx)",
+              region_index, ranges.size(), size, addr, addr+ size);
+    ++region_index;
+
+    // TODO: Add a fixup functionality, when we fail to read the correct number of bytes or anything at all
+    // we need to go back and fix the memory descriptors and the subsequent RVA's.
+    const size_t bytes_read =
+        process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
+    if (error.Fail()) {
+      LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
+                bytes_read, error.AsCString());
+      descriptors_to_clean_up_with_offset_fixes[region_index] = size;
+      descriptors[region_index].Memory.DataSize = 0;
+    }
+    if (bytes_read != size) {
+      error.SetErrorStringWithFormat("Memory region at: %zu failed to read %zu bytes", addr, size);
+      descriptors_to_clean_up_with_offset_fixes[region_index] = size - bytes_read;
+      descriptors[region_index].Memory.DataSize = bytes_read;
+    }
+
+    // Add the data to the buffer, flush as needed.
+    error = AddData(data_up->GetBytes(), bytes_read);
+    if (error.Fail())
+      return error;
+  }
+
+  // Early return if there is no cleanup needed.
+  if (descriptors.size() == 0) {
+    return error;
+  }
+  else {
+    // Flush to disk we can make the fixes in place.
+    DumpToFile();
+    // Iterate through the list, moving up (subtracting) the RVA by the current fix up offset
+    // Then check if the current item is in the map
+    // If it is, add it's offset to the fix up delta.
+    // This is so if we fail to write a certain number of bytes, we fix the rest of the RVA's
+    //
+    addr_t current_shiftup_delta = 0;
+    for (uint i = 0; i < descriptors.size(); i++) {
+      MemoryDescriptor_64 &desc = descriptors[i];
+      desc.Memory.RVA -= current_shiftup_delta;
+      // We update the delta afterwards because the RVA of the current 
+      // descriptor doesn't depend on it's size. Only the subsequent Descriptors
+      // would depend on this delta.
+      if (descriptors_to_clean_up_with_offset_fixes.count(i) > 0) {
+        current_shiftup_delta += descriptors_to_clean_up_with_offset_fixes[i];
+      }
+    }
+
+    // Fixup the descriptors that were not read correctly.
+    m_core_file->SeekFromStart(starting_offset);
+    size_t bytes_written = sizeof(MemoryDescriptor) * descriptors.size();
+    error = m_core_file->Write(descriptors.data(), bytes_written);
+    if (error.Fail() || bytes_written != sizeof(MemoryDescriptor) * descriptors.size()) {
+        error.SetErrorStringWithFormat(
+            "unable to write the memory descriptors (written %zd/%zd)",
+            bytes_written, sizeof(MemoryDescriptor) * descriptors.size());
+    }
+
+    return error;
+  }
+}
+
+Status MinidumpFileBuilder::AddData(const void* data, size_t size) {
+  m_data.AppendData(data, size);
+  // TODO: Refactor to be a parameter.
+  if (m_data.GetByteSize() > 1024 * 1024 * 1024) {
+    return FlushToDisk();
+  }
+
+  return Status();
+}
+
+Status MinidumpFileBuilder::FlushToDisk() const {
+  Status error;
+  size_t bytes_to_write = m_data.GetByteSize();
+  size_t bytes_written = bytes_to_write;
+  error = m_core_file->Write(m_data.GetBytes(), bytes_to_write);
+  if (error.Fail() || bytes_written != bytes_to_write) {
+      error.SetErrorStringWithFormat(
+          "Wrote incorrect number of bytes to minidump file. (written %zd/%zd)", bytes_written,
+          bytes_to_write);
+    return error;
+  }
+
+  return error;
+}
+
+Status MinidumpFileBuilder::DumpToFile() {
+  Status error;
+  // If anything is left unsaved, dump it.
+  error = FlushToDisk();
+  if (error.Fail())
+    return error;
+
+  // Overwrite the header which we filled in earlier.
+  error = DumpHeader();
+  if (error.Fail())
+    return error;
+
+  // Overwrite the space saved for directories
+  error = DumpDirectories();
+  if (error.Fail())
+    return error;
+
+  return error;
 }

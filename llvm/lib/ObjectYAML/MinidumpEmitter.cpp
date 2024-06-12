@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -117,6 +119,11 @@ void BlobAllocator::writeTo(raw_ostream &OS) const {
 static LocationDescriptor layout(BlobAllocator &File, yaml::BinaryRef Data) {
   return {support::ulittle32_t(Data.binary_size()),
           support::ulittle32_t(File.allocateBytes(Data))};
+}
+
+static LocationDescriptor_64 layout_64(BlobAllocator &File, yaml::BinaryRef Data) {
+  return {support::ulittle64_t(Data.binary_size()),
+          support::ulittle64_t(File.allocateBytes(Data))};
 }
 
 static size_t layout(BlobAllocator &File, MinidumpYAML::ExceptionStream &S) {
