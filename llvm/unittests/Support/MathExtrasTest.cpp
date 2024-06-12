@@ -434,8 +434,39 @@ TEST(MathExtras, IsShiftedInt) {
   EXPECT_FALSE((isShiftedInt<6, 10>(int64_t(1) << 15)));
 }
 
-template <typename T>
-class OverflowTest : public ::testing::Test { };
+TEST(MathExtras, DivideCeilSigned) {
+  EXPECT_EQ(divideCeilSigned(14, 3), 5);
+  EXPECT_EQ(divideCeilSigned(15, 3), 5);
+  EXPECT_EQ(divideCeilSigned(14, -3), -4);
+  EXPECT_EQ(divideCeilSigned(-14, -3), 5);
+  EXPECT_EQ(divideCeilSigned(-14, 3), -4);
+  EXPECT_EQ(divideCeilSigned(-15, 3), -5);
+  EXPECT_EQ(divideCeilSigned(0, 3), 0);
+  EXPECT_EQ(divideCeilSigned(0, -3), 0);
+}
+
+TEST(MathExtras, DivideFloorSigned) {
+  EXPECT_EQ(divideFloorSigned(14, 3), 4);
+  EXPECT_EQ(divideFloorSigned(15, 3), 5);
+  EXPECT_EQ(divideFloorSigned(14, -3), -5);
+  EXPECT_EQ(divideFloorSigned(-14, -3), 4);
+  EXPECT_EQ(divideFloorSigned(-14, 3), -5);
+  EXPECT_EQ(divideFloorSigned(-15, 3), -5);
+  EXPECT_EQ(divideFloorSigned(0, 3), 0);
+  EXPECT_EQ(divideFloorSigned(0, -3), 0);
+}
+
+TEST(MathExtras, Mod) {
+  EXPECT_EQ(mod(1, 14), 1);
+  EXPECT_EQ(mod(-1, 14), 13);
+  EXPECT_EQ(mod(14, 3), 2);
+  EXPECT_EQ(mod(15, 3), 0);
+  EXPECT_EQ(mod(-14, 3), 1);
+  EXPECT_EQ(mod(-15, 3), 0);
+  EXPECT_EQ(mod(0, 3), 0);
+}
+
+template <typename T> class OverflowTest : public ::testing::Test {};
 
 using OverflowTestTypes = ::testing::Types<signed char, short, int, long,
                                            long long>;
@@ -560,5 +591,4 @@ TYPED_TEST(OverflowTest, MulResultZero) {
   EXPECT_FALSE(MulOverflow<TypeParam>(0, -5, Result));
   EXPECT_EQ(Result, TypeParam(0));
 }
-
 } // namespace

@@ -2884,3 +2884,8 @@ void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
   else
     OS << " parent: " << S->getParentComputeConstruct();
 }
+
+void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
+  AddChild("begin", [=] { OS << S->getStartingElementPos(); });
+  AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
+}

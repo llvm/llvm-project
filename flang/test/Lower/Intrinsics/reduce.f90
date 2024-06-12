@@ -348,21 +348,25 @@ subroutine char1(a)
   res = reduce(a, red_char1)
 end subroutine
 
-! CHECK: fir.call @_FortranAReduceChar1
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1> {bindc_name = ".chrtmp"}
+! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<i8>
+! CHECK: fir.call @_FortranAReduceChar1(%[[RESULT]], {{.*}})
 
 pure function red_char2(a,b)
-  character(kind=2), intent(in) :: a, b
-  character(kind=2) :: red_char2
+  character(kind=2, len=10), intent(in) :: a, b
+  character(kind=2, len=10) :: red_char2
   red_char2 = a // b
 end function
 
 subroutine char2(a)
-  character(kind=2), intent(in) :: a(:)
-  character(kind=2) :: res
+  character(kind=2, len=10), intent(in) :: a(:)
+  character(kind=2, len=10) :: res
   res = reduce(a, red_char2)
 end subroutine
 
-! CHECK: fir.call @_FortranAReduceChar2
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<2,10> {bindc_name = ".chrtmp"}
+! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<2,10>>) -> !fir.ref<i16>
+! CHECK: fir.call @_FortranAReduceChar2(%[[RESULT]], {{.*}})
 
 pure function red_char4(a,b)
   character(kind=4), intent(in) :: a, b
@@ -391,5 +395,244 @@ subroutine testtype(a)
 end subroutine
 
 ! CHECK: fir.call @_FortranAReduceDerivedType
+
+subroutine integer1dim(a, id)
+  integer(1), intent(in) :: a(:,:)
+  integer(1), allocatable :: res(:)
+
+  res = reduce(a, red_int1, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceInteger1Dim
+
+subroutine integer2dim(a, id)
+  integer(2), intent(in) :: a(:,:)
+  integer(2), allocatable :: res(:)
+
+  res = reduce(a, red_int2, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceInteger2Dim
+
+subroutine integer4dim(a, id)
+  integer(4), intent(in) :: a(:,:)
+  integer(4), allocatable :: res(:)
+
+  res = reduce(a, red_int4, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceInteger4Dim
+
+subroutine integer8dim(a, id)
+  integer(8), intent(in) :: a(:,:)
+  integer(8), allocatable :: res(:)
+
+  res = reduce(a, red_int8, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceInteger8Dim
+
+subroutine integer16dim(a, id)
+  integer(16), intent(in) :: a(:,:)
+  integer(16), allocatable :: res(:)
+
+  res = reduce(a, red_int16, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceInteger16Dim
+
+subroutine real2dim(a, id)
+  real(2), intent(in) :: a(:,:)
+  real(2), allocatable :: res(:)
+
+  res = reduce(a, red_real2, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceReal2Dim
+
+subroutine real3dim(a, id)
+  real(3), intent(in) :: a(:,:)
+  real(3), allocatable :: res(:)
+
+  res = reduce(a, red_real3, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceReal3Dim
+
+subroutine real4dim(a, id)
+  real(4), intent(in) :: a(:,:)
+  real(4), allocatable :: res(:)
+
+  res = reduce(a, red_real4, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceReal4Dim
+
+subroutine real8dim(a, id)
+  real(8), intent(in) :: a(:,:)
+  real(8), allocatable :: res(:)
+
+  res = reduce(a, red_real8, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceReal8Dim
+
+subroutine real10dim(a, id)
+  real(10), intent(in) :: a(:,:)
+  real(10), allocatable :: res(:)
+
+  res = reduce(a, red_real10, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceReal10Dim
+
+subroutine real16dim(a, id)
+  real(16), intent(in) :: a(:,:)
+  real(16), allocatable :: res(:)
+
+  res = reduce(a, red_real16, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceReal16Dim
+
+subroutine complex2dim(a, id)
+  complex(2), intent(in) :: a(:,:)
+  complex(2), allocatable :: res(:)
+
+  res = reduce(a, red_complex2, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranACppReduceComplex2Dim
+
+subroutine complex3dim(a, id)
+  complex(3), intent(in) :: a(:,:)
+  complex(3), allocatable :: res(:)
+
+  res = reduce(a, red_complex3, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranACppReduceComplex3Dim
+
+subroutine complex4dim(a, id)
+  complex(4), intent(in) :: a(:,:)
+  complex(4), allocatable :: res(:)
+
+  res = reduce(a, red_complex4, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranACppReduceComplex4Dim
+
+subroutine complex8dim(a, id)
+  complex(8), intent(in) :: a(:,:)
+  complex(8), allocatable :: res(:)
+
+  res = reduce(a, red_complex8, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranACppReduceComplex8Dim
+
+subroutine complex10dim(a, id)
+  complex(10), intent(in) :: a(:,:)
+  complex(10), allocatable :: res(:)
+
+  res = reduce(a, red_complex10, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranACppReduceComplex10Dim
+
+subroutine complex16dim(a, id)
+  complex(16), intent(in) :: a(:,:)
+  complex(16), allocatable :: res(:)
+
+  res = reduce(a, red_complex16, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranACppReduceComplex16Dim
+
+subroutine logical1dim(a, id)
+  logical(1), intent(in) :: a(:,:)
+  logical(1), allocatable :: res(:)
+
+  res = reduce(a, red_log1, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceLogical1Dim
+
+subroutine logical2dim(a, id)
+  logical(2), intent(in) :: a(:,:)
+  logical(2), allocatable :: res(:)
+
+  res = reduce(a, red_log2, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceLogical2Dim
+
+subroutine logical4dim(a, id)
+  logical(4), intent(in) :: a(:,:)
+  logical(4), allocatable :: res(:)
+
+  res = reduce(a, red_log4, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceLogical4Dim
+
+subroutine logical8dim(a, id)
+  logical(8), intent(in) :: a(:,:)
+  logical(8), allocatable :: res(:)
+
+  res = reduce(a, red_log8, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceLogical8Dim
+
+subroutine testtypeDim(a)
+  type(t1), intent(in) :: a(:,:)
+  type(t1), allocatable :: res(:)
+  res = reduce(a, red_type, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceDerivedTypeDim
+
+subroutine char1dim(a)
+  character(1), intent(in) :: a(:, :)
+  character(1), allocatable :: res(:)
+  res = reduce(a, red_char1, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceCharacter1Dim
+
+subroutine char2dim(a)
+  character(kind=2, len=10), intent(in) :: a(:, :)
+  character(kind=2, len=10), allocatable :: res(:)
+  res = reduce(a, red_char2, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceCharacter2Dim
+
+subroutine char4dim(a)
+  character(kind=4), intent(in) :: a(:, :)
+  character(kind=4), allocatable :: res(:)
+  res = reduce(a, red_char4, 2)
+end subroutine
+
+! CHECK: fir.call @_FortranAReduceCharacter4Dim
+
+pure function red_char_dyn(a, b)
+  character(*), intent(In) :: a, b
+  character(max(len(a),len(b))) :: red_char_dyn
+  red_char_dyn = max(a, b)
+end function
+
+subroutine charDyn()
+  character(5) :: res
+  character(:), allocatable :: a(:)
+  allocate(character(10)::a(10))
+  res = reduce(a, red_char_dyn)
+end subroutine
+
+! CHECK: %[[BOX_ELESIZE:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1,?>(%[[BOX_ELESIZE]] : index) {bindc_name = ".chrtmp"}
+! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+! CHECK: fir.call @_FortranAReduceChar1(%[[RESULT]], {{.*}})
 
 end module

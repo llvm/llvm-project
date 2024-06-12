@@ -568,13 +568,13 @@ private:
   /// unioning their recorded alloc types.
   uint8_t computeAllocType(DenseSet<uint32_t> &ContextIds);
 
-  /// Returns the alloction type of the intersection of the contexts of two
+  /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets), optimized for the case
   /// when Node1Ids is smaller than Node2Ids.
   uint8_t intersectAllocTypesImpl(const DenseSet<uint32_t> &Node1Ids,
                                   const DenseSet<uint32_t> &Node2Ids);
 
-  /// Returns the alloction type of the intersection of the contexts of two
+  /// Returns the allocation type of the intersection of the contexts of two
   /// nodes (based on their provided context id sets).
   uint8_t intersectAllocTypes(const DenseSet<uint32_t> &Node1Ids,
                               const DenseSet<uint32_t> &Node2Ids);

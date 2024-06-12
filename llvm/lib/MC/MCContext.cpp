@@ -44,6 +44,7 @@
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -547,16 +548,42 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
   if (GroupSym)
     Group = GroupSym->getName();
   assert(!(LinkedToSym && LinkedToSym->getName().empty()));
-  // Do the lookup, if we have a hit, return it.
-  auto IterBool = ELFUniquingMap.insert(std::make_pair(
-      ELFSectionKey{Section.str(), Group,
-                    LinkedToSym ? LinkedToSym->getName() : "", UniqueID},
-      nullptr));
-  auto &Entry = *IterBool.first;
-  if (!IterBool.second)
-    return Entry.second;
 
-  StringRef CachedName = Entry.first.SectionName;
+  // Sections are differentiated by the quadruple (section_name, group_name,
+  // unique_id, link_to_symbol_name). Sections sharing the same quadruple are
+  // combined into one section. As an optimization, non-unique sections without
+  // group or linked-to symbol have a shorter unique-ing key.
+  std::pair<StringMap<MCSectionELF *>::iterator, bool> EntryNewPair;
+  // Length of the section name, which are the first SectionLen bytes of the key
+  unsigned SectionLen;
+  if (GroupSym || LinkedToSym || UniqueID != MCSection::NonUniqueID) {
+    SmallString<128> Buffer;
+    Section.toVector(Buffer);
+    SectionLen = Buffer.size();
+    Buffer.push_back(0); // separator which cannot occur in the name
+    if (GroupSym)
+      Buffer.append(GroupSym->getName());
+    Buffer.push_back(0); // separator which cannot occur in the name
+    if (LinkedToSym)
+      Buffer.append(LinkedToSym->getName());
+    support::endian::write(Buffer, UniqueID, endianness::native);
+    StringRef UniqueMapKey = StringRef(Buffer);
+    EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
+  } else if (!Section.isSingleStringRef()) {
+    SmallString<128> Buffer;
+    StringRef UniqueMapKey = Section.toStringRef(Buffer);
+    SectionLen = UniqueMapKey.size();
+    EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
+  } else {
+    StringRef UniqueMapKey = Section.getSingleStringRef();
+    SectionLen = UniqueMapKey.size();
+    EntryNewPair = ELFUniquingMap.insert(std::make_pair(UniqueMapKey, nullptr));
+  }
+
+  if (!EntryNewPair.second)
+    return EntryNewPair.first->second;
+
+  StringRef CachedName = EntryNewPair.first->getKey().take_front(SectionLen);
 
   SectionKind Kind;
   if (Flags & ELF::SHF_ARM_PURECODE)
@@ -600,7 +627,7 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
   MCSectionELF *Result =
       createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
                            IsComdat, UniqueID, LinkedToSym);
-  Entry.second = Result;
+  EntryNewPair.first->second = Result;
 
   recordELFMergeableSectionInfo(Result->getName(), Result->getFlags(),
                                 Result->getUniqueID(), Result->getEntrySize());

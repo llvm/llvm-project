@@ -390,13 +390,13 @@ static void updateBranchWeights(BranchInst &PreHeaderBI, BranchInst &LoopBI,
       SuccsSwapped ? LoopBackWeight : ExitWeight1,
       SuccsSwapped ? ExitWeight1 : LoopBackWeight,
   };
-  setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
+  setBranchWeights(LoopBI, LoopBIWeights);
   if (HasConditionalPreHeader) {
     const uint32_t PreHeaderBIWeights[] = {
         SuccsSwapped ? EnterWeight : ExitWeight0,
         SuccsSwapped ? ExitWeight0 : EnterWeight,
     };
-    setBranchWeights(PreHeaderBI, PreHeaderBIWeights, /*IsExpected=*/false);
+    setBranchWeights(PreHeaderBI, PreHeaderBIWeights);
   }
 }
 

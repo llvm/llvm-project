@@ -141,7 +141,7 @@ const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
 
 uint64_t MCAsmLayout::getSectionAddressSize(const MCSection *Sec) const {
   // The size is the last fragment's end offset.
-  const MCFragment &F = Sec->getFragmentList().back();
+  const MCFragment &F = *Sec->curFragList()->Tail;
   return getFragmentOffset(&F) + getAssembler().computeFragmentSize(*this, F);
 }
 
@@ -196,8 +196,6 @@ uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
 }
 
 /* *** */
-
-void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        MCSection *Parent)
