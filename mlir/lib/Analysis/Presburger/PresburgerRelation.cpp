@@ -1049,6 +1049,7 @@ bool PresburgerRelation::isFullDim() const {
   });
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void PresburgerRelation::print(raw_ostream &os) const {
   os << "Number of Disjuncts: " << getNumDisjuncts() << "\n";
   for (const IntegerRelation &disjunct : disjuncts) {
@@ -1058,6 +1059,7 @@ void PresburgerRelation::print(raw_ostream &os) const {
 }
 
 void PresburgerRelation::dump() const { print(llvm::errs()); }
+#endif
 
 PresburgerSet PresburgerSet::getUniverse(const PresburgerSpace &space) {
   PresburgerSet result(space);

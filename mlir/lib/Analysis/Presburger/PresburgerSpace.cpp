@@ -24,6 +24,7 @@ bool Identifier::isEqual(const Identifier &other) const {
   return value == other.value;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Identifier::print(llvm::raw_ostream &os) const {
   os << "Id<" << value << ">";
 }
@@ -32,6 +33,7 @@ void Identifier::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif
 
 PresburgerSpace PresburgerSpace::getDomainSpace() const {
   PresburgerSpace newSpace = *this;
@@ -324,6 +326,7 @@ void PresburgerSpace::mergeAndAlignSymbols(PresburgerSpace &other) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void PresburgerSpace::print(llvm::raw_ostream &os) const {
   os << "Domain: " << getNumDomainVars() << ", "
      << "Range: " << getNumRangeVars() << ", "
@@ -356,3 +359,4 @@ void PresburgerSpace::dump() const {
   print(llvm::errs());
   llvm::errs() << "\n";
 }
+#endif

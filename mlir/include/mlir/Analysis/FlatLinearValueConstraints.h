@@ -218,10 +218,12 @@ protected:
       AffineMap map, std::vector<SmallVector<int64_t, 8>> *flattenedExprs,
       bool addConservativeSemiAffineBounds = false);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Prints the number of constraints, dimensions, symbols and locals in the
   /// FlatLinearConstraints. Also, prints for each variable whether there is
   /// an SSA Value attached to it.
   void printSpace(raw_ostream &os) const override;
+#endif
 };
 
 /// FlatLinearValueConstraints represents an extension of FlatLinearConstraints
@@ -432,10 +434,12 @@ public:
   void projectOut(Value val);
   using IntegerPolyhedron::projectOut;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Prints the number of constraints, dimensions, symbols and locals in the
   /// FlatAffineValueConstraints. Also, prints for each variable whether there
   /// is an SSA Value attached to it.
   void printSpace(raw_ostream &os) const override;
+#endif
 
   /// Align `map` with this constraint system based on `operands`. Each operand
   /// must already have a corresponding dim/symbol in this constraint system.

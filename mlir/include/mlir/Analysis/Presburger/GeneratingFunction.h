@@ -90,6 +90,7 @@ public:
                               sumDenominators);
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
     for (unsigned i = 0, e = signs.size(); i < e; i++) {
       if (i == 0) {
@@ -124,6 +125,7 @@ public:
     }
     return os;
   }
+#endif
 
 private:
   unsigned numParam;

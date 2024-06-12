@@ -881,6 +881,7 @@ ValueBoundsConstraintSet::areEquivalentSlices(MLIRContext *ctx,
   return true;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ValueBoundsConstraintSet::dump() const {
   llvm::errs() << "==========\nColumns:\n";
   llvm::errs() << "(column\tdim\tvalue)\n";
@@ -909,6 +910,7 @@ void ValueBoundsConstraintSet::dump() const {
   cstr.dump();
   llvm::errs() << "==========\n";
 }
+#endif
 
 ValueBoundsConstraintSet::BoundBuilder &
 ValueBoundsConstraintSet::BoundBuilder::operator[](int64_t dim) {

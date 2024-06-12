@@ -208,9 +208,11 @@ public:
   /// Add all the constraints from the given IntegerRelation.
   void intersectIntegerRelation(const IntegerRelation &rel);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the tableau's internal state.
   void print(raw_ostream &os) const;
   void dump() const;
+#endif
 
 protected:
   /// Construct a SimplexBase with the specified number of variables and fixed
@@ -246,12 +248,14 @@ protected:
     bool restricted : 1;
     bool isSymbol : 1;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void print(raw_ostream &os) const {
       os << (orientation == Orientation::Row ? "r" : "c");
       os << pos;
       if (restricted)
         os << " [>=0]";
     }
+#endif
   };
 
   struct Pivot {

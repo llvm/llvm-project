@@ -301,9 +301,11 @@ public:
   /// Return an expression that represents a constant.
   AffineExpr getExpr(int64_t constant);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Debugging only: Dump the constraint set and the column-to-value/dim
   /// mapping to llvm::errs.
   void dump() const;
+#endif
 
 protected:
   /// Dimension identifier to indicate a value is index-typed. This is used for

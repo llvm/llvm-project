@@ -1194,6 +1194,7 @@ void FlatLinearValueConstraints::addBound(BoundType type, Value val,
   addBound(type, pos, value);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void FlatLinearConstraints::printSpace(raw_ostream &os) const {
   IntegerPolyhedron::printSpace(os);
   os << "(";
@@ -1221,6 +1222,7 @@ void FlatLinearValueConstraints::printSpace(raw_ostream &os) const {
     os << "Local\t";
   os << "const)\n";
 }
+#endif
 
 void FlatLinearValueConstraints::projectOut(Value val) {
   unsigned pos;

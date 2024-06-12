@@ -748,8 +748,10 @@ public:
   // false.
   bool isFullDim();
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &os) const;
   void dump() const;
+#endif
 
 protected:
   /// Checks all rows of equality/inequality constraints for trivial
@@ -834,9 +836,11 @@ protected:
   /// is meant to be used within an assert internally.
   virtual bool hasConsistentState() const;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Prints the number of constraints, dimensions, symbols and locals in the
   /// IntegerRelation.
   virtual void printSpace(raw_ostream &os) const;
+#endif
 
   /// Removes variables in the column range [varStart, varLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes

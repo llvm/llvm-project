@@ -221,9 +221,11 @@ public:
   /// dimensional we mean that it is not flat along any dimension.
   bool isFullDim() const;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the set's internal state.
   void print(raw_ostream &os) const;
   void dump() const;
+#endif
 
 protected:
   /// Construct an empty PresburgerRelation with the specified number of

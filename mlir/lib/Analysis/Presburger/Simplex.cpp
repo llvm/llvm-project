@@ -2121,6 +2121,7 @@ bool Simplex::isFlatAlong(ArrayRef<DynamicAPInt> coeffs) {
   return *upOpt == *downOpt;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void SimplexBase::print(raw_ostream &os) const {
   os << "rows = " << getNumRows() << ", columns = " << getNumColumns() << "\n";
   if (empty)
@@ -2157,6 +2158,7 @@ void SimplexBase::print(raw_ostream &os) const {
 }
 
 void SimplexBase::dump() const { print(llvm::errs()); }
+#endif
 
 bool Simplex::isRationalSubsetOf(const IntegerRelation &rel) {
   if (isEmpty())

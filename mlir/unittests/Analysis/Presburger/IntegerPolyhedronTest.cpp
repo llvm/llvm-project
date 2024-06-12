@@ -41,11 +41,13 @@ makeSetFromConstraints(unsigned ids, ArrayRef<SmallVector<int64_t, 4>> ineqs,
   return set;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static void dump(ArrayRef<DynamicAPInt> vec) {
   for (const DynamicAPInt &x : vec)
     llvm::errs() << x << ' ';
   llvm::errs() << '\n';
 }
+#endif
 
 /// If fn is TestFunction::Sample (default):
 ///
@@ -69,16 +71,19 @@ static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
 
     if (!hasSample) {
       EXPECT_FALSE(maybeSample.has_value());
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       if (maybeSample.has_value()) {
         llvm::errs() << "findIntegerSample gave sample: ";
         dump(*maybeSample);
       }
-
+#endif
       EXPECT_TRUE(maybeLexMin.isEmpty());
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       if (maybeLexMin.isBounded()) {
         llvm::errs() << "findIntegerLexMin gave sample: ";
         dump(*maybeLexMin);
       }
+#endif
     } else {
       ASSERT_TRUE(maybeSample.has_value());
       EXPECT_TRUE(poly.containsPoint(*maybeSample));

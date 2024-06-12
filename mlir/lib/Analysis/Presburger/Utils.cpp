@@ -513,6 +513,7 @@ void DivisionRepr::insertDiv(unsigned pos, unsigned num) {
   denoms.insert(denoms.begin() + pos, num, DynamicAPInt(0));
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void DivisionRepr::print(raw_ostream &os) const {
   os << "Dividends:\n";
   dividends.print(os);
@@ -523,6 +524,7 @@ void DivisionRepr::print(raw_ostream &os) const {
 }
 
 void DivisionRepr::dump() const { print(llvm::errs()); }
+#endif
 
 SmallVector<DynamicAPInt, 8>
 presburger::getDynamicAPIntVec(ArrayRef<int64_t> range) {

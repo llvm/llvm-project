@@ -58,6 +58,7 @@ PresburgerSet PWMAFunction::getDomain() const {
   return domain;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void MultiAffineFunction::print(raw_ostream &os) const {
   space.print(os);
   os << "Division Representation:\n";
@@ -65,6 +66,7 @@ void MultiAffineFunction::print(raw_ostream &os) const {
   os << "Output:\n";
   output.print(os);
 }
+#endif
 
 SmallVector<DynamicAPInt, 8>
 MultiAffineFunction::valueAt(ArrayRef<DynamicAPInt> point) const {
@@ -299,6 +301,7 @@ void PWMAFunction::addPiece(const Piece &piece) {
   pieces.push_back(piece);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void PWMAFunction::print(raw_ostream &os) const {
   space.print(os);
   os << getNumPieces() << " pieces:\n";
@@ -311,6 +314,7 @@ void PWMAFunction::print(raw_ostream &os) const {
 }
 
 void PWMAFunction::dump() const { print(llvm::errs()); }
+#endif
 
 PWMAFunction PWMAFunction::unionFunction(
     const PWMAFunction &func,

@@ -99,8 +99,10 @@ public:
   bool operator==(const Identifier &other) const { return isEqual(other); }
   bool operator!=(const Identifier &other) const { return !isEqual(other); }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(llvm::raw_ostream &os) const;
   void dump() const;
+#endif
 
 private:
   /// The value of the identifier.
@@ -308,8 +310,10 @@ public:
   /// the same identifiers in the same order.
   void mergeAndAlignSymbols(PresburgerSpace &other);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(llvm::raw_ostream &os) const;
   void dump() const;
+#endif
 
 protected:
   PresburgerSpace(unsigned numDomain, unsigned numRange, unsigned numSymbols,

@@ -397,6 +397,7 @@ Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
   return subMatrix;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 template <typename T>
 void Matrix<T>::print(raw_ostream &os) const {
   for (unsigned row = 0; row < nRows; ++row) {
@@ -405,6 +406,12 @@ void Matrix<T>::print(raw_ostream &os) const {
     os << '\n';
   }
 }
+
+template <typename T>
+void Matrix<T>::dump() const {
+  print(llvm::errs());
+}
+#endif
 
 /// We iterate over the `indicator` bitset, checking each bit. If a bit is 1,
 /// we append it to one matrix, and if it is zero, we append it to the other.
@@ -419,11 +426,6 @@ Matrix<T>::splitByBitset(ArrayRef<int> indicator) {
       rowsForZero.appendExtraRow(getRow(i));
   }
   return {rowsForOne, rowsForZero};
-}
-
-template <typename T>
-void Matrix<T>::dump() const {
-  print(llvm::errs());
 }
 
 template <typename T>

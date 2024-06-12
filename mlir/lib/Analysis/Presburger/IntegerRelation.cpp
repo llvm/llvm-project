@@ -2500,11 +2500,6 @@ void IntegerRelation::applyDomain(const IntegerRelation &rel) {
 
 void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
 
-void IntegerRelation::printSpace(raw_ostream &os) const {
-  space.print(os);
-  os << getNumConstraints() << " constraints\n";
-}
-
 void IntegerRelation::removeTrivialEqualities() {
   for (int i = getNumEqualities() - 1; i >= 0; --i)
     if (rangeIsZero(getEquality(i)))
@@ -2589,6 +2584,12 @@ void IntegerRelation::mergeAndCompose(const IntegerRelation &other) {
   *this = result;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void IntegerRelation::printSpace(raw_ostream &os) const {
+  space.print(os);
+  os << getNumConstraints() << " constraints\n";
+}
+
 void IntegerRelation::print(raw_ostream &os) const {
   assert(hasConsistentState());
   printSpace(os);
@@ -2610,7 +2611,7 @@ void IntegerRelation::print(raw_ostream &os) const {
 }
 
 void IntegerRelation::dump() const { print(llvm::errs()); }
-
+#endif
 unsigned IntegerPolyhedron::insertVar(VarKind kind, unsigned pos,
                                       unsigned num) {
   assert((kind != VarKind::Domain || num == 0) &&

@@ -109,8 +109,10 @@ public:
   /// Get this function as a relation.
   IntegerRelation getAsRelation() const;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &os) const;
   void dump() const;
+#endif
 
 private:
   /// Assert that the MAF is consistent.
@@ -220,8 +222,10 @@ public:
   PWMAFunction unionLexMin(const PWMAFunction &func);
   PWMAFunction unionLexMax(const PWMAFunction &func);
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &os) const;
   void dump() const;
+#endif
 
 private:
   /// Return a function defined on the union of the domains of `this` and

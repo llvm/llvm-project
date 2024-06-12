@@ -28,10 +28,12 @@ void testColumnEchelonForm(const IntMatrix &m, unsigned expectedRank) {
     for (unsigned col = lastAllowedNonZeroCol + 1, nCols = m.getNumColumns();
          col < nCols; ++col) {
       EXPECT_EQ(rowVec[col], 0);
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       if (rowVec[col] != 0) {
         llvm::errs() << "Failed at input matrix:\n";
         m.dump();
       }
+#endif
     }
     if (rowVec[lastAllowedNonZeroCol] != 0)
       lastAllowedNonZeroCol++;
