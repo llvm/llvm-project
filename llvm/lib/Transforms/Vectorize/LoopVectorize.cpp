@@ -8249,10 +8249,12 @@ createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep(), SE);
   if (auto *TruncI = dyn_cast<TruncInst>(PhiOrTrunc)) {
-    return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, IndDesc, TruncI);
+    return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, Plan.getVF(),
+                                             IndDesc, TruncI);
   }
   assert(isa<PHINode>(PhiOrTrunc) && "must be a phi node here");
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, IndDesc);
+  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, Plan.getVF(),
+                                           IndDesc);
 }
 
 VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(
@@ -8667,6 +8669,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
   VPBasicBlock *Header = TopRegion->getEntryBasicBlock();
   Header->insert(CanonicalIVPHI, Header->begin());
 
+  VPBuilder PhBuilder(cast<VPBasicBlock>(TopRegion->getSinglePredecessor()));
   VPBuilder Builder(TopRegion->getExitingBasicBlock());
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
   auto *CanonicalIVIncrement = Builder.createOverflowingOp(

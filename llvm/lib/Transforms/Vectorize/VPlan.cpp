@@ -928,8 +928,21 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
-  VFxUF.setUnderlyingValue(
-      createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
+  Value *RuntimeVF = nullptr;
+  if (VF.getNumUsers()) {
+    RuntimeVF = createStepForVF(Builder, TripCountV->getType(), State.VF, 1);
+    VF.setUnderlyingValue(RuntimeVF);
+  }
+  if (RuntimeVF) {
+    VFxUF.setUnderlyingValue(
+        State.UF > 1 ? Builder.CreateMul(
+                           VF.getLiveInIRValue(),
+                           ConstantInt::get(TripCountV->getType(), State.UF))
+                     : VF.getLiveInIRValue());
+  } else {
+    VFxUF.setUnderlyingValue(
+        createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
+  }
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
@@ -1235,6 +1248,7 @@ VPlan *VPlan::duplicate() {
   }
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
+  Old2NewVPValues[&VF] = &NewPlan->VF;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPValue();
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;

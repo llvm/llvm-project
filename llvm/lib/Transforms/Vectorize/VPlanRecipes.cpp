@@ -1308,11 +1308,11 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   // Multiply the vectorization factor by the step using integer or
   // floating-point arithmetic as appropriate.
   Type *StepType = Step->getType();
-  Value *RuntimeVF;
+  Value *RuntimeVF = State.get(getOperand(2), {0, 0});
   if (Step->getType()->isFloatingPointTy())
     RuntimeVF = getRuntimeVFAsFloat(Builder, StepType, State.VF);
   else
-    RuntimeVF = getRuntimeVF(Builder, StepType, State.VF);
+    RuntimeVF = Builder.CreateZExtOrTrunc(RuntimeVF, StepType);
   Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
 
   // Create a vector splat to use in the induction update.
