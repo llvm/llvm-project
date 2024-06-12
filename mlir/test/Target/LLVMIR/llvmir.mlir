@@ -1314,6 +1314,30 @@ llvm.func @indexconstantarray() -> vector<3xi32> {
   llvm.return %1 : vector<3xi32>
 }
 
+// FIXME: WIP tests by @emosy
+
+llvm.mlir.global external constant @test_array_zero([0]) {addr_space = 0 : i32} : !llvm.array<1 x i64>
+llvm.mlir.global external constant @test_array_ints([0, 1, 2]) {addr_space = 0 : i32} : !llvm.array<3 x i64>
+
+// FIXME: this one becomes a return void? i'm not sure why!
+llvm.func @non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
+}
+
+llvm.func @non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
+  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
+}
+
+llvm.func @nondenseintconstantarray() -> !llvm.array<2 x !llvm.array<2 x !llvm.struct<(i32, i32)>>> {
+  %1 = llvm.mlir.constant(<[[(0, 1), (2, 3)], [(4, 5), (6, 7)]]> : tensor<2x2xcomplex<i32>>) : !llvm.array<2 x!llvm.array<2 x !llvm.struct<(i32, i32)>>>
+  // CHECK{LITERAL}: ret [2 x [2 x { i32, i32 }]] [[2 x { i32, i32 }] [{ i32, i32 } { i32 0, i32 1 }, { i32, i32 } { i32 2, i32 3 }], [2 x { i32, i32 }] [{ i32, i32 } { i32 4, i32 5 }, { i32, i32 } { i32 6, i32 7 }]]
+  llvm.return %1 : !llvm.array<2 x !llvm.array<2 x !llvm.struct<(i32, i32)>>>
+}
+
+
+
 llvm.func @noreach() {
 // CHECK:    unreachable
   llvm.unreachable

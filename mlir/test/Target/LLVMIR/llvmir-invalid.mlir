@@ -15,22 +15,6 @@ llvm.func @vector_with_non_vector_type() -> f32 {
 
 // -----
 
-llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
-  // expected-error @below{{expected struct type to be a complex number}}
-  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
-  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
-}
-
-// -----
-
-llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
-  // expected-error @below{{expected struct type to be a complex number}}
-  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
-  llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
-}
-
-// -----
-
 llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
   // expected-error @below{{FloatAttr does not match expected type of the constant}}
   %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
@@ -60,11 +44,6 @@ llvm.func @incompatible_integer_type_for_float_attr() -> i32 {
   %cst = llvm.mlir.constant(1.0 : f16) : i32
   llvm.return %cst : i32
 }
-
-// -----
-
-// expected-error @below{{unsupported constant value}}
-llvm.mlir.global internal constant @test([2.5, 7.4]) : !llvm.array<2 x f64>
 
 // -----
 

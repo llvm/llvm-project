@@ -492,6 +492,8 @@ ArrayRef<Type> LLVMStructType::getBody() const {
                         : getImpl()->getTypeList();
 }
 
+size_t LLVMStructType::getNumElements() const { return getBody().size(); }
+
 LogicalResult LLVMStructType::verify(function_ref<InFlightDiagnostic()>,
                                      StringRef, bool) {
   return success();
