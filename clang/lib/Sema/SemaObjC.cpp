@@ -848,12 +848,16 @@ static bool findRetainCycleOwner(Sema &S, Expr *e, RetainCycleOwner &owner) {
 
       owner.Indirect = true;
       if (pre->isSuperReceiver()) {
-        owner.Variable = S.getCurMethodDecl()->getSelfDecl();
-        if (!owner.Variable)
+        if (const auto *CurMethodDecl = S.getCurMethodDecl()) {
+          owner.Variable = CurMethodDecl()->getSelfDecl();
+          if (!owner.Variable)
+            return false;
+          owner.Loc = pre->getLocation();
+          owner.Range = pre->getSourceRange();
+          return true;
+        } else {
           return false;
-        owner.Loc = pre->getLocation();
-        owner.Range = pre->getSourceRange();
-        return true;
+        }
       }
       e = const_cast<Expr *>(
           cast<OpaqueValueExpr>(pre->getBase())->getSourceExpr());
