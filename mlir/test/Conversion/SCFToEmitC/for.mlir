@@ -52,14 +52,14 @@ func.func @for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> (f32, f32) 
 // CHECK-NEXT:    emitc.assign %[[VAL_3]] : f32 to %[[VAL_5]] : <f32>
 // CHECK-NEXT:    emitc.assign %[[VAL_4]] : f32 to %[[VAL_6]] : <f32>
 // CHECK-NEXT:    emitc.for %[[VAL_7:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
-// CHECK-NEXT:      %[[VAL_8:.*]] = emitc.lvalue_load %[[VAL_5]] : <f32>
-// CHECK-NEXT:      %[[VAL_9:.*]] = emitc.lvalue_load %[[VAL_6]] : <f32>
+// CHECK-NEXT:      %[[VAL_8:.*]] = emitc.load %[[VAL_5]] : <f32>
+// CHECK-NEXT:      %[[VAL_9:.*]] = emitc.load %[[VAL_6]] : <f32>
 // CHECK-NEXT:      %[[VAL_10:.*]] = arith.addf %[[VAL_8]], %[[VAL_9]] : f32
 // CHECK-NEXT:      emitc.assign %[[VAL_10]] : f32 to %[[VAL_5]] : <f32>
 // CHECK-NEXT:      emitc.assign %[[VAL_10]] : f32 to %[[VAL_6]] : <f32>
 // CHECK-NEXT:    }
-// CHECK-NEXT:    %[[VAL_11:.*]] = emitc.lvalue_load %[[VAL_5]] : <f32>
-// CHECK-NEXT:    %[[VAL_12:.*]] = emitc.lvalue_load %[[VAL_6]] : <f32>
+// CHECK-NEXT:    %[[VAL_11:.*]] = emitc.load %[[VAL_5]] : <f32>
+// CHECK-NEXT:    %[[VAL_12:.*]] = emitc.load %[[VAL_6]] : <f32>
 // CHECK-NEXT:    return %[[VAL_11]], %[[VAL_12]] : f32, f32
 // CHECK-NEXT:  }
 
@@ -80,17 +80,17 @@ func.func @nested_for_yield(%arg0 : index, %arg1 : index, %arg2 : index) -> f32 
 // CHECK-NEXT:    %[[VAL_4:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
 // CHECK-NEXT:    emitc.assign %[[VAL_3]] : f32 to %[[VAL_4]] : <f32>
 // CHECK-NEXT:    emitc.for %[[VAL_5:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
-// CHECK-NEXT:      %[[VAL_6:.*]] = emitc.lvalue_load %[[VAL_4]] : <f32>
+// CHECK-NEXT:      %[[VAL_6:.*]] = emitc.load %[[VAL_4]] : <f32>
 // CHECK-NEXT:      %[[VAL_7:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
 // CHECK-NEXT:      emitc.assign %[[VAL_6]] : f32 to %[[VAL_7]] : <f32>
 // CHECK-NEXT:      emitc.for %[[VAL_8:.*]] = %[[VAL_0]] to %[[VAL_1]] step %[[VAL_2]] {
-// CHECK-NEXT:        %[[VAL_9:.*]] = emitc.lvalue_load %[[VAL_7]] : <f32>  
+// CHECK-NEXT:        %[[VAL_9:.*]] = emitc.load %[[VAL_7]] : <f32>  
 // CHECK-NEXT:        %[[VAL_10:.*]] = arith.addf %[[VAL_9]], %[[VAL_9]] : f32
 // CHECK-NEXT:        emitc.assign %[[VAL_10]] : f32 to %[[VAL_7]] : <f32>
 // CHECK-NEXT:      }
-// CHECK-NEXT:      %[[VAL_11:.*]] = emitc.lvalue_load %[[VAL_7]] : <f32>  
+// CHECK-NEXT:      %[[VAL_11:.*]] = emitc.load %[[VAL_7]] : <f32>  
 // CHECK-NEXT:      emitc.assign %[[VAL_11]] : f32 to %[[VAL_4]] : <f32>
 // CHECK-NEXT:    }
-// CHECK-NEXT:    %[[VAL_12:.*]] = emitc.lvalue_load %[[VAL_4]] : <f32>  
+// CHECK-NEXT:    %[[VAL_12:.*]] = emitc.load %[[VAL_4]] : <f32>  
 // CHECK-NEXT:    return %[[VAL_12]] : f32
 // CHECK-NEXT:  }

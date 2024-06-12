@@ -180,7 +180,7 @@ class EmitC_LValueOf<list<Type> allowedTypes> :
   ContainerType<
     AnyTypeOf<allowedTypes>,
     CPred<"::llvm::isa<::mlir::emitc::LValueType>($_self)">,
-    "::llvm::cast<::mlir::emitc::LValueType>($_self).getValue()",
+    "::llvm::cast<::mlir::emitc::LValueType>($_self).getValueType()",
     "emitc.lvalue",
     "::mlir::emitc::LValueType"
   >;

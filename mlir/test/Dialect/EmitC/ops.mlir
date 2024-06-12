@@ -246,7 +246,7 @@ emitc.global const @myconstant : !emitc.array<2xi16> = dense<2>
 func.func @use_global(%i: index) -> f32 {
   %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
   %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> !emitc.lvalue<f32>
-  %2 = emitc.lvalue_load %1 : <f32>
+  %2 = emitc.load %1 : <f32>
   return %2 : f32
 }
 

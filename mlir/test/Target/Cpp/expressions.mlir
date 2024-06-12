@@ -45,7 +45,7 @@ func.func @single_use(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 {
     emitc.assign %arg0 : i32 to %v : !emitc.lvalue<i32>
     emitc.yield
   }
-  %v_load = emitc.lvalue_load %v : !emitc.lvalue<i32>
+  %v_load = emitc.load %v : !emitc.lvalue<i32>
   return %v_load : i32
 }
 
@@ -234,7 +234,7 @@ func.func @multiple_uses(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 
   }
   %q = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<i1>
   emitc.assign %e : i1 to %q : !emitc.lvalue<i1>
-  %v_load = emitc.lvalue_load %v : !emitc.lvalue<i32>
+  %v_load = emitc.load %v : !emitc.lvalue<i32>
   return %v_load : i32
 }
 
@@ -291,7 +291,7 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
     emitc.assign %arg0 : i32 to %v : !emitc.lvalue<i32>
     emitc.yield
   }
-  %v_load = emitc.lvalue_load %v : !emitc.lvalue<i32>
+  %v_load = emitc.load %v : !emitc.lvalue<i32>
   return %v_load : i32
 }
 
@@ -339,6 +339,6 @@ func.func @expression_with_subscript_user(%arg0: !emitc.ptr<!emitc.opaque<"void"
     emitc.yield %0 : !emitc.ptr<i32>
   }
   %res = emitc.subscript %0[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
-  %res_load = emitc.lvalue_load %res : !emitc.lvalue<i32>
+  %res_load = emitc.load %res : !emitc.lvalue<i32>
   return %res_load : i32
 }

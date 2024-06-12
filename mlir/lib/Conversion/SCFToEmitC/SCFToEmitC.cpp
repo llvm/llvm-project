@@ -85,7 +85,7 @@ SmallVector<Value> loadValues(const SmallVector<Value> &variables,
                               PatternRewriter &rewriter, Location loc) {
   return llvm::map_to_vector<>(variables, [&](Value var) {
     Type type = cast<emitc::LValueType>(var.getType()).getValueType();
-    return rewriter.create<emitc::LValueLoadOp>(loc, type, var).getResult();
+    return rewriter.create<emitc::LoadOp>(loc, type, var).getResult();
   });
 }
 

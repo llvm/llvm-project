@@ -836,7 +836,7 @@ def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", [CExpression]> {
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
-def EmitC_LValueLoadOp : EmitC_Op<"lvalue_load", [
+def EmitC_LoadOp : EmitC_Op<"load", [
   TypesMatchWith<"result type matches value type of 'operand'",
                   "operand", "result",
                   "::llvm::cast<LValueType>($_self).getValueType()">

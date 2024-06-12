@@ -265,7 +265,7 @@ func.func @test_expression_illegal_op(%arg0 : i1) -> i32 {
   // expected-error @+1 {{'emitc.expression' op contains an unsupported operation}}
   %r = emitc.expression : i32 {
     %x = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-    %y = emitc.lvalue_load %x : <i32>
+    %y = emitc.load %x : <i32>
     emitc.yield %y : i32
   }
   return %r : i32

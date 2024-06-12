@@ -47,17 +47,17 @@ func.func @test_for_yield() {
   emitc.assign %s0 : i32 to %2 : !emitc.lvalue<i32>
   emitc.assign %p0 : f32 to %3 : !emitc.lvalue<f32>
   emitc.for %iter = %start to %stop step %step {
-    %4 = emitc.lvalue_load %2 : !emitc.lvalue<i32>
+    %4 = emitc.load %2 : !emitc.lvalue<i32>
     %sn = emitc.call_opaque "add"(%4, %iter) : (i32, index) -> i32
-    %5 = emitc.lvalue_load %3 : !emitc.lvalue<f32>
+    %5 = emitc.load %3 : !emitc.lvalue<f32>
     %pn = emitc.call_opaque "mul"(%5, %iter) : (f32, index) -> f32
     emitc.assign %sn : i32 to %2 : !emitc.lvalue<i32>
     emitc.assign %pn : f32 to %3 : !emitc.lvalue<f32>
     emitc.yield
   }
-  %6 = emitc.lvalue_load %2 : !emitc.lvalue<i32>
+  %6 = emitc.load %2 : !emitc.lvalue<i32>
   emitc.assign %6 : i32 to %0 : !emitc.lvalue<i32>
-  %7 = emitc.lvalue_load %3 : !emitc.lvalue<f32>
+  %7 = emitc.load %3 : !emitc.lvalue<f32>
   emitc.assign %7 : f32 to %1 : !emitc.lvalue<f32>
 
   return
@@ -144,17 +144,17 @@ func.func @test_for_yield_2() {
   emitc.assign %s0 : i32 to %2 : !emitc.lvalue<i32>
   emitc.assign %p0 : f32 to %3 : !emitc.lvalue<f32>
   emitc.for %iter = %start to %stop step %step {
-    %4 = emitc.lvalue_load %2 : !emitc.lvalue<i32>
+    %4 = emitc.load %2 : !emitc.lvalue<i32>
     %sn = emitc.call_opaque "add"(%4, %iter) : (i32, index) -> i32
-    %5 = emitc.lvalue_load %3 : !emitc.lvalue<f32>
+    %5 = emitc.load %3 : !emitc.lvalue<f32>
     %pn = emitc.call_opaque "mul"(%5, %iter) : (f32, index) -> f32
     emitc.assign %sn : i32 to %2 : !emitc.lvalue<i32>
     emitc.assign %pn : f32 to %3 : !emitc.lvalue<f32>
     emitc.yield
   }
-  %6 = emitc.lvalue_load %2 : !emitc.lvalue<i32>
+  %6 = emitc.load %2 : !emitc.lvalue<i32>
   emitc.assign %6 : i32 to %0 : !emitc.lvalue<i32>
-  %7 = emitc.lvalue_load %3 : !emitc.lvalue<f32>
+  %7 = emitc.load %3 : !emitc.lvalue<f32>
   emitc.assign %7 : f32 to %1 : !emitc.lvalue<f32>
 
   return

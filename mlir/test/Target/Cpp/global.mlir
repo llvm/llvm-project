@@ -39,7 +39,7 @@ emitc.global @opaque_init : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
 
 func.func @use_global_scalar_read() -> i32 {
   %0 = emitc.get_global @myglobal_int : !emitc.lvalue<i32>
-  %1 = emitc.lvalue_load %0 : !emitc.lvalue<i32>
+  %1 = emitc.load %0 : !emitc.lvalue<i32>
   return %1 : i32
 }
 // CPP-DEFAULT-LABEL: int32_t use_global_scalar_read()
@@ -69,7 +69,7 @@ func.func @use_global_scalar_write(%arg0 : i32) {
 func.func @use_global_array_read(%i: index) -> f32 {
   %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
   %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> !emitc.lvalue<f32>
-  %2 = emitc.lvalue_load %1 : !emitc.lvalue<f32>
+  %2 = emitc.load %1 : <f32>
   return %2 : f32
 }
 // CPP-DEFAULT-LABEL: float use_global_array_read

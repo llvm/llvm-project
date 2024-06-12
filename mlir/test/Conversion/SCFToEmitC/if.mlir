@@ -66,7 +66,7 @@ func.func @test_if_yield(%arg0: i1, %arg1: f32) -> (i32, f64) {
 // CHECK-NEXT:      emitc.assign %[[VAL_7]] : i32 to %[[VAL_3]] : <i32>
 // CHECK-NEXT:      emitc.assign %[[VAL_8]] : f64 to %[[VAL_4]] : <f64>
 // CHECK-NEXT:    }
-// CHECK-NEXT:    %[[VAL_9:.*]] = emitc.lvalue_load %[[VAL_3]] : <i32>
-// CHECK-NEXT:    %[[VAL_10:.*]] = emitc.lvalue_load %[[VAL_4]] : <f64>
+// CHECK-NEXT:    %[[VAL_9:.*]] = emitc.load %[[VAL_3]] : <i32>
+// CHECK-NEXT:    %[[VAL_10:.*]] = emitc.load %[[VAL_4]] : <f64>
 // CHECK-NEXT:    return %[[VAL_9]], %[[VAL_10]] : i32, f64
 // CHECK-NEXT:  }

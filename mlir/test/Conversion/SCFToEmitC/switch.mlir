@@ -94,8 +94,8 @@ func.func @switch_one_result(%arg0 : index) {
 // CHECK:             emitc.assign %[[VAL_7]] : i32 to %[[VAL_1]] : <i32>
 // CHECK:             emitc.assign %[[VAL_8]] : f32 to %[[VAL_2]] : <f32>
 // CHECK:           }
-// CHECK:           %[[RES_1:.*]] = emitc.lvalue_load %[[VAL_1]] : <i32>
-// CHECK:           %[[RES_2:.*]] = emitc.lvalue_load %[[VAL_2]] : <f32>
+// CHECK:           %[[RES_1:.*]] = emitc.load %[[VAL_1]] : <i32>
+// CHECK:           %[[RES_2:.*]] = emitc.load %[[VAL_2]] : <f32>
 // CHECK:           return %[[RES_1]], %[[RES_2]] : i32, f32
 // CHECK:         }
 func.func @switch_two_results(%arg0 : index) -> (i32, f32) {

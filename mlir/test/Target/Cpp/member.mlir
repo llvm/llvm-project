@@ -5,7 +5,7 @@ func.func @member(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1: i32) {
   emitc.assign %arg1 : i32 to %0 : !emitc.lvalue<i32> 
 
   %1 = "emitc.member" (%arg0) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
-  %2 = emitc.lvalue_load %1 : !emitc.lvalue<i32>
+  %2 = emitc.load %1 : !emitc.lvalue<i32>
   %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   emitc.assign %2 : i32 to %3 : !emitc.lvalue<i32>
 
@@ -24,7 +24,7 @@ func.func @member_of_pointer(%arg0: !emitc.lvalue<!emitc.ptr<!emitc.opaque<"myst
   emitc.assign %arg1 : i32 to %0 : !emitc.lvalue<i32>
 
   %1 = "emitc.member_of_ptr" (%arg0) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
-  %2 = emitc.lvalue_load %1 : !emitc.lvalue<i32>
+  %2 = emitc.load %1 : !emitc.lvalue<i32>
   %3 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   emitc.assign %2 : i32 to %3 : !emitc.lvalue<i32>
 

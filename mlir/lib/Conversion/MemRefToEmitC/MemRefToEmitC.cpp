@@ -137,7 +137,7 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
     auto subscript = rewriter.create<emitc::SubscriptOp>(
         op.getLoc(), arrayValue, operands.getIndices());
 
-    rewriter.replaceOpWithNewOp<emitc::LValueLoadOp>(op, resultTy, subscript);
+    rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
     return success();
   }
 };

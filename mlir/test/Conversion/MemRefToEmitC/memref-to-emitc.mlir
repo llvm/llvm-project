@@ -21,7 +21,7 @@ func.func @memref_load(%i: index, %j: index) -> f32 {
   %0 = memref.alloca() : memref<4x8xf32>
 
   // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[ALLOCA]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
-  // CHECK-NEXT: %[[LOAD:.*]] = emitc.lvalue_load %[[SUBSCRIPT]] : <f32>
+  // CHECK-NEXT: %[[LOAD:.*]] = emitc.load %[[SUBSCRIPT]] : <f32>
   %1 = memref.load %0[%i, %j] : memref<4x8xf32>
   // CHECK-NEXT: return %[[LOAD]] : f32
   return %1 : f32
