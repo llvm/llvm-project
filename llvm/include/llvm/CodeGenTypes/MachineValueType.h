@@ -256,7 +256,7 @@ namespace llvm {
       default:
         llvm_unreachable("Not a vector MVT!");
 
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
+#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                    \
   case Ty:                                                                     \
     return ElTy;
 #include "llvm/CodeGen/GenVT.inc"
@@ -270,7 +270,7 @@ namespace llvm {
       default:
         llvm_unreachable("Not a vector MVT!");
 
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
+#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                    \
   case Ty:                                                                     \
     return nElem;
 #include "llvm/CodeGen/GenVT.inc"
@@ -440,7 +440,7 @@ namespace llvm {
     }
 
     static MVT getVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
+#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                    \
   if (!Sc && VT.SimpleTy == ElTy && NumElements == nElem)                      \
     return Ty;
 #include "llvm/CodeGen/GenVT.inc"
@@ -450,7 +450,7 @@ namespace llvm {
     }
 
     static MVT getScalableVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
+#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                    \
   if (Sc && VT.SimpleTy == ElTy && NumElements == nElem)                       \
     return Ty;
 #include "llvm/CodeGen/GenVT.inc"

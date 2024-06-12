@@ -110,7 +110,7 @@ void VTEmitter::run(raw_ostream &OS) {
   }
   OS << "#endif\n\n";
 
-  OS << "#ifdef GET_VT_VECATTR // (Ty, Sc, nElem, ElTy, ElSz)\n";
+  OS << "#ifdef GET_VT_VECATTR // (Ty, Sc, nElem, ElTy)\n";
   for (const auto *VT : VTsByNumber) {
     if (!VT || !VT->getValueAsBit("isVector"))
       continue;
@@ -121,8 +121,7 @@ void VTEmitter::run(raw_ostream &OS) {
        << VT->getValueAsString("LLVMName") << ", "
        << VT->getValueAsBit("isScalable") << ", "
        << VT->getValueAsInt("nElem") << ", "
-       << ElTy->getName() << ", "
-       << ElTy->getValueAsInt("Size") << ")\n";
+       << ElTy->getName() << ")\n";
     // clang-format on
   }
   OS << "#endif\n\n";
