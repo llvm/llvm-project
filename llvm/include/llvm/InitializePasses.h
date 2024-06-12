@@ -201,7 +201,7 @@ void initializeMachineModuleInfoWrapperPassPass(PassRegistry &);
 void initializeMachineOptimizationRemarkEmitterPassPass(PassRegistry&);
 void initializeMachineOutlinerPass(PassRegistry&);
 void initializeMachinePipelinerPass(PassRegistry&);
-void initializeMachinePostDominatorTreePass(PassRegistry&);
+void initializeMachinePostDominatorTreeWrapperPassPass(PassRegistry &);
 void initializeMachineRegionInfoPassPass(PassRegistry&);
 void initializeMachineSanitizerBinaryMetadataPass(PassRegistry &);
 void initializeMachineSchedulerPass(PassRegistry&);
