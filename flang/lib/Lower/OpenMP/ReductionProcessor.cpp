@@ -709,8 +709,8 @@ void ReductionProcessor::addDeclareReduction(
     }
   }
 
-  // initial pass to collect all reduction vars so we can figure out if this
-  // should happen byref
+  // Reduction variable processing common to both intrinsic operators and
+  // procedure designators
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const Object &object : objectList) {
     const semantics::Symbol *symbol = object.sym();
@@ -808,15 +808,23 @@ void ReductionProcessor::addDeclareReduction(
       ReductionProcessor::ReductionIdentifier redId =
           ReductionProcessor::getReductionType(*reductionIntrinsic);
       for (auto [symVal, isByRef] : llvm::zip(reductionVars, reduceVarByRef)) {
+        // TODO: share code with above
         auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
-        if (!redType.getEleTy().isIntOrIndexOrFloat())
-          TODO(currentLocation,
-               "Reduction of some types is not supported for intrinsics");
-        decl = createDeclareReduction(
-            firOpBuilder,
-            getReductionName(getRealName(*reductionIntrinsic).ToString(),
-                             firOpBuilder.getKindMap(), redType, isByRef),
-            redId, redType, currentLocation, isByRef);
+        const auto &kindMap = firOpBuilder.getKindMap();
+        if (mlir::isa<fir::LogicalType>(redType.getEleTy()))
+          decl = createDeclareReduction(
+              firOpBuilder,
+              getReductionName(
+                  /*DIFFERENCE:*/ getRealName(*reductionIntrinsic).ToString(),
+                  kindMap, firOpBuilder.getI1Type(), isByRef),
+              redId, redType, currentLocation, isByRef);
+        else
+          decl = createDeclareReduction(
+              firOpBuilder,
+              getReductionName(
+                  /*DIFFERENCE:*/ getRealName(*reductionIntrinsic).ToString(),
+                  kindMap, redType, isByRef),
+              redId, redType, currentLocation, isByRef);
         reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
             firOpBuilder.getContext(), decl.getSymName()));
       }
