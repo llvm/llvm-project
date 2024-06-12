@@ -1468,6 +1468,11 @@ bool CompilerInvocation::setDefaultPointerAuthOptions(
       // If you change anything here, be sure to update <ptrauth.h>.
       Opts.FunctionPointers =
           PointerAuthSchema(Key::ASIA, false, Discrimination::None);
+      if (LangOpts.PointerAuthInitFini) {
+        Opts.InitFiniPointers =
+            PointerAuthSchema(Key::ASIA, false, Discrimination::Constant,
+                              InitFiniPointerConstantDiscriminator);
+      }
     }
     return true;
   }
