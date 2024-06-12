@@ -2675,6 +2675,35 @@ private:
         std::get<2>(dir.t);
     const std::optional<Fortran::parser::ScalarIntExpr> &stream =
         std::get<3>(dir.t);
+    const std::list<Fortran::parser::CUFReduction> &cufreds =
+        std::get<4>(dir.t);
+
+    llvm::SmallVector<mlir::Value> reduceOperands;
+    llvm::SmallVector<mlir::Attribute> reduceAttrs;
+
+    for (const Fortran::parser::CUFReduction &cufred : cufreds) {
+      fir::ReduceOperationEnum redOpEnum = getReduceOperationEnum(
+          std::get<Fortran::parser::ReductionOperator>(cufred.t));
+      const std::list<Fortran::parser::Scalar<Fortran::parser::Variable>>
+          &scalarvars = std::get<1>(cufred.t);
+      for (const Fortran::parser::Scalar<Fortran::parser::Variable> &scalarvar :
+           scalarvars) {
+        auto reduce_attr =
+            fir::ReduceAttr::get(builder->getContext(), redOpEnum);
+        reduceAttrs.push_back(reduce_attr);
+        const Fortran::parser::Variable &var = scalarvar.thing;
+        if (const auto *iDesignator = std::get_if<
+                Fortran::common::Indirection<Fortran::parser::Designator>>(
+                &var.u)) {
+          const Fortran::parser::Designator &designator = iDesignator->value();
+          if (const auto *name =
+                  Fortran::semantics::getDesignatorNameIfDataRef(designator)) {
+            auto val = getSymbolAddress(*name->symbol);
+            reduceOperands.push_back(val);
+          }
+        }
+      }
+    }
 
     auto isOnlyStars =
         [&](const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr>
@@ -2777,8 +2806,9 @@ private:
         loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
     }
 
-    auto op = builder->create<cuf::KernelOp>(loc, gridValues, blockValues,
-                                             streamValue, lbs, ubs, steps, n);
+    auto op = builder->create<cuf::KernelOp>(
+        loc, gridValues, blockValues, streamValue, lbs, ubs, steps, n,
+        mlir::ValueRange(reduceOperands), builder->getArrayAttr(reduceAttrs));
     builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
                          ivLocs);
     mlir::Block &b = op.getRegion().back();
