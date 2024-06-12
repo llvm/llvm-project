@@ -10,17 +10,6 @@
 #define _LIBCPP___ALGORITHM_PSTL_H
 
 #include <__config>
-#include <__functional/operations.h>
-#include <__iterator/cpp17_iterator_concepts.h>
-#include <__iterator/iterator_traits.h>
-#include <__pstl/backend.h>
-#include <__pstl/dispatch.h>
-#include <__pstl/handle_exception.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_execution_policy.h>
-#include <__type_traits/remove_cvref.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,6 +19,18 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+
+#  include <__functional/operations.h>
+#  include <__iterator/cpp17_iterator_concepts.h>
+#  include <__iterator/iterator_traits.h>
+#  include <__pstl/backend.h>
+#  include <__pstl/dispatch.h>
+#  include <__pstl/handle_exception.h>
+#  include <__type_traits/enable_if.h>
+#  include <__type_traits/is_execution_policy.h>
+#  include <__type_traits/remove_cvref.h>
+#  include <__utility/forward.h>
+#  include <__utility/move.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

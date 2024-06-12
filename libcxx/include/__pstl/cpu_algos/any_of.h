@@ -23,10 +23,8 @@
 #include <cstdint>
 #include <optional>
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
-
 _LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
@@ -97,7 +95,5 @@ struct __cpu_parallel_any_of {
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
-
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___PSTL_CPU_ALGOS_ANY_OF_H
