@@ -1064,7 +1064,7 @@ static SDValue combineShiftToAVG(SDValue Op,
     return SDValue();
   if (VT.isVector())
     NVT = EVT::getVectorVT(*DAG.getContext(), NVT, VT.getVectorElementCount());
-  if (TLO.LegalOperations() && !TLI.isOperationLegal(AVGOpc, NVT)) {
+  if (TLO.LegalTypes() && !TLI.isOperationLegal(AVGOpc, NVT)) {
     // If we could not transform, and (both) adds are nuw/nsw, we can use the
     // larger type size to do the transform.
     if (TLO.LegalOperations() && !TLI.isOperationLegal(AVGOpc, VT))
