@@ -3,8 +3,8 @@
 #include <sys/sysctl.h>
 
 #if __has_include(<arm/cpu_capabilities_public.h>)
-#  include <arm/cpu_capabilities_public.h>
-#  define HAS_CPU_CAPABILITIES_PUBLIC_H 1
+#include <arm/cpu_capabilities_public.h>
+#define HAS_CPU_CAPABILITIES_PUBLIC_H 1
 #endif
 
 static bool isKnownAndSupported(const char *name) {
@@ -34,12 +34,13 @@ void __init_cpu_features_resolver(void) {
   // ~20-something sysctls path.
   if (!sysctlbyname("hw.optional.arm.caps", &feats_bitvec, &len, 0, 0)) {
 
-    #define CHECK_BIT(FROM, TO) do { \
-      _Static_assert(FROM < CAP_BIT_NB, BROKEN_ABI_MESSAGE); \
-      if (feats_bitvec[FROM / 8] & (1u << ((FROM) & 7))) { \
-        features |= (1ULL << TO); \
-      } \
-    } while(0)
+#define CHECK_BIT(FROM, TO)                                                    \
+  do {                                                                         \
+    _Static_assert(FROM < CAP_BIT_NB, BROKEN_ABI_MESSAGE);                     \
+    if (feats_bitvec[FROM / 8] & (1u << ((FROM)&7))) {                         \
+      features |= (1ULL << TO);                                                \
+    }                                                                          \
+  } while (0)
 
     CHECK_BIT(CAP_BIT_FEAT_FlagM, FEAT_FLAGM);
     CHECK_BIT(CAP_BIT_FEAT_FlagM2, FEAT_FLAGM2);
@@ -78,7 +79,7 @@ void __init_cpu_features_resolver(void) {
     features |= (1ULL << FEAT_INIT);
 
     __atomic_store(&__aarch64_cpu_features.features, &features,
-                    __ATOMIC_RELAXED);
+                   __ATOMIC_RELAXED);
     return;
   }
 #endif
