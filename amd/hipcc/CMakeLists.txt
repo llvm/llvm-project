@@ -22,14 +22,14 @@ set(ADDITIONAL_SHARED_LIBRARIES_TO_LINK
   libstdc++fs.so)
 
 set(HIPCC_BIN
-  hipcc.bin)
+  hipcc)
 set(HIPCC_SOURCES
   src/hipBin.cpp
   src/utils.cpp
 )
 
 set(HIPCONFIG_BIN
-  hipconfig.bin)
+  hipconfig)
 set(HIPCONFIG_SOURCES
   src/hipBin.cpp
   src/utils.cpp
@@ -68,7 +68,8 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_DEBIAN_ENABLE_COMPONENT_DEPENDS ON)
 set(CPACK_DEB_COMPONENT_INSTALL ON)
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "perl (>= 5.0), rocm-core")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "rocm-core")
+set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "perl (>= 5.0)")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm-Developer-Tools/HIPCC")
 if(DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
   set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
@@ -78,17 +79,20 @@ endif()
 
 # AMD specific Debian packaging varibles.
 set(CPACK_DEBIAN_AMD_PACKAGE_NAME "hipcc")
-set(CPACK_DEBIAN_AMD_PACKAGE_DEPENDS "perl (>= 5.0), rocm-core, rocm-llvm")
+set(CPACK_DEBIAN_AMD_PACKAGE_DEPENDS "rocm-core, rocm-llvm")
+set(CPACK_DEBIAN_AMD_PACKAGE_RECOMMENDS "perl (>= 5.0)")
 
 # NVIDIA specific Debian packaging variables.
 set(CPACK_DEBIAN_NVIDIA_PACKAGE_NAME "hipcc-nvidia")
-set(CPACK_DEBIAN_NVIDIA_PACKAGE_DEPENDS "perl (>= 5.0), rocm-core") # for NVIDIA we don't need to add rocm-llvm as a dependency
+set(CPACK_DEBIAN_NVIDIA_PACKAGE_DEPENDS "rocm-core") # for NVIDIA we don't need to add rocm-llvm as a dependency
+set(CPACK_DEBIAN_NVIDIA_PACKAGE_RECOMMENDS "perl (>= 5.0)") 
 
 
 # RPM specific packaging variables.
 set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
-set(CPACK_RPM_PACKAGE_REQUIRES "perl >= 5.0, rocm-core")
+set(CPACK_RPM_PACKAGE_REQUIRES "rocm-core")
+set(CPACK_RPM_PACKAGE_SUGGESTS "perl >= 5.0")
 set(CPACK_RPM_PACKAGE_AUTOREQPROV 0)
 if(DEFINED ENV{CPACK_RPM_PACKAGE_RELEASE})
   set(CPACK_RPM_PACKAGE_RELEASE $ENV{CPACK_RPM_PACKAGE_RELEASE})
@@ -101,11 +105,13 @@ endif()
 
 # AMD specific RPM packaging varibables.
 set(CPACK_RPM_AMD_PACKAGE_NAME "hipcc")
-set(CPACK_RPM_AMD_PACKAGE_REQUIRES "perl >= 5.0, rocm-core, rocm-llvm")
+set(CPACK_RPM_AMD_PACKAGE_REQUIRES "rocm-core, rocm-llvm")
+set(CPACK_RPM_AMD_PACKAGE_SUGGESTS "perl >= 5.0")
 
 # NVIDIA specific RPM packaging variables.
 set(CPACK_RPM_NVIDIA_PACKAGE_NAME "hipcc-nvidia")
-set(CPACK_RPM_NVIDIA_PACKAGE_REQUIRES "perl >= 5.0, rocm-core") # for NVIDIA we don't need to add rocm-llvm as a dependency
+set(CPACK_RPM_NVIDIA_PACKAGE_REQUIRES "rocm-core") # for NVIDIA we don't need to add rocm-llvm as a dependency
+set(CPACK_RPM_NVIDIA_PACKAGE_SUGGESTS "perl >= 5.0")
 
 # ROCM versioning.
 set(ROCM_VERSION_FOR_PACKAGE "")
