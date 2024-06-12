@@ -34,6 +34,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+namespace __pstl {
 
 template <class _Backend, class _Index, class _Brick, class _Compare>
 _LIBCPP_HIDE_FROM_ABI optional<_Index>
@@ -43,8 +44,8 @@ __parallel_find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool
   _DifferenceType __initial_dist = __b_first ? __n : -1;
   std::atomic<_DifferenceType> __extremum(__initial_dist);
   // TODO: find out what is better here: parallel_for or parallel_reduce
-  auto __res = __pstl::__cpu_traits<_Backend>::__for_each(
-      __first, __last, [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
+  auto __res =
+      __cpu_traits<_Backend>::__for_each(__first, __last, [__comp, __f, __first, &__extremum](_Index __i, _Index __j) {
         // See "Reducing Contention Through Priority Updates", PPoPP '13, for discussion of
         // why using a shared variable scales fairly well in this situation.
         if (__comp(__i - __first, __extremum)) {
@@ -67,8 +68,8 @@ template <class _Backend, class _Index, class _DifferenceType, class _Compare>
 _LIBCPP_HIDE_FROM_ABI _Index
 __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept {
   // Experiments show good block sizes like this
-  const _DifferenceType __block_size                                                        = 8;
-  alignas(__pstl::__cpu_traits<_Backend>::__lane_size) _DifferenceType __lane[__block_size] = {0};
+  const _DifferenceType __block_size                                                = 8;
+  alignas(__cpu_traits<_Backend>::__lane_size) _DifferenceType __lane[__block_size] = {0};
   while (__end - __begin >= __block_size) {
     _DifferenceType __found = 0;
     _PSTL_PRAGMA_SIMD_REDUCTION(| : __found) for (_DifferenceType __i = __begin; __i < __begin + __block_size; ++__i) {
@@ -106,7 +107,7 @@ struct __cpu_parallel_find_if {
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return std::__parallel_find<_Backend>(
+      return __pstl::__parallel_find<_Backend>(
           __first,
           __last,
           [&__policy, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
@@ -120,7 +121,7 @@ struct __cpu_parallel_find_if {
     } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       using __diff_t = __iter_diff_t<_ForwardIterator>;
-      return std::__simd_first<_Backend>(
+      return __pstl::__simd_first<_Backend>(
           __first, __diff_t(0), __last - __first, [&__pred](_ForwardIterator __iter, __diff_t __i) {
             return __pred(__iter[__i]);
           });
@@ -130,6 +131,7 @@ struct __cpu_parallel_find_if {
   }
 };
 
+} // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
