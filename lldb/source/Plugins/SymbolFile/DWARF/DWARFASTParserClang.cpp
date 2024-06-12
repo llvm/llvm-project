@@ -23,6 +23,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -1773,6 +1774,11 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   }
 
   if (attrs.is_forward_declaration) {
+    Progress progress(llvm::formatv(
+        "Parsing type in {0}: '{1}'",
+        dwarf->GetObjectFile()->GetFileSpec().GetFilename().GetString(),
+        attrs.name.GetString()));
+
     // We have a forward declaration to a type and we need to try and
     // find a full declaration. We look in the current type index just in
     // case we have a forward declaration followed by an actual
