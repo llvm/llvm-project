@@ -28,7 +28,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iterator, class _DifferenceType, class _Function>
-_LIBCPP_HIDE_FROM_ABI _Iterator __simd_walk(_Iterator __first, _DifferenceType __n, _Function __f) noexcept {
+_LIBCPP_HIDE_FROM_ABI _Iterator __simd_for_each(_Iterator __first, _DifferenceType __n, _Function __f) noexcept {
   _PSTL_PRAGMA_SIMD
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __f(__first[__i]);
@@ -52,7 +52,7 @@ struct __cpu_parallel_for_each {
           });
     } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      std::__simd_walk(__first, __last - __first, __func);
+      std::__simd_for_each(__first, __last - __first, __func);
       return __empty{};
     } else {
       std::for_each(__first, __last, __func);
