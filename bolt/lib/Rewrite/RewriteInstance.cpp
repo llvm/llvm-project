@@ -246,6 +246,10 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
+static cl::opt<bool> SplitFunctionCheck(
+    "split-function-check", cl::desc("check if binary contains cold warm split functions"),
+    cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
+
 } // namespace opts
 
 // FIXME: implement a better way to mark sections for replacement.
@@ -1149,7 +1153,7 @@ void RewriteInstance::discoverFileObjects() {
     }
 
     // Check if it's a cold function fragment.
-    if (FunctionFragmentTemplate.match(SymName)) {
+    if (opts::SplitFunctionCheck && FunctionFragmentTemplate.match(SymName)) {
       static bool PrintedWarning = false;
       if (!PrintedWarning) {
         PrintedWarning = true;
