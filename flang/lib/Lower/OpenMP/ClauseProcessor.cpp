@@ -16,6 +16,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
 namespace Fortran {
 namespace lower {
@@ -996,6 +997,72 @@ bool ClauseProcessor::processUseDevicePtr(
       [&](const omp::clause::UseDevicePtr &clause, const parser::CharBlock &) {
         addUseDeviceClause(converter, clause.v, result.useDevicePtrVars,
                            useDeviceTypes, useDeviceLocs, useDeviceSyms);
+      });
+}
+
+static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
+  llvm::StringMap<bool> featuresMap;
+  llvm::SmallVector<llvm::StringRef> targetFeaturesVec;
+  if (mlir::LLVM::TargetFeaturesAttr features =
+          fir::getTargetFeatures(module)) {
+    llvm::StringRef targetFeaturesStr(features.getFeaturesString());
+    targetFeaturesStr.split(targetFeaturesVec, ",");
+    for (auto &feature : targetFeaturesVec) {
+      if (feature.empty())
+        continue;
+      llvm::StringRef featureKeyString = feature.substr(1);
+      featuresMap[featureKeyString] = (feature[0] == '+');
+    }
+  }
+  return featuresMap;
+}
+
+static void
+addAlignedClause(lower::AbstractConverter &converter,
+                 const omp::clause::Aligned &clause,
+                 llvm::SmallVectorImpl<mlir::Value> &alignedVars,
+                 llvm::SmallVectorImpl<mlir::Attribute> &alignmentAttrs) {
+  using Aligned = omp::clause::Aligned;
+  lower::StatementContext stmtCtx;
+  mlir::IntegerAttr alignmentValueAttr;
+  int64_t alignment = 0;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  if (auto &alignmentValueParserExpr =
+          std::get<std::optional<Aligned::Alignment>>(clause.t)) {
+    mlir::Value operand = fir::getBase(
+        converter.genExprValue(*alignmentValueParserExpr, stmtCtx));
+    if (mlir::Operation *definingOp = operand.getDefiningOp())
+      if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
+        if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue()))
+          alignment = intAttr.getInt();
+  } else {
+    llvm::StringMap<bool> featuresMap = getTargetFeatures(builder.getModule());
+    llvm::Triple triple = fir::getTargetTriple(builder.getModule());
+    alignment =
+        llvm::OpenMPIRBuilder::getOpenMPDefaultSimdAlign(triple, featuresMap);
+  }
+
+  // The default alignment for some targets is equal to 0.
+  // Do not generate alignment assumption if alignment is less than or equal to
+  // 0.
+  if (alignment > 0) {
+    auto &objects = std::get<omp::ObjectList>(clause.t);
+    if (!objects.empty())
+      genObjectList(objects, converter, alignedVars);
+    alignmentValueAttr = builder.getI64IntegerAttr(alignment);
+    // All the list items in a aligned clause will have same alignment
+    for (std::size_t i = 0; i < objects.size(); i++)
+      alignmentAttrs.push_back(alignmentValueAttr);
+  }
+}
+
+bool ClauseProcessor::processAligned(
+    mlir::omp::AlignedClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Aligned>(
+      [&](const omp::clause::Aligned &clause, const parser::CharBlock &) {
+        addAlignedClause(converter, clause, result.alignedVars,
+                         result.alignmentAttrs);
       });
 }
 

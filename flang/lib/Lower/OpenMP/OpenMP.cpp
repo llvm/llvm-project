@@ -1062,11 +1062,11 @@ static void genSimdClauses(lower::AbstractConverter &converter,
   cp.processReduction(loc, clauseOps);
   cp.processSafelen(clauseOps);
   cp.processSimdlen(clauseOps);
-  // TODO Support delayed privatization.
+  cp.processAligned(clauseOps);
 
-  cp.processTODO<clause::Aligned, clause::Allocate, clause::Linear,
-                 clause::Nontemporal, clause::Order>(
-      loc, llvm::omp::Directive::OMPD_simd);
+  // TODO Support delayed privatization.
+  cp.processTODO<clause::Allocate, clause::Linear, clause::Nontemporal,
+                 clause::Order>(loc, llvm::omp::Directive::OMPD_simd);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,
