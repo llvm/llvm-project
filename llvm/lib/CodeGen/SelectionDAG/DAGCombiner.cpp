@@ -10112,7 +10112,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   // fold (shl X, cttz(Y)) -> (mul (Y & -Y), X) if cttz is unsupported on the
   // target.
   if (((N1.getOpcode() == ISD::CTTZ &&
-        VT.getScalarSizeInBits() >= ShiftVT.getScalarSizeInBits()) ||
+        VT.getScalarSizeInBits() <= ShiftVT.getScalarSizeInBits()) ||
        N1.getOpcode() == ISD::CTTZ_ZERO_UNDEF) &&
       N1.hasOneUse() && !TLI.isOperationLegalOrCustom(ISD::CTTZ, ShiftVT) &&
       TLI.isOperationLegalOrCustom(ISD::MUL, VT)) {
@@ -17262,26 +17262,29 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   if (SDValue V = combineRepeatedFPDivisors(N))
     return V;
 
-  if (Options.UnsafeFPMath || Flags.hasAllowReciprocal()) {
-    // fold (fdiv X, c2) -> fmul X, 1/c2 if losing precision is acceptable.
-    if (auto *N1CFP = dyn_cast<ConstantFPSDNode>(N1)) {
-      // Compute the reciprocal 1.0 / c2.
-      const APFloat &N1APF = N1CFP->getValueAPF();
-      APFloat Recip(N1APF.getSemantics(), 1); // 1.0
-      APFloat::opStatus st = Recip.divide(N1APF, APFloat::rmNearestTiesToEven);
-      // Only do the transform if the reciprocal is a legal fp immediate that
-      // isn't too nasty (eg NaN, denormal, ...).
-      if ((st == APFloat::opOK || st == APFloat::opInexact) && // Not too nasty
-          (!LegalOperations ||
-           // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
-           // backend)... we should handle this gracefully after Legalize.
-           // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
-           TLI.isOperationLegal(ISD::ConstantFP, VT) ||
-           TLI.isFPImmLegal(Recip, VT, ForCodeSize)))
-        return DAG.getNode(ISD::FMUL, DL, VT, N0,
-                           DAG.getConstantFP(Recip, DL, VT));
-    }
+  // fold (fdiv X, c2) -> (fmul X, 1/c2) if there is no loss in precision, or
+  // the loss is acceptable with AllowReciprocal.
+  if (auto *N1CFP = isConstOrConstSplatFP(N1, true)) {
+    // Compute the reciprocal 1.0 / c2.
+    const APFloat &N1APF = N1CFP->getValueAPF();
+    APFloat Recip = APFloat::getOne(N1APF.getSemantics());
+    APFloat::opStatus st = Recip.divide(N1APF, APFloat::rmNearestTiesToEven);
+    // Only do the transform if the reciprocal is a legal fp immediate that
+    // isn't too nasty (eg NaN, denormal, ...).
+    if (((st == APFloat::opOK && !Recip.isDenormal()) ||
+         (st == APFloat::opInexact &&
+          (Options.UnsafeFPMath || Flags.hasAllowReciprocal()))) &&
+        (!LegalOperations ||
+         // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
+         // backend)... we should handle this gracefully after Legalize.
+         // TLI.isOperationLegalOrCustom(ISD::ConstantFP, VT) ||
+         TLI.isOperationLegal(ISD::ConstantFP, VT) ||
+         TLI.isFPImmLegal(Recip, VT, ForCodeSize)))
+      return DAG.getNode(ISD::FMUL, DL, VT, N0,
+                         DAG.getConstantFP(Recip, DL, VT));
+  }
 
+  if (Options.UnsafeFPMath || Flags.hasAllowReciprocal()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
     if (N1.getOpcode() == ISD::FSQRT) {
@@ -26586,7 +26589,12 @@ SDValue DAGCombiner::visitFP16_TO_FP(SDNode *N) {
     }
   }
 
-  return SDValue();
+  // Sometimes constants manage to survive very late in the pipeline, e.g.,
+  // because they are wrapped inside the <1 x f16> type. Try one last time to
+  // get rid of them.
+  SDValue Folded = DAG.FoldConstantArithmetic(N->getOpcode(), SDLoc(N),
+                                              N->getValueType(0), {N0});
+  return Folded;
 }
 
 SDValue DAGCombiner::visitFP_TO_BF16(SDNode *N) {

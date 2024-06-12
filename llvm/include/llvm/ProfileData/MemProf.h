@@ -28,7 +28,8 @@ enum IndexedVersion : uint64_t {
   Version1 = 1,
   // Version 2: Added a call stack table.
   Version2 = 2,
-  // Version 3: Under development.
+  // Version 3: Added a radix tree for call stacks.  Switched to linear IDs for
+  // frames and call stacks.
   Version3 = 3,
 };
 
@@ -439,8 +440,8 @@ struct IndexedMemProfRecord {
   // on the schema provided in \p Schema.
   void serialize(const MemProfSchema &Schema, raw_ostream &OS,
                  IndexedVersion Version,
-                 llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
-                     *MemProfCallStackIndexes = nullptr);
+                 llvm::DenseMap<CallStackId, LinearCallStackId>
+                     *MemProfCallStackIndexes = nullptr) const;
 
   // Deserializes memprof records from the Buffer.
   static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
@@ -579,15 +580,14 @@ private:
   IndexedVersion Version;
 
   // Mappings from CallStackId to the indexes into the call stack array.
-  llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
-      *MemProfCallStackIndexes;
+  llvm::DenseMap<CallStackId, LinearCallStackId> *MemProfCallStackIndexes;
 
 public:
   // We do not support the default constructor, which does not set Version.
   RecordWriterTrait() = delete;
-  RecordWriterTrait(const MemProfSchema *Schema, IndexedVersion V,
-                    llvm::DenseMap<memprof::CallStackId, LinearCallStackId>
-                        *MemProfCallStackIndexes)
+  RecordWriterTrait(
+      const MemProfSchema *Schema, IndexedVersion V,
+      llvm::DenseMap<CallStackId, LinearCallStackId> *MemProfCallStackIndexes)
       : Schema(Schema), Version(V),
         MemProfCallStackIndexes(MemProfCallStackIndexes) {}
 
@@ -900,9 +900,18 @@ struct LinearCallStackIdConverter {
     Frames.reserve(NumFrames);
     for (; NumFrames; --NumFrames) {
       LinearFrameId Elem =
-          support::endian::readNext<LinearFrameId, llvm::endianness::little>(
-              Ptr);
+          support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      // Follow a pointer to the parent, if any.  See comments below on
+      // CallStackRadixTreeBuilder for the description of the radix tree format.
+      if (static_cast<std::make_signed_t<LinearFrameId>>(Elem) < 0) {
+        Ptr += (-Elem) * sizeof(LinearFrameId);
+        Elem =
+            support::endian::read<LinearFrameId, llvm::endianness::little>(Ptr);
+      }
+      // We shouldn't encounter another pointer.
+      assert(static_cast<std::make_signed_t<LinearFrameId>>(Elem) >= 0);
       Frames.push_back(FrameIdToFrame(Elem));
+      Ptr += sizeof(LinearFrameId);
     }
 
     return Frames;
@@ -922,6 +931,18 @@ struct IndexedMemProfData {
   // A map to hold call stack id to call stacks.
   llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> CallStackData;
 };
+
+struct FrameStat {
+  // The number of occurrences of a given FrameId.
+  uint64_t Count = 0;
+  // The sum of indexes where a given FrameId shows up.
+  uint64_t PositionSum = 0;
+};
+
+// Compute a histogram of Frames in call stacks.
+llvm::DenseMap<FrameId, FrameStat>
+computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
+                          &MemProfCallStackData);
 
 // Construct a radix tree of call stacks.
 //
@@ -967,7 +988,7 @@ struct IndexedMemProfData {
 //
 // The radix tree allows us to reconstruct call stacks in the leaf-to-root
 // order as we scan the array from left ro right while following pointers to
-// parents along the way
+// parents along the way.
 //
 // For example, if we are decoding CallStackId 2, we start a forward traversal
 // at Index 7, noting the call stack length of 4 and obtaining f5 and f4.  When
@@ -1020,13 +1041,13 @@ public:
   // Build a radix tree array.
   void build(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
                  &&MemProfCallStackData,
-             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes);
+             const llvm::DenseMap<FrameId, LinearFrameId> &MemProfFrameIndexes,
+             llvm::DenseMap<FrameId, FrameStat> &FrameHistogram);
 
   const std::vector<LinearFrameId> &getRadixArray() const { return RadixArray; }
 
-  const llvm::DenseMap<CallStackId, LinearCallStackId> &
-  getCallStackPos() const {
-    return CallStackPos;
+  llvm::DenseMap<CallStackId, LinearCallStackId> takeCallStackPos() {
+    return std::move(CallStackPos);
   }
 };
 

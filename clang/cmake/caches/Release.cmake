@@ -30,7 +30,7 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 set(LLVM_RELEASE_ENABLE_LTO THIN CACHE STRING "")
-set(LLVM_RELEASE_ENABLE_PGO OFF CACHE BOOL "")
+set(LLVM_RELEASE_ENABLE_PGO ON CACHE BOOL "")
 set(LLVM_RELEASE_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 set(LLVM_RELEASE_ENABLE_PROJECTS "clang;lld;lldb;clang-tools-extra;bolt;polly;mlir;flang" CACHE STRING "")
 # Note we don't need to add install here, since it is one of the pre-defined

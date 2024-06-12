@@ -138,6 +138,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
     case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
@@ -324,9 +325,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    if (Part != 0 && vputils::onlyFirstPartUsed(this))
-      return State.get(this, 0, OnlyFirstLaneUsed);
-
     Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     auto *Res =
@@ -628,6 +626,7 @@ void VPInstruction::execute(VPTransformState &State) {
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
+  bool OnlyFirstPartUsed = vputils::onlyFirstPartUsed(this);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (GeneratesPerAllLanes) {
       for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
@@ -636,6 +635,13 @@ void VPInstruction::execute(VPTransformState &State) {
         assert(GeneratedValue && "generatePerLane must produce a value");
         State.set(this, GeneratedValue, VPIteration(Part, Lane));
       }
+      continue;
+    }
+
+    if (Part != 0 && OnlyFirstPartUsed && hasResult()) {
+      Value *Part0 = State.get(this, 0, /*IsScalar*/ GeneratesPerFirstLaneOnly);
+      State.set(this, Part0, Part,
+                /*IsScalar*/ GeneratesPerFirstLaneOnly);
       continue;
     }
 
@@ -669,6 +675,25 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
+    return true;
+  };
+  llvm_unreachable("switch should return");
+}
+
+bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (Instruction::isBinaryOp(getOpcode()))
+    return vputils::onlyFirstPartUsed(this);
+
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::ICmp:
+  case Instruction::Select:
+    return vputils::onlyFirstPartUsed(this);
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
   llvm_unreachable("switch should return");
