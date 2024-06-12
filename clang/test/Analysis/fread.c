@@ -347,15 +347,17 @@ void test_partial_elements_read(void) {
   buffer[2] = 3;
   buffer[3] = 4;
   buffer[4] = 5;
+  buffer[5] = 6;
   FILE *fp = fopen("/home/test", "rb+");
   if (fp) {
-    // 3*5: 15 bytes read; which is not exactly 4 integers, thus we invalidate the whole buffer.
+    // 3*5: 15 bytes read; which is not exactly 4 integers, but we still invalidate the first 4 ints.
     if (5 == fread(buffer + 1, 3, 5, fp)) {
       clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}}
       clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
       clang_analyzer_dump(buffer[2]); // expected-warning{{conj_}}
       clang_analyzer_dump(buffer[3]); // expected-warning{{conj_}}
       clang_analyzer_dump(buffer[4]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[5]); // expected-warning{{6 S32b}}
 
       char *c = (char*)buffer;
       clang_analyzer_dump(c[4+12]); // expected-warning{{conj_}} 16th byte of buffer, which is the beginning of the 4th 'int' in the buffer.
@@ -370,7 +372,8 @@ void test_partial_elements_read(void) {
       clang_analyzer_dump(buffer[2]); // expected-warning{{conj_}} ok
       clang_analyzer_dump(buffer[3]); // expected-warning{{conj_}} ok
       clang_analyzer_dump(buffer[4]); // expected-warning{{conj_}} ok, but an uninit warning would be also fine.
-      clang_analyzer_dump(buffer[5]); // expected-warning{{1st function call argument is an uninitialized value}} ok
+      clang_analyzer_dump(buffer[5]); // expected-warning{{6 S32b}} ok
+      clang_analyzer_dump(buffer[6]); // expected-warning{{1st function call argument is an uninitialized value}} ok
     }
     fclose(fp);
   }
