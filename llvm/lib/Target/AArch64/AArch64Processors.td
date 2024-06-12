@@ -713,7 +713,7 @@ def ProcessorFeatures {
                                  FeaturePerfMon, FeatureSPE, FeatureSPE_EEF];
   list<SubtargetFeature> A725 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureETE, FeaturePerfMon, FeatureSPE,
-                                 FeatureSPE_EEF, FeatureTRBE];
+                                 FeatureSVE2BitPerm, FeatureSPE_EEF, FeatureTRBE];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB, FeatureRDM, FeatureDotProd,
@@ -748,7 +748,7 @@ def ProcessorFeatures {
                                  FeatureFP16FML, FeatureSPE_EEF];
   list<SubtargetFeature> X925 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureETE, FeaturePerfMon, FeatureSPE,
-                                 FeatureSPE_EEF, FeatureTRBE];
+                                 FeatureSVE2BitPerm, FeatureSPE_EEF, FeatureTRBE];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum];
