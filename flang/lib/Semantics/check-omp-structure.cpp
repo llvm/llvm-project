@@ -2425,8 +2425,7 @@ static bool IsReductionAllowedForType(
 
               // Reduction identifier is not in OMP5.2 Table 5.2
               default:
-                CHECK(false &&
-                    "This should have been caught in CheckIntrinsicOperator");
+                DIE("This should have been caught in CheckIntrinsicOperator");
                 ok = false;
                 break;
               }
