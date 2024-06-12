@@ -29,14 +29,15 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+namespace __pstl {
 
 template <class _Backend, class _Index, class _Brick>
 _LIBCPP_HIDE_FROM_ABI optional<bool> __parallel_or(_Index __first, _Index __last, _Brick __f) {
   std::atomic<bool> __found(false);
-  auto __ret = __pstl::__cpu_traits<_Backend>::__for_each(__first, __last, [__f, &__found](_Index __i, _Index __j) {
+  auto __ret = __cpu_traits<_Backend>::__for_each(__first, __last, [__f, &__found](_Index __i, _Index __j) {
     if (!__found.load(std::memory_order_relaxed) && __f(__i, __j)) {
       __found.store(true, std::memory_order_relaxed);
-      __pstl::__cpu_traits<_Backend>::__cancel_execution();
+      __cpu_traits<_Backend>::__cancel_execution();
     }
   });
   if (!__ret)
@@ -76,7 +77,7 @@ struct __cpu_parallel_any_of {
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return std::__parallel_or<_Backend>(
+      return __pstl::__parallel_or<_Backend>(
           __first, __last, [&__policy, &__pred](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
             using _AnyOfUnseq = __pstl::__any_of<_Backend, __remove_parallel_policy_t<_RawExecutionPolicy>>;
             auto __res = _AnyOfUnseq()(std::__remove_parallel_policy(__policy), __brick_first, __brick_last, __pred);
@@ -85,13 +86,14 @@ struct __cpu_parallel_any_of {
           });
     } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return std::__simd_or(__first, __last - __first, __pred);
+      return __pstl::__simd_or(__first, __last - __first, __pred);
     } else {
       return std::any_of(__first, __last, __pred);
     }
   }
 };
 
+} // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

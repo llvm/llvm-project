@@ -26,6 +26,7 @@
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+namespace __pstl {
 
 template <class _Index, class _DifferenceType, class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Index __simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept {
@@ -43,7 +44,7 @@ struct __cpu_parallel_fill {
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      return __pstl::__cpu_traits<_Backend>::__for_each(
+      return __cpu_traits<_Backend>::__for_each(
           __first, __last, [&__policy, &__value](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
             using _FillUnseq = __pstl::__fill<_Backend, __remove_parallel_policy_t<_RawExecutionPolicy>>;
             [[maybe_unused]] auto __res =
@@ -52,7 +53,7 @@ struct __cpu_parallel_fill {
           });
     } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      std::__simd_fill_n(__first, __last - __first, __value);
+      __pstl::__simd_fill_n(__first, __last - __first, __value);
       return __empty{};
     } else {
       std::fill(__first, __last, __value);
@@ -61,6 +62,7 @@ struct __cpu_parallel_fill {
   }
 };
 
+} // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17

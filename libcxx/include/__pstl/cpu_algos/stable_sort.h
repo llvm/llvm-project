@@ -24,6 +24,7 @@
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+namespace __pstl {
 
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_stable_sort {
@@ -31,7 +32,7 @@ struct __cpu_parallel_stable_sort {
   _LIBCPP_HIDE_FROM_ABI optional<__empty>
   operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy>) {
-      return __pstl::__cpu_traits<_Backend>::__stable_sort(
+      return __cpu_traits<_Backend>::__stable_sort(
           __first, __last, __comp, [](_RandomAccessIterator __g_first, _RandomAccessIterator __g_last, _Comp __g_comp) {
             std::stable_sort(__g_first, __g_last, __g_comp);
           });
@@ -42,6 +43,7 @@ struct __cpu_parallel_stable_sort {
   }
 };
 
+} // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17

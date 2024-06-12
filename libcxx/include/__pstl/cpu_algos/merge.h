@@ -29,6 +29,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+namespace __pstl {
 
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_merge {
@@ -45,7 +46,7 @@ struct __cpu_parallel_merge {
                   __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      auto __res = __pstl::__cpu_traits<_Backend>::__merge(
+      auto __res = __cpu_traits<_Backend>::__merge(
           __first1,
           __last1,
           __first2,
@@ -78,6 +79,7 @@ struct __cpu_parallel_merge {
   }
 };
 
+} // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

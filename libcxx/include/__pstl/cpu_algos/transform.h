@@ -30,6 +30,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+namespace __pstl {
 
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Function>
 _LIBCPP_HIDE_FROM_ABI _Iterator2
@@ -61,7 +62,7 @@ struct __cpu_parallel_transform {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      __pstl::__cpu_traits<_Backend>::__for_each(
+      __cpu_traits<_Backend>::__for_each(
           __first,
           __last,
           [&__policy, __op, __first, __result](_ForwardIterator __brick_first, _ForwardIterator __brick_last) {
@@ -79,7 +80,7 @@ struct __cpu_parallel_transform {
     } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      return std::__simd_transform(
+      return __pstl::__simd_transform(
           __first,
           __last - __first,
           __result,
@@ -110,7 +111,7 @@ struct __cpu_parallel_transform_binary {
                   __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      auto __res = __pstl::__cpu_traits<_Backend>::__for_each(
+      auto __res = __cpu_traits<_Backend>::__for_each(
           __first1,
           __last1,
           [&__policy, __op, __first1, __first2, __result](
@@ -132,7 +133,7 @@ struct __cpu_parallel_transform_binary {
                          __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      return std::__simd_transform(
+      return __pstl::__simd_transform(
           __first1,
           __last1 - __first1,
           __first2,
@@ -146,6 +147,7 @@ struct __cpu_parallel_transform_binary {
   }
 };
 
+} // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
