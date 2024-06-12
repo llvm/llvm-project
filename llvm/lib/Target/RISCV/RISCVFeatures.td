@@ -855,6 +855,13 @@ def FeatureStdExtSsaia
                      "'Ssaia' (Advanced Interrupt Architecture Supervisor "
                      "Level)">;
 
+def FeatureStdExtSmcsrind
+    : RISCVExtension<"smcsrind", 1, 0,
+                     "'Smcsrind' (Indirect CSR Access Machine Level)">;
+def FeatureStdExtSscsrind
+    : RISCVExtension<"sscsrind", 1, 0,
+                     "'Sscsrind' (Indirect CSR Access Supervisor Level)">;
+
 def FeatureStdExtSmepmp
     : RISCVExtension<"smepmp", 1, 0,
                      "'Smepmp' (Enhanced Physical Memory Protection)">;
