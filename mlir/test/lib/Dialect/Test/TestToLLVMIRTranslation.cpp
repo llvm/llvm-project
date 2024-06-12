@@ -107,6 +107,10 @@ LogicalResult TestDialectLLVMIRTranslationInterface::convertOperation(
         mod->getOrInsertGlobal(symOp.getSymName(), i32Type);
         return success();
       })
+      .Case([&](test::ContainingIntPolynomialAttrOp polyOp) {
+        // Discardable, as this op existed only for testing parsin.
+        return success();
+      })
       .Default([&](Operation *) {
         return op->emitOpError("unsupported translation of test operation");
       });
