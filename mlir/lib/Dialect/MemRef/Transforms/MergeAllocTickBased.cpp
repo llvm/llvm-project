@@ -27,8 +27,12 @@ namespace memref {
 using namespace special_ticks;
 
 /// Return `true` if the given MemRef type has a static identity layout (i.e.,
-/// no layout).
-static bool hasStaticIdentityLayout(MemRefType type) {
+/// no layout) and default memory space.
+static bool isMemRefTypeOk(MemRefType type) {
+  IntegerAttr intMemorySpace =
+      llvm::dyn_cast_or_null<IntegerAttr>(type.getMemorySpace());
+  if (intMemorySpace && intMemorySpace.getValue() != 0)
+    return false;
   return type.hasStaticShape() && type.getLayout().isIdentity();
 }
 
@@ -158,8 +162,7 @@ bool TickCollecter::isMergeableAlloc(TickCollecterStates *s, Operation *op,
   if (tick == COMPLEX_ACCESS) {
     return false;
   }
-  if (!hasStaticIdentityLayout(
-          cast<MemRefType>(op->getResultTypes().front()))) {
+  if (!isMemRefTypeOk(cast<MemRefType>(op->getResultTypes().front()))) {
     return false;
   }
   auto alignment = cast<memref::AllocOp>(op).getAlignment();
