@@ -247,7 +247,7 @@ template <class _ExecutionPolicy,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI void
 fill_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __n, const _Tp& __value) {
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "fill_n requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "fill_n requires a ForwardIterator");
   using _Implementation = __pstl::__dispatch<__pstl::__fill_n, __pstl::__current_configuration, _RawPolicy>;
   __pstl::__handle_exception<_Implementation>(
       std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__n), __value);
