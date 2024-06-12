@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected -Wc++20-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx11-17 -Wc++17-extensions %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,cxx11-17,cxx11 -Wc++17-extensions -Wc++20-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx11-17 -Wc++17-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected -Wc++20-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify=expected %s
 
 struct [[nodiscard]] S {};
 S get_s();
