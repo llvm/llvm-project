@@ -867,13 +867,11 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
 
   // First indirect site.
   {
-    uint64_t TotalC;
-    auto VD = R->getValueForSite(IPVK_IndirectCallTarget, 0, &TotalC);
+    auto VD = R->getValueForSite(IPVK_IndirectCallTarget, 0);
 
     EXPECT_EQ(VD[0].Count, 3U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 2U * getProfWeight());
     EXPECT_EQ(VD[2].Count, 1U * getProfWeight());
-    EXPECT_EQ(TotalC, 6U * getProfWeight());
 
     EXPECT_STREQ((const char *)VD[0].Value, "callee3");
     EXPECT_STREQ((const char *)VD[1].Value, "callee2");
@@ -882,13 +880,11 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
 
   // First vtable site.
   {
-    uint64_t TotalC;
-    auto VD = R->getValueForSite(IPVK_VTableTarget, 0, &TotalC);
+    auto VD = R->getValueForSite(IPVK_VTableTarget, 0);
 
     EXPECT_EQ(VD[0].Count, 3U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 2U * getProfWeight());
     EXPECT_EQ(VD[2].Count, 1U * getProfWeight());
-    EXPECT_EQ(TotalC, 6U * getProfWeight());
 
     EXPECT_EQ(VD[0].Value, getCalleeAddress(vtable3));
     EXPECT_EQ(VD[1].Value, getCalleeAddress(vtable2));
@@ -897,12 +893,10 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
 
   // Second vtable site.
   {
-    uint64_t TotalC;
-    auto VD = R->getValueForSite(IPVK_VTableTarget, 1, &TotalC);
+    auto VD = R->getValueForSite(IPVK_VTableTarget, 1);
 
     EXPECT_EQ(VD[0].Count, 2U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 1U * getProfWeight());
-    EXPECT_EQ(TotalC, 3U * getProfWeight());
 
     EXPECT_EQ(VD[0].Value, getCalleeAddress(vtable2));
     EXPECT_EQ(VD[1].Value, getCalleeAddress(vtable1));

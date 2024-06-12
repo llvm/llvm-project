@@ -1271,11 +1271,13 @@ void annotateValueSite(Module &M, Instruction &Inst,
   if (!NV)
     return;
 
-  uint64_t Sum = 0;
   std::unique_ptr<InstrProfValueData[]> VD =
-      InstrProfR.getValueForSite(ValueKind, SiteIdx, &Sum);
+      InstrProfR.getValueForSite(ValueKind, SiteIdx);
 
   ArrayRef<InstrProfValueData> VDs(VD.get(), NV);
+  uint64_t Sum = 0;
+  for (const InstrProfValueData &V : VDs)
+    Sum = SaturatingAdd(Sum, V.Count);
   annotateValueSite(M, Inst, VDs, Sum, ValueKind, MaxMDCount);
 }
 
