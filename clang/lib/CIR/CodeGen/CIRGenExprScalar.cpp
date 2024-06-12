@@ -1522,9 +1522,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       // If E has side effect, it is emitted even if its final result is a
       // null pointer. In that case, a DCE pass should be able to
       // eliminate the useless instructions emitted during translating E.
-      if (Result.HasSideEffects) {
-        llvm_unreachable("NYI");
-      }
+      if (Result.HasSideEffects)
+        Visit(E);
       return CGF.CGM.buildNullConstant(DestTy, CGF.getLoc(E->getExprLoc()));
     }
     // Since target may map different address spaces in AST to the same address

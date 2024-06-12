@@ -55,3 +55,14 @@ void test_nullptr() {
   // LLVM:      store ptr addrspace(1) null, ptr %{{[0-9]+}}, align 8
   // LLVM-NEXT: store ptr addrspace(2) null, ptr %{{[0-9]+}}, align 8
 }
+
+void test_side_effect(pi1_t b) {
+  pi2_t p = (pi2_t)(*b++, (int*)0);
+  // CIR:      %{{[0-9]+}} = cir.ptr_stride(%{{[0-9]+}} : !cir.ptr<!s32i, addrspace(1)>, %{{[0-9]+}} : !s32i), !cir.ptr<!s32i, addrspace(1)>
+  // CIR:      %[[#CAST:]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i, addrspace(2)>
+  // CIR-NEXT: cir.store %[[#CAST]], %{{[0-9]+}} : !cir.ptr<!s32i, addrspace(2)>, !cir.ptr<!cir.ptr<!s32i, addrspace(2)>>
+
+  // LLVM:      %{{[0-9]+}} = getelementptr i32, ptr addrspace(1) %{{[0-9]+}}, i64 1
+  // LLVM:      store ptr addrspace(2) null, ptr %{{[0-9]+}}, align 8
+
+}
