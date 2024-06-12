@@ -161,9 +161,6 @@ bool X86FastTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
     }
   }
 
-  if (Change)
-    X86FI->setHasVirtualTileReg(true);
-
   return Change;
 }
 
