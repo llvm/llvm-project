@@ -54,7 +54,6 @@ using namespace llvm::minidump;
 
 Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories(const lldb_private::Target &target, const lldb::ProcessSP &process_sp) {
   // First set the offset on the file, and on the bytes saved
-  //TODO: advance the core file.
   m_saved_data_size += header_size;
   // We know we will have at least Misc, SystemInfo, Modules, and ThreadList (corresponding memory list for stacks)
   // And an additional memory list for non-stacks.
@@ -77,7 +76,6 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories(const lldb_private:
 
   // Now offset the file by the directores so we can write them in later.
   offset_t directory_offset = m_expected_directories * directory_size;
-  //TODO: advance the core file.
   m_saved_data_size += directory_offset;
   // Replace this when we make a better way to do this.
   Status error;
@@ -113,9 +111,9 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories(const lldb_private:
 
 void MinidumpFileBuilder::AddDirectory(StreamType type, uint64_t stream_size) {
   LocationDescriptor loc;
-  loc.DataSize = static_cast<llvm::support::ulittle64_t>(stream_size);
+  loc.DataSize = static_cast<llvm::support::ulittle32_t>(stream_size);
   // Stream will begin at the current end of data section
-  loc.RVA = static_cast<llvm::support::ulittle64_t>(GetCurrentDataEndOffset());
+  loc.RVA = static_cast<llvm::support::ulittle32_t>(GetCurrentDataEndOffset());
 
   Directory dir;
   dir.Type = static_cast<llvm::support::little_t<StreamType>>(type);
@@ -188,7 +186,7 @@ Status MinidumpFileBuilder::AddSystemInfo(const llvm::Triple &target_triple) {
   sys_info.ProcessorArch =
       static_cast<llvm::support::little_t<ProcessorArchitecture>>(arch);
   // Global offset to beginning of a csd_string in a data section
-  sys_info.CSDVersionRVA = static_cast<llvm::support::ulittle64_t>(
+  sys_info.CSDVersionRVA = static_cast<llvm::support::ulittle32_t>(
       GetCurrentDataEndOffset() + sizeof(llvm::minidump::SystemInfo));
   sys_info.PlatformId = platform_id;
   m_data.AppendData(&sys_info, sizeof(llvm::minidump::SystemInfo));
@@ -1097,6 +1095,9 @@ Status MinidumpFileBuilder::FlushToDisk() {
   addr_t starting_size = m_data.GetByteSize();
   addr_t remaining_bytes = starting_size;
   size_t offset = 0;
+
+  // Unix/Linux OS's return SSIZE for operations, this means a max of 2gb per IO operation
+  // so we chunk it here. We keep the file size small to try to minimize memory use.
   while (remaining_bytes > 0) {
     size_t chunk_size = std::min(remaining_bytes, m_write_chunk_max);
     size_t bytes_written = chunk_size;

@@ -121,11 +121,6 @@ static LocationDescriptor layout(BlobAllocator &File, yaml::BinaryRef Data) {
           support::ulittle32_t(File.allocateBytes(Data))};
 }
 
-static LocationDescriptor_64 layout_64(BlobAllocator &File, yaml::BinaryRef Data) {
-  return {support::ulittle64_t(Data.binary_size()),
-          support::ulittle64_t(File.allocateBytes(Data))};
-}
-
 static size_t layout(BlobAllocator &File, MinidumpYAML::ExceptionStream &S) {
   File.allocateObject(S.MDExceptionStream);
 
