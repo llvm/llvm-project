@@ -1085,11 +1085,8 @@ static hlfir::Entity fixProcedureDummyMismatch(mlir::Location loc,
 mlir::Value static getZeroLowerBounds(mlir::Location loc,
                                       fir::FirOpBuilder &builder,
                                       hlfir::Entity entity) {
-  // Assumed rank should not fall here, but better safe than sorry until
-  // implemented.
-  if (entity.isAssumedRank())
-    TODO(loc, "setting lower bounds of assumed rank to zero before passing it "
-              "to BIND(C) procedure");
+  assert(!entity.isAssumedRank() &&
+         "assumed-rank must use fir.rebox_assumed_rank");
   if (entity.getRank() < 1)
     return {};
   mlir::Value zero =
