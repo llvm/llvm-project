@@ -96,64 +96,64 @@
 	.p2align	3
 	.type	root,@function
 root:                                   # @root
-.Lfunc_begin0:
+Lfunc_begin0:
 	.cfi_sections .debug_frame
 	.cfi_startproc
 # %bb.0:                                # %entry
 	.loc	0 8 3 prologue_end      # t.c:8:3
-.Ltmp0:
+Ltmp0:
 	#APP
 	r0 = 42
 
 	#NO_APP
-.Ltmp1:
-.Ltmp2:
+Ltmp1:
+Ltmp2:
 	#DEBUG_VALUE: root:foo <- 0
 	.loc	0 10 3                  # t.c:10:3
-.Ltmp3:
-.Ltmp4:
+Ltmp3:
+Ltmp4:
 	r1 = 1
 	call consume
-.Ltmp5:
+Ltmp5:
 	.loc	0 11 3                  # t.c:11:3
-.Ltmp6:
-.Ltmp7:
+Ltmp6:
+Ltmp7:
 	r1 = 0
 	call consume
-.Ltmp8:
+Ltmp8:
 	.loc	0 12 3                  # t.c:12:3
-.Ltmp9:
-.Ltmp10:
+Ltmp9:
+Ltmp10:
 	r1 = 1 ll
 	call consume
-.Ltmp11:
+Ltmp11:
 	.loc	0 13 1                  # t.c:13:1
-.Ltmp12:
+Ltmp12:
 	exit
-.Ltmp13:
-.Ltmp14:
-.Lfunc_end0:
-	.size	root, .Lfunc_end0-root
+Ltmp13:
+Ltmp14:
+Lfunc_end0:
+	.size	root, Lfunc_end0-root
 	.cfi_endproc
                                         # -- End function
 	.section	.debug_loclists,"",@progbits
-	.long	.Ldebug_list_header_end0-.Ldebug_list_header_start0 # Length
-.Ldebug_list_header_start0:
+	.long	Ldebug_list_header_end0-Ldebug_list_header_start0 # Length
+Ldebug_list_header_start0:
 	.short	5                       # Version
 	.byte	8                       # Address size
 	.byte	0                       # Segment selector size
 	.long	1                       # Offset entry count
-.Lloclists_table_base0:
-	.long	.Ldebug_loc0-.Lloclists_table_base0
-.Ldebug_loc0:
+Lloclists_table_base0:
+	.long	Ldebug_loc0-Lloclists_table_base0
+Ldebug_loc0:
 	.byte	4                       # DW_LLE_offset_pair
-	.uleb128 .Ltmp1-.Lfunc_begin0   #   starting offset
-	.uleb128 .Lfunc_end0-.Lfunc_begin0 #   ending offset
+	.uleb128 Ltmp1-Lfunc_begin0     #   starting offset
+	.uleb128 Lfunc_end0-Lfunc_begin0 #   ending offset
 	.byte	2                       # Loc expr size
 	.byte	48                      # DW_OP_lit0
 	.byte	159                     # DW_OP_stack_value
 	.byte	0                       # DW_LLE_end_of_list
-.Ldebug_list_header_end0:
+Ldebug_list_header_end0:
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                       # Abbreviation Code
 	.byte	17                      # DW_TAG_compile_unit
@@ -321,9 +321,9 @@ root:                                   # @root
 	.byte	0                       # EOM(2)
 	.byte	0                       # EOM(3)
 	.section	.debug_info,"",@progbits
-.Lcu_begin0:
-	.long	.Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
-.Ldebug_info_start0:
+Lcu_begin0:
+	.long	Ldebug_info_end0-Ldebug_info_start0 # Length of Unit
+Ldebug_info_start0:
 	.short	5                       # DWARF version number
 	.byte	1                       # DWARF Unit Type
 	.byte	8                       # Address Size (in bytes)
@@ -332,13 +332,13 @@ root:                                   # @root
 	.byte	0                       # DW_AT_producer
 	.short	29                      # DW_AT_language
 	.byte	1                       # DW_AT_name
-	.long	.Lstr_offsets_base0     # DW_AT_str_offsets_base
-	.long	.Lline_table_start0     # DW_AT_stmt_list
+	.long	Lstr_offsets_base0      # DW_AT_str_offsets_base
+	.long	Lline_table_start0      # DW_AT_stmt_list
 	.byte	2                       # DW_AT_comp_dir
 	.byte	0                       # DW_AT_low_pc
-	.long	.Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
-	.long	.Laddr_table_base0      # DW_AT_addr_base
-	.long	.Lloclists_table_base0  # DW_AT_loclists_base
+	.long	Lfunc_end0-Lfunc_begin0 # DW_AT_high_pc
+	.long	Laddr_table_base0       # DW_AT_addr_base
+	.long	Lloclists_table_base0   # DW_AT_loclists_base
 	.byte	2                       # Abbrev [2] 0x27:0x10 DW_TAG_enumeration_type
 	.long	55                      # DW_AT_type
 	.byte	6                       # DW_AT_name
@@ -362,7 +362,7 @@ root:                                   # @root
 	.byte	8                       # DW_AT_byte_size
 	.byte	5                       # Abbrev [5] 0x3f:0x27 DW_TAG_subprogram
 	.byte	0                       # DW_AT_low_pc
-	.long	.Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
+	.long	Lfunc_end0-Lfunc_begin0 # DW_AT_high_pc
 	.byte	1                       # DW_AT_frame_base
 	.byte	90
                                         # DW_AT_call_all_calls
@@ -415,65 +415,65 @@ root:                                   # @root
 	.byte	5                       # DW_AT_encoding
 	.byte	4                       # DW_AT_byte_size
 	.byte	0                       # End Of Children Mark
-.Ldebug_info_end0:
+Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
 	.long	56                      # Length of String Offsets Set
 	.short	5
 	.short	0
-.Lstr_offsets_base0:
+Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
-.Linfo_string0:
+Linfo_string0:
 	.asciz	"clang version 17.0.0 (/home/eddy/work/llvm-project/clang 76d673bb89f8ec8cf65a4294a98a83c9d6646b11)" # string offset=0
-.Linfo_string1:
+Linfo_string1:
 	.asciz	"t.c"                   # string offset=99
-.Linfo_string2:
+Linfo_string2:
 	.asciz	"/home/eddy/work/tmp"   # string offset=103
-.Linfo_string3:
+Linfo_string3:
 	.asciz	"unsigned int"          # string offset=123
-.Linfo_string4:
+Linfo_string4:
 	.asciz	"U"                     # string offset=136
-.Linfo_string5:
+Linfo_string5:
 	.asciz	"V"                     # string offset=138
-.Linfo_string6:
+Linfo_string6:
 	.asciz	"bar"                   # string offset=140
-.Linfo_string7:
+Linfo_string7:
 	.asciz	"unsigned long"         # string offset=144
-.Linfo_string8:
+Linfo_string8:
 	.asciz	"consume"               # string offset=158
-.Linfo_string9:
+Linfo_string9:
 	.asciz	"root"                  # string offset=166
-.Linfo_string10:
+Linfo_string10:
 	.asciz	"foo"                   # string offset=171
-.Linfo_string11:
+Linfo_string11:
 	.asciz	"a"                     # string offset=175
-.Linfo_string12:
+Linfo_string12:
 	.asciz	"int"                   # string offset=177
 	.section	.debug_str_offsets,"",@progbits
-	.long	.Linfo_string0
-	.long	.Linfo_string1
-	.long	.Linfo_string2
-	.long	.Linfo_string3
-	.long	.Linfo_string4
-	.long	.Linfo_string5
-	.long	.Linfo_string6
-	.long	.Linfo_string7
-	.long	.Linfo_string8
-	.long	.Linfo_string9
-	.long	.Linfo_string10
-	.long	.Linfo_string11
-	.long	.Linfo_string12
+	.long	Linfo_string0
+	.long	Linfo_string1
+	.long	Linfo_string2
+	.long	Linfo_string3
+	.long	Linfo_string4
+	.long	Linfo_string5
+	.long	Linfo_string6
+	.long	Linfo_string7
+	.long	Linfo_string8
+	.long	Linfo_string9
+	.long	Linfo_string10
+	.long	Linfo_string11
+	.long	Linfo_string12
 	.section	.debug_addr,"",@progbits
-	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
-.Ldebug_addr_start0:
+	.long	Ldebug_addr_end0-Ldebug_addr_start0 # Length of contribution
+Ldebug_addr_start0:
 	.short	5                       # DWARF version number
 	.byte	8                       # Address size
 	.byte	0                       # Segment selector size
-.Laddr_table_base0:
-	.quad	.Lfunc_begin0
-	.quad	.Ltmp5
-	.quad	.Ltmp8
-	.quad	.Ltmp11
-.Ldebug_addr_end0:
+Laddr_table_base0:
+	.quad	Lfunc_begin0
+	.quad	Ltmp5
+	.quad	Ltmp8
+	.quad	Ltmp11
+Ldebug_addr_end0:
 	.section	.BTF,"",@progbits
 	.short	60319                   # 0xeb9f
 	.byte	1
@@ -569,46 +569,46 @@ root:                                   # @root
 	.long	8                       # FuncInfo
 	.long	6                       # FuncInfo section string offset=6
 	.long	1
-	.long	.Lfunc_begin0
+	.long	Lfunc_begin0
 	.long	2
 	.long	16                      # LineInfo
 	.long	6                       # LineInfo section string offset=6
 	.long	5
-	.long	.Ltmp0
+	.long	Ltmp0
 	.long	12
 	.long	36
 	.long	8195                    # Line 8 Col 3
-	.long	.Ltmp4
+	.long	Ltmp4
 	.long	12
 	.long	79
 	.long	10243                   # Line 10 Col 3
-	.long	.Ltmp7
+	.long	Ltmp7
 	.long	12
 	.long	155
 	.long	11267                   # Line 11 Col 3
-	.long	.Ltmp10
+	.long	Ltmp10
 	.long	12
 	.long	199
 	.long	12291                   # Line 12 Col 3
-	.long	.Ltmp12
+	.long	Ltmp12
 	.long	12
 	.long	260
 	.long	13313                   # Line 13 Col 1
 	.long	16                      # FieldReloc
 	.long	6                       # Field reloc section string offset=6
 	.long	3
-	.long	.Ltmp3
+	.long	Ltmp3
 	.long	3
 	.long	77
 	.long	8
-	.long	.Ltmp6
+	.long	Ltmp6
 	.long	3
 	.long	151
 	.long	0
-	.long	.Ltmp9
+	.long	Ltmp9
 	.long	8
 	.long	77
 	.long	10
 	.addrsig
 	.section	.debug_line,"",@progbits
-.Lline_table_start0:
+Lline_table_start0:
