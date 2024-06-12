@@ -859,6 +859,11 @@ feature_test_macros = [
             "libcxx_guard": "_LIBCPP_AVAILABILITY_HAS_PMR",
         },
         {
+            "name": "__cpp_lib_modules",
+            "values": {"c++23": 202207},
+            "headers": [],
+        },
+        {
             "name": "__cpp_lib_move_iterator_concept",
             "values": {"c++20": 202207},
             "headers": ["iterator"],
