@@ -21205,6 +21205,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_shuffle);
     return Builder.CreateCall(Callee, Ops);
   }
+  case WebAssembly::BI__builtin_wasm_relaxed_madd_f16x8:
+  case WebAssembly::BI__builtin_wasm_relaxed_nmadd_f16x8:
   case WebAssembly::BI__builtin_wasm_relaxed_madd_f32x4:
   case WebAssembly::BI__builtin_wasm_relaxed_nmadd_f32x4:
   case WebAssembly::BI__builtin_wasm_relaxed_madd_f64x2:
@@ -21214,10 +21216,12 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *C = EmitScalarExpr(E->getArg(2));
     unsigned IntNo;
     switch (BuiltinID) {
+    case WebAssembly::BI__builtin_wasm_relaxed_madd_f16x8:
     case WebAssembly::BI__builtin_wasm_relaxed_madd_f32x4:
     case WebAssembly::BI__builtin_wasm_relaxed_madd_f64x2:
       IntNo = Intrinsic::wasm_relaxed_madd;
       break;
+    case WebAssembly::BI__builtin_wasm_relaxed_nmadd_f16x8:
     case WebAssembly::BI__builtin_wasm_relaxed_nmadd_f32x4:
     case WebAssembly::BI__builtin_wasm_relaxed_nmadd_f64x2:
       IntNo = Intrinsic::wasm_relaxed_nmadd;

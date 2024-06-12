@@ -1,4 +1,3 @@
-from typing_extensions import override
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
