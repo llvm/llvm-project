@@ -7925,9 +7925,9 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
     // flag then we can assume we do not have that case. Otherwise we might be
     // able to prove that either X or Y is not infinity.
     if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
-        !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
+        !isKnownNeverInfinity(Y, /*Depth=*/0,
                               CI.getSimplifyQuery().getWithInstruction(&I)) &&
-        !isKnownNeverInfinity(LHSI->getOperand(0), /*Depth=*/0,
+        !isKnownNeverInfinity(X, /*Depth=*/0,
                               CI.getSimplifyQuery().getWithInstruction(&I)))
       break;
 
