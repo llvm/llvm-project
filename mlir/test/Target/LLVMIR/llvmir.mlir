@@ -1730,12 +1730,11 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"]]} {
   llvm.return
 }
 
 // CHECK: attributes #[[ATTR_GROUP]] = {
-// CHECK-DAG: noinline
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
@@ -2401,3 +2400,36 @@ llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]
 
 // CHECK: @big_ = common global [4294967296 x i8] zeroinitializer
 llvm.mlir.global common @big_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
+
+// -----
+
+// CHECK-LABEL: @no_inline
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_inline() attributes { no_inline } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noinline
+
+// -----
+
+// CHECK-LABEL: @always_inline
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @always_inline() attributes { always_inline } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: alwaysinline
+
+// -----
+
+// CHECK-LABEL: @optimize_none
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @optimize_none() attributes { no_inline, optimize_none } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: optnone

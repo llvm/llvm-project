@@ -369,6 +369,10 @@ add_math_entrypoint_object(tanhf)
 add_math_entrypoint_object(tgamma)
 add_math_entrypoint_object(tgammaf)
 
+add_math_entrypoint_object(totalorderf16)
+
+add_math_entrypoint_object(totalordermagf16)
+
 add_math_entrypoint_object(trunc)
 add_math_entrypoint_object(truncf)
 add_math_entrypoint_object(truncl)
