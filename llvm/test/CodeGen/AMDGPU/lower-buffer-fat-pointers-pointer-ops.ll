@@ -94,10 +94,9 @@ define ptr addrspace(7) @zero_gep(ptr addrspace(7) %ptr) {
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
 ; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PTR_OFF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[PTR_RSRC]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
-; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[PTR_OFF]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[RET]]
 ;
   %ret = getelementptr i8, ptr addrspace(7) %ptr, i32 0
   ret ptr addrspace(7) %ret
@@ -109,10 +108,9 @@ define ptr addrspace(7) @zero_gep_goes_second(ptr addrspace(7) %v0, i32 %arg) {
 ; CHECK-NEXT:    [[V0_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[V0]], 0
 ; CHECK-NEXT:    [[V0_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[V0]], 1
 ; CHECK-NEXT:    [[V1:%.*]] = add i32 [[V0_OFF]], [[ARG]]
-; CHECK-NEXT:    [[V2:%.*]] = add i32 [[V1]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[V0_RSRC]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[V2]], 1
-; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+; CHECK-NEXT:    [[V2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[V1]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[V2]]
 ;
   %v1 = getelementptr i8, ptr addrspace(7) %v0, i32 %arg
   %v2 = getelementptr i8, ptr addrspace(7) %v1, i32 0
@@ -124,8 +122,7 @@ define ptr addrspace(7) @zero_gep_goes_first(ptr addrspace(7) %v0, i32 %arg) {
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[V0:%.*]], i32 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[V0_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[V0]], 0
 ; CHECK-NEXT:    [[V0_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[V0]], 1
-; CHECK-NEXT:    [[V1:%.*]] = add i32 [[V0_OFF]], 0
-; CHECK-NEXT:    [[V2:%.*]] = add i32 [[V1]], [[ARG]]
+; CHECK-NEXT:    [[V2:%.*]] = add i32 [[V0_OFF]], [[ARG]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[V0_RSRC]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[V2]], 1
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
