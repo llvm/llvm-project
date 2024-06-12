@@ -633,7 +633,6 @@ struct VectorDeinterleaveOpConvert final
       return rewriter.notifyMatchFailure(deinterleaveOp,
                                          "unsupported result vector type");
 
-    // Get location.
     Location loc = deinterleaveOp->getLoc();
 
     // Deinterleave the indices.
