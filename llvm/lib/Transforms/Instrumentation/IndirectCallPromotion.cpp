@@ -720,8 +720,9 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
     for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts)
       VTableGUIDCounts[GUID] -= Count;
 
-    // 'OriginalBB' is the basic block of indirect call before indirect call
-    // promotion.
+    // 'OriginalBB' is the basic block of indirect call. After each candidate
+    // is promoted, a new basic block is created for the indirect fallback basic
+    // block and indirect call `CB` is moved into this new BB.
     BasicBlock *OriginalBB = CB.getParent();
     promoteCallWithVTableCmp(
         CB, VPtr, Candidate.TargetFunction, Candidate.AddressPoints,
@@ -744,7 +745,13 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
 
     PromotedFuncCount.push_back(Candidate.Count);
 
-    TotalFuncCount -= Candidate.Count;
+    assert(TotalFuncCount >= Candidate.Count &&
+           "Within one prof metadata, total count is the sum of counts from "
+           "individual <target, count> pairs");
+    // Use std::min since 'TotalFuncCount' is the saturating sum of individual
+    // counts, see
+    // https://github.com/llvm/llvm-project/blob/abedb3b8356d5d56f1c575c4f7682fba2cb19787/llvm/lib/ProfileData/InstrProf.cpp#L1281-L1288
+    TotalFuncCount -= std::min(TotalFuncCount, Candidate.Count);
     NumOfPGOICallPromotion++;
   }
 
@@ -817,7 +824,8 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
   if (!EnableVTableProfileUse || Candidates.empty())
     return false;
   uint64_t RemainingVTableCount = TotalCount;
-  for (size_t I = 0; I < Candidates.size(); I++) {
+  const size_t CandidateSize = Candidates.size();
+  for (size_t I = 0; I < CandidateSize; I++) {
     auto &Candidate = Candidates[I];
     uint64_t VTableSumCount = 0;
     for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts)
@@ -828,8 +836,11 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
 
     RemainingVTableCount -= Candidate.Count;
 
+    // Allowing more than one vtables for non last candidates may or may not
+    // elongates dependency chain for the subsequent candidates, so do this for
+    // the last candidate conservatively.
     int MaxNumVTable = 1;
-    if (I == Candidates.size() - 1)
+    if (I == CandidateSize - 1)
       MaxNumVTable = ICPMaxNumVTableLastCandidate;
 
     if ((int)Candidate.AddressPoints.size() > MaxNumVTable) {
@@ -845,14 +856,15 @@ bool IndirectCallPromoter::isProfitableToCompareVTables(
   return true;
 }
 
+// For virtual calls in the module, collect per-callsite information which will
+// be used to associate an ICP candidate with a vtable and a specific function
+// in the vtable. With type intrinsics (llvm.type.test), we can find virtual
+// calls in a compile-time efficient manner (by iterating its users) and more
+// importantly use the compatible type later to figure out the function byte
+// offset relative to the start of vtables.
 static void
 computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
                                   VirtualCallSiteTypeInfoMap &VirtualCSInfo) {
-  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto LookupDomTree = [&FAM](Function &F) -> DominatorTree & {
-    return FAM.getResult<DominatorTreeAnalysis>(F);
-  };
-
   // Right now only llvm.type.test is used to find out virtual call sites.
   // With ThinLTO and whole-program-devirtualization, llvm.type.test and
   // llvm.public.type.test are emitted, and llvm.public.type.test is either
@@ -865,7 +877,12 @@ computeVirtualCallSiteTypeInfoMap(Module &M, ModuleAnalysisManager &MAM,
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
   if (!TypeTestFunc || TypeTestFunc->use_empty())
     return;
-  // Iterate all type.test calls and find all indirect calls.
+
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto LookupDomTree = [&FAM](Function &F) -> DominatorTree & {
+    return FAM.getResult<DominatorTreeAnalysis>(F);
+  };
+  // Iterate all type.test calls to find all indirect calls.
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc->uses())) {
     auto *CI = dyn_cast<CallInst>(U.getUser());
     if (!CI)
@@ -912,7 +929,8 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
   bool Changed = false;
   VirtualCallSiteTypeInfoMap VirtualCSInfo;
 
-  computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
+  if (EnableVTableProfileUse)
+    computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
 
   // VTableAddressPointOffsetVal stores the vtable address points. The vtable
   // address point of a given <vtable, address point offset> is static (doesn't
