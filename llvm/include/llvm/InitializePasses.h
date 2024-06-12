@@ -190,7 +190,7 @@ void initializeMachineCopyPropagationPass(PassRegistry&);
 void initializeMachineCycleInfoPrinterPassPass(PassRegistry &);
 void initializeMachineCycleInfoWrapperPassPass(PassRegistry &);
 void initializeMachineDominanceFrontierPass(PassRegistry&);
-void initializeMachineDominatorTreePass(PassRegistry&);
+void initializeMachineDominatorTreeWrapperPassPass(PassRegistry &);
 void initializeMachineFunctionPrinterPassPass(PassRegistry&);
 void initializeMachineFunctionSplitterPass(PassRegistry &);
 void initializeMachineLateInstrsCleanupPass(PassRegistry&);

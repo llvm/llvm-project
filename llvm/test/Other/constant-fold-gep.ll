@@ -104,7 +104,7 @@
 
 ; Fold GEP of a GEP. Very simple cases are folded without targetdata.
 
-; PLAIN: @Y = global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 2)
+; PLAIN: @Y = global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 1), i64 1)
 ; PLAIN: @Z = global ptr getelementptr inbounds (i32, ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 0, i64 1, i32 0), i64 1)
 ; OPT: @Y = local_unnamed_addr global ptr getelementptr inbounds (i8, ptr @ext, i64 48)
 ; OPT: @Z = local_unnamed_addr global ptr getelementptr inbounds (i8, ptr @ext, i64 12)

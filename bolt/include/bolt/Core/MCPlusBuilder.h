@@ -1706,12 +1706,9 @@ public:
   }
 
   /// Reverses the branch condition in Inst and update its taken target to TBB.
-  ///
-  /// Returns true on success.
-  virtual bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  virtual void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                                       MCContext *Ctx) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   virtual bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB,
@@ -1751,12 +1748,9 @@ public:
   }
 
   /// Sets the taken target of the branch instruction to Target.
-  ///
-  /// Returns true on success.
-  virtual bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  virtual void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                                    MCContext *Ctx) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Extract a symbol and an addend out of the fixup value expression.

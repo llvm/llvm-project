@@ -826,6 +826,9 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }
+  if (IsX86_64 || IsAArch64)
+    Res |= SanitizerKind::NumericalStability;
+
   // Work around "Cannot represent a difference across sections".
   if (getTriple().getArch() == llvm::Triple::ppc64)
     Res &= ~SanitizerKind::Function;

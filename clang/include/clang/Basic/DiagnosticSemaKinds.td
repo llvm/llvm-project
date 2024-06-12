@@ -607,6 +607,8 @@ def note_using_decl_class_member_workaround : Note<
   "a const variable|a constexpr variable}0 instead">;
 def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
+def note_namespace_using_decl : Note<
+  "did you mean 'using namespace'?">;
 def warn_cxx17_compat_using_decl_scoped_enumerator: Warning<
   "using declaration naming a scoped enumerator is incompatible with "
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
@@ -6088,9 +6090,9 @@ def err_redefinition_different_concept : Error<
   "redefinition of concept %0 with different template parameters or requirements">;
 def err_tag_reference_non_tag : Error<
   "%select{non-struct type|non-class type|non-union type|non-enum "
-  "type|typedef|type alias|template|type alias template|template "
-  "template argument}1 %0 cannot be referenced with a "
-  "%select{struct|interface|union|class|enum}2 specifier">;
+  "type|typedef|type alias|template|alias template|template "
+  "template argument}1 %0 cannot be referenced with the '"
+  "%select{struct|interface|union|class|enum}2' specifier">;
 def err_tag_reference_conflict : Error<
   "implicit declaration introduced by elaborated type conflicts with a "
   "%select{non-struct type|non-class type|non-union type|non-enum "
@@ -9013,6 +9015,11 @@ def err_cuda_ovl_target : Error<
   "cannot overload %select{__device__|__global__|__host__|__host__ __device__}2 function %3">;
 def note_cuda_ovl_candidate_target_mismatch : Note<
     "candidate template ignored: target attributes do not match">;
+def warn_offload_incompatible_redeclare : Warning<
+  "target-attribute based function overloads are not supported by NVCC and will be treated as a function redeclaration:"
+  "new declaration is %select{__device__|__global__|__host__|__host__ __device__}0 function, "
+  "old declaration is %select{__device__|__global__|__host__|__host__ __device__}1 function">,
+  InGroup<DiagGroup<"nvcc-compat">>, DefaultIgnore;
 
 def err_cuda_device_builtin_surftex_cls_template : Error<
     "illegal device builtin %select{surface|texture}0 reference "

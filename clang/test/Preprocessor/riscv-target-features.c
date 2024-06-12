@@ -7,6 +7,7 @@
 // CHECK-NOT: __riscv_64e {{.*$}}
 // CHECK-NOT: __riscv_a {{.*$}}
 // CHECK-NOT: __riscv_atomic
+// CHECK-NOT: __riscv_b {{.*$}}
 // CHECK-NOT: __riscv_c {{.*$}}
 // CHECK-NOT: __riscv_compressed {{.*$}}
 // CHECK-NOT: __riscv_d {{.*$}}
@@ -193,6 +194,17 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-A-EXT %s
 // CHECK-A-EXT: __riscv_a 2001000{{$}}
 // CHECK-A-EXT: __riscv_atomic 1
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32ib -x c -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-B-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64ib -x c -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-B-EXT %s
+// CHECK-B-EXT: __riscv_b 1000000{{$}}
+// CHECK-B-EXT: __riscv_zba 1000000{{$}}
+// CHECK-B-EXT: __riscv_zbb 1000000{{$}}
+// CHECK-B-EXT: __riscv_zbs 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32ic -E -dM %s \

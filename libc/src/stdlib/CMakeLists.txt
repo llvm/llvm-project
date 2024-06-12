@@ -380,6 +380,28 @@ elseif(LIBC_TARGET_OS_IS_GPU)
     aligned_alloc
   )
 else()
+  add_header_library(
+    block
+    HDRS
+      block.h
+    DEPENDS
+      libc.src.__support.CPP.algorithm
+      libc.src.__support.CPP.limits
+      libc.src.__support.CPP.new
+      libc.src.__support.CPP.optional
+      libc.src.__support.CPP.span
+      libc.src.__support.CPP.type_traits
+  )
+  add_header_library(
+    freelist
+    HDRS
+      freelist.h
+    DEPENDS
+      libc.src.__support.fixedvector
+      libc.src.__support.CPP.cstddef
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.span
+  )
   add_entrypoint_external(
     malloc
   )
@@ -416,6 +438,9 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
+# TODO: Move all exit functions to linux specific 
+
+if (TARGET libc.src.__support.threads.mutex)
 add_object_library(
   exit_handler
   SRCS
@@ -432,6 +457,7 @@ add_object_library(
     libc.src.__support.fixedvector
     libc.src.__support.threads.mutex
 )
+endif()
 
 add_entrypoint_object(
   atexit

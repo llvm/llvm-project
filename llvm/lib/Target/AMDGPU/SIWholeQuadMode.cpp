@@ -225,7 +225,7 @@ private:
   void lowerCopyInstrs();
   void lowerKillInstrs(bool IsWQM);
   void lowerInitExec(MachineInstr &MI);
-  void lowerInitExecInstrs();
+  MachineBasicBlock::iterator lowerInitExecInstrs(MachineBasicBlock &Entry);
 
 public:
   static char ID;
@@ -241,7 +241,7 @@ public:
     AU.addRequired<LiveIntervals>();
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveIntervals>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTree>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -259,7 +259,7 @@ char SIWholeQuadMode::ID = 0;
 INITIALIZE_PASS_BEGIN(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_END(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                     false)
@@ -1648,9 +1648,23 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
   LIS->createAndComputeVirtRegInterval(CountReg);
 }
 
-void SIWholeQuadMode::lowerInitExecInstrs() {
-  for (MachineInstr *MI : InitExecInstrs)
+/// Lower INIT_EXEC instructions. Return a suitable insert point in \p Entry
+/// for instructions that depend on EXEC.
+MachineBasicBlock::iterator
+SIWholeQuadMode::lowerInitExecInstrs(MachineBasicBlock &Entry) {
+  MachineBasicBlock::iterator InsertPt = Entry.getFirstNonPHI();
+
+  for (MachineInstr *MI : InitExecInstrs) {
+    // Try to handle undefined cases gracefully:
+    // - multiple INIT_EXEC instructions
+    // - INIT_EXEC instructions not in the entry block
+    if (MI->getParent() == &Entry)
+      InsertPt = std::next(MI->getIterator());
+
     lowerInitExec(*MI);
+  }
+
+  return InsertPt;
 }
 
 bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
@@ -1673,7 +1687,8 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   LIS = &getAnalysis<LiveIntervals>();
-  MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
   PDT = getAnalysisIfAvailable<MachinePostDominatorTree>();
 
   if (ST->isWave32()) {
@@ -1701,18 +1716,15 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
 
   LiveMaskReg = Exec;
 
+  MachineBasicBlock &Entry = MF.front();
+  MachineBasicBlock::iterator EntryMI = lowerInitExecInstrs(Entry);
+
   // Shader is simple does not need any state changes or any complex lowering
   if (!(GlobalFlags & (StateWQM | StateStrict)) && LowerToCopyInstrs.empty() &&
       LowerToMovInstrs.empty() && KillInstrs.empty()) {
-    lowerInitExecInstrs();
     lowerLiveMaskQueries();
     return !InitExecInstrs.empty() || !LiveMaskQueries.empty();
   }
-
-  lowerInitExecInstrs();
-
-  MachineBasicBlock &Entry = MF.front();
-  MachineBasicBlock::iterator EntryMI = Entry.getFirstNonPHI();
 
   // Store a copy of the original live mask when required
   if (NeedsLiveMask || (GlobalFlags & StateWQM)) {
