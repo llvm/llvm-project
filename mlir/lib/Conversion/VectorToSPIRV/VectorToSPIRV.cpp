@@ -677,7 +677,6 @@ struct VectorDeinterleaveOpConvert final
         loc, newResultType, adaptor.getSource(), adaptor.getSource(),
         rewriter.getI32ArrayAttr(indicesOdd));
 
-    // Replace deinterleaveOp with SPIR-V shuffles.
     rewriter.replaceOp(deinterleaveOp, {shuffleEven, shuffleOdd});
     return success();
   }
