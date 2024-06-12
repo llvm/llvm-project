@@ -5239,15 +5239,15 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
   // fold avgu(zext(x), zext(y)) -> zext(avgu(x, y))
   SDValue A;
   SDValue B;
-  if (sd_match(N, m_c_BinOp(ISD::AVGFLOORU, m_ZExt(m_Value(A)),
-                            m_ZExt(m_Value(B)))) &&
+  if (sd_match(
+          N, m_BinOp(ISD::AVGFLOORU, m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))) &&
       A.getValueType() == B.getValueType() &&
       hasOperation(ISD::AVGFLOORU, A.getValueType())) {
     SDValue AvgFloorU = DAG.getNode(ISD::AVGFLOORU, DL, A.getValueType(), A, B);
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgFloorU);
   }
-  if (sd_match(N, m_c_BinOp(ISD::AVGCEILU, m_ZExt(m_Value(A)),
-                            m_ZExt(m_Value(B)))) &&
+  if (sd_match(
+          N, m_BinOp(ISD::AVGCEILU, m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))) &&
       A.getValueType() == B.getValueType() &&
       hasOperation(ISD::AVGCEILU, A.getValueType())) {
     SDValue AvgCeilU = DAG.getNode(ISD::AVGCEILU, DL, A.getValueType(), A, B);
