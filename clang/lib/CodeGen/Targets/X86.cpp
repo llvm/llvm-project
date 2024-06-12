@@ -148,6 +148,7 @@ class X86_32ABIInfo : public ABIInfo {
 
   Class classify(QualType Ty) const;
   ABIArgInfo classifyReturnType(QualType RetTy, CCState &State) const;
+
   ABIArgInfo classifyArgumentType(QualType RetTy, CCState &State,
                                   unsigned ArgIndex) const;
 
@@ -1305,6 +1306,8 @@ class X86_64ABIInfo : public ABIInfo {
   ABIArgInfo classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
                                            unsigned &NeededSSE,
                                            unsigned &MaxVectorWidth) const;
+
+  bool DoesRegcallStructFitInReg(QualType Ty) const;
 
   bool IsIllegalVectorType(QualType Ty) const;
 
@@ -2830,12 +2833,29 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
   return ABIArgInfo::getDirect(ResType);
 }
 
+bool X86_64ABIInfo::DoesRegcallStructFitInReg(QualType Ty) const {
+  auto RT = Ty->castAs<RecordType>();
+  // For Integer class, Max GPR Size is 64
+  if (getContext().getTypeSize(Ty) > 64)
+    return false;
+  // Struct At hand must not have other non Builtin types
+  for (const auto *FD : RT->getDecl()->fields()) {
+    QualType MTy = FD->getType();
+    if (!MTy->isBuiltinType())
+      return false;
+  }
+  return true;
+}
+
 ABIArgInfo
 X86_64ABIInfo::classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
                                              unsigned &NeededSSE,
                                              unsigned &MaxVectorWidth) const {
   auto RT = Ty->getAs<RecordType>();
   assert(RT && "classifyRegCallStructType only valid with struct types");
+
+  if (DoesRegcallStructFitInReg(Ty))
+    return classifyArgumentType(Ty, UINT_MAX, NeededInt, NeededSSE, true, true);
 
   if (RT->getDecl()->hasFlexibleArrayMember())
     return getIndirectReturnResult(Ty);
