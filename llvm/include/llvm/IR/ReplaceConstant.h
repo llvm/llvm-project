@@ -18,10 +18,12 @@ namespace llvm {
 
 template <typename T> class ArrayRef;
 class Constant;
+class Function;
 
 /// Replace constant expressions users of the given constants with
 /// instructions. Return whether anything was changed.
 bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+                                           Function *RestrictToFunc = nullptr,
                                            bool RemoveDeadConstants = true);
 
 } // end namespace llvm

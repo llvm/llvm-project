@@ -50,6 +50,7 @@ static SmallVector<Instruction *, 4> expandUser(BasicBlock::iterator InsertPt,
 }
 
 bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+                                           Function *RestrictToFunc,
                                            bool RemoveDeadConstants) {
   // Find all expandable direct users of Consts.
   SmallVector<Constant *> Stack;
@@ -75,7 +76,8 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
   for (Constant *C : ExpandableUsers)
     for (User *U : C->users())
       if (auto *I = dyn_cast<Instruction>(U))
-        InstructionWorklist.insert(I);
+        if (!RestrictToFunc || I->getFunction() == RestrictToFunc)
+          InstructionWorklist.insert(I);
 
   // Replace those expandable operands with instructions
   bool Changed = false;

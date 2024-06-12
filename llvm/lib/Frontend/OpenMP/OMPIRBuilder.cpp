@@ -5187,7 +5187,7 @@ static Function *createOutlinedFunction(
     // from MLIR to LLVM-IR and the MLIR lowering may still require the original
     // constants we have created rewritten versions of.
     if (auto *Const = dyn_cast<Constant>(Input))
-      convertUsersOfConstantsToInstructions({Const}, false);
+      convertUsersOfConstantsToInstructions({Const}, Func, false);
 
     // Collect all the instructions
     for (User *User : make_early_inc_range(Input->users()))
