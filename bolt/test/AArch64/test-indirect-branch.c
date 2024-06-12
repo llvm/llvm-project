@@ -21,7 +21,7 @@
 
 // clang-format off
 
-// REQUIRES: system-linux
+// REQUIRES: system-linux,target=aarch64{{.*}}
 // RUN: %clang %s -o %t.exe -Wl,-q -static -fuse-ld=lld \
 // RUN: --target=aarch64-unknown-linux-gnu
 // RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg \
