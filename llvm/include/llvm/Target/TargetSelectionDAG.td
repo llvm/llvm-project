@@ -1683,7 +1683,7 @@ multiclass ternary_atomic_op_ord {
 multiclass binary_atomic_op<SDNode atomic_op> {
   foreach vt = [ i8, i16, i32, i64 ] in {
     def _#vt : PatFrag<(ops node:$ptr, node:$val),
-                     (atomic_op  node:$ptr, node:$val)> {
+                       (atomic_op  node:$ptr, node:$val)> {
       let IsAtomic = true;
       let MemoryVT = vt;
     }
@@ -1695,7 +1695,7 @@ multiclass binary_atomic_op<SDNode atomic_op> {
 multiclass binary_atomic_op_fp<SDNode atomic_op> {
   foreach vt = [ f16, bf16, v2f16, v2bf16, f32, f64 ] in {
     def _#vt : PatFrag<(ops node:$ptr, node:$val),
-                      (atomic_op node:$ptr, node:$val)> {
+                       (atomic_op node:$ptr, node:$val)> {
       let IsAtomic = true;
       let MemoryVT = vt;
     }
@@ -1705,7 +1705,7 @@ multiclass binary_atomic_op_fp<SDNode atomic_op> {
 multiclass ternary_atomic_op<SDNode atomic_op> {
   foreach vt = [ i8, i16, i32, i64 ] in {
     def _#vt : PatFrag<(ops node:$ptr, node:$cmp, node:$val),
-                     (atomic_op node:$ptr, node:$cmp, node:$val)> {
+                       (atomic_op node:$ptr, node:$cmp, node:$val)> {
       let IsAtomic = true;
       let MemoryVT = vt;
     }
