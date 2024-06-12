@@ -393,6 +393,60 @@ TwoArrays ta = {{1, 2}, {3, 4, 5}};
 // CHECK-NEXT:     `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1 
 // CHECK-NEXT:       `-TemplateTypeParm {{.+}} 'U'
 
+TwoArrays tb = {1, 2, {3, 4, 5}};
+// CHECK:   |-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit <deduction guide for TwoArrays> 'auto (T, T, U (&&)[3]) -> TwoArrays<T, U>' aggregate 
+// CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'T'
+// CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'T'
+// CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:36> col:36 'U (&&)[3]'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit used <deduction guide for TwoArrays> 'auto (int, int, int (&&)[3]) -> GH64625::TwoArrays<int, int>' implicit_instantiation aggregate 
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.+}} <col:36> col:36 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.+}} <col:36> col:36 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.+}} <col:36> col:36 'int (&&)[3]'
+// CHECK-NEXT: FunctionProtoType {{.+}} 'auto (T, T, U (&&)[3]) -> TwoArrays<T, U>' dependent trailing_return
+// CHECK-NEXT: |-InjectedClassNameType {{.+}} 'TwoArrays<T, U>' dependent
+// CHECK-NEXT: | `-CXXRecord {{.+}} 'TwoArrays'
+// CHECK-NEXT: |-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT: | `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT: |-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT: | `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT: `-RValueReferenceType {{.+}} 'U (&&)[3]' dependent
+// CHECK-NEXT:   `-ConstantArrayType {{.+}} 'U[3]' dependent 3 
+// CHECK-NEXT:     `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
+// CHECK-NEXT:       `-TemplateTypeParm {{.+}} 'U'
+
+TwoArrays tc = {{1, 2}, 3, 4, 5};
+// CHECK: |-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit <deduction guide for TwoArrays> 'auto (T (&&)[2], U, U, U) -> TwoArrays<T, U>' aggregate 
+// CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'T (&&)[2]'
+// CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'U'
+// CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'U'
+// CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:36> col:36 'U'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit used <deduction guide for TwoArrays> 'auto (int (&&)[2], int, int, int) -> GH64625::TwoArrays<int, int>' implicit_instantiation aggregate 
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.+}} <col:36> col:36 'int (&&)[2]'
+// CHECK-NEXT:   |-ParmVarDecl {{.+}} <col:36> col:36 'int'
+// CHECK-NEXT:   |-ParmVarDecl {{.+}} <col:36> col:36 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.+}} <col:36> col:36 'int'
+// CHECK-NEXT: FunctionProtoType {{.+}} 'auto (T (&&)[2], U, U, U) -> TwoArrays<T, U>' dependent trailing_return
+// CHECK-NEXT: |-InjectedClassNameType {{.+}} 'TwoArrays<T, U>' dependent
+// CHECK-NEXT: | `-CXXRecord {{.+}} 'TwoArrays'
+// CHECK-NEXT: |-RValueReferenceType {{.+}} 'T (&&)[2]' dependent
+// CHECK-NEXT: | `-ConstantArrayType {{.+}} 'T[2]' dependent 2 
+// CHECK-NEXT: |   `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT: |     `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT: |-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
+// CHECK-NEXT: | `-TemplateTypeParm {{.+}} 'U'
+// CHECK-NEXT: |-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
+// CHECK-NEXT: | `-TemplateTypeParm {{.+}} 'U'
+// CHECK-NEXT: `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
+// CHECK-NEXT:   `-TemplateTypeParm {{.+}} 'U'
+
 } // namespace GH64625
 
 namespace GH83368 {
