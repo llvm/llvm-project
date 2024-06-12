@@ -7,7 +7,7 @@
 static volatile char sink;
 
 int main(int argc, char **argv) {
-  volatile char* y;
+  volatile char *y;
   {
     volatile char x[10];
     y = &x[0];
