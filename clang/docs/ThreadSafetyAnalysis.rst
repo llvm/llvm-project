@@ -764,12 +764,6 @@ doesn't know that munl.mu == mutex.  The SCOPED_CAPABILITY attribute handles
 aliasing for MutexLocker, but does so only for that particular pattern.
 
 
-ACQUIRED_BEFORE(...) and ACQUIRED_AFTER(...) are currently unimplemented.
--------------------------------------------------------------------------
-
-To be fixed in a future update.
-
-
 .. _mutexheader:
 
 mutex.h
