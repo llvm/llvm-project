@@ -473,10 +473,10 @@ func.func @fold_static_stride_subview_with_affine_load_store_expand_shape_3d(%ar
 func.func @fold_dynamic_subview_with_memref_load_expand_shape(%arg0 : memref<16x?xf32, strided<[16, 1]>>, %arg1 : index, %arg2 : index, %sz0: index) -> f32 {
   %c0 = arith.constant 0 : index
   %expand_shape = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [1, 16, %sz0, 1] : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
-  %0 = memref.load %expand_shape[%c0, %arg1, %arg2, %c0] : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  %0 = memref.load %expand_shape[%c0, %arg1, %arg2, %c0] {nontemporal = true} : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
   return %0 : f32
 }
-// CHECK-NEXT: %[[VAL1:.*]] = memref.load %[[ARG0]][%[[ARG1]], %[[ARG2]]] : memref<16x?xf32, strided<[16, 1]>>
+// CHECK-NEXT: %[[VAL1:.*]] = memref.load %[[ARG0]][%[[ARG1]], %[[ARG2]]] {nontemporal = true} : memref<16x?xf32, strided<[16, 1]>>
 // CHECK-NEXT: return %[[VAL1]] : f32
 
 // -----
@@ -487,11 +487,11 @@ func.func @fold_dynamic_subview_with_memref_store_expand_shape(%arg0 : memref<16
   %c0 = arith.constant 0 : index
   %c1f32 = arith.constant 1.0 : f32
   %expand_shape = memref.expand_shape %arg0 [[0, 1], [2, 3]] output_shape [1, 16, %sz0, 1] : memref<16x?xf32, strided<[16, 1]>> into memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
-  memref.store %c1f32, %expand_shape[%c0, %arg1, %arg2, %c0] : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
+  memref.store %c1f32, %expand_shape[%c0, %arg1, %arg2, %c0] {nontemporal = true} : memref<1x16x?x1xf32, strided<[256, 16, 1, 1]>>
   return
 }
 // CHECK: %[[C1F32:.*]] = arith.constant 1.000000e+00 : f32
-// CHECK-NEXT: memref.store %[[C1F32]], %[[ARG0]][%[[ARG1]], %[[ARG2]]] : memref<16x?xf32, strided<[16, 1]>>
+// CHECK-NEXT: memref.store %[[C1F32]], %[[ARG0]][%[[ARG1]], %[[ARG2]]] {nontemporal = true} : memref<16x?xf32, strided<[16, 1]>>
 // CHECK-NEXT: return
 
 // -----
@@ -890,7 +890,7 @@ func.func @fold_vector_load_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index) -> vector<8xf32> {
   %c0 = arith.constant 0 : index
   %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
-  %1 = vector.load %0[%arg1, %c0] : memref<4x8xf32>, vector<8xf32>
+  %1 = vector.load %0[%arg1, %c0] {nontemporal = true} : memref<4x8xf32>, vector<8xf32>
   return %1 : vector<8xf32>
 }
 
@@ -899,7 +899,7 @@ func.func @fold_vector_load_expand_shape(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDX:.*]] = affine.apply #[[$MAP]]()[%[[ARG1]]]
-//       CHECK:   vector.load %[[ARG0]][%[[IDX]]]
+//       CHECK:   vector.load %[[ARG0]][%[[IDX]]] {nontemporal = true}
 
 // -----
 
@@ -926,7 +926,7 @@ func.func @fold_vector_store_expand_shape(
   %arg0 : memref<32xf32>, %arg1 : index, %val : vector<8xf32>) {
   %c0 = arith.constant 0 : index
   %0 = memref.expand_shape %arg0 [[0, 1]] output_shape [4, 8] : memref<32xf32> into memref<4x8xf32>
-  vector.store %val, %0[%arg1, %c0] : memref<4x8xf32>, vector<8xf32>
+  vector.store %val, %0[%arg1, %c0] {nontemporal = true} : memref<4x8xf32>, vector<8xf32>
   return
 }
 
@@ -935,7 +935,7 @@ func.func @fold_vector_store_expand_shape(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<32xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDX:.*]] = affine.apply #[[$MAP]]()[%[[ARG1]]]
-//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]]]
+//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]]] {nontemporal = true}
 
 // -----
 
@@ -961,7 +961,7 @@ func.func @fold_vector_maskedstore_expand_shape(
 func.func @fold_vector_load_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index) -> vector<8xf32> {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
-  %1 = vector.load %0[%arg1] : memref<32xf32>, vector<8xf32>
+  %1 = vector.load %0[%arg1] {nontemporal = true} : memref<32xf32>, vector<8xf32>
   return %1 : vector<8xf32>
 }
 
@@ -972,7 +972,7 @@ func.func @fold_vector_load_collapse_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDX:.*]] = affine.apply  #[[$MAP]]()[%[[ARG1]]]
 //       CHECK:   %[[IDX1:.*]] = affine.apply #[[$MAP1]]()[%[[ARG1]]]
-//       CHECK:   vector.load %[[ARG0]][%[[IDX]], %[[IDX1]]]
+//       CHECK:   vector.load %[[ARG0]][%[[IDX]], %[[IDX1]]] {nontemporal = true}
 
 // -----
 
@@ -999,7 +999,7 @@ func.func @fold_vector_maskedload_collapse_shape(
 func.func @fold_vector_store_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index, %val : vector<8xf32>) {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>
-  vector.store %val, %0[%arg1] : memref<32xf32>, vector<8xf32>
+  vector.store %val, %0[%arg1] {nontemporal = true} : memref<32xf32>, vector<8xf32>
   return
 }
 
@@ -1010,7 +1010,7 @@ func.func @fold_vector_store_collapse_shape(
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //       CHECK:   %[[IDX:.*]] = affine.apply  #[[$MAP]]()[%[[ARG1]]]
 //       CHECK:   %[[IDX1:.*]] = affine.apply #[[$MAP1]]()[%[[ARG1]]]
-//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]], %[[IDX1]]]
+//       CHECK:   vector.store %{{.*}}, %[[ARG0]][%[[IDX]], %[[IDX1]]] {nontemporal = true}
 
 // -----
 
