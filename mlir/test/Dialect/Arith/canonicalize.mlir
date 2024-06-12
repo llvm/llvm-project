@@ -3067,17 +3067,17 @@ func.func @sequences_no_fastmath(%arg0: bf16) -> bf16 {
   return %5 : bf16
 }
 
-// CHECK-LABEL: @eliminatecastoncastf16
+// CHECK-LABEL: @eliminate_cast_to_f16
 // CHECK: return [[arg0:%.+]] : f32
-func.func @eliminatecastoncastf16(%arg0: f32) -> f32 {
+func.func @eliminate_cast_to_f16(%arg0: f32) -> f32 {
   %0 = arith.truncf %arg0 fastmath<contract> : f32 to f16
   %1 = arith.extf %0 fastmath<contract> : f16 to f32
   return %1 : f32
 }
 
-// CHECK-LABEL: @eliminatecastoncastbf16
+// CHECK-LABEL: @eliminate_cast_to_bf16
 // CHECK: return [[arg0:%.+]] : f32
-func.func @eliminatecastoncastbf16(%arg0: f32) -> f32 {
+func.func @eliminate_cast_to_bf16(%arg0: f32) -> f32 {
   %0 = arith.truncf %arg0 fastmath<contract> : f32 to bf16
   %1 = arith.extf %0 fastmath<contract> : bf16 to f32
   return %1 : f32
