@@ -61,14 +61,13 @@ private:
   MCSection *Parent;
 
   /// The atom this fragment is in, as represented by its defining symbol.
-  const MCSymbol *Atom;
+  const MCSymbol *Atom = nullptr;
 
-  /// The offset of this fragment in its section. This is ~0 until
-  /// initialized.
-  uint64_t Offset;
+  /// The offset of this fragment in its section.
+  uint64_t Offset = 0;
 
   /// The layout order of this fragment.
-  unsigned LayoutOrder;
+  unsigned LayoutOrder = 0;
 
   FragmentType Kind;
 
