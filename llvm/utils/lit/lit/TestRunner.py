@@ -568,6 +568,8 @@ def executeBuiltinRm(cmd, cmd_shenv):
 
 def executeBuiltinUmask(cmd, shenv):
     """executeBuiltinUmask - Change the current umask."""
+    if os.name != "posix":
+        raise InternalShellError(cmd, "'umask' not supported on this system")
     if len(cmd.args) != 2:
         raise InternalShellError(cmd, "'umask' supports only one argument")
     try:
