@@ -762,9 +762,7 @@ RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
     auto *Load = CGF.Builder.CreateLoad(VAListAddr);
     Address Addr = Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-    LValue LV = CGF.MakeAddrLValue(Addr, Ty);
-    CGF.EmitAggFinalDestCopy(Ty, Slot, LV, CodeGenFunction::EVK_RValue);
-    return Slot.asRValue();
+    return RValue::getAggregate(Addr);
   }
 
   CharUnits TySize = getContext().getTypeSizeInChars(Ty);

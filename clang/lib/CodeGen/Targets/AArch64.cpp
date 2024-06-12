@@ -562,7 +562,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
     auto *Load = CGF.Builder.CreateLoad(VAListAddr);
     Address ResAddr = Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(ResAddr, Ty), Slot);
+    return RValue::getAggregate(ResAddr);
   }
 
   bool IsIndirect = AI.isIndirect();
@@ -820,7 +820,7 @@ RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
   if (isEmptyRecord(getContext(), Ty, true)) {
     Address ResAddr = Address(CGF.Builder.CreateLoad(VAListAddr, "ap.cur"),
                               CGF.ConvertTypeForMem(Ty), SlotSize);
-    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(ResAddr, Ty), Slot);
+    return RValue::getAggregate(ResAddr);
   }
 
   // The size of the actual thing passed, which might end up just

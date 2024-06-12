@@ -1074,10 +1074,8 @@ RValue X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CCState State(*const_cast<CGFunctionInfo *>(CGF.CurFnInfo));
   ABIArgInfo AI = classifyArgumentType(Ty, State, /*ArgIndex*/ 0);
   // Empty records are ignored for parameter passing purposes.
-  if (AI.isIgnore()) {
-    Address Addr = CGF.CreateMemTemp(Ty);
-    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, Ty), Slot);
-  }
+  if (AI.isIgnore())
+    return RValue::getIgnored();
 
   // x86-32 changes the alignment of certain arguments on the stack.
   //
@@ -3038,10 +3036,8 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                        /*isNamedArg*/false);
 
   // Empty records are ignored for parameter passing purposes.
-  if (AI.isIgnore()) {
-    Address Addr = CGF.CreateMemTemp(Ty);
-    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, Ty), Slot);
-  }
+  if (AI.isIgnore())
+    return RValue::getIgnored();
 
   // AMD64-ABI 3.5.7p5: Step 1. Determine whether type may be passed
   // in the registers. If not go to step 7.

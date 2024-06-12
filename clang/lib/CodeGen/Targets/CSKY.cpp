@@ -65,7 +65,7 @@ RValue CSKYABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   if (isEmptyRecord(getContext(), Ty, true)) {
     Address Addr = Address(CGF.Builder.CreateLoad(VAListAddr),
                            CGF.ConvertTypeForMem(Ty), SlotSize);
-    return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(Addr, Ty), Slot);
+    return RValue::getAggregate(Addr);
   }
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
