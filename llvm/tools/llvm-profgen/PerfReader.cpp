@@ -1244,7 +1244,8 @@ void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
   if (Binary->isKernel() && !Binary->getIsLoadedByMMap()) {
-    exitWithError("Kernel is requested, but no kernel is found in mmap events.");
+    exitWithError(
+        "Kernel is requested, but no kernel is found in mmap events.");
   }
 
   emitWarningSummary(NumLeafExternalFrame, NumTotalSample,
