@@ -112,6 +112,8 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zcmop %s -o - | FileCheck --check-prefix=RV32ZCMOP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smaia %s -o - | FileCheck --check-prefixes=CHECK,RV32SMAIA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssaia %s -o - | FileCheck --check-prefixes=CHECK,RV32SSAIA %s
+; RUN: llc -mtriple=riscv32 -mattr=+smcsrind %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCSRIND %s
+; RUN: llc -mtriple=riscv32 -mattr=+sscsrind %s -o - | FileCheck --check-prefixes=CHECK,RV32SSCSRIND %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCDELEG %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV32SMEPMP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFBFMIN %s
@@ -248,6 +250,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zcmop %s -o - | FileCheck --check-prefix=RV64ZCMOP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smaia %s -o - | FileCheck --check-prefixes=CHECK,RV64SMAIA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssaia %s -o - | FileCheck --check-prefixes=CHECK,RV64SSAIA %s
+; RUN: llc -mtriple=riscv64 -mattr=+smcsrind %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCSRIND %s
+; RUN: llc -mtriple=riscv64 -mattr=+sscsrind %s -o - | FileCheck --check-prefixes=CHECK,RV64SSCSRIND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCDELEG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV64SMEPMP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFBFMIN %s
@@ -390,6 +394,8 @@
 ; RV32ZCMOP: .attribute 5, "rv32i2p1_zca1p0_zcmop1p0"
 ; RV32SMAIA: .attribute 5, "rv32i2p1_smaia1p0"
 ; RV32SSAIA: .attribute 5, "rv32i2p1_ssaia1p0"
+; RV32SMCSRIND: .attribute 5, "rv32i2p1_smcsrind1p0"
+; RV32SSCSRIND: .attribute 5, "rv32i2p1_sscsrind1p0"
 ; RV32SMCDELEG: .attribute 5, "rv32i2p1_smcdeleg1p0"
 ; RV32SMEPMP: .attribute 5, "rv32i2p1_smepmp1p0"
 ; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
@@ -525,6 +531,8 @@
 ; RV64ZCMOP: .attribute 5, "rv64i2p1_zca1p0_zcmop1p0"
 ; RV64SMAIA: .attribute 5, "rv64i2p1_smaia1p0"
 ; RV64SSAIA: .attribute 5, "rv64i2p1_ssaia1p0"
+; RV64SMCSRIND: .attribute 5, "rv64i2p1_smcsrind1p0"
+; RV64SSCSRIND: .attribute 5, "rv64i2p1_sscsrind1p0"
 ; RV64SMCDELEG: .attribute 5, "rv64i2p1_smcdeleg1p0"
 ; RV64SMEPMP: .attribute 5, "rv64i2p1_smepmp1p0"
 ; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0"
