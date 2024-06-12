@@ -5199,7 +5199,11 @@ void SwitchInstProfUpdateWrapper::init() {
   if (!ProfileData)
     return;
 
-  if (ProfileData->getNumOperands() != SI.getNumSuccessors() + 1) {
+  // FIXME: This check belongs in ProfDataUtils. Its almost equivalent to
+  // getValidBranchWeightMDNode(), but the need to use llvm_unreachable
+  // makes them slightly different.
+  if (ProfileData->getNumOperands() !=
+      SI.getNumSuccessors() + getBranchWeightOffset(ProfileData)) {
     llvm_unreachable("number of prof branch_weights metadata operands does "
                      "not correspond to number of succesors");
   }
