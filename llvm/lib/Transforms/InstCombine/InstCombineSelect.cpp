@@ -2359,20 +2359,20 @@ static Instruction *foldSelectCmpBitcasts(SelectInst &Sel,
 /// operand, the result of the select will always be equal to its false value.
 /// For example:
 ///
-///   %0 = cmpxchg i64* %ptr, i64 %compare, i64 %new_value seq_cst seq_cst
-///   %1 = extractvalue { i64, i1 } %0, 1
-///   %2 = extractvalue { i64, i1 } %0, 0
-///   %3 = select i1 %1, i64 %compare, i64 %2
-///   ret i64 %3
+///   %cmpxchg = cmpxchg ptr %ptr, i64 %compare, i64 %new_value seq_cst seq_cst
+///   %val = extractvalue { i64, i1 } %cmpxchg, 0
+///   %success = extractvalue { i64, i1 } %cmpxchg, 1
+///   %sel = select i1 %success, i64 %compare, i64 %val
+///   ret i64 %sel
 ///
-/// The returned value of the cmpxchg instruction (%2) is the original value
-/// located at %ptr prior to any update. If the cmpxchg operation succeeds, %2
+/// The returned value of the cmpxchg instruction (%val) is the original value
+/// located at %ptr prior to any update. If the cmpxchg operation succeeds, %val
 /// must have been equal to %compare. Thus, the result of the select is always
-/// equal to %2, and the code can be simplified to:
+/// equal to %val, and the code can be simplified to:
 ///
-///   %0 = cmpxchg i64* %ptr, i64 %compare, i64 %new_value seq_cst seq_cst
-///   %1 = extractvalue { i64, i1 } %0, 0
-///   ret i64 %1
+///   %cmpxchg = cmpxchg ptr %ptr, i64 %compare, i64 %new_value seq_cst seq_cst
+///   %val = extractvalue { i64, i1 } %cmpxchg, 0
+///   ret i64 %val
 ///
 static Value *foldSelectCmpXchg(SelectInst &SI) {
   // A helper that determines if V is an extractvalue instruction whose
