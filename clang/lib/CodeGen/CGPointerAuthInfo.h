@@ -81,13 +81,15 @@ public:
     return AuthenticationMode == PointerAuthenticationMode::SignAndAuth;
   }
 
-  bool operator!=(const CGPointerAuthInfo &Other) const {
-    return Key != Other.Key || Discriminator != Other.Discriminator ||
-           AuthenticationMode != Other.AuthenticationMode;
+  friend bool operator!=(const CGPointerAuthInfo &LHS,
+                         const CGPointerAuthInfo &RHS) {
+    return LHS.Key != RHS.Key || LHS.Discriminator != RHS.Discriminator ||
+           LHS.AuthenticationMode != RHS.AuthenticationMode;
   }
 
-  bool operator==(const CGPointerAuthInfo &Other) const {
-    return !(*this != Other);
+  friend bool operator==(const CGPointerAuthInfo &LHS,
+                         const CGPointerAuthInfo &RHS) {
+    return !(LHS != RHS);
   }
 };
 
