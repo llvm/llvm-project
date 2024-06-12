@@ -263,7 +263,7 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
         ( `,` `stream` `=` $stream^ )? `>` `>` `>`
         custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
             $upperbound, type($upperbound), $step, type($step))
-        `reduce_oprnds` $reduceOperands `:` type($reduceOperands)
+        `reduce` `(` $reduceOperands `:` type($reduceOperands) `)`
         attr-dict
   }];
 
