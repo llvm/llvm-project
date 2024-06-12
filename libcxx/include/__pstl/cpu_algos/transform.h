@@ -33,11 +33,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Function>
 _LIBCPP_HIDE_FROM_ABI _Iterator2
-__simd_walk(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Function __f) noexcept {
+__simd_transform(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Function __f) noexcept {
   _PSTL_PRAGMA_SIMD
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __f(__first1[__i], __first2[__i]);
   return __first2 + __n;
+}
+
+template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Iterator3, class _Function>
+_LIBCPP_HIDE_FROM_ABI _Iterator3 __simd_transform(
+    _Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Iterator3 __first3, _Function __f) noexcept {
+  _PSTL_PRAGMA_SIMD
+  for (_DifferenceType __i = 0; __i < __n; ++__i)
+    __f(__first1[__i], __first2[__i], __first3[__i]);
+  return __first3 + __n;
 }
 
 template <class _Backend, class _RawExecutionPolicy>
@@ -70,7 +79,7 @@ struct __cpu_parallel_transform {
     } else if constexpr (__is_unsequenced_execution_policy_v<_RawExecutionPolicy> &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      return std::__simd_walk(
+      return std::__simd_transform(
           __first,
           __last - __first,
           __result,
@@ -82,15 +91,6 @@ struct __cpu_parallel_transform {
     }
   }
 };
-
-template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Iterator3, class _Function>
-_LIBCPP_HIDE_FROM_ABI _Iterator3 __simd_walk(
-    _Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Iterator3 __first3, _Function __f) noexcept {
-  _PSTL_PRAGMA_SIMD
-  for (_DifferenceType __i = 0; __i < __n; ++__i)
-    __f(__first1[__i], __first2[__i], __first3[__i]);
-  return __first3 + __n;
-}
 
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_transform_binary {
@@ -132,7 +132,7 @@ struct __cpu_parallel_transform_binary {
                          __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value &&
                          __has_random_access_iterator_category_or_concept<_ForwardOutIterator>::value) {
-      return std::__simd_walk(
+      return std::__simd_transform(
           __first1,
           __last1 - __first1,
           __first2,
