@@ -10208,11 +10208,14 @@ Value *CodeGenFunction::EmitSVETupleSetOrGet(const SVETypeFlags &TypeFlags,
                                              llvm::Type *Ty,
                                              ArrayRef<Value *> Ops) {
   assert((TypeFlags.isTupleSet() || TypeFlags.isTupleGet()) &&
-         "Expects TypleFlag isTupleSet or TypeFlags.isTupleSet()");
+         "Expects TypleFlags.isTupleSet() or TypeFlags.isTupleGet()");
 
   unsigned I = cast<ConstantInt>(Ops[1])->getSExtValue();
-  auto *SingleVecTy = cast<llvm::ScalableVectorType>(
+  auto *SingleVecTy = dyn_cast<llvm::ScalableVectorType>(
       TypeFlags.isTupleSet() ? Ops[2]->getType() : Ty);
+
+  if (!SingleVecTy)
+    retutn nullptr;
   Value *Idx = ConstantInt::get(CGM.Int64Ty,
                                 I * SingleVecTy->getMinNumElements());
 
