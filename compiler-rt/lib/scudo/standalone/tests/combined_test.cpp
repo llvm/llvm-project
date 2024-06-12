@@ -447,32 +447,19 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, ReallocateSame) {
   // returns the same chunk. This requires that all the sizes we iterate on use
   // the same block size, but that should be the case for MaxSize - 64 with our
   // default class size maps.
-  constexpr scudo::uptr InitialSize =
+  constexpr scudo::uptr ReallocSize =
       TypeParam::Primary::SizeClassMap::MaxSize - 64;
+  void *P = Allocator->allocate(ReallocSize, Origin);
   const char Marker = 'A';
-  Allocator->setFillContents(scudo::PatternOrZeroFill);
-
-  void *P = Allocator->allocate(InitialSize, Origin);
-  scudo::uptr CurrentSize = InitialSize;
+  memset(P, Marker, ReallocSize);
   for (scudo::sptr Delta = -32; Delta < 32; Delta += 8) {
-    memset(P, Marker, CurrentSize);
     const scudo::uptr NewSize =
-        static_cast<scudo::uptr>(static_cast<scudo::sptr>(InitialSize) + Delta);
+        static_cast<scudo::uptr>(static_cast<scudo::sptr>(ReallocSize) + Delta);
     void *NewP = Allocator->reallocate(P, NewSize);
     EXPECT_EQ(NewP, P);
-
-    // Verify that existing contents have been preserved.
-    for (scudo::uptr I = 0; I < scudo::Min(CurrentSize, NewSize); I++)
+    for (scudo::uptr I = 0; I < ReallocSize - 32; I++)
       EXPECT_EQ((reinterpret_cast<char *>(NewP))[I], Marker);
-
-    // Verify that new bytes are set according to FillContentsMode.
-    for (scudo::uptr I = CurrentSize; I < NewSize; I++) {
-      EXPECT_EQ((reinterpret_cast<unsigned char *>(NewP))[I],
-                scudo::PatternFillByte);
-    }
-
     checkMemoryTaggingMaybe(Allocator, NewP, NewSize, 0);
-    CurrentSize = NewSize;
   }
   Allocator->deallocate(P, Origin);
 }

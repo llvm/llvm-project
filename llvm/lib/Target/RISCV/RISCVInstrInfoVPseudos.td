@@ -67,11 +67,6 @@
 ///   that terminology in code frequently refers to these as "TA" which is
 ///   confusing.  We're in the process of migrating away from this
 ///   representation.
-/// * _TU w/o policy operand -- Has a passthrough operand, and always
-///   represents the tail undisturbed state.
-/// * _TU w/policy operand - Can represent all three policy states.  If
-///   passthrough is IMPLICIT_DEF (or NoReg), then represents "undefined".
-///   Otherwise, policy operand and tablegen flags drive the interpretation.
 ///
 //===----------------------------------------------------------------------===//
 

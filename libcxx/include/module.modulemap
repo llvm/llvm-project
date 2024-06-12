@@ -1159,6 +1159,7 @@ module std_private_chrono_year                   [system] { header "__chrono/yea
 module std_private_chrono_year_month             [system] { header "__chrono/year_month.h" }
 module std_private_chrono_year_month_day         [system] { header "__chrono/year_month_day.h" }
 module std_private_chrono_year_month_weekday     [system] { header "__chrono/year_month_weekday.h" }
+module std_private_chrono_zoned_time             [system] { header "__chrono/zoned_time.h" }
 
 module std_private_compare_common_comparison_category     [system] { header "__compare/common_comparison_category.h" }
 module std_private_compare_compare_partial_order_fallback [system] { header "__compare/compare_partial_order_fallback.h" }

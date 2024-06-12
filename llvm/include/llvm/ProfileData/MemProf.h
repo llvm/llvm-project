@@ -988,7 +988,7 @@ computeFrameHistogram(llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>>
 //
 // The radix tree allows us to reconstruct call stacks in the leaf-to-root
 // order as we scan the array from left ro right while following pointers to
-// parents along the way
+// parents along the way.
 //
 // For example, if we are decoding CallStackId 2, we start a forward traversal
 // at Index 7, noting the call stack length of 4 and obtaining f5 and f4.  When

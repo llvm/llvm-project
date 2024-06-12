@@ -935,8 +935,9 @@ declarations and removes them.  Dead declarations are declarations of functions
 for which no implementation is available (i.e., declarations for unused library
 functions).
 
-``strip-debug-declare``: Strip all ``llvm.dbg.declare`` intrinsics
-------------------------------------------------------------------
+``strip-debug-declare``: Strip all ``llvm.dbg.declare`` intrinsics and
+``#dbg_declare`` records.
+-------------------------------------------------------------------
 
 Performs code stripping. Similar to strip, but only strips
 ``llvm.dbg.declare`` intrinsics.

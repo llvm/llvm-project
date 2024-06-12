@@ -129,6 +129,24 @@ public:
     return {};
   }
 
+  template <class _Duration>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI local_time<common_type_t<_Duration, seconds>>
+  to_local(const sys_time<_Duration>& __time) const {
+    using _Dp = common_type_t<_Duration, seconds>;
+
+    sys_info __info = get_info(__time);
+
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __info.offset >= chrono::seconds{0} || __time.time_since_epoch() >= _Dp::min() - __info.offset,
+        "cannot convert the system time; it would be before the minimum local clock value");
+
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __info.offset <= chrono::seconds{0} || __time.time_since_epoch() <= _Dp::max() - __info.offset,
+        "cannot convert the system time; it would be after the maximum local clock value");
+
+    return local_time<_Dp>{__time.time_since_epoch() + __info.offset};
+  }
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const __impl& __implementation() const noexcept { return *__impl_; }
 
 private:
