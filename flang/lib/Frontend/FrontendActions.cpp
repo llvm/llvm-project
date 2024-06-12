@@ -293,7 +293,7 @@ bool CodeGenAction::beginSourceFileAction() {
       kindMap, ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
       ci.getInvocation().getFrontendOpts().features, targetMachine,
-      ci.getInvocation().getTargetOpts().tuneCPU);
+      ci.getInvocation().getTargetOpts().cpuToTuneFor);
 
   // Fetch module from lb, so we can set
   mlirModule = std::make_unique<mlir::ModuleOp>(lb.getModule());

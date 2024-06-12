@@ -33,7 +33,7 @@ public:
   std::string cpu;
 
   /// If given, the name of the target CPU to tune code for.
-  std::string tuneCPU;
+  std::string cpuToTuneFor;
 
   /// The list of target specific features to enable or disable, as written on
   /// the command line.
