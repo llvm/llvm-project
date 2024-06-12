@@ -6386,10 +6386,12 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
   // Semantics builds signatures for LBOUND calls as either
   // LBOUND(array, dim, [kind]) or LBOUND(array, [kind]).
   const bool dimIsAbsent = args.size() == 2 || isStaticallyAbsent(args, 1);
-  if (array.hasAssumedRank() && dimIsAbsent)
-    return genBoundInquiry(builder, loc, resultType, args,
-                           /*kindPos=*/1, fir::runtime::genLbound,
+  if (array.hasAssumedRank() && dimIsAbsent) {
+    int kindPos = args.size() == 2 ? 1 : 2;
+    return genBoundInquiry(builder, loc, resultType, args, kindPos,
+                           fir::runtime::genLbound,
                            /*needAccurateLowerBound=*/true);
+  }
 
   mlir::Type indexType = builder.getIndexType();
 
