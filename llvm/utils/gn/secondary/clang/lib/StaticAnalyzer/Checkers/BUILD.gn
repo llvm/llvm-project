@@ -83,6 +83,7 @@ static_library("Checkers") {
     "MoveChecker.cpp",
     "NSAutoreleasePoolChecker.cpp",
     "NSErrorChecker.cpp",
+    "NoOwnershipChangeVisitor.cpp",
     "NoReturnFunctionChecker.cpp",
     "NonNullParamChecker.cpp",
     "NonnullGlobalConstantsChecker.cpp",
@@ -104,6 +105,7 @@ static_library("Checkers") {
     "PointerSortingChecker.cpp",
     "PointerSubChecker.cpp",
     "PthreadLockChecker.cpp",
+    "PutenvStackArrayChecker.cpp",
     "RetainCountChecker/RetainCountChecker.cpp",
     "RetainCountChecker/RetainCountDiagnostics.cpp",
     "ReturnPointerRangeChecker.cpp",
@@ -111,6 +113,7 @@ static_library("Checkers") {
     "ReturnValueChecker.cpp",
     "RunLoopAutoreleaseLeakChecker.cpp",
     "STLAlgorithmModeling.cpp",
+    "SetgidSetuidOrderChecker.cpp",
     "SimpleStreamChecker.cpp",
     "SmartPtrChecker.cpp",
     "SmartPtrModeling.cpp",
@@ -147,6 +150,5 @@ static_library("Checkers") {
     "WebKit/UncountedLambdaCapturesChecker.cpp",
     "WebKit/UncountedLocalVarsChecker.cpp",
     "cert/InvalidPtrChecker.cpp",
-    "cert/PutenvWithAutoChecker.cpp",
   ]
 }

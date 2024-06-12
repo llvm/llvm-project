@@ -371,9 +371,8 @@ ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
 // anything and return false, otherwise return true.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *node) {
-  auto unique = detail::find_unique(leafs, [=](const auto &dirInfo) {
-    return llvm::omp::isAllowedClauseForDirective(dirInfo.id, node->id,
-                                                  version);
+  auto unique = detail::find_unique(leafs, [=](const auto &leaf) {
+    return llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version);
   });
 
   if (unique != leafs.end()) {
@@ -438,8 +437,8 @@ bool ConstructDecompositionT<C, H>::applyToAll(const ClauseTy *node) {
 }
 
 template <typename C, typename H>
-template <typename Clause>
-bool ConstructDecompositionT<C, H>::applyClause(Clause &&clause,
+template <typename Specific>
+bool ConstructDecompositionT<C, H>::applyClause(Specific &&specific,
                                                 const ClauseTy *node) {
   // The default behavior is to find the unique directive to which the
   // given clause may be applied. If there are no such directives, or

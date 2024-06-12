@@ -1414,6 +1414,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::PackIndexingExprClass:
   case Expr::StringLiteralClass:
   case Expr::SourceLocExprClass:
+  case Expr::EmbedExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
     // These expressions can never throw.
@@ -1425,6 +1426,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
 
     // Most statements can throw if any substatement can throw.
   case Stmt::OpenACCComputeConstructClass:
+  case Stmt::OpenACCLoopConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:

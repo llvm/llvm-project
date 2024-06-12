@@ -66,12 +66,6 @@ std::unique_ptr<Pass> createSparseAssembler();
 std::unique_ptr<Pass> createSparseAssembler(bool directOut);
 
 //===----------------------------------------------------------------------===//
-// The SparseEncodingPropagation pass.
-//===----------------------------------------------------------------------===//
-
-std::unique_ptr<Pass> createSparseEncodingPropagationPass();
-
-//===----------------------------------------------------------------------===//
 // The SparseReinterpretMap pass.
 //===----------------------------------------------------------------------===//
 
@@ -253,6 +247,12 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
     bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen);
+
+//===----------------------------------------------------------------------===//
+// Sparse Iteration Transform Passes
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass> createSparseSpaceCollapsePass();
 
 //===----------------------------------------------------------------------===//
 // Registration.

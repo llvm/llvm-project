@@ -836,3 +836,85 @@ int h() {
   }();
 }
 }
+
+namespace GH92188 {
+struct A {
+  template<auto N>
+  void operator+=(this auto &&, const char (&)[N]);
+  void operator+=(this auto &&, auto &&) = delete;
+
+  void f1(this A &, auto &);
+  void f1(this A &, auto &&) = delete;
+
+  void f2(this auto&);
+  void f2(this auto&&) = delete;
+
+  void f3(auto&) &;
+  void f3(this A&, auto&&) = delete;
+
+  void f4(auto&&) & = delete;
+  void f4(this A&, auto&);
+
+  static void f5(auto&);
+  void f5(this A&, auto&&) = delete;
+
+  static void f6(auto&&) = delete;
+  void f6(this A&, auto&);
+
+  void implicit_this() {
+    int lval;
+    operator+=("123");
+    f1(lval);
+    f2();
+    f3(lval);
+    f4(lval);
+    f5(lval);
+    f6(lval);
+  }
+
+  void operator-(this A&, auto&&) = delete;
+  friend void operator-(A&, auto&);
+
+  void operator*(this A&, auto&);
+  friend void operator*(A&, auto&&) = delete;
+};
+
+void g() {
+  A a;
+  int lval;
+  a += "123";
+  a.f1(lval);
+  a.f2();
+  a.f3(lval);
+  a.f4(lval);
+  a.f5(lval);
+  a.f6(lval);
+  a - lval;
+  a * lval;
+}
+}
+
+namespace P2797 {
+struct C {
+  void c(this const C&);    // #first
+  void c() &;               // #second
+  static void c(int = 0);   // #third
+
+  void d() {
+    c();                // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#first {{candidate function}}
+                        // expected-note@#second {{candidate function}}
+                        // expected-note@#third {{candidate function}}
+
+    (C::c)();           // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#first {{candidate function}}
+                        // expected-note@#second {{candidate function}}
+                        // expected-note@#third {{candidate function}}
+
+    (&(C::c))();        // expected-error {{cannot create a non-constant pointer to member function}}
+    (&C::c)(C{});
+    (&C::c)(*this);     // expected-error {{call to non-static member function without an object argument}}
+    (&C::c)();
+  }
+};
+}

@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install -r llvm/utils/git/requirements.txt
+          pip install --require-hashes -r llvm/utils/git/requirements.txt
 
       - name: Request Release Note
         env:

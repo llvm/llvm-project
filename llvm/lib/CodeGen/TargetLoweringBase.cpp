@@ -141,6 +141,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::EXP10_F128, "exp10f128");
     setLibcallName(RTLIB::SIN_F128, "sinf128");
     setLibcallName(RTLIB::COS_F128, "cosf128");
+    setLibcallName(RTLIB::TAN_F128, "tanf128");
     setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
     setLibcallName(RTLIB::POW_F128, "powf128");
     setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
@@ -226,6 +227,34 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
         setLibcallCallingConv(RTLIB::SINCOS_STRET_F64,
                               CallingConv::ARM_AAPCS_VFP);
       }
+    }
+
+    switch (TT.getOS()) {
+    case Triple::MacOSX:
+      if (TT.isMacOSXVersionLT(10, 9)) {
+        setLibcallName(RTLIB::EXP10_F32, nullptr);
+        setLibcallName(RTLIB::EXP10_F64, nullptr);
+      } else {
+        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+        setLibcallName(RTLIB::EXP10_F64, "__exp10");
+      }
+      break;
+    case Triple::IOS:
+    case Triple::TvOS:
+    case Triple::WatchOS:
+    case Triple::XROS:
+      if (!TT.isWatchOS() &&
+          (TT.isOSVersionLT(7, 0) || (TT.isOSVersionLT(9, 0) && TT.isX86()))) {
+        setLibcallName(RTLIB::EXP10_F32, nullptr);
+        setLibcallName(RTLIB::EXP10_F64, nullptr);
+      } else {
+        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+        setLibcallName(RTLIB::EXP10_F64, "__exp10");
+      }
+
+      break;
+    default:
+      break;
     }
   } else {
     setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
@@ -987,7 +1016,8 @@ void TargetLoweringBase::initActions() {
   setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
                       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
                       ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
-                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN},
+                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN,
+                      ISD::FTAN},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // Default ISD::TRAP to expand (which turns it into abort).
@@ -1007,6 +1037,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SET_FPMODE, VT, Expand);
   }
   setOperationAction(ISD::RESET_FPMODE, MVT::Other, Expand);
+
+  // This one by default will call __clear_cache unless the target
+  // wants something different.
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -1402,9 +1436,6 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 /// this allows us to compute derived properties we expose.
 void TargetLoweringBase::computeRegisterProperties(
     const TargetRegisterInfo *TRI) {
-  static_assert(MVT::VALUETYPE_SIZE <= MVT::MAX_ALLOWED_VALUETYPE,
-                "Too many value types for ValueTypeActions to hold!");
-
   // Everything defaults to needing one register.
   for (unsigned i = 0; i != MVT::VALUETYPE_SIZE; ++i) {
     NumRegistersForVT[i] = 1;

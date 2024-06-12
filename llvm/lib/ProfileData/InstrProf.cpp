@@ -282,7 +282,7 @@ std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
 static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
   uint32_t Count = NumPrefix;
   uint32_t Pos = 0, LastPos = 0;
-  for (auto & CI : PathNameStr) {
+  for (const auto &CI : PathNameStr) {
     ++Pos;
     if (llvm::sys::path::is_separator(CI)) {
       LastPos = Pos;
@@ -1002,46 +1002,60 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
     ValueSites.emplace_back(VData, VData + N);
 }
 
-std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
-    ArrayRef<TemporalProfTraceTy> Traces) {
+void TemporalProfTraceTy::createBPFunctionNodes(
+    ArrayRef<TemporalProfTraceTy> Traces, std::vector<BPFunctionNode> &Nodes,
+    bool RemoveOutlierUNs) {
   using IDT = BPFunctionNode::IDT;
   using UtilityNodeT = BPFunctionNode::UtilityNodeT;
-  // Collect all function IDs ordered by their smallest timestamp. This will be
-  // used as the initial FunctionNode order.
-  SetVector<IDT> FunctionIds;
-  size_t LargestTraceSize = 0;
-  for (auto &Trace : Traces)
-    LargestTraceSize =
-        std::max(LargestTraceSize, Trace.FunctionNameRefs.size());
-  for (size_t Timestamp = 0; Timestamp < LargestTraceSize; Timestamp++)
-    for (auto &Trace : Traces)
-      if (Timestamp < Trace.FunctionNameRefs.size())
-        FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
-
-  const int N = Log2_64(LargestTraceSize) + 1;
-
+  UtilityNodeT MaxUN = 0;
+  DenseMap<IDT, size_t> IdToFirstTimestamp;
+  DenseMap<IDT, UtilityNodeT> IdToFirstUN;
+  DenseMap<IDT, SmallVector<UtilityNodeT>> IdToUNs;
   // TODO: We need to use the Trace.Weight field to give more weight to more
   // important utilities
-  DenseMap<IDT, SmallVector<UtilityNodeT, 4>> FuncGroups;
-  for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
-    auto &Trace = Traces[TraceIdx].FunctionNameRefs;
-    for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
-      for (int I = Log2_64(Timestamp + 1); I < N; I++) {
-        auto FunctionId = Trace[Timestamp];
-        UtilityNodeT GroupId = TraceIdx * N + I;
-        FuncGroups[FunctionId].push_back(GroupId);
+  for (auto &Trace : Traces) {
+    size_t CutoffTimestamp = 1;
+    for (size_t Timestamp = 0; Timestamp < Trace.FunctionNameRefs.size();
+         Timestamp++) {
+      IDT Id = Trace.FunctionNameRefs[Timestamp];
+      auto [It, WasInserted] = IdToFirstTimestamp.try_emplace(Id, Timestamp);
+      if (!WasInserted)
+        It->getSecond() = std::min<size_t>(It->getSecond(), Timestamp);
+      if (Timestamp >= CutoffTimestamp) {
+        ++MaxUN;
+        CutoffTimestamp = 2 * Timestamp;
       }
+      IdToFirstUN.try_emplace(Id, MaxUN);
     }
+    for (auto &[Id, FirstUN] : IdToFirstUN)
+      for (auto UN = FirstUN; UN <= MaxUN; ++UN)
+        IdToUNs[Id].push_back(UN);
+    ++MaxUN;
+    IdToFirstUN.clear();
   }
 
-  std::vector<BPFunctionNode> Nodes;
-  for (auto Id : FunctionIds) {
-    auto &UNs = FuncGroups[Id];
-    llvm::sort(UNs);
-    UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());
-    Nodes.emplace_back(Id, UNs);
+  if (RemoveOutlierUNs) {
+    DenseMap<UtilityNodeT, unsigned> UNFrequency;
+    for (auto &[Id, UNs] : IdToUNs)
+      for (auto &UN : UNs)
+        ++UNFrequency[UN];
+    // Filter out utility nodes that are too infrequent or too prevalent to make
+    // BalancedPartitioning more effective.
+    for (auto &[Id, UNs] : IdToUNs)
+      llvm::erase_if(UNs, [&](auto &UN) {
+        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+      });
   }
-  return Nodes;
+
+  for (auto &[Id, UNs] : IdToUNs)
+    Nodes.emplace_back(Id, UNs);
+
+  // Since BalancedPartitioning is sensitive to the initial order, we explicitly
+  // order nodes by their earliest timestamp.
+  llvm::sort(Nodes, [&](auto &L, auto &R) {
+    return std::make_pair(IdToFirstTimestamp[L.Id], L.Id) <
+           std::make_pair(IdToFirstTimestamp[R.Id], R.Id);
+  });
 }
 
 #define INSTR_PROF_COMMON_API_IMPL
@@ -1162,16 +1176,6 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
   }
 }
 
-template <class T>
-static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
-  using namespace support;
-
-  if (Orig == llvm::endianness::little)
-    return endian::readNext<T, llvm::endianness::little>(D);
-  else
-    return endian::readNext<T, llvm::endianness::big>(D);
-}
-
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
   return std::unique_ptr<ValueProfData>(new (::operator new(TotalSize))
                                             ValueProfData());
@@ -1210,7 +1214,8 @@ ValueProfData::getValueProfData(const unsigned char *D,
     return make_error<InstrProfError>(instrprof_error::truncated);
 
   const unsigned char *Header = D;
-  uint32_t TotalSize = swapToHostOrder<uint32_t>(Header, Endianness);
+  uint32_t TotalSize = endian::readNext<uint32_t>(Header, Endianness);
+
   if (D + TotalSize > BufferEnd)
     return make_error<InstrProfError>(instrprof_error::too_large);
 
@@ -1294,7 +1299,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
   // Value Profile Data
   uint32_t MDCount = MaxMDCount;
-  for (auto &VD : VDs) {
+  for (const auto &VD : VDs) {
     Vals.push_back(MDHelper.createConstant(
         ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
     Vals.push_back(MDHelper.createConstant(
@@ -1613,95 +1618,72 @@ void OverlapStats::dump(raw_fd_ostream &OS) const {
 }
 
 namespace IndexedInstrProf {
-// A C++14 compatible version of the offsetof macro.
-template <typename T1, typename T2>
-inline size_t constexpr offsetOf(T1 T2::*Member) {
-  constexpr T2 Object{};
-  return size_t(&(Object.*Member)) - size_t(&Object);
-}
-
-static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
-  return *reinterpret_cast<const uint64_t *>(Buffer + Offset);
-}
-
-uint64_t Header::formatVersion() const {
-  using namespace support;
-  return endian::byte_swap<uint64_t, llvm::endianness::little>(Version);
-}
-
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   using namespace support;
   static_assert(std::is_standard_layout_v<Header>,
-                "The header should be standard layout type since we use offset "
-                "of fields to read.");
+                "Use standard layout for Header for simplicity");
   Header H;
 
-  H.Magic = read(Buffer, offsetOf(&Header::Magic));
+  H.Magic = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   // Check the magic number.
-  uint64_t Magic =
-      endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
-  if (Magic != IndexedInstrProf::Magic)
+  if (H.Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
   // Read the version.
-  H.Version = read(Buffer, offsetOf(&Header::Version));
-  if (GET_VERSION(H.formatVersion()) >
+  H.Version = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  switch (GET_VERSION(H.formatVersion())) {
-    // When a new field is added in the header add a case statement here to
-    // populate it.
-    static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
-        "Please update the reading code below if a new field has been added, "
-        "if not add a case statement to fall through to the latest version.");
-  case 12ull:
-    H.VTableNamesOffset = read(Buffer, offsetOf(&Header::VTableNamesOffset));
-    [[fallthrough]];
-  case 11ull:
-    [[fallthrough]];
-  case 10ull:
-    H.TemporalProfTracesOffset =
-        read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
-    [[fallthrough]];
-  case 9ull:
-    H.BinaryIdOffset = read(Buffer, offsetOf(&Header::BinaryIdOffset));
-    [[fallthrough]];
-  case 8ull:
-    H.MemProfOffset = read(Buffer, offsetOf(&Header::MemProfOffset));
-    [[fallthrough]];
-  default: // Version7 (when the backwards compatible header was introduced).
-    H.HashType = read(Buffer, offsetOf(&Header::HashType));
-    H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));
-  }
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+                "Please update the reader as needed when a new field is added "
+                "or when indexed profile version gets bumped.");
 
+  Buffer += sizeof(uint64_t); // Skip Header.Unused field.
+  H.HashType = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  H.HashOffset = endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 8)
+    H.MemProfOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 9)
+    H.BinaryIdOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  // Version 11 is handled by this condition.
+  if (H.getIndexedProfileVersion() >= 10)
+    H.TemporalProfTracesOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
+  if (H.getIndexedProfileVersion() >= 12)
+    H.VTableNamesOffset =
+        endian::readNext<uint64_t, llvm::endianness::little>(Buffer);
   return H;
 }
 
+uint64_t Header::getIndexedProfileVersion() const {
+  return GET_VERSION(Version);
+}
+
 size_t Header::size() const {
-  switch (GET_VERSION(formatVersion())) {
-    // When a new field is added to the header add a case statement here to
-    // compute the size as offset of the new field + size of the new field. This
-    // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
-                  "Please update the size computation below if a new field has "
-                  "been added to the header, if not add a case statement to "
-                  "fall through to the latest version.");
+  switch (getIndexedProfileVersion()) {
+    // To retain backward compatibility, new fields must be appended to the end
+    // of the header, and byte offset of existing fields shouldn't change when
+    // indexed profile version gets incremented.
+    static_assert(
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version12,
+        "Please update the size computation below if a new field has "
+        "been added to the header; for a version bump without new "
+        "fields, add a case statement to fall through to the latest version.");
   case 12ull:
-    return offsetOf(&Header::VTableNamesOffset) +
-           sizeof(Header::VTableNamesOffset);
+    return 72;
   case 11ull:
     [[fallthrough]];
   case 10ull:
-    return offsetOf(&Header::TemporalProfTracesOffset) +
-           sizeof(Header::TemporalProfTracesOffset);
+    return 64;
   case 9ull:
-    return offsetOf(&Header::BinaryIdOffset) + sizeof(Header::BinaryIdOffset);
+    return 56;
   case 8ull:
-    return offsetOf(&Header::MemProfOffset) + sizeof(Header::MemProfOffset);
+    return 48;
   default: // Version7 (when the backwards compatible header was introduced).
-    return offsetOf(&Header::HashOffset) + sizeof(Header::HashOffset);
+    return 40;
   }
 }
 

@@ -472,8 +472,8 @@ TYPE_PARSER(construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %REF"_port_en_US,
-        construct<ActualArg>(construct<ActualArg::PercentRef>(
-            "%REF" >> parenthesized(variable)))) ||
+        construct<ActualArg>(
+            construct<ActualArg::PercentRef>("%REF" >> parenthesized(expr)))) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %VAL"_port_en_US,
         construct<ActualArg>(

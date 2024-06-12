@@ -2,8 +2,8 @@
 
 ! This test checks the lowering of OpenMP sections construct with several clauses present
 
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
-! RUN: bbc -hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir %openmp_flags %s -o - | FileCheck %s
+! RUN: bbc -hlfir -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 !CHECK: func @_QQmain() attributes {fir.bindc_name = "sample"} {
 !CHECK:   %[[COUNT:.*]] = fir.address_of(@_QFEcount) : !fir.ref<i32>

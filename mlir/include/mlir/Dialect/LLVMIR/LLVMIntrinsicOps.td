@@ -635,7 +635,7 @@ def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend", [0]>,
 // Exception handling intrinsics.
 //
 
-def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for"> {
+def LLVM_EhTypeidForOp : LLVM_OneResultIntrOp<"eh.typeid.for", [], [0]> {
     let arguments = (ins LLVM_AnyPointer:$type_info);
     let assemblyFormat = "$type_info attr-dict `:` functional-type(operands, results)";
 }

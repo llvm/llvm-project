@@ -310,4 +310,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+prefer-no-gather");
   if (Args.hasArg(options::OPT_mno_scatter))
     Features.push_back("+prefer-no-scatter");
+  if (Args.hasArg(options::OPT_mapx_inline_asm_use_gpr32))
+    Features.push_back("+inline-asm-use-gpr32");
 }

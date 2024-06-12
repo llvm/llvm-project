@@ -71,8 +71,8 @@ static Value *simplifyXorInst(Value *, Value *, const SimplifyQuery &,
                               unsigned);
 static Value *simplifyCastInst(unsigned, Value *, Type *, const SimplifyQuery &,
                                unsigned);
-static Value *simplifyGEPInst(Type *, Value *, ArrayRef<Value *>, bool,
-                              const SimplifyQuery &, unsigned);
+static Value *simplifyGEPInst(Type *, Value *, ArrayRef<Value *>,
+                              GEPNoWrapFlags, const SimplifyQuery &, unsigned);
 static Value *simplifySelectInst(Value *, Value *, Value *,
                                  const SimplifyQuery &, unsigned);
 static Value *simplifyInstructionWithOperands(Instruction *I,
@@ -3954,12 +3954,14 @@ static Value *simplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
           // LHS >s RHS.
           case ICmpInst::ICMP_SGT:
           case ICmpInst::ICMP_SGE:
-            return ConstantExpr::getICmp(ICmpInst::ICMP_SLT, C,
-                                         Constant::getNullValue(C->getType()));
+            return ConstantFoldCompareInstOperands(
+                ICmpInst::ICMP_SLT, C, Constant::getNullValue(C->getType()),
+                Q.DL);
           case ICmpInst::ICMP_SLT:
           case ICmpInst::ICMP_SLE:
-            return ConstantExpr::getICmp(ICmpInst::ICMP_SGE, C,
-                                         Constant::getNullValue(C->getType()));
+            return ConstantFoldCompareInstOperands(
+                ICmpInst::ICMP_SGE, C, Constant::getNullValue(C->getType()),
+                Q.DL);
 
           // If LHS is non-negative then LHS <u RHS.  If LHS is negative then
           // LHS >u RHS.
@@ -4941,7 +4943,7 @@ Value *llvm::simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
 /// Given operands for an GetElementPtrInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
-                              ArrayRef<Value *> Indices, bool InBounds,
+                              ArrayRef<Value *> Indices, GEPNoWrapFlags NW,
                               const SimplifyQuery &Q, unsigned) {
   // The type of the GEP pointer operand.
   unsigned AS =
@@ -5066,17 +5068,18 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
     return nullptr;
 
   if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
-    return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr), InBounds,
-                                     std::nullopt, Indices);
+    // TODO(gep_nowrap): Pass on the whole GEPNoWrapFlags.
+    return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr),
+                                     NW.isInBounds(), std::nullopt, Indices);
 
-  auto *CE = ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ptr), Indices,
-                                            InBounds);
+  auto *CE =
+      ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ptr), Indices, NW);
   return ConstantFoldConstant(CE, Q.DL);
 }
 
 Value *llvm::simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
-                             bool InBounds, const SimplifyQuery &Q) {
-  return ::simplifyGEPInst(SrcTy, Ptr, Indices, InBounds, Q, RecursionLimit);
+                             GEPNoWrapFlags NW, const SimplifyQuery &Q) {
+  return ::simplifyGEPInst(SrcTy, Ptr, Indices, NW, Q, RecursionLimit);
 }
 
 /// Given operands for an InsertValueInst, see if we can fold the result.
@@ -5345,9 +5348,6 @@ static Value *foldIdentityShuffles(int DestElt, Value *Op0, Value *Op1,
         DestElt, SourceShuf->getOperand(0), SourceShuf->getOperand(1),
         SourceShuf->getMaskValue(RootElt), RootVec, MaxRecurse);
   }
-
-  // TODO: Look through bitcasts? What if the bitcast changes the vector element
-  // size?
 
   // The source operand is not a shuffle. Initialize the root vector value for
   // this shuffle if that has not been done yet.
@@ -7078,7 +7078,7 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   case Instruction::GetElementPtr: {
     auto *GEPI = cast<GetElementPtrInst>(I);
     return simplifyGEPInst(GEPI->getSourceElementType(), NewOps[0],
-                           ArrayRef(NewOps).slice(1), GEPI->isInBounds(), Q,
+                           ArrayRef(NewOps).slice(1), GEPI->getNoWrapFlags(), Q,
                            MaxRecurse);
   }
   case Instruction::InsertValue: {

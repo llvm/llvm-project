@@ -1502,6 +1502,7 @@ Attributes on Structured Bindings            __cpp_structured_bindings        C+
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89
 Attributes (N2335)                                                            C23           C89
+``#embed`` (N3017)                                                            C23           C89, C++
 ============================================ ================================ ============= =============
 
 Type Trait Primitives
@@ -4016,6 +4017,30 @@ Note that the `size` argument must be a compile time constant.
 
 Note that this intrinsic cannot yet be called in a ``constexpr`` context.
 
+``__is_bitwise_cloneable``
+--------------------------
+
+A type trait is used to check whether a type can be safely copied by memcpy.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  bool __is_bitwise_cloneable(Type)
+
+**Description**:
+
+Objects of bitwise cloneable types can be bitwise copied by memcpy/memmove. The
+Clang compiler warrants that this behavior is well defined, and won't be
+broken by compiler optimizations and sanitizers.
+
+For implicit-lifetime types, the lifetime of the new object is implicitly
+started after the copy. For other types (e.g., classes with virtual methods),
+the lifetime isn't started, and using the object results in undefined behavior
+according to the C++ Standard.
+
+This builtin can be used in constant expressions.
+
 Atomic Min/Max builtins with memory ordering
 --------------------------------------------
 
@@ -4403,6 +4428,7 @@ immediately after the name being declared.
 For example, this applies the GNU ``unused`` attribute to ``a`` and ``f``, and
 also applies the GNU ``noreturn`` attribute to ``f``.
 
+Examples:
 .. code-block:: c++
 
   [[gnu::unused]] int a, f [[gnu::noreturn]] ();
@@ -4411,6 +4437,42 @@ Target-Specific Extensions
 ==========================
 
 Clang supports some language features conditionally on some targets.
+
+AMDGPU Language Extensions
+--------------------------
+
+__builtin_amdgcn_fence
+^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_fence`` emits a fence.
+
+* ``unsigned`` atomic ordering, e.g. ``__ATOMIC_ACQUIRE``
+* ``const char *`` synchronization scope, e.g. ``workgroup``
+* Zero or more ``const char *`` address spaces names.
+
+The address spaces arguments must be one of the following string literals:
+
+* ``"local"``
+* ``"global"``
+
+If one or more address space name are provided, the code generator will attempt
+to emit potentially faster instructions that order access to at least those
+address spaces.
+Emitting such instructions may not always be possible and the compiler is free
+to fence more aggressively.
+
+If no address spaces names are provided, all address spaces are fenced.
+
+.. code-block:: c++
+
+  // Fence all address spaces.
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
+
+  // Fence only requested address spaces.
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
+
 
 ARM/AArch64 Language Extensions
 -------------------------------
@@ -5603,3 +5665,26 @@ Compiling different TUs depending on these flags (including use of
 ``std::hardware_destructive_interference``)  with different compilers, macro
 definitions, or architecture flags will lead to ODR violations and should be
 avoided.
+
+``#embed`` Parameters
+=====================
+
+``clang::offset``
+-----------------
+The ``clang::offset`` embed parameter may appear zero or one time in the
+embed parameter sequence. Its preprocessor argument clause shall be present and
+have the form:
+
+..code-block: text
+
+  ( constant-expression )
+
+and shall be an integer constant expression. The integer constant expression
+shall not evaluate to a value less than 0. The token ``defined`` shall not
+appear within the constant expression.
+
+The offset will be used when reading the contents of the embedded resource to
+specify the starting offset to begin embedding from. The resources is treated
+as being empty if the specified offset is larger than the number of bytes in
+the resource. The offset will be applied *before* any ``limit`` parameters are
+applied.

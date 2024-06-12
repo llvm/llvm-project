@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-opt-isl  \
+; RUN: opt %loadNPMPolly '-passes=polly-import-jscop,polly-opt-isl,polly-codegen'  \
 ; RUN: -polly-target-throughput-vector-fma=1 \
 ; RUN: -polly-target-latency-vector-fma=8 \
 ; RUN: -polly-target-1st-cache-level-associativity=8 \
@@ -6,7 +6,7 @@
 ; RUN: -polly-target-1st-cache-level-size=32768 \
 ; RUN: -polly-target-vector-register-bitwidth=256 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -polly-import-jscop-postfix=transformed -polly-codegen -S < %s \
+; RUN: -polly-import-jscop-postfix=transformed -S < %s \
 ; RUN: | FileCheck %s
 ;
 ; Check that we disable the Loop Vectorizer.

@@ -706,11 +706,20 @@ void TestReflectBoundsOp::inferResultRanges(
   const ConstantIntRanges &range = argRanges[0];
   MLIRContext *ctx = getContext();
   Builder b(ctx);
-  auto intTy = getType();
-  setUminAttr(b.getIntegerAttr(intTy, range.umin()));
-  setUmaxAttr(b.getIntegerAttr(intTy, range.umax()));
-  setSminAttr(b.getIntegerAttr(intTy, range.smin()));
-  setSmaxAttr(b.getIntegerAttr(intTy, range.smax()));
+  Type sIntTy, uIntTy;
+  // For plain `IntegerType`s, we can derive the appropriate signed and unsigned
+  // Types for the Attributes.
+  if (auto intTy = llvm::dyn_cast<IntegerType>(getType())) {
+    unsigned bitwidth = intTy.getWidth();
+    sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
+    uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
+  } else
+    sIntTy = uIntTy = getType();
+
+  setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
+  setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
+  setSminAttr(b.getIntegerAttr(sIntTy, range.smin()));
+  setSmaxAttr(b.getIntegerAttr(sIntTy, range.smax()));
   setResultRanges(getResult(), range);
 }
 

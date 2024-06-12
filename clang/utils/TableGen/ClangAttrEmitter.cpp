@@ -1845,7 +1845,7 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
     PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) +
                               "`should only have one super class");
 
-  if (SuperClasses[0]->getName().compare(LateAttrParseKindStr) != 0)
+  if (SuperClasses[0]->getName() != LateAttrParseKindStr)
     PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) +
                               "`should only have type `" +
                               llvm::Twine(LateAttrParseKindStr) +

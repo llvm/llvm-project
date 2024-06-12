@@ -1799,17 +1799,14 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  // Returns the convergence intrinsic referenced by |I|'s convergencectrl
-  // attribute if any.
-  static IntrinsicInst *getParentConvergenceToken(Instruction *I) {
-    auto *CI = dyn_cast<llvm::CallInst>(I);
-    if (!CI)
-      return nullptr;
-
-    auto Bundle = CI->getOperandBundle(llvm::LLVMContext::OB_convergencectrl);
-    assert(Bundle->Inputs.size() == 1 &&
-           Bundle->Inputs[0]->getType()->isTokenTy());
-    return dyn_cast<llvm::IntrinsicInst>(Bundle->Inputs[0].get());
+  bool isAnchor() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
+  }
+  bool isEntry() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_entry;
+  }
+  bool isLoop() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_loop;
   }
 };
 

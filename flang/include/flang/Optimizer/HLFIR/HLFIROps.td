@@ -15,6 +15,7 @@
 #define FORTRAN_DIALECT_HLFIR_OPS
 
 include "flang/Optimizer/HLFIR/HLFIROpBase.td"
+include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
@@ -90,7 +91,7 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
     Optional<fir_DummyScopeType>:$dummy_scope,
     Builtin_StringAttr:$uniq_name,
     OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-    OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
+    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
   );
 
   let results = (outs AnyFortranVariable, AnyRefOrBoxLike);
@@ -106,7 +107,7 @@ def hlfir_DeclareOp : hlfir_Op<"declare", [AttrSizedOperandSegments,
       CArg<"mlir::Value", "{}">:$shape, CArg<"mlir::ValueRange", "{}">:$typeparams,
       CArg<"mlir::Value", "{}">:$dummy_scope,
       CArg<"fir::FortranVariableFlagsAttr", "{}">:$fortran_attrs,
-      CArg<"fir::CUDADataAttributeAttr", "{}">:$cuda_attr)>];
+      CArg<"cuf::DataAttributeAttr", "{}">:$data_attr)>];
 
   let extraClassDeclaration = [{
     /// Get the variable original base (same as input). It lacks

@@ -21,13 +21,13 @@ module m
   procedure(proc1), bind(c) :: pc1 ! no error
   procedure(proc3), bind(c) :: pc4 ! no error
 
-  !ERROR: An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement
+  !ERROR: An interface name with the BIND attribute must appear if the BIND attribute appears in a procedure declaration
   procedure(proc2), bind(c) :: pc2
 
-  !WARNING: An interface name with BIND attribute should be specified if the BIND attribute is specified in a procedure declaration statement
+  !ERROR: An interface name with the BIND attribute must appear if the BIND attribute appears in a procedure declaration
   procedure(integer), bind(c) :: pc3
 
-  !WARNING: An interface name with BIND attribute should be specified if the BIND attribute is specified in a procedure declaration statement
+  !ERROR: An interface name with the BIND attribute must appear if the BIND attribute appears in a procedure declaration
   procedure(), bind(c) :: pc5
 
 end

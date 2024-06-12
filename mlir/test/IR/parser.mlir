@@ -597,7 +597,7 @@ func.func @funcattrwithblock() -> ()
   return
 }
 
-// CHECK-label func @funcsimplemap
+// CHECK-LABEL: func @funcsimplemap
 #map_simple0 = affine_map<()[] -> (10)>
 #map_simple1 = affine_map<()[s0] -> (s0)>
 #map_non_simple0 = affine_map<(d0)[] -> (d0)>

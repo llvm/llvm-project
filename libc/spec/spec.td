@@ -53,6 +53,7 @@ def UnsignedCharType : NamedType<"unsigned char">;
 def UnsignedShortType : NamedType<"unsigned short">;
 def BoolType : NamedType<"bool">;
 
+def Float16Type : NamedType<"_Float16">;
 def Float128Type : NamedType<"float128">;
 
 // Common types
@@ -114,6 +115,7 @@ def IntPtr : PtrType<IntType>;
 def RestrictedIntPtr : RestrictedPtrType<IntType>;
 def FloatPtr : PtrType<FloatType>;
 def DoublePtr : PtrType<DoubleType>;
+def Float16Ptr : PtrType<Float16Type>;
 def Float128Ptr : PtrType<Float128Type>;
 def UnsignedCharPtr : PtrType<UnsignedCharType>;
 

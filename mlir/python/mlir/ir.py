@@ -68,7 +68,7 @@ def _si1Attr(x, context):
 
 
 @register_attribute_builder("SI8Attr")
-def _i8Attr(x, context):
+def _si8Attr(x, context):
     return IntegerAttr.get(IntegerType.get_signed(8, context=context), x)
 
 
@@ -93,7 +93,7 @@ def _ui1Attr(x, context):
 
 
 @register_attribute_builder("UI8Attr")
-def _i8Attr(x, context):
+def _ui8Attr(x, context):
     return IntegerAttr.get(IntegerType.get_unsigned(8, context=context), x)
 
 

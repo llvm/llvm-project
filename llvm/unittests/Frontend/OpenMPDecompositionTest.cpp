@@ -992,11 +992,9 @@ TEST_F(OpenMPDecompositionTest, Reduction7) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  // XXX Currently OMP.td allows "reduction" on "target".
-  ASSERT_EQ(Dir0,
-            "target reduction(, (3), (x)) map(2, , , , (x))"); // (36), (10)
-  ASSERT_EQ(Dir1, "parallel shared(x)");                       // (36), (1), (4)
-  ASSERT_EQ(Dir2, "do reduction(, (3), (x))");                 // (36)
+  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (36), (10)
+  ASSERT_EQ(Dir1, "parallel shared(x)");       // (36), (1), (4)
+  ASSERT_EQ(Dir2, "do reduction(, (3), (x))"); // (36)
 }
 
 // IF
