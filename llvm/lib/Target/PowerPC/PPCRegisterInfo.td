@@ -181,6 +181,7 @@ let isArtificial = 1 in {
   }
 }
 
+let CoveredBySubRegs = 1 in {
 // Vector registers
 foreach Index = 0-31 in {
   def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
@@ -191,6 +192,7 @@ foreach Index = 0-31 in {
 foreach Index = 0-31 in {
   def VSL#Index : VSRL<!cast<FPR>("F"#Index), !cast<FPR>("FH"#Index), "vs"#Index>,
                   DwarfRegAlias<!cast<FPR>("F"#Index)>;
+}
 }
 
 // Dummy VSX registers, this defines string: "vs32"-"vs63", and is only used for
