@@ -1025,11 +1025,9 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
     // Group Operation is a literal
     Register GroupOpReg = Call->Arguments[1];
     const MachineInstr *MI = getDefInstrMaybeConstant(GroupOpReg, MRI);
-    if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT) {
-      std::string DiagMsg = std::string(Builtin->Name) +
-                            ": expect a constant value of Group Operation";
-      report_fatal_error(DiagMsg.c_str());
-    }
+    if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT)
+      report_fatal_error(
+          "Group Operation parameter must be an integer constant");
     uint64_t GrpOp = MI->getOperand(1).getCImm()->getValue().getZExtValue();
     Register ScopeReg = Call->Arguments[0];
     if (!MRI->getRegClassOrNull(ScopeReg))
