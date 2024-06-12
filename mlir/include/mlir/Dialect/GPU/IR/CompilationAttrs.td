@@ -17,6 +17,136 @@ include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 
 //===----------------------------------------------------------------------===//
+// GPU kernel attribute
+//===----------------------------------------------------------------------===//
+
+def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
+  let description = [{
+    GPU attribute for storing metadata related to a compiled kernel. It
+    contains the attribute dictionary of the LLVM function used to generate the
+    kernel, as well as an optional dictionary for additional metadata, like
+    occupancy information.
+
+    Examples:
+    ```mlir
+      #gpu.kernel<{sym_name = "test_fusion__part_0", ...},
+                   metadata = {reg_count = 255, ...}>
+    ```
+  }];
+  let parameters = (ins
+    "DictionaryAttr":$func_attrs,
+    OptionalParameter<"DictionaryAttr", "metadata dictionary">:$metadata
+  );
+  let assemblyFormat = [{
+    `<` $func_attrs (`,` `metadata` `=` $metadata^ )? `>`
+  }];
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "DictionaryAttr":$funcAttrs,
+                                         CArg<"DictionaryAttr",
+                                              "nullptr">:$metadata), [{
+      assert(funcAttrs && "invalid function attributes dictionary");
+      return $_get(funcAttrs.getContext(), funcAttrs, metadata);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "Operation*":$kernel,
+                                         CArg<"DictionaryAttr",
+                                              "nullptr">:$metadata)>
+  ];
+  let extraClassDeclaration = [{
+    /// Returns the function attribute corresponding to key or nullptr if missing.
+    Attribute getAttr(StringRef key) const {
+      return getFuncAttrs().get(key);
+    }
+    template <typename ConcreteAttr>
+    ConcreteAttr getAttr(StringRef key) const {
+      return llvm::dyn_cast_or_null<ConcreteAttr>(getAttr(key));
+    }
+    Attribute getAttr(StringAttr key) const;
+    template <typename ConcreteAttr>
+    ConcreteAttr getAttr(StringAttr key) const {
+      return llvm::dyn_cast_or_null<ConcreteAttr>(getAttr(key));
+    }
+
+    /// Returns the name of the kernel.
+    StringAttr getName() const {
+      return getAttr<StringAttr>("sym_name");
+    }
+
+    /// Returns the metadta attribute corresponding to key or nullptr if missing.
+    Attribute getMDAttr(StringRef key) const {
+      if (DictionaryAttr attrs = getMetadata())
+        return attrs.get(key);
+      return nullptr;
+    }
+    template <typename ConcreteAttr>
+    ConcreteAttr getMDAttr(StringRef key) const {
+      return llvm::dyn_cast_or_null<ConcreteAttr>(getMDAttr(key));
+    }
+    Attribute getMDAttr(StringAttr key) const;
+    template <typename ConcreteAttr>
+    ConcreteAttr getMDAttr(StringAttr key) const {
+      return llvm::dyn_cast_or_null<ConcreteAttr>(getMDAttr(key));
+    }
+
+    /// Helper function for appending metadata to a kernel attribute.
+    KernelAttr appendMetadata(ArrayRef<NamedAttribute> attrs) const;
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// GPU kernel table attribute
+//===----------------------------------------------------------------------===//
+
+def GPU_KernelTableAttr : GPU_Attr<"KernelTable", "kernel_table"> {
+  let description = [{
+    GPU attribute representing a table of kernels metadata. All the attributes
+    in the dictionary must be of type `#gpu.kernel`.
+
+    Examples:
+    ```mlir
+      #gpu.kernel_table<{kernel0 = #gpu.kernel<...>}>
+    ```
+  }];
+  let parameters = (ins
+    "DictionaryAttr":$kernel_table
+  );
+  let assemblyFormat = [{
+    `<` $kernel_table `>`
+  }];
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "DictionaryAttr":$kernel_table), [{
+      assert(kernel_table && "invalid kernel table");
+      return $_get(kernel_table.getContext(), kernel_table);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    /// Helper iterator class for traversing the kernel table.
+    struct KernelIterator
+        : llvm::mapped_iterator_base<KernelIterator,
+                                    llvm::ArrayRef<NamedAttribute>::iterator,
+                                    std::pair<StringAttr, KernelAttr>> {
+      using llvm::mapped_iterator_base<
+          KernelIterator, llvm::ArrayRef<NamedAttribute>::iterator,
+          std::pair<StringAttr, KernelAttr>>::mapped_iterator_base;
+      /// Map the iterator to the kernel name and a KernelAttribute.
+      std::pair<StringAttr, KernelAttr> mapElement(NamedAttribute attr) const {
+        return {attr.getName(), llvm::cast<KernelAttr>(attr.getValue())};
+      }
+    };
+    auto begin() const {
+      return KernelIterator(getKernelTable().begin());
+    }
+    auto end() const {
+      return KernelIterator(getKernelTable().end());
+    }
+    size_t size() const {
+      return getKernelTable().size();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GPU object attribute.
 //===----------------------------------------------------------------------===//
 
@@ -63,16 +193,29 @@ def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
       #gpu.object<#nvvm.target, properties = {O = 3 : i32}, assembly = "..."> // An assembly object with additional properties.
       #gpu.object<#rocdl.target, bin = "..."> // A binary object.
       #gpu.object<#nvvm.target, "..."> // A fatbin object.
+      #gpu.object<#nvvm.target, kernels = #gpu.kernel_table<...>, "..."> // An object with a kernel table.
     ```
   }];
   let parameters = (ins
     "Attribute":$target,
     DefaultValuedParameter<"CompilationTarget", "CompilationTarget::Fatbin">:$format,
     "StringAttr":$object,
-    OptionalParameter<"DictionaryAttr">:$properties
+    OptionalParameter<"DictionaryAttr">:$properties,
+    OptionalParameter<"KernelTableAttr">:$kernels
   );
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Attribute":$target,
+                                        "CompilationTarget":$format,
+                                        "StringAttr":$object,
+                                        CArg<"DictionaryAttr", "nullptr">:$properties,
+                                        CArg<"KernelTableAttr", "nullptr">:$kernels), [{
+      assert(target && "invalid target");
+      return $_get(target.getContext(), target, format, object, properties, kernels);
+    }]>
+  ];
   let assemblyFormat = [{ `<`
-      $target `,`  (`properties` `=` $properties ^ `,`)?
+      $target `,`  (`properties` `=` $properties^ `,`)?
+      (`kernels` `=` $kernels^ `,`)?
       custom<Object>($format, $object)
     `>`
   }];

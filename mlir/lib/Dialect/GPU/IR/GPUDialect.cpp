@@ -2091,7 +2091,8 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 LogicalResult ObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                  Attribute target, CompilationTarget format,
-                                 StringAttr object, DictionaryAttr properties) {
+                                 StringAttr object, DictionaryAttr properties,
+                                 KernelTableAttr kernels) {
   if (!target)
     return emitError() << "the target attribute cannot be null";
   if (target.hasPromiseOrImplementsInterface<TargetAttrInterface>())
@@ -2174,6 +2175,40 @@ LogicalResult gpu::DynamicSharedMemoryOp::verify() {
     return emitOpError() << "result memref type must be memref<?xi8, "
                             "#gpu.address_space<workgroup>>";
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPU KernelAttr
+//===----------------------------------------------------------------------===//
+
+KernelAttr KernelAttr::get(Operation *kernelOp, DictionaryAttr metadata) {
+  assert(kernelOp && "invalid kernel");
+  return get(kernelOp->getAttrDictionary(), metadata);
+}
+
+KernelAttr KernelAttr::appendMetadata(ArrayRef<NamedAttribute> attrs) const {
+  if (attrs.empty())
+    return *this;
+  NamedAttrList attrList(attrs);
+  attrList.append(getMetadata());
+  return KernelAttr::get(getFuncAttrs(), attrList.getDictionary(getContext()));
+}
+
+//===----------------------------------------------------------------------===//
+// GPU KernelTableAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+KernelTableAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                        DictionaryAttr dict) {
+  if (!dict)
+    return emitError() << "table cannot be null";
+  if (llvm::any_of(dict, [](NamedAttribute attr) {
+        return !llvm::isa<KernelAttr>(attr.getValue());
+      }))
+    return emitError()
+           << "all the dictionary values must be `#gpu.kernel` attributes";
   return success();
 }
 
