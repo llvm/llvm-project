@@ -124,8 +124,9 @@
 ///      __msan_metadata_ptr_for_store_n(ptr, size);
 ///    Note that the sanitizer code has to deal with how shadow/origin pairs
 ///    returned by the these functions are represented in different ABIs. In
-///    the X86_64 ABI they are returned in RDX:RAX, and in the SystemZ ABI they
-///    are written to memory pointed to by a hidden parameter.
+///    the X86_64 ABI they are returned in RDX:RAX, in PowerPC64 they are
+///    returned in r3 and r4, and in the SystemZ ABI they are written to memory
+///    pointed to by a hidden parameter.
 ///  - TLS variables are stored in a single per-task struct. A call to a
 ///    function __msan_get_context_state() returning a pointer to that struct
 ///    is inserted into every instrumented function before the entry block;
@@ -139,7 +140,8 @@
 /// Also, KMSAN currently ignores uninitialized memory passed into inline asm
 /// calls, making sure we're on the safe side wrt. possible false positives.
 ///
-///  KernelMemorySanitizer only supports X86_64 and SystemZ at the moment.
+///  KernelMemorySanitizer only supports X86_64, SystemZ and PowerPC64 at the
+///  moment.
 ///
 //
 // FIXME: This sanitizer does not yet handle scalable vectors
