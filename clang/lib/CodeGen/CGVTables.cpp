@@ -1241,8 +1241,7 @@ void CodeGenModule::EmitDeferredVTables() {
 #endif
 
   for (const CXXRecordDecl *RD : DeferredVTables)
-    if (shouldEmitVTableAtEndOfTranslationUnit(*this, RD) &&
-        !RD->shouldEmitInExternalSource())
+    if (shouldEmitVTableAtEndOfTranslationUnit(*this, RD))
       VTables.GenerateClassData(RD);
     else if (shouldOpportunisticallyEmitVTables())
       OpportunisticVTables.push_back(RD);

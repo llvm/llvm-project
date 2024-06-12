@@ -4219,6 +4219,10 @@ void ASTReader::PassInterestingDeclsToConsumer() {
 
   // If we add any new potential interesting decl in the last call, consume it.
   ConsumingPotentialInterestingDecls();
+
+  for (GlobalDeclID ID : VTablesToEmit)
+    PassVTableToConsumer(cast<CXXRecordDecl>(GetDecl(ID)));
+  VTablesToEmit.clear();
 }
 
 void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
