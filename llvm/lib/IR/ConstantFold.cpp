@@ -1404,7 +1404,35 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   return nullptr;
 }
 
+// Combine Indices - If the source pointer to this getelementptr instruction
+// is a getelementptr instruction, combine the indices of the two
+// getelementptr instructions into a single instruction.
+static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
+                              ArrayRef<Value *> Idxs) {
+  if (PointeeTy != GEP->getResultElementType())
+    return nullptr;
+
+  // Leave inrange handling to DL-aware constant folding.
+  if (GEP->getInRange())
+    return nullptr;
+
+  // Only handle simple case with leading zero index. We cannot perform an
+  // actual addition as we don't know the correct index type size to use.
+  Constant *Idx0 = cast<Constant>(Idxs[0]);
+  if (!Idx0->isNullValue())
+    return nullptr;
+
+  SmallVector<Value*, 16> NewIndices;
+  NewIndices.reserve(Idxs.size() + GEP->getNumIndices());
+  NewIndices.append(GEP->idx_begin(), GEP->idx_end());
+  NewIndices.append(Idxs.begin() + 1, Idxs.end());
+  return ConstantExpr::getGetElementPtr(
+      GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
+      NewIndices, InBounds && GEP->isInBounds());
+}
+
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
+                                          bool InBounds,
                                           std::optional<ConstantRange> InRange,
                                           ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
@@ -1433,6 +1461,11 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                ? ConstantVector::getSplat(
                      cast<VectorType>(GEPTy)->getElementCount(), C)
                : C;
+
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
+    if (auto *GEP = dyn_cast<GEPOperator>(CE))
+      if (Constant *C = foldGEPOfGEP(GEP, PointeeTy, InBounds, Idxs))
+        return C;
 
   return nullptr;
 }
