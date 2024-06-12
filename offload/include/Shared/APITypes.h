@@ -85,6 +85,9 @@ struct __tgt_async_info {
   /// ensure it is a valid location while the transfer to the device is
   /// happening.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
+  /// Flag to indicate the Queue should be persistent.
+  bool PersistentQueue = false;
 };
 
 /// This struct contains all of the arguments to a target kernel region launch.
@@ -110,12 +113,16 @@ struct KernelArgsTy {
    // The number of threads (for x,y,z dimension).
   uint32_t ThreadLimit[3] = {0, 0, 0};
   uint32_t DynCGroupMem = 0;     // Amount of dynamic cgroup memory requested.
+  // A __tgt_async_info queue pointer to be used for the kernel and all
+  // associated device interactions. The operations are implicitly made
+  // non-blocking.
+  void *AsyncInfoQueue = nullptr;
 };
 static_assert(sizeof(KernelArgsTy().Flags) == sizeof(uint64_t),
               "Invalid struct size");
 static_assert(sizeof(KernelArgsTy) ==
                   (8 * sizeof(int32_t) + 3 * sizeof(int64_t) +
-                   4 * sizeof(void **) + 2 * sizeof(int64_t *)),
+                   5 * sizeof(void **) + 2 * sizeof(int64_t *)),
               "Invalid struct size");
 
 /// Flat array of kernel launch parameters and their total size.

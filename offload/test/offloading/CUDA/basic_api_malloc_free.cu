@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
   printf("Ptr %p, *Ptr: %i\n", Ptr, *Ptr);
   // CHECK: Ptr [[Ptr:0x.*]], *Ptr: 0
   kernel<<<1, 1>>>(Ptr, DevPtr, 42);
+  cudaDeviceSynchronize();
   printf("Ptr %p, *Ptr: %i\n", Ptr, *Ptr);
   // CHECK: Ptr [[Ptr]], *Ptr: 42
   Err = cudaFree(DevPtr);

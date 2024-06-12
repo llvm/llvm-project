@@ -31,6 +31,7 @@ int main(int argc, char **argv) {
   printf("Res: %i\n", Res);
   // CHECK: Res: 0
   kernel<<<1, 1>>>(DevPtr, 42);
+  cudaDeviceSynchronize();
   Err = cudaMemcpy(HstPtr, DevPtr, 42 * sizeof(int), cudaMemcpyDeviceToHost);
   if (Err != cudaSuccess)
     return -1;

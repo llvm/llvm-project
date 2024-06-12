@@ -10,6 +10,9 @@
 
 #include "Shared/APITypes.h"
 
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
+
+#include <cstdint>
 #include <cstdio>
 
 struct dim3 {
@@ -55,10 +58,13 @@ unsigned __llvmPopCallConfiguration(dim3 *__grid_size, dim3 *__block_size,
 int __tgt_target_kernel(void *Loc, int64_t DeviceId, int32_t NumTeams,
                         int32_t ThreadLimit, const void *HostPtr,
                         KernelArgsTy *Args);
+void *__tgt_target_get_default_async_info_queue(void *Loc, int64_t DeviceId);
 
 unsigned llvmLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
                           void *args, size_t sharedMem, void *stream) {
+  int64_t DeviceNo = 0;
   KernelArgsTy Args = {};
+  Args.Version = OMP_KERNEL_ARG_VERSION;
   Args.DynCGroupMem = sharedMem;
   Args.NumTeams[0] = gridDim.x;
   Args.NumTeams[1] = gridDim.y;
@@ -68,6 +74,13 @@ unsigned llvmLaunchKernel(const void *func, dim3 gridDim, dim3 blockDim,
   Args.ThreadLimit[2] = blockDim.z;
   Args.ArgPtrs = reinterpret_cast<void **>(args);
   Args.Flags.IsCUDA = true;
-  return __tgt_target_kernel(nullptr, 0, gridDim.x, blockDim.x, func, &Args);
+  if (stream)
+    Args.AsyncInfoQueue = stream;
+  else
+    Args.AsyncInfoQueue =
+        __tgt_target_get_default_async_info_queue(nullptr, DeviceNo);
+  int rv = __tgt_target_kernel(nullptr, DeviceNo, gridDim.x, blockDim.x, func,
+                               &Args);
+  return rv;
 }
 }

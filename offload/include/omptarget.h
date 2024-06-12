@@ -136,8 +136,19 @@ public:
   /// Synchronization method to be used.
   SyncTy SyncType;
 
-  AsyncInfoTy(DeviceTy &Device, SyncTy SyncType = SyncTy::BLOCKING)
+  AsyncInfoTy(DeviceTy &Device,  SyncTy SyncType = SyncTy::BLOCKING) 
       : Device(Device), SyncType(SyncType) {}
+  AsyncInfoTy(DeviceTy &Device, void *AsyncInfoQueue)
+      : Device(Device), SyncType(AsyncInfoQueue ? SyncTy::NON_BLOCKING : SyncTy::BLOCKING) {
+    AsyncInfo.Queue = AsyncInfoQueue;
+    AsyncInfo.PersistentQueue = !!AsyncInfoQueue;
+  }
+  AsyncInfoTy(DeviceTy &Device, void *AsyncInfoQueue, SyncTy SyncType)
+      : Device(Device), SyncType(SyncType) {
+    AsyncInfo.Queue = AsyncInfoQueue;
+    AsyncInfo.PersistentQueue = !!AsyncInfoQueue;
+  }
+
   ~AsyncInfoTy() { synchronize(); }
 
   /// Implicit conversion to the __tgt_async_info which is used in the
@@ -207,8 +218,9 @@ class TaskAsyncInfoWrapperTy {
   void **TaskAsyncInfoPtr = nullptr;
 
 public:
-  TaskAsyncInfoWrapperTy(DeviceTy &Device)
+  TaskAsyncInfoWrapperTy(DeviceTy &Device, void *AsyncInfoQueue=  nullptr) 
       : ExecThreadID(__kmpc_global_thread_num(NULL)), LocalAsyncInfo(Device) {
+    assert(!AsyncInfoQueue && "Async tasks do not support predefined async queue pointers!");
     // If we failed to acquired the current global thread id, we cannot
     // re-enqueue the current task. Thus we should use the local blocking async
     // info.
@@ -424,6 +436,8 @@ int __tgt_print_device_info(int64_t DeviceId);
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
                                  uint64_t &ReqPtrArgOffset);
+
+void *__tgt_target_get_default_queue(void *Loc, int64_t DeviceId);
 
 #ifdef __cplusplus
 }
