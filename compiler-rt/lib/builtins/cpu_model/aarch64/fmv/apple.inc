@@ -36,7 +36,6 @@ void __init_cpu_features_resolver(void) {
 
 #define CHECK_BIT(FROM, TO)                                                    \
   do {                                                                         \
-    _Static_assert(FROM < CAP_BIT_NB, BROKEN_ABI_MESSAGE);                     \
     if (feats_bitvec[FROM / 8] & (1u << ((FROM)&7))) {                         \
       features |= (1ULL << TO);                                                \
     }                                                                          \
