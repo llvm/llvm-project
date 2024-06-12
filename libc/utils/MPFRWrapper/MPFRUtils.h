@@ -206,7 +206,7 @@ public:
   // This method is marked with NOLINT because the name `explainError` does not
   // conform to the coding style.
   void explainError() override { // NOLINT
-    explain_error<InputType, OutputType>(input, match_value);
+    explain_error(input, match_value);
   }
 
   // Whether the `explainError` step is skipped or not.
@@ -239,8 +239,7 @@ private:
                                                 rounding);
   }
 
-  template <typename T, typename U>
-  void explain_error(InputType in, OutputType out) {
+  template <typename T, typename U> void explain_error(T in, U out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
                                                 rounding);
   }
