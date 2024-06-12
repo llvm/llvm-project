@@ -181,20 +181,6 @@ sqrt(InType x) {
           }
         }
 
-        if (x_exp == OutFPBits::MAX_BIASED_EXPONENT - 1 &&
-            y == OutFPBits::max_normal().uintval() && (rb || sticky)) {
-          switch (quick_get_round()) {
-          case FE_TONEAREST:
-            if (rb)
-              return OutFPBits::inf().get_val();
-            return OutFPBits::max_normal().get_val();
-          case FE_UPWARD:
-            return OutFPBits::inf().get_val();
-          default:
-            return OutFPBits::max_normal().get_val();
-          }
-        }
-
         if (x_exp <
             -OutFPBits::EXP_BIAS - OutFPBits::SIG_LEN + EXTRA_FRACTION_LEN) {
           switch (quick_get_round()) {
