@@ -2851,7 +2851,7 @@ ABIArgInfo
 X86_64ABIInfo::classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
                                              unsigned &NeededSSE,
                                              unsigned &MaxVectorWidth) const {
-  auto RT = Ty->getAs<RecordType>();
+  auto RT = Ty->castAs<RecordType>();
   assert(RT && "classifyRegCallStructType only valid with struct types");
 
   if (DoesRegcallStructFitInReg(Ty))
