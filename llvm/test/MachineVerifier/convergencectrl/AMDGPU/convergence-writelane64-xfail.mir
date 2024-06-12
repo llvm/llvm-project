@@ -1,0 +1,58 @@
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+---
+name:            basic_branch_i64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+
+    %10:vgpr_32 = COPY $vgpr5
+    %9:vgpr_32 = COPY $vgpr4
+    %8:vgpr_32 = COPY $vgpr3
+    %7:vgpr_32 = COPY $vgpr2
+    %6:vgpr_32 = COPY $vgpr1
+    %5:vgpr_32 = COPY $vgpr0
+    %12:sreg_64 = REG_SEQUENCE %9, %subreg.sub0, %10, %subreg.sub1
+    %13:sreg_64 = REG_SEQUENCE %5, %subreg.sub0, %6, %subreg.sub1
+    %14:vgpr_32 = V_AND_B32_e64 1, %7, implicit $exec
+    %15:sreg_32 = V_CMP_EQ_U32_e64 killed %14, 1, implicit $exec
+    %11:vreg_64 = COPY %12
+    %0:sreg_64 = CONVERGENCECTRL_ANCHOR
+    %16:sreg_64 = S_MOV_B64 1
+    %1:vreg_64 = V_ADD_U64_PSEUDO killed %13, killed %16, implicit-def dead $vcc, implicit $exec
+    %2:sreg_32 = SI_IF killed %15, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    %17:vreg_64 = GLOBAL_LOAD_DWORDX2 %11, 0, 0, implicit $exec
+    %18:vgpr_32 = COPY %1.sub1
+    %19:vgpr_32 = COPY %17.sub1
+    %21:sreg_32 = COPY %18
+    %22:sreg_32 = COPY %8
+    ; CHECK: Cannot mix controlled and uncontrolled convergence in the same function.
+    ; CHECK: V_WRITELANE_B32 killed %{{[0-9]+}}:sreg_32, %{{[0-9]+}}:sreg_32, %{{[0-9]+}}:vgpr_32(tied-def 0)
+    %20:vgpr_32 = V_WRITELANE_B32 killed %21, %22, %19
+    %23:vgpr_32 = COPY %1.sub0
+    %24:vgpr_32 = COPY %17.sub0
+    %26:sreg_32 = COPY %23
+    %27:sreg_32 = COPY %8
+    ; CHECK: Cannot mix controlled and uncontrolled convergence in the same function.
+    ; CHECK: V_WRITELANE_B32 killed %{{[0-9]+}}:sreg_32, %{{[0-9]+}}:sreg_32, %{{[0-9]+}}:vgpr_32(tied-def 0)
+    %25:vgpr_32 = V_WRITELANE_B32 killed %26, %27, %24
+    %28:sreg_64 = REG_SEQUENCE killed %25, %subreg.sub0, killed %20, %subreg.sub1
+    %3:vreg_64 = COPY %28
+
+  bb.2:
+    %4:vreg_64 = PHI %1, %bb.0, %3, %bb.1
+    SI_END_CF %2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %29:vgpr_32 = COPY %4.sub0
+    %30:vgpr_32 = COPY %4.sub1
+    $vgpr0 = COPY %29
+    $vgpr1 = COPY %30
+    SI_RETURN implicit $vgpr0, implicit $vgpr1
+
+...
+

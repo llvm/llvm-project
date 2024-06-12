@@ -1,0 +1,49 @@
+# RUN: not --crash llc -mtriple=amdgcn -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+---
+name:            basic_branch_i64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+
+    %8:vgpr_32 = COPY $vgpr3
+    %7:vgpr_32 = COPY $vgpr2
+    %6:vgpr_32 = COPY $vgpr1
+    %5:vgpr_32 = COPY $vgpr0
+    %9:sreg_64 = REG_SEQUENCE %5, %subreg.sub0, %6, %subreg.sub1
+    %10:vgpr_32 = V_AND_B32_e64 1, %7, implicit $exec
+    %11:sreg_64 = V_CMP_EQ_U32_e64 killed %10, 1, implicit $exec
+    %0:sreg_64 = CONVERGENCECTRL_ANCHOR
+    %12:sreg_64 = S_MOV_B64 1
+    %1:vreg_64 = V_ADD_U64_PSEUDO killed %9, killed %12, implicit-def dead $vcc, implicit $exec
+    %2:sreg_64 = SI_IF killed %11, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    %13:vgpr_32 = COPY %1.sub1
+    %15:sreg_32 = COPY %8
+    ; CHECK: Cannot mix controlled and uncontrolled convergence in the same function.
+    ; CHECK: V_READLANE_B32 killed %{{[0-9]+}}:vgpr_32, %{{[0-9]+}}:sreg_32
+    %14:sreg_32 = V_READLANE_B32 killed %13, %15
+    %16:vgpr_32 = COPY %1.sub0
+    %18:sreg_32 = COPY %8
+    ; CHECK: Cannot mix controlled and uncontrolled convergence in the same function.
+    ; CHECK: V_READLANE_B32 killed %{{[0-9]+}}:vgpr_32, %{{[0-9]+}}:sreg_32
+    %17:sreg_32 = V_READLANE_B32 killed %16, %18
+    %19:sreg_64 = REG_SEQUENCE killed %17, %subreg.sub0, killed %14, %subreg.sub1
+    %3:sreg_64 = COPY %19
+
+  bb.2:
+    %4:vreg_64 = PHI %1, %bb.0, %3, %bb.1
+    SI_END_CF %2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %20:vgpr_32 = COPY %4.sub0
+    %21:vgpr_32 = COPY %4.sub1
+    $vgpr0 = COPY %20
+    $vgpr1 = COPY %21
+    SI_RETURN implicit $vgpr0, implicit $vgpr1
+
+...
+
