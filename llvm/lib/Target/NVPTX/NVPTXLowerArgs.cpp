@@ -94,12 +94,17 @@
 #include "NVPTXUtilities.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include <cassert>
 #include <numeric>
 #include <queue>
 
@@ -146,6 +151,28 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(NVPTXLowerArgs, "nvptx-lower-args",
                     "Lower arguments (NVPTX)", false, false)
 
+static std::optional<int> tmaDescriptorOperandIndex(Instruction *I) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_1d_shared_cluster_global_tile_mbarrier_complete_tx_bytes:
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_2d_shared_cluster_global_tile_mbarrier_complete_tx_bytes:
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_3d_shared_cluster_global_tile_mbarrier_complete_tx_bytes:
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_4d_shared_cluster_global_tile_mbarrier_complete_tx_bytes:
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_5d_shared_cluster_global_tile_mbarrier_complete_tx_bytes:
+      return 1;
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_1d_global_shared_cta_tile_bulk_group:
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_2d_global_shared_cta_tile_bulk_group:
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_3d_global_shared_cta_tile_bulk_group:
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_4d_global_shared_cta_tile_bulk_group:
+    case llvm::Intrinsic::nvvm_cp_async_bulk_tensor_5d_global_shared_cta_tile_bulk_group:
+      return 0;
+    default:
+      return std::nullopt;
+    }
+  }
+  return std::nullopt;
+}
+
 // =============================================================================
 // If the function had a byval struct ptr arg, say foo(%struct.x* byval %d),
 // and we can't guarantee that the only accesses are loads,
@@ -166,14 +193,15 @@ INITIALIZE_PASS_END(NVPTXLowerArgs, "nvptx-lower-args",
 
 // Replaces the \p OldUser instruction with the same in parameter AS.
 // Only Load and GEP are supported.
-static void convertToParamAS(Value *OldUser, Value *Param) {
+static void convertToParamAS(Value *OldUser, Value *OldParam, Value *NewParam) {
   Instruction *I = dyn_cast<Instruction>(OldUser);
   assert(I && "OldUser must be an instruction");
   struct IP {
     Instruction *OldInstruction;
+    Value *OldParam;
     Value *NewParam;
   };
-  SmallVector<IP> ItemsToConvert = {{I, Param}};
+  SmallVector<IP> ItemsToConvert = {{I, OldParam, NewParam}};
   SmallVector<Instruction *> InstructionsToDelete;
 
   auto CloneInstInParamAS = [](const IP &I) -> Value * {
@@ -200,6 +228,28 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
       // Just pass through the argument, the old ASC is no longer needed.
       return I.NewParam;
     }
+    if (auto *II = dyn_cast<IntrinsicInst>(I.OldInstruction)) {
+      // Assert that this is a TMA intrinsic.
+      assert(tmaDescriptorOperandIndex(II).has_value());
+      assert(I.OldInstruction->getOperand(*tmaDescriptorOperandIndex(II)) ==
+             I.OldParam);
+      // TMA descriptors can remain in param memory space, but need to be passed
+      // in the generic address space.
+      Type *ParamPtr = PointerType::get(II->getContext(), ADDRESS_SPACE_PARAM);
+      Type *GenericPtr =
+          PointerType::get(II->getContext(), ADDRESS_SPACE_GENERIC);
+      FunctionType *cast_func_ty =
+          FunctionType::get(GenericPtr, {ParamPtr}, false);
+      Module *M = I.OldInstruction->getModule();
+      FunctionCallee func =
+          M->getOrInsertFunction(getName(llvm::Intrinsic::nvvm_ptr_param_to_gen,
+                                         {GenericPtr, ParamPtr}, M),
+                                 cast_func_ty);
+      Instruction *NewInGeneric =
+          CallInst::Create(func, {I.NewParam}, "", II->getIterator());
+      II->replaceUsesOfWith(I.OldParam, NewInGeneric);
+      return II;
+    }
     llvm_unreachable("Unsupported instruction");
   };
 
@@ -212,7 +262,8 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
       // be converted and the instruction itself to be deleted. We can't delete
       // the old instruction yet, because it's still in use by a load somewhere.
       for (Value *V : I.OldInstruction->users())
-        ItemsToConvert.push_back({cast<Instruction>(V), NewInst});
+        ItemsToConvert.push_back(
+            {cast<Instruction>(V), I.OldInstruction, NewInst});
 
       InstructionsToDelete.push_back(I.OldInstruction);
     }
@@ -300,9 +351,13 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
         Worklist.push({I, Ctx.Offset + Offset});
         continue;
       }
+      if (auto *II = dyn_cast<IntrinsicInst>(CurUser)) {
+        assert(tmaDescriptorOperandIndex(II).has_value());
+        continue;
+      }
 
       llvm_unreachable("All users must be one of: load, "
-                       "bitcast, getelementptr.");
+                       "bitcast, getelementptr, TMA intrinsic.");
     }
   }
 
@@ -321,8 +376,11 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
   assert(StructType && "Missing byval type");
 
   auto IsALoadChain = [&](Value *Start) {
-    SmallVector<Value *, 16> ValuesToCheck = {Start};
-    auto IsALoadChainInstr = [](Value *V) -> bool {
+    SmallVector<Use*, 16> UsesToCheck;
+    for (Use& u : Start->uses())
+      UsesToCheck.push_back(&u);
+    auto IsSupportedUse = [](Use *U) -> bool {
+      Value *V = U->get();
       if (isa<GetElementPtrInst>(V) || isa<BitCastInst>(V) || isa<LoadInst>(V))
         return true;
       // ASC to param space are OK, too -- we'll just strip them.
@@ -330,19 +388,26 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
         if (ASC->getDestAddressSpace() == ADDRESS_SPACE_PARAM)
           return true;
       }
+      // TMA descriptors passed to TMA intrinsics are OK, too.
+      if (auto *II = dyn_cast<IntrinsicInst>(V)) {
+        auto OI = tmaDescriptorOperandIndex(II);
+        return OI.has_value() && *OI == U->getOperandNo();
+      }
       return false;
     };
 
-    while (!ValuesToCheck.empty()) {
-      Value *V = ValuesToCheck.pop_back_val();
-      if (!IsALoadChainInstr(V)) {
-        LLVM_DEBUG(dbgs() << "Need a copy of " << *Arg << " because of " << *V
+    while (!UsesToCheck.empty()) {
+      Use* U = UsesToCheck.pop_back_val();
+      if (!IsSupportedUse(U)) {
+        LLVM_DEBUG(dbgs() << "Need a copy of " << *Arg << " because of " << U
                           << "\n");
         (void)Arg;
         return false;
       }
-      if (!isa<LoadInst>(V))
-        llvm::append_range(ValuesToCheck, V->users());
+      if (!isa<LoadInst>(U)) {
+        for (Use& u : U->getUser()->uses())
+          UsesToCheck.push_back(&u);
+      }
     }
     return true;
   };
@@ -355,7 +420,7 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
         Arg, PointerType::get(StructType, ADDRESS_SPACE_PARAM), Arg->getName(),
         FirstInst);
     for (Value *V : UsersToUpdate)
-      convertToParamAS(V, ArgInParamAS);
+      convertToParamAS(V, Arg, ArgInParamAS);
     LLVM_DEBUG(dbgs() << "No need to copy " << *Arg << "\n");
 
     const auto *TLI =

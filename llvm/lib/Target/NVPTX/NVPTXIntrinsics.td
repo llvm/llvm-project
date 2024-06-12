@@ -403,6 +403,33 @@ defm CP_ASYNC_CG_SHARED_GLOBAL_16 :
   CP_ASYNC_SHARED_GLOBAL_I<"cg", "16", int_nvvm_cp_async_cg_shared_global_16,
                                        int_nvvm_cp_async_cg_shared_global_16_s>;
 
+foreach dim = [1, 2, 3, 4, 5] in {
+  defvar idx_ptx = !interleave(!foreach(i, !range(dim), "$idx" # i), ", ");
+  defvar idx_dag = !dag(ins, !listsplat(Int32Regs, dim), !foreach(i, !range(dim), "idx" # i));
+  defvar intrinsic_g2s = !cast<Intrinsic>("int_nvvm_cp_async_bulk_tensor_" # dim # "d_shared_cluster_global_tile_mbarrier_complete_tx_bytes");
+  def CP_ASYNC_BULK_TENSOR_ # dim # D_SHARED_CLUSTER_GLOBAL_TILE_MBARRIER_COMPLETE_TX_BYTES_64 :
+    NVPTXInst<
+      (outs),
+      !con((ins Int64Regs:$dst, Int64Regs:$desc), idx_dag, (ins Int64Regs:$mbar)),
+      "cp.async.bulk.tensor." # dim # "d.shared::cluster.global.tile.mbarrier::complete_tx::bytes [$dst], [$desc, {{" # idx_ptx # "}}], [$mbar];",
+      [!con((intrinsic_g2s Int64Regs:$dst, Int64Regs:$desc),
+            !setdagop(idx_dag, intrinsic_g2s),
+            (intrinsic_g2s Int64Regs:$mbar))]
+    >,
+    Requires<[hasPTX<80>, hasSM<90>]>;
+  defvar intrinsic_s2g = !cast<Intrinsic>("int_nvvm_cp_async_bulk_tensor_" # dim # "d_global_shared_cta_tile_bulk_group");
+  def CP_ASYNC_BULK_TENSOR_ # dim # D_GLOBAL_SHARED_CTA_TILE_BULK_GROUP_64 :
+    NVPTXInst<
+      (outs),
+      !con((ins Int64Regs:$desc), idx_dag, (ins Int64Regs:$dst)),
+      "cp.async.bulk.tensor." # dim # "d.global.shared::cta.tile.bulk_group [$desc, {{" # idx_ptx # "}}], [$dst];",
+      [!con((intrinsic_s2g Int64Regs:$desc),
+            !setdagop(idx_dag, intrinsic_s2g),
+            (intrinsic_s2g Int64Regs:$dst))]
+    >,
+    Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
 def CP_ASYNC_COMMIT_GROUP :
   NVPTXInst<(outs), (ins), "cp.async.commit_group;", [(int_nvvm_cp_async_commit_group)]>,
   Requires<[hasPTX<70>, hasSM<80>]>;
@@ -2475,6 +2502,7 @@ defm cvta_local  : NG_TO_G<"local", int_nvvm_ptr_local_to_gen, useShortPtrLocal>
 defm cvta_shared : NG_TO_G<"shared", int_nvvm_ptr_shared_to_gen, useShortPtrShared>;
 defm cvta_global : NG_TO_G<"global", int_nvvm_ptr_global_to_gen, False>;
 defm cvta_const  : NG_TO_G<"const", int_nvvm_ptr_constant_to_gen, useShortPtrConst>;
+defm cvta_param  : NG_TO_G<"param", int_nvvm_ptr_param_to_gen, False>;
 
 defm cvta_to_local  : G_TO_NG<"local", int_nvvm_ptr_gen_to_local, useShortPtrLocal>;
 defm cvta_to_shared : G_TO_NG<"shared", int_nvvm_ptr_gen_to_shared, useShortPtrShared>;

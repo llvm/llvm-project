@@ -1448,6 +1448,26 @@ defm int_nvvm_cp_async_ca_shared_global_8 : CP_ASYNC_SHARED_GLOBAL<"8", "ca">;
 defm int_nvvm_cp_async_ca_shared_global_16 : CP_ASYNC_SHARED_GLOBAL<"16", "ca">;
 defm int_nvvm_cp_async_cg_shared_global_16 : CP_ASYNC_SHARED_GLOBAL<"16", "cg">;
 
+// TODO(apaszke): Multicast TMA loads
+foreach dim = [1, 2, 3, 4, 5] in {
+  def int_nvvm_cp_async_bulk_tensor_ # dim # d_shared_cluster_global_tile_mbarrier_complete_tx_bytes :
+    Intrinsic<
+      [],
+      [llvm_shared_ptr_ty, llvm_anyptr_ty] # !listsplat(llvm_i32_ty, dim) # [llvm_anyptr_ty],
+      [IntrArgMemOnly, IntrNoCallback,
+       NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<1>>, NoAlias<ArgIndex<!add(2,  dim)>>,
+       WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>],
+      "llvm.nvvm.cp.async.bulk.tensor." # dim # "d.shared_cluster.global.tile.mbarrier_complete_tx_bytes">;
+  def int_nvvm_cp_async_bulk_tensor_ # dim # d_global_shared_cta_tile_bulk_group :
+    Intrinsic<
+      [],
+      [llvm_anyptr_ty] # !listsplat(llvm_i32_ty, dim) # [llvm_shared_ptr_ty],
+      [IntrNoCallback,
+       NoAlias<ArgIndex<0>>, NoAlias<ArgIndex<!add(1, dim)>>,
+       ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<!add(1, dim)>>],
+      "llvm.nvvm.cp.async.bulk.tensor." # dim # "d.global.shared_cta.tile.bulk_group">;
+}
+
 def int_nvvm_cp_async_commit_group :
     ClangBuiltin<"__nvvm_cp_async_commit_group">,
     Intrinsic<[],[],[]>;
@@ -1595,6 +1615,10 @@ def int_nvvm_ptr_gen_to_param: Intrinsic<[llvm_anyptr_ty],
                                      [llvm_anyptr_ty],
                                    [IntrNoMem, IntrSpeculatable, IntrNoCallback],
                                    "llvm.nvvm.ptr.gen.to.param">;
+def int_nvvm_ptr_param_to_gen: Intrinsic<[llvm_anyptr_ty],
+                                     [llvm_anyptr_ty],
+                                   [IntrNoMem, IntrSpeculatable, IntrNoCallback],
+                                   "llvm.nvvm.ptr.param.to.gen">;
 
 // Move intrinsics, used in nvvm internally
 
