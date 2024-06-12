@@ -2170,7 +2170,7 @@ RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,
   case TEK_Complex:
     return RValue::getComplex(EmitLoadOfComplex(LV, Loc));
   case TEK_Aggregate:
-    EmitAggFinalDestCopy(Ty, Slot, LV, EVK_RValue);
+    EmitAggFinalDestCopy(Ty, Slot, LV, EVK_NonRValue);
     return Slot.asRValue();
   }
   llvm_unreachable("bad evaluation kind");
