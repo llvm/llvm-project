@@ -5330,14 +5330,11 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
       return PrintError("scope and th combination is not valid");
   }
 
-  bool IsStore = TID.mayStore() && !TID.mayLoad();
-  bool IsAtomic =
-      TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
-
-  if (IsAtomic) {
+  unsigned THType = AMDGPU::getTemporalHintType(TID);
+  if (THType == AMDGPU::CPol::TH_TYPE_ATOMIC) {
     if (!(CPol & AMDGPU::CPol::TH_TYPE_ATOMIC))
       return PrintError("invalid th value for atomic instructions");
-  } else if (IsStore) {
+  } else if (THType == AMDGPU::CPol::TH_TYPE_STORE) {
     if (!(CPol & AMDGPU::CPol::TH_TYPE_STORE))
       return PrintError("invalid th value for store instructions");
   } else {

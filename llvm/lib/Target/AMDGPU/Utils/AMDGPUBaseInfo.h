@@ -947,6 +947,11 @@ VOPD::InstInfo
 getVOPDInstInfo(unsigned VOPDOpcode, const MCInstrInfo *InstrInfo);
 
 LLVM_READONLY
+bool isAsyncStore(unsigned Opc);
+LLVM_READONLY
+unsigned getTemporalHintType(const MCInstrDesc TID);
+
+LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY

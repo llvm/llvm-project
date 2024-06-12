@@ -640,6 +640,31 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
 }
 
+bool isAsyncStore(unsigned Opc) {
+  return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1210;
+}
+
+unsigned getTemporalHintType(const MCInstrDesc TID) {
+  if (TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet))
+    return CPol::TH_TYPE_ATOMIC;
+
+  // An async store should have the temporal hint type of TH_TYPE_STORE
+  if (TID.mayStore() && (isAsyncStore(TID.getOpcode()) || !TID.mayLoad()))
+    return CPol::TH_TYPE_STORE;
+
+  // This will default to returning TH_TYPE_LOAD when neither MayStore nor
+  // MayLoad flag is present which is the case with instructions like
+  // image_get_resinfo.
+  return CPol::TH_TYPE_LOAD;
+}
+
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info ? Info->IsTrue16 : false;
