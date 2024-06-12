@@ -643,7 +643,7 @@ struct VectorDeinterleaveOpConvert final
     // We cannot use `spirv::VectorShuffleOp` directly in this case, and need to
     // use `spirv::CompositeExtractOp`.
     if (n == 2) {
-      spirv::CompositeExtractOp compositeExtractZero =
+      auto elem0 =
           rewriter.create<spirv::CompositeExtractOp>(
               loc, newResultType, adaptor.getSource(),
               rewriter.getI32ArrayAttr({0}));
