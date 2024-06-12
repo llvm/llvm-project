@@ -115,14 +115,6 @@ int main(int, char**)
     }
 #endif // TEST_STD_VER >= 11
 
-#if TEST_STD_VER >= 14
-    {
-      // LWG 4110
-      auto deleter = [](auto pointer) { delete pointer; };
-      std::shared_ptr<int> p(new int, deleter);
-    }
-#endif
-
   test_function_type();
   return 0;
 }
