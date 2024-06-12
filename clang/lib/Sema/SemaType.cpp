@@ -8088,10 +8088,9 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
   // not to need a separate attribute)
   if (!(S.Context.getTargetInfo().hasFeature("mve") ||
         IsTargetCUDAAndHostARM) &&
-      VecKind == VectorKind::Neon && 
+      VecKind == VectorKind::Neon &&
       S.Context.getTargetInfo().getTriple().isArmMClass()) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
-        << Attr << "'mve'";
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr << "'mve'";
     Attr.setInvalid();
     return;
   }
@@ -8099,8 +8098,7 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
         IsTargetCUDAAndHostARM) &&
       VecKind == VectorKind::NeonPoly &&
       S.Context.getTargetInfo().getTriple().isArmMClass()) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported)
-        << Attr << "'mve'";
+    S.Diag(Attr.getLoc(), diag::err_attribute_unsupported) << Attr << "'mve'";
     Attr.setInvalid();
     return;
   }
