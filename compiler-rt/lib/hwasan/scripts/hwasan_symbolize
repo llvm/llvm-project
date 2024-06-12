@@ -328,7 +328,7 @@ class Symbolizer:
     return True
 
   def finish_tag_dump(self):
-    if self.__matched_stack_uas or not self.__tag_dump_match_idx:
+    if self.__matched_stack_uas or self.__tag_dump_match_idx is None:
       return
     for offset, size, local in sorted(self.__offsets, key=lambda x: abs(x[0])):
       idx = self.__tag_dump_match_idx - offset // 16
