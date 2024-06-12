@@ -126,9 +126,6 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
     return err.report(errc::function_not_supported);
   }
 
-  if (ec)
-    ec->clear();
-
   if (is_symlink(f)) {
     if (bool(copy_options::skip_symlinks & options)) {
       // do nothing
@@ -166,14 +163,14 @@ void __copy(const path& from, const path& to, copy_options options, error_code* 
       return;
     }
     error_code m_ec2;
-    for (; it != directory_iterator(); it.increment(m_ec2)) {
-      if (m_ec2) {
-        return err.report(m_ec2);
-      }
+    for (; !m_ec2 && it != directory_iterator(); it.increment(m_ec2)) {
       __copy(it->path(), to / it->path().filename(), options | copy_options::__in_recursive_copy, ec);
       if (ec && *ec) {
         return;
       }
+    }
+    if (m_ec2) {
+      return err.report(m_ec2);
     }
   }
 }
@@ -936,23 +933,28 @@ path __weakly_canonical(const path& p, error_code* ec) {
   --PP;
   vector<string_view_t> DNEParts;
 
+  error_code m_ec;
   while (PP.State != PathParser::PS_BeforeBegin) {
     tmp.assign(createView(p.native().data(), &PP.RawEntry.back()));
-    error_code m_ec;
     file_status st = __status(tmp, &m_ec);
     if (!status_known(st)) {
       return err.report(m_ec);
     } else if (exists(st)) {
-      result = __canonical(tmp, ec);
+      result = __canonical(tmp, &m_ec);
+      if (m_ec) {
+        return err.report(m_ec);
+      }
       break;
     }
     DNEParts.push_back(*PP);
     --PP;
   }
-  if (PP.State == PathParser::PS_BeforeBegin)
-    result = __canonical("", ec);
-  if (ec)
-    ec->clear();
+  if (PP.State == PathParser::PS_BeforeBegin) {
+    result = __canonical("", &m_ec);
+    if (m_ec) {
+      return err.report(m_ec);
+    }
+  }
   if (DNEParts.empty())
     return result;
   for (auto It = DNEParts.rbegin(); It != DNEParts.rend(); ++It)
