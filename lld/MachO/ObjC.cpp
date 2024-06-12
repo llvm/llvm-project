@@ -1274,9 +1274,7 @@ void ObjcCategoryMerger::eraseMergedCategories() {
 
       eraseISec(catInfo.catBodyIsec);
 
-      // We can't erase 'catLayout.nameOffset' because for Swift categories, the
-      // name will be referenced in __METACLASS_DATA_.
-      // TODO: handle the above smarter
+      tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
                                   catLayout.instanceMethodsOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
