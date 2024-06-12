@@ -18,7 +18,7 @@ define internal i32 @foo(ptr %x, i32 %n, i32 %m) {
 ; CHECK:       [[COND_NEXT:.*]]:
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[X_0_VAL]], %[[COND_TRUE]] ], [ [[CMP2]], %[[COND_FALSE]] ], [ undef, %[[COND_NEXT]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[X_0_VAL]], %[[COND_TRUE]] ], [ [[CMP2]], %[[COND_FALSE]] ], [ poison, %[[COND_NEXT]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
@@ -42,13 +42,13 @@ cond_next:                                        ; No predecessors!
   br label %return
 
 return:                                           ; preds = %cond_next, %cond_false, %cond_true
-  %retval.0 = phi i32 [ %val, %cond_true ], [ %cmp2, %cond_false ], [ undef, %cond_next ]
+  %retval.0 = phi i32 [ %val, %cond_true ], [ %cmp2, %cond_false ], [ poison, %cond_next ]
   ret i32 %retval.0
 }
 
-define i32 @bar(ptr %x, i32 %n, i32 %m) {
+define i32 @bar(ptr align(4) dereferenceable(4) %x, i32 %n, i32 %m) {
 ; CHECK-LABEL: define i32 @bar(
-; CHECK-SAME: ptr [[X:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
+; CHECK-SAME: ptr align 4 dereferenceable(4) [[X:%.*]], i32 [[N:%.*]], i32 [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X_VAL:%.*]] = load i32, ptr [[X]], align 4
 ; CHECK-NEXT:    [[CALLRET3:%.*]] = call i32 @foo(i32 [[X_VAL]], i32 [[N]], i32 [[M]])
