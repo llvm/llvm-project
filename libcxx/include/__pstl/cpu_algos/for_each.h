@@ -23,8 +23,6 @@
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iterator, class _DifferenceType, class _Function>
@@ -62,7 +60,5 @@ struct __cpu_parallel_for_each {
 };
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___PSTL_CPU_ALGOS_FOR_EACH_H

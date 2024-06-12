@@ -21,8 +21,6 @@
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Backend, class _RawExecutionPolicy>
@@ -43,7 +41,5 @@ struct __cpu_parallel_stable_sort {
 };
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___PSTL_CPU_ALGOS_STABLE_SORT_H
