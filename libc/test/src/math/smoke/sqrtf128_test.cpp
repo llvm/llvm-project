@@ -10,4 +10,4 @@
 
 #include "src/math/sqrtf128.h"
 
-LIST_SQRT_TESTS(float128, float128, LIBC_NAMESPACE::sqrtf128)
+LIST_SQRT_TESTS(float128, LIBC_NAMESPACE::sqrtf128)
