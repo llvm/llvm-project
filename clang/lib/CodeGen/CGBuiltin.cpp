@@ -10215,7 +10215,7 @@ Value *CodeGenFunction::EmitSVETupleSetOrGet(const SVETypeFlags &TypeFlags,
       TypeFlags.isTupleSet() ? Ops[2]->getType() : Ty);
 
   if (!SingleVecTy)
-    retutn nullptr;
+    return nullptr;
   Value *Idx = ConstantInt::get(CGM.Int64Ty,
                                 I * SingleVecTy->getMinNumElements());
 
