@@ -74,6 +74,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
+  AllowTemporaryLabels = !(TargetOptions && TargetOptions->MCSaveTempLabels);
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
   if (SrcMgr && SrcMgr->getNumBuffers())
@@ -179,7 +180,6 @@ void MCContext::reset() {
   ELFSeenGenericMergeableSections.clear();
 
   NextID.clear();
-  AllowTemporaryLabels = true;
   DwarfLocSeen = false;
   GenDwarfForAssembly = false;
   GenDwarfFileNumber = 0;
