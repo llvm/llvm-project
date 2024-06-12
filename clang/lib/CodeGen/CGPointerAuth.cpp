@@ -20,7 +20,7 @@ using namespace CodeGen;
 /// Return the abstract pointer authentication schema for a pointer to the given
 /// function type.
 CGPointerAuthInfo CodeGenModule::getFunctionPointerAuthInfo(QualType T) {
-  auto &Schema = getCodeGenOpts().PointerAuth.FunctionPointers;
+  const auto &Schema = getCodeGenOpts().PointerAuth.FunctionPointers;
   if (!Schema)
     return CGPointerAuthInfo();
 
@@ -62,33 +62,25 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
 
 /// If applicable, sign a given constant function pointer with the ABI rules for
 /// functionType.
-llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *pointer,
-                                                  QualType functionType,
+llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *Pointer,
+                                                  QualType FunctionType,
                                                   GlobalDecl GD) {
-  assert(functionType->isFunctionType() ||
-         functionType->isFunctionReferenceType() ||
-         functionType->isFunctionPointerType());
+  assert(FunctionType->isFunctionType() ||
+         FunctionType->isFunctionReferenceType() ||
+         FunctionType->isFunctionPointerType());
 
-  if (auto pointerAuth = getFunctionPointerAuthInfo(functionType)) {
+  if (auto PointerAuth = getFunctionPointerAuthInfo(FunctionType)) {
     return getConstantSignedPointer(
-      pointer, pointerAuth.getKey(), nullptr,
-      cast_or_null<llvm::Constant>(pointerAuth.getDiscriminator()));
+      Pointer, PointerAuth.getKey(), nullptr,
+      cast_or_null<llvm::Constant>(PointerAuth.getDiscriminator()));
   }
 
-  return pointer;
+  return Pointer;
 }
 
 llvm::Constant *CodeGenModule::getFunctionPointer(GlobalDecl GD,
                                                   llvm::Type *Ty) {
-  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-
-  // Annoyingly, K&R functions have prototypes in the clang AST, but
-  // expressions referring to them are unprototyped.
+  const auto *FD = cast<FunctionDecl>(GD.getDecl());
   QualType FuncType = FD->getType();
-  if (!FD->hasPrototype())
-    if (const auto *Proto = FuncType->getAs<FunctionProtoType>())
-      FuncType = Context.getFunctionNoProtoType(Proto->getReturnType(),
-                                                Proto->getExtInfo());
-
   return getFunctionPointer(getRawFunctionPointer(GD, Ty), FuncType, GD);
 }

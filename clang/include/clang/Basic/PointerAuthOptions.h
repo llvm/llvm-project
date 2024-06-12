@@ -16,12 +16,10 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetOptions.h"
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
+#include <optional>
 
 namespace clang {
 
@@ -76,7 +74,7 @@ public:
         IsIsaPointer(IsIsaPointer),
         AuthenticatesNullValues(AuthenticatesNullValues),
         SelectedAuthenticationMode(AuthenticationMode),
-        DiscriminationKind(OtherDiscrimination), Key(unsigned(Key)) {
+        DiscriminationKind(OtherDiscrimination), Key(llvm::to_underlying(Key)) {
     assert((getOtherDiscrimination() != Discrimination::Constant ||
             ConstantDiscriminatorOrNone) &&
            "constant discrimination requires a constant!");
@@ -126,7 +124,7 @@ public:
 
   uint16_t getConstantDiscrimination() const {
     assert(getOtherDiscrimination() == Discrimination::Constant);
-    return (uint16_t)ConstantDiscriminator;
+    return ConstantDiscriminator;
   }
 
   unsigned getKey() const {
@@ -134,7 +132,7 @@ public:
     case Kind::None:
       llvm_unreachable("calling getKey() on disabled schema");
     case Kind::ARM8_3:
-      return unsigned(getARM8_3Key());
+      return llvm::to_underlying(getARM8_3Key());
     }
     llvm_unreachable("bad key kind");
   }

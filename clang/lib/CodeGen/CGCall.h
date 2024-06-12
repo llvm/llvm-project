@@ -196,9 +196,9 @@ public:
     KindOrFunctionPointer =
         SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
   }
-  void setPointerAuthInfo(CGPointerAuthInfo pointerAuth) {
+  void setPointerAuthInfo(CGPointerAuthInfo PointerAuth) {
     assert(isOrdinary());
-    OrdinaryInfo.PointerAuthInfo = pointerAuth;
+    OrdinaryInfo.PointerAuthInfo = PointerAuth;
   }
 
   bool isVirtual() const {

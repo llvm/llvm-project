@@ -1476,7 +1476,6 @@ bool CompilerInvocation::setDefaultPointerAuthOptions(
 }
 
 static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
-                                    ArgList &Args,
                                     const LangOptions &LangOpts,
                                     const llvm::Triple &Triple,
                                     DiagnosticsEngine &Diags) {
@@ -2187,7 +2186,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
   if (!LangOpts->CUDAIsDevice)
-    parsePointerAuthOptions(Opts.PointerAuth, Args, *LangOpts, T, Diags);
+    parsePointerAuthOptions(Opts.PointerAuth, *LangOpts, T, Diags);
 
   if (Args.hasArg(options::OPT_ffinite_loops))
     Opts.FiniteLoops = CodeGenOptions::FiniteLoopsKind::Always;

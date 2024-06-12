@@ -3049,18 +3049,18 @@ llvm::Value *CodeGenFunction::emitBoolVecConversion(llvm::Value *SrcVec,
 }
 
 void CodeGenFunction::EmitPointerAuthOperandBundle(
-    const CGPointerAuthInfo &pointerAuth,
-    SmallVectorImpl<llvm::OperandBundleDef> &bundles) {
-  if (!pointerAuth.isSigned())
+    const CGPointerAuthInfo &PointerAuth,
+    SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
+  if (!PointerAuth.isSigned())
     return;
 
-  auto key = Builder.getInt32(pointerAuth.getKey());
+  auto Key = Builder.getInt32(PointerAuth.getKey());
 
-  llvm::Value *discriminator = pointerAuth.getDiscriminator();
-  if (!discriminator) {
-    discriminator = Builder.getSize(0);
+  llvm::Value *Discriminator = PointerAuth.getDiscriminator();
+  if (!Discriminator) {
+    Discriminator = Builder.getSize(0);
   }
 
-  llvm::Value *args[] = {key, discriminator};
-  bundles.emplace_back("ptrauth", args);
+  llvm::Value *Args[] = {Key, Discriminator};
+  Bundles.emplace_back("ptrauth", Args);
 }
