@@ -263,6 +263,10 @@ class StaticVariableTestCase(TestBase):
         self.assertTrue(found_a, "Regex search found A::g_points")
         self.assertTrue(found_aa, "Regex search found AA::g_points")
 
+        # Regex lowercase should find both as well.
+        val_list = target.FindGlobalVariables("a::g_points", 10, lldb.eMatchTypeRegexInsensitive)
+        self.assertEqual(val_list.GetSize(), 2, "Found A & AA")
+
         # Normal search for full name should find one, but it looks like we don't match
         # on identifier boundaries here yet:
         val_list = target.FindGlobalVariables("A::g_points", 10, lldb.eMatchTypeNormal)
