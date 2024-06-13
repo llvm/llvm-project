@@ -479,6 +479,7 @@ private:
   void ExpandIntRes_SADDSUBO          (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_UADDSUBO          (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_XMULO             (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_AVG               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ADDSUBSAT         (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_SHLSAT            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_MULFIX            (SDNode *N, SDValue &Lo, SDValue &Hi);
