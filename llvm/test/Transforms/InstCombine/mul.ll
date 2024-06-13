@@ -87,8 +87,8 @@ define i32 @test12(i32 %a, i32 %b) {
 ; rdar://7293527
 define i32 @shl1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl1(
-; CHECK-NEXT:    [[M1:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[M1]]
+; CHECK-NEXT:    [[M:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[M]]
 ;
   %shl = shl i32 1, %b
   %m = mul i32 %shl, %a
@@ -97,8 +97,8 @@ define i32 @shl1(i32 %a, i32 %b) {
 
 define i32 @shl1_nsw_nsw(i32 %A, i32 %B) {
 ; CHECK-LABEL: @shl1_nsw_nsw(
-; CHECK-NEXT:    [[D1:%.*]] = shl nsw i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D1]]
+; CHECK-NEXT:    [[D:%.*]] = shl nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %shl = shl nsw i32 1, %B
   %D = mul nsw i32 %A, %shl
@@ -107,8 +107,8 @@ define i32 @shl1_nsw_nsw(i32 %A, i32 %B) {
 
 define <2 x i32> @shl1_nsw_nsw_commute(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @shl1_nsw_nsw_commute(
-; CHECK-NEXT:    [[D1:%.*]] = shl nsw <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[D1]]
+; CHECK-NEXT:    [[D:%.*]] = shl nsw <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[D]]
 ;
   %shl = shl nsw <2 x i32> <i32 1, i32 poison>, %B
   %D = mul nsw <2 x i32> %shl, %A
@@ -117,8 +117,8 @@ define <2 x i32> @shl1_nsw_nsw_commute(<2 x i32> %A, <2 x i32> %B) {
 
 define i32 @shl1_nuw(i32 %A, i32 %B) {
 ; CHECK-LABEL: @shl1_nuw(
-; CHECK-NEXT:    [[D1:%.*]] = shl nuw i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D1]]
+; CHECK-NEXT:    [[D:%.*]] = shl nuw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %shl = shl i32 1, %B
   %D = mul nuw i32 %A, %shl
@@ -127,8 +127,8 @@ define i32 @shl1_nuw(i32 %A, i32 %B) {
 
 define i32 @shl1_nuw_commute(i32 %A, i32 %B) {
 ; CHECK-LABEL: @shl1_nuw_commute(
-; CHECK-NEXT:    [[D1:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D1]]
+; CHECK-NEXT:    [[D:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %shl = shl nuw i32 1, %B
   %D = mul i32 %shl, %A
@@ -1001,8 +1001,7 @@ define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
 ; TODO: vector with poison should also be supported, https://alive2.llvm.org/ce/z/XYpv9q
 define <2 x i32> @PR57278_shl_vec_poison(<2 x i32> %v1) {
 ; CHECK-LABEL: @PR57278_shl_vec_poison(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[V1:%.*]], <i32 2, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <2 x i32> [[SHL]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[V1:%.*]], <i32 12, i32 poison>
 ; CHECK-NEXT:    [[MUL:%.*]] = add nuw <2 x i32> [[TMP1]], <i32 9, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
@@ -1154,8 +1153,8 @@ define i32 @test31(i32 %V) {
 ; CHECK-LABEL: @test31(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr inttoptr (i64 1 to ptr), @PR22087
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 [[V:%.*]], [[EXT]]
-; CHECK-NEXT:    ret i32 [[MUL1]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[V:%.*]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %cmp = icmp ne ptr inttoptr (i64 1 to ptr), @PR22087
   %ext = zext i1 %cmp to i32
@@ -1340,8 +1339,8 @@ define i32 @mul_nsw_mul_nsw_neg_onearg(i32 %x) {
 
 define i32 @mul_nsw_shl_nsw_neg(i32 %x, i32 %y) {
 ; CHECK-LABEL: @mul_nsw_shl_nsw_neg(
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %neg = sub i32 0, %x
@@ -1352,8 +1351,8 @@ define i32 @mul_nsw_shl_nsw_neg(i32 %x, i32 %y) {
 
 define i32 @mul_shl_nsw_neg(i32 %x,i32 %y) {
 ; CHECK-LABEL: @mul_shl_nsw_neg(
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %neg = sub i32 0, %x
@@ -1364,8 +1363,8 @@ define i32 @mul_shl_nsw_neg(i32 %x,i32 %y) {
 
 define i32 @mul_nsw_shl_neg(i32 %x,i32 %y) {
 ; CHECK-LABEL: @mul_nsw_shl_neg(
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %neg = sub i32 0, %x
@@ -1376,8 +1375,8 @@ define i32 @mul_nsw_shl_neg(i32 %x,i32 %y) {
 
 define i32 @mul_nsw_shl_neg_onearg(i32 %x) {
 ; CHECK-LABEL: @mul_nsw_shl_neg_onearg(
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i32 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %neg = sub i32 0, %x
@@ -1388,8 +1387,8 @@ define i32 @mul_nsw_shl_neg_onearg(i32 %x) {
 
 define i8 @mul_shl_nsw_neg_onearg(i8 %x) {
 ; CHECK-LABEL: @mul_shl_nsw_neg_onearg(
-; CHECK-NEXT:    [[SHL_NEG:%.*]] = shl i8 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[SHL_NEG]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ;
   %neg = sub i8 0, %x
@@ -2204,8 +2203,8 @@ define i8 @mul_not_nsw_nonneg(i8 %x, i8 %y) {
 
 define <4 x i32> @combine_vec_mul_shl_oneuse0(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @combine_vec_mul_shl_oneuse0(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[X:%.*]], <i32 1, i32 2, i32 8, i32 16>
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 1, i32 2, i32 8, i32 16>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = shl <4 x i32> %x, <i32 1, i32 2, i32 8, i32 16>

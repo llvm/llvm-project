@@ -220,7 +220,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
   // Also allow combining multiply instructions on vectors.
   {
-    Value *NewOp;
+    Value *NewOp, *NewOp2;
     Constant *C1, *C2;
     const APInt *IVal;
     if (match(&I, m_Mul(m_Shl(m_Value(NewOp), m_Constant(C2)),
@@ -252,6 +252,34 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
 
         return Shl;
       }
+    }
+
+    // (mul (shl X, C), Y) -> (shl (mul X, Y), C)
+    if (match(Op0, m_OneUse(m_Shl(m_Value(NewOp), m_Value(NewOp2))))) {
+      OverflowingBinaryOperator *Op0BO = cast<OverflowingBinaryOperator>(Op0);
+      bool AllHaveNUW = HasNUW && Op0BO->hasNoUnsignedWrap();
+      bool AllHaveNSW = HasNSW && Op0BO->hasNoSignedWrap();
+      Value *Mul = Builder.CreateMul(Op1, NewOp, "", AllHaveNUW, AllHaveNSW);
+      BinaryOperator *BO = BinaryOperator::CreateShl(Mul, NewOp2);
+      if (AllHaveNUW)
+        BO->setHasNoUnsignedWrap();
+      if (AllHaveNSW)
+        BO->setHasNoSignedWrap();
+      return BO;
+    }
+
+    // (mul Y, (shl X, C)) -> (shl (mul X, Y), C)
+    if (match(Op1, m_OneUse(m_Shl(m_Value(NewOp), m_Value(NewOp2))))) {
+      OverflowingBinaryOperator *Op1BO = cast<OverflowingBinaryOperator>(Op1);
+      bool AllHaveNUW = HasNUW && Op1BO->hasNoUnsignedWrap();
+      bool AllHaveNSW = HasNSW && Op1BO->hasNoSignedWrap();
+      Value *Mul = Builder.CreateMul(Op0, NewOp, "", AllHaveNUW, AllHaveNSW);
+      BinaryOperator *BO = BinaryOperator::CreateShl(Mul, NewOp2);
+      if (AllHaveNUW)
+        BO->setHasNoUnsignedWrap();
+      if (AllHaveNSW)
+        BO->setHasNoSignedWrap();
+      return BO;
     }
   }
 
