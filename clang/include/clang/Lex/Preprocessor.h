@@ -2889,24 +2889,19 @@ private:
   // translation unit. Each region is represented by a pair of start and
   // end locations.
   SafeBufferOptOutRegionsTy SafeBufferOptOutMap;
+
   // The "-Wunsafe-buffer-usage" opt-out regions in loaded ASTs.  We use the
   // following structure to manage them by their ASTs.
   struct {
-    // The first FileID of a loaded AST can be used to represent the
-    // loaded AST.  (By the exact words on
-    // `SourceManager::LoadedSLocEntryAllocBegin`, first FileIDs can be used
-    // to tell if they are from the same loaded AST.)
-    //
-    // The map below is from such FileIDs to the opt-out regions associated to
-    // their loaded ASTs.
-    llvm::DenseMap<FileID, SafeBufferOptOutRegionsTy> FirstFID2Regions;
+    // A map from unique IDs to region maps of loaded ASTs.  The ID identifies a
+    // loaded AST. See `SourceManager::getUniqueLoadedASTID`.
+    llvm::DenseMap<unsigned, SafeBufferOptOutRegionsTy> LoadedRegions;
 
     // Returns a reference to the safe buffer opt-out regions of the loaded
     // AST where `Loc` belongs to. (Construct if absent)
     SafeBufferOptOutRegionsTy &
     findAndConsLoadedOptOutMap(SourceLocation Loc, SourceManager &SrcMgr) {
-      FileID FID = SrcMgr.getFirstFIDOfLoadedAST(Loc);
-      return FirstFID2Regions.FindAndConstruct(FID).second;
+      return LoadedRegions[SrcMgr.getUniqueLoadedASTID(Loc)];
     }
 
     // Returns a reference to the safe buffer opt-out regions of the loaded
@@ -2915,10 +2910,10 @@ private:
     const SafeBufferOptOutRegionsTy *
     lookupLoadedOptOutMap(SourceLocation Loc,
                           const SourceManager &SrcMgr) const {
-      FileID FID = SrcMgr.getFirstFIDOfLoadedAST(Loc);
-      auto Iter = FirstFID2Regions.find_as(FID);
+      unsigned ID = SrcMgr.getUniqueLoadedASTID(Loc);
+      auto Iter = LoadedRegions.find(ID);
 
-      if (Iter == FirstFID2Regions.end())
+      if (Iter == LoadedRegions.end())
         return nullptr;
       return &Iter->getSecond();
     }

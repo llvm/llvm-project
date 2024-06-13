@@ -3,12 +3,12 @@
 // RUN: split-file %s %t
 
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=safe_buffers_test_base -x c++ %t/safe_buffers_test.modulemap -std=c++20\
-// RUN:            -o %t/safe_buffers_test_base.pcm
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=safe_buffers_test_module -x c++ %t/safe_buffers_test.modulemap -std=c++20\
-// RUN:            -o %t/safe_buffers_test_module.pcm
+// RUN:            -o %t/safe_buffers_test_base.pcm -Wunsafe-buffer-usage
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=safe_buffers_test_textual -x c++ %t/safe_buffers_test.modulemap -std=c++20\
+// RUN:            -o %t/safe_buffers_test_textual.pcm -Wunsafe-buffer-usage
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=safe_buffers_test_optout -x c++ %t/safe_buffers_test.modulemap -std=c++20\
-// RUN:            -fmodule-file=%t/safe_buffers_test_base.pcm -fmodule-file=%t/safe_buffers_test_module.pcm \
-// RUN:            -o %t/safe_buffers_test_optout.pcm
+// RUN:            -fmodule-file=%t/safe_buffers_test_base.pcm -fmodule-file=%t/safe_buffers_test_textual.pcm \
+// RUN:            -o %t/safe_buffers_test_optout.pcm -Wunsafe-buffer-usage
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodule-file=%t/safe_buffers_test_optout.pcm -I %t -std=c++20 -Wunsafe-buffer-usage\
 // RUN:            -verify %t/safe_buffers_optout-explicit.cpp
 
@@ -21,15 +21,14 @@ module safe_buffers_test_base {
  header "base.h"
 }
 
-module safe_buffers_test_module {
- textual header "test_module.h"
+module safe_buffers_test_textual {
+ textual header "textual.h"
 }
 
 module safe_buffers_test_optout {
-  explicit module test_sub1 {  textual header "test_sub1.h" }
-  explicit module test_sub2 {  textual header "test_sub2.h" }
+  explicit module test_sub1 {  header "test_sub1.h" }
+  explicit module test_sub2 {  header "test_sub2.h" }
   use safe_buffers_test_base
-  use safe_buffers_test_module
 }
 
 //--- base.h
@@ -52,7 +51,7 @@ int sub1(int *p) {
 #pragma clang unsafe_buffer_usage begin
   int y = p[5];
 #pragma clang unsafe_buffer_usage end
-  return x + y;
+  return x + y + base(p);
 }
 
 template <typename T>
@@ -74,13 +73,13 @@ int sub2(int *p) {
 #pragma clang unsafe_buffer_usage begin
   int y = p[5];
 #pragma clang unsafe_buffer_usage end
-  return x + y;
+  return x + y + base(p);
 }
 #endif
 
-//--- test_module.h
+//--- textual.h
 #ifdef __cplusplus
-int test_module(int *p) {
+int textual(int *p) {
   int x = p[5];
   int y = p[5];
   return x + y;
@@ -100,6 +99,8 @@ int test_module(int *p) {
 // module and in a separate TU that is not textually included.  The
 // explicit command that builds base.h has no `-Wunsafe-buffer-usage`.
 
+// expected-warning@base.h:3{{unsafe buffer access}}
+// expected-note@base.h:3{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
 // expected-warning@test_sub1.h:5{{unsafe buffer access}}
 // expected-note@test_sub1.h:5{{pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions}}
 // expected-warning@test_sub1.h:14{{unsafe buffer access}}
@@ -112,13 +113,12 @@ int foo(int * p) {
   int y = p[5];
 #pragma clang unsafe_buffer_usage end
   sub1_T(p); // instantiate template
-  return base(p) + sub1(p) + sub2(p);
+  return sub1(p) + sub2(p);
 }
 
 #pragma clang unsafe_buffer_usage begin
-#include "test_module.h"         // This module header is textually included (i.e., it is in the same TU as %s), so warnings are suppressed
+#include "textual.h"         // This header is textually included (i.e., it is in the same TU as %s), so warnings are suppressed
 #pragma clang unsafe_buffer_usage end
-
 
 //--- safe_buffers_optout-implicit.cpp
 #include "test_sub1.h"
@@ -143,9 +143,9 @@ int foo(int * p) {
   int y = p[5];
 #pragma clang unsafe_buffer_usage end
   sub1_T(p); // instantiate template
-  return base(p) + sub1(p) + sub2(p);
+  return sub1(p) + sub2(p);
 }
 
 #pragma clang unsafe_buffer_usage begin
-#include "test_module.h"         // This module header is textually included (i.e., it is in the same TU as %s), so warnings are suppressed
+#include "textual.h"         // This header is textually included (i.e., it is in the same TU as %s), so warnings are suppressed
 #pragma clang unsafe_buffer_usage end

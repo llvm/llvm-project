@@ -1508,16 +1508,32 @@ bool Preprocessor::isSafeBufferOptOut(const SourceManager &SourceMgr,
     return false;
   };
 
+  // What the following does:
+  //
+  // If `Loc` belongs to the local TU, we just look up `SafeBufferOptOutMap`.
+  // Otherwise, `Loc` is from a loaded AST.  We look up the
+  // `LoadedSafeBufferOptOutMap` first to get the opt-out region map of the
+  // loaded AST where `Loc` is at.  Then we find if `Loc` is in an opt-out
+  // region w.r.t. the region map.  If the region map is absent, it means there
+  // is no opt-out pragma in that loaded AST.
+  //
+  // Opt-out pragmas in the local TU or a loaded AST is not visible to another
+  // one of them.  That means if you put the pragmas around a `#include
+  // "module.h"`, where module.h is a module, it is not actually suppressing
+  // warnings in module.h.  This is fine because warnings in module.h will be
+  // reported when module.h is compiled in isolation and nothing in module.h
+  // will be analyzed ever again.  So you will not see warnings from the file
+  // that imports module.h anyway. And you can't even do the same thing for PCHs
+  //  because they can only be included from the command line.
+
   if (SourceMgr.isLocalSourceLocation(Loc))
     return TestInMap(SafeBufferOptOutMap, Loc);
 
-  // If Loc is from a loaded AST:
   const SafeBufferOptOutRegionsTy *LoadedRegions =
       LoadedSafeBufferOptOutMap.lookupLoadedOptOutMap(Loc, SourceMgr);
 
   if (LoadedRegions)
     return TestInMap(*LoadedRegions, Loc);
-  // The loaded AST has no opt-out region:
   return false;
 }
 
