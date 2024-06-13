@@ -299,7 +299,7 @@ public:
     auto adaptedOp = adaptor.getOperand();
     auto adaptedOpType = adaptedOp.getType();
 
-    if (!isa<FloatType>(adaptedOpType)) {
+    if (!emitc::isSupportedFloatType(adaptedOpType)) {
       return rewriter.notifyMatchFailure(op.getLoc(),
                                          "negf currently only supported on "
                                          "floats, not tensors/vectors thereof");
