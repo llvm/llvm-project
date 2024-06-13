@@ -827,7 +827,7 @@ Constant *SymbolicallyEvaluateBinop(unsigned Opc, Constant *Op0, Constant *Op1,
 /// If array indices are not pointer-sized integers, explicitly cast them so
 /// that they aren't implicitly casted by the getelementptr.
 Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
-                         Type *ResultTy, bool InBounds,
+                         Type *ResultTy, GEPNoWrapFlags NW,
                          std::optional<ConstantRange> InRange,
                          const DataLayout &DL, const TargetLibraryInfo *TLI) {
   Type *IntIdxTy = DL.getIndexType(ResultTy);
@@ -856,8 +856,8 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
   if (!Any)
     return nullptr;
 
-  Constant *C = ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], NewIdxs,
-                                               InBounds, InRange);
+  Constant *C =
+      ConstantExpr::getGetElementPtr(SrcElemTy, Ops[0], NewIdxs, NW, InRange);
   return ConstantFoldConstant(C, DL, TLI);
 }
 
@@ -866,14 +866,12 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
                                   ArrayRef<Constant *> Ops,
                                   const DataLayout &DL,
                                   const TargetLibraryInfo *TLI) {
-  bool InBounds = GEP->isInBounds();
-
   Type *SrcElemTy = GEP->getSourceElementType();
   Type *ResTy = GEP->getType();
   if (!SrcElemTy->isSized() || isa<ScalableVectorType>(SrcElemTy))
     return nullptr;
 
-  if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy, GEP->isInBounds(),
+  if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy, GEP->getNoWrapFlags(),
                                    GEP->getInRange(), DL, TLI))
     return C;
 
@@ -898,8 +896,10 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     InRange = InRange->sextOrTrunc(BitWidth);
 
   // If this is a GEP of a GEP, fold it all into a single GEP.
+  GEPNoWrapFlags NW = GEP->getNoWrapFlags();
+  bool Overflow = false;
   while (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-    InBounds &= GEP->isInBounds();
+    NW &= GEP->getNoWrapFlags();
 
     SmallVector<Value *, 4> NestedOps(llvm::drop_begin(GEP->operands()));
 
@@ -923,8 +923,15 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
     Ptr = cast<Constant>(GEP->getOperand(0));
     SrcElemTy = GEP->getSourceElementType();
-    Offset += APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps));
+    Offset = Offset.sadd_ov(
+        APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps)),
+        Overflow);
   }
+
+  // Preserving nusw (without inbounds) also requires that the offset
+  // additions did not overflow.
+  if (NW.hasNoUnsignedSignedWrap() && !NW.isInBounds() && Overflow)
+    NW = NW.withoutNoUnsignedSignedWrap();
 
   // If the base value for this address is a literal integer value, fold the
   // getelementptr to the resulting integer value casted to the pointer type.
@@ -944,17 +951,19 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   }
 
   // Try to infer inbounds for GEPs of globals.
-  if (!InBounds && Offset.isNonNegative()) {
+  // TODO(gep_nowrap): Also infer nuw flag.
+  if (!NW.isInBounds() && Offset.isNonNegative()) {
     bool CanBeNull, CanBeFreed;
     uint64_t DerefBytes =
         Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-    InBounds = DerefBytes != 0 && !CanBeNull && Offset.sle(DerefBytes);
+    if (DerefBytes != 0 && !CanBeNull && Offset.sle(DerefBytes))
+      NW |= GEPNoWrapFlags::inBounds();
   }
 
   // Otherwise canonicalize this to a single ptradd.
   LLVMContext &Ctx = Ptr->getContext();
   return ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Ptr,
-                                        ConstantInt::get(Ctx, Offset), InBounds,
+                                        ConstantInt::get(Ctx, Offset), NW,
                                         InRange);
 }
 
@@ -1009,12 +1018,8 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
                                           GEP->getInRange());
   }
 
-  if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE)) {
-    if (CE->isCompare())
-      return ConstantFoldCompareInstOperands(CE->getPredicate(), Ops[0], Ops[1],
-                                             DL, TLI);
+  if (auto *CE = dyn_cast<ConstantExpr>(InstOrCE))
     return CE->getWithOperands(Ops);
-  }
 
   switch (Opcode) {
   default: return nullptr;

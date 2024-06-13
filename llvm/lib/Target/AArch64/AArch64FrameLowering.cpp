@@ -431,8 +431,16 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   uint64_t NumBytes = AFI->getLocalStackSize();
 
+  // If neither NEON or SVE are available, a COPY from one Q-reg to
+  // another requires a spill -> reload sequence. We can do that
+  // using a pre-decrementing store/post-decrementing load, but
+  // if we do so, we can't use the Red Zone.
+  bool LowerQRegCopyThroughMem = Subtarget.hasFPARMv8() &&
+                                 !Subtarget.isNeonAvailable() &&
+                                 !Subtarget.hasSVE();
+
   return !(MFI.hasCalls() || hasFP(MF) || NumBytes > RedZoneSize ||
-           getSVEStackSize(MF));
+           getSVEStackSize(MF) || LowerQRegCopyThroughMem);
 }
 
 /// hasFP - Return true if the specified function should have a dedicated frame

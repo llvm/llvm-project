@@ -58,7 +58,16 @@ using namespace clang::CodeGen;
 
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
-  return TI.isAlignRequired() ? TI.Align : 0;
+  if (TI.isAlignRequired())
+    return TI.Align;
+
+  // MaxFieldAlignmentAttr is the attribute added to types
+  // declared after #pragma pack(n).
+  if (auto *Decl = Ty->getAsRecordDecl())
+    if (Decl->hasAttr<MaxFieldAlignmentAttr>())
+      return TI.Align;
+
+  return 0;
 }
 
 static uint32_t getTypeAlignIfRequired(QualType Ty, const ASTContext &Ctx) {
