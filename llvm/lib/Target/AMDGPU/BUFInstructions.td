@@ -1558,7 +1558,7 @@ multiclass BufferAtomicPat_Common<string OpPrefix, ValueType vt, string Inst, bi
 
   defvar Op = !cast<SDPatternOperator>(OpPrefix
                                        # !if(!eq(RtnMode, "ret"), "", "_noret")
-                                       # !if(isIntr, "", "_" # vt.Size));
+                                       # !if(isIntr, "", "_" # vt));
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
 
   let AddedComplexity = !if(!eq(RtnMode, "ret"), 0, 1) in {
@@ -1595,7 +1595,7 @@ multiclass BufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, string
 
   defvar Op = !cast<SDPatternOperator>("AMDGPUatomic_cmp_swap_global"
                                        # !if(!eq(RtnMode, "ret"), "", "_noret")
-                                       # "_" # vt.Size);
+                                       # "_" # vt);
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
   defvar data_vt_RC = getVregSrcForVT<data_vt>.ret.RegClass;
 
