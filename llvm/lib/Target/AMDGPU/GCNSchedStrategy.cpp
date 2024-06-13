@@ -116,6 +116,22 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                     << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
 }
 
+/// Checks whether \p SU can use the cached DAG pressure diffs to compute the
+/// current register pressure.
+///
+/// This works for the common case, but it has a few exceptions that have been
+/// observed through trial and error:
+///   - Explicit physical register operands
+///   - Subregister definitions
+///
+/// In both of those cases, PressureDiff doesn't represent the actual pressure,
+/// and querying LiveIntervals through the RegPressureTracker is needed to get
+/// an accurate value.
+///
+/// We should eventually only use PressureDiff for maximum performance, but this
+/// already allows 80% of SUs to take the fast path without changing scheduling
+/// at all. Further changes would either change scheduling, or require a lot
+/// more logic to recover an accurate pressure estimate from the PressureDiffs.
 static bool canUsePressureDiffs(const SUnit &SU) {
   if (!SU.isInstr())
     return false;
@@ -160,6 +176,17 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   Pressure.clear();
   MaxPressure.clear();
 
+  // We try to use the cached PressureDiffs in the ScheduleDAG whenever
+  // possible over querying the RegPressureTracker.
+  //
+  // RegPressureTracker will make a lot of LIS queries which are very
+  // expensive, it is considered a slow function in this context.
+  //
+  // PressureDiffs are precomputed and cached, and getPressureDiff is just a
+  // trivial lookup into an array. It is pretty much free.
+  //
+  // In EXPENSIVE_CHECKS, we always query RPTracker to verify the results of
+  // PressureDiffs.
   if (AtTop || !canUsePressureDiffs(*SU)) {
     getRegisterPressures(AtTop, RPTracker, SU, Pressure, MaxPressure);
   } else {
