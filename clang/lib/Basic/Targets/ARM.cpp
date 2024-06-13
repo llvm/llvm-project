@@ -173,8 +173,7 @@ bool ARMTargetInfo::supportsThumb() const {
 }
 
 bool ARMTargetInfo::supportsThumb2() const {
-  return CPUAttr.equals("6T2") ||
-         (ArchVersion >= 7 && !CPUAttr.equals("8M_BASE"));
+  return CPUAttr == "6T2" || (ArchVersion >= 7 && CPUAttr != "8M_BASE");
 }
 
 StringRef ARMTargetInfo::getCPUAttr() const {
@@ -509,7 +508,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   SHA2 = 0;
   AES = 0;
   DSP = 0;
-  Unaligned = 1;
+  HasUnalignedAccess = true;
   SoftFloat = false;
   // Note that SoftFloatABI is initialized in our constructor.
   HWDiv = 0;
@@ -576,7 +575,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
         return false;
       }
     } else if (Feature == "+strict-align") {
-      Unaligned = 0;
+      HasUnalignedAccess = false;
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
@@ -785,7 +784,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_ARCH_PROFILE", "'" + CPUProfile + "'");
 
   // ACLE 6.4.3 Unaligned access supported in hardware
-  if (Unaligned)
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   // ACLE 6.4.4 LDREX/STREX
@@ -1162,7 +1161,7 @@ bool ARMTargetInfo::validateAsmConstraint(
     return true;
   case 'j': // An immediate integer between 0 and 65535 (valid for MOVW)
     // only available in ARMv6T2 and above
-    if (CPUAttr.equals("6T2") || ArchVersion >= 7) {
+    if (CPUAttr == "6T2" || ArchVersion >= 7) {
       Info.setRequiresImmediate(0, 65535);
       return true;
     }

@@ -30,6 +30,7 @@
 #include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 
@@ -42,6 +43,7 @@ using namespace llvm;
 
 namespace opts {
 
+extern cl::opt<bool> TimeRewrite;
 extern cl::OptionCategory BoltOptCategory;
 
 cl::opt<bool>
@@ -372,8 +374,10 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 
   // Create necessary metadata for the flow function
   for (FlowJump &Jump : Func.Jumps) {
-    Func.Blocks.at(Jump.Source).SuccJumps.push_back(&Jump);
-    Func.Blocks.at(Jump.Target).PredJumps.push_back(&Jump);
+    assert(Jump.Source < Func.Blocks.size());
+    Func.Blocks[Jump.Source].SuccJumps.push_back(&Jump);
+    assert(Jump.Target < Func.Blocks.size());
+    Func.Blocks[Jump.Target].PredJumps.push_back(&Jump);
   }
   return Func;
 }
@@ -705,6 +709,10 @@ void assignProfile(BinaryFunction &BF,
 
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
+
+  NamedRegionTimer T("inferStaleProfile", "stale profile inference", "rewrite",
+                     "Rewrite passes", opts::TimeRewrite);
+
   if (!BF.hasCFG())
     return false;
 

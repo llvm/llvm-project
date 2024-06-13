@@ -131,6 +131,12 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
   // they are referencing.
   for (auto &BB : *Fn) {
     for (auto &I : BB) {
+      for (llvm::DbgVariableRecord &DVR :
+           llvm::filterDbgVars(I.getDbgRecordRange())) {
+        auto *DILocal = DVR.getVariable();
+        if (!DILocal->isResolved())
+          DILocal->resolve();
+      }
       if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I)) {
         auto *DILocal = DII->getVariable();
         if (!DILocal->isResolved())
@@ -1194,7 +1200,7 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   assert(Def && "The body of the key function is not assigned to Def?");
   // If the non-inline key function comes from another module unit, the vtable
   // must be defined there.
-  return Def->isInAnotherModuleUnit() && !Def->isInlineSpecified();
+  return Def->shouldEmitInExternalSource() && !Def->isInlineSpecified();
 }
 
 /// Given that we're currently at the end of the translation unit, and

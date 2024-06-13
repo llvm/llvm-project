@@ -5,7 +5,7 @@
 
 declare void @bar1(ptr %p)
 declare void @bar2(ptr %p, ptr %p2)
-
+declare void @bar3(ptr writable %p)
 define dso_local void @foo1_rdonly(ptr readonly %p) {
 ; CHECK-LABEL: define {{[^@]+}}@foo1_rdonly
 ; CHECK-SAME: (ptr readonly [[P:%.*]]) {
@@ -25,6 +25,27 @@ define dso_local void @foo1(ptr %p) {
   call void @bar1(ptr %p)
   ret void
 }
+
+define dso_local void @foo1_writable(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@foo1_writable
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @bar1(ptr writable [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @bar1(ptr writable %p)
+  ret void
+}
+
+define dso_local void @foo3_writable(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@foo3_writable
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @bar3(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @bar3(ptr %p)
+  ret void
+}
+
 
 define dso_local void @foo1_bar_aligned64_deref512(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@foo1_bar_aligned64_deref512
@@ -496,3 +517,25 @@ define void @prop_cb_def_mustprogress(ptr %p) {
   call void @foo1(ptr %p) mustprogress
   ret void
 }
+
+define void @prop_no_conflict_writable(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@prop_no_conflict_writable
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @bar1(ptr writable [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @foo1_writable(ptr readonly %p)
+  ret void
+}
+
+
+define void @prop_no_conflict_writable2(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@prop_no_conflict_writable2
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @bar3(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call void @foo3_writable(ptr readnone %p)
+  ret void
+}
+

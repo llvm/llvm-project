@@ -34,13 +34,12 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
       EmitEHFrame(true), EmitDebugFrame(false) {
   if (Assembler->getBackendPtr())
     setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
+  if (Context.getTargetOptions() && Context.getTargetOptions()->MCRelaxAll)
+    Assembler->setRelaxAll(true);
 }
 
 MCObjectStreamer::~MCObjectStreamer() = default;
 
-// AssemblerPtr is used for evaluation of expressions and causes
-// difference between asm and object outputs. Return nullptr to in
-// inline asm mode to limit divergence to assembly inputs.
 MCAssembler *MCObjectStreamer::getAssemblerPtr() {
   if (getUseAssemblerInfoForParsing())
     return Assembler.get();
@@ -176,9 +175,11 @@ void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 }
 
 void MCObjectStreamer::reset() {
-  if (Assembler)
+  if (Assembler) {
     Assembler->reset();
-  CurInsertionPoint = MCSection::iterator();
+    if (getContext().getTargetOptions())
+      Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
+  }
   EmitEHFrame = true;
   EmitDebugFrame = false;
   PendingLabels.clear();
@@ -198,12 +199,7 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 }
 
 MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  assert(getCurrentSectionOnly() && "No current section!");
-
-  if (CurInsertionPoint != getCurrentSectionOnly()->getFragmentList().begin())
-    return &*std::prev(CurInsertionPoint);
-
-  return nullptr;
+  return getCurrentSectionOnly()->curFragList()->Tail;
 }
 
 static bool canReuseDataFragment(const MCDataFragment &F,
@@ -389,8 +385,7 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   }
 
   CurSubsectionIdx = unsigned(IntSubsection);
-  CurInsertionPoint =
-      Section->getSubsectionInsertionPoint(CurSubsectionIdx);
+  Section->switchSubsection(CurSubsectionIdx);
   return Created;
 }
 

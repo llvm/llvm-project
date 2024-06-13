@@ -99,11 +99,17 @@ bool YAMLProfileReader::parseFunctionProfile(
       FuncRawBranchCount += YamlSI.Count;
   BF.setRawBranchCount(FuncRawBranchCount);
 
-  if (!opts::IgnoreHash &&
-      YamlBF.Hash != BF.computeHash(IsDFSOrder, HashFunction)) {
-    if (opts::Verbosity >= 1)
-      errs() << "BOLT-WARNING: function hash mismatch\n";
-    ProfileMatched = false;
+  if (BF.empty())
+    return true;
+
+  if (!opts::IgnoreHash) {
+    if (!BF.getHash())
+      BF.computeHash(IsDFSOrder, HashFunction);
+    if (YamlBF.Hash != BF.getHash()) {
+      if (opts::Verbosity >= 1)
+        errs() << "BOLT-WARNING: function hash mismatch\n";
+      ProfileMatched = false;
+    }
   }
 
   if (YamlBF.NumBasicBlocks != BF.size()) {
@@ -218,17 +224,28 @@ bool YAMLProfileReader::parseFunctionProfile(
         continue;
       }
 
-      BinaryBasicBlock &SuccessorBB = *Order[YamlSI.Index];
-      if (!BB.getSuccessor(SuccessorBB.getLabel())) {
-        if (opts::Verbosity >= 1)
-          errs() << "BOLT-WARNING: no successor for block " << BB.getName()
-                 << " that matches index " << YamlSI.Index << " or block "
-                 << SuccessorBB.getName() << '\n';
-        ++MismatchedEdges;
-        continue;
+      BinaryBasicBlock *ToBB = Order[YamlSI.Index];
+      if (!BB.getSuccessor(ToBB->getLabel())) {
+        // Allow passthrough blocks.
+        BinaryBasicBlock *FTSuccessor = BB.getConditionalSuccessor(false);
+        if (FTSuccessor && FTSuccessor->succ_size() == 1 &&
+            FTSuccessor->getSuccessor(ToBB->getLabel())) {
+          BinaryBasicBlock::BinaryBranchInfo &FTBI =
+              FTSuccessor->getBranchInfo(*ToBB);
+          FTBI.Count += YamlSI.Count;
+          FTBI.MispredictedCount += YamlSI.Mispreds;
+          ToBB = FTSuccessor;
+        } else {
+          if (opts::Verbosity >= 1)
+            errs() << "BOLT-WARNING: no successor for block " << BB.getName()
+                   << " that matches index " << YamlSI.Index << " or block "
+                   << ToBB->getName() << '\n';
+          ++MismatchedEdges;
+          continue;
+        }
       }
 
-      BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(SuccessorBB);
+      BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(*ToBB);
       BI.Count += YamlSI.Count;
       BI.MispredictedCount += YamlSI.Mispreds;
     }
@@ -239,10 +256,8 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (BB.getExecutionCount() == BinaryBasicBlock::COUNT_NO_PROFILE)
       BB.setExecutionCount(0);
 
-  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE) {
+  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE)
     BF.setExecutionCount(FunctionExecutionCount);
-    estimateEdgeCounts(BF);
-  }
 
   ProfileMatched &= !MismatchedBlocks && !MismatchedCalls && !MismatchedEdges;
 

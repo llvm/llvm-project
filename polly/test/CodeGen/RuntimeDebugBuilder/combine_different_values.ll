@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S \
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S \
 ; RUN: -polly-codegen-add-debug-printing \
 ; RUN: -polly-ignore-aliasing < %s | FileCheck %s
 

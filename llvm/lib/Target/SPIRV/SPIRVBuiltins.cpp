@@ -189,6 +189,10 @@ lookupBuiltin(StringRef DemangledCall,
   std::string BuiltinName =
       DemangledCall.substr(0, DemangledCall.find('(')).str();
 
+  // Account for possible "__spirv_ocl_" prefix in SPIR-V friendly LLVM IR
+  if (BuiltinName.rfind("__spirv_ocl_", 0) == 0)
+    BuiltinName = BuiltinName.substr(12);
+
   // Check if the extracted name contains type information between angle
   // brackets. If so, the builtin is an instantiated template - needs to have
   // the information after angle brackets and return type removed.
@@ -294,6 +298,72 @@ lookupBuiltin(StringRef DemangledCall,
 
   // No builtin with such name was found in the set.
   return nullptr;
+}
+
+static MachineInstr *getBlockStructInstr(Register ParamReg,
+                                         MachineRegisterInfo *MRI) {
+  // We expect the following sequence of instructions:
+  //   %0:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.alloca)
+  //   or       = G_GLOBAL_VALUE @block_literal_global
+  //   %1:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.bitcast), %0
+  //   %2:_(p4) = G_ADDRSPACE_CAST %1:_(pN)
+  MachineInstr *MI = MRI->getUniqueVRegDef(ParamReg);
+  assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
+         MI->getOperand(1).isReg());
+  Register BitcastReg = MI->getOperand(1).getReg();
+  MachineInstr *BitcastMI = MRI->getUniqueVRegDef(BitcastReg);
+  assert(isSpvIntrinsic(*BitcastMI, Intrinsic::spv_bitcast) &&
+         BitcastMI->getOperand(2).isReg());
+  Register ValueReg = BitcastMI->getOperand(2).getReg();
+  MachineInstr *ValueMI = MRI->getUniqueVRegDef(ValueReg);
+  return ValueMI;
+}
+
+// Return an integer constant corresponding to the given register and
+// defined in spv_track_constant.
+// TODO: maybe unify with prelegalizer pass.
+static unsigned getConstFromIntrinsic(Register Reg, MachineRegisterInfo *MRI) {
+  MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
+  assert(isSpvIntrinsic(*DefMI, Intrinsic::spv_track_constant) &&
+         DefMI->getOperand(2).isReg());
+  MachineInstr *DefMI2 = MRI->getUniqueVRegDef(DefMI->getOperand(2).getReg());
+  assert(DefMI2->getOpcode() == TargetOpcode::G_CONSTANT &&
+         DefMI2->getOperand(1).isCImm());
+  return DefMI2->getOperand(1).getCImm()->getValue().getZExtValue();
+}
+
+// Return type of the instruction result from spv_assign_type intrinsic.
+// TODO: maybe unify with prelegalizer pass.
+static const Type *getMachineInstrType(MachineInstr *MI) {
+  MachineInstr *NextMI = MI->getNextNode();
+  if (!NextMI)
+    return nullptr;
+  if (isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_name))
+    if ((NextMI = NextMI->getNextNode()) == nullptr)
+      return nullptr;
+  Register ValueReg = MI->getOperand(0).getReg();
+  if ((!isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_type) &&
+       !isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_ptr_type)) ||
+      NextMI->getOperand(1).getReg() != ValueReg)
+    return nullptr;
+  Type *Ty = getMDOperandAsType(NextMI->getOperand(2).getMetadata(), 0);
+  assert(Ty && "Type is expected");
+  return Ty;
+}
+
+static const Type *getBlockStructType(Register ParamReg,
+                                      MachineRegisterInfo *MRI) {
+  // In principle, this information should be passed to us from Clang via
+  // an elementtype attribute. However, said attribute requires that
+  // the function call be an intrinsic, which is not. Instead, we rely on being
+  // able to trace this to the declaration of a variable: OpenCL C specification
+  // section 6.12.5 should guarantee that we can do this.
+  MachineInstr *MI = getBlockStructInstr(ParamReg, MRI);
+  if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE)
+    return MI->getOperand(1).getGlobal()->getType();
+  assert(isSpvIntrinsic(*MI, Intrinsic::spv_alloca) &&
+         "Blocks in OpenCL C must be traceable to allocation site");
+  return getMachineInstrType(MI);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1016,9 +1086,17 @@ static bool generateIntelSubgroupsInst(const SPIRV::IncomingCall *Call,
   }
   const SPIRV::IntelSubgroupsBuiltin *IntelSubgroups =
       SPIRV::lookupIntelSubgroupsBuiltin(Builtin->Name);
-  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
 
   uint32_t OpCode = IntelSubgroups->Opcode;
+  if (Call->isSpirvOp()) {
+    bool IsSet = OpCode != SPIRV::OpSubgroupBlockWriteINTEL &&
+                 OpCode != SPIRV::OpSubgroupImageBlockWriteINTEL;
+    return buildOpFromWrapper(MIRBuilder, OpCode, Call,
+                              IsSet ? GR->getSPIRVTypeID(Call->ReturnType)
+                                    : Register(0));
+  }
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (IntelSubgroups->IsBlock) {
     // Minimal number or arguments set in TableGen records is 1
     if (SPIRVType *Arg0Type = GR->getSPIRVTypeForVReg(Call->Arguments[0])) {
@@ -1110,6 +1188,39 @@ static bool generateGroupUniformInst(const SPIRV::IncomingCall *Call,
                  .addUse(ScopeReg);
   addNumImm(ConstOperand.getCImm()->getValue(), MIB);
   MIB.addUse(ValueReg);
+
+  return true;
+}
+
+static bool generateKernelClockInst(const SPIRV::IncomingCall *Call,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  MachineFunction &MF = MIRBuilder.getMF();
+  const auto *ST = static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
+  if (!ST->canUseExtension(SPIRV::Extension::SPV_KHR_shader_clock)) {
+    std::string DiagMsg = std::string(Builtin->Name) +
+                          ": the builtin requires the following SPIR-V "
+                          "extension: SPV_KHR_shader_clock";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
+
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  Register ResultReg = Call->ReturnRegister;
+  MRI->setRegClass(ResultReg, &SPIRV::IDRegClass);
+
+  // Deduce the `Scope` operand from the builtin function name.
+  SPIRV::Scope::Scope ScopeArg =
+      StringSwitch<SPIRV::Scope::Scope>(Builtin->Name)
+          .EndsWith("device", SPIRV::Scope::Scope::Device)
+          .EndsWith("work_group", SPIRV::Scope::Scope::Workgroup)
+          .EndsWith("sub_group", SPIRV::Scope::Scope::Subgroup);
+  Register ScopeReg = buildConstantIntReg(ScopeArg, MIRBuilder, GR);
+
+  MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
+      .addDef(ResultReg)
+      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(ScopeReg);
 
   return true;
 }
@@ -1326,6 +1437,14 @@ static bool generateBarrierInst(const SPIRV::IncomingCall *Call,
   return buildBarrierInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
+                                  MachineIRBuilder &MIRBuilder) {
+  MIRBuilder.buildInstr(TargetOpcode::G_ADDRSPACE_CAST)
+      .addDef(Call->ReturnRegister)
+      .addUse(Call->Arguments[0]);
+  return true;
+}
+
 static bool generateDotOrFMulInst(const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
@@ -1414,11 +1533,22 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
         Component == 3 ? NumActualRetComponents - 1 : Component;
     assert(ExtractedComposite < NumActualRetComponents &&
            "Invalid composite index!");
+    Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+    SPIRVType *NewType = nullptr;
+    if (QueryResultType->getOpcode() == SPIRV::OpTypeVector) {
+      Register NewTypeReg = QueryResultType->getOperand(1).getReg();
+      if (TypeReg != NewTypeReg &&
+          (NewType = GR->getSPIRVTypeForVReg(NewTypeReg)) != nullptr)
+        TypeReg = NewTypeReg;
+    }
     MIRBuilder.buildInstr(SPIRV::OpCompositeExtract)
         .addDef(Call->ReturnRegister)
-        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(TypeReg)
         .addUse(QueryResult)
         .addImm(ExtractedComposite);
+    if (NewType != nullptr)
+      insertAssignInstr(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
+                        MIRBuilder.getMF().getRegInfo());
   } else {
     // More than 1 component is expected, fill a new vector.
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpVectorShuffle)
@@ -1634,7 +1764,10 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
       ReturnType = ReturnType.substr(ReturnType.find("_R") + 2);
       ReturnType = ReturnType.substr(0, ReturnType.find('('));
     }
-    SPIRVType *Type = GR->getOrCreateSPIRVTypeByName(ReturnType, MIRBuilder);
+    SPIRVType *Type =
+        Call->ReturnType
+            ? Call->ReturnType
+            : GR->getOrCreateSPIRVTypeByName(ReturnType, MIRBuilder);
     if (!Type) {
       std::string DiagMsg =
           "Unable to recognize SPIRV type name: " + ReturnType;
@@ -1756,7 +1889,7 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       if (!MRI->getRegClassOrNull(GWSPtr))
         MRI->setRegClass(GWSPtr, &SPIRV::IDRegClass);
       // TODO: Maybe simplify generation of the type of the fields.
-      unsigned Size = Call->Builtin->Name.equals("ndrange_3D") ? 3 : 2;
+      unsigned Size = Call->Builtin->Name == "ndrange_3D" ? 3 : 2;
       unsigned BitWidth = GR->getPointerSize() == 64 ? 64 : 32;
       Type *BaseTy = IntegerType::get(MF.getFunction().getContext(), BitWidth);
       Type *FieldTy = ArrayType::get(BaseTy, Size);
@@ -1788,68 +1921,6 @@ static bool buildNDRange(const SPIRV::IncomingCall *Call,
       .addUse(TmpReg);
 }
 
-static MachineInstr *getBlockStructInstr(Register ParamReg,
-                                         MachineRegisterInfo *MRI) {
-  // We expect the following sequence of instructions:
-  //   %0:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.alloca)
-  //   or       = G_GLOBAL_VALUE @block_literal_global
-  //   %1:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.bitcast), %0
-  //   %2:_(p4) = G_ADDRSPACE_CAST %1:_(pN)
-  MachineInstr *MI = MRI->getUniqueVRegDef(ParamReg);
-  assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
-         MI->getOperand(1).isReg());
-  Register BitcastReg = MI->getOperand(1).getReg();
-  MachineInstr *BitcastMI = MRI->getUniqueVRegDef(BitcastReg);
-  assert(isSpvIntrinsic(*BitcastMI, Intrinsic::spv_bitcast) &&
-         BitcastMI->getOperand(2).isReg());
-  Register ValueReg = BitcastMI->getOperand(2).getReg();
-  MachineInstr *ValueMI = MRI->getUniqueVRegDef(ValueReg);
-  return ValueMI;
-}
-
-// Return an integer constant corresponding to the given register and
-// defined in spv_track_constant.
-// TODO: maybe unify with prelegalizer pass.
-static unsigned getConstFromIntrinsic(Register Reg, MachineRegisterInfo *MRI) {
-  MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
-  assert(isSpvIntrinsic(*DefMI, Intrinsic::spv_track_constant) &&
-         DefMI->getOperand(2).isReg());
-  MachineInstr *DefMI2 = MRI->getUniqueVRegDef(DefMI->getOperand(2).getReg());
-  assert(DefMI2->getOpcode() == TargetOpcode::G_CONSTANT &&
-         DefMI2->getOperand(1).isCImm());
-  return DefMI2->getOperand(1).getCImm()->getValue().getZExtValue();
-}
-
-// Return type of the instruction result from spv_assign_type intrinsic.
-// TODO: maybe unify with prelegalizer pass.
-static const Type *getMachineInstrType(MachineInstr *MI) {
-  MachineInstr *NextMI = MI->getNextNode();
-  if (isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_name))
-    NextMI = NextMI->getNextNode();
-  Register ValueReg = MI->getOperand(0).getReg();
-  if (!isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_type) ||
-      NextMI->getOperand(1).getReg() != ValueReg)
-    return nullptr;
-  Type *Ty = getMDOperandAsType(NextMI->getOperand(2).getMetadata(), 0);
-  assert(Ty && "Type is expected");
-  return Ty;
-}
-
-static const Type *getBlockStructType(Register ParamReg,
-                                      MachineRegisterInfo *MRI) {
-  // In principle, this information should be passed to us from Clang via
-  // an elementtype attribute. However, said attribute requires that
-  // the function call be an intrinsic, which is not. Instead, we rely on being
-  // able to trace this to the declaration of a variable: OpenCL C specification
-  // section 6.12.5 should guarantee that we can do this.
-  MachineInstr *MI = getBlockStructInstr(ParamReg, MRI);
-  if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE)
-    return MI->getOperand(1).getGlobal()->getType();
-  assert(isSpvIntrinsic(*MI, Intrinsic::spv_alloca) &&
-         "Blocks in OpenCL C must be traceable to allocation site");
-  return getMachineInstrType(MI);
-}
-
 // TODO: maybe move to the global register.
 static SPIRVType *
 getOrCreateSPIRVDeviceEventPointer(MachineIRBuilder &MIRBuilder,
@@ -1879,7 +1950,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   // Local sizes arguments: Sizes of block invoke arguments. Clang generates
   // local size operands as an array, so we need to unpack them.
   SmallVector<Register, 16> LocalSizes;
-  if (Call->Builtin->Name.find("_varargs") != StringRef::npos || IsSpirvOp) {
+  if (Call->Builtin->Name.contains("_varargs") || IsSpirvOp) {
     const unsigned LocalSizeArrayIdx = HasEvents ? 9 : 6;
     Register GepReg = Call->Arguments[LocalSizeArrayIdx];
     MachineInstr *GepMI = MRI->getUniqueVRegDef(GepReg);
@@ -2005,19 +2076,40 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   unsigned Opcode =
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  bool IsSet = Opcode == SPIRV::OpGroupAsyncCopy;
+  Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              IsSet ? TypeReg : Register(0));
+
   auto Scope = buildConstantIntReg(SPIRV::Scope::Workgroup, MIRBuilder, GR);
 
   switch (Opcode) {
-  case SPIRV::OpGroupAsyncCopy:
-    return MIRBuilder.buildInstr(Opcode)
-        .addDef(Call->ReturnRegister)
-        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
-        .addUse(Scope)
-        .addUse(Call->Arguments[0])
-        .addUse(Call->Arguments[1])
-        .addUse(Call->Arguments[2])
-        .addUse(buildConstantIntReg(1, MIRBuilder, GR))
-        .addUse(Call->Arguments[3]);
+  case SPIRV::OpGroupAsyncCopy: {
+    SPIRVType *NewType =
+        Call->ReturnType->getOpcode() == SPIRV::OpTypeEvent
+            ? nullptr
+            : GR->getOrCreateSPIRVTypeByName("spirv.Event", MIRBuilder);
+    Register TypeReg = GR->getSPIRVTypeID(NewType ? NewType : Call->ReturnType);
+    unsigned NumArgs = Call->Arguments.size();
+    Register EventReg = Call->Arguments[NumArgs - 1];
+    bool Res = MIRBuilder.buildInstr(Opcode)
+                   .addDef(Call->ReturnRegister)
+                   .addUse(TypeReg)
+                   .addUse(Scope)
+                   .addUse(Call->Arguments[0])
+                   .addUse(Call->Arguments[1])
+                   .addUse(Call->Arguments[2])
+                   .addUse(Call->Arguments.size() > 4
+                               ? Call->Arguments[3]
+                               : buildConstantIntReg(1, MIRBuilder, GR))
+                   .addUse(EventReg);
+    if (NewType != nullptr)
+      insertAssignInstr(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
+                        MIRBuilder.getMF().getRegInfo());
+    return Res;
+  }
   case SPIRV::OpGroupWaitEvents:
     return MIRBuilder.buildInstr(Opcode)
         .addUse(Scope)
@@ -2242,6 +2334,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateAtomicFloatingInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Barrier:
     return generateBarrierInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::CastToPtr:
+    return generateCastToPtrInst(Call.get(), MIRBuilder);
   case SPIRV::Dot:
     return generateDotOrFMulInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Wave:
@@ -2276,6 +2370,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateIntelSubgroupsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::GroupUniform:
     return generateGroupUniformInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::KernelClock:
+    return generateKernelClockInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
@@ -2303,7 +2399,7 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
     // parseBuiltinCallArgumentBaseType(...) as this function only retrieves the
     // base types.
     if (TypeStr.ends_with("*"))
-      TypeStr = TypeStr.slice(0, TypeStr.find_first_of(" "));
+      TypeStr = TypeStr.slice(0, TypeStr.find_first_of(" *"));
 
     return parseBuiltinTypeNameToTargetExtType("opencl." + TypeStr.str() + "_t",
                                                Ctx);

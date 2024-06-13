@@ -39,6 +39,7 @@ set(MLIR_CONFIG_INCLUDE_DIRS
 # Refer to the best host mlir-tbgen, which might be a host-optimized version
 set(MLIR_CONFIG_TABLEGEN_EXE "${MLIR_TABLEGEN_EXE}")
 set(MLIR_CONFIG_PDLL_TABLEGEN_EXE "${MLIR_PDLL_TABLEGEN_EXE}")
+set(MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE "${MLIR_SRC_SHARDER_TABLEGEN_EXE}")
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
@@ -77,6 +78,7 @@ set(MLIR_CONFIG_INCLUDE_DIRS
 # if we're building with a host-optimized mlir-tblgen (with LLVM_OPTIMIZED_TABLEGEN).
 set(MLIR_CONFIG_TABLEGEN_EXE mlir-tblgen)
 set(MLIR_CONFIG_PDLL_TABLEGEN_EXE mlir-pdll)
+set(MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE mlir-src-sharder)
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in

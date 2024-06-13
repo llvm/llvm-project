@@ -13,8 +13,10 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
 #include "DWARFUnit.h"
+#include "lldb/Symbol/Type.h"
 
 #include "llvm/ADT/iterator.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
@@ -365,122 +367,141 @@ lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
   return nullptr;
 }
 
-std::vector<DWARFDIE> DWARFDIE::GetDeclContextDIEs() const {
-  if (!IsValid())
-    return {};
+static void GetDeclContextImpl(DWARFDIE die,
+                               llvm::SmallSet<lldb::user_id_t, 4> &seen,
+                               std::vector<CompilerContext> &context) {
+  // Stop if we hit a cycle.
+  while (die && seen.insert(die.GetID()).second) {
+    // Handle outline member function DIEs by following the specification.
+    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_specification)) {
+      die = spec;
+      continue;
+    }
+    // To find the name of a type in a type unit, we must follow the signature.
+    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
+      die = spec;
+      continue;
+    }
 
-  std::vector<DWARFDIE> result;
-  DWARFDIE parent = GetParentDeclContextDIE();
-  while (parent.IsValid() && parent.GetDIE() != GetDIE()) {
-    result.push_back(std::move(parent));
-    parent = parent.GetParentDeclContextDIE();
+    // Add this DIE's contribution at the end of the chain.
+    auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
+      context.push_back({kind, ConstString(name)});
+    };
+    switch (die.Tag()) {
+    case DW_TAG_module:
+      push_ctx(CompilerContextKind::Module, die.GetName());
+      break;
+    case DW_TAG_namespace:
+      push_ctx(CompilerContextKind::Namespace, die.GetName());
+      break;
+    case DW_TAG_structure_type:
+      push_ctx(CompilerContextKind::Struct, die.GetName());
+      break;
+    case DW_TAG_union_type:
+      push_ctx(CompilerContextKind::Union, die.GetName());
+      break;
+    case DW_TAG_class_type:
+      push_ctx(CompilerContextKind::Class, die.GetName());
+      break;
+    case DW_TAG_enumeration_type:
+      push_ctx(CompilerContextKind::Enum, die.GetName());
+      break;
+    case DW_TAG_subprogram:
+      push_ctx(CompilerContextKind::Function, die.GetName());
+      break;
+    case DW_TAG_variable:
+      push_ctx(CompilerContextKind::Variable, die.GetPubname());
+      break;
+    case DW_TAG_typedef:
+      push_ctx(CompilerContextKind::Typedef, die.GetName());
+      break;
+    default:
+      break;
+    }
+    // Now process the parent.
+    die = die.GetParent();
   }
-
-  return result;
 }
 
-static std::vector<lldb_private::CompilerContext>
-GetDeclContextImpl(llvm::SmallSet<lldb::user_id_t, 4> &seen, DWARFDIE die) {
-  std::vector<lldb_private::CompilerContext> context;
-  // Stop if we hit a cycle.
-  if (!die || !seen.insert(die.GetID()).second)
-    return context;
-
-  // Handle outline member function DIEs by following the specification.
-  if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_specification))
-    return GetDeclContextImpl(seen, spec);
-
-  // Get the parent context chain.
-  context = GetDeclContextImpl(seen, die.GetParent());
-
-  // Add this DIE's contribution at the end of the chain.
-  auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
-    context.push_back({kind, ConstString(name)});
-  };
-  switch (die.Tag()) {
-  case DW_TAG_module:
-    push_ctx(CompilerContextKind::Module, die.GetName());
-    break;
-  case DW_TAG_namespace:
-    push_ctx(CompilerContextKind::Namespace, die.GetName());
-    break;
-  case DW_TAG_structure_type:
-    push_ctx(CompilerContextKind::Struct, die.GetName());
-    break;
-  case DW_TAG_union_type:
-    push_ctx(CompilerContextKind::Union, die.GetName());
-    break;
-  case DW_TAG_class_type:
-    push_ctx(CompilerContextKind::Class, die.GetName());
-    break;
-  case DW_TAG_enumeration_type:
-    push_ctx(CompilerContextKind::Enum, die.GetName());
-    break;
-  case DW_TAG_subprogram:
-    push_ctx(CompilerContextKind::Function, die.GetName());
-    break;
-  case DW_TAG_variable:
-    push_ctx(CompilerContextKind::Variable, die.GetPubname());
-    break;
-  case DW_TAG_typedef:
-    push_ctx(CompilerContextKind::Typedef, die.GetName());
-    break;
-  default:
-    break;
-  }
+std::vector<CompilerContext> DWARFDIE::GetDeclContext() const {
+  llvm::SmallSet<lldb::user_id_t, 4> seen;
+  std::vector<CompilerContext> context;
+  GetDeclContextImpl(*this, seen, context);
+  std::reverse(context.begin(), context.end());
   return context;
 }
 
-std::vector<lldb_private::CompilerContext> DWARFDIE::GetDeclContext() const {
-  llvm::SmallSet<lldb::user_id_t, 4> seen;
-  return GetDeclContextImpl(seen, *this);
+static void GetTypeLookupContextImpl(DWARFDIE die,
+                                     llvm::SmallSet<lldb::user_id_t, 4> &seen,
+                                     std::vector<CompilerContext> &context) {
+  // Stop if we hit a cycle.
+  while (die && seen.insert(die.GetID()).second) {
+    // To find the name of a type in a type unit, we must follow the signature.
+    if (DWARFDIE spec = die.GetReferencedDIE(DW_AT_signature)) {
+      die = spec;
+      continue;
+    }
+
+    // If there is no name, then there is no need to look anything up for this
+    // DIE.
+    const char *name = die.GetName();
+    if (!name || !name[0])
+      return;
+
+    // Add this DIE's contribution at the end of the chain.
+    auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
+      context.push_back({kind, ConstString(name)});
+    };
+    switch (die.Tag()) {
+    case DW_TAG_namespace:
+      push_ctx(CompilerContextKind::Namespace, die.GetName());
+      break;
+    case DW_TAG_structure_type:
+      push_ctx(CompilerContextKind::Struct, die.GetName());
+      break;
+    case DW_TAG_union_type:
+      push_ctx(CompilerContextKind::Union, die.GetName());
+      break;
+    case DW_TAG_class_type:
+      push_ctx(CompilerContextKind::Class, die.GetName());
+      break;
+    case DW_TAG_enumeration_type:
+      push_ctx(CompilerContextKind::Enum, die.GetName());
+      break;
+    case DW_TAG_variable:
+      push_ctx(CompilerContextKind::Variable, die.GetPubname());
+      break;
+    case DW_TAG_typedef:
+      push_ctx(CompilerContextKind::Typedef, die.GetName());
+      break;
+    case DW_TAG_base_type:
+      push_ctx(CompilerContextKind::Builtin, name);
+      break;
+    // If any of the tags below appear in the parent chain, stop the decl
+    // context and return. Prior to these being in here, if a type existed in a
+    // namespace "a" like "a::my_struct", but we also have a function in that
+    // same namespace "a" which contained a type named "my_struct", both would
+    // return "a::my_struct" as the declaration context since the
+    // DW_TAG_subprogram would be skipped and its parent would be found.
+    case DW_TAG_compile_unit:
+    case DW_TAG_type_unit:
+    case DW_TAG_subprogram:
+    case DW_TAG_lexical_block:
+    case DW_TAG_inlined_subroutine:
+      return;
+    default:
+      break;
+    }
+    // Now process the parent.
+    die = die.GetParent();
+  }
 }
 
-std::vector<lldb_private::CompilerContext>
-DWARFDIE::GetTypeLookupContext() const {
-  std::vector<lldb_private::CompilerContext> context;
-  // If there is no name, then there is no need to look anything up for this
-  // DIE.
-  const char *name = GetName();
-  if (!name || !name[0])
-    return context;
-  const dw_tag_t tag = Tag();
-  if (tag == DW_TAG_compile_unit || tag == DW_TAG_partial_unit)
-    return context;
-  DWARFDIE parent = GetParent();
-  if (parent)
-    context = parent.GetTypeLookupContext();
-  auto push_ctx = [&](CompilerContextKind kind, llvm::StringRef name) {
-    context.push_back({kind, ConstString(name)});
-  };
-  switch (tag) {
-  case DW_TAG_namespace:
-    push_ctx(CompilerContextKind::Namespace, name);
-    break;
-  case DW_TAG_structure_type:
-    push_ctx(CompilerContextKind::Struct, name);
-    break;
-  case DW_TAG_union_type:
-    push_ctx(CompilerContextKind::Union, name);
-    break;
-  case DW_TAG_class_type:
-    push_ctx(CompilerContextKind::Class, name);
-    break;
-  case DW_TAG_enumeration_type:
-    push_ctx(CompilerContextKind::Enum, name);
-    break;
-  case DW_TAG_variable:
-    push_ctx(CompilerContextKind::Variable, GetPubname());
-    break;
-  case DW_TAG_typedef:
-    push_ctx(CompilerContextKind::Typedef, name);
-    break;
-  case DW_TAG_base_type:
-    push_ctx(CompilerContextKind::Builtin, name);
-    break;
-  default:
-    break;
-  }
+std::vector<CompilerContext> DWARFDIE::GetTypeLookupContext() const {
+  llvm::SmallSet<lldb::user_id_t, 4> seen;
+  std::vector<CompilerContext> context;
+  GetTypeLookupContextImpl(*this, seen, context);
+  std::reverse(context.begin(), context.end());
   return context;
 }
 

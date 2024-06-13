@@ -35,6 +35,8 @@ class ModFileWriter {
 public:
   explicit ModFileWriter(SemanticsContext &context) : context_{context} {}
   bool WriteAll();
+  void WriteClosure(llvm::raw_ostream &, const Symbol &,
+      UnorderedSymbolSet &nonIntrinsicModulesWritten);
 
 private:
   SemanticsContext &context_;
@@ -46,6 +48,7 @@ private:
   std::string containsBuf_;
   // Tracks nested DEC structures and fields of that type
   UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
+  UnorderedSymbolSet usedNonIntrinsicModules_;
 
   llvm::raw_string_ostream needs_{needsBuf_};
   llvm::raw_string_ostream uses_{usesBuf_};
@@ -54,7 +57,6 @@ private:
   llvm::raw_string_ostream decls_{declsBuf_};
   llvm::raw_string_ostream contains_{containsBuf_};
   bool isSubmodule_{false};
-  std::map<const Symbol *, SourceName> renamings_;
 
   void WriteAll(const Scope &);
   void WriteOne(const Scope &);

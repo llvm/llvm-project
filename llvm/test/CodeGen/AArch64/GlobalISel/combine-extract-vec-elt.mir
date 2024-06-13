@@ -23,9 +23,9 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %arg1:_(s64) = COPY $x0
     %arg2:_(s64) = COPY $x1
-    %zero:_(s32) = G_CONSTANT i32 0
+    %zero:_(s64) = G_CONSTANT i64 0
     %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
-    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %zero(s32)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %zero(s64)
     $x0 = COPY %extract(s64)
     RET_ReallyLR implicit $x0
 
@@ -55,10 +55,10 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %arg1:_(s64) = COPY $x0
     %arg2:_(s64) = COPY $x1
-    %zero:_(s32) = G_CONSTANT i32 0
+    %zero:_(s64) = G_CONSTANT i64 0
     %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
     %truncbv:_(<2 x s32>) = G_TRUNC %bv
-    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %truncbv(<2 x s32>), %zero(s32)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %truncbv(<2 x s32>), %zero(s64)
     %zext:_(s64) = G_ZEXT %extract
     $x0 = COPY %zext(s64)
     RET_ReallyLR implicit $x0
@@ -87,9 +87,9 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %arg1:_(s64) = COPY $x0
     %arg2:_(s64) = COPY $x1
-    %one:_(s32) = G_CONSTANT i32 1
+    %one:_(s64) = G_CONSTANT i64 1
     %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
-    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %one(s32)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %one(s64)
     $x0 = COPY %extract(s64)
     RET_ReallyLR implicit $x0
 
@@ -117,9 +117,9 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %arg1:_(s64) = COPY $x0
     %arg2:_(s64) = COPY $x1
-    %idx:_(s32) = G_CONSTANT i32 4
+    %idx:_(s64) = G_CONSTANT i64 4
     %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
-    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s32)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s64)
     $x0 = COPY %extract(s64)
     RET_ReallyLR implicit $x0
 
@@ -148,9 +148,9 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %arg1:_(s64) = COPY $x0
     %arg2:_(s64) = COPY $x1
-    %zero:_(s32) = G_CONSTANT i32 0
+    %zero:_(s64) = G_CONSTANT i64 0
     %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
-    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %zero(s32)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %zero(s64)
     $w0 = COPY %extract(s32)
     RET_ReallyLR implicit $w0
 
@@ -175,25 +175,25 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
     ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
-    ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
-    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %zero(s32)
+    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %zero(s64)
     ; CHECK-NEXT: $x0 = COPY %extract(s64)
     ; CHECK-NEXT: $q0 = COPY %bv(<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %arg1:_(s64) = COPY $x0
     %arg2:_(s64) = COPY $x1
-    %zero:_(s32) = G_CONSTANT i32 0
+    %zero:_(s64) = G_CONSTANT i64 0
     %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
-    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %zero(s32)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %zero(s64)
     $x0 = COPY %extract(s64)
     $q0 = COPY %bv(<2 x s64>)
     RET_ReallyLR implicit $x0
 
 ...
 ---
+# This test checks that this combine runs after the insertvec->build_vector
 name:            extract_from_insert
-alignment:       4
 tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
@@ -203,8 +203,6 @@ frameInfo:
 body:             |
   bb.1:
     liveins: $x0, $x1
-    ; This test checks that this combine runs after the insertvec->build_vector
-    ; combine.
     ; CHECK-LABEL: name: extract_from_insert
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
@@ -214,13 +212,44 @@ body:             |
     %arg1:_(s64) = COPY $x0
     %arg2:_(s64) = COPY $x1
     %undef:_(<2 x s64>) = G_IMPLICIT_DEF
-    %zero:_(s32) = G_CONSTANT i32 0
-    %one:_(s32) = G_CONSTANT i32 1
-    %ins1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %undef, %arg1(s64), %zero(s32)
-    %ins2:_(<2 x s64>) = G_INSERT_VECTOR_ELT %ins1, %arg2(s64), %one(s32)
-    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %ins2(<2 x s64>), %zero(s32)
+    %zero:_(s64) = G_CONSTANT i64 0
+    %one:_(s64) = G_CONSTANT i64 1
+    %ins1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %undef, %arg1(s64), %zero(s64)
+    %ins2:_(<2 x s64>) = G_INSERT_VECTOR_ELT %ins1, %arg2(s64), %one(s64)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %ins2(<2 x s64>), %zero(s64)
     $x0 = COPY %extract(s64)
     RET_ReallyLR implicit $x0
+
+...
+---
+# This test checks that this combine runs after the insertvec->build_vector
+name:            extract_from_insert2
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $q0, $x0, $x1
+    ; CHECK-LABEL: name: extract_from_insert2
+    ; CHECK: liveins: $q0, $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %ins2:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    ; CHECK-NEXT: $q0 = COPY %ins2(<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %arg0:_(<2 x s64>) = COPY $q0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %zero:_(s64) = G_CONSTANT i64 0
+    %one:_(s64) = G_CONSTANT i64 1
+    %ins1:_(<2 x s64>) = G_INSERT_VECTOR_ELT %arg0, %arg1(s64), %zero(s64)
+    %ins2:_(<2 x s64>) = G_INSERT_VECTOR_ELT %ins1, %arg2(s64), %one(s64)
+    $q0 = COPY %ins2(<2 x s64>)
+    RET_ReallyLR implicit $q0
 
 ...
 ---
@@ -241,9 +270,367 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY %extract(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %vec:_(<2 x s64>) = COPY $q0
-    %idx:_(s32) = G_CONSTANT i32 -2
-    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s32)
+    %idx:_(s64) = G_CONSTANT i64 -2
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s64)
     $x0 = COPY %extract(s64)
     RET_ReallyLR implicit $x0
 
 ...
+---
+name:            extract_from_vector_undef
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_vector_undef
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %extract:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = G_IMPLICIT_DEF
+    %idx:_(s64) = G_CONSTANT i64 -2
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_index_undef
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: extract_from_index_undef
+    ; CHECK: %extract:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s64) = G_IMPLICIT_DEF
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_index_too_large
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_index_too_large
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %extract:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s64) = G_CONSTANT i64 3000
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_with_freeze
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_with_freeze
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vec:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %idx:_(s64) = COPY $x1
+    ; CHECK-NEXT: %fvec:_(<2 x s64>) = G_FREEZE %vec
+    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %fvec(<2 x s64>), %idx(s64)
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s64) = COPY $x1
+    %fvec:_(<2 x s64>) = G_FREEZE %vec
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %fvec(<2 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_insert_symmetry
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_insert_symmetry
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %element:_(s64) = COPY $x1
+    ; CHECK-NEXT: $x0 = COPY %element(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s64) = COPY $x1
+    %element:_(s64) = COPY $x1
+    %invec:_(<2 x s64>) = G_INSERT_VECTOR_ELT %vec(<2 x s64>), %element(s64), %idx(s64)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %invec(<2 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_insert_with_different_consts
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_insert_with_different_consts
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vec:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %idx2:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx2(s64)
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s64) = G_CONSTANT i64 0
+    %idx2:_(s64) = G_CONSTANT i64 1
+    %element:_(s64) = COPY $x1
+    %invec:_(<2 x s64>) = G_INSERT_VECTOR_ELT %vec(<2 x s64>), %element(s64), %idx(s64)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %invec(<2 x s64>), %idx2(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_build_vector_non_const
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_non_const
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %idx:_(s64) = COPY $x0
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s64)
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s64) = COPY $x0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_build_vector_const
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_const
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: $x0 = COPY %arg1(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %idx:_(s64) = G_CONSTANT i64 0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
+name:            extract_from_build_vector_trunc_const2
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_trunc_const2
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %extract:_(s32) = G_TRUNC %arg1(s64)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %vec:_(<2 x s64>) = COPY $q0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %arg3:_(s64) = COPY $x0
+    %arg4:_(s64) = COPY $x1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %bv:_(<4 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64), %arg3(s64), %arg4(s64)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<4 x s32>), %idx(s64)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_trunc2
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_trunc2
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %arg2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %idx:_(s64) = COPY $x0
+    ; CHECK-NEXT: %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
+    ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %idx(s64)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %idx:_(s64) = COPY $x0
+    %bv:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %arg1(s64), %arg2(s64)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %bv(<2 x s32>), %idx(s64)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_trunc_const3
+alignment:       4
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_trunc_const3
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s128) = COPY $q0
+    ; CHECK-NEXT: %extract:_(s64) = G_TRUNC %arg1(s128)
+    ; CHECK-NEXT: $x0 = COPY %extract(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(s128) = COPY $q0
+    %arg2:_(s128) = COPY $q1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR_TRUNC %arg1(s128), %arg2(s128)
+    %extract:_(s64) = G_EXTRACT_VECTOR_ELT %bv(<2 x s64>), %idx(s64)
+    $x0 = COPY %extract(s64)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_shuffle_vector_undef
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_undef
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %extract:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(<4 x s32>) = COPY $q0
+    %arg2:_(<4 x s32>) = COPY $q1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2(<4 x s32>), shufflemask(-1, 0, 0, 0)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_shuffle_vector_opaque
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_opaque
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: %arg2:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: %idx:_(s64) = COPY $x1
+    ; CHECK-NEXT: %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2, shufflemask(undef, 0, 0, 0)
+    ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(<4 x s32>) = COPY $q0
+    %arg2:_(<4 x s32>) = COPY $q1
+    %idx:_(s64) = COPY $x1
+    %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2(<4 x s32>), shufflemask(-1, 0, 0, 0)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---
+name:            extract_from_build_vector_shuffle_vector_const
+body:             |
+  bb.1:
+    liveins: $x0, $x1
+    ; CHECK-LABEL: name: extract_from_build_vector_shuffle_vector_const
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: %extract:_(s32) = G_EXTRACT_VECTOR_ELT %arg1(<4 x s32>), [[C]](s64)
+    ; CHECK-NEXT: $w0 = COPY %extract(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(<4 x s32>) = COPY $q0
+    %arg2:_(<4 x s32>) = COPY $q1
+    %idx:_(s64) = G_CONSTANT i64 0
+    %sv:_(<4 x s32>) = G_SHUFFLE_VECTOR %arg1(<4 x s32>), %arg2(<4 x s32>), shufflemask(3, 0, 0, 0)
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %sv(<4 x s32>), %idx(s64)
+    $w0 = COPY %extract(s32)
+    RET_ReallyLR implicit $x0
+...
+---

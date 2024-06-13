@@ -38,7 +38,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSHA2 = false;
   bool HasSHA3 = false;
   bool HasSM4 = false;
-  bool HasUnaligned = true;
   bool HasFullFP16 = false;
   bool HasDotProd = false;
   bool HasFP16FML = false;
@@ -108,10 +107,6 @@ public:
   unsigned multiVersionSortPriority(StringRef Name) const override;
   unsigned multiVersionFeatureCost() const override;
 
-  bool
-  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
-                 StringRef CPU,
-                 const std::vector<std::string> &FeaturesVec) const override;
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }

@@ -48,7 +48,6 @@ public:
 
   /// Returns true if we know the value of all bits.
   bool isConstant() const {
-    assert(!hasConflict() && "KnownBits conflict!");
     return Zero.popcount() + One.popcount() == getBitWidth();
   }
 
@@ -74,16 +73,10 @@ public:
   }
 
   /// Returns true if value is all zero.
-  bool isZero() const {
-    assert(!hasConflict() && "KnownBits conflict!");
-    return Zero.isAllOnes();
-  }
+  bool isZero() const { return Zero.isAllOnes(); }
 
   /// Returns true if value is all one bits.
-  bool isAllOnes() const {
-    assert(!hasConflict() && "KnownBits conflict!");
-    return One.isAllOnes();
-  }
+  bool isAllOnes() const { return One.isAllOnes(); }
 
   /// Make all bits known to be zero and discard any previous information.
   void setAllZero() {
@@ -354,6 +347,18 @@ public:
   /// Compute knownbits resulting from llvm.usub.sat(LHS, RHS)
   static KnownBits usub_sat(const KnownBits &LHS, const KnownBits &RHS);
 
+  /// Compute knownbits resulting from APIntOps::avgFloorS
+  static KnownBits avgFloorS(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from APIntOps::avgFloorU
+  static KnownBits avgFloorU(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from APIntOps::avgCeilS
+  static KnownBits avgCeilS(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute knownbits resulting from APIntOps::avgCeilU
+  static KnownBits avgCeilU(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Compute known bits resulting from multiplying LHS and RHS.
   static KnownBits mul(const KnownBits &LHS, const KnownBits &RHS,
                        bool NoUndefSelfMultiply = false);
@@ -394,7 +399,7 @@ public:
   static KnownBits abdu(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits for abds(LHS, RHS).
-  static KnownBits abds(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits abds(KnownBits LHS, KnownBits RHS);
 
   /// Compute known bits for shl(LHS, RHS).
   /// NOTE: RHS (shift amount) bitwidth doesn't need to be the same as LHS.

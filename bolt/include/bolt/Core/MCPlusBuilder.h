@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCDisassembler/MCSymbolizer.h"
 #include "llvm/MC/MCExpr.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -436,8 +438,8 @@ public:
     return false;
   }
 
-  /// Check whether we support inverting this branch
-  virtual bool isUnsupportedBranch(const MCInst &Inst) const { return false; }
+  /// Check whether this conditional branch can be reversed
+  virtual bool isReversibleBranch(const MCInst &Inst) const { return true; }
 
   /// Return true of the instruction is of pseudo kind.
   virtual bool isPseudo(const MCInst &Inst) const {
@@ -533,9 +535,7 @@ public:
     return Analysis->isReturn(Inst);
   }
 
-  virtual bool isTerminator(const MCInst &Inst) const {
-    return Analysis->isTerminator(Inst);
-  }
+  virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
@@ -1412,13 +1412,14 @@ public:
     return false;
   }
 
-  /// Modify a direct call instruction \p Inst with an indirect call taking
-  /// a destination from a memory location pointed by \p TargetLocation symbol.
-  virtual bool convertCallToIndirectCall(MCInst &Inst,
-                                         const MCSymbol *TargetLocation,
-                                         MCContext *Ctx) {
+  /// Creates an indirect call to the function within the \p DirectCall PLT
+  /// stub. The function's memory location is pointed by the \p TargetLocation
+  /// symbol.
+  virtual InstructionListType
+  createIndirectPltCall(const MCInst &DirectCall,
+                        const MCSymbol *TargetLocation, MCContext *Ctx) {
     llvm_unreachable("not implemented");
-    return false;
+    return {};
   }
 
   /// Morph an indirect call into a load where \p Reg holds the call target.
@@ -1706,12 +1707,9 @@ public:
   }
 
   /// Reverses the branch condition in Inst and update its taken target to TBB.
-  ///
-  /// Returns true on success.
-  virtual bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  virtual void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                                       MCContext *Ctx) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   virtual bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB,
@@ -1751,12 +1749,9 @@ public:
   }
 
   /// Sets the taken target of the branch instruction to Target.
-  ///
-  /// Returns true on success.
-  virtual bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  virtual void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                                    MCContext *Ctx) const {
     llvm_unreachable("not implemented");
-    return false;
   }
 
   /// Extract a symbol and an addend out of the fixup value expression.

@@ -1087,8 +1087,10 @@ bool lldb_private::formatters::LibcxxWStringViewSummaryProvider(
                                         dataobj, size);
 }
 
-bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+static bool
+LibcxxChronoTimePointSecondsSummaryProvider(ValueObject &valobj, Stream &stream,
+                                            const TypeSummaryOptions &options,
+                                            const char *fmt) {
   ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__d_");
   if (!ptr_sp)
     return false;
@@ -1096,6 +1098,7 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
   if (!ptr_sp)
     return false;
 
+#ifndef _WIN32
   // The date time in the chrono library is valid in the range
   // [-32767-01-01T00:00:00Z, 32767-12-31T23:59:59Z]. A 64-bit time_t has a
   // larger range, the function strftime is not able to format the entire range
@@ -1105,6 +1108,11 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
       -1'096'193'779'200; // -32767-01-01T00:00:00Z
   const std::time_t chrono_timestamp_max =
       971'890'963'199; // 32767-12-31T23:59:59Z
+#else
+  const std::time_t chrono_timestamp_min = -43'200; // 1969-12-31T12:00:00Z
+  const std::time_t chrono_timestamp_max =
+      32'536'850'399; // 3001-01-19T21:59:59
+#endif
 
   const std::time_t seconds = ptr_sp->GetValueAsSigned(0);
   if (seconds < chrono_timestamp_min || seconds > chrono_timestamp_max)
@@ -1112,7 +1120,7 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
   else {
     std::array<char, 128> str;
     std::size_t size =
-        std::strftime(str.data(), str.size(), "%FT%H:%M:%SZ", gmtime(&seconds));
+        std::strftime(str.data(), str.size(), fmt, gmtime(&seconds));
     if (size == 0)
       return false;
 
@@ -1123,8 +1131,22 @@ bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
   return true;
 }
 
-bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
+bool lldb_private::formatters::LibcxxChronoSysSecondsSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimePointSecondsSummaryProvider(valobj, stream, options,
+                                                     "%FT%H:%M:%SZ");
+}
+
+bool lldb_private::formatters::LibcxxChronoLocalSecondsSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimePointSecondsSummaryProvider(valobj, stream, options,
+                                                     "%FT%H:%M:%S");
+}
+
+static bool
+LibcxxChronoTimepointDaysSummaryProvider(ValueObject &valobj, Stream &stream,
+                                         const TypeSummaryOptions &options,
+                                         const char *fmt) {
   ValueObjectSP ptr_sp = valobj.GetChildMemberWithName("__d_");
   if (!ptr_sp)
     return false;
@@ -1132,12 +1154,17 @@ bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
   if (!ptr_sp)
     return false;
 
+#ifndef _WIN32
   // The date time in the chrono library is valid in the range
   // [-32767-01-01Z, 32767-12-31Z]. A 32-bit time_t has a larger range, the
   // function strftime is not able to format the entire range of time_t. The
   // exact point has not been investigated; it's limited to chrono's range.
   const int chrono_timestamp_min = -12'687'428; // -32767-01-01Z
   const int chrono_timestamp_max = 11'248'737;  // 32767-12-31Z
+#else
+  const int chrono_timestamp_min = 0;       // 1970-01-01Z
+  const int chrono_timestamp_max = 376'583; // 3001-01-19Z
+#endif
 
   const int days = ptr_sp->GetValueAsSigned(0);
   if (days < chrono_timestamp_min || days > chrono_timestamp_max)
@@ -1148,7 +1175,7 @@ bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
 
     std::array<char, 128> str;
     std::size_t size =
-        std::strftime(str.data(), str.size(), "%FZ", gmtime(&seconds));
+        std::strftime(str.data(), str.size(), fmt, gmtime(&seconds));
     if (size == 0)
       return false;
 
@@ -1156,6 +1183,18 @@ bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
   }
 
   return true;
+}
+
+bool lldb_private::formatters::LibcxxChronoSysDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimepointDaysSummaryProvider(valobj, stream, options,
+                                                  "%FZ");
+}
+
+bool lldb_private::formatters::LibcxxChronoLocalDaysSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return LibcxxChronoTimepointDaysSummaryProvider(valobj, stream, options,
+                                                  "%F");
 }
 
 bool lldb_private::formatters::LibcxxChronoMonthSummaryProvider(

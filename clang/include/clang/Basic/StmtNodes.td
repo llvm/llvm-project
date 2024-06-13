@@ -71,7 +71,7 @@ def OffsetOfExpr : StmtNode<Expr>;
 def UnaryExprOrTypeTraitExpr : StmtNode<Expr>;
 def ArraySubscriptExpr : StmtNode<Expr>;
 def MatrixSubscriptExpr : StmtNode<Expr>;
-def OMPArraySectionExpr : StmtNode<Expr>;
+def ArraySectionExpr : StmtNode<Expr>;
 def OMPIteratorExpr : StmtNode<Expr>;
 def CallExpr : StmtNode<Expr>;
 def MemberExpr : StmtNode<Expr>;
@@ -302,3 +302,4 @@ def OpenACCConstructStmt : StmtNode<Stmt, /*abstract=*/1>;
 def OpenACCAssociatedStmtConstruct
     : StmtNode<OpenACCConstructStmt, /*abstract=*/1>;
 def OpenACCComputeConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;
+def OpenACCLoopConstruct : StmtNode<OpenACCAssociatedStmtConstruct>;

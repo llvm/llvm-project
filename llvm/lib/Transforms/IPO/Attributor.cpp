@@ -3954,7 +3954,7 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     // We look at internal functions only on-demand but if any use is not a
     // direct call or outside the current set of analyzed functions, we have
     // to do it eagerly.
-    if (F->hasLocalLinkage()) {
+    if (AC.UseLiveness && F->hasLocalLinkage()) {
       if (llvm::all_of(F->uses(), [&Functions](const Use &U) {
             const auto *CB = dyn_cast<CallBase>(U.getUser());
             return CB && CB->isCallee(&U) &&

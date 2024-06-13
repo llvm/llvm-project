@@ -86,16 +86,13 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                             ExpectedPrinted, "input.cc");
 }
 
-::testing::AssertionResult PrintedDeclCXX11Matches(
-                                  StringRef Code,
-                                  const DeclarationMatcher &NodeMatch,
-                                  StringRef ExpectedPrinted) {
+::testing::AssertionResult
+PrintedDeclCXX11Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
+                        StringRef ExpectedPrinted,
+                        PrintingPolicyAdjuster PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            NodeMatch,
-                            ExpectedPrinted,
-                            "input.cc");
+  return PrintedDeclMatches(Code, Args, NodeMatch, ExpectedPrinted, "input.cc",
+                            PolicyModifier);
 }
 
 ::testing::AssertionResult PrintedDeclCXX11nonMSCMatches(
@@ -1220,8 +1217,7 @@ TEST(DeclPrinter, TestTemplateTemplateParameterWrittenWithTypename) {
   ASSERT_TRUE(PrintedDeclCXX17Matches(
       "template <template <typename> typename Z> void A();",
       functionTemplateDecl(hasName("A")).bind("id"),
-      "template <template <typename> class Z> void A()"));
-  // WRONG: We should use typename if the parameter was written with it.
+      "template <template <typename> typename Z> void A()"));
 }
 
 TEST(DeclPrinter, TestTemplateArgumentList1) {
@@ -1387,34 +1383,38 @@ TEST(DeclPrinter, TestTemplateArgumentList16) {
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl17) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("template<typename T> struct Z {};"
-                                      "struct X {};"
-                                      "Z<X> A;",
-                                      "A", "Z<X> A"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;",
+      "A", "Z<X> A",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl18) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("template<typename T> struct Z {};"
-                                      "struct X {};"
-                                      "Z<X> A;"
-                                      "template <typename T1, int>"
-                                      "struct Y{};"
-                                      "Y<Z<X>, 2> B;",
-                                      "B", "Y<Z<X>, 2> B"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;"
+      "template <typename T1, int>"
+      "struct Y{};"
+      "Y<Z<X>, 2> B;",
+      "B", "Y<Z<X>, 2> B",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl19) {
-  ASSERT_TRUE(PrintedDeclCXX98Matches("template<typename T> struct Z {};"
-                                      "struct X {};"
-                                      "Z<X> A;"
-                                      "template <typename T1, int>"
-                                      "struct Y{};"
-                                      "Y<Z<X>, 2> B;",
-                                      "B", "Y<Z<X>, 2> B"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; };
+  ASSERT_TRUE(PrintedDeclCXX98Matches(
+      "template<typename T> struct Z {};"
+      "struct X {};"
+      "Z<X> A;"
+      "template <typename T1, int>"
+      "struct Y{};"
+      "Y<Z<X>, 2> B;",
+      "B", "Y<Z<X>, 2> B",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
 }
+
 TEST(DeclPrinter, TestCXXRecordDecl20) {
   ASSERT_TRUE(PrintedDeclCXX98Matches(
       "template <typename T, int N> class Inner;"
@@ -1431,8 +1431,8 @@ TEST(DeclPrinter, TestCXXRecordDecl20) {
       "};"
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
       "nestedInstance",
-      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; };
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = false; }));
 }
 
 TEST(DeclPrinter, TestCXXRecordDecl21) {
@@ -1451,8 +1451,8 @@ TEST(DeclPrinter, TestCXXRecordDecl21) {
       "};"
       "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100);",
       "nestedInstance",
-      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)"));
-  (void)[](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; };
+      "Outer<Inner<int, 10>, 5>::NestedStruct nestedInstance(100)",
+      [](PrintingPolicy &Policy) { Policy.SuppressTagKeyword = true; }));
 }
 
 TEST(DeclPrinter, TestFunctionParamUglified) {
@@ -1551,4 +1551,26 @@ TEST(DeclPrinter, VarDeclWithInitializer) {
   ASSERT_TRUE(
       PrintedDeclCXX17Matches("void foo() {int arr[42]; for(int a : arr);}",
                               namedDecl(hasName("a")).bind("id"), "int a"));
+}
+
+TEST(DeclPrinter, TestTemplateFinal) {
+  // By default we should print 'final' keyword whether class is implicitly or
+  // explicitly marked final.
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class FinalTemplate final {};",
+      classTemplateDecl(hasName("FinalTemplate")).bind("id"),
+      "template <typename T> class FinalTemplate final {}"));
+}
+
+TEST(DeclPrinter, TestTemplateFinalWithPolishForDecl) {
+  // clangd relies on the 'final' keyword being printed when
+  // PolishForDeclaration is enabled, so make sure it is even if implicit attrs
+  // are disabled.
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class FinalTemplate final {};",
+      classTemplateDecl(hasName("FinalTemplate")).bind("id"),
+      "template <typename T> class FinalTemplate final {}",
+      [](PrintingPolicy &Policy) { Policy.PolishForDeclaration = true; }));
 }

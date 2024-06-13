@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wuninitialized -Wno-uninitialized-const-reference -fsyntax-only -fcxx-exceptions %s -verify -std=c++1y
+// RUN: %clang_cc1 -Wuninitialized -Wno-uninitialized-const-reference -fsyntax-only -fcxx-exceptions %s -verify -std=c++1y
 
 // Stub out types for 'typeid' to work.
 namespace std { class type_info {}; }

@@ -183,6 +183,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.difftime
+
+    # internal entrypoints
+    libc.startup.baremetal.init
+    libc.startup.baremetal.fini
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -196,10 +200,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.fegetround
     libc.src.fenv.feholdexcept
     libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexcept
     libc.src.fenv.fesetexceptflag
     libc.src.fenv.fesetround
     libc.src.fenv.feraiseexcept
     libc.src.fenv.fetestexcept
+    libc.src.fenv.fetestexceptflag
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
@@ -207,6 +213,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.ceil

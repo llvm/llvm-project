@@ -56,11 +56,11 @@ module {
     // CHECK-NEXT: nse = 8
     // CHECK-NEXT: dim = ( 10, 8 )
     // CHECK-NEXT: lvl = ( 10, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 6
-    // CHECK-NEXT: crd[0] : ( 0, 1, 4, 5, 6, 9
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 4, 5, 7, 8
-    // CHECK-NEXT: crd[1] : ( 0, 7, 2, 2, 3, 4, 6, 7
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8
+    // CHECK-NEXT: pos[0] : ( 0, 6 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 4, 5, 6, 9 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 4, 5, 7, 8 )
+    // CHECK-NEXT: crd[1] : ( 0, 7, 2, 2, 3, 4, 6, 7 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %ts : tensor<10x8xf64, #Tensor1>

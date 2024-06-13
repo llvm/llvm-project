@@ -365,7 +365,7 @@ struct Procedure {
   static std::optional<Procedure> Characterize(
       const semantics::Symbol &, FoldingContext &);
   static std::optional<Procedure> Characterize(
-      const ProcedureDesignator &, FoldingContext &);
+      const ProcedureDesignator &, FoldingContext &, bool emitError);
   static std::optional<Procedure> Characterize(
       const ProcedureRef &, FoldingContext &);
   static std::optional<Procedure> Characterize(
@@ -386,7 +386,7 @@ struct Procedure {
   bool HasExplicitInterface() const {
     return !attrs.test(Attr::ImplicitInterface);
   }
-  int FindPassIndex(std::optional<parser::CharBlock>) const;
+  std::optional<int> FindPassIndex(std::optional<parser::CharBlock>) const;
   bool CanBeCalledViaImplicitInterface(std::string *whyNot = nullptr) const;
   bool CanOverride(const Procedure &, std::optional<int> passIndex) const;
   bool IsCompatibleWith(const Procedure &, bool ignoreImplicitVsExplicit,

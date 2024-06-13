@@ -8,21 +8,21 @@
 //===----------------------------------------------------------------------===//
 
 export {
-  using ::clock_t;
-  using ::size_t;
-  using ::time_t;
+  using ::clock_t _LIBCPP_USING_IF_EXISTS;
+  using ::size_t _LIBCPP_USING_IF_EXISTS;
+  using ::time_t _LIBCPP_USING_IF_EXISTS;
 
-  using ::timespec;
-  using ::tm;
+  using ::timespec _LIBCPP_USING_IF_EXISTS;
+  using ::tm _LIBCPP_USING_IF_EXISTS;
 
-  using ::asctime;
-  using ::clock;
-  using ::ctime;
-  using ::difftime;
-  using ::gmtime;
-  using ::localtime;
-  using ::mktime;
-  using ::strftime;
-  using ::time;
+  using ::asctime _LIBCPP_USING_IF_EXISTS;
+  using ::clock _LIBCPP_USING_IF_EXISTS;
+  using ::ctime _LIBCPP_USING_IF_EXISTS;
+  using ::difftime _LIBCPP_USING_IF_EXISTS;
+  using ::gmtime _LIBCPP_USING_IF_EXISTS;
+  using ::localtime _LIBCPP_USING_IF_EXISTS;
+  using ::mktime _LIBCPP_USING_IF_EXISTS;
+  using ::strftime _LIBCPP_USING_IF_EXISTS;
+  using ::time _LIBCPP_USING_IF_EXISTS;
   using ::timespec_get _LIBCPP_USING_IF_EXISTS;
 } // export

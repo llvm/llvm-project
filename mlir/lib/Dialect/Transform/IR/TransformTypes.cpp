@@ -44,7 +44,7 @@ DiagnosedSilenceableFailure
 transform::AffineMapParamType::checkPayload(Location loc,
                                             ArrayRef<Attribute> payload) const {
   for (Attribute attr : payload) {
-    if (!attr.isa<AffineMapAttr>()) {
+    if (!mlir::isa<AffineMapAttr>(attr)) {
       return emitSilenceableError(loc)
              << "expected affine map attribute, got " << attr;
     }
@@ -144,7 +144,7 @@ DiagnosedSilenceableFailure
 transform::TypeParamType::checkPayload(Location loc,
                                        ArrayRef<Attribute> payload) const {
   for (Attribute attr : payload) {
-    if (!attr.isa<TypeAttr>()) {
+    if (!mlir::isa<TypeAttr>(attr)) {
       return emitSilenceableError(loc)
              << "expected type attribute, got " << attr;
     }

@@ -16,10 +16,10 @@
 namespace clang {
 namespace format {
 
-class FormatTestJson : public ::testing::Test {
+class FormatTestJson : public testing::Test {
 protected:
-  static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style) {
+  static std::string format(StringRef Code, unsigned Offset, unsigned Length,
+                            const FormatStyle &Style) {
     LLVM_DEBUG(llvm::errs() << "---\n");
     LLVM_DEBUG(llvm::errs() << Code << "\n\n");
 
@@ -47,7 +47,7 @@ protected:
   }
 
   static std::string
-  format(llvm::StringRef Code,
+  format(StringRef Code,
          const FormatStyle &Style = getLLVMStyle(FormatStyle::LK_Json)) {
     return format(Code, 0, Code.size(), Style);
   }
@@ -58,13 +58,12 @@ protected:
     return Style;
   }
 
-  static void verifyFormatStable(llvm::StringRef Code,
-                                 const FormatStyle &Style) {
+  static void verifyFormatStable(StringRef Code, const FormatStyle &Style) {
     EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
   }
 
   static void
-  verifyFormat(llvm::StringRef Code,
+  verifyFormat(StringRef Code,
                const FormatStyle &Style = getLLVMStyle(FormatStyle::LK_Json)) {
     verifyFormatStable(Code, Style);
     EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));

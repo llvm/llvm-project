@@ -45,13 +45,13 @@ struct Requirements {
   const bool IsSatisfiable;
   const std::optional<Capability::Capability> Cap;
   const ExtensionList Exts;
-  const unsigned MinVer; // 0 if no min version is required.
-  const unsigned MaxVer; // 0 if no max version is required.
+  const VersionTuple MinVer; // 0 if no min version is required.
+  const VersionTuple MaxVer; // 0 if no max version is required.
 
   Requirements(bool IsSatisfiable = false,
                std::optional<Capability::Capability> Cap = {},
-               ExtensionList Exts = {}, unsigned MinVer = 0,
-               unsigned MaxVer = 0)
+               ExtensionList Exts = {}, VersionTuple MinVer = VersionTuple(),
+               VersionTuple MaxVer = VersionTuple())
       : IsSatisfiable(IsSatisfiable), Cap(Cap), Exts(Exts), MinVer(MinVer),
         MaxVer(MaxVer) {}
   Requirements(Capability::Capability Cap) : Requirements(true, {Cap}) {}
@@ -69,8 +69,8 @@ private:
   DenseSet<unsigned> AvailableCaps;
 
   SmallSet<Extension::Extension, 4> AllExtensions;
-  unsigned MinVersion; // 0 if no min version is defined.
-  unsigned MaxVersion; // 0 if no max version is defined.
+  VersionTuple MinVersion; // 0 if no min version is defined.
+  VersionTuple MaxVersion; // 0 if no max version is defined.
   // Add capabilities to AllCaps, recursing through their implicitly declared
   // capabilities too.
   void recursiveAddCapabilities(const CapabilityList &ToPrune);
@@ -79,17 +79,15 @@ private:
   void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
 
 public:
-  RequirementHandler() : MinVersion(0), MaxVersion(0) {}
+  RequirementHandler() {}
   void clear() {
     MinimalCaps.clear();
     AllCaps.clear();
     AvailableCaps.clear();
     AllExtensions.clear();
-    MinVersion = 0;
-    MaxVersion = 0;
+    MinVersion = VersionTuple();
+    MaxVersion = VersionTuple();
   }
-  unsigned getMinVersion() const { return MinVersion; }
-  unsigned getMaxVersion() const { return MaxVersion; }
   const CapabilityList &getMinimalCapabilities() const { return MinimalCaps; }
   const SmallSet<Extension::Extension, 4> &getExtensions() const {
     return AllExtensions;

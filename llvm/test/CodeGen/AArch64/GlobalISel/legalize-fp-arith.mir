@@ -96,10 +96,9 @@ name:            test_fmul_v8s32
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fmul_v8s32
-    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
-    ; CHECK: [[FMUL:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[BUILD_VECTOR]], [[BUILD_VECTOR]]
-    ; CHECK: [[FMUL1:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[BUILD_VECTOR]], [[BUILD_VECTOR]]
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[FMUL:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[DEF]], [[DEF]]
+    ; CHECK: [[FMUL1:%[0-9]+]]:_(<4 x s32>) = G_FMUL [[DEF]], [[DEF]]
     ; CHECK: $q0 = COPY [[FMUL]](<4 x s32>)
     ; CHECK: $q1 = COPY [[FMUL1]](<4 x s32>)
     %0:_(<8 x s32>) = G_IMPLICIT_DEF

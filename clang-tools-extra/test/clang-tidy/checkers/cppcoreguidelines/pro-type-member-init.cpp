@@ -463,12 +463,6 @@ struct NegativeIncompleteArrayMember {
   char e[];
 };
 
-template <typename T> class NoCrash {
-  class B : public NoCrash {
-    template <typename U> B(U u) {}
-  };
-};
-
 struct PositiveBitfieldMember {
   PositiveBitfieldMember() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: F

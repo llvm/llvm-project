@@ -263,7 +263,11 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
 
   CoerceBuilder CB(getVMContext(), getDataLayout());
   CB.addStruct(0, StrTy);
-  CB.pad(llvm::alignTo(CB.DL.getTypeSizeInBits(StrTy), 64));
+  // All structs, even empty ones, should take up a register argument slot,
+  // so pin the minimum struct size to one bit.
+  CB.pad(llvm::alignTo(
+      std::max(CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue(), uint64_t(1)),
+      64));
 
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();

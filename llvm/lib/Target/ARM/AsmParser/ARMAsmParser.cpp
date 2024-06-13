@@ -11104,7 +11104,7 @@ ARMAsmParser::checkEarlyTargetMatchPredicate(MCInst &Inst,
       return Match_MnemonicFail;
     }
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return Match_Success;
   }
