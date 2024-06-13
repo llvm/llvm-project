@@ -2201,3 +2201,14 @@ define i8 @mul_not_nsw_nonneg(i8 %x, i8 %y) {
   %mul = mul i8 %x, %y
   ret i8 %mul
 }
+
+define <4 x i32> @combine_vec_mul_shl_oneuse0(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @combine_vec_mul_shl_oneuse0(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[X:%.*]], <i32 1, i32 2, i32 8, i32 16>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %1 = shl <4 x i32> %x, <i32 1, i32 2, i32 8, i32 16>
+  %2 = mul <4 x i32> %1, %y
+  ret <4 x i32> %2
+}
