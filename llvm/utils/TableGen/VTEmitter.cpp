@@ -73,6 +73,9 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsVector = VT->getValueAsBit("isVector");
     bool IsScalable = VT->getValueAsBit("isScalable");
     bool IsNormalValueType =  VT->getValueAsBit("isNormalValueType");
+    int64_t NElem = IsVector ? VT->getValueAsInt("nElem") : 0;
+    StringRef EltName = IsVector ? VT->getValueAsDef("ElementType")->getName()
+                                 : "INVALID_SIMPLE_VALUE_TYPE";
 
     UpdateVTRange("INTEGER_FIXEDLEN_VECTOR_VALUETYPE", Name,
                   IsInteger && IsVector && !IsScalable);
@@ -97,7 +100,9 @@ void VTEmitter::run(raw_ostream &OS) {
        << (IsInteger ? Name[0] == 'i' ? 3 : 1 : 0) << ", "
        << (IsFP ? Name[0] == 'f' ? 3 : 1 : 0) << ", "
        << IsVector << ", "
-       << IsScalable << ")\n";
+       << IsScalable << ", "
+       << NElem << ", "
+       << EltName << ")\n";
     // clang-format on
   }
   OS << "#endif\n\n";

@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <unordered_map>
 
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/Utils.h"
@@ -558,7 +559,8 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
+                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+                   KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Print more elaborate kernel launch info for AMDGPU
@@ -2802,9 +2804,10 @@ private:
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
     KernelArgsTy KernelArgs = {};
-    if (auto Err = AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
-                                           /*NumBlocks=*/1ul, KernelArgs,
-                                           /*Args=*/nullptr, AsyncInfoWrapper))
+    if (auto Err =
+            AMDGPUKernel.launchImpl(*this, /*NumThread=*/1u,
+                                    /*NumBlocks=*/1ul, KernelArgs,
+                                    KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
     Error Err = Plugin::success();
@@ -3265,12 +3268,11 @@ private:
 
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads, uint64_t NumBlocks,
-                                 KernelArgsTy &KernelArgs, void *Args,
+                                 KernelArgsTy &KernelArgs,
+                                 KernelLaunchParamsTy LaunchParams,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
-  const uint32_t LaunchParamsSize = KernelArgs.NumArgs * sizeof(void *);
-
-  if (ArgsSize != LaunchParamsSize &&
-      ArgsSize != LaunchParamsSize + getImplicitArgsSize())
+  if (ArgsSize != LaunchParams.Size &&
+      ArgsSize != LaunchParams.Size + getImplicitArgsSize())
     return Plugin::error("Mismatch of kernel arguments size");
 
   AMDGPUPluginTy &AMDGPUPlugin =
@@ -3294,10 +3296,10 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     return Err;
 
   utils::AMDGPUImplicitArgsTy *ImplArgs = nullptr;
-  if (ArgsSize == LaunchParamsSize + getImplicitArgsSize()) {
+  if (ArgsSize == LaunchParams.Size + getImplicitArgsSize()) {
     // Initialize implicit arguments.
     ImplArgs = reinterpret_cast<utils::AMDGPUImplicitArgsTy *>(
-        advanceVoidPtr(AllArgs, LaunchParamsSize));
+        advanceVoidPtr(AllArgs, LaunchParams.Size));
 
     // Initialize the implicit arguments to zero.
     std::memset(ImplArgs, 0, getImplicitArgsSize());
@@ -3306,8 +3308,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // Copy the explicit arguments.
   // TODO: We should expose the args memory manager alloc to the common part as
   // 	   alternative to copying them twice.
-  if (LaunchParamsSize)
-    std::memcpy(AllArgs, *static_cast<void **>(Args), LaunchParamsSize);
+  if (LaunchParams.Size)
+    std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
 
