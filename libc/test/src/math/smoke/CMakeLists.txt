@@ -2597,6 +2597,9 @@ add_fp_unittest(
   HDRS
     SqrtTest.h
   DEPENDS
+    # The dependency on sqrtf128 is used to disable the test when float128
+    # support is not available.
+    libc.src.math.sqrtf128
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
