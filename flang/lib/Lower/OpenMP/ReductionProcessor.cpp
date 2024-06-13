@@ -593,7 +593,7 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
       createReductionCleanupRegion(builder, loc, reductionDecl);
     } else {
       assert(!isAllocatableOrPointer &&
-             "Allocatable arrays must be heap allocated");
+             "Pointer-like arrays must be heap allocated");
     }
 
     // Put the temporary inside of a box:
