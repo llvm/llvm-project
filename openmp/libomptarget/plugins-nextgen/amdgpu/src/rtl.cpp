@@ -56,18 +56,8 @@
 #define BIGENDIAN_CPU
 #endif
 
-#if defined(__has_include)
-#if __has_include("hsa/hsa.h")
-#include "hsa/hsa.h"
-#include "hsa/hsa_ext_amd.h"
-#elif __has_include("hsa.h")
 #include "hsa.h"
 #include "hsa_ext_amd.h"
-#endif
-#else
-#include "hsa/hsa.h"
-#include "hsa/hsa_ext_amd.h"
-#endif
 
 namespace llvm {
 namespace omp {

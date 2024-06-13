@@ -38,13 +38,15 @@ add_definitions(-DDEBUG_PREFIX="TARGET AMDGPU RTL")
 set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
 
+# Required by both optional dynamic_hsa/hsa.cpp and non-optional src/rtl.cpp.
+include_directories(dynamic_hsa)
+
 if (${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   libomptarget_say("Building AMDGPU NextGen plugin linked against libhsa")
   set(LIBOMPTARGET_EXTRA_SOURCE)
   set(LIBOMPTARGET_DEP_LIBRARIES hsa-runtime64::hsa-runtime64)
 else()
   libomptarget_say("Building AMDGPU NextGen plugin for dlopened libhsa")
-  include_directories(dynamic_hsa)
   set(LIBOMPTARGET_EXTRA_SOURCE dynamic_hsa/hsa.cpp)
   set(LIBOMPTARGET_DEP_LIBRARIES)
 endif()
