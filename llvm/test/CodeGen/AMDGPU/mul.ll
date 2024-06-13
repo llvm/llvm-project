@@ -374,6 +374,7 @@ define amdgpu_kernel void @v_mul_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_mov_b32 s8, s2
 ; GFX1300-NEXT:    s_mov_b32 s9, s3
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    buffer_load_b128 v[0:3], off, s[8:11], null
 ; GFX1300-NEXT:    buffer_load_b128 v[4:7], off, s[8:11], null offset:16
 ; GFX1300-NEXT:    s_mov_b32 s4, s0
@@ -525,6 +526,7 @@ define amdgpu_kernel void @s_trunc_i64_mul_to_i32(ptr addrspace(1) %out, i64 %a,
 ;
 ; GFX1300-LABEL: s_trunc_i64_mul_to_i32:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1300-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
@@ -721,6 +723,7 @@ define amdgpu_kernel void @v_trunc_i64_mul_to_i32(ptr addrspace(1) %out, ptr add
 ;
 ; GFX1300-LABEL: v_trunc_i64_mul_to_i32:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1300-NEXT:    s_mov_b32 s10, -1
@@ -1721,6 +1724,7 @@ define amdgpu_kernel void @s_mul_i32(ptr addrspace(1) %out, [8 x i32], i32 %a, [
 ;
 ; GFX1300-LABEL: s_mul_i32:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x2
 ; GFX1300-NEXT:    s_load_b32 s2, s[0:1], 0x4c
 ; GFX1300-NEXT:    s_load_b32 s3, s[0:1], 0x70
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -2037,6 +2041,7 @@ define amdgpu_kernel void @s_mul_i1(ptr addrspace(1) %out, [8 x i32], i1 %a, [8 
 ;
 ; GFX1300-LABEL: s_mul_i1:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x2
 ; GFX1300-NEXT:    s_load_b32 s2, s[0:1], 0x4c
 ; GFX1300-NEXT:    s_load_b32 s3, s[0:1], 0x70
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -2248,6 +2253,7 @@ define amdgpu_kernel void @v_mul_i1(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_mov_b32 s8, s2
 ; GFX1300-NEXT:    s_mov_b32 s9, s3
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    buffer_load_u8 v0, off, s[8:11], null
 ; GFX1300-NEXT:    buffer_load_u8 v1, off, s[8:11], null offset:4
 ; GFX1300-NEXT:    s_mov_b32 s4, s0
@@ -2440,6 +2446,7 @@ define amdgpu_kernel void @s_mul_i64(ptr addrspace(1) %out, i64 %a, i64 %b) noun
 ;
 ; GFX1300-LABEL: s_mul_i64:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
@@ -2671,6 +2678,7 @@ define amdgpu_kernel void @v_mul_i64(ptr addrspace(1) %out, ptr addrspace(1) %ap
 ;
 ; GFX1300-LABEL: v_mul_i64:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
 ; GFX1300-NEXT:    s_mov_b32 s10, -1
@@ -3749,6 +3757,7 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ;
 ; GFX1300-LABEL: s_mul_i128:
 ; GFX1300:       ; %bb.0: ; %entry
+; GFX1300-NEXT:    s_clause 0x2
 ; GFX1300-NEXT:    s_load_b128 s[4:7], s[0:1], 0x7c
 ; GFX1300-NEXT:    s_load_b128 s[8:11], s[0:1], 0x4c
 ; GFX1300-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
@@ -4117,6 +4126,7 @@ define amdgpu_kernel void @v_mul_i128(ptr addrspace(1) %out, ptr addrspace(1) %a
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    s_load_b128 s[0:3], s[0:1], 0x2c
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
+; GFX1300-NEXT:    s_clause 0x1
 ; GFX1300-NEXT:    global_load_b128 v[2:5], v0, s[2:3] scale_offset
 ; GFX1300-NEXT:    global_load_b128 v[6:9], v0, s[0:1] scale_offset
 ; GFX1300-NEXT:    s_wait_loadcnt 0x1

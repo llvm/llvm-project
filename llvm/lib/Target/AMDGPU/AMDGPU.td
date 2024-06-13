@@ -1962,6 +1962,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureSupportsSRAMECC,
    FeatureMLMathInsts,
    FeatureVGPRIndexingRegisters,
+   FeatureMaxHardClauseLength63,
    FeatureMinimum3Maximum3PKF16
 ]>;
 

@@ -1201,11 +1201,19 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (T->isArrayType()) {
+    auto Eval = [&](Expr *Init, unsigned ElemIndex) {
+      return visitArrayElemInit(ElemIndex, Init);
+    };
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
-      if (!this->visitArrayElemInit(ElementIndex, Init))
-        return false;
-      ++ElementIndex;
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+        if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
+          return false;
+      } else {
+        if (!this->visitArrayElemInit(ElementIndex, Init))
+          return false;
+        ++ElementIndex;
+      }
     }
 
     // Expand the filler expression.
@@ -1349,6 +1357,12 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
       return true;
   }
   return this->delegate(E->getSubExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
+  auto It = E->begin();
+  return this->visit(*It);
 }
 
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
@@ -3223,6 +3237,8 @@ bool ByteCodeExprGen<Emitter>::visitAPValue(const APValue &Val,
   assert(!DiscardResult);
   if (Val.isInt())
     return this->emitConst(Val.getInt(), ValType, E);
+  else if (Val.isFloat())
+    return this->emitConstFloat(Val.getFloat(), E);
 
   if (Val.isLValue()) {
     if (Val.isNullPointer())
@@ -3253,7 +3269,7 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
       const APValue &F = Val.getStructField(I);
       const Record::Field *RF = R->getField(I);
 
-      if (F.isInt() || F.isLValue() || F.isMemberPointer()) {
+      if (F.isInt() || F.isFloat() || F.isLValue() || F.isMemberPointer()) {
         PrimType T = classifyPrim(RF->Decl->getType());
         if (!this->visitAPValue(F, T, E))
           return false;
@@ -3948,7 +3964,7 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // Visit local const variables like normal.
       if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
-          VD->getType().isConstQualified()) {
+          VD->getType().isConstant(Ctx.getASTContext())) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.
@@ -3957,8 +3973,8 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->getAnyInitializer() && VD->getType().isConstQualified() &&
-        !VD->isWeak()) {
+        VD && VD->getAnyInitializer() &&
+        VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.
