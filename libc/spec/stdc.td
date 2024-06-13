@@ -134,8 +134,8 @@ def StdC : StandardSpec<"stdc"> {
           Macro<"FE_DFL_ENV">
       ],
       [
-          NamedType<"fenv_t">,
-          NamedType<"fexcept_t">,
+          FEnvT,
+          FExceptT,
       ], // Types
       [], // Enumerations
       [
