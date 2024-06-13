@@ -1451,8 +1451,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       assert(AggrDeductionCandidateParamTypes);
 
       // In the presence of a braced-init-list within the initializer, we should
-      // not fall through to the brace-elision logic, even if the brace elision
-      // is applicable. Given the example,
+      // not perform brace-elision, even if brace elision would otherwise be
+      // applicable. For example, given:
       //
       // template <class T> struct Foo {
       //   T t[2];
