@@ -810,10 +810,6 @@ define <4 x i64> @hadd32_zext_lsr(<4 x i32> %src1, <4 x i32> %src2) {
 define <4 x i16> @hadd8_sext_asr(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK-LABEL: hadd8_sext_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl.4h v1, v1, #8
-; CHECK-NEXT:    shl.4h v0, v0, #8
-; CHECK-NEXT:    sshr.4h v1, v1, #8
-; CHECK-NEXT:    sshr.4h v0, v0, #8
 ; CHECK-NEXT:    shadd.4h v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <4 x i8> %src1 to <4 x i16>
@@ -870,10 +866,6 @@ define <4 x i16> @hadd8_zext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 define <2 x i16> @hadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-LABEL: hadd8x2_sext_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl.2s v1, v1, #24
-; CHECK-NEXT:    shl.2s v0, v0, #24
-; CHECK-NEXT:    sshr.2s v1, v1, #24
-; CHECK-NEXT:    sshr.2s v0, v0, #24
 ; CHECK-NEXT:    shadd.2s v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
@@ -934,10 +926,6 @@ define <2 x i16> @hadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 define <4 x i16> @rhadd8_sext_asr(<4 x i8> %src1, <4 x i8> %src2) {
 ; CHECK-LABEL: rhadd8_sext_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl.4h v1, v1, #8
-; CHECK-NEXT:    shl.4h v0, v0, #8
-; CHECK-NEXT:    sshr.4h v1, v1, #8
-; CHECK-NEXT:    sshr.4h v0, v0, #8
 ; CHECK-NEXT:    srhadd.4h v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <4 x i8> %src1 to <4 x i16>
@@ -1000,10 +988,6 @@ define <4 x i16> @rhadd8_zext_lsr(<4 x i8> %src1, <4 x i8> %src2) {
 define <2 x i16> @rhadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-LABEL: rhadd8x2_sext_asr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl.2s v1, v1, #24
-; CHECK-NEXT:    shl.2s v0, v0, #24
-; CHECK-NEXT:    sshr.2s v1, v1, #24
-; CHECK-NEXT:    sshr.2s v0, v0, #24
 ; CHECK-NEXT:    srhadd.2s v0, v0, v1
 ; CHECK-NEXT:    ret
   %zextsrc1 = sext <2 x i8> %src1 to <2 x i16>
