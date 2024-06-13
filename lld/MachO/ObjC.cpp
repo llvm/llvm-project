@@ -675,15 +675,18 @@ void ObjcCategoryMerger::parseProtocolListInfo(const ConcatInputSection *isec,
   ptrList.structCount += protocolCount;
   ptrList.structSize = target->wordSize;
 
-  uint32_t expectedListSize =
+  [[maybe_unused]] uint32_t expectedListSize =
       (protocolCount * target->wordSize) +
       /*header(count)*/ protocolListHeaderLayout.totalSize +
       /*extra null value*/ target->wordSize;
-  assert(expectedListSize == ptrListSym->isec()->data.size() &&
-         "Protocol list does not match expected size");
 
-  // Suppress unsuded var warning
-  (void)expectedListSize;
+  // On Swift, the protocol list does not have the extra (unnecessary) null
+  [[maybe_unused]] uint32_t expectedListSizeSwift =
+      expectedListSize - target->wordSize;
+
+  assert((expectedListSize == ptrListSym->isec()->data.size() ||
+          expectedListSizeSwift == ptrListSym->isec()->data.size()) &&
+         "Protocol list does not match expected size");
 
   uint32_t off = protocolListHeaderLayout.totalSize;
   for (uint32_t inx = 0; inx < protocolCount; ++inx) {
@@ -1148,10 +1151,9 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
       if (nlCategories.count(categorySym))
         continue;
 
-      // We only support ObjC categories (no swift + @objc)
-      // TODO: Support swift + @objc categories also
-      if (!categorySym->getName().starts_with(objc::symbol_names::category))
-        continue;
+      assert(categorySym->getName().starts_with(objc::symbol_names::category) ||
+             categorySym->getName().starts_with(
+                 objc::symbol_names::swift_objc_category));
 
       auto *catBodyIsec = dyn_cast<ConcatInputSection>(categorySym->isec());
       assert(catBodyIsec &&
