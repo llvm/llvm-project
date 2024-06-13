@@ -138,6 +138,7 @@ template <typename T> struct IsTernaryInput<TernaryInput<T>> {
 };
 
 template <typename T> struct MakeScalarInput : cpp::type_identity<T> {};
+
 template <typename T>
 struct MakeScalarInput<TernaryInput<T>> : cpp::type_identity<T> {};
 
