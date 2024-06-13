@@ -458,15 +458,14 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
     auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
 
-    auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
-    if (TermBr) {
-      // Set each forward successor here when it is created, excluding
-      // backedges. A backward successor is set when the branch is created.
-      unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
-      assert(!TermBr->getSuccessor(idx) &&
-             "Trying to reset an existing successor block.");
-      TermBr->setSuccessor(idx, IRBB);
-    }
+    auto *TermBr = cast<BranchInst>(PredBBTerminator);
+    // Set each forward successor here when it is created, excluding
+    // backedges. A backward successor is set when the branch is created.
+    unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+    assert(!TermBr->getSuccessor(idx) &&
+           "Trying to reset an existing successor block.");
+    TermBr->setSuccessor(idx, IRBB);
+    State->CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, IRBB}});
   }
 }
 
@@ -919,6 +918,16 @@ void VPlan::execute(VPTransformState *State) {
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
+
+  // Disconnect the middle block from its single successor (the scalar loop
+  // header) in both the CFG and DT. The branch will be created during VPlan
+  // execution.
+  BasicBlock *MiddleBB = State->CFG.ExitBB;
+  State->CFG.DTU.applyUpdates(
+      {{DominatorTree::Delete, MiddleBB, MiddleBB->getSingleSuccessor()}});
+  auto *BrInst = new UnreachableInst(MiddleBB->getContext());
+  BrInst->insertBefore(MiddleBB->getTerminator());
+  MiddleBB->getTerminator()->eraseFromParent();
 
   // Generate code in the loop pre-header and body.
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))

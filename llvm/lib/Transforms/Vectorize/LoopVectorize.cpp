@@ -2970,18 +2970,6 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarPreHeader =
       SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
                  nullptr, Twine(Prefix) + "scalar.ph");
-
-  auto *BrInst = new UnreachableInst(LoopMiddleBlock->getContext());
-  ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
-
-  // Update dominator for loop exit. During skeleton creation, only the vector
-  // pre-header and the middle block are created. The vector loop is entirely
-  // created during VPlan exection.
-  if (!Cost->requiresScalarEpilogue(VF.isVector()))
-    // If there is an epilogue which must run, there's no edge from the
-    // middle block to exit blocks  and thus no need to update the immediate
-    // dominator of the exit blocks.
-    DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
 }
 
 PHINode *InnerLoopVectorizer::createInductionResumeValue(
@@ -3100,7 +3088,8 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton(
   |    [  ]_|   <-- vector loop (created during VPlan execution).
   |     |
   |     v
-  \   -[ ]   <--- middle-block.
+  \   -[ ]   <--- middle-block (branch to successors created during VPlan
+   |    |                       execution)
    \/   |
    /\   v
    | ->[ ]     <--- new preheader.
@@ -7701,11 +7690,8 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
       VecEpilogueIterationCountCheck,
       VecEpilogueIterationCountCheck->getSinglePredecessor());
 
-  if (auto *N = DT->getNode(LoopScalarPreHeader))
-    DT->changeImmediateDominator(LoopScalarPreHeader,
-                                 EPI.EpilogueIterationCountCheck);
-  else
-    DT->addNewBlock(LoopScalarPreHeader, EPI.EpilogueIterationCountCheck);
+  DT->changeImmediateDominator(LoopScalarPreHeader,
+                               EPI.EpilogueIterationCountCheck);
   if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF.isVector()))
     // If there is an epilogue which must run, there's no edge from the
     // middle block to exit blocks  and thus no need to update the immediate
@@ -7814,7 +7800,6 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
     setBranchWeights(BI, Weights, /*IsExpected=*/false);
   }
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
-
   LoopBypassBlocks.push_back(Insert);
   return Insert;
 }
@@ -10151,6 +10136,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
         }
 
+        assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
+               "DT not preserved correctly");
         LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
                         DT, true, &ExpandedSCEVs);
         ++LoopsEpilogueVectorized;
