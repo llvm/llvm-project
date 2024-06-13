@@ -1296,10 +1296,13 @@ struct AcImpliedDo {
 };
 
 // R808 language-binding-spec ->
-//        BIND ( C [, NAME = scalar-default-char-constant-expr] )
+//        BIND ( C [, NAME = scalar-default-char-constant-expr ]
+//                 [, CDEFINED ] )
 // R1528 proc-language-binding-spec -> language-binding-spec
-WRAPPER_CLASS(
-    LanguageBindingSpec, std::optional<ScalarDefaultCharConstantExpr>);
+struct LanguageBindingSpec {
+  TUPLE_CLASS_BOILERPLATE(LanguageBindingSpec);
+  std::tuple<std::optional<ScalarDefaultCharConstantExpr>, bool> t;
+};
 
 // R852 named-constant-def -> named-constant = constant-expr
 struct NamedConstantDef {

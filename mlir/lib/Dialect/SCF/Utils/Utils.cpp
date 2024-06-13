@@ -20,12 +20,12 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
@@ -382,7 +382,7 @@ LogicalResult mlir::loopUnrollByFactor(
     int64_t stepCst = stepCstOp.value();
     assert(lbCst >= 0 && ubCst >= 0 && stepCst >= 0 &&
            "expected positive loop bounds and step");
-    int64_t tripCount = mlir::ceilDiv(ubCst - lbCst, stepCst);
+    int64_t tripCount = llvm::divideCeilSigned(ubCst - lbCst, stepCst);
 
     if (unrollFactor == 1) {
       if (tripCount == 1 && failed(forOp.promoteIfSingleIteration(rewriter)))

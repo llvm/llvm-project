@@ -938,15 +938,14 @@ define <4 x float> @fadd_mismatched_types(<4 x float> %x, <4 x float> %y) {
 }
 
 define void @maximal_legal_fpmath(ptr %addr1, ptr %addr2, ptr %result, float %val) {
-; CHECK-LABEL: define void @maximal_legal_fpmath(
-; CHECK-SAME: ptr [[ADDR1:%.*]], ptr [[ADDR2:%.*]], ptr [[RESULT:%.*]], float [[VAL:%.*]]) {
-; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[VAL]], i64 0
+; CHECK-LABEL: @maximal_legal_fpmath(
+; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[VAL:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[SPLATINSERT]], <4 x float> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC1:%.*]] = load <16 x float>, ptr [[ADDR1]], align 4
-; CHECK-NEXT:    [[VEC2:%.*]] = load <16 x float>, ptr [[ADDR2]], align 4
+; CHECK-NEXT:    [[VEC1:%.*]] = load <16 x float>, ptr [[ADDR1:%.*]], align 4
+; CHECK-NEXT:    [[VEC2:%.*]] = load <16 x float>, ptr [[ADDR2:%.*]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <16 x float> [[TMP1]], [[VEC2]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd reassoc contract <16 x float> [[VEC1]], [[TMP2]]
-; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[RESULT]], align 4
+; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[RESULT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %splatinsert = insertelement <4 x float> poison, float %val, i64 0
