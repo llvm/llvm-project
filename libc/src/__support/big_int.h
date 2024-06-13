@@ -983,6 +983,12 @@ using UInt = BigInt<Bits, false, internal::WordTypeSelectorT<Bits>>;
 template <size_t Bits>
 using Int = BigInt<Bits, true, internal::WordTypeSelectorT<Bits>>;
 
+// Provides limits of BigInt.
+template <size_t Bits, bool Signed, typename T>
+struct cpp::numeric_limits<BigInt<Bits, Signed, T>> {
+  LIBC_INLINE_VAR static constexpr int digits = Bits - Signed;
+};
+
 // Provides limits of U/Int<128>.
 template <> class cpp::numeric_limits<UInt<128>> {
 public:
@@ -1072,6 +1078,16 @@ struct make_integral_or_big_int_signed<T, cpp::enable_if_t<is_big_int_v<T>>>
 template <typename T>
 using make_integral_or_big_int_signed_t =
     typename make_integral_or_big_int_signed<T>::type;
+
+// is_unsigned_integral_or_big_int
+template <typename T>
+struct is_unsigned_integral_or_big_int
+    : cpp::bool_constant<
+          cpp::is_same_v<T, make_integral_or_big_int_unsigned_t<T>>> {};
+
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_unsigned_integral_or_big_int_v =
+    is_unsigned_integral_or_big_int<T>::value;
 
 namespace cpp {
 
