@@ -1333,7 +1333,7 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN vp ";
+  O << Indent << "WIDEN-VP ";
   printAsOperand(O, SlotTracker);
   O << " = " << Instruction::getOpcodeName(getOpcode());
   printFlags(O);
