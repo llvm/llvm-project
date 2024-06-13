@@ -3025,7 +3025,7 @@ AArch64TargetLowering::EmitInitTPIDR2Object(MachineInstr &MI,
 
 MachineBasicBlock *
 AArch64TargetLowering::EmitAllocateZABuffer(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const {
+                                            MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
