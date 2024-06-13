@@ -24,29 +24,11 @@ program main
   !$omp end target
 
   call modify_2
+  call modify_3
 
   print *, var1
   print *, var2
   print *, var3
-
-  call modify_3
-
-  if (var1 /= 20) then
-      print*, "======= FORTRAN Test Failed! ======="
-      stop 1
-  end if
-
-  if (var2 /= 100) then
-    print*, "======= FORTRAN Test Failed! ======="
-    stop 1
-  end if
-
-  if (var3 /= 60) then
-    print*, "======= FORTRAN Test Failed! ======="
-    stop 1
-  end if
-
-  print*, "======= FORTRAN Test Passed! ======="
 end program
 
 subroutine modify_1
@@ -71,11 +53,6 @@ subroutine modify_2
 !$omp end target
 
   print *, copy
-
-  if (copy /= 80) then
-    print*, "======= FORTRAN Test Failed! ======="
-    stop 1
-  end if
 end
 
 subroutine modify_3
