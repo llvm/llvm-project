@@ -847,6 +847,7 @@ Bug Fixes to C++ Support
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
+- Fix an assertion failure caused by non-lvalue usage in lvalue context. (GH95366).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

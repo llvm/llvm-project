@@ -9325,6 +9325,9 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       Result.IsNullPtr = false;
       return true;
     } else {
+      if (!Value.isLValue())
+        return false;
+
       // Cast is of an lvalue, no need to change value.
       Result.setFrom(Info.Ctx, Value);
       return true;
