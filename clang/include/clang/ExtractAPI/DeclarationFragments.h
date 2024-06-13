@@ -27,6 +27,8 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/MacroInfo.h"
+#include <iterator>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -113,28 +115,26 @@ public:
 
   ConstFragmentIterator cend() const { return Fragments.cend(); }
 
-  // Add a new Fragment at an arbitrary offset.
-  DeclarationFragments &insert(FragmentIterator It, StringRef Spelling,
-                               FragmentKind Kind,
-                               StringRef PreciseIdentifier = "",
-                               const Decl *Declaration = nullptr) {
-    Fragments.insert(It,
-                     Fragment(Spelling, Kind, PreciseIdentifier, Declaration));
-    return *this;
+  /// Prepend another DeclarationFragments to the beginning.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// appending to chain up consecutive operations.
+  DeclarationFragments &prepend(DeclarationFragments Other) {
+    return insert(begin(), std::move(Other));
   }
 
-  DeclarationFragments &insert(FragmentIterator It,
-                               DeclarationFragments &&Other) {
-    Fragments.insert(It, std::make_move_iterator(Other.Fragments.begin()),
-                     std::make_move_iterator(Other.Fragments.end()));
-    Other.Fragments.clear();
-    return *this;
+  /// Append another DeclarationFragments to the end.
+  ///
+  /// \returns a reference to the DeclarationFragments object itself after
+  /// appending to chain up consecutive operations.
+  DeclarationFragments &append(DeclarationFragments Other) {
+    return insert(end(), std::move(Other));
   }
 
   /// Append a new Fragment to the end of the Fragments.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
-  /// appending to chain up consecutive appends.
+  /// appending to chain up consecutive operations.
   DeclarationFragments &append(StringRef Spelling, FragmentKind Kind,
                                StringRef PreciseIdentifier = "",
                                const Decl *Declaration = nullptr) {
@@ -149,18 +149,48 @@ public:
     return *this;
   }
 
-  /// Append another DeclarationFragments to the end.
-  ///
-  /// Note: \p Other is moved from and cannot be used after a call to this
-  /// method.
+  /// Inserts another DeclarationFragments at \p It.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
-  /// appending to chain up consecutive appends.
-  DeclarationFragments &append(DeclarationFragments &&Other) {
-    Fragments.insert(Fragments.end(),
-                     std::make_move_iterator(Other.Fragments.begin()),
-                     std::make_move_iterator(Other.Fragments.end()));
-    Other.Fragments.clear();
+  /// appending to chain up consecutive operations.
+  DeclarationFragments &insert(FragmentIterator It,
+                               DeclarationFragments Other) {
+    if (Other.Fragments.empty())
+      return *this;
+
+    if (Fragments.empty()) {
+      Fragments = std::move(Other.Fragments);
+      return *this;
+    }
+
+    const auto &OtherFrags = Other.Fragments;
+    auto ToInsertBegin = std::make_move_iterator(Other.begin());
+    auto ToInsertEnd = std::make_move_iterator(Other.end());
+
+    // If we aren't inserting at the end let's make sure that we merge their
+    // last fragment with It if both are text fragments.
+    if (It != end() && It->Kind == FragmentKind::Text &&
+        OtherFrags.back().Kind == FragmentKind::Text) {
+      auto &TheirBackSpelling = OtherFrags.back().Spelling;
+      It->Spelling.reserve(It->Spelling.size() + TheirBackSpelling.size());
+      It->Spelling.insert(It->Spelling.begin(), TheirBackSpelling.begin(),
+                          TheirBackSpelling.end());
+      --ToInsertEnd;
+    }
+
+    // If we aren't inserting at the beginning we want to merge their first
+    // fragment with the fragment before It if both are text fragments.
+    if (It != begin() && std::prev(It)->Kind == FragmentKind::Text &&
+        OtherFrags.front().Kind == FragmentKind::Text) {
+      auto PrevIt = std::prev(It);
+      auto &TheirFrontSpelling = OtherFrags.front().Spelling;
+      PrevIt->Spelling.reserve(PrevIt->Spelling.size() +
+                               TheirFrontSpelling.size());
+      PrevIt->Spelling.append(TheirFrontSpelling);
+      ++ToInsertBegin;
+    }
+
+    Fragments.insert(It, ToInsertBegin, ToInsertEnd);
     return *this;
   }
 
@@ -177,13 +207,13 @@ public:
   /// Append a text Fragment of a space character.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
-  /// appending to chain up consecutive appends.
+  /// appending to chain up consecutive operations.
   DeclarationFragments &appendSpace();
 
   /// Append a text Fragment of a semicolon character.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
-  /// appending to chain up consecutive appends.
+  /// appending to chain up consecutive operations.
   DeclarationFragments &appendSemicolon();
 
   /// Removes a trailing semicolon character if present.

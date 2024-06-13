@@ -903,7 +903,7 @@ TreePredicateFn::TreePredicateFn(TreePattern *N) : PatFragRec(N) {
 }
 
 bool TreePredicateFn::hasPredCode() const {
-  return isLoad() || isStore() || isAtomic() || hasNoUse() ||
+  return isLoad() || isStore() || isAtomic() || hasNoUse() || hasOneUse() ||
          !PatFragRec->getRecord()->getValueAsString("PredicateCode").empty();
 }
 
@@ -1140,6 +1140,8 @@ std::string TreePredicateFn::getPredCode() const {
 
   if (hasNoUse())
     Code += "if (!SDValue(N, 0).use_empty()) return false;\n";
+  if (hasOneUse())
+    Code += "if (!SDValue(N, 0).hasOneUse()) return false;\n";
 
   std::string PredicateCode =
       std::string(PatFragRec->getRecord()->getValueAsString("PredicateCode"));
@@ -1186,6 +1188,9 @@ bool TreePredicateFn::usesOperands() const {
 }
 bool TreePredicateFn::hasNoUse() const {
   return isPredefinedPredicateEqualTo("HasNoUse", true);
+}
+bool TreePredicateFn::hasOneUse() const {
+  return isPredefinedPredicateEqualTo("HasOneUse", true);
 }
 bool TreePredicateFn::isLoad() const {
   return isPredefinedPredicateEqualTo("IsLoad", true);
@@ -1494,8 +1499,7 @@ void PatternToMatch::getPredicateRecords(
   // Sort so that different orders get canonicalized to the same string.
   llvm::sort(PredicateRecs, LessRecord());
   // Remove duplicate predicates.
-  PredicateRecs.erase(std::unique(PredicateRecs.begin(), PredicateRecs.end()),
-                      PredicateRecs.end());
+  PredicateRecs.erase(llvm::unique(PredicateRecs), PredicateRecs.end());
 }
 
 /// getPredicateCheck - Return a single string containing all of this
@@ -4246,7 +4250,7 @@ static TreePatternNodePtr PromoteXForms(TreePatternNodePtr N) {
 
 void CodeGenDAGPatterns::ParseOnePattern(
     Record *TheDef, TreePattern &Pattern, TreePattern &Result,
-    const std::vector<Record *> &InstImpResults) {
+    const std::vector<Record *> &InstImpResults, bool ShouldIgnore) {
 
   // Inline pattern fragments and expand multiple alternatives.
   Pattern.InlinePatternFragments();
@@ -4332,7 +4336,7 @@ void CodeGenDAGPatterns::ParseOnePattern(
         AddPatternToMatch(&Pattern,
                           PatternToMatch(TheDef, Preds, T, Temp.getOnlyTree(),
                                          InstImpResults, Complexity,
-                                         TheDef->getID()));
+                                         TheDef->getID(), ShouldIgnore));
     }
   } else {
     // Show a message about a dropped pattern with some info to make it
@@ -4378,7 +4382,8 @@ void CodeGenDAGPatterns::ParsePatterns() {
       FindPatternInputsAndOutputs(Pattern, Pattern.getTree(j), InstInputs,
                                   InstResults, InstImpResults);
 
-    ParseOnePattern(CurPattern, Pattern, Result, InstImpResults);
+    ParseOnePattern(CurPattern, Pattern, Result, InstImpResults,
+                    CurPattern->getValueAsBit("GISelShouldIgnore"));
   }
 }
 
@@ -4407,10 +4412,10 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
       return;
     }
 
-    PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
-                                 std::move(NewSrc), std::move(NewDst),
-                                 P.getDstRegs(), P.getAddedComplexity(),
-                                 Record::getNewUID(Records), Check);
+    PatternsToMatch.emplace_back(
+        P.getSrcRecord(), P.getPredicates(), std::move(NewSrc),
+        std::move(NewDst), P.getDstRegs(), P.getAddedComplexity(),
+        Record::getNewUID(Records), P.getGISelShouldIgnore(), Check);
   };
 
   for (PatternToMatch &P : Copy) {
@@ -4781,6 +4786,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), Record::getNewUID(Records),
+          PatternsToMatch[i].getGISelShouldIgnore(),
           PatternsToMatch[i].getHwModeFeatures());
     }
 

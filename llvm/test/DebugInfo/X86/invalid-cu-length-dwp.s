@@ -1,8 +1,10 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
-# RUN:   llvm-dwarfdump -debug-info -
+# RUN:   llvm-dwarfdump -debug-info - 2>&1 | FileCheck %s
 
 ## llvm-dwarfdump used to crash with this input because of an invalid size
 ## of the compilation unit contribution in the .debug_cu_index section.
+
+# CHECK: warning: DWARF package unit at offset 0x00000000 has an inconsistent index (expected: 23, actual: 24)
 
     .section .debug_abbrev.dwo, "e", @progbits
 .LAbbrBegin:

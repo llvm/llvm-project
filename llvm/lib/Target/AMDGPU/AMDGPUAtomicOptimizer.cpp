@@ -249,63 +249,54 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   switch (I.getIntrinsicID()) {
   default:
     return;
-  case Intrinsic::amdgcn_buffer_atomic_add:
   case Intrinsic::amdgcn_struct_buffer_atomic_add:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_add:
   case Intrinsic::amdgcn_raw_buffer_atomic_add:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_add:
     Op = AtomicRMWInst::Add;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_sub:
   case Intrinsic::amdgcn_struct_buffer_atomic_sub:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_sub:
   case Intrinsic::amdgcn_raw_buffer_atomic_sub:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub:
     Op = AtomicRMWInst::Sub;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_and:
   case Intrinsic::amdgcn_struct_buffer_atomic_and:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_and:
   case Intrinsic::amdgcn_raw_buffer_atomic_and:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_and:
     Op = AtomicRMWInst::And;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_or:
   case Intrinsic::amdgcn_struct_buffer_atomic_or:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_or:
   case Intrinsic::amdgcn_raw_buffer_atomic_or:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_or:
     Op = AtomicRMWInst::Or;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_xor:
   case Intrinsic::amdgcn_struct_buffer_atomic_xor:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_xor:
   case Intrinsic::amdgcn_raw_buffer_atomic_xor:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_xor:
     Op = AtomicRMWInst::Xor;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_smin:
   case Intrinsic::amdgcn_struct_buffer_atomic_smin:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smin:
   case Intrinsic::amdgcn_raw_buffer_atomic_smin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smin:
     Op = AtomicRMWInst::Min;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_umin:
   case Intrinsic::amdgcn_struct_buffer_atomic_umin:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umin:
   case Intrinsic::amdgcn_raw_buffer_atomic_umin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_umin:
     Op = AtomicRMWInst::UMin;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_smax:
   case Intrinsic::amdgcn_struct_buffer_atomic_smax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_smax:
   case Intrinsic::amdgcn_raw_buffer_atomic_smax:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_smax:
     Op = AtomicRMWInst::Max;
     break;
-  case Intrinsic::amdgcn_buffer_atomic_umax:
   case Intrinsic::amdgcn_struct_buffer_atomic_umax:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_umax:
   case Intrinsic::amdgcn_raw_buffer_atomic_umax:
@@ -493,8 +484,8 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
     if (!ST->isWave32()) {
       // Combine lane 31 into lanes 32..63.
       V = B.CreateBitCast(V, IntNTy);
-      Value *const Lane31 = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
-                                              {V, B.getInt32(31)});
+      Value *const Lane31 = B.CreateIntrinsic(
+          V->getType(), Intrinsic::amdgcn_readlane, {V, B.getInt32(31)});
 
       Value *UpdateDPPCall = B.CreateCall(
           UpdateDPP, {Identity, Lane31, B.getInt32(DPP::QUAD_PERM_ID),
@@ -598,8 +589,8 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
 
   // Get the value required for atomic operation
   V = B.CreateBitCast(V, IntNTy);
-  Value *LaneValue =
-      B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {}, {V, LaneIdxInt});
+  Value *LaneValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_readlane,
+                                       {V, LaneIdxInt});
   LaneValue = B.CreateBitCast(LaneValue, Ty);
 
   // Perform writelane if intermediate scan results are required later in the
@@ -607,7 +598,7 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   Value *OldValue = nullptr;
   if (NeedResult) {
     OldValue =
-        B.CreateIntrinsic(Intrinsic::amdgcn_writelane, {},
+        B.CreateIntrinsic(IntNTy, Intrinsic::amdgcn_writelane,
                           {B.CreateBitCast(Accumulator, IntNTy), LaneIdxInt,
                            B.CreateBitCast(OldValuePhi, IntNTy)});
     OldValue = B.CreateBitCast(OldValue, Ty);
@@ -743,7 +734,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
   Function *F = I.getFunction();
   LLVMContext &C = F->getContext();
-  
+
   // For atomic sub, perform scan with add operation and allow one lane to
   // subtract the reduced value later.
   AtomicRMWInst::BinOp ScanOp = Op;
@@ -789,7 +780,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
         Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
         assert(TyBitWidth == 32);
         NewV = B.CreateBitCast(NewV, IntNTy);
-        NewV = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
+        NewV = B.CreateIntrinsic(IntNTy, Intrinsic::amdgcn_readlane,
                                  {NewV, LastLaneIdx});
         NewV = B.CreateBitCast(NewV, Ty);
       }
@@ -855,7 +846,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   Value *const Cond = B.CreateICmpEQ(Mbcnt, B.getInt32(0));
 
   // Store I's original basic block before we split the block.
-  BasicBlock *const EntryBB = I.getParent();
+  BasicBlock *const OriginalBB = I.getParent();
 
   // We need to introduce some new control flow to force a single lane to be
   // active. We do this by splitting I's basic block at I, and introducing the
@@ -876,25 +867,36 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   BasicBlock *Predecessor = nullptr;
   if (ValDivergent && ScanImpl == ScanOptions::Iterative) {
     // Move terminator from I's block to ComputeEnd block.
-    Instruction *Terminator = EntryBB->getTerminator();
+    //
+    // OriginalBB is known to have a branch as terminator because
+    // SplitBlockAndInsertIfThen will have inserted one.
+    BranchInst *Terminator = cast<BranchInst>(OriginalBB->getTerminator());
     B.SetInsertPoint(ComputeEnd);
     Terminator->removeFromParent();
     B.Insert(Terminator);
 
     // Branch to ComputeLoop Block unconditionally from the I's block for
     // iterative approach.
-    B.SetInsertPoint(EntryBB);
+    B.SetInsertPoint(OriginalBB);
     B.CreateBr(ComputeLoop);
 
     // Update the dominator tree for new control flow.
-    DTU.applyUpdates(
-        {{DominatorTree::Insert, EntryBB, ComputeLoop},
-         {DominatorTree::Insert, ComputeLoop, ComputeEnd},
-         {DominatorTree::Delete, EntryBB, SingleLaneTerminator->getParent()}});
+    SmallVector<DominatorTree::UpdateType, 6> DomTreeUpdates(
+        {{DominatorTree::Insert, OriginalBB, ComputeLoop},
+         {DominatorTree::Insert, ComputeLoop, ComputeEnd}});
+
+    // We're moving the terminator from EntryBB to ComputeEnd, make sure we move
+    // the DT edges as well.
+    for (auto *Succ : Terminator->successors()) {
+      DomTreeUpdates.push_back({DominatorTree::Insert, ComputeEnd, Succ});
+      DomTreeUpdates.push_back({DominatorTree::Delete, OriginalBB, Succ});
+    }
+
+    DTU.applyUpdates(DomTreeUpdates);
 
     Predecessor = ComputeEnd;
   } else {
-    Predecessor = EntryBB;
+    Predecessor = OriginalBB;
   }
   // Move the IR builder into single_lane next.
   B.SetInsertPoint(SingleLaneTerminator);
@@ -925,10 +927,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       Value *const ExtractLo = B.CreateTrunc(CastedPhi, Int32Ty);
       Value *const ExtractHi =
           B.CreateTrunc(B.CreateLShr(CastedPhi, 32), Int32Ty);
-      CallInst *const ReadFirstLaneLo =
-          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractLo);
-      CallInst *const ReadFirstLaneHi =
-          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractHi);
+      CallInst *const ReadFirstLaneLo = B.CreateIntrinsic(
+          Int32Ty, Intrinsic::amdgcn_readfirstlane, ExtractLo);
+      CallInst *const ReadFirstLaneHi = B.CreateIntrinsic(
+          Int32Ty, Intrinsic::amdgcn_readfirstlane, ExtractHi);
       Value *const PartialInsert = B.CreateInsertElement(
           PoisonValue::get(VecTy), ReadFirstLaneLo, B.getInt32(0));
       Value *const Insert =
@@ -937,7 +939,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     } else if (TyBitWidth == 32) {
       Value *CastedPhi = B.CreateBitCast(PHI, IntNTy);
       BroadcastI =
-          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, CastedPhi);
+          B.CreateIntrinsic(IntNTy, Intrinsic::amdgcn_readfirstlane, CastedPhi);
       BroadcastI = B.CreateBitCast(BroadcastI, Ty);
 
     } else {

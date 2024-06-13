@@ -243,7 +243,7 @@ private:
   /// Honor temporary labels, this is useful for debugging semantic
   /// differences between temporary and non-temporary labels (primarily on
   /// Darwin).
-  bool AllowTemporaryLabels = true;
+  bool SaveTempLabels = false;
   bool UseNamesOnTempLabels = false;
 
   /// The Compile Unit ID that we are currently processing.
@@ -251,31 +251,6 @@ private:
 
   /// A collection of MCPseudoProbe in the current module
   MCPseudoProbeTable PseudoProbeTable;
-
-  // Sections are differentiated by the quadruple (section_name, group_name,
-  // unique_id, link_to_symbol_name). Sections sharing the same quadruple are
-  // combined into one section.
-  struct ELFSectionKey {
-    std::string SectionName;
-    StringRef GroupName;
-    StringRef LinkedToName;
-    unsigned UniqueID;
-
-    ELFSectionKey(StringRef SectionName, StringRef GroupName,
-                  StringRef LinkedToName, unsigned UniqueID)
-        : SectionName(SectionName), GroupName(GroupName),
-          LinkedToName(LinkedToName), UniqueID(UniqueID) {}
-
-    bool operator<(const ELFSectionKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (GroupName != Other.GroupName)
-        return GroupName < Other.GroupName;
-      if (int O = LinkedToName.compare(Other.LinkedToName))
-        return O < 0;
-      return UniqueID < Other.UniqueID;
-    }
-  };
 
   struct COFFSectionKey {
     std::string SectionName;
@@ -350,8 +325,8 @@ private:
   };
 
   StringMap<MCSectionMachO *> MachOUniquingMap;
-  std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
+  StringMap<MCSectionELF *> ELFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
@@ -371,7 +346,7 @@ private:
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
   MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
-                             bool CanBeUnnamed);
+                             bool IsTemporary);
   MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
                          bool IsTemporary);
 
@@ -391,29 +366,13 @@ private:
   /// Map of currently defined macros.
   StringMap<MCAsmMacro> MacroMap;
 
-  struct ELFEntrySizeKey {
-    std::string SectionName;
-    unsigned Flags;
-    unsigned EntrySize;
-
-    ELFEntrySizeKey(StringRef SectionName, unsigned Flags, unsigned EntrySize)
-        : SectionName(SectionName), Flags(Flags), EntrySize(EntrySize) {}
-
-    bool operator<(const ELFEntrySizeKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (Flags != Other.Flags)
-        return Flags < Other.Flags;
-      return EntrySize < Other.EntrySize;
-    }
-  };
-
   // Symbols must be assigned to a section with a compatible entry size and
   // flags. This map is used to assign unique IDs to sections to distinguish
   // between sections with identical names but incompatible entry sizes and/or
   // flags. This can occur when a symbol is explicitly assigned to a section,
-  // e.g. via __attribute__((section("myname"))).
-  std::map<ELFEntrySizeKey, unsigned> ELFEntrySizeMap;
+  // e.g. via __attribute__((section("myname"))). The map key is the tuple
+  // (section name, flags, entry size).
+  DenseMap<std::tuple<StringRef, unsigned, unsigned>, unsigned> ELFEntrySizeMap;
 
   // This set is used to record the generic mergeable section names seen.
   // These are sections that are created as mergeable e.g. .debug_str. We need
@@ -462,7 +421,6 @@ public:
 
   CodeViewContext &getCVContext();
 
-  void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }
   void setUseNamesOnTempLabels(bool Value) { UseNamesOnTempLabels = Value; }
 
   /// \name Module Lifetime Management
@@ -872,7 +830,7 @@ public:
   void reportError(SMLoc L, const Twine &Msg);
   void reportWarning(SMLoc L, const Twine &Msg);
 
-  const MCAsmMacro *lookupMacro(StringRef Name) {
+  MCAsmMacro *lookupMacro(StringRef Name) {
     StringMap<MCAsmMacro>::iterator I = MacroMap.find(Name);
     return (I == MacroMap.end()) ? nullptr : &I->getValue();
   }

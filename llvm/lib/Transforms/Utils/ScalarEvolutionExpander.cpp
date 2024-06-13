@@ -1522,7 +1522,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
   } else {
     for (Instruction *I : DropPoisonGeneratingInsts) {
       rememberFlags(I);
-      I->dropPoisonGeneratingFlagsAndMetadata();
+      I->dropPoisonGeneratingAnnotations();
       // See if we can re-infer from first principles any of the flags we just
       // dropped.
       if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))
@@ -2079,7 +2079,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // FIXME: It is highly suspicious that we're ignoring the predicates here.
   SmallVector<const SCEVPredicate *, 4> Pred;
   const SCEV *ExitCount =
-      SE.getPredicatedBackedgeTakenCount(AR->getLoop(), Pred);
+      SE.getPredicatedSymbolicMaxBackedgeTakenCount(AR->getLoop(), Pred);
 
   assert(!isa<SCEVCouldNotCompute>(ExitCount) && "Invalid loop count");
 

@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_TIME_GPU_TIME_UTILS_H
 #define LLVM_LIBC_SRC_TIME_GPU_TIME_UTILS_H
 
+#include "hdr/time_macros.h"
+#include "hdr/types/clock_t.h"
 #include "src/__support/GPU/utils.h"
-
 namespace LIBC_NAMESPACE {
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
@@ -22,8 +23,10 @@ constexpr uint64_t clock_freq = 100000000UL;
 
 // We provide an externally visible symbol such that the runtime can set
 // this to the correct value.
-extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] __llvm_libc_clock_freq;
+extern "C" {
+[[gnu::visibility("protected")]]
+extern gpu::Constant<uint64_t> __llvm_libc_clock_freq;
+}
 #define GPU_CLOCKS_PER_SEC static_cast<clock_t>(__llvm_libc_clock_freq)
 
 #elif defined(LIBC_TARGET_ARCH_IS_NVPTX)

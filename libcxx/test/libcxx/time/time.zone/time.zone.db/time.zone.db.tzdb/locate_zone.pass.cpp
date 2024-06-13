@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -73,7 +73,7 @@ L link link_to_link
   TEST_VALIDATE_EXCEPTION(
       std::runtime_error,
       [&]([[maybe_unused]] const std::runtime_error& e) {
-        std::string_view what{"tzdb: requested time zone not found"};
+        [[maybe_unused]] std::string_view what{"tzdb: requested time zone not found"};
         TEST_LIBCPP_REQUIRE(
             e.what() == what,
             TEST_WRITE_CONCATENATED("\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));

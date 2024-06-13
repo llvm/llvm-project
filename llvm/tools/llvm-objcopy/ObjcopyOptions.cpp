@@ -15,6 +15,7 @@
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -26,6 +27,7 @@
 
 using namespace llvm;
 using namespace llvm::objcopy;
+using namespace llvm::object;
 using namespace llvm::opt;
 
 namespace {
@@ -569,6 +571,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   llvm::opt::InputArgList InputArgs =
       T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
 
+  if (MissingArgumentCount)
+    return createStringError(
+        errc::invalid_argument,
+        "argument to '%s' is missing (expected %d value(s))",
+        InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
+
   if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
     printHelp(T, errs(), ToolType::Objcopy);
     exit(1);
@@ -734,6 +742,42 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     if (const char *Reason = compression::getReasonIfUnsupported(
             compression::formatFor(Config.CompressionType)))
       return createStringError(errc::invalid_argument, Reason);
+  }
+
+  for (const auto *A : InputArgs.filtered(OBJCOPY_compress_sections)) {
+    SmallVector<StringRef, 0> Fields;
+    StringRef(A->getValue()).split(Fields, '=');
+    if (Fields.size() != 2 || Fields[1].empty()) {
+      return createStringError(
+          errc::invalid_argument,
+          A->getSpelling() +
+              ": parse error, not 'section-glob=[none|zlib|zstd]'");
+    }
+
+    auto Type = StringSwitch<DebugCompressionType>(Fields[1])
+                    .Case("zlib", DebugCompressionType::Zlib)
+                    .Case("zstd", DebugCompressionType::Zstd)
+                    .Default(DebugCompressionType::None);
+    if (Type == DebugCompressionType::None && Fields[1] != "none") {
+      return createStringError(
+          errc::invalid_argument,
+          "invalid or unsupported --compress-sections format: %s",
+          A->getValue());
+    }
+
+    auto &P = Config.compressSections.emplace_back();
+    P.second = Type;
+    auto Matcher =
+        NameOrPattern::create(Fields[0], SectionMatchStyle, ErrorCallback);
+    // =none allows overriding a previous =zlib or =zstd. Reject negative
+    // patterns, which would be confusing.
+    if (Matcher && !Matcher->isPositiveMatch()) {
+      return createStringError(
+          errc::invalid_argument,
+          "--compress-sections: negative pattern is unsupported");
+    }
+    if (Error E = P.first.addMatcher(std::move(Matcher)))
+      return std::move(E);
   }
 
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
@@ -1205,6 +1249,16 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
         "llvm-install-name-tool expects a single input file");
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[0];
+
+  Expected<OwningBinary<Binary>> BinaryOrErr =
+      createBinary(Config.InputFilename);
+  if (!BinaryOrErr)
+    return createFileError(Config.InputFilename, BinaryOrErr.takeError());
+  auto *Binary = (*BinaryOrErr).getBinary();
+  if (!Binary->isMachO() && !Binary->isMachOUniversalBinary())
+    return createStringError(errc::invalid_argument,
+                             "input file: %s is not a Mach-O file",
+                             Config.InputFilename.str().c_str());
 
   DC.CopyConfigs.push_back(std::move(ConfigMgr));
   return std::move(DC);

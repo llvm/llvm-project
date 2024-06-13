@@ -57,7 +57,7 @@ static Value extendMaskRank(OpBuilder &builder, Location loc, Value vec,
   Value broadcasted = extendVectorRank(builder, loc, vec, addedRank);
   SmallVector<int64_t> permutation;
   for (int64_t i = addedRank,
-               e = broadcasted.getType().cast<VectorType>().getRank();
+               e = cast<VectorType>(broadcasted.getType()).getRank();
        i < e; ++i)
     permutation.push_back(i);
   for (int64_t i = 0; i < addedRank; ++i)
@@ -90,14 +90,19 @@ namespace {
 /// Note that an alternative is to transform it to linalg.transpose +
 /// vector.transfer_read to do the transpose in memory instead.
 struct TransferReadPermutationLowering
-    : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+    : public MaskableOpRewritePattern<vector::TransferReadOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp op,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferReadOp op,
+                            MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    // TODO: Support transfer_read inside MaskOp case.
+    if (maskOp)
+      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -142,9 +147,9 @@ struct TransferReadPermutationLowering
 
     // Transpose result of transfer_read.
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
-    rewriter.replaceOpWithNewOp<vector::TransposeOp>(op, newRead,
-                                                     transposePerm);
-    return success();
+    return rewriter
+        .create<vector::TransposeOp>(op.getLoc(), newRead, transposePerm)
+        .getResult();
   }
 };
 
@@ -165,14 +170,19 @@ struct TransferReadPermutationLowering
 ///     %v = vector.transfer_write %tmp ...
 ///         permutation_map: (d0, d1, d2, d3) -> (d2, d3)
 struct TransferWritePermutationLowering
-    : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+    : public MaskableOpRewritePattern<vector::TransferWriteOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferWriteOp op,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferWriteOp op,
+                            MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    // TODO: Support transfer_write inside MaskOp case.
+    if (maskOp)
+      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -207,11 +217,14 @@ struct TransferWritePermutationLowering
         op.getLoc(), op.getVector(), indices);
     auto newMap = AffineMap::getMinorIdentityMap(
         map.getNumDims(), map.getNumResults(), rewriter.getContext());
-    rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        op, newVec, op.getSource(), op.getIndices(), AffineMapAttr::get(newMap),
-        op.getMask(), newInBoundsAttr);
-
-    return success();
+    auto newWrite = rewriter.create<vector::TransferWriteOp>(
+        op.getLoc(), newVec, op.getSource(), op.getIndices(),
+        AffineMapAttr::get(newMap), op.getMask(), newInBoundsAttr);
+    if (newWrite.hasPureTensorSemantics())
+      return newWrite.getResult();
+    // In the memref case there's no return value. Use empty value to signal
+    // success.
+    return Value();
   }
 };
 
@@ -231,14 +244,19 @@ struct TransferWritePermutationLowering
 ///     vector<1x8x16xf32>
 /// ```
 struct TransferWriteNonPermutationLowering
-    : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern::OpRewritePattern;
+    : public MaskableOpRewritePattern<vector::TransferWriteOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferWriteOp op,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferWriteOp op,
+                            MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    // TODO: Support transfer_write inside MaskOp case.
+    if (maskOp)
+      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -285,10 +303,14 @@ struct TransferWriteNonPermutationLowering
       newInBoundsValues.push_back(op.isDimInBounds(i));
     }
     ArrayAttr newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
-    rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        op, newVec, op.getSource(), op.getIndices(), AffineMapAttr::get(newMap),
-        newMask, newInBoundsAttr);
-    return success();
+    auto newWrite = rewriter.create<vector::TransferWriteOp>(
+        op.getLoc(), newVec, op.getSource(), op.getIndices(),
+        AffineMapAttr::get(newMap), newMask, newInBoundsAttr);
+    if (newWrite.hasPureTensorSemantics())
+      return newWrite.getResult();
+    // In the memref case there's no return value. Use empty value to signal
+    // success.
+    return Value();
   }
 };
 
@@ -300,14 +322,20 @@ struct TransferWriteNonPermutationLowering
 ///     %v = vector.transfer_read ...
 ///         permutation_map: (d0, d1, d2, d3) -> (d1, 0, d3)
 ///     vector.broadcast %v
-struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+struct TransferOpReduceRank
+    : public MaskableOpRewritePattern<vector::TransferReadOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp op,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferReadOp op,
+                            MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    // TODO: support masked case.
+    if (maskOp)
+      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     AffineMap map = op.getPermutationMap();
     unsigned numLeadingBroadcast = 0;
@@ -347,9 +375,9 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
             op.getLoc(), originalVecType.getElementType(), op.getSource(),
             op.getIndices());
       }
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
-                                                       newRead);
-      return success();
+      return rewriter
+          .create<vector::BroadcastOp>(op.getLoc(), originalVecType, newRead)
+          .getVector();
     }
 
     SmallVector<int64_t> newShape(
@@ -371,9 +399,9 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
         op.getLoc(), newReadType, op.getSource(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
-                                                     newRead);
-    return success();
+    return rewriter
+        .create<vector::BroadcastOp>(op.getLoc(), originalVecType, newRead)
+        .getVector();
   }
 };
 

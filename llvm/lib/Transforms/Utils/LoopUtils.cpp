@@ -222,7 +222,7 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
       // If it is of form key = value, try to parse it.
       if (Node->getNumOperands() == 2) {
         MDString *S = dyn_cast<MDString>(Node->getOperand(0));
-        if (S && S->getString().equals(StringMD)) {
+        if (S && S->getString() == StringMD) {
           ConstantInt *IntMD =
               mdconst::extract_or_null<ConstantInt>(Node->getOperand(1));
           if (IntMD && IntMD->getSExtValue() == V)
@@ -1743,16 +1743,16 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
     auto *HighAR = cast<SCEVAddRecExpr>(High);
     auto *LowAR = cast<SCEVAddRecExpr>(Low);
     const Loop *OuterLoop = TheLoop->getParentLoop();
-    const SCEV *Recur = LowAR->getStepRecurrence(*Exp.getSE());
-    if (Recur == HighAR->getStepRecurrence(*Exp.getSE()) &&
+    ScalarEvolution &SE = *Exp.getSE();
+    const SCEV *Recur = LowAR->getStepRecurrence(SE);
+    if (Recur == HighAR->getStepRecurrence(SE) &&
         HighAR->getLoop() == OuterLoop && LowAR->getLoop() == OuterLoop) {
       BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
-      const SCEV *OuterExitCount =
-          Exp.getSE()->getExitCount(OuterLoop, OuterLoopLatch);
+      const SCEV *OuterExitCount = SE.getExitCount(OuterLoop, OuterLoopLatch);
       if (!isa<SCEVCouldNotCompute>(OuterExitCount) &&
           OuterExitCount->getType()->isIntegerTy()) {
-        const SCEV *NewHigh = cast<SCEVAddRecExpr>(High)->evaluateAtIteration(
-            OuterExitCount, *Exp.getSE());
+        const SCEV *NewHigh =
+            cast<SCEVAddRecExpr>(High)->evaluateAtIteration(OuterExitCount, SE);
         if (!isa<SCEVCouldNotCompute>(NewHigh)) {
           LLVM_DEBUG(dbgs() << "LAA: Expanded RT check for range to include "
                                "outer loop in order to permit hoisting\n");
@@ -1760,7 +1760,8 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
           Low = cast<SCEVAddRecExpr>(Low)->getStart();
           // If there is a possibility that the stride is negative then we have
           // to generate extra checks to ensure the stride is positive.
-          if (!Exp.getSE()->isKnownNonNegative(Recur)) {
+          if (!SE.isKnownNonNegative(
+                  SE.applyLoopGuards(Recur, HighAR->getLoop()))) {
             Stride = Recur;
             LLVM_DEBUG(dbgs() << "LAA: ... but need to check stride is "
                                  "positive: "
@@ -1821,8 +1822,7 @@ Value *llvm::addRuntimeChecks(
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
 
-  for (const auto &Check : ExpandedChecks) {
-    const PointerBounds &A = Check.first, &B = Check.second;
+  for (const auto &[A, B] : ExpandedChecks) {
     // Check if two pointers (A and B) conflict where conflict is computed as:
     // start(A) <= end(B) && start(B) <= end(A)
 
@@ -1880,14 +1880,14 @@ Value *llvm::addDiffRuntimeChecks(
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
-  for (const auto &C : Checks) {
-    Type *Ty = C.SinkStart->getType();
+  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+    Type *Ty = SinkStart->getType();
     // Compute VF * IC * AccessSize.
     auto *VFTimesUFTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, IC * C.AccessSize));
-    Value *Diff = Expander.expandCodeFor(
-        SE.getMinusSCEV(C.SinkStart, C.SrcStart), Ty, Loc);
+                             ConstantInt::get(Ty, IC * AccessSize));
+    Value *Diff =
+        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
@@ -1898,7 +1898,7 @@ Value *llvm::addDiffRuntimeChecks(
     IsConflict =
         ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
     SeenCompares.insert({{Diff, VFTimesUFTimesSize}, IsConflict});
-    if (C.NeedsFreeze)
+    if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
     if (MemoryRuntimeCheck) {
@@ -1918,10 +1918,12 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
   if (!TI || !TI->isConditional())
     return {};
 
-  auto *CondI = dyn_cast<CmpInst>(TI->getCondition());
+  auto *CondI = dyn_cast<Instruction>(TI->getCondition());
   // The case with the condition outside the loop should already be handled
   // earlier.
-  if (!CondI || !L.contains(CondI))
+  // Allow CmpInst and TruncInsts as they may be users of load instructions
+  // and have potential for partial unswitching
+  if (!CondI || !isa<CmpInst, TruncInst>(CondI) || !L.contains(CondI))
     return {};
 
   SmallVector<Instruction *> InstToDuplicate;

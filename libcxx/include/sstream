@@ -205,7 +205,7 @@ public:
       basic_ostringstream(const T& t, const Allocator& a);                                // Since C++26
     template<class T>
       basic_ostringstream(const T& t, ios_base::openmode which, const Allocator& a);      // Since C++26
-    basic_ostringstream(const basic_ostringstream&) = delete;                             
+    basic_ostringstream(const basic_ostringstream&) = delete;
     basic_ostringstream(basic_ostringstream&& rhs);
 
     // [ostringstream.assign] Assign and swap:
@@ -312,13 +312,12 @@ typedef basic_stringstream<wchar_t> wstringstream;
 
 // clang-format on
 
-#include <__availability>
 #include <__config>
 #include <__fwd/sstream.h>
+#include <__ostream/basic_ostream.h>
 #include <__type_traits/is_convertible.h>
 #include <__utility/swap.h>
 #include <istream>
-#include <ostream>
 #include <string>
 #include <string_view>
 #include <version>
@@ -329,14 +328,6 @@ typedef basic_stringstream<wchar_t> wstringstream;
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
-
-// TODO(LLVM-19): Remove this once we drop support for Clang 16,
-// which had this bug: https://github.com/llvm/llvm-project/issues/40363
-#ifdef _WIN32
-#  define _LIBCPP_HIDE_FROM_ABI_SSTREAM _LIBCPP_ALWAYS_INLINE
-#else
-#  define _LIBCPP_HIDE_FROM_ABI_SSTREAM _LIBCPP_HIDE_FROM_ABI
-#endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -460,9 +451,9 @@ public:
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
   string_type str() const;
 #else
-  _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() const& { return str(__str_.get_allocator()); }
+  _LIBCPP_HIDE_FROM_ABI string_type str() const& { return str(__str_.get_allocator()); }
 
-  _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() && {
+  _LIBCPP_HIDE_FROM_ABI string_type str() && {
     const basic_string_view<_CharT, _Traits> __view = view();
     typename string_type::size_type __pos           = __view.empty() ? 0 : __view.data() - __str_.data();
     // In C++23, this is just string_type(std::move(__str_), __pos, __view.size(), __str_.get_allocator());
@@ -948,9 +939,9 @@ public:
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
   _LIBCPP_HIDE_FROM_ABI string_type str() const { return __sb_.str(); }
 #else
-  _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() const& { return __sb_.str(); }
+  _LIBCPP_HIDE_FROM_ABI string_type str() const& { return __sb_.str(); }
 
-  _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() && { return std::move(__sb_).str(); }
+  _LIBCPP_HIDE_FROM_ABI string_type str() && { return std::move(__sb_).str(); }
 #endif
 
 #if _LIBCPP_STD_VER >= 20
@@ -1085,9 +1076,9 @@ public:
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
   _LIBCPP_HIDE_FROM_ABI string_type str() const { return __sb_.str(); }
 #else
-  _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() const& { return __sb_.str(); }
+  _LIBCPP_HIDE_FROM_ABI string_type str() const& { return __sb_.str(); }
 
-  _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() && { return std::move(__sb_).str(); }
+  _LIBCPP_HIDE_FROM_ABI string_type str() && { return std::move(__sb_).str(); }
 #endif
 
 #if _LIBCPP_STD_VER >= 20
@@ -1225,9 +1216,9 @@ public:
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
   _LIBCPP_HIDE_FROM_ABI string_type str() const { return __sb_.str(); }
 #else
-  _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() const& { return __sb_.str(); }
+  _LIBCPP_HIDE_FROM_ABI string_type str() const& { return __sb_.str(); }
 
-  _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() && { return std::move(__sb_).str(); }
+  _LIBCPP_HIDE_FROM_ABI string_type str() && { return std::move(__sb_).str(); }
 #endif
 
 #if _LIBCPP_STD_VER >= 20
@@ -1278,6 +1269,7 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+#  include <ostream>
 #  include <type_traits>
 #endif
 

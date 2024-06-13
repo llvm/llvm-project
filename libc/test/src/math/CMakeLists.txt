@@ -1,15 +1,5 @@
 add_custom_target(libc-math-unittests)
 
-# FIXME: We shouldn't have regular libraries created because we could be
-#        cross-compiling the tests and running through an emulator.
-if(NOT LIBC_TARGET_OS_IS_GPU)
-  add_library(
-    libc_math_test_utils
-    RandUtils.cpp
-    RandUtils.h
-  )
-endif()
-
 add_fp_unittest(
   cosf_test
   NEED_MPFR
@@ -151,6 +141,7 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.trunc
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -165,6 +156,7 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.truncf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -179,6 +171,22 @@ add_fp_unittest(
     TruncTest.h
   DEPENDS
     libc.src.math.truncl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  truncf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    truncf16_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -193,6 +201,7 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceil
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -207,6 +216,7 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceilf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -221,6 +231,22 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceill
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  ceilf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ceilf16_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -235,6 +261,7 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floor
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -249,6 +276,7 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -263,6 +291,22 @@ add_fp_unittest(
     FloorTest.h
   DEPENDS
     libc.src.math.floorl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  floorf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    floorf16_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -277,6 +321,7 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.round
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -291,6 +336,7 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.roundf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -305,6 +351,22 @@ add_fp_unittest(
     RoundTest.h
   DEPENDS
     libc.src.math.roundl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundf16_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -319,6 +381,7 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundeven
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -333,6 +396,7 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -347,6 +411,22 @@ add_fp_unittest(
   RoundEvenTest.h
   DEPENDS
     libc.src.math.roundevenl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    roundevenf16_test.cpp
+  HDRS
+  RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -360,11 +440,11 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
-    libc.src.fenv.feclearexcept
-    libc.src.fenv.feraiseexcept
-    libc.src.fenv.fetestexcept
     libc.src.math.lround
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -378,11 +458,11 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
-    libc.src.fenv.feclearexcept
-    libc.src.fenv.feraiseexcept
-    libc.src.fenv.fetestexcept
     libc.src.math.lroundf
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -396,11 +476,29 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
-    libc.src.fenv.feclearexcept
-    libc.src.fenv.feraiseexcept
-    libc.src.fenv.fetestexcept
     libc.src.math.lroundl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lroundf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    lroundf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.lroundf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -414,11 +512,11 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
-    libc.src.fenv.feclearexcept
-    libc.src.fenv.feraiseexcept
-    libc.src.fenv.fetestexcept
     libc.src.math.llround
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -432,11 +530,11 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
-    libc.src.fenv.feclearexcept
-    libc.src.fenv.feraiseexcept
-    libc.src.fenv.fetestexcept
     libc.src.math.llroundf
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -450,11 +548,29 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.errno.errno
-    libc.src.fenv.feclearexcept
-    libc.src.fenv.feraiseexcept
-    libc.src.fenv.fetestexcept
     libc.src.math.llroundl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llroundf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    llroundf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.llroundf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -468,7 +584,9 @@ add_fp_unittest(
   HDRS
     RIntTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.rint
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -483,7 +601,9 @@ add_fp_unittest(
   HDRS
     RIntTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.rintf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -498,7 +618,26 @@ add_fp_unittest(
   HDRS
     RIntTest.h
   DEPENDS
+    libc.hdr.fenv_macros
     libc.src.math.rintl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  rintf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    rintf16_test.cpp
+  HDRS
+    RIntTest.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.rintf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -514,6 +653,7 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.src.math.lrint
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -529,6 +669,7 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.src.math.lrintf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -544,6 +685,23 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.src.math.lrintl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lrintf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    lrintf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.lrintf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -559,6 +717,7 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.src.math.llrint
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -574,6 +733,7 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.src.math.llrintf
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -589,6 +749,23 @@ add_fp_unittest(
     RoundToIntegerTest.h
   DEPENDS
     libc.src.math.llrintl
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  llrintf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    llrintf16_test.cpp
+  HDRS
+    RoundToIntegerTest.h
+  DEPENDS
+    libc.src.math.llrintf16
+    libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1280,6 +1457,8 @@ add_fp_unittest(
     fmaf_test.cpp
   DEPENDS
     libc.src.math.fmaf
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.src.__support.FPUtil.fp_bits
   FLAGS
     FMA_OPT__ONLY
@@ -1294,6 +1473,8 @@ add_fp_unittest(
     fma_test.cpp
   DEPENDS
     libc.src.math.fma
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -1652,6 +1833,21 @@ add_fp_unittest(
     ScalbnTest.h
   DEPENDS
     libc.src.math.scalbnl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.normal_float
+)
+
+add_fp_unittest(
+  scalbnf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    scalbnf128_test.cpp
+  HDRS
+    ScalbnTest.h
+  DEPENDS
+    libc.src.math.scalbnf128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.normal_float
 )

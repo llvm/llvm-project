@@ -176,7 +176,13 @@ void DylibVerifier::addSymbol(const Record *R, SymbolContext &SymCtx,
 
 bool DylibVerifier::shouldIgnoreObsolete(const Record *R, SymbolContext &SymCtx,
                                          const Record *DR) {
-  return SymCtx.FA->Avail.isObsoleted();
+  if (!SymCtx.FA->Avail.isObsoleted())
+    return false;
+
+  if (Zippered)
+    DeferredZipperedSymbols[SymCtx.SymbolName].emplace_back(ZipperedDeclSource{
+        SymCtx.FA, &Ctx.Diag->getSourceManager(), Ctx.Target});
+  return true;
 }
 
 bool DylibVerifier::shouldIgnoreReexport(const Record *R,
@@ -193,6 +199,28 @@ bool DylibVerifier::shouldIgnoreReexport(const Record *R,
         return true;
   }
   return false;
+}
+
+bool DylibVerifier::shouldIgnoreInternalZipperedSymbol(
+    const Record *R, const SymbolContext &SymCtx) const {
+  if (!Zippered)
+    return false;
+
+  return Exports->findSymbol(SymCtx.Kind, SymCtx.SymbolName,
+                             SymCtx.ObjCIFKind) != nullptr;
+}
+
+bool DylibVerifier::shouldIgnoreZipperedAvailability(const Record *R,
+                                                     SymbolContext &SymCtx) {
+  if (!(Zippered && SymCtx.FA->Avail.isUnavailable()))
+    return false;
+
+  // Collect source location incase there is an exported symbol to diagnose
+  // during `verifyRemainingSymbols`.
+  DeferredZipperedSymbols[SymCtx.SymbolName].emplace_back(
+      ZipperedDeclSource{SymCtx.FA, SourceManagers.back().get(), Ctx.Target});
+
+  return true;
 }
 
 bool DylibVerifier::compareObjCInterfaceSymbols(const Record *R,
@@ -214,16 +242,16 @@ bool DylibVerifier::compareObjCInterfaceSymbols(const Record *R,
                              StringRef SymName, bool PrintAsWarning = false) {
     if (SymLinkage == RecordLinkage::Unknown)
       Ctx.emitDiag([&]() {
-        Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                         PrintAsWarning ? diag::warn_library_missing_symbol
-                                        : diag::err_library_missing_symbol)
+        Ctx.Diag->Report(SymCtx.FA->Loc, PrintAsWarning
+                                             ? diag::warn_library_missing_symbol
+                                             : diag::err_library_missing_symbol)
             << SymName;
       });
     else
       Ctx.emitDiag([&]() {
-        Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                         PrintAsWarning ? diag::warn_library_hidden_symbol
-                                        : diag::err_library_hidden_symbol)
+        Ctx.Diag->Report(SymCtx.FA->Loc, PrintAsWarning
+                                             ? diag::warn_library_hidden_symbol
+                                             : diag::err_library_hidden_symbol)
             << SymName;
       });
   };
@@ -270,16 +298,14 @@ DylibVerifier::Result DylibVerifier::compareVisibility(const Record *R,
   if (R->isExported()) {
     if (!DR) {
       Ctx.emitDiag([&]() {
-        Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                         diag::err_library_missing_symbol)
+        Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_library_missing_symbol)
             << getAnnotatedName(R, SymCtx);
       });
       return Result::Invalid;
     }
     if (DR->isInternal()) {
       Ctx.emitDiag([&]() {
-        Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                         diag::err_library_hidden_symbol)
+        Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_library_hidden_symbol)
             << getAnnotatedName(R, SymCtx);
       });
       return Result::Invalid;
@@ -296,6 +322,9 @@ DylibVerifier::Result DylibVerifier::compareVisibility(const Record *R,
     if (shouldIgnorePrivateExternAttr(SymCtx.FA->D))
       return Result::Ignore;
 
+    if (shouldIgnoreInternalZipperedSymbol(R, SymCtx))
+      return Result::Ignore;
+
     unsigned ID;
     Result Outcome;
     if (Mode == VerificationMode::ErrorsAndWarnings) {
@@ -306,8 +335,7 @@ DylibVerifier::Result DylibVerifier::compareVisibility(const Record *R,
       Outcome = Result::Invalid;
     }
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(), ID)
-          << getAnnotatedName(R, SymCtx);
+      Ctx.Diag->Report(SymCtx.FA->Loc, ID) << getAnnotatedName(R, SymCtx);
     });
     return Outcome;
   }
@@ -324,20 +352,21 @@ DylibVerifier::Result DylibVerifier::compareAvailability(const Record *R,
   if (!SymCtx.FA->Avail.isUnavailable())
     return Result::Valid;
 
+  if (shouldIgnoreZipperedAvailability(R, SymCtx))
+    return Result::Ignore;
+
   const bool IsDeclAvailable = SymCtx.FA->Avail.isUnavailable();
 
   switch (Mode) {
   case VerificationMode::ErrorsAndWarnings:
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::warn_header_availability_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::warn_header_availability_mismatch)
           << getAnnotatedName(R, SymCtx) << IsDeclAvailable << IsDeclAvailable;
     });
     return Result::Ignore;
   case VerificationMode::Pedantic:
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_header_availability_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_header_availability_mismatch)
           << getAnnotatedName(R, SymCtx) << IsDeclAvailable << IsDeclAvailable;
     });
     return Result::Invalid;
@@ -353,16 +382,14 @@ bool DylibVerifier::compareSymbolFlags(const Record *R, SymbolContext &SymCtx,
                                        const Record *DR) {
   if (DR->isThreadLocalValue() && !R->isThreadLocalValue()) {
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_dylib_symbol_flags_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_dylib_symbol_flags_mismatch)
           << getAnnotatedName(DR, SymCtx) << DR->isThreadLocalValue();
     });
     return false;
   }
   if (!DR->isThreadLocalValue() && R->isThreadLocalValue()) {
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_header_symbol_flags_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_header_symbol_flags_mismatch)
           << getAnnotatedName(R, SymCtx) << R->isThreadLocalValue();
     });
     return false;
@@ -370,16 +397,14 @@ bool DylibVerifier::compareSymbolFlags(const Record *R, SymbolContext &SymCtx,
 
   if (DR->isWeakDefined() && !R->isWeakDefined()) {
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_dylib_symbol_flags_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_dylib_symbol_flags_mismatch)
           << getAnnotatedName(DR, SymCtx) << R->isWeakDefined();
     });
     return false;
   }
   if (!DR->isWeakDefined() && R->isWeakDefined()) {
     Ctx.emitDiag([&]() {
-      Ctx.Diag->Report(SymCtx.FA->D->getLocation(),
-                       diag::err_header_symbol_flags_mismatch)
+      Ctx.Diag->Report(SymCtx.FA->Loc, diag::err_header_symbol_flags_mismatch)
           << getAnnotatedName(R, SymCtx) << R->isWeakDefined();
     });
     return false;
@@ -487,6 +512,14 @@ void DylibVerifier::setTarget(const Target &T) {
   assignSlice(T);
 }
 
+void DylibVerifier::setSourceManager(
+    IntrusiveRefCntPtr<SourceManager> SourceMgr) {
+  if (!Ctx.Diag)
+    return;
+  SourceManagers.push_back(std::move(SourceMgr));
+  Ctx.Diag->setSourceManager(SourceManagers.back().get());
+}
+
 DylibVerifier::Result DylibVerifier::verify(ObjCIVarRecord *R,
                                             const FrontendAttrs *FA,
                                             const StringRef SuperClass) {
@@ -589,12 +622,62 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
     }
   }
 
+  const bool IsLinkerSymbol = SymbolName.starts_with("$ld$");
+
+  if (R.isVerified()) {
+    // Check for unavailable symbols.
+    // This should only occur in the zippered case where we ignored
+    // availability until all headers have been parsed.
+    auto It = DeferredZipperedSymbols.find(SymCtx.SymbolName);
+    if (It == DeferredZipperedSymbols.end()) {
+      updateState(Result::Valid);
+      return;
+    }
+
+    ZipperedDeclSources Locs;
+    for (const ZipperedDeclSource &ZSource : It->second) {
+      if (ZSource.FA->Avail.isObsoleted()) {
+        updateState(Result::Ignore);
+        return;
+      }
+      if (ZSource.T.Arch != Ctx.Target.Arch)
+        continue;
+      Locs.emplace_back(ZSource);
+    }
+    assert(Locs.size() == 2 && "Expected two decls for zippered symbol");
+
+    // Print violating declarations per platform.
+    for (const ZipperedDeclSource &ZSource : Locs) {
+      unsigned DiagID = 0;
+      if (Mode == VerificationMode::Pedantic || IsLinkerSymbol) {
+        updateState(Result::Invalid);
+        DiagID = diag::err_header_availability_mismatch;
+      } else if (Mode == VerificationMode::ErrorsAndWarnings) {
+        updateState(Result::Ignore);
+        DiagID = diag::warn_header_availability_mismatch;
+      } else {
+        updateState(Result::Ignore);
+        return;
+      }
+      // Bypass emitDiag banner and print the target everytime.
+      Ctx.Diag->setSourceManager(ZSource.SrcMgr);
+      Ctx.Diag->Report(diag::warn_target) << getTargetTripleName(ZSource.T);
+      Ctx.Diag->Report(ZSource.FA->Loc, DiagID)
+          << getAnnotatedName(&R, SymCtx) << ZSource.FA->Avail.isUnavailable()
+          << ZSource.FA->Avail.isUnavailable();
+    }
+    return;
+  }
+
   if (shouldIgnoreCpp(SymbolName, R.isWeakDefined())) {
     updateState(Result::Valid);
     return;
   }
 
-  const bool IsLinkerSymbol = SymbolName.starts_with("$ld$");
+  if (Aliases.count({SymbolName.str(), SymCtx.Kind})) {
+    updateState(Result::Valid);
+    return;
+  }
 
   // All checks at this point classify as some kind of violation.
   // The different verification modes dictate whether they are reported to the
@@ -648,8 +731,6 @@ void DylibVerifier::visitSymbolInDylib(const Record &R, SymbolContext &SymCtx) {
 }
 
 void DylibVerifier::visitGlobal(const GlobalRecord &R) {
-  if (R.isVerified())
-    return;
   SymbolContext SymCtx;
   SimpleSymbol Sym = parseSymbol(R.getName());
   SymCtx.SymbolName = Sym.Name;
@@ -659,8 +740,6 @@ void DylibVerifier::visitGlobal(const GlobalRecord &R) {
 
 void DylibVerifier::visitObjCIVar(const ObjCIVarRecord &R,
                                   const StringRef Super) {
-  if (R.isVerified())
-    return;
   SymbolContext SymCtx;
   SymCtx.SymbolName = ObjCIVarRecord::createScopedName(Super, R.getName());
   SymCtx.Kind = EncodeKind::ObjectiveCInstanceVariable;
@@ -680,8 +759,6 @@ void DylibVerifier::accumulateSrcLocForDylibSymbols() {
 }
 
 void DylibVerifier::visitObjCInterface(const ObjCInterfaceRecord &R) {
-  if (R.isVerified())
-    return;
   SymbolContext SymCtx;
   SymCtx.SymbolName = R.getName();
   SymCtx.ObjCIFKind = assignObjCIFSymbolKind(&R);
@@ -714,9 +791,12 @@ DylibVerifier::Result DylibVerifier::verifyRemainingSymbols() {
 
   DWARFContext DWARFInfo;
   DWARFCtx = &DWARFInfo;
-  Ctx.DiscoveredFirstError = false;
-  Ctx.PrintArch = true;
+  Ctx.Target = Target(Architecture::AK_unknown, PlatformType::PLATFORM_UNKNOWN);
   for (std::shared_ptr<RecordsSlice> Slice : Dylib) {
+    if (Ctx.Target.Arch == Slice->getTarget().Arch)
+      continue;
+    Ctx.DiscoveredFirstError = false;
+    Ctx.PrintArch = true;
     Ctx.Target = Slice->getTarget();
     Ctx.DylibSlice = Slice.get();
     Slice->visit(*this);
@@ -896,6 +976,25 @@ bool DylibVerifier::verifyBinaryAttrs(const ArrayRef<Target> ProvidedTargets,
   }
 
   return true;
+}
+
+std::unique_ptr<SymbolSet> DylibVerifier::takeExports() {
+  for (const auto &[Alias, Base] : Aliases) {
+    TargetList Targets;
+    SymbolFlags Flags = SymbolFlags::None;
+    if (const Symbol *Sym = Exports->findSymbol(Base.second, Base.first)) {
+      Flags = Sym->getFlags();
+      Targets = {Sym->targets().begin(), Sym->targets().end()};
+    }
+
+    Record R(Alias.first, RecordLinkage::Exported, Flags);
+    SymbolContext SymCtx;
+    SymCtx.SymbolName = Alias.first;
+    SymCtx.Kind = Alias.second;
+    addSymbol(&R, SymCtx, std::move(Targets));
+  }
+
+  return std::move(Exports);
 }
 
 } // namespace installapi

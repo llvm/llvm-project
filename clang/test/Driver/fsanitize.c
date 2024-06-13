@@ -35,20 +35,20 @@
 // RUN: %clang --target=%itanium_abi_triple -fsanitize=integer %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-INTEGER -implicit-check-not="-fsanitize-address-use-after-scope"
 // CHECK-INTEGER: "-fsanitize={{((signed-integer-overflow|unsigned-integer-overflow|integer-divide-by-zero|shift-base|shift-exponent|implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change|unsigned-shift-base),?){9}"}}
 
-// RUN: %clang -fsanitize=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-conversion,CHECK-implicit-conversion-RECOVER
-// RUN: %clang -fsanitize=implicit-conversion -fsanitize-recover=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-conversion,CHECK-implicit-conversion-RECOVER
-// RUN: %clang -fsanitize=implicit-conversion -fno-sanitize-recover=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-conversion,CHECK-implicit-conversion-NORECOVER
-// RUN: %clang -fsanitize=implicit-conversion -fsanitize-trap=implicit-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-conversion,CHECK-implicit-conversion-TRAP
-// CHECK-implicit-conversion: "-fsanitize={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
-// CHECK-implicit-conversion-RECOVER: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
-// CHECK-implicit-conversion-RECOVER-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
-// CHECK-implicit-conversion-RECOVER-NOT: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
-// CHECK-implicit-conversion-NORECOVER-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}} // ???
-// CHECK-implicit-conversion-NORECOVER-NOT: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
-// CHECK-implicit-conversion-NORECOVER-NOT: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
-// CHECK-implicit-conversion-TRAP: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
-// CHECK-implicit-conversion-TRAP-NOT: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
-// CHECK-implicit-conversion-TRAP-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// RUN: %clang -fsanitize=implicit-integer-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-conversion,CHECK-implicit-integer-conversion-RECOVER
+// RUN: %clang -fsanitize=implicit-integer-conversion -fsanitize-recover=implicit-integer-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-conversion,CHECK-implicit-integer-conversion-RECOVER
+// RUN: %clang -fsanitize=implicit-integer-conversion -fno-sanitize-recover=implicit-integer-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-conversion,CHECK-implicit-integer-conversion-NORECOVER
+// RUN: %clang -fsanitize=implicit-integer-conversion -fsanitize-trap=implicit-integer-conversion %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-conversion,CHECK-implicit-integer-conversion-TRAP
+// CHECK-implicit-integer-conversion: "-fsanitize={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// CHECK-implicit-integer-conversion-RECOVER: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// CHECK-implicit-integer-conversion-RECOVER-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// CHECK-implicit-integer-conversion-RECOVER-NOT: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// CHECK-implicit-integer-conversion-NORECOVER-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}} // ???
+// CHECK-implicit-integer-conversion-NORECOVER-NOT: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// CHECK-implicit-integer-conversion-NORECOVER-NOT: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// CHECK-implicit-integer-conversion-TRAP: "-fsanitize-trap={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// CHECK-implicit-integer-conversion-TRAP-NOT: "-fsanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
+// CHECK-implicit-integer-conversion-TRAP-NOT: "-fno-sanitize-recover={{((implicit-unsigned-integer-truncation|implicit-signed-integer-truncation|implicit-integer-sign-change),?){3}"}}
 
 // RUN: %clang -fsanitize=implicit-integer-arithmetic-value-change %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-arithmetic-value-change,CHECK-implicit-integer-arithmetic-value-change-RECOVER
 // RUN: %clang -fsanitize=implicit-integer-arithmetic-value-change -fsanitize-recover=implicit-integer-arithmetic-value-change %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-implicit-integer-arithmetic-value-change,CHECK-implicit-integer-arithmetic-value-change-RECOVER
@@ -458,6 +458,21 @@
 // RUN: not %clang --target=x86_64-apple-darwin10 -fsanitize=thread,memory -fsanitize=memory %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MSAN-MSAN-DARWIN
 // CHECK-TSAN-MSAN-MSAN-DARWIN: unsupported option '-fsanitize=memory' for target 'x86_64-apple-darwin10'
 // CHECK-TSAN-MSAN-MSAN-DARWIN-NOT: unsupported option
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-X86-64-LINUX
+// CHECK-NSAN-X86-64-LINUX: "-fsanitize=numerical"
+
+// RUN: %clang --target=aarch64-unknown-linux-gnu -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-AARCH64-LINUX
+// CHECK-NSAN-AARCH64-LINUX: "-fsanitize=numerical"
+
+// RUN: not %clang --target=mips-unknown-linux -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-MIPS-LINUX
+// CHECK-NSAN-MIPS-LINUX: error: unsupported option '-fsanitize=numerical' for target 'mips-unknown-linux'
+
+// RUN: %clang --target=x86_64-apple-macos -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-X86-64-MACOS
+// CHECK-NSAN-X86-64-MACOS: "-fsanitize=numerical"
+
+// RUN: %clang --target=arm64-apple-macos -fsanitize=numerical %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NSAN-ARM64-MACOS
+// CHECK-NSAN-ARM64-MACOS: "-fsanitize=numerical"
 
 // RUN: %clang --target=x86_64-apple-darwin -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-X86-64-DARWIN
 // CHECK-TSAN-X86-64-DARWIN-NOT: unsupported option

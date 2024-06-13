@@ -294,7 +294,7 @@ COFFObjectFile::getSectionContents(DataRefImpl Ref) const {
   const coff_section *Sec = toSec(Ref);
   ArrayRef<uint8_t> Res;
   if (Error E = getSectionContents(Sec, Res))
-    return std::move(E);
+    return E;
   return Res;
 }
 
@@ -807,7 +807,7 @@ Expected<std::unique_ptr<COFFObjectFile>>
 COFFObjectFile::create(MemoryBufferRef Object) {
   std::unique_ptr<COFFObjectFile> Obj(new COFFObjectFile(std::move(Object)));
   if (Error E = Obj->initialize())
-    return std::move(E);
+    return E;
   return std::move(Obj);
 }
 
@@ -1959,7 +1959,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
     uint64_t Offset = Entry.DataRVA + Sym->getValue();
     ArrayRef<uint8_t> Contents;
     if (Error E = Obj->getSectionContents(*Section, Contents))
-      return std::move(E);
+      return E;
     if (Offset + Entry.DataSize > Contents.size())
       return createStringError(object_error::parse_failed,
                                "data outside of section");

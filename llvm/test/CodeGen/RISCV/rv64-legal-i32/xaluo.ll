@@ -731,12 +731,13 @@ define zeroext i1 @smulo2.i64(i64 %v1, ptr %res) {
 ; RV64ZBA-LABEL: smulo2.i64:
 ; RV64ZBA:       # %bb.0: # %entry
 ; RV64ZBA-NEXT:    li a2, 13
-; RV64ZBA-NEXT:    mulh a3, a0, a2
-; RV64ZBA-NEXT:    mul a2, a0, a2
-; RV64ZBA-NEXT:    srai a0, a2, 63
-; RV64ZBA-NEXT:    xor a0, a3, a0
+; RV64ZBA-NEXT:    mulh a2, a0, a2
+; RV64ZBA-NEXT:    sh1add a3, a0, a0
+; RV64ZBA-NEXT:    sh2add a3, a3, a0
+; RV64ZBA-NEXT:    srai a0, a3, 63
+; RV64ZBA-NEXT:    xor a0, a2, a0
 ; RV64ZBA-NEXT:    snez a0, a0
-; RV64ZBA-NEXT:    sd a2, 0(a1)
+; RV64ZBA-NEXT:    sd a3, 0(a1)
 ; RV64ZBA-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: smulo2.i64:
@@ -809,9 +810,9 @@ define zeroext i1 @umulo2.i32(i32 signext %v1, ptr %res) {
 ;
 ; RV64ZBA-LABEL: umulo2.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    zext.w a0, a0
-; RV64ZBA-NEXT:    sh1add a2, a0, a0
-; RV64ZBA-NEXT:    sh2add a2, a2, a0
+; RV64ZBA-NEXT:    zext.w a2, a0
+; RV64ZBA-NEXT:    sh1add.uw a0, a0, a2
+; RV64ZBA-NEXT:    sh2add a2, a0, a2
 ; RV64ZBA-NEXT:    srli a0, a2, 32
 ; RV64ZBA-NEXT:    snez a0, a0
 ; RV64ZBA-NEXT:    sw a2, 0(a1)
@@ -925,10 +926,11 @@ define zeroext i1 @umulo2.i64(i64 %v1, ptr %res) {
 ;
 ; RV64ZBA-LABEL: umulo2.i64:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    li a3, 13
-; RV64ZBA-NEXT:    mulhu a2, a0, a3
+; RV64ZBA-NEXT:    li a2, 13
+; RV64ZBA-NEXT:    mulhu a2, a0, a2
 ; RV64ZBA-NEXT:    snez a2, a2
-; RV64ZBA-NEXT:    mul a0, a0, a3
+; RV64ZBA-NEXT:    sh1add a3, a0, a0
+; RV64ZBA-NEXT:    sh2add a0, a3, a0
 ; RV64ZBA-NEXT:    sd a0, 0(a1)
 ; RV64ZBA-NEXT:    mv a0, a2
 ; RV64ZBA-NEXT:    ret

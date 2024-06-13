@@ -40,6 +40,8 @@ Paper Status
 .. note::
 
    .. [#note-P2510R3] This paper is applied as DR against C++20. (MSVC STL and libstdc++ will do the same.)
+   .. [#note-P3142R0] This paper is applied as DR against C++23. (MSVC STL and libstdc++ will do the same.)
+   .. [#note-P2944R3] Implemented comparisons for ``reference_wrapper`` only.
 
 .. _issues-status-cxx2c:
 

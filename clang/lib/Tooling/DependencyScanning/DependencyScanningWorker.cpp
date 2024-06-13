@@ -259,9 +259,7 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
     ++Index;
   }
 
-  llvm::stable_sort(SimpleNames, [](const MacroOpt &A, const MacroOpt &B) {
-    return A.first < B.first;
-  });
+  llvm::stable_sort(SimpleNames, llvm::less_first());
   // Keep the last instance of each macro name by going in reverse
   auto NewEnd = std::unique(
       SimpleNames.rbegin(), SimpleNames.rend(),
@@ -363,22 +361,17 @@ public:
               PrebuiltModuleVFSMap, ScanInstance.getDiagnostics()))
         return false;
 
-    auto AdjustCI = [&](CompilerInstance &CI) {
-      // Set up the dependency scanning file system callback if requested.
-      if (DepFS) {
-        auto GetDependencyDirectives = [LocalDepFS = DepFS](FileEntryRef File)
-            -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-          if (llvm::ErrorOr<EntryRef> Entry =
-                  LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-            if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-              return Entry->getDirectiveTokens();
-          return std::nullopt;
-        };
-
-        CI.getPreprocessor().setDependencyDirectivesFn(
-            std::move(GetDependencyDirectives));
-      }
-    };
+    // Use the dependency scanning optimized file system if requested to do so.
+    if (DepFS)
+      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
+          [LocalDepFS = DepFS](FileEntryRef File)
+          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
+        if (llvm::ErrorOr<EntryRef> Entry =
+                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
+          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
+            return Entry->getDirectiveTokens();
+        return std::nullopt;
+      };
 
     // Create the dependency collector that will collect the produced
     // dependencies.
@@ -430,11 +423,9 @@ public:
     std::unique_ptr<FrontendAction> Action;
 
     if (ModuleName)
-      Action = std::make_unique<GetDependenciesByModuleNameAction>(
-          *ModuleName, std::move(AdjustCI));
+      Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
     else
-      Action =
-          std::make_unique<ReadPCHAndPreprocessAction>(std::move(AdjustCI));
+      Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
     if (ScanInstance.getDiagnostics().hasErrorOccurred())
       return false;
@@ -445,6 +436,9 @@ public:
 
     if (Result)
       setLastCC1Arguments(std::move(OriginalInvocation));
+
+    // Propagate the statistics to the parent FileManager.
+    DriverFileMgr->AddStats(ScanInstance.getFileManager());
 
     return Result;
   }

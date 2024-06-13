@@ -1292,6 +1292,37 @@ void func() {}
   EXPECT_EQ(attrCount, 1);
 }
 
+TEST_F(LibclangParseTest, clang_getSpellingLocation) {
+  std::string fileName = "main.c";
+  WriteFile(fileName, "#define X(value) int x = value;\nX(42)\n");
+
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+
+  int declarationCount = 0;
+  Traverse([&declarationCount](CXCursor cursor,
+                               CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_VarDecl) {
+      declarationCount++;
+
+      CXSourceLocation cxl = clang_getCursorLocation(cursor);
+      unsigned line;
+
+      // We expect clang_getFileLocation to return the expansion location,
+      // whereas clang_getSpellingLocation should resolve the macro expansion
+      // and return the location of the macro definition.
+      clang_getFileLocation(cxl, nullptr, &line, nullptr, nullptr);
+      EXPECT_EQ(line, 2U);
+      clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+      EXPECT_EQ(line, 1U);
+    }
+
+    return CXChildVisit_Recurse;
+  });
+
+  EXPECT_EQ(declarationCount, 1);
+}
+
 class LibclangRewriteTest : public LibclangParseTest {
 public:
   CXRewriter Rew = nullptr;

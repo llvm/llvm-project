@@ -156,6 +156,12 @@ public:
     /// This is the scope of an OpenACC Compute Construct, which restricts
     /// jumping into/out of it.
     OpenACCComputeConstructScope = 0x10000000,
+
+    /// This is a scope of type alias declaration.
+    TypeAliasScope = 0x20000000,
+
+    /// This is a scope of friend declaration.
+    FriendScope = 0x40000000,
   };
 
 private:
@@ -579,6 +585,12 @@ public:
   /// Determine whether this scope is a controlling scope in a
   /// if/switch/while/for statement.
   bool isControlScope() const { return getFlags() & Scope::ControlScope; }
+
+  /// Determine whether this scope is a type alias scope.
+  bool isTypeAliasScope() const { return getFlags() & Scope::TypeAliasScope; }
+
+  /// Determine whether this scope is a friend scope.
+  bool isFriendScope() const { return getFlags() & Scope::FriendScope; }
 
   /// Returns if rhs has a higher scope depth than this.
   ///

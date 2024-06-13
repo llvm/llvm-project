@@ -403,7 +403,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
       // Such transposes do not materially effect the underlying vector and can
       // be omitted. EG: perm [1, 0, 2] applied to vector<1x1x8xi32>
       bool transposeNonOuterUnitDims = false;
-      auto operandShape = operands[it.index()].getType().cast<ShapedType>();
+      auto operandShape = cast<ShapedType>(operands[it.index()].getType());
       for (auto [index, dim] :
            llvm::enumerate(ArrayRef<int64_t>(perm).drop_back(1))) {
         if (dim != static_cast<int64_t>(index) &&

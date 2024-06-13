@@ -17,6 +17,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -179,6 +180,8 @@ void StackInfoBuilder::visit(Instruction &Inst) {
 
 bool StackInfoBuilder::isInterestingAlloca(const AllocaInst &AI) {
   return (AI.getAllocatedType()->isSized() &&
+          // FIXME: support vscale.
+          !AI.getAllocatedType()->isScalableTy() &&
           // FIXME: instrument dynamic allocas, too
           AI.isStaticAlloca() &&
           // alloca() may be called with 0 size, ignore it.
@@ -281,6 +284,38 @@ Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
       Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
                                 IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
+}
+
+static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
+  return dyn_cast<DbgAssignIntrinsic>(DVI);
+}
+
+static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
+  return DVR->isDbgAssign() ? DVR : nullptr;
+}
+
+void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
+  // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
+  // abstracted over whether they're intrinsic-stored or DbgVariableRecord
+  // stored.
+  auto AnnotateDbgRecord = [&](auto *DPtr) {
+    // Prepend "tag_offset, N" to the dwarf expression.
+    // Tag offset logically applies to the alloca pointer, and it makes sense
+    // to put it at the beginning of the expression.
+    SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset, Tag};
+    for (size_t LocNo = 0; LocNo < DPtr->getNumVariableLocationOps(); ++LocNo)
+      if (DPtr->getVariableLocationOp(LocNo) == Info.AI)
+        DPtr->setExpression(
+            DIExpression::appendOpsToArg(DPtr->getExpression(), NewOps, LocNo));
+    if (auto *DAI = DynCastToDbgAssign(DPtr)) {
+      if (DAI->getAddress() == Info.AI)
+        DAI->setAddressExpression(
+            DIExpression::prependOpcodes(DAI->getAddressExpression(), NewOps));
+    }
+  };
+
+  llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
+  llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
 }
 
 } // namespace memtag

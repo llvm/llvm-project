@@ -132,10 +132,13 @@ set(LIBOMP_ASMFLAGS "" CACHE STRING
   "Appended user specified assembler flags.")
 set(LIBOMP_LDFLAGS "" CACHE STRING
   "Appended user specified linker flags.")
-if("${LIBOMP_ARCH}" STREQUAL "ppc" AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  # PPC (32-bit) on AIX needs libatomic for __atomic_load_8, etc.
-  set(LIBOMP_LIBFLAGS "-latomic" CACHE STRING
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
+  if("${LIBOMP_ARCH}" STREQUAL "ppc")
+    # PPC (32-bit) on AIX needs libatomic for __atomic_load_8, etc.
+    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
+  endif()
 else()
   set(LIBOMP_LIBFLAGS "" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")

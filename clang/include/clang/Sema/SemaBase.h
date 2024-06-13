@@ -146,7 +146,7 @@ public:
     ///   if (SemaDiagnosticBuilder(...) << foo << bar)
     ///     return ExprError();
     ///
-    /// But see CUDADiagIfDeviceCode() and CUDADiagIfHostCode() -- you probably
+    /// But see DiagIfDeviceCode() and DiagIfHostCode() -- you probably
     /// want to use these instead of creating a SemaDiagnosticBuilder yourself.
     operator bool() const { return isImmediate(); }
 
@@ -217,6 +217,9 @@ public:
   /// Emit a partial diagnostic.
   SemaDiagnosticBuilder Diag(SourceLocation Loc, const PartialDiagnostic &PD,
                              bool DeferHint = false);
+
+  /// Build a partial diagnostic.
+  PartialDiagnostic PDiag(unsigned DiagID = 0);
 };
 
 } // namespace clang
