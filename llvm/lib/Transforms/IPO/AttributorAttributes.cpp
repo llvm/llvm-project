@@ -2446,7 +2446,7 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
               return true;
             },
             IRP.getAssociatedFunction(), nullptr, {Instruction::Ret},
-            UsedAssumedInformation))
+            UsedAssumedInformation, false, /*CheckPotentiallyDead=*/true))
       return false;
   }
 
