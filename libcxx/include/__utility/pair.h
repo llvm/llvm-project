@@ -267,6 +267,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
   }
 
 #  if _LIBCPP_STD_VER >= 23
+  template <class = void>
   _LIBCPP_HIDE_FROM_ABI constexpr const pair& operator=(pair const& __p) const
       noexcept(is_nothrow_copy_assignable_v<const first_type> && is_nothrow_copy_assignable_v<const second_type>)
     requires(is_copy_assignable_v<const first_type> && is_copy_assignable_v<const second_type>)
@@ -276,6 +277,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
     return *this;
   }
 
+  template <class = void>
   _LIBCPP_HIDE_FROM_ABI constexpr const pair& operator=(pair&& __p) const
       noexcept(is_nothrow_assignable_v<const first_type&, first_type> &&
                is_nothrow_assignable_v<const second_type&, second_type>)
