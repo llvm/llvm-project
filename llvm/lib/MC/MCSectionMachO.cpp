@@ -291,3 +291,15 @@ Error MCSectionMachO::ParseSectionSpecifier(StringRef Spec,       // In.
 
   return Error::success();
 }
+
+void MCSectionMachO::allocAtoms() {
+  auto *L = curFragList();
+  if (L->Tail)
+    Atoms.resize(L->Tail->getLayoutOrder() + 1);
+}
+
+const MCSymbol *MCSectionMachO::getAtom(size_t I) const {
+  return I < Atoms.size() ? Atoms[I] : nullptr;
+}
+
+void MCSectionMachO::setAtom(size_t I, const MCSymbol *Sym) { Atoms[I] = Sym; }

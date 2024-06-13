@@ -60,9 +60,6 @@ private:
   /// The data for the section this fragment is in.
   MCSection *Parent;
 
-  /// The atom this fragment is in, as represented by its defining symbol.
-  const MCSymbol *Atom = nullptr;
-
   /// The offset of this fragment in its section.
   uint64_t Offset = 0;
 
@@ -96,8 +93,7 @@ public:
   MCSection *getParent() const { return Parent; }
   void setParent(MCSection *Value) { Parent = Value; }
 
-  const MCSymbol *getAtom() const { return Atom; }
-  void setAtom(const MCSymbol *Value) { Atom = Value; }
+  const MCSymbol *getAtom() const;
 
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }

@@ -17,6 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -262,6 +263,10 @@ void MCFragment::destroy() {
       delete cast<MCDummyFragment>(this);
       return;
   }
+}
+
+const MCSymbol *MCFragment::getAtom() const {
+  return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
 }
 
 // Debugging methods
