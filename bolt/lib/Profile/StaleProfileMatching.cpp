@@ -308,7 +308,7 @@ FlowFunction
 createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   FlowFunction Func;
   std::vector<uint64_t> ExitBlocksIndices;
-  
+
   // Add a special "dummy" source so that there is always a unique entry point.
   FlowBlock EntryBlock;
   EntryBlock.Index = 0;
@@ -384,7 +384,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
     Func.Jumps.emplace_back();
     FlowJump &Jump = Func.Jumps.back();
     Jump.Source = I;
-    Jump.Target = Func.Blocks.size()-1;
+    Jump.Target = Func.Blocks.size() - 1;
   }
 
   // Create necessary metadata for the flow function
@@ -656,7 +656,7 @@ void assignProfile(BinaryFunction &BF,
         continue;
 
       // Skips the artificial sink block.
-      if (Jump->Target == Func.Blocks.size()-1)
+      if (Jump->Target == Func.Blocks.size() - 1)
         continue;
       BinaryBasicBlock &SuccBB = *BlockOrder[Jump->Target - 1];
       // Check if the edge corresponds to a regular jump or a landing pad
