@@ -48,8 +48,8 @@ public:
                             "creating an nonexistent_local_time from a local_info that is not non-existent");
   }
 
-  nonexistent_local_time(const nonexistent_local_time&)            = default;
-  nonexistent_local_time& operator=(const nonexistent_local_time&) = default;
+  _LIBCPP_HIDE_FROM_ABI nonexistent_local_time(const nonexistent_local_time&)            = default;
+  _LIBCPP_HIDE_FROM_ABI nonexistent_local_time& operator=(const nonexistent_local_time&) = default;
 
   _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI ~nonexistent_local_time() override; // exported as key function
 
@@ -92,8 +92,8 @@ public:
                             "creating an ambiguous_local_time from a local_info that is not ambiguous");
   }
 
-  ambiguous_local_time(const ambiguous_local_time&)            = default;
-  ambiguous_local_time& operator=(const ambiguous_local_time&) = default;
+  _LIBCPP_HIDE_FROM_ABI ambiguous_local_time(const ambiguous_local_time&)            = default;
+  _LIBCPP_HIDE_FROM_ABI ambiguous_local_time& operator=(const ambiguous_local_time&) = default;
 
   _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI ~ambiguous_local_time() override; // exported as key function
 
