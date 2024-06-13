@@ -1105,7 +1105,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (Subtarget.hasStdExtZfbfmin()) {
           if (Subtarget.hasVInstructionsF16())
             setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-          else if (Subtarget.hasVInstructionsF16Minimal())
+          else
             setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         }
         setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
@@ -1343,7 +1343,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           if (Subtarget.hasStdExtZfbfmin()) {
             if (Subtarget.hasVInstructionsF16())
               setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-            else if (Subtarget.hasVInstructionsF16Minimal())
+            else
               setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
           }
           setOperationAction(
@@ -6739,7 +6739,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           !Subtarget.hasVInstructionsF16())) ||
         (Op.getValueType().getScalarType() == MVT::bf16 &&
          (Subtarget.hasVInstructionsBF16() && Subtarget.hasStdExtZfbfmin() &&
-          Subtarget.hasVInstructionsF16Minimal() &&
           !Subtarget.hasVInstructionsF16()))) {
       if (Op.getValueType() == MVT::nxv32f16 ||
           Op.getValueType() == MVT::nxv32bf16)
