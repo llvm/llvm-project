@@ -489,7 +489,7 @@ clang option ``-fcoverage-mcdc``, there are two hard limits.
 The maximum number of terms is limited to 32767, which is practical for
 handwritten expressions. To be more restrictive in order to enforce coding rules,
 use ``-Xclang -fmcdc-max-conditions=n``. Expressions with exceeded condition
-counts ``n`` will generate warnings.
+counts ``n`` will generate warnings and will be excluded in the MC/DC coverage.
 
 The number of test vectors (the maximum number of possible combinations of
 expressions) is limited to 2,147,483,646. In this case, approximately
