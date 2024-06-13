@@ -768,3 +768,54 @@
 # CHECK: cteste {dfv=of} r15, r9
 # CHECK: encoding: [0x62,0x54,0xc4,0x04,0x85,0xcf]
          cteste {dfv=of} r15, r9
+
+## "{evex} test*" are alias for "cteste* {dfv=of,sf,zf,cf}"
+
+# CHECK: cteste	{dfv=of,sf,zf,cf}	byte ptr [r8 + 4*rax + 123], 123
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0xf6,0x44,0x80,0x7b,0x7b]
+         {evex} test	byte ptr [r8 + 4*rax + 123], 123
+# CHECK: cteste	{dfv=of,sf,zf,cf}	word ptr [r8 + 4*rax + 123], 1234
+# CHECK: encoding: [0x62,0xd4,0x7d,0x04,0xf7,0x44,0x80,0x7b,0xd2,0x04]
+         {evex} test	word ptr [r8 + 4*rax + 123], 1234
+# CHECK: cteste	{dfv=of,sf,zf,cf}	dword ptr [r8 + 4*rax + 123], 123456
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0xf7,0x44,0x80,0x7b,0x40,0xe2,0x01,0x00]
+         {evex} test	dword ptr [r8 + 4*rax + 123], 123456
+# CHECK: cteste	{dfv=of,sf,zf,cf}	qword ptr [r8 + 4*rax + 123], 123456
+# CHECK: encoding: [0x62,0xd4,0xfc,0x04,0xf7,0x44,0x80,0x7b,0x40,0xe2,0x01,0x00]
+         {evex} test	qword ptr [r8 + 4*rax + 123], 123456
+# CHECK: cteste	{dfv=of,sf,zf,cf}	byte ptr [r8 + 4*rax + 123], bl
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x84,0x5c,0x80,0x7b]
+         {evex} test	byte ptr [r8 + 4*rax + 123], bl
+# CHECK: cteste	{dfv=of,sf,zf,cf}	word ptr [r8 + 4*rax + 123], dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x04,0x85,0x54,0x80,0x7b]
+         {evex} test	word ptr [r8 + 4*rax + 123], dx
+# CHECK: cteste	{dfv=of,sf,zf,cf}	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x85,0x4c,0x80,0x7b]
+         {evex} test	dword ptr [r8 + 4*rax + 123], ecx
+# CHECK: cteste	{dfv=of,sf,zf,cf}	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x04,0x85,0x4c,0x80,0x7b]
+         {evex} test	qword ptr [r8 + 4*rax + 123], r9
+# CHECK: cteste	{dfv=of,sf,zf,cf}	bl, 123
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0xf6,0xc3,0x7b]
+         {evex} test	bl, 123
+# CHECK: cteste	{dfv=of,sf,zf,cf}	dx, 1234
+# CHECK: encoding: [0x62,0xf4,0x7d,0x04,0xf7,0xc2,0xd2,0x04]
+         {evex} test	dx, 1234
+# CHECK: cteste	{dfv=of,sf,zf,cf}	ecx, 123456
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0xf7,0xc1,0x40,0xe2,0x01,0x00]
+         {evex} test	ecx, 123456
+# CHECK: cteste	{dfv=of,sf,zf,cf}	r9, 123456
+# CHECK: encoding: [0x62,0xd4,0xfc,0x04,0xf7,0xc1,0x40,0xe2,0x01,0x00]
+         {evex} test	r9, 123456
+# CHECK: cteste	{dfv=of,sf,zf,cf}	dl, bl
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0x84,0xda]
+         {evex} test	dl, bl
+# CHECK: cteste	{dfv=of,sf,zf,cf}	ax, dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x04,0x85,0xd0]
+         {evex} test	ax, dx
+# CHECK: cteste	{dfv=of,sf,zf,cf}	edx, ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0x85,0xca]
+         {evex} test	edx, ecx
+# CHECK: cteste	{dfv=of,sf,zf,cf}	r15, r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x04,0x85,0xcf]
+         {evex} test	r15, r9

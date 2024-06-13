@@ -83,6 +83,13 @@ static const char OpPrecedence[] = {
     3   // IC_GE
 };
 
+static bool ifCmpOrTestOpcode(std::string &Opcode) {
+  return Opcode == "cmp" || Opcode == "cmpb" || Opcode == "cmpw" ||
+         Opcode == "cmpl" || Opcode == "cmpq" || Opcode == "test" ||
+         Opcode == "testb" || Opcode == "testw" || Opcode == "testl" ||
+         Opcode == "testq";
+}
+
 class X86AsmParser : public MCTargetAsmParser {
   ParseInstructionInfo *InstInfo;
   bool Code16GCC;
@@ -96,6 +103,7 @@ class X86AsmParser : public MCTargetAsmParser {
     OpcodePrefix_VEX2,
     OpcodePrefix_VEX3,
     OpcodePrefix_EVEX,
+    OpcodePrefix_EVEX_CMP_TEST,
   };
 
   OpcodePrefix ForcedOpcodePrefix = OpcodePrefix_Default;
@@ -3202,6 +3210,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       if (getLexer().isNot(AsmToken::RCurly))
         return Error(Parser.getTok().getLoc(), "Expected '}'");
       Parser.Lex(); // Eat curly.
+      std::string Opcode = Parser.getTok().getString().lower();
 
       if (Prefix == "rex")
         ForcedOpcodePrefix = OpcodePrefix_REX;
@@ -3214,7 +3223,9 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       else if (Prefix == "vex3")
         ForcedOpcodePrefix = OpcodePrefix_VEX3;
       else if (Prefix == "evex")
-        ForcedOpcodePrefix = OpcodePrefix_EVEX;
+        ForcedOpcodePrefix = is64BitMode() && ifCmpOrTestOpcode(Opcode)
+                                 ? OpcodePrefix_EVEX_CMP_TEST
+                                 : OpcodePrefix_EVEX;
       else if (Prefix == "disp8")
         ForcedDispEncoding = DispEncoding_Disp8;
       else if (Prefix == "disp32")
@@ -3784,6 +3795,66 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
     Inst.setOpcode(X86::INT3);
     return true;
   }
+#define FROM_TO(FROM, TO)                                                      \
+  case X86::FROM: {                                                            \
+    if (ForcedOpcodePrefix == OpcodePrefix_EVEX_CMP_TEST) {                    \
+      Inst.setOpcode(X86::TO);                                                 \
+      Inst.addOperand(MCOperand::createImm(15));                               \
+      Inst.addOperand(MCOperand::createImm(4));                                \
+      return true;                                                             \
+    }                                                                          \
+    return false;                                                              \
+  }
+    FROM_TO(CMP64rr, CCMP64rr)
+    FROM_TO(CMP64mi32, CCMP64mi32)
+    FROM_TO(CMP64mi8, CCMP64mi8)
+    FROM_TO(CMP64mr, CCMP64mr)
+    FROM_TO(CMP64ri32, CCMP64ri32)
+    FROM_TO(CMP64ri8, CCMP64ri8)
+    FROM_TO(CMP64rm, CCMP64rm)
+
+    FROM_TO(CMP32rr, CCMP32rr)
+    FROM_TO(CMP32mi, CCMP32mi)
+    FROM_TO(CMP32mi8, CCMP32mi8)
+    FROM_TO(CMP32mr, CCMP32mr)
+    FROM_TO(CMP32ri, CCMP32ri)
+    FROM_TO(CMP32ri8, CCMP32ri8)
+    FROM_TO(CMP32rm, CCMP32rm)
+
+    FROM_TO(CMP16rr, CCMP16rr)
+    FROM_TO(CMP16mi, CCMP16mi)
+    FROM_TO(CMP16mi8, CCMP16mi8)
+    FROM_TO(CMP16mr, CCMP16mr)
+    FROM_TO(CMP16ri, CCMP16ri)
+    FROM_TO(CMP16ri8, CCMP16ri8)
+    FROM_TO(CMP16rm, CCMP16rm)
+
+    FROM_TO(CMP8rr, CCMP8rr)
+    FROM_TO(CMP8mi, CCMP8mi)
+    FROM_TO(CMP8mr, CCMP8mr)
+    FROM_TO(CMP8ri, CCMP8ri)
+    FROM_TO(CMP8rm, CCMP8rm)
+
+    FROM_TO(TEST64rr, CTEST64rr)
+    FROM_TO(TEST64mi32, CTEST64mi32)
+    FROM_TO(TEST64mr, CTEST64mr)
+    FROM_TO(TEST64ri32, CTEST64ri32)
+
+    FROM_TO(TEST32rr, CTEST32rr)
+    FROM_TO(TEST32mi, CTEST32mi)
+    FROM_TO(TEST32mr, CTEST32mr)
+    FROM_TO(TEST32ri, CTEST32ri)
+
+    FROM_TO(TEST16rr, CTEST16rr)
+    FROM_TO(TEST16mi, CTEST16mi)
+    FROM_TO(TEST16mr, CTEST16mr)
+    FROM_TO(TEST16ri, CTEST16ri)
+
+    FROM_TO(TEST8rr, CTEST8rr)
+    FROM_TO(TEST8mi, CTEST8mi)
+    FROM_TO(TEST8mr, CTEST8mr)
+    FROM_TO(TEST8ri, CTEST8ri)
+#undef FROM_TO
   }
 }
 
@@ -4122,6 +4193,7 @@ unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
 
   switch (ForcedOpcodePrefix) {
   case OpcodePrefix_Default:
+  case OpcodePrefix_EVEX_CMP_TEST:
     break;
   case OpcodePrefix_REX:
   case OpcodePrefix_REX2:

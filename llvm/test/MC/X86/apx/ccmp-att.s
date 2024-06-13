@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-402: error:
+# ERROR-COUNT-428: error:
 # ERROR-NOT: error:
 ## Condition flags
 
@@ -1217,3 +1217,109 @@
 # CHECK: ccmpoq {dfv=of,sf,zf,cf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xfc,0x00,0x39,0xc3]
          ccmpoq {dFV=Cf,zF,SF,of} %rax, %rbx
+
+## "{evex} cmp*" are alias for "ccmpe* {dfv=of,sf,zf,cf}"
+
+# CHECK: ccmpeb  {dfv=of,sf,zf,cf}       $123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x80,0x7c,0x80,0x7b,0x7b]
+{evex} cmpb $123, 123(%r8,%rax,4)
+
+# CHECK: ccmpew  {dfv=of,sf,zf,cf}       $123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x7d,0x04,0x83,0x7c,0x80,0x7b,0x7b]
+{evex} cmpw $123, 123(%r8,%rax,4)
+
+# CHECK: ccmpew  {dfv=of,sf,zf,cf}       $1234, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x7d,0x04,0x81,0x7c,0x80,0x7b,0xd2,0x04]
+{evex} cmpw $1234, 123(%r8,%rax,4)
+
+# CHECK: ccmpel  {dfv=of,sf,zf,cf}       $123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x83,0x7c,0x80,0x7b,0x7b]
+{evex} cmpl $123, 123(%r8,%rax,4)
+
+# CHECK: ccmpel  {dfv=of,sf,zf,cf}       $123456, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
+{evex} cmpl $123456, 123(%r8,%rax,4)
+
+# CHECK: ccmpeq  {dfv=of,sf,zf,cf}       $123, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0xfc,0x04,0x83,0x7c,0x80,0x7b,0x7b]
+{evex} cmpq $123, 123(%r8,%rax,4)
+
+# CHECK: ccmpeq  {dfv=of,sf,zf,cf}       $123456, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0xfc,0x04,0x81,0x7c,0x80,0x7b,0x40,0xe2,0x01,0x00]
+{evex} cmpq $123456, 123(%r8,%rax,4)
+
+# CHECK: ccmpeb  {dfv=of,sf,zf,cf}       %bl, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x38,0x5c,0x80,0x7b]
+{evex} cmpb %bl, 123(%r8,%rax,4)
+
+# CHECK: ccmpew  {dfv=of,sf,zf,cf}       %dx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x7d,0x04,0x39,0x54,0x80,0x7b]
+{evex} cmpw %dx, 123(%r8,%rax,4)
+
+# CHECK: ccmpel  {dfv=of,sf,zf,cf}       %ecx, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x39,0x4c,0x80,0x7b]
+{evex} cmpl %ecx, 123(%r8,%rax,4)
+
+# CHECK: ccmpeq  {dfv=of,sf,zf,cf}       %r9, 123(%r8,%rax,4)
+# CHECK: encoding: [0x62,0x54,0xfc,0x04,0x39,0x4c,0x80,0x7b]
+{evex} cmpq %r9, 123(%r8,%rax,4)
+
+# CHECK: ccmpeb  {dfv=of,sf,zf,cf}       123(%r8,%rax,4), %bl
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x3a,0x5c,0x80,0x7b]
+{evex} cmpb 123(%r8,%rax,4), %bl
+
+# CHECK: ccmpew  {dfv=of,sf,zf,cf}       123(%r8,%rax,4), %dx
+# CHECK: encoding: [0x62,0xd4,0x7d,0x04,0x3b,0x54,0x80,0x7b]
+{evex} cmpw 123(%r8,%rax,4), %dx
+
+# CHECK: ccmpel  {dfv=of,sf,zf,cf}       123(%r8,%rax,4), %ecx
+# CHECK: encoding: [0x62,0xd4,0x7c,0x04,0x3b,0x4c,0x80,0x7b]
+{evex} cmpl 123(%r8,%rax,4), %ecx
+
+# CHECK: ccmpeq  {dfv=of,sf,zf,cf}       123(%r8,%rax,4), %r9
+# CHECK: encoding: [0x62,0x54,0xfc,0x04,0x3b,0x4c,0x80,0x7b]
+{evex} cmpq 123(%r8,%rax,4), %r9
+
+# CHECK: ccmpeb  {dfv=of,sf,zf,cf}       $123, %bl
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0x80,0xfb,0x7b]
+{evex} cmpb $123, %bl
+
+# CHECK: ccmpew  {dfv=of,sf,zf,cf}       $123, %dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x04,0x83,0xfa,0x7b]
+{evex} cmpw $123, %dx
+
+# CHECK: ccmpel  {dfv=of,sf,zf,cf}       $123, %ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0x83,0xf9,0x7b]
+{evex} cmpl $123, %ecx
+
+# CHECK: ccmpeq  {dfv=of,sf,zf,cf}       $123, %r9
+# CHECK: encoding: [0x62,0xd4,0xfc,0x04,0x83,0xf9,0x7b]
+{evex} cmpq $123, %r9
+
+# CHECK: ccmpew  {dfv=of,sf,zf,cf}       $1234, %dx
+# CHECK: encoding: [0x62,0xf4,0x7d,0x04,0x81,0xfa,0xd2,0x04]
+{evex} cmpw $1234, %dx
+
+# CHECK: ccmpel  {dfv=of,sf,zf,cf}       $123456, %ecx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0x81,0xf9,0x40,0xe2,0x01,0x00]
+{evex} cmpl $123456, %ecx
+
+# CHECK: ccmpeq  {dfv=of,sf,zf,cf}       $123456, %r9
+# CHECK: encoding: [0x62,0xd4,0xfc,0x04,0x81,0xf9,0x40,0xe2,0x01,0x00]
+{evex} cmpq $123456, %r9
+
+# CHECK: ccmpeb  {dfv=of,sf,zf,cf}       %bl, %dl
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0x38,0xda]
+{evex} cmpb %bl, %dl
+
+# CHECK: ccmpew  {dfv=of,sf,zf,cf}       %dx, %ax
+# CHECK: encoding: [0x62,0xf4,0x7d,0x04,0x39,0xd0]
+{evex} cmpw %dx, %ax
+
+# CHECK: ccmpel  {dfv=of,sf,zf,cf}       %ecx, %edx
+# CHECK: encoding: [0x62,0xf4,0x7c,0x04,0x39,0xca]
+{evex} cmpl %ecx, %edx
+
+# CHECK: ccmpeq  {dfv=of,sf,zf,cf}       %r9, %r15
+# CHECK: encoding: [0x62,0x54,0xfc,0x04,0x39,0xcf]
+{evex} cmpq %r9, %r15
