@@ -343,6 +343,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToBoolean:
+  case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
     if (DiscardResult)
       return this->discard(SubExpr);
@@ -362,7 +363,12 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (FromT == ToT)
       return true;
-    return this->emitCast(*FromT, *ToT, CE);
+    if (!this->emitCast(*FromT, *ToT, CE))
+      return false;
+
+    if (CE->getCastKind() == CK_BooleanToSignedIntegral)
+      return this->emitNeg(*ToT, CE);
+    return true;
   }
 
   case CK_PointerToBoolean:
@@ -1101,6 +1107,23 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->delegate(Inits[0]);
   }
 
+  // Prepare composite return value.
+  if (!Initializing) {
+    if (GlobalDecl) {
+      std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+      if (!GlobalIndex)
+        return false;
+      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+        return false;
+    } else {
+      std::optional<unsigned> LocalIndex = allocateLocal(E);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrGlobal(*LocalIndex, E))
+        return false;
+    }
+  }
+
   QualType T = E->getType();
   if (T->isRecordType()) {
     const Record *R = getRecord(E->getType());
@@ -1201,19 +1224,11 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (T->isArrayType()) {
-    auto Eval = [&](Expr *Init, unsigned ElemIndex) {
-      return visitArrayElemInit(ElemIndex, Init);
-    };
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
-      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
-        if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
-          return false;
-      } else {
-        if (!this->visitArrayElemInit(ElementIndex, Init))
-          return false;
-        ++ElementIndex;
-      }
+      if (!this->visitArrayElemInit(ElementIndex, Init))
+        return false;
+      ++ElementIndex;
     }
 
     // Expand the filler expression.
@@ -1357,12 +1372,6 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
       return true;
   }
   return this->delegate(E->getSubExpr());
-}
-
-template <class Emitter>
-bool ByteCodeExprGen<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
-  auto It = E->begin();
-  return this->visit(*It);
 }
 
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
@@ -3962,9 +3971,17 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // we haven't seen yet.
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      const auto typeShouldBeVisited = [&](QualType T) -> bool {
+        if (T.isConstant(Ctx.getASTContext()))
+          return true;
+        if (const auto *RT = T->getAs<ReferenceType>())
+          return RT->getPointeeType().isConstQualified();
+        return false;
+      };
+
       // Visit local const variables like normal.
       if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
-          VD->getType().isConstant(Ctx.getASTContext())) {
+          typeShouldBeVisited(VD->getType())) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.

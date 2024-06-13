@@ -14,6 +14,7 @@
 #include "AMDKernelCodeT.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "Utils/SIDefinesUtils.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
@@ -220,43 +221,6 @@ static int get_amd_kernel_code_t_FieldIndex(StringRef name) {
   return map.lookup(name) - 1; // returns -1 if not found
 }
 
-static constexpr std::pair<unsigned, unsigned> getShiftMask(unsigned Value) {
-  unsigned Shift = 0;
-  unsigned Mask = 0;
-
-  Mask = ~Value;
-  for (; !(Mask & 1); Shift++, Mask >>= 1) {
-  }
-
-  return std::make_pair(Shift, Mask);
-}
-
-static const MCExpr *MaskShiftSet(const MCExpr *Val, uint32_t Mask,
-                                  uint32_t Shift, MCContext &Ctx) {
-  if (Mask) {
-    const MCExpr *MaskExpr = MCConstantExpr::create(Mask, Ctx);
-    Val = MCBinaryExpr::createAnd(Val, MaskExpr, Ctx);
-  }
-  if (Shift) {
-    const MCExpr *ShiftExpr = MCConstantExpr::create(Shift, Ctx);
-    Val = MCBinaryExpr::createShl(Val, ShiftExpr, Ctx);
-  }
-  return Val;
-}
-
-static const MCExpr *MaskShiftGet(const MCExpr *Val, uint32_t Mask,
-                                  uint32_t Shift, MCContext &Ctx) {
-  if (Shift) {
-    const MCExpr *ShiftExpr = MCConstantExpr::create(Shift, Ctx);
-    Val = MCBinaryExpr::createLShr(Val, ShiftExpr, Ctx);
-  }
-  if (Mask) {
-    const MCExpr *MaskExpr = MCConstantExpr::create(Mask, Ctx);
-    Val = MCBinaryExpr::createAnd(Val, MaskExpr, Ctx);
-  }
-  return Val;
-}
-
 class PrintField {
 public:
   template <typename T, T AMDGPUMCKernelCodeT::*ptr,
@@ -305,10 +269,10 @@ static ArrayRef<PrintFx> getPrinterTable() {
     const MCExpr *Value;                                                       \
     if (PGMType == 0) {                                                        \
       Value =                                                                  \
-          MaskShiftGet(C.compute_pgm_resource1_registers, Mask, Shift, Ctx);   \
+          maskShiftGet(C.compute_pgm_resource1_registers, Mask, Shift, Ctx);   \
     } else {                                                                   \
       Value =                                                                  \
-          MaskShiftGet(C.compute_pgm_resource2_registers, Mask, Shift, Ctx);   \
+          maskShiftGet(C.compute_pgm_resource2_registers, Mask, Shift, Ctx);   \
     }                                                                          \
     int64_t Val;                                                               \
     if (Value->evaluateAsAbsolute(Val))                                        \
@@ -392,7 +356,7 @@ static ArrayRef<ParseFx> getParserTable() {
     if (!parseExpr(MCParser, Value, Err))                                      \
       return false;                                                            \
     auto [Shift, Mask] = getShiftMask(Complement);                             \
-    Value = MaskShiftSet(Value, Mask, Shift, Ctx);                             \
+    Value = maskShiftSet(Value, Mask, Shift, Ctx);                             \
     const MCExpr *Compl = MCConstantExpr::create(Complement, Ctx);             \
     if (PGMType == 0) {                                                        \
       C.compute_pgm_resource1_registers = MCBinaryExpr::createAnd(             \
@@ -542,7 +506,7 @@ void AMDGPUMCKernelCodeT::EmitKernelCodeT(MCStreamer &OS, MCContext &Ctx) {
     const MCExpr *CodeProps = MCConstantExpr::create(code_properties, Ctx);
     CodeProps = MCBinaryExpr::createOr(
         CodeProps,
-        MaskShiftSet(is_dynamic_callstack,
+        maskShiftSet(is_dynamic_callstack,
                      (1 << AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_WIDTH) - 1,
                      AMD_CODE_PROPERTY_IS_DYNAMIC_CALLSTACK_SHIFT, Ctx),
         Ctx);
