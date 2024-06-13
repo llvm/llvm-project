@@ -100,7 +100,7 @@ public:
     }
 
     // TODO: add support for switch cases.
-    assert(false && "Unhandled terminator type.");
+    llvm_unreachable("Unhandled terminator type.");
   }
 
   /// Replaces |BB|'s branch targets present in |ToReplace| with |NewTarget|.
