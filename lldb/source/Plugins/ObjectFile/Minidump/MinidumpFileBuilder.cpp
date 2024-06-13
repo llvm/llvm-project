@@ -32,6 +32,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "Plugins/Process/minidump/MinidumpTypes.h"
 #include "lldb/lldb-enumerations.h"
@@ -52,13 +53,14 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::minidump;
 
-Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories(
-    const lldb_private::Target &target, const lldb::ProcessSP &process_sp) {
+Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
   // First set the offset on the file, and on the bytes saved
   m_saved_data_size += header_size;
   // We know we will have at least Misc, SystemInfo, Modules, and ThreadList
   // (corresponding memory list for stacks) And an additional memory list for
   // non-stacks.
+
+  lldb_private::Target& target = m_process_sp->GetTarget();
   m_expected_directories = 6;
   // Check if OS is linux
   if (target.GetArchitecture().GetTriple().getOS() ==
@@ -66,7 +68,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories(
     m_expected_directories += 9;
 
   // Go through all of the threads and check for exceptions.
-  lldb_private::ThreadList thread_list = process_sp->GetThreadList();
+  lldb_private::ThreadList thread_list = m_process_sp->GetThreadList();
   const uint32_t num_threads = thread_list.GetSize();
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
     ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
@@ -125,8 +127,9 @@ void MinidumpFileBuilder::AddDirectory(StreamType type, uint64_t stream_size) {
   assert(m_expected_directories >= m_directories.size());
 }
 
-Status MinidumpFileBuilder::AddSystemInfo(const llvm::Triple &target_triple) {
+Status MinidumpFileBuilder::AddSystemInfo() {
   Status error;
+  const llvm::Triple &target_triple = m_process_sp->GetTarget().GetArchitecture().GetTriple();
   AddDirectory(StreamType::SystemInfo, sizeof(llvm::minidump::SystemInfo));
 
   llvm::minidump::ProcessorArchitecture arch;
@@ -276,10 +279,11 @@ llvm::Expected<uint64_t> getModuleFileSize(Target &target,
 // single module. Additional data of variable length, such as module's names,
 // are stored just after the ModuleList stream. The llvm::minidump::Module
 // structures point to this helper data by global offset.
-Status MinidumpFileBuilder::AddModuleList(Target &target) {
+Status MinidumpFileBuilder::AddModuleList() {
   constexpr size_t minidump_module_size = sizeof(llvm::minidump::Module);
   Status error;
 
+  lldb_private::Target& target = m_process_sp->GetTarget();
   const ModuleList &modules = target.GetImages();
   llvm::support::ulittle32_t modules_count =
       static_cast<llvm::support::ulittle32_t>(modules.GetSize());
@@ -551,39 +555,6 @@ public:
   }
 };
 
-// Function returns start and size of the memory region that contains
-// memory location pointed to by the current stack pointer.
-llvm::Expected<std::pair<addr_t, addr_t>>
-findStackHelper(const lldb::ProcessSP &process_sp, uint64_t rsp) {
-  MemoryRegionInfo range_info;
-  Status error = process_sp->GetMemoryRegionInfo(rsp, range_info);
-  // Skip failed memory region requests or any regions with no permissions.
-  if (error.Fail() || range_info.GetLLDBPermissions() == 0)
-    return llvm::createStringError(
-        std::errc::not_supported,
-        "unable to load stack segment of the process");
-
-  // This is a duplicate of the logic in
-  // Process::SaveOffRegionsWithStackPointers but ultimately, we need to only
-  // save up from the start of the stack down to the stack pointer
-  const addr_t range_end = range_info.GetRange().GetRangeEnd();
-  const addr_t red_zone = process_sp->GetABI()->GetRedZoneSize();
-  const addr_t stack_head = rsp - red_zone;
-  if (stack_head > range_info.GetRange().GetRangeEnd()) {
-    range_info.GetRange().SetRangeBase(stack_head);
-    range_info.GetRange().SetByteSize(range_end - stack_head);
-  }
-
-  const addr_t addr = range_info.GetRange().GetRangeBase();
-  const addr_t size = range_info.GetRange().GetByteSize();
-
-  if (size == 0)
-    return llvm::createStringError(std::errc::not_supported,
-                                   "stack segment of the process is empty");
-
-  return std::make_pair(addr, size);
-}
-
 Status MinidumpFileBuilder::FixThreads() {
   Status error;
   // If we have anything in the heap flush it.
@@ -607,9 +578,9 @@ Status MinidumpFileBuilder::FixThreads() {
   return error;
 }
 
-Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
+Status MinidumpFileBuilder::AddThreadList() {
   constexpr size_t minidump_thread_size = sizeof(llvm::minidump::Thread);
-  lldb_private::ThreadList thread_list = process_sp->GetThreadList();
+  lldb_private::ThreadList thread_list = m_process_sp->GetThreadList();
 
   // size of the entire thread stream consists of:
   // number of threads and threads array
@@ -640,7 +611,7 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
       return error;
     }
     RegisterContext *reg_ctx = reg_ctx_sp.get();
-    Target &target = process_sp->GetTarget();
+    Target &target = m_process_sp->GetTarget();
     const ArchSpec &arch = target.GetArchitecture();
     ArchThreadContexts thread_context(arch.GetMachine());
     if (!thread_context.prepareRegisterContext(reg_ctx)) {
@@ -652,7 +623,7 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
 
     uint64_t sp = reg_ctx->GetSP();
     MemoryRegionInfo sp_region;
-    process_sp->GetMemoryRegionInfo(sp, sp_region);
+    m_process_sp->GetMemoryRegionInfo(sp, sp_region);
 
     // Emit a blank descriptor
     MemoryDescriptor stack;
@@ -693,8 +664,8 @@ Status MinidumpFileBuilder::AddThreadList(const lldb::ProcessSP &process_sp) {
   return Status();
 }
 
-void MinidumpFileBuilder::AddExceptions(const lldb::ProcessSP &process_sp) {
-  lldb_private::ThreadList thread_list = process_sp->GetThreadList();
+void MinidumpFileBuilder::AddExceptions() {
+  lldb_private::ThreadList thread_list = m_process_sp->GetThreadList();
 
   const uint32_t num_threads = thread_list.GetSize();
   for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
@@ -744,7 +715,7 @@ void MinidumpFileBuilder::AddExceptions(const lldb::ProcessSP &process_sp) {
   }
 }
 
-void MinidumpFileBuilder::AddMiscInfo(const lldb::ProcessSP &process_sp) {
+void MinidumpFileBuilder::AddMiscInfo() {
   AddDirectory(StreamType::MiscInfo,
                sizeof(lldb_private::minidump::MinidumpMiscInfo));
 
@@ -756,7 +727,7 @@ void MinidumpFileBuilder::AddMiscInfo(const lldb::ProcessSP &process_sp) {
   misc_info.flags1 = static_cast<llvm::support::ulittle32_t>(0);
 
   lldb_private::ProcessInstanceInfo process_info;
-  process_sp->GetProcessInfo(process_info);
+  m_process_sp->GetProcessInfo(process_info);
   if (process_info.ProcessIDIsValid()) {
     // Set flags1 to reflect that PID is filled in
     misc_info.flags1 =
@@ -778,15 +749,14 @@ getFileStreamHelper(const std::string &path) {
   return std::move(maybe_stream.get());
 }
 
-void MinidumpFileBuilder::AddLinuxFileStreams(
-    const lldb::ProcessSP &process_sp) {
+void MinidumpFileBuilder::AddLinuxFileStreams() {
   std::vector<std::pair<StreamType, std::string>> files_with_stream_types = {
       {StreamType::LinuxCPUInfo, "/proc/cpuinfo"},
       {StreamType::LinuxLSBRelease, "/etc/lsb-release"},
   };
 
   lldb_private::ProcessInstanceInfo process_info;
-  process_sp->GetProcessInfo(process_info);
+  m_process_sp->GetProcessInfo(process_info);
   if (process_info.ProcessIDIsValid()) {
     lldb::pid_t pid = process_info.GetProcessID();
     std::string pid_str = std::to_string(pid);
@@ -822,56 +792,66 @@ void MinidumpFileBuilder::AddLinuxFileStreams(
   }
 }
 
-Status MinidumpFileBuilder::AddMemory(const ProcessSP &process_sp,
-                                      SaveCoreStyle core_style) {
+Status MinidumpFileBuilder::AddMemory(SaveCoreStyle core_style) {
   Status error;
 
-  Process::CoreFileMemoryRanges ranges_for_memory_list;
-  error = process_sp->CalculateCoreFileSaveRanges(
-      SaveCoreStyle::eSaveCoreStackOnly, ranges_for_memory_list);
-  if (error.Fail()) {
+  Process::CoreFileMemoryRanges ranges_32;
+  Process::CoreFileMemoryRanges ranges_64;
+  error = m_process_sp->CalculateCoreFileSaveRanges(
+      SaveCoreStyle::eSaveCoreStackOnly, ranges_32);
+  if (error.Fail())
+    return error;
+
+  std::set<addr_t> stack_start_addresses;
+  for (const auto &core_range : ranges_32)
+    stack_start_addresses.insert(core_range.range.start());
+
+
+
+
+  uint64_t total_size = ranges_32.size() * sizeof(llvm::minidump::MemoryDescriptor);
+  for (const auto &core_range : ranges_32)
+    total_size += core_range.range.size();
+
+  if (total_size >= UINT32_MAX) {
+    error.SetErrorStringWithFormat("Unable to write minidump. Stack memory exceeds 32b limit. (Num Stacks %zu)", ranges_32.size());
     return error;
   }
 
-  std::set<addr_t> stack_ranges;
-  for (const auto &core_range : ranges_for_memory_list) {
-    stack_ranges.insert(core_range.range.start());
-  }
-  // We leave a little padding for dictionary and any other metadata we would
-  // want. Also so that we can put the header of the memory list 64 in 32b land,
-  // because the directory requires a 32b RVA.
-  Process::CoreFileMemoryRanges ranges;
-  error = process_sp->CalculateCoreFileSaveRanges(core_style, ranges);
-  if (error.Fail()) {
-    return error;
+  Process::CoreFileMemoryRanges all_core_memory_ranges;
+  if (core_style != SaveCoreStyle::eSaveCoreStackOnly) {
+    error = m_process_sp->CalculateCoreFileSaveRanges(core_style, all_core_memory_ranges);
+    if (error.Fail())
+      return error;
   }
 
-  uint64_t total_size =
-      256 + (ranges.size() * sizeof(llvm::minidump::MemoryDescriptor_64));
-  // Take all the memory that will fit in the 32b range.
-  for (int i = ranges.size() - 1; i >= 0; i--) {
-    addr_t size_to_add =
-        ranges[i].range.size() + sizeof(llvm::minidump::MemoryDescriptor);
-    // filter out the stacks and check if it's below 32b max.
-    if (stack_ranges.count(ranges[i].range.start()) > 0) {
-      ranges.erase(ranges.begin() + i);
+  // We need to calculate the MemoryDescriptor size in the worst case
+  // Where all memory descriptors are 64b. We also leave some additional padding
+  // So that we convert over to 64b with space to spare. This does not waste space in the dump
+  // But instead converts some memory from being in the memorylist_32 to the memorylist_64.
+  total_size += 256 + (ranges_64.size() - stack_start_addresses.size()) * sizeof(llvm::minidump::MemoryDescriptor_64);
+
+  for (const auto &core_range : all_core_memory_ranges) {
+    addr_t size_to_add = core_range.range.size() + sizeof(llvm::minidump::MemoryDescriptor);
+    if (stack_start_addresses.count(core_range.range.start()) > 0) {
+      // Don't double save stacks.
+      continue;
     } else if (total_size + size_to_add < UINT32_MAX) {
-      ranges_for_memory_list.push_back(ranges[i]);
-      total_size += ranges[i].range.size();
+      ranges_32.push_back(core_range);
+      total_size += core_range.range.size();
       total_size += sizeof(llvm::minidump::MemoryDescriptor);
-      ranges.erase(ranges.begin() + i);
     } else {
-      break;
+      ranges_64.push_back(core_range);
     }
   }
 
-  error = AddMemoryList_32(process_sp, ranges_for_memory_list);
+  error = AddMemoryList_32(ranges_32);
   if (error.Fail())
     return error;
 
   // Add the remaining memory as a 64b range.
-  if (ranges.size() > 0) {
-    error = AddMemoryList_64(process_sp, ranges);
+  if (ranges_64.size() > 0) {
+    error = AddMemoryList_64(ranges_64);
     if (error.Fail())
       return error;
   }
@@ -907,7 +887,7 @@ Status MinidumpFileBuilder::DumpHeader() const {
   if (error.Fail() || bytes_written != header_size) {
     if (bytes_written != header_size)
       error.SetErrorStringWithFormat(
-          "unable to write the header (written %zd/%zd)", bytes_written,
+          "Unable to write the minidump header (written %zd/%zd)", bytes_written,
           header_size);
     return error;
   }
@@ -937,8 +917,7 @@ Status MinidumpFileBuilder::DumpDirectories() const {
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_32(
-    const ProcessSP &process_sp, const Process::CoreFileMemoryRanges &ranges) {
+Status MinidumpFileBuilder::AddMemoryList_32(const Process::CoreFileMemoryRanges &ranges) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   Log *log = GetLog(LLDBLog::Object);
@@ -952,12 +931,12 @@ Status MinidumpFileBuilder::AddMemoryList_32(
 
     LLDB_LOGF(
         log,
-        "AddMemoryList %zu/%zu reading memory for region (%zu bytes) [%zx, %zx)",
+        "/AddMemoryList/AddMemory/ %zu/%zu reading memory for region (%zu bytes) [%zx, %zx)",
         region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
     const size_t bytes_read =
-        process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
+        m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail() || bytes_read == 0) {
       LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
                 bytes_read, error.AsCString());
@@ -1005,8 +984,7 @@ Status MinidumpFileBuilder::AddMemoryList_32(
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_64(
-    const ProcessSP &process_sp, const Process::CoreFileMemoryRanges &ranges) {
+Status MinidumpFileBuilder::AddMemoryList_64(const Process::CoreFileMemoryRanges &ranges) {
   AddDirectory(StreamType::Memory64List,
                (sizeof(llvm::support::ulittle64_t) * 2) +
                    ranges.size() * sizeof(llvm::minidump::MemoryDescriptor_64));
@@ -1046,13 +1024,13 @@ Status MinidumpFileBuilder::AddMemoryList_64(
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
 
     LLDB_LOGF(log,
-              "AddMemoryList_64 %zu/%zu reading memory for region (%zu bytes) "
+              "/AddMemoryList_64/AddMemory %zu/%zu reading memory for region (%zu bytes) "
               "[%zx, %zx)",
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
     const size_t bytes_read =
-        process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
+        m_process_sp->ReadMemory(addr, data_up->GetBytes(), size, error);
     if (error.Fail()) {
       LLDB_LOGF(log, "Failed to read memory region. Bytes read: %zu, error: %s",
                 bytes_read, error.AsCString());
@@ -1115,19 +1093,17 @@ Status MinidumpFileBuilder::FlushToDisk() {
   m_core_file->SeekFromEnd(0);
   addr_t starting_size = m_data.GetByteSize();
   addr_t remaining_bytes = starting_size;
-  size_t offset = 0;
+  offset_t offset = 0;
 
-  // Unix/Linux OS's return SSIZE for operations, this means a max of 2gb per IO
-  // operation so we chunk it here. We keep the file size small to try to
-  // minimize memory use.
   while (remaining_bytes > 0) {
-    size_t chunk_size = std::min(remaining_bytes, m_write_chunk_max);
-    size_t bytes_written = chunk_size;
+    size_t bytes_written = 0;
+    // We don't care how many bytes we wrote unless we got an error
+    // so just decrement the remaining bytes.
     error = m_core_file->Write(m_data.GetBytes() + offset, bytes_written);
-    if (error.Fail() || bytes_written != chunk_size) {
+    if (error.Fail()) {
       error.SetErrorStringWithFormat(
           "Wrote incorrect number of bytes to minidump file. (written %zd/%zd)",
-          bytes_written, chunk_size);
+          starting_size - remaining_bytes, starting_size);
       return error;
     }
 

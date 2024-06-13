@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 

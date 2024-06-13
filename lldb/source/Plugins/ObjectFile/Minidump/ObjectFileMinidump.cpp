@@ -72,37 +72,36 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
     error = maybe_core_file.takeError();
     return false;
   }
-  MinidumpFileBuilder builder(std::move(maybe_core_file.get()));
+  MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp);
 
   Target &target = process_sp->GetTarget();
-  builder.AddHeaderAndCalculateDirectories(target, process_sp);
-
+  builder.AddHeaderAndCalculateDirectories();
   Log *log = GetLog(LLDBLog::Object);
-  error = builder.AddSystemInfo(target.GetArchitecture().GetTriple());
+  error = builder.AddSystemInfo();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddSystemInfo failed: %s", error.AsCString());
     return false;
   }
 
-  builder.AddModuleList(target);
-  builder.AddMiscInfo(process_sp);
+  builder.AddModuleList();
+  builder.AddMiscInfo();
 
-  error = builder.AddThreadList(process_sp);
+  error = builder.AddThreadList();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddThreadList failed: %s", error.AsCString());
     return false;
   }
   if (target.GetArchitecture().GetTriple().getOS() ==
       llvm::Triple::OSType::Linux) {
-    builder.AddLinuxFileStreams(process_sp);
+    builder.AddLinuxFileStreams();
   }
 
   // Add any exceptions but only if there are any in any threads.
-  builder.AddExceptions(process_sp);
+  builder.AddExceptions();
 
   // Note: add memory HAS to be the last thing we do. It can overflow into 64b
   // land and many RVA's only support 32b
-  error = builder.AddMemory(process_sp, core_style);
+  error = builder.AddMemory(core_style);
   if (error.Fail()) {
     LLDB_LOGF(log, "AddMemoryList failed: %s", error.AsCString());
     return false;

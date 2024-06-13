@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <utility>
 #include <variant>
 
 #include "lldb/Target/Process.h"
@@ -46,7 +47,8 @@ lldb_private::Status WriteString(const std::string &to_write,
 /// the data on heap.
 class MinidumpFileBuilder {
 public:
-  MinidumpFileBuilder(lldb::FileUP&& core_file): m_core_file(std::move(core_file)) {};
+  MinidumpFileBuilder(lldb::FileUP&& core_file, const lldb::ProcessSP &process_sp) 
+    : m_process_sp(std::move(process_sp)), m_core_file(std::move(core_file)) {};
 
   MinidumpFileBuilder(const MinidumpFileBuilder &) = delete;
   MinidumpFileBuilder &operator=(const MinidumpFileBuilder &) = delete;
@@ -56,31 +58,28 @@ public:
 
   ~MinidumpFileBuilder() = default;
 
+  lldb_private::Status AddThreadList();
+  // Add Exception streams for any threads that stopped with exceptions.
+  void AddExceptions();
   lldb_private::Status
-  AddHeaderAndCalculateDirectories(const lldb_private::Target &target,
-                                   const lldb::ProcessSP &process_sp);
+  AddHeaderAndCalculateDirectories();
   // Add SystemInfo stream, used for storing the most basic information
   // about the system, platform etc...
-  lldb_private::Status AddSystemInfo(const llvm::Triple &target_triple);
+  lldb_private::Status AddSystemInfo();
   // Add ModuleList stream, containing information about all loaded modules
   // at the time of saving minidump.
-  lldb_private::Status AddModuleList(lldb_private::Target &target);
+  lldb_private::Status AddModuleList();
   // Add ThreadList stream, containing information about all threads running
   // at the moment of core saving. Contains information about thread
   // contexts.
   // Add MiscInfo stream, mainly providing ProcessId
-  void AddMiscInfo(const lldb::ProcessSP &process_sp);
+  void AddMiscInfo();
   // Add informative files about a Linux process
-  void AddLinuxFileStreams(const lldb::ProcessSP &process_sp);
-  // Add Exception streams for any threads that stopped with exceptions.
-  void AddExceptions(const lldb::ProcessSP &process_sp);
-  // Dump the prepared data into file. In case of the failure data are
-  // intact.
-  lldb_private::Status AddThreadList(const lldb::ProcessSP &process_sp);
+  void AddLinuxFileStreams();
 
-  lldb_private::Status AddMemory(const lldb::ProcessSP &process_sp,
-                                 lldb::SaveCoreStyle core_style);
+  lldb_private::Status AddMemory(lldb::SaveCoreStyle core_style);
 
+  // Run cleanup and write all remaining bytes to file
   lldb_private::Status DumpToFile();
 
 private:
@@ -89,11 +88,9 @@ private:
   lldb_private::Status AddData(const void *data, size_t size);
   // Add MemoryList stream, containing dumps of important memory segments
   lldb_private::Status
-  AddMemoryList_64(const lldb::ProcessSP &process_sp,
-                   const lldb_private::Process::CoreFileMemoryRanges &ranges);
+  AddMemoryList_64(const lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status
-  AddMemoryList_32(const lldb::ProcessSP &process_sp,
-                   const lldb_private::Process::CoreFileMemoryRanges &ranges);
+  AddMemoryList_32(const lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status FixThreads();
   lldb_private::Status FlushToDisk();
 
@@ -103,7 +100,7 @@ private:
   // Add directory of StreamType pointing to the current end of the prepared
   // file with the specified size.
   void AddDirectory(llvm::minidump::StreamType type, uint64_t stream_size);
-  lldb::addr_t GetCurrentDataEndOffset() const;
+  lldb::offset_t GetCurrentDataEndOffset() const;
   // Stores directories to fill in later
   std::vector<llvm::minidump::Directory> m_directories;
   // When we write off the threads for the first time, we need to clean them up
@@ -112,9 +109,11 @@ private:
   // Main data buffer consisting of data without the minidump header and
   // directories
   lldb_private::DataBufferHeap m_data;
+  lldb::ProcessSP m_process_sp;
+
   uint m_expected_directories = 0;
   uint64_t m_saved_data_size = 0;
-  size_t m_thread_list_start = 0;
+  lldb::offset_t m_thread_list_start = 0;
   // We set the max write amount to 128 mb
   // Linux has a signed 32b - some buffer on writes
   // and we have guarauntee a user memory region / 'object' could be over 2gb
