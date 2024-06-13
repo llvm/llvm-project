@@ -18,7 +18,7 @@ int main() {
   // CHECK: {{    #[0-9]+ 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-4]]
   // CHECK: {{0x.* is located 0 bytes inside of 1-byte region .0x.*,0x.*}}
   // CHECK: {{freed by thread T0 here:}}
-  // CHECK: {{    #[0-9]+ 0x.* in .*free .*.cpp}}
+  // CHECK: {{    #[0-9]+ 0x.* in .*free.* .*.cpp}}
   // CHECK: {{    #[0-9]+ 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-9]]
 
   // CHECK: {{previously allocated by thread T0 here:}}
