@@ -1199,7 +1199,7 @@ def Arith_ExtSIOp : Arith_IToICastOp<"extsi"> {
 // ExtFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
+def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "cast from floating-point to wider floating-point";
   let description = [{
     Cast a floating-point value to a larger floating-point-typed value.
@@ -1208,6 +1208,13 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf"> {
   }];
   let hasVerifier = 1;
   let hasFolder = 1;
+
+  let arguments = (ins FloatLike:$in, DefaultValuedAttr<
+                         Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let results = (outs FloatLike:$out);
+
+  let assemblyFormat = [{ $in (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($in) `to` type($out) }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1246,8 +1253,11 @@ def Arith_TruncFOp :
     Arith_Op<"truncf",
       [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
        DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
+       DeclareOpInterfaceMethods<ArithFastMathInterface>,
        DeclareOpInterfaceMethods<CastOpInterface>]>,
     Arguments<(ins FloatLike:$in,
+                   DefaultValuedAttr<
+                      Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
                    OptionalAttr<Arith_RoundingModeAttr>:$roundingmode)>,
     Results<(outs FloatLike:$out)> {
   let summary = "cast from floating-point to narrower floating-point";
@@ -1267,7 +1277,9 @@ def Arith_TruncFOp :
 
   let hasFolder = 1;
   let hasVerifier = 1;
-  let assemblyFormat = "$in ($roundingmode^)? attr-dict `:` type($in) `to` type($out)";
+  let assemblyFormat = [{ $in ($roundingmode^)?
+                          (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($in) `to` type($out) }];
 }
 
 //===----------------------------------------------------------------------===//
