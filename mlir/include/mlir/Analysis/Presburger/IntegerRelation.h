@@ -642,7 +642,7 @@ public:
   /// the split become symbols, or some of the symbols immediately after the
   /// split become dimensions.
   void setDimSymbolSeparation(unsigned newSymbolCount) {
-    space.setVarSymbolSeperation(newSymbolCount);
+    space.setVarSymbolSeparation(newSymbolCount);
   }
 
   /// Return a set corresponding to all points in the domain of the relation.
