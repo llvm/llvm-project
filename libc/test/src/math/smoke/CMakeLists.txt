@@ -2504,9 +2504,10 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     sqrtf_test.cpp
+  HDRS
+    SqrtTest.h
   DEPENDS
     libc.src.math.sqrtf
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -2515,9 +2516,10 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     sqrt_test.cpp
+  HDRS
+    SqrtTest.h
   DEPENDS
     libc.src.math.sqrt
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -2526,9 +2528,10 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     sqrtl_test.cpp
+  HDRS
+    SqrtTest.h
   DEPENDS
     libc.src.math.sqrtl
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -2537,9 +2540,10 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     sqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
   DEPENDS
     libc.src.math.sqrtf128
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -2548,9 +2552,9 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     generic_sqrtf_test.cpp
+  HDRS
+    SqrtTest.h
   DEPENDS
-    libc.src.math.sqrtf
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
@@ -2562,9 +2566,9 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     generic_sqrt_test.cpp
+  HDRS
+    SqrtTest.h
   DEPENDS
-    libc.src.math.sqrt
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
@@ -2576,9 +2580,9 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     generic_sqrtl_test.cpp
+  HDRS
+    SqrtTest.h
   DEPENDS
-    libc.src.math.sqrtl
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
@@ -2590,9 +2594,9 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     generic_sqrtf128_test.cpp
+  HDRS
+    SqrtTest.h
   DEPENDS
-    libc.src.math.sqrtf128
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.generic.sqrt
   COMPILE_OPTIONS
     -O3
@@ -3542,4 +3546,16 @@ add_fp_unittest(
     TotalOrderMagTest.h
   DEPENDS
     libc.src.math.totalordermagf16
+)
+
+add_fp_unittest(
+  f16sqrtf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16sqrtf_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.f16sqrtf
 )
