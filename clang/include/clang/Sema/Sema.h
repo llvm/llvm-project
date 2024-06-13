@@ -5148,7 +5148,7 @@ public:
     enum ExpressionKind {
       EK_Decltype,
       EK_TemplateArgument,
-      EK_AttrArgument,
+      EK_BoundsAttrArgument,
       EK_Other
     } ExprContext;
 
@@ -5255,9 +5255,10 @@ public:
     return const_cast<Sema *>(this)->parentEvaluationContext();
   };
 
-  bool isAttrContext() const {
+  bool isBoundsAttrContext() const {
     return ExprEvalContexts.back().ExprContext ==
-           ExpressionEvaluationContextRecord::ExpressionKind::EK_AttrArgument;
+           ExpressionEvaluationContextRecord::ExpressionKind::
+               EK_BoundsAttrArgument;
   }
 
   /// Increment when we find a reference; decrement when we find an ignored
