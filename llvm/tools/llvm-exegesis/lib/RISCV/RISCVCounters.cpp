@@ -20,9 +20,23 @@ namespace exegesis {
 
 inline uint64_t getRISCVCpuCyclesCount() {
 #ifdef __riscv
-  uint64_t Counter;
-  asm("csrr %0, cycle" : "=r"(Counter)::"memory");
-  return Counter;
+#if __riscv_xlen == 32
+  uint32_t cycles_lo, cycles_hi0, cycles_hi1;
+  asm volatile("rdtimeh %0\n"
+               "rdtime %1\n"
+               "rdtimeh %2\n"
+               "sub %0, %0, %2\n"
+               "seqz %0, %0\n"
+               "sub %0, zero, %0\n"
+               "and %1, %1, %0\n"
+               : "=r"(cycles_hi0), "=r"(cycles_lo), "=r"(cycles_hi1));
+  return static_cast<uint64_t>((static_cast<uint64_t>(cycles_hi1) << 32) |
+                               cycles_lo);
+#else
+  uint64_t cycles;
+  asm volatile("rdtime %0" : "=r"(cycles));
+  return static_cast<uint64_t>(cycles);
+#endif
 #else
   return 0;
 #endif

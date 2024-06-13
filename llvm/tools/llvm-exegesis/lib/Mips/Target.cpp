@@ -62,6 +62,7 @@ private:
   unsigned getMaxMemoryAccessSize() const override { return 64; }
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;
+
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
   bool matchesArch(Triple::ArchType Arch) const override {
