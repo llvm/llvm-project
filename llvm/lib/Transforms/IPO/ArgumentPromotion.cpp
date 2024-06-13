@@ -662,7 +662,8 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
     auto *CB = dyn_cast<CallBase>(V);
     Value *PtrArg = cast<Value>(U);
-    if (isSelfRecursive && CB && PtrArg) {
+    if (isSelfRecursive && CB && PtrArg &&
+        CB->getCalledFunction() == CB->getFunction()) {
       Type *PtrTy = PtrArg->getType();
       APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
       PtrArg = PtrArg->stripAndAccumulateConstantOffsets(
