@@ -28,18 +28,13 @@ set(asset_dir "${CMAKE_CURRENT_SOURCE_DIR}/../assets")
 set(resource_dir "${CMAKE_BINARY_DIR}/share/clang")
 set(out_files)
 
-function(copy_files_to_dst src_dir dst_dir file msg)
+function(copy_files_to_dst src_dir dst_dir file)
   set(src "${src_dir}/${file}")
   set(dst "${dst_dir}/${file}")
-  # set a default message if one isn't supplied
-  if("${msg}" STREQUAL "")
-    set(msg "Copying ${file} to ${dst_dir}")
-  endif()
-
   add_custom_command(OUTPUT ${dst}
     DEPENDS ${src}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-    COMMENT "${msg}"
+    COMMENT "Copying ${file} to ${dst_dir}"
   )
   list(APPEND out_files ${dst})
   set(out_files ${out_files} PARENT_SCOPE)
@@ -49,7 +44,7 @@ foreach(f ${assets})
   install(FILES ${asset_dir}/${f}
     DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
     COMPONENT clang-doc)
-  copy_files_to_dst(${asset_dir} ${resource_dir} ${f} "")
+  copy_files_to_dst(${asset_dir} ${resource_dir} ${f})
 endforeach(f)
 
 add_custom_target(copy-clang-doc-assets
