@@ -69,15 +69,12 @@ define <16 x i16> @zext_avgceilu_mismatch(<16 x i4> %a0, <16 x i8> %a1) {
   ret <16 x i16> %avg
 }
 
-define <16 x i16> @sext_avgflooru(<16 x i8> %a0, <16 x i8> %a1) {
-; CHECK-LABEL: sext_avgflooru:
+define <16 x i16> @sext_avgfloors(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: sext_avgfloors:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v2.8h, v0.8b, #0
-; CHECK-NEXT:    sshll2 v0.8h, v0.16b, #0
-; CHECK-NEXT:    sshll v3.8h, v1.8b, #0
-; CHECK-NEXT:    sshll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    shadd v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    shadd v0.8h, v2.8h, v3.8h
+; CHECK-NEXT:    shadd v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ret
   %x0 = sext <16 x i8> %a0 to <16 x i16>
   %x1 = sext <16 x i8> %a1 to <16 x i16>
@@ -88,8 +85,8 @@ define <16 x i16> @sext_avgflooru(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i16> %avg
 }
 
-define <16 x i16> @sext_avgflooru_mismatch(<16 x i8> %a0, <16 x i4> %a1) {
-; CHECK-LABEL: sext_avgflooru_mismatch:
+define <16 x i16> @sext_avgfloors_mismatch(<16 x i8> %a0, <16 x i4> %a1) {
+; CHECK-LABEL: sext_avgfloors_mismatch:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll2 v2.8h, v1.16b, #0
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
@@ -111,15 +108,12 @@ define <16 x i16> @sext_avgflooru_mismatch(<16 x i8> %a0, <16 x i4> %a1) {
   ret <16 x i16> %avg
 }
 
-define <16 x i16> @sext_avgceilu(<16 x i8> %a0, <16 x i8> %a1) {
-; CHECK-LABEL: sext_avgceilu:
+define <16 x i16> @sext_avgceils(<16 x i8> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: sext_avgceils:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v2.8h, v0.8b, #0
-; CHECK-NEXT:    sshll2 v0.8h, v0.16b, #0
-; CHECK-NEXT:    sshll v3.8h, v1.8b, #0
-; CHECK-NEXT:    sshll2 v1.8h, v1.16b, #0
-; CHECK-NEXT:    srhadd v1.8h, v0.8h, v1.8h
-; CHECK-NEXT:    srhadd v0.8h, v2.8h, v3.8h
+; CHECK-NEXT:    srhadd v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    sshll2 v1.8h, v0.16b, #0
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    ret
   %x0 = sext <16 x i8> %a0 to <16 x i16>
   %x1 = sext <16 x i8> %a1 to <16 x i16>
@@ -130,8 +124,8 @@ define <16 x i16> @sext_avgceilu(<16 x i8> %a0, <16 x i8> %a1) {
   ret <16 x i16> %avg
 }
 
-define <16 x i16> @sext_avgceilu_mismatch(<16 x i4> %a0, <16 x i8> %a1) {
-; CHECK-LABEL: sext_avgceilu_mismatch:
+define <16 x i16> @sext_avgceils_mismatch(<16 x i4> %a0, <16 x i8> %a1) {
+; CHECK-LABEL: sext_avgceils_mismatch:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushll v2.8h, v0.8b, #0
 ; CHECK-NEXT:    ushll2 v0.8h, v0.16b, #0
