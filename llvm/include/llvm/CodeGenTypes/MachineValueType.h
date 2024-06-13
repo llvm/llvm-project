@@ -438,9 +438,9 @@ namespace llvm {
     }
 
     static MVT getVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
-  if (!Sc && VT.SimpleTy == ElTy && NumElements == nElem)                      \
-    return Ty;
+#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                  \
+    if (!Sc && VT.SimpleTy == ElTy && NumElements == nElem)                    \
+      return Ty;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
 
@@ -448,9 +448,9 @@ namespace llvm {
     }
 
     static MVT getScalableVectorVT(MVT VT, unsigned NumElements) {
-#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy, ElSz)                              \
-  if (Sc && VT.SimpleTy == ElTy && NumElements == nElem)                       \
-    return Ty;
+#define GET_VT_VECATTR(Ty, Sc, nElem, ElTy)                                  \
+    if (Sc && VT.SimpleTy == ElTy && NumElements == nElem)                     \
+      return Ty;
 #include "llvm/CodeGen/GenVT.inc"
 #undef GET_VT_VECATTR
 
