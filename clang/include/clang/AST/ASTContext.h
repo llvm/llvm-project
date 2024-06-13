@@ -1803,6 +1803,13 @@ public:
                                                 QualType DeducedType,
                                                 bool IsDependent) const;
 
+private:
+  QualType getDeducedTemplateSpecializationTypeInternal(TemplateName Template,
+                                                        QualType DeducedType,
+                                                        bool IsDependent,
+                                                        QualType Canon) const;
+
+public:
   /// Return the unique reference to the type for the specified TagDecl
   /// (struct/union/class/enum) decl.
   QualType getTagDeclType(const TagDecl *Decl) const;
