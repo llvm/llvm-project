@@ -61,9 +61,6 @@ void mlir::emitc::buildTerminatedBody(OpBuilder &builder, Location loc) {
 bool mlir::emitc::isSupportedEmitCType(Type type) {
   if (llvm::isa<emitc::OpaqueType>(type))
     return true;
-  if (auto lType = llvm::dyn_cast<emitc::LValueType>(type))
-    // lvalue types are only allowed in a few places.
-    return false;
   if (auto ptrType = llvm::dyn_cast<emitc::PointerType>(type))
     return isSupportedEmitCType(ptrType.getPointee());
   if (auto arrayType = llvm::dyn_cast<emitc::ArrayType>(type)) {
