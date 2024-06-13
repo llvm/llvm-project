@@ -343,6 +343,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToBoolean:
+  case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
     if (DiscardResult)
       return this->discard(SubExpr);
@@ -362,7 +363,12 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (FromT == ToT)
       return true;
-    return this->emitCast(*FromT, *ToT, CE);
+    if (!this->emitCast(*FromT, *ToT, CE))
+      return false;
+
+    if (CE->getCastKind() == CK_BooleanToSignedIntegral)
+      return this->emitNeg(*ToT, CE);
+    return true;
   }
 
   case CK_PointerToBoolean:
