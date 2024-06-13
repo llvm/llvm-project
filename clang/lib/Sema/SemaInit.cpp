@@ -513,7 +513,7 @@ public:
       : InitListChecker(S, Entity, IL, T, /*VerifyOnly=*/true,
                         /*TreatUnavailableAsInvalid=*/false,
                         /*InOverloadResolution=*/false,
-                        &AggrDeductionCandidateParamTypes){};
+                        &AggrDeductionCandidateParamTypes) {}
 
   bool HadError() { return hadError; }
 
@@ -1443,7 +1443,21 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       //   dependent non-array type or an array type with a value-dependent
       //   bound
       assert(AggrDeductionCandidateParamTypes);
-      if (!isa_and_nonnull<ConstantArrayType>(
+
+      // In the presence of a braced-init-list within the initializer, we should
+      // not perform brace-elision, even if brace elision would otherwise be
+      // applicable. For example, given:
+      //
+      // template <class T> struct Foo {
+      //   T t[2];
+      // };
+      //
+      // Foo t = {{1, 2}};
+      //
+      // we don't want the (T, T) but rather (T [2]) in terms of the initializer
+      // {{1, 2}}.
+      if (isa<InitListExpr, DesignatedInitExpr>(expr) ||
+          !isa_and_present<ConstantArrayType>(
               SemaRef.Context.getAsArrayType(ElemType))) {
         ++Index;
         AggrDeductionCandidateParamTypes->push_back(ElemType);
@@ -10940,14 +10954,14 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         //   if e_i is of array type and x_i is a braced-init-list, T_i is an
         //   rvalue reference to the declared type of e_i and
         // C++ [over.match.class.deduct]p1.9:
-        //   if e_i is of array type and x_i is a bstring-literal, T_i is an
+        //   if e_i is of array type and x_i is a string-literal, T_i is an
         //   lvalue reference to the const-qualified declared type of e_i and
         // C++ [over.match.class.deduct]p1.10:
         //   otherwise, T_i is the declared type of e_i
         for (int I = 0, E = ListInit->getNumInits();
              I < E && !isa<PackExpansionType>(ElementTypes[I]); ++I)
           if (ElementTypes[I]->isArrayType()) {
-            if (isa<InitListExpr>(ListInit->getInit(I)))
+            if (isa<InitListExpr, DesignatedInitExpr>(ListInit->getInit(I)))
               ElementTypes[I] = Context.getRValueReferenceType(ElementTypes[I]);
             else if (isa<StringLiteral>(
                          ListInit->getInit(I)->IgnoreParenImpCasts()))
