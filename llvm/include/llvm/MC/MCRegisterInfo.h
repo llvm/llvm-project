@@ -187,7 +187,7 @@ private:
   DenseMap<MCRegister, int> L2SEHRegs;        // LLVM to SEH regs mapping
   DenseMap<MCRegister, int> L2CVRegs;         // LLVM to CV regs mapping
 
-  mutable DenseMap<MCPhysReg, std::vector<MCPhysReg>> RegAliasesCache;
+  mutable std::vector<std::vector<MCPhysReg>> RegAliasesCache;
   ArrayRef<MCPhysReg> getCachedAliasesOf(MCPhysReg R) const;
 
   /// Iterator class that can traverse the differentially encoded values in
@@ -302,6 +302,8 @@ public:
     EHDwarf2LRegsSize = 0;
     Dwarf2LRegs = nullptr;
     Dwarf2LRegsSize = 0;
+
+    RegAliasesCache.resize(NumRegs);
   }
 
   /// Used to initialize LLVM register to Dwarf

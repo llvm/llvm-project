@@ -84,16 +84,18 @@ public:
 } // namespace
 
 ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCPhysReg R) const {
-  if (auto It = RegAliasesCache.find(R); It != RegAliasesCache.end())
-    return It->second;
-
   auto &Aliases = RegAliasesCache[R];
+  if (!Aliases.empty())
+    return Aliases;
+
   for (MCRegAliasIteratorImpl It(R, this); It.isValid(); ++It)
     Aliases.push_back(*It);
 
   llvm::sort(Aliases);
   Aliases.erase(unique(Aliases), Aliases.end());
   // Always put "self" at the end, so the iterator can choose to ignore it.
+  // For registers without aliases, it also serves as a sentinel value that
+  // tells us to not recompute the alias set.
   Aliases.push_back(R);
   Aliases.shrink_to_fit();
   return Aliases;
