@@ -3072,7 +3072,6 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool NeedsWinCFI = needsWinCFI(MF);
-  bool HasSVE = MF.getSubtarget<AArch64Subtarget>().hasSVE();
   DebugLoc DL;
   SmallVector<RegPairInfo, 8> RegPairs;
 
@@ -3167,36 +3166,38 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
             .setMIFlag(MachineInstr::FrameSetup);
 
         AFI->setStreamingVGIdx(RPI.FrameIdx);
+      } else if (MF.getSubtarget<AArch64Subtarget>().hasSVE()) {
+        BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
+            .addImm(31)
+            .addImm(1)
+            .setMIFlag(MachineInstr::FrameSetup);
+        AFI->setVGIdx(RPI.FrameIdx);
       } else {
-        if (HasSVE)
-          BuildMI(MBB, MI, DL, TII.get(AArch64::CNTD_XPiI), Reg1)
-              .addImm(31)
-              .addImm(1)
-              .setMIFlag(MachineInstr::FrameSetup);
-        else {
-          const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
-          for (const auto &LiveIn : MBB.liveins())
-            if (STI.getRegisterInfo()->isSuperOrSubRegisterEq(AArch64::X0,
-                                                              LiveIn.PhysReg))
-              X0Scratch = Reg1;
+        const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+        if (llvm::any_of(
+                MBB.liveins(),
+                [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
+                  return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
+                      AArch64::X0, LiveIn.PhysReg);
+                }))
+          X0Scratch = Reg1;
 
-          if (X0Scratch != AArch64::NoRegister)
-            BuildMI(MBB, MI, DL, TII.get(AArch64::ORRXrr), Reg1)
-                .addReg(AArch64::XZR)
-                .addReg(AArch64::X0, RegState::Undef)
-                .addReg(AArch64::X0, RegState::Implicit)
-                .setMIFlag(MachineInstr::FrameSetup);
-
-          const uint32_t *RegMask = TRI->getCallPreservedMask(
-              MF, CallingConv::
-                      AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
-          BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
-              .addExternalSymbol("__arm_get_current_vg")
-              .addRegMask(RegMask)
-              .addReg(AArch64::X0, RegState::ImplicitDefine)
+        if (X0Scratch != AArch64::NoRegister)
+          BuildMI(MBB, MI, DL, TII.get(AArch64::ORRXrr), Reg1)
+              .addReg(AArch64::XZR)
+              .addReg(AArch64::X0, RegState::Undef)
+              .addReg(AArch64::X0, RegState::Implicit)
               .setMIFlag(MachineInstr::FrameSetup);
-          Reg1 = AArch64::X0;
-        }
+
+        const uint32_t *RegMask = TRI->getCallPreservedMask(
+            MF,
+            CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
+        BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
+            .addExternalSymbol("__arm_get_current_vg")
+            .addRegMask(RegMask)
+            .addReg(AArch64::X0, RegState::ImplicitDefine)
+            .setMIFlag(MachineInstr::FrameSetup);
+        Reg1 = AArch64::X0;
         AFI->setVGIdx(RPI.FrameIdx);
       }
     }
