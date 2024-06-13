@@ -162,10 +162,6 @@ GCC_except_table1:
 	.section	.data.DW.ref.__gxx_personality_v0,"awG",@progbits,DW.ref.__gxx_personality_v0,comdat
 	.p2align	3, 0x0
 	.type	DW.ref.__gxx_personality_v0,@object
-	.size	DW.ref.__gxx_personality_v0, 8
-DW.ref.__gxx_personality_v0:
-	.quad	__gxx_personality_v0
-	.ident	"Facebook clang version 19.0.0 (https://git.internal.tfbnw.net/repos/git/rw/osmeta/external/llvm-project 4fc35430a0be5afb4ff7909ef6f51859b7019e33)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.addrsig_sym _Z3fooi
