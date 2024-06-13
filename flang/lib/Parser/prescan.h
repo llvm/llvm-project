@@ -247,6 +247,8 @@ private:
   bool omitNewline_{false};
   bool skipLeadingAmpersand_{false};
 
+  const std::size_t firstCookedCharacterOffset_{cooked_.BufferedBytes()};
+
   const Provenance spaceProvenance_{
       allSources_.CompilerInsertionProvenance(' ')};
   const Provenance backslashProvenance_{
