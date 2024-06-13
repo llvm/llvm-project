@@ -317,6 +317,20 @@ bool ClauseProcessor::processDeviceType(
   return false;
 }
 
+bool ClauseProcessor::processDistSchedule(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::DistScheduleClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::DistSchedule>()) {
+    result.distScheduleStaticAttr = converter.getFirOpBuilder().getUnitAttr();
+    const auto &chunkSize = std::get<std::optional<ExprTy>>(clause->t);
+    if (chunkSize)
+      result.distScheduleChunkSizeVar =
+          fir::getBase(converter.genExprValue(*chunkSize, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processFinal(lower::StatementContext &stmtCtx,
                                    mlir::omp::FinalClauseOps &result) const {
   const parser::CharBlock *source = nullptr;

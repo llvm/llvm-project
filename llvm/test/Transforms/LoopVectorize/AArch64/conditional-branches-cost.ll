@@ -781,9 +781,7 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 4
-; PRED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 4
-; PRED-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
+; PRED-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP4]], 1
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP7]]
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
