@@ -1107,23 +1107,6 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->delegate(Inits[0]);
   }
 
-  // Prepare composite return value.
-  if (!Initializing) {
-    if (GlobalDecl) {
-      std::optional<unsigned> GlobalIndex = P.createGlobal(E);
-      if (!GlobalIndex)
-        return false;
-      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
-        return false;
-    } else {
-      std::optional<unsigned> LocalIndex = allocateLocal(E);
-      if (!LocalIndex)
-        return false;
-      if (!this->emitGetPtrGlobal(*LocalIndex, E))
-        return false;
-    }
-  }
-
   QualType T = E->getType();
   if (T->isRecordType()) {
     const Record *R = getRecord(E->getType());
@@ -1224,6 +1207,23 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (T->isArrayType()) {
+    // Prepare composite return value.
+    if (!Initializing) {
+      if (GlobalDecl) {
+        std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+        if (!GlobalIndex)
+          return false;
+        if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+          return false;
+      } else {
+        std::optional<unsigned> LocalIndex = allocateLocal(E);
+        if (!LocalIndex)
+          return false;
+        if (!this->emitGetPtrLocal(*LocalIndex, E))
+          return false;
+      }
+    }
+
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
       if (!this->visitArrayElemInit(ElementIndex, Init))
