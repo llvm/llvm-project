@@ -19,8 +19,6 @@ module {
 // CHECK:  ^bb[[#COND]]:
 // CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#BODY]]:
-// CHECK:    cir.br ^bb[[#STEP:]]
-// CHECK:  ^bb[[#STEP]]:
 // CHECK:    cir.br ^bb[[#COND:]]
 // CHECK:  ^bb[[#EXIT]]:
 // CHECK:    cir.return
@@ -56,10 +54,8 @@ module {
   }
 // CHECK:  cir.func @testDoWhile(%arg0: !cir.bool) {
 // CHECK:    cir.br ^bb[[#BODY:]]
-// CHECK:  ^bb[[#COND]]:
-// CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#BODY]]:
-// CHECK:    cir.br ^bb[[#COND:]]
+// CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#EXIT]]:
 // CHECK:    cir.return
 // CHECK:  }
@@ -77,8 +73,6 @@ module {
     cir.return
   }
 // CHECK:  cir.func @testWhileWithBreakTerminatedBody(%arg0: !cir.bool) {
-// CHECK:    cir.br ^bb[[#COND:]]
-// CHECK:  ^bb[[#COND]]:
 // CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#BODY]]:
 // CHECK:    cir.br ^bb[[#EXIT]]
@@ -108,13 +102,9 @@ module {
 // CHECK:  ^bb[[#COND]]:
 // CHECK:    cir.brcond %arg0 ^bb[[#BODY:]], ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#BODY]]:
-// CHECK:    cir.br ^bb[[#EX_SCOPE_IN:]]
-// CHECK:  ^bb[[#EX_SCOPE_IN]]:
-// CHECK:    cir.br ^bb[[#EXIT:]]
+// CHECK:    cir.br ^bb[[#EXIT]]
 // CHECK:  ^bb[[#EX_SCOPE_EXIT:]]:
-// CHECK:    cir.br ^bb[[#STEP:]]
-// CHECK:  ^bb[[#STEP]]:
-// CHECK:    cir.br ^bb[[#COND:]]
+// CHECK:    cir.br ^bb[[#COND]]
 // CHECK:  ^bb[[#EXIT]]:
 // CHECK:    cir.return
 // CHECK:  }

@@ -944,6 +944,42 @@ mlir::SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
 
 Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
 
+/// Removes branches between two blocks if it is the only branch.
+///
+/// From:
+///   ^bb0:
+///     cir.br ^bb1
+///   ^bb1:  // pred: ^bb0
+///     cir.return
+///
+/// To:
+///   ^bb0:
+///     cir.return
+LogicalResult BrOp::fold(FoldAdaptor adaptor,
+                         SmallVectorImpl<OpFoldResult> &results) {
+  Block *block = getOperation()->getBlock();
+  Block *dest = getDest();
+
+  if (isa<mlir::cir::LabelOp>(dest->front())) {
+    return failure();
+  }
+
+  if (block->getNumSuccessors() == 1 && dest->getSinglePredecessor() == block) {
+    getOperation()->erase();
+    block->getOperations().splice(block->end(), dest->getOperations());
+    auto eraseBlock = [](Block *block) {
+      for (auto &op : llvm::make_early_inc_range(*block))
+        op.erase();
+      block->erase();
+    };
+    eraseBlock(dest);
+
+    return success();
+  }
+
+  return failure();
+}
+
 //===----------------------------------------------------------------------===//
 // BrCondOp
 //===----------------------------------------------------------------------===//

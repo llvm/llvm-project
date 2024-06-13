@@ -35,10 +35,6 @@ module {
 // CHECK:    cir.br ^bb3(%5 : !s32i)
 // CHECK:  ^bb2:  // pred: ^bb0
 // CHECK:    %6 = cir.const #cir.int<5> : !s32i
-// CHECK:    cir.br ^bb3(%6 : !s32i)
-// CHECK:  ^bb3(%7: !s32i):  // 2 preds: ^bb1, ^bb2
-// CHECK:    cir.br ^bb4
-// CHECK:  ^bb4:  // pred: ^bb3
 // CHECK:    cir.store %7, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK:    %8 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK:    cir.return %8 : !s32i
@@ -60,8 +56,6 @@ module {
 // CHECK: ^bb2:  // pred: ^bb0
 // CHECK:   cir.br ^bb3
 // CHECK: ^bb3:  // 2 preds: ^bb1, ^bb2
-// CHECK:   cir.br ^bb4
-// CHECK: ^bb4:  // pred: ^bb3
 // CHECK:   cir.return
 // CHECK: }
 

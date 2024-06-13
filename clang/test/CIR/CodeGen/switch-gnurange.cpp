@@ -172,8 +172,6 @@ void sw3(enum letter c) {
 //      LLVM:    store i32 4, ptr %[[X]]
 //      LLVM:    br label %[[EPILOG]]
 //      LLVM:  [[EPILOG]]:
-// LLVM-NEXT:    br label %[[EPILOG_END:[0-9]+]]
-//      LLVM:  [[EPILOG_END]]:
 // LLVM-NEXT:    ret void
 
 void sw4(int x) {
@@ -213,8 +211,6 @@ void sw4(int x) {
 // LLVM-NEXT:    %[[DIFF_CMP:[0-9]+]] = icmp ule i32 %[[DIFF]], 167
 //      LLVM:    br i1 %[[DIFF_CMP]], label %[[CASE_66_233]], label %[[EPILOG]]
 //      LLVM:  [[EPILOG]]:
-// LLVM-NEXT:    br label %[[EPILOG_END:[0-9]+]]
-//      LLVM:  [[EPILOG_END]]:
 // LLVM-NEXT:    ret void
 
 void sw5(int x) {
@@ -241,8 +237,6 @@ void sw5(int x) {
 // LLVM-NEXT:    store i32 1, ptr %[[Y:[0-9]+]]
 // LLVM-NEXT:    br label %[[EPILOG]]
 //      LLVM:  [[EPILOG]]:
-// LLVM-NEXT:    br label %[[EPILOG_END:[0-9]+]]
-//      LLVM:  [[EPILOG_END]]:
 // LLVM-NEXT:    ret void
 
 void sw6(int x) {
@@ -273,8 +267,6 @@ void sw6(int x) {
 // LLVM-NEXT:    %[[DIFF_CMP:[0-9]+]] = icmp ule i32 %[[DIFF]], -1
 // LLVM-NEXT:    br i1 %[[DIFF_CMP]], label %[[CASE_MIN_MAX]], label %[[EPILOG]]
 //      LLVM:  [[EPILOG]]:
-// LLVM-NEXT:    br label %[[EPILOG_END:[0-9]+]]
-//      LLVM:  [[EPILOG_END]]:
 // LLVM-NEXT:    ret void
 
 void sw7(int x) {
@@ -346,7 +338,5 @@ void sw7(int x) {
 //      LLVM:  [[CASE_500_600]]:
 // LLVM-NEXT:    br label %[[EPILOG]]
 //      LLVM:  [[EPILOG]]:
-// LLVM-NEXT:    br label %[[EPILOG_END:[0-9]+]]
-//      LLVM:  [[EPILOG_END]]:
 // LLVM-NEXT:    ret void
 
