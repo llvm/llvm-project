@@ -1831,11 +1831,26 @@ static Instruction *foldSelectICmpBinOp(SelectInst &SI, ICmpInst *ICI,
                                         InstCombinerImpl &IC) {
   Value *X, *Y;
   const APInt *C;
-
-  if (!((match(CmpLHS, m_BinOp(m_Value(X), m_Value(Y))) &&
-         match(CmpRHS, m_APInt(C))) &&
-        (match(TVal, m_c_BinOp(m_Specific(X), m_Value())) ||
-         match(TVal, m_c_BinOp(m_Specific(Y), m_Value())))))
+  unsigned CmpLHSOpc;
+  bool IsDisjoint = false;
+  // Specially handling for X^Y==0 transformed to X==Y
+  if (match(TVal, m_c_BitwiseLogic(m_Specific(CmpLHS), m_Specific(CmpRHS)))) {
+    X = CmpLHS;
+    Y = CmpRHS;
+    APInt ZeroVal = APInt::getZero(CmpLHS->getType()->getScalarSizeInBits());
+    C = const_cast<APInt *>(&ZeroVal);
+    CmpLHSOpc = Instruction::Xor;
+  } else if ((match(CmpLHS, m_BinOp(m_Value(X), m_Value(Y))) &&
+              match(CmpRHS, m_APInt(C))) &&
+             (match(TVal, m_c_BinOp(m_Specific(X), m_Value())) ||
+              match(TVal, m_c_BinOp(m_Specific(Y), m_Value())))) {
+    if (auto Inst = dyn_cast<PossiblyDisjointInst>(CmpLHS)) {
+      if (Inst->isDisjoint())
+        IsDisjoint = true;
+      CmpLHSOpc = Instruction::Or;
+    } else
+      CmpLHSOpc = cast<BinaryOperator>(CmpLHS)->getOpcode();
+  } else
     return nullptr;
 
   enum SpecialKnownBits {
@@ -1847,20 +1862,17 @@ static Instruction *foldSelectICmpBinOp(SelectInst &SI, ICmpInst *ICI,
 
   // We cannot know exactly what bits is known in X Y.
   // Instead, we just know what relationship exist for.
-  auto isSpecialKnownBitsFor = [&](const Instruction *CmpLHS,
-                                   const APInt *CmpRHS) -> unsigned {
-    unsigned Opc = CmpLHS->getOpcode();
-    if (Opc == Instruction::And) {
-      if (CmpRHS->isZero())
+  auto isSpecialKnownBitsFor = [&]() -> unsigned {
+    if (CmpLHSOpc == Instruction::And) {
+      if (C->isZero())
         return NoCommonBits;
-    } else if (Opc == Instruction::Xor) {
-      if (CmpRHS->isAllOnes())
+    } else if (CmpLHSOpc == Instruction::Xor) {
+      if (C->isAllOnes())
         return NoCommonBits | AllBitsEnabled;
-      if (CmpRHS->isZero())
+      if (C->isZero())
         return AllCommonBits;
-    } else if (auto Disjoint = dyn_cast<PossiblyDisjointInst>(CmpLHS);
-               Disjoint->isDisjoint()) {
-      if (CmpRHS->isAllOnes())
+    } else if (CmpLHSOpc == Instruction::Or && IsDisjoint) {
+      if (C->isAllOnes())
         return NoCommonBits | AllBitsEnabled;
       return NoCommonBits;
     }
@@ -1879,10 +1891,9 @@ static Instruction *foldSelectICmpBinOp(SelectInst &SI, ICmpInst *ICI,
   Type *TValTy = TVal->getType();
   unsigned BitWidth = TVal->getType()->getScalarSizeInBits();
   auto TValBop = cast<BinaryOperator>(TVal);
-  auto CmpLHSBop = cast<BinaryOperator>(CmpLHS);
   unsigned XOrder = hasOperandAt(TValBop, X);
   unsigned YOrder = hasOperandAt(TValBop, Y);
-  unsigned SKB = isSpecialKnownBitsFor(CmpLHSBop, C);
+  unsigned SKB = isSpecialKnownBitsFor();
 
   KnownBits Known;
   if (TValBop->isBitwiseLogicOp()) {
@@ -1933,19 +1944,19 @@ static Instruction *foldSelectICmpBinOp(SelectInst &SI, ICmpInst *ICI,
       CmpInst::Predicate Pred = ICI->getPredicate();
       if (Pred == ICmpInst::ICMP_EQ) {
         // Estimate additional KnownBits from the relationship between X and Y
-        if (CmpLHSBop->getOpcode() == Instruction::And) {
+        if (CmpLHSOpc == Instruction::And) {
           // The bit that are set to 1 at `~C&Y` must be 0 in X
           // The bit that are set to 1 at `~C&X` must be 0 in Y
           XKnown.Zero |= ~*C & YKnown.One;
           YKnown.Zero |= ~*C & XKnown.One;
         }
-        if (CmpLHSBop->getOpcode() == Instruction::Or) {
+        if (CmpLHSOpc == Instruction::Or) {
           // The bit that are set to 0 at `C&Y` must be 1 in X
           // The bit that are set to 0 at `C&X` must be 1 in Y
           XKnown.One |= *C & YKnown.Zero;
           YKnown.One |= *C & XKnown.Zero;
         }
-        if (CmpLHSBop->getOpcode() == Instruction::Xor) {
+        if (CmpLHSOpc == Instruction::Xor) {
           // If X^Y==C, then X and Y must be either (1,0) or (0,1) for the
           // enabled bits in C.
           XKnown.One |= *C & YKnown.Zero;
