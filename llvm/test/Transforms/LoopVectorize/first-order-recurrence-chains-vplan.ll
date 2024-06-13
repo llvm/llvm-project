@@ -33,9 +33,19 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
-; CHECK-NEXT: No successors
+; CHECK-NEXT:    EMIT vp<[[RESUME_1_EXT:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2_EXT:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>
+; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.*]]> = exit-phi vp<[[RESUME_1_EXT]]>, ir<22>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.*]]> = exit-phi vp<[[RESUME_2_EXT]]>, ir<33>
+; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1]]>
 ; CHECK-NEXT: Live-out i16 %for.2 = vp<[[RESUME_2]]>
@@ -94,9 +104,20 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[RESUME_2:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[RESUME_3:%.+]]> = extract-from-end vp<[[FOR2_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_1_EXT:%.+]]> = extract-from-end ir<%for.1.next>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2_EXT:%.+]]> = extract-from-end vp<[[FOR1_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[RESUME_3_EXT:%.+]]> = extract-from-end vp<[[FOR2_SPLICE]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>
+; CHECK-NEXT:    EMIT vp<[[RESUME_1:%.*]]> = exit-phi vp<[[RESUME_1_EXT]]>, ir<22>
+; CHECK-NEXT:    EMIT vp<[[RESUME_2:%.*]]> = exit-phi vp<[[RESUME_2_EXT]]>, ir<33>
+; CHECK-NEXT:    EMIT vp<[[RESUME_3:%.*]]> = exit-phi vp<[[RESUME_3_EXT]]>, ir<33>
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: Live-out i16 %for.1 = vp<[[RESUME_1]]>

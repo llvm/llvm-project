@@ -614,6 +614,12 @@ public:
       appendPredecessor(Pred);
   }
 
+  void setSuccessors(ArrayRef<VPBlockBase *> NewSuccs) {
+    assert(Successors.empty() && "Block predecessors already set.");
+    for (auto *Succ : NewSuccs)
+      appendSuccessor(Succ);
+  }
+
   /// Remove all the predecessor of this block.
   void clearPredecessors() { Predecessors.clear(); }
 
@@ -677,9 +683,13 @@ public:
 class VPLiveOut : public VPUser {
   PHINode *Phi;
 
+  /// Predecessor in VPlan of this live-out. Used to as block to set the
+  /// incoming value for.
+  VPBasicBlock *Pred;
+
 public:
-  VPLiveOut(PHINode *Phi, VPValue *Op)
-      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
+  VPLiveOut(PHINode *Phi, VPValue *Op, VPBasicBlock *Pred)
+      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi), Pred(Pred) {}
 
   static inline bool classof(const VPUser *U) {
     return U->getVPUserID() == VPUser::VPUserID::LiveOut;
@@ -700,6 +710,9 @@ public:
   }
 
   PHINode *getPhi() const { return Phi; }
+
+  /// Returns to incoming block for which to set the value.
+  VPBasicBlock *getPred() const { return Pred; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPLiveOut to \p O.
@@ -1182,6 +1195,10 @@ public:
     SLPStore,
     ActiveLaneMask,
     ExplicitVectorLength,
+    /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
+    /// The first operand is the incoming value from the predecessor in VPlan,
+    /// the second operand is the incoming value for all other predecessors.
+    ExitPhi,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -2997,6 +3014,8 @@ public:
   }
 
   BasicBlock *getIRBasicBlock() const { return IRBB; }
+
+  void resetBlock(BasicBlock *BB) { IRBB = BB; }
 };
 
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks
@@ -3194,7 +3213,9 @@ public:
   /// pre-header, followed by a region for the vector loop, followed by the
   /// middle VPBasicBlock.
   static VPlanPtr createInitialVPlan(const SCEV *TripCount,
-                                     ScalarEvolution &PSE, BasicBlock *PH);
+                                     ScalarEvolution &PSE,
+                                     bool RequiresScalarEpilogueCheck,
+                                     bool TailFolded, Loop *TheLoop);
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
@@ -3314,7 +3335,7 @@ public:
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
   }
 
-  void addLiveOut(PHINode *PN, VPValue *V);
+  void addLiveOut(PHINode *PN, VPValue *V, VPBasicBlock *Pred);
 
   void removeLiveOut(PHINode *PN) {
     delete LiveOuts[PN];

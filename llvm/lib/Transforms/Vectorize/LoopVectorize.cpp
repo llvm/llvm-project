@@ -607,10 +607,6 @@ protected:
                     BasicBlock *MiddleBlock, BasicBlock *VectorHeader,
                     VPlan &Plan, VPTransformState &State);
 
-  /// Create the phi node for the resume value of first order recurrences in the
-  /// scalar preheader and update the users in the scalar loop.
-  void fixFixedOrderRecurrence(VPLiveOut *LO, VPTransformState &State);
-
   /// Iteratively sink the scalarized operands of a predicated instruction into
   /// the block that was created for it.
   void sinkScalarOperands(Instruction *PredInst);
@@ -2970,33 +2966,6 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarPreHeader =
       SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
                  nullptr, Twine(Prefix) + "scalar.ph");
-
-  auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
-
-  // Set up the middle block terminator.  Two cases:
-  // 1) If we know that we must execute the scalar epilogue, emit an
-  //    unconditional branch.
-  // 2) Otherwise, we must have a single unique exit block (due to how we
-  //    implement the multiple exit case).  In this case, set up a conditional
-  //    branch from the middle block to the loop scalar preheader, and the
-  //    exit block.  completeLoopSkeleton will update the condition to use an
-  //    iteration check, if required to decide whether to execute the remainder.
-  BranchInst *BrInst =
-      Cost->requiresScalarEpilogue(VF.isVector())
-          ? BranchInst::Create(LoopScalarPreHeader)
-          : BranchInst::Create(LoopExitBlock, LoopScalarPreHeader,
-                               Builder.getTrue());
-  BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
-  ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
-
-  // Update dominator for loop exit. During skeleton creation, only the vector
-  // pre-header and the middle block are created. The vector loop is entirely
-  // created during VPlan exection.
-  if (!Cost->requiresScalarEpilogue(VF.isVector()))
-    // If there is an epilogue which must run, there's no edge from the
-    // middle block to exit blocks  and thus no need to update the immediate
-    // dominator of the exit blocks.
-    DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
 }
 
 PHINode *InnerLoopVectorizer::createInductionResumeValue(
@@ -3093,51 +3062,6 @@ void InnerLoopVectorizer::createInductionResumeValues(
   }
 }
 
-BasicBlock *InnerLoopVectorizer::completeLoopSkeleton() {
-  // The trip counts should be cached by now.
-  Value *Count = getTripCount();
-  Value *VectorTripCount = getOrCreateVectorTripCount(LoopVectorPreHeader);
-
-  auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
-
-  // Add a check in the middle block to see if we have completed
-  // all of the iterations in the first vector loop.  Three cases:
-  // 1) If we require a scalar epilogue, there is no conditional branch as
-  //    we unconditionally branch to the scalar preheader.  Do nothing.
-  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
-  //    Thus if tail is to be folded, we know we don't need to run the
-  //    remainder and we can use the previous value for the condition (true).
-  // 3) Otherwise, construct a runtime check.
-  if (!Cost->requiresScalarEpilogue(VF.isVector()) &&
-      !Cost->foldTailByMasking()) {
-    // Here we use the same DebugLoc as the scalar loop latch terminator instead
-    // of the corresponding compare because they may have ended up with
-    // different line numbers and we want to avoid awkward line stepping while
-    // debugging. Eg. if the compare has got a line number inside the loop.
-    // TODO: At the moment, CreateICmpEQ will simplify conditions with constant
-    // operands. Perform simplification directly on VPlan once the branch is
-    // modeled there.
-    IRBuilder<> B(LoopMiddleBlock->getTerminator());
-    B.SetCurrentDebugLocation(ScalarLatchTerm->getDebugLoc());
-    Value *CmpN = B.CreateICmpEQ(Count, VectorTripCount, "cmp.n");
-    BranchInst &BI = *cast<BranchInst>(LoopMiddleBlock->getTerminator());
-    BI.setCondition(CmpN);
-    if (hasBranchWeightMD(*ScalarLatchTerm)) {
-      // Assume that `Count % VectorTripCount` is equally distributed.
-      unsigned TripCount = UF * VF.getKnownMinValue();
-      assert(TripCount > 0 && "trip count should not be zero");
-      const uint32_t Weights[] = {1, TripCount - 1};
-      setBranchWeights(BI, Weights, /*IsExpected=*/false);
-    }
-  }
-
-#ifdef EXPENSIVE_CHECKS
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
-#endif
-
-  return LoopVectorPreHeader;
-}
-
 std::pair<BasicBlock *, Value *>
 InnerLoopVectorizer::createVectorizedLoopSkeleton(
     const SCEV2ValueTy &ExpandedSCEVs) {
@@ -3160,7 +3084,8 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton(
   |    [  ]_|   <-- vector loop (created during VPlan execution).
   |     |
   |     v
-  \   -[ ]   <--- middle-block.
+  \   -[ ]   <--- middle-block (branch to successors created during VPlan
+   |    |                       execution)
    \/   |
    /\   v
    | ->[ ]     <--- new preheader.
@@ -3197,7 +3122,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton(
   // Emit phis for the new starting index of the scalar loop.
   createInductionResumeValues(ExpandedSCEVs);
 
-  return {completeLoopSkeleton(), nullptr};
+  return {LoopVectorPreHeader, nullptr};
 }
 
 // Fix up external users of the induction variable. At this point, we are
@@ -3398,8 +3323,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   for (const auto &[_, LO] : to_vector(Plan.getLiveOuts())) {
     if (!Legal->isFixedOrderRecurrence(LO->getPhi()))
       continue;
-    fixFixedOrderRecurrence(LO, State);
-    Plan.removeLiveOut(LO->getPhi());
   }
 
   // Forget the original basic block.
@@ -3469,31 +3392,16 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
                                VF.getKnownMinValue() * UF);
 }
 
-void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
-                                                  VPTransformState &State) {
-  // Extract the last vector element in the middle block. This will be the
-  // initial value for the recurrence when jumping to the scalar loop.
-  VPValue *VPExtract = LO->getOperand(0);
-  using namespace llvm::VPlanPatternMatch;
-  assert(match(VPExtract, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                              m_VPValue(), m_VPValue())) &&
-         "FOR LiveOut expects to use an extract from end.");
-  Value *ResumeScalarFOR = State.get(VPExtract, UF - 1, true);
-
-  // Fix the initial value of the original recurrence in the scalar loop.
-  PHINode *ScalarHeaderPhi = LO->getPhi();
-  auto *InitScalarFOR =
-      ScalarHeaderPhi->getIncomingValueForBlock(LoopScalarPreHeader);
-  Builder.SetInsertPoint(LoopScalarPreHeader, LoopScalarPreHeader->begin());
-  auto *ScalarPreheaderPhi =
-      Builder.CreatePHI(ScalarHeaderPhi->getType(), 2, "scalar.recur.init");
-  for (auto *BB : predecessors(LoopScalarPreHeader)) {
-    auto *Incoming = BB == LoopMiddleBlock ? ResumeScalarFOR : InitScalarFOR;
-    ScalarPreheaderPhi->addIncoming(Incoming, BB);
-  }
-  ScalarHeaderPhi->setIncomingValueForBlock(LoopScalarPreHeader,
-                                            ScalarPreheaderPhi);
-  ScalarHeaderPhi->setName("scalar.recur");
+// Helper to reorder blocks so they match the original order even after the
+// order of the predecessors changes. This is only used to avoid a number of
+// test changes due to reordering of incoming blocks in phi nodes and should be
+// removed soon, with the tests being updated.
+static void reorderIncomingBlocks(SmallVectorImpl<BasicBlock *> &Blocks,
+                                  BasicBlock *LoopMiddleBlock) {
+  if (Blocks.front() == LoopMiddleBlock)
+    std::swap(Blocks.front(), Blocks.back());
+  if (Blocks.size() == 3)
+    std::swap(Blocks[0], Blocks[1]);
 }
 
 void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
@@ -7387,7 +7295,9 @@ static void createAndCollectMergePhiForReduction(
   // If we are fixing reductions in the epilogue loop then we should already
   // have created a bc.merge.rdx Phi after the main vector body. Ensure that
   // we carry over the incoming values correctly.
-  for (auto *Incoming : predecessors(LoopScalarPreHeader)) {
+  SmallVector<BasicBlock *> Blocks(predecessors(LoopScalarPreHeader));
+  reorderIncomingBlocks(Blocks, LoopMiddleBlock);
+  for (auto *Incoming : Blocks) {
     if (Incoming == LoopMiddleBlock)
       BCBlockPhi->addIncoming(FinalValue, Incoming);
     else if (ResumePhi && is_contained(ResumePhi->blocks(), Incoming))
@@ -7458,6 +7368,21 @@ LoopVectorizationPlanner::executePlan(
   std::tie(State.CFG.PrevBB, CanonicalIVStartValue) =
       ILV.createVectorizedLoopSkeleton(ExpandedSCEVs ? *ExpandedSCEVs
                                                      : State.ExpandedSCEVs);
+#ifdef EXPENSIVE_CHECKS
+  assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+#endif
+
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
+
+  using namespace llvm::VPlanPatternMatch;
+  if (MiddleVPBB->begin() != MiddleVPBB->end() &&
+      match(&MiddleVPBB->back(), m_BranchOnCond(m_VPValue()))) {
+    cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[1])
+        ->resetBlock(OrigLoop->getLoopPreheader());
+  } else
+    cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])
+        ->resetBlock(OrigLoop->getLoopPreheader());
 
   // Only use noalias metadata when using memory checks guaranteeing no overlap
   // across all iterations.
@@ -7538,6 +7463,18 @@ LoopVectorizationPlanner::executePlan(
 
   ILV.printDebugTracesAtEnd();
 
+  // Adjust branch weight of the branch in the middle block.
+  auto *MiddleTerm =
+      cast<BranchInst>(State.CFG.VPBB2IRBB[ExitVPBB]->getTerminator());
+  if (MiddleTerm->isConditional() &&
+      hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+    // Assume that `Count % VectorTripCount` is equally distributed.
+    unsigned TripCount = State.UF * State.VF.getKnownMinValue();
+    assert(TripCount > 0 && "trip count should not be zero");
+    const uint32_t Weights[] = {1, TripCount - 1};
+    setBranchWeights(*MiddleTerm, Weights, /*IsExpected=*/false);
+  }
+
   return {State.ExpandedSCEVs, ReductionResumeValues};
 }
 
@@ -7594,7 +7531,7 @@ EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton(
   // inductions in the epilogue loop are created before executing the plan for
   // the epilogue loop.
 
-  return {completeLoopSkeleton(), nullptr};
+  return {LoopVectorPreHeader, nullptr};
 }
 
 void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
@@ -7783,7 +7720,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
                               {VecEpilogueIterationCountCheck,
                                EPI.VectorTripCount} /* AdditionalBypass */);
 
-  return {completeLoopSkeleton(), EPResumeVal};
+  return {LoopVectorPreHeader, EPResumeVal};
 }
 
 BasicBlock *
@@ -7828,7 +7765,6 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
     setBranchWeights(BI, Weights, /*IsExpected=*/false);
   }
   ReplaceInstWithInst(Insert->getTerminator(), &BI);
-
   LoopBypassBlocks.push_back(Insert);
   return Insert;
 }
@@ -8514,7 +8450,9 @@ static void addUsersInExitBlock(VPBasicBlock *HeaderVPBB, Loop *OrigLoop,
     Value *IncomingValue =
         ExitPhi.getIncomingValueForBlock(ExitingBB);
     VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue, Plan);
-    Plan.addLiveOut(&ExitPhi, V);
+    Plan.addLiveOut(
+        &ExitPhi, V,
+        cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor()));
   }
 }
 
@@ -8533,9 +8471,25 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // modified; a basic block for the vector pre-header, followed by a region for
   // the vector loop, followed by the middle basic block. The skeleton vector
   // loop region contains a header and latch basic blocks.
+
+  // Add a check in the middle block to see if we have completed
+  // all of the iterations in the first vector loop.  Three cases:
+  // 1) If we require a scalar epilogue, there is no conditional branch as
+  //    we unconditionally branch to the scalar preheader.  Do nothing.
+  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
+  //    Thus if tail is to be folded, we know we don't need to run the
+  //    remainder and we can use the previous value for the condition (true).
+  // 3) Otherwise, construct a runtime check.
+  bool RequiresScalarEpilogueCheck =
+      LoopVectorizationPlanner::getDecisionAndClampRange(
+          [this](ElementCount VF) {
+            return !CM.requiresScalarEpilogue(VF.isVector());
+          },
+          Range);
   VPlanPtr Plan = VPlan::createInitialVPlan(
       createTripCountSCEV(Legal->getWidestInductionType(), PSE, OrigLoop),
-      *PSE.getSE(), OrigLoop->getLoopPreheader());
+      *PSE.getSE(), RequiresScalarEpilogueCheck, CM.foldTailByMasking(),
+      OrigLoop);
   VPBasicBlock *HeaderVPBB = new VPBasicBlock("vector.body");
   VPBasicBlock *LatchVPBB = new VPBasicBlock("vector.latch");
   VPBlockUtils::insertBlockAfter(LatchVPBB, HeaderVPBB);
@@ -8678,6 +8632,49 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
 
+  auto *MiddleVPBB =
+      cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getSingleSuccessor());
+
+  VPBasicBlock *ScalarPH = nullptr;
+  for (VPBlockBase *Succ : MiddleVPBB->getSuccessors()) {
+    auto *VPIRBB = dyn_cast<VPIRBasicBlock>(Succ);
+    if (VPIRBB && VPIRBB->getIRBasicBlock() == OrigLoop->getHeader()) {
+      ScalarPH = VPIRBB;
+      break;
+    }
+  }
+
+  if (ScalarPH) {
+    for (auto &H : HeaderVPBB->phis()) {
+      auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&H);
+      if (!FOR)
+        continue;
+      VPBuilder B(ScalarPH);
+      VPBuilder MiddleBuilder;
+      // Set insert point so new recipes are inserted before terminator and
+      // condition, if there is either the former or both.
+      if (MiddleVPBB->getNumSuccessors() != 2)
+        MiddleBuilder.setInsertPoint(MiddleVPBB);
+      else if (isa<VPInstruction>(MiddleVPBB->getTerminator()->getOperand(0)))
+        MiddleBuilder.setInsertPoint(
+            &*std::prev(MiddleVPBB->getTerminator()->getIterator()));
+      else
+        MiddleBuilder.setInsertPoint(MiddleVPBB->getTerminator());
+
+      // Extract the resume value and create a new VPLiveOut for it.
+      auto *Resume = MiddleBuilder.createNaryOp(
+          VPInstruction::ExtractFromEnd,
+          {FOR->getBackedgeValue(),
+           Plan->getOrAddLiveIn(
+               ConstantInt::get(Plan->getCanonicalIV()->getScalarType(), 1))},
+          {}, "vector.recur.extract");
+      auto *R =
+          B.createNaryOp(VPInstruction::ExitPhi, {Resume, FOR->getStartValue()},
+                         {}, "scalar.recur.init");
+      Plan->addLiveOut(cast<PHINode>(FOR->getUnderlyingInstr()), R, ScalarPH);
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
   // bring the VPlan to its final state.
@@ -8783,7 +8780,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   // Create new empty VPlan
   auto Plan = VPlan::createInitialVPlan(
       createTripCountSCEV(Legal->getWidestInductionType(), PSE, OrigLoop),
-      *PSE.getSE(), OrigLoop->getLoopPreheader());
+      *PSE.getSE(), true, false, OrigLoop);
 
   // Build hierarchical CFG
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
@@ -8992,6 +8989,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     }
   }
   Builder.setInsertPoint(&*LatchVPBB->begin());
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor());
+  VPBasicBlock::iterator IP = MiddleVPBB->begin();
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
@@ -9100,8 +9100,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // also modeled in VPlan.
     auto *FinalReductionResult = new VPInstruction(
         VPInstruction::ComputeReductionResult, {PhiR, NewExitingVPV}, ExitDL);
-    cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor())
-        ->appendRecipe(FinalReductionResult);
+    FinalReductionResult->insertBefore(*MiddleVPBB, IP);
+    IP = std::next(FinalReductionResult->getIterator());
     OrigExitingVPV->replaceUsesWithIf(
         FinalReductionResult,
         [](VPUser &User, unsigned) { return isa<VPLiveOut>(&User); });
@@ -10146,6 +10146,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           cast<VPHeaderPHIRecipe>(&R)->setStartValue(StartVal);
         }
 
+        assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
+               "DT not preserved correctly");
         LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
                         DT, true, &ExpandedSCEVs);
         ++LoopsEpilogueVectorized;

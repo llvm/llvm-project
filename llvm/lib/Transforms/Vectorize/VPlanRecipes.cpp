@@ -193,13 +193,12 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   VPValue *ExitValue = getOperand(0);
   if (vputils::isUniformAfterVectorization(ExitValue))
     Lane = VPLane::getFirstLane();
-  VPBasicBlock *MiddleVPBB =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  assert(MiddleVPBB->getNumSuccessors() == 0 &&
-         "the middle block must not have any successors");
-  BasicBlock *MiddleBB = State.CFG.VPBB2IRBB[MiddleVPBB];
-  Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
-                   MiddleBB);
+  BasicBlock *PredBB = State.CFG.VPBB2IRBB[Pred];
+  Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
+  if (Phi->getBasicBlockIndex(PredBB) != -1)
+    Phi->setIncomingValueForBlock(PredBB, V);
+  else
+    Phi->addIncoming(V, PredBB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -298,12 +297,14 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (isVectorToScalar())
     return true;
   switch (Opcode) {
+  case Instruction::ICmp:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::ExitPhi:
     return true;
   default:
     return false;
@@ -318,6 +319,14 @@ Value *VPInstruction::generatePerLane(VPTransformState &State,
          "only PtrAdd opcodes are supported for now");
   return Builder.CreatePtrAdd(State.get(getOperand(0), Lane),
                               State.get(getOperand(1), Lane), Name);
+}
+
+static void reorderIncomingBlocks(SmallVectorImpl<BasicBlock *> &Blocks,
+                                  BasicBlock *LoopMiddleBlock) {
+  if (Blocks.front() == LoopMiddleBlock)
+    std::swap(Blocks.front(), Blocks.back());
+  if (Blocks.size() == 3)
+    std::swap(Blocks[0], Blocks[1]);
 }
 
 Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
@@ -340,8 +349,12 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     return Builder.CreateNot(A, Name);
   }
   case Instruction::ICmp: {
-    Value *A = State.get(getOperand(0), Part);
-    Value *B = State.get(getOperand(1), Part);
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    if (Part != 0 && vputils::onlyFirstPartUsed(this))
+      return State.get(this, 0, OnlyFirstLaneUsed);
+
+    Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
+    Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
@@ -442,18 +455,18 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       return nullptr;
 
     Value *Cond = State.get(getOperand(0), VPIteration(Part, 0));
-    VPRegionBlock *ParentRegion = getParent()->getParent();
-    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
-
     // Replace the temporary unreachable terminator with a new conditional
-    // branch, hooking it up to backward destination for exiting blocks now and
-    // to forward destination(s) later when they are created.
+    // branch.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-
-    if (getParent()->isExiting())
+    if (getParent()->isExiting()) {
+      VPRegionBlock *ParentRegion = getParent()->getParent();
+      VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
+      // Hooking it up to backward destination for exiting blocks.
       CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
+    }
 
+    // Forward destination(s) are hooked up later when they are created.
     CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
     return CondBr;
@@ -592,6 +605,28 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Addend = State.get(getOperand(1), Part, /* IsScalar */ true);
     return Builder.CreatePtrAdd(Ptr, Addend, Name);
   }
+  case VPInstruction::ExitPhi: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+    Value *IncomingFromVPlanPred =
+        State.get(getOperand(0), Part, /* IsScalar */ true);
+    Value *IncomingForOtherPredecessors =
+        State.get(getOperand(1), Part, /* IsScalar */ true);
+    auto *NewPhi =
+        Builder.CreatePHI(IncomingForOtherPredecessors->getType(), 2, Name);
+    SmallVector<BasicBlock *> Blocks(predecessors(Builder.GetInsertBlock()));
+    BasicBlock *VPlanPred =
+        State.CFG
+            .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getSinglePredecessor())];
+    reorderIncomingBlocks(Blocks, VPlanPred);
+    for (auto *BB : Blocks) {
+      auto *Incoming = BB == VPlanPred ? IncomingFromVPlanPred
+                                       : IncomingForOtherPredecessors;
+      NewPhi->addIncoming(Incoming, BB);
+    }
+    return NewPhi;
+  }
+
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -599,6 +634,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
+         getOpcode() == VPInstruction::ExitPhi ||
          getOpcode() == VPInstruction::ComputeReductionResult;
 }
 
@@ -675,6 +711,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnCond:
     return true;
   };
   llvm_unreachable("switch should return");
@@ -726,6 +763,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
+    break;
+  case VPInstruction::ExitPhi:
+    O << "exit-phi";
     break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";

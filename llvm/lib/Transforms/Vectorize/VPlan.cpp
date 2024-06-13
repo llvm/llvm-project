@@ -443,10 +443,27 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 }
 
 void VPIRBasicBlock::execute(VPTransformState *State) {
-  assert(getHierarchicalPredecessors().empty() &&
-         "VPIRBasicBlock cannot have predecessors at the moment");
   assert(getHierarchicalSuccessors().empty() &&
          "VPIRBasicBlock cannot have successors at the moment");
+
+  for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
+    VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
+    auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
+    BasicBlock *PredBB = State->CFG.VPBB2IRBB[PredVPBB];
+
+    assert(PredBB && "Predecessor basic-block not found building successor.");
+    auto *PredBBTerminator = PredBB->getTerminator();
+    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
+
+    auto *TermBr = cast<BranchInst>(PredBBTerminator);
+    // Set each forward successor here when it is created, excluding
+    // backedges. A backward successor is set when the branch is created.
+    unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
+    assert(!TermBr->getSuccessor(idx) &&
+           "Trying to reset an existing successor block.");
+    TermBr->setSuccessor(idx, IRBB);
+    State->CFG.DTU.applyUpdates({{DominatorTree::Insert, PredBB, IRBB}});
+  }
 
   State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
   executeRecipes(State, getIRBasicBlock());
@@ -479,6 +496,14 @@ void VPBasicBlock::execute(VPTransformState *State) {
     // The Exit block of a loop is always set to be successor 0 of the Exiting
     // block.
     cast<BranchInst>(ExitingBB->getTerminator())->setSuccessor(0, NewBB);
+    // Set the insert point for recipe execution in the block.
+    State->Builder.SetInsertPoint(NewBB->getTerminator());
+    if (getSuccessors().size() == 1) {
+      BranchInst *Br = State->Builder.CreateBr(NewBB);
+      Br->setSuccessor(0, nullptr);
+      NewBB->getTerminator()->eraseFromParent();
+      State->Builder.SetInsertPoint(NewBB->getTerminator());
+    }
     State->CFG.DTU.applyUpdates({{DominatorTree::Insert, ExitingBB, NewBB}});
   } else if (PrevVPBB && /* A */
              !((SingleHPred = getSingleHierarchicalPredecessor()) &&
@@ -639,6 +664,7 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 
   printSuccessors(O, Indent);
 }
+
 #endif
 
 static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry);
@@ -654,10 +680,21 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneSESE(VPBlockBase *Entry) {
       Entry);
   for (VPBlockBase *BB : RPOT) {
     VPBlockBase *NewBB = BB->clone();
-    for (VPBlockBase *Pred : BB->getPredecessors())
-      VPBlockUtils::connectBlocks(Old2NewVPBlocks[Pred], NewBB);
-
     Old2NewVPBlocks[BB] = NewBB;
+  }
+
+  for (VPBlockBase *BB : RPOT) {
+    VPBlockBase *NewBB = Old2NewVPBlocks[BB];
+    SmallVector<VPBlockBase *> NewPreds;
+    for (VPBlockBase *Pred : BB->getPredecessors()) {
+      NewPreds.push_back(Old2NewVPBlocks[Pred]);
+    }
+    NewBB->setPredecessors(NewPreds);
+    SmallVector<VPBlockBase *> NewSuccs;
+    for (VPBlockBase *Succ : BB->successors()) {
+      NewSuccs.push_back(Old2NewVPBlocks[Succ]);
+    }
+    NewBB->setSuccessors(NewSuccs);
   }
 
 #if !defined(NDEBUG)
@@ -784,8 +821,9 @@ VPlan::~VPlan() {
 }
 
 VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
-                                   BasicBlock *PH) {
-  VPIRBasicBlock *Preheader = new VPIRBasicBlock(PH);
+                                   bool RequiresScalarEpilogueCheck,
+                                   bool TailFolded, Loop *TheLoop) {
+  VPIRBasicBlock *Preheader = new VPIRBasicBlock(TheLoop->getLoopPreheader());
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =
@@ -795,6 +833,35 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
   VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
   VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
+
+  BasicBlock *EB = TheLoop->getUniqueExitBlock();
+  if (RequiresScalarEpilogueCheck) {
+    auto *EBWrapper = new VPIRBasicBlock(EB);
+    VPBlockUtils::insertBlockAfter(EBWrapper, MiddleVPBB);
+
+    auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
+    // Here we use the same DebugLoc as the scalar loop latch terminator instead
+    // of the corresponding compare because they may have ended up with
+    // different line numbers and we want to avoid awkward line stepping while
+    // debugging. Eg. if the compare has got a line number inside the loop.
+    VPValue *Cmp =
+        TailFolded
+            ? Plan->getOrAddLiveIn(ConstantInt::getTrue(
+                  IntegerType::getInt1Ty(TripCount->getType()->getContext())))
+            : new VPInstruction(Instruction::ICmp, CmpInst::ICMP_EQ,
+                                Plan->getTripCount(),
+                                &Plan->getVectorTripCount(),
+                                ScalarLatchTerm->getDebugLoc(), "cmp.n");
+    if (auto *VPI = Cmp->getDefiningRecipe())
+      MiddleVPBB->appendRecipe(VPI);
+    auto *Br = new VPInstruction(VPInstruction::BranchOnCond, {Cmp},
+                                 ScalarLatchTerm->getDebugLoc());
+    MiddleVPBB->appendRecipe(Br);
+  }
+  BasicBlock *Header = TheLoop->getHeader();
+  VPIRBasicBlock *PHWrapper = new VPIRBasicBlock(Header);
+  VPBlockUtils::connectBlocks(MiddleVPBB, PHWrapper);
+
   return Plan;
 }
 
@@ -851,6 +918,16 @@ void VPlan::execute(VPTransformState *State) {
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
   State->CFG.DTU.applyUpdates(
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
+
+  // Disconnect the middle block from its single successor (the scalar loop
+  // header) in both the CFG and DT. The branch will be created during VPlan
+  // execution.
+  BasicBlock *MiddleBB = State->CFG.ExitBB;
+  State->CFG.DTU.applyUpdates(
+      {{DominatorTree::Delete, MiddleBB, MiddleBB->getSingleSuccessor()}});
+  auto *BrInst = new UnreachableInst(MiddleBB->getContext());
+  BrInst->insertBefore(MiddleBB->getTerminator());
+  MiddleBB->getTerminator()->eraseFromParent();
 
   // Generate code in the loop pre-header and body.
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
@@ -1010,9 +1087,9 @@ LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
 #endif
 
-void VPlan::addLiveOut(PHINode *PN, VPValue *V) {
+void VPlan::addLiveOut(PHINode *PN, VPValue *V, VPBasicBlock *Pred) {
   assert(LiveOuts.count(PN) == 0 && "an exit value for PN already exists");
-  LiveOuts.insert({PN, new VPLiveOut(PN, V)});
+  LiveOuts.insert({PN, new VPLiveOut(PN, V, Pred)});
 }
 
 static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
@@ -1081,9 +1158,18 @@ VPlan *VPlan::duplicate() {
   remapOperands(Preheader, NewPreheader, Old2NewVPValues);
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
+  DenseMap<VPBlockBase *, VPBlockBase *> Old2NewVPBlocks;
+  VPBlockBase *OldMiddle = getVectorLoopRegion()->getSingleSuccessor();
+  VPBlockBase *NewMiddle = NewPlan->getVectorLoopRegion()->getSingleSuccessor();
+  Old2NewVPBlocks[OldMiddle] = NewMiddle;
+  for (const auto &[Old, New] :
+       zip(OldMiddle->getSuccessors(), NewMiddle->getSuccessors()))
+    Old2NewVPBlocks[Old] = New;
+
   // Clone live-outs.
   for (const auto &[_, LO] : LiveOuts)
-    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)]);
+    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)],
+                        cast<VPBasicBlock>(Old2NewVPBlocks[LO->getPred()]));
 
   // Initialize remaining fields of cloned VPlan.
   NewPlan->VFs = VFs;
@@ -1155,8 +1241,10 @@ void VPlanPrinter::drawEdge(const VPBlockBase *From, const VPBlockBase *To,
                             bool Hidden, const Twine &Label) {
   // Due to "dot" we print an edge between two regions as an edge between the
   // exiting basic block and the entry basic of the respective regions.
-  const VPBlockBase *Tail = From->getExitingBasicBlock();
-  const VPBlockBase *Head = To->getEntryBasicBlock();
+  const VPBlockBase *Tail =
+      isa<VPIRBasicBlock>(From) ? From : From->getExitingBasicBlock();
+  const VPBlockBase *Head =
+      isa<VPIRBasicBlock>(To) ? To : To->getEntryBasicBlock();
   OS << Indent << getUID(Tail) << " -> " << getUID(Head);
   OS << " [ label=\"" << Label << '\"';
   if (Tail != From)

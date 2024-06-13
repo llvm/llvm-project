@@ -34,8 +34,11 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
     ScalarEvolution &SE, const TargetLibraryInfo &TLI) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan->getEntry());
+      Plan->getVectorLoopRegion());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    // Skip blocks outside region
+    if (!VPBB->getParent())
+      break;
     VPRecipeBase *Term = VPBB->getTerminator();
     auto EndIter = Term ? Term->getIterator() : VPBB->end();
     // Introduce each ingredient into VPlan.
@@ -364,7 +367,8 @@ static bool mergeBlocksIntoPredecessors(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     auto *PredVPBB =
         dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
-    if (PredVPBB && PredVPBB->getNumSuccessors() == 1)
+    if (PredVPBB && PredVPBB->getNumSuccessors() == 1 &&
+        !isa<VPIRBasicBlock>(VPBB))
       WorkList.push_back(VPBB);
   }
 
@@ -812,8 +816,19 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
       RecurrencePhis.push_back(FOR);
 
-  VPBuilder MiddleBuilder(
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor()));
+  VPBasicBlock *MiddleVPBB =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  VPBuilder MiddleBuilder;
+  // Set insert point so new recipes are inserted before terminator and
+  // condition, if there is either the former or both.
+  if (MiddleVPBB->getNumSuccessors() != 2)
+    MiddleBuilder.setInsertPoint(MiddleVPBB);
+  else if (isa<VPInstruction>(MiddleVPBB->getTerminator()->getOperand(0)))
+    MiddleBuilder.setInsertPoint(
+        &*std::prev(MiddleVPBB->getTerminator()->getIterator()));
+  else
+    MiddleBuilder.setInsertPoint(MiddleVPBB->getTerminator());
+
   for (VPFirstOrderRecurrencePHIRecipe *FOR : RecurrencePhis) {
     SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
     VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
@@ -924,14 +939,6 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
         {}, "vector.recur.extract.for.phi"));
     RecurSplice->replaceUsesWithIf(
         Penultimate, [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
-
-    // Extract the resume value and create a new VPLiveOut for it.
-    auto *Resume = MiddleBuilder.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {FOR->getBackedgeValue(),
-         Plan.getOrAddLiveIn(ConstantInt::get(IntTy, 1))},
-        {}, "vector.recur.extract");
-    Plan.addLiveOut(cast<PHINode>(FOR->getUnderlyingInstr()), Resume);
   }
   return true;
 }
