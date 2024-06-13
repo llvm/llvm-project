@@ -43,6 +43,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <set>
 #include <utility>
@@ -828,6 +829,9 @@ Status MinidumpFileBuilder::AddMemory(SaveCoreStyle core_style) {
       return error;
   }
 
+  // Sort the ranges so we try to fit all the small ranges in 32b.
+  std::sort(all_core_memory_ranges.begin(), all_core_memory_ranges.end());
+
   // We need to calculate the MemoryDescriptor size in the worst case
   // Where all memory descriptors are 64b. We also leave some additional padding
   // So that we convert over to 64b with space to spare. This does not waste
@@ -924,20 +928,24 @@ Status MinidumpFileBuilder::DumpDirectories() const {
 }
 
 Status MinidumpFileBuilder::AddMemoryList_32(
-    const Process::CoreFileMemoryRanges &ranges) {
+    Process::CoreFileMemoryRanges &ranges) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
+  if (ranges.size() == 0)
+    return error;
+
+  std::sort(ranges.begin(), ranges.end());
   Log *log = GetLog(LLDBLog::Object);
   size_t region_index = 0;
+  auto data_up = std::make_unique<DataBufferHeap>(ranges.back().range.size(), 0);
   for (const auto &core_range : ranges) {
     // Take the offset before we write.
     const size_t offset_for_data = GetCurrentDataEndOffset();
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
-    auto data_up = std::make_unique<DataBufferHeap>(size, 0);
 
     LLDB_LOGF(log,
-              "/AddMemoryList/AddMemory/ %zu/%zu reading memory for region "
+              "AddMemoryList %zu/%zu reading memory for region "
               "(%zu bytes) [%zx, %zx)",
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
@@ -992,7 +1000,13 @@ Status MinidumpFileBuilder::AddMemoryList_32(
 }
 
 Status MinidumpFileBuilder::AddMemoryList_64(
-    const Process::CoreFileMemoryRanges &ranges) {
+    Process::CoreFileMemoryRanges &ranges) {
+  Status error;
+  if (ranges.empty()) 
+    return error;
+
+  // Sort the ranges so we can preallocate a buffer big enough for the largest item.
+  std::sort(ranges.begin(), ranges.end());
   AddDirectory(StreamType::Memory64List,
                (sizeof(llvm::support::ulittle64_t) * 2) +
                    ranges.size() * sizeof(llvm::minidump::MemoryDescriptor_64));
@@ -1023,16 +1037,16 @@ Status MinidumpFileBuilder::AddMemoryList_64(
     m_data.AppendData(&memory_desc, sizeof(MemoryDescriptor_64));
   }
 
-  Status error;
+
   Log *log = GetLog(LLDBLog::Object);
   size_t region_index = 0;
+  auto data_up = std::make_unique<DataBufferHeap>(ranges.back().range.size(), 0);
   for (const auto &core_range : ranges) {
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
-    auto data_up = std::make_unique<DataBufferHeap>(size, 0);
 
     LLDB_LOGF(log,
-              "/AddMemoryList_64/AddMemory %zu/%zu reading memory for region "
+              "AddMemoryList_64 %zu/%zu reading memory for region "
               "(%zu bytes) "
               "[%zx, %zx)",
               region_index, ranges.size(), size, addr, addr + size);

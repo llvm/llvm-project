@@ -103,7 +103,7 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   // land and many RVA's only support 32b
   error = builder.AddMemory(core_style);
   if (error.Fail()) {
-    LLDB_LOGF(log, "AddMemoryList failed: %s", error.AsCString());
+    LLDB_LOGF(log, "AddMemory failed: %s", error.AsCString());
     return false;
   }
 

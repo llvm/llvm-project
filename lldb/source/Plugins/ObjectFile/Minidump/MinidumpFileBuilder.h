@@ -49,8 +49,8 @@ class MinidumpFileBuilder {
 public:
   MinidumpFileBuilder(lldb::FileUP &&core_file,
                       const lldb::ProcessSP &process_sp)
-      : m_process_sp(std::move(process_sp)),
-        m_core_file(std::move(core_file)){};
+      : m_process_sp(process_sp),
+        m_core_file(std::move(core_file)) {};
 
   MinidumpFileBuilder(const MinidumpFileBuilder &) = delete;
   MinidumpFileBuilder &operator=(const MinidumpFileBuilder &) = delete;
@@ -73,7 +73,7 @@ public:
   lldb_private::Status AddThreadList();
   // Add Exception streams for any threads that stopped with exceptions.
   void AddExceptions();
-  // Add MiscInfo stream, mainly providing ProcessId
+  // Add MiscInfo stream, mainly providing ProcessId  8
   void AddMiscInfo();
   // Add informative files about a Linux process
   void AddLinuxFileStreams();
@@ -89,15 +89,14 @@ private:
   lldb_private::Status AddData(const void *data, size_t size);
   // Add MemoryList stream, containing dumps of important memory segments
   lldb_private::Status
-  AddMemoryList_64(const lldb_private::Process::CoreFileMemoryRanges &ranges);
+  AddMemoryList_64(lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status
-  AddMemoryList_32(const lldb_private::Process::CoreFileMemoryRanges &ranges);
+  AddMemoryList_32(lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status FixThreads();
   lldb_private::Status FlushToDisk();
 
   lldb_private::Status DumpHeader() const;
   lldb_private::Status DumpDirectories() const;
-  bool CheckIf_64Bit(const size_t size);
   // Add directory of StreamType pointing to the current end of the prepared
   // file with the specified size.
   void AddDirectory(llvm::minidump::StreamType type, uint64_t stream_size);
