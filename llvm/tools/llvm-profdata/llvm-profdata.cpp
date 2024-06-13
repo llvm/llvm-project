@@ -2696,9 +2696,9 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
   Stats.TotalNumValueSites += NS;
   for (size_t I = 0; I < NS; ++I) {
     auto VD = Func.getValueArrayForSite(VK, I);
-    if (VD.empty())
-      continue;
     uint32_t NV = VD.size();
+    if (NV == 0)
+      continue;
     Stats.TotalNumValues += NV;
     Stats.TotalNumValueSitesWithValueProfile++;
     if (NV > Stats.ValueSitesHistogram.size())
