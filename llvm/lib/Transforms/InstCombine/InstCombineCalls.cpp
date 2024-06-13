@@ -3670,7 +3670,7 @@ Instruction *InstCombinerImpl::foldPtrAuthConstantCallee(CallBase &Call) {
   if (!CPA)
     return nullptr;
 
-  auto *CalleeF = dyn_cast<Function>(CPA->getPointer()->stripPointerCasts());
+  auto *CalleeF = dyn_cast<Function>(CPA->getPointer());
   // If the ptrauth constant isn't based on a function pointer, bail out.
   if (!CalleeF)
     return nullptr;
