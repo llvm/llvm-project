@@ -37,11 +37,7 @@ void StackReclaimPass::runOnOperation() {
   mlir::OpBuilder builder(context);
   mlir::Type voidPtr = mlir::LLVM::LLVMPointerType::get(context);
 
-  op->walk([&](mlir::Operation *op) {
-    if (!mlir::isa<fir::DoLoopOp>(op))
-      return;
-
-    auto loopOp = mlir::dyn_cast<fir::DoLoopOp>(op);
+  op->walk([&](fir::DoLoopOp loopOp) {
     mlir::Location loc = loopOp.getLoc();
 
     if (!loopOp.getRegion().getOps<fir::AllocaOp>().empty()) {
