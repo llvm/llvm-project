@@ -266,6 +266,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
   calls to ``std::forward``.
 
+- Improved :doc:`cppcoreguidelines-macro-usage
+  <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
+  hash preprocessing token.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
   giving false positives for deleted functions, by fixing false negatives when only
