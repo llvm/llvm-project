@@ -26,7 +26,7 @@ define i64 @test_ptrauth_nop_constant_addrdisc() {
 ; CHECK-LABEL: @test_ptrauth_nop_constant_addrdisc(
 ; CHECK-NEXT:    ret i64 ptrtoint (ptr @foo to i64)
 ;
-  %addr = ptrtoint void()* @foo to i64
+  %addr = ptrtoint ptr @foo to i64
   %blended = call i64 @llvm.ptrauth.blend(i64 %addr, i64 1234)
   %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234, ptr @foo) to i64), i32 1, i64 %blended)
   ret i64 %authed
