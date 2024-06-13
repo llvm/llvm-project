@@ -4,7 +4,16 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-set(MODULES
+# Define the list of Fortran module files that need to be compiled
+# to produce an object file for inclusion into the FortranRuntime
+# library.
+set(MODULES_WITH_IMPLEMENTATION
+  "__fortran_builtin_kinds"
+)
+
+# Define the list of Fortran module files for which it is
+# sufficient to generate the module file via -fsyntax-only.
+set(MODULES_WITHOUT_IMPLEMENTATION
   "__fortran_builtins"
   "__fortran_ieee_exceptions"
   "__fortran_type_info"
@@ -19,6 +28,12 @@ set(MODULES
   "iso_c_binding"
   "iso_fortran_env"
 )
+
+set(MODULES ${MODULES_WITH_IMPLEMENTATION} ${MODULES_WITHOUT_IMPLEMENTATION})
+
+# Init variable to hold extra object files coming from the Fortran modules;
+# these module files will be contributed from the CMakeLists in flang/tools/f18.
+unset(FORTRAN_MODULE_OBJECTS CACHE)
 
 # Create module files directly from the top-level module source directory.
 # If CMAKE_CROSSCOMPILING, then the newly built flang-new executable was
@@ -41,6 +56,9 @@ if (NOT CMAKE_CROSSCOMPILING)
       if(NOT ${filename} STREQUAL "__fortran_type_info")
         set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_type_info.mod)
       endif()
+      if(${filename} STREQUAL "iso_fortran_env")
+        set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtin_kinds.mod)
+      endif()
       if(${filename} STREQUAL "ieee_arithmetic" OR
          ${filename} STREQUAL "ieee_exceptions")
         set(depends ${depends} ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_ieee_exceptions.mod)
@@ -58,16 +76,34 @@ if (NOT CMAKE_CROSSCOMPILING)
       endif()
     endif()
 
+
+    # Some modules have an implementation part that needs to be added to the
+    # FortranRuntime library.
+    set(compile_with "-fsyntax-only")
+    set(object_output "")
+    set(include_in_link FALSE)
+    if(${filename} IN_LIST MODULES_WITH_IMPLEMENTATION)
+      set(compile_with "-c")
+      set(object_output "${CMAKE_CURRENT_BINARY_DIR}/${filename}${CMAKE_CXX_OUTPUT_EXTENSION}")
+      set(include_in_link TRUE)
+    endif()
+
     set(base ${FLANG_INTRINSIC_MODULES_DIR}/${filename})
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
-    add_custom_command(OUTPUT ${base}.mod
+    add_custom_command(OUTPUT ${base}.mod ${object_output}
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang-new ${opts} -cpp -fsyntax-only -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang-new ${opts} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
       DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
     list(APPEND MODULE_FILES ${base}.mod)
     install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
+
+    # If a module has been compiled into an object file, add the file to
+    # the link line for the FortranRuntime library.
+    if(include_in_link)
+      set(FORTRAN_MODULE_OBJECTS "${FORTRAN_MODULE_OBJECTS}" "${object_output}" CACHE INTERNAL "")
+    endif()
   endforeach()
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
