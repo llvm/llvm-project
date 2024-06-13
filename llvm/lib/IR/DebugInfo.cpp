@@ -2010,7 +2010,7 @@ bool calculateFragmentIntersectImpl(
   //                 SliceSizeInBits=32, Dest=%dest, Assign=dbg.assign)
   //
   // Drawing the store (s) in memory followed by the shortened version ($),
-  // then the dbg.assign (d), with the fragment information on a seperate scale
+  // then the dbg.assign (d), with the fragment information on a separate scale
   // underneath:
   //
   // Memory
