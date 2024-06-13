@@ -40,6 +40,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -5092,27 +5093,6 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
   return getOrCreateRuntimeFunction(M, Name);
 }
 
-static void replaceConstatExprUsesInFuncWithInstr(ConstantExpr *ConstExpr,
-                                                  Function *Func) {
-  for (User *User : make_early_inc_range(ConstExpr->users())) {
-    if (auto *Instr = dyn_cast<Instruction>(User)) {
-      if (Instr->getFunction() == Func) {
-        Instruction *ConstInst = ConstExpr->getAsInstruction();
-        ConstInst->insertBefore(*Instr->getParent(), Instr->getIterator());
-        Instr->replaceUsesOfWith(ConstExpr, ConstInst);
-      }
-    }
-  }
-}
-
-static void replaceConstantValueUsesInFuncWithInstr(llvm::Value *Input,
-                                                    Function *Func) {
-  for (User *User : make_early_inc_range(Input->users()))
-    if (auto *Const = dyn_cast<Constant>(User))
-      if (auto *ConstExpr = dyn_cast<ConstantExpr>(Const))
-        replaceConstatExprUsesInFuncWithInstr(ConstExpr, Func);
-}
-
 static Function *createOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
     SmallVectorImpl<Value *> &Inputs,
@@ -5191,17 +5171,23 @@ static Function *createOutlinedFunction(
 
     // Things like GEP's can come in the form of Constants. Constants and
     // ConstantExpr's do not have access to the knowledge of what they're
-    // contained in, so we must dig a little to find an instruction so we can
-    // tell if they're used inside of the function we're outlining. We also
-    // replace the original constant expression with a new instruction
+    // contained in, so we must dig a little to find an instruction so we
+    // can tell if they're used inside of the function we're outlining. We
+    // also replace the original constant expression with a new instruction
     // equivalent; an instruction as it allows easy modification in the
-    // following loop, as we can now know the constant (instruction) is owned by
-    // our target function and replaceUsesOfWith can now be invoked on it
-    // (cannot do this with constants it seems). A brand new one also allows us
-    // to be cautious as it is perhaps possible the old expression was used
-    // inside of the function but exists and is used externally (unlikely by the
-    // nature of a Constant, but still).
-    replaceConstantValueUsesInFuncWithInstr(Input, Func);
+    // following loop, as we can now know the constant (instruction) is
+    // owned by our target function and replaceUsesOfWith can now be invoked
+    // on it (cannot do this with constants it seems). A brand new one also
+    // allows us to be cautious as it is perhaps possible the old expression
+    // was used inside of the function but exists and is used externally
+    // (unlikely by the nature of a Constant, but still).
+    // NOTE: We cannot remove dead constants that have been rewritten to
+    // instructions at this stage, we run the risk of breaking later lowering
+    // by doing so as we could still be in the process of lowering the module
+    // from MLIR to LLVM-IR and the MLIR lowering may still require the original
+    // constants we have created rewritten versions of.
+    if (auto *Const = dyn_cast<Constant>(Input))
+      convertUsersOfConstantsToInstructions(Const, Func, false);
 
     // Collect all the instructions
     for (User *User : make_early_inc_range(Input->users()))

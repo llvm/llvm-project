@@ -18,10 +18,21 @@ namespace llvm {
 
 template <typename T> class ArrayRef;
 class Constant;
+class Function;
 
 /// Replace constant expressions users of the given constants with
 /// instructions. Return whether anything was changed.
-bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts);
+///
+/// Passing RestrictToFunc will restrict the constant replacement
+/// to the passed in functions scope, as opposed to the replacements
+/// occurring at module scope.
+///
+/// RemoveDeadConstants by default will remove all dead constants as
+/// the final step of the function after replacement, when passed
+/// false it will skip this final step.
+bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+                                           Function *RestrictToFunc = nullptr,
+                                           bool RemoveDeadConstants = true);
 
 } // end namespace llvm
 
