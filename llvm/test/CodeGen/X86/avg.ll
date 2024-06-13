@@ -2201,12 +2201,11 @@ define <8 x i16> @PR52131_not_zext_with_constant(<8 x i32> %a) {
 define i64 @PR95284(i32 %a0) {
 ; CHECK-LABEL: PR95284:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    decq %rcx
-; CHECK-NEXT:    shrq %rcx
-; CHECK-NEXT:    incq %rcx
-; CHECK-NEXT:    movabsq $9223372036854775806, %rax # imm = 0x7FFFFFFFFFFFFFFE
-; CHECK-NEXT:    andq %rcx, %rax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    decq %rax
+; CHECK-NEXT:    shrq %rax
+; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    andq $-2, %rax
 ; CHECK-NEXT:    retq
   %ext = zext nneg i32 %a0 to i64
   %dec = add i64 %ext, -1
