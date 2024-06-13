@@ -556,14 +556,8 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   ABIArgInfo AI = classifyArgumentType(Ty, /*IsVariadic=*/true,
                                        CGF.CurFnInfo->getCallingConvention());
   // Empty records are ignored for parameter passing purposes.
-  if (AI.isIgnore()) {
-    uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
-    CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
-    VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
-    auto *Load = CGF.Builder.CreateLoad(VAListAddr);
-    Address ResAddr = Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-    return RValue::getAggregate(ResAddr);
-  }
+  if (AI.isIgnore())
+    return Slot.asRValue();
 
   bool IsIndirect = AI.isIndirect();
 
@@ -817,11 +811,8 @@ RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
   CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    Address ResAddr = Address(CGF.Builder.CreateLoad(VAListAddr, "ap.cur"),
-                              CGF.ConvertTypeForMem(Ty), SlotSize);
-    return RValue::getAggregate(ResAddr);
-  }
+  if (isEmptyRecord(getContext(), Ty, true))
+    return Slot.asRValue();
 
   // The size of the actual thing passed, which might end up just
   // being a pointer for indirect types.

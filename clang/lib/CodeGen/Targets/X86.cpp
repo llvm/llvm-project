@@ -1075,7 +1075,7 @@ RValue X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   ABIArgInfo AI = classifyArgumentType(Ty, State, /*ArgIndex*/ 0);
   // Empty records are ignored for parameter passing purposes.
   if (AI.isIgnore())
-    return RValue::getIgnored();
+    return Slot.asRValue();
 
   // x86-32 changes the alignment of certain arguments on the stack.
   //
@@ -3037,7 +3037,7 @@ RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // Empty records are ignored for parameter passing purposes.
   if (AI.isIgnore())
-    return RValue::getIgnored();
+    return Slot.asRValue();
 
   // AMD64-ABI 3.5.7p5: Step 1. Determine whether type may be passed
   // in the registers. If not go to step 7.

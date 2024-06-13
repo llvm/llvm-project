@@ -834,5 +834,4 @@ typedef struct {} empty;
 empty empty_record_test(void) {
 // CHECK-LABEL: define{{.*}} void @empty_record_test()
   return va_arg(the_list, empty);
-// CHECK: [[GR_OFFS:%[a-z_0-9]+]] = load ptr, ptr @the_list
 }

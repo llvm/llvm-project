@@ -494,11 +494,8 @@ RValue RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits SlotSize = CharUnits::fromQuantity(XLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    Address Addr = Address(CGF.Builder.CreateLoad(VAListAddr),
-                           CGF.ConvertTypeForMem(Ty), SlotSize);
-    return RValue::getAggregate(Addr);
-  }
+  if (isEmptyRecord(getContext(), Ty, true))
+    return Slot.asRValue();
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
 

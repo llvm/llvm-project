@@ -758,12 +758,8 @@ RValue ARMABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits SlotSize = CharUnits::fromQuantity(4);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
-    auto *Load = CGF.Builder.CreateLoad(VAListAddr);
-    Address Addr = Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
-    return RValue::getAggregate(Addr);
-  }
+  if (isEmptyRecord(getContext(), Ty, true))
+    return Slot.asRValue();
 
   CharUnits TySize = getContext().getTypeSizeInChars(Ty);
   CharUnits TyAlignForABI = getContext().getTypeUnadjustedAlignInChars(Ty);
