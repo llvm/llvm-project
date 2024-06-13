@@ -359,7 +359,6 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
            "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
            "vector scale range">,
   ];
-  let constructor = "::fir::createVScaleAttrPass()";
 }
 
 def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
@@ -395,7 +394,6 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
            "bool", /*default=*/"false",
            "Set the unsafe-fp-math attribute on functions in the module.">,
   ];
-  let constructor = "::fir::createFunctionAttrPass()";
 }
 
 def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {

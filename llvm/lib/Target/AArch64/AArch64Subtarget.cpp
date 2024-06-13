@@ -153,9 +153,11 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA710:
   case CortexA715:
   case CortexA720:
+  case CortexA725:
   case CortexX2:
   case CortexX3:
   case CortexX4:
+  case CortexX925:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -298,6 +300,13 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
     MaxInterleaveFactor = 4;
+    break;
+  case Oryon:
+    CacheLineSize = 64;
+    PrefFunctionAlignment = Align(16);
+    MaxInterleaveFactor = 4;
+    PrefetchDistance = 128;
+    MinPrefetchStride = 1024;
     break;
   }
 

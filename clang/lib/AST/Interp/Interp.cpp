@@ -538,7 +538,7 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     return false;
   }
 
-  if (!F->isConstexpr()) {
+  if (!F->isConstexpr() || !F->hasBody()) {
     const SourceLocation &Loc = S.Current->getLocation(OpPC);
     if (S.getLangOpts().CPlusPlus11) {
       const FunctionDecl *DiagDecl = F->getDecl();
@@ -572,9 +572,10 @@ bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
             S.checkingPotentialConstantExpression())
           return false;
 
-        // If the declaration is defined _and_ declared 'constexpr', the below
-        // diagnostic doesn't add anything useful.
-        if (DiagDecl->isDefined() && DiagDecl->isConstexpr())
+        // If the declaration is defined, declared 'constexpr' _and_ has a body,
+        // the below diagnostic doesn't add anything useful.
+        if (DiagDecl->isDefined() && DiagDecl->isConstexpr() &&
+            DiagDecl->hasBody())
           return false;
 
         S.FFDiag(Loc, diag::note_constexpr_invalid_function, 1)

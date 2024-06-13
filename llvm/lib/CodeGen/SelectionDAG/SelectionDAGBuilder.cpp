@@ -729,8 +729,17 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       // prevents it from being picked up by the earlier bitcast case.
       if (ValueVT.getVectorElementCount().isScalar() &&
           (!ValueVT.isFloatingPoint() || !PartVT.isInteger())) {
-        Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
-                          DAG.getVectorIdxConstant(0, DL));
+        // If we reach this condition and PartVT is FP, this means that
+        // ValueVT is also FP and both have a different size, otherwise we
+        // would have bitcasted them. Producing an EXTRACT_VECTOR_ELT here
+        // would be invalid since that would mean the smaller FP type has to
+        // be extended to the larger one.
+        if (PartVT.isFloatingPoint()) {
+          Val = DAG.getBitcast(ValueVT.getScalarType(), Val);
+          Val = DAG.getNode(ISD::FP_EXTEND, DL, PartVT, Val);
+        } else
+          Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
+                            DAG.getVectorIdxConstant(0, DL));
       } else {
         uint64_t ValueSize = ValueVT.getFixedSizeInBits();
         assert(PartVT.getFixedSizeInBits() > ValueSize &&
@@ -6597,7 +6606,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::dbg_assign: {
-    // Debug intrinsics are handled seperately in assignment tracking mode.
+    // Debug intrinsics are handled separately in assignment tracking mode.
     if (AssignmentTrackingEnabled)
       return;
     // If assignment tracking hasn't been enabled then fall through and treat
@@ -6605,7 +6614,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     [[fallthrough]];
   }
   case Intrinsic::dbg_value: {
-    // Debug intrinsics are handled seperately in assignment tracking mode.
+    // Debug intrinsics are handled separately in assignment tracking mode.
     if (AssignmentTrackingEnabled)
       return;
     const DbgValueInst &DI = cast<DbgValueInst>(I);
