@@ -1117,7 +1117,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
       NewCall->setMetadata(LLVMContext::MD_noalias, AATags.NoAlias);
   }
 
-  NewCall->setDebugLoc(TheStore->getDebugLoc());
+  NewCall->dropLocation();
 
   if (MSSAU) {
     MemoryAccess *NewMemAcc = MSSAU->createMemoryAccessInBB(
