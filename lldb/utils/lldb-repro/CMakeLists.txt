@@ -1,6 +1,6 @@
 add_custom_target(lldb-repro)
 add_dependencies(lldb-repro lldb-test-depends)
-set_target_properties(lldb-repro PROPERTIES FOLDER "lldb utils")
+set_target_properties(lldb-repro PROPERTIES FOLDER "LLDB/Utils")
 
 # Generate lldb-repro Python script for each build mode.
 if(LLDB_BUILT_STANDALONE)

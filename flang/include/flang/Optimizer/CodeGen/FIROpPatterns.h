@@ -101,6 +101,10 @@ protected:
                         mlir::Value box,
                         mlir::ConversionPatternRewriter &rewriter) const;
 
+  mlir::Value getRankFromBox(mlir::Location loc, TypePair boxTy,
+                             mlir::Value box,
+                             mlir::ConversionPatternRewriter &rewriter) const;
+
   // Get the element type given an LLVM type that is of the form
   // (array|struct|vector)+ and the provided indexes.
   mlir::Type getBoxEleTy(mlir::Type type,
@@ -120,6 +124,12 @@ protected:
                                    mlir::Value box,
                                    mlir::ConversionPatternRewriter &rewriter,
                                    unsigned maskValue) const;
+
+  /// Compute the descriptor size in bytes. The result is not guaranteed to be a
+  /// compile time constant if the box is for an assumed rank, in which case the
+  /// box rank will be read.
+  mlir::Value computeBoxSize(mlir::Location, TypePair boxTy, mlir::Value box,
+                             mlir::ConversionPatternRewriter &rewriter) const;
 
   template <typename... ARGS>
   mlir::LLVM::GEPOp genGEP(mlir::Location loc, mlir::Type ty,

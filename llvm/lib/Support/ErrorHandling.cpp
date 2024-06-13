@@ -236,7 +236,42 @@ void LLVMResetFatalErrorHandler() {
 
 #ifdef _WIN32
 
+#define WIN32_NO_STATUS
+#include "llvm/Support/Windows/WindowsSupport.h"
+#undef WIN32_NO_STATUS
+#include <ntstatus.h>
 #include <winerror.h>
+
+// This is equivalent to NtCurrentTeb()->LastStatusValue, but the public
+// _TEB definition does not expose the LastStatusValue field directly.
+// Avoid offsetting into this structure by calling RtlGetLastNtStatus
+// from ntdll.dll.
+//
+// The return of this function will roughly match that of
+// GetLastError, but this lower level API disambiguates some cases
+// that GetLastError does not.
+//
+// For more information, see:
+// https://www.geoffchappell.com/studies/windows/km/ntoskrnl/inc/api/pebteb/teb/index.htm
+// https://github.com/llvm/llvm-project/issues/89137
+extern "C" NTSYSAPI NTSTATUS NTAPI RtlGetLastNtStatus();
+
+// This function obtains the last error code and maps it. It may call
+// RtlGetLastNtStatus, which is a lower level API that can return a
+// more specific error code than GetLastError.
+std::error_code llvm::mapLastWindowsError() {
+  unsigned EV = ::GetLastError();
+  // The mapping of NTSTATUS to Win32 error loses some information; special
+  // case the generic ERROR_ACCESS_DENIED code to check the underlying
+  // NTSTATUS and potentially return a more accurate error code.
+  if (EV == ERROR_ACCESS_DENIED) {
+    llvm::errc code = RtlGetLastNtStatus() == STATUS_DELETE_PENDING
+                          ? errc::delete_pending
+                          : errc::permission_denied;
+    return make_error_code(code);
+  }
+  return mapWindowsError(EV);
+}
 
 // I'd rather not double the line count of the following.
 #define MAP_ERR_TO_COND(x, y)                                                  \

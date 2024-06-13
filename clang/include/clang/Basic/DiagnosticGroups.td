@@ -15,8 +15,6 @@ def Implicit : DiagGroup<"implicit", [
     ImplicitInt
 ]>;
 
-def DeprecatedStaticAnalyzerFlag : DiagGroup<"deprecated-static-analyzer-flag">;
-
 // Empty DiagGroups are recognized by clang but ignored.
 def ODR : DiagGroup<"odr">;
 def : DiagGroup<"abi">;
@@ -508,7 +506,7 @@ def MaxUnsignedZero : DiagGroup<"max-unsigned-zero">;
 def MissingBraces : DiagGroup<"missing-braces">;
 def MissingDeclarations: DiagGroup<"missing-declarations">;
 def : DiagGroup<"missing-format-attribute">;
-def : DiagGroup<"missing-include-dirs">;
+def MissingIncludeDirs : DiagGroup<"missing-include-dirs">;
 def MissingNoreturn : DiagGroup<"missing-noreturn">;
 def MultiChar : DiagGroup<"multichar">;
 def : DiagGroup<"nested-externs">;
@@ -1447,6 +1445,10 @@ def FunctionMultiVersioning
 
 def NoDeref : DiagGroup<"noderef">;
 
+// -fbounds-safety and bounds annotation related warnings
+def BoundsSafetyCountedByEltTyUnknownSize :
+  DiagGroup<"bounds-safety-counted-by-elt-type-unknown-size">;
+
 // A group for cross translation unit static analysis related warnings.
 def CrossTU : DiagGroup<"ctu">;
 
@@ -1514,6 +1516,9 @@ def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
 
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
+
+// Warning for HLSL API availability
+def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
 // Warnings and notes related to const_var_decl_type attribute checks
 def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;

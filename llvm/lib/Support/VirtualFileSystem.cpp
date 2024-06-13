@@ -867,21 +867,16 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
   // Any intermediate directories we create should be accessible by
   // the owner, even if Perms says otherwise for the final path.
   const auto NewDirectoryPerms = ResolvedPerms | sys::fs::owner_all;
-  while (true) {
-    StringRef Name = *I;
-    detail::InMemoryNode *Node = Dir->getChild(Name);
-    ++I;
-    if (!Node) {
-      if (I == E) {
-        // End of the path.
-        Dir->addChild(
-            Name, MakeNode({Dir->getUniqueID(), Path, Name, ModificationTime,
-                            std::move(Buffer), ResolvedUser, ResolvedGroup,
-                            ResolvedType, ResolvedPerms}));
-        return true;
-      }
 
-      // Create a new directory. Use the path up to here.
+  StringRef Name = *I;
+  while (true) {
+    Name = *I;
+    ++I;
+    if (I == E)
+      break;
+    detail::InMemoryNode *Node = Dir->getChild(Name);
+    if (!Node) {
+      // This isn't the last element, so we create a new directory.
       Status Stat(
           StringRef(Path.str().begin(), Name.end() - Path.str().begin()),
           getDirectoryID(Dir->getUniqueID(), Name),
@@ -891,27 +886,33 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
           Name, std::make_unique<detail::InMemoryDirectory>(std::move(Stat))));
       continue;
     }
-
-    if (auto *NewDir = dyn_cast<detail::InMemoryDirectory>(Node)) {
-      Dir = NewDir;
-    } else {
-      assert((isa<detail::InMemoryFile>(Node) ||
-              isa<detail::InMemoryHardLink>(Node)) &&
-             "Must be either file, hardlink or directory!");
-
-      // Trying to insert a directory in place of a file.
-      if (I != E)
-        return false;
-
-      // Return false only if the new file is different from the existing one.
-      if (auto Link = dyn_cast<detail::InMemoryHardLink>(Node)) {
-        return Link->getResolvedFile().getBuffer()->getBuffer() ==
-               Buffer->getBuffer();
-      }
-      return cast<detail::InMemoryFile>(Node)->getBuffer()->getBuffer() ==
-             Buffer->getBuffer();
-    }
+    // Creating file under another file.
+    if (!isa<detail::InMemoryDirectory>(Node))
+      return false;
+    Dir = cast<detail::InMemoryDirectory>(Node);
   }
+  detail::InMemoryNode *Node = Dir->getChild(Name);
+  if (!Node) {
+    Dir->addChild(Name,
+                  MakeNode({Dir->getUniqueID(), Path, Name, ModificationTime,
+                            std::move(Buffer), ResolvedUser, ResolvedGroup,
+                            ResolvedType, ResolvedPerms}));
+    return true;
+  }
+  if (isa<detail::InMemoryDirectory>(Node))
+    return ResolvedType == sys::fs::file_type::directory_file;
+
+  assert((isa<detail::InMemoryFile>(Node) ||
+          isa<detail::InMemoryHardLink>(Node)) &&
+         "Must be either file, hardlink or directory!");
+
+  // Return false only if the new file is different from the existing one.
+  if (auto *Link = dyn_cast<detail::InMemoryHardLink>(Node)) {
+    return Link->getResolvedFile().getBuffer()->getBuffer() ==
+           Buffer->getBuffer();
+  }
+  return cast<detail::InMemoryFile>(Node)->getBuffer()->getBuffer() ==
+         Buffer->getBuffer();
 }
 
 bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,

@@ -205,9 +205,9 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
   setOperationAction(ISD::SDIVREM, VT, Expand);
   setOperationAction(ISD::UDIVREM, VT, Expand);
 
-  if (!VT.isFloatingPoint() &&
-      VT != MVT::v2i64 && VT != MVT::v1i64)
-    for (auto Opcode : {ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX})
+  if (!VT.isFloatingPoint() && VT != MVT::v2i64 && VT != MVT::v1i64)
+    for (auto Opcode : {ISD::ABS, ISD::ABDS, ISD::ABDU, ISD::SMIN, ISD::SMAX,
+                        ISD::UMIN, ISD::UMAX})
       setOperationAction(Opcode, VT, Legal);
   if (!VT.isFloatingPoint())
     for (auto Opcode : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
@@ -1000,7 +1000,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     }
 
     setTargetDAGCombine({ISD::SHL, ISD::SRL, ISD::SRA, ISD::FP_TO_SINT,
-                         ISD::FP_TO_UINT, ISD::FDIV, ISD::LOAD});
+                         ISD::FP_TO_UINT, ISD::FMUL, ISD::LOAD});
 
     // It is legal to extload from v4i8 to v4i16 or v4i32.
     for (MVT Ty : {MVT::v8i8, MVT::v4i8, MVT::v2i8, MVT::v4i16, MVT::v2i16,
@@ -1623,9 +1623,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
-
-  if (Subtarget->isThumb() || Subtarget->isThumb2())
-    setTargetDAGCombine(ISD::ABS);
 }
 
 bool ARMTargetLowering::useSoftFloat() const {
@@ -4174,7 +4171,15 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   }
   case Intrinsic::arm_neon_vabs:
     return DAG.getNode(ISD::ABS, SDLoc(Op), Op.getValueType(),
-                        Op.getOperand(1));
+                       Op.getOperand(1));
+  case Intrinsic::arm_neon_vabds:
+    if (Op.getValueType().isInteger())
+      return DAG.getNode(ISD::ABDS, SDLoc(Op), Op.getValueType(),
+                         Op.getOperand(1), Op.getOperand(2));
+    return SDValue();
+  case Intrinsic::arm_neon_vabdu:
+    return DAG.getNode(ISD::ABDU, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::arm_neon_vmulls:
   case Intrinsic::arm_neon_vmullu: {
     unsigned NewOpc = (IntNo == Intrinsic::arm_neon_vmulls)
@@ -13496,18 +13501,6 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
                          DCI.DAG.getZExtOrTrunc(Op1S, DL, MVT::i32));
 }
 
-static SDValue PerformABSCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const ARMSubtarget *Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  if (TLI.isOperationLegal(N->getOpcode(), N->getValueType(0)))
-    return SDValue();
-
-  return TLI.expandABS(N, DAG);
-}
-
 /// PerformADDECombine - Target-specific dag combine transform from
 /// ARMISD::ADDC, ARMISD::ADDE, and ISD::MUL_LOHI to MLAL or
 /// ARMISD::ADDC, ARMISD::ADDE and ARMISD::UMLAL to ARMISD::UMAAL
@@ -14381,9 +14374,17 @@ static SDValue CombineANDShift(SDNode *N,
     }
   }
 
-  // FIXME: Transform "(and (shl x, c2) c1)" ->
-  // "(shl (and x, c1>>c2), c2)" if "c1 >> c2" is a cheaper immediate than
-  // c1.
+  // Transform "(and (shl x, c2) c1)" into "(shl (and x, c1>>c2), c2)"
+  // if "c1 >> c2" is a cheaper immediate than "c1"
+  if (LeftShift &&
+      HasLowerConstantMaterializationCost(C1 >> C2, C1, Subtarget)) {
+
+    SDValue And = DAG.getNode(ISD::AND, DL, MVT::i32, N0->getOperand(0),
+                              DAG.getConstant(C1 >> C2, DL, MVT::i32));
+    return DAG.getNode(ISD::SHL, DL, MVT::i32, And,
+                       DAG.getConstant(C2, DL, MVT::i32));
+  }
+
   return SDValue();
 }
 
@@ -17003,17 +17004,17 @@ static SDValue PerformFADDCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// PerformVDIVCombine - VCVT (fixed-point to floating-point, Advanced SIMD)
-/// can replace combinations of VCVT (integer to floating-point) and VDIV
-/// when the VDIV has a constant operand that is a power of 2.
+/// PerformVMulVCTPCombine - VCVT (fixed-point to floating-point, Advanced SIMD)
+/// can replace combinations of VCVT (integer to floating-point) and VMUL
+/// when the VMUL has a constant operand that is a power of 2.
 ///
-/// Example (assume d17 = <float 8.000000e+00, float 8.000000e+00>):
+/// Example (assume d17 = <float 0.125, float 0.125>):
 ///  vcvt.f32.s32    d16, d16
-///  vdiv.f32        d16, d17, d16
+///  vmul.f32        d16, d16, d17
 /// becomes:
 ///  vcvt.f32.s32    d16, d16, #3
-static SDValue PerformVDIVCombine(SDNode *N, SelectionDAG &DAG,
-                                  const ARMSubtarget *Subtarget) {
+static SDValue PerformVMulVCTPCombine(SDNode *N, SelectionDAG &DAG,
+                                      const ARMSubtarget *Subtarget) {
   if (!Subtarget->hasNEON())
     return SDValue();
 
@@ -17040,26 +17041,34 @@ static SDValue PerformVDIVCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   }
 
-  BitVector UndefElements;
-  BuildVectorSDNode *BV = cast<BuildVectorSDNode>(ConstVec);
-  int32_t C = BV->getConstantFPSplatPow2ToLog2Int(&UndefElements, 33);
+  ConstantFPSDNode *CN = isConstOrConstSplatFP(ConstVec, true);
+  APFloat Recip(0.0f);
+  if (!CN || !CN->getValueAPF().getExactInverse(&Recip))
+    return SDValue();
+
+  bool IsExact;
+  APSInt IntVal(33);
+  if (Recip.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact) !=
+          APFloat::opOK ||
+      !IsExact)
+    return SDValue();
+
+  int32_t C = IntVal.exactLogBase2();
   if (C == -1 || C == 0 || C > 32)
     return SDValue();
 
-  SDLoc dl(N);
+  SDLoc DL(N);
   bool isSigned = OpOpcode == ISD::SINT_TO_FP;
   SDValue ConvInput = Op.getOperand(0);
   if (IntBits < FloatBits)
-    ConvInput = DAG.getNode(isSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND,
-                            dl, NumLanes == 2 ? MVT::v2i32 : MVT::v4i32,
-                            ConvInput);
+    ConvInput = DAG.getNode(isSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL,
+                            NumLanes == 2 ? MVT::v2i32 : MVT::v4i32, ConvInput);
 
-  unsigned IntrinsicOpcode = isSigned ? Intrinsic::arm_neon_vcvtfxs2fp :
-    Intrinsic::arm_neon_vcvtfxu2fp;
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl,
-                     Op.getValueType(),
-                     DAG.getConstant(IntrinsicOpcode, dl, MVT::i32),
-                     ConvInput, DAG.getConstant(C, dl, MVT::i32));
+  unsigned IntrinsicOpcode = isSigned ? Intrinsic::arm_neon_vcvtfxs2fp
+                                      : Intrinsic::arm_neon_vcvtfxu2fp;
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Op.getValueType(),
+                     DAG.getConstant(IntrinsicOpcode, DL, MVT::i32), ConvInput,
+                     DAG.getConstant(C, DL, MVT::i32));
 }
 
 static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
@@ -18855,7 +18864,6 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT:     return PerformSELECTCombine(N, DCI, Subtarget);
   case ISD::VSELECT:    return PerformVSELECTCombine(N, DCI, Subtarget);
   case ISD::SETCC:      return PerformVSetCCToVCTPCombine(N, DCI, Subtarget);
-  case ISD::ABS:        return PerformABSCombine(N, DCI, Subtarget);
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);
   case ISD::ADD:        return PerformADDCombine(N, DCI, Subtarget);
@@ -18889,8 +18897,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformVCVTCombine(N, DCI.DAG, Subtarget);
   case ISD::FADD:
     return PerformFADDCombine(N, DCI.DAG, Subtarget);
-  case ISD::FDIV:
-    return PerformVDIVCombine(N, DCI.DAG, Subtarget);
+  case ISD::FMUL:
+    return PerformVMulVCTPCombine(N, DCI.DAG, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return PerformIntrinsicCombine(N, DCI);
   case ISD::SHL:

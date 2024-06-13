@@ -190,7 +190,7 @@ std::string RegisterFlags::AsTable(uint32_t max_width) const {
   return table;
 }
 
-void RegisterFlags::ToXML(StreamString &strm) const {
+void RegisterFlags::ToXML(Stream &strm) const {
   // Example XML:
   // <flags id="cpsr_flags" size="4">
   //   <field name="incorrect" start="0" end="0"/>
@@ -213,7 +213,7 @@ void RegisterFlags::ToXML(StreamString &strm) const {
   strm.Indent("</flags>\n");
 }
 
-void RegisterFlags::Field::ToXML(StreamString &strm) const {
+void RegisterFlags::Field::ToXML(Stream &strm) const {
   // Example XML:
   // <field name="correct" start="0" end="0"/>
   strm.Indent();

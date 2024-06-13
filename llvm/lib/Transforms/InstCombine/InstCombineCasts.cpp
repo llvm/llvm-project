@@ -2049,16 +2049,28 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
       Mask->getType() == Ty)
     return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
 
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(SrcOp)) {
+  if (auto *GEP = dyn_cast<GEPOperator>(SrcOp)) {
     // Fold ptrtoint(gep null, x) to multiply + constant if the GEP has one use.
     // While this can increase the number of instructions it doesn't actually
     // increase the overall complexity since the arithmetic is just part of
     // the GEP otherwise.
     if (GEP->hasOneUse() &&
         isa<ConstantPointerNull>(GEP->getPointerOperand())) {
-      return replaceInstUsesWith(
-          CI, Builder.CreateIntCast(EmitGEPOffset(cast<GEPOperator>(GEP)), Ty,
-                                    /*isSigned=*/false));
+      return replaceInstUsesWith(CI,
+                                 Builder.CreateIntCast(EmitGEPOffset(GEP), Ty,
+                                                       /*isSigned=*/false));
+    }
+
+    // (ptrtoint (gep (inttoptr Base), ...)) -> Base + Offset
+    Value *Base;
+    if (GEP->hasOneUse() &&
+        match(GEP->getPointerOperand(), m_OneUse(m_IntToPtr(m_Value(Base)))) &&
+        Base->getType() == Ty) {
+      Value *Offset = EmitGEPOffset(GEP);
+      auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
+      if (GEP->isInBounds() && isKnownNonNegative(Offset, SQ))
+        NewOp->setHasNoUnsignedWrap(true);
+      return NewOp;
     }
   }
 

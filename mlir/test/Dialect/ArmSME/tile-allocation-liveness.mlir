@@ -366,15 +366,15 @@ func.func @avoidable_spill(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %c: vector<
 
 //  CHECK-LIVE-RANGE-LABEL: @cond_branch_with_backedge
 //        CHECK-LIVE-RANGE: ^bb1:
-//  CHECK-LIVE-RANGE--NEXT:  ||| |           arith.cmpi
-//  CHECK-LIVE-RANGE--NEXT:  EEE E           cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT:  ||| |           arith.cmpi
+//   CHECK-LIVE-RANGE-NEXT:  EEE E           cf.cond_br
 //
-//  CHECK-LIVE-RANGE--NEXT: ^[[BB3_COPIES:[[:alnum:]]+]]:
-//  CHECK-LIVE-RANGE--NEXT:  ||| ES          arm_sme.copy_tile
-//  CHECK-LIVE-RANGE--NEXT:  E||  |S         arm_sme.copy_tile
-//  CHECK-LIVE-RANGE--NEXT:   E|  ||S        arm_sme.copy_tile
-//  CHECK-LIVE-RANGE--NEXT:    E  |||S       arm_sme.copy_tile
-//  CHECK-LIVE-RANGE--NEXT:       EEEE       cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^[[BB3_COPIES:[[:alnum:]]+]]:
+//   CHECK-LIVE-RANGE-NEXT:  ||| ES          arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT:  E||  |S         arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT:   E|  ||S        arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT:    E  |||S       arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT:       EEEE       cf.br
 //
 // It is important to note that the first three live ranges in ^bb1 do not end
 // at the `cf.cond_br` they are live-out via the backedge bb1 -> bb2 -> bb1.
@@ -389,15 +389,15 @@ func.func @avoidable_spill(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %c: vector<
 //
 //        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
 //        CHECK-LIVE-RANGE: ^bb1:
-//  CHECK-LIVE-RANGE--NEXT: |||| arith.cmpi
-//  CHECK-LIVE-RANGE--NEXT: EEEE cf.cond_br
+//   CHECK-LIVE-RANGE-NEXT: |||| arith.cmpi
+//   CHECK-LIVE-RANGE-NEXT: EEEE cf.cond_br
 //
-//  CHECK-LIVE-RANGE--NEXT: ^[[BB3_COPIES]]:
-//  CHECK-LIVE-RANGE--NEXT: |||| arm_sme.copy_tile
-//  CHECK-LIVE-RANGE--NEXT: |||| arm_sme.copy_tile
-//  CHECK-LIVE-RANGE--NEXT: |||| arm_sme.copy_tile
-//  CHECK-LIVE-RANGE--NEXT: |||| arm_sme.copy_tile
-//  CHECK-LIVE-RANGE--NEXT: EEEE cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^[[BB3_COPIES]]:
+//   CHECK-LIVE-RANGE-NEXT: |||| arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: |||| arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: |||| arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: |||| arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: EEEE cf.br
 
 // CHECK-LABEL: @cond_branch_with_backedge
 // CHECK-NOT: tile_id = 16

@@ -23,6 +23,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -4154,7 +4155,7 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
   }
 
   if (II->isStr("vector"))
-    Actions.DeclareRISCVVBuiltins = true;
+    Actions.RISCV().DeclareRVVBuiltins = true;
   else if (II->isStr("sifive_vector"))
-    Actions.DeclareRISCVSiFiveVectorBuiltins = true;
+    Actions.RISCV().DeclareSiFiveVectorBuiltins = true;
 }

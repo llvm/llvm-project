@@ -194,8 +194,7 @@ define float @fmuladd_unary_fneg_x_unary_fneg_y(float %x, float %y, float %z) {
 
 define float @fmuladd_fneg_x_fneg_y_fast(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmuladd_fneg_x_fneg_y_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[FMULADD:%.*]] = fadd fast float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[FMULADD:%.*]] = call fast float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[FMULADD]]
 ;
   %x.fneg = fsub float -0.0, %x
@@ -204,10 +203,27 @@ define float @fmuladd_fneg_x_fneg_y_fast(float %x, float %y, float %z) {
   ret float %fmuladd
 }
 
+define float @fmuladd_unfold(float %x, float %y, float %z) {
+; CHECK-LABEL: @fmuladd_unfold(
+; CHECK-NEXT:    [[FMULADD:%.*]] = call reassoc contract float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    ret float [[FMULADD]]
+;
+  %fmuladd = call reassoc contract float @llvm.fmuladd.f32(float %x, float %y, float %z)
+  ret float %fmuladd
+}
+
+define <8 x half> @fmuladd_unfold_vec(<8 x half> %x, <8 x half> %y, <8 x half> %z) {
+; CHECK-LABEL: @fmuladd_unfold_vec(
+; CHECK-NEXT:    [[FMULADD:%.*]] = call reassoc contract <8 x half> @llvm.fmuladd.v8f16(<8 x half> [[X:%.*]], <8 x half> [[Y:%.*]], <8 x half> [[Z:%.*]])
+; CHECK-NEXT:    ret <8 x half> [[FMULADD]]
+;
+  %fmuladd = call reassoc contract <8 x half> @llvm.fmuladd.v8f16(<8 x half> %x, <8 x half> %y, <8 x half> %z)
+  ret <8 x half> %fmuladd
+}
+
 define float @fmuladd_unary_fneg_x_unary_fneg_y_fast(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fmuladd_unary_fneg_x_unary_fneg_y_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[FMULADD:%.*]] = fadd fast float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[FMULADD:%.*]] = call fast float @llvm.fmuladd.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[FMULADD]]
 ;
   %x.fneg = fneg float %x
@@ -285,8 +301,7 @@ define float @fmuladd_fabs_x_fabs_x(float %x, float %z) {
 
 define float @fmuladd_fabs_x_fabs_x_fast(float %x, float %z) {
 ; CHECK-LABEL: @fmuladd_fabs_x_fabs_x_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[FMULADD:%.*]] = fadd fast float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[FMULADD:%.*]] = call fast float @llvm.fmuladd.f32(float [[X:%.*]], float [[X]], float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[FMULADD]]
 ;
   %x.fabs = call float @llvm.fabs.f32(float %x)
@@ -312,10 +327,10 @@ define float @fma_k_y_z_fast(float %y, float %z) {
   ret float %fma
 }
 
+; Treat fmuladd like an fma intrinsic
 define float @fmuladd_k_y_z_fast(float %y, float %z) {
 ; CHECK-LABEL: @fmuladd_k_y_z_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[Y:%.*]], 4.000000e+00
-; CHECK-NEXT:    [[FMULADD:%.*]] = fadd fast float [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[FMULADD:%.*]] = call fast float @llvm.fmuladd.f32(float [[Y:%.*]], float 4.000000e+00, float [[Z:%.*]])
 ; CHECK-NEXT:    ret float [[FMULADD]]
 ;
   %fmuladd = call fast float @llvm.fmuladd.f32(float 4.0, float %y, float %z)

@@ -1391,10 +1391,11 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
       return InlineCost::getAlways("preinliner");
   }
 
-  // For old FDO inliner, we inline the call site as long as cost is not
-  // "Never". The cost-benefit check is done earlier.
+  // For old FDO inliner, we inline the call site if it is below hot threshold,
+  // even if the function is hot based on sample profile data. This is to
+  // prevent huge functions from being inlined.
   if (!CallsitePrioritizedInline) {
-    return InlineCost::get(Cost.getCost(), INT_MAX);
+    return InlineCost::get(Cost.getCost(), SampleHotCallSiteThreshold);
   }
 
   // Otherwise only use the cost from call analyzer, but overwite threshold with
@@ -1661,7 +1662,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])});
+          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])},
+                           /*IsExpected=*/false);
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -1672,7 +1674,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
           } else {
-            setBranchWeights(I, {uint32_t(0)});
+            setBranchWeights(I, {uint32_t(0)}, /*IsExpected=*/false);
           }
         }
       }
@@ -1755,7 +1757,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     if (MaxWeight > 0 &&
         (!TI->extractProfTotalWeight(TempWeight) || OverwriteExistingWeights)) {
       LLVM_DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
-      setBranchWeights(*TI, Weights);
+      setBranchWeights(*TI, Weights, /*IsExpected=*/false);
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
                << "most popular destination for conditional branches at "

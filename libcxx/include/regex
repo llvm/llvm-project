@@ -792,7 +792,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__algorithm/find.h>
 #include <__algorithm/search.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/default_sentinel.h>
@@ -4701,6 +4700,9 @@ private:
 
   template <class, class>
   friend class __lookahead;
+
+  template <class, class, class>
+  friend class regex_iterator;
 };
 
 template <class _BidirectionalIterator, class _Allocator>
@@ -5411,7 +5413,9 @@ template <class _BidirectionalIterator, class _CharT, class _Traits>
 regex_iterator<_BidirectionalIterator, _CharT, _Traits>&
 regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++() {
   __flags_ |= regex_constants::__no_update_pos;
-  _BidirectionalIterator __start = __match_[0].second;
+  _BidirectionalIterator __start        = __match_[0].second;
+  _BidirectionalIterator __prefix_start = __start;
+
   if (__match_[0].first == __match_[0].second) {
     if (__start == __end_) {
       __match_ = value_type();
@@ -5425,9 +5429,21 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++() {
     else
       ++__start;
   }
+
   __flags_ |= regex_constants::match_prev_avail;
-  if (!std::regex_search(__start, __end_, __match_, *__pregex_, __flags_))
+  if (!std::regex_search(__start, __end_, __match_, *__pregex_, __flags_)) {
     __match_ = value_type();
+
+  } else {
+    // The Standard mandates that if `regex_search` returns true ([re.regiter.incr]), "`match.prefix().first` shall be
+    // equal to the previous value of `match[0].second`... It is unspecified how the implementation makes these
+    // adjustments." The adjustment is necessary if we incremented `__start` above (the branch that deals with
+    // zero-length matches).
+    auto& __prefix = __match_.__prefix_;
+    __prefix.first = __prefix_start;
+    __prefix.matched = __prefix.first != __prefix.second;
+  }
+
   return *this;
 }
 

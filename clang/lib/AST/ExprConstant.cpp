@@ -2130,7 +2130,7 @@ static bool IsWeakLValue(const LValue &Value) {
 
 static bool isZeroSized(const LValue &Value) {
   const ValueDecl *Decl = GetLValueBaseDecl(Value);
-  if (Decl && isa<VarDecl>(Decl)) {
+  if (isa_and_nonnull<VarDecl>(Decl)) {
     QualType Ty = Decl->getType();
     if (Ty->isArrayType())
       return Ty->isIncompleteType() ||
@@ -14014,8 +14014,8 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     QualType Ty = E->getTypeOfArgument();
     // If the vector has a fixed size, we can determine the number of elements
     // at compile time.
-    if (Ty->isVectorType())
-      return Success(Ty->castAs<VectorType>()->getNumElements(), E);
+    if (const auto *VT = Ty->getAs<VectorType>())
+      return Success(VT->getNumElements(), E);
 
     assert(Ty->isSizelessVectorType());
     if (Info.InConstantContext)
@@ -15209,11 +15209,21 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       APFloat &ResI = Result.getComplexFloatImag();
       if (LHSReal) {
         assert(!RHSReal && "Cannot have two real operands for a complex op!");
-        ResR = A * C;
-        ResI = A * D;
+        ResR = A;
+        ResI = A;
+        // ResR = A * C;
+        // ResI = A * D;
+        if (!handleFloatFloatBinOp(Info, E, ResR, BO_Mul, C) ||
+            !handleFloatFloatBinOp(Info, E, ResI, BO_Mul, D))
+          return false;
       } else if (RHSReal) {
-        ResR = C * A;
-        ResI = C * B;
+        // ResR = C * A;
+        // ResI = C * B;
+        ResR = C;
+        ResI = C;
+        if (!handleFloatFloatBinOp(Info, E, ResR, BO_Mul, A) ||
+            !handleFloatFloatBinOp(Info, E, ResI, BO_Mul, B))
+          return false;
       } else {
         // In the fully general case, we need to handle NaNs and infinities
         // robustly.
@@ -15289,8 +15299,13 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
       APFloat &ResR = Result.getComplexFloatReal();
       APFloat &ResI = Result.getComplexFloatImag();
       if (RHSReal) {
-        ResR = A / C;
-        ResI = B / C;
+        ResR = A;
+        ResI = B;
+        // ResR = A / C;
+        // ResI = B / C;
+        if (!handleFloatFloatBinOp(Info, E, ResR, BO_Div, C) ||
+            !handleFloatFloatBinOp(Info, E, ResI, BO_Div, C))
+          return false;
       } else {
         if (LHSReal) {
           // No real optimizations we can do here, stub out with zero.

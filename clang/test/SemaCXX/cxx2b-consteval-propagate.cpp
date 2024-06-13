@@ -446,3 +446,11 @@ int h(int x) {
 }
 
 #endif
+
+
+namespace GH91308 {
+    constexpr void f(auto) {
+        static_assert(false);
+    }
+    using R1 = decltype(&f<int>);
+}

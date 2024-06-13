@@ -586,8 +586,8 @@ define <vscale x 128 x i8> @vsaddu_vi_nxv128i8(<vscale x 128 x i8> %va, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:  .LBB50_2:
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vsaddu.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 128 x i8> @llvm.vp.uadd.sat.nxv128i8(<vscale x 128 x i8> %va, <vscale x 128 x i8> splat (i8 -1), <vscale x 128 x i1> %m, i32 %evl)
@@ -1365,8 +1365,8 @@ define <vscale x 32 x i32> @vsaddu_vi_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB118_2:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vsaddu.vi v8, v8, -1, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i32> @llvm.vp.uadd.sat.nxv32i32(<vscale x 32 x i32> %va, <vscale x 32 x i32> splat (i32 -1), <vscale x 32 x i1> %m, i32 %evl)

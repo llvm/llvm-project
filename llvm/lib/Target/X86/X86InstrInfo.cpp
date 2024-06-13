@@ -3164,6 +3164,80 @@ X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
              : X86::COND_INVALID;
 }
 
+int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
+  // CCMP/CTEST has two conditional operands:
+  // - SCC: source conditonal code (same as CMOV)
+  // - DCF: destination conditional flags, which has 4 valid bits
+  //
+  // +----+----+----+----+
+  // | OF | SF | ZF | CF |
+  // +----+----+----+----+
+  //
+  // If SCC(source conditional code) evaluates to false, CCMP/CTEST will updates
+  // the conditional flags by as follows:
+  //
+  // OF = DCF.OF
+  // SF = DCF.SF
+  // ZF = DCF.ZF
+  // CF = DCF.CF
+  // PF = DCF.CF
+  // AF = 0 (Auxiliary Carry Flag)
+  //
+  // Otherwise, the CMP or TEST is executed and it updates the
+  // CSPAZO flags normally.
+  //
+  // NOTE:
+  // If SCC = P, then SCC evaluates to true regardless of the CSPAZO value.
+  // If SCC = NP, then SCC evaluates to false regardless of the CSPAZO value.
+
+  enum { CF = 1, ZF = 2, SF = 4, OF = 8, PF = CF };
+
+  switch (CC) {
+  default:
+    llvm_unreachable("Illegal condition code!");
+  case X86::COND_NO:
+  case X86::COND_NE:
+  case X86::COND_GE:
+  case X86::COND_G:
+  case X86::COND_AE:
+  case X86::COND_A:
+  case X86::COND_NS:
+  case X86::COND_NP:
+    return 0;
+  case X86::COND_O:
+    return OF;
+  case X86::COND_B:
+  case X86::COND_BE:
+    return CF;
+    break;
+  case X86::COND_E:
+  case X86::COND_LE:
+    return ZF;
+  case X86::COND_S:
+  case X86::COND_L:
+    return SF;
+  case X86::COND_P:
+    return PF;
+  }
+}
+
+#define GET_X86_NF_TRANSFORM_TABLE
+#define GET_X86_ND2NONND_TABLE
+#include "X86GenInstrMapping.inc"
+unsigned X86::getNFVariant(unsigned Opc) {
+  ArrayRef<X86TableEntry> Table = ArrayRef(X86NFTransformTable);
+  const auto I = llvm::lower_bound(Table, Opc);
+  return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
+}
+
+static unsigned getNonNDVariant(unsigned Opc, const X86Subtarget &STI) {
+  if (!STI.hasNDD())
+    return 0U;
+  ArrayRef<X86TableEntry> Table = ArrayRef(X86ND2NonNDTable);
+  const auto I = llvm::lower_bound(Table, Opc);
+  return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
+}
+
 /// Return the inverse of the specified condition,
 /// e.g. turning COND_E to COND_NE.
 X86::CondCode X86::GetOppositeBranchCondition(X86::CondCode CC) {
@@ -7067,7 +7141,7 @@ static void updateOperandRegConstraints(MachineFunction &MF,
   }
 }
 
-static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
+static MachineInstr *fuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
                                      ArrayRef<MachineOperand> MOs,
                                      MachineBasicBlock::iterator InsertPt,
                                      MachineInstr &MI,
@@ -7096,7 +7170,7 @@ static MachineInstr *FuseTwoAddrInst(MachineFunction &MF, unsigned Opcode,
   return MIB;
 }
 
-static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
+static MachineInstr *fuseInst(MachineFunction &MF, unsigned Opcode,
                               unsigned OpNo, ArrayRef<MachineOperand> MOs,
                               MachineBasicBlock::iterator InsertPt,
                               MachineInstr &MI, const TargetInstrInfo &TII,
@@ -7128,7 +7202,7 @@ static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
   return MIB;
 }
 
-static MachineInstr *MakeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
+static MachineInstr *makeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
                                 ArrayRef<MachineOperand> MOs,
                                 MachineBasicBlock::iterator InsertPt,
                                 MachineInstr &MI) {
@@ -7166,7 +7240,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
             : (MI.getOpcode() == X86::VINSERTPSrr) ? X86::VINSERTPSrm
                                                    : X86::INSERTPSrm;
         MachineInstr *NewMI =
-            FuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, PtrOffset);
+            fuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, PtrOffset);
         NewMI->getOperand(NewMI->getNumOperands() - 1).setImm(NewImm);
         return NewMI;
       }
@@ -7188,7 +7262,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
             : (MI.getOpcode() == X86::VMOVHLPSrr) ? X86::VMOVLPSrm
                                                   : X86::MOVLPSrm;
         MachineInstr *NewMI =
-            FuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, 8);
+            fuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, 8);
         return NewMI;
       }
     }
@@ -7203,10 +7277,16 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
       if ((Size == 0 || Size >= 16) && RCSize >= 16 && Alignment < Align(16)) {
         MachineInstr *NewMI =
-            FuseInst(MF, X86::MOVHPDrm, OpNum, MOs, InsertPt, MI, *this);
+            fuseInst(MF, X86::MOVHPDrm, OpNum, MOs, InsertPt, MI, *this);
         return NewMI;
       }
     }
+    break;
+  case X86::MOV32r0:
+    if (auto *NewMI =
+            makeM0Inst(*this, (Size == 4) ? X86::MOV32mi : X86::MOV64mi32, MOs,
+                       InsertPt, MI))
+      return NewMI;
     break;
   }
 
@@ -7263,30 +7343,30 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     ArrayRef<MachineOperand> MOs, MachineBasicBlock::iterator InsertPt,
     unsigned Size, Align Alignment, bool AllowCommute) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
-  bool isTwoAddrFold = false;
+  unsigned Opc = MI.getOpcode();
 
   // For CPUs that favor the register form of a call or push,
   // do not fold loads into calls or pushes, unless optimizing for size
   // aggressively.
   if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
-      (MI.getOpcode() == X86::CALL32r || MI.getOpcode() == X86::CALL64r ||
-       MI.getOpcode() == X86::PUSH16r || MI.getOpcode() == X86::PUSH32r ||
-       MI.getOpcode() == X86::PUSH64r))
+      (Opc == X86::CALL32r || Opc == X86::CALL64r || Opc == X86::PUSH16r ||
+       Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().hasOptSize() &&
-      (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/ true) ||
+      (hasPartialRegUpdate(Opc, Subtarget, /*ForLoadFold*/ true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
   unsigned NumOps = MI.getDesc().getNumOperands();
-  bool isTwoAddr =
-      NumOps > 1 && MI.getDesc().getOperandConstraint(1, MCOI::TIED_TO) != -1;
+  bool IsTwoAddr = NumOps > 1 && OpNum < 2 && MI.getOperand(0).isReg() &&
+                   MI.getOperand(1).isReg() &&
+                   MI.getOperand(0).getReg() == MI.getOperand(1).getReg();
 
   // FIXME: AsmPrinter doesn't know how to handle
   // X86II::MO_GOT_ABSOLUTE_ADDRESS after folding.
-  if (MI.getOpcode() == X86::ADD32ri &&
+  if (Opc == X86::ADD32ri &&
       MI.getOperand(2).getTargetFlags() == X86II::MO_GOT_ABSOLUTE_ADDRESS)
     return nullptr;
 
@@ -7295,7 +7375,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   // instructions.
   if (MOs.size() == X86::AddrNumOperands &&
       MOs[X86::AddrDisp].getTargetFlags() == X86II::MO_GOTTPOFF &&
-      MI.getOpcode() != X86::ADD64rr)
+      Opc != X86::ADD64rr)
     return nullptr;
 
   // Don't fold loads into indirect calls that need a KCFI check as we'll
@@ -7303,36 +7383,23 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (MI.isCall() && MI.getCFIType())
     return nullptr;
 
-  MachineInstr *NewMI = nullptr;
-
   // Attempt to fold any custom cases we have.
-  if (MachineInstr *CustomMI = foldMemoryOperandCustom(
-          MF, MI, OpNum, MOs, InsertPt, Size, Alignment))
+  if (auto *CustomMI = foldMemoryOperandCustom(MF, MI, OpNum, MOs, InsertPt,
+                                               Size, Alignment))
     return CustomMI;
-
-  const X86FoldTableEntry *I = nullptr;
 
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
   // replacing the *two* registers with the memory location.
-  if (isTwoAddr && NumOps >= 2 && OpNum < 2 && MI.getOperand(0).isReg() &&
-      MI.getOperand(1).isReg() &&
-      MI.getOperand(0).getReg() == MI.getOperand(1).getReg()) {
-    I = lookupTwoAddrFoldTable(MI.getOpcode());
-    isTwoAddrFold = true;
-  } else {
-    if (OpNum == 0) {
-      if (MI.getOpcode() == X86::MOV32r0) {
-        NewMI = MakeM0Inst(*this, X86::MOV32mi, MOs, InsertPt, MI);
-        if (NewMI)
-          return NewMI;
-      }
-    }
+  //
+  // Utilize the mapping NonNDD -> RMW for the NDD variant.
+  unsigned NonNDOpc = getNonNDVariant(Opc, Subtarget);
+  const X86FoldTableEntry *I =
+      IsTwoAddr ? lookupTwoAddrFoldTable(NonNDOpc ? NonNDOpc : Opc)
+                : lookupFoldTable(Opc, OpNum);
 
-    I = lookupFoldTable(MI.getOpcode(), OpNum);
-  }
-
-  if (I != nullptr) {
+  MachineInstr *NewMI = nullptr;
+  if (I) {
     unsigned Opcode = I->DstOp;
     if (Alignment <
         Align(1ULL << ((I->Flags & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT)))
@@ -7363,10 +7430,8 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
         return nullptr;
     }
 
-    if (isTwoAddrFold)
-      NewMI = FuseTwoAddrInst(MF, Opcode, MOs, InsertPt, MI, *this);
-    else
-      NewMI = FuseInst(MF, Opcode, OpNum, MOs, InsertPt, MI, *this);
+    NewMI = IsTwoAddr ? fuseTwoAddrInst(MF, Opcode, MOs, InsertPt, MI, *this)
+                      : fuseInst(MF, Opcode, OpNum, MOs, InsertPt, MI, *this);
 
     if (NarrowToMOV32rm) {
       // If this is the special case where we use a MOV32rm to load a 32-bit
@@ -7420,6 +7485,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   for (auto Op : Ops) {
     MachineOperand &MO = MI.getOperand(Op);
     auto SubReg = MO.getSubReg();
+    // MOV32r0 is special b/c it's used to clear a 64-bit register too.
+    // (See patterns for MOV32r0 in TD files).
+    if (MI.getOpcode() == X86::MOV32r0 && SubReg == X86::sub_32bit)
+      continue;
     if (SubReg && (MO.isDef() || SubReg == X86::sub_8bit_hi))
       return nullptr;
   }
@@ -7432,12 +7501,20 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (!RI.hasStackRealignment(MF))
     Alignment =
         std::min(Alignment, Subtarget.getFrameLowering()->getStackAlign());
+
+  auto Impl = [&]() {
+    return foldMemoryOperandImpl(MF, MI, Ops[0],
+                                 MachineOperand::CreateFI(FrameIndex), InsertPt,
+                                 Size, Alignment, /*AllowCommute=*/true);
+  };
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     unsigned NewOpc = 0;
     unsigned RCSize = 0;
-    switch (MI.getOpcode()) {
+    unsigned Opc = MI.getOpcode();
+    switch (Opc) {
     default:
-      return nullptr;
+      // NDD can be folded into RMW though its Op0 and Op1 are not tied.
+      return getNonNDVariant(Opc, Subtarget) ? Impl() : nullptr;
     case X86::TEST8rr:
       NewOpc = X86::CMP8ri;
       RCSize = 1;
@@ -7465,9 +7542,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   } else if (Ops.size() != 1)
     return nullptr;
 
-  return foldMemoryOperandImpl(MF, MI, Ops[0],
-                               MachineOperand::CreateFI(FrameIndex), InsertPt,
-                               Size, Alignment, /*AllowCommute=*/true);
+  return Impl();
 }
 
 /// Check if \p LoadMI is a partial register load that we can't fold into \p MI
@@ -8166,7 +8241,7 @@ X86InstrInfo::foldMemoryBroadcast(MachineFunction &MF, MachineInstr &MI,
 
   if (auto *I = lookupBroadcastFoldTable(MI.getOpcode(), OpNum))
     return matchBroadcastSize(*I, BitsSize)
-               ? FuseInst(MF, I->DstOp, OpNum, MOs, InsertPt, MI, *this)
+               ? fuseInst(MF, I->DstOp, OpNum, MOs, InsertPt, MI, *this)
                : nullptr;
 
   if (AllowCommute) {
@@ -10255,7 +10330,8 @@ struct LDTLSCleanup : public MachineFunctionPass {
       return false;
     }
 
-    MachineDominatorTree *DT = &getAnalysis<MachineDominatorTree>();
+    MachineDominatorTree *DT =
+        &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
     return VisitNode(DT->getRootNode(), 0);
   }
 
@@ -10342,7 +10418,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

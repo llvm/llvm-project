@@ -861,26 +861,28 @@ static bool ValuesOverlap(std::vector<ValueEqualityComparisonCase> &C1,
 
 // Set branch weights on SwitchInst. This sets the metadata if there is at
 // least one non-zero weight.
-static void setBranchWeights(SwitchInst *SI, ArrayRef<uint32_t> Weights) {
+static void setBranchWeights(SwitchInst *SI, ArrayRef<uint32_t> Weights,
+                             bool IsExpected) {
   // Check that there is at least one non-zero weight. Otherwise, pass
   // nullptr to setMetadata which will erase the existing metadata.
   MDNode *N = nullptr;
   if (llvm::any_of(Weights, [](uint32_t W) { return W != 0; }))
-    N = MDBuilder(SI->getParent()->getContext()).createBranchWeights(Weights);
+    N = MDBuilder(SI->getParent()->getContext())
+            .createBranchWeights(Weights, IsExpected);
   SI->setMetadata(LLVMContext::MD_prof, N);
 }
 
 // Similar to the above, but for branch and select instructions that take
 // exactly 2 weights.
 static void setBranchWeights(Instruction *I, uint32_t TrueWeight,
-                             uint32_t FalseWeight) {
+                             uint32_t FalseWeight, bool IsExpected) {
   assert(isa<BranchInst>(I) || isa<SelectInst>(I));
   // Check that there is at least one non-zero weight. Otherwise, pass
   // nullptr to setMetadata which will erase the existing metadata.
   MDNode *N = nullptr;
   if (TrueWeight || FalseWeight)
     N = MDBuilder(I->getParent()->getContext())
-            .createBranchWeights(TrueWeight, FalseWeight);
+            .createBranchWeights(TrueWeight, FalseWeight, IsExpected);
   I->setMetadata(LLVMContext::MD_prof, N);
 }
 
@@ -1338,7 +1340,7 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
 
     SmallVector<uint32_t, 8> MDWeights(Weights.begin(), Weights.end());
 
-    setBranchWeights(NewSI, MDWeights);
+    setBranchWeights(NewSI, MDWeights, /*IsExpected=*/false);
   }
 
   EraseTerminatorAndDCECond(PTI);
@@ -3831,7 +3833,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     FitWeights(NewWeights);
 
     SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
-    setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
+    setBranchWeights(PBI, MDWeights[0], MDWeights[1], /*IsExpected=*/false);
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
     // could replace PBI's branch probabilities with BI's.
@@ -4568,7 +4570,7 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     // Halve the weights if any of them cannot fit in an uint32_t
     FitWeights(NewWeights);
 
-    setBranchWeights(PBI, NewWeights[0], NewWeights[1]);
+    setBranchWeights(PBI, NewWeights[0], NewWeights[1], /*IsExpected=*/false);
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
@@ -4604,7 +4606,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
         FitWeights(NewWeights);
 
-        setBranchWeights(NV, NewWeights[0], NewWeights[1]);
+        setBranchWeights(NV, NewWeights[0], NewWeights[1],
+                         /*IsExpected=*/false);
       }
     }
   }
@@ -4667,7 +4670,7 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
       // Create a conditional branch sharing the condition of the select.
       BranchInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
       if (TrueWeight != FalseWeight)
-        setBranchWeights(NewBI, TrueWeight, FalseWeight);
+        setBranchWeights(NewBI, TrueWeight, FalseWeight, /*IsExpected=*/false);
     }
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
@@ -5501,11 +5504,13 @@ static bool CasesAreContiguous(SmallVectorImpl<ConstantInt *> &Cases) {
 }
 
 static void createUnreachableSwitchDefault(SwitchInst *Switch,
-                                           DomTreeUpdater *DTU) {
+                                           DomTreeUpdater *DTU,
+                                           bool RemoveOrigDefaultBlock = true) {
   LLVM_DEBUG(dbgs() << "SimplifyCFG: switch default is dead.\n");
   auto *BB = Switch->getParent();
   auto *OrigDefaultBlock = Switch->getDefaultDest();
-  OrigDefaultBlock->removePredecessor(BB);
+  if (RemoveOrigDefaultBlock)
+    OrigDefaultBlock->removePredecessor(BB);
   BasicBlock *NewDefaultBlock = BasicBlock::Create(
       BB->getContext(), BB->getName() + ".unreachabledefault", BB->getParent(),
       OrigDefaultBlock);
@@ -5514,7 +5519,8 @@ static void createUnreachableSwitchDefault(SwitchInst *Switch,
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 2> Updates;
     Updates.push_back({DominatorTree::Insert, BB, &*NewDefaultBlock});
-    if (!is_contained(successors(BB), OrigDefaultBlock))
+    if (RemoveOrigDefaultBlock &&
+        !is_contained(successors(BB), OrigDefaultBlock))
       Updates.push_back({DominatorTree::Delete, BB, &*OrigDefaultBlock});
     DTU->applyUpdates(Updates);
   }
@@ -5614,7 +5620,7 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
         TrueWeight /= 2;
         FalseWeight /= 2;
       }
-      setBranchWeights(NewBI, TrueWeight, FalseWeight);
+      setBranchWeights(NewBI, TrueWeight, FalseWeight, /*IsExpected=*/false);
     }
   }
 
@@ -5696,10 +5702,33 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
       Known.getBitWidth() - (Known.Zero | Known.One).popcount();
   assert(NumUnknownBits <= Known.getBitWidth());
   if (HasDefault && DeadCases.empty() &&
-      NumUnknownBits < 64 /* avoid overflow */ &&
-      SI->getNumCases() == (1ULL << NumUnknownBits)) {
-    createUnreachableSwitchDefault(SI, DTU);
-    return true;
+      NumUnknownBits < 64 /* avoid overflow */) {
+    uint64_t AllNumCases = 1ULL << NumUnknownBits;
+    if (SI->getNumCases() == AllNumCases) {
+      createUnreachableSwitchDefault(SI, DTU);
+      return true;
+    }
+    // When only one case value is missing, replace default with that case.
+    // Eliminating the default branch will provide more opportunities for
+    // optimization, such as lookup tables.
+    if (SI->getNumCases() == AllNumCases - 1) {
+      assert(NumUnknownBits > 1 && "Should be canonicalized to a branch");
+      IntegerType *CondTy = cast<IntegerType>(Cond->getType());
+      if (CondTy->getIntegerBitWidth() > 64 ||
+          !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
+        return false;
+
+      uint64_t MissingCaseVal = 0;
+      for (const auto &Case : SI->cases())
+        MissingCaseVal ^= Case.getCaseValue()->getValue().getLimitedValue();
+      auto *MissingCase =
+          cast<ConstantInt>(ConstantInt::get(Cond->getType(), MissingCaseVal));
+      SwitchInstProfUpdateWrapper SIW(*SI);
+      SIW.addCase(MissingCase, SI->getDefaultDest(), SIW.getSuccessorWeight(0));
+      createUnreachableSwitchDefault(SI, DTU, /*RemoveOrigDefaultBlock*/ false);
+      SIW.setSuccessorWeight(0, 0);
+      return true;
+    }
   }
 
   if (DeadCases.empty())
@@ -6717,8 +6746,25 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     TableSize =
         (MaxCaseVal->getValue() - MinCaseVal->getValue()).getLimitedValue() + 1;
 
+  // If the default destination is unreachable, or if the lookup table covers
+  // all values of the conditional variable, branch directly to the lookup table
+  // BB. Otherwise, check that the condition is within the case range.
+  bool DefaultIsReachable = !SI->defaultDestUndefined();
+
   bool TableHasHoles = (NumResults < TableSize);
-  bool NeedMask = (TableHasHoles && !HasDefaultResults);
+
+  // If the table has holes but the default destination doesn't produce any
+  // constant results, the lookup table entries corresponding to the holes will
+  // contain undefined values.
+  bool AllHolesAreUndefined = TableHasHoles && !HasDefaultResults;
+
+  // If the default destination doesn't produce a constant result but is still
+  // reachable, and the lookup table has holes, we need to use a mask to
+  // determine if the current index should load from the lookup table or jump
+  // to the default case.
+  // The mask is unnecessary if the table has holes but the default destination
+  // is unreachable, as in that case the holes must also be unreachable.
+  bool NeedMask = AllHolesAreUndefined && DefaultIsReachable;
   if (NeedMask) {
     // As an extra penalty for the validity test we require more cases.
     if (SI->getNumCases() < 4) // FIXME: Find best threshold value (benchmark).
@@ -6739,12 +6785,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   assert(MaxTableSize >= TableSize &&
          "It is impossible for a switch to have more entries than the max "
          "representable value of its input integer type's size.");
-
-  // If the default destination is unreachable, or if the lookup table covers
-  // all values of the conditional variable, branch directly to the lookup table
-  // BB. Otherwise, check that the condition is within the case range.
-  bool DefaultIsReachable =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
 
   // Create the BB that does the lookups.
   Module &Mod = *CommonDest->getParent()->getParent();
@@ -6869,8 +6909,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
 
-    // If using a bitmask, use any value to fill the lookup table holes.
-    Constant *DV = NeedMask ? ResultLists[PHI][0].second : DefaultResults[PHI];
+    // Use any value to fill the lookup table holes.
+    Constant *DV =
+        AllHolesAreUndefined ? ResultLists[PHI][0].second : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
                             DL, FuncName);
