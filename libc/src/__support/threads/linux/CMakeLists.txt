@@ -64,6 +64,7 @@ add_object_library(
     .futex_utils
     libc.config.linux.app_h
     libc.include.sys_syscall
+    libc.include.fcntl
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream
