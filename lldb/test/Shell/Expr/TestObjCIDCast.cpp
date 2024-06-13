@@ -6,5 +6,5 @@
 
 int main() { return 0; }
 
-// CHECK: (lldb) expression --language objc -- *(id)0x1234 
+// CHECK: (lldb) expression --language objc -- *(id)0x1234
 // CHECK: error: Couldn't apply expression side effects : Couldn't dematerialize a result variable: couldn't read its memory
