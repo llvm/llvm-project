@@ -558,10 +558,10 @@ public:
                                  resultType ? mlir::TypeRange(resultType)
                                             : mlir::TypeRange()));
 
-    rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
-    if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
+    if (failed(rewriter.convertRegionTypes(&op.getBody(), *typeConverter,
                                            &signatureConversion)))
       return mlir::failure();
+    rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
 
     rewriter.eraseOp(op);
     return mlir::LogicalResult::success();

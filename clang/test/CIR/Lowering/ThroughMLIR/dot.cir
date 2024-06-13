@@ -1,6 +1,5 @@
 // RUN: cir-opt %s -cir-to-mlir -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s
-// XFAIL: *
 
 !s32i = !cir.int<s, 32>
 module {
