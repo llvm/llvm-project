@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/tools.h"
 #include <list>
 #include <map>
 #include <sstream>
@@ -2540,6 +2541,32 @@ void ResolveOmpTopLevelParts(
   });
 }
 
+static bool IsSymbolInCommonBlock(const Symbol &symbol) {
+  // If there are many symbols in common blocks, going through them all can be
+  // slow. A possible optimization is to add an OmpInCommonBlock flag to
+  // Symbol, to make it possible to quickly test if a given symbol is in a
+  // common block.
+  for (const auto &cb : symbol.owner().commonBlocks()) {
+    if (IsCommonBlockContaining(cb.second.get(), symbol)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool IsSymbolPredeterminedAsPrivate(const Symbol &symbol) {
+  switch (symbol.owner().kind()) {
+  case Scope::Kind::MainProgram:
+  case Scope::Kind::Subprogram:
+  case Scope::Kind::BlockConstruct:
+    return !symbol.attrs().test(Attr::SAVE) &&
+        !symbol.attrs().test(Attr::PARAMETER) && !IsAssumedShape(symbol) &&
+        !IsSymbolInCommonBlock(symbol);
+  default:
+    return false;
+  }
+}
+
 void OmpAttributeVisitor::CheckDataCopyingClause(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
   const auto *checkSymbol{&symbol};
@@ -2566,13 +2593,19 @@ void OmpAttributeVisitor::CheckDataCopyingClause(
           "COPYPRIVATE variable '%s' may not appear on a PRIVATE or "
           "FIRSTPRIVATE clause on a SINGLE construct"_err_en_US,
           symbol.name());
-    } else {
+    } else if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate) &&
+        !(HasSymbolInEnclosingScope(symbol, currScope()) &&
+            (symbol.test(Symbol::Flag::OmpPrivate) ||
+                symbol.test(Symbol::Flag::OmpFirstPrivate)))) {
       // List of items/objects that can appear in a 'copyprivate' clause must be
       // either 'private' or 'threadprivate' in enclosing context.
-      if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate) &&
-          !(HasSymbolInEnclosingScope(symbol, currScope()) &&
-              (symbol.test(Symbol::Flag::OmpPrivate) ||
-                  symbol.test(Symbol::Flag::OmpFirstPrivate)))) {
+      // If the symbol used in 'copyprivate' has not gone through constructs
+      // that may privatize the original symbol, then it may be predetermined
+      // as private in some cases.
+      // (OMP 5.2 5.1.1 - Variables Referenced in a Construct)
+      if (!HasSymbolInEnclosingScope(symbol, currScope()) ||
+          symbol != symbol.GetUltimate() ||
+          !IsSymbolPredeterminedAsPrivate(symbol)) {
         context_.Say(name.source,
             "COPYPRIVATE variable '%s' is not PRIVATE or THREADPRIVATE in "
             "outer context"_err_en_US,
