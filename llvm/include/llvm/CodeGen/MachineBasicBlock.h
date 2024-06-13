@@ -238,6 +238,9 @@ public:
     BB = nullptr;
   }
 
+  /// Check if there is a name of corresponding LLVM basic block.
+  bool hasName() const;
+
   /// Return the name of the corresponding LLVM basic block, or an empty string.
   StringRef getName() const;
 

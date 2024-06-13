@@ -48,6 +48,7 @@ class MachinePostDominatorTree : public PostDomTreeBase<MachineBasicBlock> {
 
 public:
   MachinePostDominatorTree() = default;
+  explicit MachinePostDominatorTree(MachineFunction &MF) { recalculate(MF); }
 
   /// Make findNearestCommonDominator(const NodeT *A, const NodeT *B) available.
   using Base::findNearestCommonDominator;
