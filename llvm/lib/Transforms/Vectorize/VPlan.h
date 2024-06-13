@@ -42,6 +42,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/InstructionCost.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -64,7 +65,10 @@ class VPlan;
 class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
+class LoopVectorizationCostModel;
 class LoopVersioning;
+
+struct VPCostContext;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -81,6 +85,14 @@ Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
 
 const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
                                 Loop *CurLoop = nullptr);
+
+/// A helper function that returns the reciprocal of the block probability of
+/// predicated blocks. If we return X, we are assuming the predicated block
+/// will execute once for every X iterations of the loop header.
+///
+/// TODO: We should use actual block probability here, if available. Currently,
+///       we always assume predicated blocks have a 50% chance of executing.
+inline unsigned getReciprocalPredBlockProb() { return 2; }
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -167,8 +179,10 @@ public:
 
   static VPLane getFirstLane() { return VPLane(0, VPLane::Kind::First); }
 
-  static VPLane getLastLaneForVF(const ElementCount &VF) {
-    unsigned LaneOffset = VF.getKnownMinValue() - 1;
+  static VPLane getLaneFromEnd(const ElementCount &VF, unsigned Offset) {
+    assert(Offset > 0 && Offset <= VF.getKnownMinValue() &&
+           "trying to extract with invalid offset");
+    unsigned LaneOffset = VF.getKnownMinValue() - Offset;
     Kind LaneKind;
     if (VF.isScalable())
       // In this case 'LaneOffset' refers to the offset from the start of the
@@ -177,6 +191,10 @@ public:
     else
       LaneKind = VPLane::Kind::First;
     return VPLane(LaneOffset, LaneKind);
+  }
+
+  static VPLane getLastLaneForVF(const ElementCount &VF) {
+    return getLaneFromEnd(VF, 1);
   }
 
   /// Returns a compile-time known value for the lane index and asserts if the
@@ -618,6 +636,9 @@ public:
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;
 
+  /// Return the cost of the block.
+  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
+
   /// Delete all blocks reachable from a given VPBlockBase, inclusive.
   static void deleteCFG(VPBlockBase *Entry);
 
@@ -701,6 +722,27 @@ public:
 #endif
 };
 
+/// Struct to hold various analysis needed for cost computations.
+struct VPCostContext {
+  const TargetTransformInfo &TTI;
+  VPTypeAnalysis Types;
+  LLVMContext &LLVMCtx;
+  LoopVectorizationCostModel &CM;
+  SmallPtrSet<Instruction *, 8> SkipCostComputation;
+
+  VPCostContext(const TargetTransformInfo &TTI, Type *CanIVTy,
+                LLVMContext &LLVMCtx, LoopVectorizationCostModel &CM)
+      : TTI(TTI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
+
+  /// Return the cost for \p UI with \p VF using the legacy cost model as
+  /// fallback until computing the cost of all recipes migrates to VPlan.
+  InstructionCost getLegacyCost(Instruction *UI, ElementCount VF) const;
+
+  /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
+  /// has already been pre-computed.
+  bool skipCostComputation(Instruction *UI, bool IsVector) const;
+};
+
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
 /// instructions. VPRecipeBase owns the VPValues it defines through VPDef
 /// and is responsible for deleting its defined values. Single-value
@@ -739,6 +781,11 @@ public:
   /// The method which generates the output IR instructions that correspond to
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
+
+  /// Return the cost of this recipe, taking into account if the cost
+  /// computation should be skipped and the ForceTargetInstructionCost flag.
+  /// Also takes care of printing the cost for debugging.
+  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
 
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
@@ -800,6 +847,11 @@ public:
 
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
+
+protected:
+  /// Compute the cost of this recipe using the legacy cost model and the
+  /// underlying instructions.
+  InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 };
 
 // Helper macro to define common classof implementations for recipes.
@@ -1182,6 +1234,12 @@ public:
     BranchOnCount,
     BranchOnCond,
     ComputeReductionResult,
+    // Takes the VPValue to extract from as first operand and the lane or part
+    // to extract as second operand, counting from the end starting with 1 for
+    // last. The second operand must be a positive constant and <= VF when
+    // extracting from a vector or <= UF when extracting from an unrolled
+    // scalar.
+    ExtractFromEnd,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
@@ -1313,20 +1371,11 @@ public:
   bool onlyFirstLaneUsed(const VPValue *Op) const override;
 
   /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool onlyFirstPartUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    if (getOperand(0) != Op)
-      return false;
-    switch (getOpcode()) {
-    default:
-      return false;
-    case VPInstruction::BranchOnCount:
-    case VPInstruction::CanonicalIVIncrementForPart:
-      return true;
-    };
-    llvm_unreachable("switch should return");
-  }
+  bool onlyFirstPartUsed(const VPValue *Op) const override;
+
+  /// Returns true if this VPInstruction produces a scalar value from a vector,
+  /// e.g. by performing a reduction or extracting a lane.
+  bool isVectorToScalar() const;
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
@@ -1378,8 +1427,6 @@ public:
         ResultTy(ResultTy) {
     assert(UI.getOpcode() == Opcode &&
            "opcode of underlying cast doesn't match");
-    assert(UI.getType() == ResultTy &&
-           "result type of underlying cast doesn't match");
   }
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
@@ -2093,6 +2140,8 @@ public:
            "Op must be an operand of the recipe");
     return Op == getAddr() && !llvm::is_contained(getStoredValues(), Op);
   }
+
+  Instruction *getInsertPos() const { return IG->getInsertPos(); }
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on
@@ -2907,6 +2956,9 @@ public:
   /// this VPBasicBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
+  /// Return the cost of this VPBasicBlock.
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
+
   /// Return the position of the first non-phi node recipe in the block.
   iterator getFirstNonPhi();
 
@@ -3081,6 +3133,9 @@ public:
   /// this VPRegionBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
+  // Return the cost of this region.
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
+
   void dropAllReferences(VPValue *NewValue) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3150,7 +3205,9 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveInsToFree;
 
-  /// Values used outside the plan.
+  /// Values used outside the plan. It contains live-outs that need fixing. Any
+  /// live-out that is fixed outside VPlan needs to be removed. The remaining
+  /// live-outs are fixed via VPLiveOut::fixPhi.
   MapVector<PHINode *, VPLiveOut *> LiveOuts;
 
   /// Mapping from SCEVs to the VPValues representing their expansions.
@@ -3198,6 +3255,9 @@ public:
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
 
+  /// Return the cost of this plan.
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
+
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
 
@@ -3239,6 +3299,11 @@ public:
   bool hasVF(ElementCount VF) { return VFs.count(VF); }
   bool hasScalableVF() {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
+  }
+
+  iterator_range<SmallSetVector<ElementCount, 2>::iterator>
+  vectorFactors() const {
+    return {VFs.begin(), VFs.end()};
   }
 
   bool hasScalarVFOnly() const { return VFs.size() == 1 && VFs[0].isScalar(); }
@@ -3657,9 +3722,16 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
     return all_of(GEP->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
-    return VPI->getOpcode() == VPInstruction::ComputeReductionResult;
+    return VPI->isVectorToScalar();
   return false;
 }
+
+/// Return true if \p Cond is a uniform boolean.
+bool isUniformBoolean(VPValue *Cond);
+
+/// Return true if \p V is a header mask in \p Plan.
+bool isHeaderMask(VPValue *V, VPlan &Plan);
+
 } // end namespace vputils
 
 } // end namespace llvm

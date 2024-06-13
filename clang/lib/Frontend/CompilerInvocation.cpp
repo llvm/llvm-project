@@ -2407,6 +2407,9 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     // This option is automatically generated from UndefPrefixes.
     if (Warning == "undef-prefix")
       continue;
+    // This option is automatically generated from CheckConstexprFunctionBodies.
+    if (Warning == "invalid-constexpr" || Warning == "no-invalid-constexpr")
+      continue;
     Consumer(StringRef("-W") + Warning);
   }
 

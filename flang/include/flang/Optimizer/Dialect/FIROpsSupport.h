@@ -160,6 +160,7 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(Builder &builder) {
           builder.getUnitAttr()};
 }
 
+bool isDummyArgument(mlir::Value v);
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIROPSSUPPORT_H

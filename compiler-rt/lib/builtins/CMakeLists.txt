@@ -561,12 +561,23 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
-if(COMPILER_RT_HAS_AARCH64_SME AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
-  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-libc-routines.c)
-  message(STATUS "AArch64 SME ABI routines enabled")
-  set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
-else()
-  message(STATUS "AArch64 SME ABI routines disabled")
+if (COMPILER_RT_HAS_AARCH64_SME)
+  if (NOT COMPILER_RT_DISABLE_AARCH64_FMV AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+    list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-abi-vg.c aarch64/sme-libc-routines.c)
+    message(STATUS "AArch64 SME ABI routines enabled")
+    set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
+  else()
+    if(COMPILER_RT_DISABLE_AARCH64_FMV)
+      message(WARNING "AArch64 SME ABI routines require function multiversioning support.")
+    endif()
+    if(NOT COMPILER_RT_HAS_FNO_BUILTIN_FLAG)
+      message(WARNING "AArch64 SME ABI routines require '-fno-builtin'")
+    endif()
+    if(NOT (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+      message(WARNING "AArch64 SME ABI routines requires sys/auxv.h or COMPILER_RT_BAREMETAL_BUILD flag")
+    endif()
+    message(STATUS "AArch64 SME ABI routines disabled")
+  endif()
 endif()
 
 # Generate outline atomics helpers from lse.S base
@@ -750,7 +761,7 @@ set(ve_SOURCES
   ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
-set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT Misc")
+set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
 
 option(COMPILER_RT_ENABLE_SOFTWARE_INT128
   "Enable the int128 builtin routines for all targets."

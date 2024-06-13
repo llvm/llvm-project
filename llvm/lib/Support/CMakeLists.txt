@@ -40,7 +40,8 @@ endif()
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
-  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32)
+  # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
+  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)
@@ -169,6 +170,7 @@ add_llvm_component_library(LLVMSupport
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
+  DynamicAPInt.cpp
   ELFAttributeParser.cpp
   ELFAttributes.cpp
   Error.cpp
@@ -222,6 +224,7 @@ add_llvm_component_library(LLVMSupport
   SHA1.cpp
   SHA256.cpp
   Signposts.cpp
+  SlowDynamicAPInt.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp
