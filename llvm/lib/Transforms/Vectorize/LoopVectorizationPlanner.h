@@ -161,6 +161,15 @@ public:
     return tryInsertInstruction(
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
+
+  VPInstruction *createFPOp(unsigned Opcode,
+                            std::initializer_list<VPValue *> Operands,
+                            DebugLoc DL = {}, const Twine &Name = "",
+                            FastMathFlags FMFs = {}) {
+    auto *Op = new VPInstruction(Opcode, Operands, FMFs, DL, Name);
+    return tryInsertInstruction(Op);
+  }
+
   VPValue *createNot(VPValue *Operand, DebugLoc DL = {},
                      const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);

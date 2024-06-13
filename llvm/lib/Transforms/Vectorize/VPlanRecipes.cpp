@@ -453,9 +453,9 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     if (Part != 0)
       return State.get(this, 0, /*IsScalar*/ true);
 
+    unsigned UF = getInterleaveCount();
     Value *ScalarTC = State.get(getOperand(0), {0, 0});
-    Value *Step =
-        createStepForVF(Builder, ScalarTC->getType(), State.VF, State.UF);
+    Value *Step = createStepForVF(Builder, ScalarTC->getType(), State.VF, UF);
     Value *Sub = Builder.CreateSub(ScalarTC, Step);
     Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
     Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
@@ -488,14 +488,15 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
-    if (Part == 0)
-      return IV;
-
-    // The canonical IV is incremented by the vectorization factor (num of SIMD
-    // elements) times the unroll part.
-    Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
-    return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
-                             hasNoSignedWrap());
+    if (getNumOperands() == 2) {
+      // The canonical IV is incremented by the vectorization factor (num of
+      // SIMD elements) times the unroll part.
+      Value *Step = createStepForVF(Builder, IV->getType(), State.VF,
+                                    getInterleaveCount());
+      return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
+                               hasNoSignedWrap());
+    }
+    return IV;
   }
   case VPInstruction::BranchOnCond: {
     if (Part != 0)
@@ -543,8 +544,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     return CondBr;
   }
   case VPInstruction::ComputeReductionResult: {
-    if (Part != 0)
-      return State.get(this, 0, /*IsScalar*/ true);
+    unsigned NumParts = getNumOperands() - 1;
 
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -555,11 +555,10 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     RecurKind RK = RdxDesc.getRecurrenceKind();
 
-    VPValue *LoopExitingDef = getOperand(1);
     Type *PhiTy = OrigPhi->getType();
-    VectorParts RdxParts(State.UF);
-    for (unsigned Part = 0; Part < State.UF; ++Part)
-      RdxParts[Part] = State.get(LoopExitingDef, Part, PhiR->isInLoop());
+    VectorParts RdxParts(NumParts);
+    for (unsigned Part = 0; Part != NumParts; ++Part)
+      RdxParts[Part] = State.get(getOperand(1 + Part), 0, PhiR->isInLoop());
 
     // If the vector reduction can be performed in a smaller type, we truncate
     // then extend the loop exit value to enable InstCombine to evaluate the
@@ -567,7 +566,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     // TODO: Handle this in truncateToMinBW.
     if (State.VF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
       Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), State.VF);
-      for (unsigned Part = 0; Part < State.UF; ++Part)
+      for (unsigned Part = 0; Part < NumParts; ++Part)
         RdxParts[Part] = Builder.CreateTrunc(RdxParts[Part], RdxVecTy);
     }
     // Reduce all of the unrolled parts into a single vector.
@@ -577,12 +576,12 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       Op = Instruction::Or;
 
     if (PhiR->isOrdered()) {
-      ReducedPartRdx = RdxParts[State.UF - 1];
+      ReducedPartRdx = RdxParts[NumParts - 1];
     } else {
       // Floating-point operations should have some FMF to enable the reduction.
       IRBuilderBase::FastMathFlagGuard FMFG(Builder);
       Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
-      for (unsigned Part = 1; Part < State.UF; ++Part) {
+      for (unsigned Part = 1; Part < NumParts; ++Part) {
         Value *RdxPart = RdxParts[Part];
         if (Op != Instruction::ICmp && Op != Instruction::FCmp)
           ReducedPartRdx = Builder.CreateBinOp(
@@ -687,6 +686,12 @@ bool VPInstruction::isVectorToScalar() const {
 bool VPInstruction::isSingleScalar() const {
   return getOpcode() == VPInstruction::ResumePhi;
 }
+
+unsigned VPInstruction::getInterleaveCount() const {
+  return getNumOperands() == 1
+             ? 1
+             : cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
+                   ->getZExtValue();
 
 #if !defined(NDEBUG)
 bool VPInstruction::isFPMathOp() const {
@@ -1305,24 +1310,32 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     MulOp = Instruction::FMul;
   }
 
-  // Multiply the vectorization factor by the step using integer or
-  // floating-point arithmetic as appropriate.
-  Type *StepType = Step->getType();
-  Value *RuntimeVF;
-  if (Step->getType()->isFloatingPointTy())
-    RuntimeVF = getRuntimeVFAsFloat(Builder, StepType, State.VF);
-  else
-    RuntimeVF = getRuntimeVF(Builder, StepType, State.VF);
-  Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
+  Value *SplatVF;
+  if (getNumOperands() == 4) {
+    // Need to create stuff in PH.
+    SplatVF = State.get(getOperand(2), 0);
+  } else {
 
-  // Create a vector splat to use in the induction update.
-  //
-  // FIXME: If the step is non-constant, we create the vector splat with
-  //        IRBuilder. IRBuilder can constant-fold the multiply, but it doesn't
-  //        handle a constant vector splat.
-  Value *SplatVF = isa<Constant>(Mul)
-                       ? ConstantVector::getSplat(State.VF, cast<Constant>(Mul))
-                       : Builder.CreateVectorSplat(State.VF, Mul);
+    // Multiply the vectorization factor by the step using integer or
+    // floating-point arithmetic as appropriate.
+    Type *StepType = Step->getType();
+    Value *RuntimeVF;
+    if (Step->getType()->isFloatingPointTy())
+      RuntimeVF = getRuntimeVFAsFloat(Builder, StepType, State.VF);
+    else
+      RuntimeVF = getRuntimeVF(Builder, StepType, State.VF);
+    Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
+
+    // Create a vector splat to use in the induction update.
+    //
+    // FIXME: If the step is non-constant, we create the vector splat with
+    //        IRBuilder. IRBuilder can constant-fold the multiply, but it
+    //        doesn't handle a constant vector splat.
+    SplatVF = isa<Constant>(Mul)
+                  ? ConstantVector::getSplat(State.VF, cast<Constant>(Mul))
+                  : Builder.CreateVectorSplat(State.VF, Mul);
+  }
+
   Builder.restoreIP(CurrIP);
 
   // We may need to add the step a number of times, depending on the unroll
@@ -1452,7 +1465,8 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     EndLane = StartLane + 1;
   }
   for (unsigned Part = StartPart; Part < EndPart; ++Part) {
-    Value *StartIdx0 = createStepForVF(Builder, IntStepTy, State.VF, Part);
+    Value *StartIdx0 =
+        createStepForVF(Builder, IntStepTy, State.VF, getPartForRecipe());
 
     if (!FirstLaneOnly && State.VF.isScalable()) {
       auto *SplatStartIdx = Builder.CreateVectorSplat(State.VF, StartIdx0);
@@ -1483,6 +1497,13 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
       State.set(this, Add, VPIteration(Part, Lane));
     }
   }
+}
+
+unsigned VPScalarIVStepsRecipe::getPartForRecipe() const {
+  return getNumOperands() == 2
+             ? 0
+             : cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
+                   ->getZExtValue();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1586,6 +1607,7 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPVectorPointerRecipe ::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
+  unsigned CurrentPart = getPartForRecipe();
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     // Calculate the pointer for the specific unroll-part.
     Value *PartPtr = nullptr;
@@ -1593,7 +1615,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
     // or query DataLayout for a more suitable index type otherwise.
     const DataLayout &DL =
         Builder.GetInsertBlock()->getDataLayout();
-    Type *IndexTy = State.VF.isScalable() && (IsReverse || Part > 0)
+    Type *IndexTy = State.VF.isScalable() && (IsReverse || CurrentPart > 0)
                         ? DL.getIndexType(IndexedTy->getPointerTo())
                         : Builder.getInt32Ty();
     Value *Ptr = State.get(getOperand(0), VPIteration(0, 0));
@@ -1604,21 +1626,29 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
       // RunTimeVF =  VScale * VF.getKnownMinValue()
       // For fixed-width VScale is 1, then RunTimeVF = VF.getKnownMinValue()
       Value *RunTimeVF = getRuntimeVF(Builder, IndexTy, State.VF);
-      // NumElt = -Part * RunTimeVF
+      // NumElt = -CurrentPart * RunTimeVF
       Value *NumElt = Builder.CreateMul(
-          ConstantInt::get(IndexTy, -(int64_t)Part), RunTimeVF);
+          ConstantInt::get(IndexTy, -(int64_t)CurrentPart), RunTimeVF);
       // LastLane = 1 - RunTimeVF
       Value *LastLane =
           Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
       PartPtr = Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", InBounds);
       PartPtr = Builder.CreateGEP(IndexedTy, PartPtr, LastLane, "", InBounds);
     } else {
-      Value *Increment = createStepForVF(Builder, IndexTy, State.VF, Part);
+      Value *Increment =
+          createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
       PartPtr = Builder.CreateGEP(IndexedTy, Ptr, Increment, "", InBounds);
     }
 
     State.set(this, PartPtr, Part, /*IsScalar*/ true);
   }
+}
+
+unsigned VPVectorPointerRecipe::getPartForRecipe() const {
+  return getNumOperands() == 1
+             ? 0
+             : cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
+                   ->getZExtValue();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2564,6 +2594,14 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = WIDEN-POINTER-INDUCTION ";
   getStartValue()->printAsOperand(O, SlotTracker);
   O << ", " << *IndDesc.getStep();
+  if (getNumOperands() == 5) {
+    O << ", ";
+    getOperand(2)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    getOperand(3)->printAsOperand(O, SlotTracker);
+    O << ", ";
+    getOperand(4)->printAsOperand(O, SlotTracker);
+  }
 }
 #endif
 
@@ -2599,7 +2637,7 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
                       ? CanonicalIV
                       : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
-    Value *VStep = createStepForVF(Builder, STy, VF, Part);
+    Value *VStep = createStepForVF(Builder, STy, VF, getPartForRecipe());
     if (VF.isVector()) {
       VStep = Builder.CreateVectorSplat(VF, VStep);
       VStep =
@@ -2608,6 +2646,13 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
     Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
     State.set(this, CanonicalVectorIV, Part);
   }
+}
+
+unsigned VPWidenCanonicalIVRecipe::getPartForRecipe() const {
+  return getNumOperands() == 1
+             ? 0
+             : cast<ConstantInt>(getOperand(1)->getLiveInIRValue())
+                   ->getZExtValue();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2688,6 +2733,8 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
 
   Value *Iden = nullptr;
   RecurKind RK = RdxDesc.getRecurrenceKind();
+  unsigned CurrentPart = getPartForRecipe();
+
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
       RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
     // MinMax and AnyOf reductions have the start value as their identity.
@@ -2704,11 +2751,15 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
                                          RdxDesc.getFastMathFlags());
 
     if (!ScalarPHI) {
-      Iden = Builder.CreateVectorSplat(State.VF, Iden);
-      IRBuilderBase::InsertPointGuard IPBuilder(Builder);
-      Builder.SetInsertPoint(VectorPH->getTerminator());
-      Constant *Zero = Builder.getInt32(0);
-      StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
+      if (CurrentPart != 0) {
+        Iden = Builder.CreateVectorSplat(State.VF, Iden);
+      } else {
+        Iden = Builder.CreateVectorSplat(State.VF, Iden);
+        IRBuilderBase::InsertPointGuard IPBuilder(Builder);
+        Builder.SetInsertPoint(VectorPH->getTerminator());
+        Constant *Zero = Builder.getInt32(0);
+        StartV = Builder.CreateInsertElement(Iden, StartV, Zero);
+      }
     }
   }
 
@@ -2716,9 +2767,16 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
     Value *EntryPart = State.get(this, Part, IsInLoop);
     // Make sure to add the reduction start value only to the
     // first unroll part.
-    Value *StartVal = (Part == 0) ? StartV : Iden;
+    Value *StartVal = (CurrentPart == 0) ? StartV : Iden;
     cast<PHINode>(EntryPart)->addIncoming(StartVal, VectorPH);
   }
+}
+
+unsigned VPReductionPHIRecipe::getPartForRecipe() const {
+  return getNumOperands() == 2
+             ? 0
+             : cast<ConstantInt>(getOperand(2)->getLiveInIRValue())
+                   ->getZExtValue();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

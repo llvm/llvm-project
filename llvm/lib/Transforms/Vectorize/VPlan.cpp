@@ -931,6 +931,10 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   // FIXME: Model VF * UF computation completely in VPlan.
   VFxUF.setUnderlyingValue(
       createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF));
+  if (VF.getNumUsers() > 0) {
+    VF.setUnderlyingValue(
+        createStepForVF(Builder, TripCountV->getType(), State.VF, 1));
+  }
 
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
@@ -974,6 +978,7 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
+  State->UF = 1;
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
@@ -1048,6 +1053,9 @@ void VPlan::execute(VPTransformState *State) {
       // Move the last step to the end of the latch block. This ensures
       // consistent placement of all induction updates.
       Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
+      if (isa<VPWidenIntOrFpInductionRecipe>(&R) && R.getNumOperands() == 4)
+        Inc->setOperand(0, State->get(R.getOperand(3), 0));
+
       Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
       continue;
     }
@@ -1417,6 +1425,10 @@ void VPlanIngredient::print(raw_ostream &O) const {
 #endif
 
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
+
+bool VPValue::isDefinedOutsideVectorRegions() const {
+  return !hasDefiningRecipe() || !getDefiningRecipe()->getParent()->getParent();
+}
 
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });

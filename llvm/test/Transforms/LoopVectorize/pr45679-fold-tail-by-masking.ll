@@ -92,28 +92,28 @@ define void @pr45679(ptr %A) optsize {
 ; VF2UF2:       pred.store.continue:
 ; VF2UF2-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
 ; VF2UF2-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3:%.*]]
-; VF2UF2:       pred.store.if2:
+; VF2UF2:       pred.store.if1:
 ; VF2UF2-NEXT:    [[TMP6:%.*]] = add i32 [[INDEX]], 1
 ; VF2UF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP6]]
 ; VF2UF2-NEXT:    store i32 13, ptr [[TMP7]], align 1
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE3]]
-; VF2UF2:       pred.store.continue3:
+; VF2UF2:       pred.store.continue2:
 ; VF2UF2-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; VF2UF2-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; VF2UF2:       pred.store.if4:
+; VF2UF2:       pred.store.if3:
 ; VF2UF2-NEXT:    [[TMP9:%.*]] = add i32 [[INDEX]], 2
 ; VF2UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP9]]
 ; VF2UF2-NEXT:    store i32 13, ptr [[TMP10]], align 1
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; VF2UF2:       pred.store.continue5:
+; VF2UF2:       pred.store.continue4:
 ; VF2UF2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
 ; VF2UF2-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7]]
-; VF2UF2:       pred.store.if6:
+; VF2UF2:       pred.store.if5:
 ; VF2UF2-NEXT:    [[TMP12:%.*]] = add i32 [[INDEX]], 3
 ; VF2UF2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP12]]
 ; VF2UF2-NEXT:    store i32 13, ptr [[TMP13]], align 1
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; VF2UF2:       pred.store.continue7:
+; VF2UF2:       pred.store.continue6:
 ; VF2UF2-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; VF2UF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], <i32 2, i32 2>
 ; VF2UF2-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 16
@@ -293,31 +293,31 @@ define void @load_variant(ptr noalias %a, ptr noalias %b) {
 ; VF2UF2:       pred.store.continue:
 ; VF2UF2-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
 ; VF2UF2-NEXT:    br i1 [[TMP7]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3:%.*]]
-; VF2UF2:       pred.store.if2:
+; VF2UF2:       pred.store.if1:
 ; VF2UF2-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
 ; VF2UF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP8]]
 ; VF2UF2-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP9]], align 8
 ; VF2UF2-NEXT:    store i64 [[TMP10]], ptr [[B]], align 8
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE3]]
-; VF2UF2:       pred.store.continue3:
+; VF2UF2:       pred.store.continue2:
 ; VF2UF2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; VF2UF2-NEXT:    br i1 [[TMP12]], label [[PRED_STORE_IF4:%.*]], label [[PRED_STORE_CONTINUE5:%.*]]
-; VF2UF2:       pred.store.if4:
+; VF2UF2:       pred.store.if3:
 ; VF2UF2-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 2
 ; VF2UF2-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP13]]
 ; VF2UF2-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP14]], align 8
 ; VF2UF2-NEXT:    store i64 [[TMP15]], ptr [[B]], align 8
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE5]]
-; VF2UF2:       pred.store.continue5:
+; VF2UF2:       pred.store.continue4:
 ; VF2UF2-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
 ; VF2UF2-NEXT:    br i1 [[TMP17]], label [[PRED_STORE_IF6:%.*]], label [[PRED_STORE_CONTINUE7]]
-; VF2UF2:       pred.store.if6:
+; VF2UF2:       pred.store.if5:
 ; VF2UF2-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 3
 ; VF2UF2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP18]]
 ; VF2UF2-NEXT:    [[TMP20:%.*]] = load i64, ptr [[TMP19]], align 8
 ; VF2UF2-NEXT:    store i64 [[TMP20]], ptr [[B]], align 8
 ; VF2UF2-NEXT:    br label [[PRED_STORE_CONTINUE7]]
-; VF2UF2:       pred.store.continue7:
+; VF2UF2:       pred.store.continue6:
 ; VF2UF2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; VF2UF2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], <i64 2, i64 2>
 ; VF2UF2-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
