@@ -364,5 +364,9 @@ std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,
   if (!CPU.empty())
     return CPU;
 
+  if (Triple.getVendor() == llvm::Triple::MipsTechnologies &&
+      Triple.isRISCV64())
+    return "p8700";
+
   return Triple.isRISCV64() ? "generic-rv64" : "generic-rv32";
 }
