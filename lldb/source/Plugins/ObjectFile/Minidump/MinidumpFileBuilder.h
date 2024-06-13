@@ -47,8 +47,10 @@ lldb_private::Status WriteString(const std::string &to_write,
 /// the data on heap.
 class MinidumpFileBuilder {
 public:
-  MinidumpFileBuilder(lldb::FileUP&& core_file, const lldb::ProcessSP &process_sp) 
-    : m_process_sp(std::move(process_sp)), m_core_file(std::move(core_file)) {};
+  MinidumpFileBuilder(lldb::FileUP &&core_file,
+                      const lldb::ProcessSP &process_sp)
+      : m_process_sp(std::move(process_sp)),
+        m_core_file(std::move(core_file)){};
 
   MinidumpFileBuilder(const MinidumpFileBuilder &) = delete;
   MinidumpFileBuilder &operator=(const MinidumpFileBuilder &) = delete;
@@ -58,8 +60,7 @@ public:
 
   ~MinidumpFileBuilder() = default;
 
-  lldb_private::Status
-  AddHeaderAndCalculateDirectories();
+  lldb_private::Status AddHeaderAndCalculateDirectories();
   // Add SystemInfo stream, used for storing the most basic information
   // about the system, platform etc...
   lldb_private::Status AddSystemInfo();

@@ -24,7 +24,6 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegisterValue.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -60,7 +59,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
   // (corresponding memory list for stacks) And an additional memory list for
   // non-stacks.
 
-  lldb_private::Target& target = m_process_sp->GetTarget();
+  lldb_private::Target &target = m_process_sp->GetTarget();
   m_expected_directories = 6;
   // Check if OS is linux
   if (target.GetArchitecture().GetTriple().getOS() ==
@@ -129,7 +128,8 @@ void MinidumpFileBuilder::AddDirectory(StreamType type, uint64_t stream_size) {
 
 Status MinidumpFileBuilder::AddSystemInfo() {
   Status error;
-  const llvm::Triple &target_triple = m_process_sp->GetTarget().GetArchitecture().GetTriple();
+  const llvm::Triple &target_triple =
+      m_process_sp->GetTarget().GetArchitecture().GetTriple();
   AddDirectory(StreamType::SystemInfo, sizeof(llvm::minidump::SystemInfo));
 
   llvm::minidump::ProcessorArchitecture arch;
@@ -283,7 +283,7 @@ Status MinidumpFileBuilder::AddModuleList() {
   constexpr size_t minidump_module_size = sizeof(llvm::minidump::Module);
   Status error;
 
-  lldb_private::Target& target = m_process_sp->GetTarget();
+  lldb_private::Target &target = m_process_sp->GetTarget();
   const ModuleList &modules = target.GetImages();
   llvm::support::ulittle32_t modules_count =
       static_cast<llvm::support::ulittle32_t>(modules.GetSize());
@@ -315,10 +315,12 @@ Status MinidumpFileBuilder::AddModuleList() {
     auto maybe_mod_size = getModuleFileSize(target, mod);
     if (!maybe_mod_size) {
       llvm::Error mod_size_err = maybe_mod_size.takeError();
-      llvm::handleAllErrors(std::move(mod_size_err), [&](const llvm::ErrorInfoBase &E) {
-        error.SetErrorStringWithFormat("Unable to get the size of module %s: %s.",
-                                     module_name.c_str(), E.message().c_str());
-      });
+      llvm::handleAllErrors(std::move(mod_size_err),
+                            [&](const llvm::ErrorInfoBase &E) {
+                              error.SetErrorStringWithFormat(
+                                  "Unable to get the size of module %s: %s.",
+                                  module_name.c_str(), E.message().c_str());
+                            });
       return error;
     }
 
@@ -806,33 +808,37 @@ Status MinidumpFileBuilder::AddMemory(SaveCoreStyle core_style) {
   for (const auto &core_range : ranges_32)
     stack_start_addresses.insert(core_range.range.start());
 
-
-
-
-  uint64_t total_size = ranges_32.size() * sizeof(llvm::minidump::MemoryDescriptor);
+  uint64_t total_size =
+      ranges_32.size() * sizeof(llvm::minidump::MemoryDescriptor);
   for (const auto &core_range : ranges_32)
     total_size += core_range.range.size();
 
   if (total_size >= UINT32_MAX) {
-    error.SetErrorStringWithFormat("Unable to write minidump. Stack memory exceeds 32b limit. (Num Stacks %zu)", ranges_32.size());
+    error.SetErrorStringWithFormat("Unable to write minidump. Stack memory "
+                                   "exceeds 32b limit. (Num Stacks %zu)",
+                                   ranges_32.size());
     return error;
   }
 
   Process::CoreFileMemoryRanges all_core_memory_ranges;
   if (core_style != SaveCoreStyle::eSaveCoreStackOnly) {
-    error = m_process_sp->CalculateCoreFileSaveRanges(core_style, all_core_memory_ranges);
+    error = m_process_sp->CalculateCoreFileSaveRanges(core_style,
+                                                      all_core_memory_ranges);
     if (error.Fail())
       return error;
   }
 
   // We need to calculate the MemoryDescriptor size in the worst case
   // Where all memory descriptors are 64b. We also leave some additional padding
-  // So that we convert over to 64b with space to spare. This does not waste space in the dump
-  // But instead converts some memory from being in the memorylist_32 to the memorylist_64.
-  total_size += 256 + (ranges_64.size() - stack_start_addresses.size()) * sizeof(llvm::minidump::MemoryDescriptor_64);
+  // So that we convert over to 64b with space to spare. This does not waste
+  // space in the dump But instead converts some memory from being in the
+  // memorylist_32 to the memorylist_64.
+  total_size += 256 + (ranges_64.size() - stack_start_addresses.size()) *
+                          sizeof(llvm::minidump::MemoryDescriptor_64);
 
   for (const auto &core_range : all_core_memory_ranges) {
-    addr_t size_to_add = core_range.range.size() + sizeof(llvm::minidump::MemoryDescriptor);
+    addr_t size_to_add =
+        core_range.range.size() + sizeof(llvm::minidump::MemoryDescriptor);
     if (stack_start_addresses.count(core_range.range.start()) > 0) {
       // Don't double save stacks.
       continue;
@@ -887,8 +893,8 @@ Status MinidumpFileBuilder::DumpHeader() const {
   if (error.Fail() || bytes_written != header_size) {
     if (bytes_written != header_size)
       error.SetErrorStringWithFormat(
-          "Unable to write the minidump header (written %zd/%zd)", bytes_written,
-          header_size);
+          "Unable to write the minidump header (written %zd/%zd)",
+          bytes_written, header_size);
     return error;
   }
   return error;
@@ -917,7 +923,8 @@ Status MinidumpFileBuilder::DumpDirectories() const {
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_32(const Process::CoreFileMemoryRanges &ranges) {
+Status MinidumpFileBuilder::AddMemoryList_32(
+    const Process::CoreFileMemoryRanges &ranges) {
   std::vector<MemoryDescriptor> descriptors;
   Status error;
   Log *log = GetLog(LLDBLog::Object);
@@ -929,10 +936,10 @@ Status MinidumpFileBuilder::AddMemoryList_32(const Process::CoreFileMemoryRanges
     const addr_t size = core_range.range.size();
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
 
-    LLDB_LOGF(
-        log,
-        "/AddMemoryList/AddMemory/ %zu/%zu reading memory for region (%zu bytes) [%zx, %zx)",
-        region_index, ranges.size(), size, addr, addr + size);
+    LLDB_LOGF(log,
+              "/AddMemoryList/AddMemory/ %zu/%zu reading memory for region "
+              "(%zu bytes) [%zx, %zx)",
+              region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
     const size_t bytes_read =
@@ -984,7 +991,8 @@ Status MinidumpFileBuilder::AddMemoryList_32(const Process::CoreFileMemoryRanges
   return error;
 }
 
-Status MinidumpFileBuilder::AddMemoryList_64(const Process::CoreFileMemoryRanges &ranges) {
+Status MinidumpFileBuilder::AddMemoryList_64(
+    const Process::CoreFileMemoryRanges &ranges) {
   AddDirectory(StreamType::Memory64List,
                (sizeof(llvm::support::ulittle64_t) * 2) +
                    ranges.size() * sizeof(llvm::minidump::MemoryDescriptor_64));
@@ -1024,7 +1032,8 @@ Status MinidumpFileBuilder::AddMemoryList_64(const Process::CoreFileMemoryRanges
     auto data_up = std::make_unique<DataBufferHeap>(size, 0);
 
     LLDB_LOGF(log,
-              "/AddMemoryList_64/AddMemory %zu/%zu reading memory for region (%zu bytes) "
+              "/AddMemoryList_64/AddMemory %zu/%zu reading memory for region "
+              "(%zu bytes) "
               "[%zx, %zx)",
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
