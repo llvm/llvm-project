@@ -159,7 +159,7 @@ return:                                           ; preds = %entry, %if.end
 ; CHECK-NEXT:    bx    lr
 
 
-; CHEK-LABEL: OUTLINED_FUNCTION_0:
+; CHECK-LABEL: OUTLINED_FUNCTION_0:
 ; CHECK-NOT: pac
 ; CHECK-NOT: aut
 ; CHECK:        b    _Z1hii
@@ -203,6 +203,6 @@ attributes #2 = { noreturn }
 ; UNWIND-NEXT:  0xB0      ; finish
 
 ; UNWIND: 000000a9 {{.*}} OUTLINED_FUNCTION_0
-; UWNIND: 00000001 {{.*}} _Z1hii
-; UWNIND: 0000003d {{.*}} _Z1fiiii
-; UWNIND: 00000073 {{.*}} _Z1giiii
+; UNWIND: 00000001 {{.*}} _Z1hii
+; UNWIND: 0000003d {{.*}} _Z1fiiii
+; UNWIND: 00000073 {{.*}} _Z1giiii

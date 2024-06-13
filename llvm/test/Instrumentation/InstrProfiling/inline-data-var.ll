@@ -5,7 +5,7 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK: @__profd_foobar = private global
-; CHECK-NOT @__profd_foobar
+; CHECK-NOT: @__profd_foobar
 
 declare void @llvm.instrprof.increment(ptr %0, i64 %1, i32 %2, i32 %3)
 @__profn_foobar = private constant [6 x i8] c"foobar"

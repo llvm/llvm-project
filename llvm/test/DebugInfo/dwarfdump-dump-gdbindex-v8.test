@@ -39,7 +39,7 @@ RUN: llvm-dwarfdump -gdb-index %p/Inputs/dwarfdump-gdbindex-v8.elf-x86-64 | File
 
 ; CHECK:      Types CU list offset = 0x38, has 2 entries:
 ; CHECK-NEXT:   0: offset = 0x00000000, type_offset = 0x0000001e, type_signature = 0x418503b8111e9a7b
-; CHECK-NEXT;   1: offset = 0x00000044, type_offset = 0x0000001e, type_signature = 0x00f6cca4e3a15118
+; CHECK-NEXT:   1: offset = 0x00000044, type_offset = 0x0000001e, type_signature = 0x00f6cca4e3a15118
 
 ; CHECK:      Address area offset = 0x68, has 2 entries:
 ; CHECK-NEXT:   Low/High address = [0x201180, 0x20118f) (Size: 0xf), CU id = 0

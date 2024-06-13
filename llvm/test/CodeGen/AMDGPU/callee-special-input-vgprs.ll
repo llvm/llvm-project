@@ -557,16 +557,16 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
 }
 
 ; GCN-LABEL: {{^}}func_call_too_many_args_use_workitem_id_x_byval:
-; FIXED-ABI-NOT: v31
+; FIXEDABI-NOT: v31
 ; FIXEDABI: v_mov_b32_e32 [[K0:v[0-9]+]], 0x3e7{{$}}
 ; FIXEDABI: buffer_store_dword [[K0]], off, s[0:3], s33{{$}}
 ; FIXEDABI: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140{{$}}
 ; FIXEDABI: buffer_store_dword [[K1]], off, s[0:3], s32{{$}}
 ; FIXEDABI: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33{{$}}
 
-; FIXED-ABI-NOT: v31
+; FIXEDABI-NOT: v31
 ; FIXEDABI: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4{{$}}
-; FIXED-ABI-NOT: v31
+; FIXEDABI-NOT: v31
 ; FIXEDABI: s_swappc_b64
 define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
   %alloca = alloca i32, align 4, addrspace(5)

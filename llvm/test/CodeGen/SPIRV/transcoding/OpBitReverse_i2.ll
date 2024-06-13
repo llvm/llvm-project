@@ -10,7 +10,7 @@
 ; CHECK-SPIRV: OpCapability BitInstructions
 ; CHECK-SPIRV: OpExtension "SPV_KHR_bit_instructions"
 ; CHECK-SPIRV: %[[#CharTy:]] = OpTypeInt 8 0
-; CHECK-SPIRV-NO: %[[#CharTy:]] = OpTypeInt 8 0
+; CHECK-SPIRV-NOT: %[[#CharTy:]] = OpTypeInt 8 0
 ; CHECK-SPIRV: %[[#Arg:]] = OpFunctionParameter %[[#CharTy]]
 ; CHECK-SPIRV: %[[#Res:]] = OpBitReverse %[[#CharTy]] %[[#Arg]]
 ; CHECK-SPIRV: OpReturnValue %[[#Res]]

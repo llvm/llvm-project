@@ -49,7 +49,7 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ; features when the number of registers is frozen), this ends up using
 ; more than expected.
 
-; XALL-LABEL: {{^}}max_12_sgprs_14_input_sgprs:
+; ALL-LABEL: {{^}}max_12_sgprs_14_input_sgprs:
 ; XTOSGPR: SGPRBlocks: 1
 ; XTOSGPR: NumSGPRsForWavesPerEU: 16
 
@@ -87,13 +87,13 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;}
 
 ; The following test is commented out for now; http://llvm.org/PR31230
-; XALL-LABEL: max_12_sgprs_12_input_sgprs{{$}}
+; COM: ALL-LABEL: max_12_sgprs_12_input_sgprs{{$}}
 ; ; Make sure copies for input buffer are not clobbered. This requires
 ; ; swapping the order the registers are copied from what normally
 ; ; happens.
 
-; XALL: SGPRBlocks: 2
-; XALL: NumSGPRsForWavesPerEU: 18
+; COM: ALL: SGPRBlocks: 2
+; COM: ALL: NumSGPRsForWavesPerEU: 18
 ;define amdgpu_kernel void @max_12_sgprs_12_input_sgprs(ptr addrspace(1) %out1,
 ;                                        ptr addrspace(1) %out2,
 ;                                        ptr addrspace(1) %out3,

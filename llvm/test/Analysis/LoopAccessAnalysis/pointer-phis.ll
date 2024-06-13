@@ -293,7 +293,7 @@ define i32 @store_with_pointer_phi_incoming_phi(ptr %A, ptr %B, ptr %C, i1 %c.0,
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
-; CHECK-EMPTY
+; CHECK-EMPTY:
 entry:
   br label %loop.header
 
@@ -376,7 +376,7 @@ define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(ptr %A, ptr %B
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
-; CHECK-EMPTY
+; CHECK-EMPTY:
 entry:
   br label %loop.header
 

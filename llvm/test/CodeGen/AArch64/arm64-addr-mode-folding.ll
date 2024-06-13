@@ -8,7 +8,7 @@ define i32 @fct(i32 %i1, i32 %i2) {
 ; Sign extension is used more than once, thus it should not be folded.
 ; CodeGenPrepare is not sharing sext across uses, thus this is folded because
 ; of that.
-; _CHECK-NOT: , sxtw]
+; CHECK-NOT: , sxtw]
 entry:
   %idxprom = sext i32 %i1 to i64
   %0 = load ptr, ptr @block, align 8

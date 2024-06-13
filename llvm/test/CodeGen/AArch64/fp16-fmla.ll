@@ -84,11 +84,11 @@ entry:
 
 define <4 x half> @test_FMLAv4i16_indexed_OP1(<4 x half> %a, <4 x i16> %b, <4 x i16> %c) {
 ; CHECK-LABEL: test_FMLAv4i16_indexed_OP1:
-; CHECK-FIXME: Currently LLVM produces inefficient code:
+; FIXME: Currently LLVM produces inefficient code:
 ; CHECK: mul
 ; CHECK: fadd
-; CHECK-FIXME: It should instead produce the following instruction:
-; CHECK-FIXME: fmla    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
+; FIXME: It should instead produce the following instruction:
+; COM: CHECK: fmla    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
 entry:
   %mul = mul <4 x i16> %c, %b
   %m = bitcast <4 x i16> %mul to <4 x half>
@@ -98,11 +98,11 @@ entry:
 
 define <4 x half> @test_FMLAv4i16_indexed_OP2(<4 x half> %a, <4 x i16> %b, <4 x i16> %c) {
 ; CHECK-LABEL: test_FMLAv4i16_indexed_OP2:
-; CHECK-FIXME: Currently LLVM produces inefficient code:
+; FIXME: Currently LLVM produces inefficient code:
 ; CHECK: mul
 ; CHECK: fadd
-; CHECK-FIXME: It should instead produce the following instruction:
-; CHECK-FIXME: fmla    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
+; FIXME: It should instead produce the following instruction:
+; COM: CHECK: fmla    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
 entry:
   %mul = mul <4 x i16> %c, %b
   %m = bitcast <4 x i16> %mul to <4 x half>
@@ -112,11 +112,11 @@ entry:
 
 define <8 x half> @test_FMLAv8i16_indexed_OP1(<8 x half> %a, <8 x i16> %b, <8 x i16> %c) {
 ; CHECK-LABEL: test_FMLAv8i16_indexed_OP1:
-; CHECK-FIXME: Currently LLVM produces inefficient code:
+; FIXME: Currently LLVM produces inefficient code:
 ; CHECK: mul
 ; CHECK: fadd
-; CHECK-FIXME: It should instead produce the following instruction:
-; CHECK-FIXME: fmla    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; FIXME: It should instead produce the following instruction:
+; COM: CHECK: fmla    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
 entry:
   %mul = mul <8 x i16> %c, %b
   %m = bitcast <8 x i16> %mul to <8 x half>
@@ -126,11 +126,11 @@ entry:
 
 define <8 x half> @test_FMLAv8i16_indexed_OP2(<8 x half> %a, <8 x i16> %b, <8 x i16> %c) {
 ; CHECK-LABEL: test_FMLAv8i16_indexed_OP2:
-; CHECK-FIXME: Currently LLVM produces inefficient code:
+; FIXME: Currently LLVM produces inefficient code:
 ; CHECK: mul
 ; CHECK: fadd
-; CHECK-FIXME: It should instead produce the following instruction:
-; CHECK-FIXME: fmla    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; FIXME: It should instead produce the following instruction:
+; COM: CHECK: fmla    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
 entry:
   %mul = mul <8 x i16> %c, %b
   %m = bitcast <8 x i16> %mul to <8 x half>
@@ -178,11 +178,11 @@ entry:
 
 define <4 x half> @test_FMLSv4i16_indexed_OP2(<4 x half> %a, <4 x i16> %b, <4 x i16> %c) {
 ; CHECK-LABEL: test_FMLSv4i16_indexed_OP2:
-; CHECK-FIXME: Currently LLVM produces inefficient code:
+; FIXME: Currently LLVM produces inefficient code:
 ; CHECK: mul
 ; CHECK: fsub
-; CHECK-FIXME: It should instead produce the following instruction:
-; CHECK-FIXME: fmls    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
+; FIXME: It should instead produce the following instruction:
+; COM: CHECK: fmls    {{v[0-9]+}}.4h, {{v[0-9]+}}.4h, {{v[0-9]+}}.4h
 entry:
   %mul = mul <4 x i16> %c, %b
   %m = bitcast <4 x i16> %mul to <4 x half>
@@ -192,12 +192,12 @@ entry:
 
 define <8 x half> @test_FMLSv8i16_indexed_OP1(<8 x half> %a, <8 x i16> %b, <8 x i16> %c) {
 ; CHECK-LABEL: test_FMLSv8i16_indexed_OP1:
-; CHECK-FIXME: Currently LLVM produces inefficient code:
+; FIXME: Currently LLVM produces inefficient code:
 ; CHECK: mul
 ; CHECK: fsub
-; CHECK-FIXME: It should instead produce the following instruction:
-; CHECK-FIXME: fneg    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
-; CHECK-FIXME: fmla    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; FIXME: It should instead produce the following instruction:
+; COM: CHECK: fneg    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; COM: CHECK: fmla    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
 entry:
   %mul = mul <8 x i16> %c, %b
   %m = bitcast <8 x i16> %mul to <8 x half>
@@ -207,11 +207,11 @@ entry:
 
 define <8 x half> @test_FMLSv8i16_indexed_OP2(<8 x half> %a, <8 x i16> %b, <8 x i16> %c) {
 ; CHECK-LABEL: test_FMLSv8i16_indexed_OP2:
-; CHECK-FIXME: Currently LLVM produces inefficient code:
+; FIXME: Currently LLVM produces inefficient code:
 ; CHECK: mul
 ; CHECK: fsub
-; CHECK-FIXME: It should instead produce the following instruction:
-; CHECK-FIXME: fmls    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
+; FIXME: It should instead produce the following instruction:
+; COM: CHECK: fmls    {{v[0-9]+}}.8h, {{v[0-9]+}}.8h, {{v[0-9]+}}.8h
 entry:
   %mul = mul <8 x i16> %c, %b
   %m = bitcast <8 x i16> %mul to <8 x half>

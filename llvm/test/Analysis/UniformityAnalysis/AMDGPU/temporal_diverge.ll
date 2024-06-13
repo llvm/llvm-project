@@ -169,7 +169,7 @@ X:
   br label %G
 
 G:
-; C HECK: DIVERGENT: %div.user =
+; CHECK: DIVERGENT: %div.user =
   %div.user = add i32 %uni.inc, 5
   br i1 %uni.cond, label %G, label %Y
 ; CHECK: DIVERGENT: %div.user =

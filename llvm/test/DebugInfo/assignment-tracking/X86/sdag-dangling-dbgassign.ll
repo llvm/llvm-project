@@ -144,7 +144,7 @@ entry4:
 ; Verify that we do not get a DBG_VALUE that maps foo5 to @S here.
 define i32 @test5() local_unnamed_addr #0 !dbg !47 {
 ; CHECK-LABEL: bb.0.entry5:
-; cHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[FOO5]], !DIExpression()
+; CHECK-NEXT:    DBG_VALUE $noreg, $noreg, ![[FOO5]], !DIExpression()
 ; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO5]], !DIExpression()
 ; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr64 = LEA64r
 ; INSTRREF-SAME:    debug-instr-number 1

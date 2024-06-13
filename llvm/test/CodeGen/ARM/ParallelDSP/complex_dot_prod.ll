@@ -45,7 +45,7 @@ define dso_local arm_aapcscc void @complex_dot_prod(ptr nocapture readonly %pSrc
 ; CHECK-LLC-NEXT:    str r7, [r2]
 ; CHECK-LLC-NEXT:    str r0, [r3]
 ; CHECK-LLC-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
-; CHECK-LCC: pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
+; CHECK-LLC: pop.w {r4, r5, r6, r7, r8, r9, r10, pc}
 ;
 ; CHECK-OPT-LABEL: @complex_dot_prod(
 ; CHECK-OPT-NEXT:  entry:

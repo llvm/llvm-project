@@ -3,7 +3,7 @@
 # This test checks for persistence of the hasRedZone attribute through a
 # llc transformation that shouldn't do anything
 
-# CHECK-NAME: name:            foo
+# CHECK-LABEL: name:            foo
 # CHECK-LABEL: machineFunctionInfo: {}
 
 ---

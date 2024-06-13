@@ -3,7 +3,7 @@
 ; Test left-shift i64 lowering does not result in call being inserted.
 
 ; CHECK-LABEL: shift
-; CHECKT: bt __ashldi3
+; CHECK: bt __ashldi3
 ; CHECK: or	%r0, 0x0, %r[[T0:[0-9]+]]
 ; CHECK: mov	0x20, %r[[T1:[0-9]+]]
 ; CHECK: sub	%r[[T1]], %r[[ShAmt:[0-9]+]], %r[[T1]]

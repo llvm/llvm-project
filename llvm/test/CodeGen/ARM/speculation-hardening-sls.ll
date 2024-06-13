@@ -96,7 +96,7 @@ entry:
 ; CHECK-NEXT:      {{^[ \t]+b }}
 ; CHECK-NEXT:      @NO_APP
      ; For direct branches, no mitigation is needed.
-; ISDDSB-NOT: dsb sy
+; ISBDSB-NOT: dsb sy
 ; SB-NOT:     {{ sb$}}
 
 asm.fallthrough:               ; preds = %entry

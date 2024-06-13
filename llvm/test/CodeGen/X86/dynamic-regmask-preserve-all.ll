@@ -56,7 +56,7 @@ define {i64, i64} @caller2(i64 %a0) nounwind {
   ret {i64, i64} %b1
 }
 ; CHECK:    name: caller2
-; CHECL:    CALL64pcrel32 @callee2, CustomRegMask($bh,$bl,$bp,$bph,$bpl,$bx,$ch,$cl,$cx,$di,$dih,$dil,$ebp,$ebx,$ecx,$edi,$esi,$hbp,$hbx,$hcx,$hdi,$hsi,$rbp,$rbx,$rcx,$rdi,$rsi,$si,$sih,$sil,$r8,$r9,$r10,$r12,$r13,$r14,$r15,$xmm0,$xmm1,$xmm2,$xmm3,$xmm4,$xmm5,$xmm6,$xmm7,$xmm8,$xmm9,$xmm10,$xmm11,$xmm12,$xmm13,$xmm14,$xmm15,$r8b,$r9b,$r10b,$r12b,$r13b,$r14b,$r15b,$r8bh,$r9bh,$r10bh,$r12bh,$r13bh,$r14bh,$r15bh,$r8d,$r9d,$r10d,$r12d,$r13d,$r14d,$r15d,$r8w,$r9w,$r10w,$r12w,$r13w,$r14w,$r15w,$r8wh,$r9wh,$r10wh,$r12wh,$r13wh,$r14wh,$r15wh), implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit $r8, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, implicit-def $rdx
+; CHECK:    CALL64pcrel32 @callee2, CustomRegMask($bh,$bl,$bp,$bph,$bpl,$bx,$ch,$cl,$cx,$di,$dih,$dil,$ebp,$ebx,$ecx,$edi,$esi,$hbp,$hbx,$hcx,$hdi,$hsi,$rbp,$rbx,$rcx,$rdi,$rsi,$si,$sih,$sil,$r8,$r9,$r10,$r12,$r13,$r14,$r15,$xmm0,$xmm1,$xmm2,$xmm3,$xmm4,$xmm5,$xmm6,$xmm7,$xmm8,$xmm9,$xmm10,$xmm11,$xmm12,$xmm13,$xmm14,$xmm15,$r8b,$r9b,$r10b,$r12b,$r13b,$r14b,$r15b,$r8bh,$r9bh,$r10bh,$r12bh,$r13bh,$r14bh,$r15bh,$r8d,$r9d,$r10d,$r12d,$r13d,$r14d,$r15d,$r8w,$r9w,$r10w,$r12w,$r13w,$r14w,$r15w,$r8wh,$r9wh,$r10wh,$r12wh,$r13wh,$r14wh,$r15wh), implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit $r8, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, implicit-def $rdx
 ; CHECK:    RET 0, $rax, $rdx
 
 

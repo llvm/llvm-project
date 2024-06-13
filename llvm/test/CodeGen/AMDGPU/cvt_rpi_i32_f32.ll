@@ -32,7 +32,7 @@ define amdgpu_kernel void @cvt_rpi_i32_f32_fabs(ptr addrspace(1) %out, float %x)
 
 ; FIXME: This doesn't work because it forms fsub 0.5, x
 ; FUNC-LABEL: {{^}}cvt_rpi_i32_f32_fneg:
-; XSI-NONAN: v_cvt_rpi_i32_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}
+; COM: SI-NONAN: v_cvt_rpi_i32_f32_e64 v{{[0-9]+}}, -s{{[0-9]+}}
 ; SI: v_sub_f32_e64 [[TMP:v[0-9]+]], 0.5, s{{[0-9]+}}
 ; SI-SAFE-NOT: v_cvt_flr_i32_f32
 ; SI-NONAN: v_cvt_flr_i32_f32_e32 {{v[0-9]+}}, [[TMP]]
@@ -49,7 +49,7 @@ define amdgpu_kernel void @cvt_rpi_i32_f32_fneg(ptr addrspace(1) %out, float %x)
 ; FIXME: This doesn't work for same reason as above
 ; FUNC-LABEL: {{^}}cvt_rpi_i32_f32_fabs_fneg:
 ; SI-SAFE-NOT: v_cvt_rpi_i32_f32
-; XSI-NONAN: v_cvt_rpi_i32_f32_e64 v{{[0-9]+}}, -|s{{[0-9]+}}|
+; COM: SI-NONAN: v_cvt_rpi_i32_f32_e64 v{{[0-9]+}}, -|s{{[0-9]+}}|
 
 ; SI: v_sub_f32_e64 [[TMP:v[0-9]+]], 0.5, |s{{[0-9]+}}|
 ; SI-SAFE-NOT: v_cvt_flr_i32_f32

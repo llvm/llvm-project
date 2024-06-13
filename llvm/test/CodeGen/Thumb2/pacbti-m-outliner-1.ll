@@ -141,6 +141,6 @@ attributes #0 = { minsize nofree norecurse nounwind optsize uwtable}
 ; UNWIND-NEXT:     0xB0      ; finish
 
 
-; UNWINND-LABEL: 00000041 {{.*}} OUTLINED_FUNCTION_0
-; UNWINND-LABEL: 00000001 {{.*}} x
-; UNWINND-LABEL: 00000021 {{.*}} y
+; UNWIND-LABEL: 00000041 {{.*}} OUTLINED_FUNCTION_0
+; UNWIND-LABEL: 00000001 {{.*}} x
+; UNWIND-LABEL: 00000021 {{.*}} y

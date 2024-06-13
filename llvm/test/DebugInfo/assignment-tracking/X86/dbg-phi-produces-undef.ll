@@ -30,7 +30,7 @@
 ; CHECK: bb.0.entry:
 ; CHECK: DBG_VALUE %stack.0.c, $noreg, ![[var:[0-9]+]], !DIExpression(DW_OP_deref), debug-location
 ; CHECK-NEXT: MOV8mi %stack.0.c, 1, $noreg, 0, $noreg, 5, debug-location
-; CHECL-NEXT: DBG_VALUE %stack.0.c, $noreg, ![[var]], !DIExpression(DW_OP_deref), debug-location
+; CHECK-NEXT: DBG_VALUE %stack.0.c, $noreg, ![[var]], !DIExpression(DW_OP_deref), debug-location
 
 ; CHECK: bb.1.if.then:
 ; CHECK: MOV8mi %stack.0.c, 1, $noreg, 0, $noreg, 0

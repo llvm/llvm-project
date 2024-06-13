@@ -931,7 +931,7 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
   ret void
 }
 
-; ; XFUNC-LABEL: {{^}}local_zextload_v64i16_to_v64i64:
+; FUNC-LABEL: {{^}}local_zextload_v64i16_to_v64i64:
 ; define amdgpu_kernel void @local_zextload_v64i16_to_v64i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
 ;   %load = load <64 x i16>, ptr addrspace(3) %in
 ;   %ext = zext <64 x i16> %load to <64 x i64>
@@ -939,7 +939,7 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ;   ret void
 ; }
 
-; ; XFUNC-LABEL: {{^}}local_sextload_v64i16_to_v64i64:
+; FUNC-LABEL: {{^}}local_sextload_v64i16_to_v64i64:
 ; define amdgpu_kernel void @local_sextload_v64i16_to_v64i64(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
 ;   %load = load <64 x i16>, ptr addrspace(3) %in
 ;   %ext = sext <64 x i16> %load to <64 x i64>

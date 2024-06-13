@@ -5,7 +5,7 @@
 
 ; RUN: llc -O0 %s -mtriple=msp430 -filetype=obj -o - -minimize-addr-in-v5=Expressions \
 ; RUN:   | llvm-dwarfdump -debug-info -debug-addr -debug-rnglists -v - \
-; RUN:   | FileCheck --check-prefix=CHECK --check-prefix=EXPRORFORM --check-prefix=EXPR\
+; RUN:   | FileCheck --check-prefix=CHECK --check-prefix=EXPRORFORM --check-prefix=EXPR \
 ; RUN:     --implicit-check-not=DW_TAG --implicit-check-not=NULL --implicit-check-not=_pc %s
 
 ; RUN: llc -O0 %s -mtriple=msp430 -filetype=obj -o - -minimize-addr-in-v5=Form \

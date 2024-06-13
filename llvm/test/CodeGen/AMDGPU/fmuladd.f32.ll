@@ -455,7 +455,7 @@ define amdgpu_kernel void @mad_sub_fabs_f32(ptr addrspace(1) noalias nocapture %
 ; GCN: {{buffer|flat|global}}_load_dword [[REGB:v[0-9]+]]
 ; GCN: {{buffer|flat|global}}_load_dword [[REGC:v[0-9]+]]
 ; GCN-FLUSH-MAD: v_mad_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
-; GCN-FLUSH-FMA: v_fma_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
+; GCN-FLUSH-FMAC:v_fma_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
 
 ; GCN-DENORM-FASTFMA-CONTRACT: v_fma_f32 [[RESULT:v[0-9]+]], -[[REGA]], [[REGB]], |[[REGC]]|
 

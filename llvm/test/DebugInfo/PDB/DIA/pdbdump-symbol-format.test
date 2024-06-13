@@ -10,7 +10,7 @@
 ; The format is func [0x<rva_start>+<prologue_length> - 0x<rva_end>-<epilogue_length>]
 ; SYM_FORMAT_FPO: ---SYMBOLS---
 ; SYM_FORMAT_FPO: symbolformat-fpo.obj
-; SYM_FORMAT-FPO: func [{{.*}}] (FPO) unsigned int __cdecl fpo_func(unsigned int n)
+; SYM_FORMAT_FPO: func [{{.*}}] (FPO) unsigned int __cdecl fpo_func(unsigned int n)
 
 ; SYM_FORMAT: ---SYMBOLS---
 ; SYM_FORMAT: symbolformat.obj

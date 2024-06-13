@@ -4,7 +4,7 @@
 # for corner cases that we can only hit with -mtriple=i386.
 ---
 name:            test2add_32
-# CHECK: name: test2add_32
+# CHECK-LABEL: name: test2add_32
 alignment:       16
 tracksRegLiveness: true
 debugInstrRef: true
@@ -12,7 +12,7 @@ liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
 # CHECK:       debugValueSubstitutions:
-# CHECK-NAME:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 0 }
 body:             |
   bb.0:
     liveins: $eax, $ebp

@@ -5,7 +5,7 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV-WITHOUT
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-: Capability USMStorageClassesINTEL
+; CHECK-SPIRV: Capability USMStorageClassesINTEL
 ; CHECK-SPIRV-WITHOUT-NOT: Capability USMStorageClassesINTEL
 ; CHECK-SPIRV-EXT-DAG: %[[DevTy:[0-9]+]] = OpTypePointer DeviceOnlyINTEL %[[#]]
 ; CHECK-SPIRV-EXT-DAG: %[[HostTy:[0-9]+]] = OpTypePointer HostOnlyINTEL %[[#]]

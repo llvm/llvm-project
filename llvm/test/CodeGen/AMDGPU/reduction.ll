@@ -488,14 +488,14 @@ entry:
 ; directly from the IR to avoid unnecessary quieting.
 
 ; GCN-LABEL: {{^}}reduction_fast_max_pattern_v4f16:
-; XGFX9:      v_pk_max_f16 [[MAX:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; XGFX9-NEXT: v_max_f16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; COM: GFX9:      v_pk_max_f16 [[MAX:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; COM: GFX9-NEXT: v_max_f16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; XVI: s_waitcnt
-; XVI-NEXT: v_max_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; XVI-NEXT: v_max_f16_e32 v0, v0, v1
-; XVI-NEXT: v_max_f16_e32 v0, v0, v2
-; XVI-NEXT: s_setpc_b64
+; COM: VI: s_waitcnt
+; COM: VI-NEXT: v_max_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; COM: VI-NEXT: v_max_f16_e32 v0, v0, v1
+; COM: VI-NEXT: v_max_f16_e32 v0, v0, v2
+; COM: VI-NEXT: s_setpc_b64
 
 ; GFX9: s_waitcnt
 ; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
@@ -527,14 +527,14 @@ entry:
 ; directly from the IR to avoid unnecessary quieting.
 
 ; GCN-LABEL: {{^}}reduction_fast_min_pattern_v4f16:
-; XGFX9:      v_pk_min_f16 [[MIN:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; XGFX9-NEXT: v_min_f16_sdwa v{{[0-9]+}}, [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; COM: GFX9:      v_pk_min_f16 [[MIN:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; COM: GFX9-NEXT: v_min_f16_sdwa v{{[0-9]+}}, [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
-; XVI: s_waitcnt
-; XVI-NEXT: v_min_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; XVI-NEXT: v_min_f16_e32 v0, v0, v1
-; XVI-NEXT: v_min_f16_e32 v0, v0, v2
-; XVI-NEXT: s_setpc_b64
+; COM: VI: s_waitcnt
+; COM: VI-NEXT: v_min_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; COM: VI-NEXT: v_min_f16_e32 v0, v0, v1
+; COM: VI-NEXT: v_min_f16_e32 v0, v0, v2
+; COM: VI-NEXT: s_setpc_b64
 
 ; GFX9: s_waitcnt
 ; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1

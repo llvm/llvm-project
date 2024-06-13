@@ -632,7 +632,7 @@ done:
 
 ; OPT-LABEL: @test_sink_global_small_min_scratch_global_offset(
 ; OPT-SICIVI: %in.gep = getelementptr i8, ptr addrspace(1) %in, i64 -4096
-; OPT-SICIV: br
+; OPT-SICIVI: br
 ; OPT-SICIVI: %tmp1 = load i8, ptr addrspace(1) %in.gep
 
 ; OPT-GFX9: br

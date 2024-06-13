@@ -20,7 +20,7 @@ debugInstrRef: true
 liveins:
   - { reg: '$rax' }
 # CHECK:     debugValueSubstitutions:
-# CHECK-NEXT - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 4 }
+# CHECK-NEXT:- { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 4 }
 ## Subreg 4 -> sub_16bit
 body:             |
   bb.0:
@@ -41,7 +41,7 @@ debugInstrRef: true
 liveins:
   - { reg: '$rdi' }
 # CHECK:     debugValueSubstitutions:
-# CHECK-NEXT - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 4 }
+# CHECK-NEXT:- { srcinst: 1, srcop: 0, dstinst: 2, dstop: 0, subreg: 4 }
 ## Subreg 4 -> sub_16bit
 body:             |
   bb.0:
