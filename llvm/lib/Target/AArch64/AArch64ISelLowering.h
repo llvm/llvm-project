@@ -70,6 +70,9 @@ enum NodeType : unsigned {
 
   COALESCER_BARRIER,
 
+  VG_SAVE,
+  VG_RESTORE,
+
   SMSTART,
   SMSTOP,
   RESTORE_ZA,
