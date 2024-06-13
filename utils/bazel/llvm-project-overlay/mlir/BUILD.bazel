@@ -1051,6 +1051,7 @@ cc_library(
         ":CAPIDebugObjects",
         ":CAPIIRObjects",
         ":CAPIInterfacesObjects",
+        ":CAPITransformObjects",
     ],
 )
 
