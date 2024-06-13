@@ -2574,8 +2574,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   for (auto &Edge : CallerEdges) {
     // Skip any that have been removed by an earlier recursive call.
     if (Edge->Callee == nullptr && Edge->Caller == nullptr) {
-      assert(!std::count(Node->CallerEdges.begin(), Node->CallerEdges.end(),
-                         Edge));
+      assert(!is_contained(Node->CallerEdges, Edge));
       continue;
     }
     recursivelyRemoveNoneTypeCalleeEdges(Edge->Caller, Visited);
