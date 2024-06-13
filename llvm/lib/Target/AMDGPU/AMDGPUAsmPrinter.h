@@ -82,7 +82,6 @@ private:
 
   void initTargetStreamer(Module &M);
 
-  static uint64_t getMCExprValue(const MCExpr *Value, MCContext &Ctx);
   SmallString<128> getMCExprStr(const MCExpr *Value);
 
 public:

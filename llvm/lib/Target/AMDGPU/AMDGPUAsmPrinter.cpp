@@ -136,15 +136,6 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
     getTargetStreamer()->getPALMetadata()->readFromIR(M);
 }
 
-uint64_t AMDGPUAsmPrinter::getMCExprValue(const MCExpr *Value, MCContext &Ctx) {
-  int64_t Val;
-  if (!Value->evaluateAsAbsolute(Val)) {
-    Ctx.reportError(SMLoc(), "could not resolve expression when required.");
-    return 0;
-  }
-  return static_cast<uint64_t>(Val);
-}
-
 void AMDGPUAsmPrinter::emitEndOfAsmFile(Module &M) {
   // Init target streamer if it has not yet happened
   if (!IsTargetStreamerInitialized)
@@ -511,6 +502,8 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
   int64_t PGRM_Rsrc3 = 1;
   bool EvaluatableRsrc3 =
       CurrentProgramInfo.ComputePGMRSrc3GFX90A->evaluateAsAbsolute(PGRM_Rsrc3);
+  (void)PGRM_Rsrc3;
+  (void)EvaluatableRsrc3;
   assert(STM.hasGFX90AInsts() || !EvaluatableRsrc3 ||
          static_cast<uint64_t>(PGRM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3GFX90A;

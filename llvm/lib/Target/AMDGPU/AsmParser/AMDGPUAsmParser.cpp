@@ -5367,7 +5367,7 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
   MCContext &Ctx = getContext();
 
   const MCExpr *NumSGPRs = NextFreeSGPR;
-  int64_t evaluatedSGPRs;
+  int64_t EvaluatedSGPRs;
 
   if (Version.Major >= 10)
     NumSGPRs = MCConstantExpr::create(0, Ctx);
@@ -5375,18 +5375,18 @@ bool AMDGPUAsmParser::calculateGPRBlocks(
     unsigned MaxAddressableNumSGPRs =
         IsaInfo::getAddressableNumSGPRs(&getSTI());
 
-    if (NumSGPRs->evaluateAsAbsolute(evaluatedSGPRs) && Version.Major >= 8 &&
+    if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) && Version.Major >= 8 &&
         !Features.test(FeatureSGPRInitBug) &&
-        static_cast<uint64_t>(evaluatedSGPRs) > MaxAddressableNumSGPRs)
+        static_cast<uint64_t>(EvaluatedSGPRs) > MaxAddressableNumSGPRs)
       return OutOfRangeError(SGPRRange);
 
     const MCExpr *ExtraSGPRs = AMDGPUVariadicMCExpr::createExtraSGPRs(
         VCCUsed, FlatScrUsed, XNACKUsed, Ctx);
     NumSGPRs = MCBinaryExpr::createAdd(NumSGPRs, ExtraSGPRs, Ctx);
 
-    if (NumSGPRs->evaluateAsAbsolute(evaluatedSGPRs) &&
+    if (NumSGPRs->evaluateAsAbsolute(EvaluatedSGPRs) &&
         (Version.Major <= 7 || Features.test(FeatureSGPRInitBug)) &&
-        static_cast<uint64_t>(evaluatedSGPRs) > MaxAddressableNumSGPRs)
+        static_cast<uint64_t>(EvaluatedSGPRs) > MaxAddressableNumSGPRs)
       return OutOfRangeError(SGPRRange);
 
     if (Features.test(FeatureSGPRInitBug))
