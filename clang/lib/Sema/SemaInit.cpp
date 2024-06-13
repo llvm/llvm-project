@@ -1449,8 +1449,19 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       //   dependent non-array type or an array type with a value-dependent
       //   bound
       assert(AggrDeductionCandidateParamTypes);
-      // Don't consider the brace elision if the initializer is a
-      // braced-init-list.
+
+      // In the presence of a braced-init-list within the initializer, we should
+      // not fall through to the brace-elision logic, even if the brace elision
+      // is applicable. Given the example,
+      //
+      // template <class T> struct Foo {
+      //   T t[2];
+      // };
+      //
+      // Foo t = {{1, 2}};
+      //
+      // we don't want the (T, T) but rather (T [2]) in terms of the initializer
+      // {{1, 2}}.
       if (isa<InitListExpr, DesignatedInitExpr>(expr) ||
           !isa_and_present<ConstantArrayType>(
               SemaRef.Context.getAsArrayType(ElemType))) {
