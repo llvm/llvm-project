@@ -159,7 +159,13 @@ foreach Index = 0-31 in {
 let isArtificial = 1 in {
   foreach Index = 0-31 in {
     def FH#Index : FPR<-1, "">;
+    def VFH#Index : VF<-1, "">;
   }
+}
+
+let isAllocatable = 0, CopyCost = -1 in {
+  def VFHRC : RegisterClass<"PPC", [f64], 64, (sequence "VFH%u", 0, 31)>;
+  def FHRC : RegisterClass<"PPC", [f64], 64, (sequence "FH%u", 0, 31)>;
 }
 
 // Floating-point pair registers
@@ -173,12 +179,6 @@ foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in
 foreach Index = 0-31 in {
   def VF#Index : VF<Index, "v" #Index>,
                  DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
-}
-
-let isArtificial = 1 in {
-  foreach Index = 0-31 in {
-    def VFH#Index : VF<-1, "">;
-  }
 }
 
 let CoveredBySubRegs = 1 in {
