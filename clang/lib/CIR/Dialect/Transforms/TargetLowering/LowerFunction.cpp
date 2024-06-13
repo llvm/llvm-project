@@ -317,8 +317,9 @@ Value LowerFunction::rewriteCallOp(const LowerFunctionInfo &CallInfo,
   // NOTE(cir): We don't know if the callee was already lowered, so we only
   // fetch the name from the callee, while the return type is fetch from the
   // lowering types manager.
-  CallOp _ = rewriter.create<CallOp>(loc, Caller.getCalleeAttr(),
-                                     IRFuncTy.getReturnType(), IRCallArgs);
+  CallOp callOp = rewriter.create<CallOp>(loc, Caller.getCalleeAttr(),
+                                          IRFuncTy.getReturnType(), IRCallArgs);
+  callOp.setExtraAttrsAttr(Caller.getExtraAttrs());
 
   assert(!::cir::MissingFeatures::vectorType());
 

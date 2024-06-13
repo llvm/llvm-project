@@ -2346,6 +2346,7 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
 
 static ::mlir::ParseResult parseCallCommon(
     ::mlir::OpAsmParser &parser, ::mlir::OperationState &result,
+    llvm::StringRef extraAttrsAttrName,
     llvm::function_ref<::mlir::ParseResult(::mlir::OpAsmParser &,
                                            ::mlir::OperationState &)>
         customOpHandler =
@@ -2380,6 +2381,23 @@ static ::mlir::ParseResult parseCallCommon(
     return ::mlir::failure();
   if (parser.parseRParen())
     return ::mlir::failure();
+
+  auto &builder = parser.getBuilder();
+  Attribute extraAttrs;
+  if (::mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parser.parseAttribute(extraAttrs).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+  } else {
+    NamedAttrList empty;
+    extraAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
+        builder.getContext(), empty.getDictionary(builder.getContext()));
+  }
+  result.addAttribute(extraAttrsAttrName, extraAttrs);
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return ::mlir::failure();
   if (parser.parseColon())
@@ -2400,6 +2418,7 @@ static ::mlir::ParseResult parseCallCommon(
 void printCallCommon(
     Operation *op, mlir::Value indirectCallee, mlir::FlatSymbolRefAttr flatSym,
     ::mlir::OpAsmPrinter &state,
+    ::mlir::cir::ExtraFuncAttributesAttr extraAttrs,
     llvm::function_ref<void()> customOpHandler = []() {}) {
   state << ' ';
 
@@ -2415,13 +2434,20 @@ void printCallCommon(
   state << "(";
   state << ops;
   state << ")";
-  llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;
+
+  llvm::SmallVector<::llvm::StringRef, 4> elidedAttrs;
   elidedAttrs.push_back("callee");
   elidedAttrs.push_back("ast");
+  elidedAttrs.push_back("extra_attrs");
   state.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   state << ' ' << ":";
   state << ' ';
   state.printFunctionalType(op->getOperands().getTypes(), op->getResultTypes());
+  if (!extraAttrs.getElements().empty()) {
+    state << " extra(";
+    state.printAttributeWithoutType(extraAttrs);
+    state << ")";
+  }
 }
 
 LogicalResult
@@ -2431,12 +2457,14 @@ cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 ::mlir::ParseResult CallOp::parse(::mlir::OpAsmParser &parser,
                                   ::mlir::OperationState &result) {
-  return parseCallCommon(parser, result);
+
+  return parseCallCommon(parser, result, getExtraAttrsAttrName(result.name));
 }
 
 void CallOp::print(::mlir::OpAsmPrinter &state) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  printCallCommon(*this, indirectCallee, getCalleeAttr(), state);
+  printCallCommon(*this, indirectCallee, getCalleeAttr(), state,
+                  getExtraAttrs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2493,7 +2521,7 @@ LogicalResult cir::TryCallOp::verify() { return mlir::success(); }
 ::mlir::ParseResult TryCallOp::parse(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result) {
   return parseCallCommon(
-      parser, result,
+      parser, result, getExtraAttrsAttrName(result.name),
       [](::mlir::OpAsmParser &parser,
          ::mlir::OperationState &result) -> ::mlir::ParseResult {
         ::mlir::OpAsmParser::UnresolvedOperand exceptionRawOperands[1];
@@ -2535,7 +2563,8 @@ void TryCallOp::print(::mlir::OpAsmPrinter &state) {
   state << getExceptionInfo();
   state << ")";
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  printCallCommon(*this, indirectCallee, getCalleeAttr(), state);
+  printCallCommon(*this, indirectCallee, getCalleeAttr(), state,
+                  getExtraAttrs());
 }
 
 //===----------------------------------------------------------------------===//

@@ -1718,8 +1718,8 @@ void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
       builder.setInsertionPoint(noProtoCallOp);
 
       // Patch call type with the real function type.
-      auto realCallOp = builder.create<mlir::cir::CallOp>(
-          noProtoCallOp.getLoc(), NewFn, noProtoCallOp.getOperands());
+      auto realCallOp = builder.createCallOp(noProtoCallOp.getLoc(), NewFn,
+                                             noProtoCallOp.getOperands());
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);

@@ -195,7 +195,7 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
   }
 
   // Create a variable initialization function.
-  mlir::OpBuilder builder(&getContext());
+  CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
   auto voidTy = ::mlir::cir::VoidType::get(builder.getContext());
   auto fnType = mlir::cir::FuncType::get({}, voidTy);
@@ -264,7 +264,7 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
                                                 dtorCall.getArgOperand(0));
     args[2] = builder.create<mlir::cir::GetGlobalOp>(
         Handle.getLoc(), HandlePtrTy, Handle.getSymName());
-    builder.create<mlir::cir::CallOp>(dtorCall.getLoc(), fnAtExit, args);
+    builder.createCallOp(dtorCall.getLoc(), fnAtExit, args);
     dtorCall->erase();
     entryBB->getOperations().splice(entryBB->end(), dtorBlock.getOperations(),
                                     dtorBlock.begin(),
@@ -481,7 +481,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
     fnName += getTransformedFileName(theModule);
   }
 
-  mlir::OpBuilder builder(&getContext());
+  CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&theModule.getBodyRegion().back());
   auto fnType = mlir::cir::FuncType::get(
       {}, mlir::cir::VoidType::get(builder.getContext()));
@@ -490,7 +490,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
                            mlir::cir::GlobalLinkageKind::ExternalLinkage);
   builder.setInsertionPointToStart(f.addEntryBlock());
   for (auto &f : dynamicInitializers) {
-    builder.create<mlir::cir::CallOp>(f.getLoc(), f);
+    builder.createCallOp(f.getLoc(), f);
   }
 
   builder.create<ReturnOp>(f.getLoc());
@@ -597,7 +597,7 @@ void LoweringPreparePass::lowerArrayCtor(ArrayCtor op) {
 void LoweringPreparePass::lowerStdFindOp(StdFindOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
-  auto call = builder.create<mlir::cir::CallOp>(
+  auto call = builder.createCallOp(
       op.getLoc(), op.getOriginalFnAttr(), op.getResult().getType(),
       mlir::ValueRange{op.getOperand(0), op.getOperand(1), op.getOperand(2)});
 
@@ -608,9 +608,9 @@ void LoweringPreparePass::lowerStdFindOp(StdFindOp op) {
 void LoweringPreparePass::lowerIterBeginOp(IterBeginOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
-  auto call = builder.create<mlir::cir::CallOp>(
-      op.getLoc(), op.getOriginalFnAttr(), op.getResult().getType(),
-      mlir::ValueRange{op.getOperand()});
+  auto call = builder.createCallOp(op.getLoc(), op.getOriginalFnAttr(),
+                                   op.getResult().getType(),
+                                   mlir::ValueRange{op.getOperand()});
 
   op.replaceAllUsesWith(call);
   op.erase();
@@ -619,9 +619,9 @@ void LoweringPreparePass::lowerIterBeginOp(IterBeginOp op) {
 void LoweringPreparePass::lowerIterEndOp(IterEndOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op.getOperation());
-  auto call = builder.create<mlir::cir::CallOp>(
-      op.getLoc(), op.getOriginalFnAttr(), op.getResult().getType(),
-      mlir::ValueRange{op.getOperand()});
+  auto call = builder.createCallOp(op.getLoc(), op.getOriginalFnAttr(),
+                                   op.getResult().getType(),
+                                   mlir::ValueRange{op.getOperand()});
 
   op.replaceAllUsesWith(call);
   op.erase();
@@ -712,8 +712,7 @@ void LoweringPreparePass::runOnMathOp(Operation *op) {
       buildRuntimeFunction(builder, rtFuncName, op->getLoc(), rtFuncTy);
 
   builder.setInsertionPointAfter(op);
-  auto call = builder.create<mlir::cir::CallOp>(op->getLoc(), rtFunc,
-                                                op->getOperands());
+  auto call = builder.createCallOp(op->getLoc(), rtFunc, op->getOperands());
 
   op->replaceAllUsesWith(call);
   op->erase();
