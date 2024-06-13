@@ -845,6 +845,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
     }
 
     TheNeg->moveBefore(*InsertPt->getParent(), InsertPt);
+    TheNeg->dropLocation();
     if (TheNeg->getOpcode() == Instruction::Sub) {
       TheNeg->setHasNoUnsignedWrap(false);
       TheNeg->setHasNoSignedWrap(false);
