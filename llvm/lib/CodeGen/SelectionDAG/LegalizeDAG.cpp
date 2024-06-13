@@ -3650,27 +3650,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // FIXME: Use separate LibCall action.
     if (TLI.getLibcallName(LC))
       break;
-    if (Node->getOpcode() == ISD::FLDEXP && VT == MVT::f32 &&
-        TLI.isTypeLegal(MVT::f64) &&
-        TLI.getLibcallName(RTLIB::getLDEXP(MVT::f64))) {
-      // On Windows, it's common to be missing the 32-bit libcall, but have
-      // the 64-bit libcall. Expand to the 64-bit libcall. (Note that ldexp
-      // involves a rounding step if the result is subnormal, but that isn't
-      // relevant here because any subnormal result will round to zero when
-      // it's truncated.)
-      //
-      // FIXME: Consider doing something similar for f16/bf16. But be very
-      // careful handling bf16: expanding bf16->f64 is fine, but expanding
-      // bf16->f32 would produce incorrect subnormal results.
-      SDValue Extended =
-          DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, Node->getOperand(0));
-      SDValue LdExp =
-          DAG.getNode(ISD::FLDEXP, dl, MVT::f64, Extended, Node->getOperand(1));
-      Results.push_back(
-          DAG.getNode(ISD::FP_ROUND, dl, VT, LdExp,
-                      DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
-      break;
-    }
 
     if (SDValue Expanded = expandLdexp(Node)) {
       Results.push_back(Expanded);
