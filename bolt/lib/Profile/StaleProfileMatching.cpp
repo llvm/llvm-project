@@ -308,6 +308,7 @@ FlowFunction
 createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   FlowFunction Func;
   std::vector<uint64_t> ExitBlocksIndices;
+  
   // Add a special "dummy" source so that there is always a unique entry point.
   FlowBlock EntryBlock;
   EntryBlock.Index = 0;
@@ -330,7 +331,6 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   FlowBlock SinkBlock;
   SinkBlock.Index = Func.Blocks.size();
   Func.Blocks.push_back(SinkBlock);
-  Func.Sink = SinkBlock.Index;
 
   // Create FlowJump for each jump between basic blocks in the binary function.
   std::vector<uint64_t> InDegree(Func.Blocks.size(), 0);
@@ -384,7 +384,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
     Func.Jumps.emplace_back();
     FlowJump &Jump = Func.Jumps.back();
     Jump.Source = I;
-    Jump.Target = Func.Sink;
+    Jump.Target = Func.Blocks.size()-1;
   }
 
   // Create necessary metadata for the flow function
@@ -596,7 +596,7 @@ bool canApplyInference(const FlowFunction &Func) {
 
   // Returns false if the artificial sink block has no predecessors meaning
   // there are no exit blocks.
-  if (Func.Blocks[Func.Sink].isEntry())
+  if (Func.Blocks[Func.size()-1].isEntry())
     return false;
 
   return true;
@@ -656,7 +656,7 @@ void assignProfile(BinaryFunction &BF,
         continue;
 
       // Skips the artificial sink block.
-      if (Jump->Target == Func.Sink)
+      if (Jump->Target == Func.Blocks.size()-1)
         continue;
       BinaryBasicBlock &SuccBB = *BlockOrder[Jump->Target - 1];
       // Check if the edge corresponds to a regular jump or a landing pad
