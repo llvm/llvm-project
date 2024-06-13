@@ -2752,13 +2752,9 @@ static clang::Type const *GetCompleteEnumType(clang::ASTContext *ast,
 }
 
 static clang::Type const *
-GetCompleteObjCInterfaceType(clang::ASTContext *ast, clang::QualType qual_type,
+GetCompleteObjCInterfaceType(clang::ASTContext *ast,
+                             clang::ObjCObjectType const *objc_class_type,
                              bool allow_completion = true) {
-  const clang::ObjCObjectType *objc_class_type =
-      llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
-  if (!objc_class_type)
-    return nullptr;
-
   clang::ObjCInterfaceDecl *class_interface_decl =
       objc_class_type->getInterface();
   // We currently can't complete objective C types through the newly added
@@ -2819,8 +2815,13 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
   } break;
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
-    if (auto const *ty = llvm::dyn_cast_or_null<ObjCInterfaceType>(
-            GetCompleteObjCInterfaceType(ast, qual_type, allow_completion)))
+    const clang::ObjCObjectType *objc_class_type =
+        llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
+    if (!objc_class_type)
+      return true;
+
+    if (auto const *ty = GetCompleteObjCInterfaceType(ast, objc_class_type,
+                                                      allow_completion))
       return TypeSystemClang::UseRedeclCompletion() || !ty->isIncompleteType();
 
     return false;
