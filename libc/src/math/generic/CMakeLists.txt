@@ -3609,6 +3609,7 @@ add_entrypoint_object(
   HDRS
     ../f16fmaf.h
   DEPENDS
+    libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
     -O3

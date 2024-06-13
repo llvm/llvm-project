@@ -10,7 +10,6 @@
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/CPP/type_traits/type_identity.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
