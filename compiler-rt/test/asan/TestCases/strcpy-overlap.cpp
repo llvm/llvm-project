@@ -36,7 +36,7 @@ __attribute__((noinline)) void bad_function() {
   char buffer[] = "hello";
   // CHECK: strcpy-param-overlap: memory ranges
   // CHECK: [{{0x.*,[ ]*0x.*}}) and [{{0x.*,[ ]*0x.*}}) overlap
-  // CHECK: {{#[0-9]+ 0x.* in .*strcpy .*.cpp}}
+  // CHECK: {{#[0-9]+ 0x.* in .*strcpy.* .*.cpp}}
   // CHECK: {{#[0-9]+ 0x.* in bad_function.*strcpy-overlap.cpp:}}[[@LINE+2]]
   // CHECK: {{#[0-9]+ 0x.* in main .*strcpy-overlap.cpp:}}[[@LINE+5]]
   strcpy(buffer, buffer + 1); // BOOM
