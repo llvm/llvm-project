@@ -29,6 +29,8 @@ struct OptionArgParser {
 
   static bool ToBoolean(llvm::StringRef s, bool fail_value, bool *success_ptr);
 
+  static bool ToBoolean(llvm::StringRef option_name, llvm::StringRef option_arg, bool fail_value, Status &error);
+
   static char ToChar(llvm::StringRef s, char fail_value, bool *success_ptr);
 
   static int64_t ToOptionEnum(llvm::StringRef s,

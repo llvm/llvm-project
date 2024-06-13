@@ -11,6 +11,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -77,18 +78,30 @@ class CommandObjectStatsDump : public CommandObjectParsed {
         break;
       case 's':
         m_stats_options.summary_only = true;
+        // In the "summary" mode, the following sections should be omitted by
+        // default unless their corresponding options are explicitly given.
+        // If such options were processed before 's', `m_seen_options` should
+        // contain them, and we will skip setting them to `false` here. If such
+        // options are not yet processed, we will set them to `false` here, and
+        // they will be overwritten when the options are processed.
+        if (m_seen_options.find((int)'r') == m_seen_options.end())
+          m_stats_options.include_targets = false;
+        if (m_seen_options.find((int)'m') == m_seen_options.end())
+          m_stats_options.include_modules = false;
+        if (m_seen_options.find((int)'t') == m_seen_options.end())
+          m_stats_options.include_transcript = false;
         break;
       case 'f':
         m_stats_options.load_all_debug_info = true;
         break;
       case 'r':
-        m_stats_options.include_targets = true;
+        m_stats_options.include_targets = OptionArgParser::ToBoolean("--targets", option_arg, true /* doesn't matter */, error);
         break;
       case 'm':
-        m_stats_options.include_modules = true;
+        m_stats_options.include_modules = OptionArgParser::ToBoolean("--modules", option_arg, true /* doesn't matter */, error);
         break;
       case 't':
-        m_stats_options.include_transcript = true;
+        m_stats_options.include_transcript = OptionArgParser::ToBoolean("--transcript", option_arg, true /* doesn't matter */, error);
         break;
       default:
         llvm_unreachable("Unimplemented option");

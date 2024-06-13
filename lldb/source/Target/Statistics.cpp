@@ -108,11 +108,7 @@ TargetStats::ToJSON(Target &target,
   json::Object target_metrics_json;
   ProcessSP process_sp = target.GetProcessSP();
   const bool summary_only = options.summary_only;
-  const bool include_targets = options.include_targets;
   const bool include_modules = options.include_modules;
-  const bool include_transcript = options.include_transcript;
-  const bool include_default_sections = !summary_only && !include_targets &&
-                                        !include_modules && !include_transcript;
   if (!summary_only) {
     CollectStats(target);
 
@@ -122,7 +118,7 @@ TargetStats::ToJSON(Target &target,
 
     target_metrics_json.try_emplace(m_expr_eval.name, m_expr_eval.ToJSON());
     target_metrics_json.try_emplace(m_frame_var.name, m_frame_var.ToJSON());
-    if (include_default_sections || include_modules)
+    if (include_modules)
       target_metrics_json.try_emplace("moduleIdentifiers",
                                       std::move(json_module_uuid_array));
 
@@ -235,8 +231,6 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   const bool include_targets = options.include_targets;
   const bool include_modules = options.include_modules;
   const bool include_transcript = options.include_transcript;
-  const bool include_default_sections = !summary_only && !include_targets &&
-                                        !include_modules && !include_transcript;
 
   json::Array json_targets;
   json::Array json_modules;
@@ -324,7 +318,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     if (module_stat.debug_info_had_incomplete_types)
       ++num_modules_with_incomplete_types;
 
-    if (include_default_sections || include_modules) {
+    if (include_modules) {
       module_stat.identifier = (intptr_t)module;
       module_stat.path = module->GetFileSpec().GetPath();
       if (ConstString object_name = module->GetObjectName()) {
@@ -357,7 +351,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalSymbolTableStripped", num_stripped_modules},
   };
 
-  if (include_default_sections || include_targets) {
+  if (include_targets) {
     if (target) {
       json_targets.emplace_back(target->ReportStatistics(options));
     } else {
@@ -377,11 +371,11 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     global_stats.try_emplace("commands", std::move(cmd_stats));
   }
 
-  if (include_default_sections || include_modules) {
+  if (include_modules) {
     global_stats.try_emplace("modules", std::move(json_modules));
   }
 
-  if (include_default_sections || include_transcript) {
+  if (include_transcript) {
     // When transcript is available, add it to the to-be-returned statistics.
     //
     // NOTE:

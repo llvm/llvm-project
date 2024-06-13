@@ -133,9 +133,9 @@ struct ConstStringStats {
 struct StatisticsOptions {
   bool summary_only = false;
   bool load_all_debug_info = false;
-  bool include_targets = false;
-  bool include_modules = false;
-  bool include_transcript = false;
+  bool include_targets = true;
+  bool include_modules = true;
+  bool include_transcript = true;
 };
 
 /// A class that represents statistics for a since lldb_private::Target.

@@ -1,6 +1,7 @@
 import lldb
 import json
 import os
+import re
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -635,7 +636,7 @@ class TestCase(TestBase):
         self.runCmd("version")
 
         # Verify the output of a first "statistics dump"
-        debug_stats = self.get_stats("--transcript")
+        debug_stats = self.get_stats("--transcript true")
         self.assertIn("transcript", debug_stats)
         transcript = debug_stats["transcript"]
         self.assertEqual(len(transcript), 2)
@@ -645,7 +646,7 @@ class TestCase(TestBase):
         self.assertNotIn("output", transcript[1])
 
         # Verify the output of a second "statistics dump"
-        debug_stats = self.get_stats("--transcript")
+        debug_stats = self.get_stats("--transcript true")
         self.assertIn("transcript", debug_stats)
         transcript = debug_stats["transcript"]
         self.assertEqual(len(transcript), 3)
@@ -665,92 +666,107 @@ class TestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.createTestTarget(file_path=exe)
-        self.runCmd("settings set interpreter.save-transcript true")
 
+        # Create some transcript so that it can be tested.
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
+        self.runCmd("b main")
+        # But disable transcript so that it won't change during verification
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # Expectation
+        should_always_exist_or_not = {
+            "totalDebugInfoEnabled": True,
+            "memory": True,
+        }
         test_cases = [
-            {  # statistics dump
+            {  # Everything mode
                 "options": "",
                 "expect": {
                     "commands": True,
                     "targets": True,
                     "targets.moduleIdentifiers": True,
                     "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
                     "modules": True,
                     "transcript": True,
                 },
             },
-            {  # statistics dump --summary
+            {  # Summary mode
                 "options": " --summary",
                 "expect": {
                     "commands": False,
                     "targets": False,
                     "targets.moduleIdentifiers": False,
                     "targets.breakpoints": False,
+                    "targets.expressionEvaluation": False,
                     "modules": False,
                     "transcript": False,
                 },
             },
-            {  # statistics dump --targets
-                "options": " --targets",
+            {  # Summary mode with targets
+                "options": " --summary --targets=true",
+                "expect": {
+                    "commands": False,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "targets.expressionEvaluation": False,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Summary mode with modules
+                "options": " --summary --modules=true",
+                "expect": {
+                    "commands": False,
+                    "targets": False,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "targets.expressionEvaluation": True,
+                    "modules": True,
+                    "transcript": False,
+                },
+            },
+            {  # Everything mode but without modules and transcript
+                "options": " --modules=false --transcript=false",
                 "expect": {
                     "commands": True,
                     "targets": True,
                     "targets.moduleIdentifiers": False,
                     "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
                     "modules": False,
                     "transcript": False,
                 },
             },
-            {  # statistics dump --modules
-                "options": " --modules",
-                "expect": {
-                    "commands": True,
-                    "targets": False,
-                    "targets.moduleIdentifiers": False,
-                    "targets.breakpoints": False,
-                    "modules": True,
-                    "transcript": False,
-                },
-            },
-            {  # statistics dump --targets --modules
-                "options": " --targets --modules",
+            {  # Everything mode but without modules
+                "options": " --modules=false",
                 "expect": {
                     "commands": True,
                     "targets": True,
-                    "targets.moduleIdentifiers": True,
-                    "targets.breakpoints": True,
-                    "modules": True,
-                    "transcript": False,
-                },
-            },
-            {  # statistics dump --transcript
-                "options": " --transcript",
-                "expect": {
-                    "commands": True,
-                    "targets": False,
                     "targets.moduleIdentifiers": False,
-                    "targets.breakpoints": False,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
                     "modules": False,
                     "transcript": True,
                 },
             },
         ]
 
+        # Verification
         for test_case in test_cases:
             options = test_case["options"]
             debug_stats = self.get_stats(options)
-            # The following fields should always exist
-            self.assertIn(
-                "totalDebugInfoEnabled", debug_stats, "Global stats should always exist"
-            )
-            self.assertIn("memory", debug_stats, "'memory' should always exist")
-            # The following fields should exist/not exist depending on the test case
-            for field_name in test_case["expect"]:
+            # Verify that each field should exist (or not)
+            expectation = {**should_always_exist_or_not, **test_case["expect"]}
+            for field_name in expectation:
                 idx = field_name.find(".")
                 if idx == -1:
                     # `field` is a top-level field
                     exists = field_name in debug_stats
-                    should_exist = test_case["expect"][field_name]
+                    should_exist = expectation[field_name]
                     should_exist_string = "" if should_exist else "not "
                     self.assertEqual(
                         exists,
@@ -767,10 +783,49 @@ class TestCase(TestBase):
                         else []
                     ):
                         exists = second_level_field_name in top_level_field
-                        should_exist = test_case["expect"][field_name]
+                        should_exist = expectation[field_name]
                         should_exist_string = "" if should_exist else "not "
                         self.assertEqual(
                             exists,
                             should_exist,
                             f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
                         )
+
+    def test_order_of_options_do_not_matter(self):
+        """
+        Test "statistics dump" and the order of options.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+
+        # Create some transcript so that it can be tested.
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
+        self.runCmd("b main")
+        # But disable transcript so that it won't change during verification
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # The order of the following options shouldn't matter
+        test_cases = [
+            (" --summary", " --targets=true"),
+            (" --summary", " --targets=false"),
+            (" --summary", " --modules=true"),
+            (" --summary", " --modules=false"),
+            (" --summary", " --transcript=true"),
+            (" --summary", " --transcript=false"),
+        ]
+
+        # Verification
+        for options in test_cases:
+            debug_stats_0 = self.get_stats(options[0] + options[1])
+            debug_stats_1 = self.get_stats(options[1] + options[0])
+            # Redact all numbers
+            debug_stats_0 = re.sub(r"\d+", "0", json.dumps(debug_stats_0))
+            debug_stats_1 = re.sub(r"\d+", "0", json.dumps(debug_stats_1))
+            # Verify that the two output are the same
+            self.assertEqual(
+                debug_stats_0,
+                debug_stats_1,
+                f"The order of options '{options[0]}' and '{options[1]}' should not matter",
+            )
