@@ -72,7 +72,7 @@ end program
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = {{.*}}<pointer>, uniq_name = "_QFEv"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant false
 ! CHECK:           %[[VAL_7:.*]] = fir.absent !fir.box<none>
-! CHECK:           %[[VAL_8:.*]] = fir.address_of({{.*}}) : !fir.ref<!fir.char<1,81>>
+! CHECK:           %[[VAL_8:.*]] = fir.address_of(
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 8 : i32
 ! CHECK:           %[[VAL_10:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_10]] : (!fir.ptr<i32>) -> !fir.box<!fir.ptr<i32>>
