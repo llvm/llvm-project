@@ -23,7 +23,7 @@ class TestSwiftDWARFImporterObjC(lldbtest.TestBase):
 
     def build(self):
         include = self.getBuildArtifact('include')
-        inputs = self.getSourcePath('Inputs')
+        inputs = self.getSourcePath(os.path.join('Inputs', 'module'))
         lldbutil.mkdir_p(include)
         import shutil
         for f in ['module.modulemap', 'objc-header.h']:
