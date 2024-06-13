@@ -5131,6 +5131,10 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
   if (VD->hasAttr<NoDebugAttr>())
     return nullptr;
 
+  // Debug intrinsics expect to take an alloca directly, not an addrspace cast
+  // thereof.
+  Storage = Storage->stripPointerCasts();
+
   bool Unwritten =
       VD->isImplicit() || (isa<Decl>(VD->getDeclContext()) &&
                            cast<Decl>(VD->getDeclContext())->isImplicit());

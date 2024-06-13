@@ -139,6 +139,26 @@ __device__ void func1(int Arg) {
   auto *FuncVarAPointer = &FuncVarA;
   auto *FuncVarBPointer = &FuncVarB;
 }
+
+struct pair { int first, second; };
+// DIEXPR-IR-LABEL: @_Z5func14pair(
+// DIEXPR-IR-NEXT:  entry:
+// DIEXPR-IR-NEXT:    [[P:%.*]] = alloca [[STRUCT_PAIR:%.*]], align 4, addrspace(5)
+// DIEXPR-IR-NEXT:    [[P1:%.*]] = addrspacecast ptr addrspace(5) [[P]] to ptr
+// DIEXPR-IR-NEXT:    store [2 x i32] [[P_COERCE:%.*]], ptr [[P1]], align 4
+// DIEXPR-IR-NEXT:    call void @llvm.dbg.def(metadata [[META87:![0-9]+]], metadata ptr addrspace(5) [[P]]), !dbg [[DBG88:![0-9]+]]
+// DIEXPR-IR-NEXT:    ret void, !dbg [[DBG89:![0-9]+]]
+//
+// DIEXPRESSION-IR-LABEL: @_Z5func14pair(
+// DIEXPRESSION-IR-NEXT:  entry:
+// DIEXPRESSION-IR-NEXT:    [[P:%.*]] = alloca [[STRUCT_PAIR:%.*]], align 4, addrspace(5)
+// DIEXPRESSION-IR-NEXT:    [[P1:%.*]] = addrspacecast ptr addrspace(5) [[P]] to ptr
+// DIEXPRESSION-IR-NEXT:    store [2 x i32] [[P_COERCE:%.*]], ptr [[P1]], align 4
+// DIEXPRESSION-IR-NEXT:      #dbg_declare(ptr addrspace(5) [[P]], [[META67:![0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref([[STRUCT_PAIR]])), [[META68:![0-9]+]])
+// DIEXPRESSION-IR-NEXT:    ret void, !dbg [[DBG69:![0-9]+]]
+//
+__device__ void func1(pair p) {}
+
 //.
 // DIEXPR-IR: [[META8:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META9:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 // DIEXPR-IR: [[META9]] = !DIFile(filename: "{{.*}}", directory: {{.*}})
@@ -189,6 +209,18 @@ __device__ void func1(int Arg) {
 // DIEXPR-IR: [[META75]] = distinct !DILifetime(object: [[META66]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(ptr)))
 // DIEXPR-IR: [[DBG76]] = !DILocation(line: 140, column: 9, scope: [[META60]])
 // DIEXPR-IR: [[DBG77]] = !DILocation(line: 141, column: 1, scope: [[META60]])
+// DIEXPR-IR: [[META78:![0-9]+]] = distinct !DISubprogram(name: "func1", linkageName: "_Z5func14pair", scope: [[META12]], file: [[META12]], line: 160, type: [[META79:![0-9]+]], scopeLine: 160, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META8]], retainedNodes: [[META85:![0-9]+]])
+// DIEXPR-IR: [[META79]] = !DISubroutineType(types: [[META80:![0-9]+]])
+// DIEXPR-IR: [[META80]] = !{null, [[META81:![0-9]+]]}
+// DIEXPR-IR: [[META81]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "pair", file: [[META12]], line: 143, size: 64, flags: DIFlagTypePassByValue, elements: [[META82:![0-9]+]], identifier: "_ZTS4pair")
+// DIEXPR-IR: [[META82]] = !{[[META83:![0-9]+]], [[META84:![0-9]+]]}
+// DIEXPR-IR: [[META83]] = !DIDerivedType(tag: DW_TAG_member, name: "first", scope: [[META81]], file: [[META12]], line: 143, baseType: [[META13]], size: 32)
+// DIEXPR-IR: [[META84]] = !DIDerivedType(tag: DW_TAG_member, name: "second", scope: [[META81]], file: [[META12]], line: 143, baseType: [[META13]], size: 32, offset: 32)
+// DIEXPR-IR: [[META85]] = !{[[META86:![0-9]+]]}
+// DIEXPR-IR: [[META86]] = !DILocalVariable(name: "p", arg: 1, scope: [[META78]], file: [[META12]], line: 160, type: [[META81]])
+// DIEXPR-IR: [[META87]] = distinct !DILifetime(object: [[META86]], location: !DIExpr(DIOpReferrer(ptr addrspace(5)), DIOpDeref(%struct.pair)))
+// DIEXPR-IR: [[DBG88]] = !DILocation(line: 160, column: 28, scope: [[META78]])
+// DIEXPR-IR: [[DBG89]] = !DILocation(line: 160, column: 32, scope: [[META78]])
 //.
 // DIEXPRESSION-IR: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)))
 // DIEXPRESSION-IR: [[META1]] = distinct !DIGlobalVariable(name: "GlobalSharedA", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 12, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_group)
@@ -244,4 +276,15 @@ __device__ void func1(int Arg) {
 // DIEXPRESSION-IR: [[META56]] = !DILocation(line: 139, column: 9, scope: [[META46]])
 // DIEXPRESSION-IR: [[META57]] = !DILocation(line: 140, column: 9, scope: [[META46]])
 // DIEXPRESSION-IR: [[DBG58]] = !DILocation(line: 141, column: 1, scope: [[META46]])
+// DIEXPRESSION-IR: [[META59:![0-9]+]] = distinct !DISubprogram(name: "func1", linkageName: "_Z5func14pair", scope: [[META7]], file: [[META7]], line: 160, type: [[META60:![0-9]+]], scopeLine: 160, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META2]], retainedNodes: [[META66:![0-9]+]])
+// DIEXPRESSION-IR: [[META60]] = !DISubroutineType(types: [[META61:![0-9]+]])
+// DIEXPRESSION-IR: [[META61]] = !{null, [[META62:![0-9]+]]}
+// DIEXPRESSION-IR: [[META62]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "pair", file: [[META7]], line: 143, size: 64, flags: DIFlagTypePassByValue, elements: [[META63:![0-9]+]], identifier: "_ZTS4pair")
+// DIEXPRESSION-IR: [[META63]] = !{[[META64:![0-9]+]], [[META65:![0-9]+]]}
+// DIEXPRESSION-IR: [[META64]] = !DIDerivedType(tag: DW_TAG_member, name: "first", scope: [[META62]], file: [[META7]], line: 143, baseType: [[META8]], size: 32)
+// DIEXPRESSION-IR: [[META65]] = !DIDerivedType(tag: DW_TAG_member, name: "second", scope: [[META62]], file: [[META7]], line: 143, baseType: [[META8]], size: 32, offset: 32)
+// DIEXPRESSION-IR: [[META66]] = !{[[META67]]}
+// DIEXPRESSION-IR: [[META67]] = !DILocalVariable(name: "p", arg: 1, scope: [[META59]], file: [[META7]], line: 160, type: [[META62]])
+// DIEXPRESSION-IR: [[META68]] = !DILocation(line: 160, column: 28, scope: [[META59]])
+// DIEXPRESSION-IR: [[DBG69]] = !DILocation(line: 160, column: 32, scope: [[META59]])
 //.
