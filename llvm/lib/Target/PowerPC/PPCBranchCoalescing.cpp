@@ -166,7 +166,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachinePostDominatorTree>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -196,7 +196,7 @@ FunctionPass *llvm::createPPCBranchCoalescingPass() {
 INITIALIZE_PASS_BEGIN(PPCBranchCoalescing, DEBUG_TYPE,
                       "Branch Coalescing", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCBranchCoalescing, DEBUG_TYPE, "Branch Coalescing",
                     false, false)
 
@@ -215,7 +215,7 @@ void PPCBranchCoalescing::CoalescingCandidateInfo::clear() {
 
 void PPCBranchCoalescing::initialize(MachineFunction &MF) {
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MPDT = &getAnalysis<MachinePostDominatorTree>();
+  MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
 }

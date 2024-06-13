@@ -224,8 +224,10 @@ static bool canReuseDataFragment(const MCDataFragment &F,
 MCDataFragment *
 MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
   MCDataFragment *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
-  if (!F || !canReuseDataFragment(*F, *Assembler, STI))
-    F = allocAndAdd<MCDataFragment>();
+  if (!F || !canReuseDataFragment(*F, *Assembler, STI)) {
+    F = getContext().allocFragment<MCDataFragment>();
+    insert(F);
+  }
   return F;
 }
 
@@ -341,7 +343,7 @@ void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
     emitULEB128IntValue(IntValue);
     return;
   }
-  allocAndAdd<MCLEBFragment>(*Value, false);
+  insert(getContext().allocFragment<MCLEBFragment>(*Value, false));
 }
 
 void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
@@ -350,7 +352,7 @@ void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
     emitSLEB128IntValue(IntValue);
     return;
   }
-  allocAndAdd<MCLEBFragment>(*Value, true);
+  insert(getContext().allocFragment<MCLEBFragment>(*Value, true));
 }
 
 void MCObjectStreamer::emitWeakReference(MCSymbol *Alias,
@@ -468,7 +470,10 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
 
   // Always create a new, separate fragment here, because its size can change
   // during relaxation.
-  auto *IF = allocAndAdd<MCRelaxableFragment>(Inst, STI);
+  MCRelaxableFragment *IF =
+      getContext().allocFragment<MCRelaxableFragment>(Inst, STI);
+  insert(IF);
+
   SmallString<128> Code;
   getAssembler().getEmitter().encodeInstruction(Inst, Code, IF->getFixups(),
                                                 STI);
@@ -540,7 +545,8 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
     return;
   }
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, SMLoc());
-  allocAndAdd<MCDwarfLineAddrFragment>(LineDelta, *AddrDelta);
+  insert(getContext().allocFragment<MCDwarfLineAddrFragment>(LineDelta,
+                                                             *AddrDelta));
 }
 
 void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
@@ -565,7 +571,8 @@ void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                                  const MCSymbol *Label,
                                                  SMLoc Loc) {
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, Loc);
-  allocAndAdd<MCDwarfCallFrameFragment>(*AddrDelta, nullptr);
+  insert(getContext().allocFragment<MCDwarfCallFrameFragment>(*AddrDelta,
+                                                              nullptr));
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
@@ -636,7 +643,8 @@ void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Value,
                                             unsigned MaxBytesToEmit) {
   if (MaxBytesToEmit == 0)
     MaxBytesToEmit = Alignment.value();
-  allocAndAdd<MCAlignFragment>(Alignment, Value, ValueSize, MaxBytesToEmit);
+  insert(getContext().allocFragment<MCAlignFragment>(
+      Alignment, Value, ValueSize, MaxBytesToEmit));
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *CurSec = getCurrentSectionOnly();
@@ -653,7 +661,7 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
-  allocAndAdd<MCOrgFragment>(*Offset, Value, Loc);
+  insert(getContext().allocFragment<MCOrgFragment>(*Offset, Value, Loc));
 }
 
 // Associate DTPRel32 fixup with data and resize data area
@@ -840,7 +848,8 @@ void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
   flushPendingLabels(DF, DF->getContents().size());
 
   assert(getCurrentSectionOnly() && "need a section");
-  allocAndAdd<MCFillFragment>(FillValue, 1, NumBytes, Loc);
+  insert(
+      getContext().allocFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc));
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
@@ -870,7 +879,8 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   flushPendingLabels(DF, DF->getContents().size());
 
   assert(getCurrentSectionOnly() && "need a section");
-  allocAndAdd<MCFillFragment>(Expr, Size, NumValues, Loc);
+  insert(
+      getContext().allocFragment<MCFillFragment>(Expr, Size, NumValues, Loc));
 }
 
 void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
@@ -881,7 +891,8 @@ void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
 
   assert(getCurrentSectionOnly() && "need a section");
 
-  allocAndAdd<MCNopsFragment>(NumBytes, ControlledNopLength, Loc, STI);
+  insert(getContext().allocFragment<MCNopsFragment>(
+      NumBytes, ControlledNopLength, Loc, STI));
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {

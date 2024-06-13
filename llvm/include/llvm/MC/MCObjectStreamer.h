@@ -90,12 +90,6 @@ public:
 
   MCFragment *getCurrentFragment() const;
 
-  template <typename F, typename... Args> F *allocAndAdd(Args &&...args) {
-    F *Frag = new F(std::forward<Args>(args)...);
-    insert(Frag);
-    return Frag;
-  }
-
   void insert(MCFragment *F) {
     flushPendingLabels(F);
     MCSection *CurSection = getCurrentSectionOnly();
