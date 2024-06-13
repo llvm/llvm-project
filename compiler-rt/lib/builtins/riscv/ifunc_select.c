@@ -116,221 +116,137 @@ struct {
 // NOTE: Should sync-up with RISCVFeatures.td
 // TODO: Maybe generate a header from tablegen then include it.
 #define A_GROUPID 0
-#define A_BITMASK (1ULL << 22)
+#define A_BITMASK (1ULL << 0)
 #define C_GROUPID 0
-#define C_BITMASK (1ULL << 43)
+#define C_BITMASK (1ULL << 2)
 #define D_GROUPID 0
-#define D_BITMASK (1ULL << 34)
+#define D_BITMASK (1ULL << 3)
 #define E_GROUPID 0
-#define E_BITMASK (1ULL << 1)
+#define E_BITMASK (1ULL << 4)
 #define F_GROUPID 0
-#define F_BITMASK (1ULL << 33)
-#define H_GROUPID 1
-#define H_BITMASK (1ULL << 43)
+#define F_BITMASK (1ULL << 5)
 #define I_GROUPID 0
-#define I_BITMASK (1ULL << 0)
+#define I_BITMASK (1ULL << 8)
 #define M_GROUPID 0
-#define M_BITMASK (1ULL << 20)
-#define V_GROUPID 1
-#define V_BITMASK (1ULL << 22)
-#define ZA128RS_GROUPID 0
-#define ZA128RS_BITMASK (1ULL << 25)
-#define ZA64RS_GROUPID 0
-#define ZA64RS_BITMASK (1ULL << 24)
-#define ZAAMO_GROUPID 0
-#define ZAAMO_BITMASK (1ULL << 26)
-#define ZABHA_GROUPID 0
-#define ZABHA_BITMASK (1ULL << 27)
-#define ZACAS_GROUPID 0
-#define ZACAS_BITMASK (1ULL << 28)
-#define ZALASR_GROUPID 0
-#define ZALASR_BITMASK (1ULL << 29)
-#define ZALRSC_GROUPID 0
-#define ZALRSC_BITMASK (1ULL << 30)
-#define ZAMA16B_GROUPID 0
-#define ZAMA16B_BITMASK (1ULL << 31)
-#define ZAWRS_GROUPID 0
-#define ZAWRS_BITMASK (1ULL << 32)
-#define ZBA_GROUPID 0
-#define ZBA_BITMASK (1ULL << 52)
-#define ZBB_GROUPID 0
-#define ZBB_BITMASK (1ULL << 53)
-#define ZBC_GROUPID 0
-#define ZBC_BITMASK (1ULL << 54)
-#define ZBKB_GROUPID 0
-#define ZBKB_BITMASK (1ULL << 56)
-#define ZBKC_GROUPID 0
-#define ZBKC_BITMASK (1ULL << 58)
-#define ZBKX_GROUPID 0
-#define ZBKX_BITMASK (1ULL << 57)
-#define ZBS_GROUPID 0
-#define ZBS_BITMASK (1ULL << 55)
-#define ZCA_GROUPID 0
-#define ZCA_BITMASK (1ULL << 44)
-#define ZCB_GROUPID 0
-#define ZCB_BITMASK (1ULL << 45)
-#define ZCD_GROUPID 0
-#define ZCD_BITMASK (1ULL << 46)
-#define ZCE_GROUPID 0
-#define ZCE_BITMASK (1ULL << 50)
-#define ZCF_GROUPID 0
-#define ZCF_BITMASK (1ULL << 47)
-#define ZCMOP_GROUPID 0
-#define ZCMOP_BITMASK (1ULL << 51)
-#define ZCMP_GROUPID 0
-#define ZCMP_BITMASK (1ULL << 48)
-#define ZCMT_GROUPID 0
-#define ZCMT_BITMASK (1ULL << 49)
-#define ZDINX_GROUPID 0
-#define ZDINX_BITMASK (1ULL << 40)
-#define ZFA_GROUPID 0
-#define ZFA_BITMASK (1ULL << 38)
-#define ZFBFMIN_GROUPID 0
-#define ZFBFMIN_BITMASK (1ULL << 37)
-#define ZFH_GROUPID 0
-#define ZFH_BITMASK (1ULL << 36)
-#define ZFHMIN_GROUPID 0
-#define ZFHMIN_BITMASK (1ULL << 35)
-#define ZFINX_GROUPID 0
-#define ZFINX_BITMASK (1ULL << 39)
-#define ZHINX_GROUPID 0
-#define ZHINX_BITMASK (1ULL << 42)
-#define ZHINXMIN_GROUPID 0
-#define ZHINXMIN_BITMASK (1ULL << 41)
-#define ZIC64B_GROUPID 0
-#define ZIC64B_BITMASK (1ULL << 2)
-#define ZICBOM_GROUPID 0
-#define ZICBOM_BITMASK (1ULL << 3)
-#define ZICBOP_GROUPID 0
-#define ZICBOP_BITMASK (1ULL << 4)
-#define ZICBOZ_GROUPID 0
-#define ZICBOZ_BITMASK (1ULL << 5)
-#define ZICCAMOA_GROUPID 0
-#define ZICCAMOA_BITMASK (1ULL << 6)
-#define ZICCIF_GROUPID 0
-#define ZICCIF_BITMASK (1ULL << 7)
-#define ZICCLSM_GROUPID 0
-#define ZICCLSM_BITMASK (1ULL << 8)
-#define ZICCRSE_GROUPID 0
-#define ZICCRSE_BITMASK (1ULL << 9)
-#define ZICFILP_GROUPID 0
-#define ZICFILP_BITMASK (1ULL << 18)
-#define ZICFISS_GROUPID 0
-#define ZICFISS_BITMASK (1ULL << 19)
-#define ZICNTR_GROUPID 0
-#define ZICNTR_BITMASK (1ULL << 11)
-#define ZICOND_GROUPID 0
-#define ZICOND_BITMASK (1ULL << 12)
-#define ZICSR_GROUPID 0
-#define ZICSR_BITMASK (1ULL << 10)
-#define ZIFENCEI_GROUPID 0
-#define ZIFENCEI_BITMASK (1ULL << 13)
-#define ZIHINTNTL_GROUPID 0
-#define ZIHINTNTL_BITMASK (1ULL << 15)
-#define ZIHINTPAUSE_GROUPID 0
-#define ZIHINTPAUSE_BITMASK (1ULL << 14)
-#define ZIHPM_GROUPID 0
-#define ZIHPM_BITMASK (1ULL << 16)
-#define ZIMOP_GROUPID 0
-#define ZIMOP_BITMASK (1ULL << 17)
-#define ZK_GROUPID 1
-#define ZK_BITMASK (1ULL << 4)
-#define ZKN_GROUPID 1
-#define ZKN_BITMASK (1ULL << 1)
-#define ZKND_GROUPID 0
-#define ZKND_BITMASK (1ULL << 59)
-#define ZKNE_GROUPID 0
-#define ZKNE_BITMASK (1ULL << 60)
-#define ZKNH_GROUPID 0
-#define ZKNH_BITMASK (1ULL << 61)
+#define M_BITMASK (1ULL << 12)
+#define V_GROUPID 0
+#define V_BITMASK (1ULL << 21)
+#define ZACAS_GROUPID 1
+#define ZACAS_BITMASK (1ULL << 6)
+#define ZBA_GROUPID 1
+#define ZBA_BITMASK (1ULL << 55)
+#define ZBB_GROUPID 1
+#define ZBB_BITMASK (1ULL << 12)
+#define ZBC_GROUPID 1
+#define ZBC_BITMASK (1ULL << 13)
+#define ZBKB_GROUPID 1
+#define ZBKB_BITMASK (1ULL << 15)
+#define ZBKC_GROUPID 1
+#define ZBKC_BITMASK (1ULL << 17)
+#define ZBKX_GROUPID 1
+#define ZBKX_BITMASK (1ULL << 16)
+#define ZBS_GROUPID 1
+#define ZBS_BITMASK (1ULL << 14)
+#define ZCA_GROUPID 1
+#define ZCA_BITMASK (1ULL << 11)
+#define ZFA_GROUPID 1
+#define ZFA_BITMASK (1ULL << 9)
+#define ZFH_GROUPID 1
+#define ZFH_BITMASK (1ULL << 8)
+#define ZFHMIN_GROUPID 1
+#define ZFHMIN_BITMASK (1ULL << 7)
+#define ZHINX_GROUPID 1
+#define ZHINX_BITMASK (1ULL << 10)
+#define ZICBOZ_GROUPID 1
+#define ZICBOZ_BITMASK (1ULL << 0)
+#define ZICOND_GROUPID 1
+#define ZICOND_BITMASK (1ULL << 2)
+#define ZICSR_GROUPID 1
+#define ZICSR_BITMASK (1ULL << 1)
+#define ZIHINTNTL_GROUPID 1
+#define ZIHINTNTL_BITMASK (1ULL << 3)
+#define ZKND_GROUPID 1
+#define ZKND_BITMASK (1ULL << 18)
+#define ZKNE_GROUPID 1
+#define ZKNE_BITMASK (1ULL << 19)
+#define ZKNH_GROUPID 1
+#define ZKNH_BITMASK (1ULL << 20)
 #define ZKR_GROUPID 1
-#define ZKR_BITMASK (1ULL << 0)
-#define ZKS_GROUPID 1
-#define ZKS_BITMASK (1ULL << 2)
-#define ZKSED_GROUPID 0
-#define ZKSED_BITMASK (1ULL << 62)
-#define ZKSH_GROUPID 0
-#define ZKSH_BITMASK (1ULL << 63)
+#define ZKR_BITMASK (1ULL << 23)
+#define ZKSED_GROUPID 1
+#define ZKSED_BITMASK (1ULL << 21)
+#define ZKSH_GROUPID 1
+#define ZKSH_BITMASK (1ULL << 22)
 #define ZKT_GROUPID 1
-#define ZKT_BITMASK (1ULL << 3)
-#define ZMMUL_GROUPID 0
-#define ZMMUL_BITMASK (1ULL << 21)
-#define ZTSO_GROUPID 0
-#define ZTSO_BITMASK (1ULL << 23)
+#define ZKT_BITMASK (1ULL << 24)
+#define ZTSO_GROUPID 1
+#define ZTSO_BITMASK (1ULL << 5)
 #define ZVBB_GROUPID 1
-#define ZVBB_BITMASK (1ULL << 28)
+#define ZVBB_BITMASK (1ULL << 46)
 #define ZVBC_GROUPID 1
-#define ZVBC_BITMASK (1ULL << 29)
+#define ZVBC_BITMASK (1ULL << 47)
 #define ZVE32F_GROUPID 1
-#define ZVE32F_BITMASK (1ULL << 18)
+#define ZVE32F_BITMASK (1ULL << 38)
 #define ZVE32X_GROUPID 1
-#define ZVE32X_BITMASK (1ULL << 17)
+#define ZVE32X_BITMASK (1ULL << 37)
 #define ZVE64D_GROUPID 1
-#define ZVE64D_BITMASK (1ULL << 21)
+#define ZVE64D_BITMASK (1ULL << 41)
 #define ZVE64F_GROUPID 1
-#define ZVE64F_BITMASK (1ULL << 20)
+#define ZVE64F_BITMASK (1ULL << 40)
 #define ZVE64X_GROUPID 1
-#define ZVE64X_BITMASK (1ULL << 19)
-#define ZVFBFMIN_GROUPID 1
-#define ZVFBFMIN_BITMASK (1ULL << 23)
-#define ZVFBFWMA_GROUPID 1
-#define ZVFBFWMA_BITMASK (1ULL << 24)
+#define ZVE64X_BITMASK (1ULL << 39)
 #define ZVFH_GROUPID 1
-#define ZVFH_BITMASK (1ULL << 26)
+#define ZVFH_BITMASK (1ULL << 44)
 #define ZVFHMIN_GROUPID 1
-#define ZVFHMIN_BITMASK (1ULL << 25)
+#define ZVFHMIN_BITMASK (1ULL << 43)
 #define ZVKB_GROUPID 1
-#define ZVKB_BITMASK (1ULL << 27)
+#define ZVKB_BITMASK (1ULL << 45)
 #define ZVKG_GROUPID 1
-#define ZVKG_BITMASK (1ULL << 30)
+#define ZVKG_BITMASK (1ULL << 48)
 #define ZVKN_GROUPID 1
-#define ZVKN_BITMASK (1ULL << 37)
-#define ZVKNC_GROUPID 1
-#define ZVKNC_BITMASK (1ULL << 38)
+#define ZVKN_BITMASK (1ULL << 56)
 #define ZVKNED_GROUPID 1
-#define ZVKNED_BITMASK (1ULL << 31)
+#define ZVKNED_BITMASK (1ULL << 49)
 #define ZVKNG_GROUPID 1
-#define ZVKNG_BITMASK (1ULL << 39)
+#define ZVKNG_BITMASK (1ULL << 57)
 #define ZVKNHA_GROUPID 1
-#define ZVKNHA_BITMASK (1ULL << 32)
+#define ZVKNHA_BITMASK (1ULL << 50)
 #define ZVKNHB_GROUPID 1
-#define ZVKNHB_BITMASK (1ULL << 33)
+#define ZVKNHB_BITMASK (1ULL << 51)
 #define ZVKS_GROUPID 1
-#define ZVKS_BITMASK (1ULL << 40)
-#define ZVKSC_GROUPID 1
-#define ZVKSC_BITMASK (1ULL << 41)
+#define ZVKS_BITMASK (1ULL << 58)
 #define ZVKSED_GROUPID 1
-#define ZVKSED_BITMASK (1ULL << 34)
+#define ZVKSED_BITMASK (1ULL << 52)
 #define ZVKSG_GROUPID 1
-#define ZVKSG_BITMASK (1ULL << 42)
+#define ZVKSG_BITMASK (1ULL << 59)
 #define ZVKSH_GROUPID 1
-#define ZVKSH_BITMASK (1ULL << 35)
+#define ZVKSH_BITMASK (1ULL << 53)
 #define ZVKT_GROUPID 1
-#define ZVKT_BITMASK (1ULL << 36)
+#define ZVKT_BITMASK (1ULL << 54)
 #define ZVL1024B_GROUPID 1
-#define ZVL1024B_BITMASK (1ULL << 10)
+#define ZVL1024B_BITMASK (1ULL << 30)
 #define ZVL128B_GROUPID 1
-#define ZVL128B_BITMASK (1ULL << 7)
+#define ZVL128B_BITMASK (1ULL << 27)
 #define ZVL16384B_GROUPID 1
-#define ZVL16384B_BITMASK (1ULL << 14)
+#define ZVL16384B_BITMASK (1ULL << 34)
 #define ZVL2048B_GROUPID 1
-#define ZVL2048B_BITMASK (1ULL << 11)
+#define ZVL2048B_BITMASK (1ULL << 31)
 #define ZVL256B_GROUPID 1
-#define ZVL256B_BITMASK (1ULL << 8)
+#define ZVL256B_BITMASK (1ULL << 28)
 #define ZVL32768B_GROUPID 1
-#define ZVL32768B_BITMASK (1ULL << 15)
+#define ZVL32768B_BITMASK (1ULL << 35)
 #define ZVL32B_GROUPID 1
-#define ZVL32B_BITMASK (1ULL << 5)
+#define ZVL32B_BITMASK (1ULL << 25)
 #define ZVL4096B_GROUPID 1
-#define ZVL4096B_BITMASK (1ULL << 12)
+#define ZVL4096B_BITMASK (1ULL << 32)
 #define ZVL512B_GROUPID 1
-#define ZVL512B_BITMASK (1ULL << 9)
+#define ZVL512B_BITMASK (1ULL << 29)
 #define ZVL64B_GROUPID 1
-#define ZVL64B_BITMASK (1ULL << 6)
+#define ZVL64B_BITMASK (1ULL << 26)
 #define ZVL65536B_GROUPID 1
-#define ZVL65536B_BITMASK (1ULL << 16)
+#define ZVL65536B_BITMASK (1ULL << 36)
 #define ZVL8192B_GROUPID 1
-#define ZVL8192B_BITMASK (1ULL << 13)
+#define ZVL8192B_BITMASK (1ULL << 33)
 
 #define HWPROBE_LENGTH 3
 
