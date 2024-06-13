@@ -596,7 +596,7 @@ bool canApplyInference(const FlowFunction &Func) {
 
   // Returns false if the artificial sink block has no predecessors meaning
   // there are no exit blocks.
-  if (Func.Blocks[Func.Blocks.size()-1].isEntry())
+  if (Func.Blocks[Func.Blocks.size() - 1].isEntry())
     return false;
 
   return true;
