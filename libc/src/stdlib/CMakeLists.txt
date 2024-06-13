@@ -398,8 +398,9 @@ else()
       freelist.h
     DEPENDS
       libc.src.__support.fixedvector
-      libc.src.__support.CPP.cstddef
       libc.src.__support.CPP.array
+      libc.src.__support.CPP.cstddef
+      libc.src.__support.CPP.new
       libc.src.__support.CPP.span
   )
   add_header_library(
