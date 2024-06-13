@@ -797,7 +797,7 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
 
   auto *Vec_i1Ty = VectorType::get(IntegerType::getInt1Ty(Ctx.LLVMCtx), VF);
   auto FixedVF = VF.getFixedValue(); // Known to be non scalable.
-  InstructionCost Cost = ThenCost;   //
+  InstructionCost Cost = ThenCost;
   Cost += Ctx.TTI.getScalarizationOverhead(Vec_i1Ty, APInt::getAllOnes(FixedVF),
                                            /*Insert*/ false, /*Extract*/ true,
                                            CostKind);
@@ -979,6 +979,8 @@ void VPlan::execute(VPTransformState *State) {
 }
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
+  // For now only return the cost of the vector loop region, ignoring any other
+  // blocks, like the preheader or middle blocks.
   return getVectorLoopRegion()->cost(VF, Ctx);
 }
 

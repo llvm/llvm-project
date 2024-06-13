@@ -7348,7 +7348,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
       continue;
     if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
       assert(!CostCtx.SkipCostComputation.contains(CondI) &&
-             "Condition alrady skipped?");
+             "Condition already skipped?");
       CostCtx.SkipCostComputation.insert(CondI);
       Cost += CostCtx.getLegacyCost(CondI, VF);
     }
