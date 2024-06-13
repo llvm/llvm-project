@@ -34,8 +34,10 @@ static auto getClassTemplateRedecls() {
       Res.push_back(CTD);
   }
   assert(Res.size() == 3);
+#ifndef NDEBUG
   for (auto &&I : Res)
     assert(I->getCanonicalDecl() == Res[0]);
+#endif
   return std::make_tuple(std::move(AST), Res[1], Res[2]);
 }
 
