@@ -2197,3 +2197,21 @@ define <8 x i16> @PR52131_not_zext_with_constant(<8 x i32> %a) {
   %i3 = trunc <8 x i32> %i2 to <8 x i16>
   ret <8 x i16> %i3
 }
+
+define i64 @PR95284(i32 %a0) {
+; CHECK-LABEL: PR95284:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    decq %rcx
+; CHECK-NEXT:    shrq %rcx
+; CHECK-NEXT:    incq %rcx
+; CHECK-NEXT:    movabsq $9223372036854775806, %rax # imm = 0x7FFFFFFFFFFFFFFE
+; CHECK-NEXT:    andq %rcx, %rax
+; CHECK-NEXT:    retq
+  %ext = zext nneg i32 %a0 to i64
+  %dec = add i64 %ext, -1
+  %srl = lshr i64 %dec, 1
+  %inc = add nuw nsw i64 %srl, 1
+  %res = and i64 %inc, 9223372036854775806
+  ret i64 %res
+}
