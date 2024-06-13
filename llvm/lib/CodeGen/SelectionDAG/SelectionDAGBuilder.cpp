@@ -6606,7 +6606,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::dbg_assign: {
-    // Debug intrinsics are handled seperately in assignment tracking mode.
+    // Debug intrinsics are handled separately in assignment tracking mode.
     if (AssignmentTrackingEnabled)
       return;
     // If assignment tracking hasn't been enabled then fall through and treat
@@ -6614,7 +6614,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     [[fallthrough]];
   }
   case Intrinsic::dbg_value: {
-    // Debug intrinsics are handled seperately in assignment tracking mode.
+    // Debug intrinsics are handled separately in assignment tracking mode.
     if (AssignmentTrackingEnabled)
       return;
     const DbgValueInst &DI = cast<DbgValueInst>(I);

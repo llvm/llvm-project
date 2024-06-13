@@ -146,7 +146,7 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
     dbgs() << "Group [\n";
     MCPseudoProbeTable::DdgPrintIndent += 2;
   });
-  assert(!isRoot() && "Root should be handled seperately");
+  assert(!isRoot() && "Root should be handled separately");
 
   // Emit probes grouped by GUID.
   LLVM_DEBUG({

@@ -2263,7 +2263,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
 
   // This creates the initial MEMBER_OF mapping that consists of
   // the parent/top level container (same as above effectively, except
-  // with a fixed initial compile time size and seperate maptype which
+  // with a fixed initial compile time size and separate maptype which
   // indicates the true mape type (tofrom etc.). This parent mapping is
   // only relevant if the structure in its totality is being mapped,
   // otherwise the above suffices.
@@ -2388,7 +2388,7 @@ static void processMapWithMembersOf(
 
   // If we have a partial map (no parent referenced in the map clauses of the
   // directive, only members) and only a single member, we do not need to bind
-  // the map of the member to the parent, we can pass the member seperately.
+  // the map of the member to the parent, we can pass the member separately.
   if (parentClause.getMembers().size() == 1 && parentClause.getPartialMap()) {
     auto memberClause = llvm::cast<mlir::omp::MapInfoOp>(
         parentClause.getMembers()[0].getDefiningOp());
@@ -2425,7 +2425,7 @@ createAlteredByCaptureMap(MapInfoData &mapData,
                           LLVM::ModuleTranslation &moduleTranslation,
                           llvm::IRBuilderBase &builder) {
   for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
-    // if it's declare target, skip it, it's handled seperately.
+    // if it's declare target, skip it, it's handled separately.
     if (!mapData.IsDeclareTarget[i]) {
       auto mapOp =
           mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(mapData.MapClause[i]);

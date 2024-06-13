@@ -13709,7 +13709,7 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
   //   t2: i64 = build_pair t1, t1:1
   //   t3: i64 = add t2, y
   // Otherwise we try to push the add up above VADDLVAx, to potentially allow
-  // the add to be simplified seperately.
+  // the add to be simplified separately.
   // We also need to check for sext / zext and commutitive adds.
   auto MakeVecReduce = [&](unsigned Opcode, unsigned OpcodeA, SDValue NA,
                            SDValue NB) {
