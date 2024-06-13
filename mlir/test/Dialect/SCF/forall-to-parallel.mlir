@@ -78,3 +78,21 @@ func.func @mapping_attr() -> () {
   return
 
 }
+
+// -----
+
+// CHECK-LABEL: @forall_with_outputs
+// CHECK-SAME: %[[ARG0:.+]]: tensor<32x32xf32>
+func.func @forall_with_outputs(%arg0: tensor<32x32xf32>) -> tensor<8x112x32x32xf32> {
+  // CHECK-NOT: scf.parallel
+  // CHECK: %[[RES:.+]] = scf.forall{{.*}}shared_outs
+  // CHECK: return %[[RES]] : tensor<8x112x32x32xf32>
+
+  %0 = tensor.empty() : tensor<8x112x32x32xf32>
+  %1 = scf.forall (%arg1, %arg2) in (8, 112) shared_outs(%arg3 = %0) -> (tensor<8x112x32x32xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %arg0 into %arg3[%arg1, %arg2, 0, 0] [1, 1, 32, 32] [1, 1, 1, 1] : tensor<32x32xf32> into tensor<8x112x32x32xf32>
+    }
+  }
+  return %1 : tensor<8x112x32x32xf32>
+}

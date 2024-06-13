@@ -71,8 +71,9 @@ struct ForallToParallelLoop final
 
     parentOp->walk([&](scf::ForallOp forallOp) {
       if (failed(scf::forallToParallelLoop(rewriter, forallOp))) {
-        return signalPassFailure();
+        return WalkResult::skip();
       }
+      return WalkResult::advance();
     });
   }
 };
