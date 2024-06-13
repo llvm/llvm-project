@@ -3,8 +3,7 @@
 cppcoreguidelines-prefer-at-over-subscript-operator
 ===================================================
 
-This check flags all uses of ``operator[]`` where an equivalent (same parameter
-and return types) ``at()`` method exists and suggest using that instead.
+Flags the unsafe ``operator[]`` and suggests replacing it with ``at()``.
 
 For example the code
 
