@@ -471,8 +471,8 @@ void benchmarkMain() {
   }
 
   InitializeAllExegesisTargets();
-#define LLVM_EXEGESIS(TargetName) \
-  LLVMInitialize##TargetName##AsmPrinter(); \
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##AsmPrinter();                                    \
   LLVMInitialize##TargetName##AsmParser();
 #include "llvm/Config/TargetExegesis.def"
 
@@ -624,8 +624,8 @@ static void analysisMain() {
   }
 
   InitializeAllExegesisTargets();
-#define LLVM_EXEGESIS(TargetName) \
-  LLVMInitialize##TargetName##AsmPrinter(); \
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##AsmPrinter();                                    \
   LLVMInitialize##TargetName##Disassembler();
 #include "llvm/Config/TargetExegesis.def"
 
@@ -694,9 +694,9 @@ int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
   // Initialize targets so we can print them when flag --version is specified.
-#define LLVM_EXEGESIS(TargetName) \
-  LLVMInitialize##TargetName##Target(); \
-  LLVMInitialize##TargetName##TargetInfo(); \
+#define LLVM_EXEGESIS(TargetName)                                              \
+  LLVMInitialize##TargetName##Target();                                        \
+  LLVMInitialize##TargetName##TargetInfo();                                    \
   LLVMInitialize##TargetName##TargetMC();
 #include "llvm/Config/TargetExegesis.def"
 
