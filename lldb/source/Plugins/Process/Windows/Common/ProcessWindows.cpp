@@ -405,8 +405,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                "{1:x} with watchpoint {2}",
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc, id);
 
-      stop_info = StopInfo::CreateStopReasonWithWatchpointID(
-          *stop_thread, id);
+      stop_info = StopInfo::CreateStopReasonWithWatchpointID(*stop_thread, id);
       stop_thread->SetStopInfo(stop_info);
 
       return;
