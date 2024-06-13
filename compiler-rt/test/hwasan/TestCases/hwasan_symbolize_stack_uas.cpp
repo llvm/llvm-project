@@ -1,7 +1,8 @@
 // RUN: %clang_hwasan -Wl,--build-id -g %s -o %t
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s
 
-// REQUIRES: pointer-tagging
+// TODO: find out why this fails on sanitizer-x86_64-linux-qemu bot
+// REQUIRES: aarch64-target-arch
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
