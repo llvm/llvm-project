@@ -5,7 +5,7 @@
 template <class T>
 struct X {
   template <class U>
-  struct A { // expected-note {{not-yet-instantiated member is declared here}}
+  struct A {
     template <class V>
     struct B {
       template <class W>
@@ -28,9 +28,9 @@ struct X {
   template <class X>
   template <class Y>
   template <class Z>
-  friend void A<U>::template B<V>::template C<W>::template D<X>::template E<Y>::operator+=(Z); // expected-warning {{not supported}} expected-error {{no member 'A' in 'X<int>'; it has not yet been instantiated}}
+  friend void A<U>::template B<V>::template C<W>::template D<X>::template E<Y>::operator+=(Z); // expected-warning {{dependent nested name specifier 'A<U>::B<V>::C<W>::D<X>::template E<Y>::' for friend class declaration is not supported; turning off access control for 'X'}}
 };
 
 void test() {
-  X<int>::A<int>::B<int>::C<int>::D<int>::E<int>() += 1.0; // expected-note {{in instantiation of template class 'X<int>' requested here}}
+  X<int>::A<int>::B<int>::C<int>::D<int>::E<int>() += 1.0;
 }

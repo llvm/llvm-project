@@ -4568,6 +4568,24 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
   if (QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName()) {
     TemplateDecl *Template = QTN->getUnderlyingTemplate().getAsTemplateDecl();
     assert(Template && "qualified template name must refer to a template");
+    if (QTN->getQualifier()) {
+      CXXScopeSpec QualifierSS;
+      QualifierSS.MakeTrivial(getSema().getASTContext(), QTN->getQualifier(),
+                              NameLoc);
+      NestedNameSpecifierLoc QualifierLoc =
+          QualifierSS.getWithLocInContext(getSema().getASTContext());
+      NestedNameSpecifierLoc TransformedQualifierLoc =
+          getDerived().TransformNestedNameSpecifierLoc(QualifierLoc);
+      if (!TransformedQualifierLoc)
+        return Name;
+      if (getDerived().AlwaysRebuild() ||
+          QualifierLoc != TransformedQualifierLoc) {
+        SS.Adopt(TransformedQualifierLoc);
+        return getDerived().RebuildTemplateName(
+            SS, SourceLocation(), *Template->getIdentifier(), NameLoc,
+            ObjectType, FirstQualifierInScope, /*AllowInjectedClassName=*/true);
+      }
+    }
 
     TemplateDecl *TransTemplate
       = cast_or_null<TemplateDecl>(getDerived().TransformDecl(NameLoc,
