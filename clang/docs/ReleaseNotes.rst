@@ -660,6 +660,9 @@ Bug Fixes in This Version
 - Correctly reject declarations where a statement is required in C.
   Fixes #GH92775
 
+- ``__has_unique_object_representations`` correctly handles arrays of unknown bounds of
+  types by ensuring they are complete and instantiating them if needed. Fixes (#GH95311).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
