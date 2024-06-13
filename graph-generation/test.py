@@ -13,6 +13,15 @@ def config_logger():
 
 config_logger()
 
+def update_paths(root):
+    src = '/home/thebesttv/vul/llvm-project/graph-generation'
+    dst = root
+    logging.info(f'Updating paths: {src} -> {dst}')
+    cmd = '''
+    sed -i 's|{src}|{dst}|g' $(find {dst} -type f -name '*.json')
+'''.format(src=src, dst=dst)
+    subprocess.run(cmd, shell=True, check=True)
+
 def get_test_cases(root):
     # get all directories under root
     directories = [d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))]
@@ -60,6 +69,8 @@ if __name__ == '__main__':
 
     logging.info(f'Test directory: {ROOT}')
     logging.info(f'Tool script:    {tool_path}')
+
+    update_paths(ROOT)
 
     test_cases = get_test_cases(ROOT)
     for test in test_cases:
