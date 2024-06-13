@@ -867,7 +867,7 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
 
   // First indirect site.
   {
-    auto VD = R->getValueForSite(IPVK_IndirectCallTarget, 0);
+    auto VD = R->getValueArrayForSite(IPVK_IndirectCallTarget, 0);
 
     EXPECT_EQ(VD[0].Count, 3U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 2U * getProfWeight());
@@ -880,7 +880,7 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
 
   // First vtable site.
   {
-    auto VD = R->getValueForSite(IPVK_VTableTarget, 0);
+    auto VD = R->getValueArrayForSite(IPVK_VTableTarget, 0);
 
     EXPECT_EQ(VD[0].Count, 3U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 2U * getProfWeight());
@@ -893,7 +893,7 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
 
   // Second vtable site.
   {
-    auto VD = R->getValueForSite(IPVK_VTableTarget, 1);
+    auto VD = R->getValueArrayForSite(IPVK_VTableTarget, 1);
 
     EXPECT_EQ(VD[0].Count, 2U * getProfWeight());
     EXPECT_EQ(VD[1].Count, 1U * getProfWeight());
@@ -1125,7 +1125,7 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
 
   // Test the merged values for indirect calls.
   {
-    auto VD = R->getValueForSite(IPVK_IndirectCallTarget, 0);
+    auto VD = R->getValueArrayForSite(IPVK_IndirectCallTarget, 0);
     EXPECT_STREQ((const char *)VD[0].Value, "callee2");
     EXPECT_EQ(VD[0].Count, 7U);
     EXPECT_STREQ((const char *)VD[1].Value, "callee3");
@@ -1162,7 +1162,7 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
 
   // Test the merged values for vtables
   {
-    auto VD0 = R->getValueForSite(IPVK_VTableTarget, 0);
+    auto VD0 = R->getValueArrayForSite(IPVK_VTableTarget, 0);
     EXPECT_EQ(VD0[0].Value, getCalleeAddress(vtable2));
     EXPECT_EQ(VD0[0].Count, 7U);
     EXPECT_EQ(VD0[1].Value, getCalleeAddress(vtable3));
@@ -1172,7 +1172,7 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
     EXPECT_EQ(VD0[3].Value, getCalleeAddress(vtable1));
     EXPECT_EQ(VD0[3].Count, 1U);
 
-    auto VD1 = R->getValueForSite(IPVK_VTableTarget, 1);
+    auto VD1 = R->getValueArrayForSite(IPVK_VTableTarget, 1);
     EXPECT_EQ(VD1[0].Value, getCalleeAddress(vtable3));
     EXPECT_EQ(VD1[0].Count, 6U);
     EXPECT_EQ(VD1[1].Value, getCalleeAddress(vtable4));
@@ -1182,7 +1182,7 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
     EXPECT_EQ(VD1[3].Value, getCalleeAddress(vtable1));
     EXPECT_EQ(VD1[3].Count, 1U);
 
-    auto VD2 = R->getValueForSite(IPVK_VTableTarget, 2);
+    auto VD2 = R->getValueArrayForSite(IPVK_VTableTarget, 2);
     EXPECT_EQ(VD2[0].Value, getCalleeAddress(vtable3));
     EXPECT_EQ(VD2[0].Count, 6U);
     EXPECT_EQ(VD2[1].Value, getCalleeAddress(vtable2));
