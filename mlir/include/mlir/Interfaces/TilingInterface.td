@@ -33,7 +33,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
       b) Based on the tile of the producer used by the tiled consumer,
          materialize the tiled implementation of a producer to generate that
          tile (and use it immediately in the consumer)
-    You could also fuse a consumer with with a producer by
+    You could also fuse a consumer with a producer by
       a) Tiling the producer
       b) Based on the tile produced, materialize the tiled implementation of
          a consumer that uses this tile.
@@ -98,6 +98,10 @@ def TilingInterface : OpInterface<"TilingInterface"> {
             provided here (as opposed to zero-based offset "relative" to the
             iteration space).
           - `sizes` provides the size of the tile.
+
+          The returned `TilingResult` must return for each result of the
+          untiled operation, a `Value` that is the result of the tiled
+          operation.
         }],
         /*retType=*/"FailureOr<::mlir::TilingResult>",
         /*methodName=*/"getTiledImplementation",
@@ -122,7 +126,9 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           result(s). This methods returns information about what part of the
           result tensor is computed by the tiled implementation. The manner in
           which these tiles get put together to get the final result is upto
-          the surrounding loop construct.
+          the surrounding loop construct. If an operation has no results, (for
+          example an operation that operates only on memrefs), then this method
+          need not be implemented by the operation.
           - `resultNumber` is the result number of the original operation
             being processed.
           - `offsets` provides the offset of the tile in the coordinate system
@@ -161,7 +167,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           with an (already tiled) consumer. Typically, for two operations with
           producer -> consumer relation ship, to compute a tile of the
           consumer a `slice` of the producer is needed. This method allows
-          computing that slice of the produce in-place, there-by "fusing"
+          computing that slice of the producer in-place, thereby "fusing"
           the operations at tile-granularity. This method is different from
           `getTiledImplementation`, which produces a tiled implementation
           for a tile of the iteration space. This method produces a tiled
@@ -268,10 +274,14 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           consumer needs to be returned to replace the uses of the consumer.
           For the tile+fuse algorithm to do this it needs information about
           which tile of the iteration space encompasses all uses of the tile
-          produced and use that to compute what are the results produced.
+          produced and use that to compute what are the results produced. Note
+          that this iteration space might be the entire iteration space of the
+          operation, or multiple operand tiles might map to intersecting
+          iteration spaces. It is upto the caller to make sure that it is still
+          fusable with producer in this scenario, or it must return a failure.
 
           Note that this method is only used as a way to implement the
-          transformation. It does not provide gaurantees on whether such a
+          transformation. It does not provide guarantees on whether such a
           transformation is profitable.
 
           For most cases `getTiledImplementationFromOperandTile` could be a
