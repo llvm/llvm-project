@@ -864,6 +864,10 @@ struct InstrProfRecord {
   /// Return the total number of ValueData for ValueKind.
   inline uint32_t getNumValueData(uint32_t ValueKind) const;
 
+  /// Return the array of profiled values at \p Site.
+  inline ArrayRef<InstrProfValueData> getValueArrayForSite(uint32_t ValueKind,
+                                                           uint32_t Site) const;
+
   /// Return the number of value data collected for ValueKind at profiling
   /// site: Site.
   inline uint32_t getNumValueDataForSite(uint32_t ValueKind,
@@ -1058,6 +1062,11 @@ uint32_t InstrProfRecord::getNumValueSites(uint32_t ValueKind) const {
 uint32_t InstrProfRecord::getNumValueDataForSite(uint32_t ValueKind,
                                                  uint32_t Site) const {
   return getValueSitesForKind(ValueKind)[Site].ValueData.size();
+}
+
+ArrayRef<InstrProfValueData>
+InstrProfRecord::getValueArrayForSite(uint32_t ValueKind, uint32_t Site) const {
+  return getValueSitesForKind(ValueKind)[Site].ValueData;
 }
 
 std::unique_ptr<InstrProfValueData[]>
