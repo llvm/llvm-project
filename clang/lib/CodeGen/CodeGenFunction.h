@@ -5057,17 +5057,18 @@ public:
   /// \p SignedIndices indicates whether any of the GEP indices are signed.
   /// \p IsSubtraction indicates whether the expression used to form the GEP
   /// is a subtraction.
+  /// \p NUW indicates whether the GEP is nuw.
   llvm::Value *EmitCheckedInBoundsGEP(llvm::Type *ElemTy, llvm::Value *Ptr,
                                       ArrayRef<llvm::Value *> IdxList,
-                                      bool SignedIndices,
-                                      bool IsSubtraction,
+                                      bool SignedIndices, bool IsSubtraction,
                                       SourceLocation Loc,
-                                      const Twine &Name = "");
+                                      const Twine &Name = "", bool NUW = false);
 
   Address EmitCheckedInBoundsGEP(Address Addr, ArrayRef<llvm::Value *> IdxList,
                                  llvm::Type *elementType, bool SignedIndices,
                                  bool IsSubtraction, SourceLocation Loc,
-                                 CharUnits Align, const Twine &Name = "");
+                                 CharUnits Align, const Twine &Name = "",
+                                 bool NUW = false);
 
   /// Specifies which type of sanitizer check to apply when handling a
   /// particular builtin.

@@ -3959,13 +3959,13 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
 static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      ArrayRef<llvm::Value *> indices,
                                      llvm::Type *elementType, bool inbounds,
-                                     bool signedIndices, SourceLocation loc,
-                                     CharUnits align,
+                                     bool nuw, bool signedIndices,
+                                     SourceLocation loc, CharUnits align,
                                      const llvm::Twine &name = "arrayidx") {
   if (inbounds) {
     return CGF.EmitCheckedInBoundsGEP(addr, indices, elementType, signedIndices,
                                       CodeGenFunction::NotSubtraction, loc,
-                                      align, name);
+                                      align, name, nuw);
   } else {
     return CGF.Builder.CreateGEP(addr, indices, elementType, align, name);
   }
@@ -4060,7 +4060,7 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
 
 static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      ArrayRef<llvm::Value *> indices,
-                                     QualType eltType, bool inbounds,
+                                     QualType eltType, bool inbounds, bool nuw,
                                      bool signedIndices, SourceLocation loc,
                                      QualType *arrayType = nullptr,
                                      const Expr *Base = nullptr,
@@ -4091,7 +4091,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   if (!LastIndex ||
       (!CGF.IsInPreservedAIRegion && !IsPreserveAIArrayBase(CGF, Base))) {
     addr = emitArraySubscriptGEP(CGF, addr, indices,
-                                 CGF.ConvertTypeForMem(eltType), inbounds,
+                                 CGF.ConvertTypeForMem(eltType), inbounds, nuw,
                                  signedIndices, loc, eltAlign, name);
     return addr;
   } else {
@@ -4214,7 +4214,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
     QualType EltType = LV.getType()->castAs<VectorType>()->getElementType();
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, EltType, /*inbounds*/ true,
-                                 SignedIndices, E->getExprLoc());
+                                 /*nuw=*/false, SignedIndices, E->getExprLoc());
     return MakeAddrLValue(Addr, EltType, LV.getBaseInfo(),
                           CGM.getTBAAInfoForSubobject(LV, EltType));
   }
@@ -4245,7 +4245,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, vla->getElementType(),
                                  !getLangOpts().isSignedOverflowDefined(),
-                                 SignedIndices, E->getExprLoc());
+                                 /*nuw=*/false, SignedIndices, E->getExprLoc());
 
   } else if (const ObjCObjectType *OIT = E->getType()->getAs<ObjCObjectType>()){
     // Indexing over an interface, as in "NSString *P; P[4];"
@@ -4332,10 +4332,20 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
     // Propagate the alignment from the array itself to the result.
     QualType arrayType = Array->getType();
-    Addr = emitArraySubscriptGEP(
-        *this, ArrayLV.getAddress(), {CGM.getSize(CharUnits::Zero()), Idx},
-        E->getType(), !getLangOpts().isSignedOverflowDefined(), SignedIndices,
-        E->getExprLoc(), &arrayType, E->getBase());
+
+    bool Inbounds = !getLangOpts().isSignedOverflowDefined();
+    // (ISO/IEC 9899:TC3, 6.5.6.8) / (C++ expr.add 4.2)
+    // If A in A[i] is the base of a constant size array, then the addition of
+    // the index to the base pointer cannot wrap in an unsigned sense without
+    // violating the inbounds constraint.
+    bool NUW = !SignedIndices && Inbounds &&
+               (getLangOpts().C99 || getLangOpts().CPlusPlus) &&
+               getContext().getAsConstantArrayType(arrayType);
+
+    Addr = emitArraySubscriptGEP(*this, ArrayLV.getAddress(),
+                                 {CGM.getSize(CharUnits::Zero()), Idx},
+                                 E->getType(), Inbounds, NUW, SignedIndices,
+                                 E->getExprLoc(), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
     EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
   } else {
@@ -4345,8 +4355,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     QualType ptrType = E->getBase()->getType();
     Addr = emitArraySubscriptGEP(*this, Addr, Idx, E->getType(),
                                  !getLangOpts().isSignedOverflowDefined(),
-                                 SignedIndices, E->getExprLoc(), &ptrType,
-                                 E->getBase());
+                                 /*nuw=*/false, SignedIndices, E->getExprLoc(),
+                                 &ptrType, E->getBase());
   }
 
   LValue LV = MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -4543,6 +4553,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
       Idx = Builder.CreateNSWMul(Idx, NumElements);
     EltPtr = emitArraySubscriptGEP(*this, Base, Idx, VLA->getElementType(),
                                    !getLangOpts().isSignedOverflowDefined(),
+                                   /*nuw=*/false,
                                    /*signedIndices=*/false, E->getExprLoc());
   } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
     // If this is A[i] where A is an array, the frontend will have decayed the
@@ -4563,6 +4574,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
     EltPtr = emitArraySubscriptGEP(
         *this, ArrayLV.getAddress(), {CGM.getSize(CharUnits::Zero()), Idx},
         ResultExprTy, !getLangOpts().isSignedOverflowDefined(),
+        /*nuw=*/false,
         /*signedIndices=*/false, E->getExprLoc());
     BaseInfo = ArrayLV.getBaseInfo();
     TBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, ResultExprTy);
@@ -4572,7 +4584,8 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
                                 ResultExprTy, IsLowerBound);
     EltPtr = emitArraySubscriptGEP(*this, Base, Idx, ResultExprTy,
                                    !getLangOpts().isSignedOverflowDefined(),
-                                   /*signedIndices=*/false, E->getExprLoc());
+                                   /*signedIndices=*/false, /*nuw=*/false,
+                                   E->getExprLoc());
   }
 
   return MakeAddrLValue(EltPtr, ResultExprTy, BaseInfo, TBAAInfo);
