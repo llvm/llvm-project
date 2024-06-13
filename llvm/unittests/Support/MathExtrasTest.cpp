@@ -189,7 +189,7 @@ TEST(MathExtras, AlignTo) {
   EXPECT_EQ(8u, alignTo(5, 8));
   EXPECT_EQ(24u, alignTo(17, 8));
   EXPECT_EQ(0u, alignTo(~0LL, 8));
-  EXPECT_EQ((uint64_t)std::numeric_limits<uint32_t>::max() + 1,
+  EXPECT_EQ(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1,
             alignTo(std::numeric_limits<uint32_t>::max(), 2));
 
   EXPECT_EQ(7u, alignTo(5, 8, 7));
@@ -204,7 +204,7 @@ TEST(MathExtras, AlignToPowerOf2) {
   EXPECT_EQ(8u, alignToPowerOf2(5, 8));
   EXPECT_EQ(24u, alignToPowerOf2(17, 8));
   EXPECT_EQ(0u, alignToPowerOf2(~0LL, 8));
-  EXPECT_EQ((uint64_t)std::numeric_limits<uint32_t>::max() + 1,
+  EXPECT_EQ(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1,
             alignToPowerOf2(std::numeric_limits<uint32_t>::max(), 2));
 }
 
