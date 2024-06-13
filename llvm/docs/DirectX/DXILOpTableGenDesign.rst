@@ -47,12 +47,12 @@ A. Properties consumed in DXIL backend passes
    11.  Memory access attributes of the operation (``fn_attr``).
    12.  Boolean attributes of operation to indicate if it
 
-       * is some kind of a derivative (``is_derivative``)
-       * requires gradient calculation (``is_gradient``)
-       * is a sampler feedback (``is_feedback``)
-       * requires in-wave, cross-lane functionality (``is_wave``)
-       * requires that all of its inputs are uniform across the wave (``requires_uniform_inputs``).
-       * is a barrier operation (``is_barrier``).
+        * is some kind of a derivative (``is_derivative``)
+        * requires gradient calculation (``is_gradient``)
+        * is a sampler feedback (``is_feedback``)
+        * requires in-wave, cross-lane functionality (``is_wave``)
+        * requires that all of its inputs are uniform across the wave (``requires_uniform_inputs``).
+        * is a barrier operation (``is_barrier``).
 
 Motivation
 ==========
@@ -104,8 +104,8 @@ properties are specified as fields of the ``DXILOp`` class as described below.
    as a list of ``Constraint`` records. Representation of ``Constraints`` class is described
    a later section.
 8. Various attributes of the DXIL Operation that are not predicated on Shader Model version
-   are represented as a ``dag`` using the special marker
-   ``attrs``. Representation of ``Attributes`` class is described in a later section.
+   are represented as a ``dag`` using the special marker ``attrs``. Representation of ``Attributes`` 
+   class is described in a later section.
 
 A DXIL Operation is represented by the following TableGen class by encapsulating the various
 TableGen representations of its properties described above.
@@ -114,25 +114,25 @@ TableGen representations of its properties described above.
 
    // Abstraction DXIL Operation
    class DXILOp {
-      // A short description of the operation
-      string Doc = "";
+     // A short description of the operation
+     string Doc = "";
 
-      // Opcode of DXIL Operation
-      int OpCode = 0;
+     // Opcode of DXIL Operation
+     int OpCode = 0;
 
-      // Class of DXIL Operation.
-      DXILOpClass OpClass = UnknownOpClass;
+     // Class of DXIL Operation.
+     DXILOpClass OpClass = UnknownOpClass;
 
-      // LLVM Intrinsic DXIL Operation maps to
-      Intrinsic LLVMIntrinsic = ?;
+     // LLVM Intrinsic DXIL Operation maps to
+     Intrinsic LLVMIntrinsic = ?;
 
-      // Dag containing the arguments of the op. Default to 0 arguments.
-      dag arguments = (ins);
+     // Dag containing the arguments of the op. Default to 0 arguments.
+     dag arguments = (ins);
 
-      // Results of the op. Default to 0 results.
-      dag result = (out);
+     // Results of the op. Default to 0 results.
+     dag result = (out);
 
-      // List of constraints predicated on Shader Model version
+     // List of constraints predicated on Shader Model version
      list<SMVersionConstraints> sm_constraints;
 
      // Non-predicated operation attributes
@@ -144,7 +144,8 @@ Constraint Specification
 ========================
 
 DXIL Operation properties such as valid overload types and valid shader stages are
-predicated on Shader Model version.
+predicated on Shader Model version.hese are represented as list of constrained
+properties.
 
 Following is the definition of a generic constraint and the associated predicate
 
@@ -152,7 +153,7 @@ Following is the definition of a generic constraint and the associated predicate
 
    // Generic constraint
    class Constraint<Pred pred> {
-      Pred predicate = pred;
+     Pred predicate = pred;
    }
 
 Shader Model version is represented as follows:
@@ -161,8 +162,8 @@ Shader Model version is represented as follows:
 
    // Abstract class to represent major and minor version values
    class Version<int major, int minor> {
-      int Major = major;
-      int Minor = minor;
+     int Major = major;
+     int Minor = minor;
    }
 
    // Valid Shader model version records
@@ -178,7 +179,7 @@ A shader model version predicate class is defined as
 .. code-block::
 
    class SMVersion<Version ver> : Pred {
-      Version SMVersion = ver;
+     Version SMVersion = ver;
    }
 
 A constraint class to represent overload types and shader stages predicated on shader
@@ -187,23 +188,21 @@ model version is defined as
 .. code-block::
 
    class SMVersionConstraints<SMVersion smver, dag oloads, dag stages> : Constraint<smver> {
-      dag overload_types = oloads;
-      dag stage_kinds = stages;
+     dag overload_types = oloads;
+     dag stage_kinds = stages;
    }
 
-The ``dag overload_types`` and ``dag shader_kinds``use a special markers ``overloads``
+The ``dag overload_types`` and ``dag shader_kinds`` use a special markers ``overloads``
 and ``stages``, respectively.
 
-
 Examples
---------
+---------
 
-Consider a DXIL operation that is valid in Shader Model version 6.2 and later
-
-   1. wiith valid overload types ``half``, ``float``, ``i16`` and ``i32``
-   2. is valid for stages ``pixel`` and ``compute``
-   3. with valid overload types ``double`` and ``i614`` if Shader Model version 6.3 and later
-   4. is valid for all stages if Shader Model version 6.3 and later
+Consider a DXIL Operation that is valid in Shader Model version 6.2 or later
+  1. wiith valid overload types ``half``, ``float``, ``i16`` and ``i32``
+  2. is valid for stages ``pixel`` and ``compute``
+  3. with valid overload types ``double`` and ``i614`` if Shader Model version 6.3 and later
+  4. is valid for all stages if Shader Model version 6.3 and later
 
 This is represented as
 
@@ -218,19 +217,32 @@ This is represented as
                           (stages allKinds)>];
 
 Consider a DXIL operation that is valid in Shader Model version 6.2 and later
-
-   1. with no overload types, i.e., types of all arguments and result are fixed.
-   2. is valid for all stages.
+  1. with no overload types, i.e., types of all arguments and result are fixed.
+  2. is valid for all stages.
 
 This is represented as
 
 .. code-block::
 
-      [SMVersionConstraints<SMVersion<SM6_2>, (overloads), (stages allKinds)>];
+     [SMVersionConstraints<SMVersion<SM6_2>, (overloads), (stages allKinds)>];
 
 
 Attribute Specification
 =======================
+
+DXIL Operation properties that are not predicated on any constraint are represented as
+a ``dag`` of Attribute records of the following abstract ``DXILAttributes`` class.
+
+.. code-block::
+
+  class DXILAttributes;
+
+Following example records represent memory arrtibutes 
+
+.. code-block::
+
+  def ReadOnly : DXILOpAttributes;
+  def ReadNone : DXILOpAttributes;
 
 Summary
 =======
