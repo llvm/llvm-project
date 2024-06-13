@@ -1612,7 +1612,6 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
 // vector<[1]x4xf32> -> vector<[4]xf32>). This could be implemented in the
 // future.
 static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
-  auto newVecBuilder = VectorType::Builder(inVecTy);
   auto inVecShape = inVecTy.getShape();
   SmallVector<int64_t> newShape;
   SmallVector<bool> newScalableDims;
