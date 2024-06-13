@@ -142,11 +142,10 @@ int main(int argc, char **argv) {
   }
 
   // Convert to new debug format if requested.
-  assert(!M->IsNewDbgInfoFormat && "Unexpectedly in new debug mode");
-  if (UseNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode) {
-    M->convertToNewDbgValues();
+  M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat &&
+                           WriteNewDbgInfoFormatToBitcode);
+  if (M->IsNewDbgInfoFormat)
     M->removeDebugIntrinsicDeclarations();
-  }
 
   std::unique_ptr<ModuleSummaryIndex> Index = std::move(ModuleAndIndex.Index);
 

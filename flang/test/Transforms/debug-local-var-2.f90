@@ -28,27 +28,27 @@
 
 ! BOTH-LABEL: define {{.*}}i64 @_QFPfn1
 ! BOTH-SAME: (ptr %[[ARG1:.*]], ptr %[[ARG2:.*]], ptr %[[ARG3:.*]])
-! INTRINSICS-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[ARG1]], metadata ![[A1:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[ARG2]], metadata ![[B1:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[ARG3]], metadata ![[C1:.*]], metadata !DIExpression())
+! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG1]], metadata ![[A1:.*]], metadata !DIExpression())
+! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG2]], metadata ![[B1:.*]], metadata !DIExpression())
+! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG3]], metadata ![[C1:.*]], metadata !DIExpression())
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG1]], ![[A1:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG2]], ![[B1:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[ARG3]], ![[C1:.*]], !DIExpression(), !{{.*}})
 ! BOTH-DAG: %[[AL2:.*]] = alloca i64
-! INTRINSICS-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[AL2]], metadata ![[RES1:.*]], metadata !DIExpression())
+! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL2]], metadata ![[RES1:.*]], metadata !DIExpression())
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL2]], ![[RES1:.*]], !DIExpression(), !{{.*}})
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i32 @_QFPfn2
 ! BOTH-SAME: (ptr %[[FN2ARG1:.*]], ptr %[[FN2ARG2:.*]], ptr %[[FN2ARG3:.*]])
-! INTRINSICS-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[FN2ARG1]], metadata ![[A2:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[FN2ARG2]], metadata ![[B2:.*]], metadata !DIExpression())
-! INTRINSICS-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[FN2ARG3]], metadata ![[C2:.*]], metadata !DIExpression())
+! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG1]], metadata ![[A2:.*]], metadata !DIExpression())
+! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG2]], metadata ![[B2:.*]], metadata !DIExpression())
+! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG3]], metadata ![[C2:.*]], metadata !DIExpression())
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG1]], ![[A2:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG2]], ![[B2:.*]], !DIExpression(), !{{.*}})
 ! RECORDS-DAG: #dbg_declare(ptr %[[FN2ARG3]], ![[C2:.*]], !DIExpression(), !{{.*}})
 ! BOTH-DAG: %[[AL3:.*]] = alloca i32
-! INTRINSICS-DAG: tail call void @llvm.dbg.declare(metadata ptr %[[AL3]], metadata ![[RES2:.*]], metadata !DIExpression())
+! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL3]], metadata ![[RES2:.*]], metadata !DIExpression())
 ! RECORDS-DAG: #dbg_declare(ptr %[[AL3]], ![[RES2:.*]], !DIExpression(), !{{.*}})
 ! BOTH-LABEL: }
 
