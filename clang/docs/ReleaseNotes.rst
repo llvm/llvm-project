@@ -471,10 +471,6 @@ Attribute Changes in Clang
        size_t count;
      };
 
-- The ``guarded_by``, ``pt_guarded_by``, ``acquired_after``, ``acquired_before``
-  attributes now support referencing struct members in C. The arguments are also
-  now late parsed when ``-fexperimental-late-parse-attributes`` is passed like
-  for ``counted_by``.
 
 Improvements to Clang's diagnostics
 -----------------------------------
