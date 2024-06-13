@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -start-before=amdgpu-isel -stop-after=amdgpu-isel -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
+; RUN: llc < %s -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -stop-after=amdgpu-isel -enable-new-pm | FileCheck %s --check-prefixes=CHECK
 
 ; This caused failure in infinite cycle in Selection DAG (combine) due to missing insert_subvector.
 ;

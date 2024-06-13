@@ -115,6 +115,8 @@ genLboundsAndExtentsFromBox(mlir::Location loc, fir::FirOpBuilder &builder,
 static llvm::SmallVector<mlir::Value>
 getNonDefaultLowerBounds(mlir::Location loc, fir::FirOpBuilder &builder,
                          hlfir::Entity entity) {
+  assert(!entity.isAssumedRank() &&
+         "cannot compute assumed rank bounds statically");
   if (!entity.mayHaveNonDefaultLowerBounds())
     return {};
   if (auto varIface = entity.getIfVariableInterface()) {
@@ -880,20 +882,28 @@ static fir::ExtendedValue translateVariableToExtendedValue(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity variable,
     bool forceHlfirBase = false, bool contiguousHint = false) {
   assert(variable.isVariable() && "must be a variable");
-  /// When going towards FIR, use the original base value to avoid
-  /// introducing descriptors at runtime when they are not required.
-  mlir::Value base =
-      forceHlfirBase ? variable.getBase() : variable.getFirBase();
+  // When going towards FIR, use the original base value to avoid
+  // introducing descriptors at runtime when they are not required.
+  // This is not done for assumed-rank since the fir::ExtendedValue cannot
+  // held the related lower bounds in an vector. The lower bounds of the
+  // descriptor must always be used instead.
+
+  mlir::Value base = (forceHlfirBase || variable.isAssumedRank())
+                         ? variable.getBase()
+                         : variable.getFirBase();
   if (variable.isMutableBox())
     return fir::MutableBoxValue(base, getExplicitTypeParams(variable),
                                 fir::MutableProperties{});
 
   if (mlir::isa<fir::BaseBoxType>(base.getType())) {
-    bool contiguous = variable.isSimplyContiguous() || contiguousHint;
+    const bool contiguous = variable.isSimplyContiguous() || contiguousHint;
+    const bool isAssumedRank = variable.isAssumedRank();
     if (!contiguous || variable.isPolymorphic() ||
-        variable.isDerivedWithLengthParameters() || variable.isOptional()) {
-      llvm::SmallVector<mlir::Value> nonDefaultLbounds =
-          getNonDefaultLowerBounds(loc, builder, variable);
+        variable.isDerivedWithLengthParameters() || variable.isOptional() ||
+        isAssumedRank) {
+      llvm::SmallVector<mlir::Value> nonDefaultLbounds;
+      if (!isAssumedRank)
+        nonDefaultLbounds = getNonDefaultLowerBounds(loc, builder, variable);
       return fir::BoxValue(base, nonDefaultLbounds,
                            getExplicitTypeParams(variable));
     }

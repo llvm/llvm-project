@@ -96,15 +96,16 @@ class Value;
 
 namespace Sched {
 
-enum Preference {
-  None,        // No preference
-  Source,      // Follow source order.
-  RegPressure, // Scheduling for lowest register pressure.
-  Hybrid,      // Scheduling for both latency and register pressure.
-  ILP,         // Scheduling for ILP in low register pressure mode.
-  VLIW,        // Scheduling for VLIW targets.
-  Fast,        // Fast suboptimal list scheduling
-  Linearize    // Linearize DAG, no scheduling
+enum Preference : uint8_t {
+  None,            // No preference
+  Source,          // Follow source order.
+  RegPressure,     // Scheduling for lowest register pressure.
+  Hybrid,          // Scheduling for both latency and register pressure.
+  ILP,             // Scheduling for ILP in low register pressure mode.
+  VLIW,            // Scheduling for VLIW targets.
+  Fast,            // Fast suboptimal list scheduling
+  Linearize,       // Linearize DAG, no scheduling
+  Last = Linearize // Marker for the last Sched::Preference
 };
 
 } // end namespace Sched
@@ -5343,6 +5344,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandABD(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand vector/scalar AVGCEILS/AVGCEILU/AVGFLOORS/AVGFLOORU nodes.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandAVG(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand BSWAP nodes. Expands scalar/vector BSWAP nodes with i16/i32/i64
   /// scalar types. Returns SDValue() if expand fails.

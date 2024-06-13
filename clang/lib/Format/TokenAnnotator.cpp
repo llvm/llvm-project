@@ -1358,6 +1358,8 @@ private:
           Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
           Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
         Tok->setType(TT_ModulePartitionColon);
+      } else if (Line.First->is(tok::kw_asm)) {
+        Tok->setType(TT_InlineASMColon);
       } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
         if (Style.Language == FormatStyle::LK_TextProto) {
@@ -1425,13 +1427,6 @@ private:
         // This handles a special macro in ObjC code where selectors including
         // the colon are passed as macro arguments.
         Tok->setType(TT_ObjCMethodExpr);
-      } else if (Contexts.back().ContextKind == tok::l_paren &&
-                 !Line.InPragmaDirective) {
-        if (Style.isTableGen() && Contexts.back().IsTableGenDAGArg) {
-          Tok->setType(TT_TableGenDAGArgListColon);
-          break;
-        }
-        Tok->setType(TT_InlineASMColon);
       }
       break;
     case tok::pipe:

@@ -322,14 +322,20 @@ struct TransferWriteNonPermutationLowering
 ///     %v = vector.transfer_read ...
 ///         permutation_map: (d0, d1, d2, d3) -> (d1, 0, d3)
 ///     vector.broadcast %v
-struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+struct TransferOpReduceRank
+    : public MaskableOpRewritePattern<vector::TransferReadOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp op,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<mlir::Value>
+  matchAndRewriteMaskableOp(vector::TransferReadOp op,
+                            MaskingOpInterface maskOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    // TODO: support masked case.
+    if (maskOp)
+      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     AffineMap map = op.getPermutationMap();
     unsigned numLeadingBroadcast = 0;
@@ -369,9 +375,9 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
             op.getLoc(), originalVecType.getElementType(), op.getSource(),
             op.getIndices());
       }
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
-                                                       newRead);
-      return success();
+      return rewriter
+          .create<vector::BroadcastOp>(op.getLoc(), originalVecType, newRead)
+          .getVector();
     }
 
     SmallVector<int64_t> newShape(
@@ -393,9 +399,9 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
         op.getLoc(), newReadType, op.getSource(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
-                                                     newRead);
-    return success();
+    return rewriter
+        .create<vector::BroadcastOp>(op.getLoc(), originalVecType, newRead)
+        .getVector();
   }
 };
 

@@ -1339,14 +1339,13 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (SrcIdx && DstIdx)
     return false;
 
-  [[maybe_unused]] const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
+  const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
 
-      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(),
-                                              DefMI->getOperand(0).getSubReg());
+      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(), DefSubIdx);
       if (NewDstIdx)
         NewDstReg = TRI->getSubReg(DstReg, NewDstIdx);
 

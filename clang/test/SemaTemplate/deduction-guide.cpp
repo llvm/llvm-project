@@ -290,7 +290,7 @@ using AFoo = Foo<G<U>>;
 // CHECK-NEXT: | |     `-IntegerLiteral {{.*}}
 // CHECK-NEXT: | `-TypeTraitExpr {{.*}} 'bool' __is_deducible
 // CHECK-NEXT: |   |-DeducedTemplateSpecializationType {{.*}} 'AFoo' dependent
-// CHECK-NEXT: |   | `-name:  'AFoo'
+// CHECK-NEXT: |   | `-name: 'AFoo'
 // CHECK-NEXT: |   |   `-TypeAliasTemplateDecl {{.+}} AFoo
 // CHECK-NEXT: |   `-TemplateSpecializationType {{.*}} 'Foo<G<type-parameter-0-0>>' dependent
 // CHECK:      |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (G<type-parameter-0-0>) -> Foo<G<type-parameter-0-0>>'
@@ -330,7 +330,7 @@ namespace TTP {
 // CHECK-NEXT:  | `-CXXRecord {{.+}} 'B'{{$}}
 // CHECK-NEXT:  `-ElaboratedType {{.+}} 'template-parameter-0-1<T>' sugar dependent{{$}}
 // CHECK-NEXT:    `-TemplateSpecializationType {{.+}} 'template-parameter-0-1<T>' dependent{{$}}
-// CHECK-NEXT:      |-name:  'template-parameter-0-1' qualified
+// CHECK-NEXT:      |-name: 'template-parameter-0-1' qualified
 // CHECK-NEXT:      | `-TemplateTemplateParmDecl {{.+}} depth 0 index 1
 // CHECK-NEXT:      `-TemplateArgument type 'T':'type-parameter-0-0'{{$}}
 // CHECK-NEXT:        `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0{{$}}

@@ -153,7 +153,6 @@ function exclude-linux() {
   for project in ${projects}; do
     case ${project} in
     cross-project-tests) ;; # tests failing
-    lldb)                ;; # tests failing
     openmp)              ;; # https://github.com/google/llvm-premerge-checks/issues/410
     *)
       echo "${project}"
@@ -170,7 +169,7 @@ function exclude-windows() {
     compiler-rt)         ;; # tests taking too long
     openmp)              ;; # TODO: having trouble with the Perl installation
     libc)                ;; # no Windows support
-    lldb)                ;; # tests failing
+    lldb)                ;; # custom environment requirements (https://github.com/llvm/llvm-project/pull/94208#issuecomment-2146256857)
     bolt)                ;; # tests are not supported yet
     *)
       echo "${project}"
@@ -213,7 +212,7 @@ function check-targets() {
       echo "check-unwind"
     ;;
     lldb)
-      echo "check-all" # TODO: check-lldb may not include all the LLDB tests?
+      echo "check-lldb"
     ;;
     pstl)
       echo "check-all"
