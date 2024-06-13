@@ -8,7 +8,6 @@ target triple = "x86_64-pc-linux-gnu"
 declare void @"some_call"(ptr addrspace(1))
 declare i32 @"personality_function"()
 
-; CHECK-LABEL: test_invoke:
 define ptr addrspace(1) @test_invoke(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e, ptr addrspace(1) %f, ptr addrspace(1) %g, ptr addrspace(1) %h, ptr addrspace(1) %j, ptr addrspace(1) %k, ptr addrspace(1) %l, ptr addrspace(1) %m, ptr addrspace(1) %n, ptr addrspace(1) %o, ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %s, ptr addrspace(1) %t)
 ; CHECK-LABEL: test_invoke:
 ; CHECK:       # %bb.0: # %entry
@@ -47,7 +46,6 @@ exceptional_return:
   ret ptr addrspace(1) null
 }
 
-; CHECK-LABEL: test_call:
 define ptr addrspace(1) @test_call(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e, ptr addrspace(1) %f, ptr addrspace(1) %g, ptr addrspace(1) %h, ptr addrspace(1) %j, ptr addrspace(1) %k, ptr addrspace(1) %l, ptr addrspace(1) %m, ptr addrspace(1) %n, ptr addrspace(1) %o, ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %s, ptr addrspace(1) %t)
 ; CHECK-LABEL: test_call:
 ; CHECK:       # %bb.0: # %entry
