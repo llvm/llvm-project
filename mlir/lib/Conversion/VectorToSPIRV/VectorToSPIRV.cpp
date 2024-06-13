@@ -665,12 +665,11 @@ struct VectorDeinterleaveOpConvert final
         llvm::map_to_vector(seqOdd, [](int i) { return i * 2 + 1; });
 
     // Create two SPIR-V shuffles.
-    spirv::VectorShuffleOp shuffleEven =
-        rewriter.create<spirv::VectorShuffleOp>(
-            loc, newResultType, sourceVector, sourceVector,
-            rewriter.getI32ArrayAttr(indicesEven));
+    auto shuffleEven = rewriter.create<spirv::VectorShuffleOp>(
+        loc, newResultType, sourceVector, sourceVector,
+        rewriter.getI32ArrayAttr(indicesEven));
 
-    spirv::VectorShuffleOp shuffleOdd = rewriter.create<spirv::VectorShuffleOp>(
+    auto shuffleOdd = rewriter.create<spirv::VectorShuffleOp>(
         loc, newResultType, sourceVector, sourceVector,
         rewriter.getI32ArrayAttr(indicesOdd));
 
