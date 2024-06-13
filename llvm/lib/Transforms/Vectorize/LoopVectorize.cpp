@@ -3863,7 +3863,8 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   case Instruction::URem:
     // TODO: We can use the loop-preheader as context point here and get
     // context sensitive reasoning
-    return !isSafeToSpeculativelyExecute(I);
+    return !isSafeToSpeculativelyExecute(I) &&
+           !Legal->isInvariant(I->getOperand(1));
   case Instruction::Call:
     return Legal->isMaskRequired(I);
   }
