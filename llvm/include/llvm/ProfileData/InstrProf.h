@@ -870,8 +870,8 @@ struct InstrProfRecord {
                                          uint32_t Site) const;
 
   /// Return the array of profiled values at \p Site.
-  inline ArrayRef<InstrProfValueData>
-  getValueForSite(uint32_t ValueKind, uint32_t Site) const;
+  inline ArrayRef<InstrProfValueData> getValueForSite(uint32_t ValueKind,
+                                                      uint32_t Site) const;
 
   /// Return the array of profiled values at \p Site.
   inline std::unique_ptr<InstrProfValueData[]>
