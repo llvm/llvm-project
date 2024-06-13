@@ -51,6 +51,12 @@ cl::opt<bool>
                       cl::desc("Infer counts from stale profile data."),
                       cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
+cl::opt<unsigned> MatchedProfileThreshold(
+    "matched-profile-threshold",
+    cl::desc("Percentage threshold of matched execution counts at which stale "
+             "profile inference is executed."),
+    cl::init(5), cl::Hidden, cl::cat(BoltOptCategory));
+
 cl::opt<unsigned> StaleMatchingMaxFuncSize(
     "stale-matching-max-func-size",
     cl::desc("The maximum size of a function to consider for inference."),
@@ -434,6 +440,7 @@ void matchWeightsByHashes(BinaryContext &BC,
       if (Matcher.isHighConfidenceMatch(BinHash, YamlHash)) {
         ++BC.Stats.NumMatchedBlocks;
         BC.Stats.MatchedSampleCount += YamlBB.ExecCount;
+        Func.MatchedExecCount += YamlBB.ExecCount;
         LLVM_DEBUG(dbgs() << "  exact match\n");
       } else {
         LLVM_DEBUG(dbgs() << "  loose match\n");
@@ -575,8 +582,11 @@ void preprocessUnreachableBlocks(FlowFunction &Func) {
 /// Decide if stale profile matching can be applied for a given function.
 /// Currently we skip inference for (very) large instances and for instances
 /// having "unexpected" control flow (e.g., having no sink basic blocks).
-bool canApplyInference(const FlowFunction &Func) {
+bool canApplyInference(const FlowFunction &Func, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
+    return false;
+
+  if (Func.MatchedExecCount / YamlBF.ExecCount >= opts::MatchedProfileThreshold)
     return false;
 
   bool HasExitBlocks = llvm::any_of(
@@ -736,7 +746,7 @@ bool YAMLProfileReader::inferStaleProfile(
   preprocessUnreachableBlocks(Func);
 
   // Check if profile inference can be applied for the instance.
-  if (!canApplyInference(Func))
+  if (!canApplyInference(Func, YamlBF))
     return false;
 
   // Apply the profile inference algorithm.
