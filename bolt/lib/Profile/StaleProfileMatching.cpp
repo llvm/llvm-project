@@ -352,6 +352,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
       FlowJump &Jump = Func.Jumps.back();
       Jump.Source = SrcBB->getIndex() + 1;
       Jump.Target = Func.Blocks.size() - 1;
+      InDegree[Jump.Target]++;
     }
 
     // Collect jumps to landing pads
