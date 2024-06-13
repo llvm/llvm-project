@@ -874,7 +874,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                      {MVT::Other, MVT::v2i16, MVT::v2f16, MVT::v2bf16,
                       MVT::v3i16, MVT::v3f16, MVT::v4f16, MVT::v4i16,
                       MVT::v4bf16, MVT::v8i16, MVT::v8f16, MVT::v8bf16,
-                      MVT::f16, MVT::i16, MVT::i8, MVT::i128},
+                      MVT::f16, MVT::i16, MVT::bf16, MVT::i8, MVT::i128},
                      Custom);
 
   setOperationAction(ISD::STACKSAVE, MVT::Other, Custom);
@@ -9973,7 +9973,7 @@ SDValue SITargetLowering::handleByteShortBufferStores(SelectionDAG &DAG,
                                                       EVT VDataType, SDLoc DL,
                                                       SDValue Ops[],
                                                       MemSDNode *M) const {
-  if (VDataType == MVT::f16)
+  if (VDataType == MVT::f16 || VDataType == MVT::bf16)
     Ops[1] = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Ops[1]);
 
   SDValue BufferStoreExt = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Ops[1]);
