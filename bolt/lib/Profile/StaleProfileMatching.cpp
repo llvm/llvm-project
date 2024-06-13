@@ -307,7 +307,6 @@ void BinaryFunction::computeBlockHashes(HashFunction HashFunction) const {
 FlowFunction
 createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   FlowFunction Func;
-  std::vector<uint64_t> ExitBlocksIndices;
 
   // Add a special "dummy" source so that there is always a unique entry point.
   FlowBlock EntryBlock;
@@ -319,9 +318,6 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
     Func.Blocks.emplace_back();
     FlowBlock &Block = Func.Blocks.back();
     Block.Index = Func.Blocks.size() - 1;
-    if (BB->successors().empty()) {
-      ExitBlocksIndices.push_back(Block.Index);
-    }
     (void)BB;
     assert(Block.Index == BB->getIndex() + 1 &&
            "incorrectly assigned basic block index");
@@ -349,6 +345,15 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
       InDegree[Jump.Target]++;
       UniqueSuccs.insert(DstBB);
     }
+
+    // If the block is an exit, add a dummy edge from it to the sink block.
+    if (UniqueSuccs.empty()) {
+      Func.Jumps.emplace_back();
+      FlowJump &Jump = Func.Jumps.back();
+      Jump.Source = SrcBB->getIndex() + 1;
+      Jump.Target = Func.Blocks.size() - 1;
+    }
+
     // Collect jumps to landing pads
     for (const BinaryBasicBlock *DstBB : SrcBB->landing_pads()) {
       // Ignoring parallel edges
@@ -377,14 +382,6 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
       if (!BB->isEntryPoint())
         Jump.IsUnlikely = true;
     }
-  }
-
-  // Add dummy edges from the exit blocks to the sink block.
-  for (uint64_t I : ExitBlocksIndices) {
-    Func.Jumps.emplace_back();
-    FlowJump &Jump = Func.Jumps.back();
-    Jump.Source = I;
-    Jump.Target = Func.Blocks.size() - 1;
   }
 
   // Create necessary metadata for the flow function
