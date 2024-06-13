@@ -2461,7 +2461,7 @@ DWARFASTParserClang::ConstructDemangledNameFromDWARF(const DWARFDIE &die) {
   std::vector<clang::ParmVarDecl *> param_decls;
   StreamString sstr;
 
-  DWARFDeclContext decl_ctx = SymbolFileDWARF::GetDWARFDeclContext(die);
+  DWARFDeclContext decl_ctx = die.GetDWARFDeclContext();
   sstr << decl_ctx.GetQualifiedName();
 
   clang::DeclContext *containing_decl_ctx =
