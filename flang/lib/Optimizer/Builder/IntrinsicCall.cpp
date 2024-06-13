@@ -5751,6 +5751,12 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
           mlir::dyn_cast_or_null<fir::EmboxProcOp>(operation.getDefiningOp())) {
     auto fctTy = mlir::dyn_cast<mlir::FunctionType>(embox.getFunc().getType());
     argByRef = mlir::isa<fir::ReferenceType>(fctTy.getInput(0));
+  } else if (auto load = mlir::dyn_cast_or_null<fir::LoadOp>(
+                 operation.getDefiningOp())) {
+    auto boxProcTy = mlir::dyn_cast_or_null<fir::BoxProcType>(load.getType());
+    assert(boxProcTy && "expect BoxProcType");
+    auto fctTy = mlir::dyn_cast<mlir::FunctionType>(boxProcTy.getEleTy());
+    argByRef = mlir::isa<fir::ReferenceType>(fctTy.getInput(0));
   }
 
   mlir::Type ty = array.getType();
