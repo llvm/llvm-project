@@ -1426,6 +1426,23 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
                                   {EVLPhi, Plan.getTripCount()});
   VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
 
+  // Replace header mask pattern (ICmp::ule widen-canonical-IV, BTC) with a
+  // (ICmp::ult step-vector, EVL).
+  // TODO: Replace all users of the ExplicitVectorLengthMask recipe with
+  // EVL-series recipes wherever possible to ensure the final vplan does not use
+  // the mask. The ExplicitVectorLengthMask recipe is a temporary appoarch to
+  // handle situations requiring a header mask, such as out-loop (unordered)
+  // reductions. It is necessary to generate a mask different from the original
+  // header mask because the explict vector length of the second-to-last
+  // iteration may be smaller than VF*UF.
+  auto *EVLMask =
+      new VPInstruction(VPInstruction::ExplicitVectorLengthMask, {VPEVL});
+  EVLMask->insertAfter(VPEVL);
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+    HeaderMask->replaceAllUsesWith(EVLMask);
+    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
+
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   VPSingleDefRecipe *OpVPEVL = VPEVL;
@@ -1444,29 +1461,28 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   NextEVLIV->insertBefore(CanonicalIVIncrement);
   EVLPhi->addOperand(NextEVLIV);
 
-  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
-    for (VPUser *U : collectUsersRecursively(HeaderMask)) {
-      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
-      if (!MemR)
-        continue;
-      VPValue *OrigMask = MemR->getMask();
-      assert(OrigMask && "Unmasked widen memory recipe when folding tail");
-      VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
-      if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
-        auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
-        N->insertBefore(L);
-        L->replaceAllUsesWith(N);
-        L->eraseFromParent();
-      } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
-        auto *N = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
-        N->insertBefore(S);
-        S->eraseFromParent();
-      } else {
-        llvm_unreachable("unsupported recipe");
-      }
+  for (VPUser *U : collectUsersRecursively(EVLMask)) {
+    auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
+    if (!MemR)
+      continue;
+    VPValue *OrigMask = MemR->getMask();
+    assert(OrigMask && "Unmasked widen memory recipe when folding tail");
+    VPValue *NewMask = EVLMask == OrigMask ? nullptr : OrigMask;
+    if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
+      auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
+      N->insertBefore(L);
+      L->replaceAllUsesWith(N);
+      L->eraseFromParent();
+    } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
+      auto *N = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
+      N->insertBefore(S);
+      S->eraseFromParent();
+    } else {
+      llvm_unreachable("unsupported recipe");
     }
-    recursivelyDeleteDeadRecipes(HeaderMask);
   }
+  recursivelyDeleteDeadRecipes(EVLMask);
+
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
   CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
