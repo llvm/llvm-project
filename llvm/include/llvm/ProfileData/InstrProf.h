@@ -866,7 +866,7 @@ struct InstrProfRecord {
 
   /// Return the array of profiled values at \p Site.
   inline ArrayRef<InstrProfValueData> getValueArrayForSite(uint32_t ValueKind,
-                                                      uint32_t Site) const;
+                                                           uint32_t Site) const;
 
   /// Return the number of value data collected for ValueKind at profiling
   /// site: Site.
