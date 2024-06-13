@@ -3948,9 +3948,17 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // we haven't seen yet.
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      const auto typeShouldBeVisited = [&](QualType T) -> bool {
+        if (T.isConstant(Ctx.getASTContext()))
+          return true;
+        if (const auto *RT = T->getAs<ReferenceType>())
+          return RT->getPointeeType().isConstQualified();
+        return false;
+      };
+
       // Visit local const variables like normal.
       if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
-          VD->getType().isConstant(Ctx.getASTContext())) {
+          typeShouldBeVisited(VD->getType())) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.
