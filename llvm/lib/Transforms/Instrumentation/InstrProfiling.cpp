@@ -937,9 +937,6 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   auto *Bitmaps = getOrCreateRegionBitmaps(I);
   IRBuilder<> Builder(I);
 
-  auto *Addr = Builder.CreateConstInBoundsGEP2_32(
-      Bitmaps->getValueType(), Bitmaps, 0, I->getBitmapIndex()->getZExtValue());
-
   if (isRuntimeCounterRelocationEnabled()) {
     LLVMContext &Ctx = M.getContext();
     Ctx.diagnose(DiagnosticInfoPGOProfile(
@@ -949,7 +946,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
         DS_Warning));
   }
 
-  return Addr;
+  return Bitmaps;
 }
 
 void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
@@ -1019,9 +1016,11 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
   auto *BitmapAddr = getBitmapAddress(Update);
 
-  // Load Temp Val.
+  // Load Temp Val + BitmapIdx.
   //  %mcdc.temp = load i32, ptr %mcdc.addr, align 4
-  auto *Temp = Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp");
+  auto *Temp = Builder.CreateAdd(
+      Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp"),
+      Update->getBitmapIndex());
 
   // Calculate byte offset using div8.
   //  %1 = lshr i32 %mcdc.temp, 3
@@ -1416,7 +1415,7 @@ GlobalVariable *
 InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
                                   StringRef Name,
                                   GlobalValue::LinkageTypes Linkage) {
-  uint64_t NumBytes = Inc->getNumBitmapBytes()->getZExtValue();
+  uint64_t NumBytes = Inc->getNumBitmapBytes();
   auto *BitmapTy = ArrayType::get(Type::getInt8Ty(M.getContext()), NumBytes);
   auto GV = new GlobalVariable(M, BitmapTy, false, Linkage,
                                Constant::getNullValue(BitmapTy), Name);
@@ -1435,7 +1434,7 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   // the corresponding profile section.
   auto *BitmapPtr = setupProfileSection(Inc, IPSK_bitmap);
   PD.RegionBitmaps = BitmapPtr;
-  PD.NumBitmapBytes = Inc->getNumBitmapBytes()->getZExtValue();
+  PD.NumBitmapBytes = Inc->getNumBitmapBytes();
   return PD.RegionBitmaps;
 }
 
