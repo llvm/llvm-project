@@ -654,7 +654,7 @@ struct VectorDeinterleaveOpConvert final
       return success();
     }
 
-    // Indices for `res1`.
+    // Indices for `shuffleEven` (result 0).
     auto seqEven = llvm::seq<int64_t>(n / 2);
     auto indicesEven =
         llvm::map_to_vector(seqEven, [](int i) { return i * 2; });
