@@ -1032,10 +1032,7 @@ addAlignedClause(lower::AbstractConverter &converter,
           std::get<std::optional<Aligned::Alignment>>(clause.t)) {
     mlir::Value operand = fir::getBase(
         converter.genExprValue(*alignmentValueParserExpr, stmtCtx));
-    if (mlir::Operation *definingOp = operand.getDefiningOp())
-      if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
-        if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue()))
-          alignment = intAttr.getInt();
+    alignment = *fir::getIntIfConstant(operand);
   } else {
     llvm::StringMap<bool> featuresMap = getTargetFeatures(builder.getModule());
     llvm::Triple triple = fir::getTargetTriple(builder.getModule());
