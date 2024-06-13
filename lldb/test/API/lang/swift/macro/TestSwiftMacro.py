@@ -42,8 +42,8 @@ class TestSwiftMacro(lldbtest.TestBase):
         thread.StepInto()
         # This is the expanded macro source, we should be able to step into it.
         self.expect('reg read pc', substrs=[
-            '[inlined] freestanding macro expansion #1 of stringify',
-            '13testStringify'
+            '[inlined] freestanding macro expansion #1 of stringify in module a file main.swift line 5 column 11',
+            'stringify'
         ])
 
         self.expect('expression -- #stringify(1)', substrs=['0 = 1', '1 = "1"'])
