@@ -469,7 +469,8 @@ struct ForcedIParity16 {
 
 /// Placeholder for real*10 version of Reduce Intrinsic
 struct ForcedReduceReal10 {
-  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ReduceReal10));
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceReal10Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF80(ctx);
@@ -488,7 +489,8 @@ struct ForcedReduceReal10 {
 
 /// Placeholder for real*16 version of Reduce Intrinsic
 struct ForcedReduceReal16 {
-  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ReduceReal16));
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceReal16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF128(ctx);
@@ -508,7 +510,7 @@ struct ForcedReduceReal16 {
 /// Placeholder for DIM real*10 version of Reduce Intrinsic
 struct ForcedReduceReal10Dim {
   static constexpr const char *name =
-      ExpandAndQuoteKey(RTNAME(ReduceReal10Dim));
+      ExpandAndQuoteKey(RTNAME(ReduceReal10DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF80(ctx);
@@ -530,7 +532,7 @@ struct ForcedReduceReal10Dim {
 /// Placeholder for DIM real*16 version of Reduce Intrinsic
 struct ForcedReduceReal16Dim {
   static constexpr const char *name =
-      ExpandAndQuoteKey(RTNAME(ReduceReal16Dim));
+      ExpandAndQuoteKey(RTNAME(ReduceReal16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::FloatType::getF128(ctx);
@@ -552,7 +554,7 @@ struct ForcedReduceReal16Dim {
 /// Placeholder for integer*16 version of Reduce Intrinsic
 struct ForcedReduceInteger16 {
   static constexpr const char *name =
-      ExpandAndQuoteKey(RTNAME(ReduceInteger16));
+      ExpandAndQuoteKey(RTNAME(ReduceInteger16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::IntegerType::get(ctx, 128);
@@ -572,7 +574,7 @@ struct ForcedReduceInteger16 {
 /// Placeholder for DIM integer*16 version of Reduce Intrinsic
 struct ForcedReduceInteger16Dim {
   static constexpr const char *name =
-      ExpandAndQuoteKey(RTNAME(ReduceInteger16Dim));
+      ExpandAndQuoteKey(RTNAME(ReduceInteger16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::IntegerType::get(ctx, 128);
@@ -594,7 +596,7 @@ struct ForcedReduceInteger16Dim {
 /// Placeholder for complex(10) version of Reduce Intrinsic
 struct ForcedReduceComplex10 {
   static constexpr const char *name =
-      ExpandAndQuoteKey(RTNAME(CppReduceComplex10));
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex10Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
@@ -615,7 +617,7 @@ struct ForcedReduceComplex10 {
 /// Placeholder for Dim complex(10) version of Reduce Intrinsic
 struct ForcedReduceComplex10Dim {
   static constexpr const char *name =
-      ExpandAndQuoteKey(RTNAME(CppReduceComplex10Dim));
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex10DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
@@ -637,7 +639,7 @@ struct ForcedReduceComplex10Dim {
 /// Placeholder for complex(16) version of Reduce Intrinsic
 struct ForcedReduceComplex16 {
   static constexpr const char *name =
-      ExpandAndQuoteKey(RTNAME(CppReduceComplex16));
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex16Ref));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
@@ -658,7 +660,7 @@ struct ForcedReduceComplex16 {
 /// Placeholder for Dim complex(16) version of Reduce Intrinsic
 struct ForcedReduceComplex16Dim {
   static constexpr const char *name =
-      ExpandAndQuoteKey(RTNAME(CppReduceComplex16Dim));
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex16DimRef));
   static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
     return [](mlir::MLIRContext *ctx) {
       auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
@@ -1471,17 +1473,17 @@ void fir::runtime::genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::factory::CharacterExprHelper charHelper{builder, loc};
 
   if (eleTy == fir::ComplexType::get(ctx, 2))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex2)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex2Ref)>(loc,
+                                                                       builder);
   else if (eleTy == fir::ComplexType::get(ctx, 3))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex3)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex3Ref)>(loc,
+                                                                       builder);
   else if (eleTy == fir::ComplexType::get(ctx, 4))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex4)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex4Ref)>(loc,
+                                                                       builder);
   else if (eleTy == fir::ComplexType::get(ctx, 8))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex8)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex8Ref)>(loc,
+                                                                       builder);
   else if (eleTy == fir::ComplexType::get(ctx, 10))
     func = fir::runtime::getRuntimeFunc<ForcedReduceComplex10>(loc, builder);
   else if (eleTy == fir::ComplexType::get(ctx, 16))
@@ -1529,35 +1531,43 @@ mlir::Value fir::runtime::genReduce(fir::FirOpBuilder &builder,
          "expect real, interger or logical");
 
   if (eleTy.isF16())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal2)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal2Ref)>(loc, builder);
   else if (eleTy.isBF16())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal3)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal3Ref)>(loc, builder);
   else if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal4)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal4Ref)>(loc, builder);
   else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8Ref)>(loc, builder);
   else if (eleTy.isF80())
     func = fir::runtime::getRuntimeFunc<ForcedReduceReal10>(loc, builder);
   else if (eleTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedReduceReal16>(loc, builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger1)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger1Ref)>(loc, builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger2)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger2Ref)>(loc, builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger4)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger4Ref)>(loc, builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger8)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger8Ref)>(loc, builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
     func = fir::runtime::getRuntimeFunc<ForcedReduceInteger16>(loc, builder);
   else if (eleTy == fir::LogicalType::get(ctx, 1))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical1)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical1Ref)>(loc, builder);
   else if (eleTy == fir::LogicalType::get(ctx, 2))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical2)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical2Ref)>(loc, builder);
   else if (eleTy == fir::LogicalType::get(ctx, 4))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical4)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical4Ref)>(loc, builder);
   else if (eleTy == fir::LogicalType::get(ctx, 8))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical8)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical8Ref)>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
 
@@ -1586,59 +1596,63 @@ void fir::runtime::genReduceDim(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::factory::CharacterExprHelper charHelper{builder, loc};
 
   if (eleTy.isF16())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal2Dim)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal2DimRef)>(loc, builder);
   else if (eleTy.isBF16())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal3Dim)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal3DimRef)>(loc, builder);
   else if (eleTy.isF32())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal4Dim)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal4DimRef)>(loc, builder);
   else if (eleTy.isF64())
-    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8Dim)>(loc, builder);
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8DimRef)>(loc, builder);
   else if (eleTy.isF80())
     func = fir::runtime::getRuntimeFunc<ForcedReduceReal10Dim>(loc, builder);
   else if (eleTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedReduceReal16Dim>(loc, builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger1Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger1DimRef)>(loc,
+                                                                       builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger2Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger2DimRef)>(loc,
+                                                                       builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger4Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger4DimRef)>(loc,
+                                                                       builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger8Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger8DimRef)>(loc,
+                                                                       builder);
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
     func = fir::runtime::getRuntimeFunc<ForcedReduceInteger16Dim>(loc, builder);
   else if (eleTy == fir::ComplexType::get(ctx, 2))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex2Dim)>(loc,
-                                                                       builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex2DimRef)>(
+        loc, builder);
   else if (eleTy == fir::ComplexType::get(ctx, 3))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex3Dim)>(loc,
-                                                                       builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex3DimRef)>(
+        loc, builder);
   else if (eleTy == fir::ComplexType::get(ctx, 4))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex4Dim)>(loc,
-                                                                       builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex4DimRef)>(
+        loc, builder);
   else if (eleTy == fir::ComplexType::get(ctx, 8))
-    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex8Dim)>(loc,
-                                                                       builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex8DimRef)>(
+        loc, builder);
   else if (eleTy == fir::ComplexType::get(ctx, 10))
     func = fir::runtime::getRuntimeFunc<ForcedReduceComplex10Dim>(loc, builder);
   else if (eleTy == fir::ComplexType::get(ctx, 16))
     func = fir::runtime::getRuntimeFunc<ForcedReduceComplex16Dim>(loc, builder);
   else if (eleTy == fir::LogicalType::get(ctx, 1))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical1Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical1DimRef)>(loc,
+                                                                       builder);
   else if (eleTy == fir::LogicalType::get(ctx, 2))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical2Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical2DimRef)>(loc,
+                                                                       builder);
   else if (eleTy == fir::LogicalType::get(ctx, 4))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical4Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical4DimRef)>(loc,
+                                                                       builder);
   else if (eleTy == fir::LogicalType::get(ctx, 8))
-    func =
-        fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical8Dim)>(loc, builder);
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical8DimRef)>(loc,
+                                                                       builder);
   else if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 1)
     func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceCharacter1Dim)>(loc,
                                                                       builder);
