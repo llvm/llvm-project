@@ -732,7 +732,7 @@ void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
     uint32_t NumValueSites = getNumValueSites(VK);
     for (size_t I = 0; I < NumValueSites; ++I) {
       uint32_t NV = getNumValueDataForSite(VK, I);
-      std::unique_ptr<InstrProfValueData[]> VD = getValueForSiteLegacy(VK, I);
+      std::unique_ptr<InstrProfValueData[]> VD = getValueForSite(VK, I);
       for (uint32_t V = 0; V < NV; V++)
         KindSum += VD[V].Count;
     }
@@ -1095,8 +1095,7 @@ uint32_t getNumValueDataForSiteInstrProf(const void *R, uint32_t VK,
 
 void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
                               uint32_t K, uint32_t S) {
-  reinterpret_cast<const InstrProfRecord *>(R)->getValueForSiteLegacy(Dst, K,
-                                                                      S);
+  reinterpret_cast<const InstrProfRecord *>(R)->getValueForSite(Dst, K, S);
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
@@ -1280,7 +1279,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
     return;
 
   std::unique_ptr<InstrProfValueData[]> VD =
-      InstrProfR.getValueForSiteLegacy(ValueKind, SiteIdx);
+      InstrProfR.getValueForSite(ValueKind, SiteIdx);
 
   ArrayRef<InstrProfValueData> VDs(VD.get(), NV);
   uint64_t Sum = 0;

@@ -864,23 +864,23 @@ struct InstrProfRecord {
   /// Return the total number of ValueData for ValueKind.
   inline uint32_t getNumValueData(uint32_t ValueKind) const;
 
+  /// Return the array of profiled values at \p Site.
+  inline ArrayRef<InstrProfValueData> getValueArrayForSite(uint32_t ValueKind,
+                                                      uint32_t Site) const;
+
   /// Return the number of value data collected for ValueKind at profiling
   /// site: Site.
   inline uint32_t getNumValueDataForSite(uint32_t ValueKind,
                                          uint32_t Site) const;
 
   /// Return the array of profiled values at \p Site.
-  inline ArrayRef<InstrProfValueData> getValueForSite(uint32_t ValueKind,
-                                                      uint32_t Site) const;
-
-  /// Return the array of profiled values at \p Site.
   inline std::unique_ptr<InstrProfValueData[]>
-  getValueForSiteLegacy(uint32_t ValueKind, uint32_t Site) const;
+  getValueForSite(uint32_t ValueKind, uint32_t Site) const;
 
   /// Get the target value/counts of kind \p ValueKind collected at site
   /// \p Site and store the result in array \p Dest.
-  inline void getValueForSiteLegacy(InstrProfValueData Dest[],
-                                    uint32_t ValueKind, uint32_t Site) const;
+  inline void getValueForSite(InstrProfValueData Dest[], uint32_t ValueKind,
+                              uint32_t Site) const;
 
   /// Reserve space for NumValueSites sites.
   inline void reserveSites(uint32_t ValueKind, uint32_t NumValueSites);
@@ -1065,26 +1065,24 @@ uint32_t InstrProfRecord::getNumValueDataForSite(uint32_t ValueKind,
 }
 
 ArrayRef<InstrProfValueData>
-InstrProfRecord::getValueForSite(uint32_t ValueKind, uint32_t Site) const {
+InstrProfRecord::getValueArrayForSite(uint32_t ValueKind, uint32_t Site) const {
   return getValueSitesForKind(ValueKind)[Site].ValueData;
 }
 
 std::unique_ptr<InstrProfValueData[]>
-InstrProfRecord::getValueForSiteLegacy(uint32_t ValueKind,
-                                       uint32_t Site) const {
+InstrProfRecord::getValueForSite(uint32_t ValueKind, uint32_t Site) const {
   uint32_t N = getNumValueDataForSite(ValueKind, Site);
   if (N == 0)
     return std::unique_ptr<InstrProfValueData[]>(nullptr);
 
   auto VD = std::make_unique<InstrProfValueData[]>(N);
-  getValueForSiteLegacy(VD.get(), ValueKind, Site);
+  getValueForSite(VD.get(), ValueKind, Site);
 
   return VD;
 }
 
-void InstrProfRecord::getValueForSiteLegacy(InstrProfValueData Dest[],
-                                            uint32_t ValueKind,
-                                            uint32_t Site) const {
+void InstrProfRecord::getValueForSite(InstrProfValueData Dest[],
+                                      uint32_t ValueKind, uint32_t Site) const {
   uint32_t I = 0;
   for (auto V : getValueSitesForKind(ValueKind)[Site].ValueData) {
     Dest[I].Value = V.Value;
