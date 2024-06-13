@@ -249,6 +249,7 @@ public:
   struct NoLValuePath {};
   struct UninitArray {};
   struct UninitStruct {};
+  struct ConstexprUnknown {};
 
   template <typename Impl> friend class clang::serialization::BasicReaderBase;
   friend class ASTImporter;
@@ -256,6 +257,7 @@ public:
 
 private:
   ValueKind Kind;
+  bool AllowConstexprUnknown = false;
 
   struct ComplexAPSInt {
     APSInt Real, Imag;
@@ -314,53 +316,69 @@ private:
   DataType Data;
 
 public:
-  APValue() : Kind(None) {}
-  explicit APValue(APSInt I) : Kind(None) {
+  bool allowConstexprUnknown() const { return AllowConstexprUnknown; }
+
+  void setConstexprUnknown() { AllowConstexprUnknown = true; }
+
+  APValue() : Kind(None), AllowConstexprUnknown(false) {}
+  explicit APValue(APSInt I) : Kind(None), AllowConstexprUnknown(false) {
     MakeInt(); setInt(std::move(I));
   }
-  explicit APValue(APFloat F) : Kind(None) {
+  explicit APValue(APFloat F) : Kind(None), AllowConstexprUnknown(false) {
     MakeFloat(); setFloat(std::move(F));
   }
-  explicit APValue(APFixedPoint FX) : Kind(None) {
+  explicit APValue(APFixedPoint FX) : Kind(None), AllowConstexprUnknown(false) {
     MakeFixedPoint(std::move(FX));
   }
-  explicit APValue(const APValue *E, unsigned N) : Kind(None) {
+  explicit APValue(const APValue *E, unsigned N)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeVector(); setVector(E, N);
   }
-  APValue(APSInt R, APSInt I) : Kind(None) {
+  APValue(APSInt R, APSInt I) : Kind(None), AllowConstexprUnknown(false) {
     MakeComplexInt(); setComplexInt(std::move(R), std::move(I));
   }
-  APValue(APFloat R, APFloat I) : Kind(None) {
+  APValue(APFloat R, APFloat I) : Kind(None), AllowConstexprUnknown(false) {
     MakeComplexFloat(); setComplexFloat(std::move(R), std::move(I));
   }
   APValue(const APValue &RHS);
   APValue(APValue &&RHS);
   APValue(LValueBase B, const CharUnits &O, NoLValuePath N,
           bool IsNullPtr = false)
-      : Kind(None) {
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeLValue(); setLValue(B, O, N, IsNullPtr);
   }
   APValue(LValueBase B, const CharUnits &O, ArrayRef<LValuePathEntry> Path,
           bool OnePastTheEnd, bool IsNullPtr = false)
-      : Kind(None) {
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeLValue(); setLValue(B, O, Path, OnePastTheEnd, IsNullPtr);
   }
-  APValue(UninitArray, unsigned InitElts, unsigned Size) : Kind(None) {
+
+  APValue(LValueBase B, ConstexprUnknown, const CharUnits &O,
+          bool IsNullPtr = false)
+      : Kind(None), AllowConstexprUnknown(true) {
+    MakeLValue();
+    setLValue(B, O, NoLValuePath{}, IsNullPtr);
+  }
+
+  APValue(UninitArray, unsigned InitElts, unsigned Size)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeArray(InitElts, Size);
   }
-  APValue(UninitStruct, unsigned B, unsigned M) : Kind(None) {
+  APValue(UninitStruct, unsigned B, unsigned M)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeStruct(B, M);
   }
   explicit APValue(const FieldDecl *D, const APValue &V = APValue())
-      : Kind(None) {
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeUnion(); setUnion(D, V);
   }
   APValue(const ValueDecl *Member, bool IsDerivedMember,
-          ArrayRef<const CXXRecordDecl*> Path) : Kind(None) {
+          ArrayRef<const CXXRecordDecl *> Path)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeMemberPointer(Member, IsDerivedMember, Path);
   }
-  APValue(const AddrLabelExpr* LHSExpr, const AddrLabelExpr* RHSExpr)
-      : Kind(None) {
+  APValue(const AddrLabelExpr *LHSExpr, const AddrLabelExpr *RHSExpr)
+      : Kind(None), AllowConstexprUnknown(false) {
     MakeAddrLabelDiff(); setAddrLabelDiff(LHSExpr, RHSExpr);
   }
   static APValue IndeterminateValue() {
