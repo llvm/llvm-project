@@ -4493,9 +4493,8 @@ static std::optional<ConstantRange> getRange(const Instruction &I) {
     if (CB->hasRetAttr(Attribute::NoUndef))
       return CB->getRange();
   }
-  if (const MDNode *Range = getRangeMetadata(I)) {
+  if (const MDNode *Range = getRangeMetadata(I))
     return getConstantRangeFromMetadata(*Range);
-  }
   return std::nullopt;
 }
 
