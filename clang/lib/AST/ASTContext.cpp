@@ -2791,11 +2791,9 @@ bool ASTContext::hasUniqueObjectRepresentations(
     return hasUniqueObjectRepresentations(getBaseElementType(Ty),
                                           CheckIfTriviallyCopyable);
 
-  if (Ty->isVoidType())
-    return false;
-
-  assert(!Ty->isIncompleteType() && "hasUniqueObjectRepresentations should not "
-                                    "be called with an incomplete type");
+  assert((Ty->isVoidType() || !Ty->isIncompleteType()) &&
+         "hasUniqueObjectRepresentations should not be called with an "
+         "incomplete type");
 
   // (9.1) - T is trivially copyable...
   if (CheckIfTriviallyCopyable && !Ty.isTriviallyCopyableType(*this))
