@@ -422,6 +422,10 @@ them.
 
  The default is `default`.
 
+.. option:: --no-verify-note-sections
+
+ When adding note sections, do not verify if the section format is valid.
+
 .. option:: --output-target <format>, -O
 
  Write the output as the specified format. See `SUPPORTED FORMATS`_ for a list
@@ -514,12 +518,8 @@ them.
 
 .. option:: --verify-note-sections
 
- When adding note sections, verify if the section format is valid. This flag is
- turned on by default for ELF files.
-
-.. option:: --no-verify-note-sections
-
- When adding note sections, do not verify if the section format is valid.
+ When adding note sections, verify if the section format is valid. On by default
+ for ELF files.
 
 .. option:: --weaken-symbol <symbol>, -W
 

@@ -3,22 +3,22 @@
 ## Add [namesz, descsz, type, name, desc] for a build id.
 
 ## Notes should be padded on 8 bytes.
-# RUN: echo -e -n "\x04\x00\x00\x00" >  %t-miss-padding-note.bin
-# RUN: echo -e -n "\x07\x00\x00\x00" >> %t-miss-padding-note.bin
-# RUN: echo -e -n "\x03\x00\x00\x00" >> %t-miss-padding-note.bin
-# RUN: echo -e -n "GNU\x00"          >> %t-miss-padding-note.bin
-# RUN: echo -e -n "\x0c\x0d\x0e"     >> %t-miss-padding-note.bin
+# RUN: printf "\x04\x00\x00\x00" >  %t-miss-padding-note.bin
+# RUN: printf "\x07\x00\x00\x00" >> %t-miss-padding-note.bin
+# RUN: printf "\x03\x00\x00\x00" >> %t-miss-padding-note.bin
+# RUN: printf "GNU\x00"          >> %t-miss-padding-note.bin
+# RUN: printf "\x0c\x0d\x0e"     >> %t-miss-padding-note.bin
 
 ## The namesz field bit is incorrect.
-# RUN: echo -e -n "\x08\x00\x00\x00" >  %t-invalid-size-note.bin
-# RUN: echo -e -n "\x07\x00\x00\x00" >> %t-invalid-size-note.bin
-# RUN: echo -e -n "\x03\x00\x00\x00" >> %t-invalid-size-note.bin
-# RUN: echo -e -n "GNU\x00"          >> %t-invalid-size-note.bin
-# RUN: echo -e -n "\x0c\x0d\x0e\x00" >> %t-invalid-size-note.bin
+# RUN: printf "\x08\x00\x00\x00" >  %t-invalid-size-note.bin
+# RUN: printf "\x07\x00\x00\x00" >> %t-invalid-size-note.bin
+# RUN: printf "\x03\x00\x00\x00" >> %t-invalid-size-note.bin
+# RUN: printf "GNU\x00"          >> %t-invalid-size-note.bin
+# RUN: printf "\x0c\x0d\x0e\x00" >> %t-invalid-size-note.bin
 
 ## Missing type field.
-# RUN: echo -e -n "\x08\x00\x00\x00" >  %t-short-note.bin
-# RUN: echo -e -n "\x07\x00\x00\x00" >> %t-short-note.bin
+# RUN: printf "\x08\x00\x00\x00" >  %t-short-note.bin
+# RUN: printf "\x07\x00\x00\x00" >> %t-short-note.bin
 
 # RUN: yaml2obj %s -o %t.o
 
@@ -32,10 +32,10 @@
 # RUN: not llvm-objcopy --add-section=.note.short=%t-short-note.bin %t.o %t-with-note.o 2>&1 | FileCheck --check-prefix=CHECK-SHORT %s
 # CHECK-SHORT: .note.short data must be either empty or at least 12 bytes long
 
-## test that verification can be disabled
+## Test that verification can be disabled.
 # RUN: llvm-objcopy --add-section=.note.short=%t-short-note.bin --no-verify-note-sections %t.o %t-with-note.o
 
-## test that last argument has precedence
+## Test that last argument has precedence.
 # RUN: llvm-objcopy --add-section=.note.short=%t-short-note.bin --verify-note-sections --no-verify-note-sections %t.o %t-with-note.o
 
 !ELF
@@ -43,4 +43,3 @@ FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
   Type:            ET_REL
-
