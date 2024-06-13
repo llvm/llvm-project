@@ -21,7 +21,6 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -41,12 +40,10 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -139,8 +136,7 @@ namespace {
 // In the inner map, the key represents address point offsets and the value is a
 // constant for this address point.
 using VTableAddressPointOffsetValMap =
-    std::unordered_map<const GlobalVariable *,
-                       std::unordered_map<int, Constant *>>;
+    SmallDenseMap<const GlobalVariable *, std::unordered_map<int, Constant *>>;
 
 // A struct to collect type information for a virtual call site.
 struct VirtualCallSiteInfo {
@@ -154,7 +150,7 @@ struct VirtualCallSiteInfo {
 
 // The key is a virtual call, and value is its type information.
 using VirtualCallSiteTypeInfoMap =
-    std::unordered_map<const CallBase *, VirtualCallSiteInfo>;
+    SmallDenseMap<const CallBase *, VirtualCallSiteInfo>;
 
 // The key is vtable GUID, and value is its value profile count.
 using VTableGUIDCountsMap = SmallDenseMap<uint64_t, uint64_t, 16>;
