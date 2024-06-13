@@ -998,7 +998,7 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
     }
     if (tok == "CLASS")
       osd->osec.commands.push_back(make<InputSectionDescription>(
-          StringRef{}, withFlags, withoutFlags, next()));
+          StringRef{}, withFlags, withoutFlags, readSectionClassName()));
     else
       osd->osec.commands.push_back(
           readInputSectionRules(tok, withFlags, withoutFlags));

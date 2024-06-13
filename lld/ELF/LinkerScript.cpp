@@ -602,7 +602,8 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       return ret;
     }
     if (!scd->sc.assigned) {
-      error("section class '" + cmd->className + "' used before assigned");
+      error("section class '" + cmd->className + "' referenced by '" +
+            outCmd.name + "' before class definition");
       return ret;
     }
 
@@ -806,7 +807,7 @@ void LinkerScript::processSectionCommands() {
       for (InputSectionBase *sec : isd->sectionBases)
         if (sec->parent && isa<SectionClass>(sec->parent))
           error("section '" + sec->name + "' assigned to class '" +
-                sec->parent->name + "' but to no output section");
+                sec->parent->name + "' but unreferenced by any output section");
 }
 
 void LinkerScript::processSymbolAssignments() {

@@ -9,9 +9,12 @@
 ## references may be restricted by INPUT_SECTION_FLAGS.
 
 # RUN: ld.lld -T matching.ld matching.o -o matching
-# RUN: llvm-readobj -x .rodata matching | FileCheck %s --check-prefix=MATCHING
+# RUN: llvm-readobj -x .rodata -x .rodata.d matching | FileCheck %s --check-prefix=MATCHING
 
-# MATCHING: 02030104
+# MATCHING:      .rodata
+# MATCHING-NEXT: 020301
+# MATCHING:      .rodata.d
+# MATCHING-NEXT: 04
 
 
 ## An error is reported when a section class has more than one description.
@@ -32,13 +35,12 @@
 
 
 ## An error is reported when the content of section classes is demanded before
-## input sections have been assigned to them.
+## its definition is processed.
 
-# RUN: not ld.lld -T used-before-assigned.ld matching.o 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=USED-BEFORE-ASSIGNED
+# RUN: not ld.lld -T referenced-before-defined.ld matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=REFERENCED-BEFORE-DEFINED
 
-# USED-BEFORE-ASSIGNED: error: section class 'a' used before assigned
-
+# REFERENCED-BEFORE-DEFINED: error: section class 'a' referenced by '.rodata' before class definition
 
 ## An error is reported when an input section is bound to a section class but
 ## is not referenced by at least one output section.
@@ -46,7 +48,7 @@
 # RUN: not ld.lld -T unreferenced.ld matching.o 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=UNREFERENCED
 
-# UNREFERENCED: error: section '.rodata.a' assigned to class 'a' but to no output section
+# UNREFERENCED: error: section '.rodata.a' assigned to class 'a' but unreferenced by any output section
 
 
 ## An error is reported when one section class references another.
@@ -178,10 +180,6 @@
 .byte 4
 
 #--- matching.ld
-MEMORY {
- m : ORIGIN = 0, LENGTH = 4
-}
-
 SECTIONS {
   CLASS(a) { *(.rodata.a) }
   CLASS(cd) { *(.rodata.c) *(.rodata.d) }
@@ -189,8 +187,8 @@ SECTIONS {
     *(.rodata.*)
     INPUT_SECTION_FLAGS(SHF_EXECINSTR) CLASS(cd)
     CLASS(a)
-    CLASS(cd)
-  } >m
+  }
+  OVERLAY : { .rodata.d { INPUT_SECTION_FLAGS(!SHF_EXECINSTR) CLASS(cd) } }
 }
 
 #--- already-defined.ld
@@ -204,7 +202,7 @@ SECTIONS {
   CLASS(a) { (.rodata.a) }
 }
 
-#--- used-before-assigned.ld
+#--- referenced-before-defined.ld
 SECTIONS {
   .rodata : { CLASS(a) }
   CLASS(a) { *(.rodata.a) }
