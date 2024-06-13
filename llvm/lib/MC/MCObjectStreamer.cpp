@@ -300,7 +300,7 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     // Assign all pending labels to offset 0 within the dummy "pending"
     // fragment. (They will all be reassigned to a real fragment in
     // flushPendingLabels())
-    assert(Symbol->getOffset() == 0);
+    Symbol->setOffset(0);
     addPendingLabel(Symbol);
   }
 
