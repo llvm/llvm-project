@@ -307,9 +307,9 @@ bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {
 }
 
 unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
-  if (auto VTy = dyn_cast<FixedVectorType>(Tp)) {
+  if (FixedVectorType *VTy = dyn_cast<FixedVectorType>(Tp)) {
     if (DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
-      auto ElCount = VTy->getElementCount().getFixedValue();
+      unsigned ElCount = VTy->getElementCount().getFixedValue();
       return ElCount / 4;
     }
   }
