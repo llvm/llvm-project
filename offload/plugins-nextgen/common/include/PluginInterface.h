@@ -19,6 +19,7 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
@@ -265,7 +266,7 @@ struct GenericKernelTy {
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
                            uint64_t NumBlocks, KernelArgsTy &KernelArgs,
-                           void *Args,
+                           KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
@@ -326,11 +327,12 @@ protected:
 
 private:
   /// Prepare the arguments before launching the kernel.
-  void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
-                    llvm::SmallVectorImpl<void *> &Args,
-                    llvm::SmallVectorImpl<void *> &Ptrs,
-                    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
+  KernelLaunchParamsTy
+  prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
+              ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
+              llvm::SmallVectorImpl<void *> &Args,
+              llvm::SmallVectorImpl<void *> &Ptrs,
+              KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
