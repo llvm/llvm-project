@@ -480,16 +480,16 @@ class MachineBlockPlacement : public MachineFunctionPass {
                                BlockFilterSet *BlockFilter);
   bool repeatedlyTailDuplicateBlock(
       MachineBasicBlock *BB, MachineBasicBlock *&LPred,
-      const MachineBasicBlock *LoopHeaderBB,
-      BlockChain &Chain, BlockFilterSet *BlockFilter,
+      const MachineBasicBlock *LoopHeaderBB, BlockChain &Chain,
+      BlockFilterSet *BlockFilter,
       MachineFunction::iterator &PrevUnplacedBlockIt,
       BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt);
-  bool maybeTailDuplicateBlock(
-      MachineBasicBlock *BB, MachineBasicBlock *LPred,
-      BlockChain &Chain, BlockFilterSet *BlockFilter,
-      MachineFunction::iterator &PrevUnplacedBlockIt,
-      BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
-      bool &DuplicatedToLPred);
+  bool
+  maybeTailDuplicateBlock(MachineBasicBlock *BB, MachineBasicBlock *LPred,
+                          BlockChain &Chain, BlockFilterSet *BlockFilter,
+                          MachineFunction::iterator &PrevUnplacedBlockIt,
+                          BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
+                          bool &DuplicatedToLPred);
   bool hasBetterLayoutPredecessor(
       const MachineBasicBlock *BB, const MachineBasicBlock *Succ,
       const BlockChain &SuccChain, BranchProbability SuccProb,
@@ -500,13 +500,13 @@ class MachineBlockPlacement : public MachineFunctionPass {
       const BlockFilterSet *BlockFilter);
   MachineBasicBlock *selectBestCandidateBlock(
       const BlockChain &Chain, SmallVectorImpl<MachineBasicBlock *> &WorkList);
-  MachineBasicBlock *getFirstUnplacedBlock(
-      const BlockChain &PlacedChain,
-      MachineFunction::iterator &PrevUnplacedBlockIt);
-  MachineBasicBlock *getFirstUnplacedBlock(
-      const BlockChain &PlacedChain,
-      BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
-      const BlockFilterSet *BlockFilter);
+  MachineBasicBlock *
+  getFirstUnplacedBlock(const BlockChain &PlacedChain,
+                        MachineFunction::iterator &PrevUnplacedBlockIt);
+  MachineBasicBlock *
+  getFirstUnplacedBlock(const BlockChain &PlacedChain,
+                        BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
+                        const BlockFilterSet *BlockFilter);
 
   /// Add a basic block to the work list if it is appropriate.
   ///
@@ -1805,7 +1805,7 @@ MachineBasicBlock *MachineBlockPlacement::getFirstUnplacedBlock(
     BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
     const BlockFilterSet *BlockFilter) {
   assert(BlockFilter);
-  for (;PrevUnplacedBlockInFilterIt != BlockFilter->end();
+  for (; PrevUnplacedBlockInFilterIt != BlockFilter->end();
        ++PrevUnplacedBlockInFilterIt) {
     BlockChain *C = BlockToChain[*PrevUnplacedBlockInFilterIt];
     if (C != &PlacedChain) {
@@ -3053,16 +3053,14 @@ void MachineBlockPlacement::alignBlocks() {
 /// @return true if \p BB was removed.
 bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
     MachineBasicBlock *BB, MachineBasicBlock *&LPred,
-    const MachineBasicBlock *LoopHeaderBB,
-    BlockChain &Chain, BlockFilterSet *BlockFilter,
-    MachineFunction::iterator &PrevUnplacedBlockIt,
+    const MachineBasicBlock *LoopHeaderBB, BlockChain &Chain,
+    BlockFilterSet *BlockFilter, MachineFunction::iterator &PrevUnplacedBlockIt,
     BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt) {
   bool Removed, DuplicatedToLPred;
   bool DuplicatedToOriginalLPred;
-  Removed = maybeTailDuplicateBlock(BB, LPred, Chain, BlockFilter,
-                                    PrevUnplacedBlockIt,
-                                    PrevUnplacedBlockInFilterIt,
-                                    DuplicatedToLPred);
+  Removed = maybeTailDuplicateBlock(
+      BB, LPred, Chain, BlockFilter, PrevUnplacedBlockIt,
+      PrevUnplacedBlockInFilterIt, DuplicatedToLPred);
   if (!Removed)
     return false;
   DuplicatedToOriginalLPred = DuplicatedToLPred;
@@ -3083,10 +3081,9 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
     if (ChainEnd == Chain.begin())
       break;
     DupPred = *std::prev(ChainEnd);
-    Removed = maybeTailDuplicateBlock(DupBB, DupPred, Chain, BlockFilter,
-                                      PrevUnplacedBlockIt,
-                                      PrevUnplacedBlockInFilterIt,
-                                      DuplicatedToLPred);
+    Removed = maybeTailDuplicateBlock(
+        DupBB, DupPred, Chain, BlockFilter, PrevUnplacedBlockIt,
+        PrevUnplacedBlockInFilterIt, DuplicatedToLPred);
   }
   // If BB was duplicated into LPred, it is now scheduled. But because it was
   // removed, markChainSuccessors won't be called for its chain. Instead we
@@ -3113,9 +3110,8 @@ bool MachineBlockPlacement::repeatedlyTailDuplicateBlock(
 /// \p DuplicatedToLPred - True if the block was duplicated into LPred.
 /// \return  - True if the block was duplicated into all preds and removed.
 bool MachineBlockPlacement::maybeTailDuplicateBlock(
-    MachineBasicBlock *BB, MachineBasicBlock *LPred,
-    BlockChain &Chain, BlockFilterSet *BlockFilter,
-    MachineFunction::iterator &PrevUnplacedBlockIt,
+    MachineBasicBlock *BB, MachineBasicBlock *LPred, BlockChain &Chain,
+    BlockFilterSet *BlockFilter, MachineFunction::iterator &PrevUnplacedBlockIt,
     BlockFilterSet::iterator &PrevUnplacedBlockInFilterIt,
     bool &DuplicatedToLPred) {
   DuplicatedToLPred = false;
@@ -3163,10 +3159,13 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
           // pointing to the same element as before.
           if (It != BlockFilter->end()) {
             if (It < PrevUnplacedBlockInFilterIt) {
+              const MachineBasicBlock *PrevBB = *PrevUnplacedBlockInFilterIt;
               // BlockFilter is a SmallVector so all elements after RemBB are
               // shifted to the front by 1 after its deletion.
               auto Distance = PrevUnplacedBlockInFilterIt - It - 1;
               PrevUnplacedBlockInFilterIt = BlockFilter->erase(It) + Distance;
+              assert(*PrevUnplacedBlockInFilterIt == PrevBB);
+              (void)PrevBB;
             } else if (It == PrevUnplacedBlockInFilterIt)
               // The block pointed by PrevUnplacedBlockInFilterIt is erased, we
               // have to set it to the next element.
