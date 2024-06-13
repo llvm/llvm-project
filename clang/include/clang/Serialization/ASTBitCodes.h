@@ -168,12 +168,16 @@ const unsigned int NUM_PREDEF_SUBMODULE_IDS = 1;
 /// because blobs in bitstream are 32-bit aligned). This structure is
 /// serialized "as is" to the AST file.
 class UnalignedUInt64 {
-  uint32_t BitLow = 0;
-  uint32_t BitHigh = 0;
+  uint32_t BitLow;
+  uint32_t BitHigh;
 
 public:
   UnalignedUInt64() = default;
   UnalignedUInt64(uint64_t BitOffset) { set(BitOffset); }
+
+  operator uint64_t() const {
+    return get();
+  }
 
   void set(uint64_t Offset) {
     BitLow = Offset;
@@ -255,11 +259,9 @@ public:
   }
 };
 
-// The unaligned decl ID used in the Blobs of bistreams.
-using unaligned_decl_id_t =
-    llvm::support::detail::packed_endian_specific_integral<
-        serialization::DeclID, llvm::endianness::native,
-        llvm::support::unaligned>;
+// The 32 bits aligned decl ID used in the Blobs of bistreams due the blobs
+// are 32 bits aligned.
+using SerializedDeclID = UnalignedUInt64;
 
 /// The number of predefined preprocessed entity IDs.
 const unsigned int NUM_PREDEF_PP_ENTITY_IDS = 1;
@@ -1986,9 +1988,9 @@ enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
 
 /// Describes the categories of an Objective-C class.
 struct ObjCCategoriesInfo {
-  // The ID of the definition. Use unaligned_decl_id_t to keep
+  // The ID of the definition. Use SerializedDeclID to keep
   // ObjCCategoriesInfo 32-bit aligned.
-  unaligned_decl_id_t DefinitionID;
+  SerializedDeclID DefinitionID;
 
   // Offset into the array of category lists.
   unsigned Offset;

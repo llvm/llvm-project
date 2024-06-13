@@ -458,7 +458,7 @@ public:
   unsigned BaseDeclIndex = 0;
 
   /// Array of file-level DeclIDs sorted by file.
-  const serialization::unaligned_decl_id_t *FileSortedDecls = nullptr;
+  const serialization::SerializedDeclID *FileSortedDecls = nullptr;
   unsigned NumFileSortedDecls = 0;
 
   /// Array of category list location information within this

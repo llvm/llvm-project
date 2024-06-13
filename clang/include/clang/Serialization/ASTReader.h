@@ -586,11 +586,11 @@ private:
 
   struct FileDeclsInfo {
     ModuleFile *Mod = nullptr;
-    ArrayRef<serialization::unaligned_decl_id_t> Decls;
+    ArrayRef<serialization::SerializedDeclID> Decls;
 
     FileDeclsInfo() = default;
     FileDeclsInfo(ModuleFile *Mod,
-                  ArrayRef<serialization::unaligned_decl_id_t> Decls)
+                  ArrayRef<serialization::SerializedDeclID> Decls)
         : Mod(Mod), Decls(Decls) {}
   };
 
@@ -599,7 +599,7 @@ private:
 
   /// An array of lexical contents of a declaration context, as a sequence of
   /// Decl::Kind, DeclID pairs.
-  using LexicalContents = ArrayRef<serialization::unaligned_decl_id_t>;
+  using LexicalContents = ArrayRef<serialization::SerializedDeclID>;
 
   /// Map from a DeclContext to its lexical contents.
   llvm::DenseMap<const DeclContext*, std::pair<ModuleFile*, LexicalContents>>
@@ -1482,7 +1482,7 @@ private:
 public:
   class ModuleDeclIterator
       : public llvm::iterator_adaptor_base<
-            ModuleDeclIterator, const serialization::unaligned_decl_id_t *,
+            ModuleDeclIterator, const serialization::SerializedDeclID *,
             std::random_access_iterator_tag, const Decl *, ptrdiff_t,
             const Decl *, const Decl *> {
     ASTReader *Reader = nullptr;
@@ -1492,7 +1492,7 @@ public:
     ModuleDeclIterator() : iterator_adaptor_base(nullptr) {}
 
     ModuleDeclIterator(ASTReader *Reader, ModuleFile *Mod,
-                       const serialization::unaligned_decl_id_t *Pos)
+                       const serialization::SerializedDeclID *Pos)
         : iterator_adaptor_base(Pos), Reader(Reader), Mod(Mod) {}
 
     value_type operator*() const {

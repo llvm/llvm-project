@@ -1266,7 +1266,7 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   if (!Lex.first) {
     Lex = std::make_pair(
         &M, llvm::ArrayRef(
-                reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
+                reinterpret_cast<const SerializedDeclID *>(Blob.data()),
                 Blob.size() / sizeof(DeclID)));
   }
   DC->setHasExternalLexicalStorage(true);
@@ -1658,7 +1658,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
 
     unsigned NumFileDecls = Record[7];
     if (NumFileDecls && ContextObj) {
-      const unaligned_decl_id_t *FirstDecl = F->FileSortedDecls + Record[6];
+      const SerializedDeclID *FirstDecl = F->FileSortedDecls + Record[6];
       assert(F->FileSortedDecls && "FILE_SORTED_DECLS not encountered yet ?");
       FileDeclIDs[FID] =
           FileDeclsInfo(F, llvm::ArrayRef(FirstDecl, NumFileDecls));
@@ -3388,7 +3388,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case TU_UPDATE_LEXICAL: {
       DeclContext *TU = ContextObj->getTranslationUnitDecl();
       LexicalContents Contents(
-          reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
+          reinterpret_cast<const SerializedDeclID *>(Blob.data()),
           static_cast<unsigned int>(Blob.size() / sizeof(DeclID)));
       TULexicalDecls.push_back(std::make_pair(&F, Contents));
       TU->setHasExternalLexicalStorage(true);
@@ -3616,7 +3616,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case FILE_SORTED_DECLS:
-      F.FileSortedDecls = (const unaligned_decl_id_t *)Blob.data();
+      F.FileSortedDecls = (const SerializedDeclID *)Blob.data();
       F.NumFileSortedDecls = Record[0];
       break;
 
@@ -7911,23 +7911,23 @@ public:
   UnalignedDeclIDComp(ASTReader &Reader, ModuleFile &M)
       : Reader(Reader), Mod(M) {}
 
-  bool operator()(unaligned_decl_id_t L, unaligned_decl_id_t R) const {
+  bool operator()(SerializedDeclID L, SerializedDeclID R) const {
     SourceLocation LHS = getLocation(L);
     SourceLocation RHS = getLocation(R);
     return Reader.getSourceManager().isBeforeInTranslationUnit(LHS, RHS);
   }
 
-  bool operator()(SourceLocation LHS, unaligned_decl_id_t R) const {
+  bool operator()(SourceLocation LHS, SerializedDeclID R) const {
     SourceLocation RHS = getLocation(R);
     return Reader.getSourceManager().isBeforeInTranslationUnit(LHS, RHS);
   }
 
-  bool operator()(unaligned_decl_id_t L, SourceLocation RHS) const {
+  bool operator()(SerializedDeclID L, SourceLocation RHS) const {
     SourceLocation LHS = getLocation(L);
     return Reader.getSourceManager().isBeforeInTranslationUnit(LHS, RHS);
   }
 
-  SourceLocation getLocation(unaligned_decl_id_t ID) const {
+  SourceLocation getLocation(SerializedDeclID ID) const {
     return Reader.getSourceManager().getFileLoc(
         Reader.getSourceLocationForDeclID(
             Reader.getGlobalDeclID(Mod, (LocalDeclID)ID)));
@@ -7954,7 +7954,7 @@ void ASTReader::FindFileRegionDecls(FileID File,
   SourceLocation EndLoc = BeginLoc.getLocWithOffset(Length);
 
   UnalignedDeclIDComp DIDComp(*this, *DInfo.Mod);
-  ArrayRef<unaligned_decl_id_t>::iterator BeginIt =
+  ArrayRef<SerializedDeclID>::iterator BeginIt =
       llvm::lower_bound(DInfo.Decls, BeginLoc, DIDComp);
   if (BeginIt != DInfo.Decls.begin())
     --BeginIt;
@@ -7967,12 +7967,12 @@ void ASTReader::FindFileRegionDecls(FileID File,
              ->isTopLevelDeclInObjCContainer())
     --BeginIt;
 
-  ArrayRef<unaligned_decl_id_t>::iterator EndIt =
+  ArrayRef<SerializedDeclID>::iterator EndIt =
       llvm::upper_bound(DInfo.Decls, EndLoc, DIDComp);
   if (EndIt != DInfo.Decls.end())
     ++EndIt;
 
-  for (ArrayRef<unaligned_decl_id_t>::iterator DIt = BeginIt; DIt != EndIt;
+  for (ArrayRef<SerializedDeclID>::iterator DIt = BeginIt; DIt != EndIt;
        ++DIt)
     Decls.push_back(GetDecl(getGlobalDeclID(*DInfo.Mod, (LocalDeclID)(*DIt))));
 }
