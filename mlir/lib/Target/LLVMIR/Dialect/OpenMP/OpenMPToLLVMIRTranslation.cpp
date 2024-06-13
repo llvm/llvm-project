@@ -30,6 +30,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -2913,10 +2914,14 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
     // reference pointer and the pointer are assigned in the kernel argument
     // structure for the host.
     if (mapData.IsDeclareTarget[i]) {
-
-      moduleTranslation.getOpenMPBuilder()
-          ->replaceConstantValueUsesInFuncWithInstr(mapData.OriginalValue[i],
-                                                    func);
+      // If the original map value is a constant, then we have to make sure all
+      // of it's uses within the current kernel/function that we are going to
+      // rewrite are converted to instructions, as we will be altering the old
+      // use (OriginalValue) from a constant to an instruction, which will be
+      // illegal and ICE the compiler if the user is a constant expression of
+      // some kind e.g. a constant GEP.
+      if (auto *constant = dyn_cast<llvm::Constant>(mapData.OriginalValue[i]))
+        convertUsersOfConstantsToInstructions(constant, func, false);
 
       // The users iterator will get invalidated if we modify an element,
       // so we populate this vector of uses to alter each user on an
