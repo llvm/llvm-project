@@ -6071,33 +6071,80 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
                                    fir::getBase(args[1])));
 }
 
+/// Create a fir.box to be passed to the LBOUND/UBOUND runtime.
+/// This ensure that local lower bounds of assumed shape are propagated and that
+/// a fir.box with equivalent LBOUNDs.
+static mlir::Value
+createBoxForRuntimeBoundInquiry(mlir::Location loc, fir::FirOpBuilder &builder,
+                                const fir::ExtendedValue &array) {
+  // Assumed-rank descriptor must always carry accurate lower bound information
+  // in lowering since they cannot be tracked on the side in a vector at compile
+  // time.
+  if (array.hasAssumedRank())
+    return builder.createBox(loc, array);
+
+  return array.match(
+      [&](const fir::BoxValue &boxValue) -> mlir::Value {
+        // This entity is mapped to a fir.box that may not contain the local
+        // lower bound information if it is a dummy. Rebox it with the local
+        // shape information.
+        mlir::Value localShape = builder.createShape(loc, array);
+        mlir::Value oldBox = boxValue.getAddr();
+        return builder.create<fir::ReboxOp>(loc, oldBox.getType(), oldBox,
+                                            localShape,
+                                            /*slice=*/mlir::Value{});
+      },
+      [&](const auto &) -> mlir::Value {
+        // This is a pointer/allocatable, or an entity not yet tracked with a
+        // fir.box. For pointer/allocatable, createBox will forward the
+        // descriptor that contains the correct lower bound information. For
+        // other entities, a new fir.box will be made with the local lower
+        // bounds.
+        return builder.createBox(loc, array);
+      });
+}
+
 /// Generate runtime call to inquire about all the bounds/extents of an
-/// assumed-rank array.
+/// array (or an assumed-rank).
 template <typename Func>
-static fir::ExtendedValue genAssumedRankBoundInquiry(
-    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type resultType,
-    llvm::ArrayRef<fir::ExtendedValue> args, int kindPos, Func genRtCall) {
+static fir::ExtendedValue
+genBoundInquiry(fir::FirOpBuilder &builder, mlir::Location loc,
+                mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
+                int kindPos, Func genRtCall, bool needAccurateLowerBound) {
   const fir::ExtendedValue &array = args[0];
-  // Allocate an array with the maximum rank, that is big enough to hold the
-  // result but still "small" (15 elements). Static size alloca make stack
-  // analysis/manipulation easier.
+  const bool hasAssumedRank = array.hasAssumedRank();
   mlir::Type resultElementType = fir::unwrapSequenceType(resultType);
-  mlir::Type allocSeqType =
-      fir::SequenceType::get({Fortran::common::maxRank}, resultElementType);
+  // For assumed-rank arrays, allocate an array with the maximum rank, that is
+  // big enough to hold the result but still "small" (15 elements). Static size
+  // alloca make stack analysis/manipulation easier.
+  int rank = hasAssumedRank ? Fortran::common::maxRank : array.rank();
+  mlir::Type allocSeqType = fir::SequenceType::get(rank, resultElementType);
   mlir::Value resultStorage = builder.createTemporary(loc, allocSeqType);
-  mlir::Value arrayBox = builder.createBox(loc, array);
+  mlir::Value arrayBox =
+      needAccurateLowerBound
+          ? createBoxForRuntimeBoundInquiry(loc, builder, array)
+          : builder.createBox(loc, array);
   mlir::Value kind = isStaticallyAbsent(args, kindPos)
                          ? builder.createIntegerConstant(
                                loc, builder.getI32Type(),
                                builder.getKindMap().defaultIntegerKind())
                          : fir::getBase(args[kindPos]);
   genRtCall(builder, loc, resultStorage, arrayBox, kind);
-  mlir::Type baseType =
-      fir::ReferenceType::get(builder.getVarLenSeqTy(resultElementType));
-  mlir::Value resultBase = builder.createConvert(loc, baseType, resultStorage);
-  mlir::Value rank =
-      builder.create<fir::BoxRankOp>(loc, builder.getIndexType(), arrayBox);
-  return fir::ArrayBoxValue{resultBase, {rank}};
+  if (hasAssumedRank) {
+    // Cast to fir.ref<array<?xik>> since the result extent is not a compile
+    // time constant.
+    mlir::Type baseType =
+        fir::ReferenceType::get(builder.getVarLenSeqTy(resultElementType));
+    mlir::Value resultBase =
+        builder.createConvert(loc, baseType, resultStorage);
+    mlir::Value rankValue =
+        builder.create<fir::BoxRankOp>(loc, builder.getIndexType(), arrayBox);
+    return fir::ArrayBoxValue{resultBase, {rankValue}};
+  }
+  // Result extent is a compile time constant in the other cases.
+  mlir::Value rankValue =
+      builder.createIntegerConstant(loc, builder.getIndexType(), rank);
+  return fir::ArrayBoxValue{resultStorage, {rankValue}};
 }
 
 // SHAPE
@@ -6107,8 +6154,9 @@ IntrinsicLibrary::genShape(mlir::Type resultType,
   assert(args.size() >= 1);
   const fir::ExtendedValue &array = args[0];
   if (array.hasAssumedRank())
-    return genAssumedRankBoundInquiry(builder, loc, resultType, args,
-                                      /*kindPos=*/1, fir::runtime::genShape);
+    return genBoundInquiry(builder, loc, resultType, args,
+                           /*kindPos=*/1, fir::runtime::genShape,
+                           /*needAccurateLowerBound=*/false);
   int rank = array.rank();
   mlir::Type indexType = builder.getIndexType();
   mlir::Type extentType = fir::unwrapSequenceType(resultType);
@@ -6344,33 +6392,6 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
   return builder.create<mlir::arith::SelectOp>(loc, dimIsEmpty, one, lb);
 }
 
-/// Create a fir.box to be passed to the LBOUND/UBOUND runtime.
-/// This ensure that local lower bounds of assumed shape are propagated and that
-/// a fir.box with equivalent LBOUNDs.
-static mlir::Value
-createBoxForRuntimeBoundInquiry(mlir::Location loc, fir::FirOpBuilder &builder,
-                                const fir::ExtendedValue &array) {
-  return array.match(
-      [&](const fir::BoxValue &boxValue) -> mlir::Value {
-        // This entity is mapped to a fir.box that may not contain the local
-        // lower bound information if it is a dummy. Rebox it with the local
-        // shape information.
-        mlir::Value localShape = builder.createShape(loc, array);
-        mlir::Value oldBox = boxValue.getAddr();
-        return builder.create<fir::ReboxOp>(loc, oldBox.getType(), oldBox,
-                                            localShape,
-                                            /*slice=*/mlir::Value{});
-      },
-      [&](const auto &) -> mlir::Value {
-        // This is a pointer/allocatable, or an entity not yet tracked with a
-        // fir.box. For pointer/allocatable, createBox will forward the
-        // descriptor that contains the correct lower bound information. For
-        // other entities, a new fir.box will be made with the local lower
-        // bounds.
-        return builder.createBox(loc, array);
-      });
-}
-
 // LBOUND
 fir::ExtendedValue
 IntrinsicLibrary::genLbound(mlir::Type resultType,
@@ -6380,9 +6401,12 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
   // Semantics builds signatures for LBOUND calls as either
   // LBOUND(array, dim, [kind]) or LBOUND(array, [kind]).
   const bool dimIsAbsent = args.size() == 2 || isStaticallyAbsent(args, 1);
-  if (array.hasAssumedRank() && dimIsAbsent)
-    return genAssumedRankBoundInquiry(builder, loc, resultType, args,
-                                      /*kindPos=*/1, fir::runtime::genLbound);
+  if (array.hasAssumedRank() && dimIsAbsent) {
+    int kindPos = args.size() == 2 ? 1 : 2;
+    return genBoundInquiry(builder, loc, resultType, args, kindPos,
+                           fir::runtime::genLbound,
+                           /*needAccurateLowerBound=*/true);
+  }
 
   mlir::Type indexType = builder.getIndexType();
 
@@ -6434,7 +6458,8 @@ fir::ExtendedValue
 IntrinsicLibrary::genUbound(mlir::Type resultType,
                             llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3 || args.size() == 2);
-  if (args.size() == 3) {
+  const bool dimIsAbsent = args.size() == 2 || isStaticallyAbsent(args, 1);
+  if (!dimIsAbsent) {
     // Handle calls to UBOUND with the DIM argument, which return a scalar
     mlir::Value extent = fir::getBase(genSize(resultType, args));
     mlir::Value lbound = fir::getBase(genLbound(resultType, args));
@@ -6442,28 +6467,12 @@ IntrinsicLibrary::genUbound(mlir::Type resultType,
     mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
     mlir::Value ubound = builder.create<mlir::arith::SubIOp>(loc, lbound, one);
     return builder.create<mlir::arith::AddIOp>(loc, ubound, extent);
-  } else {
-    // Handle calls to UBOUND without the DIM argument, which return an array
-    mlir::Value kind = isStaticallyAbsent(args[1])
-                           ? builder.createIntegerConstant(
-                                 loc, builder.getIndexType(),
-                                 builder.getKindMap().defaultIntegerKind())
-                           : fir::getBase(args[1]);
-
-    // Create mutable fir.box to be passed to the runtime for the result.
-    mlir::Type type = builder.getVarLenSeqTy(resultType, /*rank=*/1);
-    fir::MutableBoxValue resultMutableBox =
-        fir::factory::createTempMutableBox(builder, loc, type);
-    mlir::Value resultIrBox =
-        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
-
-    fir::ExtendedValue box =
-        createBoxForRuntimeBoundInquiry(loc, builder, args[0]);
-    fir::runtime::genUbound(builder, loc, resultIrBox, fir::getBase(box), kind);
-
-    return readAndAddCleanUp(resultMutableBox, resultType, "UBOUND");
   }
-  return mlir::Value();
+  // Handle calls to UBOUND without the DIM argument, which return an array
+  int kindPos = args.size() == 2 ? 1 : 2;
+  return genBoundInquiry(builder, loc, resultType, args, kindPos,
+                         fir::runtime::genUbound,
+                         /*needAccurateLowerBound=*/true);
 }
 
 // SPACING
