@@ -18709,7 +18709,7 @@ bool Sema::DefineUsedVTables() {
     const CXXMethodDecl *KeyFunction = Context.getCurrentKeyFunction(Class);
     // V-tables for non-template classes with an owning module are always
     // uniquely emitted in that module.
-    if (Class->isInNamedModule())
+    if (Class->isInCurrentModuleUnit())
       DefineVTable = true;
     else if (KeyFunction && !KeyFunction->hasBody()) {
       // If this class has a key function, but that key function is
