@@ -595,6 +595,10 @@ def TuningPreferShiftShuffle : SubtargetFeature<"faster-shift-than-shuffle",
                                    "PreferLowerShuffleAsShift", "true",
                                    "Shifts are faster (or as fast) as shuffle">;
 
+def TuningPreferPerEltVectorShift : SubtargetFeature<"tuning-fast-per-element-vector-shift",
+                                        "PreferPerEltVectorShift", "true",
+                                        "Vector per element shifts are faster">;
+
 def TuningFastImmVectorShift : SubtargetFeature<"tuning-fast-imm-vector-shift",
                                    "FastImmVectorShift", "true",
                                    "Vector shifts are fast (2/cycle) as opposed to slow (1/cycle)">;
@@ -997,7 +1001,8 @@ def ProcessorFeatures {
                                       TuningNoDomainDelayMov,
                                       TuningNoDomainDelayShuffle,
                                       TuningNoDomainDelayBlend,
-                                      TuningFastImmVectorShift];
+                                      TuningFastImmVectorShift,
+                                      TuningPreferPerEltVectorShift];
   list<SubtargetFeature> SKXFeatures =
     !listconcat(BDWFeatures, SKXAdditionalFeatures);
 
