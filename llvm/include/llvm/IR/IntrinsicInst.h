@@ -33,6 +33,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -1580,10 +1581,16 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
+  /// \return The number of bits used for the MCDC bitmaps for the instrumented
+  /// function.
+  ConstantInt *getNumBitmapBits() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  }
+
   /// \return The number of bytes used for the MCDC bitmaps for the instrumented
   /// function.
-  ConstantInt *getNumBitmapBytes() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  auto getNumBitmapBytes() const {
+    return alignTo(getNumBitmapBits()->getZExtValue(), CHAR_BIT) / CHAR_BIT;
   }
 };
 

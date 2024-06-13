@@ -1161,7 +1161,7 @@ enum ProfVersion {
   Version10 = 10,
   // An additional field is used for bitmap bytes.
   Version11 = 11,
-  // VTable profiling,
+  // VTable profiling, decision record and bitmap are modified for mcdc.
   Version12 = 12,
   // The current version is 12.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
