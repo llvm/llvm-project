@@ -1502,7 +1502,6 @@ Attributes on Structured Bindings            __cpp_structured_bindings        C+
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89
 Attributes (N2335)                                                            C23           C89
-``#embed`` (N3017)                                                            C23           C89, C++
 ============================================ ================================ ============= =============
 
 Type Trait Primitives
@@ -5665,26 +5664,3 @@ Compiling different TUs depending on these flags (including use of
 ``std::hardware_destructive_interference``)  with different compilers, macro
 definitions, or architecture flags will lead to ODR violations and should be
 avoided.
-
-``#embed`` Parameters
-=====================
-
-``clang::offset``
------------------
-The ``clang::offset`` embed parameter may appear zero or one time in the
-embed parameter sequence. Its preprocessor argument clause shall be present and
-have the form:
-
-..code-block: text
-
-  ( constant-expression )
-
-and shall be an integer constant expression. The integer constant expression
-shall not evaluate to a value less than 0. The token ``defined`` shall not
-appear within the constant expression.
-
-The offset will be used when reading the contents of the embedded resource to
-specify the starting offset to begin embedding from. The resources is treated
-as being empty if the specified offset is larger than the number of bytes in
-the resource. The offset will be applied *before* any ``limit`` parameters are
-applied.

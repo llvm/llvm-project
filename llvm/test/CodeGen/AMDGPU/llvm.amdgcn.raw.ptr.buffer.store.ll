@@ -246,6 +246,31 @@ main_body:
   ret void
 }
 
+;CHECK-LABEL: {{^}}buffer_store_v8f16:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 offen
+define amdgpu_ps void @buffer_store_v8f16(ptr addrspace(8) inreg %rsrc, <8 x half> %data, i32 %offset) #0 {
+main_body:
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v8f16(<8 x half> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}buffer_store_v2bf16:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_store_dword v0, v1, s[0:3], 0 offen
+define amdgpu_ps void @buffer_store_v2bf16(ptr addrspace(8) inreg %rsrc, <2 x bfloat> %data, i32 %offset) {
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2bf16(<2 x bfloat> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
+  ret void
+}
+
+;CHECK-LABEL: {{^}}buffer_store_v4bf16:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_store_dwordx2 v[0:1], v2, s[0:3], 0 offen
+define amdgpu_ps void @buffer_store_v4bf16(ptr addrspace(8) inreg %rsrc, <4 x bfloat> %data, i32 %offset) #0 {
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4bf16(<4 x bfloat> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
+  ret void
+}
+
 ;CHECK-LABEL: {{^}}raw_ptr_buffer_store_i16:
 ;CHECK-NEXT: %bb.
 ;CHECK-NOT: v0
@@ -273,6 +298,22 @@ main_body:
 define amdgpu_ps void @buffer_store_v4i16(ptr addrspace(8) inreg %rsrc, <4 x i16> %data, i32 %offset) #0 {
 main_body:
   call void @llvm.amdgcn.raw.ptr.buffer.store.v4i16(<4 x i16> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
+  ret void
+}
+
+; FIXME:
+; define amdgpu_ps void @buffer_store_v6i16(ptr addrspace(8) inreg %rsrc, <6 x i16> %data, i32 %offset) #0 {
+; main_body:
+;   call void @llvm.amdgcn.raw.ptr.buffer.store.v6i16(<6 x i16> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
+;   ret void
+; }
+
+;CHECK-LABEL: {{^}}buffer_store_v8i16:
+;CHECK-NOT: s_waitcnt
+;CHECK: buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 offen
+define amdgpu_ps void @buffer_store_v8i16(ptr addrspace(8) inreg %rsrc, <8 x i16> %data, i32 %offset) #0 {
+main_body:
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v8i16(<8 x i16> %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)
   ret void
 }
 
