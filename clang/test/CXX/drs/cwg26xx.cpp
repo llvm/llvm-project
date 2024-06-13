@@ -225,6 +225,15 @@ void m() {
 }
 
 #if __cplusplus >= 202302L
+
+namespace cwg2685 { // cwg2685: 17
+template <class T>
+struct A {
+  T ar[4];
+};
+A a = { "foo" };
+}
+
 namespace cwg2687 { // cwg2687: 18
 struct S{
     void f(int);
