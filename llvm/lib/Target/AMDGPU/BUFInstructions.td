@@ -2454,9 +2454,15 @@ class VBUFFER_Real_gfx12<bits<8> op, BUF_Pseudo ps, string real_name> :
 multiclass VBUFFER_MUBUF_Real_gfx12<bits<8> op, string real_name> {
   defvar ps = !cast<MUBUF_Pseudo>(NAME);
   def _gfx12 : VBUFFER_Real_gfx12<op, ps, real_name> {
-    // Set the last bit of format to 1 to avoid round-trip issues, as some tools
+    // Set the format field to be 1 to avoid round-trip issues, as some tools
     // print BUF_FMT_INVALID for format 0.
-    let Inst{55} = 0b1;
+    let Inst{61-55} = 0b0000001;
+  }
+  // Have a version of the instruction to disassemble to for any other
+  // format field values.
+  def _gfx12_format : VBUFFER_Real<op, ps, real_name> {
+    let AsmVariantName = "NonParsable";
+    let DecoderNamespace = "GFX12";
   }
 }
 
