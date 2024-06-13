@@ -1072,7 +1072,7 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
   let results = (outs Res<AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>, "",
-                          [MemAlloc<DefaultResource, 0, FullEffect>]>:$memref);
+                          [MemAlloc<DefaultResource, 0, FullEffect>]>);
 
   let hasVerifier = 1;
 }
