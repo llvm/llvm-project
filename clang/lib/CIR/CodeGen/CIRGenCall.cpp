@@ -447,22 +447,29 @@ static mlir::cir::CIRCallOpInterface
 buildCallLikeOp(CIRGenFunction &CGF, mlir::Location callLoc,
                 mlir::cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                 mlir::cir::FuncOp directFuncOp,
-                SmallVectorImpl<mlir::Value> &CIRCallArgs, bool InvokeDest) {
+                SmallVectorImpl<mlir::Value> &CIRCallArgs, bool InvokeDest,
+                mlir::cir::ExtraFuncAttributesAttr extraFnAttrs) {
   auto &builder = CGF.getBuilder();
 
   if (InvokeDest) {
     auto addr = CGF.currLexScope->getExceptionInfo().addr;
-    if (indirectFuncTy)
-      return builder.create<mlir::cir::TryCallOp>(
+
+    mlir::cir::TryCallOp tryCallOp;
+    if (indirectFuncTy) {
+      tryCallOp = builder.create<mlir::cir::TryCallOp>(
           callLoc, addr, indirectFuncVal, indirectFuncTy, CIRCallArgs);
-    return builder.create<mlir::cir::TryCallOp>(callLoc, directFuncOp, addr,
-                                                CIRCallArgs);
+    } else {
+      tryCallOp = builder.create<mlir::cir::TryCallOp>(callLoc, directFuncOp,
+                                                       addr, CIRCallArgs);
+    }
+    tryCallOp->setAttr("extra_attrs", extraFnAttrs);
+    return tryCallOp;
   }
 
   if (indirectFuncTy)
-    return builder.create<mlir::cir::CallOp>(callLoc, indirectFuncVal,
-                                             indirectFuncTy, CIRCallArgs);
-  return builder.create<mlir::cir::CallOp>(callLoc, directFuncOp, CIRCallArgs);
+    return builder.createIndirectCallOp(
+        callLoc, indirectFuncVal, indirectFuncTy, CIRCallArgs, extraFnAttrs);
+  return builder.createCallOp(callLoc, directFuncOp, CIRCallArgs, extraFnAttrs);
 }
 
 RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
@@ -735,9 +742,10 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
       indirectFuncVal = CalleePtr->getResult(0);
     }
 
-    mlir::cir::CIRCallOpInterface callLikeOp =
-        buildCallLikeOp(*this, callLoc, indirectFuncTy, indirectFuncVal,
-                        directFuncOp, CIRCallArgs, InvokeDest);
+    mlir::cir::CIRCallOpInterface callLikeOp = buildCallLikeOp(
+        *this, callLoc, indirectFuncTy, indirectFuncVal, directFuncOp,
+        CIRCallArgs, InvokeDest,
+        mlir::cir::ExtraFuncAttributesAttr::get(builder.getContext(), Attrs));
 
     if (E)
       callLikeOp->setAttr(
@@ -844,7 +852,7 @@ mlir::Value CIRGenFunction::buildRuntimeCall(mlir::Location loc,
   // TODO(cir): set the calling convention to this runtime call.
   assert(!MissingFeatures::setCallingConv());
 
-  auto call = builder.create<mlir::cir::CallOp>(loc, callee, args);
+  auto call = builder.createCallOp(loc, callee, args);
   assert(call->getNumResults() <= 1 &&
          "runtime functions have at most 1 result");
 

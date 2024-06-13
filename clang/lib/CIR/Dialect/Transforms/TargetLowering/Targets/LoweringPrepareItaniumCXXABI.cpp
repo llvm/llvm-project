@@ -36,7 +36,7 @@ static void buildBadCastCall(CIRBaseBuilderTy &builder, mlir::Location loc,
   // TODO(cir): set the calling convention to __cxa_bad_cast.
   assert(!MissingFeatures::setCallingConv());
 
-  builder.create<mlir::cir::CallOp>(loc, badCastFuncRef, mlir::ValueRange{});
+  builder.createCallOp(loc, badCastFuncRef, mlir::ValueRange{});
   builder.create<mlir::cir::UnreachableOp>(loc);
   builder.clearInsertionPoint();
 }
@@ -62,8 +62,8 @@ static mlir::Value buildDynamicCastAfterNullCheck(CIRBaseBuilderTy &builder,
   assert(!MissingFeatures::setCallingConv());
   mlir::Value castedPtr =
       builder
-          .create<mlir::cir::CallOp>(loc, dynCastFuncRef,
-                                     builder.getVoidPtrTy(), dynCastFuncArgs)
+          .createCallOp(loc, dynCastFuncRef, builder.getVoidPtrTy(),
+                        dynCastFuncArgs)
           .getResult();
 
   assert(castedPtr.getType().isa<mlir::cir::PointerType>() &&

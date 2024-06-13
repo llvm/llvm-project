@@ -179,10 +179,9 @@ mlir::cir::CallOp CIRGenFunction::buildCoroIDBuiltinCall(mlir::Location loc,
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
-  return builder.create<mlir::cir::CallOp>(
-      loc, fnOp,
-      mlir::ValueRange{builder.getUInt32(NewAlign, loc), nullPtr, nullPtr,
-                       nullPtr});
+  return builder.createCallOp(loc, fnOp,
+                              mlir::ValueRange{builder.getUInt32(NewAlign, loc),
+                                               nullPtr, nullPtr, nullPtr});
 }
 
 mlir::cir::CallOp
@@ -202,7 +201,7 @@ CIRGenFunction::buildCoroAllocBuiltinCall(mlir::Location loc) {
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
-  return builder.create<mlir::cir::CallOp>(
+  return builder.createCallOp(
       loc, fnOp, mlir::ValueRange{CurCoro.Data->CoroId.getResult()});
 }
 
@@ -223,7 +222,7 @@ CIRGenFunction::buildCoroBeginBuiltinCall(mlir::Location loc,
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
-  return builder.create<mlir::cir::CallOp>(
+  return builder.createCallOp(
       loc, fnOp,
       mlir::ValueRange{CurCoro.Data->CoroId.getResult(), coroframeAddr});
 }
@@ -244,7 +243,7 @@ mlir::cir::CallOp CIRGenFunction::buildCoroEndBuiltinCall(mlir::Location loc,
   } else
     fnOp = cast<mlir::cir::FuncOp>(builtin);
 
-  return builder.create<mlir::cir::CallOp>(
+  return builder.createCallOp(
       loc, fnOp, mlir::ValueRange{nullPtr, builder.getBool(false, loc)});
 }
 
