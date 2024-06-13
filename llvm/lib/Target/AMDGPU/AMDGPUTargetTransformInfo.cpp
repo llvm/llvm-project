@@ -1385,9 +1385,6 @@ bool GCNTTIImpl::hasScalarizationOverhead(
   if (DL.getTypeSizeInBits(VTy->getElementType()) != 8)
     return false;
 
-  unsigned Threshold = VL.size() / 2;
-  unsigned CrossBBUserCount = 0;
-
   for (Value *V : VL) {
     Instruction *Inst = dyn_cast<Instruction>(V);
     if (!V)
