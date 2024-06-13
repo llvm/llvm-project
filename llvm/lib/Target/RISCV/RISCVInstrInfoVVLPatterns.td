@@ -2653,7 +2653,7 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
   }
 }
 
-foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
+foreach fvti = AllFloatVectors in {
   let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
                                GetVTypeScalarPredicates<fvti>.Predicates) in {
     // 13.16. Vector Floating-Point Move Instruction
