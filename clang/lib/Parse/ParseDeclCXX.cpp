@@ -744,15 +744,15 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
       IdentifierInfo *IdentInfo = Tok.getIdentifierInfo();
       SourceLocation IdentLoc = ConsumeToken();
 
-      ParsedType Type = Actions.getTypeName(*IdentInfo, IdentLoc, getCurScope(), &SS, /*isClassName=*/true,
-                  /*HasTrailingDot=*/false,
-                  /*ObjectType=*/nullptr, /*IsCtorOrDtorName=*/false,
-                  /*WantNontrivialTypeSourceInfo=*/true);
+      ParsedType Type = Actions.getTypeName(
+          *IdentInfo, IdentLoc, getCurScope(), &SS, /*isClassName=*/true,
+          /*HasTrailingDot=*/false,
+          /*ObjectType=*/nullptr, /*IsCtorOrDtorName=*/false,
+          /*WantNontrivialTypeSourceInfo=*/true);
 
       UED = Actions.ActOnUsingEnumDeclaration(
           getCurScope(), AS, UsingLoc, UELoc, IdentLoc, *IdentInfo, Type, &SS);
-    }
-    else if (Tok.is(tok::annot_template_id)) {
+    } else if (Tok.is(tok::annot_template_id)) {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
 
       if (TemplateId->mightBeType()) {
@@ -764,22 +764,21 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
         SourceRange Loc = Tok.getAnnotationRange();
         ConsumeAnnotationToken();
 
-        UED = Actions.ActOnUsingEnumDeclaration(
-        getCurScope(), AS, UsingLoc, UELoc, Loc, *TemplateId->Name, Type.get(), &SS);
-      }
-      else {
+        UED = Actions.ActOnUsingEnumDeclaration(getCurScope(), AS, UsingLoc,
+                                                UELoc, Loc, *TemplateId->Name,
+                                                Type.get(), &SS);
+      } else {
         Diag(Tok.getLocation(), diag::err_using_enum_not_enum)
             << TemplateId->Name->getName()
             << SourceRange(TemplateId->TemplateNameLoc, TemplateId->RAngleLoc);
       }
-    }
-    else {
+    } else {
       Diag(Tok.getLocation(), diag::err_using_enum_expect_identifier)
           << Tok.is(tok::kw_enum);
       SkipUntil(tok::semi);
       return nullptr;
     }
-    
+
     if (!UED) {
       SkipUntil(tok::semi);
       return nullptr;
