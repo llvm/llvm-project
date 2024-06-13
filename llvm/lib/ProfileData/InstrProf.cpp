@@ -1404,7 +1404,7 @@ static void createPGONameMetadata(GlobalObject &GO, StringRef MetadataName,
   if (GO.getName() == PGOName)
     return;
 
-  // Don't created duplictaed metadata.
+  // Don't created duplicated metadata.
   if (GO.getMetadata(MetadataName))
     return;
 

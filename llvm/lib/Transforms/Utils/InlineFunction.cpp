@@ -1964,6 +1964,13 @@ void llvm::updateProfileCallee(
           ? 0
           : PriorEntryCount + EntryDelta;
 
+  auto updateVTableProfWeight = [](CallBase *CB, const uint64_t NewEntryCount,
+                                   const uint64_t PriorEntryCount) {
+    Instruction *VPtr = PGOIndirectCallVisitor::tryGetVTableInstruction(CB);
+    if (VPtr)
+      scaleProfData(*VPtr, NewEntryCount, PriorEntryCount);
+  };
+
   // During inlining ?
   if (VMap) {
     uint64_t CloneEntryCount = PriorEntryCount - NewEntryCount;
@@ -1971,20 +1978,13 @@ void llvm::updateProfileCallee(
       if (isa<CallInst>(Entry.first))
         if (auto *CI = dyn_cast_or_null<CallInst>(Entry.second)) {
           CI->updateProfWeight(CloneEntryCount, PriorEntryCount);
-
-          Instruction *VPtr =
-              PGOIndirectCallVisitor::tryGetVTableInstruction(CI);
-          if (VPtr)
-            scaleProfData(*VPtr, CloneEntryCount, PriorEntryCount);
+          updateVTableProfWeight(CI, CloneEntryCount, PriorEntryCount);
         }
+
       if (isa<InvokeInst>(Entry.first))
         if (auto *II = dyn_cast_or_null<InvokeInst>(Entry.second)) {
           II->updateProfWeight(CloneEntryCount, PriorEntryCount);
-
-          Instruction *VPtr =
-              PGOIndirectCallVisitor::tryGetVTableInstruction(II);
-          if (VPtr)
-            scaleProfData(*VPtr, CloneEntryCount, PriorEntryCount);
+          updateVTableProfWeight(II, CloneEntryCount, PriorEntryCount);
         }
     }
   }
@@ -1998,19 +1998,11 @@ void llvm::updateProfileCallee(
         for (Instruction &I : BB) {
           if (CallInst *CI = dyn_cast<CallInst>(&I)) {
             CI->updateProfWeight(NewEntryCount, PriorEntryCount);
-
-            Instruction *VPtr =
-                PGOIndirectCallVisitor::tryGetVTableInstruction(CI);
-            if (VPtr)
-              scaleProfData(*VPtr, NewEntryCount, PriorEntryCount);
+            updateVTableProfWeight(CI, NewEntryCount, PriorEntryCount);
           }
           if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
             II->updateProfWeight(NewEntryCount, PriorEntryCount);
-
-            Instruction *VPtr =
-                PGOIndirectCallVisitor::tryGetVTableInstruction(II);
-            if (VPtr)
-              scaleProfData(*VPtr, NewEntryCount, PriorEntryCount);
+            updateVTableProfWeight(II, NewEntryCount, PriorEntryCount);
           }
         }
   }

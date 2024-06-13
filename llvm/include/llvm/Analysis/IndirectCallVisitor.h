@@ -41,7 +41,6 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
       return nullptr;
 
     LoadInst *LI = dyn_cast<LoadInst>(CB->getCalledOperand());
-
     if (LI != nullptr) {
       Value *FuncPtr = LI->getPointerOperand(); // GEP (or bitcast)
       Value *VTablePtr = FuncPtr->stripInBoundsConstantOffsets();

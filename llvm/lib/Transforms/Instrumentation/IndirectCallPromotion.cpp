@@ -46,6 +46,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -138,7 +139,8 @@ namespace {
 // In the inner map, the key represents address point offsets and the value is a
 // constant for this address point.
 using VTableAddressPointOffsetValMap =
-    SmallDenseMap<const GlobalVariable *, SmallDenseMap<int, Constant *>>;
+    std::unordered_map<const GlobalVariable *,
+                       std::unordered_map<int, Constant *>>;
 
 // A struct to collect type information for a virtual call site.
 struct VirtualCallSiteInfo {
@@ -152,10 +154,10 @@ struct VirtualCallSiteInfo {
 
 // The key is a virtual call, and value is its type information.
 using VirtualCallSiteTypeInfoMap =
-    SmallDenseMap<const CallBase *, VirtualCallSiteInfo>;
+    std::unordered_map<const CallBase *, VirtualCallSiteInfo>;
 
 // The key is vtable GUID, and value is its value profile count.
-using VTableGUIDCountsMap = SmallDenseMap<uint64_t, uint64_t>;
+using VTableGUIDCountsMap = SmallDenseMap<uint64_t, uint64_t, 16>;
 
 // Returns the address point offset of the given compatible type.
 //
@@ -365,15 +367,16 @@ private:
       MutableArrayRef<InstrProfValueData> ICallProfDataRef,
       VTableGUIDCountsMap &VTableGUIDCounts);
 
-  // Returns true if it's profitable to compare vtables.
+  // Returns true if it's profitable to compare vtables for the callsite.
   bool isProfitableToCompareVTables(
-      const std::vector<PromotionCandidate> &Candidates, uint64_t TotalCount);
+      const CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
+      uint64_t TotalCount);
 
   // Given an indirect callsite and the list of function candidates, compute
   // the following vtable information in output parameters and returns vtable
   // pointer if type profiles exist.
-  // - Populate `VTableGUIDCounts` with <vtable-guid, count> with !prof metadata
-  // attached on the vtable pointer.
+  // - Populate `VTableGUIDCounts` with <vtable-guid, count> using !prof
+  // metadata attached on the vtable pointer.
   // - For each function candidate, finds out the vtables from which it get
   // called and stores the <vtable-guid, count> there.
   Instruction *computeVTableInfos(const CallBase *CB,
@@ -559,7 +562,7 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
     GUIDCountsMap[VTableVal] = VTableValueDataArray[j].Count;
     GlobalVariable *VTableVar = Symtab->getGlobalVariable(VTableVal);
     if (!VTableVar) {
-      LLVM_DEBUG(dbgs() << "\tCannot find vtable definition for " << VTableVal
+      LLVM_DEBUG(dbgs() << "Cannot find vtable definition for " << VTableVal
                         << "; maybe the vtable isn't imported\n");
       continue;
     }
@@ -666,13 +669,9 @@ bool IndirectCallPromoter::tryToPromoteWithFuncCmp(
          "of values in profile metadata");
 
   // Update value profiles on the indirect call.
-  // TODO: Handle profile update properly when Clang `-fstrict-vtable-pointers`
-  // is enabled and a vtable is used to load multiple virtual functions.
   updateFuncValueProfiles(CB, ICallProfDataRef.slice(NumPromoted), TotalCount,
                           NumCandidates);
-  // Update value profiles on the vtable pointer if it exists.
-  if (VPtr)
-    updateVPtrValueProfiles(VPtr, VTableGUIDCounts);
+  updateVPtrValueProfiles(VPtr, VTableGUIDCounts);
   return true;
 }
 
@@ -689,6 +688,9 @@ void IndirectCallPromoter::updateFuncValueProfiles(
 
 void IndirectCallPromoter::updateVPtrValueProfiles(
     Instruction *VPtr, VTableGUIDCountsMap &VTableGUIDCounts) {
+  if (!EnableVTableProfileUse || VPtr == nullptr ||
+      !VPtr->getMetadata(LLVMContext::MD_prof))
+    return;
   VPtr->setMetadata(LLVMContext::MD_prof, nullptr);
   std::vector<InstrProfValueData> VTableValueProfiles;
   uint64_t TotalVTableCount = 0;
@@ -762,17 +764,17 @@ bool IndirectCallPromoter::tryToPromoteWithVTableCmp(
   // a distinct 'VPtr'.
   // FIXME: When Clang `-fstrict-vtable-pointers` is enabled, a vtable might be
   // used to load multiple virtual functions. The vtable profiles needs to be
-  // updated properly in that case (e.g, annotate type profiles per indirect
-  // call).
+  // updated properly in that case (e.g, for each indirect call annotate both
+  // type profiles and function profiles in one !prof).
   for (size_t I = 0; I < PromotedFuncCount.size(); I++)
     ICallProfDataRef[I].Count -=
         std::max(PromotedFuncCount[I], ICallProfDataRef[I].Count);
   // Sort value profiles by count in descending order.
-  llvm::sort(ICallProfDataRef.begin(), ICallProfDataRef.end(),
-             [](const InstrProfValueData &LHS, const InstrProfValueData &RHS) {
-               return LHS.Count > RHS.Count;
-             });
-  // Drop the <target-value, count> pair if count is not greater than zero.
+  llvm::stable_sort(ICallProfDataRef, [](const InstrProfValueData &LHS,
+                                         const InstrProfValueData &RHS) {
+    return LHS.Count > RHS.Count;
+  });
+  // Drop the <target-value, count> pair if count is zero.
   ArrayRef<InstrProfValueData> VDs(
       ICallProfDataRef.begin(),
       llvm::upper_bound(ICallProfDataRef, 0U,
@@ -805,7 +807,7 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
     Instruction *VPtr =
         computeVTableInfos(CB, VTableGUIDCounts, PromotionCandidates);
 
-    if (isProfitableToCompareVTables(PromotionCandidates, TotalCount))
+    if (isProfitableToCompareVTables(*CB, PromotionCandidates, TotalCount))
       Changed |= tryToPromoteWithVTableCmp(*CB, VPtr, PromotionCandidates,
                                            TotalCount, NumCandidates,
                                            ICallProfDataRef, VTableGUIDCounts);
@@ -820,25 +822,34 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
 // TODO: Returns false if the function addressing and vtable load instructions
 // cannot sink to indirect fallback.
 bool IndirectCallPromoter::isProfitableToCompareVTables(
-    const std::vector<PromotionCandidate> &Candidates, uint64_t TotalCount) {
+    const CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
+    uint64_t TotalCount) {
   if (!EnableVTableProfileUse || Candidates.empty())
     return false;
   uint64_t RemainingVTableCount = TotalCount;
   const size_t CandidateSize = Candidates.size();
   for (size_t I = 0; I < CandidateSize; I++) {
     auto &Candidate = Candidates[I];
-    uint64_t VTableSumCount = 0;
+    uint64_t CandidateVTableCount = 0;
     for (auto &[GUID, Count] : Candidate.VTableGUIDAndCounts)
-      VTableSumCount += Count;
+      CandidateVTableCount += Count;
 
-    if (VTableSumCount < Candidate.Count * ICPVTablePercentageThreshold)
+    if (CandidateVTableCount < Candidate.Count * ICPVTablePercentageThreshold) {
+      LLVM_DEBUG(dbgs() << "For callsite #" << NumOfPGOICallsites << CB << I
+                        << "-th candidate, function count " << Candidate.Count
+                        << " and its vtable count " << CandidateVTableCount
+                        << " have discrepancies\n");
       return false;
+    }
 
     RemainingVTableCount -= Candidate.Count;
 
-    // Allowing more than one vtables for non last candidates may or may not
-    // elongates dependency chain for the subsequent candidates, so do this for
-    // the last candidate conservatively.
+    // 'MaxNumVTable' limits the number of vtables to make vtable comparison
+    // profitable. Comparing multiple vtables for one function candidate will
+    // insert additional instructions on the hot path, and allowing more than
+    // one vtable for non last candidates may or may not elongates dependency
+    // chain for the subsequent candidates. Set its value to 1 for non-last
+    // candidate and allow option to override it for the last candidate.
     int MaxNumVTable = 1;
     if (I == CandidateSize - 1)
       MaxNumVTable = ICPMaxNumVTableLastCandidate;
