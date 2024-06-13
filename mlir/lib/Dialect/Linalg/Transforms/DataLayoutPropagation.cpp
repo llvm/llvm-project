@@ -760,7 +760,7 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
           packOp, "only one of the expanded dimensions can be packed");
     // Only the inner-most dim should be packed. Otherwise, elements order will
     // be affected after operation reordering.
-    if (packedDims[0] != indices.back())
+    if (packedDims.front() != indices.back())
       return rewriter.notifyMatchFailure(
           packOp, "can only pack the inner-most expanded dimension");
   }
