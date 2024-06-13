@@ -190,7 +190,7 @@ writing tests:
 
 Note that these are principles, not rules. There are cases where it is appropriate to break these principles.
 
-These principles should be used  **to build consensus**, not to **gatekeep**. Your fellow engineers are
+These principles should be used  **to build consensus** and not to **gatekeep**. Your fellow engineers are
 all working towards the same goal: to make the code better.
 
 Structure of the testing related directories
