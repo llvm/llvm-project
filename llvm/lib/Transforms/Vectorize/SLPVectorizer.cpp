@@ -9085,7 +9085,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   InstructionCost CommonCost = 0;
   std::pair<bool, bool> ScalarizationKind(false, false);
-  if (TTI->hasScalarizationOverhead(VL, ScalarizationKind)) {
+  if (TTI->hasScalarizationOverhead(VL, FinalVecTy, ScalarizationKind)) {
     APInt DemandedElts = APInt::getAllOnes(VL.size());
     CommonCost -= TTI->getScalarizationOverhead(
         VecTy, DemandedElts,

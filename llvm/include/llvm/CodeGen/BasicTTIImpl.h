@@ -807,7 +807,7 @@ public:
                                              CostKind);
   }
 
-  bool hasScalarizationOverhead(ArrayRef<Value *> VL,
+  bool hasScalarizationOverhead(ArrayRef<Value *> VL, FixedVectorType *VT,
                                 std::pair<bool, bool> &ScalarizationKind) {
     return false;
   }

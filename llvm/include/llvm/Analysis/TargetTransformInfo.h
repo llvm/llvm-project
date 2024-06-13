@@ -893,7 +893,7 @@ public:
 
   /// Whether or not there is any target-specific condition that imposes an
   /// overhead for scalarization
-  bool hasScalarizationOverhead(ArrayRef<Value *> VL,
+  bool hasScalarizationOverhead(ArrayRef<Value *> VL, FixedVectorType *VTy,
                                 std::pair<bool, bool> &ScalarizationKind) const;
 
   /// Estimate the overhead of scalarizing an instructions unique
@@ -1928,7 +1928,7 @@ public:
                                    TargetCostKind CostKind) = 0;
 
   virtual bool
-  hasScalarizationOverhead(ArrayRef<Value *> VL,
+  hasScalarizationOverhead(ArrayRef<Value *> VL, FixedVectorType *VTy,
                            std::pair<bool, bool> &ScalarizationKind) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
   virtual bool supportsTailCalls() = 0;
@@ -2467,9 +2467,9 @@ public:
   }
 
   bool
-  hasScalarizationOverhead(ArrayRef<Value *> VL,
+  hasScalarizationOverhead(ArrayRef<Value *> VL, FixedVectorType *VTy,
                            std::pair<bool, bool> &ScalarizationKind) override {
-    return Impl.hasScalarizationOverhead(VL, ScalarizationKind);
+    return Impl.hasScalarizationOverhead(VL, VTy, ScalarizationKind);
   }
 
   InstructionCost

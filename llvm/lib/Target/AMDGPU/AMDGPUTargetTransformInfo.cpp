@@ -1379,6 +1379,32 @@ int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
                                       : getQuarterRateInstrCost(CostKind);
 }
 
+bool GCNTTIImpl::hasScalarizationOverhead(
+    ArrayRef<Value *> VL, FixedVectorType *VTy,
+    std::pair<bool, bool> &ScalarizationKind) const {
+  if (DL.getTypeSizeInBits(VTy->getElementType()) != 8)
+    return false;
+
+  unsigned Threshold = VL.size() / 2;
+  unsigned CrossBBUserCount = 0;
+
+  for (Value *V : VL) {
+    Instruction *Inst = dyn_cast<Instruction>(V);
+    if (!V)
+      continue;
+    for (User *IU : Inst->users()) {
+      Instruction *UseInst = cast<Instruction>(IU);
+      if (UseInst->getOpcode() == Instruction::PHI ||
+          UseInst->getParent() != Inst->getParent()) {
+        ScalarizationKind = {true, true};
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 std::pair<InstructionCost, MVT>
 GCNTTIImpl::getTypeLegalizationCost(Type *Ty) const {
   std::pair<InstructionCost, MVT> Cost = BaseT::getTypeLegalizationCost(Ty);

@@ -257,6 +257,9 @@ public:
                                          FastMathFlags FMF,
                                          TTI::TargetCostKind CostKind);
 
+  bool hasScalarizationOverhead(ArrayRef<Value *> VL, FixedVectorType *VTy,
+                                std::pair<bool, bool> &ScalarizationKind) const;
+
   /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
   unsigned getCacheLineSize() const override { return 128; }
 
