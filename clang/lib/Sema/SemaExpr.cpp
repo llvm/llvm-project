@@ -13288,6 +13288,23 @@ enum {
   ConstUnknown,  // Keep as last element
 };
 
+static void MaybeSuggestDerefFixIt(Sema &S, const Expr *E, SourceLocation Loc) {
+  ExprResult Deref;
+  Expr *TE = const_cast<Expr *>(E);
+  {
+    Sema::TentativeAnalysisScope Trap(S);
+    Deref = S.ActOnUnaryOp(S.getCurScope(), Loc, tok::star, TE);
+  }
+  if (Deref.isUsable() &&
+      Deref.get()->isModifiableLvalue(S.Context, &Loc) == Expr::MLV_Valid &&
+      !E->getType()->isObjCObjectPointerType()) {
+    S.Diag(E->getBeginLoc(),
+           diag::note_typecheck_add_deref_star_not_modifiable_lvalue)
+        << E->getSourceRange()
+        << FixItHint::CreateInsertion(E->getBeginLoc(), "*");
+  }
+}
+
 /// Emit the "read-only variable not assignable" error and print notes to give
 /// more information about why the variable is not assignable, such as pointing
 /// to the declaration of a const variable, showing that a method is const, or
@@ -13382,6 +13399,7 @@ static void DiagnoseConstAssignment(Sema &S, const Expr *E,
         if (!DiagnosticEmitted) {
           S.Diag(Loc, diag::err_typecheck_assign_const)
               << ExprRange << ConstVariable << VD << VD->getType();
+          MaybeSuggestDerefFixIt(S, E, Loc);
           DiagnosticEmitted = true;
         }
         S.Diag(VD->getLocation(), diag::note_typecheck_assign_const)
@@ -13602,10 +13620,12 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
   SourceRange Assign;
   if (Loc != OrigLoc)
     Assign = SourceRange(OrigLoc, OrigLoc);
-  if (NeedType)
+  if (NeedType) {
     S.Diag(Loc, DiagID) << E->getType() << E->getSourceRange() << Assign;
-  else
+  } else {
     S.Diag(Loc, DiagID) << E->getSourceRange() << Assign;
+    MaybeSuggestDerefFixIt(S, E, Loc);
+  }
   return true;
 }
 
