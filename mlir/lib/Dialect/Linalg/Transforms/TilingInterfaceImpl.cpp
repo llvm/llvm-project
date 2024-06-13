@@ -129,7 +129,13 @@ struct LinalgOpTilingInterface
     Operation *tiledOp = clone(b, linalgOp, resultTensorTypes, tiledOperands);
     offsetIndices(b, cast<LinalgOp>(tiledOp), offsets);
 
-    return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+    SmallVector<Operation *> sliceOps;
+    for (Value operand : tiledOperands)
+      if (auto sliceOp = operand.getDefiningOp<tensor::ExtractSliceOp>())
+        sliceOps.push_back(sliceOp);
+
+    return TilingResult{
+        {tiledOp}, SmallVector<Value>(tiledOp->getResults()), sliceOps};
   }
 
   /// Utility to fetch the offsets and sizes when applied as per the indexing
@@ -247,7 +253,8 @@ struct LinalgOpTilingInterface
 
     return TilingResult{
         tilingResult->tiledOps,
-        SmallVector<Value>{tilingResult->tiledValues[resultNumber]}};
+        SmallVector<Value>{tilingResult->tiledValues[resultNumber]},
+        tilingResult->extractSliceOps};
   }
 
   /// Method to generate the tiled implementation of an operation from the tile
