@@ -5240,11 +5240,11 @@ const unsigned MAX_BINOP_DEPTH = 1;
 // used to check whether an instruction needs to be promoted or not is similar
 // to the logic used to check whether or not a defined register is sign or zero
 // extended within the function PPCInstrInfo::isSignOrZeroExtended.
-// Additionally, the `PromoteInstr32To64ForElimEXTSW` function is recursive.
+// Additionally, the `promoteInstr32To64ForElimEXTSW` function is recursive.
 // BinOpDepth does not count all of the recursions. The parameter BinOpDepth is
-// incremented  only when `PromoteInstr32To64ForElimEXTSW` calls itself more
+// incremented  only when `promoteInstr32To64ForElimEXTSW` calls itself more
 // than once. This is done to prevent exponential recursion.
-void PPCInstrInfo::PromoteInstr32To64ForElimEXTSW(const Register &Reg,
+void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
                                                   MachineRegisterInfo *MRI,
                                                   unsigned BinOpDepth,
                                                   LiveVariables *LV) const {
@@ -5282,7 +5282,7 @@ void PPCInstrInfo::PromoteInstr32To64ForElimEXTSW(const Register &Reg,
       for (unsigned I = 1; I < OperandEnd; I += OperandStride) {
         assert(MI->getOperand(I).isReg() && "Operand must be register");
         Register SrcReg = MI->getOperand(I).getReg();
-        PromoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth + 1, LV);
+        promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth + 1, LV);
       }
     }
     break;
@@ -5297,7 +5297,7 @@ void PPCInstrInfo::PromoteInstr32To64ForElimEXTSW(const Register &Reg,
     if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
       // If this is a copy from another register, we recursively promote the
       // source.
-      PromoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
+      promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
       return;
     }
 
@@ -5307,7 +5307,7 @@ void PPCInstrInfo::PromoteInstr32To64ForElimEXTSW(const Register &Reg,
     if (SrcReg != PPC::X3)
       // If this is a copy from another register, we recursively promote the
       // source.
-      PromoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
+      promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
     return;
   }
   case PPC::ORI:
@@ -5327,7 +5327,7 @@ void PPCInstrInfo::PromoteInstr32To64ForElimEXTSW(const Register &Reg,
   case PPC::ORIS8:
   case PPC::XORIS8: {
     Register SrcReg = MI->getOperand(1).getReg();
-    PromoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
+    promoteInstr32To64ForElimEXTSW(SrcReg, MRI, BinOpDepth, LV);
     break;
   }
   case PPC::AND:
@@ -5336,9 +5336,9 @@ void PPCInstrInfo::PromoteInstr32To64ForElimEXTSW(const Register &Reg,
   case PPC::AND8: {
     if (BinOpDepth < MAX_BINOP_DEPTH) {
       Register SrcReg1 = MI->getOperand(1).getReg();
-      PromoteInstr32To64ForElimEXTSW(SrcReg1, MRI, BinOpDepth, LV);
+      promoteInstr32To64ForElimEXTSW(SrcReg1, MRI, BinOpDepth, LV);
       Register SrcReg2 = MI->getOperand(2).getReg();
-      PromoteInstr32To64ForElimEXTSW(SrcReg2, MRI, BinOpDepth, LV);
+      promoteInstr32To64ForElimEXTSW(SrcReg2, MRI, BinOpDepth, LV);
     }
     break;
   }
