@@ -785,21 +785,23 @@ void explain_unary_operation_single_output_error(Operation op, InputType input,
   tlog << msg.str();
 }
 
-template void explain_unary_operation_single_output_error<float>(Operation op,
-                                                                 float, float,
-                                                                 double,
-                                                                 RoundingMode);
-template void explain_unary_operation_single_output_error<double>(
-    Operation op, double, double, double, RoundingMode);
-template void explain_unary_operation_single_output_error<long double>(
-    Operation op, long double, long double, double, RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, float,
+                                                          float, double,
+                                                          RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, double,
+                                                          double, double,
+                                                          RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          long double,
+                                                          long double, double,
+                                                          RoundingMode);
 #ifdef LIBC_TYPES_HAS_FLOAT16
-template void explain_unary_operation_single_output_error<float16>(
-    Operation op, float16, float16, double, RoundingMode);
-template void explain_unary_operation_single_output_error<float>(Operation op,
-                                                                 float, float16,
-                                                                 double,
-                                                                 RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, float16,
+                                                          float16, double,
+                                                          RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, float,
+                                                          float16, double,
+                                                          RoundingMode);
 #endif
 
 template <typename T>
@@ -973,21 +975,18 @@ bool compare_unary_operation_single_output(Operation op, InputType input,
   return (ulp <= ulp_tolerance);
 }
 
-template bool compare_unary_operation_single_output<float>(Operation, float,
-                                                           float, double,
-                                                           RoundingMode);
-template bool compare_unary_operation_single_output<double>(Operation, double,
-                                                            double, double,
-                                                            RoundingMode);
-template bool compare_unary_operation_single_output<long double>(
-    Operation, long double, long double, double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, float, float,
+                                                    double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, double, double,
+                                                    double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, long double,
+                                                    long double, double,
+                                                    RoundingMode);
 #ifdef LIBC_TYPES_HAS_FLOAT16
-template bool compare_unary_operation_single_output<float16>(Operation, float16,
-                                                             float16, double,
-                                                             RoundingMode);
-template bool compare_unary_operation_single_output<float>(Operation, float,
-                                                           float16, double,
-                                                           RoundingMode);
+template bool compare_unary_operation_single_output(Operation, float16, float16,
+                                                    double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, float, float16,
+                                                    double, RoundingMode);
 #endif
 
 template <typename T>
