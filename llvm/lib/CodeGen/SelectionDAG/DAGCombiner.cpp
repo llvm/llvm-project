@@ -15896,6 +15896,7 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         FMAs.push_back(Tmp.getNode());
         Tmp = Tmp->getOperand(2);
       } while (isFusedOp(Tmp) && (Aggressive || Tmp.hasOneUse()));
+
       if (matcher.match(Tmp, ISD::FMUL) && (Aggressive || Tmp.hasOneUse())) {
         Tmp = matcher.getNode(PreferredFusedOpcode, SL, VT, Tmp.getOperand(0),
                               Tmp.getOperand(1), E);
