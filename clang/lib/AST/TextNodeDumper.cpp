@@ -1140,7 +1140,7 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN, StringRef Label) {
         llvm::raw_svector_ostream SS(Str);
         TN.print(SS, PrintPolicy);
       }
-      OS << " '" << Str << "'";
+      OS << "'" << Str << "'";
 
       if (Context) {
         if (TemplateName CanonTN = Context->getCanonicalTemplateName(TN);
