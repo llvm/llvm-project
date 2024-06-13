@@ -38,8 +38,7 @@ struct FormExpressionsPass
     auto matchFun = [&](Operation *op) {
       if (op->hasTrait<OpTrait::emitc::CExpression>() &&
           !op->getParentOfType<emitc::ExpressionOp>() &&
-          op->getNumResults() == 1 &&
-          isSupportedEmitCType(op->getResult(0).getType()))
+          op->getNumResults() == 1)
         createExpression(op, builder);
     };
     rootOp->walk(matchFun);
