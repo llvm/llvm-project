@@ -139,19 +139,15 @@ module {
 // CHECK:  cir.func @shouldFlatMultiBlockCase(%arg0: !s32i) {
 // CHECK:     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
 // CHECK:     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
-// CHECK:     cir.br ^bb1
-// CHECK:   ^bb1:  // pred: ^bb0
 // CHECK:     %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
-// CHECK:     cir.switch.flat %1 : !s32i, ^bb4 [
-// CHECK:       3: ^bb2
+// CHECK:     cir.switch.flat %1 : !s32i, ^bb3 [
+// CHECK:       3: ^bb1
 // CHECK:     ]
-// CHECK:   ^bb2:  // pred: ^bb1
+// CHECK:   ^bb1:  // pred: ^bb0
 // CHECK:     cir.return
-// CHECK:   ^bb3:  // no predecessors
-// CHECK:     cir.br ^bb4
-// CHECK:   ^bb4:  // 2 preds: ^bb1, ^bb3
-// CHECK:     cir.br ^bb5
-// CHECK:   ^bb5:  // pred: ^bb4
+// CHECK:   ^bb2:  // no predecessors
+// CHECK:     cir.br ^bb3
+// CHECK:   ^bb3:  // 2 preds: ^bb0, ^bb2
 // CHECK:     cir.return
 // CHECK:   }
 
@@ -185,22 +181,16 @@ module {
     cir.return %4 : !s32i
   }
 // CHECK:  cir.func @shouldFlatNestedBreak(%arg0: !s32i, %arg1: !s32i) -> !s32i {
-// CHECK:    cir.switch.flat %3 : !s32i, ^bb7 [
-// CHECK:      0: ^bb2
+// CHECK:    cir.switch.flat %3 : !s32i, ^bb4 [
+// CHECK:      0: ^bb1
 // CHECK:    ]
+// CHECK:  ^bb1:  // pred: ^bb0
+// CHECK:    cir.brcond {{%.*}} ^bb2, ^bb3
 // CHECK:  ^bb2:  // pred: ^bb1
-// CHECK:    cir.br ^bb3
-// CHECK:  ^bb3:  // pred: ^bb2
-// CHECK:    cir.brcond {{%.*}} ^bb4, ^bb5
-// CHECK:  ^bb4:  // pred: ^bb3
-// CHECK:    cir.br ^bb7
-// CHECK:  ^bb5:  // pred: ^bb3
-// CHECK:    cir.br ^bb6
-// CHECK:  ^bb6:  // pred: ^bb5
-// CHECK:    cir.br ^bb7
-// CHECK:  ^bb7:  // 3 preds: ^bb1, ^bb4, ^bb6
-// CHECK:    cir.br ^bb8
-// CHECK:  ^bb8:  // pred: ^bb7
+// CHECK:    cir.br ^bb4
+// CHECK:  ^bb3:  // pred: ^bb1
+// CHECK:    cir.br ^bb4
+// CHECK:  ^bb4:  // 3 preds: ^bb0, ^bb2, ^bb3
 // CHECK:    cir.return %9 : !s32i
 // CHECK:  }
 
@@ -260,8 +250,6 @@ module {
 // CHECK-NEXT:  ^[[CASE_DEFAULT]]:
 // CHECK-NEXT:    cir.int<3>
 // CHECK-NEXT:    cir.store
-// CHECK-NEXT:    cir.br ^[[EPILOG]]
-// CHECK-NEXT:  ^[[EPILOG]]:
 // CHECK-NEXT:    cir.br ^[[EPILOG_END:bb[0-9]+]]
 // CHECK-NEXT:  ^[[EPILOG_END]]:
 //      CHECK:    cir.return

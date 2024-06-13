@@ -7,13 +7,17 @@ module {
     %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init] {alignment = 4 : i64}
     %1 = cir.const #cir.int<1> : !u32i
     cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
-    cir.br ^bb2
-  ^bb1:  // no predecessors
+    %c = cir.const #cir.int<0> : !u32i
+    %cond = cir.cast(int_to_bool, %c : !u32i), !cir.bool
+    cir.brcond %cond ^bb1, ^bb2
+
+  ^bb1:
     %2 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     %3 = cir.const #cir.int<1> : !u32i
     %4 = cir.binop(add, %2, %3) : !u32i
     cir.store %4, %0 : !u32i, !cir.ptr<!u32i>
     cir.br ^bb2
+
   ^bb2:  // 2 preds: ^bb0, ^bb1
     %5 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     %6 = cir.const #cir.int<2> : !u32i
@@ -25,8 +29,10 @@ module {
 
 //      MLIR: module {
 // MLIR-NEXT: func @foo
-//      MLIR: cf.br ^bb1
-//      MLIR: ^bb1:
+//      MLIR: cf.cond_br %{{.+}}, ^bb[[#BLK1:]], ^bb[[#BLK2:]]
+//      MLIR: ^bb[[#BLK1:]]:
+//      MLIR: cf.br ^bb[[#BLK2:]]
+//      MLIR: ^bb[[#BLK2:]]:
 //      MLIR: return
 
 //      LLVM: br label %[[Value:[0-9]+]]
