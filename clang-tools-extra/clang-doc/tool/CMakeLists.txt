@@ -27,7 +27,7 @@ install(FILES ../assets/index.js
   COMPONENT clang-doc)
 
 add_custom_target(copy-clang-doc-assets
-        COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different "${CMAKE_CURRENT_SOURCE_DIR}/../assets" "${CMAKE_BINARY_DIR}/share/clang"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../assets" "${CMAKE_BINARY_DIR}/share/clang"
         DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../assets"
         COMMENT "Copying Clang-Doc Assets"
 )
