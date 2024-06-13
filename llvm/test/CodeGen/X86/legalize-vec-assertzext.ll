@@ -39,6 +39,9 @@ define i64 @widen_assertzext_range_attr(ptr %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq test2@PLT
+; CHECK-NEXT:    movb $127, %al
+; CHECK-NEXT:    kmovw %eax, %k1
+; CHECK-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    popq %rcx

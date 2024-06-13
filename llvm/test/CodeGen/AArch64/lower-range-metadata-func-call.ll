@@ -34,9 +34,10 @@ entry:
   ret i32 %and
 }
 
+; and can be eliminated
 ; CHECK-LABEL: {{^}}test_call_known_max_range_attr:
 ; CHECK: bl foo
-; CHECK: and w{{[0-9]+}}, w0, #0x3ff
+; CHECK-NOT: and
 ; CHECK: ret
 define i32 @test_call_known_max_range_attr() #0 {
 entry:
@@ -55,7 +56,6 @@ entry:
   %and = and i32 %id, 1023
   ret i32 %and
 }
-
 
 declare i32 @foo()
 
