@@ -8,7 +8,7 @@ define i32 @test_ptrauth_call_resign(ptr %p) {
 ;
   %v0 = ptrtoint ptr %p to i64
   %v1 = call i64 @llvm.ptrauth.resign(i64 %v0, i32 1, i64 1234, i32 1, i64 5678)
-  %v2 = inttoptr i64 %v1 to i32()*
+  %v2 = inttoptr i64 %v1 to ptr
   %v3 = call i32 %v2() [ "ptrauth"(i32 1, i64 5678) ]
   ret i32 %v3
 }
@@ -24,7 +24,7 @@ define i32 @test_ptrauth_call_resign_blend(ptr %pp) {
   %v2 = ptrtoint ptr %v0 to i64
   %v3 = call i64 @llvm.ptrauth.blend(i64 %v1, i64 5678)
   %v4 = call i64 @llvm.ptrauth.resign(i64 %v2, i32 1, i64 1234, i32 1, i64 %v3)
-  %v5 = inttoptr i64 %v4 to i32()*
+  %v5 = inttoptr i64 %v4 to ptr
   %v6 = call i32 %v5() [ "ptrauth"(i32 1, i64 %v3) ]
   ret i32 %v6
 }
@@ -42,7 +42,7 @@ define i32 @test_ptrauth_call_resign_blend_2(ptr %pp) {
   %v2 = ptrtoint ptr %v0 to i64
   %v3 = call i64 @llvm.ptrauth.blend(i64 %v1, i64 5678)
   %v4 = call i64 @llvm.ptrauth.resign(i64 %v2, i32 0, i64 %v3, i32 0, i64 1234)
-  %v5 = inttoptr i64 %v4 to i32()*
+  %v5 = inttoptr i64 %v4 to ptr
   %v6 = call i32 %v5() [ "ptrauth"(i32 0, i64 1234) ]
   ret i32 %v6
 }
@@ -54,7 +54,7 @@ define i32 @test_ptrauth_call_sign(ptr %p) {
 ;
   %v0 = ptrtoint ptr %p to i64
   %v1 = call i64 @llvm.ptrauth.sign(i64 %v0, i32 2, i64 5678)
-  %v2 = inttoptr i64 %v1 to i32()*
+  %v2 = inttoptr i64 %v1 to ptr
   %v3 = call i32 %v2() [ "ptrauth"(i32 2, i64 5678) ]
   ret i32 %v3
 }
@@ -66,7 +66,7 @@ define i32 @test_ptrauth_call_sign_otherbundle(ptr %p) {
 ;
   %v0 = ptrtoint ptr %p to i64
   %v1 = call i64 @llvm.ptrauth.sign(i64 %v0, i32 2, i64 5678)
-  %v2 = inttoptr i64 %v1 to i32()*
+  %v2 = inttoptr i64 %v1 to ptr
   %v3 = call i32 %v2() [ "somebundle"(ptr null), "ptrauth"(i32 2, i64 5678), "otherbundle"(i64 0) ]
   ret i32 %v3
 }
