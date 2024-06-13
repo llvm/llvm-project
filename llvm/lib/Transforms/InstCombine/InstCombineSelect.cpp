@@ -1858,6 +1858,11 @@ static Instruction *foldSelectICmpBinOp(SelectInst &SI, ICmpInst *ICI,
         return NoCommonBits | AllBitsEnabled;
       if (CmpRHS->isZero())
         return AllCommonBits;
+    } else if (auto Disjoint = dyn_cast<PossiblyDisjointInst>(CmpLHS);
+               Disjoint->isDisjoint()) {
+      if (CmpRHS->isAllOnes())
+        return NoCommonBits | AllBitsEnabled;
+      return NoCommonBits;
     }
 
     return NothingSpecial;

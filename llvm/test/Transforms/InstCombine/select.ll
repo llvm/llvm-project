@@ -3763,11 +3763,7 @@ exit:
 define i32 @src_or_disjoint_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_or_disjoint_xor(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[OR_DISJOINT]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[XOR]], i32 -1
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 -1
 ;
 entry:
   %or.disjoint = or disjoint i32 %x, %y
@@ -3780,11 +3776,7 @@ entry:
 define i32 @src_or_disjoint_xor_comm(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_or_disjoint_xor_comm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[OR_DISJOINT]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[XOR]], i32 -1
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 -1
 ;
 entry:
   %or.disjoint = or disjoint i32 %x, %y
@@ -3797,11 +3789,7 @@ entry:
 define i32 @src_or_disjoint_xor_ne(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_or_disjoint_xor_ne(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[OR_DISJOINT]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP_NOT]], i32 [[XOR]], i32 -1
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 -1
 ;
 entry:
   %or.disjoint = or disjoint i32 %x, %y
@@ -3814,11 +3802,7 @@ entry:
 define i32 @src_or_disjoint_xor_ne_comm(i32 %x, i32 %y) {
 ; CHECK-LABEL: @src_or_disjoint_xor_ne_comm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[OR_DISJOINT]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP_NOT]], i32 [[XOR]], i32 -1
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 -1
 ;
 entry:
   %or.disjoint = or disjoint i32 %y, %x
@@ -3831,11 +3815,7 @@ entry:
 define <2 x i8> @src_or_disjoint_xor_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @src_or_disjoint_xor_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[OR_DISJOINT]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[XOR]], <2 x i8> <i8 -1, i8 -1>
-; CHECK-NEXT:    ret <2 x i8> [[COND]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
 entry:
   %or.disjoint = or disjoint <2 x i8> %x, %y
@@ -3848,11 +3828,7 @@ entry:
 define <2 x i8> @src_or_disjoint_xor_comm_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @src_or_disjoint_xor_comm_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[OR_DISJOINT]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[XOR]], <2 x i8> <i8 -1, i8 -1>
-; CHECK-NEXT:    ret <2 x i8> [[COND]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
 entry:
   %or.disjoint = or disjoint <2 x i8> %x, %y
@@ -3865,11 +3841,7 @@ entry:
 define <2 x i8> @src_or_disjoint_xor_ne_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @src_or_disjoint_xor_ne_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq <2 x i8> [[OR_DISJOINT]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i8> [[XOR]], <2 x i8> <i8 -1, i8 -1>
-; CHECK-NEXT:    ret <2 x i8> [[COND]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
 entry:
   %or.disjoint = or disjoint <2 x i8> %x, %y
@@ -3882,11 +3854,7 @@ entry:
 define <2 x i8> @src_or_disjoint_xor_ne_comm_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @src_or_disjoint_xor_ne_comm_vec(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR_DISJOINT:%.*]] = or disjoint <2 x i8> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq <2 x i8> [[OR_DISJOINT]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[Y]], [[X]]
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i8> [[XOR]], <2 x i8> <i8 -1, i8 -1>
-; CHECK-NEXT:    ret <2 x i8> [[COND]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
 entry:
   %or.disjoint = or disjoint <2 x i8> %y, %x
@@ -4924,13 +4892,11 @@ define i32 @src_no_trans_select_xor_eq0_and_xor(i32 %x, i32 %y) {
   ret i32 %cond
 }
 
-; https://alive2.llvm.org/ce/z/SBe8ei
-define i32 @src_no_trans_select_xor_eq0_or_xor(i32 %x, i32 %y) {
-; CHECK-LABEL: @src_no_trans_select_xor_eq0_or_xor(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR0:%.*]] = icmp eq i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[XOR0]], i32 [[OR]], i32 [[XOR]]
+define i32 @src_trans_select_xor_eq0_or_xor(i32 %x, i32 %y) {
+; CHECK-LABEL: @src_trans_select_xor_eq0_or_xor(
+; CHECK-NEXT:    [[XOR0:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = select i1 [[XOR0]], i32 0, i32 [[Y]]
+; CHECK-NEXT:    [[COND:%.*]] = xor i32 [[XOR]], [[X]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %xor = xor i32 %x, %y
