@@ -31,8 +31,6 @@ jobs:
       - name: Build tool
         run: |
           ./graph-generation/tool -h
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: Run test
         run: |
           ./graph-generation/test.py
