@@ -507,6 +507,32 @@ func.func @interleave_size1(%a: vector<1xf32>, %b: vector<1xf32>) -> vector<2xf3
 
 // -----
 
+// CHECK-LABEL: func @deinterleave
+// CHECK-SAME: (%[[ARG0:.+]]: vector<4xf32>)
+//       CHECK: %[[SHUFFLE0:.*]] = spirv.VectorShuffle [0 : i32, 2 : i32] %[[ARG0]], %[[ARG0]] : vector<4xf32>, vector<4xf32> -> vector<2xf32>
+//       CHECK: %[[SHUFFLE1:.*]] = spirv.VectorShuffle [1 : i32, 3 : i32] %[[ARG0]], %[[ARG0]] : vector<4xf32>, vector<4xf32> -> vector<2xf32>
+//       CHECK: return %[[SHUFFLE0]], %[[SHUFFLE1]]
+func.func @deinterleave(%a: vector<4xf32>) -> (vector<2xf32>, vector<2xf32>) {
+  %0, %1 = vector.deinterleave %a : vector<4xf32> -> vector<2xf32>
+  return %0, %1 : vector<2xf32>, vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @deinterleave_scalar
+// CHECK-SAME: (%[[ARG0:.+]]: vector<2xf32>)
+//       CHECK: %[[EXTRACT0:.*]] = spirv.CompositeExtract %[[ARG0]][0 : i32] : vector<2xf32>
+//       CHECK: %[[EXTRACT1:.*]] = spirv.CompositeExtract %[[ARG0]][1 : i32] : vector<2xf32>
+//       CHECK: %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[EXTRACT0]] : f32 to vector<1xf32>
+//       CHECK: %[[CAST1:.*]] = builtin.unrealized_conversion_cast %[[EXTRACT1]] : f32 to vector<1xf32>
+//       CHECK: return %[[CAST0]], %[[CAST1]]
+func.func @deinterleave_scalar(%a: vector<2xf32>) -> (vector<1xf32>, vector<1xf32>) {
+  %0, %1 = vector.deinterleave %a: vector<2xf32> -> vector<1xf32>
+  return %0, %1 : vector<1xf32>, vector<1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @reduction_add
 //  CHECK-SAME: (%[[V:.+]]: vector<4xi32>)
 //       CHECK:   %[[S0:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<4xi32>
