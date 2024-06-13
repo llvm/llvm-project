@@ -3,8 +3,7 @@
 # RUN: link_fdata %s %t.exe %t.preagg PREAGG
 # RUN: perf2bolt %t.exe -p %t.preagg --pa -o %t.fdata -w %t.yaml
 # RUN: sed -i 's/0000/0001/g' %t.yaml
-# RUN: sed -i 's/0x[0-9A-Fa-f]{16}/0x0000000000000000/g' %t.yaml
-
+# RUN: sed -i '0,/hash:/s/0x[0-9A-Fa-f]\{16\}/0x0000000000000000/' %t.yaml
 # RUN: llvm-bolt %t.exe -data %t.yaml -o %t.null -v=1 -infer-stale-profile 2>&1 \
 # RUN:   | FileCheck %s
 
