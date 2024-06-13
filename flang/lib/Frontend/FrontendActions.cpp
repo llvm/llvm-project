@@ -861,6 +861,9 @@ void CodeGenAction::generateLLVMIR() {
       llvmModule->setPIELevel(
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
+
+  // Set mcmodel level LLVM module flags
+  llvmModule->setCodeModel(opts.getCodeModel());
 }
 
 static std::unique_ptr<llvm::raw_pwrite_stream>

@@ -32,6 +32,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
@@ -379,6 +380,26 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.PICLevel = picLevel;
     if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
       opts.IsPIE = 1;
+  }
+
+  // -mcmodel option.
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mcmodel_EQ)) {
+    llvm::StringRef modelName = a->getValue();
+    auto codeModel =
+        llvm::StringSwitch<std::optional<llvm::CodeModel::Model>>(modelName)
+            .Case("tiny", llvm::CodeModel::Model::Tiny)
+            .Case("small", llvm::CodeModel::Model::Small)
+            .Case("kernel", llvm::CodeModel::Model::Kernel)
+            .Case("medium", llvm::CodeModel::Model::Medium)
+            .Case("large", llvm::CodeModel::Model::Large)
+            .Default(std::nullopt);
+
+    if (codeModel.has_value())
+      opts.setCodeModel(*codeModel);
+    else
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << modelName;
   }
 
   // This option is compatible with -f[no-]underscoring in gfortran.
