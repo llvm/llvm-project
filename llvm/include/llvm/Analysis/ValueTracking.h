@@ -141,7 +141,7 @@ bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false,
 /// 2. X is true implies Y is false.
 /// 3. X is false implies Y is true.
 /// Otherwise, return false.
-bool isKnownInversion(Value *X, Value *Y);
+bool isKnownInversion(const Value *X, const Value *Y);
 
 /// Returns true if the give value is known to be non-negative.
 bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
