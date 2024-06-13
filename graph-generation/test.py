@@ -46,7 +46,7 @@ def run_case(root, dir, input_path, output_path, tool_path):
     subprocess.run(cmd, shell=True, \
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, \
                    check=True)
-    
+
     new_output = read_output(output_path)
     if original_output != new_output:
         os.remove(output_path)
