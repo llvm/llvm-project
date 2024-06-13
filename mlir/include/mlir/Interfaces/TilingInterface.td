@@ -247,7 +247,7 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
           less or equal to the tile size. This is meant to be used with
           `mergeReductions` method which will combine the partial reductions.
         }],
-        /*retType=*/"Operation*",
+        /*retType=*/"FailureOr<TilingResult>",
         /*methodName=*/"tileToPartialReduction",
         /*args=*/(ins
             "OpBuilder &":$b,
@@ -258,7 +258,7 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
             "ArrayRef<int>":$reductionDims),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return nullptr;
+          return failure();
         }]
       >,
       InterfaceMethod<
@@ -267,7 +267,7 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
           tiled along the reduction dimensions. This will only apply the
           reduction the operation.
         }],
-        /*retType=*/"Operation*",
+        /*retType=*/"FailureOr<MergeResult>",
         /*methodName=*/"mergeReductions",
         /*args=*/(ins
             "OpBuilder &":$b,
@@ -276,7 +276,7 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
             "ArrayRef<int>":$reductionDim),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return nullptr;
+          return failure();
         }]
       >
   ];
