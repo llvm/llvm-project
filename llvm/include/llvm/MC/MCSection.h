@@ -113,9 +113,6 @@ private:
   // subsections.
   SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
 
-  // Mach-O only: the defining non-temporary symbol for each fragment.
-  SmallVector<const MCSymbol *, 0> Atoms;
-
   /// State for tracking labels that don't yet have Fragments
   struct PendingLabel {
     MCSymbol* Sym;

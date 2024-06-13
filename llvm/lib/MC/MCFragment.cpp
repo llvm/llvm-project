@@ -17,6 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -199,7 +200,8 @@ uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        MCSection *Parent)
-    : Parent(Parent), Kind(Kind), HasInstructions(HasInstructions) {
+    : Parent(Parent), Kind(Kind), HasInstructions(HasInstructions),
+      LinkerRelaxable(false) {
   if (Parent && !isa<MCDummyFragment>(*this))
     Parent->addFragment(*this);
 }
@@ -264,15 +266,7 @@ void MCFragment::destroy() {
 }
 
 const MCSymbol *MCFragment::getAtom() const {
-  if (LayoutOrder >= Parent->Atoms.size())
-    return nullptr;
-  return Parent->Atoms[LayoutOrder];
-}
-
-void MCFragment::setAtom(const MCSymbol *Sym) {
-  if (LayoutOrder >= Parent->Atoms.size())
-    Parent->Atoms.resize(LayoutOrder + 1);
-  Parent->Atoms[LayoutOrder] = Sym;
+  return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
 }
 
 // Debugging methods

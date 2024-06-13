@@ -69,8 +69,8 @@ private:
   FragmentType Kind;
 
 protected:
-  bool HasInstructions;
-  bool LinkerRelaxable = false;
+  bool HasInstructions : 1;
+  bool LinkerRelaxable : 1;
 
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
@@ -94,7 +94,6 @@ public:
   void setParent(MCSection *Value) { Parent = Value; }
 
   const MCSymbol *getAtom() const;
-  void setAtom(const MCSymbol *Sym);
 
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
