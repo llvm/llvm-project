@@ -79,10 +79,4 @@ void *realloc(void *ptr, size_t s) {
 // Integration tests are linked with -nostdlib. BFD linker expects
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
-
-// On some platform (aarch64 fedora tested) full build integration test
-// objects need to link against libgcc, which may expect a __getauxval
-// function. For now, it is fine to provide a weak definition that always
-// returns false.
-[[gnu::weak]] bool __getauxval(uint64_t, uint64_t *) { return false; }
 } // extern "C"
