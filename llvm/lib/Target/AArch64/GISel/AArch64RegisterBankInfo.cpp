@@ -496,6 +496,20 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   }
 }
 
+bool AArch64RegisterBankInfo::isPHIWithFPContraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI, const unsigned Depth) const {
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  return any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                [&](const MachineInstr &UseMI) {
+                  if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
+                    return true;
+                  return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+                });
+}
+
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI,
                                                const TargetRegisterInfo &TRI,
@@ -851,13 +865,18 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // instead of blind map every scalar to GPR.
     if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](const MachineInstr &UseMI) {
-                 // If we have at least one direct use in a FP instruction,
+                 // If we have at least one direct or indirect use
+                 // in a FP instruction,
                  // assume this was a floating point load in the IR. If it was
                  // not, we would have had a bitcast before reaching that
                  // instruction.
                  //
                  // Int->FP conversion operations are also captured in
                  // onlyDefinesFP().
+
+                 if (isPHIWithFPContraints(UseMI, MRI, TRI))
+                   return true;
+
                  return onlyUsesFP(UseMI, MRI, TRI) ||
                         onlyDefinesFP(UseMI, MRI, TRI);
                }))
