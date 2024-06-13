@@ -755,7 +755,7 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
       continue;
     // Shape expansion cannot be propagated when multiple expanded dimension are
     // packed.
-    if (packedDims.size() > 1)
+    if (packedDims.size() != 1)
       return rewriter.notifyMatchFailure(
           packOp, "only one of the expanded dimensions can be packed");
     // Only the inner-most dim should be packed. Otherwise, elements order will
