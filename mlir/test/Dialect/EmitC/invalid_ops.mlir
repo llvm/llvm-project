@@ -88,17 +88,19 @@ func.func @array_result() {
 
 // -----
 
-func.func @empty_operator(%arg : !emitc.lvalue<i32>) {
+func.func @empty_operator() {
+    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
     // expected-error @+1 {{'emitc.apply' op applicable operator must not be empty}}
-    %2 = emitc.apply ""(%arg) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    %1 = emitc.apply ""(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
     return
 }
 
 // -----
 
-func.func @illegal_operator(%arg : !emitc.lvalue<i32>) {
+func.func @illegal_operator() {
+    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
     // expected-error @+1 {{'emitc.apply' op applicable operator is illegal}}
-    %2 = emitc.apply "+"(%arg) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    %1 = emitc.apply "+"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
     return
 }
 
@@ -225,10 +227,13 @@ func.func @test_misplaced_yield() {
 
 // -----
 
-func.func @test_assign_to_non_variable(%arg1: f32, %arg2: !emitc.lvalue<f32>) {
+func.func @test_assign_to_block_argument(%arg0: f32) {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<f32>
+  cf.br ^bb1(%0 : !emitc.lvalue<f32>)
+^bb1(%a : !emitc.lvalue<f32>):
   // expected-error @+1 {{'emitc.assign' op cannot assign to block argument}}
-  emitc.assign %arg1 : f32 to %arg2 : !emitc.lvalue<f32>
-  return
+  emitc.assign %arg0 : f32 to %a : !emitc.lvalue<f32>
+  func.return
 }
 
 // -----
@@ -326,6 +331,13 @@ emitc.func @resulterror() -> i32 {
 emitc.func @return_type_mismatch() -> i32 {
   %0 = emitc.call_opaque "foo()"(): () -> f32
   emitc.return %0 : f32  // expected-error {{type of the return operand ('f32') doesn't match function result type ('i32') in function @return_type_mismatch}}
+}
+
+// -----
+
+// expected-error@+1 {{'emitc.func' op cannot have lvalue type as argument}}
+emitc.func @argument_type_lvalue(%arg : !emitc.lvalue<i32>) {
+  emitc.return
 }
 
 // -----

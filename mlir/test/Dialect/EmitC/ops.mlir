@@ -47,9 +47,11 @@ func.func @c() {
   return
 }
 
-func.func @a(%arg0: !emitc.lvalue<i32>, %arg1: !emitc.lvalue<i32>) {
-  %1 = "emitc.apply"(%arg0) {applicableOperator = "&"} : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-  %2 = emitc.apply "&"(%arg1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+func.func @a() {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  %2 = "emitc.apply"(%0) {applicableOperator = "&"} : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+  %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   return
 }
 

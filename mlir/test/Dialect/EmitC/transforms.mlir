@@ -85,7 +85,8 @@ func.func @expression_with_dereference(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr
 
 
 // CHECK-LABEL: func.func @expression_with_address_taken(
-// CHECK-SAME:      %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: !emitc.ptr<i32>, %[[VAL_3:.*]]: !emitc.lvalue<i32>) -> i1 {
+// CHECK-SAME:      %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: !emitc.ptr<i32>) -> i1 {
+// CHECK:         %[[VAL_3:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
 // CHECK:         %[[VAL_4:.*]] = emitc.expression : i1 {
 // CHECK:           %[[VAL_5:.*]] = emitc.apply "&"(%[[VAL_3]]) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
 // CHECK:           %[[VAL_6:.*]] = emitc.add %[[VAL_5]], %[[VAL_1]] : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
@@ -95,8 +96,9 @@ func.func @expression_with_dereference(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr
 // CHECK:         return %[[VAL_4]] : i1
 // CHECK:       }
 
-func.func @expression_with_address_taken(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>, %arg3: !emitc.lvalue<i32>) -> i1 {
-  %a = emitc.apply "&"(%arg3) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+func.func @expression_with_address_taken(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
+  %a = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   %b = emitc.add %a, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
   %c = emitc.cmp lt, %b, %arg2 :(!emitc.ptr<i32>, !emitc.ptr<i32>) -> i1
   return %c : i1

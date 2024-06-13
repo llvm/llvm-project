@@ -1064,6 +1064,11 @@ static LogicalResult printOperation(CppEmitter &emitter,
         "with multiple blocks needs variables declared at top");
   }
 
+  if (llvm::any_of(functionOp.getArgumentTypes(), llvm::IsaPred<LValueType>)) {
+    return functionOp.emitOpError()
+           << "cannot emit lvalue type as argument type";
+  }
+
   if (llvm::any_of(functionOp.getResultTypes(), llvm::IsaPred<ArrayType>)) {
     return functionOp.emitOpError() << "cannot emit array type as result type";
   }

@@ -82,19 +82,20 @@ func.func @opaque_types(%arg0: !emitc.opaque<"bool">, %arg1: !emitc.opaque<"char
   return %2 : !emitc.opaque<"status_t">
 }
 
-// CHECK-LABEL: int32_t* apply(
-// CHECK-SAME: int32_t [[V1:[^ ]*]]) {
-func.func @apply(%arg0: !emitc.lvalue<i32>) -> !emitc.ptr<i32> {
+// CHECK-LABEL: int32_t* apply() {
+func.func @apply() -> !emitc.ptr<i32> {
+  // CHECK-NEXT: int32_t [[V1:[^ ]*]];
+  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   // CHECK-NEXT: int32_t* [[V2:[^ ]*]] = &[[V1]];
-  %0 = emitc.apply "&"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+  %1 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   // CHECK-NEXT: int32_t [[V3:[^ ]*]];
   %2 = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
   // CHECK-NEXT: int32_t [[V4:[^ ]*]] = *[[V2]];
-  %1 = emitc.apply "*"(%0) : (!emitc.ptr<i32>) -> i32
+  %3 = emitc.apply "*"(%1) : (!emitc.ptr<i32>) -> i32
   // CHECK-NEXT: [[V3]] = [[V4]];
-  emitc.assign %1 : i32 to %2 : !emitc.lvalue<i32>
+  emitc.assign %3 : i32 to %2 : !emitc.lvalue<i32>
   // CHECK-NEXT: return [[V2]];
-  return %0 : !emitc.ptr<i32>
+  return %1 : !emitc.ptr<i32>
 }
 
 // CHECK: void array_type(int32_t v1[3], float v2[10][20])

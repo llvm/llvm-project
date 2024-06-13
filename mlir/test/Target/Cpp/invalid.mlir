@@ -74,6 +74,13 @@ func.func @pointer_to_array(%arg0 : !emitc.ptr<!emitc.array<4xf32>>) {
 
 // -----
 
+// expected-error@+1 {{cannot emit lvalue type as argument type}}
+func.func @lvalue_as_argument(%arg: !emitc.lvalue<i8>) {
+   return
+}
+
+// -----
+
 // expected-error@+1 {{cannot emit array type as result type}}
 func.func @array_as_result(%arg: !emitc.array<4xi8>) -> (!emitc.array<4xi8>) {
    return %arg : !emitc.array<4xi8>

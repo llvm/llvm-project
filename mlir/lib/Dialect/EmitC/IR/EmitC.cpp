@@ -548,6 +548,10 @@ void FuncOp::print(OpAsmPrinter &p) {
 }
 
 LogicalResult FuncOp::verify() {
+  if (llvm::any_of(getArgumentTypes(), llvm::IsaPred<LValueType>)) {
+    return emitOpError("cannot have lvalue type as argument");
+  }
+
   if (getNumResults() > 1)
     return emitOpError("requires zero or exactly one result, but has ")
            << getNumResults();
