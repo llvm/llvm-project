@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_MCDCSTATE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ProfileData/Coverage/MCDCTypes.h"
 
 namespace clang {
