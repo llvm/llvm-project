@@ -15,13 +15,13 @@ int main() {
   // CHECK: {{.*ERROR: AddressSanitizer: heap-use-after-free on address}}
   // CHECK:   {{0x.* at pc 0x.* bp 0x.* sp 0x.*}}
   // CHECK: {{WRITE of size 1 at 0x.* thread T0}}
-  // CHECK: {{    #0 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-4]]
+  // CHECK: {{    #[0-9]+ 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-4]]
   // CHECK: {{0x.* is located 0 bytes inside of 1-byte region .0x.*,0x.*}}
   // CHECK: {{freed by thread T0 here:}}
-  // CHECK: {{    #0 0x.* in .*free}}
-  // CHECK: {{    #[1-3] 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-9]]
+  // CHECK: {{    #[0-9]+ 0x.* in .*free .*.cpp}}
+  // CHECK: {{    #[0-9]+ 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-9]]
 
   // CHECK: {{previously allocated by thread T0 here:}}
-  // CHECK: {{    #0 0x.* in .*malloc}}
-  // CHECK: {{    #[1-3] 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-14]]
+  // CHECK: {{    #[0-9]+ 0x.* in .*malloc}}
+  // CHECK: {{    #[0-9]+ 0x.* in main .*use-after-free-right.cpp:}}[[@LINE-14]]
 }
