@@ -2291,7 +2291,6 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
   unsigned PrefixLen = 0;
 
   while (PrefixLen != 16 && isRawStringDelimBody(CurPtr[PrefixLen])) {
-    ++PrefixLen;
     if (!isLexingRawMode() &&
         llvm::is_contained({'$', '@', '`'}, CurPtr[PrefixLen])) {
       const char *Pos = &CurPtr[PrefixLen];
@@ -2300,6 +2299,7 @@ bool Lexer::LexRawStringLiteral(Token &Result, const char *CurPtr,
                     : diag::ext_cxx26_raw_string_literal_character_set)
           << StringRef(Pos, 1);
     }
+    ++PrefixLen;
   }
 
   // If the last character was not a '(', then we didn't lex a valid delimiter.
