@@ -5248,6 +5248,9 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
                                                   MachineRegisterInfo *MRI,
                                                   unsigned BinOpDepth,
                                                   LiveVariables *LV) const {
+  if (!Reg.isVirtual())
+    return;
+
   MachineInstr *MI = MRI->getVRegDef(Reg);
   if (!MI)
     return;
