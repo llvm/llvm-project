@@ -72,8 +72,8 @@ private:
   FragmentType Kind;
 
 protected:
-  bool HasInstructions;
-  bool LinkerRelaxable = false;
+  bool HasInstructions : 1;
+  bool LinkerRelaxable : 1;
 
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
