@@ -1273,7 +1273,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
                               StringRef Component, RuntimeLinkOptions Opts,
                               bool IsShared) const {
   SmallString<64> DarwinLibName = StringRef("libclang_rt.");
-  // an Darwin the builtins compomnent is not in the library name
+  // On Darwin the builtins component is not in the library name.
   if (Component != "builtins") {
     DarwinLibName += Component;
     if (!(Opts & RLO_IsEmbedded))
