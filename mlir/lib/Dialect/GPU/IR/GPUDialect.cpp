@@ -2182,17 +2182,45 @@ LogicalResult gpu::DynamicSharedMemoryOp::verify() {
 // GPU KernelAttr
 //===----------------------------------------------------------------------===//
 
-KernelAttr KernelAttr::get(Operation *kernelOp, DictionaryAttr metadata) {
-  assert(kernelOp && "invalid kernel");
-  return get(kernelOp->getAttrDictionary(), metadata);
+KernelAttr KernelAttr::get(FunctionOpInterface kernel,
+                           DictionaryAttr metadata) {
+  assert(kernel && "invalid kernel");
+  return get(kernel.getNameAttr(), kernel.getFunctionType(),
+             kernel.getAllArgAttrs(), metadata);
+}
+
+KernelAttr KernelAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                  FunctionOpInterface kernel,
+                                  DictionaryAttr metadata) {
+  assert(kernel && "invalid kernel");
+  return getChecked(emitError, kernel.getNameAttr(), kernel.getFunctionType(),
+                    kernel.getAllArgAttrs(), metadata);
 }
 
 KernelAttr KernelAttr::appendMetadata(ArrayRef<NamedAttribute> attrs) const {
   if (attrs.empty())
     return *this;
-  NamedAttrList attrList(attrs);
-  attrList.append(getMetadata());
-  return KernelAttr::get(getFuncAttrs(), attrList.getDictionary(getContext()));
+  NamedAttrList attrList;
+  if (auto dict = getMetadata())
+    attrList.append(dict);
+  attrList.append(attrs);
+  return KernelAttr::get(getName(), getFunctionType(), getArgAttrs(),
+                         attrList.getDictionary(getContext()));
+}
+
+LogicalResult KernelAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 StringAttr name, Type functionType,
+                                 ArrayAttr argAttrs, DictionaryAttr metadata) {
+  if (name.empty())
+    return emitError() << "the kernel name can't be empty";
+  if (argAttrs) {
+    if (llvm::any_of(argAttrs, [](Attribute attr) {
+          return !llvm::isa<DictionaryAttr>(attr);
+        }))
+      return emitError()
+             << "all attributes in the array must be a dictionary attribute";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2204,11 +2232,15 @@ KernelTableAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                         DictionaryAttr dict) {
   if (!dict)
     return emitError() << "table cannot be null";
-  if (llvm::any_of(dict, [](NamedAttribute attr) {
-        return !llvm::isa<KernelAttr>(attr.getValue());
-      }))
-    return emitError()
-           << "all the dictionary values must be `#gpu.kernel` attributes";
+  for (NamedAttribute attr : dict) {
+    auto kernel = llvm::dyn_cast<KernelAttr>(attr.getValue());
+    if (!kernel)
+      return emitError()
+             << "all the dictionary values must be `#gpu.kernel` attributes";
+    if (kernel.getName() != attr.getName())
+      return emitError() << "expected kernel to be named `" << attr.getName()
+                         << "` but got `" << kernel.getName() << "`";
+  }
   return success();
 }
 

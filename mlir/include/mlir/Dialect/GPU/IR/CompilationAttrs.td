@@ -22,72 +22,83 @@ include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 
 def GPU_KernelAttr : GPU_Attr<"Kernel", "kernel"> {
   let description = [{
-    GPU attribute for storing metadata related to a compiled kernel. It
-    contains the attribute dictionary of the LLVM function used to generate the
-    kernel, as well as an optional dictionary for additional metadata, like
-    occupancy information.
+    GPU attribute for storing metadata related to a compiled kernel. The
+    attribute contains the name and function type of the kernel.
+
+    The attribute also contains optional parameters for storing the arguments
+    attributes as well as a dictionary for additional metadata, like occupancy
+    information or other function attributes.
+
+    Note: The `arg_attrs` parameter is expected to follow all the constraints
+    imposed by the `mlir::FunctionOpInterface` interface.
 
     Examples:
     ```mlir
-      #gpu.kernel<{sym_name = "test_fusion__part_0", ...},
-                   metadata = {reg_count = 255, ...}>
+      #gpu.kernel<@kernel1, (i32) -> (), arg_attrs = [...],  metadata = {reg_count = 255, ...}>
+      #gpu.kernel<@kernel2, (i32, f64) -> ()>
     ```
   }];
   let parameters = (ins
-    "DictionaryAttr":$func_attrs,
+    "StringAttr":$name,
+    "Type":$function_type,
+    OptionalParameter<"ArrayAttr", "arguments attributes">:$arg_attrs,
     OptionalParameter<"DictionaryAttr", "metadata dictionary">:$metadata
   );
   let assemblyFormat = [{
-    `<` $func_attrs (`,` `metadata` `=` $metadata^ )? `>`
+    `<` $name `,` $function_type (`,` struct($arg_attrs, $metadata)^)? `>`
   }];
   let builders = [
-    AttrBuilderWithInferredContext<(ins "DictionaryAttr":$funcAttrs,
-                                         CArg<"DictionaryAttr",
-                                              "nullptr">:$metadata), [{
-      assert(funcAttrs && "invalid function attributes dictionary");
-      return $_get(funcAttrs.getContext(), funcAttrs, metadata);
+    AttrBuilderWithInferredContext<(ins "StringAttr":$name,
+                                        "Type":$functionType,
+                                        CArg<"ArrayAttr", "nullptr">:$argAttrs,
+                                        CArg<"DictionaryAttr",
+                                             "nullptr">:$metadata), [{
+      assert(name && "invalid name");
+      return $_get(name.getContext(), name, functionType, argAttrs, metadata);
     }]>,
-    AttrBuilderWithInferredContext<(ins "Operation*":$kernel,
+    AttrBuilderWithInferredContext<(ins "FunctionOpInterface":$kernel,
                                          CArg<"DictionaryAttr",
                                               "nullptr">:$metadata)>
   ];
+  let genVerifyDecl = 1;
   let extraClassDeclaration = [{
-    /// Returns the function attribute corresponding to key or nullptr if missing.
+    /// Returns the metadata attribute corresponding to `key` or `nullptr`
+    /// if missing.
     Attribute getAttr(StringRef key) const {
-      return getFuncAttrs().get(key);
+      auto attrs = getMetadata();
+      return attrs ? attrs.get(key) : nullptr;
     }
     template <typename ConcreteAttr>
     ConcreteAttr getAttr(StringRef key) const {
       return llvm::dyn_cast_or_null<ConcreteAttr>(getAttr(key));
     }
-    Attribute getAttr(StringAttr key) const;
+    Attribute getAttr(StringAttr key) const {
+      auto attrs = getMetadata();
+      return attrs ? attrs.get(key) : nullptr;
+    }
     template <typename ConcreteAttr>
     ConcreteAttr getAttr(StringAttr key) const {
       return llvm::dyn_cast_or_null<ConcreteAttr>(getAttr(key));
     }
 
-    /// Returns the name of the kernel.
-    StringAttr getName() const {
-      return getAttr<StringAttr>("sym_name");
+    /// Returns the attribute dictionary at position `index`.
+    DictionaryAttr getArgAttrDict(unsigned index) {
+      auto argArray = getArgAttrs();
+      return argArray ? llvm::cast<DictionaryAttr>(argArray[index]) : nullptr;
     }
 
-    /// Returns the metadta attribute corresponding to key or nullptr if missing.
-    Attribute getMDAttr(StringRef key) const {
-      if (DictionaryAttr attrs = getMetadata())
-        return attrs.get(key);
-      return nullptr;
+    /// Return the specified attribute, if present, for the argument at 'index',
+    /// null otherwise.
+    Attribute getArgAttr(unsigned index, StringAttr name) {
+      auto argDict = getArgAttrDict(index);
+      return argDict ? argDict.get(name) : nullptr;
     }
-    template <typename ConcreteAttr>
-    ConcreteAttr getMDAttr(StringRef key) const {
-      return llvm::dyn_cast_or_null<ConcreteAttr>(getMDAttr(key));
-    }
-    Attribute getMDAttr(StringAttr key) const;
-    template <typename ConcreteAttr>
-    ConcreteAttr getMDAttr(StringAttr key) const {
-      return llvm::dyn_cast_or_null<ConcreteAttr>(getMDAttr(key));
+    Attribute getArgAttr(unsigned index, StringRef name) {
+      auto argDict = getArgAttrDict(index);
+      return argDict ? argDict.get(name) : nullptr;
     }
 
-    /// Helper function for appending metadata to a kernel attribute.
+    /// Returns a new KernelAttr that contains `attrs` in the metadata dictionary.
     KernelAttr appendMetadata(ArrayRef<NamedAttribute> attrs) const;
   }];
 }
@@ -143,6 +154,14 @@ def GPU_KernelTableAttr : GPU_Attr<"KernelTable", "kernel_table"> {
     size_t size() const {
       return getKernelTable().size();
     }
+
+    /// Returns the kernel with name `key` or `nullptr` if not present.
+    KernelAttr lookup(StringRef key) const {
+      return getKernelTable().getAs<KernelAttr>(key);
+    }
+    KernelAttr lookup(StringAttr key) const {
+      return getKernelTable().getAs<KernelAttr>(key);
+    }
   }];
 }
 
@@ -166,8 +185,9 @@ def GPU_CompilationTargetEnum : GPU_I32Enum<
 def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
   let description = [{
     A GPU object attribute glues together a GPU target, the object kind, a
-    binary string with the object, and the object properties, encapsulating how
-    the object was generated and its properties with the object itself.
+    binary string with the object, the object properties, and kernel metadata,
+    encapsulating how the object was generated and its properties with the
+    object itself.
 
     There are four object formats:
     1. `Offload`: represents generic objects not described by the other three
@@ -185,6 +205,10 @@ def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
 
     Object properties are specified through the `properties` dictionary
     attribute and can be used to define additional information.
+
+    Kernel metadata is specified through the `kernels` parameter, and can be
+    used to specify additional information on a kernel by kernel basis.
+
     The target attribute must implement or promise the `TargetAttrInterface`
     interface.
 

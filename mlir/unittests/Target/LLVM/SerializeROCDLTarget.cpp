@@ -197,9 +197,9 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(GetELFMetadata)) {
       // Check that the ELF metadata is present.
       ASSERT_TRUE(kernel.getMetadata() != nullptr);
       // Verify that `sgpr_count` is present and it is an integer attribute.
-      ASSERT_TRUE(kernel.getMDAttr<IntegerAttr>("sgpr_count") != nullptr);
+      ASSERT_TRUE(kernel.getAttr<IntegerAttr>("sgpr_count") != nullptr);
       // Verify that `vgpr_count` is present and it is an integer attribute.
-      ASSERT_TRUE(kernel.getMDAttr<IntegerAttr>("vgpr_count") != nullptr);
+      ASSERT_TRUE(kernel.getAttr<IntegerAttr>("vgpr_count") != nullptr);
     }
   }
 }
