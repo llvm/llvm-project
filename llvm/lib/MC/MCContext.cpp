@@ -74,7 +74,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
-  AllowTemporaryLabels = !(TargetOptions && TargetOptions->MCSaveTempLabels);
+  SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
   if (SrcMgr && SrcMgr->getNumBuffers())
@@ -268,7 +268,7 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
                                   bool IsTemporary) {
   // Determine whether this is a user written assembler temporary or normal
   // label, if used.
-  if (AllowTemporaryLabels && !IsTemporary)
+  if (!SaveTempLabels && !IsTemporary)
     IsTemporary = Name.starts_with(MAI->getPrivateGlobalPrefix());
 
   SmallString<128> NewName = Name;
