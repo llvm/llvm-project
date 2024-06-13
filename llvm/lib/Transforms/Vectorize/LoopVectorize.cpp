@@ -7518,7 +7518,7 @@ LoopVectorizationPlanner::executePlan(
     unsigned TripCount = State.UF * State.VF.getKnownMinValue();
     assert(TripCount > 0 && "trip count should not be zero");
     const uint32_t Weights[] = {1, TripCount - 1};
-    setBranchWeights(*MiddleTerm, Weights);
+    setBranchWeights(*MiddleTerm, Weights, /*IsExpected=*/false);
   }
 
   return {State.ExpandedSCEVs, ReductionResumeValues};
