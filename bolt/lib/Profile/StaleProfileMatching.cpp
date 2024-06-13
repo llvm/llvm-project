@@ -307,7 +307,7 @@ void BinaryFunction::computeBlockHashes(HashFunction HashFunction) const {
 FlowFunction
 createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   FlowFunction Func;
-
+  std::vector<uint64_t> ExitBlocksIndices;
   // Add a special "dummy" source so that there is always a unique entry point.
   FlowBlock EntryBlock;
   EntryBlock.Index = 0;
@@ -318,7 +318,9 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
     Func.Blocks.emplace_back();
     FlowBlock &Block = Func.Blocks.back();
     Block.Index = Func.Blocks.size() - 1;
-    Block.IsExit = BB->successors().empty();
+    if ( BB->successors().empty() ) {
+      ExitBlocksIndices.push_back(Block.Index);  
+    }
     (void)BB;
     assert(Block.Index == BB->getIndex() + 1 &&
            "incorrectly assigned basic block index");
@@ -378,10 +380,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
   }
 
   // Add dummy edges from the exit blocks to the sink block.
-  for (uint64_t I = 1; I < BlockOrder.size() + 1; I++) {
-    if (!Func.Blocks[I].IsExit)
-      continue;
-
+  for (uint64_t I : ExitBlocksIndices) {
     Func.Jumps.emplace_back();
     FlowJump &Jump = Func.Jumps.back();
     Jump.Source = I;

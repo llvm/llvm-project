@@ -28,7 +28,6 @@ struct FlowBlock {
   uint64_t Weight{0};
   bool HasUnknownWeight{true};
   bool IsUnlikely{false};
-  bool IsExit{false};
   uint64_t Flow{0};
   std::vector<FlowJump *> SuccJumps;
   std::vector<FlowJump *> PredJumps;
