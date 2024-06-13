@@ -33,6 +33,17 @@
                     "var": "p"
                 }
             ]
+        },
+        {
+            "type": "npe-bad-source",
+            "locations": [
+                {
+                    "type": "source",
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/main.cpp",
+                    "line": 33,
+                    "column": 5
+                }
+            ]
         }
     ]
 }
