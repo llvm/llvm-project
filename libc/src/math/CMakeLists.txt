@@ -99,6 +99,8 @@ add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
 
+add_math_entrypoint_object(f16sqrtf)
+
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
 add_math_entrypoint_object(fabsl)
