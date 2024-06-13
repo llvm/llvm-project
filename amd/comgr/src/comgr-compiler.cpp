@@ -428,9 +428,6 @@ static bool executeAssemblerImpl(AssemblerInvocation &Opts,
   }
 
   MOFI->initMCObjectFileInfo(Ctx, PIC);
-  if (Opts.SaveTemporaryLabels) {
-    Ctx.setAllowTemporaryLabels(false);
-  }
   if (Opts.GenDwarfForAssembly) {
     Ctx.setGenDwarfForAssembly(true);
   }

@@ -1101,6 +1101,23 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     return this->delegate(Inits[0]);
   }
 
+  // Prepare composite return value.
+  if (!Initializing) {
+    if (GlobalDecl) {
+      std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+      if (!GlobalIndex)
+        return false;
+      if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+        return false;
+    } else {
+      std::optional<unsigned> LocalIndex = allocateLocal(E);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrGlobal(*LocalIndex, E))
+        return false;
+    }
+  }
+
   QualType T = E->getType();
   if (T->isRecordType()) {
     const Record *R = getRecord(E->getType());
@@ -3948,9 +3965,17 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // we haven't seen yet.
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      const auto typeShouldBeVisited = [&](QualType T) -> bool {
+        if (T.isConstant(Ctx.getASTContext()))
+          return true;
+        if (const auto *RT = T->getAs<ReferenceType>())
+          return RT->getPointeeType().isConstQualified();
+        return false;
+      };
+
       // Visit local const variables like normal.
       if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
-          VD->getType().isConstant(Ctx.getASTContext())) {
+          typeShouldBeVisited(VD->getType())) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.
