@@ -7171,31 +7171,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
 SDValue RISCVTargetLowering::emitFlushICache(SelectionDAG &DAG, SDValue InChain,
                                              SDValue Start, SDValue End,
                                              SDValue Flags, SDLoc DL) const {
-  TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-
-  // start
-  Entry.Node = Start;
-  Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-  Args.push_back(Entry);
-
-  // end
-  Entry.Node = End;
-  Entry.Ty = PointerType::getUnqual(*DAG.getContext());
-  Args.push_back(Entry);
-
-  // flags
-  Entry.Node = Flags;
-  Entry.Ty = Type::getIntNTy(*DAG.getContext(), Subtarget.getXLen());
-  Args.push_back(Entry);
-
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  EVT Ty = getPointerTy(DAG.getDataLayout());
-  CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-      DAG.getExternalSymbol("__riscv_flush_icache", Ty), std::move(Args));
-
-  std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
+  MakeLibCallOptions CallOptions;
+  std::pair<SDValue, SDValue> CallResult =
+      makeLibCall(DAG, RTLIB::RISCV_FLUSH_ICACHE, MVT::isVoid,
+                  {Start, End, Flags}, CallOptions, DL, InChain);
 
   // This function returns void so only the out chain matters.
   return CallResult.second;
