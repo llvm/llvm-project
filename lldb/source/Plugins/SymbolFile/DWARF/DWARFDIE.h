@@ -88,6 +88,8 @@ public:
   /// using a full or partial CompilerContext array.
   std::vector<CompilerContext> GetTypeLookupContext() const;
 
+  DWARFDeclContext GetDWARFDeclContext() const;
+
   // Getting attribute values from the DIE.
   //
   // GetAttributeValueAsXXX() functions should only be used if you are

@@ -3099,7 +3099,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         template_params = dwarf_ast->GetDIEClassTemplateParams(die);
     }
 
-    const DWARFDeclContext die_dwarf_decl_ctx = GetDWARFDeclContext(die);
+    const DWARFDeclContext die_dwarf_decl_ctx = die.GetDWARFDeclContext();
     m_index->GetFullyQualifiedType(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
       // Make sure type_die's language matches the type system we are
       // looking for. We don't want to find a "Foo" type from Java if we
@@ -3128,7 +3128,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       }
 
       if (log) {
-        DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
+        DWARFDeclContext type_dwarf_decl_ctx = type_die.GetDWARFDeclContext();
         GetObjectFile()->GetModule()->LogMessage(
             log,
             "SymbolFileDWARF::"
@@ -3620,8 +3620,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     if ((parent_tag == DW_TAG_compile_unit ||
          parent_tag == DW_TAG_partial_unit) &&
         Language::LanguageIsCPlusPlus(GetLanguage(*die.GetCU())))
-      mangled =
-          GetDWARFDeclContext(die).GetQualifiedNameAsConstString().GetCString();
+      mangled = die.GetDWARFDeclContext()
+                    .GetQualifiedNameAsConstString()
+                    .GetCString();
   }
 
   if (tag == DW_TAG_formal_parameter)
@@ -4452,14 +4453,6 @@ SymbolFileDWARF::GetContainingDeclContext(const DWARFDIE &die) {
   if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU()))
     return dwarf_ast->GetDeclContextContainingUIDFromDWARF(die);
   return CompilerDeclContext();
-}
-
-DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(const DWARFDIE &die) {
-  if (!die.IsValid())
-    return {};
-  DWARFDeclContext dwarf_decl_ctx =
-      die.GetDIE()->GetDWARFDeclContext(die.GetCU());
-  return dwarf_decl_ctx;
 }
 
 LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
