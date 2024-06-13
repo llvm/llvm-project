@@ -129,8 +129,9 @@ struct AreMatchingBinaryInputAndBinaryOutput<BinaryInput<T>, BinaryOutput<T>> {
   static constexpr bool VALUE = cpp::is_floating_point_v<T>;
 };
 
-template <typename T>
-bool compare_unary_operation_single_output(Operation op, T input, T libc_output,
+template <typename InputType, typename OutputType>
+bool compare_unary_operation_single_output(Operation op, InputType input,
+                                           OutputType libc_output,
                                            double ulp_tolerance,
                                            RoundingMode rounding);
 template <typename T>
@@ -157,9 +158,9 @@ bool compare_ternary_operation_one_output(Operation op,
                                           T libc_output, double ulp_tolerance,
                                           RoundingMode rounding);
 
-template <typename T>
-void explain_unary_operation_single_output_error(Operation op, T input,
-                                                 T match_value,
+template <typename InputType, typename OutputType>
+void explain_unary_operation_single_output_error(Operation op, InputType input,
+                                                 OutputType match_value,
                                                  double ulp_tolerance,
                                                  RoundingMode rounding);
 template <typename T>
@@ -212,7 +213,7 @@ public:
   bool is_silent() const override { return silent; }
 
 private:
-  template <typename T> bool match(T in, T out) {
+  template <typename T, typename U> bool match(T in, U out) {
     return compare_unary_operation_single_output(op, in, out, ulp_tolerance,
                                                  rounding);
   }
@@ -238,7 +239,7 @@ private:
                                                 rounding);
   }
 
-  template <typename T> void explain_error(T in, T out) {
+  template <typename T, typename U> void explain_error(T in, U out) {
     explain_unary_operation_single_output_error(op, in, out, ulp_tolerance,
                                                 rounding);
   }
@@ -271,6 +272,12 @@ private:
 // types.
 template <Operation op, typename InputType, typename OutputType>
 constexpr bool is_valid_operation() {
+  constexpr bool IS_NARROWING_OP = op == Operation::Sqrt &&
+                                   cpp::is_floating_point_v<InputType> &&
+                                   cpp::is_floating_point_v<OutputType> &&
+                                   sizeof(OutputType) <= sizeof(InputType);
+  if (IS_NARROWING_OP)
+    return true;
   return (Operation::BeginUnaryOperationsSingleOutput < op &&
           op < Operation::EndUnaryOperationsSingleOutput &&
           cpp::is_same_v<InputType, OutputType> &&
