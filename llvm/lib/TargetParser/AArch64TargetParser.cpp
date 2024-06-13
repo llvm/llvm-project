@@ -116,6 +116,8 @@ const AArch64::ArchInfo *AArch64::parseArch(StringRef Arch) {
 std::optional<AArch64::ExtensionInfo>
 AArch64::parseArchExtension(StringRef ArchExt) {
   for (const auto &A : Extensions) {
+    if (A.Name.empty() && !A.Alias)
+      continue;
     if (ArchExt == A.Name || ArchExt == A.Alias)
       return A;
   }
@@ -160,7 +162,7 @@ void AArch64::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
          << (DescMap.empty() ? "\n" : "Description\n");
   for (const auto &Ext : Extensions) {
     // Extensions without a feature cannot be used with -march.
-    if (!Ext.Feature.empty()) {
+    if (!Ext.Name.empty() && !Ext.Feature.empty()) {
       std::string Description = DescMap[Ext.Name].str();
       outs() << "    "
              << format(Description.empty() ? "%s\n" : "%-20s%s\n",
