@@ -2578,12 +2578,12 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static clang::RecordType const *GetCompleteRecordType(clang::ASTContext *ast,
+static const clang::RecordType *GetCompleteRecordType(clang::ASTContext *ast,
                                                       clang::QualType qual_type,
                                                       bool allow_completion) {
   assert(qual_type->isRecordType());
 
-  auto const *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+  const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
 
   clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
 
@@ -2624,7 +2624,7 @@ static clang::RecordType const *GetCompleteRecordType(clang::ASTContext *ast,
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static clang::EnumType const *GetCompleteEnumType(clang::ASTContext *ast,
+static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
                                                   clang::QualType qual_type,
                                                   bool allow_completion) {
   assert(qual_type->isEnumeralType());
@@ -2660,7 +2660,7 @@ static clang::EnumType const *GetCompleteEnumType(clang::ASTContext *ast,
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static clang::ObjCObjectType const *
+static const clang::ObjCObjectType *
 GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type,
                           bool allow_completion) {
   assert(qual_type->isObjCObjectType());
@@ -2713,7 +2713,7 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
                                  allow_completion);
   } break;
   case clang::Type::Record: {
-    if (auto const *RT =
+    if (const auto *RT =
             GetCompleteRecordType(ast, qual_type, allow_completion))
       return !RT->isIncompleteType();
 
@@ -2721,14 +2721,14 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
   } break;
 
   case clang::Type::Enum: {
-    if (auto const *ET = GetCompleteEnumType(ast, qual_type, allow_completion))
+    if (const auto *ET = GetCompleteEnumType(ast, qual_type, allow_completion))
       return !ET->isIncompleteType();
 
     return false;
   } break;
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
-    if (auto const *OT =
+    if (const auto *OT =
             GetCompleteObjCObjectType(ast, qual_type, allow_completion))
       return !OT->isIncompleteType();
 
