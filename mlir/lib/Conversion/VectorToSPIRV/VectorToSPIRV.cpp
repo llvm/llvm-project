@@ -659,7 +659,7 @@ struct VectorDeinterleaveOpConvert final
     auto indicesEven =
         llvm::map_to_vector(seqEven, [](int i) { return i * 2; });
 
-    // Indices for `res2`.
+    // Indices for `shuffleOdd` (result 1).
     auto seqOdd = llvm::seq<int64_t>(n / 2);
     auto indicesOdd =
         llvm::map_to_vector(seqOdd, [](int i) { return i * 2 + 1; });
