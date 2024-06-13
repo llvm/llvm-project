@@ -637,9 +637,14 @@ defm int_amdgcn_atomic_cond_sub_u32 : local_addr_space_atomic_op;
 defm int_amdgcn_atomic_cond_sub_u32 : flat_addr_space_atomic_op;
 defm int_amdgcn_atomic_cond_sub_u32 : global_addr_space_atomic_op;
 
-multiclass noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
+multiclass noret_binary_atomic_op<SDNode atomic_op> {
   let HasNoUse = true in
-  defm "_noret" : binary_atomic_op<atomic_op, IsInt>;
+  defm "_noret" : binary_atomic_op<atomic_op>;
+}
+
+multiclass noret_binary_atomic_op_fp<SDNode atomic_op> {
+  let HasNoUse = true in
+  defm "_noret" : binary_atomic_op_fp<atomic_op>;
 }
 
 multiclass noret_ternary_atomic_op<SDNode atomic_op> {
@@ -647,11 +652,21 @@ multiclass noret_ternary_atomic_op<SDNode atomic_op> {
   defm "_noret" : ternary_atomic_op<atomic_op>;
 }
 
-multiclass binary_atomic_op_all_as<SDNode atomic_op, bit IsInt = 1> {
-  foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
+defvar atomic_addrspace_names = [ "global", "flat", "constant", "local", "private", "region" ];
+
+multiclass binary_atomic_op_all_as<SDNode atomic_op> {
+  foreach as = atomic_addrspace_names in {
     let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
-      defm "_"#as : binary_atomic_op<atomic_op, IsInt>;
-      defm "_"#as : noret_binary_atomic_op<atomic_op, IsInt>;
+      defm "_"#as : binary_atomic_op<atomic_op>;
+      defm "_"#as : noret_binary_atomic_op<atomic_op>;
+    }
+  }
+}
+multiclass binary_atomic_op_fp_all_as<SDNode atomic_op> {
+  foreach as = atomic_addrspace_names in {
+    let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
+      defm "_"#as : binary_atomic_op_fp<atomic_op>;
+      defm "_"#as : noret_binary_atomic_op_fp<atomic_op>;
     }
   }
 }
@@ -666,11 +681,9 @@ defm atomic_load_sub : binary_atomic_op_all_as<atomic_load_sub>;
 defm atomic_load_umax : binary_atomic_op_all_as<atomic_load_umax>;
 defm atomic_load_umin : binary_atomic_op_all_as<atomic_load_umin>;
 defm atomic_load_xor : binary_atomic_op_all_as<atomic_load_xor>;
-defm atomic_load_fadd : binary_atomic_op_all_as<atomic_load_fadd, 0>;
+defm atomic_load_fadd : binary_atomic_op_fp_all_as<atomic_load_fadd>;
 defm atomic_load_uinc_wrap : binary_atomic_op_all_as<atomic_load_uinc_wrap>;
 defm atomic_load_udec_wrap : binary_atomic_op_all_as<atomic_load_udec_wrap>;
-let MemoryVT = v2f16 in
-defm atomic_load_fadd_v2f16 : binary_atomic_op_all_as<atomic_load_fadd, 0>;
 defm AMDGPUatomic_cmp_swap : binary_atomic_op_all_as<AMDGPUatomic_cmp_swap>;
 
 def load_align8_local : PatFrag<(ops node:$ptr), (load_local node:$ptr)>,

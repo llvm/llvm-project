@@ -318,8 +318,8 @@ class isIntType<ValueType SrcVT> {
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
 
-defm atomic_load_fmin : binary_atomic_op_all_as<SIatomic_fmin, 0>;
-defm atomic_load_fmax : binary_atomic_op_all_as<SIatomic_fmax, 0>;
+defm atomic_load_fmin : binary_atomic_op_fp_all_as<SIatomic_fmin>;
+defm atomic_load_fmax : binary_atomic_op_fp_all_as<SIatomic_fmax>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
@@ -709,15 +709,24 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
   >;
 
   let AddressSpaces = StoreAddress_local.AddrSpaces in {
-    defm _local_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue"), IsInt>;
-    defm _local_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue"),
-                                                 IsInt>;
+
+    if IsInt then {
+      defm _local_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+      defm _local_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+    } else {
+      defm _local_m0 : binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+      defm _local_m0 : noret_binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+     }
   }
 
   let AddressSpaces = StoreAddress_region.AddrSpaces in {
-    defm _region_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue"), IsInt>;
-    defm _region_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue"),
-                                                  IsInt>;
+    if IsInt then {
+      defm _region_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+      defm _region_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+    } else {
+      defm _region_m0 : binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+      defm _region_m0 : noret_binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+    }
   }
 }
 
