@@ -1096,7 +1096,7 @@ Status MinidumpFileBuilder::FlushToDisk() {
   offset_t offset = 0;
 
   while (remaining_bytes > 0) {
-    size_t bytes_written = 0;
+    size_t bytes_written = remaining_bytes;
     // We don't care how many bytes we wrote unless we got an error
     // so just decrement the remaining bytes.
     error = m_core_file->Write(m_data.GetBytes() + offset, bytes_written);

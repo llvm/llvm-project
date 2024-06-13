@@ -114,4 +114,4 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   }
 
   return true;
-}
+} 

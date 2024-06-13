@@ -58,9 +58,6 @@ public:
 
   ~MinidumpFileBuilder() = default;
 
-  lldb_private::Status AddThreadList();
-  // Add Exception streams for any threads that stopped with exceptions.
-  void AddExceptions();
   lldb_private::Status
   AddHeaderAndCalculateDirectories();
   // Add SystemInfo stream, used for storing the most basic information
@@ -72,6 +69,9 @@ public:
   // Add ThreadList stream, containing information about all threads running
   // at the moment of core saving. Contains information about thread
   // contexts.
+  lldb_private::Status AddThreadList();
+  // Add Exception streams for any threads that stopped with exceptions.
+  void AddExceptions();
   // Add MiscInfo stream, mainly providing ProcessId
   void AddMiscInfo();
   // Add informative files about a Linux process
@@ -114,10 +114,10 @@ private:
   uint m_expected_directories = 0;
   uint64_t m_saved_data_size = 0;
   lldb::offset_t m_thread_list_start = 0;
-  // We set the max write amount to 128 mb
-  // Linux has a signed 32b - some buffer on writes
-  // and we have guarauntee a user memory region / 'object' could be over 2gb
-  // now that we support 64b memory dumps.
+  // We set the max write amount to 128 mb, this is arbitrary
+  // but we want to try to keep the size of m_data small
+  // and we will only exceed a 128 mb buffer if we get a memory region
+  // that is larger than 128 mb.
   static constexpr size_t m_write_chunk_max = (1024 * 1024 * 128);
 
   static constexpr size_t header_size = sizeof(llvm::minidump::Header);
