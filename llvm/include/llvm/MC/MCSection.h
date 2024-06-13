@@ -26,7 +26,6 @@ class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
-class MCFragment;
 class MCSymbol;
 class raw_ostream;
 class Triple;
@@ -36,7 +35,6 @@ class Triple;
 class MCSection {
 public:
   friend MCAssembler;
-  friend MCFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
