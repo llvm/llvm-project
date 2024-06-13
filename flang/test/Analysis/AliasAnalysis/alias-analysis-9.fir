@@ -1,4 +1,4 @@
-// RUN: fir-opt -debug %s -split-input-file \
+// RUN: fir-opt %s -split-input-file -o /dev/null \
 // RUN:   -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' \
 // RUN:   2>&1 | FileCheck -match-full-lines %s
 
