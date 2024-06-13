@@ -263,6 +263,18 @@ void MCFragment::destroy() {
   }
 }
 
+const MCSymbol *MCFragment::getAtom() const {
+  if (LayoutOrder >= Parent->Atoms.size())
+    return nullptr;
+  return Parent->Atoms[LayoutOrder];
+}
+
+void MCFragment::setAtom(const MCSymbol *Sym) {
+  if (LayoutOrder >= Parent->Atoms.size())
+    Parent->Atoms.resize(LayoutOrder + 1);
+  Parent->Atoms[LayoutOrder] = Sym;
+}
+
 // Debugging methods
 
 namespace llvm {

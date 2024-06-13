@@ -26,6 +26,7 @@ class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
+class MCFragment;
 class MCSymbol;
 class raw_ostream;
 class Triple;
@@ -35,6 +36,7 @@ class Triple;
 class MCSection {
 public:
   friend MCAssembler;
+  friend MCFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -110,6 +112,9 @@ private:
   // subsection 0 list is replaced with concatenated fragments from all
   // subsections.
   SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
+
+  // Mach-O only: the defining non-temporary symbol for each fragment.
+  SmallVector<const MCSymbol *, 0> Atoms;
 
   /// State for tracking labels that don't yet have Fragments
   struct PendingLabel {
