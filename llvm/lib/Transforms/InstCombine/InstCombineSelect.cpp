@@ -1886,50 +1886,74 @@ static Instruction *foldSelectICmpBinOp(SelectInst &SI, ICmpInst *ICI,
 
   KnownBits Known;
   if (TValBop->isBitwiseLogicOp()) {
+    // We handle if we know specific knownbits from cond of selectinst.
+    // ex) X&Y==-1 ? X^Y : False
     if (SKB != SpecialKnownBits::NothingSpecial && XOrder && YOrder) {
+      // No common bits between X, Y
       if (SKB & SpecialKnownBits::NoCommonBits) {
         if (SKB & (SpecialKnownBits::AllBitsEnabled)) {
+          // If X op Y == -1, then XOR must be -1
           if (TValBop->getOpcode() == Instruction::Xor)
             Known = KnownBits::makeConstant(APInt(BitWidth, -1));
         }
+        // If Trueval is X&Y then it should be 0.
         if (TValBop->getOpcode() == Instruction::And)
           Known = KnownBits::makeConstant(APInt(BitWidth, 0));
+        // X|Y can be replace with X^Y, X^Y can be replace with X|Y
+        // This replacing is meaningful when falseval is same.
         else if ((match(TVal, m_c_Or(m_Specific(X), m_Specific(Y))) &&
                   match(FVal, m_c_Xor(m_Specific(X), m_Specific(Y)))) ||
                  (match(TVal, m_c_Xor(m_Specific(X), m_Specific(Y))) &&
                   match(FVal, m_c_Or(m_Specific(X), m_Specific(Y)))))
           return IC.replaceInstUsesWith(SI, FVal);
+        // All common bits between X, Y
       } else if (SKB & SpecialKnownBits::AllCommonBits) {
+        // We can replace (X&Y) and (X|Y) to X or Y
         if (TValBop->getOpcode() == Instruction::And ||
             TValBop->getOpcode() == Instruction::Or)
           if (TValBop->hasOneUse())
             return IC.replaceOperand(SI, 1, X);
       } else if (SKB & SpecialKnownBits::AllBitsEnabled) {
+        // We can replace (X|Y) to -1
         if (TValBop->getOpcode() == Instruction::Or)
           Known = KnownBits::makeConstant(APInt(BitWidth, -1));
       }
     } else {
       KnownBits XKnown, YKnown, Temp;
       KnownBits TValBop0KB, TValBop1KB;
+      // computeKnowBits calculates the KnownBits in the branching condition
+      // that the specified variable passes in the execution flow. however, it
+      // does not contain the SelectInst condition, so there is an optimization
+      // opportunity to update the knownbits obtained by calculating KnownBits
+      // with the SelectInst condition.
       XKnown = IC.computeKnownBits(X, 0, &SI);
       IC.computeKnownBitsFromCond(X, ICI, XKnown, 0, &SI, false);
       YKnown = IC.computeKnownBits(Y, 0, &SI);
       IC.computeKnownBitsFromCond(Y, ICI, YKnown, 0, &SI, false);
       CmpInst::Predicate Pred = ICI->getPredicate();
       if (Pred == ICmpInst::ICMP_EQ) {
+        // Estimate additional KnownBits from the relationship between X and Y
         if (CmpLHSBop->getOpcode() == Instruction::And) {
+          // The bit that are set to 1 at `~C&Y` must be 0 in X
+          // The bit that are set to 1 at `~C&X` must be 0 in Y
           XKnown.Zero |= ~*C & YKnown.One;
           YKnown.Zero |= ~*C & XKnown.One;
         }
         if (CmpLHSBop->getOpcode() == Instruction::Or) {
+          // The bit that are set to 0 at `C&Y` must be 1 in X
+          // The bit that are set to 0 at `C&X` must be 1 in Y
           XKnown.One |= *C & YKnown.Zero;
           YKnown.One |= *C & XKnown.Zero;
         }
         if (CmpLHSBop->getOpcode() == Instruction::Xor) {
+          // If X^Y==C, then X and Y must be either (1,0) or (0,1) for the
+          // enabled bits in C.
           XKnown.One |= *C & YKnown.Zero;
           XKnown.Zero |= *C & YKnown.One;
           YKnown.One |= *C & XKnown.Zero;
           YKnown.Zero |= *C & XKnown.One;
+          // If X^Y==C, then X and Y must be either (0,0) or (1,1) for the
+          // disabled bits in C.
           XKnown.Zero |= ~*C & YKnown.Zero;
           XKnown.One |= ~*C & YKnown.One;
           YKnown.Zero |= ~*C & XKnown.Zero;
@@ -1937,6 +1961,8 @@ static Instruction *foldSelectICmpBinOp(SelectInst &SI, ICmpInst *ICI,
         }
       }
 
+      // If TrueVal has X or Y, return the corresponding KnownBits, otherwise
+      // compute and return new KnownBits.
       auto getTValBopKB = [&](unsigned OpNum) -> KnownBits {
         unsigned Order = OpNum + 1;
         if (Order == XOrder)
