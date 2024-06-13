@@ -421,26 +421,6 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   return NF;
 }
 
-/// Returns true if the Ptr is loaded by any Load in the vector of
-/// Loads, and if the Loaded value is not a pointer.
-static bool checkIfPointerIsDereferenced(SmallVector<LoadInst *, 16> &Loads,
-                                         const Value *Ptr) {
-  // If this is a recursive function and one of the argument types is a
-  // pointer that isn't loaded to a non pointer type, it can lead to
-  // recursive promotion. Look for any Load candidates above the function
-  // call that load a non pointer type from this argument pointer. If we
-  // don't find even one such use, return false. For reference, you can
-  // refer to Transforms/ArgumentPromotion/pr42028-recursion.ll and
-  // Transforms/ArgumentPromotion/2008-09-08-CGUpdateSelfEdge.ll
-  // testcases.
-  bool doesPointerResolve = false;
-  for (auto Load : Loads)
-    if (Load->getPointerOperand() == Ptr && !Load->getType()->isPointerTy())
-      doesPointerResolve = true;
-
-  return doesPointerResolve;
-}
-
 /// Return true if we can prove that all callees pass in a valid pointer for the
 /// specified function argument.
 static bool allCallersPassValidPointerForArgument(
@@ -662,8 +642,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
     auto *CB = dyn_cast<CallBase>(V);
     Value *PtrArg = cast<Value>(U);
-    if (isSelfRecursive && CB && PtrArg &&
-        CB->getCalledFunction() == CB->getFunction()) {
+    if (CB && PtrArg && CB->getCalledFunction() == CB->getFunction()) {
       Type *PtrTy = PtrArg->getType();
       APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
       PtrArg = PtrArg->stripAndAccumulateConstantOffsets(
@@ -674,9 +653,6 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
       if (Offset.getSignificantBits() >= 64)
         return false;
-
-      // if (!checkIfPointerIsDereferenced(Loads, PtrArg))
-      //   return false;
 
       int64_t Off = Offset.getSExtValue();
       if (Off) {
