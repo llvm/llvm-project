@@ -7,13 +7,6 @@
 struct X { int a[2]; };
 extern int bar();
 
-//.
-// CHECK: @test.i23 = internal global i32 4, align 4
-// CHECK: @i = global i32 4, align 4
-// CHECK: @Arr = global [100 x i32] zeroinitializer, align 16
-// CHECK: @foo2.X = internal global ptr getelementptr (i8, ptr @Arr, i64 196), align 8
-// CHECK: @foo2.i23 = internal global i32 0, align 4
-//.
 // CHECK-LABEL: define {{[^@]+}}@test
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -51,7 +44,7 @@ int foo(int i) { return bar(&Arr[49])+bar(&Arr[i]); }
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    store ptr @Arr, ptr [[P]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
+// CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i32 1
 // CHECK-NEXT:    store ptr [[INCDEC_PTR]], ptr [[P]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP1]] to i64
