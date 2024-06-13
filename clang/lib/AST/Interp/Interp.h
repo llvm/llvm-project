@@ -1980,10 +1980,25 @@ static inline bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static inline bool VoidPtrCast(InterpState &S, CodePtr OpPC) {
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+
+  if (SrcIsVoidPtr && S.getLangOpts().CPlusPlus) {
+    bool HasValidResult = !Ptr.isZero();
+
+    if (HasValidResult) {
+      // FIXME: note_constexpr_invalid_void_star_cast
+    } else if (!S.getLangOpts().CPlusPlus26) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << 3 << "'void *'" << S.Current->getRange(OpPC);
+    }
+  } else {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+        << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  }
+
   return true;
 }
 

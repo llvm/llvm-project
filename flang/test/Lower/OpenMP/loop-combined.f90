@@ -6,19 +6,17 @@
 program main
   integer :: i
 
-  ! TODO When DISTRIBUTE, TASKLOOP and TEAMS are supported add:
+  ! TODO When composite constructs are supported add:
   ! - DISTRIBUTE PARALLEL DO SIMD
   ! - DISTRIBUTE PARALLEL DO
   ! - DISTRIBUTE SIMD
   ! - TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD
   ! - TARGET TEAMS DISTRIBUTE PARALLEL DO
   ! - TARGET TEAMS DISTRIBUTE SIMD
-  ! - TARGET TEAMS DISTRIBUTE
   ! - TASKLOOP SIMD
   ! - TEAMS DISTRIBUTE PARALLEL DO SIMD
   ! - TEAMS DISTRIBUTE PARALLEL DO
   ! - TEAMS DISTRIBUTE SIMD
-  ! - TEAMS DISTRIBUTE
 
   ! ----------------------------------------------------------------------------
   ! DO SIMD
@@ -80,4 +78,27 @@ program main
   do i = 1, 10
   end do
   !$omp end target simd
+
+  ! ----------------------------------------------------------------------------
+  ! TARGET TEAMS DISTRIBUTE
+  ! ----------------------------------------------------------------------------
+
+  ! CHECK: omp.target
+  ! CHECK: omp.teams
+  ! CHECK: omp.distribute
+  !$omp target teams distribute
+  do i = 1, 10
+  end do
+  !$omp end target teams distribute
+
+  ! ----------------------------------------------------------------------------
+  ! TEAMS DISTRIBUTE
+  ! ----------------------------------------------------------------------------
+
+  ! CHECK: omp.teams
+  ! CHECK: omp.distribute
+  !$omp teams distribute
+  do i = 1, 10
+  end do
+  !$omp end teams distribute
 end program main

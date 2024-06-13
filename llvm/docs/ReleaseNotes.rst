@@ -66,6 +66,10 @@ Changes to the LLVM IR
 
   * ``icmp``
   * ``fcmp``
+* LLVM has switched from using debug intrinsics in textual IR to using debug
+  records by default. Details of the change and instructions on how to update
+  any downstream tools and tests can be found in the `migration docs
+  <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -88,8 +92,8 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
-  Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
+* Added support for Cortex-R82AE, Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
+  Cortex-A725, Cortex-X925, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 * ``-mbranch-protection=standard`` now enables FEAT_PAuth_LR by
   default when the feature is enabled. The new behaviour results 
@@ -152,6 +156,8 @@ Changes to the RISC-V Backend
 * Zaamo and Zalrsc are no longer experimental.
 * Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
 * Zabha is no longer experimental.
+* B (the collection of the Zba, Zbb, Zbs extensions) is supported.
+* Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -224,13 +230,6 @@ Changes to the Metadata Info
 
 Changes to the Debug Info
 ---------------------------------
-
-* LLVM has switched from using debug intrinsics internally to using debug
-  records by default. This should happen transparently when using the DIBuilder
-  to construct debug variable information, but will require changes for any code
-  that interacts with debug intrinsics directly. Debug intrinsics will only be
-  supported on a best-effort basis from here onwards; for more information, see
-  the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to the LLVM tools
 ---------------------------------

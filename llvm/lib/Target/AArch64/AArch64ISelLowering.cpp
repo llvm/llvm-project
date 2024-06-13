@@ -728,14 +728,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::bf16, Promote);
   }
 
-  for (auto Op : {ISD::FREM,         ISD::FPOW,         ISD::FPOWI,
-                  ISD::FCOS,         ISD::FSIN,         ISD::FSINCOS,
-                  ISD::FTAN,         ISD::FEXP,         ISD::FEXP2,
-                  ISD::FEXP10,       ISD::FLOG,         ISD::FLOG2,
-                  ISD::FLOG10,       ISD::STRICT_FREM,  ISD::STRICT_FPOW,
-                  ISD::STRICT_FPOWI, ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
-                  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2, ISD::STRICT_FLOG,
-                  ISD::STRICT_FLOG2, ISD::STRICT_FLOG10}) {
+  for (auto Op : {ISD::FREM,         ISD::FPOW,          ISD::FPOWI,
+                  ISD::FCOS,         ISD::FSIN,          ISD::FSINCOS,
+                  ISD::FTAN,         ISD::FEXP,          ISD::FEXP2,
+                  ISD::FEXP10,       ISD::FLOG,          ISD::FLOG2,
+                  ISD::FLOG10,       ISD::STRICT_FREM,   ISD::STRICT_FPOW,
+                  ISD::STRICT_FPOWI, ISD::STRICT_FCOS,   ISD::STRICT_FSIN,
+                  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,
+                  ISD::STRICT_FLOG2, ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::v4f16, Expand);
     setOperationAction(Op, MVT::v8f16, Expand);
@@ -2493,6 +2493,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::FIRST_NUMBER:
     break;
     MAKE_CASE(AArch64ISD::COALESCER_BARRIER)
+    MAKE_CASE(AArch64ISD::VG_SAVE)
+    MAKE_CASE(AArch64ISD::VG_RESTORE)
     MAKE_CASE(AArch64ISD::SMSTART)
     MAKE_CASE(AArch64ISD::SMSTOP)
     MAKE_CASE(AArch64ISD::RESTORE_ZA)
@@ -8514,6 +8516,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
+
+    Chain = DAG.getNode(AArch64ISD::VG_SAVE, DL,
+                        DAG.getVTList(MVT::Other, MVT::Glue), Chain);
+    InGlue = Chain.getValue(1);
+
     SDValue NewChain = changeStreamingMode(
         DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain, InGlue,
         getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
@@ -8691,6 +8698,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Result = changeStreamingMode(
         DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
         getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
+    InGlue = Result.getValue(1);
+
+    Result =
+        DAG.getNode(AArch64ISD::VG_RESTORE, DL,
+                    DAG.getVTList(MVT::Other, MVT::Glue), {Result, InGlue});
   }
 
   if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))

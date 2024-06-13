@@ -2130,7 +2130,7 @@ static bool IsWeakLValue(const LValue &Value) {
 
 static bool isZeroSized(const LValue &Value) {
   const ValueDecl *Decl = GetLValueBaseDecl(Value);
-  if (Decl && isa<VarDecl>(Decl)) {
+  if (isa_and_nonnull<VarDecl>(Decl)) {
     QualType Ty = Decl->getType();
     if (Ty->isArrayType())
       return Ty->isIncompleteType() ||
@@ -14014,8 +14014,8 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     QualType Ty = E->getTypeOfArgument();
     // If the vector has a fixed size, we can determine the number of elements
     // at compile time.
-    if (Ty->isVectorType())
-      return Success(Ty->castAs<VectorType>()->getNumElements(), E);
+    if (const auto *VT = Ty->getAs<VectorType>())
+      return Success(VT->getNumElements(), E);
 
     assert(Ty->isSizelessVectorType());
     if (Info.InConstantContext)

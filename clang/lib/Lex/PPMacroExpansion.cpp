@@ -226,7 +226,7 @@ void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,
   bool IsSystemMacro = true;
   bool IsAmbiguous = false;
   if (auto *MD = Info.MD) {
-    while (MD && isa<VisibilityMacroDirective>(MD))
+    while (isa_and_nonnull<VisibilityMacroDirective>(MD))
       MD = MD->getPrevious();
     if (auto *DMD = dyn_cast_or_null<DefMacroDirective>(MD)) {
       MI = DMD->getInfo();
