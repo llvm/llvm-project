@@ -230,17 +230,6 @@ using ModuleAnalysisManagerCGSCCProxy =
 /// Passes which do not change the call graph structure in any way can just
 /// ignore this argument to their run method.
 struct CGSCCUpdateResult {
-  /// Worklist of the RefSCCs queued for processing.
-  ///
-  /// When a pass refines the graph and creates new RefSCCs or causes them to
-  /// have a different shape or set of component SCCs it should add the RefSCCs
-  /// to this worklist so that we visit them in the refined form.
-  ///
-  /// This worklist is in reverse post-order, as we pop off the back in order
-  /// to observe RefSCCs in post-order. When adding RefSCCs, clients should add
-  /// them in reverse post-order.
-  SmallPriorityWorklist<LazyCallGraph::RefSCC *, 1> &RCWorklist;
-
   /// Worklist of the SCCs queued for processing.
   ///
   /// When a pass refines the graph and creates new SCCs or causes them to have
