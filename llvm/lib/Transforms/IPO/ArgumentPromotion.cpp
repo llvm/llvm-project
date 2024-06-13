@@ -662,7 +662,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
       }
 
       unsigned int ArgNo = Arg->getArgNo();
-      if (CB->getArgOperand(ArgNo) != Arg) {
+      if (CB->getArgOperand(ArgNo) != Arg || U->getOperandNo() != ArgNo) {
         LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                           << "arg position is different in callee\n");
         return false;
