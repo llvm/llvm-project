@@ -35,11 +35,11 @@ bool OptionArgParser::ToBoolean(llvm::StringRef ref, bool fail_value,
   return fail_value;
 }
 
-bool OptionArgParser::ToBoolean(llvm::StringRef option_name, llvm::StringRef option_arg, bool fail_value, Status &error)
-{
+bool OptionArgParser::ToBoolean(llvm::StringRef option_name,
+                                llvm::StringRef option_arg, bool fail_value,
+                                Status &error) {
   bool parse_success;
-  const bool arg_value =
-    ToBoolean(option_arg, fail_value, &parse_success);
+  const bool arg_value = ToBoolean(option_arg, fail_value, &parse_success);
   if (!parse_success)
     error.SetErrorStringWithFormat(
         "Invalid boolean value for option '%s': '%s'",

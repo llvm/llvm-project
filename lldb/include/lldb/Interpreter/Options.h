@@ -217,7 +217,7 @@ protected:
 
   void OptionsSetUnion(const OptionSet &set_a, const OptionSet &set_b,
                        OptionSet &union_set);
-  
+
   // Subclasses must reset their option values prior to starting a new option
   // parse. Each subclass must override this function and revert all option
   // settings to default values.

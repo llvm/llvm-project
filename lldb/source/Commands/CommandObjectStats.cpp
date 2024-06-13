@@ -95,13 +95,16 @@ class CommandObjectStatsDump : public CommandObjectParsed {
         m_stats_options.load_all_debug_info = true;
         break;
       case 'r':
-        m_stats_options.include_targets = OptionArgParser::ToBoolean("--targets", option_arg, true /* doesn't matter */, error);
+        m_stats_options.include_targets = OptionArgParser::ToBoolean(
+            "--targets", option_arg, true /* doesn't matter */, error);
         break;
       case 'm':
-        m_stats_options.include_modules = OptionArgParser::ToBoolean("--modules", option_arg, true /* doesn't matter */, error);
+        m_stats_options.include_modules = OptionArgParser::ToBoolean(
+            "--modules", option_arg, true /* doesn't matter */, error);
         break;
       case 't':
-        m_stats_options.include_transcript = OptionArgParser::ToBoolean("--transcript", option_arg, true /* doesn't matter */, error);
+        m_stats_options.include_transcript = OptionArgParser::ToBoolean(
+            "--transcript", option_arg, true /* doesn't matter */, error);
         break;
       default:
         llvm_unreachable("Unimplemented option");
