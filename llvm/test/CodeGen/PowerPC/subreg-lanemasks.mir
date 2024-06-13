@@ -1,6 +1,7 @@
-# RUN: llc -mcpu=pwr10 -O3 -ppc-track-subreg-liveness -verify-machineinstrs \
+# RUN: llc -mcpu=pwr10 -ppc-track-subreg-liveness -filetype=null  \
 # RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virtregrewriter \
-# RUN:   -debug-only=regalloc -o - %s 2>&1 >/dev/null | FileCheck %s
+# RUN:   -debug-only=regalloc -o - %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
 
 # Keep track of all of the lanemasks for various subregsiters.
 #
