@@ -60,7 +60,7 @@ void AliasAnalysis::Source::print(llvm::raw_ostream &os) const {
   attributes.Dump(os, EnumToString);
 }
 
-bool AliasAnalysis::Source::isRecordWithPointerComponent(mlir::Type ty) {
+bool AliasAnalysis::isRecordWithPointerComponent(mlir::Type ty) {
   auto eleTy = fir::dyn_cast_ptrEleTy(ty);
   if (!eleTy)
     return false;
@@ -68,7 +68,7 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent(mlir::Type ty) {
   return mlir::isa<fir::RecordType>(eleTy);
 }
 
-bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
+bool AliasAnalysis::isPointerReference(mlir::Type ty) {
   auto eleTy = fir::dyn_cast_ptrEleTy(ty);
   if (!eleTy)
     return false;
@@ -139,16 +139,13 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
     // of the former, so it can return MayAlias when unnecessary.  For example,
     // they might both be addresses of components of a larger composite.
     //
-    // FIXME: Actually, we should generalize from
-    // Source::isRecordWithPointerComponent to any composite because a component
-    // with !isData() is not always a pointer.  However,
-    // Source::isRecordWithPointerComponent currently doesn't actually check for
-    // pointer components, so it's fine for now.
+    // FIXME: Actually, we should generalize from isRecordWithPointerComponent
+    // to any composite because a component with !isData() is not always a
+    // pointer.  However, Source::isRecordWithPointerComponent currently doesn't
+    // actually check for pointer components, so it's fine for now.
     if (lhsSrc.origin.u == rhsSrc.origin.u &&
-        ((Source::isRecordWithPointerComponent(lhs.getType()) &&
-          !rhsSrc.isData()) ||
-         (Source::isRecordWithPointerComponent(rhs.getType()) &&
-          !lhsSrc.isData()))) {
+        ((isRecordWithPointerComponent(lhs.getType()) && !rhsSrc.isData()) ||
+         (isRecordWithPointerComponent(rhs.getType()) && !lhsSrc.isData()))) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing between composite and non-data component with "
                  << "same source kind and origin value\n");
@@ -233,16 +230,16 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   //
   // The dummy argument p is an alias for a%p, even for the purposes of pointer
   // association during the assignment a = b.  Thus, the program should print 2.
-  if ((Source::isRecordWithPointerComponent(val1->getType()) &&
+  if ((isRecordWithPointerComponent(val1->getType()) &&
        src1->kind != SourceKind::Allocate &&
        src2->kind == SourceKind::Argument &&
        src2->attributes.test(Attribute::Pointer) && !src2->isData() &&
-       !Source::isRecordWithPointerComponent(src2->valueType)) ||
-      (Source::isRecordWithPointerComponent(val2->getType()) &&
+       !isRecordWithPointerComponent(src2->valueType)) ||
+      (isRecordWithPointerComponent(val2->getType()) &&
        src2->kind != SourceKind::Allocate &&
        src1->kind == SourceKind::Argument &&
        src1->attributes.test(Attribute::Pointer) && !src1->isData() &&
-       !Source::isRecordWithPointerComponent(src1->valueType))) {
+       !isRecordWithPointerComponent(src1->valueType))) {
     LLVM_DEBUG(llvm::dbgs()
                << "  aliasing between pointer arg and composite with pointer "
                << "component\n");
@@ -382,7 +379,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
 
           // TODO: Take followBoxData into account when setting the pointer
           // attribute
-          if (Source::isPointerReference(ty))
+          if (isPointerReference(ty))
             attributes.set(Attribute::Pointer);
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
@@ -461,7 +458,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
       if (fir::valueHasFirAttribute(v, fir::getTargetAttrName()))
         attributes.set(Attribute::Target);
 
-      if (Source::isPointerReference(ty))
+      if (isPointerReference(ty))
         attributes.set(Attribute::Pointer);
     }
 
