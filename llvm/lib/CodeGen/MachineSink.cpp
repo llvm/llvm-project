@@ -185,7 +185,7 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachinePostDominatorTree>();
+      AU.addRequired<MachinePostDominatorTreeWrapperPass>();
       AU.addRequired<MachineCycleInfoWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfo>();
       AU.addPreserved<MachineCycleInfoWrapperPass>();
@@ -709,7 +709,7 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
   DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  PDT = &getAnalysis<MachinePostDominatorTree>();
+  PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
   MBFI = UseBlockFreqInfo ? &getAnalysis<MachineBlockFrequencyInfo>() : nullptr;
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
