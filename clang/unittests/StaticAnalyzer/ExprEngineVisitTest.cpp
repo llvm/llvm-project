@@ -68,7 +68,6 @@ void addExprEngineVisitPostChecker(AnalysisASTConsumer &AnalysisConsumer,
 TEST(ExprEngineVisitTest, checkPreStmtGCCAsmStmt) {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCode<addExprEngineVisitPreChecker>(R"(
-    int a = 1;
     void top() {
       asm("");
     }
@@ -80,7 +79,6 @@ TEST(ExprEngineVisitTest, checkPreStmtGCCAsmStmt) {
 TEST(ExprEngineVisitTest, checkPostStmtGCCAsmStmt) {
   std::string Diags;
   EXPECT_TRUE(runCheckerOnCode<addExprEngineVisitPostChecker>(R"(
-    int a = 1;
     void top() {
       asm("");
     }
