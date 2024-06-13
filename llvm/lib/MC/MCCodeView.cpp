@@ -459,8 +459,10 @@ MCFragment *CodeViewContext::emitDefRange(
     StringRef FixedSizePortion) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  return new MCCVDefRangeFragment(Ranges, FixedSizePortion,
-                           OS.getCurrentSectionOnly());
+  auto *F =
+      MCCtx->allocFragment<MCCVDefRangeFragment>(Ranges, FixedSizePortion);
+  OS.insert(F);
+  return F;
 }
 
 static unsigned computeLabelDiff(MCAsmLayout &Layout, const MCSymbol *Begin,
