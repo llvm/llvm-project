@@ -60,7 +60,8 @@ DAP::~DAP() = default;
 
 void DAP::PopulateExceptionBreakpoints() {
   llvm::call_once(initExceptionBreakpoints, [this]() {
-    exception_breakpoints = {};
+    exception_breakpoints = std::vector<ExceptionBreakpoint> {};
+    
     if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
       exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
                                           lldb::eLanguageTypeC_plus_plus);
@@ -79,6 +80,8 @@ void DAP::PopulateExceptionBreakpoints() {
       exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
                                           lldb::eLanguageTypeSwift);
     }
+    assert(exception_breakpoints.has_value() && "should have been initted");
+    assert(!exception_breakpoints->empty() && "should not be empty");
   });
 }
 
