@@ -594,7 +594,9 @@ struct ExtensionSet {
   // Constructs a new ExtensionSet by toggling the corresponding bits for every
   // feature in the \p Features list without expanding their dependencies. Used
   // for reconstructing an ExtensionSet from the output of toLLVMFeatures().
-  void reconstructFromParsedFeatures(const std::vector<std::string> &Features);
+  // Features that are not recognized are pushed back to \p NonExtensions.
+  void reconstructFromParsedFeatures(const std::vector<std::string> &Features,
+                                     std::vector<std::string> &NonExtensions);
 
   // Convert the set of enabled extension to an LLVM feature list, appending
   // them to Features.

@@ -1061,9 +1061,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 //
 // A feature may correspond to an Extension (anything with a corresponding
 // AEK_), in which case an ExtensionSet is used to parse it and expand its
-// dependencies. Otherwise the feature is passed through (e.g. +v8.1a,
-// +outline-atomics, -fmv, etc). Features coming from the command line are
-// already parsed, therefore their dependencies do not need expansion.
+// dependencies. If the feature does not yield a successful parse then it
+// is be passed through.
 ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   ParsedTargetAttr Ret;
   if (Features == "default")
@@ -1078,10 +1077,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     SmallVector<StringRef, 8> SplitFeatures;
     FeatString.split(SplitFeatures, StringRef("+"), -1, false);
     for (StringRef Feature : SplitFeatures) {
-      if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
+      if (FeatureBits.parseModifier(Feature))
         continue;
-      // Pass through features that are not extensions, e.g. +v8.1a,
-      // +outline-atomics, -fmv, etc.
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
       if (Feature.starts_with("no"))
         Features.push_back("-" + Feature.drop_front(2).str());
       else
@@ -1091,7 +1094,8 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
   llvm::AArch64::ExtensionSet FeatureBits;
   // Reconstruct the bitset from the command line option features.
-  FeatureBits.reconstructFromParsedFeatures(getTargetOpts().FeaturesAsWritten);
+  FeatureBits.reconstructFromParsedFeatures(getTargetOpts().FeaturesAsWritten,
+                                            Ret.Features);
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
@@ -1142,8 +1146,12 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     } else {
       if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
         continue;
-      // Pass through features that are not extensions, e.g. +v8.1a,
-      // +outline-atomics, -fmv, etc.
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
       if (Feature.starts_with("no-"))
         Ret.Features.push_back("-" + Feature.drop_front(3).str());
       else

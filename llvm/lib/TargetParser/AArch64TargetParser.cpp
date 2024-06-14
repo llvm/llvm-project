@@ -266,7 +266,8 @@ bool AArch64::ExtensionSet::parseModifier(StringRef Modifier,
 }
 
 void AArch64::ExtensionSet::reconstructFromParsedFeatures(
-    const std::vector<std::string> &Features) {
+    const std::vector<std::string> &Features,
+    std::vector<std::string> &NonExtensions) {
   assert(Touched.none() && "Bitset already initialized");
   for (auto &F : Features) {
     bool IsNegated = F[0] == '-';
@@ -276,7 +277,9 @@ void AArch64::ExtensionSet::reconstructFromParsedFeatures(
         Enabled.reset(AE->ID);
       else
         Enabled.set(AE->ID);
+      continue;
     }
+    NonExtensions.push_back(F);
   }
 }
 
