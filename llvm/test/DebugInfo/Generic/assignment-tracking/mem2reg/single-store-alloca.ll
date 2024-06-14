@@ -8,8 +8,8 @@
 ;; are cleaned up, including duplciates.
 
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[A:[0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 %a, ![[B:[0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 %a, ![[A:[0-9]+]]
 ; CHECK-NEXT: ret
 
 ; CHECK-DAG: ![[A]] = !DILocalVariable(name: "a",
