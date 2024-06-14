@@ -247,7 +247,8 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   if (!MemOPOptMemcmpBcmp && (MO.isMemcmp(TLI) || MO.isBcmp(TLI)))
     return false;
 
-  uint32_t NumVals, MaxNumVals = INSTR_PROF_NUM_BUCKETS;
+  uint32_t NumVals = INSTR_PROF_NUM_BUCKETS;
+  uint32_t MaxNumVals = INSTR_PROF_NUM_BUCKETS;
   uint64_t TotalCount;
   auto ValueDataArray = getValueProfDataFromInst(
       *MO.I, IPVK_MemOPSize, MaxNumVals, NumVals, TotalCount);
