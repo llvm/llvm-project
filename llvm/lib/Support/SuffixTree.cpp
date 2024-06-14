@@ -138,7 +138,7 @@ void SuffixTree::setLeafNodes() {
       auto I = ChildrenMap.find(CurrInternalNode);
       if (I == ChildrenMap.end()) {
         // This is the first time we visit this node.
-        // Its children have not been added to the stack yet. 
+        // Its children have not been added to the stack yet.
         // We add current node back, and add its children to the stack.
         // We keep track of the first and last children of the current node.
         auto it = CurrInternalNode->Children.begin();
@@ -153,11 +153,11 @@ void SuffixTree::setLeafNodes() {
           ChildrenMap[CurrInternalNode] = {FirstChild, LastChild};
         }
       } else {
-        // This is the second time we visit this node. 
-        // All of its children have already been processed. 
+        // This is the second time we visit this node.
+        // All of its children have already been processed.
         // Now, we can set its LeftLeafIdx and RightLeafIdx;
         auto [FirstChild, LastChild] = I->second;
-        // Get the first child to use its RightLeafIdx. 
+        // Get the first child to use its RightLeafIdx.
         // The first child is the first one added to the stack, so it is
         // the last one to be processed. Hence, the leaf descendants
         // of the first child are assigned the largest index numbers.
@@ -165,7 +165,7 @@ void SuffixTree::setLeafNodes() {
         // Get the last child to use its LeftLeafIdx.
         CurrNode->setLeftLeafIdx(LastChild->getLeftLeafIdx());
         assert(CurrNode->getLeftLeafIdx() <= CurrNode->getRightLeafIdx() &&
-              "LeftLeafIdx should not be larger than RightLeafIdx");
+               "LeftLeafIdx should not be larger than RightLeafIdx");
       }
     } else {
       // The current node is a leaf node.
