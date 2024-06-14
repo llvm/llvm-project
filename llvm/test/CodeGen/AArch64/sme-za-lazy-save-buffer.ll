@@ -23,10 +23,9 @@ define float @multi_bb_stpidr2_save_required(i32 %a, float %b, float %c) "aarch6
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x8, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    sub x9, x29, #16
-; CHECK-NEXT:    str x8, [x9]
-; CHECK-NEXT:    strh wzr, [x9, #10]
-; CHECK-NEXT:    str wzr, [x9, #12]
+; CHECK-NEXT:    stur x8, [x29, #-16]
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
+; CHECK-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-NEXT:    cbz w0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %use_b
 ; CHECK-NEXT:    fmov s1, #4.00000000
@@ -35,6 +34,7 @@ define float @multi_bb_stpidr2_save_required(i32 %a, float %b, float %c) "aarch6
 ; CHECK-NEXT:  .LBB1_2: // %use_c
 ; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl cosf
