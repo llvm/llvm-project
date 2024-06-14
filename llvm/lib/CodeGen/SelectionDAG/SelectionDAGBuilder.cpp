@@ -4487,6 +4487,17 @@ static const MDNode *getRangeMetadata(const Instruction &I) {
   return I.getMetadata(LLVMContext::MD_range);
 }
 
+static std::optional<ConstantRange> getRange(const Instruction &I) {
+  if (const auto *CB = dyn_cast<CallBase>(&I)) {
+    // see comment in getRangeMetadata about this check
+    if (CB->hasRetAttr(Attribute::NoUndef))
+      return CB->getRange();
+  }
+  if (const MDNode *Range = getRangeMetadata(I))
+    return getConstantRangeFromMetadata(*Range);
+  return std::nullopt;
+}
+
 void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (I.isAtomic())
     return visitAtomicLoad(I);
@@ -10230,19 +10241,16 @@ void SelectionDAGBuilder::visitVACopy(const CallInst &I) {
 SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
                                                     const Instruction &I,
                                                     SDValue Op) {
-  const MDNode *Range = getRangeMetadata(I);
-  if (!Range)
+  std::optional<ConstantRange> CR = getRange(I);
+
+  if (!CR || CR->isFullSet() || CR->isEmptySet() || CR->isUpperWrapped())
     return Op;
 
-  ConstantRange CR = getConstantRangeFromMetadata(*Range);
-  if (CR.isFullSet() || CR.isEmptySet() || CR.isUpperWrapped())
-    return Op;
-
-  APInt Lo = CR.getUnsignedMin();
+  APInt Lo = CR->getUnsignedMin();
   if (!Lo.isMinValue())
     return Op;
 
-  APInt Hi = CR.getUnsignedMax();
+  APInt Hi = CR->getUnsignedMax();
   unsigned Bits = std::max(Hi.getActiveBits(),
                            static_cast<unsigned>(IntegerType::MIN_INT_BITS));
 
