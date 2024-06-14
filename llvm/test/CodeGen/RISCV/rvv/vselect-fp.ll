@@ -524,20 +524,14 @@ define <vscale x 1 x bfloat> @vfmerge_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vs
 }
 
 define <vscale x 1 x bfloat> @vfmerge_fv_nxv1bf16(<vscale x 1 x bfloat> %va, bfloat %b, <vscale x 1 x i1> %cond) {
-; CHECK-ZVFH-LABEL: vfmerge_fv_nxv1bf16:
-; CHECK-ZVFH:       # %bb.0:
-; CHECK-ZVFH-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-ZVFH-NEXT:    vfmerge.vfm v8, v8, fa0, v0
-; CHECK-ZVFH-NEXT:    ret
-;
-; CHECK-ZVFHMIN-LABEL: vfmerge_fv_nxv1bf16:
-; CHECK-ZVFHMIN:       # %bb.0:
-; CHECK-ZVFHMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfmv.v.f v9, fa5
-; CHECK-ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v8, v9, v0.t
-; CHECK-ZVFHMIN-NEXT:    ret
+; CHECK-LABEL: vfmerge_fv_nxv1bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vfmv.v.f v9, fa5
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9, v0.t
+; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 1 x bfloat> %head, <vscale x 1 x bfloat> poison, <vscale x 1 x i32> zeroinitializer
   %vc = select <vscale x 1 x i1> %cond, <vscale x 1 x bfloat> %splat, <vscale x 1 x bfloat> %va
@@ -555,20 +549,14 @@ define <vscale x 2 x bfloat> @vfmerge_vv_nxv2bf16(<vscale x 2 x bfloat> %va, <vs
 }
 
 define <vscale x 2 x bfloat> @vfmerge_fv_nxv2bf16(<vscale x 2 x bfloat> %va, bfloat %b, <vscale x 2 x i1> %cond) {
-; CHECK-ZVFH-LABEL: vfmerge_fv_nxv2bf16:
-; CHECK-ZVFH:       # %bb.0:
-; CHECK-ZVFH-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-ZVFH-NEXT:    vfmerge.vfm v8, v8, fa0, v0
-; CHECK-ZVFH-NEXT:    ret
-;
-; CHECK-ZVFHMIN-LABEL: vfmerge_fv_nxv2bf16:
-; CHECK-ZVFHMIN:       # %bb.0:
-; CHECK-ZVFHMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfmv.v.f v9, fa5
-; CHECK-ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v8, v9, v0.t
-; CHECK-ZVFHMIN-NEXT:    ret
+; CHECK-LABEL: vfmerge_fv_nxv2bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v9, fa5
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9, v0.t
+; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 2 x bfloat> %head, <vscale x 2 x bfloat> poison, <vscale x 2 x i32> zeroinitializer
   %vc = select <vscale x 2 x i1> %cond, <vscale x 2 x bfloat> %splat, <vscale x 2 x bfloat> %va
@@ -586,20 +574,14 @@ define <vscale x 4 x bfloat> @vfmerge_vv_nxv4bf16(<vscale x 4 x bfloat> %va, <vs
 }
 
 define <vscale x 4 x bfloat> @vfmerge_fv_nxv4bf16(<vscale x 4 x bfloat> %va, bfloat %b, <vscale x 4 x i1> %cond) {
-; CHECK-ZVFH-LABEL: vfmerge_fv_nxv4bf16:
-; CHECK-ZVFH:       # %bb.0:
-; CHECK-ZVFH-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-ZVFH-NEXT:    vfmerge.vfm v8, v8, fa0, v0
-; CHECK-ZVFH-NEXT:    ret
-;
-; CHECK-ZVFHMIN-LABEL: vfmerge_fv_nxv4bf16:
-; CHECK-ZVFHMIN:       # %bb.0:
-; CHECK-ZVFHMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfmv.v.f v10, fa5
-; CHECK-ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK-ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v8, v10, v0.t
-; CHECK-ZVFHMIN-NEXT:    ret
+; CHECK-LABEL: vfmerge_fv_nxv4bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfmv.v.f v10, fa5
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v10, v0.t
+; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 4 x bfloat> %head, <vscale x 4 x bfloat> poison, <vscale x 4 x i32> zeroinitializer
   %vc = select <vscale x 4 x i1> %cond, <vscale x 4 x bfloat> %splat, <vscale x 4 x bfloat> %va
@@ -617,20 +599,14 @@ define <vscale x 8 x bfloat> @vfmerge_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vs
 }
 
 define <vscale x 8 x bfloat> @vfmerge_fv_nxv8bf16(<vscale x 8 x bfloat> %va, bfloat %b, <vscale x 8 x i1> %cond) {
-; CHECK-ZVFH-LABEL: vfmerge_fv_nxv8bf16:
-; CHECK-ZVFH:       # %bb.0:
-; CHECK-ZVFH-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-ZVFH-NEXT:    vfmerge.vfm v8, v8, fa0, v0
-; CHECK-ZVFH-NEXT:    ret
-;
-; CHECK-ZVFHMIN-LABEL: vfmerge_fv_nxv8bf16:
-; CHECK-ZVFHMIN:       # %bb.0:
-; CHECK-ZVFHMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfmv.v.f v12, fa5
-; CHECK-ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v8, v12, v0.t
-; CHECK-ZVFHMIN-NEXT:    ret
+; CHECK-LABEL: vfmerge_fv_nxv8bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfmv.v.f v12, fa5
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v12, v0.t
+; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 8 x bfloat> %head, <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
   %vc = select <vscale x 8 x i1> %cond, <vscale x 8 x bfloat> %splat, <vscale x 8 x bfloat> %va
@@ -675,20 +651,14 @@ define <vscale x 16 x bfloat> @vfmerge_vv_nxv16bf16(<vscale x 16 x bfloat> %va, 
 }
 
 define <vscale x 16 x bfloat> @vfmerge_fv_nxv16bf16(<vscale x 16 x bfloat> %va, bfloat %b, <vscale x 16 x i1> %cond) {
-; CHECK-ZVFH-LABEL: vfmerge_fv_nxv16bf16:
-; CHECK-ZVFH:       # %bb.0:
-; CHECK-ZVFH-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-ZVFH-NEXT:    vfmerge.vfm v8, v8, fa0, v0
-; CHECK-ZVFH-NEXT:    ret
-;
-; CHECK-ZVFHMIN-LABEL: vfmerge_fv_nxv16bf16:
-; CHECK-ZVFHMIN:       # %bb.0:
-; CHECK-ZVFHMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfmv.v.f v16, fa5
-; CHECK-ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
-; CHECK-ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v8, v16, v0.t
-; CHECK-ZVFHMIN-NEXT:    ret
+; CHECK-LABEL: vfmerge_fv_nxv16bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfmv.v.f v16, fa5
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16, v0.t
+; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 16 x bfloat> %head, <vscale x 16 x bfloat> poison, <vscale x 16 x i32> zeroinitializer
   %vc = select <vscale x 16 x i1> %cond, <vscale x 16 x bfloat> %splat, <vscale x 16 x bfloat> %va
@@ -706,23 +676,17 @@ define <vscale x 32 x bfloat> @vfmerge_vv_nxv32bf16(<vscale x 32 x bfloat> %va, 
 }
 
 define <vscale x 32 x bfloat> @vfmerge_fv_nxv32bf16(<vscale x 32 x bfloat> %va, bfloat %b, <vscale x 32 x i1> %cond) {
-; CHECK-ZVFH-LABEL: vfmerge_fv_nxv32bf16:
-; CHECK-ZVFH:       # %bb.0:
-; CHECK-ZVFH-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; CHECK-ZVFH-NEXT:    vfmerge.vfm v8, v8, fa0, v0
-; CHECK-ZVFH-NEXT:    ret
-;
-; CHECK-ZVFHMIN-LABEL: vfmerge_fv_nxv32bf16:
-; CHECK-ZVFHMIN:       # %bb.0:
-; CHECK-ZVFHMIN-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfmv.v.f v16, fa5
-; CHECK-ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vfncvtbf16.f.f.w v24, v16
-; CHECK-ZVFHMIN-NEXT:    vmv.v.v v28, v24
-; CHECK-ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; CHECK-ZVFHMIN-NEXT:    vmerge.vvm v8, v8, v24, v0
-; CHECK-ZVFHMIN-NEXT:    ret
+; CHECK-LABEL: vfmerge_fv_nxv32bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vfmv.v.f v16, fa5
+; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vfncvtbf16.f.f.w v24, v16
+; CHECK-NEXT:    vmv.v.v v28, v24
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v24, v0
+; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x bfloat> poison, bfloat %b, i32 0
   %splat = shufflevector <vscale x 32 x bfloat> %head, <vscale x 32 x bfloat> poison, <vscale x 32 x i32> zeroinitializer
   %vc = select <vscale x 32 x i1> %cond, <vscale x 32 x bfloat> %splat, <vscale x 32 x bfloat> %va
