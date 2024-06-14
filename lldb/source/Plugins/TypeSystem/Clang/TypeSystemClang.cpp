@@ -2684,7 +2684,7 @@ static const clang::RecordType *GetCompleteRecordType(clang::ASTContext *ast,
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
 
   clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
-  if (TypeSystemClang::UseRedeclCompletion()) {
+  if (TypeSystemClang::UseRedeclCompletion() && cxx_record_decl) {
     clang::CXXRecordDecl *def = cxx_record_decl->getDefinition();
     if (!def)
       return nullptr;
