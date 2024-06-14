@@ -168,17 +168,12 @@ fma(InType x, InType y, InType z) {
   //      z :    10aa...a
   // - prod :     1bb...bb....b
   // In that case, in order to store the exact result, we need at least
-  //   (Length of prod) - (MantissaLength of z) = 2*(52 + 1) - 52 = 54.
-  // TODO:                            53? (Explicit mantissa.) ^
+  //   (Length of prod) - (Fraction length of z) = 2*(52 + 1) - 52 = 54.
   // Overall, before aligning the mantissas and exponents, we can simply left-
   // shift the mantissa of z by at least 54, and left-shift the product of x*y
-  // by (that amount - 52).  After that, it is enough to align the least
-  // TODO:             ^ 54?
+  // by (that amount - 54).  After that, it is enough to align the least
   // significant bit, given that we keep track of the round and sticky bits
   // after the least significant bit.
-  // We pick shifting z_mant by 64 bits so that technically we can simply use
-  // the original mantissa as high part when constructing 128-bit z_mant. So the
-  // mantissa of prod will be left-shifted by 64 - 54 = 10 initially.
 
   TmpResultType prod_mant = TmpResultType(x_mant) * y_mant;
   int prod_lsb_exp =
@@ -241,10 +236,10 @@ fma(InType x, InType y, InType z) {
             InFPBits::EXP_BIAS + OutFPBits::EXP_BIAS;
 
     if (r_exp > 0) {
-      // The result is normal.  We will shift the mantissa to the right by
-      // 63 - 52 = 11 bits (from the locations of the most significant bit).
-      // Then the rounding bit will correspond the 11th bit, and the lowest
-      // 10 bits are merged into sticky bits.
+      // The result is normal.  We will shift the mantissa to the right by the
+      // amount of extra bits compared to the length of the explicit mantissa in
+      // the output type.  The rounding bit then becomes the highest bit that is
+      // shifted out, and the following lower bits are merged into sticky bits.
       round_bit =
           (prod_mant & (TmpResultType(1) << (EXTRA_FRACTION_LEN - 1))) != 0;
       sticky_bits |= (prod_mant & EXTRA_FRACTION_STICKY_MASK) != 0;
