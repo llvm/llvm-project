@@ -170,6 +170,7 @@ add_llvm_component_library(LLVMSupport
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
+  DynamicAPInt.cpp
   ELFAttributeParser.cpp
   ELFAttributes.cpp
   Error.cpp
@@ -223,6 +224,7 @@ add_llvm_component_library(LLVMSupport
   SHA1.cpp
   SHA256.cpp
   Signposts.cpp
+  SlowDynamicAPInt.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp

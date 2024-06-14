@@ -2638,9 +2638,10 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
                  fvti.RegClass:$merge, fvti.RegClass:$rs2, 0, (fvti.Mask V0),
                  GPR:$vl, fvti.Log2SEW)>;
   }
+}
 
-  let Predicates = !listconcat(GetVTypePredicates<GetFpVTypeInfo<fvti>.Vti>.Predicates,
-                               GetVTypeScalarPredicates<fvti>.Predicates) in {
+foreach fvti = AllFloatVectors in {
+  let Predicates = GetVTypePredicates<fvti>.Predicates in {
     def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask V0),
                                             (SplatFPOp fvti.ScalarRegClass:$rs1),
                                             fvti.RegClass:$rs2,
@@ -2654,8 +2655,8 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
 }
 
 foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
-  let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
-                               GetVTypeScalarPredicates<fvti>.Predicates) in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
     // 13.16. Vector Floating-Point Move Instruction
     // If we're splatting fpimm0, use vmv.v.x vd, x0.
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
@@ -2666,7 +2667,11 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
                            fvti.Vector:$passthru, (fvti.Scalar (SelectFPImm (XLenVT GPR:$imm))), VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_V_X_"#fvti.LMul.MX)
                $passthru, GPR:$imm, GPR:$vl, fvti.Log2SEW, TU_MU)>;
+  }
+}
 
+foreach fvti = AllFloatVectors in {
+  let Predicates = GetVTypePredicates<fvti>.Predicates in {
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                            fvti.Vector:$passthru, (fvti.Scalar fvti.ScalarRegClass:$rs2), VLOpFrag)),
               (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #

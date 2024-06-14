@@ -546,13 +546,14 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
       // Optimize memory usage by emitting the instruction to a
       // MCCompactEncodedInstFragment when not in a bundle-locked group and
       // there are no fixups registered.
-      MCCompactEncodedInstFragment *CEIF = new MCCompactEncodedInstFragment();
+      MCCompactEncodedInstFragment *CEIF =
+          getContext().allocFragment<MCCompactEncodedInstFragment>();
       insert(CEIF);
       CEIF->getContents().append(Code.begin(), Code.end());
       CEIF->setHasInstructions(STI);
       return;
     } else {
-      DF = new MCDataFragment();
+      DF = getContext().allocFragment<MCDataFragment>();
       insert(DF);
     }
     if (Sec.getBundleLockState() == MCSection::BundleLockedAlignToEnd) {

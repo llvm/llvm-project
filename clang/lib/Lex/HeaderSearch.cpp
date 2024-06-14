@@ -2039,6 +2039,8 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   using namespace llvm::sys;
 
   llvm::SmallString<32> FilePath = File;
+  if (!WorkingDir.empty() && !path::is_absolute(FilePath))
+    fs::make_absolute(WorkingDir, FilePath);
   // remove_dots switches to backslashes on windows as a side-effect!
   // We always want to suggest forward slashes for includes.
   // (not remove_dots(..., posix) as that misparses windows paths).

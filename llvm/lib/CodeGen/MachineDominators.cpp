@@ -18,6 +18,7 @@
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
 

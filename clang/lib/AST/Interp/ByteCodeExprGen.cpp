@@ -343,6 +343,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToBoolean:
+  case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
     if (DiscardResult)
       return this->discard(SubExpr);
@@ -362,7 +363,12 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (FromT == ToT)
       return true;
-    return this->emitCast(*FromT, *ToT, CE);
+    if (!this->emitCast(*FromT, *ToT, CE))
+      return false;
+
+    if (CE->getCastKind() == CK_BooleanToSignedIntegral)
+      return this->emitNeg(*ToT, CE);
+    return true;
   }
 
   case CK_PointerToBoolean:
@@ -1201,6 +1207,23 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (T->isArrayType()) {
+    // Prepare composite return value.
+    if (!Initializing) {
+      if (GlobalDecl) {
+        std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+        if (!GlobalIndex)
+          return false;
+        if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+          return false;
+      } else {
+        std::optional<unsigned> LocalIndex = allocateLocal(E);
+        if (!LocalIndex)
+          return false;
+        if (!this->emitGetPtrLocal(*LocalIndex, E))
+          return false;
+      }
+    }
+
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
       if (!this->visitArrayElemInit(ElementIndex, Init))
@@ -3223,6 +3246,8 @@ bool ByteCodeExprGen<Emitter>::visitAPValue(const APValue &Val,
   assert(!DiscardResult);
   if (Val.isInt())
     return this->emitConst(Val.getInt(), ValType, E);
+  else if (Val.isFloat())
+    return this->emitConstFloat(Val.getFloat(), E);
 
   if (Val.isLValue()) {
     if (Val.isNullPointer())
@@ -3253,7 +3278,7 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
       const APValue &F = Val.getStructField(I);
       const Record::Field *RF = R->getField(I);
 
-      if (F.isInt() || F.isLValue() || F.isMemberPointer()) {
+      if (F.isInt() || F.isFloat() || F.isLValue() || F.isMemberPointer()) {
         PrimType T = classifyPrim(RF->Decl->getType());
         if (!this->visitAPValue(F, T, E))
           return false;
@@ -3946,9 +3971,17 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // we haven't seen yet.
   if (Ctx.getLangOpts().CPlusPlus) {
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
+      const auto typeShouldBeVisited = [&](QualType T) -> bool {
+        if (T.isConstant(Ctx.getASTContext()))
+          return true;
+        if (const auto *RT = T->getAs<ReferenceType>())
+          return RT->getPointeeType().isConstQualified();
+        return false;
+      };
+
       // Visit local const variables like normal.
       if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
-          VD->getType().isConstQualified()) {
+          typeShouldBeVisited(VD->getType())) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.
@@ -3957,8 +3990,8 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
   } else {
     if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->getAnyInitializer() && VD->getType().isConstQualified() &&
-        !VD->isWeak()) {
+        VD && VD->getAnyInitializer() &&
+        VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
       if (!this->visitVarDecl(VD))
         return false;
       // Retry.
