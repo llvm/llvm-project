@@ -368,7 +368,7 @@ class Symbolizer:
         size = local[4]
         if frame_offset is None or size is None:
           continue
-        obj_offset = (self.__last_access_address & fp_mask) - ((fp + frame_offset) & fp_mask)
+        obj_offset = (self.__last_access_address & fp_mask) - (fp & fp_mask + frame_offset)
         tag_offset = local[5]
         if not ignore_tags and (tag_offset is None or base_tag ^ tag_offset != self.__last_access_tag):
           continue
