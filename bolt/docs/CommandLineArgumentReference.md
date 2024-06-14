@@ -614,12 +614,6 @@
 
 - `--lite-threshold-pct=<uint>`
 
-  Threshold (in percent) of matched profile where profile inference is applied
-  to functions. If the ratio of a function's exactly matched blocks to number of
-  blocks is less than the threshold, inference isn't applied. Default is %0.
-
-- `--matched-profile-threshold=<uint>`
-
   Threshold (in percent) for selecting functions to process in lite mode. Higher
   threshold means fewer functions to process. E.g threshold of 90 means only top
   10 percent of functions with profile will be processed.
@@ -807,6 +801,11 @@
 - `--stale-matching-max-func-size=<uint>`
 
   The maximum size of a function to consider for inference.
+
+- `--stale-matching-min-matched-block=<uint>`
+
+  Minimum percent of exact match block for a function to be considered for
+  profile inference.
 
 - `--stale-threshold=<uint>`
 
