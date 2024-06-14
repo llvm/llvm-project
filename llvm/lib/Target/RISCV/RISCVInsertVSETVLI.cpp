@@ -737,9 +737,6 @@ public:
     return hasCompatibleVTYPE(Used, Require);
   }
 
-  // Whether or not two VSETVLIInfos are the same. Note that this does
-  // not necessarily mean they have the same AVL or VTYPE. Use
-  // isCompatible or isKnownSame for that instead.
   bool operator==(const VSETVLIInfo &Other) const {
     // Uninitialized is only equal to another Uninitialized.
     if (!isValid())
