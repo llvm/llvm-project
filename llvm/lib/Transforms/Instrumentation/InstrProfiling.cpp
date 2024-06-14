@@ -927,6 +927,9 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
         Bias->setComdat(M.getOrInsertComdat(Bias->getName()));
     }
     BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias);
+    // Bias doesn't change after startup.
+    BiasLI->setMetadata(LLVMContext::MD_invariant_load,
+                        MDNode::get(M.getContext(), std::nullopt));
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
