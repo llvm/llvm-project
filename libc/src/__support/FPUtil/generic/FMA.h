@@ -71,11 +71,10 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
     // Update sticky bits if t != 0.0 and the least (52 - 23 - 1 = 28) bits are
     // zero.
     if (!t.is_zero() && ((bit_sum.get_mantissa() & 0xfff'ffffULL) == 0)) {
-      if (bit_sum.sign() != t.sign()) {
+      if (bit_sum.sign() != t.sign())
         bit_sum.set_mantissa(bit_sum.get_mantissa() + 1);
-      } else if (bit_sum.get_mantissa()) {
+      else if (bit_sum.get_mantissa())
         bit_sum.set_mantissa(bit_sum.get_mantissa() - 1);
-      }
     }
   }
 
@@ -122,9 +121,8 @@ fma(InType x, InType y, InType z) {
   constexpr TmpResultType EXTRA_FRACTION_STICKY_MASK =
       (TmpResultType(1) << (EXTRA_FRACTION_LEN - 1)) - 1;
 
-  if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0)) {
+  if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0))
     return static_cast<OutType>(x * y + z);
-  }
 
   int x_exp = 0;
   int y_exp = 0;
@@ -293,9 +291,8 @@ fma(InType x, InType y, InType z) {
   result = static_cast<OutStorageType>(
       (result & OutFPBits::FRACTION_MASK) |
       (static_cast<OutStorageType>(r_exp) << OutFPBits::FRACTION_LEN));
-  if (prod_sign.is_neg()) {
+  if (prod_sign.is_neg())
     result |= OutFPBits::SIGN_MASK;
-  }
 
   // Rounding.
   if (round_mode == FE_TONEAREST) {
