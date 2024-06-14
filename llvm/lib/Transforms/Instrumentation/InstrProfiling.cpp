@@ -276,7 +276,7 @@ private:
 
   /// Replace instrprof.mcdc.tvbitmask.update with a shift and or instruction
   /// using the index represented by the a temp value into a bitmap.
-  void lowerMCDCTestVectorBitmapUpdate(InstrProfMCDCTVBitmapUpdate *Ins);
+  bool lowerMCDCTestVectorBitmapUpdate(InstrProfMCDCTVBitmapUpdate *Ins);
 
   /// Replace instrprof.mcdc.temp.update with a shift and or instruction using
   /// the corresponding condition ID.
@@ -625,35 +625,45 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
 bool InstrLowerer::lowerIntrinsics(Function *F) {
   bool MadeChange = false;
   PromotionCandidates.clear();
-  for (BasicBlock &BB : *F) {
-    for (Instruction &Instr : llvm::make_early_inc_range(BB)) {
-      if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(&Instr)) {
-        lowerIncrement(IPIS);
-        MadeChange = true;
-      } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(&Instr)) {
-        lowerIncrement(IPI);
-        MadeChange = true;
-      } else if (auto *IPC = dyn_cast<InstrProfTimestampInst>(&Instr)) {
-        lowerTimestamp(IPC);
-        MadeChange = true;
-      } else if (auto *IPC = dyn_cast<InstrProfCoverInst>(&Instr)) {
-        lowerCover(IPC);
-        MadeChange = true;
-      } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
-        lowerValueProfileInst(IPVP);
-        MadeChange = true;
-      } else if (auto *IPMP = dyn_cast<InstrProfMCDCBitmapParameters>(&Instr)) {
-        IPMP->eraseFromParent();
-        MadeChange = true;
-      } else if (auto *IPBU = dyn_cast<InstrProfMCDCTVBitmapUpdate>(&Instr)) {
-        lowerMCDCTestVectorBitmapUpdate(IPBU);
-        MadeChange = true;
-      } else if (auto *IPTU = dyn_cast<InstrProfMCDCCondBitmapUpdate>(&Instr)) {
-        lowerMCDCCondBitmapUpdate(IPTU);
-        MadeChange = true;
+  bool IsBBChanged;
+  do {
+    IsBBChanged = false;
+    for (BasicBlock &BB : *F) {
+      for (Instruction &Instr : llvm::make_early_inc_range(BB)) {
+        if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(&Instr)) {
+          lowerIncrement(IPIS);
+          MadeChange = true;
+        } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(&Instr)) {
+          lowerIncrement(IPI);
+          MadeChange = true;
+        } else if (auto *IPC = dyn_cast<InstrProfTimestampInst>(&Instr)) {
+          lowerTimestamp(IPC);
+          MadeChange = true;
+        } else if (auto *IPC = dyn_cast<InstrProfCoverInst>(&Instr)) {
+          lowerCover(IPC);
+          MadeChange = true;
+        } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
+          lowerValueProfileInst(IPVP);
+          MadeChange = true;
+        } else if (auto *IPMP =
+                       dyn_cast<InstrProfMCDCBitmapParameters>(&Instr)) {
+          IPMP->eraseFromParent();
+          MadeChange = true;
+        } else if (auto *IPBU = dyn_cast<InstrProfMCDCTVBitmapUpdate>(&Instr)) {
+          IsBBChanged = lowerMCDCTestVectorBitmapUpdate(IPBU);
+          MadeChange = true;
+        } else if (auto *IPTU =
+                       dyn_cast<InstrProfMCDCCondBitmapUpdate>(&Instr)) {
+          lowerMCDCCondBitmapUpdate(IPTU);
+          MadeChange = true;
+        }
+        if (IsBBChanged)
+          break;
       }
+      if (IsBBChanged)
+        break;
     }
-  }
+  } while (IsBBChanged);
 
   if (!MadeChange)
     return false;
@@ -1007,7 +1017,7 @@ void InstrLowerer::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
   CoverageNamesVar->eraseFromParent();
 }
 
-void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
+bool InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     InstrProfMCDCTVBitmapUpdate *Update) {
   IRBuilder<> Builder(Update);
   auto *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -1051,6 +1061,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   //  store i8 %8, ptr %3, align 1
   Builder.CreateStore(Result, BitmapByteAddr);
   Update->eraseFromParent();
+  return false;
 }
 
 void InstrLowerer::lowerMCDCCondBitmapUpdate(
