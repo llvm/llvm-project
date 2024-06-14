@@ -5745,6 +5745,14 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
   int rank = arrayTmp.rank();
   assert(rank >= 1);
 
+  // Arguements to the reduction operation are passed by reference or value?
+  bool argByRef = true;
+  if (auto embox =
+          mlir::dyn_cast_or_null<fir::EmboxProcOp>(operation.getDefiningOp())) {
+    auto fctTy = mlir::dyn_cast<mlir::FunctionType>(embox.getFunc().getType());
+    argByRef = mlir::isa<fir::ReferenceType>(fctTy.getInput(0));
+  }
+
   mlir::Type ty = array.getType();
   mlir::Type arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   mlir::Type eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
@@ -5772,7 +5780,7 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
     if (fir::isa_complex(eleTy) || fir::isa_derived(eleTy)) {
       mlir::Value result = builder.createTemporary(loc, eleTy);
       fir::runtime::genReduce(builder, loc, array, operation, mask, identity,
-                              ordered, result);
+                              ordered, result, argByRef);
       if (fir::isa_derived(eleTy))
         return result;
       return builder.create<fir::LoadOp>(loc, result);
@@ -5789,11 +5797,11 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
                                             charTy.getLen());
       fir::CharBoxValue temp = charHelper.createCharacterTemp(eleTy, len);
       fir::runtime::genReduce(builder, loc, array, operation, mask, identity,
-                              ordered, temp.getBuffer());
+                              ordered, temp.getBuffer(), argByRef);
       return temp;
     }
     return fir::runtime::genReduce(builder, loc, array, operation, mask,
-                                   identity, ordered);
+                                   identity, ordered, argByRef);
   }
   // Handle cases that have an array result.
   // Create mutable fir.box to be passed to the runtime for the result.
@@ -5804,7 +5812,7 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
   mlir::Value dim = fir::getBase(args[2]);
   fir::runtime::genReduceDim(builder, loc, array, operation, dim, mask,
-                             identity, ordered, resultIrBox);
+                             identity, ordered, resultIrBox, argByRef);
   return readAndAddCleanUp(resultMutableBox, resultType, "REDUCE");
 }
 
