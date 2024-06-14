@@ -1,4 +1,4 @@
-//===-- Implementation of fma function ------------------------------------===//
+//===-- Implementation of f16fmaf function --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fma.h"
-#include "src/__support/common.h"
-
+#include "src/math/f16fmaf.h"
 #include "src/__support/FPUtil/FMA.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(double, fma, (double x, double y, double z)) {
-  return fputil::fma<double>(x, y, z);
+LLVM_LIBC_FUNCTION(float16, f16fmaf, (float x, float y, float z)) {
+  return fputil::fma<float16>(x, y, z);
 }
 
 } // namespace LIBC_NAMESPACE

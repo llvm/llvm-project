@@ -3109,9 +3109,10 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     fmaf_test.cpp
+  HDRS
+    FmaTest.h
   DEPENDS
     libc.src.math.fmaf
-    libc.src.__support.FPUtil.fp_bits
   FLAGS
     FMA_OPT__ONLY
 )
@@ -3122,9 +3123,10 @@ add_fp_unittest(
     libc-math-smoke-tests
   SRCS
     fma_test.cpp
+  HDRS
+    FmaTest.h
   DEPENDS
     libc.src.math.fma
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -3549,6 +3551,18 @@ add_fp_unittest(
     TotalOrderMagTest.h
   DEPENDS
     libc.src.math.totalordermagf16
+)
+
+add_fp_unittest(
+  f16fmaf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    f16fmaf_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmaf
 )
 
 add_fp_unittest(

@@ -922,46 +922,49 @@ template void explain_binary_operation_one_output_error<long double>(
     Operation, const BinaryInput<long double> &, long double, double,
     RoundingMode);
 
-template <typename T>
-void explain_ternary_operation_one_output_error(Operation op,
-                                                const TernaryInput<T> &input,
-                                                T libc_result,
-                                                double ulp_tolerance,
-                                                RoundingMode rounding) {
-  unsigned int precision = get_precision<T>(ulp_tolerance);
+template <typename InputType, typename OutputType>
+void explain_ternary_operation_one_output_error(
+    Operation op, const TernaryInput<InputType> &input, OutputType libc_result,
+    double ulp_tolerance, RoundingMode rounding) {
+  unsigned int precision = get_precision<InputType>(ulp_tolerance);
   MPFRNumber mpfrX(input.x, precision);
   MPFRNumber mpfrY(input.y, precision);
   MPFRNumber mpfrZ(input.z, precision);
-  FPBits<T> xbits(input.x);
-  FPBits<T> ybits(input.y);
-  FPBits<T> zbits(input.z);
+  FPBits<InputType> xbits(input.x);
+  FPBits<InputType> ybits(input.y);
+  FPBits<InputType> zbits(input.z);
   MPFRNumber mpfr_result = ternary_operation_one_output(
       op, input.x, input.y, input.z, precision, rounding);
   MPFRNumber mpfrMatchValue(libc_result);
 
   tlog << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str()
        << " z: " << mpfrZ.str() << '\n';
-  tlog << " First input bits: " << str(FPBits<T>(input.x)) << '\n';
-  tlog << "Second input bits: " << str(FPBits<T>(input.y)) << '\n';
-  tlog << " Third input bits: " << str(FPBits<T>(input.z)) << '\n';
+  tlog << " First input bits: " << str(FPBits<InputType>(input.x)) << '\n';
+  tlog << "Second input bits: " << str(FPBits<InputType>(input.y)) << '\n';
+  tlog << " Third input bits: " << str(FPBits<InputType>(input.z)) << '\n';
 
   tlog << "Libc result: " << mpfrMatchValue.str() << '\n'
        << "MPFR result: " << mpfr_result.str() << '\n';
-  tlog << "Libc floating point result bits: " << str(FPBits<T>(libc_result))
-       << '\n';
+  tlog << "Libc floating point result bits: "
+       << str(FPBits<OutputType>(libc_result)) << '\n';
   tlog << "              MPFR rounded bits: "
-       << str(FPBits<T>(mpfr_result.as<T>())) << '\n';
+       << str(FPBits<OutputType>(mpfr_result.as<OutputType>())) << '\n';
   tlog << "ULP error: " << mpfr_result.ulp_as_mpfr_number(libc_result).str()
        << '\n';
 }
 
-template void explain_ternary_operation_one_output_error<float>(
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, float, double, RoundingMode);
-template void explain_ternary_operation_one_output_error<double>(
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<double> &, double, double, RoundingMode);
-template void explain_ternary_operation_one_output_error<long double>(
-    Operation, const TernaryInput<long double> &, long double, double,
-    RoundingMode);
+template void
+explain_ternary_operation_one_output_error(Operation,
+                                           const TernaryInput<long double> &,
+                                           long double, double, RoundingMode);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<float> &, float16, double, RoundingMode);
+#endif
 
 template <typename InputType, typename OutputType>
 bool compare_unary_operation_single_output(Operation op, InputType input,
@@ -1069,12 +1072,13 @@ template bool compare_binary_operation_one_output<long double>(
     Operation, const BinaryInput<long double> &, long double, double,
     RoundingMode);
 
-template <typename T>
+template <typename InputType, typename OutputType>
 bool compare_ternary_operation_one_output(Operation op,
-                                          const TernaryInput<T> &input,
-                                          T libc_result, double ulp_tolerance,
+                                          const TernaryInput<InputType> &input,
+                                          OutputType libc_result,
+                                          double ulp_tolerance,
                                           RoundingMode rounding) {
-  unsigned int precision = get_precision<T>(ulp_tolerance);
+  unsigned int precision = get_precision<InputType>(ulp_tolerance);
   MPFRNumber mpfr_result = ternary_operation_one_output(
       op, input.x, input.y, input.z, precision, rounding);
   double ulp = mpfr_result.ulp(libc_result);
@@ -1082,13 +1086,23 @@ bool compare_ternary_operation_one_output(Operation op,
   return (ulp <= ulp_tolerance);
 }
 
-template bool compare_ternary_operation_one_output<float>(
-    Operation, const TernaryInput<float> &, float, double, RoundingMode);
-template bool compare_ternary_operation_one_output<double>(
-    Operation, const TernaryInput<double> &, double, double, RoundingMode);
-template bool compare_ternary_operation_one_output<long double>(
-    Operation, const TernaryInput<long double> &, long double, double,
-    RoundingMode);
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<float> &,
+                                                   float, double, RoundingMode);
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<double> &,
+                                                   double, double,
+                                                   RoundingMode);
+template bool
+compare_ternary_operation_one_output(Operation,
+                                     const TernaryInput<long double> &,
+                                     long double, double, RoundingMode);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<float> &,
+                                                   float16, double,
+                                                   RoundingMode);
+#endif
 
 } // namespace internal
 
