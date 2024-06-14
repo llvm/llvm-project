@@ -1906,3 +1906,10 @@ bool llvm::isGuaranteedNotToBeUndef(Register Reg,
   return ::isGuaranteedNotToBeUndefOrPoison(Reg, MRI, Depth,
                                             UndefPoisonKind::UndefOnly);
 }
+
+Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
+  if (Ty.isVector())
+    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                                Ty.getNumElements());
+  return IntegerType::get(C, Ty.getSizeInBits());
+}
