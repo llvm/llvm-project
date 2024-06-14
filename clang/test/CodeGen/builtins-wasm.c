@@ -690,6 +690,20 @@ f64x2 nmadd_f64x2(f64x2 a, f64x2 b, f64x2 c) {
   // WEBASSEMBLY-NEXT: ret
 }
 
+f16x8 madd_f16x8(f16x8 a, f16x8 b, f16x8 c) {
+  return __builtin_wasm_relaxed_madd_f16x8(a, b, c);
+  // WEBASSEMBLY: call <8 x half> @llvm.wasm.relaxed.madd.v8f16(
+  // WEBASSEMBLY-SAME: <8 x half> %a, <8 x half> %b, <8 x half> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
+f16x8 nmadd_f16x8(f16x8 a, f16x8 b, f16x8 c) {
+  return __builtin_wasm_relaxed_nmadd_f16x8(a, b, c);
+  // WEBASSEMBLY: call <8 x half> @llvm.wasm.relaxed.nmadd.v8f16(
+  // WEBASSEMBLY-SAME: <8 x half> %a, <8 x half> %b, <8 x half> %c)
+  // WEBASSEMBLY-NEXT: ret
+}
+
 i8x16 laneselect_i8x16(i8x16 a, i8x16 b, i8x16 c) {
   return __builtin_wasm_relaxed_laneselect_i8x16(a, b, c);
   // WEBASSEMBLY: call <16 x i8> @llvm.wasm.relaxed.laneselect.v16i8(
@@ -824,6 +838,30 @@ float extract_lane_f16x8(f16x8 a, int i) {
   // WEBASSEMBLY:  %0 = tail call float @llvm.wasm.extract.lane.f16x8(<8 x half> %a, i32 %i)
   // WEBASSEMBLY-NEXT: ret float %0
   return __builtin_wasm_extract_lane_f16x8(a, i);
+}
+
+f16x8 min_f16x8(f16x8 a, f16x8 b) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.minimum.v8f16(<8 x half> %a, <8 x half> %b)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_min_f16x8(a, b);
+}
+
+f16x8 max_f16x8(f16x8 a, f16x8 b) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.maximum.v8f16(<8 x half> %a, <8 x half> %b)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_max_f16x8(a, b);
+}
+
+f16x8 pmin_f16x8(f16x8 a, f16x8 b) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.wasm.pmin.v8f16(<8 x half> %a, <8 x half> %b)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_pmin_f16x8(a, b);
+}
+
+f16x8 pmax_f16x8(f16x8 a, f16x8 b) {
+  // WEBASSEMBLY:  %0 = tail call <8 x half> @llvm.wasm.pmax.v8f16(<8 x half> %a, <8 x half> %b)
+  // WEBASSEMBLY-NEXT: ret <8 x half> %0
+  return __builtin_wasm_pmax_f16x8(a, b);
 }
 __externref_t externref_null() {
   return __builtin_wasm_ref_null_extern();

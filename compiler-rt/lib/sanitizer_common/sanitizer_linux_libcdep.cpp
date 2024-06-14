@@ -54,6 +54,8 @@
 #    undef MAP_NORESERVE
 #    define MAP_NORESERVE 0
 extern const Elf_Auxinfo *__elf_aux_vector;
+extern "C" int __sys_sigaction(int signum, const struct sigaction *act,
+                               struct sigaction *oldact);
 #  endif
 
 #  if SANITIZER_NETBSD
@@ -93,12 +95,22 @@ SANITIZER_WEAK_ATTRIBUTE int real_sigaction(int signum, const void *act,
                                             void *oldact);
 
 int internal_sigaction(int signum, const void *act, void *oldact) {
-#  if !SANITIZER_GO
+#  if SANITIZER_FREEBSD
+  // On FreeBSD, call the sigaction syscall directly (part of libsys in FreeBSD
+  // 15) since the libc version goes via a global interposing table. Due to
+  // library initialization order the table can be relocated after the call to
+  // InitializeDeadlySignals() which then crashes when dereferencing the
+  // uninitialized pointer in libc.
+  return __sys_sigaction(signum, (const struct sigaction *)act,
+                         (struct sigaction *)oldact);
+#  else
+#    if !SANITIZER_GO
   if (&real_sigaction)
     return real_sigaction(signum, act, oldact);
-#  endif
+#    endif
   return sigaction(signum, (const struct sigaction *)act,
                    (struct sigaction *)oldact);
+#  endif
 }
 
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,

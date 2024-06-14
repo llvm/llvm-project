@@ -235,8 +235,9 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
 }
 
 void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
-                               StringRef FnAttr) {
-  KernelRoot->removeFnAttr(FnAttr);
+                               ArrayRef<StringRef> FnAttrs) {
+  for (StringRef Attr : FnAttrs)
+    KernelRoot->removeFnAttr(Attr);
 
   SmallVector<Function *> WorkList = {CG[KernelRoot]->getFunction()};
   SmallPtrSet<Function *, 8> Visited;
@@ -261,12 +262,15 @@ void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
             Function *PotentialCallee =
                 ExternalCallRecord.second->getFunction();
             assert(PotentialCallee);
-            if (!isKernelLDS(PotentialCallee))
-              PotentialCallee->removeFnAttr(FnAttr);
+            if (!isKernelLDS(PotentialCallee)) {
+              for (StringRef Attr : FnAttrs)
+                PotentialCallee->removeFnAttr(Attr);
+            }
           }
         }
       } else {
-        Callee->removeFnAttr(FnAttr);
+        for (StringRef Attr : FnAttrs)
+          Callee->removeFnAttr(Attr);
         if (Visited.insert(Callee).second)
           WorkList.push_back(Callee);
       }

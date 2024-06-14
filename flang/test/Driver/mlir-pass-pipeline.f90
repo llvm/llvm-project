@@ -80,6 +80,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: PolymorphicOpConversion
+! ALL-NEXT: AssumedRankOpConversion
 ! O2-NEXT:  AddAliasTags
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']

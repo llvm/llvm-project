@@ -1467,3 +1467,29 @@ namespace IgnoredCtorWithZeroInit {
     return (S(), true);
   }
 }
+
+#if __cplusplus >= 202002L
+namespace VirtOperator {
+  /// This used to crash because it's a virtual CXXOperatorCallExpr.
+  struct B {
+    virtual constexpr bool operator==(const B&) const { return true; }
+  };
+  struct D : B {
+    constexpr bool operator==(const B&) const override{ return false; } // both-note {{operator}}
+  };
+  constexpr bool cmp_base_derived = D() == D(); // both-warning {{ambiguous}}
+}
+
+namespace FloatAPValue {
+  struct ClassTemplateArg {
+    int a;
+    float f;
+  };
+  template<ClassTemplateArg A> struct ClassTemplateArgTemplate {
+    static constexpr const ClassTemplateArg &Arg = A;
+  };
+  ClassTemplateArgTemplate<ClassTemplateArg{1, 2.0f}> ClassTemplateArgObj;
+  template<const ClassTemplateArg&> struct ClassTemplateArgRefTemplate {};
+  ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
+}
+#endif

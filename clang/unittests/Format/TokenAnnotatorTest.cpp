@@ -493,6 +493,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   Tokens = annotate("template <typename T, enum E e> struct S {};");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[11], tok::l_brace, TT_StructLBrace);
+
+  auto Style = getLLVMStyle();
+  Style.AttributeMacros.push_back("EXPORT");
+  Tokens = annotate("struct EXPORT StructName {};", Style);
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[3], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[4], tok::r_brace, TT_StructRBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUnions) {
@@ -1488,12 +1496,82 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   auto Tokens = annotate("__asm{\n"
-                         "a:\n"
-                         "};");
-  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+                         "\"a\":\n"
+                         ": x\n"
+                         ":};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
   EXPECT_TOKEN(Tokens[1], tok::l_brace, TT_InlineASMBrace);
-  EXPECT_TOKEN(Tokens[4], tok::r_brace, TT_InlineASMBrace);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_InlineASMBrace);
+
+  Tokens = annotate("__asm(\n"
+                    "\"a\":\n"
+                    ": x\n"
+                    ":);");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
+
+  Tokens = annotate("asm volatile (\n"
+                    "\"a_label:\"\n"
+                    ":\n"
+                    ": x\n"
+                    ":);");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_InlineASMColon);
+
+  Tokens = annotate("__asm__(\n"
+                    "\"a_label:\"\n"
+                    ": x\n"
+                    ":\n"
+                    ": y);");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
+
+  Tokens = annotate("__asm volatile (\n"
+                    "\"a_label:\"\n"
+                    "\"a b c(%%x)\"\n"
+                    ":\n"
+                    ": x\n"
+                    ":);");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[8], tok::colon, TT_InlineASMColon);
+
+  Tokens = annotate("asm(\n"
+                    "\"insn\"\n"
+                    ": \"=r\" (var1), \"=&r\" (value)\n"
+                    ":\n"
+                    ": \"memory\");");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[13], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[14], tok::colon, TT_InlineASMColon);
+
+  Tokens = annotate("__asm__ volatile (\n"
+                    "\"ldr r1, [r0, %%[sym]]\"\n"
+                    ":\n"
+                    ": [sym] \"J\" (aaaaa(aaaa, aaaa))\n"
+                    ");");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[6], tok::l_square, TT_InlineASMSymbolicNameLSquare);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
@@ -1576,6 +1654,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[2], tok::arrow, TT_TrailingReturnArrow);
   EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("[] -> struct S { return {}; }");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[2], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("foo([&](u32 bar) __attribute__((attr)) -> void {});");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[15], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
 
   Tokens = annotate("[] <typename T> () {}");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
@@ -1988,11 +2078,11 @@ TEST_F(TokenAnnotatorTest, UnderstandHashInMacro) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
   // '__attribute__' has special handling.
-  auto Tokens = annotate("__attribute__(X) void Foo(void);");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  auto Tokens = annotate("__attribute__((X)) void Foo(void);");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw___attribute, TT_Unknown);
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_AttributeLParen);
-  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
 
   // Generic macro has no special handling in this location.
   Tokens = annotate("A(X) void Foo(void);");
@@ -2014,11 +2104,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacros) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCDecl) {
   // '__attribute__' has special handling.
-  auto Tokens = annotate("__attribute__(X) @interface Foo");
-  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  auto Tokens = annotate("__attribute__((X)) @interface Foo");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw___attribute, TT_Unknown);
   EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_AttributeLParen);
-  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
 
   // Generic macro has no special handling in this location.
   Tokens = annotate("A(X) @interface Foo");
@@ -2042,11 +2132,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCDecl) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCMethodDecl) {
   // '__attribute__' has special handling.
-  auto Tokens = annotate("- (id)init __attribute__(X);");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  auto Tokens = annotate("- (id)init __attribute__((X));");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::kw___attribute, TT_Unknown);
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_AttributeLParen);
-  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_AttributeRParen);
 
   // Generic macro has no special handling in this location.
   Tokens = annotate("- (id)init A(X);");
@@ -2070,11 +2160,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCMethodDecl) {
 
 TEST_F(TokenAnnotatorTest, UnderstandsAttributeMacrosOnObjCProperty) {
   // '__attribute__' has special handling.
-  auto Tokens = annotate("@property(weak) id delegate __attribute__(X);");
-  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  auto Tokens = annotate("@property(weak) id delegate __attribute__((X));");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[7], tok::kw___attribute, TT_Unknown);
   EXPECT_TOKEN(Tokens[8], tok::l_paren, TT_AttributeLParen);
-  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_AttributeRParen);
+  EXPECT_TOKEN(Tokens[12], tok::r_paren, TT_AttributeRParen);
 
   // Generic macro has no special handling in this location.
   Tokens = annotate("@property(weak) id delegate A(X);");
@@ -2913,6 +3003,11 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[5], BK_Block);
   EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+
+  Tokens = annotate("struct Foo<int>::Bar {};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[7], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[8], BK_Block);
 
   Tokens = annotate("struct Foo<int> : Base {};");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;

@@ -50,7 +50,10 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/SemaSwift.h"
+#include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
@@ -538,8 +541,9 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   } else if (AllowDeducedTemplate) {
     if (auto *TD = getAsTypeTemplateDecl(IIDecl)) {
       assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
-      TemplateName Template =
-          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
+      TemplateName Template = Context.getQualifiedTemplateName(
+          SS ? SS->getScopeRep() : nullptr, /*TemplateKeyword=*/false,
+          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
       T = Context.getDeducedTemplateSpecializationType(Template, QualType(),
                                                        false);
       // Don't wrap in a further UsingType.
@@ -1137,12 +1141,10 @@ Corrected:
           dyn_cast<UsingShadowDecl>(*Result.begin());
       assert(!FoundUsingShadow ||
              TD == cast<TemplateDecl>(FoundUsingShadow->getTargetDecl()));
-      Template =
-          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD);
-      if (SS.isNotEmpty())
-        Template = Context.getQualifiedTemplateName(SS.getScopeRep(),
-                                                    /*TemplateKeyword=*/false,
-                                                    Template);
+      Template = Context.getQualifiedTemplateName(
+          SS.getScopeRep(),
+          /*TemplateKeyword=*/false,
+          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
     } else {
       // All results were non-template functions. This is a function template
       // name.
@@ -1491,7 +1493,7 @@ void Sema::ActOnExitFunctionContext() {
 ///
 /// This routine determines whether overloading is possible, not
 /// whether a new declaration actually overloads a previous one.
-/// It will return true in C++ (where overloads are alway permitted)
+/// It will return true in C++ (where overloads are always permitted)
 /// or, as a C extension, when either the new declaration or a
 /// previous one is declared with the 'overloadable' attribute.
 static bool AllowOverloadingOfFunction(const LookupResult &Previous,
@@ -2283,9 +2285,14 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
     if (LabelDecl *LD = dyn_cast<LabelDecl>(D))
       CheckPoppedLabel(LD, *this, addDiag);
 
-    // Remove this name from our lexical scope, and warn on it if we haven't
-    // already.
-    IdResolver.RemoveDecl(D);
+    // Partial translation units that are created in incremental processing must
+    // not clean up the IdResolver because PTUs should take into account the
+    // declarations that came from previous PTUs.
+    if (!PP.isIncrementalProcessingEnabled() || getLangOpts().ObjC ||
+        getLangOpts().CPlusPlus)
+      IdResolver.RemoveDecl(D);
+
+    // Warn on it if we are shadowing a declaration.
     auto ShadowI = ShadowingDecls.find(D);
     if (ShadowI != ShadowingDecls.end()) {
       if (const auto *FD = dyn_cast<FieldDecl>(ShadowI->second)) {
@@ -2913,7 +2920,7 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   } else if (const auto *MA = dyn_cast<MinSizeAttr>(Attr))
     NewAttr = S.mergeMinSizeAttr(D, *MA);
   else if (const auto *SNA = dyn_cast<SwiftNameAttr>(Attr))
-    NewAttr = S.mergeSwiftNameAttr(D, *SNA, SNA->getName());
+    NewAttr = S.Swift().mergeNameAttr(D, *SNA, SNA->getName());
   else if (const auto *OA = dyn_cast<OptimizeNoneAttr>(Attr))
     NewAttr = S.mergeOptimizeNoneAttr(D, *OA);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
@@ -2930,9 +2937,9 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
   else if (const auto *UA = dyn_cast<UuidAttr>(Attr))
     NewAttr = S.mergeUuidAttr(D, *UA, UA->getGuid(), UA->getGuidDecl());
   else if (const auto *IMA = dyn_cast<WebAssemblyImportModuleAttr>(Attr))
-    NewAttr = S.mergeImportModuleAttr(D, *IMA);
+    NewAttr = S.Wasm().mergeImportModuleAttr(D, *IMA);
   else if (const auto *INA = dyn_cast<WebAssemblyImportNameAttr>(Attr))
-    NewAttr = S.mergeImportNameAttr(D, *INA);
+    NewAttr = S.Wasm().mergeImportNameAttr(D, *INA);
   else if (const auto *TCBA = dyn_cast<EnforceTCBAttr>(Attr))
     NewAttr = S.mergeEnforceTCBAttr(D, *TCBA);
   else if (const auto *TCBLA = dyn_cast<EnforceTCBLeafAttr>(Attr))
@@ -4140,7 +4147,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
     // If we are merging two functions where only one of them has a prototype,
     // we may have enough information to decide to issue a diagnostic that the
-    // function without a protoype will change behavior in C23. This handles
+    // function without a prototype will change behavior in C23. This handles
     // cases like:
     //   void i(); void i(int j);
     //   void i(int j); void i();
@@ -8896,7 +8903,7 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // PPC MMA non-pointer types are not allowed as non-local variable types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
       !NewVD->isLocalVarDecl() &&
-      CheckPPCMMAType(T, NewVD->getLocation())) {
+      PPC().CheckPPCMMAType(T, NewVD->getLocation())) {
     NewVD->setInvalidDecl();
     return;
   }
@@ -10243,7 +10250,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // check at the end of the TU (or when the PMF starts) to see that we
     // have a definition at that point.
     if (isInline && !D.isFunctionDefinition() && getLangOpts().CPlusPlus20 &&
-        NewFD->hasOwningModule() && NewFD->getOwningModule()->isNamedModule()) {
+        NewFD->isInNamedModule()) {
       PendingInlineFuncDecls.insert(NewFD);
     }
   }
@@ -10546,7 +10553,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (getLangOpts().CUDA && !isFunctionTemplateSpecialization)
       CUDA().maybeAddHostDeviceAttrs(NewFD, Previous);
 
-    // Handle explict specializations of function templates
+    // Handle explicit specializations of function templates
     // and friend function declarations with an explicit
     // template argument list.
     if (isFunctionTemplateSpecialization) {
@@ -12057,7 +12064,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
   // PPC MMA non-pointer types are not allowed as function return types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
-      CheckPPCMMAType(NewFD->getReturnType(), NewFD->getLocation())) {
+      PPC().CheckPPCMMAType(NewFD->getReturnType(), NewFD->getLocation())) {
     NewFD->setInvalidDecl();
   }
 
@@ -12594,7 +12601,7 @@ void Sema::CheckMSVCRTEntryPoint(FunctionDecl *FD) {
     if (FD->getName() != "DllMain")
       FD->setHasImplicitReturnZero(true);
 
-  // Explicity specified calling conventions are applied to MSVC entry points
+  // Explicitly specified calling conventions are applied to MSVC entry points
   if (!hasExplicitCallingConv(T)) {
     if (isDefaultStdCall(FD, *this)) {
       if (FT->getCallConv() != CC_X86StdCall) {
@@ -13667,12 +13674,12 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
           CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), Args);
       if (RecoveryExpr.get())
         VDecl->setInit(RecoveryExpr.get());
-      // In general, for error recovery purposes, the initalizer doesn't play
+      // In general, for error recovery purposes, the initializer doesn't play
       // part in the valid bit of the declaration. There are a few exceptions:
       //  1) if the var decl has a deduced auto type, and the type cannot be
       //     deduced by an invalid initializer;
-      //  2) if the var decl is decompsition decl with a non-deduced type, and
-      //     the initialization fails (e.g. `int [a] = {1, 2};`);
+      //  2) if the var decl is a decomposition decl with a non-deduced type,
+      //      and the initialization fails (e.g. `int [a] = {1, 2};`);
       // Case 1) was already handled elsewhere.
       if (isa<DecompositionDecl>(VDecl)) // Case 2)
         VDecl->setInvalidDecl();
@@ -13890,9 +13897,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     }
   } else if (VDecl->isFileVarDecl()) {
     // In C, extern is typically used to avoid tentative definitions when
-    // declaring variables in headers, but adding an intializer makes it a
+    // declaring variables in headers, but adding an initializer makes it a
     // definition. This is somewhat confusing, so GCC and Clang both warn on it.
-    // In C++, extern is often used to give implictly static const variables
+    // In C++, extern is often used to give implicitly static const variables
     // external linkage, so don't warn in that case. If selectany is present,
     // this might be header code intended for C and C++ inclusion, so apply the
     // C++ rules.
@@ -14086,7 +14093,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
           return;
         }
       }
-      // The declaration is unitialized, no need for further checks.
+      // The declaration is uninitialized, no need for further checks.
       return;
     }
 
@@ -15349,7 +15356,7 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
 
   // PPC MMA non-pointer types are not allowed as function argument types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
-      CheckPPCMMAType(New->getOriginalType(), New->getLocation())) {
+      PPC().CheckPPCMMAType(New->getOriginalType(), New->getLocation())) {
     New->setInvalidDecl();
   }
 
@@ -16317,7 +16324,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         FSI->ObjCWarnForNoDesignatedInitChain = false;
       }
       if (FSI->ObjCWarnForNoInitDelegation) {
-        // Don't issue this warning for unavaialable inits.
+        // Don't issue this warning for unavailable inits.
         if (!MD->isUnavailable())
           Diag(MD->getLocation(),
                diag::warn_objc_secondary_init_missing_init_call);
@@ -17869,7 +17876,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                   SkipBody->Previous = Def;
                   makeMergedDefinitionVisible(Hidden);
                   // Carry on and handle it like a normal definition. We'll
-                  // skip starting the definitiion later.
+                  // skip starting the definition later.
                 }
               } else if (!IsExplicitSpecializationAfterInstantiation) {
                 // A redeclaration in function prototype scope in C isn't
@@ -18764,7 +18771,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
 
   // PPC MMA non-pointer types are not allowed as field types.
   if (Context.getTargetInfo().getTriple().isPPC64() &&
-      CheckPPCMMAType(T, NewFD->getLocation()))
+      PPC().CheckPPCMMAType(T, NewFD->getLocation()))
     NewFD->setInvalidDecl();
 
   NewFD->setAccess(AS);
@@ -20468,7 +20475,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
   } else if (LangOpts.OpenMP > 45) {
     // In OpenMP host compilation prior to 5.0 everything was an emitted host
     // function. In 5.0, no_host was introduced which might cause a function to
-    // be ommitted.
+    // be omitted.
     std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
         OMPDeclareTargetDeclAttr::getDeviceType(FD->getCanonicalDecl());
     if (DevTy)

@@ -100,7 +100,6 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; DEFAULT:       middle.block:
 ; DEFAULT-NEXT:    [[BIN_RDX:%.*]] = or <vscale x 4 x i32> [[TMP58]], [[TMP57]]
 ; DEFAULT-NEXT:    [[TMP60:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[BIN_RDX]])
-; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    [[TMP61:%.*]] = call i32 @llvm.vscale.i32()
 ; DEFAULT-NEXT:    [[TMP62:%.*]] = mul i32 [[TMP61]], 4
 ; DEFAULT-NEXT:    [[TMP63:%.*]] = sub i32 [[TMP62]], 1
@@ -109,6 +108,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; DEFAULT-NEXT:    [[TMP65:%.*]] = mul i32 [[TMP64]], 4
 ; DEFAULT-NEXT:    [[TMP66:%.*]] = sub i32 [[TMP65]], 1
 ; DEFAULT-NEXT:    [[VECTOR_RECUR_EXTRACT13:%.*]] = extractelement <vscale x 4 x i32> [[TMP20]], i32 [[TMP66]]
+; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; DEFAULT:       scalar.ph:
 ; DEFAULT-NEXT:    [[SCALAR_RECUR_INIT14:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT13]], [[MIDDLE_BLOCK]] ]
@@ -159,9 +159,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; PRED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 4
-; PRED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
+; PRED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP2]], 1
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP5]]
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP2]]
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -391,9 +389,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 8
-; PRED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 8
-; PRED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
+; PRED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP2]], 1
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP5]]
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP2]]
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

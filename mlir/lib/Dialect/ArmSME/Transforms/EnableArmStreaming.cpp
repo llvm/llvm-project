@@ -58,17 +58,25 @@ constexpr StringLiteral
 struct EnableArmStreamingPass
     : public arm_sme::impl::EnableArmStreamingBase<EnableArmStreamingPass> {
   EnableArmStreamingPass(ArmStreamingMode streamingMode, ArmZaMode zaMode,
-                         bool onlyIfRequiredByOps) {
+                         bool ifRequiredByOps, bool ifContainsScalableVectors) {
     this->streamingMode = streamingMode;
     this->zaMode = zaMode;
-    this->onlyIfRequiredByOps = onlyIfRequiredByOps;
+    this->ifRequiredByOps = ifRequiredByOps;
+    this->ifContainsScalableVectors = ifContainsScalableVectors;
   }
   void runOnOperation() override {
-    auto op = getOperation();
+    auto function = getOperation();
 
-    if (onlyIfRequiredByOps) {
+    if (ifRequiredByOps && ifContainsScalableVectors) {
+      function->emitOpError(
+          "enable-arm-streaming: `if-required-by-ops` and "
+          "`if-contains-scalable-vectors` are mutually exclusive");
+      return signalPassFailure();
+    }
+
+    if (ifRequiredByOps) {
       bool foundTileOp = false;
-      op.walk([&](Operation *op) {
+      function.walk([&](Operation *op) {
         if (llvm::isa<ArmSMETileOpInterface>(op)) {
           foundTileOp = true;
           return WalkResult::interrupt();
@@ -79,27 +87,46 @@ struct EnableArmStreamingPass
         return;
     }
 
-    if (op->getAttr(kEnableArmStreamingIgnoreAttr) ||
+    if (ifContainsScalableVectors) {
+      bool foundScalableVector = false;
+      auto isScalableVector = [&](Type type) {
+        if (auto vectorType = dyn_cast<VectorType>(type))
+          return vectorType.isScalable();
+        return false;
+      };
+      function.walk([&](Operation *op) {
+        if (llvm::any_of(op->getOperandTypes(), isScalableVector) ||
+            llvm::any_of(op->getResultTypes(), isScalableVector)) {
+          foundScalableVector = true;
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
+      if (!foundScalableVector)
+        return;
+    }
+
+    if (function->getAttr(kEnableArmStreamingIgnoreAttr) ||
         streamingMode == ArmStreamingMode::Disabled)
       return;
 
     auto unitAttr = UnitAttr::get(&getContext());
 
-    op->setAttr(stringifyArmStreamingMode(streamingMode), unitAttr);
+    function->setAttr(stringifyArmStreamingMode(streamingMode), unitAttr);
 
     // The pass currently only supports enabling ZA when in streaming-mode, but
     // ZA can be accessed by the SME LDR, STR and ZERO instructions when not in
     // streaming-mode (see section B1.1.1, IDGNQM of spec [1]). It may be worth
     // supporting this later.
     if (zaMode != ArmZaMode::Disabled)
-      op->setAttr(stringifyArmZaMode(zaMode), unitAttr);
+      function->setAttr(stringifyArmZaMode(zaMode), unitAttr);
   }
 };
 } // namespace
 
 std::unique_ptr<Pass> mlir::arm_sme::createEnableArmStreamingPass(
     const ArmStreamingMode streamingMode, const ArmZaMode zaMode,
-    bool onlyIfRequiredByOps) {
-  return std::make_unique<EnableArmStreamingPass>(streamingMode, zaMode,
-                                                  onlyIfRequiredByOps);
+    bool ifRequiredByOps, bool ifContainsScalableVectors) {
+  return std::make_unique<EnableArmStreamingPass>(
+      streamingMode, zaMode, ifRequiredByOps, ifContainsScalableVectors);
 }

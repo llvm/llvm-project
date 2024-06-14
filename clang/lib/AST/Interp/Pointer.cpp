@@ -13,6 +13,7 @@
 #include "Function.h"
 #include "Integral.h"
 #include "InterpBlock.h"
+#include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
 
@@ -63,26 +64,27 @@ Pointer::~Pointer() {
 }
 
 void Pointer::operator=(const Pointer &P) {
-  if (!this->isIntegralPointer() || !P.isBlockPointer())
-    assert(P.StorageKind == StorageKind || (this->isZero() && P.isZero()));
-
+  // If the current storage type is Block, we need to remove
+  // this pointer from the block.
   bool WasBlockPointer = isBlockPointer();
-  StorageKind = P.StorageKind;
   if (StorageKind == Storage::Block) {
     Block *Old = PointeeStorage.BS.Pointee;
-    if (WasBlockPointer && PointeeStorage.BS.Pointee)
+    if (WasBlockPointer && Old) {
       PointeeStorage.BS.Pointee->removePointer(this);
+      Old->cleanup();
+    }
+  }
 
-    Offset = P.Offset;
+  StorageKind = P.StorageKind;
+  Offset = P.Offset;
+
+  if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
+    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
-
-    if (WasBlockPointer && Old)
-      Old->cleanup();
-
-  } else if (StorageKind == Storage::Int) {
+  } else if (P.isIntegralPointer()) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else {
     assert(false && "Unhandled storage kind");
@@ -90,26 +92,27 @@ void Pointer::operator=(const Pointer &P) {
 }
 
 void Pointer::operator=(Pointer &&P) {
-  if (!this->isIntegralPointer() || !P.isBlockPointer())
-    assert(P.StorageKind == StorageKind || (this->isZero() && P.isZero()));
-
+  // If the current storage type is Block, we need to remove
+  // this pointer from the block.
   bool WasBlockPointer = isBlockPointer();
-  StorageKind = P.StorageKind;
   if (StorageKind == Storage::Block) {
     Block *Old = PointeeStorage.BS.Pointee;
-    if (WasBlockPointer && PointeeStorage.BS.Pointee)
+    if (WasBlockPointer && Old) {
       PointeeStorage.BS.Pointee->removePointer(this);
+      Old->cleanup();
+    }
+  }
 
-    Offset = P.Offset;
+  StorageKind = P.StorageKind;
+  Offset = P.Offset;
+
+  if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
+    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
-
-    if (WasBlockPointer && Old)
-      Old->cleanup();
-
-  } else if (StorageKind == Storage::Int) {
+  } else if (P.isIntegralPointer()) {
     PointeeStorage.Int = P.PointeeStorage.Int;
   } else {
     assert(false && "Unhandled storage kind");

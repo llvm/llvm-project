@@ -172,6 +172,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCCMP = false;
   bool HasNF = false;
   bool HasCF = false;
+  bool HasInlineAsmUseGPR32 = false;
 
 protected:
   llvm::X86::CPUKind CPU = llvm::X86::CK_None;

@@ -5873,10 +5873,8 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
 std::optional<outliner::OutlinedFunction>
 ARMBaseInstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
-
   unsigned SequenceSize = 0;
-  for (auto &MI : FirstCand)
+  for (auto &MI : RepeatedSequenceLocs[0])
     SequenceSize += getInstSizeInBytes(MI);
 
   // Properties about candidate MBBs that hold for all of them.
@@ -6062,6 +6060,8 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
         RepeatedSequenceLocs.size() * Costs.CallDefault) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
+      if (RepeatedSequenceLocs.size() < 2)
+        return std::nullopt;
     } else
       SetCandidateCallInfo(MachineOutlinerDefault, Costs.CallDefault);
   }
@@ -6071,6 +6071,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
     // check if the range contains a call.  These require a save + restore of
     // the link register.
+    outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
     if (std::any_of(FirstCand.begin(), std::prev(FirstCand.end()),
                     [](const MachineInstr &MI) { return MI.isCall(); }))
       NumBytesToCreateFrame += Costs.SaveRestoreLROnStack;

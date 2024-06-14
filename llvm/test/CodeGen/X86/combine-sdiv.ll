@@ -58,8 +58,8 @@ define i32 @combine_sdiv_by_minsigned(i32 %x) {
 ; CHECK-LABEL: combine_sdiv_by_minsigned:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $-2147483648, %edi # imm = 0x80000000
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    seto %al
 ; CHECK-NEXT:    retq
   %1 = sdiv i32 %x, -2147483648
   ret i32 %1

@@ -80,6 +80,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 // PASSES-NEXT: PolymorphicOpConversion
+// PASSES-NEXT: AssumedRankOpConversion
 // PASSES-NEXT: AddAliasTags
 
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']

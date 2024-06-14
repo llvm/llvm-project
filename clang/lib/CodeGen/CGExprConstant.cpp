@@ -715,7 +715,7 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
     const Expr *Init = nullptr;
     if (ElementNo < ILE->getNumInits())
       Init = ILE->getInit(ElementNo++);
-    if (Init && isa<NoInitExpr>(Init))
+    if (isa_and_nonnull<NoInitExpr>(Init))
       continue;
 
     // Zero-sized fields are not emitted, but their initializers may still

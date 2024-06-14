@@ -48,10 +48,10 @@ define dso_local void @add512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 define dso_local void @avg_v64i8_256(ptr %a, ptr %b) "min-legal-vector-width"="256" {
 ; CHECK-LABEL: avg_v64i8_256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa (%rsi), %ymm0
-; CHECK-NEXT:    vmovdqa 32(%rsi), %ymm1
-; CHECK-NEXT:    vpavgb (%rdi), %ymm0, %ymm0
-; CHECK-NEXT:    vpavgb 32(%rdi), %ymm1, %ymm1
+; CHECK-NEXT:    vmovdqa (%rdi), %ymm0
+; CHECK-NEXT:    vmovdqa 32(%rdi), %ymm1
+; CHECK-NEXT:    vpavgb (%rsi), %ymm0, %ymm0
+; CHECK-NEXT:    vpavgb 32(%rsi), %ymm1, %ymm1
 ; CHECK-NEXT:    vmovdqu %ymm1, (%rax)
 ; CHECK-NEXT:    vmovdqu %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
