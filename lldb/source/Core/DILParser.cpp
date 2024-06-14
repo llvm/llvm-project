@@ -2678,7 +2678,8 @@ ParseResult DILParser::ParseFloatingLiteral(
                                          ? llvm::APFloat::IEEEsingle()
                                          : llvm::APFloat::IEEEdouble();
   llvm::APFloat raw_value(format);
-  llvm::APFloat::opStatus result = literal.GetFloatValue(raw_value);
+  llvm::RoundingMode rm = llvm::RoundingMode::NearestTiesToEven;
+  llvm::APFloat::opStatus result = literal.GetFloatValue(raw_value, rm);
 
   // Overflow is always an error, but underflow is only an error if we
   // underflowed to zero (APFloat reports denormals as underflow).
@@ -3026,9 +3027,8 @@ ParseResult DILParser::BuildCxxStaticCastToEnum(CompilerType type, ParseResult r
                                              /*is_rvalue*/ true);
 }
 
-ParseResult DILParser::BuildCxxStaticCastToPointer(CompilerType type,
-                                                  ParseResult rhs,
-                                                  clang::SourceLocation location)
+ParseResult DILParser::BuildCxxStaticCastToPointer(
+    CompilerType type, ParseResult rhs, clang::SourceLocation location)
 {
   CompilerType bad_type;
   auto rhs_type = rhs->result_type_deref();
@@ -3145,7 +3145,8 @@ ParseResult DILParser::BuildCxxStaticCastForInheritedTypes(
     // At this point `idx` represents indices of direct base classes on path
     // from the `rhs` type to the target `type`.
     return std::make_unique<CxxStaticCastNode>(location, type, std::move(rhs),
-                                               std::move(idx), is_rvalue);
+                                               llvm::ArrayRef(std::move(idx)),
+                                               is_rvalue);
   }
 
   // Handle base-to-derived conversion.
@@ -3216,6 +3217,19 @@ ParseResult DILParser::BuildCxxReinterpretCast(CompilerType type, ParseResult rh
                 location);
         return std::make_unique<DILErrorNode>(bad_type);
       }
+    } else if (type.IsTypedefType() || rhs_type.IsTypedefType()) {
+      CompilerType base_type = type.IsTypedefType() ? type.GetTypedefedType()
+                               :  type;
+      CompilerType rhs_base_type = rhs_type.IsTypedefType() ?
+                                   rhs_type.GetTypedefedType() : rhs_type;
+      if (!base_type.CompareTypes(rhs_base_type)) {
+        // Integral type can be converted to its own type.
+        BailOut(ErrorCode::kInvalidOperandType,
+                llvm::formatv("reinterpret_cast from {0} to {1} is not allowed",
+                              rhs_type.TypeDescription(), type.TypeDescription()),
+                location);
+        return std::make_unique<DILErrorNode>(bad_type);
+      }
     } else if (!type.CompareTypes(rhs_type)) {
       // Integral type can be converted to its own type.
       BailOut(ErrorCode::kInvalidOperandType,
@@ -3226,7 +3240,11 @@ ParseResult DILParser::BuildCxxReinterpretCast(CompilerType type, ParseResult rh
     }
   } else if (type.IsEnumerationType()) {
     // Enumeration type can be converted to its own type.
-    if (!type.CompareTypes(rhs_type)) {
+    CompilerType base_type = type.IsTypedefType() ? type.GetTypedefedType()
+                             :  type;
+    CompilerType rhs_base_type = rhs_type.IsTypedefType() ?
+                                 rhs_type.GetTypedefedType() : rhs_type;
+    if (!base_type.CompareTypes(rhs_base_type)) {
       BailOut(ErrorCode::kInvalidOperandType,
               llvm::formatv("reinterpret_cast from {0} to {1} is not allowed",
                             rhs_type.TypeDescription(), type.TypeDescription()),

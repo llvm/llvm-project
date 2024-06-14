@@ -42,193 +42,9 @@ bool Compare(BinaryOpKind kind, const T& l, const T& r) {
   }
 }
 
-/*
-static lldb::ValueObjectSP CreateValueObjectFromBytes (lldb::TargetSP target_sp,
-                                                 const void* bytes,
-                                                 CompilerType type) {
-  ExecutionContext exe_ctx(
-      ExecutionContextRef(ExecutionContext(target_sp.get(), false)));
-  uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target_sp.get()))
-    byte_size = temp.value();
-  lldb::DataExtractorSP data_sp =
-      std::make_shared<DataExtractor> (
-          bytes, byte_size,
-          target_sp->GetArchitecture().GetByteOrder(),
-          static_cast<uint8_t>(
-              target_sp->GetArchitecture().GetAddressByteSize()));
-  lldb::ValueObjectSP value =
-      ValueObject::CreateValueObjectFromData("result", *data_sp, exe_ctx,
-                                             type);
-  return value;
-
-}
-
-static lldb::ValueObjectSP CreateValueObjectFromBytes (lldb::TargetSP target,
-                                                 const void* bytes,
-                                                 lldb::BasicType type) {
-  CompilerType target_type;
-  if (target) {
-    for (auto type_system_sp : target->GetScratchTypeSystems())
-      if (auto compiler_type = type_system_sp->GetBasicTypeFromAST(type)) {
-        target_type = compiler_type;
-        break;
-      }
-  }
-  return CreateValueObjectFromBytes(target, bytes, target_type);
-}
-
-static lldb::ValueObjectSP CreateValueObjectFromAPInt (lldb::TargetSP target,
-                                                 const llvm::APInt &v,
-                                                 CompilerType type) {
-  return CreateValueObjectFromBytes(target, v.getRawData(), type);
-}
-
-static lldb::ValueObjectSP CreateValueObjectFromAPFloat (lldb::TargetSP target,
-                                                   const llvm::APFloat& v,
-                                                   CompilerType type) {
-  return CreateValueObjectFromAPInt(target, v.bitcastToAPInt(), type);
-}
-
-static lldb::ValueObjectSP CreateValueObjectFromPointer (lldb::TargetSP target,
-                                                uintptr_t addr,
-                                                CompilerType type) {
-  return CreateValueObjectFromBytes(target, &addr, type);
-}
-
-static lldb::ValueObjectSP CreateValueObjectFromBool (lldb::TargetSP target,
-                                                bool value) {
-  return CreateValueObjectFromBytes(target, &value, lldb::eBasicTypeBool);
-}
-
-
-static lldb::ValueObjectSP CreateValueObjectFromNullptr(lldb::TargetSP target,
-                                                  CompilerType type) {
-  assert(type.IsNullPtrType() && "target type must be nullptr");
-  uintptr_t zero = 0;
-  return CreateValueObjectFromBytes(target, &zero, type);
-}
-*/
-/*
-static llvm::APFloat CreateAPFloatFromAPSInt(const llvm::APSInt& value,
-                                             lldb::BasicType basic_type) {
-  switch (basic_type) {
-    case lldb::eBasicTypeFloat:
-      return llvm::APFloat(value.isSigned()
-                               ? llvm::APIntOps::RoundSignedAPIntToFloat(value)
-                               : llvm::APIntOps::RoundAPIntToFloat(value));
-    case lldb::eBasicTypeDouble:
-      // No way to get more precision at the moment.
-    case lldb::eBasicTypeLongDouble:
-      return llvm::APFloat(value.isSigned()
-                               ? llvm::APIntOps::RoundSignedAPIntToDouble(value)
-                               : llvm::APIntOps::RoundAPIntToDouble(value));
-    default:
-      return llvm::APFloat(NAN);
-  }
-}
-
-static llvm::APFloat CreateAPFloatFromAPFloat(llvm::APFloat value,
-                                              lldb::BasicType basic_type) {
-  switch (basic_type) {
-    case lldb::eBasicTypeFloat: {
-      bool loses_info;
-      value.convert(llvm::APFloat::IEEEsingle(),
-                    llvm::APFloat::rmNearestTiesToEven, &loses_info);
-      return value;
-    }
-    case lldb::eBasicTypeDouble:
-      // No way to get more precision at the moment.
-    case lldb::eBasicTypeLongDouble: {
-      bool loses_info;
-      value.convert(llvm::APFloat::IEEEdouble(),
-                    llvm::APFloat::rmNearestTiesToEven, &loses_info);
-      return value;
-    }
-    default:
-      return llvm::APFloat(NAN);
-  }
-}
-*/
-/*
-static uint64_t GetByteSize(CompilerType type, lldb::TargetSP target) {
-  //ExecutionContext exe_ctx(
-  //    ExecutionContextRef(ExecutionContext(target.get(), false)));
-  uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
-    byte_size = temp.value();
-
-  return byte_size;
-}
-*/
-
-/*
-static llvm::APSInt GetInteger(lldb::ValueObjectSP value_sp)
-{
-  lldb::TargetSP target = value_sp->GetTargetSP();
-  uint64_t byte_size = 0;
-  if (auto temp = value_sp->GetCompilerType().GetByteSize(target.get()))
-    byte_size = temp.value();
-
-  unsigned bit_width = static_cast<unsigned>(byte_size * CHAR_BIT);
-  lldb::ValueObjectSP value(DILGetSPWithLock(value_sp));
-  bool success = true;
-  uint64_t fail_value = 0;
-  uint64_t ret_val = value->GetValueAsUnsigned(fail_value, &success);
-  uint64_t new_value = fail_value;
-  if (success)
-    new_value = ret_val;
-  bool is_signed = value->GetCompilerType().IsSigned();
-
-  return llvm::APSInt(llvm::APInt(bit_width, new_value, is_signed), !is_signed);
-}
-*/
-
-/*
-static llvm::APFloat GetFloat(lldb::ValueObjectSP value) {
-  lldb::BasicType basic_type =
-      value->GetCompilerType().GetCanonicalType().GetBasicTypeEnumeration();
-  lldb::DataExtractorSP data_sp(new DataExtractor());
-  Status error;
-
-  switch (basic_type) {
-    case lldb::eBasicTypeFloat: {
-      float v = 0;
-      value->GetData(*data_sp, error);
-      assert (error.Success() && "Unable to read float data from value");
-
-      lldb::offset_t offset = 0;
-      uint32_t old_offset = offset;
-      void *ok = nullptr;
-      ok = data_sp->GetU8(&offset, (void *) &v, sizeof(float));
-      assert(offset != old_offset && ok != nullptr && "unable to read data");
-
-      return llvm::APFloat(v);
-    }
-    case lldb::eBasicTypeDouble:
-      // No way to get more precision at the moment.
-    case lldb::eBasicTypeLongDouble: {
-      double v = 0;
-      value->GetData(*data_sp, error);
-      assert (error.Success() && "Unable to read long double data from value");
-
-      lldb::offset_t offset = 0;
-      uint32_t old_offset = offset;
-      void *ok = nullptr;
-      ok = data_sp->GetU8(&offset, (void *) &v, sizeof(double));
-      assert(offset != old_offset && ok != nullptr && "unable to read data");
-
-      return llvm::APFloat(v);
-    }
-    default:
-      return llvm::APFloat(NAN);
-  }
-}
-*/
-
-/*
 static uint64_t GetUInt64(lldb::ValueObjectSP value_sp) {
-  // GetValueAsUnsigned performs overflow according to the underlying type. For
+  // GetValueAsUnsigned performs overflow according to the underlying type. Fo\
+r
   // example, if the underlying type is `int32_t` and the value is `-1`,
   // GetValueAsUnsigned will return 4294967295.
   lldb::ValueObjectSP value(DILGetSPWithLock(value_sp));
@@ -236,95 +52,6 @@ static uint64_t GetUInt64(lldb::ValueObjectSP value_sp) {
       ? value->GetValueAsSigned(0)
       : value->GetValueAsUnsigned(0);
 }
-*/
-
-/*
-static bool GetBool(lldb::ValueObjectSP value) {
-  CompilerType val_type = value->GetCompilerType();
-  if (val_type.IsInteger() || val_type.IsUnscopedEnumerationType() ||
-      val_type.IsPointerType()) {
-    return GetInteger(value).getBoolValue();
-  }
-  if (val_type.IsFloat()) {
-    return GetFloat(value).isNonZero();
-  }
-  if (val_type.IsArrayType()) {
-    lldb::ValueObjectSP value_sp(DILGetSPWithLock(value));
-    lldb::ValueObjectSP new_val =
-        ValueObject::ValueObject::CreateValueObjectFromAddress(
-            value_sp->GetName().GetStringRef(),
-            value_sp->GetAddressOf(),
-            value_sp->GetExecutionContextRef(),
-            val_type);
-    //return GetUInt64(new_val) != 0;
-    return new_val->GetValueAsUnsigned(0) != 0;
-  }
-  return false;
-}
-*/
-
-/*
-static lldb::ValueObjectSP Clone(lldb::ValueObjectSP val) {
-  lldb::DataExtractorSP data_sp(new DataExtractor());
-  Status error;
-  val->GetData(*data_sp, error);
-  if (error.Success()) {
-    Status ignore;
-    void *ok = nullptr;
-    auto raw_data = std::make_unique<uint8_t[]>(data_sp->GetByteSize());
-    lldb::offset_t offset = 0;
-    uint32_t old_offset = offset;
-    size_t size = data_sp->GetByteSize();
-    ok = data_sp->GetU8(&offset, raw_data.get(), size);
-    if ((offset == old_offset) || (ok == nullptr)) {
-      ignore.SetErrorString("Clone: unable to read data");
-      return lldb::ValueObjectSP();
-    }
-    return ValueObject::CreateValueObjectFromBytes(
-        val->GetTargetSP(), raw_data.get(), val->GetCompilerType());
-  } else {
-    return lldb::ValueObjectSP();
-  }
-}
-*/
-
-/*
-static void Update(lldb::ValueObjectSP val, const llvm::APInt& v) {
-  lldb::TargetSP target = val->GetTargetSP();
-  uint64_t byte_size = 0;
-  if (auto temp = val->GetCompilerType().GetByteSize(target.get()))
-    byte_size = temp.value();
-
-  assert(v.getBitWidth() == byte_size * CHAR_BIT &&
-         "illegal argument: new value should be of the same size");
-
-  lldb::DataExtractorSP data_sp;
-  Status error;
-  data_sp->SetData(v.getRawData(), byte_size,
-                   target->GetArchitecture().GetByteOrder());
-  data_sp->SetAddressByteSize(
-      static_cast<uint8_t>(target->GetArchitecture().GetAddressByteSize()));
-  val->SetData(*data_sp, error);
-}
-*/
-
-/*
-static void Update(lldb::ValueObjectSP val, lldb::ValueObjectSP val2) {
-  CompilerType val2_type = val2->GetCompilerType();
-  assert((val2_type.IsInteger() || val2_type.IsFloat() ||
-          val2_type.IsPointerType()) &&
-         "illegal argument: new value should be of the same size");
-
-  if (val2_type.IsInteger()) {
-    val.UpdateIntegerValue(val2->GetValueAsAPSInt());
-  } else if (val2_type.IsFloat()) {
-    val.UpdateIntegerValue(val2->GetValueAsFloat().bitcastToAPInt());
-  } else if (val2_type.IsPointerType()) {
-    val.UpdateIntegerValue(llvm::APInt(64, val2->GetValueAsUnsigned(0)));
-    //Update(val, llvm::APInt(64, GetUInt64(val2)));
-  }
-}
-*/
 
 static lldb::ValueObjectSP EvaluateArithmeticOpInteger(lldb::TargetSP target,
                                                        BinaryOpKind kind,
@@ -340,39 +67,46 @@ static lldb::ValueObjectSP EvaluateArithmeticOpInteger(lldb::TargetSP target,
          "invalid ast: operands must have the same type");
 
   auto wrap = [target, rtype](auto value) {
-    return ValueObject::CreateValueObjectFromAPInt(target, value, rtype);
+    return ValueObject::CreateValueObjectFromAPInt(target, value, rtype,
+                                                   "result");
   };
 
-  auto l = lhs->GetValueAsAPSInt();
-  auto r = rhs->GetValueAsAPSInt();
+  llvm::Expected<llvm::APSInt> l_value = lhs->GetValueAsAPSInt();
+  llvm::Expected<llvm::APSInt> r_value = rhs->GetValueAsAPSInt();
 
-  switch (kind) {
-    case BinaryOpKind::Add:
-      return wrap(l + r);
-    case BinaryOpKind::Sub:
-      return wrap(l - r);
-    case BinaryOpKind::Div:
-      return wrap(l / r);
-    case BinaryOpKind::Mul:
-      return wrap(l * r);
-    case BinaryOpKind::Rem:
-      return wrap(l % r);
-    case BinaryOpKind::And:
-      return wrap(l & r);
-    case BinaryOpKind::Or:
-      return wrap(l | r);
-    case BinaryOpKind::Xor:
-      return wrap(l ^ r);
-    case BinaryOpKind::Shl:
-      return wrap(l.shl(r));
-    case BinaryOpKind::Shr:
-      // Apply arithmetic shift on signed values and logical shift operation
-      // on unsigned values.
-      return wrap(l.isSigned() ? l.ashr(r) : l.lshr(r));
+  if (l_value && r_value) {
+    llvm::APSInt l = *l_value;
+    llvm::APSInt r = *r_value;
+    switch (kind) {
+      case BinaryOpKind::Add:
+        return wrap(l + r);
+      case BinaryOpKind::Sub:
+        return wrap(l - r);
+      case BinaryOpKind::Div:
+        return wrap(l / r);
+      case BinaryOpKind::Mul:
+        return wrap(l * r);
+      case BinaryOpKind::Rem:
+        return wrap(l % r);
+      case BinaryOpKind::And:
+        return wrap(l & r);
+      case BinaryOpKind::Or:
+        return wrap(l | r);
+      case BinaryOpKind::Xor:
+        return wrap(l ^ r);
+      case BinaryOpKind::Shl:
+        return wrap(l.shl(r));
+      case BinaryOpKind::Shr:
+        // Apply arithmetic shift on signed values and logical shift operation
+        // on unsigned values.
+        return wrap(l.isSigned() ? l.ashr(r) : l.lshr(r));
 
-    default:
-      assert(false && "invalid ast: invalid arithmetic operation");
-      return lldb::ValueObjectSP();
+      default:
+        assert(false && "invalid ast: invalid arithmetic operation");
+        return lldb::ValueObjectSP();
+    }
+  } else {
+    return lldb::ValueObjectSP();
   }
 }
 
@@ -386,26 +120,31 @@ static lldb::ValueObjectSP EvaluateArithmeticOpFloat(lldb::TargetSP target,
          "invalid ast: operands must be floats and have the same type");
 
   auto wrap = [target, rtype](auto value) {
-    return ValueObject::CreateValueObjectFromAPFloat(target, value, rtype);
+    return ValueObject::CreateValueObjectFromAPFloat(target, value, rtype, "result");
   };
 
-  auto l = lhs->GetValueAsFloat();
-  auto r = rhs->GetValueAsFloat();
+  auto lval_or_err = lhs->GetValueAsAPFloat();
+  auto rval_or_err = rhs->GetValueAsAPFloat();
+  if (lval_or_err && rval_or_err) {
+    llvm::APFloat l = *lval_or_err;
+    llvm::APFloat r = *rval_or_err;
 
-  switch (kind) {
-    case BinaryOpKind::Add:
-      return wrap(l + r);
-    case BinaryOpKind::Sub:
-      return wrap(l - r);
-    case BinaryOpKind::Div:
-      return wrap(l / r);
-    case BinaryOpKind::Mul:
-      return wrap(l * r);
+    switch (kind) {
+      case BinaryOpKind::Add:
+        return wrap(l + r);
+      case BinaryOpKind::Sub:
+        return wrap(l - r);
+      case BinaryOpKind::Div:
+        return wrap(l / r);
+      case BinaryOpKind::Mul:
+        return wrap(l * r);
 
-    default:
-      assert(false && "invalid ast: invalid arithmetic operation");
-      return lldb::ValueObjectSP();
+      default:
+        assert(false && "invalid ast: invalid arithmetic operation");
+        return lldb::ValueObjectSP();
+    }
   }
+  return lldb::ValueObjectSP();
 }
 
 static lldb::ValueObjectSP EvaluateArithmeticOp(lldb::TargetSP target,
@@ -505,104 +244,6 @@ static lldb::ValueObjectSP EvaluateMemberOf(lldb::ValueObjectSP value,
   return member_val;
 }
 
-/*
-static lldb::addr_t GetLoadAddress(lldb::ValueObjectSP inner_value_sp) {
-  lldb::addr_t addr_value = LLDB_INVALID_ADDRESS;
-  lldb::TargetSP target_sp(inner_value_sp->GetTargetSP());
-  lldb::ValueObjectSP inner_value(DILGetSPWithLock(inner_value_sp));
-  if (target_sp) {
-    const bool scalar_is_load_address = true;
-    AddressType addr_type;
-    addr_value = inner_value->GetAddressOf(scalar_is_load_address, &addr_type);
-    if (addr_type == eAddressTypeFile) {
-      lldb::ModuleSP module_sp(inner_value->GetModule());
-      if (!module_sp)
-        addr_value = LLDB_INVALID_ADDRESS;
-      else {
-        Address tmp_addr;
-        module_sp->ResolveFileAddress(addr_value, tmp_addr);
-        addr_value = tmp_addr.GetLoadAddress(target_sp.get());
-      }
-    } else if (addr_type == eAddressTypeHost ||
-               addr_type == eAddressTypeHost)
-      addr_value = LLDB_INVALID_ADDRESS;
-  }
-  return addr_value;
-}
-*/
-
-/*
-static lldb::ValueObjectSP CastDerivedToBaseType(
-    lldb::TargetSP target,
-    lldb::ValueObjectSP value,
-    CompilerType type,
-    const std::vector<uint32_t>& idx)
-{
-  assert((type.IsPointerType() || type.IsReferenceType()) &&
-         "invalid ast: target type should be a pointer or a reference");
-  assert(!idx.empty() && "invalid ast: children sequence should be non-empty");
-
-  // The `value` can be a pointer, but GetChildAtIndex works for pointers too.
-  bool prefer_synthetic_value = false;
-  lldb::DynamicValueType use_dynamic = lldb::eNoDynamicValues;
-  lldb::ValueObjectSP inner_value(DILGetSPWithLock(value, use_dynamic,
-                                                   prefer_synthetic_value));
-  for (const uint32_t i : idx) {
-    // Force static value, otherwise we can end up with the "real" type.
-    inner_value = value->GetChildAtIndex(i, **can_create_synthetic** false);
-  }
-
-  // At this point type of `inner_value` should be the dereferenced target type.
-  CompilerType inner_value_type = inner_value->GetCompilerType();
-  if (type.IsPointerType()) {
-    assert(inner_value_type.CompareTypes(type.GetPointeeType()) &&
-           "casted value doesn't match the desired type");
-
-    uintptr_t addr = inner_value->GetLoadAddress();
-    return ValueObject::CreateValueObjectFromPointer(target, addr, type);
-  }
-
-  // At this point the target type should be a reference.
-  assert(inner_value_type.CompareTypes(type.GetNonReferenceType()) &&
-         "casted value doesn't match the desired type");
-
-  lldb::ValueObjectSP inner_value_sp(DILGetSPWithLock(inner_value));
-  return lldb::ValueObjectSP(inner_value_sp->Cast(type.GetNonReferenceType()));
-}
-*/
-
-/*
-static lldb::ValueObjectSP CastBaseToDerivedType(lldb::TargetSP target,
-                                                 lldb::ValueObjectSP value,
-                                                 CompilerType type,
-                                                 uint64_t offset)
-{
-  assert((type.IsPointerType() || type.IsReferenceType()) &&
-         "invalid ast: target type should be a pointer or a reference");
-
-  auto pointer_type = type.IsPointerType()
-                          ? type
-                          : type.GetNonReferenceType().GetPointerType();
-
-  //uintptr_t addr = type.IsPointerType() ? GetUInt64(value)
-  uintptr_t addr = type.IsPointerType() ? value->GetValueAsUnsigned(0)
-                                        : value->GetLoadAddress();
-
-  value = ValueObject::CreateValueObjectFromPointer(target, addr - offset,
-                                                    pointer_type);
-
-  if (type.IsPointerType()) {
-    return value;
-  }
-
-  // At this point the target type is a reference. Since `value` is a pointer,
-  // it has to be dereferenced.
-  Status error;
-  lldb::ValueObjectSP value_sp(DILGetSPWithLock(value));
-  return value_sp->Dereference(error);
-}
-*/
-
 static std::string FormatDiagnostics(clang::SourceManager& sm,
                                      const std::string& message,
                                      clang::SourceLocation loc,
@@ -676,192 +317,6 @@ void SetUbStatus(Status& error, ErrorCode code) {
   error.SetError((lldb::ValueType)code, lldb::ErrorType::eErrorTypeGeneric);
   error.SetErrorString(err_str);
 }
-
-/*
-static lldb::ValueObjectSP CastScalarToBasicType(lldb::TargetSP target,
-                                                 lldb::ValueObjectSP value,
-                                                 CompilerType type,
-                                                 Status& error)
-{
-  assert(type.IsScalarType() && "target type must be an scalar");
-  assert(value->GetCompilerType().IsScalarType()
-         && "argument must be a scalar");
-
-  if (type.IsBoolean()) {
-    if (value->GetCompilerType().IsInteger()) {
-      return ValueObject::CreateValueObjectFromBool(target,
-                                                    value->GetValueAsUnsigned(0) != 0);
-      //GetUInt64(value) != 0);
-    }
-    if (value->GetCompilerType().IsFloat()) {
-      return ValueObject::CreateValueObjectFromBool(target,
-                                                    !value->GetValueAsFloat().isZero());
-    }
-  }
-  if (type.IsInteger()) {
-    if (value->GetCompilerType().IsInteger()) {
-      uint64_t byte_size = 0;
-      if (auto temp = type.GetByteSize(target.get()))
-        byte_size = temp.value();
-      llvm::APSInt ext =
-          value->GetValueAsAPSInt().extOrTrunc(byte_size * CHAR_BIT);
-      return ValueObject::CreateValueObjectFromAPInt(target, ext, type);
-    }
-    if (value->GetCompilerType().IsFloat()) {
-      uint64_t byte_size = 0;
-      if (auto temp = type.GetByteSize(target.get()))
-        byte_size = temp.value();
-      llvm::APSInt integer(byte_size * CHAR_BIT,
-                           !type.IsSigned());
-      bool is_exact;
-      llvm::APFloatBase::opStatus status =
-          value->GetValueAsFloat().convertToInteger(
-              integer, llvm::APFloat::rmTowardZero, &is_exact);
-
-      // Casting floating point values that are out of bounds of the target type
-      // is undefined behaviour.
-      if (status & llvm::APFloatBase::opInvalidOp) {
-        SetUbStatus(error, ErrorCode::kUBInvalidCast);
-      }
-
-      return ValueObject::CreateValueObjectFromAPInt(target, integer, type);
-    }
-  }
-  if (type.IsFloat()) {
-    if (value->GetCompilerType().IsInteger()) {
-      llvm::APFloat f = CreateAPFloatFromAPSInt(
-          value->GetValueAsAPSInt(),
-          type.GetCanonicalType().GetBasicTypeEnumeration());
-      return ValueObject::CreateValueObjectFromAPFloat(target, f, type);
-    }
-    if (value->GetCompilerType().IsFloat()) {
-      llvm::APFloat f = CreateAPFloatFromAPFloat(
-          value->GetValueAsFloat(),
-          type.GetCanonicalType().GetBasicTypeEnumeration());
-      return ValueObject::CreateValueObjectFromAPFloat(target, f, type);
-    }
-  }
-  assert(false && "invalid target type: must be a scalar");
-  return lldb::ValueObjectSP();
-}
-*/
-
-/*
-static lldb::ValueObjectSP CastEnumToBasicType(lldb::TargetSP target,
-                                               lldb::ValueObjectSP val,
-                                               CompilerType type)
-{
-  assert(type.IsScalarType() && "target type must be a scalar");
-  assert(val->GetCompilerType().IsEnumerationType()
-         && "argument must be an enum");
-
-  if (type.IsBoolean()) {
-    //return ValueObject::CreateValueObjectFromBool(target, GetUInt64(val) != 0);
-    return ValueObject::CreateValueObjectFromBool(target,
-                                                  val->GetValueAsUnsigned(0)
-                                                  != 0);
-  }
-
-  uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
-    byte_size = temp.value();
-  // Get the value as APSInt and extend or truncate it to the requested size.
-  llvm::APSInt ext =
-      val->GetValueAsAPSInt().extOrTrunc(byte_size * CHAR_BIT);
-
-  if (type.IsInteger()) {
-    return ValueObject::CreateValueObjectFromAPInt(target, ext, type);
-  }
-  if (type.IsFloat()) {
-    llvm::APFloat f =
-        CreateAPFloatFromAPSInt(
-            ext,
-            type.GetCanonicalType().GetBasicTypeEnumeration());
-    return ValueObject::CreateValueObjectFromAPFloat(target, f, type);
-  }
-  assert(false && "invalid target type: must be a scalar");
-  return lldb::ValueObjectSP();
-}
-*/
-
-/*
-static lldb::ValueObjectSP CastPointerToBasicType(lldb::TargetSP target,
-                                                  lldb::ValueObjectSP val,
-                                                  CompilerType type)
-{
-  uint64_t type_byte_size = 0;
-  uint64_t val_byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
-    type_byte_size = temp.value();
-  if (auto temp = val->GetCompilerType().GetByteSize(target.get()))
-    val_byte_size = temp.value();
-  assert(type.IsInteger() && "target type must be an integer");
-  assert((type.IsBoolean() ||  type_byte_size >= val_byte_size)
-         && "target type cannot be smaller than the pointer type");
-
-  if (type.IsBoolean()) {
-    //return ValueObject::CreateValueObjectFromBool(target, GetUInt64(val) != 0);
-    return ValueObject::CreateValueObjectFromBool(target,
-                                                  val->GetValueAsUnsigned(0)
-                                                  != 0);
-  }
-
-  // Get the value as APSInt and extend or truncate it to the requested size.
-  llvm::APSInt ext =
-      val->GetValueAsAPSInt().extOrTrunc(type_byte_size * CHAR_BIT);
-  return ValueObject::CreateValueObjectFromAPInt(target, ext, type);
-}
-*/
-
-/*
-static lldb::ValueObjectSP CastIntegerOrEnumToEnumType(lldb::TargetSP target,
-                                                       lldb::ValueObjectSP val,
-                                                       CompilerType type)
-{
-  assert(type.IsEnumerationType() && "target type must be an enum");
-  assert((val->GetCompilerType().IsInteger()
-          || val->GetCompilerType().IsEnumerationType())
-         && "argument must be an integer or an enum");
-  uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
-    byte_size = temp.value();
-
-  // Get the value as APSInt and extend or truncate it to the requested size.
-  llvm::APSInt ext =
-      val->GetValueAsAPSInt().extOrTrunc(byte_size * CHAR_BIT);
-  return ValueObject::CreateValueObjectFromAPInt(target, ext, type);
-}
-*/
-
-/*
-static lldb::ValueObjectSP CastFloatToEnumType(lldb::TargetSP target,
-                                               lldb::ValueObjectSP val,
-                                               CompilerType type,
-                                               Status& error)
-{
-  assert(type.IsEnumerationType() && "target type must be an enum");
-  assert(val->GetCompilerType().IsFloat() && "argument must be a float");
-
-  uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
-    byte_size = temp.value();
-  llvm::APSInt integer(byte_size * CHAR_BIT, !type.IsSigned());
-  bool is_exact;
-
-  llvm::APFloatBase::opStatus status =
-      val->GetValueAsFloat().convertToInteger(integer,
-                                                llvm::APFloat::rmTowardZero,
-                                                &is_exact);
-
-  // Casting floating point values that are out of bounds of the target type
-  // is undefined behaviour.
-  if (status & llvm::APFloatBase::opInvalidOp) {
-    SetUbStatus(error, ErrorCode::kUBInvalidCast);
-  }
-
-  return ValueObject::CreateValueObjectFromAPInt(target, integer, type);
-}
-*/
 
 DILInterpreter::DILInterpreter(lldb::TargetSP target,
                                std::shared_ptr<DILSourceManager> sm)
@@ -938,17 +393,26 @@ void DILInterpreter::Visit(const DILErrorNode* node) {
 void DILInterpreter::Visit(const LiteralNode* node) {
   struct {
     lldb::ValueObjectSP operator()(llvm::APInt val) {
-      return ValueObject::CreateValueObjectFromAPInt(target, val, type);
+      return ValueObject::CreateValueObjectFromAPInt(target, val, type, "result");
     }
     lldb::ValueObjectSP operator()(llvm::APFloat val) {
-      return ValueObject::CreateValueObjectFromAPFloat(target, val, type);
+      return ValueObject::CreateValueObjectFromAPFloat(target, val, type, "result");
     }
     lldb::ValueObjectSP operator()(bool val) {
-      return ValueObject::CreateValueObjectFromBool(target, val);
+      return ValueObject::CreateValueObjectFromBool(target, val, "result");
     }
     lldb::ValueObjectSP operator()(const std::vector<char>& val) {
-      return ValueObject::CreateValueObjectFromBytes(
-          target, reinterpret_cast<const void*>(val.data()), type);
+      ExecutionContext exe_ctx(target.get(), false);
+      uint64_t byte_size = 0;
+      if (auto temp = type.GetByteSize(target.get()))
+        byte_size = temp.value();
+      lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+          reinterpret_cast<const void*>(val.data()), byte_size,
+          exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
+      return ValueObject::CreateValueObjectFromData("result", *data_sp, exe_ctx,
+                                                    type);
+      //return ValueObject::CreateValueObjectFromBytes(
+      //    target, reinterpret_cast<const void*>(val.data()), type);
     }
 
     lldb::TargetSP target;
@@ -1050,7 +514,16 @@ void DILInterpreter::Visit(const SizeOfNode* node) {
                 ? deref_byte_size
                 : other_byte_size;
   CompilerType type = node->result_type_deref();
-  m_result = ValueObject::CreateValueObjectFromBytes(m_target, &size, type);
+  ExecutionContext exe_ctx(m_target.get(), false);
+  uint64_t byte_size = 0;
+  if (auto temp = type.GetByteSize(m_target.get()))
+    byte_size = temp.value();
+  lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+      reinterpret_cast<const void*>(&size), byte_size,
+      exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
+  m_result = ValueObject::CreateValueObjectFromData("result", *data_sp, exe_ctx,
+                                                    type);
+  //m_result = ValueObject::CreateValueObjectFromBytes(m_target, &size, type);
 }
 
 void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
@@ -1067,11 +540,28 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
            "invalid ast: argument to __log2 must be an interger");
 
     // Use Log2_32 to match the behaviour of Visual Studio debugger.
-       //uint32_t ret = llvm::Log2_32(static_cast<uint32_t>(GetUInt64(val)));
     uint32_t ret =
         llvm::Log2_32(static_cast<uint32_t>(val->GetValueAsUnsigned(0)));
-    m_result = ValueObject::CreateValueObjectFromBytes(
-        m_target, &ret, lldb::eBasicTypeUnsignedInt);
+    CompilerType target_type;
+    for (auto type_system_sp : m_target->GetScratchTypeSystems())
+      if (auto compiler_type =
+          type_system_sp->GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt)) {
+        target_type = compiler_type;
+        break;
+      }
+
+    ExecutionContext exe_ctx(m_target.get(), false);
+    uint64_t byte_size = 0;
+    if (auto temp = target_type.GetByteSize(m_target.get()))
+      byte_size = temp.value();
+    lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+        reinterpret_cast<const void*>(&ret), byte_size,
+        exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
+    m_result =
+        ValueObject::CreateValueObjectFromData("result", *data_sp,
+                                               exe_ctx, target_type);
+    //m_result = ValueObject::CreateValueObjectFromBytes(
+    //    m_target, &ret, lldb::eBasicTypeUnsignedInt);
     return;
   }
 
@@ -1126,6 +616,18 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
     uint64_t memory = 0;
     Status error;
 
+    CompilerType target_type;
+    for (auto type_system_sp : m_target->GetScratchTypeSystems())
+      if (auto compiler_type =
+          type_system_sp->GetBasicTypeFromAST(lldb::eBasicTypeInt)) {
+        target_type = compiler_type;
+        break;
+      }
+    ExecutionContext exe_ctx(m_target.get(), false);
+    uint64_t byte_size = 0;
+    if (auto temp = target_type.GetByteSize(m_target.get()))
+      byte_size = temp.value();
+
     for (int i = 0; i < size; ++i) {
       size_t read =
           process->ReadMemory(addr + i * ptr_size, &memory, ptr_size, error);
@@ -1140,15 +642,28 @@ void DILInterpreter::Visit(const BuiltinFunctionCallNode* node) {
       }
 
       if (memory != 0) {
-        m_result = ValueObject::CreateValueObjectFromBytes(
-            m_target, &i, lldb::eBasicTypeInt);
+        lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+            reinterpret_cast<const void*>(&i), byte_size,
+            exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
+        m_result = ValueObject::CreateValueObjectFromData("result", *data_sp,
+                                                          exe_ctx,
+                                                          target_type);
+        //m_result = ValueObject::CreateValueObjectFromBytes(
+        //    m_target, &i, lldb::eBasicTypeInt);
         return;
       }
     }
 
     int ret = -1;
-    m_result = ValueObject::CreateValueObjectFromBytes(
-        m_target, &ret, lldb::eBasicTypeInt);
+
+    lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+        reinterpret_cast<const void*>(&ret), byte_size,
+        exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
+    m_result = ValueObject::CreateValueObjectFromData("result", *data_sp,
+                                                      exe_ctx,
+                                                      target_type);
+    //m_result = ValueObject::CreateValueObjectFromBytes(
+    //    m_target, &ret, lldb::eBasicTypeInt);
     return;
   }
 
@@ -1177,11 +692,12 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
       // Pick an appropriate cast.
       if (rhs->GetCompilerType().IsPointerType()
           || rhs->GetCompilerType().IsNullPtrType()) {
-        m_result = rhs->CastPointerToBasicType(type);
+        m_result = rhs->CastToBasicType(type);
       } else if (rhs->GetCompilerType().IsScalarType()) {
-        m_result = rhs->CastScalarToBasicType(type, m_error);
+        m_result = rhs->CastToBasicType(type);
+        //m_result = rhs->CastScalarToBasicType(type, m_error);
       } else if (rhs->GetCompilerType().IsEnumerationType()) {
-        m_result = rhs->CastEnumToBasicType(type);
+        m_result = rhs->CastToBasicType(type);
       } else {
         assert(false &&
                "invalid ast: operand is not convertible to arithmetic type");
@@ -1193,10 +709,10 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
              "invalid ast: target type should be an enumeration.");
 
       if (rhs->GetCompilerType().IsFloat()) {
-        m_result = rhs->CastFloatToEnumType(type, m_error);
+        m_result = rhs->CastToEnumType(type);
       } else if (rhs->GetCompilerType().IsInteger() ||
                  rhs->GetCompilerType().IsEnumerationType()) {
-        m_result = rhs->CastIntegerOrEnumToEnumType(type);
+        m_result = rhs->CastToEnumType(type);
       } else {
         assert(false &&
                "invalid ast: operand is not convertible to enumeration type");
@@ -1208,9 +724,15 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
              "invalid ast: target type should be a pointer.");
       uint64_t addr = rhs->GetCompilerType().IsArrayType()
                           ? rhs->GetLoadAddress()
-                          : rhs->GetValueAsUnsigned(0);
-      //: GetUInt64(rhs);
-      m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
+                          : GetUInt64(rhs);
+      //                    : rhs->GetValueAsUnsigned(0);
+      //m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
+      llvm::StringRef name = "result";
+      ExecutionContext exe_ctx(m_target.get(), false);
+      m_result =
+          ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                    type,
+                                                    /* do_deref */ false);
       return;
     }
     case CStyleCastKind::kNullptr: {
@@ -1218,7 +740,7 @@ void DILInterpreter::Visit(const CStyleCastNode* node) {
           (type.GetCanonicalType().GetBasicTypeEnumeration() ==
            lldb::eBasicTypeNullPtr)
           && "invalid ast: target type should be a nullptr_t.");
-      m_result = ValueObject::CreateValueObjectFromNullptr(m_target, type);
+      m_result = ValueObject::CreateValueObjectFromNullptr(m_target, type, "result");
       return;
     }
     case CStyleCastKind::kReference: {
@@ -1260,11 +782,12 @@ void DILInterpreter::Visit(const CxxStaticCastNode* node) {
       if (rhs->GetCompilerType().IsPointerType()
           || rhs->GetCompilerType().IsNullPtrType()) {
         assert(type.IsBoolean() && "invalid ast: target type should be bool");
-        m_result = rhs->CastPointerToBasicType(type);
+        m_result = rhs->CastToBasicType(type);
       } else if (rhs->GetCompilerType().IsScalarType()) {
-        m_result = rhs->CastScalarToBasicType(type, m_error);
+        //m_result = rhs->CastScalarToBasicType(type, m_error);
+        m_result = rhs->CastToBasicType(type);
       } else if (rhs->GetCompilerType().IsEnumerationType()) {
-        m_result = rhs->CastEnumToBasicType(type);
+        m_result = rhs->CastToBasicType(type);
       } else {
         assert(false &&
                "invalid ast: operand is not convertible to arithmetic type");
@@ -1274,10 +797,10 @@ void DILInterpreter::Visit(const CxxStaticCastNode* node) {
 
     case CxxStaticCastKind::kEnumeration: {
       if (rhs->GetCompilerType().IsFloat()) {
-        m_result = rhs->CastFloatToEnumType(type, m_error);
+        m_result = rhs->CastToEnumType(type);
       } else if (rhs->GetCompilerType().IsInteger() ||
                  rhs->GetCompilerType().IsEnumerationType()) {
-        m_result = rhs->CastIntegerOrEnumToEnumType(type);
+        m_result = rhs->CastToEnumType(type);
       } else {
         assert(false &&
                "invalid ast: operand is not convertible to enumeration type");
@@ -1292,23 +815,34 @@ void DILInterpreter::Visit(const CxxStaticCastNode* node) {
       uint64_t addr = rhs->GetCompilerType().IsArrayType()
                           ? rhs-> GetLoadAddress()
                           : rhs->GetValueAsUnsigned(0);
-      //: GetUInt64(rhs);
-      m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
+      //m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
+      llvm::StringRef name = "result";
+      ExecutionContext exe_ctx(m_target.get(), false);
+      m_result =
+          ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                    type,
+                                                    /* do_deref */ false);
       return;
     }
 
     case CxxStaticCastKind::kNullptr: {
-      m_result = ValueObject::CreateValueObjectFromNullptr(m_target, type);
+      m_result = ValueObject::CreateValueObjectFromNullptr(m_target, type, "result");
       return;
     }
 
     case CxxStaticCastKind::kDerivedToBase: {
-      m_result = rhs->CastDerivedToBaseType(type, node->idx());
+      llvm::Expected<lldb::ValueObjectSP> result =
+          rhs->CastDerivedToBaseType(type, node->idx());
+      if (result)
+        m_result = *result;
       return;
     }
 
     case CxxStaticCastKind::kBaseToDerived: {
-      m_result = rhs->CastBaseToDerivedType(type, node->offset());
+      llvm::Expected<lldb::ValueObjectSP> result =
+          rhs->CastBaseToDerivedType(type, node->offset());
+      if (result)
+        m_result = *result;
       return;
     }
   }
@@ -1330,16 +864,26 @@ void DILInterpreter::Visit(const CxxReinterpretCastNode* node) {
   if (type.IsInteger()) {
     if (rhs->GetCompilerType().IsPointerType()
         || rhs->GetCompilerType().IsNullPtrType()) {
-      m_result = rhs->CastPointerToBasicType(type);
+      m_result = rhs->CastToBasicType(type);
     } else {
-      assert(type.CompareTypes(rhs->GetCompilerType()) &&
+      CompilerType base_type = type.IsTypedefType() ? type.GetTypedefedType()
+                               : type;
+      CompilerType rhs_base_type = rhs->GetCompilerType().IsTypedefType() ?
+                                   rhs->GetCompilerType().GetTypedefedType() :
+                                   rhs->GetCompilerType();
+      assert(base_type.CompareTypes(rhs_base_type) &&
              "invalid ast: operands should have the same type");
       // Cast value to handle type aliases.
       lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
       m_result = lldb::ValueObjectSP(rhs_sp->Cast(type));
     }
   } else if (type.IsEnumerationType()) {
-    assert(type.CompareTypes(rhs->GetCompilerType()) &&
+    CompilerType base_type = type.IsTypedefType() ? type.GetTypedefedType()
+                             : type;
+    CompilerType rhs_base_type = rhs->GetCompilerType().IsTypedefType() ?
+                                 rhs->GetCompilerType().GetTypedefedType() :
+                                 rhs->GetCompilerType();
+    assert(base_type.CompareTypes(rhs_base_type) &&
            "invalid ast: operands should have the same type");
     // Cast value to handle type aliases.
     lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
@@ -1353,8 +897,13 @@ void DILInterpreter::Visit(const CxxReinterpretCastNode* node) {
     uint64_t addr = rhs->GetCompilerType().IsArrayType()
                     ? rhs->GetLoadAddress()
                     : rhs->GetValueAsUnsigned(0);
-    //: GetUInt64(rhs);
-    m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
+    //m_result = ValueObject::CreateValueObjectFromPointer(m_target, addr, type);
+    llvm::StringRef name = "result";
+    ExecutionContext exe_ctx(m_target.get(), false);
+    m_result =
+        ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                  type,
+                                                  /* do_deref */ false);
   } else if (type.IsReferenceType()) {
     lldb::ValueObjectSP rhs_sp(DILGetSPWithLock(rhs));
     m_result =
@@ -1410,9 +959,9 @@ void DILInterpreter::Visit(const ArraySubscriptNode* node) {
   if (base->HasSyntheticValue()) {
     lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
     if (synthetic && synthetic != base) {
-      //uint64_t child_idx = GetUInt64(index);
       uint64_t child_idx = index->GetValueAsUnsigned(0);
-      if (static_cast<uint32_t>(child_idx) < synthetic->GetNumChildren()) {
+      if (static_cast<uint32_t>(child_idx) <
+          synthetic->GetNumChildrenIgnoringErrors()) {
         lldb::ValueObjectSP child_valobj_sp =
             synthetic->GetChildAtIndex(child_idx);
         if (child_valobj_sp) {
@@ -1427,7 +976,7 @@ void DILInterpreter::Visit(const ArraySubscriptNode* node) {
   lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
   lldb::VariableSP base_var = base->GetVariable();
   if (synthetic) {
-    uint32_t num_children = synthetic->GetNumChildren();
+    uint32_t num_children = synthetic->GetNumChildrenIgnoringErrors();
     if (index->GetValueAsSigned(0) >= num_children) {
       SetError(ErrorCode::kSubscriptOutOfRange,
                llvm::formatv("array index {0} is not valid for \"({1}) {2}\"",
@@ -1448,15 +997,17 @@ void DILInterpreter::Visit(const ArraySubscriptNode* node) {
          "array subscript: index must be integer or unscoped enum");
 
   CompilerType item_type = base->GetCompilerType().GetPointeeType();
-  //lldb::addr_t base_addr = GetUInt64(base);
   lldb::addr_t base_addr = base->GetValueAsUnsigned(0);
 
+  llvm::StringRef name = "result";
+  ExecutionContext exe_ctx(m_target.get(), false);
   // Create a pointer and add the index, i.e. "base + index".
   lldb::ValueObjectSP value =
-      PointerAdd(ValueObject::CreateValueObjectFromPointer(
-          //m_target, base_addr, item_type.GetPointerType()), GetUInt64(index));
-          m_target, base_addr, item_type.GetPointerType()),
-                 //index->GetValueAsUnsigned(0));
+      //PointerAdd(ValueObject::CreateValueObjectFromPointer(m_target, base_addr,
+      //                                                      item_type.GetPointerType()),
+      PointerAdd(ValueObject::CreateValueObjectFromAddress(
+          name, base_addr, exe_ctx, item_type.GetPointerType(),
+          /* do_deref */ false),
                  index->GetValueAsSigned(0));
 
   lldb::ValueObjectSP value_sp(DILGetSPWithLock(value));
@@ -1485,12 +1036,16 @@ void DILInterpreter::Visit(const BinaryOpNode* node) {
            "invalid ast: must be convertible to bool");
 
     // For "&&" break if LHS is "false", for "||" if LHS is "true".
-    bool lhs_val = lhs->GetValueAsBool();
+    auto lvalue_or_err = lhs->GetValueAsBool();
+    if (!lvalue_or_err)
+      return;
+
+    bool lhs_val = *lvalue_or_err;
     bool break_early =
         (node->kind() == BinaryOpKind::LAnd) ? !lhs_val : lhs_val;
 
     if (break_early) {
-      m_result = ValueObject::CreateValueObjectFromBool(m_target, lhs_val);
+      m_result = ValueObject::CreateValueObjectFromBool(m_target, lhs_val, "result");
       return;
     }
 
@@ -1504,8 +1059,13 @@ void DILInterpreter::Visit(const BinaryOpNode* node) {
     assert(rhs->GetCompilerType().IsContextuallyConvertibleToBool() &&
            "invalid ast: must be convertible to bool");
 
+    auto rvalue_or_err = rhs->GetValueAsBool();
+    if (!rvalue_or_err)
+      return;
+
     m_result = ValueObject::CreateValueObjectFromBool(m_target,
-                                                      rhs->GetValueAsBool());
+                                                      *rvalue_or_err,
+                                                      "result");
     return;
   }
 
@@ -1625,7 +1185,6 @@ void DILInterpreter::Visit(const UnaryOpNode* node) {
 
   switch (node->kind()) {
     case UnaryOpKind::Deref:
-      //if (rhs->GetVariable())
       {
         lldb::ValueObjectSP dynamic_rhs =
             rhs->GetDynamicValue(m_default_dynamic);
@@ -1695,10 +1254,12 @@ void DILInterpreter::Visit(const TernaryOpNode* node) {
   // Pass down the flow analysis because the conditional operator is a "flow
   // control" construct -- LHS/RHS might be lvalues and eligible for some
   // optimizations (e.g. "&*" elision).
-  if (cond->GetValueAsBool()) {
-    m_result = DILEvalNode(node->lhs(), flow_analysis());
-  } else {
-    m_result = DILEvalNode(node->rhs(), flow_analysis());
+  auto value_or_err = cond->GetValueAsBool();
+  if (value_or_err) {
+    if (*value_or_err)
+      m_result = DILEvalNode(node->lhs(), flow_analysis());
+    else
+      m_result = DILEvalNode(node->rhs(), flow_analysis());
   }
 }
 
@@ -1732,8 +1293,14 @@ void DILInterpreter::Visit(const SmartPtrToPtrDecay* node) {
     pointer_type =
         value_sp->GetCompilerType().GetTypeTemplateArgument(0).GetPointerType();
 
-  m_result = ValueObject::CreateValueObjectFromPointer(m_target, base_addr,
-                                                       pointer_type);
+  //m_result = ValueObject::CreateValueObjectFromPointer(m_target, base_addr,
+  //                                                     pointer_type);
+  llvm::StringRef name = "result";
+  ExecutionContext exe_ctx(m_target.get(), false);
+  m_result =
+      ValueObject::CreateValueObjectFromAddress(name, base_addr, exe_ctx,
+                                                pointer_type,
+                                                /* do_deref */ false);
 
   ValueObject *deref_valobj = nullptr;
   if (ptr->HasSyntheticValue())
@@ -1742,7 +1309,6 @@ void DILInterpreter::Visit(const SmartPtrToPtrDecay* node) {
   else if (ptr->IsSynthetic())
     deref_valobj = ptr->GetChildMemberWithName("$$dereference$$").get();
   if (deref_valobj)
-    //m_result->m_deref_valobj = deref_valobj;
     m_result->SetDerefValobj(deref_valobj);
 }
 
@@ -1751,33 +1317,49 @@ lldb::ValueObjectSP DILInterpreter::EvaluateComparison(BinaryOpKind kind,
                                                        lldb::ValueObjectSP rhs) {
   // Evaluate arithmetic operation for two integral values.
   if (lhs->GetCompilerType().IsInteger() && rhs->GetCompilerType().IsInteger()) {
-    bool ret = Compare(kind, lhs->GetValueAsAPSInt(), rhs->GetValueAsAPSInt());
-    return ValueObject::CreateValueObjectFromBool(m_target, ret);
+    llvm::Expected<llvm::APSInt> l = lhs->GetValueAsAPSInt();
+    llvm::Expected<llvm::APSInt> r = rhs->GetValueAsAPSInt();
+
+    if (l && r) {
+      bool ret = Compare(kind, *l, *r);
+      return ValueObject::CreateValueObjectFromBool(m_target, ret, "result");
+    }
   }
 
   // Evaluate arithmetic operation for two floating point values.
   if (lhs->GetCompilerType().IsFloat() && rhs->GetCompilerType().IsFloat()) {
-    bool ret = Compare(kind, lhs->GetValueAsFloat(),
-                       rhs->GetValueAsFloat());
-    return ValueObject::CreateValueObjectFromBool(m_target, ret);
+    llvm::Expected<llvm::APFloat> l = lhs->GetValueAsAPFloat();
+    llvm::Expected<llvm::APFloat> r = rhs->GetValueAsAPFloat();
+    if (l && r) {
+      bool ret = Compare(kind, *l, *r);
+      return ValueObject::CreateValueObjectFromBool(m_target, ret, "result");
+    }
   }
 
   // Evaluate arithmetic operation for two scoped enum values.
   if (lhs->GetCompilerType().IsScopedEnumerationType()
       && rhs->GetCompilerType().IsScopedEnumerationType()) {
-    bool ret = Compare(kind, lhs->GetValueAsAPSInt(), rhs->GetValueAsAPSInt());
-    return ValueObject::CreateValueObjectFromBool(m_target, ret);
+    llvm::Expected<llvm::APSInt> l = lhs->GetValueAsAPSInt();
+    llvm::Expected<llvm::APSInt> r = rhs->GetValueAsAPSInt();
+    if (l && r) {
+      bool ret = Compare(kind, *l, *r);
+      return ValueObject::CreateValueObjectFromBool(m_target, ret, "result");
+    }
   }
 
   // Must be pointer/integer and/or nullptr comparison.
   size_t ptr_size = m_target->GetArchitecture().GetAddressByteSize() * 8;
+  llvm::Expected<llvm::APSInt> l = lhs->GetValueAsAPSInt();
+  llvm::Expected<llvm::APSInt> r = rhs->GetValueAsAPSInt();
 
-  bool ret =
-      Compare(kind, llvm::APSInt(lhs->GetValueAsAPSInt().sextOrTrunc(ptr_size),
-                                 true),
-              llvm::APSInt(rhs->GetValueAsAPSInt().sextOrTrunc(ptr_size),
-                           true));
-  return ValueObject::CreateValueObjectFromBool(m_target, ret);
+  if (l && r) {
+    bool ret =
+        Compare(kind, llvm::APSInt(l->sextOrTrunc(ptr_size), true),
+                llvm::APSInt(r->sextOrTrunc(ptr_size), true));
+    return ValueObject::CreateValueObjectFromBool(m_target, ret, "result");
+  }
+
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateDereference(lldb::ValueObjectSP rhs)
@@ -1794,11 +1376,16 @@ lldb::ValueObjectSP DILInterpreter::EvaluateDereference(lldb::ValueObjectSP rhs)
     return rhs->GetDerefValobj()->GetSP();
 
   CompilerType pointer_type = rhs->GetCompilerType();
-  //lldb::addr_t base_addr = GetUInt64(rhs);
   lldb::addr_t base_addr = rhs->GetValueAsUnsigned(0);
 
-  lldb::ValueObjectSP value = ValueObject::CreateValueObjectFromPointer(
-      m_target, base_addr,  pointer_type);
+  llvm::StringRef name = "result";
+  ExecutionContext exe_ctx(m_target.get(), false);
+  lldb::ValueObjectSP value =
+          ValueObject::CreateValueObjectFromAddress(name, base_addr, exe_ctx,
+                                                    pointer_type,
+                                                    /* do_deref */ false);
+  //lldb::ValueObjectSP value = ValueObject::CreateValueObjectFromPointer(
+  //    m_target, base_addr,  pointer_type);
 
   lldb::ValueObjectSP value_sp(DILGetSPWithLock(value));
   // If we're in the address-of context, skip the dereference and cancel the
@@ -1817,16 +1404,24 @@ lldb::ValueObjectSP DILInterpreter::EvaluateUnaryMinus(lldb::ValueObjectSP rhs)
          && "invalid ast: must be an arithmetic type");
 
   if (rhs->GetCompilerType().IsInteger()) {
-    llvm::APSInt v = rhs->GetValueAsAPSInt();
-    v.negate();
-    return ValueObject::CreateValueObjectFromAPInt(m_target, v,
-                                                   rhs->GetCompilerType());
+    llvm::Expected<llvm::APSInt> r = rhs->GetValueAsAPSInt();
+    if (r) {
+      llvm::APSInt v = *r;
+      v.negate();
+      return ValueObject::CreateValueObjectFromAPInt(m_target, v,
+                                                     rhs->GetCompilerType(),
+                                                     "result");
+    }
   }
   if (rhs->GetCompilerType().IsFloat()) {
-    llvm::APFloat v = rhs->GetValueAsFloat();
-    v.changeSign();
-    return ValueObject::CreateValueObjectFromAPFloat(m_target, v,
-                                                     rhs->GetCompilerType());
+    auto value_or_err = rhs->GetValueAsAPFloat();
+    if (value_or_err) {
+      llvm::APFloat v = *value_or_err;
+      v.changeSign();
+      return ValueObject::CreateValueObjectFromAPFloat(m_target, v,
+                                                       rhs->GetCompilerType(),
+                                                       "result");
+    }
   }
 
   return lldb::ValueObjectSP();
@@ -1837,17 +1432,27 @@ lldb::ValueObjectSP DILInterpreter::EvaluateUnaryNegation(
 {
   assert(rhs->GetCompilerType().IsContextuallyConvertibleToBool() &&
          "invalid ast: must be convertible to bool");
-  return ValueObject::CreateValueObjectFromBool(m_target,
-                                                !rhs->GetValueAsBool());
+  auto value_or_err = rhs->GetValueAsBool();
+  if (value_or_err)
+    return ValueObject::CreateValueObjectFromBool(m_target,
+                                                  !(*value_or_err),
+                                                  "result");
+  else
+    return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateUnaryBitwiseNot(
     lldb::ValueObjectSP rhs) {
   assert(rhs->GetCompilerType().IsInteger() && "invalid ast: must be an integer");
-  llvm::APSInt v = rhs->GetValueAsAPSInt();
-  v.flipAllBits();
-  return ValueObject::CreateValueObjectFromAPInt(m_target, v,
-                                                 rhs->GetCompilerType());
+  auto value_or_err = rhs->GetValueAsAPSInt();
+  if (value_or_err) {
+    llvm::APSInt v = *value_or_err;
+    v.flipAllBits();
+    return ValueObject::CreateValueObjectFromAPInt(m_target, v,
+                                                   rhs->GetCompilerType(),
+                                                   "result");
+  }
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateUnaryPrefixIncrement(
@@ -1857,23 +1462,33 @@ lldb::ValueObjectSP DILInterpreter::EvaluateUnaryPrefixIncrement(
           || rhs->GetCompilerType().IsPointerType()) &&
          "invalid ast: must be either arithmetic type or pointer");
 
+  Status status;
   if (rhs->GetCompilerType().IsInteger()) {
-    llvm::APSInt v = rhs->GetValueAsAPSInt();
-    ++v;  // Do the increment.
+    llvm::Expected<llvm::APSInt> r = rhs->GetValueAsAPSInt();
+    if (r) {
+      llvm::APSInt v = *r;
+      ++v;  // Do the increment.
 
-    rhs->UpdateIntegerValue(v);
-    return rhs;
+      rhs->SetValueFromInteger(v, status);
+      if (status.Success())
+        return rhs;
+      return lldb::ValueObjectSP();
+    }
   }
   if (rhs->GetCompilerType().IsFloat()) {
-    llvm::APFloat v = rhs->GetValueAsFloat();
-    // Do the increment.
-    v = v + llvm::APFloat(v.getSemantics(), 1ULL);
+    auto value_or_err = rhs->GetValueAsAPFloat();
+    if (value_or_err) {
+      llvm::APFloat v = *value_or_err;
+      // Do the increment.
+      v = v + llvm::APFloat(v.getSemantics(), 1ULL);
 
-    rhs->UpdateIntegerValue(v.bitcastToAPInt());
-    return rhs;
+      rhs->SetValueFromInteger(v.bitcastToAPInt(), status);
+      if (status.Success())
+        return rhs;
+      return lldb::ValueObjectSP();
+    }
   }
   if (rhs->GetCompilerType().IsPointerType()) {
-    //uint64_t v = GetUInt64(rhs);
     uint64_t v = rhs->GetValueAsUnsigned(0);
     uint64_t byte_size = 0;
     if (auto temp =
@@ -1882,8 +1497,9 @@ lldb::ValueObjectSP DILInterpreter::EvaluateUnaryPrefixIncrement(
       byte_size = temp.value();
     v += byte_size;;  // Do the increment.
 
-    rhs->UpdateIntegerValue(llvm::APInt(64, v));
-    return rhs;
+    rhs->SetValueFromInteger(llvm::APInt(64, v), status);
+    if (status.Success())
+      return rhs;
   }
 
   return lldb::ValueObjectSP();
@@ -1896,23 +1512,33 @@ lldb::ValueObjectSP DILInterpreter::EvaluateUnaryPrefixDecrement(
           rhs->GetCompilerType().IsPointerType()) &&
          "invalid ast: must be either arithmetic type or pointer");
 
+  Status status;
   if (rhs->GetCompilerType().IsInteger()) {
-    llvm::APSInt v = rhs->GetValueAsAPSInt();
-    --v;  // Do the decrement.
+    llvm::Expected<llvm::APSInt> r = rhs->GetValueAsAPSInt();
+    if (r) {
+      llvm::APSInt v = *r;
+      --v;  // Do the decrement.
 
-    rhs->UpdateIntegerValue(v);
-    return rhs;
+      rhs->SetValueFromInteger(v, status);
+      if (status.Success())
+        return rhs;
+      return lldb::ValueObjectSP();
+    }
   }
   if (rhs->GetCompilerType().IsFloat()) {
-    llvm::APFloat v = rhs->GetValueAsFloat();
-    // Do the decrement.
-    v = v - llvm::APFloat(v.getSemantics(), 1ULL);
+    auto value_or_err = rhs->GetValueAsAPFloat();
+    if (value_or_err) {
+      llvm::APFloat v = *value_or_err;
+      // Do the decrement.
+      v = v - llvm::APFloat(v.getSemantics(), 1ULL);
 
-    rhs->UpdateIntegerValue(v.bitcastToAPInt());
-    return rhs;
+      rhs->SetValueFromInteger(v.bitcastToAPInt(), status);
+      if (status.Success())
+        return rhs;
+      return lldb::ValueObjectSP();
+    }
   }
   if (rhs->GetCompilerType().IsPointerType()) {
-    //uint64_t v = GetUInt64(rhs);
     uint64_t v = rhs->GetValueAsUnsigned(0);
     uint64_t byte_size = 0;
     if (auto temp =
@@ -1921,8 +1547,9 @@ lldb::ValueObjectSP DILInterpreter::EvaluateUnaryPrefixDecrement(
       byte_size = temp.value();
     v -= byte_size;  // Do the decrement.
 
-    rhs->UpdateIntegerValue(llvm::APInt(64, v));
-    return rhs;
+    rhs->SetValueFromInteger(llvm::APInt(64, v), status);
+    if (status.Success())
+      return rhs;
   }
 
   return lldb::ValueObjectSP();
@@ -1955,14 +1582,12 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryAddition(
   assert(offset->GetCompilerType().IsInteger() &&
          "invalid ast: offset must be an integer");
 
-  //if (GetUInt64(ptr) == 0 && GetUInt64(offset) != 0) {
   if (ptr->GetValueAsUnsigned(0) == 0 && offset->GetValueAsUnsigned(0) != 0) {
     // Binary addition with null pointer causes mismatches between LLDB and
     // lldb-eval if the offset different than zero.
     SetUbStatus(m_error, ErrorCode::kUBNullPtrArithmetic);
   }
 
-  //return PointerAdd(ptr, GetUInt64(offset));
   return PointerAdd(ptr, offset->GetValueAsUnsigned(0));
 }
 
@@ -1983,7 +1608,6 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinarySubtraction(
 
   // "pointer - integer" operation.
   if (rhs->GetCompilerType().IsInteger()) {
-    //return PointerAdd(lhs, -GetUInt64(rhs));
     return PointerAdd(lhs, - rhs->GetValueAsUnsigned(0));
   }
 
@@ -2005,7 +1629,6 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinarySubtraction(
   // Since pointers have compatible types, both have the same pointee size.
   uint64_t item_size = lhs_byte_size;
   // Pointer difference is a signed value.
-  //int64_t diff = static_cast<int64_t>(GetUInt64(lhs) - GetUInt64(rhs));
   int64_t diff = static_cast<int64_t>(lhs->GetValueAsUnsigned(0) -
                                       rhs->GetValueAsUnsigned(0));
 
@@ -2019,7 +1642,16 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinarySubtraction(
   diff /= static_cast<int64_t>(item_size);
 
   // Pointer difference is ptrdiff_t.
-  return ValueObject::CreateValueObjectFromBytes(m_target, &diff, result_type);
+  ExecutionContext exe_ctx(m_target.get(), false);
+  uint64_t byte_size = 0;
+  if (auto temp = result_type.GetByteSize(m_target.get()))
+    byte_size = temp.value();
+  lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
+      reinterpret_cast<const void*>(&diff), byte_size,
+      exe_ctx.GetByteOrder(), exe_ctx.GetAddressByteSize());
+  return ValueObject::CreateValueObjectFromData("result", *data_sp, exe_ctx,
+                                                result_type);
+  //return ValueObject::CreateValueObjectFromBytes(m_target, &diff, result_type);
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinaryMultiplication(
@@ -2039,7 +1671,6 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryDivision(
          "invalid ast: operands must be arithmetic and have the same type");
 
   // Check for zero only for integer division.
-  //if (rhs->GetCompilerType().IsInteger() && GetUInt64(rhs) == 0) {
   if (rhs->GetCompilerType().IsInteger() && rhs->GetValueAsUnsigned(0) == 0) {
     // This is UB and the compiler would generate a warning:
     //
@@ -2067,7 +1698,6 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryRemainder(
           && lhs->GetCompilerType().CompareTypes(rhs->GetCompilerType()))
          && "invalid ast: operands must be integers and have the same type");
 
-  //if (GetUInt64(rhs) == 0) {
   if (rhs->GetValueAsUnsigned(0) == 0) {
     // This is UB and the compiler would generate a warning:
     //
@@ -2117,9 +1747,9 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryShift(BinaryOpKind kind,
     lhs_byte_size = temp.value();
   // Performing shift operation is undefined behaviour if the right operand
   // isn't in interval [0, bit-size of the left operand).
-  if (rhs->GetValueAsAPSInt().isNegative() ||
-      (rhs->GetValueAsUnsigned(0) >= lhs_byte_size * CHAR_BIT)) {
-    //(GetUInt64(rhs) >= lhs_byte_size * CHAR_BIT)) {
+  llvm::Expected<llvm::APSInt> r = rhs->GetValueAsAPSInt();
+  if (r && (r->isNegative() ||
+            (rhs->GetValueAsUnsigned(0) >= lhs_byte_size * CHAR_BIT))) {
     SetUbStatus(m_error, ErrorCode::kUBInvalidShift);
   }
 
@@ -2132,8 +1762,11 @@ lldb::ValueObjectSP DILInterpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
   assert(lhs->GetCompilerType().CompareTypes(rhs->GetCompilerType()) &&
          "invalid ast: operands must have the same type");
 
-  lhs->UpdateIntegerValue(rhs);
-  return lhs;
+  Status status;
+  lhs->SetValueFromInteger(rhs, status);
+  if (status.Success())
+    return lhs;
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinaryAddAssign(
@@ -2150,13 +1783,18 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryAddAssign(
            && "invalid ast: lhs must be an arithmetic type");
     assert(rhs->GetCompilerType().IsBasicType() &&
            "invalid ast: rhs must be a basic type");
-    ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(), m_error);
+    //ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(), m_error);
+    ret = lhs->CastToBasicType(rhs->GetCompilerType());
     ret = EvaluateBinaryAddition(ret, rhs);
-    ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+    //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+    ret = ret->CastToBasicType(lhs->GetCompilerType());
   }
 
-  lhs->UpdateIntegerValue(ret);
-  return lhs;
+  Status status;
+  lhs->SetValueFromInteger(ret, status);
+  if (status.Success())
+    return lhs;
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinarySubAssign(
@@ -2174,13 +1812,18 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinarySubAssign(
            && "invalid ast: lhs must be an arithmetic type");
     assert(rhs->GetCompilerType().IsBasicType() &&
            "invalid ast: rhs must be a basic type");
-    ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(), m_error);
+    //ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(), m_error);
+    ret = lhs->CastToBasicType(rhs->GetCompilerType());
     ret = EvaluateBinarySubtraction(ret, rhs, ret->GetCompilerType());
-    ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+    //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+    ret = ret->CastToBasicType(lhs->GetCompilerType());
   }
 
-  lhs->UpdateIntegerValue(ret);
-  return lhs;
+  Status status;
+  lhs->SetValueFromInteger(ret, status);
+  if (status.Success())
+    return lhs;
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinaryMulAssign(
@@ -2190,13 +1833,18 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryMulAssign(
   assert(rhs->GetCompilerType().IsBasicType()
          && "invalid ast: rhs must be a basic type");
 
-  lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
-                                                       m_error);
+  lldb::ValueObjectSP ret = lhs->CastToBasicType(rhs->GetCompilerType());
+  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
+  //                                                     m_error);
   ret = EvaluateBinaryMultiplication(ret, rhs);
-  ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  ret = ret->CastToBasicType(lhs->GetCompilerType());
 
-  lhs->UpdateIntegerValue(ret);
-  return lhs;
+  Status status;
+  lhs->SetValueFromInteger(ret, status);
+  if (status.Success())
+    return lhs;
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinaryDivAssign(
@@ -2206,13 +1854,18 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryDivAssign(
   assert(rhs->GetCompilerType().IsBasicType()
          && "invalid ast: rhs must be a basic type");
 
-  lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
-                                                       m_error);
+  lldb::ValueObjectSP ret = lhs->CastToBasicType(rhs->GetCompilerType());
+  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
+  //                                                       m_error);
   ret = EvaluateBinaryDivision(ret, rhs);
-  ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  ret = ret->CastToBasicType(lhs->GetCompilerType());
 
-  lhs->UpdateIntegerValue(ret);
-  return lhs;
+  Status status;
+  lhs->SetValueFromInteger(ret, status);
+  if (status.Success())
+    return lhs;
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinaryRemAssign(
@@ -2222,13 +1875,19 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryRemAssign(
   assert(rhs->GetCompilerType().IsBasicType()
          && "invalid ast: rhs must be a basic type");
 
-  lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
-                                                       m_error);
-  ret = EvaluateBinaryRemainder(ret, rhs);
-  ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
+  //                                                     m_error);
+  lldb::ValueObjectSP ret = lhs->CastToBasicType(rhs->GetCompilerType());
 
-  lhs->UpdateIntegerValue(ret);
-  return lhs;
+  ret = EvaluateBinaryRemainder(ret, rhs);
+  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  ret = ret->CastToBasicType(lhs->GetCompilerType());
+
+  Status status;
+  lhs->SetValueFromInteger(ret, status);
+  if (status.Success())
+    return lhs;
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinaryBitwiseAssign(
@@ -2253,13 +1912,18 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryBitwiseAssign(
   assert(rhs->GetCompilerType().IsBasicType() &&
          "invalid ast: rhs must be a basic type");
 
-  lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
-                                                       m_error);
+  lldb::ValueObjectSP ret = lhs->CastToBasicType(rhs->GetCompilerType());
+  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(rhs->GetCompilerType(),
+  //                                                     m_error);
   ret = EvaluateBinaryBitwise(kind, ret, rhs);
-  ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  ret = ret->CastToBasicType(lhs->GetCompilerType());
 
-  lhs->UpdateIntegerValue(ret);
-  return lhs;
+  Status status;
+  lhs->SetValueFromInteger(ret, status);
+  if (status.Success())
+    return lhs;
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::EvaluateBinaryShiftAssign(
@@ -2286,13 +1950,18 @@ lldb::ValueObjectSP DILInterpreter::EvaluateBinaryShiftAssign(
   assert(comp_assign_type.IsInteger() &&
          "invalid ast: comp_assign_type must be an integer");
 
-  lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(comp_assign_type,
-                                                       m_error);
+  //lldb::ValueObjectSP ret = lhs->CastScalarToBasicType(comp_assign_type,
+  //                                                     m_error);
+  lldb::ValueObjectSP ret = lhs->CastToBasicType(comp_assign_type);
   ret = EvaluateBinaryShift(kind, ret, rhs);
-  ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  //ret = ret->CastScalarToBasicType(lhs->GetCompilerType(), m_error);
+  ret = ret->CastToBasicType(lhs->GetCompilerType());
 
-  lhs->UpdateIntegerValue(ret);
-  return lhs;
+  Status status;
+  lhs->SetValueFromInteger(ret, status);
+  if (status.Success())
+    return lhs;
+  return lldb::ValueObjectSP();
 }
 
 lldb::ValueObjectSP DILInterpreter::PointerAdd(lldb::ValueObjectSP lhs,
@@ -2301,11 +1970,15 @@ lldb::ValueObjectSP DILInterpreter::PointerAdd(lldb::ValueObjectSP lhs,
   if (auto temp = lhs->GetCompilerType().GetPointeeType().GetByteSize(
           lhs->GetTargetSP().get()))
     byte_size = temp.value();
-  //uintptr_t addr = GetUInt64(lhs) + offset * byte_size;
   uintptr_t addr = lhs->GetValueAsUnsigned(0) + offset * byte_size;
 
-  return ValueObject::CreateValueObjectFromPointer(m_target, addr,
-                                                   lhs->GetCompilerType());
+  llvm::StringRef name = "result";
+  ExecutionContext exe_ctx(m_target.get(), false);
+  return ValueObject::CreateValueObjectFromAddress(name, addr, exe_ctx,
+                                                   lhs->GetCompilerType(),
+                                                    /* do_deref */ false);
+  //return ValueObject::CreateValueObjectFromPointer(m_target, addr,
+  //                                                 lhs->GetCompilerType());
 }
 
 lldb::ValueObjectSP DILInterpreter::ResolveContextVar(

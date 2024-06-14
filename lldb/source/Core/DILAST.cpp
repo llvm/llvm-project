@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DILAST.h"
+#include "lldb/API/SBType.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Symbol/TypeList.h"
@@ -241,9 +242,9 @@ static lldb::ValueObjectSP LookupStaticIdentifier(
 
     if (val_name_sstr == name_sstr ||
         val_name_sstr == llvm::formatv("::{0}", name_sstr).str() ||
-        val_name_sstr.endswith(llvm::formatv(" {0}", name_sstr).str()) ||
-        val_name_sstr.endswith(llvm::formatv("*{0}", name_sstr).str()) ||
-        val_name_sstr.endswith(llvm::formatv("&{0}", name_sstr).str())) {
+        val_name_sstr.ends_with(llvm::formatv(" {0}", name_sstr).str()) ||
+        val_name_sstr.ends_with(llvm::formatv("*{0}", name_sstr).str()) ||
+        val_name_sstr.ends_with(llvm::formatv("&{0}", name_sstr).str())) {
       return val;
     }
   }
@@ -272,6 +273,58 @@ static std::vector<EnumMember> GetEnumMembers(CompilerType type) {
   return enum_member_list;
 }
 
+/*
+CompilerType ResolveTypeByNameBad (
+    const std::string& name,
+    std::shared_ptr<ExecutionContextScope> ctx_scope)
+{
+  llvm::StringRef name_ref(name);
+  bool global_scope = false;
+
+  if (name_ref.starts_with("::")) {
+    name_ref = name_ref.drop_front(2);
+    global_scope = true;
+  }
+
+  lldb::TargetSP target_sp = ctx_scope->CalculateTarget();
+  lldb::SBTarget target;
+  target.SetSP(target_sp);
+  lldb::SBTypeList types = target.FindTypes(name_ref.data());
+
+  // We've found multiple types, try finding the "correct" one.
+  //CompilerType full_match;
+  lldb::SBType full_match;
+  //std::vector<CompilerType> partial_matches;
+  std::vector<lldb::SBType> partial_matches;
+
+  for (uint32_t i = 0; i < types.GetSize(); ++i) {
+    lldb::SBType type = types.GetTypeAtIndex(i);
+    llvm::StringRef type_name = type.GetName();
+
+    if (type_name == name_ref)
+      full_match = type;
+    else if (type_name.ends_with(name_ref))
+      partial_matches.push_back(type);
+  }
+
+  // Full match is always correct.
+  if (full_match.IsValid()) {
+    // Convert full_match to CompilerType and return it.
+    CompilerType ret_type = full_match.GetSP()->GetCompilerType(false);
+    return ret_type;
+  } else {
+    // If we have partial matches, pick a "random" one.
+    if (partial_matches.size() > 0) {
+      // convert partial_matches.back() to a CompilerType and return it.
+      CompilerType ret_type = partial_matches.back().GetSP()->GetCompilerType(false);
+      return ret_type;
+    }
+  }
+  CompilerType empty_type;
+  return empty_type;
+}
+*/
+
 CompilerType ResolveTypeByName(
     const std::string& name,
     std::shared_ptr<ExecutionContextScope> ctx_scope)
@@ -284,7 +337,7 @@ CompilerType ResolveTypeByName(
   llvm::StringRef name_ref(name);
   bool global_scope = false;
 
-  if (name_ref.startswith("::")) {
+  if (name_ref.starts_with("::")) {
     name_ref = name_ref.drop_front(2);
     global_scope = true;
   }
@@ -296,6 +349,7 @@ CompilerType ResolveTypeByName(
     ModuleList &images = target_sp->GetImages();
     ConstString const_type_name(type_name);
     TypeQuery query(type_name);
+    //TypeQuery query(type_name, lldb_private::e_find_one);
     TypeResults results;
     images.FindTypes(nullptr, query, results);
     for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types()) {
@@ -332,7 +386,7 @@ CompilerType ResolveTypeByName(
 
     if (type_name_ref == name_ref) {
       full_match = type;
-    } else if (type_name_ref.endswith(name_ref)) {
+    } else if (type_name_ref.ends_with(name_ref)) {
       partial_matches.push_back(type);
     }
   }
@@ -430,7 +484,7 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
 
   // Support $rax as a special syntax for accessing registers.
   // Will return an invalid value in case the requested register doesn't exist.
-  if (name_ref.startswith("$")) {
+  if (name_ref.starts_with("$")) {
     lldb::ValueObjectSP value_sp;
     const char* reg_name = name_ref.drop_front(1).data();
     Target *target = ctx_scope->CalculateTarget().get();
@@ -457,7 +511,7 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
   // Internally values don't have global scope qualifier in their names and
   // LLDB doesn't support queries with it too.
   bool global_scope = false;
-  if (name_ref.startswith("::")) {
+  if (name_ref.starts_with("::")) {
     name_ref = name_ref.drop_front(2);
     global_scope = true;
   }
@@ -468,8 +522,6 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
     if (!scope_ptr || !scope_ptr->IsValid()) {
       // Lookup in the current frame.
       lldb::StackFrameSP frame = ctx_scope->CalculateStackFrame();
-      //      lldb::DynamicValueType use_dynamic =
-      //          frame->CalculateTarget()->GetPreferDynamicValue();
       // Try looking for a local variable in current scope.
       lldb::ValueObjectSP value_sp;
       lldb::VariableListSP var_list_sp(frame->GetInScopeVariableList(true));
@@ -477,7 +529,6 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
       if (variable_list) {
         lldb::VariableSP var_sp =
             DILFindVariable(ConstString(name_ref), variable_list);
-        //variable_list->FindVariable(ConstString(name_ref), false);
         if (var_sp)
           value_sp = frame->GetValueObjectForFrameVariable(var_sp,
                                                            use_dynamic);
@@ -489,8 +540,7 @@ std::unique_ptr<IdentifierInfo> LookupIdentifier(
       lldb::ValueObjectSP value(DILGetSPWithLock(value_sp, use_dynamic,
                                                  use_synthetic));
       if (value) {
-        //// Force static value, otherwise we can end up with the "real" type.
-        //return IdentifierInfo::FromValue(value->GetStaticValue());
+        // Force static value, otherwise we can end up with the "real" type.
         return IdentifierInfo::FromValue(value);
       }
       // Try looking for an instance variable (class member).
