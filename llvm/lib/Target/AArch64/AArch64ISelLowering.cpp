@@ -16067,8 +16067,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     Value *ZExt = createTblShuffleForZExt(
         Builder, I->getOperand(0), FixedVectorType::getInteger(DstTy),
         FixedVectorType::getInteger(DstTy), Subtarget->isLittleEndian());
-    if (!ZExt)
-      return false;
+    assert(ZExt && "Cannot fail for the i8 to float conversion");
     auto *UI = Builder.CreateUIToFP(ZExt, DstTy);
     I->replaceAllUsesWith(UI);
     I->eraseFromParent();
@@ -16082,8 +16081,7 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     auto *Shuffle = createTblShuffleForSExt(Builder, I->getOperand(0),
                                             FixedVectorType::getInteger(DstTy),
                                             Subtarget->isLittleEndian());
-    if (!Shuffle)
-      return false;
+    assert(Shuffle && "Cannot fail for the i8 to float conversion");
     auto *Cast = Builder.CreateBitCast(Shuffle, VectorType::getInteger(DstTy));
     auto *AShr = Builder.CreateAShr(Cast, 24, "", true);
     auto *SI = Builder.CreateSIToFP(AShr, DstTy);

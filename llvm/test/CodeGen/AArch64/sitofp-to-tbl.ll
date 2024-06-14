@@ -195,3 +195,82 @@ loop:
 exit:
   ret void
 }
+
+
+; Negative tests, currently we don't convert to f16/bf16 via `tbl`.
+define void @sitofp_v8i8_to_v8f16(ptr %src, ptr %dst) {
+; CHECK-LABEL: sitofp_v8i8_to_v8f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB2_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr d0, [x0, x8, lsl #3]
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshll v1.4s, v0.4h, #0
+; CHECK-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-NEXT:    scvtf v1.4s, v1.4s
+; CHECK-NEXT:    scvtf v0.4s, v0.4s
+; CHECK-NEXT:    fcvtn v1.4h, v1.4s
+; CHECK-NEXT:    fcvtn2 v1.8h, v0.4s
+; CHECK-NEXT:    str q1, [x1, x8, lsl #4]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    b.eq .LBB2_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.src = getelementptr inbounds <8 x i8>, ptr %src, i64 %iv
+  %l = load <8 x i8>, ptr %gep.src
+  %conv = sitofp <8 x i8> %l to <8 x half>
+  %gep.dst = getelementptr inbounds <8 x half>, ptr %dst, i64 %iv
+  store <8 x half> %conv, ptr %gep.dst
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+
+; Negative test, conversion to double with the help of `tbl` not implemented (TODO)
+define void @sitofp_v2i8_to_v2f64(ptr %src, ptr %dst) {
+; CHECK-LABEL: sitofp_v2i8_to_v2f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:  .LBB3_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    add x9, x0, x8, lsl #1
+; CHECK-NEXT:    ldrsb w10, [x9]
+; CHECK-NEXT:    ldrsb w9, [x9, #1]
+; CHECK-NEXT:    fmov s0, w10
+; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
+; CHECK-NEXT:    add x8, x8, #1
+; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    b.eq .LBB3_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.src = getelementptr inbounds <2 x i8>, ptr %src, i64 %iv
+  %l = load <2 x i8>, ptr %gep.src
+  %conv = sitofp <2 x i8> %l to <2 x double>
+  %gep.dst = getelementptr inbounds <2 x double>, ptr %dst, i64 %iv
+  store <2 x double> %conv, ptr %gep.dst
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
