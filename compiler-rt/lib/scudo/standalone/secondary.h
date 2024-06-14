@@ -391,7 +391,8 @@ public:
       return true;
     }
     if (O == Option::MaxCacheEntriesCount) {
-      if (Value < 0) return false;
+      if (Value < 0)
+        return false;
       atomic_store_relaxed(
           &MaxEntriesCount,
           Min<u32>(static_cast<u32>(Value), Config::getEntriesArraySize()));
