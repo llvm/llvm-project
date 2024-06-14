@@ -102,15 +102,17 @@ static long initHwProbe(struct riscv_hwprobe *Hwprobes, int len) {
   return sys_riscv_hwprobe(Hwprobes, len, 0, (cpu_set_t *)((void *)0), 0);
 }
 
+#define RISCV_FEATURE_BITS_LENGTH 2
 struct {
   unsigned length;
-  unsigned long long features[2];
+  unsigned long long features[RISCV_FEATURE_BITS_LENGTH];
 } __riscv_feature_bits __attribute__((visibility("hidden"), nocommon));
 
+#define RISCV_VENDOR_FEATURE_BITS_LENGTH 1
 struct {
   unsigned vendorID;
   unsigned length;
-  unsigned long long features[1];
+  unsigned long long features[RISCV_VENDOR_FEATURE_BITS_LENGTH];
 } __riscv_vendor_feature_bits __attribute__((visibility("hidden"), nocommon));
 
 // NOTE: Should sync-up with RISCVFeatures.td
@@ -155,8 +157,6 @@ struct {
 #define ZFH_BITMASK (1ULL << 8)
 #define ZFHMIN_GROUPID 1
 #define ZFHMIN_BITMASK (1ULL << 7)
-#define ZHINX_GROUPID 1
-#define ZHINX_BITMASK (1ULL << 10)
 #define ZICBOZ_GROUPID 1
 #define ZICBOZ_BITMASK (1ULL << 0)
 #define ZICOND_GROUPID 1
@@ -272,7 +272,6 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   if (IMAEXT0Value & RISCV_HWPROBE_IMA_FD) {
     __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
     __riscv_feature_bits.features[D_GROUPID] |= D_BITMASK;
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
   }
 
   if (IMAEXT0Value & RISCV_HWPROBE_IMA_C) {
@@ -281,17 +280,6 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
   if (IMAEXT0Value & RISCV_HWPROBE_IMA_V) {
     __riscv_feature_bits.features[V_GROUPID] |= V_BITMASK;
-    __riscv_feature_bits.features[ZVE32X_GROUPID] |= ZVE32X_BITMASK;
-    __riscv_feature_bits.features[ZVE64X_GROUPID] |= ZVE64X_BITMASK;
-    __riscv_feature_bits.features[ZVL32B_GROUPID] |= ZVL32B_BITMASK;
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-    __riscv_feature_bits.features[ZVE64D_GROUPID] |= ZVE64D_BITMASK;
-    __riscv_feature_bits.features[D_GROUPID] |= D_BITMASK;
-    __riscv_feature_bits.features[ZVE32F_GROUPID] |= ZVE32F_BITMASK;
-    __riscv_feature_bits.features[ZVL128B_GROUPID] |= ZVL128B_BITMASK;
-    __riscv_feature_bits.features[ZVE64F_GROUPID] |= ZVE64F_BITMASK;
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
-    __riscv_feature_bits.features[ZVL64B_GROUPID] |= ZVL64B_BITMASK;
   }
 
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBA) {
@@ -342,7 +330,6 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVBB) {
     __riscv_feature_bits.features[ZVBB_GROUPID] |= ZVBB_BITMASK;
-    __riscv_feature_bits.features[ZVKB_GROUPID] |= ZVKB_BITMASK;
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVBC) {
     __riscv_feature_bits.features[ZVBC_GROUPID] |= ZVBC_BITMASK;
@@ -361,11 +348,6 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKNHB) {
     __riscv_feature_bits.features[ZVKNHB_GROUPID] |= ZVKNHB_BITMASK;
-    __riscv_feature_bits.features[ZVE32X_GROUPID] |= ZVE32X_BITMASK;
-    __riscv_feature_bits.features[ZVE64X_GROUPID] |= ZVE64X_BITMASK;
-    __riscv_feature_bits.features[ZVL32B_GROUPID] |= ZVL32B_BITMASK;
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
-    __riscv_feature_bits.features[ZVL64B_GROUPID] |= ZVL64B_BITMASK;
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKSED) {
     __riscv_feature_bits.features[ZVKSED_GROUPID] |= ZVKSED_BITMASK;
@@ -378,40 +360,21 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFH) {
     __riscv_feature_bits.features[ZFH_GROUPID] |= ZFH_BITMASK;
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-    __riscv_feature_bits.features[ZFHMIN_GROUPID] |= ZFHMIN_BITMASK;
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFHMIN) {
     __riscv_feature_bits.features[ZFHMIN_GROUPID] |= ZFHMIN_BITMASK;
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZIHINTNTL) {
     __riscv_feature_bits.features[ZIHINTNTL_GROUPID] |= ZIHINTNTL_BITMASK;
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVFH) {
     __riscv_feature_bits.features[ZVFH_GROUPID] |= ZVFH_BITMASK;
-    __riscv_feature_bits.features[ZVE32X_GROUPID] |= ZVE32X_BITMASK;
-    __riscv_feature_bits.features[ZVL32B_GROUPID] |= ZVL32B_BITMASK;
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-    __riscv_feature_bits.features[ZVFHMIN_GROUPID] |= ZVFHMIN_BITMASK;
-    __riscv_feature_bits.features[ZVE32F_GROUPID] |= ZVE32F_BITMASK;
-    __riscv_feature_bits.features[ZFHMIN_GROUPID] |= ZFHMIN_BITMASK;
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVFHMIN) {
     __riscv_feature_bits.features[ZVFHMIN_GROUPID] |= ZVFHMIN_BITMASK;
-    __riscv_feature_bits.features[ZVE32X_GROUPID] |= ZVE32X_BITMASK;
-    __riscv_feature_bits.features[ZVL32B_GROUPID] |= ZVL32B_BITMASK;
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-    __riscv_feature_bits.features[ZVE32F_GROUPID] |= ZVE32F_BITMASK;
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFA) {
     __riscv_feature_bits.features[ZFA_GROUPID] |= ZFA_BITMASK;
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
   }
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZTSO) {
     __riscv_feature_bits.features[ZTSO_GROUPID] |= ZTSO_BITMASK;
@@ -422,6 +385,83 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZICOND) {
     __riscv_feature_bits.features[ZICOND_GROUPID] |= ZICOND_BITMASK;
   }
+}
+
+static unsigned updateImpliedFeaturesImpl() {
+
+  unsigned long long OriFeaturesBits[RISCV_FEATURE_BITS_LENGTH];
+  for (unsigned i = 0; i < __riscv_feature_bits.length; i++)
+    OriFeaturesBits[i] = __riscv_feature_bits.features[i];
+
+  if (__riscv_feature_bits.features[D_GROUPID] & D_BITMASK)
+    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
+
+  if (__riscv_feature_bits.features[F_GROUPID] & F_BITMASK)
+    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
+
+  if (__riscv_feature_bits.features[V_GROUPID] & V_BITMASK)
+    __riscv_feature_bits.features[ZVL128B_GROUPID] |= ZVL128B_BITMASK;
+
+  if (__riscv_feature_bits.features[V_GROUPID] & V_BITMASK)
+    __riscv_feature_bits.features[ZVE64D_GROUPID] |= ZVE64D_BITMASK;
+
+  if (__riscv_feature_bits.features[ZFA_GROUPID] & ZFA_BITMASK)
+    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
+
+  if (__riscv_feature_bits.features[ZFH_GROUPID] & ZFH_BITMASK)
+    __riscv_feature_bits.features[ZFHMIN_GROUPID] |= ZFHMIN_BITMASK;
+
+  if (__riscv_feature_bits.features[ZFHMIN_GROUPID] & ZFHMIN_BITMASK)
+    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVBB_GROUPID] & ZVBB_BITMASK)
+    __riscv_feature_bits.features[ZVKB_GROUPID] |= ZVKB_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE32F_GROUPID] & ZVE32F_BITMASK)
+    __riscv_feature_bits.features[ZVE32X_GROUPID] |= ZVE32X_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE32F_GROUPID] & ZVE32F_BITMASK)
+    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE32X_GROUPID] & ZVE32X_BITMASK)
+    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE32X_GROUPID] & ZVE32X_BITMASK)
+    __riscv_feature_bits.features[ZVL32B_GROUPID] |= ZVL32B_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE64D_GROUPID] & ZVE64D_BITMASK)
+    __riscv_feature_bits.features[ZVE64F_GROUPID] |= ZVE64F_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE64D_GROUPID] & ZVE64D_BITMASK)
+    __riscv_feature_bits.features[D_GROUPID] |= D_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE64F_GROUPID] & ZVE64F_BITMASK)
+    __riscv_feature_bits.features[ZVE32F_GROUPID] |= ZVE32F_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE64F_GROUPID] & ZVE64F_BITMASK)
+    __riscv_feature_bits.features[ZVE64X_GROUPID] |= ZVE64X_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE64X_GROUPID] & ZVE64X_BITMASK)
+    __riscv_feature_bits.features[ZVE32X_GROUPID] |= ZVE32X_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVE64X_GROUPID] & ZVE64X_BITMASK)
+    __riscv_feature_bits.features[ZVL64B_GROUPID] |= ZVL64B_BITMASK;
+
+  if (__riscv_feature_bits.features[ZVFH_GROUPID] & ZVFH_BITMASK)
+    __riscv_feature_bits.features[ZVFHMIN_GROUPID] |= ZVFHMIN_BITMASK;
+
+  for (unsigned i = 0; i < __riscv_feature_bits.length; i++)
+    if (OriFeaturesBits[i] != __riscv_feature_bits.features[i])
+      return 1;
+
+  return 0;
+}
+
+void updateImpliedFeatures() {
+  unsigned Changed = 1;
+
+  while (Changed)
+    Changed = updateImpliedFeaturesImpl();
 }
 
 static int FeaturesBitCached = 0;
@@ -440,4 +480,5 @@ void __init_riscv_features_bit() {
   initHwProbe(Hwprobes, HWPROBE_LENGTH);
 
   initRISCVFeature(Hwprobes);
+  updateImpliedFeatures();
 }
