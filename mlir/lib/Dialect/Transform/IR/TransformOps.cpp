@@ -1391,46 +1391,83 @@ DiagnosedSilenceableFailure
 transform::ForeachOp::apply(transform::TransformRewriter &rewriter,
                             transform::TransformResults &results,
                             transform::TransformState &state) {
-  SmallVector<SmallVector<Operation *>> resultOps(getNumResults(), {});
-  // Store payload ops in a vector because ops may be removed from the mapping
-  // by the TrackingRewriter while the iteration is in progress.
-  SmallVector<Operation *> targets =
-      llvm::to_vector(state.getPayloadOps(getTarget()));
-  for (Operation *op : targets) {
+  // We store the payloads before executing the body as ops may be removed from
+  // the mapping by the TrackingRewriter while iteration is in progress.
+  SmallVector<SmallVector<MappedValue>> payloads;
+  detail::prepareValueMappings(payloads, getTargets(), state);
+  size_t numIterations = payloads.empty() ? 0 : payloads.front().size();
+
+  // As we will be "zipping" over them, check all payloads have the same size.
+  for (size_t argIdx = 1; argIdx < payloads.size(); argIdx++) {
+    if (payloads[argIdx].size() != numIterations) {
+      return emitSilenceableError()
+             << "prior targets' payload size (" << numIterations
+             << ") differs from payload size (" << payloads[argIdx].size()
+             << ") of target " << getTargets()[argIdx];
+    }
+  }
+
+  // Start iterating, indexing into payloads to obtain the right arguments to
+  // call the body with - each slice of payloads at the same argument index
+  // corresponding to a tuple to use as the body's block arguments.
+  ArrayRef<BlockArgument> blockArguments = getBody().front().getArguments();
+  SmallVector<SmallVector<MappedValue>> zippedResults(getNumResults(), {});
+  for (size_t iterIdx = 0; iterIdx < numIterations; iterIdx++) {
     auto scope = state.make_region_scope(getBody());
-    if (failed(state.mapBlockArguments(getIterationVariable(), {op})))
-      return DiagnosedSilenceableFailure::definiteFailure();
+    // Set up arguments to the region's block.
+    for (auto &&[argIdx, blockArg] : llvm::enumerate(blockArguments)) {
+      MappedValue argument = payloads[argIdx][iterIdx];
+      // Note that each blockArg's handle gets associated with just a single
+      // element from the corresponding target's payload.
+      if (failed(state.mapBlockArgument(blockArg, {argument})))
+        return DiagnosedSilenceableFailure::definiteFailure();
+    }
 
     // Execute loop body.
     for (Operation &transform : getBody().front().without_terminator()) {
       DiagnosedSilenceableFailure result = state.applyTransform(
-          cast<transform::TransformOpInterface>(transform));
+          llvm::cast<transform::TransformOpInterface>(transform));
       if (!result.succeeded())
         return result;
     }
 
-    // Append yielded payload ops to result list (if any).
-    for (unsigned i = 0; i < getNumResults(); ++i) {
-      auto yieldedOps = state.getPayloadOps(getYieldOp().getOperand(i));
-      resultOps[i].append(yieldedOps.begin(), yieldedOps.end());
-    }
+    // Append yielded payloads to corresponding results from prior iterations.
+    OperandRange yieldOperands = getYieldOp().getOperands();
+    for (auto &&[result, yieldOperand, resTuple] :
+         llvm::zip_equal(getResults(), yieldOperands, zippedResults))
+      // NB: each iteration we add any number of ops/vals/params to a result.
+      if (isa<TransformHandleTypeInterface>(result.getType()))
+        llvm::append_range(resTuple, state.getPayloadOps(yieldOperand));
+      else if (isa<TransformValueHandleTypeInterface>(result.getType()))
+        llvm::append_range(resTuple, state.getPayloadValues(yieldOperand));
+      else if (isa<TransformParamTypeInterface>(result.getType()))
+        llvm::append_range(resTuple, state.getParams(yieldOperand));
+      else
+        assert(false && "unhandled handle type");
   }
 
-  for (unsigned i = 0; i < getNumResults(); ++i)
-    results.set(llvm::cast<OpResult>(getResult(i)), resultOps[i]);
+  // Associate the accumulated result payloads to the op's actual results.
+  for (auto &&[result, resPayload] : zip_equal(getResults(), zippedResults))
+    results.setMappedValues(llvm::cast<OpResult>(result), resPayload);
 
   return DiagnosedSilenceableFailure::success();
 }
 
 void transform::ForeachOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  BlockArgument iterVar = getIterationVariable();
-  if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
-        return isHandleConsumed(iterVar, cast<TransformOpInterface>(&op));
-      })) {
-    consumesHandle(getTarget(), effects);
-  } else {
-    onlyReadsHandle(getTarget(), effects);
+  // NB: this `zip` should be `zip_equal` - while this op's verifier catches
+  // arity errors, this method might get called before/in absence of `verify()`.
+  for (auto &&[target, blockArg] :
+       llvm::zip(getTargets(), getBody().front().getArguments())) {
+    BlockArgument blockArgument = blockArg;
+    if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
+          return isHandleConsumed(blockArgument,
+                                  cast<TransformOpInterface>(&op));
+        })) {
+      consumesHandle(target, effects);
+    } else {
+      onlyReadsHandle(target, effects);
+    }
   }
 
   if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
@@ -1463,8 +1500,8 @@ void transform::ForeachOp::getSuccessorRegions(
 
 OperandRange
 transform::ForeachOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  // The iteration variable op handle is mapped to a subset (one op to be
-  // precise) of the payload ops of the ForeachOp operand.
+  // Each block argument handle is mapped to a subset (one op to be precise)
+  // of the payload of the corresponding `targets` operand of ForeachOp.
   assert(point == getBody() && "unexpected region index");
   return getOperation()->getOperands();
 }
@@ -1474,14 +1511,27 @@ transform::YieldOp transform::ForeachOp::getYieldOp() {
 }
 
 LogicalResult transform::ForeachOp::verify() {
-  auto yieldOp = getYieldOp();
-  if (getNumResults() != yieldOp.getNumOperands())
-    return emitOpError() << "expects the same number of results as the "
-                            "terminator has operands";
-  for (Value v : yieldOp.getOperands())
-    if (!llvm::isa<TransformHandleTypeInterface>(v.getType()))
-      return yieldOp->emitOpError("expects operands to have types implementing "
-                                  "TransformHandleTypeInterface");
+  for (auto [targetOpt, bodyArgOpt] :
+       llvm::zip_longest(getTargets(), getBody().front().getArguments())) {
+    if (!targetOpt || !bodyArgOpt)
+      return emitOpError() << "expects the same number of targets as the body "
+                              "has block arguments";
+    if (targetOpt.value().getType() != bodyArgOpt.value().getType())
+      return emitOpError(
+          "expects co-indexed targets and the body's "
+          "block arguments to have the same op/value/param type");
+  }
+
+  for (auto [resultOpt, yieldOperandOpt] :
+       llvm::zip_longest(getResults(), getYieldOp().getOperands())) {
+    if (!resultOpt || !yieldOperandOpt)
+      return emitOpError() << "expects the same number of results as the "
+                              "yield terminator has operands";
+    if (resultOpt.value().getType() != yieldOperandOpt.value().getType())
+      return emitOpError("expects co-indexed results and yield "
+                         "operands to have the same op/value/param type");
+  }
+
   return success();
 }
 
