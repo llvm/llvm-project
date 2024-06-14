@@ -255,8 +255,10 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
       mlir::Block *insertBlock =
           getBlockForAllocaInsert(parentOp, parentRegion);
-      size.getDefiningOp()->moveAfter(insertBlock, insertBlock->begin());
-      rewriter.setInsertionPointAfter(size.getDefiningOp());
+      if (rewriter.getInsertionBlock() != insertBlock) {
+        size.getDefiningOp()->moveAfter(insertBlock, insertBlock->begin());
+        rewriter.setInsertionPointAfter(size.getDefiningOp());
+      }
     }
 
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
@@ -3705,7 +3707,8 @@ public:
       signalPassFailure();
     }
 
-    // Run pass to add comdats to functions that have weak linkage on relevant platforms
+    // Run pass to add comdats to functions that have weak linkage on relevant
+    // platforms
     if (fir::getTargetTriple(mod).supportsCOMDAT()) {
       mlir::OpPassManager comdatPM("builtin.module");
       comdatPM.addPass(mlir::LLVM::createLLVMAddComdats());

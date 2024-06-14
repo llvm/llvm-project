@@ -2015,17 +2015,17 @@ func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // AMDGPU:        %[[AA:.*]] = llvm.alloca %[[ALLOCA_SIZE]] x !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
 // AMDGPU:        %[[ALLOCA:.*]] = llvm.addrspacecast %[[AA]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK:         %[[C20:.*]] = llvm.mlir.constant(20 : index) : i64
-// CHECK:         %[[ALLOCA_SIZE_X:.*]] = llvm.mlir.constant(1 : i64) : i64
-// GENERIC:       %[[X:.*]] = llvm.alloca %[[ALLOCA_SIZE_X]] x !llvm.array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr
-// AMDGPU:        %[[AC:.*]] = llvm.alloca %[[ALLOCA_SIZE_X]] x !llvm.array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr<5>
-// AMDGPU:        %[[X:.*]] = llvm.addrspacecast %[[AC]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C10:.*]] = llvm.mlir.constant(10 : i64) : i64
+// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
 // CHECK:         %[[ALLOCA_SIZE_V:.*]] = llvm.mlir.constant(1 : i64) : i64
 // GENERIC:       %[[V:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr
 // AMDGPU:        %[[AB:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr<5>
 // AMDGPU:        %[[V:.*]] = llvm.addrspacecast %[[AB]] : !llvm.ptr<5> to !llvm.ptr
-// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:         %[[C10:.*]] = llvm.mlir.constant(10 : i64) : i64
-// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
+// CHECK:         %[[ALLOCA_SIZE_X:.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC:       %[[X:.*]] = llvm.alloca %[[ALLOCA_SIZE_X]] x !llvm.array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr
+// AMDGPU:        %[[AC:.*]] = llvm.alloca %[[ALLOCA_SIZE_X]] x !llvm.array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr<5>
+// AMDGPU:        %[[X:.*]] = llvm.addrspacecast %[[AC]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(9 : i32) : i32
 // CHECK:         %[[NULL:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[NULL]][1]
