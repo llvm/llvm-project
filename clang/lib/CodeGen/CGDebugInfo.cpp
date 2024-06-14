@@ -5762,7 +5762,7 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
   llvm::DIType *Type = getOrCreateType(Ty, Unit);
 
   // Check if Value is already a declared variable and has debug info, in this
-  // case we have nothing to do. Clang emits declared variable as alloca, and
+  // case we have nothing to do. Clang emits a declared variable as alloca, and
   // it is loaded upon use, so we identify such pattern here.
   if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Value)) {
     llvm::Value *Var = Load->getPointerOperand();
@@ -5778,23 +5778,14 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
       return;
   }
 
-  // Find the correct location to insert the debug value.
-  llvm::BasicBlock *InsertBB = Value->getParent();
-  llvm::Instruction *InsertBefore = Value->getIterator()->getNextNode();
-  if (llvm::InvokeInst *Invoke = dyn_cast<llvm::InvokeInst>(Value)) {
-    InsertBB = Invoke->getNormalDest();
-    InsertBefore = InsertBB->size() > 0 ? &(InsertBB->front()) : nullptr;
-  }
+  llvm::DILocalVariable *D =
+      DBuilder.createAutoVariable(LexicalBlockStack.back(), "", nullptr, 0,
+                                  Type, false, llvm::DINode::FlagArtificial);
 
-  llvm::DILocalVariable *D = DBuilder.createAutoVariable(
-      LexicalBlockStack.back(), "", nullptr, 0, Type, false,
-      llvm::DINode::FlagArtificial);
-  if (InsertBefore)
+  if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
     DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
-                                   InsertBefore);
-  else
-    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
-                                     InsertBB);
+                                     &**InsertPoint);
+  }
 }
 
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
