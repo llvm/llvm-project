@@ -7,8 +7,6 @@ name: Restart Preempted Libc++ Workflow
 # We identify a canceled workflow run by checking the annotations of the check runs in the check suite,
 # which should contain the message "The runner has received a shutdown signal."
 
-# Note: If a job is both preempted and also contains a non-preemption failure, we do not restart the workflow.
-
 on:
   workflow_run:
     workflows: [Build and Test libc\+\+]
@@ -32,7 +30,6 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
         with:
           script: |
-            const failure_regex = /Process completed with exit code 1./
             const preemption_regex = /The runner has received a shutdown signal/
 
             const wf_run = context.payload.workflow_run
@@ -102,17 +99,6 @@ jobs:
                 if (preemption_match != null) {
                   console.log('Found preemption message: ' + annotation.message);
                   has_preempted_job = true;
-                }
-
-                const failure_match = annotation.message.match(failure_regex);
-                if (failure_match != null) {
-                  // We only want to restart the workflow if all of the failures were due to preemption.
-                  // We don't want to restart the workflow if there were other failures.
-                  core.notice('Choosing not to rerun workflow because we found a non-preemption failure' +
-                    'Failure message: "' + annotation.message + '"');
-                  await create_check_run('skipped', 'Choosing not to rerun workflow because we found a non-preemption failure\n'
-                    + 'Failure message: ' + annotation.message)
-                  return;
                 }
               }
             }
