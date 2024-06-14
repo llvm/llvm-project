@@ -2418,7 +2418,7 @@ Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
   if (hasBuiltinTypePrefix(TypeStr)) {
     // OpenCL builtin types in demangled call strings have the following format:
     // e.g. ocl_image2d_ro
-    bool IsOCLBuiltinType = TypeStr.consume_front("ocl_");
+    [[maybe_unused]] bool IsOCLBuiltinType = TypeStr.consume_front("ocl_");
     assert(IsOCLBuiltinType && "Invalid OpenCL builtin prefix");
 
     // Check if this is pointer to a builtin type and not just pointer

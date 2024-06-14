@@ -223,8 +223,6 @@ CODEGENOPT(CoverageMapping , 1, 0) ///< Generate coverage mapping regions to
 CODEGENOPT(DumpCoverageMapping , 1, 0) ///< Dump the generated coverage mapping
                                        ///< regions.
 CODEGENOPT(MCDCCoverage , 1, 0) ///< Enable MC/DC code coverage criteria.
-VALUE_CODEGENOPT(MCDCMaxConds, 16, 32767) ///< MC/DC Maximum conditions.
-VALUE_CODEGENOPT(MCDCMaxTVs, 32, 0x7FFFFFFE) ///< MC/DC Maximum test vectors.
 
   /// If -fpcc-struct-return or -freg-struct-return is specified.
 ENUM_CODEGENOPT(StructReturnConvention, StructReturnConventionKind, 2, SRCK_Default)
