@@ -2672,13 +2672,18 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
   return nullptr;
 }
 
-static clang::Type const *GetCompleteRecordType(clang::ASTContext *ast,
-                                                clang::QualType qual_type,
-                                                bool allow_completion = true) {
-  clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
-  if (!cxx_record_decl)
-    return nullptr;
+/// Returns the clang::RecordType of the specified \ref qual_type. This
+/// function will try to complete the type if necessary (and allowed
+/// by the specified \ref allow_completion). If we fail to return a *complete*
+/// type, returns nullptr.
+static const clang::RecordType *GetCompleteRecordType(clang::ASTContext *ast,
+                                                      clang::QualType qual_type,
+                                                      bool allow_completion) {
+  assert(qual_type->isRecordType());
 
+  const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+
+  clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
   if (TypeSystemClang::UseRedeclCompletion()) {
     clang::CXXRecordDecl *def = cxx_record_decl->getDefinition();
     if (!def)
@@ -2686,44 +2691,54 @@ static clang::Type const *GetCompleteRecordType(clang::ASTContext *ast,
     return def->getTypeForDecl();
   }
 
-  if (cxx_record_decl->hasExternalLexicalStorage()) {
-    const bool is_complete = cxx_record_decl->isCompleteDefinition();
-    const bool fields_loaded =
-        cxx_record_decl->hasLoadedFieldsFromExternalStorage();
-    if (is_complete && fields_loaded)
-      return qual_type.getTypePtr();
+  // RecordType with no way of completing it, return the plain
+  // TagType.
+  if (!cxx_record_decl || !cxx_record_decl->hasExternalLexicalStorage())
+    return tag_type;
 
-    if (!allow_completion)
-      return nullptr;
+  const bool is_complete = cxx_record_decl->isCompleteDefinition();
+  const bool fields_loaded =
+      cxx_record_decl->hasLoadedFieldsFromExternalStorage();
 
-    // Call the field_begin() accessor to for it to use the external source
-    // to load the fields...
-    clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
-    if (external_ast_source) {
-      external_ast_source->CompleteType(cxx_record_decl);
-      if (cxx_record_decl->isCompleteDefinition()) {
-        cxx_record_decl->field_begin();
-        cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
-      }
+  // Already completed this type, nothing to be done.
+  if (is_complete && fields_loaded)
+    return tag_type;
+
+  if (!allow_completion)
+    return nullptr;
+
+  // Call the field_begin() accessor to for it to use the external source
+  // to load the fields...
+  //
+  // TODO: if we need to complete the type but have no external source,
+  // shouldn't we error out instead?
+  clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+  if (external_ast_source) {
+    external_ast_source->CompleteType(cxx_record_decl);
+    if (cxx_record_decl->isCompleteDefinition()) {
+      cxx_record_decl->field_begin();
+      cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
     }
-
-    return qual_type.getTypePtr();
   }
 
-  return qual_type.getTypePtr();
+  return tag_type;
 }
 
-static clang::Type const *GetCompleteEnumType(clang::ASTContext *ast,
-                                              clang::QualType qual_type,
-                                              bool allow_completion = true) {
-  const clang::TagType *tag_type =
-      llvm::dyn_cast<clang::TagType>(qual_type.getTypePtr());
-  if (!tag_type)
-    return nullptr;
+/// Returns the clang::EnumType of the specified \ref qual_type. This
+/// function will try to complete the type if necessary (and allowed
+/// by the specified \ref allow_completion). If we fail to return a *complete*
+/// type, returns nullptr.
+static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
+                                                  clang::QualType qual_type,
+                                                  bool allow_completion) {
+  assert(qual_type->isEnumeralType());
+  assert(ast);
 
-  clang::TagDecl *tag_decl = tag_type->getDecl();
-  if (!tag_decl)
-    return nullptr;
+  const clang::EnumType *enum_type =
+      llvm::cast<clang::EnumType>(qual_type.getTypePtr());
+
+  auto *tag_decl = enum_type->getAsTagDecl();
+  assert(tag_decl);
 
   if (TypeSystemClang::UseRedeclCompletion()) {
     if (clang::TagDecl *def = tag_decl->getDefinition())
@@ -2732,29 +2747,39 @@ static clang::Type const *GetCompleteEnumType(clang::ASTContext *ast,
     return tag_decl->getTypeForDecl();
   }
 
+  // Already completed, nothing to be done.
   if (tag_decl->getDefinition())
-    return tag_type;
+    return enum_type;
 
   if (!allow_completion)
     return nullptr;
 
-  if (tag_decl->hasExternalLexicalStorage()) {
-    if (ast) {
-      clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
-      if (external_ast_source) {
-        external_ast_source->CompleteType(tag_decl);
-        return tag_type;
-      }
-    }
-  }
+  // No definition but can't complete it, error out.
+  if (!tag_decl->hasExternalLexicalStorage())
+    return nullptr;
 
-  return tag_type;
+  // We can't complete the type without an external source.
+  clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+  if (!external_ast_source)
+    return nullptr;
+
+  external_ast_source->CompleteType(tag_decl);
+  return enum_type;
 }
 
-static clang::Type const *
-GetCompleteObjCInterfaceType(clang::ASTContext *ast,
-                             clang::ObjCObjectType const *objc_class_type,
-                             bool allow_completion = true) {
+/// Returns the clang::ObjCObjectType of the specified \ref qual_type. This
+/// function will try to complete the type if necessary (and allowed
+/// by the specified \ref allow_completion). If we fail to return a *complete*
+/// type, returns nullptr.
+static const clang::ObjCObjectType *
+GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type,
+                          bool allow_completion) {
+  assert(qual_type->isObjCObjectType());
+  assert(ast);
+
+  const clang::ObjCObjectType *objc_class_type =
+      llvm::cast<clang::ObjCObjectType>(qual_type);
+
   clang::ObjCInterfaceDecl *class_interface_decl =
       objc_class_type->getInterface();
   // We currently can't complete objective C types through the newly added
@@ -2769,17 +2794,17 @@ GetCompleteObjCInterfaceType(clang::ASTContext *ast,
   if (!allow_completion)
     return nullptr;
 
-  if (class_interface_decl->hasExternalLexicalStorage()) {
-    if (ast) {
-      clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
-      if (external_ast_source) {
-        external_ast_source->CompleteType(class_interface_decl);
-        return objc_class_type;
-      }
-    }
-  }
+  // No definition but can't complete it, error out.
+  if (!class_interface_decl->hasExternalLexicalStorage())
+    return nullptr;
 
-  return nullptr;
+  // We can't complete the type without an external source.
+  clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+  if (!external_ast_source)
+    return nullptr;
+
+  external_ast_source->CompleteType(class_interface_decl);
+  return objc_class_type;
 }
 
 static bool GetCompleteQualType(clang::ASTContext *ast,
@@ -2799,30 +2824,24 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
                                  allow_completion);
   } break;
   case clang::Type::Record: {
-    if (auto const *ty = llvm::dyn_cast_or_null<RecordType>(
-            GetCompleteRecordType(ast, qual_type, allow_completion)))
-      return TypeSystemClang::UseRedeclCompletion() || !ty->isIncompleteType();
+    if (const auto *RT =
+            GetCompleteRecordType(ast, qual_type, allow_completion))
+      return TypeSystemClang::UseRedeclCompletion() || !RT->isIncompleteType();
 
     return false;
   } break;
 
   case clang::Type::Enum: {
-    if (auto const *ty = llvm::dyn_cast_or_null<EnumType>(
-            GetCompleteEnumType(ast, qual_type, allow_completion)))
-      return TypeSystemClang::UseRedeclCompletion() || !ty->isIncompleteType();
+    if (const auto *ET = GetCompleteEnumType(ast, qual_type, allow_completion))
+      return TypeSystemClang::UseRedeclCompletion() || !ET->isIncompleteType();
 
     return false;
   } break;
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
-    const clang::ObjCObjectType *objc_class_type =
-        llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
-    if (!objc_class_type)
-      return true;
-
-    if (auto const *ty = GetCompleteObjCInterfaceType(ast, objc_class_type,
-                                                      allow_completion))
-      return TypeSystemClang::UseRedeclCompletion() || !ty->isIncompleteType();
+    if (const auto *OT =
+            GetCompleteObjCObjectType(ast, qual_type, allow_completion))
+      return TypeSystemClang::UseRedeclCompletion() || !OT->isIncompleteType();
 
     return false;
   } break;
