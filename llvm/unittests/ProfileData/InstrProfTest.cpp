@@ -1299,9 +1299,9 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_site_trunc) {
 
   Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
   ASSERT_THAT_ERROR(R.takeError(), Succeeded());
-  std::unique_ptr<InstrProfValueData[]> VD(R->getValueForSite(ValueKind, 0));
   ASSERT_EQ(2U, R->getNumValueSites(ValueKind));
-  EXPECT_EQ(255U, R->getNumValueDataForSite(ValueKind, 0));
+  auto VD = R->getValueArrayForSite(ValueKind, 0);
+  EXPECT_THAT(VD, SizeIs(255));
   for (unsigned I = 0; I < 255; I++) {
     EXPECT_EQ(VD[I].Value, 509 - I);
     EXPECT_EQ(VD[I].Count, 1509 - I);
