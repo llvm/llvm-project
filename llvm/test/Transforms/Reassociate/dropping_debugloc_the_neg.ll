@@ -1,5 +1,8 @@
 ; RUN: opt < %s -passes=reassociate -S | FileCheck %s
 
+; Check that Reassociate's NegateValue() drops the debug location of `%sub2` 
+; when moving it out of the loop's body (`%for.body`) to `%for.cond`.
+
 define void @fn1(i32 %a, i1 %c, ptr %ptr) !dbg !5 {
 ; CHECK-LABEL: define void @fn1(
 ; CHECK:       for.cond:
