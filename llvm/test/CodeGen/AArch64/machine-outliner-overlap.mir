@@ -55,6 +55,18 @@ body:             |
     ; CHECK-NEXT: BL @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $lr, implicit-def $x8, implicit-def $x9, implicit $sp, implicit $x0, implicit $x9
     ; CHECK-NEXT: RET undef $x9
 
+    ; CHECK-LABEL: name: OUTLINED_FUNCTION_0
+    ; CHECK: liveins: $x0, $x9, $lr
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x8 = ADDXri $x0, 3, 0
+    ; CHECK-NEXT: $x9 = ADDXri $x9, 16, 0
+    ; CHECK-NEXT: $x9 = ADDXri $x9, 16, 0
+    ; CHECK-NEXT: $x9 = ADDXri $x9, 16, 0
+    ; CHECK-NEXT: $x9 = ADDXri $x9, 16, 0
+    ; CHECK-NEXT: $x9 = ADDXri $x9, 16, 0
+    ; CHECK-NEXT: $x9 = ADDXri $x9, 16, 0
+    ; CHECK-NEXT: RET $lr
+
     ; CHECK-LEAF-LABEL: name: overlap
     ; CHECK-LEAF: liveins: $x0, $x9
     ; CHECK-LEAF-NEXT: {{  $}}
@@ -76,7 +88,6 @@ body:             |
     ; CHECK-LEAF-NEXT: $x9 = ADDXri $x9, 16, 0
     ; CHECK-LEAF-NEXT: RET $lr
 
-    ; fixme: outline!
     $x9 = ADDXri $x9, 16, 0
     $x9 = ADDXri $x9, 16, 0
     $x9 = ADDXri $x9, 16, 0
@@ -86,7 +97,6 @@ body:             |
 
     $x8 = ADDXri $x0, 3, 0
 
-    ; outline
     $x9 = ADDXri $x9, 16, 0
     $x9 = ADDXri $x9, 16, 0
     $x9 = ADDXri $x9, 16, 0
@@ -96,7 +106,6 @@ body:             |
 
     $x8 = ADDXri $x0, 3, 0
 
-    ; outline
     $x9 = ADDXri $x9, 16, 0
     $x9 = ADDXri $x9, 16, 0
     $x9 = ADDXri $x9, 16, 0
