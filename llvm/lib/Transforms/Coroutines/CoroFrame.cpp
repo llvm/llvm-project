@@ -869,7 +869,8 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
     SWI->setDefaultDest(DestBB);
   }
   // This Debug Info could tell us which allocas are merged into one slot.
-  LLVM_DEBUG(for (auto &AllocaSet : NonOverlapedAllocas) {
+  LLVM_DEBUG(for (auto &AllocaSet
+                  : NonOverlapedAllocas) {
     if (AllocaSet.size() > 1) {
       dbgs() << "In Function:" << F.getName() << "\n";
       dbgs() << "Find Union Set "
