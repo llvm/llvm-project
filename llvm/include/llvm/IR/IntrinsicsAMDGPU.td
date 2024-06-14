@@ -2252,7 +2252,7 @@ def int_amdgcn_strict_wqm : Intrinsic<[llvm_any_ty],
 // program ever uses WQM, then the instruction and the first source will be
 // computed in WQM.
 def int_amdgcn_set_inactive :
-  Intrinsic<[llvm_anyint_ty],
+  Intrinsic<[llvm_any_ty],
             [LLVMMatchType<0>, // value to be copied
              LLVMMatchType<0>], // value for the inactive lanes to take
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
