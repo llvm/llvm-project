@@ -1178,7 +1178,7 @@ func.func @alloca_fixed_char_array(%e : index) -> !fir.ref<!fir.array<?x?x!fir.c
 // CHECK-LABEL: llvm.func @alloca_fixed_char_array
 // CHECK-SAME: ([[E:%.*]]: i64) -> !llvm.ptr
 // CHECK-DAG: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: [[PROD1:%.*]] = llvm.mul [[ONE]], [[E]] : i64
+// CHECK: [[PROD1:%.*]] = llvm.mul [[E]], [[ONE]] : i64
 // CHECK: [[PROD2:%.*]] = llvm.mul [[PROD1]], [[E]] : i64
 // GENERIC: [[A:%.*]] = llvm.alloca [[PROD2]] x !llvm.array<8 x i8>
 // AMDGPU: [[AA:%.*]] = llvm.alloca [[PROD2]] x !llvm.array<8 x i8> : (i64) -> !llvm.ptr<5>
@@ -1225,7 +1225,7 @@ func.func @alloca_multidim_array(%0 : index) -> !fir.ref<!fir.array<8x16x32xf32>
 // CHECK-SAME: ([[OP1:%.*]]: i64) -> !llvm.ptr
 // CHECK: [[OP2:%.*]] = llvm.mlir.constant(24 : index) : i64
 // CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: [[MUL1:%.*]] = llvm.mul [[ONE]], [[OP1]] : i64
+// CHECK: [[MUL1:%.*]] = llvm.mul [[OP1]], [[ONE]] : i64
 // CHECK: [[TOTAL:%.*]] = llvm.mul [[MUL1]], [[OP2]] : i64
 // GENERIC: [[A:%.*]] = llvm.alloca [[TOTAL]] x !llvm.array<32 x array<16 x array<8 x f32>>>
 // AMDGPU: [[AA:%.*]] = llvm.alloca [[TOTAL]] x !llvm.array<32 x array<16 x array<8 x f32>>> : (i64) -> !llvm.ptr<5>
@@ -1246,7 +1246,7 @@ func.func @alloca_const_interior_array(%0 : index) -> !fir.ref<!fir.array<8x9x?x
 // CHECK-SAME: ([[OP1:%.*]]: i64) -> !llvm.ptr
 // CHECK: [[OP2:%.*]] = llvm.mlir.constant(64 : index) : i64
 // CHECK: [[ONE:%.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: [[MUL1:%.*]] = llvm.mul [[ONE]], [[OP1]] : i64
+// CHECK: [[MUL1:%.*]] = llvm.mul [[OP1]], [[ONE]] : i64
 // CHECK: [[TOTAL:%.*]] = llvm.mul [[MUL1]], [[OP2]] : i64
 // GENERIC: [[A:%.*]] = llvm.alloca [[TOTAL]] x !llvm.array<9 x array<8 x f32>>
 // AMDGPU: [[AA:%.*]] = llvm.alloca [[TOTAL]] x !llvm.array<9 x array<8 x f32>> : (i64) -> !llvm.ptr<5>
@@ -1937,7 +1937,7 @@ func.func private @_QPxb(!fir.box<!fir.array<?x?xf64>>)
 // CHECK:         %[[N2_TMP:.*]] = llvm.sub %[[N]], %[[SH2]]  : i64
 // CHECK:         %[[N2:.*]] = llvm.add %[[N2_TMP]], %[[C1]]  : i64
 // CHECK:         %[[C1_0:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:         %[[ARR_SIZE_TMP1:.*]] = llvm.mul %[[C1_0]], %[[N1]]  : i64
+// CHECK:         %[[ARR_SIZE_TMP1:.*]] = llvm.mul %[[N1]], %[[C1_0]]  : i64
 // CHECK:         %[[ARR_SIZE:.*]] = llvm.mul %[[ARR_SIZE_TMP1]], %[[N2]]  : i64
 // GENERIC:       %[[ARR:.*]] = llvm.alloca %[[ARR_SIZE]] x f64 {bindc_name = "arr"} : (i64) -> !llvm.ptr
 // AMDGPU:        %[[AR:.*]] = llvm.alloca %[[ARR_SIZE]] x f64 {bindc_name = "arr"} : (i64) -> !llvm.ptr<5>
@@ -2015,17 +2015,17 @@ func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // AMDGPU:        %[[AA:.*]] = llvm.alloca %[[ALLOCA_SIZE]] x !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr<5>
 // AMDGPU:        %[[ALLOCA:.*]] = llvm.addrspacecast %[[AA]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK:         %[[C20:.*]] = llvm.mlir.constant(20 : index) : i64
-// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:         %[[C10:.*]] = llvm.mlir.constant(10 : i64) : i64
-// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
-// CHECK:         %[[ALLOCA_SIZE_V:.*]] = llvm.mlir.constant(1 : i64) : i64
-// GENERIC:       %[[V:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr
-// AMDGPU:        %[[AB:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr<5>
-// AMDGPU:        %[[V:.*]] = llvm.addrspacecast %[[AB]] : !llvm.ptr<5> to !llvm.ptr
 // CHECK:         %[[ALLOCA_SIZE_X:.*]] = llvm.mlir.constant(1 : i64) : i64
 // GENERIC:       %[[X:.*]] = llvm.alloca %[[ALLOCA_SIZE_X]] x !llvm.array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr
 // AMDGPU:        %[[AC:.*]] = llvm.alloca %[[ALLOCA_SIZE_X]] x !llvm.array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr<5>
 // AMDGPU:        %[[X:.*]] = llvm.addrspacecast %[[AC]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK:         %[[ALLOCA_SIZE_V:.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC:       %[[V:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr
+// AMDGPU:        %[[AB:.*]] = llvm.alloca %[[ALLOCA_SIZE_V]] x i32 {bindc_name = "v"} : (i64) -> !llvm.ptr<5>
+// AMDGPU:        %[[V:.*]] = llvm.addrspacecast %[[AB]] : !llvm.ptr<5> to !llvm.ptr
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:         %[[C10:.*]] = llvm.mlir.constant(10 : i64) : i64
+// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i64) : i64
 // CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(9 : i32) : i32
 // CHECK:         %[[NULL:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[NULL]][1]
