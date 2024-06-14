@@ -1,22 +1,36 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
 
+# 设置当前工程要求的最低 cmake 版本
 cmake_minimum_required(VERSION 3.20.0)
 
+# 设置变量LLVM_COMMON_CMAKE_UTILS，存储.cmake配置文件所在的路径
+# CMAKE_CURRENT_SOURCE_DIR:当前正在处理的源文件所在位置。
+# 这条命令向上找到项目顶层的cmake文件夹。cmake文件夹中一般定义了多个用于复用的cmake宏或者方法。
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+message(WARNING "找到项目最外层的cmake路径为===="${LLVM_COMMON_CMAKE_UTILS})
+
+# 将.cmake文件导入到当前文件
+# 可以将重复性的 cmake 语句书写在 cmake 后缀的文件中，在使用的位置通过 include 来引入，避免重复 cmake 代码
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
 # Builds with custom install names and installation rpath setups may not work
 # in the build tree. Allow these cases to use CMake's default build tree
 # behavior by setting `LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE` to do this.
+# 设置 option。在后续的 cmake 文件中可能根据 option 的不同值来控制构建过程
+# option 的值可以由用户输入
 option(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE "If set, use CMake's default build tree install name directory logic (Darwin only)" OFF)
+# 将当前 option 置为高级选项，只在 cmake GUI中的高级选项中展示
 mark_as_advanced(LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
+
 if(NOT LLVM_NO_INSTALL_NAME_DIR_FOR_BUILD_TREE)
   set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 endif()
 
+# 导入LLVM的版本设置cmake文件，引入一些变量供后续使用
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/LLVMVersion.cmake)
 
+# 设置属性值
 set_directory_properties(PROPERTIES LLVM_VERSION_MAJOR "${LLVM_VERSION_MAJOR}")
 
 if (NOT PACKAGE_VERSION)
@@ -29,6 +43,12 @@ if(NOT DEFINED LLVM_SHLIB_SYMBOL_VERSION)
   set(LLVM_SHLIB_SYMBOL_VERSION "LLVM_${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
 endif()
 
+# 根据cmake的构建工具来做不同的逻辑处理
+# 常见的构建工具有四个：
+# Ninja — for generating Ninja build files. Most llvm developers use Ninja.
+# Unix Makefiles — for generating make-compatible parallel makefiles.
+# Visual Studio — for generating Visual Studio projects and solutions.
+# Xcode — for generating Xcode projects.
 if ((CMAKE_GENERATOR MATCHES "Visual Studio") AND (MSVC_TOOLSET_VERSION LESS 142) AND (CMAKE_GENERATOR_TOOLSET STREQUAL ""))
   message(WARNING "Visual Studio generators use the x86 host compiler by "
                   "default, even for 64-bit targets. This can result in linker "
@@ -42,24 +62,32 @@ if (CMAKE_GENERATOR STREQUAL "Xcode" AND NOT CMAKE_OSX_ARCHITECTURES)
   set(CMAKE_OSX_ARCHITECTURES "x86_64")
 endif()
 
+# 设置当前工程的工程名，版本信息以及实现语言
 project(LLVM
   VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
   LANGUAGES C CXX ASM)
 
+  # CMAKE_INSTALL_LIBDIRinstall的路径
 if (NOT DEFINED CMAKE_INSTALL_LIBDIR AND DEFINED LLVM_LIBDIR_SUFFIX)
   # Must go before `include(GNUInstallDirs)`.
   set(CMAKE_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
 endif()
 
+# 设置环境变量，注意 cache 指定该值应该缓存使用
 # Must go after `DEFINED LLVM_LIBDIR_SUFFIX` check.
 set(LLVM_LIBDIR_SUFFIX "" CACHE STRING "Define suffix of library directory name (32/64)" )
 
+# cmake 官方功能导入
 # Must go after `project(..)`.
 include(GNUInstallDirs)
 
+# 设置工程使用语言的 C++标准
 # This C++ standard is required to build LLVM.
 set(LLVM_REQUIRED_CXX_STANDARD 17)
 
+# 如果缓存的语言版本小于当前最新的设置，对其值进行更新。
+# 所以cmake的cache是不是采用一种懒加载的方式？即一旦cache之后就不会主动更新，除非手动去更新，或者删除build目录再次触发configuration
+# 修改缓存变量时，一定要加FORCE选项，否则修改无效
 # If we find that the cache contains CMAKE_CXX_STANDARD it means that it's a old CMakeCache.txt
 # and we can just inform the user and then reset it.
 if($CACHE{CMAKE_CXX_STANDARD} AND $CACHE{CMAKE_CXX_STANDARD} LESS ${LLVM_REQUIRED_CXX_STANDARD})
@@ -84,6 +112,8 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
+# build类型选择，在 configure 阶段必须从中选择一种，因为这里没有默认值且是fatal error
+# 根据项目的不同阶段来选择build类型
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(FATAL_ERROR "
 No build type selected. You need to pass -DCMAKE_BUILD_TYPE=<type> in order to configure LLVM.
@@ -114,29 +144,43 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
+# 将LLVM支持的子项目都列出来
 set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
+
+# flang项目暂未列入all中，先单独处理
 # The flang project is not yet part of "all" projects (see C++ requirements)
 set(LLVM_EXTRA_PROJECTS "flang")
+
+# 所有已知的项目列表
 # List of all known projects in the mono repo
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
+
+# 预先设置LLVM_ENABLE_PROJECTS为空，注意其格式，多个项目之间使用分号隔开
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
     "Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
+
+# 如果LLVM_ENABLE_PROJECTS的值为all，将上面的LLVM_ALL_PROJECTS的值直接给LLVM_ENABLE_PROJECTS
 # Make sure expansion happens first to not handle "all" in rest of the checks.
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
+
 foreach(proj ${LLVM_ENABLE_PROJECTS})
+  message(WARNING "子项目名称===="${proj})
+  # 如果proj的值既不是llvm有不属于LLVM_KNOWN_PROJECTS中的任意一个，直接报错退出
   if (NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}. Did you mean to enable it as a runtime in LLVM_ENABLE_RUNTIMES?")
   endif()
 endforeach()
 
+# 判断flang是否在LLVM_ENABLE_PROJECTS中
 if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+  # 如果flang在而mlir不在列表里面，主动将nlir追加到列表内
   if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling MLIR as a dependency to flang")
     list(APPEND LLVM_ENABLE_PROJECTS "mlir")
   endif()
-
+  # 如果flang在而clang不在列表里面，直接报错
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
   endif()
@@ -146,6 +190,8 @@ endif()
 #
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
+# 设置LLVM的运行时库
+# 运行时库是指C/C++标准库的实现。
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
 set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
@@ -153,12 +199,15 @@ set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
   set(LLVM_ENABLE_RUNTIMES ${LLVM_DEFAULT_RUNTIMES})
 endif()
+
+# 有点懒，这里临时变量竟然直接使用名字proj，最好是用runtime
 foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
   if (NOT "${proj}" IN_LIST LLVM_SUPPORTED_RUNTIMES)
     message(FATAL_ERROR "Runtime \"${proj}\" is not a supported runtime. Supported runtimes are: ${LLVM_SUPPORTED_RUNTIMES}")
   endif()
 endforeach()
 
+# 是否使用GPU加速，暂不深入。
 # Set a shorthand option to enable the GPU build of the 'libc' project.
 option(LIBC_GPU_BUILD "Enable the 'libc' project targeting the GPU" OFF)
 if(LIBC_GPU_BUILD)
@@ -198,6 +247,9 @@ if(NEED_LIBC_HDRGEN)
 endif()
 unset(NEED_LIBC_HDRGEN)
 
+# LLVM_ENABLE_PROJECTS_USED在这里就已经有值为ON，后面将其设置为OFF的set且没有FORCE不知道意欲何为，可能只是一个定义
+message(WARNING "LLVM_ENABLE_PROJECTS_USED的值为===="${LLVM_ENABLE_PROJECTS_USED})
+
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
 # several reasons:
@@ -218,20 +270,30 @@ mark_as_advanced(LLVM_ENABLE_PROJECTS_USED)
 if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
   set(LLVM_ENABLE_PROJECTS_USED ON CACHE BOOL "" FORCE)
   foreach(proj ${LLVM_KNOWN_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
+    # 将proj转为大写
     string(TOUPPER "${proj}" upper_proj)
+    message(WARNING "子项目名大写===="${upper_proj})
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
+    message(WARNING "大写子项目名替换-为_后===="${upper_proj})
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
       message(STATUS "${proj} project is enabled")
       set(SHOULD_ENABLE_PROJECT TRUE)
+
+      # 设置子工程的路径
       set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+      message(WARNING "子工程路径===="${PROJ_DIR})
+
+      # 找不到路径指向的文件夹
       if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
         message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
       endif()
+
       if( LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR STREQUAL "" )
         set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}" CACHE PATH "" FORCE)
       else()
         set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}" CACHE PATH "")
       endif()
+      message(WARNING "设置变量LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR的值为===="${LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR})
     elseif ("${proj}" IN_LIST LLVM_EXTERNAL_PROJECTS)
       message(STATUS "${proj} project is enabled")
       set(SHOULD_ENABLE_PROJECT TRUE)
@@ -249,10 +311,15 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
       CACHE
       BOOL "Whether to build ${upper_proj} as part of LLVM" FORCE
     )
+    message(WARNING "设置变量LLVM_TOOL_${upper_proj}_BUILD的值为===="${LLVM_TOOL_${upper_proj}_BUILD})
   endforeach()
 endif()
 unset(SHOULD_ENABLE_PROJECT)
 
+# ccache == Compiler Cache.可以加速编译过程
+# 如果启用且ccache 程序可用，则 LLVM 将使用 ccache 构建，以加快 LLVM 及其组件的重建速度。默认为关闭。
+# ccache 所维护缓存的大小和位置可以通过 LLVM_CCACHE_MAXSIZE 和 LLVM_CCACHE_DIR 选项进行调整，
+# 这两个选项分别传递给 CCACHE_MAXSIZE 和 CCACHE_DIR 环境变量。
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if(LLVM_CCACHE_BUILD)
@@ -538,6 +605,8 @@ set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should sear
 
 set(LLVM_TARGET_ARCH "host"
   CACHE STRING "Set target to use for LLVM JIT or use \"host\" for automatic detection.")
+
+option(LLVM_ENABLE_TERMINFO "Use terminfo database if available." ON)
 
 set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, OFF, or FORCE_ON")
 
@@ -903,8 +972,8 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
   "Profiling data file to use when compiling in order to improve runtime performance.")
 
 if(LLVM_INCLUDE_TESTS)
-  # All LLVM Python files should be compatible down to this minimum version.
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
+  # Lit test suite requires at least python 3.6
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.6)
 else()
   # FIXME: it is unknown if this is the actual minimum bound
   set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
@@ -1018,6 +1087,7 @@ endforeach(t)
 # Provide an LLVM_ namespaced alias for use in #cmakedefine.
 set(LLVM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
+# def.in文件为模板文件，里面的@XXX@字段会被变量 XXX 的值替换掉
 # Produce the target definition files, which provide a way for clients to easily
 # include various classes of targets.
 configure_file(
@@ -1097,6 +1167,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
 endif()
 
 # Configure the three LLVM configuration header files.
+# configure_file，复制一份输入文件到输出文件，替换输入文件中被@VAR@或者${VAR}引用的变量值。也就是说，让普通文件，也能使用CMake中的变量
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/config.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/config.h)
@@ -1229,7 +1300,7 @@ if( LLVM_INCLUDE_UTILS )
   if( LLVM_INCLUDE_TESTS )
     set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-    set(LLVM_SUBPROJECT_TITLE) 
+    set(LLVM_SUBPROJECT_TITLE)
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )
