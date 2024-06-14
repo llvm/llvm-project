@@ -37,7 +37,7 @@ namespace clang {
     unsigned AbbrevToUse;
 
     /// A helper that can help us to write a packed bit across function
-    /// calls. For example, we may write seperate bits in seperate functions:
+    /// calls. For example, we may write separate bits in separate functions:
     ///
     ///  void VisitA(A* a) {
     ///     Record.push_back(a->isSomething());
