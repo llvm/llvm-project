@@ -55,7 +55,7 @@ cl::opt<unsigned> StaleMatchingMinMatchedBlock(
     "stale-matching-min-matched-block",
     cl::desc("Percentage threshold of matched basic blocks at which stale "
              "profile inference is executed."),
-    cl::init(50), cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> StaleMatchingMaxFuncSize(
     "stale-matching-max-func-size",
