@@ -400,8 +400,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 void matchWeightsByHashes(BinaryContext &BC,
                           const BinaryFunction::BasicBlockOrderType &BlockOrder,
                           const yaml::bolt::BinaryFunctionProfile &YamlBF,
-                          FlowFunction &Func,
-                          uint64_t &MatchedBlocksCount) {
+                          FlowFunction &Func, uint64_t &MatchedBlocksCount) {
   assert(Func.Blocks.size() == BlockOrder.size() + 1);
 
   std::vector<FlowBlock *> Blocks;
