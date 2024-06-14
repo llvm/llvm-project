@@ -1934,8 +1934,7 @@ static bool canSinkInstructions(
     ArrayRef<Instruction *> Insts,
     DenseMap<const Use *, SmallVector<Value *, 4>> &PHIOperands) {
   // Prune out obviously bad instructions to move. Each instruction must have
-  // exactly zero or one use, and we check later that use is by a single, common
-  // PHI instruction in the successor.
+  // the same number of uses, and we check later that the uses are consistent.
   std::optional<unsigned> NumUses;
   for (auto *I : Insts) {
     // These instructions may change or break semantics if moved.
@@ -2138,7 +2137,7 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
 
   for (User *U : make_early_inc_range(I0->users())) {
     // canSinkLastInstruction checked that all instructions are only used by
-    // phi nodes a way that allows replacing the phi node with the common
+    // phi nodes in a way that allows replacing the phi node with the common
     // instruction.
     auto *PN = cast<PHINode>(U);
     PN->replaceAllUsesWith(I0);
