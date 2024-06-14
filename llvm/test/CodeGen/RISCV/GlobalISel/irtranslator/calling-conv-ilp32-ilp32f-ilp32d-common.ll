@@ -379,14 +379,14 @@ define void @callee_large_struct_ret(ptr noalias sret(%struct.large) %agg.result
   ; RV32I-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; RV32I-NEXT:   G_STORE [[C]](s32), [[COPY]](p0) :: (store (s32) into %ir.agg.result)
   ; RV32I-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; RV32I-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C4]](s32)
-  ; RV32I-NEXT:   G_STORE [[C1]](s32), [[PTR_ADD]](p0) :: (store (s32) into %ir.b)
+  ; RV32I-NEXT:   %3:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C4]](s32)
+  ; RV32I-NEXT:   G_STORE [[C1]](s32), %3(p0) :: (store (s32) into %ir.b)
   ; RV32I-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; RV32I-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C5]](s32)
-  ; RV32I-NEXT:   G_STORE [[C2]](s32), [[PTR_ADD1]](p0) :: (store (s32) into %ir.c)
+  ; RV32I-NEXT:   %6:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C5]](s32)
+  ; RV32I-NEXT:   G_STORE [[C2]](s32), %6(p0) :: (store (s32) into %ir.c)
   ; RV32I-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; RV32I-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C6]](s32)
-  ; RV32I-NEXT:   G_STORE [[C3]](s32), [[PTR_ADD2]](p0) :: (store (s32) into %ir.d)
+  ; RV32I-NEXT:   %9:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C6]](s32)
+  ; RV32I-NEXT:   G_STORE [[C3]](s32), %9(p0) :: (store (s32) into %ir.d)
   ; RV32I-NEXT:   PseudoRET
   store i32 1, ptr %agg.result, align 4
   %b = getelementptr inbounds %struct.large, ptr %agg.result, i32 0, i32 1
@@ -408,8 +408,8 @@ define i32 @caller_large_struct_ret() nounwind {
   ; ILP32-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.1)
   ; ILP32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; ILP32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
-  ; ILP32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s32) from %ir.3)
+  ; ILP32-NEXT:   %3:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
+  ; ILP32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %3(p0) :: (dereferenceable load (s32) from %ir.3)
   ; ILP32-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
   ; ILP32-NEXT:   $x10 = COPY [[ADD]](s32)
   ; ILP32-NEXT:   PseudoRET implicit $x10
@@ -423,8 +423,8 @@ define i32 @caller_large_struct_ret() nounwind {
   ; ILP32F-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32F-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.1)
   ; ILP32F-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; ILP32F-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
-  ; ILP32F-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s32) from %ir.3)
+  ; ILP32F-NEXT:   %3:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
+  ; ILP32F-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %3(p0) :: (dereferenceable load (s32) from %ir.3)
   ; ILP32F-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
   ; ILP32F-NEXT:   $x10 = COPY [[ADD]](s32)
   ; ILP32F-NEXT:   PseudoRET implicit $x10
@@ -438,8 +438,8 @@ define i32 @caller_large_struct_ret() nounwind {
   ; ILP32D-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
   ; ILP32D-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.1)
   ; ILP32D-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 12
-  ; ILP32D-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
-  ; ILP32D-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s32) from %ir.3)
+  ; ILP32D-NEXT:   %3:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX]], [[C]](s32)
+  ; ILP32D-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %3(p0) :: (dereferenceable load (s32) from %ir.3)
   ; ILP32D-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[LOAD1]]
   ; ILP32D-NEXT:   $x10 = COPY [[ADD]](s32)
   ; ILP32D-NEXT:   PseudoRET implicit $x10

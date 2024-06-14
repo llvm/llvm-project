@@ -1581,10 +1581,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   uint32_t Flags = 0;
-  if (isa<Instruction>(U)) {
-    const Instruction &I = cast<Instruction>(U);
-    Flags = MachineInstr::copyFlagsFromInstruction(I);
-  }
+  if (const Instruction *I = dyn_cast<Instruction>(&U))
+    Flags = MachineInstr::copyFlagsFromInstruction(*I);
 
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
