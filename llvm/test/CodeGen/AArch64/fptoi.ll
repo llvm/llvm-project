@@ -1483,7 +1483,7 @@ define <8 x i16> @fptos_v8f64_v8i16(<8 x double> %a) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI70_0
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI54_0]
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI70_0]
 ; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
 ; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
 ; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
@@ -1514,7 +1514,7 @@ define <8 x i16> @fptou_v8f64_v8i16(<8 x double> %a) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI71_0
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI55_0]
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI71_0]
 ; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
 ; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
 ; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
@@ -1545,7 +1545,7 @@ define <16 x i16> @fptos_v16f64_v16i16(<16 x double> %a) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI72_0
 ; CHECK-SD-NEXT:    fcvtzs v2.2d, v2.2d
 ; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI56_0]
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI72_0]
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
@@ -1592,7 +1592,7 @@ define <16 x i16> @fptou_v16f64_v16i16(<16 x double> %a) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI73_0
 ; CHECK-SD-NEXT:    fcvtzs v2.2d, v2.2d
 ; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI57_0]
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI73_0]
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
@@ -1656,7 +1656,7 @@ define <32 x i16> @fptos_v32f64_v32i16(<32 x double> %a) {
 ; CHECK-SD-NEXT:    fcvtzs v16.2d, v16.2d
 ; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
 ; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
-; CHECK-SD-NEXT:    adrp x8, .LCPI58_0
+; CHECK-SD-NEXT:    adrp x8, .LCPI74_0
 ; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    xtn v7.2s, v7.2d
@@ -1671,7 +1671,7 @@ define <32 x i16> @fptos_v32f64_v32i16(<32 x double> %a) {
 ; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
 ; CHECK-SD-NEXT:    xtn v18.2s, v22.2d
 ; CHECK-SD-NEXT:    xtn v22.2s, v16.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI58_0]
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI74_0]
 ; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
 ; CHECK-SD-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v16.16b
 ; CHECK-SD-NEXT:    tbl v2.16b, { v18.16b, v19.16b, v20.16b, v21.16b }, v16.16b
@@ -1743,7 +1743,7 @@ define <32 x i16> @fptou_v32f64_v32i16(<32 x double> %a) {
 ; CHECK-SD-NEXT:    fcvtzs v16.2d, v16.2d
 ; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
 ; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
-; CHECK-SD-NEXT:    adrp x8, .LCPI59_0
+; CHECK-SD-NEXT:    adrp x8, .LCPI75_0
 ; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    xtn v7.2s, v7.2d
@@ -1758,7 +1758,7 @@ define <32 x i16> @fptou_v32f64_v32i16(<32 x double> %a) {
 ; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
 ; CHECK-SD-NEXT:    xtn v18.2s, v22.2d
 ; CHECK-SD-NEXT:    xtn v22.2s, v16.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI59_0]
+; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI75_0]
 ; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
 ; CHECK-SD-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v16.16b
 ; CHECK-SD-NEXT:    tbl v2.16b, { v18.16b, v19.16b, v20.16b, v21.16b }, v16.16b
