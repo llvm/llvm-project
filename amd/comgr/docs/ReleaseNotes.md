@@ -176,6 +176,7 @@ New Targets
  - gfx1036
  - gfx1150
  - gfx1151
+ - gfx1152
  - gfx9-generic
  - gfx10-1-generic
  - gfx10-3-generic
