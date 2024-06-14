@@ -144,9 +144,8 @@ int llvm_test_dibuilder() {
     LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "b", 1, 2, File,
                                          42, Int64Ty, true, 0);
 
-  LLVMMetadataRef FooParamVar3 =
-    LLVMDIBuilderCreateParameterVariable(DIB, FunctionMetadata, "c", 1, 3, File,
-                                         42, VectorTy, true, 0);
+  LLVMMetadataRef FooParamVar3 = LLVMDIBuilderCreateParameterVariable(
+      DIB, FunctionMetadata, "c", 1, 3, File, 42, VectorTy, true, 0);
 
   LLVMSetSubprogram(FooFunction, FunctionMetadata);
 
@@ -163,9 +162,9 @@ int llvm_test_dibuilder() {
   LLVMValueRef FooVal1 = LLVMConstInt(LLVMInt64Type(), 0, false);
   LLVMMetadataRef FooVarValueExpr =
     LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
-  
-  LLVMDIBuilderInsertDbgValueRecordAtEnd(
-      DIB, FooVal1, FooVar1, FooVarValueExpr, FooVarsLocation, FooVarBlock);
+
+  LLVMDIBuilderInsertDbgValueRecordAtEnd(DIB, FooVal1, FooVar1, FooVarValueExpr,
+                                         FooVarsLocation, FooVarBlock);
 
   LLVMMetadataRef MacroFile =
       LLVMDIBuilderCreateTempMacroFile(DIB, NULL, 0, File);
