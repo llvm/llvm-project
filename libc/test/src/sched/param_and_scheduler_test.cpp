@@ -145,11 +145,9 @@ public:
   using LlvmLibcSchedTest = SchedTest;                                         \
   TEST_F(LlvmLibcSchedTest, Sched_##policy) { testSched(policy, can_set); }
 
-// Temporarily disabled as these tests are failing on Arch Linux where
-// scheduling policy setting succeeds without running as root.
-// // Root is required to set these policies.
-// LIST_SCHED_TESTS(SCHED_FIFO, LIBC_NAMESPACE::getuid() == 0)
-// LIST_SCHED_TESTS(SCHED_RR, LIBC_NAMESPACE::getuid() == 0)
+// Root is required to set these policies.
+LIST_SCHED_TESTS(SCHED_FIFO, LIBC_NAMESPACE::getuid() == 0)
+LIST_SCHED_TESTS(SCHED_RR, LIBC_NAMESPACE::getuid() == 0)
 
 // No root is required to set these policies.
 LIST_SCHED_TESTS(SCHED_OTHER, true)
