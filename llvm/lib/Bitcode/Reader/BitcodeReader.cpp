@@ -7332,12 +7332,11 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
                                               bool IsOldProfileFormat,
                                               bool HasProfile, bool HasRelBF) {
   std::vector<FunctionSummary::EdgeTy> Ret;
-  if (IsOldProfileFormat) {
-    if (HasProfile)
-      Ret.reserve(Record.size() / 3);
-    else
-      Ret.reserve(Record.size() / 2);
-  } else if (HasProfile || HasRelBF) {
+  // In the case of new profile formats, there are two Record entries per
+  // Edge. Otherwise, conservatively reserve up to Record.size and later
+  // shrink_to_fit when we are done (and shrink_to_fit for the exact
+  // case should be a no-op).
+  if (!IsOldProfileFormat && (HasProfile || HasRelBF)) {
     Ret.reserve(Record.size() / 2);
   } else
     Ret.reserve(Record.size());
@@ -7359,6 +7358,8 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
     Ret.push_back(FunctionSummary::EdgeTy{
         Callee, CalleeInfo(Hotness, HasTailCall, RelBF)});
   }
+
+  Ret.shrink_to_fit();
   return Ret;
 }
 
