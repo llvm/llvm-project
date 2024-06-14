@@ -8279,9 +8279,9 @@ def : CLFlag<"Oi">, Alias<_SLASH_O>, AliasArgs<["i"]>,
 def : CLFlag<"Oi-">, Alias<_SLASH_O>, AliasArgs<["i-"]>,
   HelpText<"Disable use of builtin functions">;
 def : CLFlag<"Os">, Alias<_SLASH_O>, AliasArgs<["s"]>,
-  HelpText<"Optimize for size">;
+  HelpText<"Optimize for size (like clang -Os)">;
 def : CLFlag<"Ot">, Alias<_SLASH_O>, AliasArgs<["t"]>,
-  HelpText<"Optimize for speed">;
+  HelpText<"Optimize for speed (like clang -O3)">;
 def : CLFlag<"Ox">, Alias<_SLASH_O>, AliasArgs<["x"]>,
   HelpText<"Deprecated (like /Og /Oi /Ot /Oy /Ob2); use /O2">;
 def : CLFlag<"Oy">, Alias<_SLASH_O>, AliasArgs<["y"]>,
