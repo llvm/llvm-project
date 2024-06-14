@@ -28,7 +28,6 @@ struct FlowBlock {
   uint64_t Weight{0};
   bool HasUnknownWeight{true};
   bool IsUnlikely{false};
-  bool IsExit{false};
   uint64_t Flow{0};
   std::vector<FlowJump *> SuccJumps;
   std::vector<FlowJump *> PredJumps;
@@ -58,7 +57,6 @@ struct FlowFunction {
   std::vector<FlowJump> Jumps;
   /// The index of the entry block.
   uint64_t Entry{0};
-  uint64_t Sink{UINT64_MAX};
 };
 
 /// Various thresholds and options controlling the behavior of the profile
