@@ -53,9 +53,9 @@ cl::opt<bool>
 
 cl::opt<unsigned> MatchedProfileThreshold(
     "matched-profile-threshold",
-    cl::desc("Percentage threshold of matched execution counts at which stale "
+    cl::desc("Percentage threshold of matched basic blocks at which stale "
              "profile inference is executed."),
-    cl::init(5), cl::Hidden, cl::cat(BoltOptCategory));
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<unsigned> StaleMatchingMaxFuncSize(
     "stale-matching-max-func-size",
@@ -184,6 +184,17 @@ public:
   uint8_t PredHash{0};
   /// (Loose) Hashes of the successors of the basic block.
   uint8_t SuccHash{0};
+};
+
+/// A data object containing function matching information.
+struct FunctionMatchingData {
+public:
+  /// The number of blocks matched exactly.
+  uint64_t MatchedExactBlocks{0};
+  /// The number of blocks matched loosely.
+  uint64_t MatchedLooseBlocks{0};
+  /// The number of execution counts matched.
+  uint64_t MatchedExecCounts{0};
 };
 
 /// The object is used to identify and match basic blocks in a BinaryFunction
@@ -417,7 +428,9 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 void matchWeightsByHashes(BinaryContext &BC,
                           const BinaryFunction::BasicBlockOrderType &BlockOrder,
                           const yaml::bolt::BinaryFunctionProfile &YamlBF,
-                          FlowFunction &Func) {
+                          FlowFunction &Func,
+                          FunctionMatchingData &FuncMatchingData
+                          ) {
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
   std::vector<FlowBlock *> Blocks;
@@ -457,9 +470,11 @@ void matchWeightsByHashes(BinaryContext &BC,
       if (Matcher.isHighConfidenceMatch(BinHash, YamlHash)) {
         ++BC.Stats.NumMatchedBlocks;
         BC.Stats.MatchedSampleCount += YamlBB.ExecCount;
-        Func.MatchedExecCount += YamlBB.ExecCount;
+        FuncMatchingData.MatchedExecCounts += YamlBB.ExecCount;
+        FuncMatchingData.MatchedExactBlocks += 1;
         LLVM_DEBUG(dbgs() << "  exact match\n");
       } else {
+        FuncMatchingData.MatchedLooseBlocks += 1;
         LLVM_DEBUG(dbgs() << "  loose match\n");
       }
       if (YamlBB.NumInstructions == BB->size())
@@ -600,13 +615,16 @@ void preprocessUnreachableBlocks(FlowFunction &Func) {
 /// Currently we skip inference for (very) large instances and for instances
 /// having "unexpected" control flow (e.g., having no sink basic blocks).
 bool canApplyInference(const FlowFunction &Func,
-                       const yaml::bolt::BinaryFunctionProfile &YamlBF) {
+                       const yaml::bolt::BinaryFunctionProfile &YamlBF,
+                       const FunctionMatchingData &FuncMatchingData) {
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
     return false;
 
-  if ((double)Func.MatchedExecCount / YamlBF.ExecCount >=
+  if ((double)FuncMatchingData.MatchedExactBlocks/YamlBF.Blocks.size() >=
       opts::MatchedProfileThreshold / 100.0)
     return false;
+
+  
 
   bool HasExitBlocks = llvm::any_of(
       Func.Blocks, [&](const FlowBlock &Block) { return Block.isExit(); });
@@ -757,18 +775,21 @@ bool YAMLProfileReader::inferStaleProfile(
   const BinaryFunction::BasicBlockOrderType BlockOrder(
       BF.getLayout().block_begin(), BF.getLayout().block_end());
 
+  // Create a containter for function matching data.
+  FunctionMatchingData FuncMatchingData;
+
   // Create a wrapper flow function to use with the profile inference algorithm.
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func);
+  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func, FuncMatchingData);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.
   preprocessUnreachableBlocks(Func);
 
   // Check if profile inference can be applied for the instance.
-  if (!canApplyInference(Func, YamlBF))
+  if (!canApplyInference(Func, YamlBF, FuncMatchingData))
     return false;
 
   // Apply the profile inference algorithm.
