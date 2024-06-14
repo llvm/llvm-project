@@ -570,33 +570,23 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   // * When compiling for SVE only, the caller must be in non-streaming mode.
   // * When compiling for both SVE and SME, the caller can be in either mode.
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
-    static llvm::StringMap<bool> CallerFeatureMapWithoutSVE,
-        CallerFeatureMapWithoutSME;
+    auto DisableFeatures = [](llvm::StringMap<bool> &Map, StringRef S) {
+      for (StringRef K : Map.keys())
+        if (K.starts_with(S))
+          Map[K] = false;
+    };
 
-    // Cache the feature maps, to avoid having to recalculate this for each
-    // builtin call.
-    static unsigned CachedODRHash = 0;
-    if (FD->getODRHash() != CachedODRHash) {
-      auto DisableFeatures = [](llvm::StringMap<bool> &Map, StringRef S) {
-        for (StringRef K : Map.keys())
-          if (K.starts_with(S))
-            Map[K] = false;
-      };
-
-      CallerFeatureMapWithoutSME.clear();
-      S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
-      DisableFeatures(CallerFeatureMapWithoutSME, "sme");
-
-      CallerFeatureMapWithoutSVE.clear();
-      S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
-      DisableFeatures(CallerFeatureMapWithoutSVE, "sve");
-
-      CachedODRHash = FD->getODRHash();
-    }
+    llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
+    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
+    DisableFeatures(CallerFeatureMapWithoutSVE, "sve");
 
     // Avoid emitting diagnostics for a function that can never compile.
     if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
       return false;
+
+    llvm::StringMap<bool> CallerFeatureMapWithoutSME;
+    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
+    DisableFeatures(CallerFeatureMapWithoutSME, "sme");
 
     // We know the builtin requires either some combination of SVE flags, or
     // some combination of SME flags, but we need to figure out which part
@@ -667,8 +657,6 @@ static ArmSMEState getSMEState(unsigned BuiltinID) {
 
 bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  bool HasError = false;
-
   if (FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
     std::optional<ArmStreamingType> BuiltinType;
 
@@ -678,9 +666,9 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SME_STREAMING_ATTRS
     }
 
-    if (BuiltinType)
-      HasError |= checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType,
-                                           BuiltinID);
+    if (BuiltinType &&
+        checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
+      return true;
 
     if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
       Diag(TheCall->getBeginLoc(),
@@ -704,13 +692,11 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SME_IMMEDIATE_CHECK
   }
 
-  HasError |= ParseSVEImmChecks(TheCall, ImmChecks);
-  return HasError;
+  return ParseSVEImmChecks(TheCall, ImmChecks);
 }
 
 bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  bool HasError = false;
   if (FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
     std::optional<ArmStreamingType> BuiltinType;
 
@@ -719,9 +705,9 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 #include "clang/Basic/arm_sve_streaming_attrs.inc"
 #undef GET_SVE_STREAMING_ATTRS
     }
-    if (BuiltinType)
-      HasError |= checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType,
-                                           BuiltinID);
+    if (BuiltinType &&
+        checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
+      return true;
   }
   // Range check SVE intrinsics that take immediate values.
   SmallVector<std::tuple<int, int, int>, 3> ImmChecks;
@@ -734,14 +720,12 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SVE_IMMEDIATE_CHECK
   }
 
-  HasError |= ParseSVEImmChecks(TheCall, ImmChecks);
-  return HasError;
+  return ParseSVEImmChecks(TheCall, ImmChecks);
 }
 
 bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                                            unsigned BuiltinID,
                                            CallExpr *TheCall) {
-  bool HasError = false;
   if (FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
 
     switch (BuiltinID) {
@@ -751,8 +735,9 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 #define TARGET_BUILTIN(id, ...) case NEON::BI##id:
 #define BUILTIN(id, ...) case NEON::BI##id:
 #include "clang/Basic/arm_neon.inc"
-      HasError |= checkArmStreamingBuiltin(SemaRef, TheCall, FD,
-                                           ArmNonStreaming, BuiltinID);
+      if (checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming,
+                                   BuiltinID))
+        return true;
       break;
 #undef TARGET_BUILTIN
 #undef BUILTIN
@@ -817,15 +802,14 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
   unsigned i = 0, l = 0, u = 0;
   switch (BuiltinID) {
   default:
-    return HasError;
+    return false;
 #define GET_NEON_IMMEDIATE_CHECK
 #include "clang/Basic/arm_fp16.inc"
 #include "clang/Basic/arm_neon.inc"
 #undef GET_NEON_IMMEDIATE_CHECK
   }
 
-  HasError |= SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
-  return HasError;
+  return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u + l);
 }
 
 bool SemaARM::CheckMVEBuiltinFunctionCall(unsigned BuiltinID,
