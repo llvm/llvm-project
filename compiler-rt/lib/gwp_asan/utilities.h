@@ -30,7 +30,7 @@ GWP_ASAN_ALWAYS_INLINE void Check(bool Condition, const char *Message) {
 // errno at the end).
 GWP_ASAN_ALWAYS_INLINE void
 checkWithErrorCode(bool Condition, const char *Message, int64_t ErrorCode) {
-  if (Condition)
+  if (GWP_ASAN_LIKELY(Condition))
     return;
   dieWithErrorCode(Message, ErrorCode);
 }
