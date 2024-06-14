@@ -7,11 +7,11 @@ body: |
   bb.0:
     ; Check the spill/reload sequence for the %0 register
     ; CHECK: renamable $[[REG0:[a-z0-9]+]]_[[REG1:[a-z0-9]+]] = CASPALX
-    ; CHECK-NEXT: STPXi killed renamable $[[REG0]], renamable $[[REG1]], %stack.0, 0 :: (store (s128) into %stack.0, align 8)
+    ; CHECK-NEXT: STPXi renamable $[[REG0]], renamable $[[REG1]], %stack.0, 0, implicit killed $[[REG0]]_[[REG1]] :: (store (s128) into %stack.0, align 8)
     ; CHECK: INLINEASM
-    ; CHECK: renamable $[[REG2:[a-z0-9]+]], renamable $[[REG3:[a-z0-9]+]] = LDPXi %stack.0, 0 :: (load (s128) from %stack.0, align 8)
+    ; CHECK: renamable $[[REG2:[a-z0-9]+]], renamable $[[REG3:[a-z0-9]+]] = LDPXi %stack.0, 0, implicit-def $[[REG2]]_[[REG3]] :: (load (s128) from %stack.0, align 8)
     ; CHECK-NEXT: $xzr = COPY renamable $[[REG2]]
-    ; CHECK-NEXT: $xzr = COPY killed renamable $[[REG3]]
+    ; CHECK-NEXT: $xzr = COPY renamable $[[REG3]]
     %0 : xseqpairsclass = IMPLICIT_DEF
     %1 : xseqpairsclass = IMPLICIT_DEF
     %2 : gpr64common = IMPLICIT_DEF
@@ -27,11 +27,11 @@ body: |
   bb.0:
     ; Check the spill/reload sequence for the %0 register
     ; CHECK: $[[REG0:[a-z0-9]+]]_[[REG1:[a-z0-9]+]] = CASPALW
-    ; CHECK-NEXT: STPWi killed renamable $[[REG0]], renamable $[[REG1]], %stack.0, 0 :: (store (s64) into %stack.0, align 4)
+    ; CHECK-NEXT: STPWi renamable $[[REG0]], renamable $[[REG1]], %stack.0, 0, implicit killed $[[REG0]]_[[REG1]] :: (store (s64) into %stack.0, align 4)
     ; CHECK: INLINEASM
-    ; CHECK: renamable $[[REG2:[a-z0-9]+]], renamable $[[REG3:[a-z0-9]+]] = LDPWi %stack.0, 0 :: (load (s64) from %stack.0, align 4)
+    ; CHECK: renamable $[[REG2:[a-z0-9]+]], renamable $[[REG3:[a-z0-9]+]] = LDPWi %stack.0, 0, implicit-def $[[REG2]]_[[REG3]] :: (load (s64) from %stack.0, align 4)
     ; CHECK-NEXT: $xzr = COPY renamable $[[REG2]]
-    ; CHECK-NEXT: $xzr = COPY killed renamable $[[REG3]]
+    ; CHECK-NEXT: $xzr = COPY renamable $[[REG3]]
     %0 : wseqpairsclass = IMPLICIT_DEF
     %1 : wseqpairsclass = IMPLICIT_DEF
     %2 : gpr64common = IMPLICIT_DEF
