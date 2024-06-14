@@ -93,8 +93,6 @@ public:
   std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
   getMultiPayloadEnumDescriptor(const swift::reflection::TypeRef *TR) override;
 
-  lldb_private::Type *FindDefinitionTypeForDIE(const DWARFDIE &die) override;
-
 private:
   /// Returns the canonical demangle tree of a die's type.
   NodePointer GetCanonicalDemangleTree(DWARFDIE &die);
