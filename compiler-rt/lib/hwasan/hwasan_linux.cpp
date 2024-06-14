@@ -106,8 +106,7 @@ static uptr GetHighMemEnd() {
 }
 
 static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
-  if (SANITIZER_CAN_USE_PREINIT_ARRAY &&
-      flags()->fixed_shadow_base != (uptr)-1) {
+  if (!SANITIZER_ANDROID && flags()->fixed_shadow_base != (uptr)-1) {
     __hwasan_shadow_memory_dynamic_address = flags()->fixed_shadow_base;
   } else {
     __hwasan_shadow_memory_dynamic_address =
