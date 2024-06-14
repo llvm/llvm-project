@@ -453,10 +453,10 @@ inline int64_t divideFloorSigned(int64_t Numerator, int64_t Denominator) {
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
-  int64_t Bias = Denominator >= 0 ? 1 : -1;
+  int64_t Bias = Denominator >= 0 ? -1 : 1;
   bool SameSign = (Numerator >= 0) == (Denominator >= 0);
   return SameSign ? Numerator / Denominator
-                  : -((-Numerator - Bias) / Denominator) - 1;
+                  : -((Bias - Numerator) / Denominator) - 1;
 }
 
 /// Returns the remainder of the Euclidean division of LHS by RHS. Result is
@@ -467,11 +467,14 @@ inline int64_t mod(int64_t Numerator, int64_t Denominator) {
   return Mod < 0 ? Mod + Denominator : Mod;
 }
 
-/// Returns (Numerator / Denominator) rounded by round-half-up. Guranteed to
+/// Returns (Numerator / Denominator) rounded by round-half-up. Guaranteed to
 /// never overflow.
 inline uint64_t divideNearest(uint64_t Numerator, uint64_t Denominator) {
+  uint64_t Mod = Numerator % Denominator;
+  uint64_t HalfDenomFloor = Denominator / 2;
   return (Numerator / Denominator) +
-         (Denominator == 1 ? 0 : Numerator % Denominator >= Denominator / 2);
+         (Mod > HalfDenomFloor ||
+          ((Mod == HalfDenomFloor) & ~(Denominator & 1)));
 }
 
 /// Returns the largest uint64_t less than or equal to \p Value and is
