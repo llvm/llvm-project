@@ -1790,14 +1790,6 @@ defm mcdc_coverage : BoolFOption<"coverage-mcdc",
           "Enable MC/DC criteria when generating code coverage">,
   NegFlag<SetFalse, [], [ClangOption], "Disable MC/DC coverage criteria">,
           BothFlags<[], [ClangOption, CLOption]>>;
-def fmcdc_max_conditions_EQ : Joined<["-"], "fmcdc-max-conditions=">,
-  Group<f_Group>, Visibility<[CC1Option]>,
-  HelpText<"Maximum number of conditions in MC/DC coverage">,
-  MarshallingInfoInt<CodeGenOpts<"MCDCMaxConds">, "32767">;
-def fmcdc_max_test_vectors_EQ : Joined<["-"], "fmcdc-max-test-vectors=">,
-  Group<f_Group>, Visibility<[CC1Option]>,
-  HelpText<"Maximum number of test vectors in MC/DC coverage">,
-  MarshallingInfoInt<CodeGenOpts<"MCDCMaxTVs">, "0x7FFFFFFE">;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
