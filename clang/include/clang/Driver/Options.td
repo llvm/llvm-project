@@ -8125,7 +8125,7 @@ def show_inst : Flag<["-"], "show-inst">,
 def dwarf_debug_producer : Separate<["-"], "dwarf-debug-producer">,
   HelpText<"The string to embed in the Dwarf debug AT_producer record.">;
 
-def defsym : Separate<["-"], "defsym">,
+def defsym : Separate<["--"], "defsym">,
   HelpText<"Define a value for a symbol">;
 
 } // let Visibility = [CC1AsOption]

@@ -6,9 +6,10 @@
 
 // RUN: %clang -### -c -no-integrated-as -target x86_64-unknown-unknown %s \
 // RUN: -Wa,-defsym,abc=5 -Wa,--defsym,xyz=0xa \
-// RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM1
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHECK-DEFSYM1-GAS
 
-// CHECK-DEFSYM1: "-defsym" "abc=5" "--defsym" "xyz=0xa"
+// CHECK-DEFSYM1: "--defsym" "abc=5" "--defsym" "xyz=0xa"
+// CHECK-DEFSYM1-GAS: "-defsym" "abc=5" "--defsym" "xyz=0xa"
 
 // RUN: not %clang -c -integrated-as -o /dev/null %s \
 // RUN: -Wa,-defsym,abc= \
