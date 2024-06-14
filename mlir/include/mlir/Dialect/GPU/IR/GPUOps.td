@@ -79,7 +79,7 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
 
 def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
   let description = [{
-    Returns the number of thread blocks in the cluster along
+    Returns the number of cluster identifiers per grid along
     the x, y, or z `dimension`.
 
     Example:
@@ -89,8 +89,27 @@ def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
     ```
 
     If `upper_bound` is set, then executing (a lowering of) this operation in an
-    environment where the cluster dimension is greater than `upper_bound` causes
+    environment where the clusters per grid is greater than `upper_bound` causes
     undefined behavior.
+
+    There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
+  }];
+}
+
+def GPU_ClusterDimBlocksOp : GPU_IndexOp<"cluster_dim_blocks"> {
+  let description = [{
+    Returns the number of thread blocks in the cluster along
+    the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cDimBlocksX = gpu.cluster_dim_blocks x
+    ```
+
+    If `upper_bound` is set, then executing (a lowering of) this operation in an
+    environment where the thread blocks per cluster  is greater than `upper_bound`
+    causes undefined behavior.
 
     There is an implicit upper bound of `kMaxClusterDim` (currently 8).
   }];
@@ -108,8 +127,26 @@ def GPU_ClusterIdOp : GPU_IndexOp<"cluster_id"> {
     ```
 
     If `upper_bound` is set, then executing (a lowering of) this operation in an
-    environment where the cluster dimension along `dimension` is greater than
-    `upper_bound` causes undefined behavior.
+    environment where the number of clusters in the grid along `dimension` is
+    greater than `upper_bound` causes undefined behavior.
+
+    There is an implicit upper bound of `kMaxDim` (currently uint32_t::max).
+  }];
+}
+
+def GPU_ClusterBlockIdOp : GPU_IndexOp<"cluster_block_id"> {
+  let description = [{
+    Returns the block id within the cluster along the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cBlockIdY = gpu.cluster_block_id y
+    ```
+
+    If `upper_bound` is set, then executing (a lowering of) this operation in an
+    environment where the number of thread blocks per cluster  along `dimension`
+    is greater than `upper_bound` causes undefined behavior.
 
     There is an implicit upper bound of `kMaxClusterDim` (currently 8).
   }];

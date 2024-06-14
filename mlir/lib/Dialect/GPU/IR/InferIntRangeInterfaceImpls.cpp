@@ -127,6 +127,14 @@ static std::optional<uint64_t> getKnownLaunchDim(Op op, LaunchDims type) {
 
 void ClusterDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                      SetIntRangeFn setResultRange) {
+  uint64_t max = kMaxDim;
+  if (auto specified = getUpperBound())
+    max = specified->getZExtValue();
+  setResultRange(getResult(), getIndexRange(1, max));
+}
+
+void ClusterDimBlocksOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                           SetIntRangeFn setResultRange) {
   uint64_t max = kMaxClusterDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();
@@ -135,6 +143,14 @@ void ClusterDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void ClusterIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                     SetIntRangeFn setResultRange) {
+  uint64_t max = kMaxDim;
+  if (auto specified = getUpperBound())
+    max = specified->getZExtValue();
+  setResultRange(getResult(), getIndexRange(0, max - 1ULL));
+}
+
+void ClusterBlockIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
+                                         SetIntRangeFn setResultRange) {
   uint64_t max = kMaxClusterDim;
   if (auto specified = getUpperBound())
     max = specified->getZExtValue();

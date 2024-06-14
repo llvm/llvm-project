@@ -4632,12 +4632,13 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Ob0                    Disable function inlining
       /Ob1                    Only inline functions which are (explicitly or implicitly) marked inline
       /Ob2                    Inline functions as deemed beneficial by the compiler
+      /Ob3                    Same as /Ob2
       /Od                     Disable optimization
       /Og                     No effect
       /Oi-                    Disable use of builtin functions
       /Oi                     Enable use of builtin functions
-      /Os                     Optimize for size
-      /Ot                     Optimize for speed
+      /Os                     Optimize for size (like clang -Os)
+      /Ot                     Optimize for speed (like clang -O3)
       /Ox                     Deprecated (same as /Og /Oi /Ot /Oy /Ob2); use /O2 instead
       /Oy-                    Disable frame pointer omission (x86 only, default)
       /Oy                     Enable frame pointer omission (x86 only)
