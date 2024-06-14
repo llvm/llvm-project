@@ -168,12 +168,12 @@ fma(InType x, InType y, InType z) {
   //      z :    10aa...a
   // - prod :     1bb...bb....b
   // In that case, in order to store the exact result, we need at least
-  //   (Length of prod) - (Fraction length of z) = 2*(52 + 1) - 52 = 54.
+  //     (Length of prod) - (Fraction length of z)
+  //   = 2*(Length of input explicit mantissa) - (Fraction length of z) bits.
   // Overall, before aligning the mantissas and exponents, we can simply left-
-  // shift the mantissa of z by at least 54, and left-shift the product of x*y
-  // by (that amount - 54).  After that, it is enough to align the least
-  // significant bit, given that we keep track of the round and sticky bits
-  // after the least significant bit.
+  // shift the mantissa of z by that amount.  After that, it is enough to align
+  // the least significant bit, given that we keep track of the round and sticky
+  // bits after the least significant bit.
 
   TmpResultType prod_mant = TmpResultType(x_mant) * y_mant;
   int prod_lsb_exp =
