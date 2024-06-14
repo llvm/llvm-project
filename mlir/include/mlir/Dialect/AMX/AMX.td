@@ -64,15 +64,35 @@ def AMX_Dialect : Dialect {
 class AMX_Op<string mnemonic, list<Trait> traits = []> :
   Op<AMX_Dialect, mnemonic, traits> {}
 
+class AMX_IntrOpBase<string mnemonic, int numResults, 
+                    list<int> immArgPositions = [],
+                    list<string> immArgAttrNames = [],
+                    list<Trait> traits = []>
+    : LLVM_IntrOpBase<
+          /*Dialect dialect=*/AMX_Dialect,
+          /*string opName=*/mnemonic,
+          /*string enumName=*/"x86_" # !subst(".", "_", mnemonic),
+          /*list<int> overloadedResults=*/[],
+          /*list<int> overloadedOperands=*/[],
+          /*list<Trait> traits=*/traits,
+          /*int numResults=*/numResults,
+          /*bit requiresAccessGroup=*/0,
+          /*bit requiresAliasAnalysis=*/0,
+          /*bit requiresFastmath=*/0,
+          /*list<int> immArgPositions=*/immArgPositions,
+          /*list<string> immArgAttrNames=*/immArgAttrNames>;
+
 // The "internal" intrinsics are meant for compiler usage.
 class AMX_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
-  LLVM_IntrOpBase<AMX_Dialect, mnemonic,
-                  "x86_" # !subst(".", "_", mnemonic) # "_internal",
-                  [], [], traits, numResults>;
+  AMX_IntrOp<mnemonic # "_internal", numResults, [], [], traits>;
 
 //===----------------------------------------------------------------------===//
 // AMX Op definitions (user facing).
 //===----------------------------------------------------------------------===//
+
+
+def TileRegisterIndexAttr : OptionalAttr<
+	ConfinedAttr<SI8Attr, [IntMinValue<0>, IntMaxValue<7>]>>;
 
 //
 // Tile reset.
@@ -91,6 +111,7 @@ def TileZeroOp : AMX_Op<"tile_zero", [Pure]> {
       %0 = amx.tile_zero : vector<16x16xbf16>
     ```
   }];
+  let arguments = (ins TileRegisterIndexAttr:$dstRegIndex);
   let results = (outs
     VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$res);
   let extraClassDeclaration = [{
@@ -98,7 +119,7 @@ def TileZeroOp : AMX_Op<"tile_zero", [Pure]> {
       return ::llvm::cast<VectorType>(getRes().getType());
     }
   }];
-  let assemblyFormat = "attr-dict `:` type($res)";
+  let assemblyFormat = "(`[` $dstRegIndex^ `]`)? attr-dict `:` type($res)";
   let hasVerifier = 1;
 }
 
@@ -121,7 +142,7 @@ def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
     ```
   }];
   let arguments = (ins Arg<AnyMemRef, "load base", [MemRead]>:$base,
-                   Variadic<Index>:$indices);
+                   Variadic<Index>:$indices, TileRegisterIndexAttr:$srcRegIndex);
   let results = (outs
     VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$res);
   let extraClassDeclaration = [{
@@ -132,7 +153,7 @@ def TileLoadOp : AMX_Op<"tile_load", [Pure]> {
       return ::llvm::cast<VectorType>(getRes().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` attr-dict `:` "
+  let assemblyFormat = "$base `[` $indices `]` attr-dict (`into` `[` $srcRegIndex^ `]`)? `:` "
                        "type($base) `into` type($res)";
   let hasVerifier = 1;
 }
@@ -153,7 +174,8 @@ def TileStoreOp : AMX_Op<"tile_store"> {
   }];
   let arguments = (ins Arg<AnyMemRef, "store base", [MemWrite]>:$base,
                    Variadic<Index>:$indices,
-                   VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$val);
+                   VectorOfRankAndType<[2], [F32, BF16, I32, I8]>:$val,
+                   TileRegisterIndexAttr:$dstRegIndex);
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
       return ::llvm::cast<MemRefType>(getBase().getType());
@@ -162,7 +184,7 @@ def TileStoreOp : AMX_Op<"tile_store"> {
       return ::llvm::cast<VectorType>(getVal().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $val attr-dict `:` "
+  let assemblyFormat = "$base `[` $indices `]` `,` $val (`[` $dstRegIndex^ `]`)? attr-dict `:` "
                        "type($base) `,` type($val)";
   let hasVerifier = 1;
 }
@@ -189,7 +211,10 @@ def TileMulFOp : AMX_Op<"tile_mulf", [
   }];
   let arguments = (ins VectorOfRankAndType<[2], [F32, BF16]>:$lhs,
                        VectorOfRankAndType<[2], [F32, BF16]>:$rhs,
-                       VectorOfRankAndType<[2], [F32, BF16]>:$acc);
+                       VectorOfRankAndType<[2], [F32, BF16]>:$acc, 
+                       TileRegisterIndexAttr:$lhsRegIndex,
+                       TileRegisterIndexAttr:$rhsRegIndex,
+                       TileRegisterIndexAttr:$accRegIndex);
   let results = (outs VectorOfRankAndType<[2], [F32, BF16]>:$res);
   let extraClassDeclaration = [{
     VectorType getLhsVectorType() {
@@ -202,7 +227,9 @@ def TileMulFOp : AMX_Op<"tile_mulf", [
       return ::llvm::cast<VectorType>(getRes().getType());
     }
   }];
-  let assemblyFormat = "$lhs `,` $rhs `,` $acc attr-dict `:` "
+  let assemblyFormat = "$lhs (`[` $lhsRegIndex^ `]`)? `,` "
+                       "$rhs (`[` $rhsRegIndex^ `]`)? `,` "
+                       "$acc (`[` $accRegIndex^ `]`)? attr-dict `:` "
                        "type($lhs) `,` type($rhs) `,` type($acc) ";
   let hasVerifier = 1;
 }
@@ -230,7 +257,10 @@ def TileMulIOp : AMX_Op<"tile_muli", [
                        VectorOfRankAndType<[2], [I32, I8]>:$rhs,
                        VectorOfRankAndType<[2], [I32, I8]>:$acc,
                        UnitAttr:$isZextLhs,
-                       UnitAttr:$isZextRhs
+                       UnitAttr:$isZextRhs,
+                       TileRegisterIndexAttr:$lhsRegIndex,
+                       TileRegisterIndexAttr:$rhsRegIndex,
+                       TileRegisterIndexAttr:$accRegIndex
                        );
   let results = (outs VectorOfRankAndType<[2], [I32, I8]>:$res);
   let extraClassDeclaration = [{
@@ -244,13 +274,15 @@ def TileMulIOp : AMX_Op<"tile_muli", [
       return ::llvm::cast<VectorType>(getRes().getType());
     }
   }];
-  let assemblyFormat = "$lhs (`zext` $isZextLhs^)? `,` $rhs (`zext` $isZextRhs^)? `,` $acc attr-dict `:` "
+  let assemblyFormat = "$lhs (`zext` $isZextLhs^)? (`[` $lhsRegIndex^ `]`)? `,` "
+                       "$rhs (`zext` $isZextRhs^)? (`[` $rhsRegIndex^ `]`)? `,` "
+                       "$acc (`[` $accRegIndex^ `]`)? attr-dict `:` "
                        "type($lhs) `,` type($rhs) `,` type($acc) ";
   let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// AMX IntrOp definitions (LLVM compiler facing).
+// AMX Internal IntrOp definitions (LLVM compiler facing).
 //===----------------------------------------------------------------------===//
 
 //
@@ -309,5 +341,86 @@ def LLVM_x86_amx_tdpbuud : AMX_IntrOp<"tdpbuud", 1>,
   Arguments<(ins AnyInteger,
                  AnyInteger,
 		 AnyInteger, LLVM_Type, LLVM_Type, LLVM_Type)>;
+
+//===----------------------------------------------------------------------===//
+// AMX IntrOp definitions (direct mapping to physical assembly).
+// The `dm` suffixes in Op names stand for `direct mapping`.
+//===----------------------------------------------------------------------===//
+
+//
+// Tile palette config operations. Parameter define the pointer to palette membuf.
+//
+
+def LLVM_x86_amx_ldtilecfg_plain : AMX_IntrOpBase<"ldtilecfg", 0>,
+  Arguments<(int LLVM_AnyPointer)>;
+
+def LLVM_x86_amx_tilerelease_plain : AMX_IntrOpBase<"tilerelease", 0>;
+
+//
+// Tile reset. Parameters define the tile size.
+//
+
+def LLVM_x86_amx_tilezero_plain : AMX_IntrOpBase<"tilezero", 0, [0], ["res_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of resulting tmm registers">:$res_index)>;
+
+//
+// Tile memory operations. Parameters define the tile size,
+// base address, and stride between consecutive rows for the
+// memory operation.
+//
+
+def LLVM_x86_amx_tileloadd64_plain : AMX_IntrOpBase<"tileloadd64", 0, [0], ["dst_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
+                 LLVM_AnyPointer, AnyInteger)>;
+
+// Non-temporal load version
+def LLVM_x86_amx_tileloaddt164_plain : AMX_IntrOpBase<"tileloaddt164", 0, [0], ["dst_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
+                 LLVM_AnyPointer, AnyInteger)>;
+
+def LLVM_x86_amx_tilestored64_plain : AMX_IntrOpBase<"tilestored64", 0, [0], ["src_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of src tmm registers">:$src_index,
+                 LLVM_AnyPointer, AnyInteger)>;
+
+//
+// Tile multiplication operations (series of dot products). Parameters
+// define the tile sizes and source and destination tiles for the
+// operation. Note that the prefix "tdp" stands for tile dot product.
+//
+
+// Dot product of bf16 tiles into f32 tile.
+def LLVM_x86_amx_tdpbf16ps_plain : AMX_IntrOpBase<"tdpbf16ps", 0, 
+		[0, 1, 2], ["dst_index", "lhs_index", "rhs_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
+                 Arg<I8Attr, "Index of lhs tmm registers">:$lhs_index,
+		 Arg<I8Attr, "Index of rhs tmm registers">:$rhs_index)>;
+
+// Dot product of i8 tiles into i32 tile (with sign/sign extension).
+def LLVM_x86_amx_tdpbssd_plain : AMX_IntrOpBase<"tdpbssd", 0,
+		[0, 1, 2], ["dst_index", "lhs_index", "rhs_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
+                 Arg<I8Attr, "Index of lhs tmm registers">:$lhs_index,
+		 Arg<I8Attr, "Index of rhs tmm registers">:$rhs_index)>;
+
+// Dot product of i8 tiles into i32 tile (with sign/zero extension).
+def LLVM_x86_amx_tdpbsud_plain : AMX_IntrOpBase<"tdpbsud", 1,
+		[0, 1, 2], ["dst_index", "lhs_index", "rhs_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
+                 Arg<I8Attr, "Index of lhs tmm registers">:$lhs_index,
+		 Arg<I8Attr, "Index of rhs tmm registers">:$rhs_index)>;
+
+// Dot product of i8 tiles into i32 tile (with zero/sign extension).
+def LLVM_x86_amx_tdpbusd_plain : AMX_IntrOpBase<"tdpbusd", 1,
+		[0, 1, 2], ["dst_index", "lhs_index", "rhs_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
+                 Arg<I8Attr, "Index of lhs tmm registers">:$lhs_index,
+		 Arg<I8Attr, "Index of rhs tmm registers">:$rhs_index)>;
+
+// Dot product of i8 tiles into i32 tile (with zero/zero extension).
+def LLVM_x86_amx_tdpbuud_plain : AMX_IntrOpBase<"tdpbuud", 1,
+		[0, 1, 2], ["dst_index", "lhs_index", "rhs_index"]>,
+  Arguments<(ins Arg<I8Attr, "Index of dst tmm registers">:$dst_index,
+                 Arg<I8Attr, "Index of lhs tmm registers">:$lhs_index,
+		 Arg<I8Attr, "Index of rhs tmm registers">:$rhs_index)>;
 
 #endif // AMX

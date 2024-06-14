@@ -211,7 +211,12 @@ void mlir::populateAMXLegalizeForLLVMExportPatterns(
 void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {
   target.addLegalOp<x86_amx_tilezero, x86_amx_tileloadd64, x86_amx_tilestored64,
                     x86_amx_tdpbf16ps, x86_amx_tdpbssd, x86_amx_tdpbsud,
-                    x86_amx_tdpbusd, x86_amx_tdpbuud>();
+                    x86_amx_tdpbusd, x86_amx_tdpbuud, x86_amx_ldtilecfg_plain,
+                    x86_amx_tilerelease_plain, x86_amx_tilezero_plain,
+                    x86_amx_tileloadd64_plain, x86_amx_tilestored64_plain,
+                    x86_amx_tilestoreddt164_plain x86_amx_tdpbf16ps_plain,
+                    x86_amx_tdpbssd_plain, x86_amx_tdpbsud_plain,
+                    x86_amx_tdpbusd_plain, x86_amx_tdpbuud_plain>();
   target.addIllegalOp<TileZeroOp, TileLoadOp, TileStoreOp, TileMulIOp,
                       TileMulFOp>();
 }
