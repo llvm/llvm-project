@@ -28510,15 +28510,15 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
     // Don't do this if we only need to unpack one half.
     if (Subtarget.hasSSSE3() &&
         ISD::isBuildVectorOfConstantSDNodes(B.getNode())) {
-      bool IsLoLaneZeroOrUndef = true;
-      bool IsHiLaneZeroOrUndef = true;
+      bool IsLoLaneAllZeroOrUndef = true;
+      bool IsHiLaneAllZeroOrUndef = true;
       for (auto [Idx, Val] : enumerate(B->ops())) {
         if ((Idx % NumEltsPerLane) >= (NumEltsPerLane / 2))
-          IsHiLaneZeroOrUndef &= isNullConstantOrUndef(Val);
+          IsHiLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
         else
-          IsLoLaneZeroOrUndef &= isNullConstantOrUndef(Val);
+          IsLoLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
       }
-      if (!(IsLoLaneZeroOrUndef || IsHiLaneZeroOrUndef)) {
+      if (!(IsLoLaneAllZeroOrUndef || IsHiLaneAllZeroOrUndef)) {
         SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(0x00FF, dl, ExVT));
         SDValue BLo = DAG.getNode(ISD::AND, dl, VT, Mask, B);
         SDValue BHi = DAG.getNode(X86ISD::ANDNP, dl, VT, Mask, B);
