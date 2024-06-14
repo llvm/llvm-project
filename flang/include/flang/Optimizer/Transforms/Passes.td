@@ -260,6 +260,15 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
+def StackReclaim : Pass<"stack-reclaim"> {
+  let summary = "Insert stacksave/stackrestore in region with allocas";
+  let description = [{
+    Insert stacksave/stackrestore in loop region to reclaim alloca done in its
+    scope.
+  }];
+  let dependentDialects = [ "mlir::LLVM::LLVMDialect" ];
+}
+
 def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
   let summary = "Add tbaa tags to operations that implement FirAliasAnalysisOpInterface";
   let description = [{
