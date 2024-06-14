@@ -24,10 +24,6 @@ using namespace llvm;
 
 namespace {
 
-static inline bool isNullConstantOrUndef(SDValue V) {
-  return V.isUndef() || isNullConstant(V);
-}
-
 static inline bool getConstantValue(SDValue N, uint32_t &Out) {
   // This is only used for packed vectors, where using 0 for undef should
   // always be good.

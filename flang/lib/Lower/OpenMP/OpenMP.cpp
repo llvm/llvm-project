@@ -991,6 +991,18 @@ static void genCriticalDeclareClauses(lower::AbstractConverter &converter,
       mlir::StringAttr::get(converter.getFirOpBuilder().getContext(), name);
 }
 
+static void genDistributeClauses(lower::AbstractConverter &converter,
+                                 semantics::SemanticsContext &semaCtx,
+                                 lower::StatementContext &stmtCtx,
+                                 const List<Clause> &clauses,
+                                 mlir::Location loc,
+                                 mlir::omp::DistributeClauseOps &clauseOps) {
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
+  cp.processDistSchedule(stmtCtx, clauseOps);
+  // TODO Support delayed privatization.
+}
+
 static void genFlushClauses(lower::AbstractConverter &converter,
                             semantics::SemanticsContext &semaCtx,
                             const ObjectList &objects,
@@ -1288,8 +1300,50 @@ genDistributeOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 semantics::SemanticsContext &semaCtx,
                 lower::pft::Evaluation &eval, mlir::Location loc,
                 const ConstructQueue &queue, ConstructQueue::iterator item) {
-  TODO(loc, "Distribute construct");
-  return nullptr;
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  symTable.pushScope();
+  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
+                           lower::omp::isLastItemInQueue(item, queue));
+  dsp.processStep1();
+
+  lower::StatementContext stmtCtx;
+  mlir::omp::LoopNestClauseOps loopClauseOps;
+  mlir::omp::DistributeClauseOps distributeClauseOps;
+  llvm::SmallVector<const semantics::Symbol *> iv;
+  genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
+                     loopClauseOps, iv);
+  genDistributeClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
+                       distributeClauseOps);
+
+  // Create omp.distribute wrapper.
+  auto distributeOp =
+      firOpBuilder.create<mlir::omp::DistributeOp>(loc, distributeClauseOps);
+
+  firOpBuilder.createBlock(&distributeOp.getRegion());
+  firOpBuilder.setInsertionPoint(
+      lower::genOpenMPTerminator(firOpBuilder, distributeOp, loc));
+
+  // Create nested omp.loop_nest and fill body with loop contents.
+  auto loopOp = firOpBuilder.create<mlir::omp::LoopNestOp>(loc, loopClauseOps);
+
+  auto *nestedEval =
+      getCollapsedLoopEval(eval, getCollapseValue(item->clauses));
+
+  auto ivCallback = [&](mlir::Operation *op) {
+    genLoopVars(op, converter, loc, iv);
+    return iv;
+  };
+
+  createBodyOfOp(*loopOp,
+                 OpWithBodyGenInfo(converter, symTable, semaCtx, loc,
+                                   *nestedEval, llvm::omp::Directive::OMPD_simd)
+                     .setClauses(&item->clauses)
+                     .setDataSharingProcessor(&dsp)
+                     .setGenRegionEntryCb(ivCallback),
+                 queue, item);
+
+  symTable.popScope();
+  return distributeOp;
 }
 
 static mlir::omp::FlushOp

@@ -5068,8 +5068,9 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
     return nullptr;
 
   if (!ConstantExpr::isSupportedGetElementPtr(SrcTy))
-    return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr), std::nullopt,
-                                     Indices);
+    // TODO(gep_nowrap): Pass on the whole GEPNoWrapFlags.
+    return ConstantFoldGetElementPtr(SrcTy, cast<Constant>(Ptr),
+                                     NW.isInBounds(), std::nullopt, Indices);
 
   auto *CE =
       ConstantExpr::getGetElementPtr(SrcTy, cast<Constant>(Ptr), Indices, NW);
