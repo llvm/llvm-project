@@ -325,11 +325,7 @@ RValue SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     break;
 
   case ABIArgInfo::Ignore:
-    return CGF.EmitLoadOfAnyValue(
-        CGF.MakeAddrLValue(
-            Address(llvm::UndefValue::get(ArgPtrTy), ArgTy, TypeInfo.Align),
-            Ty),
-        Slot);
+    return Slot.asRValue();
   }
 
   // Update VAList.
