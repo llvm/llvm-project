@@ -577,7 +577,8 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       // When loop is unrolled without vectorizing, retrieve UF - Offset.
       Res = State.get(getOperand(0), State.UF - Offset);
     }
-    Res->setName(Name);
+    if (isa<ExtractElementInst>(Res))
+      Res->setName(Name);
     return Res;
   }
   case VPInstruction::LogicalAnd: {
