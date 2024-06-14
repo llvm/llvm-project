@@ -231,6 +231,8 @@ fma(InType x, InType y, InType z) {
   OutStorageType result = 0;
   int r_exp = 0; // Unbiased exponent of the result
 
+  int round_mode = fputil::quick_get_round();
+
   // Normalize the result.
   if (prod_mant != 0) {
     int lead_zeros = cpp::countl_zero(prod_mant);
@@ -269,12 +271,15 @@ fma(InType x, InType y, InType z) {
       r_exp = 0;
     }
   } else {
-    // Return +0.0 when there is exact cancellation, i.e., x*y == -z exactly.
-    prod_sign = Sign::POS;
+    // When there is exact cancellation, i.e., x*y == -z exactly, return -0.0 if
+    // rounding downward and +0.0 for other rounding modes.
+    if (round_mode == FE_DOWNWARD)
+      prod_sign = Sign::NEG;
+    else
+      prod_sign = Sign::POS;
   }
 
   // Finalize the result.
-  int round_mode = fputil::quick_get_round();
   if (LIBC_UNLIKELY(r_exp >= OutFPBits::MAX_BIASED_EXPONENT)) {
     if ((round_mode == FE_TOWARDZERO) ||
         (round_mode == FE_UPWARD && prod_sign.is_neg()) ||

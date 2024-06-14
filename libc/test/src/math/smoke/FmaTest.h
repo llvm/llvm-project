@@ -58,6 +58,7 @@ public:
       EXPECT_FP_EQ(out.zero,
                    func(InType(0.5), in.min_denormal, in.min_denormal));
     }
+
     // Test underflow rounding down.
     OutType v = OutFPBits(static_cast<OutStorageType>(OUT_MIN_NORMAL_U +
                                                       OutStorageType(1)))
@@ -73,12 +74,29 @@ public:
           out.min_normal,
           func(InType(1) / InType(IN_MIN_NORMAL_U << 1), v, out.min_normal));
     }
+
     // Test overflow.
     OutType z = out.max_normal;
-    EXPECT_FP_EQ(OutType(0.75) * z, func(InType(1.75), z, -z));
+    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0.75) * z, func(InType(1.75), z, -z));
+
     // Exact cancellation.
-    EXPECT_FP_EQ(out.zero, func(InType(3.0), InType(5.0), -InType(15.0)));
-    EXPECT_FP_EQ(out.zero, func(InType(-3.0), InType(5.0), InType(15.0)));
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        out.zero, func(InType(3.0), InType(5.0), InType(-15.0)));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(out.zero,
+                                 func(InType(3.0), InType(5.0), InType(-15.0)));
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(
+        out.zero, func(InType(3.0), InType(5.0), InType(-15.0)));
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(
+        out.neg_zero, func(InType(3.0), InType(5.0), InType(-15.0)));
+
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        out.zero, func(InType(-3.0), InType(5.0), InType(15.0)));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(out.zero,
+                                 func(InType(-3.0), InType(5.0), InType(15.0)));
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(
+        out.zero, func(InType(-3.0), InType(5.0), InType(15.0)));
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(
+        out.neg_zero, func(InType(-3.0), InType(5.0), InType(15.0)));
   }
 };
 
