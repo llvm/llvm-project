@@ -113,7 +113,7 @@ fma(InType x, InType y, InType z) {
   using InStorageType = typename InFPBits::StorageType;
 
   constexpr int IN_EXPLICIT_MANT_LEN = InFPBits::FRACTION_LEN + 1;
-  constexpr size_t PROD_LEN = 2 * (IN_EXPLICIT_MANT_LEN);
+  constexpr size_t PROD_LEN = 2 * IN_EXPLICIT_MANT_LEN;
   constexpr size_t TMP_RESULT_LEN = cpp::bit_ceil(PROD_LEN + 1);
   using TmpResultType = UInt<TMP_RESULT_LEN>;
 
