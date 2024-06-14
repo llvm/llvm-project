@@ -669,5 +669,18 @@ const char* const IdSymbolic[] = {
 
 } // namespace VGPRIndexMode
 
+namespace UCVersion {
+
+ArrayRef<GFXVersion> getGFXVersions() {
+  static const GFXVersion Versions[] = {{"UC_VERSION_GFX7", 0},
+                                        {"UC_VERSION_GFX10", 4},
+                                        {"UC_VERSION_GFX11", 6},
+                                        {"UC_VERSION_GFX12", 9}};
+
+  return Versions;
+}
+
+} // namespace UCVersion
+
 } // namespace AMDGPU
 } // namespace llvm
