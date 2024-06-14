@@ -130,7 +130,7 @@ static void high_reader_count_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_unlock(&rwlock), 0);
 
   pthread_t threads[20];
-  for (auto &i : threads) {
+  for (auto &i : threads)
     ASSERT_EQ(LIBC_NAMESPACE::pthread_create(
                   &i, nullptr,
                   [](void *arg) -> void * {
@@ -146,10 +146,9 @@ static void high_reader_count_test() {
                   },
                   &rwlock),
               0);
-  }
-  for (auto &i : threads) {
+
+  for (auto &i : threads)
     ASSERT_EQ(LIBC_NAMESPACE::pthread_join(i, nullptr), 0);
-  }
 }
 
 static void unusual_timespec_test() {
@@ -303,18 +302,16 @@ static void randomized_thread_operation(SharedData *data, ThreadGuard &guard) {
   auto read_ops = [data]() {
     ASSERT_FALSE(data->writer_flag);
     data->reader_count.fetch_add(1, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; ++i)
       LIBC_NAMESPACE::sleep_briefly();
-    }
     data->reader_count.fetch_sub(1, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
   };
   auto write_ops = [data]() {
     ASSERT_FALSE(data->writer_flag);
     data->data += 1;
     data->writer_flag = true;
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; ++i)
       LIBC_NAMESPACE::sleep_briefly();
-    }
     ASSERT_EQ(data->reader_count, 0);
     data->writer_flag = false;
     data->total_writer_count.fetch_add(1);
@@ -382,7 +379,7 @@ randomized_process_operation(SharedData &data,
                              LIBC_NAMESPACE::cpp::Atomic<int> &finish_count,
                              int expected_count) {
   pthread_t threads[32];
-  for (auto &i : threads) {
+  for (auto &i : threads)
     ASSERT_EQ(LIBC_NAMESPACE::pthread_create(
                   &i, nullptr,
                   [](void *arg) -> void * {
@@ -394,14 +391,14 @@ randomized_process_operation(SharedData &data,
                   },
                   &data),
               0);
-  }
-  for (auto &i : threads) {
+
+  for (auto &i : threads)
     ASSERT_EQ(LIBC_NAMESPACE::pthread_join(i, nullptr), 0);
-  }
+
   finish_count.fetch_add(1);
-  while (finish_count.load() != expected_count) {
+  while (finish_count.load() != expected_count)
     LIBC_NAMESPACE::sleep_briefly();
-  }
+
   ASSERT_EQ(data.total_writer_count.load(), data.data);
   ASSERT_FALSE(data.writer_flag);
   ASSERT_EQ(data.reader_count, 0);
@@ -447,9 +444,9 @@ static void multiple_process_test(int preference) {
             0);
   int pid = LIBC_NAMESPACE::fork();
   randomized_process_operation(shared_data->data, shared_data->finish_count, 2);
-  if (pid == 0) {
+  if (pid == 0)
     LIBC_NAMESPACE::exit(0);
-  } else {
+  else {
     int status;
     LIBC_NAMESPACE::waitpid(pid, &status, 0);
     ASSERT_EQ(status, 0);
