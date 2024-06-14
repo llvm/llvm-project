@@ -214,6 +214,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.scanf
     libc.src.stdio.fscanf
     libc.src.stdio.fileno
+    libc.src.stdio.fdopen
 
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_create
