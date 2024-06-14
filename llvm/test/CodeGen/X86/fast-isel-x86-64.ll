@@ -20,8 +20,8 @@ define i32 @test1(i32 %i) nounwind ssp {
 define void @test2(i64 %x) nounwind ssp {
 entry:
   %x.addr = alloca i64, align 8
-  store i64 %x, i64* %x.addr, align 8
-  %tmp = load i64, i64* %x.addr, align 8
+  store i64 %x, ptr %x.addr, align 8
+  %tmp = load i64, ptr %x.addr, align 8
   %cmp = icmp sgt i64 %tmp, 42
   br i1 %cmp, label %if.then, label %if.end
 
@@ -40,7 +40,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 @G = external global i32
 define i64 @test3() nounwind {
-  %A = ptrtoint i32* @G to i64
+  %A = ptrtoint ptr @G to i64
   ret i64 %A
 ; CHECK-LABEL: test3:
 ; CHECK: movq _G@GOTPCREL(%rip), %rax
@@ -53,8 +53,8 @@ define i64 @test3() nounwind {
 @rtx_length = external global [153 x i8]
 
 define i32 @test4(i64 %idxprom9) nounwind {
-  %arrayidx10 = getelementptr inbounds [153 x i8], [153 x i8]* @rtx_length, i32 0, i64 %idxprom9
-  %tmp11 = load i8, i8* %arrayidx10, align 1
+  %arrayidx10 = getelementptr inbounds [153 x i8], ptr @rtx_length, i32 0, i64 %idxprom9
+  %tmp11 = load i8, ptr %arrayidx10, align 1
   %conv = zext i8 %tmp11 to i32
   ret i32 %conv
 
@@ -66,9 +66,9 @@ define i32 @test4(i64 %idxprom9) nounwind {
 
 
 ; PR3242 - Out of range shifts should not be folded by fastisel.
-define void @test5(i32 %x, i32* %p) nounwind {
+define void @test5(i32 %x, ptr %p) nounwind {
   %y = ashr i32 %x, 50000
-  store i32 %y, i32* %p
+  store i32 %y, ptr %p
   ret void
 
 ; CHECK-LABEL: test5:
@@ -172,11 +172,11 @@ entry:
 ; CHECK: callq
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
 ; rdar://9289488 - fast-isel shouldn't bail out on llvm.memcpy
-define void @test15(i8* %a, i8* %b) nounwind {
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %a, i8* align 4 %b, i64 4, i1 false)
+define void @test15(ptr %a, ptr %b) nounwind {
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 4, i1 false)
   ret void
 ; CHECK-LABEL: test15:
 ; CHECK-NEXT: movl	(%rsi), %eax
@@ -211,9 +211,9 @@ declare void @foo() unnamed_addr ssp align 2
 
 ; Verify that we don't fold the load into the compare here.  That would move it
 ; w.r.t. the call.
-define i32 @test17(i32 *%P) ssp nounwind {
+define i32 @test17(ptr%P) ssp nounwind {
 entry:
-  %tmp = load i32, i32* %P
+  %tmp = load i32, ptr %P
   %cmp = icmp ne i32 %tmp, 5
   call void @foo()
   br i1 %cmp, label %if.then, label %if.else
@@ -231,16 +231,16 @@ if.else:                                          ; preds = %entry
 }
 
 ; Check that 0.0 is materialized using xorps
-define void @test18(float* %p1) {
-  store float 0.0, float* %p1
+define void @test18(ptr %p1) {
+  store float 0.0, ptr %p1
   ret void
 ; CHECK-LABEL: test18:
 ; CHECK: xorps
 }
 
 ; Without any type hints, doubles use the smaller xorps instead of xorpd.
-define void @test19(double* %p1) {
-  store double 0.0, double* %p1
+define void @test19(ptr %p1) {
+  store double 0.0, ptr %p1
   ret void
 ; CHECK-LABEL: test19:
 ; CHECK: xorps
@@ -251,17 +251,17 @@ define void @test19(double* %p1) {
 define void @test20() nounwind ssp {
 entry:
   %tmp = alloca %struct.a, align 8
-  call void @test20sret(%struct.a* sret(%struct.a) %tmp)
+  call void @test20sret(ptr sret(%struct.a) %tmp)
   ret void
 ; CHECK-LABEL: test20:
 ; CHECK: movq %rsp, %rdi
 ; CHECK: callq _test20sret
 }
-declare void @test20sret(%struct.a* sret(%struct.a))
+declare void @test20sret(ptr sret(%struct.a))
 
 ; Check that -0.0 is not materialized using xor
-define void @test21(double* %p1) {
-  store double -0.0, double* %p1
+define void @test21(ptr %p1) {
+  store double -0.0, ptr %p1
   ret void
 ; CHECK-LABEL: test21:
 ; CHECK-NOT: xor
@@ -292,9 +292,9 @@ entry:
 declare void @foo22(i32)
 
 ; PR13563
-define void @test23(i8* noalias sret(i8) %result) {
+define void @test23(ptr noalias sret(i8) %result) {
   %a = alloca i8
-  %b = call i8* @foo23()
+  %b = call ptr @foo23()
   ret void
 ; CHECK-LABEL: test23:
 ; CHECK: movq %rdi, [[STACK:[0-9]+\(%rsp\)]]
@@ -304,15 +304,15 @@ define void @test23(i8* noalias sret(i8) %result) {
 ; CHECK: ret
 }
 
-declare i8* @foo23()
+declare ptr @foo23()
 
-declare void @takesi32ptr(i32* %arg)
+declare void @takesi32ptr(ptr %arg)
 
 ; CHECK-LABEL: allocamaterialize
 define void @allocamaterialize() {
   %a = alloca i32
 ; CHECK: leaq {{.*}}, %rdi
-  call void @takesi32ptr(i32* %a)
+  call void @takesi32ptr(ptr %a)
   ret void
 }
 

@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 | FileCheck %s -check-prefix=DARWIN
 
 
-@G = external dso_local global i32                ; <i32*> [#uses=2]
+@G = external dso_local global i32                ; <ptr> [#uses=2]
 
 declare void @ext(i32)
 
@@ -17,7 +17,7 @@ define i32 @t1(i32 %X, i32 %Y) nounwind {
 ; LINUX: addl %eax, %ecx
 ; LINUX: movl %ecx, G
         %Z = add i32 %X, %Y             ; <i32> [#uses=1]
-        store i32 %Z, i32* @G
+        store i32 %Z, ptr @G
         ret i32 %X
 }
 
@@ -28,7 +28,7 @@ define i32 @t2(i32 %X, i32 %Y) nounwind {
 ; LINUX: xorl %eax, %ecx
 ; LINUX: movl %ecx, G
         %Z = xor i32 %X, %Y             ; <i32> [#uses=1]
-        store i32 %Z, i32* @G
+        store i32 %Z, ptr @G
         ret i32 %X
 }
 

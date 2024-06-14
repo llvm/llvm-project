@@ -12,8 +12,8 @@
 ;;int bar(int *a, int *b, int n) {
 ;;  int sum = 0;
 ;;  for (int i = 0; i < n; ++i) {
-;;    int x = a[i] * a[i+1] * a[i+2];
-;;    int y = b[i] * b[i+1];
+;;    int x = aptr aptr a[i+2];
+;;    int y = bptr b[i+1];
 ;;    sum += y > x ? x : 0;
 ;;  }
 ;;  return sum;
@@ -42,16 +42,16 @@
 
 ; CHECK-NOT: jg
 ; CHECK: cmovle
-define i32 @bar(i32* nocapture readonly %a, i32* nocapture readonly %b, i32 %n) #0 {
+define i32 @bar(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %n) #0 {
 entry:
   %cmp30 = icmp sgt i32 %n, 0
   br i1 %cmp30, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:                               ; preds = %entry
-  %.pre = load i32, i32* %a, align 4
-  %arrayidx2.phi.trans.insert = getelementptr inbounds i32, i32* %a, i64 1
-  %.pre34 = load i32, i32* %arrayidx2.phi.trans.insert, align 4
-  %.pre35 = load i32, i32* %b, align 4
+  %.pre = load i32, ptr %a, align 4
+  %arrayidx2.phi.trans.insert = getelementptr inbounds i32, ptr %a, i64 1
+  %.pre34 = load i32, ptr %arrayidx2.phi.trans.insert, align 4
+  %.pre35 = load i32, ptr %b, align 4
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
@@ -68,11 +68,11 @@ for.body:                                         ; preds = %for.body, %for.body
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %mul = mul nsw i32 %1, %2
   %3 = add nuw nsw i64 %indvars.iv, 2
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %3
-  %4 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %3
+  %4 = load i32, ptr %arrayidx5, align 4
   %mul6 = mul nsw i32 %mul, %4
-  %arrayidx11 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv.next
-  %5 = load i32, i32* %arrayidx11, align 4
+  %arrayidx11 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv.next
+  %5 = load i32, ptr %arrayidx11, align 4
   %mul12 = mul nsw i32 %5, %0
   %cmp13 = icmp sgt i32 %mul12, %mul6
   %cond = select i1 %cmp13, i32 %mul6, i32 0

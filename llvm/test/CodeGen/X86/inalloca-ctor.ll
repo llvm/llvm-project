@@ -4,31 +4,30 @@
 
 %frame = type { %Foo, i32, %Foo }
 
-declare void @f(%frame* inalloca(%frame) %a)
+declare void @f(ptr inalloca(%frame) %a)
 
-declare void @Foo_ctor(%Foo* %this)
+declare void @Foo_ctor(ptr %this)
 
 define void @g() {
 entry:
   %args = alloca inalloca %frame
-  %c = getelementptr %frame, %frame* %args, i32 0, i32 2
+  %c = getelementptr %frame, ptr %args, i32 0, i32 2
 ; CHECK: pushl   %eax
 ; CHECK: subl    $16, %esp
 ; CHECK: movl %esp,
-  call void @Foo_ctor(%Foo* %c)
+  call void @Foo_ctor(ptr %c)
 ; CHECK: leal 12(%{{.*}}),
 ; CHECK-NEXT: pushl
 ; CHECK-NEXT: calll _Foo_ctor
 ; CHECK: addl $4, %esp
-  %b = getelementptr %frame, %frame* %args, i32 0, i32 1
-  store i32 42, i32* %b
+  %b = getelementptr %frame, ptr %args, i32 0, i32 1
+  store i32 42, ptr %b
 ; CHECK: movl $42,
-  %a = getelementptr %frame, %frame* %args, i32 0, i32 0
-  call void @Foo_ctor(%Foo* %a)
+  call void @Foo_ctor(ptr %args)
 ; CHECK-NEXT: pushl
 ; CHECK-NEXT: calll _Foo_ctor
 ; CHECK: addl $4, %esp
-  call void @f(%frame* inalloca(%frame) %args)
+  call void @f(ptr inalloca(%frame) %args)
 ; CHECK: calll   _f
   ret void
 }

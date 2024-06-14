@@ -8,7 +8,7 @@
 ; RUN: llc < %s -O2 -mtriple=x86_64-linux-gnu -mattr=-sse \
 ; RUN:     -enable-legalize-types-checking | FileCheck %s --check-prefix=NOSSE
 
-define void @test_select(fp128* %p, fp128* %q, i1 zeroext %c) {
+define void @test_select(ptr %p, ptr %q, i1 zeroext %c) {
 ; SSE-LABEL: test_select:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    testl %edx, %edx
@@ -32,9 +32,9 @@ define void @test_select(fp128* %p, fp128* %q, i1 zeroext %c) {
 ; NOSSE-NEXT:    movq %rcx, 8(%rsi)
 ; NOSSE-NEXT:    movq %rax, (%rsi)
 ; NOSSE-NEXT:    retq
-  %a = load fp128, fp128* %p, align 2
+  %a = load fp128, ptr %p, align 2
   %r = select i1 %c, fp128 %a, fp128 0xL00000000000000007FFF800000000000
-  store fp128 %r, fp128* %q
+  store fp128 %r, ptr %q
   ret void
 }
 

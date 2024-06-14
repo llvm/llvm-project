@@ -4,14 +4,14 @@ target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
 %eh.ThrowInfo = type { i32, i32, i32, i32 }
-%rtti.TypeDescriptor2 = type { i8**, i8*, [3 x i8] }
+%rtti.TypeDescriptor2 = type { ptr, ptr, [3 x i8] }
 
-@"\01??_7type_info@@6B@" = external constant i8*
-@"\01??_R0H@8" = internal global %rtti.TypeDescriptor2 { i8** @"\01??_7type_info@@6B@", i8* null, [3 x i8] c".H\00" }
+@"\01??_7type_info@@6B@" = external constant ptr
+@"\01??_R0H@8" = internal global %rtti.TypeDescriptor2 { ptr @"\01??_7type_info@@6B@", ptr null, [3 x i8] c".H\00" }
 
 declare void @llvm.trap()
 
-define void @test1(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1(i1 %B) personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @g()
           to label %unreachable unwind label %catch.dispatch
@@ -20,7 +20,7 @@ catch.dispatch:
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:
-  %cp = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %cp = catchpad within %cs1 [ptr null, i32 64, ptr null]
   br label %catch.loop
 
 catch.loop:
@@ -52,24 +52,24 @@ unreachable:
 declare void @g()
 
 
-define i32 @test2(i1 %B) personality i32 (...)* @__CxxFrameHandler3 {
+define i32 @test2(i1 %B) personality ptr @__CxxFrameHandler3 {
 entry:
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1
+  invoke void @_CxxThrowException(ptr null, ptr null) #1
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #1 ["funclet"(token %0)]
+  %0 = catchpad within %cs1 [ptr null, i32 64, ptr null]
+  invoke void @_CxxThrowException(ptr null, ptr null) #1 ["funclet"(token %0)]
           to label %unreachable unwind label %catch.dispatch.1
 
 catch.dispatch.1:                                 ; preds = %catch
   %cs2 = catchswitch within %0 [label %catch.3] unwind to caller
 
 catch.3:                                          ; preds = %catch.dispatch.1
-  %1 = catchpad within %cs2 [i8* null, i32 64, i8* null]
+  %1 = catchpad within %cs2 [ptr null, i32 64, ptr null]
   catchret from %1 to label %try.cont
 
 try.cont:                                         ; preds = %catch.3
@@ -104,7 +104,7 @@ unreachable:                                      ; preds = %catch, %entry
 ; CHECK: ud2
 
 
-define void @test3(i1 %V) #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define void @test3(i1 %V) #0 personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @g()
           to label %try.cont unwind label %catch.dispatch
@@ -113,7 +113,7 @@ catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %catch.2] unwind label %catch.dispatch.1
 
 catch.2:                                          ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i8* null]
+  %0 = catchpad within %cs1 [ptr @"\01??_R0H@8", i32 0, ptr null]
   tail call void @exit(i32 0) #2 [ "funclet"(token %0) ]
   unreachable
 
@@ -121,7 +121,7 @@ catch.dispatch.1:                                 ; preds = %catch.dispatch
   %cs2 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch.1
-  %1 = catchpad within %cs2 [i8* null, i32 64, i8* null]
+  %1 = catchpad within %cs2 [ptr null, i32 64, ptr null]
   tail call void @exit(i32 0) #2 [ "funclet"(token %1) ]
   unreachable
 
@@ -160,5 +160,5 @@ exit_two:
 ; CHECK-NEXT: int3
 
 declare void @exit(i32) noreturn nounwind
-declare void @_CxxThrowException(i8*, %eh.ThrowInfo*)
+declare void @_CxxThrowException(ptr, ptr)
 declare i32 @__CxxFrameHandler3(...)

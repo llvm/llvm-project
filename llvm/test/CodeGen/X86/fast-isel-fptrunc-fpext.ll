@@ -14,10 +14,10 @@
 ; float double_to_single_rr(double x) {
 ;   return (float)x;
 ; }
-; double single_to_double_rm(float *x) {
+; double single_to_double_rm(ptr x) {
 ;   return (double)*x;
 ; }
-; float double_to_single_rm(double *x) {
+; float double_to_single_rm(ptr x) {
 ;   return (float)*x;
 ; }
 ; ///
@@ -52,7 +52,7 @@ entry:
   ret float %conv
 }
 
-define double @single_to_double_rm(float* %x) {
+define double @single_to_double_rm(ptr %x) {
 ; SSE-LABEL: single_to_double_rm:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -65,12 +65,12 @@ define double @single_to_double_rm(float* %x) {
 ; AVX-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load float, float* %x, align 4
+  %0 = load float, ptr %x, align 4
   %conv = fpext float %0 to double
   ret double %conv
 }
 
-define double @single_to_double_rm_optsize(float* %x) optsize {
+define double @single_to_double_rm_optsize(ptr %x) optsize {
 ; SSE-LABEL: single_to_double_rm_optsize:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtss2sd (%rdi), %xmm0
@@ -81,12 +81,12 @@ define double @single_to_double_rm_optsize(float* %x) optsize {
 ; AVX-NEXT:    vcvtss2sd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load float, float* %x, align 4
+  %0 = load float, ptr %x, align 4
   %conv = fpext float %0 to double
   ret double %conv
 }
 
-define float @double_to_single_rm(double* %x) {
+define float @double_to_single_rm(ptr %x) {
 ; SSE-LABEL: double_to_single_rm:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -99,12 +99,12 @@ define float @double_to_single_rm(double* %x) {
 ; AVX-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load double, double* %x, align 8
+  %0 = load double, ptr %x, align 8
   %conv = fptrunc double %0 to float
   ret float %conv
 }
 
-define float @double_to_single_rm_optsize(double* %x) optsize {
+define float @double_to_single_rm_optsize(ptr %x) optsize {
 ; SSE-LABEL: double_to_single_rm_optsize:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvtsd2ss (%rdi), %xmm0
@@ -115,7 +115,7 @@ define float @double_to_single_rm_optsize(double* %x) optsize {
 ; AVX-NEXT:    vcvtsd2ss (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
-  %0 = load double, double* %x, align 8
+  %0 = load double, ptr %x, align 8
   %conv = fptrunc double %0 to float
   ret float %conv
 }

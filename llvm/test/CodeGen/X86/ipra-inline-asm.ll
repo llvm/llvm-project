@@ -17,6 +17,6 @@ define void @foo() #0 {
   ret void
 }
 
-@llvm.used = appending global [2 x i8*] [i8* bitcast (void ()* @foo to i8*), i8* bitcast (void ()* @bar to i8*)]
+@llvm.used = appending global [2 x ptr] [ptr @foo, ptr @bar]
 
 attributes #0 = { nounwind }

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s --check-prefix=X64
 
-define void @vec3_setcc_crash(<3 x i32>* %in, <3 x i32>* %out) {
+define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; X86-LABEL: vec3_setcc_crash:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -23,9 +23,9 @@ define void @vec3_setcc_crash(<3 x i32>* %in, <3 x i32>* %out) {
 ; X64-NEXT:    vpextrd $2, %xmm0, 8(%rsi)
 ; X64-NEXT:    vmovq %xmm0, (%rsi)
 ; X64-NEXT:    retq
-  %a = load <3 x i32>, <3 x i32>* %in
+  %a = load <3 x i32>, ptr %in
   %cmp = icmp eq <3 x i32> %a, zeroinitializer
   %c = select <3 x i1> %cmp, <3 x i32> %a, <3 x i32> zeroinitializer
-  store <3 x i32> %c, <3 x i32>* %out
+  store <3 x i32> %c, ptr %out
   ret void
 }

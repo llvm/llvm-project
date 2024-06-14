@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefix=X64-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=X64-AVX
 
-define i32 @f(<4 x float> %A, i8* %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 x i32> %F, <8 x i16> %G, <16 x i8> %H, i64 %I, i32* %loadptr) nounwind {
+define i32 @f(<4 x float> %A, ptr %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 x i32> %F, <8 x i16> %G, <16 x i8> %H, i64 %I, ptr %loadptr) nounwind {
 ; X86-SSE-LABEL: f:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %ebp
@@ -142,37 +142,29 @@ define i32 @f(<4 x float> %A, i8* %B, <2 x double> %C, i32 %D, <2 x i64> %E, <4 
 ; X64-AVX-NEXT:    movntiq %rdx, (%rdi)
 ; X64-AVX-NEXT:    addl (%rcx), %eax
 ; X64-AVX-NEXT:    retq
-  %v0 = load i32, i32* %loadptr, align 1
-  %cast = bitcast i8* %B to <4 x float>*
+  %v0 = load i32, ptr %loadptr, align 1
   %A2 = fadd <4 x float> %A, <float 1.0, float 2.0, float 3.0, float 4.0>
-  store <4 x float> %A2, <4 x float>* %cast, align 16, !nontemporal !0
-  %v1   = load i32, i32* %loadptr, align 1
-  %cast1 = bitcast i8* %B to <2 x i64>*
+  store <4 x float> %A2, ptr %B, align 16, !nontemporal !0
+  %v1   = load i32, ptr %loadptr, align 1
   %E2 = add <2 x i64> %E, <i64 1, i64 2>
-  store <2 x i64> %E2, <2 x i64>* %cast1, align 16, !nontemporal !0
-  %v2   = load i32, i32* %loadptr, align 1
-  %cast2 = bitcast i8* %B to <2 x double>*
+  store <2 x i64> %E2, ptr %B, align 16, !nontemporal !0
+  %v2   = load i32, ptr %loadptr, align 1
   %C2 = fadd <2 x double> %C, <double 1.0, double 2.0>
-  store <2 x double> %C2, <2 x double>* %cast2, align 16, !nontemporal !0
-  %v3   = load i32, i32* %loadptr, align 1
-  %cast3 = bitcast i8* %B to <4 x i32>*
+  store <2 x double> %C2, ptr %B, align 16, !nontemporal !0
+  %v3   = load i32, ptr %loadptr, align 1
   %F2 = add <4 x i32> %F, <i32 1, i32 2, i32 3, i32 4>
-  store <4 x i32> %F2, <4 x i32>* %cast3, align 16, !nontemporal !0
-  %v4   = load i32, i32* %loadptr, align 1
-  %cast4 = bitcast i8* %B to <8 x i16>*
+  store <4 x i32> %F2, ptr %B, align 16, !nontemporal !0
+  %v4   = load i32, ptr %loadptr, align 1
   %G2 = add <8 x i16> %G, <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>
-  store <8 x i16> %G2, <8 x i16>* %cast4, align 16, !nontemporal !0
-  %v5   = load i32, i32* %loadptr, align 1
-  %cast5 = bitcast i8* %B to <16 x i8>*
+  store <8 x i16> %G2, ptr %B, align 16, !nontemporal !0
+  %v5   = load i32, ptr %loadptr, align 1
   %H2 = add <16 x i8> %H, <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>
-  store <16 x i8> %H2, <16 x i8>* %cast5, align 16, !nontemporal !0
-  %v6   = load i32, i32* %loadptr, align 1
-  %cast6 = bitcast i8* %B to i32*
-  store i32 %D, i32* %cast6, align 1, !nontemporal !0
-  %v7   = load i32, i32* %loadptr, align 1
-  %cast7 = bitcast i8* %B to i64*
-  store i64 %I, i64* %cast7, align 1, !nontemporal !0
-  %v8   = load i32, i32* %loadptr, align 1
+  store <16 x i8> %H2, ptr %B, align 16, !nontemporal !0
+  %v6   = load i32, ptr %loadptr, align 1
+  store i32 %D, ptr %B, align 1, !nontemporal !0
+  %v7   = load i32, ptr %loadptr, align 1
+  store i64 %I, ptr %B, align 1, !nontemporal !0
+  %v8   = load i32, ptr %loadptr, align 1
   %sum1 = add i32 %v0, %v1
   %sum2 = add i32 %sum1, %v2
   %sum3 = add i32 %sum2, %v3

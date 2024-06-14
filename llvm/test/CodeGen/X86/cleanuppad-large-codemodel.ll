@@ -4,7 +4,7 @@ declare i32 @__CxxFrameHandler3(...)
 
 declare void @bar()
 
-define void @foo() personality i32 (...)* @__CxxFrameHandler3 {
+define void @foo() personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @bar()
     to label %exit unwind label %cleanup

@@ -7,10 +7,10 @@
 ; rdar://6653118
 define i32 @loadgv() nounwind {
 entry:
-	%0 = load i32, i32* @src, align 4
-	%1 = load i32, i32* @src, align 4
+	%0 = load i32, ptr @src, align 4
+	%1 = load i32, ptr @src, align 4
         %2 = add i32 %0, %1
-        store i32 %2, i32* @src
+        store i32 %2, ptr @src
 	ret i32 %2
 ; This should fold one of the loads into the add.
 ; CHECK-LABEL: loadgv:
@@ -43,12 +43,12 @@ entry:
 
 }
 
-%stuff = type { i32 (...)** }
-@LotsStuff = external constant [4 x i32 (...)*]
+%stuff = type { ptr }
+@LotsStuff = external constant [4 x ptr]
 
-define void @t(%stuff* %this) nounwind {
+define void @t(ptr %this) nounwind {
 entry:
-	store i32 (...)** getelementptr ([4 x i32 (...)*], [4 x i32 (...)*]* @LotsStuff, i32 0, i32 2), i32 (...)*** null, align 4
+	store ptr getelementptr ([4 x ptr], ptr @LotsStuff, i32 0, i32 2), ptr null, align 4
 	ret void
 ; CHECK: _t:
 ; CHECK:	xorl    %eax, %eax

@@ -3,7 +3,7 @@
 
 declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64)
 
-define i32 @test_01(i32* %p, i64 %len, i32 %x) {
+define i32 @test_01(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -14,12 +14,9 @@ define i32 @test_01(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[OV]], label [[EXIT:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[IV]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[P:%.*]] to ptr
-; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR1]], i64 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast ptr [[SUNKADDR2]] to ptr
-; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[TMP2]] unordered, align 4
+; CHECK-NEXT:    [[SUNKADDR3:%.*]] = mul i64 [[MATH]], 4
+; CHECK-NEXT:    [[SUNKADDR4:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[SUNKADDR3]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load atomic i32, ptr [[SUNKADDR4]] unordered, align 4
 ; CHECK-NEXT:    [[COND_2:%.*]] = icmp eq i32 [[LOADED]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND_2]], label [[FAILURE:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -39,11 +36,9 @@ loop:                                             ; preds = %backedge, %entry
 
 backedge:                                         ; preds = %loop
   %sunkaddr = mul i64 %iv, 4
-  %1 = bitcast i32* %p to i8*
-  %sunkaddr1 = getelementptr i8, i8* %1, i64 %sunkaddr
-  %sunkaddr2 = getelementptr i8, i8* %sunkaddr1, i64 4
-  %2 = bitcast i8* %sunkaddr2 to i32*
-  %loaded = load atomic i32, i32* %2 unordered, align 4
+  %sunkaddr1 = getelementptr i8, ptr %p, i64 %sunkaddr
+  %sunkaddr2 = getelementptr i8, ptr %sunkaddr1, i64 4
+  %loaded = load atomic i32, ptr %sunkaddr2 unordered, align 4
   %cond_2 = icmp eq i32 %loaded, %x
   br i1 %cond_2, label %failure, label %loop
 

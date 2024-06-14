@@ -56,7 +56,7 @@ entry:
   ret double %0
 }
 
-define double @int_to_double_rm(i32* %a) {
+define double @int_to_double_rm(ptr %a) {
 ; SSE2-LABEL: int_to_double_rm:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2sdl (%rdi), %xmm0
@@ -103,12 +103,12 @@ define double @int_to_double_rm(i32* %a) {
 ; AVX_X86-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX_X86-NEXT:    retl
 entry:
-  %0 = load i32, i32* %a
+  %0 = load i32, ptr %a
   %1 = sitofp i32 %0 to double
   ret double %1
 }
 
-define double @int_to_double_rm_optsize(i32* %a) optsize {
+define double @int_to_double_rm_optsize(ptr %a) optsize {
 ; SSE2-LABEL: int_to_double_rm_optsize:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2sdl (%rdi), %xmm0
@@ -155,7 +155,7 @@ define double @int_to_double_rm_optsize(i32* %a) optsize {
 ; AVX_X86-NEXT:    .cfi_def_cfa %esp, 4
 ; AVX_X86-NEXT:    retl
 entry:
-  %0 = load i32, i32* %a
+  %0 = load i32, ptr %a
   %1 = sitofp i32 %0 to double
   ret double %1
 }
@@ -197,7 +197,7 @@ entry:
   ret float %0
 }
 
-define float @int_to_float_rm(i32* %a) {
+define float @int_to_float_rm(ptr %a) {
 ; SSE2-LABEL: int_to_float_rm:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2ssl (%rdi), %xmm0
@@ -232,12 +232,12 @@ define float @int_to_float_rm(i32* %a) {
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX_X86-NEXT:    retl
 entry:
-  %0 = load i32, i32* %a
+  %0 = load i32, ptr %a
   %1 = sitofp i32 %0 to float
   ret float %1
 }
 
-define float @int_to_float_rm_optsize(i32* %a) optsize {
+define float @int_to_float_rm_optsize(ptr %a) optsize {
 ; SSE2-LABEL: int_to_float_rm_optsize:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    cvtsi2ssl (%rdi), %xmm0
@@ -272,7 +272,7 @@ define float @int_to_float_rm_optsize(i32* %a) optsize {
 ; AVX_X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX_X86-NEXT:    retl
 entry:
-  %0 = load i32, i32* %a
+  %0 = load i32, ptr %a
   %1 = sitofp i32 %0 to float
   ret float %1
 }

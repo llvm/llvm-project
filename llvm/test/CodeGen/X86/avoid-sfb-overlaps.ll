@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @test_overlap_1(i8* nocapture %A, i32 %x) local_unnamed_addr #0 {
+define dso_local void @test_overlap_1(ptr nocapture %A, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_overlap_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $7, -8(%rdi)
@@ -99,29 +99,26 @@ define dso_local void @test_overlap_1(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %A, i64 -16
-  %add.ptr1 = getelementptr inbounds i8, i8* %A, i64 -8
-  %0 = bitcast i8* %add.ptr1 to i32*
-  store i32 7, i32* %0, align 4
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %A, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr = getelementptr inbounds i8, ptr %A, i64 -16
+  %add.ptr1 = getelementptr inbounds i8, ptr %A, i64 -8
+  store i32 7, ptr %add.ptr1, align 4
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   %conv = sext i32 %x to i64
-  %add.ptr2 = getelementptr inbounds i8, i8* %A, i64 -9
-  %1 = bitcast i8* %add.ptr2 to i64*
-  store i64 %conv, i64* %1, align 8
-  %2 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %2, align 8
-  %add.ptr5 = getelementptr inbounds i8, i8* %A, i64 -1
-  store i8 0, i8* %add.ptr5, align 1
-  %add.ptr6 = getelementptr inbounds i8, i8* %A, i64 16
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 %add.ptr6, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr2 = getelementptr inbounds i8, ptr %A, i64 -9
+  store i64 %conv, ptr %add.ptr2, align 8
+  store i64 %conv, ptr %add.ptr, align 8
+  %add.ptr5 = getelementptr inbounds i8, ptr %A, i64 -1
+  store i8 0, ptr %add.ptr5, align 1
+  %add.ptr6 = getelementptr inbounds i8, ptr %A, i64 16
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %add.ptr6, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @test_overlap_2(i8* nocapture %A, i32 %x) local_unnamed_addr #0 {
+define dso_local void @test_overlap_2(ptr nocapture %A, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_overlap_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq %esi, %rax
@@ -188,24 +185,21 @@ define dso_local void @test_overlap_2(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movq %rax, 24(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %A, i64 -16
+  %add.ptr = getelementptr inbounds i8, ptr %A, i64 -16
   %conv = sext i32 %x to i64
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %A, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
-  %add.ptr3 = getelementptr inbounds i8, i8* %A, i64 -8
-  %1 = bitcast i8* %add.ptr3 to i64*
-  store i64 %conv, i64* %1, align 8
-  %add.ptr4 = getelementptr inbounds i8, i8* %A, i64 -12
-  %2 = bitcast i8* %add.ptr4 to i32*
-  store i32 7, i32* %2, align 4
-  %add.ptr5 = getelementptr inbounds i8, i8* %A, i64 16
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 %add.ptr5, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  store i64 %conv, ptr %add.ptr, align 8
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr3 = getelementptr inbounds i8, ptr %A, i64 -8
+  store i64 %conv, ptr %add.ptr3, align 8
+  %add.ptr4 = getelementptr inbounds i8, ptr %A, i64 -12
+  store i32 7, ptr %add.ptr4, align 4
+  %add.ptr5 = getelementptr inbounds i8, ptr %A, i64 16
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %add.ptr5, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @test_overlap_3(i8* nocapture %A, i32 %x) local_unnamed_addr #0 {
+define dso_local void @test_overlap_3(ptr nocapture %A, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_overlap_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $7, -10(%rdi)
@@ -306,26 +300,23 @@ define dso_local void @test_overlap_3(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %A, i64 -16
-  %add.ptr1 = getelementptr inbounds i8, i8* %A, i64 -10
-  %0 = bitcast i8* %add.ptr1 to i32*
-  store i32 7, i32* %0, align 4
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %A, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr = getelementptr inbounds i8, ptr %A, i64 -16
+  %add.ptr1 = getelementptr inbounds i8, ptr %A, i64 -10
+  store i32 7, ptr %add.ptr1, align 4
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   %conv = sext i32 %x to i64
-  %add.ptr2 = getelementptr inbounds i8, i8* %A, i64 -9
-  %1 = bitcast i8* %add.ptr2 to i64*
-  store i64 %conv, i64* %1, align 8
-  %2 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %2, align 8
-  %add.ptr5 = getelementptr inbounds i8, i8* %A, i64 -1
-  store i8 0, i8* %add.ptr5, align 1
-  %add.ptr6 = getelementptr inbounds i8, i8* %A, i64 16
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 %add.ptr6, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr2 = getelementptr inbounds i8, ptr %A, i64 -9
+  store i64 %conv, ptr %add.ptr2, align 8
+  store i64 %conv, ptr %add.ptr, align 8
+  %add.ptr5 = getelementptr inbounds i8, ptr %A, i64 -1
+  store i8 0, ptr %add.ptr5, align 1
+  %add.ptr6 = getelementptr inbounds i8, ptr %A, i64 16
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %add.ptr6, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @test_overlap_4(i8* nocapture %A, i32 %x) local_unnamed_addr #0 {
+define dso_local void @test_overlap_4(ptr nocapture %A, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_overlap_4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movups -16(%rdi), %xmm0
@@ -404,24 +395,21 @@ define dso_local void @test_overlap_4(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movb %al, 31(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %A, i64 -16
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %A, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr = getelementptr inbounds i8, ptr %A, i64 -16
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   %conv = sext i32 %x to i64
-  %add.ptr1 = getelementptr inbounds i8, i8* %A, i64 -8
-  %0 = bitcast i8* %add.ptr1 to i64*
-  store i64 %conv, i64* %0, align 8
-  %1 = bitcast i8* %add.ptr to i32*
-  store i32 %x, i32* %1, align 4
-  %add.ptr3 = getelementptr inbounds i8, i8* %A, i64 -11
-  %2 = bitcast i8* %add.ptr3 to i32*
-  store i32 0, i32* %2, align 4
-  %add.ptr4 = getelementptr inbounds i8, i8* %A, i64 16
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 %add.ptr4, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr1 = getelementptr inbounds i8, ptr %A, i64 -8
+  store i64 %conv, ptr %add.ptr1, align 8
+  store i32 %x, ptr %add.ptr, align 4
+  %add.ptr3 = getelementptr inbounds i8, ptr %A, i64 -11
+  store i32 0, ptr %add.ptr3, align 4
+  %add.ptr4 = getelementptr inbounds i8, ptr %A, i64 16
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %add.ptr4, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   ret void
 }
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @test_overlap_5(i8* nocapture %A, i32 %x) local_unnamed_addr #0 {
+define dso_local void @test_overlap_5(ptr nocapture %A, i32 %x) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_overlap_5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movups -16(%rdi), %xmm0
@@ -500,18 +488,17 @@ define dso_local void @test_overlap_5(i8* nocapture %A, i32 %x) local_unnamed_ad
 ; CHECK-AVX512-NEXT:    movw %ax, 30(%rdi)
 ; CHECK-AVX512-NEXT:    retq
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %A, i64 -16
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %A, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr = getelementptr inbounds i8, ptr %A, i64 -16
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   %conv = sext i32 %x to i64
-  %0 = bitcast i8* %add.ptr to i64*
-  store i64 %conv, i64* %0, align 8
+  store i64 %conv, ptr %add.ptr, align 8
   %conv2 = trunc i32 %x to i8
-  %add.ptr3 = getelementptr inbounds i8, i8* %A, i64 -14
-  store i8 %conv2, i8* %add.ptr3, align 1
-  %add.ptr4 = getelementptr inbounds i8, i8* %A, i64 -11
-  store i8 0, i8* %add.ptr4, align 1
-  %add.ptr5 = getelementptr inbounds i8, i8* %A, i64 16
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 4 %add.ptr5, i8* nonnull align 4 %add.ptr, i64 16, i1 false)
+  %add.ptr3 = getelementptr inbounds i8, ptr %A, i64 -14
+  store i8 %conv2, ptr %add.ptr3, align 1
+  %add.ptr4 = getelementptr inbounds i8, ptr %A, i64 -11
+  store i8 0, ptr %add.ptr4, align 1
+  %add.ptr5 = getelementptr inbounds i8, ptr %A, i64 16
+  tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %add.ptr5, ptr nonnull align 4 %add.ptr, i64 16, i1 false)
   ret void
 }
 

@@ -3,7 +3,7 @@
 ; Now this test spills one register. But a reload in the loop is cheaper than
 ; the divsd so it's a win.
 
-define fastcc void @fourn(double* %data, i32 %isign) nounwind {
+define fastcc void @fourn(ptr %data, i32 %isign) nounwind {
 ; CHECK: fourn
 entry:
 	br label %bb
@@ -20,7 +20,7 @@ bb:		; preds = %bb, %entry
 ; CHECK: movsd %xmm0, 16(%esp)
 ; CHECK: %bb3
 bb3:		; preds = %bb30.loopexit, %bb25, %bb3
-	%2 = load i32, i32* null, align 4		; <i32> [#uses=1]
+	%2 = load i32, ptr null, align 4		; <i32> [#uses=1]
 	%3 = mul i32 %2, 0		; <i32> [#uses=1]
 	%4 = icmp slt i32 0, %3		; <i1> [#uses=1]
 	br i1 %4, label %bb18, label %bb3

@@ -81,7 +81,7 @@ define void @f2(i32 %x) nounwind uwtable {
 ; X64-NEXT:    retq
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
   call void @llvm.x86.xabort(i8 1)
   call void @f1()
   ret void

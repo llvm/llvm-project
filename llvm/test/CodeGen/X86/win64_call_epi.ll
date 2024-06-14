@@ -5,7 +5,7 @@ declare void @baz()
 declare i32 @personality(...)
 
 ; Check for 'nop' between the last call and the epilogue.
-define void @foo1() personality i32 (...)* @personality {
+define void @foo1() personality ptr @personality {
 
     invoke void @bar()
         to label %normal
@@ -15,8 +15,8 @@ normal:
     ret void
 
 catch:
-    %1 = landingpad { i8*, i32 } cleanup
-    resume { i8*, i32 } %1
+    %1 = landingpad { ptr, i32 } cleanup
+    resume { ptr, i32 } %1
 }
 ; WIN64-LABEL: foo1:
 ; WIN64: .seh_proc foo1
@@ -38,7 +38,7 @@ a:
     br label %done
 b:
     call void @baz()
-    store i32 0, i32* @something
+    store i32 0, ptr @something
     br label %done
 done:
     ret void

@@ -65,8 +65,8 @@ define void @share_v4i32_v4f32(ptr %p, ptr %q, i1 %t) nounwind {
 entry:
   br label %loop
 loop:
-  store <4 x i32><i32 1073741824, i32 1073741824, i32 1073741824, i32 1073741824>, <4 x i32>* %p
-  store <4 x float><float 2.0, float 2.0, float 2.0, float 2.0>, <4 x float>* %q
+  store <4 x i32><i32 1073741824, i32 1073741824, i32 1073741824, i32 1073741824>, ptr %p
+  store <4 x float><float 2.0, float 2.0, float 2.0, float 2.0>, ptr %q
   br i1 %t, label %loop, label %ret
 ret:
   ret void

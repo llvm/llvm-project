@@ -5,11 +5,11 @@
 ; a-lot-of-fixed-and-reserved-registers case. We do that by
 ; emmiting lea before 4 cmpxchg8b operands generators.
 
-define void @foo_alloca(i64* %a, i32 %off, i32 %n) {
+define void @foo_alloca(ptr %a, i32 %off, i32 %n) {
   %dummy = alloca i32, i32 %n
-  %addr = getelementptr inbounds i64, i64* %a, i32 %off
+  %addr = getelementptr inbounds i64, ptr %a, i32 %off
 
-  %res = cmpxchg i64* %addr, i64 0, i64 1 monotonic monotonic
+  %res = cmpxchg ptr %addr, i64 0, i64 1 monotonic monotonic
   ret void
 }
 
@@ -23,10 +23,10 @@ define void @foo_alloca(i64* %a, i32 %off, i32 %n) {
 
 ; If we don't use index register in the address mode -
 ; check that we did not generate the lea.
-define void @foo_alloca_direct_address(i64* %addr, i32 %n) {
+define void @foo_alloca_direct_address(ptr %addr, i32 %n) {
   %dummy = alloca i32, i32 %n
 
-  %res = cmpxchg i64* %addr, i64 0, i64 1 monotonic monotonic
+  %res = cmpxchg ptr %addr, i64 0, i64 1 monotonic monotonic
   ret void
 }
 
@@ -38,18 +38,18 @@ define void @foo_alloca_direct_address(i64* %addr, i32 %n) {
 ; - base pointer for stack frame (VLA + alignment)
 ; - cmpxchg8b frameindex + index reg
 
-declare void @escape(i32*)
+declare void @escape(ptr)
 
 define void @foo_alloca_index(i32 %i, i64 %val) {
 entry:
   %Counters = alloca [19 x i64], align 32
   %vla = alloca i32, i32 %i
-  call void @escape(i32* %vla)
+  call void @escape(ptr %vla)
   br label %body
 
 body:
-  %p = getelementptr inbounds [19 x i64], [19 x i64]* %Counters, i32 0, i32 %i
-  %t2 = cmpxchg volatile i64* %p, i64 %val, i64 %val seq_cst seq_cst
+  %p = getelementptr inbounds [19 x i64], ptr %Counters, i32 0, i32 %i
+  %t2 = cmpxchg volatile ptr %p, i64 %val, i64 %val seq_cst seq_cst
   %t3 = extractvalue { i64, i1 } %t2, 0
   %cmp.i = icmp eq i64 %val, %t3
   br i1 %cmp.i, label %done, label %body
@@ -74,14 +74,14 @@ done:
 define void @foo_alloca_index_global(i32 %i, i64 %val) {
 entry:
   %aligner = alloca i32, align 32
-  call void @escape(i32* %aligner)
+  call void @escape(ptr %aligner)
   %vla = alloca i32, i32 %i
-  call void @escape(i32* %vla)
+  call void @escape(ptr %vla)
   br label %body
 
 body:
-  %p = getelementptr inbounds [19 x i64], [19 x i64]* @Counters, i32 0, i32 %i
-  %t2 = cmpxchg volatile i64* %p, i64 %val, i64 %val seq_cst seq_cst
+  %p = getelementptr inbounds [19 x i64], ptr @Counters, i32 0, i32 %i
+  %t2 = cmpxchg volatile ptr %p, i64 %val, i64 %val seq_cst seq_cst
   %t3 = extractvalue { i64, i1 } %t2, 0
   %cmp.i = icmp eq i64 %val, %t3
   br i1 %cmp.i, label %done, label %body

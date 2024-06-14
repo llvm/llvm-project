@@ -51,24 +51,24 @@ define dso_local i32 @foo() optsize {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  store i32 1234, i32* @a
-  store i32 1234, i32* @b
-  store i32 12, i32* @c
-  %0 = load i32, i32* @e
+  store i32 1234, ptr @a
+  store i32 1234, ptr @b
+  store i32 12, ptr @c
+  %0 = load i32, ptr @e
   %cmp = icmp eq i32 %0, 12
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* @x
+  store i32 1, ptr @x
   br label %if.end
 
 ; New block.. Make sure 1234 isn't live across basic blocks from before.
 if.end:                                           ; preds = %if.then, %entry
-  store i32 1234, i32* @f
-  store i32 555, i32* @h
-  %1 = load i32, i32* @i
+  store i32 1234, ptr @f
+  store i32 555, ptr @h
+  %1 = load i32, ptr @i
   %add1 = add nsw i32 %1, 555
-  store i32 %add1, i32* @i
+  store i32 %add1, ptr @i
   ret i32 0
 }
 
@@ -112,24 +112,24 @@ define dso_local i32 @foo_pgso() !prof !14 {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  store i32 1234, i32* @a
-  store i32 1234, i32* @b
-  store i32 12, i32* @c
-  %0 = load i32, i32* @e
+  store i32 1234, ptr @a
+  store i32 1234, ptr @b
+  store i32 12, ptr @c
+  %0 = load i32, ptr @e
   %cmp = icmp eq i32 %0, 12
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* @x
+  store i32 1, ptr @x
   br label %if.end
 
 ; New block.. Make sure 1234 isn't live across basic blocks from before.
 if.end:                                           ; preds = %if.then, %entry
-  store i32 1234, i32* @f
-  store i32 555, i32* @h
-  %1 = load i32, i32* @i
+  store i32 1234, ptr @f
+  store i32 555, ptr @h
+  %1 = load i32, ptr @i
   %add1 = add nsw i32 %1, 555
-  store i32 %add1, i32* @i
+  store i32 %add1, ptr @i
   ret i32 0
 }
 
@@ -149,12 +149,12 @@ define dso_local i32 @foo2() {
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  store i32 1234, i32* @a
-  store i32 1234, i32* @b
+  store i32 1234, ptr @a
+  store i32 1234, ptr @b
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #1
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) #1
 
 @AA = common dso_local global [100 x i8] zeroinitializer, align 1
 
@@ -181,7 +181,7 @@ define dso_local void @foomemset() optsize {
 ; X64-NEXT:    movq %rax, AA(%rip)
 ; X64-NEXT:    retq
 entry:
-  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @AA, i32 0, i32 0), i8 33, i32 24, i1 false)
+  call void @llvm.memset.p0.i32(ptr @AA, i8 33, i32 24, i1 false)
   ret void
 }
 
@@ -208,7 +208,7 @@ define dso_local void @foomemset_pgso() !prof !14 {
 ; X64-NEXT:    movq %rax, AA(%rip)
 ; X64-NEXT:    retq
 entry:
-  call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @AA, i32 0, i32 0), i8 33, i32 24, i1 false)
+  call void @llvm.memset.p0.i32(ptr @AA, i8 33, i32 24, i1 false)
   ret void
 }
 

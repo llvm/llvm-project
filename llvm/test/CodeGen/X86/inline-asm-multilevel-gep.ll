@@ -7,6 +7,6 @@
 define void @bar() {
 ; access foo[1][1]
 ; CHECK: # foo+12
-  tail call void asm sideeffect "# ${0:c}", "i"(i32* getelementptr inbounds ([2 x [2 x i32]], [2 x [2 x i32]]* @foo, i64 0, i64 1, i64 1))
+  tail call void asm sideeffect "# ${0:c}", "i"(ptr getelementptr inbounds ([2 x [2 x i32]], ptr @foo, i64 0, i64 1, i64 1))
   ret void
 }

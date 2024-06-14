@@ -50,7 +50,7 @@ define i32 @load32_shl_by_negated(ptr %valptr, i32 %shamt) nounwind {
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shll %cl, %eax
 ; X64-NEXT:    retq
-  %val = load i32, i32* %valptr
+  %val = load i32, ptr %valptr
   %negshamt = sub i32 32, %shamt
   %shifted = shl i32 %val, %negshamt
   ret i32 %shifted
@@ -77,7 +77,7 @@ define void @store32_shl_by_negated(i32 %val, ptr %dstptr, i32 %shamt) nounwind 
 ; X64-NEXT:    retq
   %negshamt = sub i32 32, %shamt
   %shifted = shl i32 %val, %negshamt
-  store i32 %shifted, i32* %dstptr
+  store i32 %shifted, ptr %dstptr
   ret void
 }
 define void @modify32_shl_by_negated(ptr %valptr, i32 %shamt) nounwind {
@@ -95,10 +95,10 @@ define void @modify32_shl_by_negated(ptr %valptr, i32 %shamt) nounwind {
 ; X64-NEXT:    subb %sil, %cl
 ; X64-NEXT:    shll %cl, (%rdi)
 ; X64-NEXT:    retq
-  %val = load i32, i32* %valptr
+  %val = load i32, ptr %valptr
   %negshamt = sub i32 32, %shamt
   %shifted = shl i32 %val, %negshamt
-  store i32 %shifted, i32* %valptr
+  store i32 %shifted, ptr %valptr
   ret void
 }
 
@@ -163,7 +163,7 @@ define i64 @load64_shl_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    shlq %cl, %rax
 ; X64-NEXT:    retq
-  %val = load i64, i64* %valptr
+  %val = load i64, ptr %valptr
   %negshamt = sub i64 64, %shamt
   %shifted = shl i64 %val, %negshamt
   ret i64 %shifted
@@ -203,7 +203,7 @@ define void @store64_shl_by_negated(i64 %val, ptr %dstptr, i64 %shamt) nounwind 
 ; X64-NEXT:    retq
   %negshamt = sub i64 64, %shamt
   %shifted = shl i64 %val, %negshamt
-  store i64 %shifted, i64* %dstptr
+  store i64 %shifted, ptr %dstptr
   ret void
 }
 define void @modify64_shl_by_negated(ptr %valptr, i64 %shamt) nounwind {
@@ -237,10 +237,10 @@ define void @modify64_shl_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X64-NEXT:    subb %sil, %cl
 ; X64-NEXT:    shlq %cl, (%rdi)
 ; X64-NEXT:    retq
-  %val = load i64, i64* %valptr
+  %val = load i64, ptr %valptr
   %negshamt = sub i64 64, %shamt
   %shifted = shl i64 %val, %negshamt
-  store i64 %shifted, i64* %valptr
+  store i64 %shifted, ptr %valptr
   ret void
 }
 
@@ -288,7 +288,7 @@ define i32 @load32_lshr_by_negated(ptr %valptr, i32 %shamt) nounwind {
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shrl %cl, %eax
 ; X64-NEXT:    retq
-  %val = load i32, i32* %valptr
+  %val = load i32, ptr %valptr
   %negshamt = sub i32 32, %shamt
   %shifted = lshr i32 %val, %negshamt
   ret i32 %shifted
@@ -315,7 +315,7 @@ define void @store32_lshr_by_negated(i32 %val, ptr %dstptr, i32 %shamt) nounwind
 ; X64-NEXT:    retq
   %negshamt = sub i32 32, %shamt
   %shifted = lshr i32 %val, %negshamt
-  store i32 %shifted, i32* %dstptr
+  store i32 %shifted, ptr %dstptr
   ret void
 }
 define void @modify32_lshr_by_negated(ptr %valptr, i32 %shamt) nounwind {
@@ -333,10 +333,10 @@ define void @modify32_lshr_by_negated(ptr %valptr, i32 %shamt) nounwind {
 ; X64-NEXT:    subb %sil, %cl
 ; X64-NEXT:    shrl %cl, (%rdi)
 ; X64-NEXT:    retq
-  %val = load i32, i32* %valptr
+  %val = load i32, ptr %valptr
   %negshamt = sub i32 32, %shamt
   %shifted = lshr i32 %val, %negshamt
-  store i32 %shifted, i32* %valptr
+  store i32 %shifted, ptr %valptr
   ret void
 }
 
@@ -401,7 +401,7 @@ define i64 @load64_lshr_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    shrq %cl, %rax
 ; X64-NEXT:    retq
-  %val = load i64, i64* %valptr
+  %val = load i64, ptr %valptr
   %negshamt = sub i64 64, %shamt
   %shifted = lshr i64 %val, %negshamt
   ret i64 %shifted
@@ -441,7 +441,7 @@ define void @store64_lshr_by_negated(i64 %val, ptr %dstptr, i64 %shamt) nounwind
 ; X64-NEXT:    retq
   %negshamt = sub i64 64, %shamt
   %shifted = lshr i64 %val, %negshamt
-  store i64 %shifted, i64* %dstptr
+  store i64 %shifted, ptr %dstptr
   ret void
 }
 define void @modify64_lshr_by_negated(ptr %valptr, i64 %shamt) nounwind {
@@ -475,10 +475,10 @@ define void @modify64_lshr_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X64-NEXT:    subb %sil, %cl
 ; X64-NEXT:    shrq %cl, (%rdi)
 ; X64-NEXT:    retq
-  %val = load i64, i64* %valptr
+  %val = load i64, ptr %valptr
   %negshamt = sub i64 64, %shamt
   %shifted = lshr i64 %val, %negshamt
-  store i64 %shifted, i64* %valptr
+  store i64 %shifted, ptr %valptr
   ret void
 }
 
@@ -526,7 +526,7 @@ define i32 @load32_ashr_by_negated(ptr %valptr, i32 %shamt) nounwind {
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    sarl %cl, %eax
 ; X64-NEXT:    retq
-  %val = load i32, i32* %valptr
+  %val = load i32, ptr %valptr
   %negshamt = sub i32 32, %shamt
   %shifted = ashr i32 %val, %negshamt
   ret i32 %shifted
@@ -553,7 +553,7 @@ define void @store32_ashr_by_negated(i32 %val, ptr %dstptr, i32 %shamt) nounwind
 ; X64-NEXT:    retq
   %negshamt = sub i32 32, %shamt
   %shifted = ashr i32 %val, %negshamt
-  store i32 %shifted, i32* %dstptr
+  store i32 %shifted, ptr %dstptr
   ret void
 }
 define void @modify32_ashr_by_negated(ptr %valptr, i32 %shamt) nounwind {
@@ -571,10 +571,10 @@ define void @modify32_ashr_by_negated(ptr %valptr, i32 %shamt) nounwind {
 ; X64-NEXT:    subb %sil, %cl
 ; X64-NEXT:    sarl %cl, (%rdi)
 ; X64-NEXT:    retq
-  %val = load i32, i32* %valptr
+  %val = load i32, ptr %valptr
   %negshamt = sub i32 32, %shamt
   %shifted = ashr i32 %val, %negshamt
-  store i32 %shifted, i32* %valptr
+  store i32 %shifted, ptr %valptr
   ret void
 }
 
@@ -641,7 +641,7 @@ define i64 @load64_ashr_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    sarq %cl, %rax
 ; X64-NEXT:    retq
-  %val = load i64, i64* %valptr
+  %val = load i64, ptr %valptr
   %negshamt = sub i64 64, %shamt
   %shifted = ashr i64 %val, %negshamt
   ret i64 %shifted
@@ -682,7 +682,7 @@ define void @store64_ashr_by_negated(i64 %val, ptr %dstptr, i64 %shamt) nounwind
 ; X64-NEXT:    retq
   %negshamt = sub i64 64, %shamt
   %shifted = ashr i64 %val, %negshamt
-  store i64 %shifted, i64* %dstptr
+  store i64 %shifted, ptr %dstptr
   ret void
 }
 define void @modify64_ashr_by_negated(ptr %valptr, i64 %shamt) nounwind {
@@ -717,10 +717,10 @@ define void @modify64_ashr_by_negated(ptr %valptr, i64 %shamt) nounwind {
 ; X64-NEXT:    subb %sil, %cl
 ; X64-NEXT:    sarq %cl, (%rdi)
 ; X64-NEXT:    retq
-  %val = load i64, i64* %valptr
+  %val = load i64, ptr %valptr
   %negshamt = sub i64 64, %shamt
   %shifted = ashr i64 %val, %negshamt
-  store i64 %shifted, i64* %valptr
+  store i64 %shifted, ptr %valptr
   ret void
 }
 

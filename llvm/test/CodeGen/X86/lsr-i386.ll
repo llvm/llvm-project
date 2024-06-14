@@ -22,7 +22,7 @@ entry:
 bb1:                                              ; preds = %bb6, %bb
   %indvar11 = phi i32 [ %indvar.next12, %bb6 ], [ 0, %entry ] ; <i32> [#uses=2]
   %tmp21 = add i32 %indvar11, 1                   ; <i32> [#uses=1]
-  %t = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @mp2grad_, i32 0, i32 1)
+  %t = load i32, ptr getelementptr inbounds (%struct.anon, ptr @mp2grad_, i32 0, i32 1)
   %tmp15 = mul i32 %n, %t                      ; <i32> [#uses=1]
   %tmp16 = add i32 %tmp21, %tmp15                 ; <i32> [#uses=1]
   %tmp17 = shl i32 %tmp16, 3                      ; <i32> [#uses=1]
@@ -32,8 +32,8 @@ bb1:                                              ; preds = %bb6, %bb
 bb2:                                              ; preds = %bb2, %bb2.preheader
   %indvar = phi i32 [ 0, %bb1 ], [ %indvar.next, %bb2 ] ; <i32> [#uses=2]
   %tmp19 = add i32 %tmp18, %indvar                ; <i32> [#uses=1]
-  %scevgep = getelementptr %struct.anon, %struct.anon* @mp2grad_, i32 0, i32 0, i32 %tmp19 ; <i32*> [#uses=1]
-  store i32 0, i32* %scevgep
+  %scevgep = getelementptr %struct.anon, ptr @mp2grad_, i32 0, i32 0, i32 %tmp19 ; <ptr> [#uses=1]
+  store i32 0, ptr %scevgep
   %indvar.next = add i32 %indvar, 1               ; <i32> [#uses=1]
   %c = icmp ne i32 %indvar.next, %m
   br i1 %c, label %bb2, label %bb6

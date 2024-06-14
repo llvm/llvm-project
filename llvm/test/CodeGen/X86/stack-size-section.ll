@@ -41,7 +41,7 @@ define linkonce_odr dso_local i32 @_Z4fooTIiET_v() comdat {
 ; NOGROUPS: .section .stack_sizes,"",@progbits
 define dso_local i32 @func3() section ".text.func3" {
   %1 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
+  store i32 0, ptr %1, align 4
   ret i32 0
 }
 

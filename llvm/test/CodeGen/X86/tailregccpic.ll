@@ -9,7 +9,7 @@ define x86_regcallcc void @tail_call_regcall(i32 %a) nounwind {
 
 define internal x86_regcallcc void @__regcall3__func(i32 %i1) {
 entry:
-  store i32 %i1, i32* @a0, align 4
+  store i32 %i1, ptr @a0, align 4
   ret void
 }
 

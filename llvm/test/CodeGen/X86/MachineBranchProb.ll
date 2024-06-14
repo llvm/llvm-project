@@ -5,7 +5,7 @@
 
 @max_regno = common global i32 0, align 4
 
-define void @test(i32* %old, i32 %final) {
+define void @test(ptr %old, i32 %final) {
 for.cond:
   br label %for.cond2
 
@@ -13,7 +13,7 @@ for.cond2:                                        ; preds = %for.inc, %for.cond
   %i.1 = phi i32 [ %inc19, %for.inc ], [ 0, %for.cond ]
   %bit.0 = phi i32 [ %shl, %for.inc ], [ 1, %for.cond ]
   %tobool = icmp eq i32 %bit.0, 0
-  %v3 = load i32, i32* @max_regno, align 4
+  %v3 = load i32, ptr @max_regno, align 4
   %cmp4 = icmp eq i32 %i.1, %v3
   %or.cond = or i1 %tobool, %cmp4
   br i1 %or.cond, label %for.inc20, label %for.inc, !prof !0

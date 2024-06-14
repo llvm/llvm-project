@@ -9,7 +9,7 @@
 ; Partial Vector Loads - PR16739
 ;
 
-define <4 x float> @load_float4_float3(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <4 x float> @load_float4_float3(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -19,19 +19,18 @@ define <4 x float> @load_float4_float3(<4 x float>* nocapture readonly dereferen
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %p0 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 0
-  %p1 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 1
-  %p2 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %ld0 = load float, float* %p0, align 4
-  %ld1 = load float, float* %p1, align 4
-  %ld2 = load float, float* %p2, align 4
+  %p1 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 1
+  %p2 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %ld0 = load float, ptr %0, align 4
+  %ld1 = load float, ptr %p1, align 4
+  %ld2 = load float, ptr %p2, align 4
   %r0 = insertelement <4 x float> undef, float %ld0, i32 0
   %r1 = insertelement <4 x float> %r0,   float %ld1, i32 1
   %r2 = insertelement <4 x float> %r1,   float %ld2, i32 2
   ret <4 x float> %r2
 }
 
-define <4 x float> @load_float4_float3_0122(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <4 x float> @load_float4_float3_0122(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_0122:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -45,12 +44,11 @@ define <4 x float> @load_float4_float3_0122(<4 x float>* nocapture readonly dere
 ; AVX-NEXT:    vmovups (%rdi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
 ; AVX-NEXT:    retq
-  %p0 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 0
-  %p1 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 1
-  %p2 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %ld0 = load float, float* %p0, align 4
-  %ld1 = load float, float* %p1, align 4
-  %ld2 = load float, float* %p2, align 4
+  %p1 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 1
+  %p2 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %ld0 = load float, ptr %0, align 4
+  %ld1 = load float, ptr %p1, align 4
+  %ld2 = load float, ptr %p2, align 4
   %r0 = insertelement <4 x float> undef, float %ld0, i32 0
   %r1 = insertelement <4 x float> %r0,   float %ld1, i32 1
   %r2 = insertelement <4 x float> %r1,   float %ld2, i32 2
@@ -58,7 +56,7 @@ define <4 x float> @load_float4_float3_0122(<4 x float>* nocapture readonly dere
   ret <4 x float> %r3
 }
 
-define <8 x float> @load_float8_float3(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <8 x float> @load_float8_float3(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float8_float3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -68,19 +66,18 @@ define <8 x float> @load_float8_float3(<4 x float>* nocapture readonly dereferen
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %p0 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 0
-  %p1 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 1
-  %p2 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %ld0 = load float, float* %p0, align 4
-  %ld1 = load float, float* %p1, align 4
-  %ld2 = load float, float* %p2, align 4
+  %p1 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 1
+  %p2 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %ld0 = load float, ptr %0, align 4
+  %ld1 = load float, ptr %p1, align 4
+  %ld2 = load float, ptr %p2, align 4
   %r0 = insertelement <8 x float> undef, float %ld0, i32 0
   %r1 = insertelement <8 x float> %r0,   float %ld1, i32 1
   %r2 = insertelement <8 x float> %r1,   float %ld2, i32 2
   ret <8 x float> %r2
 }
 
-define <8 x float> @load_float8_float3_0122(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <8 x float> @load_float8_float3_0122(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float8_float3_0122:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -94,12 +91,11 @@ define <8 x float> @load_float8_float3_0122(<4 x float>* nocapture readonly dere
 ; AVX-NEXT:    vmovups (%rdi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
 ; AVX-NEXT:    retq
-  %p0 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 0
-  %p1 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 1
-  %p2 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %ld0 = load float, float* %p0, align 4
-  %ld1 = load float, float* %p1, align 4
-  %ld2 = load float, float* %p2, align 4
+  %p1 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 1
+  %p2 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %ld0 = load float, ptr %0, align 4
+  %ld1 = load float, ptr %p1, align 4
+  %ld2 = load float, ptr %p2, align 4
   %r0 = insertelement <8 x float> undef, float %ld0, i32 0
   %r1 = insertelement <8 x float> %r0,   float %ld1, i32 1
   %r2 = insertelement <8 x float> %r1,   float %ld2, i32 2
@@ -107,7 +103,7 @@ define <8 x float> @load_float8_float3_0122(<4 x float>* nocapture readonly dere
   ret <8 x float> %r3
 }
 
-define <4 x float> @load_float4_float3_as_float2_float(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <4 x float> @load_float4_float3_as_float2_float(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_as_float2_float:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
@@ -117,19 +113,18 @@ define <4 x float> @load_float4_float3_as_float2_float(<4 x float>* nocapture re
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %2 = bitcast <4 x float>* %0 to <2 x float>*
-  %3 = load <2 x float>, <2 x float>* %2, align 4
-  %4 = extractelement <2 x float> %3, i32 0
-  %5 = insertelement <4 x float> undef, float %4, i32 0
-  %6 = extractelement <2 x float> %3, i32 1
-  %7 = insertelement <4 x float> %5, float %6, i32 1
-  %8 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %9 = load float, float* %8, align 4
-  %10 = insertelement <4 x float> %7, float %9, i32 2
-  ret <4 x float> %10
+  %2 = load <2 x float>, ptr %0, align 4
+  %3 = extractelement <2 x float> %2, i32 0
+  %4 = insertelement <4 x float> undef, float %3, i32 0
+  %5 = extractelement <2 x float> %2, i32 1
+  %6 = insertelement <4 x float> %4, float %5, i32 1
+  %7 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %8 = load float, ptr %7, align 4
+  %9 = insertelement <4 x float> %6, float %8, i32 2
+  ret <4 x float> %9
 }
 
-define <4 x float> @load_float4_float3_as_float2_float_0122(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <4 x float> @load_float4_float3_as_float2_float_0122(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_as_float2_float_0122:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -143,20 +138,19 @@ define <4 x float> @load_float4_float3_as_float2_float_0122(<4 x float>* nocaptu
 ; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
 ; AVX-NEXT:    retq
-  %2 = bitcast <4 x float>* %0 to <2 x float>*
-  %3 = load <2 x float>, <2 x float>* %2, align 4
-  %4 = extractelement <2 x float> %3, i32 0
-  %5 = insertelement <4 x float> undef, float %4, i32 0
-  %6 = extractelement <2 x float> %3, i32 1
-  %7 = insertelement <4 x float> %5, float %6, i32 1
-  %8 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %9 = load float, float* %8, align 4
-  %10 = insertelement <4 x float> %7, float %9, i32 2
-  %11 = insertelement <4 x float> %10, float %9, i32 3
-  ret <4 x float> %11
+  %2 = load <2 x float>, ptr %0, align 4
+  %3 = extractelement <2 x float> %2, i32 0
+  %4 = insertelement <4 x float> undef, float %3, i32 0
+  %5 = extractelement <2 x float> %2, i32 1
+  %6 = insertelement <4 x float> %4, float %5, i32 1
+  %7 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %8 = load float, ptr %7, align 4
+  %9 = insertelement <4 x float> %6, float %8, i32 2
+  %10 = insertelement <4 x float> %9, float %8, i32 3
+  ret <4 x float> %10
 }
 
-define <4 x float> @load_float4_float3_trunc(<4 x float>* nocapture readonly dereferenceable(16)) {
+define <4 x float> @load_float4_float3_trunc(ptr nocapture readonly dereferenceable(16)) {
 ; SSE-LABEL: load_float4_float3_trunc:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm0
@@ -166,25 +160,23 @@ define <4 x float> @load_float4_float3_trunc(<4 x float>* nocapture readonly der
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %2 = bitcast <4 x float>* %0 to i64*
-  %3 = load i64, i64* %2, align 16
-  %4 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %5 = bitcast float* %4 to i64*
-  %6 = load i64, i64* %5, align 8
-  %7 = trunc i64 %3 to i32
-  %8 = bitcast i32 %7 to float
-  %9 = insertelement <4 x float> undef, float %8, i32 0
-  %10 = lshr i64 %3, 32
-  %11 = trunc i64 %10 to i32
-  %12 = bitcast i32 %11 to float
-  %13 = insertelement <4 x float> %9, float %12, i32 1
-  %14 = trunc i64 %6 to i32
-  %15 = bitcast i32 %14 to float
-  %16 = insertelement <4 x float> %13, float %15, i32 2
-  ret <4 x float> %16
+  %2 = load i64, ptr %0, align 16
+  %3 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %4 = load i64, ptr %3, align 8
+  %5 = trunc i64 %2 to i32
+  %6 = bitcast i32 %5 to float
+  %7 = insertelement <4 x float> undef, float %6, i32 0
+  %8 = lshr i64 %2, 32
+  %9 = trunc i64 %8 to i32
+  %10 = bitcast i32 %9 to float
+  %11 = insertelement <4 x float> %7, float %10, i32 1
+  %12 = trunc i64 %4 to i32
+  %13 = bitcast i32 %12 to float
+  %14 = insertelement <4 x float> %11, float %13, i32 2
+  ret <4 x float> %14
 }
 
-define <4 x float> @load_float4_float3_trunc_0122(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <4 x float> @load_float4_float3_trunc_0122(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE-LABEL: load_float4_float3_trunc_0122:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -198,26 +190,24 @@ define <4 x float> @load_float4_float3_trunc_0122(<4 x float>* nocapture readonl
 ; AVX-NEXT:    vmovaps (%rdi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0,0]
 ; AVX-NEXT:    retq
-  %2 = bitcast <4 x float>* %0 to i64*
-  %3 = load i64, i64* %2, align 16
-  %4 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %5 = bitcast float* %4 to i64*
-  %6 = load i64, i64* %5, align 8
-  %7 = trunc i64 %3 to i32
-  %8 = bitcast i32 %7 to float
-  %9 = insertelement <4 x float> undef, float %8, i32 0
-  %10 = lshr i64 %3, 32
-  %11 = trunc i64 %10 to i32
-  %12 = bitcast i32 %11 to float
-  %13 = insertelement <4 x float> %9, float %12, i32 1
-  %14 = trunc i64 %6 to i32
-  %15 = bitcast i32 %14 to float
-  %16 = insertelement <4 x float> %13, float %15, i32 2
-  %17 = insertelement <4 x float> %16, float %15, i32 3
-  ret <4 x float> %17
+  %2 = load i64, ptr %0, align 16
+  %3 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %4 = load i64, ptr %3, align 8
+  %5 = trunc i64 %2 to i32
+  %6 = bitcast i32 %5 to float
+  %7 = insertelement <4 x float> undef, float %6, i32 0
+  %8 = lshr i64 %2, 32
+  %9 = trunc i64 %8 to i32
+  %10 = bitcast i32 %9 to float
+  %11 = insertelement <4 x float> %7, float %10, i32 1
+  %12 = trunc i64 %4 to i32
+  %13 = bitcast i32 %12 to float
+  %14 = insertelement <4 x float> %11, float %13, i32 2
+  %15 = insertelement <4 x float> %14, float %13, i32 3
+  ret <4 x float> %15
 }
 
-define <4 x float> @load_float4_float3_trunc_0123(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <4 x float> @load_float4_float3_trunc_0123(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE2-LABEL: load_float4_float3_trunc_0123:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movaps (%rdi), %xmm0
@@ -243,29 +233,27 @@ define <4 x float> @load_float4_float3_trunc_0123(<4 x float>* nocapture readonl
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
-  %2 = bitcast <4 x float>* %0 to i64*
-  %3 = load i64, i64* %2, align 16
-  %4 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %5 = bitcast float* %4 to i64*
-  %6 = load i64, i64* %5, align 8
-  %7 = trunc i64 %3 to i32
-  %8 = bitcast i32 %7 to float
-  %9 = insertelement <4 x float> undef, float %8, i32 0
-  %10 = lshr i64 %3, 32
-  %11 = trunc i64 %10 to i32
-  %12 = bitcast i32 %11 to float
-  %13 = insertelement <4 x float> %9, float %12, i32 1
-  %14 = trunc i64 %6 to i32
-  %15 = bitcast i32 %14 to float
-  %16 = insertelement <4 x float> %13, float %15, i32 2
-  %17 = lshr i64 %6, 32
-  %18 = trunc i64 %17 to i32
-  %19 = bitcast i32 %18 to float
-  %20 = insertelement <4 x float> %16, float %19, i32 3
-  ret <4 x float> %20
+  %2 = load i64, ptr %0, align 16
+  %3 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %4 = load i64, ptr %3, align 8
+  %5 = trunc i64 %2 to i32
+  %6 = bitcast i32 %5 to float
+  %7 = insertelement <4 x float> undef, float %6, i32 0
+  %8 = lshr i64 %2, 32
+  %9 = trunc i64 %8 to i32
+  %10 = bitcast i32 %9 to float
+  %11 = insertelement <4 x float> %7, float %10, i32 1
+  %12 = trunc i64 %4 to i32
+  %13 = bitcast i32 %12 to float
+  %14 = insertelement <4 x float> %11, float %13, i32 2
+  %15 = lshr i64 %4, 32
+  %16 = trunc i64 %15 to i32
+  %17 = bitcast i32 %16 to float
+  %18 = insertelement <4 x float> %14, float %17, i32 3
+  ret <4 x float> %18
 }
 
-define <4 x float> @load_float4_float3_trunc_0123_unaligned(<4 x float>* nocapture readonly dereferenceable(16)) nofree nosync {
+define <4 x float> @load_float4_float3_trunc_0123_unaligned(ptr nocapture readonly dereferenceable(16)) nofree nosync {
 ; SSE2-LABEL: load_float4_float3_trunc_0123_unaligned:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movups (%rdi), %xmm0
@@ -291,30 +279,28 @@ define <4 x float> @load_float4_float3_trunc_0123_unaligned(<4 x float>* nocaptu
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
-  %2 = bitcast <4 x float>* %0 to i64*
-  %3 = load i64, i64* %2, align 1
-  %4 = getelementptr inbounds <4 x float>, <4 x float>* %0, i64 0, i64 2
-  %5 = bitcast float* %4 to i64*
-  %6 = load i64, i64* %5, align 1
-  %7 = trunc i64 %3 to i32
-  %8 = bitcast i32 %7 to float
-  %9 = insertelement <4 x float> undef, float %8, i32 0
-  %10 = lshr i64 %3, 32
-  %11 = trunc i64 %10 to i32
-  %12 = bitcast i32 %11 to float
-  %13 = insertelement <4 x float> %9, float %12, i32 1
-  %14 = trunc i64 %6 to i32
-  %15 = bitcast i32 %14 to float
-  %16 = insertelement <4 x float> %13, float %15, i32 2
-  %17 = lshr i64 %6, 32
-  %18 = trunc i64 %17 to i32
-  %19 = bitcast i32 %18 to float
-  %20 = insertelement <4 x float> %16, float %19, i32 3
-  ret <4 x float> %20
+  %2 = load i64, ptr %0, align 1
+  %3 = getelementptr inbounds <4 x float>, ptr %0, i64 0, i64 2
+  %4 = load i64, ptr %3, align 1
+  %5 = trunc i64 %2 to i32
+  %6 = bitcast i32 %5 to float
+  %7 = insertelement <4 x float> undef, float %6, i32 0
+  %8 = lshr i64 %2, 32
+  %9 = trunc i64 %8 to i32
+  %10 = bitcast i32 %9 to float
+  %11 = insertelement <4 x float> %7, float %10, i32 1
+  %12 = trunc i64 %4 to i32
+  %13 = bitcast i32 %12 to float
+  %14 = insertelement <4 x float> %11, float %13, i32 2
+  %15 = lshr i64 %4, 32
+  %16 = trunc i64 %15 to i32
+  %17 = bitcast i32 %16 to float
+  %18 = insertelement <4 x float> %14, float %17, i32 3
+  ret <4 x float> %18
 }
 
 ; PR21780
-define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceable(32)) nofree nosync {
+define <4 x double> @load_double4_0u2u(ptr nocapture readonly dereferenceable(32)) nofree nosync {
 ; SSE2-LABEL: load_double4_0u2u:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
@@ -339,10 +325,10 @@ define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceabl
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
 ; AVX-NEXT:    retq
-  %2 = load double, double* %0, align 8
+  %2 = load double, ptr %0, align 8
   %3 = insertelement <4 x double> undef, double %2, i32 0
-  %4 = getelementptr inbounds double, double* %0, i64 2
-  %5 = load double, double* %4, align 8
+  %4 = getelementptr inbounds double, ptr %0, i64 2
+  %5 = load double, ptr %4, align 8
   %6 = insertelement <4 x double> %3, double %5, i32 2
   %7 = shufflevector <4 x double> %6, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   ret <4 x double> %7
@@ -386,14 +372,14 @@ define dso_local i32 @load_partial_illegal_type()  {
 ; AVX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
-  %1 = load <2 x i8>, <2 x i8>* bitcast (i8* @h to <2 x i8>*), align 1
+  %1 = load <2 x i8>, ptr @h, align 1
   %2 = shufflevector <2 x i8> %1, <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %3 = insertelement <4 x i8> %2, i8 2, i32 2
   %4 = bitcast <4 x i8> %3 to i32
   ret i32 %4
 }
 
-define dso_local void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
+define dso_local void @PR43227(ptr %explicit_0, ptr %explicit_1) {
 ; SSE-LABEL: PR43227:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -428,13 +414,12 @@ define dso_local void @PR43227(i32* %explicit_0, <8 x i32>* %explicit_1) {
 ; AVX2-NEXT:    vmovdqa %ymm0, 672(%rsi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
-  %1 = getelementptr i32, i32* %explicit_0, i64 63
-  %2 = bitcast i32* %1 to <3 x i32>*
-  %3 = load <3 x i32>, <3 x i32>* %2, align 1
-  %4 = shufflevector <3 x i32> %3, <3 x i32> undef, <2 x i32> <i32 1, i32 2>
-  %5 = shufflevector <2 x i32> %4, <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %6 = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 0>, <8 x i32> %5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 9, i32 7>
-  %7 = getelementptr inbounds <8 x i32>, <8 x i32>* %explicit_1, i64 21
-  store <8 x i32> %6, <8 x i32>* %7, align 32
+  %1 = getelementptr i32, ptr %explicit_0, i64 63
+  %2 = load <3 x i32>, ptr %1, align 1
+  %3 = shufflevector <3 x i32> %2, <3 x i32> undef, <2 x i32> <i32 1, i32 2>
+  %4 = shufflevector <2 x i32> %3, <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %5 = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 0>, <8 x i32> %4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 9, i32 7>
+  %6 = getelementptr inbounds <8 x i32>, ptr %explicit_1, i64 21
+  store <8 x i32> %5, ptr %6, align 32
   ret void
 }

@@ -28,7 +28,7 @@ define i32 @bzhi32(i32 %x, i32 %y)   {
   ret i32 %tmp
 }
 
-define i32 @bzhi32_load(i32* %x, i32 %y)   {
+define i32 @bzhi32_load(ptr %x, i32 %y)   {
 ; X86-LABEL: bzhi32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -103,7 +103,7 @@ define i32 @pdep32(i32 %x, i32 %y)   {
   ret i32 %tmp
 }
 
-define i32 @pdep32_load(i32 %x, i32* %y)   {
+define i32 @pdep32_load(i32 %x, ptr %y)   {
 ; X86-LABEL: pdep32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -338,7 +338,7 @@ define i32 @pext32(i32 %x, i32 %y)   {
   ret i32 %tmp
 }
 
-define i32 @pext32_load(i32 %x, i32* %y)   {
+define i32 @pext32_load(i32 %x, ptr %y)   {
 ; X86-LABEL: pext32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -387,7 +387,7 @@ define i32 @pext32_knownbits(i32 %x)   {
 
 declare i32 @llvm.x86.bmi.pext.32(i32, i32)
 
-define i32 @mulx32(i32 %x, i32 %y, i32* %p)   {
+define i32 @mulx32(i32 %x, i32 %y, ptr %p)   {
 ; X86-LABEL: mulx32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -432,11 +432,11 @@ define i32 @mulx32(i32 %x, i32 %y, i32* %p)   {
   %h1 = lshr i64 %r1, 32
   %h  = trunc i64 %h1 to i32
   %l  = trunc i64 %r1 to i32
-  store i32 %h, i32* %p
+  store i32 %h, ptr %p
   ret i32 %l
 }
 
-define i32 @mulx32_load(i32 %x, i32* %y, i32* %p)   {
+define i32 @mulx32_load(i32 %x, ptr %y, ptr %p)   {
 ; X86-LABEL: mulx32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -471,13 +471,13 @@ define i32 @mulx32_load(i32 %x, i32* %y, i32* %p)   {
 ; EGPR-NEXT:    # kill: def $eax killed $eax killed $rax
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %x1 = add i32 %x, %x
-  %y1 = load i32, i32* %y
+  %y1 = load i32, ptr %y
   %x2 = zext i32 %x1 to i64
   %y2 = zext i32 %y1 to i64
   %r1 = mul i64 %x2, %y2
   %h1 = lshr i64 %r1, 32
   %h  = trunc i64 %h1 to i32
   %l  = trunc i64 %r1 to i32
-  store i32 %h, i32* %p
+  store i32 %h, ptr %p
   ret i32 %l
 }

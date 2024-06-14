@@ -6,7 +6,7 @@
 ; XFAIL: *
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
-@G = external global i32              ; <i32*> [#uses=1]
+@G = external global i32              ; <ptr> [#uses=1]
 
 declare void @bar(...)
 
@@ -37,8 +37,8 @@ entry:
 ; CHECK-STATIC-32: frob G x
 ; CHECK-STATIC-32: frob G x
 
-        call void asm "frob $0 x", "*m"(i32* @G) nounwind
-        call void asm "frob ${0:P} x", "*m"(i32* @G) nounwind
+        call void asm "frob $0 x", "*m"(ptr @G) nounwind
+        call void asm "frob ${0:P} x", "*m"(ptr @G) nounwind
         ret void
 }
 
@@ -70,9 +70,9 @@ entry:
 
 
 ; asm(" blah %P0" : : "X"(bar));
-  tail call void asm sideeffect "call ${0:P}", "X"(void (...)* @bar) nounwind
-  tail call void asm sideeffect "call ${0:P}", "X"(void (...)* bitcast (void ()* @test3 to void (...)*)) nounwind
-  tail call void asm sideeffect "call $0", "X"(void (...)* @bar) nounwind
-  tail call void asm sideeffect "call $0", "X"(void (...)* bitcast (void ()* @test3 to void (...)*)) nounwind
+  tail call void asm sideeffect "call ${0:P}", "X"(ptr @bar) nounwind
+  tail call void asm sideeffect "call ${0:P}", "X"(ptr @test3) nounwind
+  tail call void asm sideeffect "call $0", "X"(ptr @bar) nounwind
+  tail call void asm sideeffect "call $0", "X"(ptr @test3) nounwind
   ret void
 }

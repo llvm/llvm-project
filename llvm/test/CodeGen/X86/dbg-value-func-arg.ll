@@ -26,10 +26,10 @@
 target datalayout = "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-unknown-unknown"
 
-%struct.bar = type { i32, i32* }
+%struct.bar = type { i32, ptr }
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local %struct.bar* @func1(%struct.bar* readnone returned %0, i32 %1, i32 %2, i32* nocapture readnone %3) local_unnamed_addr #0 !dbg !8 {
+define dso_local ptr @func1(ptr readnone returned %0, i32 %1, i32 %2, ptr nocapture readnone %3) local_unnamed_addr #0 !dbg !8 {
 ; CHECK-DAG: DBG_VALUE %fixed-stack.1, 0, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 32),
 ; CHECK-DAG: DBG_VALUE %fixed-stack.0, 0, {{.*}}, !DIExpression(DW_OP_LLVM_fragment, 32, 32),
 ; CHECK-DAG: DBG_VALUE %fixed-stack.3, 0, {{.*}}, !DIExpression(),
@@ -38,12 +38,12 @@ define dso_local %struct.bar* @func1(%struct.bar* readnone returned %0, i32 %1, 
 ; CHECK-DAG: DBG_VALUE %fixed-stack.3, 0, {{.*}}, !DIExpression(DW_OP_plus_uconst, 144, DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32),
 
   call void @llvm.dbg.value(metadata i32 %2, metadata !24, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !26
-  call void @llvm.dbg.value(metadata i32* %3, metadata !24, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !26
-  call void @llvm.dbg.value(metadata %struct.bar* %0, metadata !22, metadata !DIExpression()), !dbg !26
+  call void @llvm.dbg.value(metadata ptr %3, metadata !24, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !26
+  call void @llvm.dbg.value(metadata ptr %0, metadata !22, metadata !DIExpression()), !dbg !26
   call void @llvm.dbg.value(metadata i32 %1, metadata !23, metadata !DIExpression()), !dbg !26
-  call void @llvm.dbg.value(metadata %struct.bar* %0, metadata !25, metadata !DIExpression(DW_OP_plus_uconst, 144, DW_OP_stack_value)), !dbg !26
-  call void @llvm.dbg.value(metadata %struct.bar* %0, metadata !24, metadata !DIExpression(DW_OP_plus_uconst, 144, DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32)), !dbg !26
-  ret %struct.bar* %0, !dbg !27
+  call void @llvm.dbg.value(metadata ptr %0, metadata !25, metadata !DIExpression(DW_OP_plus_uconst, 144, DW_OP_stack_value)), !dbg !26
+  call void @llvm.dbg.value(metadata ptr %0, metadata !24, metadata !DIExpression(DW_OP_plus_uconst, 144, DW_OP_stack_value, DW_OP_LLVM_fragment, 32, 32)), !dbg !26
+  ret ptr %0, !dbg !27
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn

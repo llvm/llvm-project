@@ -34,7 +34,7 @@ define <4 x float> @rangeps_128(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res
 }
 
-define <4 x float> @rangeps_mem_128(<4 x float> %a0, <4 x float>* %p1) {
+define <4 x float> @rangeps_mem_128(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangeps_mem_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -58,13 +58,13 @@ define <4 x float> @rangeps_mem_128(<4 x float> %a0, <4 x float>* %p1) {
 ; DISABLE-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <4 x float>, <4 x float>* %p1, align 64
+  %a1 = load <4 x float>, ptr %p1, align 64
   %2 = call <4 x float> @llvm.x86.avx512.mask.range.ps.128(<4 x float> %a0, <4 x float> %a1, i32 88, <4 x float> undef, i8 -1)
   %res = fadd <4 x float> %2, %a0
   ret <4 x float> %res
 }
 
-define <4 x float> @rangeps_broadcast_128(<4 x float> %a0, float* %p1) {
+define <4 x float> @rangeps_broadcast_128(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangeps_broadcast_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -88,7 +88,7 @@ define <4 x float> @rangeps_broadcast_128(<4 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <4 x float> undef, float %v1, i64 0
   %a1 = shufflevector <4 x float> %t0, <4 x float> undef, <4 x i32> zeroinitializer
   %2 = call <4 x float> @llvm.x86.avx512.mask.range.ps.128(<4 x float> %a0, <4 x float> %a1, i32 88, <4 x float> undef, i8 -1)
@@ -96,7 +96,7 @@ define <4 x float> @rangeps_broadcast_128(<4 x float> %a0, float* %p1) {
   ret <4 x float> %res
 }
 
-define <4 x float> @rangeps_maskz_128(<4 x float> %a0, <4 x float> %a1, i8* %pmask) {
+define <4 x float> @rangeps_maskz_128(<4 x float> %a0, <4 x float> %a1, ptr %pmask) {
 ; ENABLE-LABEL: rangeps_maskz_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -124,7 +124,7 @@ define <4 x float> @rangeps_maskz_128(<4 x float> %a0, <4 x float> %a1, i8* %pma
 ; DISABLE-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %mask = load i8, i8* %pmask
+  %mask = load i8, ptr %pmask
   %2 = call <4 x float> @llvm.x86.avx512.mask.range.ps.128(<4 x float> %a0, <4 x float> %a1, i32 88, <4 x float> undef, i8 %mask)
   %3 = fadd <4 x float> %a0, %a1
   %res = fadd <4 x float> %2, %3
@@ -165,7 +165,7 @@ define <8 x float> @rangeps_256(<8 x float> %a0, <8 x float> %a1) {
   ret <8 x float> %res
 }
 
-define <8 x float> @rangeps_mem_256(<8 x float> %a0, <8 x float>* %p1) {
+define <8 x float> @rangeps_mem_256(<8 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangeps_mem_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -189,13 +189,13 @@ define <8 x float> @rangeps_mem_256(<8 x float> %a0, <8 x float>* %p1) {
 ; DISABLE-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <8 x float>, <8 x float>* %p1, align 64
+  %a1 = load <8 x float>, ptr %p1, align 64
   %2 = call <8 x float> @llvm.x86.avx512.mask.range.ps.256(<8 x float> %a0, <8 x float> %a1, i32 88, <8 x float> undef, i8 -1)
   %res = fadd <8 x float> %2, %a0
   ret <8 x float> %res
 }
 
-define <8 x float> @rangeps_broadcast_256(<8 x float> %a0, float* %p1) {
+define <8 x float> @rangeps_broadcast_256(<8 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangeps_broadcast_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -219,7 +219,7 @@ define <8 x float> @rangeps_broadcast_256(<8 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <8 x float> undef, float %v1, i64 0
   %a1 = shufflevector <8 x float> %t0, <8 x float> undef, <8 x i32> zeroinitializer
   %2 = call <8 x float> @llvm.x86.avx512.mask.range.ps.256(<8 x float> %a0, <8 x float> %a1, i32 88, <8 x float> undef, i8 -1)
@@ -227,7 +227,7 @@ define <8 x float> @rangeps_broadcast_256(<8 x float> %a0, float* %p1) {
   ret <8 x float> %res
 }
 
-define <8 x float> @rangeps_maskz_256(<8 x float> %a0, <8 x float> %a1, i8* %pmask) {
+define <8 x float> @rangeps_maskz_256(<8 x float> %a0, <8 x float> %a1, ptr %pmask) {
 ; ENABLE-LABEL: rangeps_maskz_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -255,7 +255,7 @@ define <8 x float> @rangeps_maskz_256(<8 x float> %a0, <8 x float> %a1, i8* %pma
 ; DISABLE-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %mask = load i8, i8* %pmask
+  %mask = load i8, ptr %pmask
   %2 = call <8 x float> @llvm.x86.avx512.mask.range.ps.256(<8 x float> %a0, <8 x float> %a1, i32 44, <8 x float> undef, i8 %mask)
   %3 = fadd <8 x float> %a0, %a1
   %res = fadd <8 x float> %2, %3
@@ -296,7 +296,7 @@ define <16 x float> @rangeps_512(<16 x float> %a0, <16 x float> %a1) {
   ret <16 x float> %res
 }
 
-define <16 x float> @rangeps_mem_512(<16 x float> %a0, <16 x float>* %p1) {
+define <16 x float> @rangeps_mem_512(<16 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangeps_mem_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -320,13 +320,13 @@ define <16 x float> @rangeps_mem_512(<16 x float> %a0, <16 x float>* %p1) {
 ; DISABLE-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <16 x float>, <16 x float>* %p1, align 64
+  %a1 = load <16 x float>, ptr %p1, align 64
   %2 = call <16 x float> @llvm.x86.avx512.mask.range.ps.512(<16 x float> %a0, <16 x float> %a1, i32 88, <16 x float> undef, i16 -1, i32 4)
   %res = fadd <16 x float> %2, %a0
   ret <16 x float> %res
 }
 
-define <16 x float> @rangeps_broadcast_512(<16 x float> %a0, float* %p1) {
+define <16 x float> @rangeps_broadcast_512(<16 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangeps_broadcast_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -350,7 +350,7 @@ define <16 x float> @rangeps_broadcast_512(<16 x float> %a0, float* %p1) {
 ; DISABLE-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load float, float* %p1, align 4
+  %v1 = load float, ptr %p1, align 4
   %t0 = insertelement <16 x float> undef, float %v1, i64 0
   %a1 = shufflevector <16 x float> %t0, <16 x float> undef, <16 x i32> zeroinitializer
   %2 = call <16 x float> @llvm.x86.avx512.mask.range.ps.512(<16 x float> %a0, <16 x float> %a1, i32 88, <16 x float> undef, i16 -1, i32 4)
@@ -358,7 +358,7 @@ define <16 x float> @rangeps_broadcast_512(<16 x float> %a0, float* %p1) {
   ret <16 x float> %res
 }
 
-define <16 x float> @rangeps_maskz_512(<16 x float> %a0, <16 x float> %a1, i16* %pmask) {
+define <16 x float> @rangeps_maskz_512(<16 x float> %a0, <16 x float> %a1, ptr %pmask) {
 ; ENABLE-LABEL: rangeps_maskz_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -386,7 +386,7 @@ define <16 x float> @rangeps_maskz_512(<16 x float> %a0, <16 x float> %a1, i16* 
 ; DISABLE-NEXT:    vaddps %zmm0, %zmm1, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %mask = load i16, i16* %pmask
+  %mask = load i16, ptr %pmask
   %2 = call <16 x float> @llvm.x86.avx512.mask.range.ps.512(<16 x float> %a0, <16 x float> %a1, i32 88, <16 x float> undef, i16 %mask, i32 4)
   %3 = fadd <16 x float> %a0, %a1
   %res = fadd <16 x float> %2, %3
@@ -428,7 +428,7 @@ define <2 x double> @rangepd_128(<2 x double> %a0, <2 x double> %a1) {
   ret <2 x double> %res
 }
 
-define <2 x double> @rangepd_mem_128(<2 x double> %a0, <2 x double>* %p1) {
+define <2 x double> @rangepd_mem_128(<2 x double> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangepd_mem_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -452,13 +452,13 @@ define <2 x double> @rangepd_mem_128(<2 x double> %a0, <2 x double>* %p1) {
 ; DISABLE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <2 x double>, <2 x double>* %p1, align 64
+  %a1 = load <2 x double>, ptr %p1, align 64
   %2 = call <2 x double> @llvm.x86.avx512.mask.range.pd.128(<2 x double> %a0, <2 x double> %a1, i32 88, <2 x double> undef, i8 -1)
   %res = fadd <2 x double> %2, %a0
   ret <2 x double> %res
 }
 
-define <2 x double> @rangepd_broadcast_128(<2 x double> %a0, double* %p1) {
+define <2 x double> @rangepd_broadcast_128(<2 x double> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangepd_broadcast_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -482,7 +482,7 @@ define <2 x double> @rangepd_broadcast_128(<2 x double> %a0, double* %p1) {
 ; DISABLE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load double, double* %p1, align 4
+  %v1 = load double, ptr %p1, align 4
   %t0 = insertelement <2 x double> undef, double %v1, i64 0
   %a1 = shufflevector <2 x double> %t0, <2 x double> undef, <2 x i32> zeroinitializer
   %2 = call <2 x double> @llvm.x86.avx512.mask.range.pd.128(<2 x double> %a0, <2 x double> %a1, i32 88, <2 x double> undef, i8 -1)
@@ -490,7 +490,7 @@ define <2 x double> @rangepd_broadcast_128(<2 x double> %a0, double* %p1) {
   ret <2 x double> %res
 }
 
-define <2 x double> @rangepd_maskz_128(<2 x double> %a0, <2 x double> %a1, i8* %pmask) {
+define <2 x double> @rangepd_maskz_128(<2 x double> %a0, <2 x double> %a1, ptr %pmask) {
 ; ENABLE-LABEL: rangepd_maskz_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -518,7 +518,7 @@ define <2 x double> @rangepd_maskz_128(<2 x double> %a0, <2 x double> %a1, i8* %
 ; DISABLE-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %mask = load i8, i8* %pmask
+  %mask = load i8, ptr %pmask
   %2 = call <2 x double> @llvm.x86.avx512.mask.range.pd.128(<2 x double> %a0, <2 x double> %a1, i32 88, <2 x double> undef, i8 %mask)
   %3 = fadd <2 x double> %a0, %a1
   %res = fadd <2 x double> %2, %3
@@ -559,7 +559,7 @@ define <4 x double> @rangepd_256(<4 x double> %a0, <4 x double> %a1) {
   ret <4 x double> %res
 }
 
-define <4 x double> @rangepd_mem_256(<4 x double> %a0, <4 x double>* %p1) {
+define <4 x double> @rangepd_mem_256(<4 x double> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangepd_mem_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -583,13 +583,13 @@ define <4 x double> @rangepd_mem_256(<4 x double> %a0, <4 x double>* %p1) {
 ; DISABLE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <4 x double>, <4 x double>* %p1, align 64
+  %a1 = load <4 x double>, ptr %p1, align 64
   %2 = call <4 x double> @llvm.x86.avx512.mask.range.pd.256(<4 x double> %a0, <4 x double> %a1, i32 88, <4 x double> undef, i8 -1)
   %res = fadd <4 x double> %2, %a0
   ret <4 x double> %res
 }
 
-define <4 x double> @rangepd_broadcast_256(<4 x double> %a0, double* %p1) {
+define <4 x double> @rangepd_broadcast_256(<4 x double> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangepd_broadcast_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -613,7 +613,7 @@ define <4 x double> @rangepd_broadcast_256(<4 x double> %a0, double* %p1) {
 ; DISABLE-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load double, double* %p1, align 4
+  %v1 = load double, ptr %p1, align 4
   %t0 = insertelement <4 x double> undef, double %v1, i64 0
   %a1 = shufflevector <4 x double> %t0, <4 x double> undef, <4 x i32> zeroinitializer
   %2 = call <4 x double> @llvm.x86.avx512.mask.range.pd.256(<4 x double> %a0, <4 x double> %a1, i32 88, <4 x double> undef, i8 -1)
@@ -621,7 +621,7 @@ define <4 x double> @rangepd_broadcast_256(<4 x double> %a0, double* %p1) {
   ret <4 x double> %res
 }
 
-define <4 x double> @rangepd_maskz_256(<4 x double> %a0, <4 x double> %a1, i8* %pmask) {
+define <4 x double> @rangepd_maskz_256(<4 x double> %a0, <4 x double> %a1, ptr %pmask) {
 ; ENABLE-LABEL: rangepd_maskz_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -649,7 +649,7 @@ define <4 x double> @rangepd_maskz_256(<4 x double> %a0, <4 x double> %a1, i8* %
 ; DISABLE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %mask = load i8, i8* %pmask
+  %mask = load i8, ptr %pmask
   %2 = call <4 x double> @llvm.x86.avx512.mask.range.pd.256(<4 x double> %a0, <4 x double> %a1, i32 88, <4 x double> undef, i8 %mask)
   %3 = fadd <4 x double> %a0, %a1
   %res = fadd <4 x double> %2, %3
@@ -690,7 +690,7 @@ define <8 x double> @rangepd_512(<8 x double> %a0, <8 x double> %a1) {
   ret <8 x double> %res
 }
 
-define <8 x double> @rangepd_mem_512(<8 x double> %a0, <8 x double>* %p1) {
+define <8 x double> @rangepd_mem_512(<8 x double> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangepd_mem_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -714,13 +714,13 @@ define <8 x double> @rangepd_mem_512(<8 x double> %a0, <8 x double>* %p1) {
 ; DISABLE-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <8 x double>, <8 x double>* %p1, align 64
+  %a1 = load <8 x double>, ptr %p1, align 64
   %2 = call <8 x double> @llvm.x86.avx512.mask.range.pd.512(<8 x double> %a0, <8 x double> %a1, i32 88, <8 x double> undef, i8 -1, i32 4)
   %res = fadd <8 x double> %2, %a0
   ret <8 x double> %res
 }
 
-define <8 x double> @rangepd_broadcast_512(<8 x double> %a0, double* %p1) {
+define <8 x double> @rangepd_broadcast_512(<8 x double> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangepd_broadcast_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -744,7 +744,7 @@ define <8 x double> @rangepd_broadcast_512(<8 x double> %a0, double* %p1) {
 ; DISABLE-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v1 = load double, double* %p1, align 4
+  %v1 = load double, ptr %p1, align 4
   %t0 = insertelement <8 x double> undef, double %v1, i64 0
   %a1 = shufflevector <8 x double> %t0, <8 x double> undef, <8 x i32> zeroinitializer
   %2 = call <8 x double> @llvm.x86.avx512.mask.range.pd.512(<8 x double> %a0, <8 x double> %a1, i32 88, <8 x double> undef, i8 -1, i32 4)
@@ -752,7 +752,7 @@ define <8 x double> @rangepd_broadcast_512(<8 x double> %a0, double* %p1) {
   ret <8 x double> %res
 }
 
-define <8 x double> @rangepd_maskz_512(<8 x double> %a0, <8 x double> %a1, i8* %pmask) {
+define <8 x double> @rangepd_maskz_512(<8 x double> %a0, <8 x double> %a1, ptr %pmask) {
 ; ENABLE-LABEL: rangepd_maskz_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
@@ -780,7 +780,7 @@ define <8 x double> @rangepd_maskz_512(<8 x double> %a0, <8 x double> %a1, i8* %
 ; DISABLE-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %mask = load i8, i8* %pmask
+  %mask = load i8, ptr %pmask
   %2 = call <8 x double> @llvm.x86.avx512.mask.range.pd.512(<8 x double> %a0, <8 x double> %a1, i32 88, <8 x double> undef, i8 %mask, i32 4)
   %3 = fadd <8 x double> %a0, %a1
   %res = fadd <8 x double> %2, %3
@@ -821,7 +821,7 @@ define <4 x float> @rangess(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res
 }
 
-define <4 x float> @rangess_mem(<4 x float> %a0, <4 x float>* %p1) {
+define <4 x float> @rangess_mem(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangess_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -841,13 +841,13 @@ define <4 x float> @rangess_mem(<4 x float> %a0, <4 x float>* %p1) {
 ; DISABLE-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <4 x float>, <4 x float>* %p1, align 64
+  %a1 = load <4 x float>, ptr %p1, align 64
   %2 = call <4 x float> @llvm.x86.avx512.mask.range.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 -1, i32 4, i32 4)
   %res = fadd <4 x float> %2, %a0
   ret <4 x float> %res
 }
 
-define <4 x float> @rangess_maskz(<4 x float> %a0, <4 x float> %a1, i8* %pmask) {
+define <4 x float> @rangess_maskz(<4 x float> %a0, <4 x float> %a1, ptr %pmask) {
 ; ENABLE-LABEL: rangess_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -875,7 +875,7 @@ define <4 x float> @rangess_maskz(<4 x float> %a0, <4 x float> %a1, i8* %pmask) 
 ; DISABLE-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %mask = load i8, i8* %pmask
+  %mask = load i8, ptr %pmask
   %2 = call <4 x float> @llvm.x86.avx512.mask.range.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> undef, i8 %mask, i32 4, i32 4)
   %3 = fadd <4 x float> %a0, %a1
   %res = fadd <4 x float> %2, %3
@@ -916,7 +916,7 @@ define <2 x double> @rangesd(<2 x double> %a0, <2 x double> %a1) {
   ret <2 x double> %res
 }
 
-define <2 x double> @rangesd_mem(<2 x double> %a0, <2 x double>* %p1) {
+define <2 x double> @rangesd_mem(<2 x double> %a0, ptr %p1) {
 ; ENABLE-LABEL: rangesd_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -940,13 +940,13 @@ define <2 x double> @rangesd_mem(<2 x double> %a0, <2 x double>* %p1) {
 ; DISABLE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <2 x double>, <2 x double>* %p1, align 64
+  %a1 = load <2 x double>, ptr %p1, align 64
   %2 = call <2 x double> @llvm.x86.avx512.mask.range.sd(<2 x double> %a0, <2 x double> %a1, <2 x double> undef, i8 -1, i32 4, i32 4)
   %res = fadd <2 x double> %2, %a0
   ret <2 x double> %res
 }
 
-define <2 x double> @rangesd_maskz(<2 x double> %a0, <2 x double> %a1, i8* %pmask) {
+define <2 x double> @rangesd_maskz(<2 x double> %a0, <2 x double> %a1, ptr %pmask) {
 ; ENABLE-LABEL: rangesd_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -974,7 +974,7 @@ define <2 x double> @rangesd_maskz(<2 x double> %a0, <2 x double> %a1, i8* %pmas
 ; DISABLE-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %mask = load i8, i8* %pmask
+  %mask = load i8, ptr %pmask
   %2 = call <2 x double> @llvm.x86.avx512.mask.range.sd(<2 x double> %a0, <2 x double> %a1, <2 x double> undef, i8 %mask, i32 4, i32 4)
   %3 = fadd <2 x double> %a0, %a1
   %res = fadd <2 x double> %2, %3

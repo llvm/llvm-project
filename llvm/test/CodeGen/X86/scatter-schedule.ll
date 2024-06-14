@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; This test checks the order of scatter operations after split.
 ; The right order is "from LSB to MSB", otherwise the semantic is broken.
 
-define void @test(i64 %x272, <16 x i32*> %x335, <16 x i32> %x270) {
+define void @test(i64 %x272, <16 x ptr> %x335, <16 x i32> %x270) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k1
@@ -16,7 +16,7 @@ define void @test(i64 %x272, <16 x i32*> %x335, <16 x i32> %x270) {
 ; CHECK-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> %x270, <16 x i32*> %x335, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %x270, <16 x ptr> %x335, i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
-declare void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> , <16 x i32*> , i32, <16 x i1> )
+declare void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> , <16 x ptr> , i32, <16 x i1> )

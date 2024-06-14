@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mcpu=atom -mtriple=i686-linux  -no-x86-call-frame-opt | FileCheck -check-prefix=ATOM %s
 ; RUN: llc < %s -mcpu=core2 -mtriple=i686-linux -no-x86-call-frame-opt | FileCheck %s
 
-declare void @use_arr(i8*)
+declare void @use_arr(ptr)
 declare void @many_params(i32, i32, i32, i32, i32, i32)
 
 define void @test1() nounwind {
@@ -16,8 +16,7 @@ define void @test1() nounwind {
 ; CHECK: call
 ; CHECK-NOT: lea
   %arr = alloca [1024 x i8], align 16
-  %arr_ptr = getelementptr inbounds [1024 x i8], [1024 x i8]* %arr, i8 0, i8 0
-  call void @use_arr(i8* %arr_ptr)
+  call void @use_arr(ptr %arr)
   ret void
 }
 
@@ -42,7 +41,7 @@ define void @test3() nounwind {
 ; CHECK-NOT: lea
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  store i32 0, i32* %x, align 4
+  store i32 0, ptr %x, align 4
   ret void
 }
 

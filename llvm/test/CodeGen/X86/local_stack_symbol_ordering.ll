@@ -114,61 +114,53 @@ entry:
   %b = alloca i32, align 4
   %d = alloca i32, align 4
   %aaa = alloca [1000 x i32], align 16
-  %0 = bitcast i32* %f to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #1
-  %1 = bitcast [30 x i32]* %a to i8*
-  call void @llvm.lifetime.start.p0i8(i64 120, i8* %1) #1
-  %2 = bitcast [1000 x i32]* %aa to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4000, i8* %2) #1
-  %3 = bitcast i32* %e to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %3) #1
-  %4 = bitcast [1000 x i32]* %cc to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4000, i8* %4) #1
-  %5 = bitcast i32* %b to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %5) #1
-  %6 = bitcast i32* %d to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %6) #1
-  %7 = bitcast [1000 x i32]* %aaa to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4000, i8* %7) #1
-  %call = call i32 ([30 x i32]*, ...) bitcast (i32 (...)* @check_a to i32 ([30 x i32]*, ...)*)([30 x i32]* %a)
-  %call1 = call i32 ([1000 x i32]*, ...) bitcast (i32 (...)* @bar1 to i32 ([1000 x i32]*, ...)*)([1000 x i32]* %aaa)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %f) #1
+  call void @llvm.lifetime.start.p0(i64 120, ptr %a) #1
+  call void @llvm.lifetime.start.p0(i64 4000, ptr %aa) #1
+  call void @llvm.lifetime.start.p0(i64 4, ptr %e) #1
+  call void @llvm.lifetime.start.p0(i64 4000, ptr %cc) #1
+  call void @llvm.lifetime.start.p0(i64 4, ptr %b) #1
+  call void @llvm.lifetime.start.p0(i64 4, ptr %d) #1
+  call void @llvm.lifetime.start.p0(i64 4000, ptr %aaa) #1
+  %call = call i32 (ptr, ...) @check_a(ptr %a)
+  %call1 = call i32 (ptr, ...) @bar1(ptr %aaa)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call2 = call i32 ([30 x i32]*, ...) bitcast (i32 (...)* @bar1 to i32 ([30 x i32]*, ...)*)([30 x i32]* %a)
-  %call3 = call i32 (i32*, ...) bitcast (i32 (...)* @check_f to i32 (i32*, ...)*)(i32* %f)
+  %call2 = call i32 (ptr, ...) @bar1(ptr %a)
+  %call3 = call i32 (ptr, ...) @check_f(ptr %f)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call4 = call i32 ([30 x i32]*, ...) bitcast (i32 (...)* @bar1 to i32 ([30 x i32]*, ...)*)([30 x i32]* %a)
-  %call5 = call i32 ([1000 x i32]*, [1000 x i32]*, [1000 x i32]*, ...) bitcast (i32 (...)* @bar3 to i32 ([1000 x i32]*, [1000 x i32]*, [1000 x i32]*, ...)*)([1000 x i32]* %aa, [1000 x i32]* %aaa, [1000 x i32]* %cc)
+  %call4 = call i32 (ptr, ...) @bar1(ptr %a)
+  %call5 = call i32 (ptr, ptr, ptr, ...) @bar3(ptr %aa, ptr %aaa, ptr %cc)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call6 = call i32 ([30 x i32]*, [1000 x i32]*, ...) bitcast (i32 (...)* @bar2 to i32 ([30 x i32]*, [1000 x i32]*, ...)*)([30 x i32]* %a, [1000 x i32]* %cc)
-  %call7 = call i32 (i32*, ...) bitcast (i32 (...)* @check_b to i32 (i32*, ...)*)(i32* %b)
+  %call6 = call i32 (ptr, ptr, ...) @bar2(ptr %a, ptr %cc)
+  %call7 = call i32 (ptr, ...) @check_b(ptr %b)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call8 = call i32 ([30 x i32]*, ...) bitcast (i32 (...)* @bar1 to i32 ([30 x i32]*, ...)*)([30 x i32]* %a)
+  %call8 = call i32 (ptr, ...) @bar1(ptr %a)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call9 = call i32 ([30 x i32]*, i32*, ...) bitcast (i32 (...)* @bar2 to i32 ([30 x i32]*, i32*, ...)*)([30 x i32]* %a, i32* %f)
-  %call10 = call i32 (i32*, ...) bitcast (i32 (...)* @check_e to i32 (i32*, ...)*)(i32* %e)
+  %call9 = call i32 (ptr, ptr, ...) @bar2(ptr %a, ptr %f)
+  %call10 = call i32 (ptr, ...) @check_e(ptr %e)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call11 = call i32 ([30 x i32]*, ...) bitcast (i32 (...)* @bar1 to i32 ([30 x i32]*, ...)*)([30 x i32]* %a)
+  %call11 = call i32 (ptr, ...) @bar1(ptr %a)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call12 = call i32 (i32*, i32*, ...) bitcast (i32 (...)* @bar2 to i32 (i32*, i32*, ...)*)(i32* %e, i32* %f)
-  %call13 = call i32 (i32*, ...) bitcast (i32 (...)* @check_d to i32 (i32*, ...)*)(i32* %d)
-  %call14 = call i32 ([30 x i32]*, ...) bitcast (i32 (...)* @bar1 to i32 ([30 x i32]*, ...)*)([30 x i32]* %a)
+  %call12 = call i32 (ptr, ptr, ...) @bar2(ptr %e, ptr %f)
+  %call13 = call i32 (ptr, ...) @check_d(ptr %d)
+  %call14 = call i32 (ptr, ...) @bar1(ptr %a)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call15 = call i32 (i32*, i32*, i32*, ...) bitcast (i32 (...)* @bar3 to i32 (i32*, i32*, i32*, ...)*)(i32* %d, i32* %e, i32* %f)
+  %call15 = call i32 (ptr, ptr, ptr, ...) @bar3(ptr %d, ptr %e, ptr %f)
   call void asm sideeffect "", "~{esi},~{edi},~{ebp},~{ebx},~{rbx},~{r12},~{r13},~{r14},~{r15},~{rbp},~{dirflag},~{fpsr},~{flags}"() #1
-  %call16 = call i32 ([30 x i32]*, ...) bitcast (i32 (...)* @bar1 to i32 ([30 x i32]*, ...)*)([30 x i32]* %a)
-  call void @llvm.lifetime.end.p0i8(i64 4000, i8* %7) #1
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %6) #1
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %5) #1
-  call void @llvm.lifetime.end.p0i8(i64 4000, i8* %4) #1
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %3) #1
-  call void @llvm.lifetime.end.p0i8(i64 4000, i8* %2) #1
-  call void @llvm.lifetime.end.p0i8(i64 120, i8* %1) #1
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0) #1
+  %call16 = call i32 (ptr, ...) @bar1(ptr %a)
+  call void @llvm.lifetime.end.p0(i64 4000, ptr %aaa) #1
+  call void @llvm.lifetime.end.p0(i64 4, ptr %d) #1
+  call void @llvm.lifetime.end.p0(i64 4, ptr %b) #1
+  call void @llvm.lifetime.end.p0(i64 4000, ptr %cc) #1
+  call void @llvm.lifetime.end.p0(i64 4, ptr %e) #1
+  call void @llvm.lifetime.end.p0(i64 4000, ptr %aa) #1
+  call void @llvm.lifetime.end.p0(i64 120, ptr %a) #1
+  call void @llvm.lifetime.end.p0(i64 4, ptr %f) #1
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 declare i32 @check_a(...) #2
 declare i32 @bar1(...) #2
@@ -180,5 +172,5 @@ declare i32 @check_e(...) #2
 declare i32 @check_d(...) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 

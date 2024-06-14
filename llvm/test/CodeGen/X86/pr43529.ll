@@ -22,11 +22,10 @@ define i32 @a() nounwind {
 ; CHECK-NEXT:    retl
 entry:
   %b = alloca i32, align 4
-  %0 = bitcast i32* %b to i8*
-  %1 = ptrtoint i32* %b to i32
-  %sub = sub nsw i32 %1, ptrtoint (i32 ()* @a to i32)
-  %call = call i32 bitcast (i32 (...)* @d to i32 (i32)*)(i32 inreg %sub)
-  %cmp = icmp ugt i32* %b, bitcast (i32 ()* @a to i32*)
+  %0 = ptrtoint ptr %b to i32
+  %sub = sub nsw i32 %0, ptrtoint (ptr @a to i32)
+  %call = call i32 @d(i32 inreg %sub)
+  %cmp = icmp ugt ptr %b, @a
   br i1 %cmp, label %for.cond, label %for.end.split
 
 for.cond:                                         ; preds = %entry, %for.cond

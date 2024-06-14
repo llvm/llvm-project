@@ -28,12 +28,12 @@ entry:
   br i1 %cond1, label %true1, label %false1, !prof !30
 
 true1:
-  %v1 = load i32, i32* %p, align 4
+  %v1 = load i32, ptr %p, align 4
   %v2 = add i32 %v1, 2
   br label %dup
 
 false1:
-  %v3 = load i32, i32* %q, align 4
+  %v3 = load i32, ptr %q, align 4
   %v4 = sub i32 %v3, 3
   br label %dup
 
@@ -83,12 +83,12 @@ entry:
   br i1 %cond1, label %true1, label %false1, !prof !30
 
 true1:
-  %v1 = load i32, i32* %p, align 4
+  %v1 = load i32, ptr %p, align 4
   %v2 = add i32 %v1, 2
   br label %dup
 
 false1:
-  %v3 = load i32, i32* %q, align 4
+  %v3 = load i32, ptr %q, align 4
   %v4 = sub i32 %v3, 3
   br label %dup
 

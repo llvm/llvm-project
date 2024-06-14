@@ -7,22 +7,22 @@
 
 define void @foo() nounwind ssp {
 entry:
-  store i32 1, i32* @a, align 4
+  store i32 1, ptr @a, align 4
   ; CHECK: movq    _a@TLVP(%rip), %rdi
   ; CHECK: callq   *(%rdi)
   ; CHECK: movl    $1, (%rax)
   
-  store i32 2, i32* @b, align 4
+  store i32 2, ptr @b, align 4
   ; CHECK: movq    _b@TLVP(%rip), %rdi
   ; CHECK: callq   *(%rdi)
   ; CHECK: movl    $2, (%rax)
 
-  store i32 3, i32* @c, align 4
+  store i32 3, ptr @c, align 4
   ; CHECK: movq    _c@TLVP(%rip), %rdi
   ; CHECK: callq   *(%rdi)
   ; CHECK: movl    $3, (%rax)
   
-  store i32 4, i32* @d, align 4
+  store i32 4, ptr @d, align 4
   ; CHECK: movq    _d@TLVP(%rip), %rdi
   ; CHECK: callq   *(%rdi)
   ; CHECK: movl    $4, (%rax)

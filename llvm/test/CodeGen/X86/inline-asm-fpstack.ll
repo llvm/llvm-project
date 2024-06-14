@@ -204,7 +204,7 @@ entry:
 }
 
 ; PR4485
-define void @testPR4485(x86_fp80* %a) nounwind {
+define void @testPR4485(ptr %a) nounwind {
 ; CHECK-LABEL: testPR4485:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -225,11 +225,11 @@ define void @testPR4485(x86_fp80* %a) nounwind {
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load x86_fp80, x86_fp80* %a, align 16
+  %0 = load x86_fp80, ptr %a, align 16
   %1 = fmul x86_fp80 %0, 0xK4006B400000000000000
   %2 = fmul x86_fp80 %1, 0xK4012F424000000000000
   tail call void asm sideeffect "fistpl $0", "{st},~{st}"(x86_fp80 %2)
-  %3 = load x86_fp80, x86_fp80* %a, align 16
+  %3 = load x86_fp80, ptr %a, align 16
   %4 = fmul x86_fp80 %3, 0xK4006B400000000000000
   %5 = fmul x86_fp80 %4, 0xK4012F424000000000000
   tail call void asm sideeffect "fistpl $0", "{st},~{st}"(x86_fp80 %5)
@@ -245,7 +245,7 @@ entry:
 ;   void fist1(long double x, int *p) {
 ;     asm volatile ("fistl %1" : : "t"(x), "m"(*p));
 ;   }
-define void @fist1(x86_fp80 %x, i32* %p) nounwind ssp {
+define void @fist1(x86_fp80 %x, ptr %p) nounwind ssp {
 ; CHECK-LABEL: fist1:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $12, %esp
@@ -258,7 +258,7 @@ define void @fist1(x86_fp80 %x, i32* %p) nounwind ssp {
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
-  tail call void asm sideeffect "fistl $1", "{st},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, i32* elementtype(i32) %p) nounwind
+  tail call void asm sideeffect "fistl $1", "{st},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, ptr elementtype(i32) %p) nounwind
   ret void
 }
 
@@ -270,7 +270,7 @@ entry:
 ;     asm ("fistl %1" : "=&t"(y) : "0"(x), "m"(*p) : "memory");
 ;     return y;
 ;   }
-define x86_fp80 @fist2(x86_fp80 %x, i32* %p) nounwind ssp {
+define x86_fp80 @fist2(x86_fp80 %x, ptr %p) nounwind ssp {
 ; CHECK-LABEL: fist2:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $12, %esp
@@ -282,7 +282,7 @@ define x86_fp80 @fist2(x86_fp80 %x, i32* %p) nounwind ssp {
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
-  %0 = tail call x86_fp80 asm "fistl $2", "=&{st},0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, i32* elementtype(i32) %p) nounwind
+  %0 = tail call x86_fp80 asm "fistl $2", "=&{st},0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, ptr elementtype(i32) %p) nounwind
   ret x86_fp80 %0
 }
 
@@ -479,20 +479,20 @@ define void @test_live_st(i32 %a1) nounwind {
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
-  %0 = load x86_fp80, x86_fp80* undef, align 16
+  %0 = load x86_fp80, ptr undef, align 16
   %cond = icmp eq i32 %a1, 1
   br i1 %cond, label %sw.bb4.i, label %_Z5tointRKe.exit
 
 sw.bb4.i:
   %1 = call x86_fp80 asm sideeffect "frndint", "={st},0,~{dirflag},~{fpsr},~{flags}"(x86_fp80 %0)
-  call void asm sideeffect "fldcw $0", "*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) undef)
+  call void asm sideeffect "fldcw $0", "*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) undef)
   br label %_Z5tointRKe.exit
 
 _Z5tointRKe.exit:
   %result.0.i = phi x86_fp80 [ %1, %sw.bb4.i ], [ %0, %entry ]
   %conv.i1814 = fptosi x86_fp80 %result.0.i to i32
   %conv626 = sitofp i32 %conv.i1814 to x86_fp80
-  store x86_fp80 %conv626, x86_fp80* getelementptr inbounds (%struct.fpu_t, %struct.fpu_t* @fpu, i32 0, i32 1)
+  store x86_fp80 %conv626, ptr getelementptr inbounds (%struct.fpu_t, ptr @fpu, i32 0, i32 1)
   br label %return
 
 return:

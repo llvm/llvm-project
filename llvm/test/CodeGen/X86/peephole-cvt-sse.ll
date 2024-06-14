@@ -4,7 +4,7 @@
 
 ; Check that unaligned loads merge with cvtdq2pd and cvtps2pd.
 
-define <2 x double> @peephole_cvtps2pd(<4 x float>* %a0) {
+define <2 x double> @peephole_cvtps2pd(ptr %a0) {
 ; X86-64-LABEL: peephole_cvtps2pd:
 ; X86-64:       # %bb.0:
 ; X86-64-NEXT:    cvtps2pd (%rdi), %xmm0
@@ -15,13 +15,13 @@ define <2 x double> @peephole_cvtps2pd(<4 x float>* %a0) {
 ; I386-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    cvtps2pd (%eax), %xmm0
 ; I386-NEXT:    retl
-  %1 = load <4 x float>, <4 x float>* %a0, align 1
+  %1 = load <4 x float>, ptr %a0, align 1
   %2 = shufflevector <4 x float> %1, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   %3 = fpext <2 x float> %2 to <2 x double>
   ret <2 x double> %3
 }
 
-define <2 x double> @peephole_cvtdq2pd(<4 x i32>* %a0) {
+define <2 x double> @peephole_cvtdq2pd(ptr %a0) {
 ; X86-64-LABEL: peephole_cvtdq2pd:
 ; X86-64:       # %bb.0:
 ; X86-64-NEXT:    cvtdq2pd (%rdi), %xmm0
@@ -32,7 +32,7 @@ define <2 x double> @peephole_cvtdq2pd(<4 x i32>* %a0) {
 ; I386-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; I386-NEXT:    cvtdq2pd (%eax), %xmm0
 ; I386-NEXT:    retl
-  %1 = load <4 x i32>, <4 x i32>* %a0, align 1
+  %1 = load <4 x i32>, ptr %a0, align 1
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
   %3 = sitofp <2 x i32> %2 to <2 x double>
   ret <2 x double> %3

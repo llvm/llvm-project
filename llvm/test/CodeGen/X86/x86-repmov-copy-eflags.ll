@@ -5,19 +5,19 @@ target triple = "i686-pc-windows-msvc18.0.0"
 %struct.T = type { i64, [3 x i32] }
 
 ; Function Attrs: nounwind optsize
-define void @f(i8* %p, i8* %q, i32* inalloca(i32) nocapture %unused) #0 {
+define void @f(ptr %p, ptr %q, ptr inalloca(i32) nocapture %unused) #0 {
 entry:
   %g = alloca %struct.T, align 8
   %r = alloca i32, align 8
-  store i32 0, i32* %r, align 4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %p, i8* align 8 %q, i32 24, i1 false)
+  store i32 0, ptr %r, align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %p, ptr align 8 %q, i32 24, i1 false)
   br label %while.body
 
 while.body:                                       ; preds = %while.body, %entry
-  %load = load i32, i32* %r, align 4
+  %load = load i32, ptr %r, align 4
   %dec = add nsw i32 %load, -1
-  store i32 %dec, i32* %r, align 4
-  call void @g(%struct.T* %g)
+  store i32 %dec, ptr %r, align 4
+  call void @g(ptr %g)
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %while.end, label %while.body
 
@@ -25,19 +25,19 @@ while.end:                                        ; preds = %while.body
   ret void
 }
 
-define void @f_pgso(i8* %p, i8* %q, i32* inalloca(i32) nocapture %unused) !prof !14 {
+define void @f_pgso(ptr %p, ptr %q, ptr inalloca(i32) nocapture %unused) !prof !14 {
 entry:
   %g = alloca %struct.T, align 8
   %r = alloca i32, align 8
-  store i32 0, i32* %r, align 4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 %p, i8* align 8 %q, i32 24, i1 false)
+  store i32 0, ptr %r, align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr align 8 %p, ptr align 8 %q, i32 24, i1 false)
   br label %while.body
 
 while.body:                                       ; preds = %while.body, %entry
-  %load = load i32, i32* %r, align 4
+  %load = load i32, ptr %r, align 4
   %dec = add nsw i32 %load, -1
-  store i32 %dec, i32* %r, align 4
-  call void @g(%struct.T* %g)
+  store i32 %dec, ptr %r, align 4
+  call void @g(ptr %g)
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %while.end, label %while.body
 
@@ -46,9 +46,9 @@ while.end:                                        ; preds = %while.body
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1) #1
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture readonly, i32, i1) #1
 
-declare void @g(%struct.T*)
+declare void @g(ptr)
 
 ; CHECK-LABEL: _f:
 ; CHECK:     pushl %ebp

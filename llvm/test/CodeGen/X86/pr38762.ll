@@ -47,10 +47,9 @@ target triple = "x86_64-pc-linux-gnu"
 define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
 entry:
   %foo = alloca i32, align 4
-  %foo.0..sroa_cast = bitcast i32* %foo to i8*
-  store volatile i32 0, i32* %foo, align 4
-  %foo.0. = load volatile i32, i32* %foo, align 4
-  %foo.0.5 = load volatile i32, i32* %foo, align 4
+  store volatile i32 0, ptr %foo, align 4
+  %foo.0. = load volatile i32, ptr %foo, align 4
+  %foo.0.5 = load volatile i32, ptr %foo, align 4
   call void @llvm.dbg.value(metadata i32 %foo.0.5, metadata !15, metadata !DIExpression()), !dbg !25
   %cmp = icmp sgt i32 %foo.0., 3, !dbg !26
   br i1 %cmp, label %if.then, label %if.end, !dbg !28

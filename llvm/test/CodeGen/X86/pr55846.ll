@@ -5,7 +5,7 @@
 ; The AssertZext does not add information, so it should be eliminated,
 ; but that must not trigger a compile-time assert.
 
-define void @test(i64* %p) {
+define void @test(ptr %p) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $256, %eax # imm = 0x100
@@ -15,9 +15,8 @@ define void @test(i64* %p) {
   br label %bb2
 
 bb2:
-  store i64 %sel, i64* %p, align 4
-  %p.bc = bitcast i64* %p to <2 x i1>*
-  %load = load <2 x i1>, <2 x i1>* %p.bc, align 1
+  store i64 %sel, ptr %p, align 4
+  %load = load <2 x i1>, ptr %p, align 1
   br label %bb3
 
 bb3:

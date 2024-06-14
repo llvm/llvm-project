@@ -12,15 +12,15 @@ target triple = "x86_64-pc-linux-gnu"
 
 declare dso_local i1 @return_i1()
 declare dso_local void @func()
-declare dso_local void @consume(i32 addrspace(1)*)
-declare dso_local void @consume2(i32 addrspace(1)*, i32 addrspace(1)*)
-declare dso_local void @consume5(i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 addrspace(1)*)
-declare dso_local void @use1(i32 addrspace(1)*, i8 addrspace(1)*)
-declare dso_local void @bar(i8 addrspace(1)*, i8 addrspace(1)*)
-declare i8 addrspace(1)* @dummy(i32)
+declare dso_local void @consume(ptr addrspace(1))
+declare dso_local void @consume2(ptr addrspace(1), ptr addrspace(1))
+declare dso_local void @consume5(ptr addrspace(1), ptr addrspace(1), ptr addrspace(1), ptr addrspace(1), ptr addrspace(1))
+declare dso_local void @use1(ptr addrspace(1), ptr addrspace(1))
+declare dso_local void @bar(ptr addrspace(1), ptr addrspace(1))
+declare ptr addrspace(1) @dummy(i32)
 
 ; test most simple relocate
-define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
+define i1 @test_relocate(ptr addrspace(1) %a) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_relocate
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
 ; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
@@ -36,14 +36,14 @@ define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
-  %rel1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
+  %rel1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   %res1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-  call void @consume(i32 addrspace(1)* %rel1)
+  call void @consume(ptr addrspace(1) %rel1)
   ret i1 %res1
 }
 ; test pointer variables intermixed with pointer constants
-define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c) gc "statepoint-example" {
+define void @test_mixed(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_mixed
 ; CHECK-VREG:    %2:gr64 = COPY $rdx
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
@@ -71,18 +71,18 @@ define void @test_mixed(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-PREG:    CALL64pcrel32 @consume5, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit killed $rcx, implicit killed $r8, implicit-def $rsp, implicit-def $ssp
 
 entry:
-  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a, i32 addrspace(1)* null, i32 addrspace(1)* %b, i32 addrspace(1)* null, i32 addrspace(1)* %c)]
-  %rel1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
-  %rel2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 1, i32 1)
-  %rel3 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 2, i32 2)
-  %rel4 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 3, i32 3)
-  %rel5 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 4, i32 4)
-  call void @consume5(i32 addrspace(1)* %rel1, i32 addrspace(1)* %rel2, i32 addrspace(1)* %rel3, i32 addrspace(1)* %rel4, i32 addrspace(1)* %rel5)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a, ptr addrspace(1) null, ptr addrspace(1) %b, ptr addrspace(1) null, ptr addrspace(1) %c)]
+  %rel1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  %rel2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 1, i32 1)
+  %rel3 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 2, i32 2)
+  %rel4 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 3, i32 3)
+  %rel5 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 4, i32 4)
+  call void @consume5(ptr addrspace(1) %rel1, ptr addrspace(1) %rel2, ptr addrspace(1) %rel3, ptr addrspace(1) %rel4, ptr addrspace(1) %rel5)
   ret void
 }
 
 ; same as above, but for alloca
-define i32 addrspace(1)* @test_alloca(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define ptr addrspace(1) @test_alloca(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_alloca
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
 ; CHECK-VREG:    MOV64mr %stack.0.alloca, 1, $noreg, 0, $noreg, %0 :: (store (s64) into %ir.alloca)
@@ -101,17 +101,17 @@ define i32 addrspace(1)* @test_alloca(i32 addrspace(1)* %ptr) gc "statepoint-exa
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
 entry:
-  %alloca = alloca i32 addrspace(1)*, align 8
-  store i32 addrspace(1)* %ptr, i32 addrspace(1)** %alloca
-  %safepoint_token = call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)** %alloca, i32 addrspace(1)* %ptr)]
-  %rel1 = load i32 addrspace(1)*, i32 addrspace(1)** %alloca
-  %rel2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 1, i32 1)
-  call void @consume(i32 addrspace(1)* %rel2)
-  ret i32 addrspace(1)* %rel1
+  %alloca = alloca ptr addrspace(1), align 8
+  store ptr addrspace(1) %ptr, ptr %alloca
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr %alloca, ptr addrspace(1) %ptr)]
+  %rel1 = load ptr addrspace(1), ptr %alloca
+  %rel2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 1, i32 1)
+  call void @consume(ptr addrspace(1) %rel2)
+  ret ptr addrspace(1) %rel1
 }
 
 ; test base != derived
-define void @test_base_derived(i32 addrspace(1)* %base, i32 addrspace(1)* %derived) gc "statepoint-example" {
+define void @test_base_derived(ptr addrspace(1) %base, ptr addrspace(1) %derived) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_base_derived
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
@@ -125,14 +125,14 @@ define void @test_base_derived(i32 addrspace(1)* %base, i32 addrspace(1)* %deriv
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
-  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %base, i32 addrspace(1)* %derived)]
-  %reloc = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 1)
-  call void @consume(i32 addrspace(1)* %reloc)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %base, ptr addrspace(1) %derived)]
+  %reloc = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 1)
+  call void @consume(ptr addrspace(1) %reloc)
   ret void
 }
 
 ; deopt GC pointer not present in GC args must be spilled
-define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc "statepoint-example" {
+define void @test_deopt_gcpointer(ptr addrspace(1) %a, ptr addrspace(1) %b) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_deopt_gcpointer
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
@@ -148,14 +148,14 @@ define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 
-  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 addrspace(1)* %a), "gc-live" (i32 addrspace(1)* %b)]
-  %rel = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
-  call void @consume(i32 addrspace(1)* %rel)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (ptr addrspace(1) %a), "gc-live" (ptr addrspace(1) %b)]
+  %rel = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  call void @consume(ptr addrspace(1) %rel)
   ret void
 }
 
 ;; Two gc.relocates of the same input, should require only a single spill/fill
-define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define void @test_gcrelocate_uniqueing(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_gcrelocate_uniqueing
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
 ; CHECK-VREG:    %1:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 2, %0, 2, 4278124286, 2, 1, %0(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
@@ -170,15 +170,15 @@ define void @test_gcrelocate_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-ex
 ; CHECK-PREG:    $rsi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume2, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
 
-  %tok = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 addrspace(1)* %ptr, i32 undef), "gc-live" (i32 addrspace(1)* %ptr, i32 addrspace(1)* %ptr)]
-  %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
-  %b = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 1, i32 1)
-  call void @consume2(i32 addrspace(1)* %a, i32 addrspace(1)* %b)
+  %tok = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (ptr addrspace(1) %ptr, i32 undef), "gc-live" (ptr addrspace(1) %ptr, ptr addrspace(1) %ptr)]
+  %a = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 0, i32 0)
+  %b = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 1, i32 1)
+  call void @consume2(ptr addrspace(1) %a, ptr addrspace(1) %b)
   ret void
 }
 
 ; Two gc.relocates of a bitcasted pointer should only require a single spill/fill
-define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define void @test_gcptr_uniqueing(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_gcptr_uniqueing
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
 ; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
@@ -196,16 +196,15 @@ define void @test_gcptr_uniqueing(i32 addrspace(1)* %ptr) gc "statepoint-example
 ; CHECK-PREG:    $rsi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @use1, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit killed $rsi, implicit-def $rsp, implicit-def $ssp
 
-  %ptr2 = bitcast i32 addrspace(1)* %ptr to i8 addrspace(1)*
-  %tok = tail call token (i64, i32, void ()*, i32, i32, ...)
-      @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 addrspace(1)* %ptr, i32 undef), "gc-live" (i32 addrspace(1)* %ptr, i8 addrspace(1)* %ptr2)]
-  %a = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %tok, i32 0, i32 0)
-  %b = call i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tok, i32 1, i32 1)
-  call void @use1(i32 addrspace(1)* %a, i8 addrspace(1)* %b)
+  %tok = tail call token (i64, i32, ptr, i32, i32, ...)
+      @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["deopt" (ptr addrspace(1) %ptr, i32 undef), "gc-live" (ptr addrspace(1) %ptr, ptr addrspace(1) %ptr)]
+  %a = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 0, i32 0)
+  %b = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tok, i32 1, i32 1)
+  call void @use1(ptr addrspace(1) %a, ptr addrspace(1) %b)
   ret void
 }
 
-define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
+define i1 @test_cross_bb(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_cross_bb
 ; CHECK-VREG:  bb.0.entry:
 ; CHECK-VREG:         %1:gr32 = COPY $esi
@@ -232,13 +231,13 @@ define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint
 ; CHECK-VREG-NEXT:    RET 0, $al
 
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
   br i1 %external_cond, label %left, label %right
 
 left:
-  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %call1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-  call void @consume(i32 addrspace(1)* %call1)
+  call void @consume(ptr addrspace(1) %call1)
   ret i1 %call2
 
 right:
@@ -268,18 +267,18 @@ right:
 ; CHECK-VREG:  bb.2.right:
 ; CHECK-VREG:    $rax = COPY %0
 ; CHECK-VREG:    RET 0, $rax
-define i8 addrspace(1)* @test_local_non_local_reloc(i1 %c, i8 addrspace(1)* %p) gc "statepoint-example" {
+define ptr addrspace(1) @test_local_non_local_reloc(i1 %c, ptr addrspace(1) %p) gc "statepoint-example" {
 entry:
-  %statepoint = call token (i64, i32, i8 addrspace(1)* (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8i32f(i64 2, i32 5, i8 addrspace(1)* (i32)* nonnull elementtype(i8 addrspace(1)* (i32)) @dummy, i32 1, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %p) ]
-  %p.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint, i32 0, i32 0) ; (%p, %p)
+  %statepoint = call token (i64, i32, ptr addrspace(1) (i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2, i32 5, ptr addrspace(1) (i32)* nonnull elementtype(ptr addrspace(1) (i32)) @dummy, i32 1, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) %p) ]
+  %p.relocated = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %statepoint, i32 0, i32 0) ; (%p, %p)
   br i1 %c, label %right, label %left
 
 left:
-  %p.relocated.2 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %statepoint, i32 0, i32 0) ; (%p, %p)
-  ret i8 addrspace(1)* %p.relocated.2
+  %p.relocated.2 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %statepoint, i32 0, i32 0) ; (%p, %p)
+  ret ptr addrspace(1) %p.relocated.2
 
 right:
-  ret i8 addrspace(1)* %p.relocated
+  ret ptr addrspace(1) %p.relocated
 }
 
 ; No need to check post-regalloc output as it is the same
@@ -293,21 +292,21 @@ define i1 @duplicate_reloc() gc "statepoint-example" {
 ; CHECK-VREG:    RET 0, $al
 
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* null, i32 addrspace(1)* null)]
-  %base = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
-  %derived = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 1)
-  %safepoint_token2 = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %base, i32 addrspace(1)* %derived)]
-  %base_reloc = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2,  i32 0, i32 0)
-  %derived_reloc = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token2,  i32 0, i32 1)
-  %cmp1 = icmp eq i32 addrspace(1)* %base_reloc, null
-  %cmp2 = icmp eq i32 addrspace(1)* %derived_reloc, null
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) null, ptr addrspace(1) null)]
+  %base = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  %derived = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 1)
+  %safepoint_token2 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %base, ptr addrspace(1) %derived)]
+  %base_reloc = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2,  i32 0, i32 0)
+  %derived_reloc = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token2,  i32 0, i32 1)
+  %cmp1 = icmp eq ptr addrspace(1) %base_reloc, null
+  %cmp2 = icmp eq ptr addrspace(1) %derived_reloc, null
   %cmp = and i1 %cmp1, %cmp2
   ret i1 %cmp
 }
 
 ; Vectors cannot go in VRegs
 ; No need to check post-regalloc output as it is lowered using old scheme
-define <2 x i8 addrspace(1)*> @test_vector(<2 x i8 addrspace(1)*> %obj) gc "statepoint-example" {
+define <2 x ptr addrspace(1)> @test_vector(<2 x ptr addrspace(1)> %obj) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_vector
 ; CHECK-VREG:    %0:vr128 = COPY $xmm0
 ; CHECK-VREG:    MOVAPSmr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store (s128) into %stack.0)
@@ -317,14 +316,14 @@ define <2 x i8 addrspace(1)*> @test_vector(<2 x i8 addrspace(1)*> %obj) gc "stat
 ; CHECK-VREG:    RET 0, $xmm0
 
 entry:
-  %safepoint_token = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<2 x i8 addrspace(1)*> %obj)]
-  %obj.relocated = call coldcc <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
-  ret <2 x i8 addrspace(1)*> %obj.relocated
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (<2 x ptr addrspace(1)> %obj)]
+  %obj.relocated = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token %safepoint_token, i32 0, i32 0) ; (%obj, %obj)
+  ret <2 x ptr addrspace(1)> %obj.relocated
 }
 
 
 ; test limit on amount of vregs
-define void @test_limit(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %d, i32 addrspace(1)*  %e) gc "statepoint-example" {
+define void @test_limit(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1)  %e) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: name:            test_limit
 ; CHECK-VREG:    %4:gr64 = COPY $r8
 ; CHECK-VREG:    %3:gr64 = COPY $rcx
@@ -342,18 +341,18 @@ define void @test_limit(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspac
 ; CHECK-VREG:    CALL64pcrel32 @consume5, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit $r8, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    RET 0
 entry:
-  %safepoint_token = tail call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %c, i32 addrspace(1)* %d, i32 addrspace(1)* %e)]
-  %rel1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
-  %rel2 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 1, i32 1)
-  %rel3 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 2, i32 2)
-  %rel4 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 3, i32 3)
-  %rel5 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 4, i32 4)
-  call void @consume5(i32 addrspace(1)* %rel1, i32 addrspace(1)* %rel2, i32 addrspace(1)* %rel3, i32 addrspace(1)* %rel4, i32 addrspace(1)* %rel5)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e)]
+  %rel1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
+  %rel2 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 1, i32 1)
+  %rel3 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 2, i32 2)
+  %rel4 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 3, i32 3)
+  %rel5 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 4, i32 4)
+  call void @consume5(ptr addrspace(1) %rel1, ptr addrspace(1) %rel2, ptr addrspace(1) %rel3, ptr addrspace(1) %rel4, ptr addrspace(1) %rel5)
   ret void
 }
 
 ; Test that CopyFromReg emitted during ISEL processing of gc.relocate are properly ordered w.r.t. statepoint.
-define i8 addrspace(1)* @test_isel_sched(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i32 %2) gc "statepoint-example" {
+define ptr addrspace(1) @test_isel_sched(ptr addrspace(1) %0, ptr addrspace(1) %1, i32 %2) gc "statepoint-example" {
 ;CHECK-VREG-LABEL: name:            test_isel_sched
 ;CHECK-VREG:  bb.0.entry:
 ;CHECK-VREG:        %2:gr32 = COPY $edx
@@ -372,16 +371,16 @@ define i8 addrspace(1)* @test_isel_sched(i8 addrspace(1)* %0, i8 addrspace(1)* %
 ;CHECK-VREG:        RET 0, $rax
 entry:
   %cmp = icmp eq i32 %2, 0
-  %ptr = select i1 %cmp, i8 addrspace(1)* %0, i8 addrspace(1)* %1
-  %token = call token (i64, i32, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 10, i32 0, void (i8 addrspace(1)*, i8 addrspace(1)*)* elementtype(void (i8 addrspace(1)*, i8 addrspace(1)*)) @bar, i32 2, i32 0, i8 addrspace(1)* null, i8 addrspace(1)* %ptr, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* %0, i8 addrspace(1)* %1) ]
-  %rel0 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 0, i32 0)
-  %rel1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %token, i32 1, i32 1)
-  %res = select i1 %cmp, i8 addrspace(1)* %rel0, i8 addrspace(1)* %rel1
-  ret i8 addrspace(1)* %res
+  %ptr = select i1 %cmp, ptr addrspace(1) %0, ptr addrspace(1) %1
+  %token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 10, i32 0, ptr elementtype(void (ptr addrspace(1), ptr addrspace(1))) @bar, i32 2, i32 0, ptr addrspace(1) null, ptr addrspace(1) %ptr, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) %0, ptr addrspace(1) %1) ]
+  %rel0 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 0, i32 0)
+  %rel1 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %token, i32 1, i32 1)
+  %res = select i1 %cmp, ptr addrspace(1) %rel0, ptr addrspace(1) %rel1
+  ret ptr addrspace(1) %res
 }
 
 ; Check that ISEL of gc.relocate used in other BB does not generate extra COPY instruction.
-define i1 @test_cross_bb_reloc(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint-example" {
+define i1 @test_cross_bb_reloc(ptr addrspace(1) %a, i1 %external_cond) gc "statepoint-example" {
 ; CHECK-VREG-LABEL: test_cross_bb_reloc
 ; CHECK-VREG:    bb.0.entry:
 ; CHECK-VREG:      [[VREG:%[^ ]+]]:gr64 = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
@@ -393,25 +392,21 @@ define i1 @test_cross_bb_reloc(i32 addrspace(1)* %a, i1 %external_cond) gc "stat
 ; CHECK-VREG:      RET 0, $al
 
 entry:
-  %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (i32 addrspace(1)* %a)]
-  %call1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token,  i32 0, i32 0)
+  %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
+  %call1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   br i1 %external_cond, label %left, label %right
 
 left:
-  call void @consume(i32 addrspace(1)* %call1)
+  call void @consume(ptr addrspace(1) %call1)
   ret i1 %call2
 
 right:
   ret i1 true
 }
 
-declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
-declare dso_local i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
-declare dso_local i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
-declare <2 x i8 addrspace(1)*> @llvm.experimental.gc.relocate.v2p1i8(token, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
+declare dso_local ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)
+declare <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token, i32, i32)
 declare dso_local i1 @llvm.experimental.gc.result.i1(token)
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8p1i8f(i64 immarg, i32 immarg, void (i8 addrspace(1)*, i8 addrspace(1)*)*, i32 immarg, i32 immarg, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_p1i8i32f(i64, i32, i8 addrspace(1)* (i32)*, i32, i32, ...)
 

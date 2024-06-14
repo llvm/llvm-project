@@ -1,17 +1,17 @@
 ; RUN: llc -O2 -mtriple=i686-- < %s | FileCheck %s
 
-define i32* @fooOptnone(i32* %p, i32* %q, i32** %z) #0 {
+define ptr @fooOptnone(ptr %p, ptr %q, ptr %z) #0 {
 entry:
-  %r = load i32, i32* %p
-  %s = load i32, i32* %q
-  %y = load i32*, i32** %z
+  %r = load i32, ptr %p
+  %s = load i32, ptr %q
+  %y = load ptr, ptr %z
 
   %t0 = add i32 %r, %s
   %t1 = add i32 %t0, 1
-  %t2 = getelementptr i32, i32* %y, i32 1
-  %t3 = getelementptr i32, i32* %t2, i32 %t1
+  %t2 = getelementptr i32, ptr %y, i32 1
+  %t3 = getelementptr i32, ptr %t2, i32 %t1
 
-  ret i32* %t3
+  ret ptr %t3
 
 ; 'optnone' should use fast-isel which will not produce 'lea'.
 ; CHECK-LABEL: fooOptnone:
@@ -19,18 +19,18 @@ entry:
 ; CHECK:       ret
 }
 
-define i32* @fooNormal(i32* %p, i32* %q, i32** %z) #1 {
+define ptr @fooNormal(ptr %p, ptr %q, ptr %z) #1 {
 entry:
-  %r = load i32, i32* %p
-  %s = load i32, i32* %q
-  %y = load i32*, i32** %z
+  %r = load i32, ptr %p
+  %s = load i32, ptr %q
+  %y = load ptr, ptr %z
 
   %t0 = add i32 %r, %s
   %t1 = add i32 %t0, 1
-  %t2 = getelementptr i32, i32* %y, i32 1
-  %t3 = getelementptr i32, i32* %t2, i32 %t1
+  %t2 = getelementptr i32, ptr %y, i32 1
+  %t3 = getelementptr i32, ptr %t2, i32 %t1
 
-  ret i32* %t3
+  ret ptr %t3
 
 ; Normal ISel will produce 'lea'.
 ; CHECK-LABEL: fooNormal:

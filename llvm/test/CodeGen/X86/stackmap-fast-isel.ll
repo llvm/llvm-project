@@ -168,10 +168,10 @@ define void @liveConstant() {
 define void @directFrameIdx() {
 entry:
   %metadata1 = alloca i64, i32 3, align 8
-  store i64 11, i64* %metadata1
-  store i64 12, i64* %metadata1
-  store i64 13, i64* %metadata1
-  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 16, i32 0, i64* %metadata1)
+  store i64 11, ptr %metadata1
+  store i64 12, ptr %metadata1
+  store i64 13, ptr %metadata1
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 16, i32 0, ptr %metadata1)
   ret void
 }
 

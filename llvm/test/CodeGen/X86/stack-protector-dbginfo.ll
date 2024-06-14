@@ -21,12 +21,11 @@ entry:
 define i32 @IgnoreIntrinsicTest() #1 {
 ; IGNORE_INTRIN: IgnoreIntrinsicTest:
   %1 = alloca i32, align 4
-  %2 = bitcast i32* %1 to i8*
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !73, metadata !DIExpression()), !dbg !74
-  store volatile i32 1, i32* %1, align 4
-  %3 = load volatile i32, i32* %1, align 4
-  %4 = mul nsw i32 %3, 42
-  ret i32 %4
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !73, metadata !DIExpression()), !dbg !74
+  store volatile i32 1, ptr %1, align 4
+  %2 = load volatile i32, ptr %1, align 4
+  %3 = mul nsw i32 %2, 42
+  ret i32 %3
 ; IGNORE_INTRIN-NOT: callq __stack_chk_fail
 ; IGNORE_INTRIN:     .cfi_endproc
 }

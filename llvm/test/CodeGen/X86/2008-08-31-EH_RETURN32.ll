@@ -56,5 +56,5 @@ entry:
   unreachable
 }
 
-declare void @llvm.eh.return.i32(i32, i8*)
+declare void @llvm.eh.return.i32(i32, ptr)
 declare void @llvm.eh.unwind.init()

@@ -111,7 +111,7 @@ define <4 x float> @lshr_truncate_mask_ucvt_4i64_4f32(ptr%p0) {
 ; X64-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
-  %load = load <4 x i64>, <4 x i64>* %p0, align 2
+  %load = load <4 x i64>, ptr %p0, align 2
   %lshr = lshr <4 x i64> %load, <i64 16, i64 16, i64 16, i64 16>
   %and = and <4 x i64> %lshr, <i64 65535, i64 65535, i64 65535, i64 65535>
   %uitofp = uitofp <4 x i64> %and to <4 x float>

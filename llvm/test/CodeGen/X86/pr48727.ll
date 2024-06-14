@@ -17,31 +17,25 @@ define void @PR48727() {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load [100 x [100 x i16]]*, [100 x [100 x i16]]** undef, align 8
-  %wide.load.2 = load <4 x double>, <4 x double>* null, align 16
+  %0 = load ptr, ptr undef, align 8
+  %wide.load.2 = load <4 x double>, ptr null, align 16
   %1 = fptosi <4 x double> %wide.load.2 to <4 x i16>
-  %2 = getelementptr inbounds [100 x [100 x i16]], [100 x [100 x i16]]* %0, i64 0, i64 0, i64 8
-  %3 = bitcast i16* %2 to <4 x i16>*
-  store <4 x i16> %1, <4 x i16>* %3, align 8
-  %wide.load.3 = load <4 x double>, <4 x double>* undef, align 16, !invariant.load !0, !noalias !1
-  %4 = fptosi <4 x double> %wide.load.3 to <4 x i16>
-  %5 = getelementptr inbounds [100 x [100 x i16]], [100 x [100 x i16]]* %0, i64 0, i64 0, i64 12
-  %6 = bitcast i16* %5 to <4 x i16>*
-  store <4 x i16> %4, <4 x i16>* %6, align 8
-  %7 = getelementptr inbounds [100 x [100 x double]], [100 x [100 x double]]* null, i64 0, i64 0, i64 16
-  %8 = bitcast double* %7 to <4 x double>*
-  %wide.load.4 = load <4 x double>, <4 x double>* %8, align 16, !invariant.load !0, !noalias !1
-  %9 = fptosi <4 x double> %wide.load.4 to <4 x i16>
-  %10 = getelementptr inbounds [100 x [100 x i16]], [100 x [100 x i16]]* %0, i64 0, i64 0, i64 16
-  %11 = bitcast i16* %10 to <4 x i16>*
-  store <4 x i16> %9, <4 x i16>* %11, align 8
-  %12 = getelementptr inbounds [100 x [100 x double]], [100 x [100 x double]]* null, i64 0, i64 0, i64 20
-  %13 = bitcast double* %12 to <4 x double>*
-  %wide.load.5 = load <4 x double>, <4 x double>* %13, align 16, !invariant.load !0, !noalias !1
-  %14 = fptosi <4 x double> %wide.load.5 to <4 x i16>
-  %15 = getelementptr inbounds [100 x [100 x i16]], [100 x [100 x i16]]* %0, i64 0, i64 0, i64 20
-  %16 = bitcast i16* %15 to <4 x i16>*
-  store <4 x i16> %14, <4 x i16>* %16, align 8
+  %2 = getelementptr inbounds [100 x [100 x i16]], ptr %0, i64 0, i64 0, i64 8
+  store <4 x i16> %1, ptr %2, align 8
+  %wide.load.3 = load <4 x double>, ptr undef, align 16, !invariant.load !0, !noalias !1
+  %3 = fptosi <4 x double> %wide.load.3 to <4 x i16>
+  %4 = getelementptr inbounds [100 x [100 x i16]], ptr %0, i64 0, i64 0, i64 12
+  store <4 x i16> %3, ptr %4, align 8
+  %5 = getelementptr inbounds [100 x [100 x double]], ptr null, i64 0, i64 0, i64 16
+  %wide.load.4 = load <4 x double>, ptr %5, align 16, !invariant.load !0, !noalias !1
+  %6 = fptosi <4 x double> %wide.load.4 to <4 x i16>
+  %7 = getelementptr inbounds [100 x [100 x i16]], ptr %0, i64 0, i64 0, i64 16
+  store <4 x i16> %6, ptr %7, align 8
+  %8 = getelementptr inbounds [100 x [100 x double]], ptr null, i64 0, i64 0, i64 20
+  %wide.load.5 = load <4 x double>, ptr %8, align 16, !invariant.load !0, !noalias !1
+  %9 = fptosi <4 x double> %wide.load.5 to <4 x i16>
+  %10 = getelementptr inbounds [100 x [100 x i16]], ptr %0, i64 0, i64 0, i64 20
+  store <4 x i16> %9, ptr %10, align 8
   ret void
 }
 

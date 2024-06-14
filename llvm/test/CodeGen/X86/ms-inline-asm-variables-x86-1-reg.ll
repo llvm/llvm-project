@@ -80,8 +80,8 @@ define void @t1() #0 {
 ; X86PIC-NEXT:    .cfi_def_cfa %esp, 4
 ; X86PIC-NEXT:    retl
 entry:
-  call void asm sideeffect inteldialect "add eax, dword ptr $2[eax]\0A\09add dword ptr $0[eax], eax\0A\09add ebx, dword ptr $3[ebx + $$270]\0A\09add dword ptr $1[ebx + $$828], ebx", "=*m,=*m,*m,*m,~{eax},~{ebx},~{flags},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar)
-  store i32 3, i32* @gVar, align 4
+  call void asm sideeffect inteldialect "add eax, dword ptr $2[eax]\0A\09add dword ptr $0[eax], eax\0A\09add ebx, dword ptr $3[ebx + $$270]\0A\09add dword ptr $1[ebx + $$828], ebx", "=*m,=*m,*m,*m,~{eax},~{ebx},~{flags},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar)
+  store i32 3, ptr @gVar, align 4
   ret void
 }
 
@@ -140,8 +140,8 @@ define void @t2() #0 {
 ; X86PIC-NEXT:    retl
 entry:
   %lVar = alloca i32, align 4
-  call void asm sideeffect inteldialect "mov eax, dword ptr $3[eax]\0A\09mov dword ptr $0[eax], eax\0A\09mov ebx, dword ptr $4[ebx + $$270]\0A\09mov dword ptr $1[ebx + $$828], ebx\0A\09mov $2[ebx + $$47], eax", "=*m,=*m,=*m,*m,*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %lVar, i32* elementtype(i32) %lVar, i32* elementtype(i32) %lVar, i32* elementtype(i32) %lVar, i32* elementtype(i32) %lVar)
-  store i32 2, i32* %lVar, align 4
+  call void asm sideeffect inteldialect "mov eax, dword ptr $3[eax]\0A\09mov dword ptr $0[eax], eax\0A\09mov ebx, dword ptr $4[ebx + $$270]\0A\09mov dword ptr $1[ebx + $$828], ebx\0A\09mov $2[ebx + $$47], eax", "=*m,=*m,=*m,*m,*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %lVar, ptr elementtype(i32) %lVar, ptr elementtype(i32) %lVar, ptr elementtype(i32) %lVar, ptr elementtype(i32) %lVar)
+  store i32 2, ptr %lVar, align 4
   ret void
 }
 

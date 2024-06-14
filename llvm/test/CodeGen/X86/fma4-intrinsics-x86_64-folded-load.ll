@@ -3,24 +3,24 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -mattr=+avx,-fma -show-mc-encoding | FileCheck %s
 
 ; VFMADD
-define < 4 x float > @test_x86_fma4_vfmadd_ss_load(< 4 x float > %a0, < 4 x float > %a1, float* %a2) {
+define < 4 x float > @test_x86_fma4_vfmadd_ss_load(< 4 x float > %a0, < 4 x float > %a1, ptr %a2) {
 ; CHECK-LABEL: test_x86_fma4_vfmadd_ss_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddss (%rdi), %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x6a,0x07,0x10]
 ; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) + mem
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load float , float *%a2
+  %x = load float , ptr%a2
   %y = insertelement <4 x float> undef, float %x, i32 0
   %res = call < 4 x float > @llvm.x86.fma4.vfmadd.ss(< 4 x float > %a0, < 4 x float > %a1, < 4 x float > %y)
   ret < 4 x float > %res
 }
-define < 4 x float > @test_x86_fma4_vfmadd_ss_load2(< 4 x float > %a0, float* %a1, < 4 x float > %a2) {
+define < 4 x float > @test_x86_fma4_vfmadd_ss_load2(< 4 x float > %a0, ptr %a1, < 4 x float > %a2) {
 ; CHECK-LABEL: test_x86_fma4_vfmadd_ss_load2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddss %xmm1, (%rdi), %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x6a,0x07,0x10]
 ; CHECK-NEXT:    # xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load float , float *%a1
+  %x = load float , ptr%a1
   %y = insertelement <4 x float> undef, float %x, i32 0
   %res = call < 4 x float > @llvm.x86.fma4.vfmadd.ss(< 4 x float > %a0, < 4 x float > %y, < 4 x float > %a2)
   ret < 4 x float > %res
@@ -28,97 +28,97 @@ define < 4 x float > @test_x86_fma4_vfmadd_ss_load2(< 4 x float > %a0, float* %a
 
 declare < 4 x float > @llvm.x86.fma4.vfmadd.ss(< 4 x float >, < 4 x float >, < 4 x float >) nounwind readnone
 
-define < 2 x double > @test_x86_fma4_vfmadd_sd_load(< 2 x double > %a0, < 2 x double > %a1, double* %a2) {
+define < 2 x double > @test_x86_fma4_vfmadd_sd_load(< 2 x double > %a0, < 2 x double > %a1, ptr %a2) {
 ; CHECK-LABEL: test_x86_fma4_vfmadd_sd_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddsd (%rdi), %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x6b,0x07,0x10]
 ; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) + mem
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load double , double *%a2
+  %x = load double , ptr%a2
   %y = insertelement <2 x double> undef, double %x, i32 0
   %res = call < 2 x double > @llvm.x86.fma4.vfmadd.sd(< 2 x double > %a0, < 2 x double > %a1, < 2 x double > %y)
   ret < 2 x double > %res
 }
-define < 2 x double > @test_x86_fma4_vfmadd_sd_load2(< 2 x double > %a0, double* %a1, < 2 x double > %a2) {
+define < 2 x double > @test_x86_fma4_vfmadd_sd_load2(< 2 x double > %a0, ptr %a1, < 2 x double > %a2) {
 ; CHECK-LABEL: test_x86_fma4_vfmadd_sd_load2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddsd %xmm1, (%rdi), %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x6b,0x07,0x10]
 ; CHECK-NEXT:    # xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load double , double *%a1
+  %x = load double , ptr%a1
   %y = insertelement <2 x double> undef, double %x, i32 0
   %res = call < 2 x double > @llvm.x86.fma4.vfmadd.sd(< 2 x double > %a0, < 2 x double > %y, < 2 x double > %a2)
   ret < 2 x double > %res
 }
 declare < 2 x double > @llvm.x86.fma4.vfmadd.sd(< 2 x double >, < 2 x double >, < 2 x double >) nounwind readnone
-define < 4 x float > @test_x86_fma_vfmadd_ps_load(< 4 x float > %a0, < 4 x float > %a1, < 4 x float >* %a2) {
+define < 4 x float > @test_x86_fma_vfmadd_ps_load(< 4 x float > %a0, < 4 x float > %a1, ptr %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddps (%rdi), %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x68,0x07,0x10]
 ; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) + mem
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load <4 x float>, <4 x float>* %a2
+  %x = load <4 x float>, ptr %a2
   %res = call < 4 x float > @llvm.x86.fma.vfmadd.ps(< 4 x float > %a0, < 4 x float > %a1, < 4 x float > %x)
   ret < 4 x float > %res
 }
-define < 4 x float > @test_x86_fma_vfmadd_ps_load2(< 4 x float > %a0, < 4 x float >* %a1, < 4 x float > %a2) {
+define < 4 x float > @test_x86_fma_vfmadd_ps_load2(< 4 x float > %a0, ptr %a1, < 4 x float > %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps_load2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddps %xmm1, (%rdi), %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x68,0x07,0x10]
 ; CHECK-NEXT:    # xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load <4 x float>, <4 x float>* %a1
+  %x = load <4 x float>, ptr %a1
   %res = call < 4 x float > @llvm.x86.fma.vfmadd.ps(< 4 x float > %a0, < 4 x float > %x, < 4 x float > %a2)
   ret < 4 x float > %res
 }
 declare < 4 x float > @llvm.x86.fma.vfmadd.ps(< 4 x float >, < 4 x float >, < 4 x float >) nounwind readnone
 
 ; To test execution dependency
-define < 4 x float > @test_x86_fma_vfmadd_ps_load3(< 4 x float >* %a0, < 4 x float >* %a1, < 4 x float > %a2) {
+define < 4 x float > @test_x86_fma_vfmadd_ps_load3(ptr %a0, ptr %a1, < 4 x float > %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_ps_load3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %xmm1 # encoding: [0xc5,0xf8,0x28,0x0f]
 ; CHECK-NEXT:    vfmaddps %xmm0, (%rsi), %xmm1, %xmm0 # encoding: [0xc4,0xe3,0x71,0x68,0x06,0x00]
 ; CHECK-NEXT:    # xmm0 = (xmm1 * mem) + xmm0
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load <4 x float>, <4 x float>* %a0
-  %y = load <4 x float>, <4 x float>* %a1
+  %x = load <4 x float>, ptr %a0
+  %y = load <4 x float>, ptr %a1
   %res = call < 4 x float > @llvm.x86.fma.vfmadd.ps(< 4 x float > %x, < 4 x float > %y, < 4 x float > %a2)
   ret < 4 x float > %res
 }
 
-define < 2 x double > @test_x86_fma_vfmadd_pd_load(< 2 x double > %a0, < 2 x double > %a1, < 2 x double >* %a2) {
+define < 2 x double > @test_x86_fma_vfmadd_pd_load(< 2 x double > %a0, < 2 x double > %a1, ptr %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_pd_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddpd (%rdi), %xmm1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0xf9,0x69,0x07,0x10]
 ; CHECK-NEXT:    # xmm0 = (xmm0 * xmm1) + mem
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load <2 x double>, <2 x double>* %a2
+  %x = load <2 x double>, ptr %a2
   %res = call < 2 x double > @llvm.x86.fma.vfmadd.pd(< 2 x double > %a0, < 2 x double > %a1, < 2 x double > %x)
   ret < 2 x double > %res
 }
-define < 2 x double > @test_x86_fma_vfmadd_pd_load2(< 2 x double > %a0, < 2 x double >* %a1, < 2 x double > %a2) {
+define < 2 x double > @test_x86_fma_vfmadd_pd_load2(< 2 x double > %a0, ptr %a1, < 2 x double > %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_pd_load2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vfmaddpd %xmm1, (%rdi), %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x69,0x07,0x10]
 ; CHECK-NEXT:    # xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load <2 x double>, <2 x double>* %a1
+  %x = load <2 x double>, ptr %a1
   %res = call < 2 x double > @llvm.x86.fma.vfmadd.pd(< 2 x double > %a0, < 2 x double > %x, < 2 x double > %a2)
   ret < 2 x double > %res
 }
 declare < 2 x double > @llvm.x86.fma.vfmadd.pd(< 2 x double >, < 2 x double >, < 2 x double >) nounwind readnone
 
 ; To test execution dependency
-define < 2 x double > @test_x86_fma_vfmadd_pd_load3(< 2 x double >* %a0, < 2 x double >* %a1, < 2 x double > %a2) {
+define < 2 x double > @test_x86_fma_vfmadd_pd_load3(ptr %a0, ptr %a1, < 2 x double > %a2) {
 ; CHECK-LABEL: test_x86_fma_vfmadd_pd_load3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovapd (%rdi), %xmm1 # encoding: [0xc5,0xf9,0x28,0x0f]
 ; CHECK-NEXT:    vfmaddpd %xmm0, (%rsi), %xmm1, %xmm0 # encoding: [0xc4,0xe3,0x71,0x69,0x06,0x00]
 ; CHECK-NEXT:    # xmm0 = (xmm1 * mem) + xmm0
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %x = load <2 x double>, <2 x double>* %a0
-  %y = load <2 x double>, <2 x double>* %a1
+  %x = load <2 x double>, ptr %a0
+  %y = load <2 x double>, ptr %a1
   %res = call < 2 x double > @llvm.x86.fma.vfmadd.pd(< 2 x double > %x, < 2 x double > %y, < 2 x double > %a2)
   ret < 2 x double > %res
 }

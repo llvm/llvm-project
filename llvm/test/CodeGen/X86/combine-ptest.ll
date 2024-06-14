@@ -247,8 +247,8 @@ define zeroext i1 @PR38522(ptr %x, ptr %y) {
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 start:
-  %0 = load <16 x i8>, <16 x i8>* %x, align 16
-  %1 = load <16 x i8>, <16 x i8>* %y, align 16
+  %0 = load <16 x i8>, ptr %x, align 16
+  %1 = load <16 x i8>, ptr %y, align 16
   %2 = icmp sle <16 x i8> %0, %1
   %3 = sext <16 x i1> %2 to <16 x i8>
   %4 = bitcast <16 x i8> %3 to <2 x i64>

@@ -4,11 +4,11 @@
 ; CHECK-LABEL: @foo
 ; CHECK: __stack_chk_guard
 ; CHECK: retq
-define hidden void @foo(i8** %ptr) #0 {
+define hidden void @foo(ptr %ptr) #0 {
 entry:
-  %args.addr = alloca i8*, align 8
-  %0 = va_arg i8** %args.addr, i8*
-  store i8* %0, i8** %ptr
+  %args.addr = alloca ptr, align 8
+  %0 = va_arg ptr %args.addr, ptr
+  store ptr %0, ptr %ptr
   ret void
 }
 

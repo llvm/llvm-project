@@ -18,25 +18,25 @@ define dso_local void @k(i32 %l) {
 ; CHECK-NEXT:    shrl $24, %eax
 ; CHECK-NEXT:    movb %al, f+3(%rip)
 ; CHECK-NEXT:    retq
-  %load = load i32, i32* @c, align 4
-  %load6 = load i32, i32* @f, align 4
+  %load = load i32, ptr @c, align 4
+  %load6 = load i32, ptr @f, align 4
   %clear7 = and i32 %load6, 16777215
-  store i32 %clear7, i32* @c, align 4
+  store i32 %clear7, ptr @c, align 4
   %neg = and i32 %load6, 2097151
   %value = xor i32 %neg, 2097151
-  store i32 %load, i32* @c, align 4
-  %t0 = load i32, i32* @e, align 4
+  store i32 %load, ptr @c, align 4
+  %t0 = load i32, ptr @e, align 4
   %value15 = xor i32 %t0, %value
   %clear16 = and i32 %load6, -16777216
   %set17 = or i32 %value15, %clear16
-  store i32 %set17, i32* @f, align 4
+  store i32 %set17, ptr @f, align 4
   %clear25 = and i32 %set17, -16777216
   %set26 = or i32 %clear25, %clear7
-  store i32 %set26, i32* @f, align 4
+  store i32 %set26, ptr @f, align 4
   ret void
 }
 
-declare i32 @printf(i8* nocapture readonly, ...)
+declare i32 @printf(ptr nocapture readonly, ...)
 
 define dso_local i32 @main() {
 ; CHECK-LABEL: main:
@@ -54,7 +54,7 @@ define dso_local i32 @main() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   tail call void @k(i32 1)
-  %load = load i32, i32* @f, align 4
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i64 0, i64 0), i32 %load)
+  %load = load i32, ptr @f, align 4
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str.1, i32 %load)
   ret i32 0
 }

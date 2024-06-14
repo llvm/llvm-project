@@ -39,3 +39,4 @@ if.end:                                           ; preds = %if.then, %if.else, 
 ; CHECK-LABEL: foo:
 ; CHECK: movss 12([[THIS:%[a-zA-Z0-9]+]]), [[REGISTER:%[a-zA-Z0-9]+]]
 ; CHECK-NEXT: movss [[REGISTER]], 60([[THIS]])
+

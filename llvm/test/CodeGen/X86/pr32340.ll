@@ -49,19 +49,19 @@ define void @foo() {
 ; X64-NEXT:    movw %ax, var_827
 ; X64-NEXT:    retq
 entry:
-  store i16 0, i16* @var_825, align 2
-  %v0 = load i16, i16* @var_32, align 2
+  store i16 0, ptr @var_825, align 2
+  %v0 = load i16, ptr @var_32, align 2
   %conv = zext i16 %v0 to i32
-  %v2 = load i16, i16* @var_901, align 2
+  %v2 = load i16, ptr @var_901, align 2
   %conv2 = zext i16 %v2 to i32
   %xor = xor i32 %conv, %conv2
   %xor3 = xor i32 %conv, %xor
   %add = add nsw i32 %xor3, %conv
   %conv5 = sext i32 %add to i64
-  store i64 %conv5, i64* @var_826, align 8
-  %v4 = load i16, i16* @var_32, align 2
+  store i64 %conv5, ptr @var_826, align 8
+  %v4 = load i16, ptr @var_32, align 2
   %conv6 = zext i16 %v4 to i64
-  %v6 = load i16, i16* @var_901, align 2
+  %v6 = load i16, ptr @var_901, align 2
   %conv8 = zext i16 %v6 to i32
   %xor9 = xor i32 51981, %conv8
   %conv10 = sext i32 %xor9 to i64
@@ -69,15 +69,15 @@ entry:
   %xor12 = xor i64 %conv6, %xor11
   %neg = xor i64 %xor12, -1
   %xor13 = xor i64 %conv6, %neg
-  %v9 = load i16, i16* @var_901, align 2
-  %v10 = load i64, i64* @var_57, align 8
+  %v9 = load i16, ptr @var_901, align 2
+  %v10 = load i64, ptr @var_57, align 8
   %or = or i64 %xor13, %v10
   %or23 = or i64 %xor13, %or
   %conv24 = trunc i64 %or23 to i16
-  store i16 %conv24, i16* @var_900, align 2
-  %v11 = load i64, i64* @var_28, align 8
+  store i16 %conv24, ptr @var_900, align 2
+  %v11 = load i64, ptr @var_28, align 8
   %cmp = icmp ne i64 0, %v11
   %conv25 = zext i1 %cmp to i16
-  store i16 %conv25, i16* @var_827, align 2
+  store i16 %conv25, ptr @var_827, align 2
   ret void
 }

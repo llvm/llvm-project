@@ -24,8 +24,8 @@ define void @test1() {
 ; X64-NEXT:    movq $0, M1(%rip)
 ; X64-NEXT:    movq $0, M2(%rip)
 ; X64-NEXT:    retq
-  store <1 x i64> zeroinitializer, <1 x i64>* @M1
-  store <2 x i32> zeroinitializer, <2 x i32>* @M2
+  store <1 x i64> zeroinitializer, ptr @M1
+  store <2 x i32> zeroinitializer, ptr @M2
   ret void
 }
 
@@ -43,8 +43,8 @@ define void @test2() {
 ; X64-NEXT:    movq $-1, M1(%rip)
 ; X64-NEXT:    movq $-1, M2(%rip)
 ; X64-NEXT:    retq
-  store <1 x i64> < i64 -1 >, <1 x i64>* @M1
-  store <2 x i32> < i32 -1, i32 -1 >, <2 x i32>* @M2
+  store <1 x i64> < i64 -1 >, ptr @M1
+  store <2 x i32> < i32 -1, i32 -1 >, ptr @M2
   ret void
 }
 
@@ -62,8 +62,8 @@ define void @test3() {
 ; X64-NEXT:    movaps %xmm0, S1(%rip)
 ; X64-NEXT:    movaps %xmm0, S2(%rip)
 ; X64-NEXT:    retq
-  store <2 x i64> zeroinitializer, <2 x i64>* @S1
-  store <4 x i32> zeroinitializer, <4 x i32>* @S2
+  store <2 x i64> zeroinitializer, ptr @S1
+  store <4 x i32> zeroinitializer, ptr @S2
   ret void
 }
 
@@ -81,7 +81,7 @@ define void @test4() {
 ; X64-NEXT:    movdqa %xmm0, S1(%rip)
 ; X64-NEXT:    movdqa %xmm0, S2(%rip)
 ; X64-NEXT:    retq
-  store <2 x i64> < i64 -1, i64 -1>, <2 x i64>* @S1
-  store <4 x i32> < i32 -1, i32 -1, i32 -1, i32 -1 >, <4 x i32>* @S2
+  store <2 x i64> < i64 -1, i64 -1>, ptr @S1
+  store <4 x i32> < i32 -1, i32 -1, i32 -1, i32 -1 >, ptr @S2
   ret void
 }

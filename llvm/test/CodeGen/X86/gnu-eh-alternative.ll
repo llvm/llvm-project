@@ -5,43 +5,42 @@
 ; RUN: llc -verify-machineinstrs -mtriple x86_64-pc-linux-gnu -use-leb128-directives=false -filetype=asm < %s | \
 ; RUN:   FileCheck --check-prefixes=ASM,NO128 %s
 
-@_ZTIi = external dso_local constant i8*
+@_ZTIi = external dso_local constant ptr
 
-define dso_local i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local i32 @main() personality ptr @__gxx_personality_v0 {
 entry:
   %retval = alloca i32, align 4
-  %exn.slot = alloca i8*, align 8
+  %exn.slot = alloca ptr, align 8
   %ehselector.slot = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %exception = call i8* @__cxa_allocate_exception(i64 4) #1
-  %0 = bitcast i8* %exception to i32*
-  store i32 1, i32* %0, align 16
-  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #2
+  store i32 0, ptr %retval, align 4
+  %exception = call ptr @__cxa_allocate_exception(i64 4) #1
+  store i32 1, ptr %exception, align 16
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
           to label %unreachable unwind label %lpad
 
 lpad:                                             ; preds = %entry
-  %1 = landingpad { i8*, i32 }
-          catch i8* null
-  %2 = extractvalue { i8*, i32 } %1, 0
-  store i8* %2, i8** %exn.slot, align 8
-  %3 = extractvalue { i8*, i32 } %1, 1
-  store i32 %3, i32* %ehselector.slot, align 4
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  store ptr %1, ptr %exn.slot, align 8
+  %2 = extractvalue { ptr, i32 } %0, 1
+  store i32 %2, ptr %ehselector.slot, align 4
   br label %catch
 
 catch:                                            ; preds = %lpad
-  %exn = load i8*, i8** %exn.slot, align 8
-  %4 = call i8* @__cxa_begin_catch(i8* %exn) #1
-  store i32 2, i32* %retval, align 4
+  %exn = load ptr, ptr %exn.slot, align 8
+  %3 = call ptr @__cxa_begin_catch(ptr %exn) #1
+  store i32 2, ptr %retval, align 4
   call void @__cxa_end_catch()
   br label %return
 
 try.cont:                                         ; No predecessors!
-  store i32 1, i32* %retval, align 4
+  store i32 1, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %try.cont, %catch
-  %5 = load i32, i32* %retval, align 4
-  ret i32 %5
+  %4 = load i32, ptr %retval, align 4
+  ret i32 %4
 
 unreachable:                                      ; preds = %entry
   unreachable
@@ -96,8 +95,8 @@ unreachable:                                      ; preds = %entry
 ; ASM:     .Lttbase0:
 ; ASM:     	.p2align	2
 
-declare dso_local i8* @__cxa_allocate_exception(i64)
-declare dso_local void @__cxa_throw(i8*, i8*, i8*)
+declare dso_local ptr @__cxa_allocate_exception(i64)
+declare dso_local void @__cxa_throw(ptr, ptr, ptr)
 declare dso_local i32 @__gxx_personality_v0(...)
-declare dso_local i8* @__cxa_begin_catch(i8*)
+declare dso_local ptr @__cxa_begin_catch(ptr)
 declare dso_local void @__cxa_end_catch()

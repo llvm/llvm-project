@@ -4,7 +4,7 @@
 
 ; Used movq to load i64 into a v2i64 when the top i64 is 0.
 
-define <2 x i64> @foo1(i64* %y) nounwind  {
+define <2 x i64> @foo1(ptr %y) nounwind  {
 ; X32-LABEL: foo1:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -16,14 +16,14 @@ define <2 x i64> @foo1(i64* %y) nounwind  {
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
 entry:
-  %tmp1 = load i64, i64* %y, align 8
+  %tmp1 = load i64, ptr %y, align 8
   %s2v = insertelement <2 x i64> undef, i64 %tmp1, i32 0
   %loadl = shufflevector <2 x i64> zeroinitializer, <2 x i64> %s2v, <2 x i32> <i32 2, i32 1>
   ret <2 x i64> %loadl
 }
 
 
-define <4 x float> @foo2(i64* %p) nounwind {
+define <4 x float> @foo2(ptr %p) nounwind {
 ; X32-LABEL: foo2:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -35,7 +35,7 @@ define <4 x float> @foo2(i64* %p) nounwind {
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
 entry:
-  %load = load i64, i64* %p
+  %load = load i64, ptr %p
   %s2v = insertelement <2 x i64> undef, i64 %load, i32 0
   %loadl = shufflevector <2 x i64> zeroinitializer, <2 x i64> %s2v, <2 x i32> <i32 2, i32 1>
   %0 = bitcast <2 x i64> %loadl to <4 x float>

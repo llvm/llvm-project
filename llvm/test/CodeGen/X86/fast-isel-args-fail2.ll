@@ -3,7 +3,6 @@
 %struct.s0 = type { x86_fp80, x86_fp80 }
 
 ; FastISel cannot handle this case yet. Make sure that we abort.
-define i8* @args_fail(%struct.s0* byval(%struct.s0) nocapture readonly align 16 %y) {
-  %1 = bitcast %struct.s0* %y to i8*
-  ret i8* %1
+define ptr @args_fail(ptr byval(%struct.s0) nocapture readonly align 16 %y) {
+  ret ptr %y
 }

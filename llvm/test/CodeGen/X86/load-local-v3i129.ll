@@ -32,6 +32,6 @@ Entry:
   %y = alloca <3 x i129>, align 16
   %L = load <3 x i129>, ptr %y
   %I1 = insertelement <3 x i129> %L, i129 340282366920938463463374607431768211455, i32 1
-  store <3 x i129> %I1, <3 x i129>* %y
+  store <3 x i129> %I1, ptr %y
   ret void
 }

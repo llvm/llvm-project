@@ -414,7 +414,7 @@ define float @fdiv_f32(float %a, float %b) nounwind strictfp {
   ret float %ret
 }
 
-define void @fpext_f32_to_f64(float* %val, double* %ret) nounwind strictfp {
+define void @fpext_f32_to_f64(ptr %val, ptr %ret) nounwind strictfp {
 ; SSE-X86-LABEL: fpext_f32_to_f64:
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -455,14 +455,14 @@ define void @fpext_f32_to_f64(float* %val, double* %ret) nounwind strictfp {
 ; X87-NEXT:    fstpl (%eax)
 ; X87-NEXT:    wait
 ; X87-NEXT:    retl
-  %1 = load float, float* %val, align 4
+  %1 = load float, ptr %val, align 4
   %res = call double @llvm.experimental.constrained.fpext.f64.f32(float %1,
                                                                   metadata !"fpexcept.strict") #0
-  store double %res, double* %ret, align 8
+  store double %res, ptr %ret, align 8
   ret void
 }
 
-define void @fptrunc_double_to_f32(double* %val, float *%ret) nounwind strictfp {
+define void @fptrunc_double_to_f32(ptr %val, ptr%ret) nounwind strictfp {
 ; SSE-X86-LABEL: fptrunc_double_to_f32:
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -507,15 +507,15 @@ define void @fptrunc_double_to_f32(double* %val, float *%ret) nounwind strictfp 
 ; X87-NEXT:    wait
 ; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
-  %1 = load double, double* %val, align 8
+  %1 = load double, ptr %val, align 8
   %res = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %1,
                                                                    metadata !"round.dynamic",
                                                                    metadata !"fpexcept.strict") #0
-  store float %res, float* %ret, align 4
+  store float %res, ptr %ret, align 4
   ret void
 }
 
-define void @fsqrt_f64(double* %a) nounwind strictfp {
+define void @fsqrt_f64(ptr %a) nounwind strictfp {
 ; SSE-X86-LABEL: fsqrt_f64:
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -554,15 +554,15 @@ define void @fsqrt_f64(double* %a) nounwind strictfp {
 ; X87-NEXT:    fstpl (%eax)
 ; X87-NEXT:    wait
 ; X87-NEXT:    retl
-  %1 = load double, double* %a, align 8
+  %1 = load double, ptr %a, align 8
   %res = call double @llvm.experimental.constrained.sqrt.f64(double %1,
                                                              metadata !"round.dynamic",
                                                              metadata !"fpexcept.strict") #0
-  store double %res, double* %a, align 8
+  store double %res, ptr %a, align 8
   ret void
 }
 
-define void @fsqrt_f32(float* %a) nounwind strictfp {
+define void @fsqrt_f32(ptr %a) nounwind strictfp {
 ; SSE-X86-LABEL: fsqrt_f32:
 ; SSE-X86:       # %bb.0:
 ; SSE-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -601,11 +601,11 @@ define void @fsqrt_f32(float* %a) nounwind strictfp {
 ; X87-NEXT:    fstps (%eax)
 ; X87-NEXT:    wait
 ; X87-NEXT:    retl
-  %1 = load float, float* %a, align 4
+  %1 = load float, ptr %a, align 4
   %res = call float @llvm.experimental.constrained.sqrt.f32(float %1,
                                                             metadata !"round.dynamic",
                                                             metadata !"fpexcept.strict") #0
-  store float %res, float* %a, align 4
+  store float %res, ptr %a, align 4
   ret void
 }
 

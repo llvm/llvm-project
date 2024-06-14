@@ -3,7 +3,7 @@
 
 declare dso_local void @bar()
 
-define void @foo(i64*) {
+define void @foo(ptr) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %start
 ; CHECK-NEXT:    movl (%rdi), %eax
@@ -13,7 +13,7 @@ define void @foo(i64*) {
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    retq
 start:
-  %1 = load i64, i64* %0, align 8, !range !0
+  %1 = load i64, ptr %0, align 8, !range !0
   %2 = and i64 %1, 6
   %3 = icmp eq i64 %2, 4
   br i1 %3, label %bb1, label %bb2.i

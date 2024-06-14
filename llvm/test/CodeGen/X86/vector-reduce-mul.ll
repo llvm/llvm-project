@@ -2240,7 +2240,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; Legalization
 ;
 
-define i8 @illegal_v4i8(i8 %a0, <4 x i8>* %a1) {
+define i8 @illegal_v4i8(i8 %a0, ptr %a1) {
 ; SSE2-LABEL: illegal_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl %edi, %eax
@@ -2284,13 +2284,13 @@ define i8 @illegal_v4i8(i8 %a0, <4 x i8>* %a1) {
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-NEXT:    mulb %cl
 ; AVX-NEXT:    retq
-  %ld = load <4 x i8>, <4 x i8>* %a1, align 4
+  %ld = load <4 x i8>, ptr %a1, align 4
   %rdx = call i8 @llvm.vector.reduce.mul.v4i8(<4 x i8> %ld)
   %mul = mul i8 %a0, %rdx
   ret i8 %mul
 }
 
-define i8 @illegal_v8i8(i8 %a0, <8 x i8>* %a1) {
+define i8 @illegal_v8i8(i8 %a0, ptr %a1) {
 ; SSE2-LABEL: illegal_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl %edi, %eax
@@ -2338,7 +2338,7 @@ define i8 @illegal_v8i8(i8 %a0, <8 x i8>* %a1) {
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX-NEXT:    mulb %cl
 ; AVX-NEXT:    retq
-  %ld = load <8 x i8>, <8 x i8>* %a1, align 4
+  %ld = load <8 x i8>, ptr %a1, align 4
   %rdx = call i8 @llvm.vector.reduce.mul.v8i8(<8 x i8> %ld)
   %mul = mul i8 %a0, %rdx
   ret i8 %mul

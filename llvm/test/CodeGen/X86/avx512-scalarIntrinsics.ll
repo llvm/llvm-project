@@ -12,12 +12,12 @@ define <4 x float> @test_rsqrt14_ss(<4 x float> %a0) {
     ret <4 x float> %res
 }
 
-define <4 x float> @test_rsqrt14_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
+define <4 x float> @test_rsqrt14_ss_load(<4 x float> %a0, ptr %a1ptr) {
 ; CHECK-LABEL: test_rsqrt14_ss_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrsqrt14ss (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a1 = load <4 x float>, <4 x float>* %a1ptr
+  %a1 = load <4 x float>, ptr %a1ptr
   %res = call <4 x float> @llvm.x86.avx512.rsqrt14.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 -1) ;
   ret <4 x float> %res
 }
@@ -32,12 +32,12 @@ define <4 x float> @test_rcp14_ss(<4 x float> %a0) {
     ret <4 x float> %res
 }
 
-define <4 x float> @test_rcp14_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
+define <4 x float> @test_rcp14_ss_load(<4 x float> %a0, ptr %a1ptr) {
 ; CHECK-LABEL: test_rcp14_ss_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrcp14ss (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a1 = load <4 x float>, <4 x float>* %a1ptr
+  %a1 = load <4 x float>, ptr %a1ptr
   %res = call <4 x float> @llvm.x86.avx512.rcp14.ss(<4 x float> %a0, <4 x float> %a1, <4 x float> zeroinitializer, i8 -1) ;
   ret <4 x float> %res
 }
@@ -52,12 +52,12 @@ define <2 x double> @test_rsqrt14_sd(<2 x double> %a0) {
     ret <2 x double> %res
 }
 
-define <2 x double> @test_rsqrt14_sd_load(<2 x double> %a0, <2 x double>* %a1ptr) {
+define <2 x double> @test_rsqrt14_sd_load(<2 x double> %a0, ptr %a1ptr) {
 ; CHECK-LABEL: test_rsqrt14_sd_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrsqrt14sd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a1 = load <2 x double>, <2 x double>* %a1ptr
+  %a1 = load <2 x double>, ptr %a1ptr
   %res = call <2 x double> @llvm.x86.avx512.rsqrt14.sd(<2 x double> %a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 -1) ;
   ret <2 x double> %res
 }
@@ -73,12 +73,12 @@ define <2 x double> @test_rcp14_sd(<2 x double> %a0) {
 
 }
 
-define <2 x double> @test_rcp14_sd_load(<2 x double> %a0, <2 x double>* %a1ptr) {
+define <2 x double> @test_rcp14_sd_load(<2 x double> %a0, ptr %a1ptr) {
 ; CHECK-LABEL: test_rcp14_sd_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vrcp14sd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %a1 = load <2 x double>, <2 x double>* %a1ptr
+  %a1 = load <2 x double>, ptr %a1ptr
   %res = call <2 x double> @llvm.x86.avx512.rcp14.sd(<2 x double> %a0, <2 x double> %a1, <2 x double> zeroinitializer, i8 -1) ;
   ret <2 x double> %res
 }
@@ -107,12 +107,12 @@ define <4 x float>@test_int_x86_avx512_mask_scalef_ss(<4 x float> %x0, <4 x floa
     ret <4 x float> %res2
 }
 
-define <4 x float>@test_int_x86_avx512_mask_scalef_ss_load(<4 x float> %x0, <4 x float>* %x1ptr) {
+define <4 x float>@test_int_x86_avx512_mask_scalef_ss_load(<4 x float> %x0, ptr %x1ptr) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_scalef_ss_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vscalefss (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %x1 = load <4 x float>, <4 x float>* %x1ptr
+  %x1 = load <4 x float>, ptr %x1ptr
   %res = call <4 x float> @llvm.x86.avx512.mask.scalef.ss(<4 x float> %x0, <4 x float> %x1, <4 x float> undef, i8 -1, i32 4)
   ret <4 x float> %res
 }
@@ -140,12 +140,12 @@ define <2 x double>@test_int_x86_avx512_mask_scalef_sd(<2 x double> %x0, <2 x do
     ret <2 x double> %res2
 }
 
-define <2 x double>@test_int_x86_avx512_mask_scalef_sd_load(<2 x double> %x0, <2 x double>* %x1ptr) {
+define <2 x double>@test_int_x86_avx512_mask_scalef_sd_load(<2 x double> %x0, ptr %x1ptr) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_scalef_sd_load:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vscalefsd (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %x1 = load <2 x double>, <2 x double>* %x1ptr
+  %x1 = load <2 x double>, ptr %x1ptr
   %res = call <2 x double> @llvm.x86.avx512.mask.scalef.sd(<2 x double> %x0, <2 x double> %x1, <2 x double> undef, i8 -1, i32 4)
   ret <2 x double> %res
 }

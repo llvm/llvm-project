@@ -4,7 +4,7 @@
 ; Test for case where insertps was folding the load of the insertion element, but a later optimization
 ; was then manipulating the load.
 
-define <4 x float> @insertps_unfold(<4 x float>* %v0, <4 x float>* %v1) {
+define <4 x float> @insertps_unfold(ptr %v0, ptr %v1) {
 ; X32-LABEL: insertps_unfold:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -22,11 +22,11 @@ define <4 x float> @insertps_unfold(<4 x float>* %v0, <4 x float>* %v1) {
 ; X64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X64-NEXT:    addps %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %a = getelementptr inbounds <4 x float>, <4 x float>* %v1, i64 0, i64 1
-  %b = load float, float* %a, align 4
+  %a = getelementptr inbounds <4 x float>, ptr %v1, i64 0, i64 1
+  %b = load float, ptr %a, align 4
   %c = insertelement <4 x float> undef, float %b, i32 0
-  %d = load <4 x float>, <4 x float>* %v1, align 16
-  %e = load <4 x float>, <4 x float>* %v0, align 16
+  %d = load <4 x float>, ptr %v1, align 16
+  %e = load <4 x float>, ptr %v0, align 16
   %f = shufflevector <4 x float> %e, <4 x float> %d, <4 x i32> <i32 0, i32 1, i32 2, i32 5>
   %g = fadd <4 x float> %c, %f
   ret <4 x float> %g

@@ -20,13 +20,13 @@ define dso_local void @PR37667() {
 ; CHECK-NEXT:    movzbl %dl, %eax
 ; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    retq
-  %t0 = load i32, i32* @c, align 4
-  %t1 = load i32, i32* @b, align 4
-  %t2 = load i32, i32* @d, align 4
+  %t0 = load i32, ptr @c, align 4
+  %t1 = load i32, ptr @b, align 4
+  %t2 = load i32, ptr @d, align 4
   %rem = urem i32 %t1, %t2
   %or = or i32 %rem, %t0
   %conv1 = and i32 %or, 255
-  store i32 %conv1, i32* @a, align 4
+  store i32 %conv1, ptr @a, align 4
   ret void
 }
 
@@ -40,12 +40,12 @@ define dso_local void @PR37060() {
 ; CHECK-NEXT:    movzbl %dl, %eax
 ; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    retq
-  %t0 = load i32, i32* @c, align 4
+  %t0 = load i32, ptr @c, align 4
   %rem = srem i32 -1, %t0
-  %t2 = load i32, i32* @b, align 4
+  %t2 = load i32, ptr @b, align 4
   %xor = xor i32 %t2, %rem
   %conv3 = and i32 %xor, 255
-  store i32 %conv3, i32* @a, align 4
+  store i32 %conv3, ptr @a, align 4
   ret void
 }
 

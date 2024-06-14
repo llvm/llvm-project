@@ -9,6 +9,6 @@ target triple = "x86_64-apple-darwin11.4.2"
 
 define void @MergeStats() nounwind {
 allocas:
-  %r.i.i720 = atomicrmw max i64* getelementptr inbounds (%v8_uniform_Stats.0.2.4.10, %v8_uniform_Stats.0.2.4.10* @globalStats, i64 0, i32 30), i64 0 seq_cst
+  %r.i.i720 = atomicrmw max ptr getelementptr inbounds (%v8_uniform_Stats.0.2.4.10, ptr @globalStats, i64 0, i32 30), i64 0 seq_cst
   ret void
 }

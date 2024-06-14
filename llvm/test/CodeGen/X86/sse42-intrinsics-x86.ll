@@ -30,7 +30,7 @@ define i32 @test_x86_sse42_pcmpestri128(<16 x i8> %a0, <16 x i8> %a2) {
 declare i32 @llvm.x86.sse42.pcmpestri128(<16 x i8>, i32, <16 x i8>, i32, i8) nounwind readnone
 
 
-define i32 @test_x86_sse42_pcmpestri128_load(<16 x i8>* %a0, <16 x i8>* %a2) {
+define i32 @test_x86_sse42_pcmpestri128_load(ptr %a0, ptr %a2) {
 ; X86-SSE-LABEL: test_x86_sse42_pcmpestri128_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
@@ -90,8 +90,8 @@ define i32 @test_x86_sse42_pcmpestri128_load(<16 x i8>* %a0, <16 x i8>* %a2) {
 ; X64-AVX512-NEXT:    vpcmpestri $7, (%rsi), %xmm0 ## encoding: [0xc4,0xe3,0x79,0x61,0x06,0x07]
 ; X64-AVX512-NEXT:    movl %ecx, %eax ## encoding: [0x89,0xc8]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = load <16 x i8>, <16 x i8>* %a0
-  %2 = load <16 x i8>, <16 x i8>* %a2
+  %1 = load <16 x i8>, ptr %a0
+  %2 = load <16 x i8>, ptr %a2
   %res = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %1, i32 7, <16 x i8> %2, i32 7, i8 7) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -367,7 +367,7 @@ define <16 x i8> @test_x86_sse42_pcmpestrm128(<16 x i8> %a0, <16 x i8> %a2) {
 declare <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8>, i32, <16 x i8>, i32, i8) nounwind readnone
 
 
-define <16 x i8> @test_x86_sse42_pcmpestrm128_load(<16 x i8> %a0, <16 x i8>* %a2) {
+define <16 x i8> @test_x86_sse42_pcmpestrm128_load(<16 x i8> %a0, ptr %a2) {
 ; X86-SSE-LABEL: test_x86_sse42_pcmpestrm128_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x04]
@@ -397,7 +397,7 @@ define <16 x i8> @test_x86_sse42_pcmpestrm128_load(<16 x i8> %a0, <16 x i8>* %a2
 ; X64-AVX-NEXT:    movl $7, %edx ## encoding: [0xba,0x07,0x00,0x00,0x00]
 ; X64-AVX-NEXT:    vpcmpestrm $7, (%rdi), %xmm0 ## encoding: [0xc4,0xe3,0x79,0x60,0x07,0x07]
 ; X64-AVX-NEXT:    retq ## encoding: [0xc3]
-  %1 = load <16 x i8>, <16 x i8>* %a2
+  %1 = load <16 x i8>, ptr %a2
   %res = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %a0, i32 7, <16 x i8> %1, i32 7, i8 7) ; <<16 x i8>> [#uses=1]
   ret <16 x i8> %res
 }
@@ -421,7 +421,7 @@ define i32 @test_x86_sse42_pcmpistri128(<16 x i8> %a0, <16 x i8> %a1) {
 declare i32 @llvm.x86.sse42.pcmpistri128(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 
-define i32 @test_x86_sse42_pcmpistri128_load(<16 x i8>* %a0, <16 x i8>* %a1) {
+define i32 @test_x86_sse42_pcmpistri128_load(ptr %a0, ptr %a1) {
 ; X86-SSE-LABEL: test_x86_sse42_pcmpistri128_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x08]
@@ -469,8 +469,8 @@ define i32 @test_x86_sse42_pcmpistri128_load(<16 x i8>* %a0, <16 x i8>* %a1) {
 ; X64-AVX512-NEXT:    vpcmpistri $7, (%rsi), %xmm0 ## encoding: [0xc4,0xe3,0x79,0x63,0x06,0x07]
 ; X64-AVX512-NEXT:    movl %ecx, %eax ## encoding: [0x89,0xc8]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %1 = load <16 x i8>, <16 x i8>* %a0
-  %2 = load <16 x i8>, <16 x i8>* %a1
+  %1 = load <16 x i8>, ptr %a0
+  %2 = load <16 x i8>, ptr %a1
   %res = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %1, <16 x i8> %2, i8 7) ; <i32> [#uses=1]
   ret i32 %res
 }
@@ -592,7 +592,7 @@ define <16 x i8> @test_x86_sse42_pcmpistrm128(<16 x i8> %a0, <16 x i8> %a1) {
 declare <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 
-define <16 x i8> @test_x86_sse42_pcmpistrm128_load(<16 x i8> %a0, <16 x i8>* %a1) {
+define <16 x i8> @test_x86_sse42_pcmpistrm128_load(<16 x i8> %a0, ptr %a1) {
 ; X86-SSE-LABEL: test_x86_sse42_pcmpistrm128_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -614,7 +614,7 @@ define <16 x i8> @test_x86_sse42_pcmpistrm128_load(<16 x i8> %a0, <16 x i8>* %a1
 ; X64-AVX:       ## %bb.0:
 ; X64-AVX-NEXT:    vpcmpistrm $7, (%rdi), %xmm0 ## encoding: [0xc4,0xe3,0x79,0x62,0x07,0x07]
 ; X64-AVX-NEXT:    retq ## encoding: [0xc3]
-  %1 = load <16 x i8>, <16 x i8>* %a1, align 1
+  %1 = load <16 x i8>, ptr %a1, align 1
   %res = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %a0, <16 x i8> %1, i8 7) ; <<16 x i8>> [#uses=1]
   ret <16 x i8> %res
 }

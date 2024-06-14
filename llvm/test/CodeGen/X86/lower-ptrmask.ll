@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx -stop-after=finalize-isel %s -o - | FileCheck %s
 
-declare i8* @llvm.ptrmask.p0i8.i64(i8* , i64)
+declare ptr @llvm.ptrmask.p0.i64(ptr , i64)
 
 ; CHECK-LABEL: name: test1
 ; CHECK:         %0:gr64 = COPY $rdi
@@ -9,9 +9,9 @@ declare i8* @llvm.ptrmask.p0i8.i64(i8* , i64)
 ; CHECK-NEXT:    $rax = COPY %2
 ; CHECK-NEXT:    RET 0, $rax
 
-define i8* @test1(i8* %src) {
-  %ptr = call i8* @llvm.ptrmask.p0i8.i64(i8* %src, i64 72057594037927928)
-  ret i8* %ptr
+define ptr @test1(ptr %src) {
+  %ptr = call ptr @llvm.ptrmask.p0.i64(ptr %src, i64 72057594037927928)
+  ret ptr %ptr
 }
 
 declare <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr>, <2 x i64>)

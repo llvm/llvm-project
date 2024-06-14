@@ -1,11 +1,11 @@
 ; RUN: llc < %s -verify-coalescing | FileCheck %s
 target triple = "x86_64-pc-win32"
 
-@fnptr = external global void ()*
+@fnptr = external global ptr
 
 define void @test1() {
 entry:
-  %p = load void ()*, void ()** @fnptr
+  %p = load ptr, ptr @fnptr
   tail call void %p()
   ret void
 }

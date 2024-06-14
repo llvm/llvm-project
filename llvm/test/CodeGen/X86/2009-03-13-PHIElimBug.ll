@@ -6,7 +6,7 @@ declare i32 @f()
 
 declare i32 @g()
 
-define i32 @phi() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @phi() personality ptr @__gxx_personality_v0 {
 entry:
 	%a = call i32 @f()		; <i32> [#uses=1]
 	%b = invoke i32 @g()
@@ -24,7 +24,7 @@ cont2:		; preds = %cont
 
 lpad:		; preds = %cont, %entry
 	%y = phi i32 [ %a, %entry ], [ %aa, %cont ]		; <i32> [#uses=1]
-        %exn = landingpad {i8*, i32}
+        %exn = landingpad {ptr, i32}
                  cleanup
 	ret i32 %y
 }

@@ -5,7 +5,7 @@
 
 declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>)
 
-define void @foo(%v8_uniform_FVector3* %Out, float* %In, <8 x i32> %__mask) {
+define void @foo(ptr %Out, ptr %In, <8 x i32> %__mask) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %allocas
 ; CHECK-NEXT:    vmovups (%rsi), %xmm0
@@ -18,18 +18,15 @@ define void @foo(%v8_uniform_FVector3* %Out, float* %In, <8 x i32> %__mask) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 allocas:
-  %ptr_cast_for_load = bitcast float* %In to <8 x float>*
-  %ptr_masked_load74 = load <8 x float>, <8 x float>* %ptr_cast_for_load, align 4
-  %ptr8096 = getelementptr float, float* %In, i64 8
-  %ptr_cast_for_load81 = bitcast float* %ptr8096 to <8 x float>*
-  %ptr80_masked_load82 = load <8 x float>, <8 x float>* %ptr_cast_for_load81, align 4
+  %ptr_masked_load74 = load <8 x float>, ptr %In, align 4
+  %ptr8096 = getelementptr float, ptr %In, i64 8
+  %ptr80_masked_load82 = load <8 x float>, ptr %ptr8096, align 4
   %ret_7.i.i = shufflevector <8 x float> %ptr_masked_load74, <8 x float> %ptr80_masked_load82, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-  %Out_load19 = getelementptr %v8_uniform_FVector3, %v8_uniform_FVector3* %Out, i64 0, i32 0
   %v1.i.i100 = tail call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %ret_7.i.i, <8 x float> %ret_7.i.i)
   %v2.i.i101 = tail call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1.i.i100, <8 x float> %v1.i.i100)
   %scalar1.i.i102 = extractelement <8 x float> %v2.i.i101, i32 0
   %scalar2.i.i103 = extractelement <8 x float> %v2.i.i101, i32 4
   %sum.i.i104 = fadd float %scalar1.i.i102, %scalar2.i.i103
-  store float %sum.i.i104, float* %Out_load19, align 4
+  store float %sum.i.i104, ptr %Out, align 4
   ret void
 }

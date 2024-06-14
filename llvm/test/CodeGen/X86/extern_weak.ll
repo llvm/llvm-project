@@ -30,9 +30,9 @@ if.end:
 ; WIN64: jmpq *.refptr.foo
 
 
-declare extern_weak i32 @X(i8*)
+declare extern_weak i32 @X(ptr)
 
-@Y = global i32 (i8*)* @X               ; <i32 (i8*)**> [#uses=0]
+@Y = global ptr @X               ; <ptr> [#uses=0]
 
 ; DARWIN-LABEL: _Y:
 ; DARWIN: .long _X

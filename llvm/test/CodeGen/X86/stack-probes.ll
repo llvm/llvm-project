@@ -2,12 +2,12 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck --check-prefix=X64-LINUX %s
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -code-model=large < %s -o - | FileCheck --check-prefix=X64-LINUX-LARGE %s
 
-declare void @use([40096 x i8]*)
+declare void @use(ptr)
 
 ; Ensure calls to __probestack occur for large stack frames
 define void @test() "probe-stack"="__probestack" {
   %array = alloca [40096 x i8], align 16
-  call void @use([40096 x i8]* %array)
+  call void @use(ptr %array)
   ret void
 
 ; X86-LINUX-LABEL:       test:

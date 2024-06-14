@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=i686-unknown-linux-gnu %s -o - | FileCheck %s --check-prefix=CHECK32
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu %s -o - | FileCheck %s --check-prefix=CHECK64
 
-define void @zero_optsize(i32* %p) optsize {
+define void @zero_optsize(ptr %p) optsize {
 ; CHECK32-LABEL: zero_optsize:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -14,12 +14,12 @@ define void @zero_optsize(i32* %p) optsize {
 ; CHECK64-NEXT:    movl $0, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i32 0, i32* %p
+  store i32 0, ptr %p
   ret void
 
 }
 
-define void @zero_pgso(i32* %p) !prof !14 {
+define void @zero_pgso(ptr %p) !prof !14 {
 ; CHECK32-LABEL: zero_pgso:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -31,12 +31,12 @@ define void @zero_pgso(i32* %p) !prof !14 {
 ; CHECK64-NEXT:    movl $0, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i32 0, i32* %p
+  store i32 0, ptr %p
   ret void
 
 }
 
-define void @minus_one_optsize(i32* %p) optsize {
+define void @minus_one_optsize(ptr %p) optsize {
 ; CHECK32-LABEL: minus_one_optsize:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -48,12 +48,12 @@ define void @minus_one_optsize(i32* %p) optsize {
 ; CHECK64-NEXT:    movl $-1, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i32 -1, i32* %p
+  store i32 -1, ptr %p
   ret void
 
 }
 
-define void @minus_one_pgso(i32* %p) !prof !14 {
+define void @minus_one_pgso(ptr %p) !prof !14 {
 ; CHECK32-LABEL: minus_one_pgso:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -65,12 +65,12 @@ define void @minus_one_pgso(i32* %p) !prof !14 {
 ; CHECK64-NEXT:    movl $-1, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i32 -1, i32* %p
+  store i32 -1, ptr %p
   ret void
 
 }
 
-define void @zero_64(i64* %p) minsize {
+define void @zero_64(ptr %p) minsize {
 ; CHECK32-LABEL: zero_64:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -83,12 +83,12 @@ define void @zero_64(i64* %p) minsize {
 ; CHECK64-NEXT:    andq $0, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i64 0, i64* %p
+  store i64 0, ptr %p
   ret void
 
 }
 
-define void @zero_32(i32* %p) minsize {
+define void @zero_32(ptr %p) minsize {
 ; CHECK32-LABEL: zero_32:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -100,12 +100,12 @@ define void @zero_32(i32* %p) minsize {
 ; CHECK64-NEXT:    andl $0, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i32 0, i32* %p
+  store i32 0, ptr %p
   ret void
 
 }
 
-define void @zero_16(i16* %p) minsize {
+define void @zero_16(ptr %p) minsize {
 ; CHECK32-LABEL: zero_16:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -117,13 +117,13 @@ define void @zero_16(i16* %p) minsize {
 ; CHECK64-NEXT:    andw $0, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i16 0, i16* %p
+  store i16 0, ptr %p
   ret void
 
 }
 
 
-define void @minus_one_64(i64* %p) minsize {
+define void @minus_one_64(ptr %p) minsize {
 ; CHECK32-LABEL: minus_one_64:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -136,12 +136,12 @@ define void @minus_one_64(i64* %p) minsize {
 ; CHECK64-NEXT:    orq $-1, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i64 -1, i64* %p
+  store i64 -1, ptr %p
   ret void
 
 }
 
-define void @minus_one_32(i32* %p) minsize {
+define void @minus_one_32(ptr %p) minsize {
 ; CHECK32-LABEL: minus_one_32:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -153,12 +153,12 @@ define void @minus_one_32(i32* %p) minsize {
 ; CHECK64-NEXT:    orl $-1, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i32 -1, i32* %p
+  store i32 -1, ptr %p
   ret void
 
 }
 
-define void @minus_one_16(i16* %p) minsize {
+define void @minus_one_16(ptr %p) minsize {
 ; CHECK32-LABEL: minus_one_16:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -170,13 +170,13 @@ define void @minus_one_16(i16* %p) minsize {
 ; CHECK64-NEXT:    orw $-1, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store i16 -1, i16* %p
+  store i16 -1, ptr %p
   ret void
 
 }
 
 ; FIXME: Make sure we don't use the and/or trick on volatile stores.
-define void @volatile_zero_64(i64* %p) minsize {
+define void @volatile_zero_64(ptr %p) minsize {
 ; CHECK32-LABEL: volatile_zero_64:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -190,11 +190,11 @@ define void @volatile_zero_64(i64* %p) minsize {
 ; CHECK64-NEXT:    movq $0, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store volatile i64 0, i64* %p
+  store volatile i64 0, ptr %p
   ret void
 }
 
-define void @volatile_zero_32(i32* %p) minsize {
+define void @volatile_zero_32(ptr %p) minsize {
 ; CHECK32-LABEL: volatile_zero_32:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -206,11 +206,11 @@ define void @volatile_zero_32(i32* %p) minsize {
 ; CHECK64-NEXT:    movl $0, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   ret void
 }
 
-define void @volatile_zero_16(i16* %p) minsize {
+define void @volatile_zero_16(ptr %p) minsize {
 ; CHECK32-LABEL: volatile_zero_16:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -222,12 +222,12 @@ define void @volatile_zero_16(i16* %p) minsize {
 ; CHECK64-NEXT:    movw $0, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store volatile i16 0, i16* %p
+  store volatile i16 0, ptr %p
   ret void
 }
 
 
-define void @volatile_minus_one_64(i64* %p) minsize {
+define void @volatile_minus_one_64(ptr %p) minsize {
 ; CHECK32-LABEL: volatile_minus_one_64:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -242,11 +242,11 @@ define void @volatile_minus_one_64(i64* %p) minsize {
 ; CHECK64-NEXT:    movq $-1, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store volatile i64 -1, i64* %p
+  store volatile i64 -1, ptr %p
   ret void
 }
 
-define void @volatile_minus_one_32(i32* %p) minsize {
+define void @volatile_minus_one_32(ptr %p) minsize {
 ; CHECK32-LABEL: volatile_minus_one_32:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -258,11 +258,11 @@ define void @volatile_minus_one_32(i32* %p) minsize {
 ; CHECK64-NEXT:    movl $-1, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store volatile i32 -1, i32* %p
+  store volatile i32 -1, ptr %p
   ret void
 }
 
-define void @volatile_minus_one_16(i16* %p) minsize {
+define void @volatile_minus_one_16(ptr %p) minsize {
 ; CHECK32-LABEL: volatile_minus_one_16:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -274,7 +274,7 @@ define void @volatile_minus_one_16(i16* %p) minsize {
 ; CHECK64-NEXT:    movw $-1, (%rdi)
 ; CHECK64-NEXT:    retq
 entry:
-  store volatile i16 -1, i16* %p
+  store volatile i16 -1, ptr %p
   ret void
 }
 

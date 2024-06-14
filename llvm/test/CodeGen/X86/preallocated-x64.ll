@@ -3,16 +3,15 @@
 ; XFAIL: *
 
 declare token @llvm.call.preallocated.setup(i32)
-declare i8* @llvm.call.preallocated.arg(token, i32)
+declare ptr @llvm.call.preallocated.arg(token, i32)
 
 %Foo = type { i32, i32 }
 
-declare x86_thiscallcc void @f(i32, %Foo* preallocated(%Foo))
+declare x86_thiscallcc void @f(i32, ptr preallocated(%Foo))
 
 define void @g() {
   %t = call token @llvm.call.preallocated.setup(i32 1)
-  %a = call i8* @llvm.call.preallocated.arg(token %t, i32 0) preallocated(%Foo)
-  %b = bitcast i8* %a to %Foo*
-  call void @f(i32 0, %Foo* preallocated(%Foo) %b) ["preallocated"(token %t)]
+  %a = call ptr @llvm.call.preallocated.arg(token %t, i32 0) preallocated(%Foo)
+  call void @f(i32 0, ptr preallocated(%Foo) %a) ["preallocated"(token %t)]
   ret void
 }

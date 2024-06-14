@@ -11,10 +11,10 @@ target triple = "i386-pc-windows-msvc19.16.0"
 ; 20 bytes of memory.
 %struct.Args = type { i32, i32, i32, i32, i32 }
 
-declare dso_local x86_thiscallcc void @methodWithVtorDisp(i8* nocapture readonly, <{ %struct.Args }>* inalloca(<{ %struct.Args }>))
+declare dso_local x86_thiscallcc void @methodWithVtorDisp(ptr nocapture readonly, ptr inalloca(<{ %struct.Args }>))
 
 ; Function Attrs: nounwind optsize
-define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(i8* %0, <{ %struct.Args }>* inalloca(<{ %struct.Args }>) %1) #0 {
+define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(ptr %0, ptr inalloca(<{ %struct.Args }>) %1) #0 {
 ; CHECK-LABEL: methodWithVtorDisp_thunk:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
@@ -27,21 +27,20 @@ define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(i8* %0, <{ %struc
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    jmp _methodWithVtorDisp # TAILCALL
-  %3 = getelementptr inbounds i8, i8* %0, i32 -4
-  %4 = bitcast i8* %3 to i32*
-  %5 = load i32, i32* %4, align 4
-  %6 = sub i32 0, %5
-  %7 = getelementptr i8, i8* %0, i32 %6
-  %8 = call i8* @llvm.returnaddress(i32 0)
-  call void @__cyg_profile_func_exit(i8* bitcast (void (i8*, <{ %struct.Args }>*)* @methodWithVtorDisp_thunk to i8*), i8* %8)
-  musttail call x86_thiscallcc void @methodWithVtorDisp(i8* %7, <{ %struct.Args }>* inalloca(<{ %struct.Args }>) nonnull %1)
+  %3 = getelementptr inbounds i8, ptr %0, i32 -4
+  %4 = load i32, ptr %3, align 4
+  %5 = sub i32 0, %4
+  %6 = getelementptr i8, ptr %0, i32 %5
+  %7 = call ptr @llvm.returnaddress(i32 0)
+  call void @__cyg_profile_func_exit(ptr @methodWithVtorDisp_thunk, ptr %7)
+  musttail call x86_thiscallcc void @methodWithVtorDisp(ptr %6, ptr inalloca(<{ %struct.Args }>) nonnull %1)
   ret void
 }
 
-declare void @__cyg_profile_func_exit(i8*, i8*)
+declare void @__cyg_profile_func_exit(ptr, ptr)
 
 ; Function Attrs: nofree nosync nounwind readnone willreturn
-declare i8* @llvm.returnaddress(i32 immarg) #1
+declare ptr @llvm.returnaddress(i32 immarg) #1
 
 attributes #0 = { nounwind optsize }
 attributes #1 = { nofree nosync nounwind readnone willreturn }

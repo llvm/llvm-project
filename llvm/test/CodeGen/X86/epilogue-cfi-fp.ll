@@ -24,11 +24,11 @@ entry:
   %k.addr = alloca i32, align 4
   %l.addr = alloca i32, align 4
   %m.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  store i32 %j, i32* %j.addr, align 4
-  store i32 %k, i32* %k.addr, align 4
-  store i32 %l, i32* %l.addr, align 4
-  store i32 %m, i32* %m.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
+  store i32 %j, ptr %j.addr, align 4
+  store i32 %k, ptr %k.addr, align 4
+  store i32 %l, ptr %l.addr, align 4
+  store i32 %m, ptr %m.addr, align 4
   ret i32 0
 }
 

@@ -191,7 +191,7 @@ define void @shift1(i256 %x, i256 %a, ptr nocapture %r) nounwind readnone {
 ; CHECK-X64-O2-NEXT:    retq
 entry:
 	%0 = ashr i256 %x, %a
-	store i256 %0, i256* %r
+	store i256 %0, ptr %r
         ret void
 }
 

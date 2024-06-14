@@ -32,6 +32,6 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   %1 = lshr i128 %0, 64
   %2 = trunc i128 %1 to i64
-  store i64 %2, i64* @b, align 8
+  store i64 %2, ptr @b, align 8
   ret void
 }

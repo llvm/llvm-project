@@ -6,7 +6,7 @@ target triple = "i686-apple-darwin8.6.1"
 	%struct.GLTColor4 = type { float, float, float, float }
 	%struct.GLTCoord3 = type { float, float, float }
 	%struct.__GLIContextRec = type { { %struct.anon, { [24 x [16 x float]], [24 x [16 x float]] }, %struct.GLTColor4, { float, float, float, float, %struct.GLTCoord3, float } }, { float, float, float, float, float, float, float, float, [4 x i32], [4 x i32], [4 x i32] } }
-	%struct.__GLvertex = type { %struct.GLTColor4, %struct.GLTColor4, %struct.GLTColor4, %struct.GLTColor4, %struct.GLTColor4, %struct.GLTCoord3, float, %struct.GLTColor4, float, float, float, i8, i8, i8, i8, [4 x float], [2 x i8*], i32, i32, [16 x %struct.GLTColor4] }
+	%struct.__GLvertex = type { %struct.GLTColor4, %struct.GLTColor4, %struct.GLTColor4, %struct.GLTColor4, %struct.GLTColor4, %struct.GLTCoord3, float, %struct.GLTColor4, float, float, float, i8, i8, i8, i8, [4 x float], [2 x ptr], i32, i32, [16 x %struct.GLTColor4] }
 	%struct.anon = type { float, float, float, float, float, float, float, float }
 
 declare <4 x float> @llvm.x86.sse.cmp.ps(<4 x float>, <4 x float>, i8)
@@ -45,6 +45,6 @@ cond_false183:		; preds = %cond_false, %entry
 	%tmp446 = zext i8 %tmp436 to i32		; <i32> [#uses=1]
 	%tmp447 = shl i32 %tmp446, 24		; <i32> [#uses=1]
 	%tmp449 = or i32 0, %tmp447		; <i32> [#uses=1]
-	store i32 %tmp449, i32* null
+	store i32 %tmp449, ptr null
 	ret void
 }

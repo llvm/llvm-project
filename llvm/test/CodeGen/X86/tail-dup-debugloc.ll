@@ -11,15 +11,15 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.Node = type { %struct.Node* }
+%struct.Node = type { ptr }
 
-define i32 @foo(%struct.Node* readonly %node, %struct.Node* readnone %root) !dbg !6 {
+define i32 @foo(ptr readonly %node, ptr readnone %root) !dbg !6 {
 entry:
-  %cmp = icmp eq %struct.Node* %node, %root, !dbg !8
+  %cmp = icmp eq ptr %node, %root, !dbg !8
   br i1 %cmp, label %while.end4, label %while.cond1.preheader.lr.ph, !dbg !10
 
 while.cond1.preheader.lr.ph:                      ; preds = %entry
-  %tobool = icmp eq %struct.Node* %node, null
+  %tobool = icmp eq ptr %node, null
   br i1 %tobool, label %while.cond1.preheader.us.preheader, label %while.body2.preheader, !dbg !11
 
 while.body2.preheader:                            ; preds = %while.cond1.preheader.lr.ph

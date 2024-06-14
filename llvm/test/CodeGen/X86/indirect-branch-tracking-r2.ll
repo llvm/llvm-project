@@ -38,14 +38,14 @@
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @foo() #0 {
 entry:
-  %call = call i32 (i32, ...) bitcast (i32 (...)* @setjmp to i32 (i32, ...)*)(i32 0) #1
-  %call1 = call i32 (i32, ...) bitcast (i32 (...)* @setzx to i32 (i32, ...)*)(i32 0)
-  %call2 = call i32 (i32, ...) bitcast (i32 (...)* @sigsetjmp to i32 (i32, ...)*)(i32 0) #1
-  %call3 = call i32 (i32, ...) bitcast (i32 (...)* @setzx to i32 (i32, ...)*)(i32 0)
-  %call4 = call i32 (i32, ...) bitcast (i32 (...)* @savectx to i32 (i32, ...)*)(i32 0) #1
+  %call = call i32 (i32, ...) @setjmp(i32 0) #1
+  %call1 = call i32 (i32, ...) @setzx(i32 0)
+  %call2 = call i32 (i32, ...) @sigsetjmp(i32 0) #1
+  %call3 = call i32 (i32, ...) @setzx(i32 0)
+  %call4 = call i32 (i32, ...) @savectx(i32 0) #1
   %call5 = call i32 @vfork() #1
-  %call6 = call i32 (i32, ...) bitcast (i32 (...)* @setzx to i32 (i32, ...)*)(i32 0)
-  %call7 = call i32 (i32, ...) bitcast (i32 (...)* @getcontext to i32 (i32, ...)*)(i32 0) #1
+  %call6 = call i32 (i32, ...) @setzx(i32 0)
+  %call7 = call i32 (i32, ...) @getcontext(i32 0) #1
   ret void
 }
 

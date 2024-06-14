@@ -16,8 +16,8 @@ define dso_local i32 @main(i8 %small) {
 entry:
   %0 = and i8 %small, 1
   %cmp = icmp eq i8 %0, 0
-  %m.n = select i1 %cmp, i32* @m, i32* @n
-  %retval = load volatile i32, i32* %m.n, align 4
+  %m.n = select i1 %cmp, ptr @m, ptr @n
+  %retval = load volatile i32, ptr %m.n, align 4
   ret i32 %retval
 }
 
@@ -34,7 +34,7 @@ define dso_local i32 @main2(i8 %small) {
 entry:
   %0 = and i8 %small, 1
   %cmp = icmp eq i8 %0, 1
-  %m.n = select i1 %cmp, i32* @m, i32* @n
-  %retval = load volatile i32, i32* %m.n, align 4
+  %m.n = select i1 %cmp, ptr @m, ptr @n
+  %retval = load volatile i32, ptr %m.n, align 4
   ret i32 %retval
 }

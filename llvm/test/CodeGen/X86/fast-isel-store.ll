@@ -22,7 +22,7 @@ define i32 @test_store_32(ptr nocapture %addr, i32 %value) nounwind {
 ; X64-NEXT:    movl %esi, (%rdi)
 ; X64-NEXT:    retq
 entry:
-  store i32 %value, i32* %addr, align 1
+  store i32 %value, ptr %addr, align 1
   ret i32 %value
 }
 
@@ -41,7 +41,7 @@ define i16 @test_store_16(ptr nocapture %addr, i16 %value) nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  store i16 %value, i16* %addr, align 1
+  store i16 %value, ptr %addr, align 1
   ret i16 %value
 }
 
@@ -72,7 +72,7 @@ define <4 x i32> @test_store_4xi32(ptr nocapture %addr, <4 x i32> %value, <4 x i
 ; X64-AVX-NEXT:    vmovdqu %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
   %foo = add <4 x i32> %value, %value2 ; to force integer type on store
-  store <4 x i32> %foo, <4 x i32>* %addr, align 1
+  store <4 x i32> %foo, ptr %addr, align 1
   ret <4 x i32> %foo
 }
 
@@ -103,7 +103,7 @@ define <4 x i32> @test_store_4xi32_aligned(ptr nocapture %addr, <4 x i32> %value
 ; X64-AVX-NEXT:    vmovdqa %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
   %foo = add <4 x i32> %value, %value2 ; to force integer type on store
-  store <4 x i32> %foo, <4 x i32>* %addr, align 16
+  store <4 x i32> %foo, ptr %addr, align 16
   ret <4 x i32> %foo
 }
 
@@ -186,7 +186,7 @@ define <2 x double> @test_store_2xf64(ptr nocapture %addr, <2 x double> %value, 
 ; X64-AVX-NEXT:    vmovupd %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
   %foo = fadd <2 x double> %value, %value2 ; to force dobule type on store
-  store <2 x double> %foo, <2 x double>* %addr, align 1
+  store <2 x double> %foo, ptr %addr, align 1
   ret <2 x double> %foo
 }
 
@@ -217,7 +217,7 @@ define <2 x double> @test_store_2xf64_aligned(ptr nocapture %addr, <2 x double> 
 ; X64-AVX-NEXT:    vmovapd %xmm0, (%rdi)
 ; X64-AVX-NEXT:    retq
   %foo = fadd <2 x double> %value, %value2 ; to force dobule type on store
-  store <2 x double> %foo, <2 x double>* %addr, align 16
+  store <2 x double> %foo, ptr %addr, align 16
   ret <2 x double> %foo
 }
 
@@ -367,7 +367,7 @@ define <4 x double> @test_store_4xf64(ptr nocapture %addr, <4 x double> %value, 
 ; X64-AVX-NEXT:    vmovupd %ymm0, (%rdi)
 ; X64-AVX-NEXT:    retq
   %foo = fadd <4 x double> %value, %value2 ; to force dobule type on store
-  store <4 x double> %foo, <4 x double>* %addr, align 1
+  store <4 x double> %foo, ptr %addr, align 1
   ret <4 x double> %foo
 }
 
@@ -405,7 +405,7 @@ define <4 x double> @test_store_4xf64_aligned(ptr nocapture %addr, <4 x double> 
 ; X64-AVX-NEXT:    vmovapd %ymm0, (%rdi)
 ; X64-AVX-NEXT:    retq
   %foo = fadd <4 x double> %value, %value2 ; to force dobule type on store
-  store <4 x double> %foo, <4 x double>* %addr, align 32
+  store <4 x double> %foo, ptr %addr, align 32
   ret <4 x double> %foo
 }
 
@@ -670,7 +670,7 @@ define <8 x double> @test_store_8xf64(ptr nocapture %addr, <8 x double> %value, 
 ; X64-AVX512-NEXT:    vmovupd %zmm0, (%rdi)
 ; X64-AVX512-NEXT:    retq
   %foo = fadd <8 x double> %value, %value2 ; to force dobule type on store
-  store <8 x double> %foo, <8 x double>* %addr, align 1
+  store <8 x double> %foo, ptr %addr, align 1
   ret <8 x double> %foo
 }
 
@@ -743,6 +743,6 @@ define <8 x double> @test_store_8xf64_aligned(ptr nocapture %addr, <8 x double> 
 ; X64-AVX512-NEXT:    vmovapd %zmm0, (%rdi)
 ; X64-AVX512-NEXT:    retq
   %foo = fadd <8 x double> %value, %value2 ; to force dobule type on store
-  store <8 x double> %foo, <8 x double>* %addr, align 64
+  store <8 x double> %foo, ptr %addr, align 64
   ret <8 x double> %foo
 }

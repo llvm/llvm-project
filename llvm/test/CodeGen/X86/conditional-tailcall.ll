@@ -141,8 +141,8 @@ bb2:
 
 }
 
-declare dso_local x86_thiscallcc zeroext i1 @baz(i8*, i32)
-define x86_thiscallcc zeroext i1 @BlockPlacementTest(i8* %this, i32 %x) optsize {
+declare dso_local x86_thiscallcc zeroext i1 @baz(ptr, i32)
+define x86_thiscallcc zeroext i1 @BlockPlacementTest(ptr %this, i32 %x) optsize {
 ; CHECK32-LABEL: BlockPlacementTest:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
@@ -211,7 +211,7 @@ land.rhs:
   br i1 %tobool7, label %lor.rhs, label %land.end
 
 lor.rhs:
-  %call = tail call x86_thiscallcc zeroext i1 @baz(i8* %this, i32 %x) #2
+  %call = tail call x86_thiscallcc zeroext i1 @baz(ptr %this, i32 %x) #2
   br label %land.end
 
 land.end:
@@ -225,10 +225,10 @@ land.end:
 
 
 %"class.std::basic_string" = type { %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" }
-%"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { i8* }
-declare dso_local zeroext i1 @_Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_(i8*, i8*)
+%"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { ptr }
+declare dso_local zeroext i1 @_Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_(ptr, ptr)
 
-define zeroext i1 @pr31257(%"class.std::basic_string"* nocapture readonly dereferenceable(8) %s) minsize {
+define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize {
 ; CHECK32-LABEL: pr31257:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    pushl %ebp # encoding: [0x55]
@@ -524,18 +524,16 @@ define zeroext i1 @pr31257(%"class.std::basic_string"* nocapture readonly derefe
 ; WIN64-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN64-NEXT:    retq # encoding: [0xc3]
 entry:
-  %_M_p.i.i = getelementptr inbounds %"class.std::basic_string", %"class.std::basic_string"* %s, i64 0, i32 0, i32 0
-  %0 = load i8*, i8** %_M_p.i.i, align 8
-  %arrayidx.i.i.i54 = getelementptr inbounds i8, i8* %0, i64 -24
-  %_M_length.i.i55 = bitcast i8* %arrayidx.i.i.i54 to i64*
-  %1 = load i64, i64* %_M_length.i.i55, align 8
-  %add.ptr.i56 = getelementptr inbounds i8, i8* %0, i64 %1
+  %0 = load ptr, ptr %s, align 8
+  %arrayidx.i.i.i54 = getelementptr inbounds i8, ptr %0, i64 -24
+  %1 = load i64, ptr %arrayidx.i.i.i54, align 8
+  %add.ptr.i56 = getelementptr inbounds i8, ptr %0, i64 %1
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %it.sroa.0.0 = phi i8* [ %0, %entry ], [ %incdec.ptr.i, %for.inc ]
+  %it.sroa.0.0 = phi ptr [ %0, %entry ], [ %incdec.ptr.i, %for.inc ]
   %state.0 = phi i32 [ 0, %entry ], [ %state.1, %for.inc ]
-  %cmp.i = icmp eq i8* %it.sroa.0.0, %add.ptr.i56
+  %cmp.i = icmp eq ptr %it.sroa.0.0, %add.ptr.i56
   br i1 %cmp.i, label %5, label %for.body
 
 for.body:                                         ; preds = %for.cond
@@ -546,7 +544,7 @@ for.body:                                         ; preds = %for.cond
   ]
 
 sw.bb:                                            ; preds = %for.body
-  %2 = load i8, i8* %it.sroa.0.0, align 1
+  %2 = load i8, ptr %it.sroa.0.0, align 1
   switch i8 %2, label %if.else [
     i8 43, label %for.inc
     i8 45, label %for.inc
@@ -559,14 +557,14 @@ if.else:                                          ; preds = %sw.bb
   br i1 %isdigit46, label %for.inc, label %cleanup.thread.loopexit
 
 sw.bb14:                                          ; preds = %for.body
-  %3 = load i8, i8* %it.sroa.0.0, align 1
+  %3 = load i8, ptr %it.sroa.0.0, align 1
   %conv16 = zext i8 %3 to i32
   %isdigittmp43 = add nsw i32 %conv16, -48
   %isdigit44 = icmp ult i32 %isdigittmp43, 10
   br i1 %isdigit44, label %for.inc, label %cleanup.thread.loopexit
 
 sw.bb22:                                          ; preds = %for.body
-  %4 = load i8, i8* %it.sroa.0.0, align 1
+  %4 = load i8, ptr %it.sroa.0.0, align 1
   %conv24 = zext i8 %4 to i32
   %isdigittmp = add nsw i32 %conv24, -48
   %isdigit = icmp ult i32 %isdigittmp, 10
@@ -576,12 +574,12 @@ sw.bb22:                                          ; preds = %for.body
 ; thinks the conditional tail call clobbers it.
 
 if.else28:                                        ; preds = %sw.bb22
-  %call34 = tail call zeroext i1 @_Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_(i8* nonnull %it.sroa.0.0, i8* %add.ptr.i56)
+  %call34 = tail call zeroext i1 @_Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_(ptr nonnull %it.sroa.0.0, ptr %add.ptr.i56)
   br label %cleanup.thread
 
 for.inc:                                          ; preds = %sw.bb, %sw.bb, %sw.bb22, %sw.bb14, %if.else, %for.body
   %state.1 = phi i32 [ %state.0, %for.body ], [ 1, %sw.bb ], [ 2, %if.else ], [ 2, %sw.bb14 ], [ 2, %sw.bb22 ], [ 1, %sw.bb ]
-  %incdec.ptr.i = getelementptr inbounds i8, i8* %it.sroa.0.0, i64 1
+  %incdec.ptr.i = getelementptr inbounds i8, ptr %it.sroa.0.0, i64 1
   br label %for.cond
 
 ; <label>:5:                                      ; preds = %for.cond

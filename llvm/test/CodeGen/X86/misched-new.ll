@@ -11,7 +11,7 @@
 ; FIXME: There should be an assert in the coalescer that we're not rematting
 ; "not-quite-dead" copies, but that breaks a lot of tests <rdar://problem/11148682>.
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
 ; From oggenc.
 ; After coalescing, we have a dead superreg (RAX) definition.
@@ -24,7 +24,7 @@ entry:
   br i1 undef, label %for.cond.preheader, label %if.end
 
 for.cond.preheader:                               ; preds = %entry
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 undef, i8* align 4 null, i64 128, i1 false) nounwind
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 undef, ptr align 4 null, i64 128, i1 false) nounwind
   unreachable
 
 if.end:                                           ; preds = %entry
@@ -60,8 +60,8 @@ declare void @bar(i32,i32)
 ; CHECK: call
 
 %t0 = type { i32, i32, i8 }
-%t6 = type { i32 (...)**, %t7* }
-%t7 = type { i32 (...)** }
+%t6 = type { ptr, ptr }
+%t7 = type { ptr }
 
 define void @hasundef() unnamed_addr uwtable ssp align 2 {
   %1 = alloca %t0, align 8
@@ -74,7 +74,7 @@ define void @hasundef() unnamed_addr uwtable ssp align 2 {
   br i1 undef, label %4, label %5
 
 ; <label>:4                                       ; preds = %3
-  call void undef(%t6* undef, %t0* %1)
+  call void undef(ptr undef, ptr %1)
   unreachable
 
 ; <label>:5                                       ; preds = %3
@@ -90,20 +90,20 @@ define void @hasundef() unnamed_addr uwtable ssp align 2 {
 ; TOPDOWN: movzbl %al
 ; TOPDOWN: ret
 define void @testSubregTracking() nounwind uwtable ssp align 2 {
-  %tmp = load i8, i8* undef, align 1
+  %tmp = load i8, ptr undef, align 1
   %tmp6 = sub i8 0, %tmp
-  %tmp7 = load i8, i8* undef, align 1
+  %tmp7 = load i8, ptr undef, align 1
   %tmp8 = udiv i8 %tmp6, %tmp7
   %tmp9 = zext i8 %tmp8 to i64
-  %tmp10 = load i8, i8* undef, align 1
+  %tmp10 = load i8, ptr undef, align 1
   %tmp11 = zext i8 %tmp10 to i64
   %tmp12 = mul i64 %tmp11, %tmp9
   %tmp13 = urem i8 %tmp6, %tmp7
   %tmp14 = zext i8 %tmp13 to i32
   %tmp15 = add nsw i32 %tmp14, 0
   %tmp16 = add i32 %tmp15, 0
-  store i32 %tmp16, i32* undef, align 4
+  store i32 %tmp16, ptr undef, align 4
   %tmp17 = add i64 0, %tmp12
-  store i64 %tmp17, i64* undef, align 8
+  store i64 %tmp17, ptr undef, align 8
   ret void
 }

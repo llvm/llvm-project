@@ -14,7 +14,7 @@
 ;; section.  Please don't add to this file unless you're testing the FaultMap
 ;; serialization code itself.
 
-define i32 @imp_null_check_load(i32* %x) {
+define i32 @imp_null_check_load(ptr %x) {
 ; CHECK-LABEL: _imp_null_check_load:
 ; CHECK: [[BB0_imp_null_check_load:L[^:]+]]:
 ; CHECK: movl (%rdi), %eax
@@ -24,18 +24,18 @@ define i32 @imp_null_check_load(i32* %x) {
 ; CHECK: retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load i32, i32* %x
+  %t = load i32, ptr %x
   ret i32 %t
 }
 
-define void @imp_null_check_store(i32* %x) {
+define void @imp_null_check_store(ptr %x) {
 ; CHECK-LABEL: _imp_null_check_store:
 ; CHECK: [[BB0_imp_null_check_store:L[^:]+]]:
 ; CHECK: movl $1, (%rdi)
@@ -44,14 +44,14 @@ define void @imp_null_check_store(i32* %x) {
 ; CHECK: retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !0
 
  is_null:
   ret void
 
  not_null:
-  store i32 1, i32* %x
+  store i32 1, ptr %x
   ret void
 }
 

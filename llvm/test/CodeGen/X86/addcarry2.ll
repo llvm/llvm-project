@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown --show-mc-encoding | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown       --show-mc-encoding | FileCheck %s --check-prefix=X64
 
-define void @adc_load_store_64_15(i64* inreg %x, i64* inreg %x2, i64 inreg %y) nounwind {
+define void @adc_load_store_64_15(ptr inreg %x, ptr inreg %x2, i64 inreg %y) nounwind {
 ; X86-LABEL: adc_load_store_64_15:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi # encoding: [0x56]
@@ -26,7 +26,7 @@ define void @adc_load_store_64_15(i64* inreg %x, i64* inreg %x2, i64 inreg %y) n
 ; X64-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
 ; X64-NEXT:    movq %rax, (%rsi) # encoding: [0x48,0x89,0x06]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %vx   = load i64, i64* %x
+  %vx   = load i64, ptr %x
   %zvx  = zext i64 %vx to i192
   %szvx = shl i192 %zvx, 64
   %zy   = zext i64 %y to i192
@@ -34,14 +34,14 @@ define void @adc_load_store_64_15(i64* inreg %x, i64* inreg %x2, i64 inreg %y) n
   %zsum = add i192 %op, 276701161105643274241 ; 0x0000_0000_0000_0000__0000_0000_0000_000F__0000_0000_0000_0001
   %ssum = lshr i192 %zsum, 64
   %val = trunc i192 %ssum to i64
-  store i64 %val, i64* %x
+  store i64 %val, ptr %x
   %ssum2 = lshr i192 %zsum, 128
   %val2 = trunc i192 %ssum2 to i64
-  store i64 %val2, i64* %x2
+  store i64 %val2, ptr %x2
   ret void
 }
 
-define void @adc_load_store_64_0x1000F(i64* inreg %x, i64* inreg %x2, i64 inreg %y) nounwind {
+define void @adc_load_store_64_0x1000F(ptr inreg %x, ptr inreg %x2, i64 inreg %y) nounwind {
 ; X86-LABEL: adc_load_store_64_0x1000F:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi # encoding: [0x56]
@@ -67,7 +67,7 @@ define void @adc_load_store_64_0x1000F(i64* inreg %x, i64* inreg %x2, i64 inreg 
 ; X64-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
 ; X64-NEXT:    movq %rax, (%rsi) # encoding: [0x48,0x89,0x06]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %vx   = load i64, i64* %x
+  %vx   = load i64, ptr %x
   %zvx  = zext i64 %vx to i192
   %szvx = shl i192 %zvx, 64
   %zy   = zext i64 %y to i192
@@ -75,14 +75,14 @@ define void @adc_load_store_64_0x1000F(i64* inreg %x, i64* inreg %x2, i64 inreg 
   %zsum = add i192 %op, 1209202520775734817980417 ; 0x0000_0000_0000_0000__0000_0000_0001_000F__0000_0000_0000_0001
   %ssum = lshr i192 %zsum, 64
   %val = trunc i192 %ssum to i64
-  store i64 %val, i64* %x
+  store i64 %val, ptr %x
   %ssum2 = lshr i192 %zsum, 128
   %val2 = trunc i192 %ssum2 to i64
-  store i64 %val2, i64* %x2
+  store i64 %val2, ptr %x2
   ret void
 }
 
-define void @adc_load_store_64_0x100001000F(i64* inreg %x, i64* inreg %x2, i64 inreg %y) nounwind {
+define void @adc_load_store_64_0x100001000F(ptr inreg %x, ptr inreg %x2, i64 inreg %y) nounwind {
 ; X86-LABEL: adc_load_store_64_0x100001000F:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi # encoding: [0x56]
@@ -108,7 +108,7 @@ define void @adc_load_store_64_0x100001000F(i64* inreg %x, i64* inreg %x2, i64 i
 ; X64-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
 ; X64-NEXT:    movq %rax, (%rsi) # encoding: [0x48,0x89,0x06]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %vx   = load i64, i64* %x
+  %vx   = load i64, ptr %x
   %zvx  = zext i64 %vx to i192
   %szvx = shl i192 %zvx, 64
   %zy   = zext i64 %y to i192
@@ -116,14 +116,14 @@ define void @adc_load_store_64_0x100001000F(i64* inreg %x, i64* inreg %x2, i64 i
   %zsum = add i192 %op, 1267650600504930562602346479617 ; 0x0000_0000_0000_0000__0000_0010_0000_000F__0000_0000_0000_0001
   %ssum = lshr i192 %zsum, 64
   %val = trunc i192 %ssum to i64
-  store i64 %val, i64* %x
+  store i64 %val, ptr %x
   %ssum2 = lshr i192 %zsum, 128
   %val2 = trunc i192 %ssum2 to i64
-  store i64 %val2, i64* %x2
+  store i64 %val2, ptr %x2
   ret void
 }
 
-define void @adc_load_store_32_127(i32* inreg %x, i32* inreg %x2, i32 inreg %y) nounwind {
+define void @adc_load_store_32_127(ptr inreg %x, ptr inreg %x2, i32 inreg %y) nounwind {
 ; X86-LABEL: adc_load_store_32_127:
 ; X86:       # %bb.0:
 ; X86-NEXT:    addl $1, %ecx # encoding: [0x83,0xc1,0x01]
@@ -148,7 +148,7 @@ define void @adc_load_store_32_127(i32* inreg %x, i32* inreg %x2, i32 inreg %y) 
 ; X64-NEXT:    movl %eax, (%rdi) # encoding: [0x89,0x07]
 ; X64-NEXT:    movl %edx, (%rsi) # encoding: [0x89,0x16]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %vx   = load i32, i32* %x
+  %vx   = load i32, ptr %x
   %zvx  = zext i32 %vx to i96
   %szvx = shl i96 %zvx, 32
   %zy   = zext i32 %y to i96
@@ -156,14 +156,14 @@ define void @adc_load_store_32_127(i32* inreg %x, i32* inreg %x2, i32 inreg %y) 
   %zsum = add i96 %op, 545460846593 ; 0x0000_0000__0000_007F__0000_0001
   %ssum = lshr i96 %zsum, 32
   %val = trunc i96 %ssum to i32
-  store i32 %val, i32* %x
+  store i32 %val, ptr %x
   %ssum2 = lshr i96 %zsum, 64
   %val2 = trunc i96 %ssum2 to i32
-  store i32 %val2, i32* %x2
+  store i32 %val2, ptr %x2
   ret void
 }
 
-define void @adc_load_store_32_128(i32* inreg %x, i32* inreg %x2, i32 inreg %y) nounwind {
+define void @adc_load_store_32_128(ptr inreg %x, ptr inreg %x2, i32 inreg %y) nounwind {
 ; X86-LABEL: adc_load_store_32_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    addl $1, %ecx # encoding: [0x83,0xc1,0x01]
@@ -188,7 +188,7 @@ define void @adc_load_store_32_128(i32* inreg %x, i32* inreg %x2, i32 inreg %y) 
 ; X64-NEXT:    movl %eax, (%rdi) # encoding: [0x89,0x07]
 ; X64-NEXT:    movl %edx, (%rsi) # encoding: [0x89,0x16]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %vx   = load i32, i32* %x
+  %vx   = load i32, ptr %x
   %zvx  = zext i32 %vx to i96
   %szvx = shl i96 %zvx, 32
   %zy   = zext i32 %y to i96
@@ -196,17 +196,17 @@ define void @adc_load_store_32_128(i32* inreg %x, i32* inreg %x2, i32 inreg %y) 
   %zsum = add i96 %op, 549755813889 ; 0x0000_0000__0000_0080__0000_0001
   %ssum = lshr i96 %zsum, 32
   %val = trunc i96 %ssum to i32
-  store i32 %val, i32* %x
+  store i32 %val, ptr %x
   %ssum2 = lshr i96 %zsum, 64
   %val2 = trunc i96 %ssum2 to i32
-  store i32 %val2, i32* %x2
+  store i32 %val2, ptr %x2
   ret void
 }
 
 ; These tests all verify the load-op-store fusion does not generate
 ; larger instructions than mainline DAG Instruction selection.
 
-define void @adc_load_store_8_15(i64 inreg %ca, i64 inreg %cb, i8* inreg %x) nounwind {
+define void @adc_load_store_8_15(i64 inreg %ca, i64 inreg %cb, ptr inreg %x) nounwind {
 ; X86-LABEL: adc_load_store_8_15:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi # encoding: [0x56]
@@ -228,14 +228,14 @@ define void @adc_load_store_8_15(i64 inreg %ca, i64 inreg %cb, i8* inreg %x) nou
   %ec = lshr i65 %zc, 64
   %c = trunc i65 %ec to i1
   %cc = zext i1 %c to i8
-  %vx = load i8, i8* %x
+  %vx = load i8, ptr %x
   %cc_off = add i8 15, %cc
   %vsum = add i8 %vx, %cc_off
-  store i8 %vsum, i8* %x
+  store i8 %vsum, ptr %x
   ret void
 }
 
-define void @adc_load_store_16_15(i64 inreg %ca, i64 inreg %cb, i16* inreg %x) nounwind {
+define void @adc_load_store_16_15(i64 inreg %ca, i64 inreg %cb, ptr inreg %x) nounwind {
 ; X86-LABEL: adc_load_store_16_15:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi # encoding: [0x56]
@@ -257,14 +257,14 @@ define void @adc_load_store_16_15(i64 inreg %ca, i64 inreg %cb, i16* inreg %x) n
   %ec = lshr i65 %zc, 64
   %c = trunc i65 %ec to i1
   %cc = zext i1 %c to i16
-  %vx = load i16, i16* %x
+  %vx = load i16, ptr %x
   %cc_off = add i16 15, %cc
   %vsum = add i16 %vx, %cc_off
-  store i16 %vsum, i16* %x
+  store i16 %vsum, ptr %x
   ret void
 }
 
-define void @adc_load_store_16_256(i64 inreg %ca, i64 inreg %cb, i16* inreg %x) nounwind {
+define void @adc_load_store_16_256(i64 inreg %ca, i64 inreg %cb, ptr inreg %x) nounwind {
 ; X86-LABEL: adc_load_store_16_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi # encoding: [0x56]
@@ -288,9 +288,9 @@ define void @adc_load_store_16_256(i64 inreg %ca, i64 inreg %cb, i16* inreg %x) 
   %ec = lshr i65 %zc, 64
   %c = trunc i65 %ec to i1
   %cc = zext i1 %c to i16
-  %vx = load i16, i16* %x
+  %vx = load i16, ptr %x
   %cc_off = add i16 256, %cc
   %vsum = add i16 %vx, %cc_off
-  store i16 %vsum, i16* %x
+  store i16 %vsum, ptr %x
   ret void
 }

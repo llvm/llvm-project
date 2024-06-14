@@ -117,7 +117,7 @@ define <8 x i16> @test_x86_sse41_mpsadbw(<16 x i8> %a0, <16 x i8> %a1) {
 declare <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8>, <16 x i8>, i8) nounwind readnone
 
 ; We shouldn't commute this operation to fold the load.
-define <8 x i16> @test_x86_sse41_mpsadbw_load_op0(<16 x i8>* %ptr, <16 x i8> %a1) {
+define <8 x i16> @test_x86_sse41_mpsadbw_load_op0(ptr %ptr, <16 x i8> %a1) {
 ; X86-SSE-LABEL: test_x86_sse41_mpsadbw_load_op0:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -158,7 +158,7 @@ define <8 x i16> @test_x86_sse41_mpsadbw_load_op0(<16 x i8>* %ptr, <16 x i8> %a1
 ; X64-AVX512-NEXT:    vmovdqa (%rdi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0x0f]
 ; X64-AVX512-NEXT:    vmpsadbw $7, %xmm0, %xmm1, %xmm0 ## encoding: [0xc4,0xe3,0x71,0x42,0xc0,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a0 = load <16 x i8>, <16 x i8>* %ptr
+  %a0 = load <16 x i8>, ptr %ptr
   %res = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> %a0, <16 x i8> %a1, i8 7) ; <<8 x i16>> [#uses=1]
   ret <8 x i16> %res
 }
@@ -389,7 +389,7 @@ define <2 x double> @test_x86_sse41_round_sd(<2 x double> %a0, <2 x double> %a1)
 declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
 
 
-define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, <2 x double>* %a1) {
+define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, ptr %a1) {
 ; X86-SSE-LABEL: test_x86_sse41_round_sd_load:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -422,7 +422,7 @@ define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, <2 x double>
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vroundsd $7, (%rdi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x0b,0x07,0x07]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
-  %a1b = load <2 x double>, <2 x double>* %a1
+  %a1b = load <2 x double>, ptr %a1
   %res = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %a0, <2 x double> %a1b, i32 7) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }

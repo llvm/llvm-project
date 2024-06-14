@@ -57,7 +57,7 @@ define {i64, i1} @t3() nounwind {
 }
 
 ; SMULO
-define zeroext i1 @smuloi8(i8 %v1, i8 %v2, i8* %res) {
+define zeroext i1 @smuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi8:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movl %edi, %eax
@@ -100,11 +100,11 @@ define zeroext i1 @smuloi8(i8 %v1, i8 %v2, i8* %res) {
   %t = call {i8, i1} @llvm.smul.with.overflow.i8(i8 %v1, i8 %v2)
   %val = extractvalue {i8, i1} %t, 0
   %obit = extractvalue {i8, i1} %t, 1
-  store i8 %val, i8* %res
+  store i8 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi16(i16 %v1, i16 %v2, i16* %res) {
+define zeroext i1 @smuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi16:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulw %si, %di
@@ -138,11 +138,11 @@ define zeroext i1 @smuloi16(i16 %v1, i16 %v2, i16* %res) {
   %t = call {i16, i1} @llvm.smul.with.overflow.i16(i16 %v1, i16 %v2)
   %val = extractvalue {i16, i1} %t, 0
   %obit = extractvalue {i16, i1} %t, 1
-  store i16 %val, i16* %res
+  store i16 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @smuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi32:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imull %esi, %edi
@@ -176,11 +176,11 @@ define zeroext i1 @smuloi32(i32 %v1, i32 %v2, i32* %res) {
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi64(i64 %v1, i64 %v2, i64* %res) {
+define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi64:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulq %rsi, %rdi
@@ -279,12 +279,12 @@ define zeroext i1 @smuloi64(i64 %v1, i64 %v2, i64* %res) {
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; UMULO
-define zeroext i1 @umuloi8(i8 %v1, i8 %v2, i8* %res) {
+define zeroext i1 @umuloi8(i8 %v1, i8 %v2, ptr %res) {
 ; SDAG-LABEL: umuloi8:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movl %edi, %eax
@@ -327,11 +327,11 @@ define zeroext i1 @umuloi8(i8 %v1, i8 %v2, i8* %res) {
   %t = call {i8, i1} @llvm.umul.with.overflow.i8(i8 %v1, i8 %v2)
   %val = extractvalue {i8, i1} %t, 0
   %obit = extractvalue {i8, i1} %t, 1
-  store i8 %val, i8* %res
+  store i8 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi16(i16 %v1, i16 %v2, i16* %res) {
+define zeroext i1 @umuloi16(i16 %v1, i16 %v2, ptr %res) {
 ; SDAG-LABEL: umuloi16:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -378,11 +378,11 @@ define zeroext i1 @umuloi16(i16 %v1, i16 %v2, i16* %res) {
   %t = call {i16, i1} @llvm.umul.with.overflow.i16(i16 %v1, i16 %v2)
   %val = extractvalue {i16, i1} %t, 0
   %obit = extractvalue {i16, i1} %t, 1
-  store i16 %val, i16* %res
+  store i16 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi32(i32 %v1, i32 %v2, i32* %res) {
+define zeroext i1 @umuloi32(i32 %v1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: umuloi32:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -427,11 +427,11 @@ define zeroext i1 @umuloi32(i32 %v1, i32 %v2, i32* %res) {
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi64(i64 %v1, i64 %v2, i64* %res) {
+define zeroext i1 @umuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: umuloi64:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -502,7 +502,7 @@ define zeroext i1 @umuloi64(i64 %v1, i64 %v2, i64* %res) {
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
@@ -1393,7 +1393,7 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
   ret i1 %x1
 }
 
-define zeroext i1 @smuloi8_load(i8* %ptr1, i8 %v2, i8* %res) {
+define zeroext i1 @smuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi8_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movl %esi, %eax
@@ -1433,15 +1433,15 @@ define zeroext i1 @smuloi8_load(i8* %ptr1, i8 %v2, i8* %res) {
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
-  %v1 = load i8, i8* %ptr1
+  %v1 = load i8, ptr %ptr1
   %t = call {i8, i1} @llvm.smul.with.overflow.i8(i8 %v1, i8 %v2)
   %val = extractvalue {i8, i1} %t, 0
   %obit = extractvalue {i8, i1} %t, 1
-  store i8 %val, i8* %res
+  store i8 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi8_load2(i8 %v1, i8* %ptr2, i8* %res) {
+define zeroext i1 @smuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: smuloi8_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movl %edi, %eax
@@ -1482,15 +1482,15 @@ define zeroext i1 @smuloi8_load2(i8 %v1, i8* %ptr2, i8* %res) {
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
-  %v2 = load i8, i8* %ptr2
+  %v2 = load i8, ptr %ptr2
   %t = call {i8, i1} @llvm.smul.with.overflow.i8(i8 %v1, i8 %v2)
   %val = extractvalue {i8, i1} %t, 0
   %obit = extractvalue {i8, i1} %t, 1
-  store i8 %val, i8* %res
+  store i8 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi16_load(i16* %ptr1, i16 %v2, i16* %res) {
+define zeroext i1 @smuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi16_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulw (%rdi), %si
@@ -1522,15 +1522,15 @@ define zeroext i1 @smuloi16_load(i16* %ptr1, i16 %v2, i16* %res) {
 ; WIN32-NEXT:    seto %al
 ; WIN32-NEXT:    movw %dx, (%ecx)
 ; WIN32-NEXT:    retl
-  %v1 = load i16, i16* %ptr1
+  %v1 = load i16, ptr %ptr1
   %t = call {i16, i1} @llvm.smul.with.overflow.i16(i16 %v1, i16 %v2)
   %val = extractvalue {i16, i1} %t, 0
   %obit = extractvalue {i16, i1} %t, 1
-  store i16 %val, i16* %res
+  store i16 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi16_load2(i16 %v1, i16* %ptr2, i16* %res) {
+define zeroext i1 @smuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: smuloi16_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulw (%rsi), %di
@@ -1562,15 +1562,15 @@ define zeroext i1 @smuloi16_load2(i16 %v1, i16* %ptr2, i16* %res) {
 ; WIN32-NEXT:    seto %al
 ; WIN32-NEXT:    movw %dx, (%ecx)
 ; WIN32-NEXT:    retl
-  %v2 = load i16, i16* %ptr2
+  %v2 = load i16, ptr %ptr2
   %t = call {i16, i1} @llvm.smul.with.overflow.i16(i16 %v1, i16 %v2)
   %val = extractvalue {i16, i1} %t, 0
   %obit = extractvalue {i16, i1} %t, 1
-  store i16 %val, i16* %res
+  store i16 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi32_load(i32* %ptr1, i32 %v2, i32* %res) {
+define zeroext i1 @smuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi32_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imull (%rdi), %esi
@@ -1602,15 +1602,15 @@ define zeroext i1 @smuloi32_load(i32* %ptr1, i32 %v2, i32* %res) {
 ; WIN32-NEXT:    seto %al
 ; WIN32-NEXT:    movl %edx, (%ecx)
 ; WIN32-NEXT:    retl
-  %v1 = load i32, i32* %ptr1
+  %v1 = load i32, ptr %ptr1
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi32_load2(i32 %v1, i32* %ptr2, i32* %res) {
+define zeroext i1 @smuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: smuloi32_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imull (%rsi), %edi
@@ -1642,15 +1642,15 @@ define zeroext i1 @smuloi32_load2(i32 %v1, i32* %ptr2, i32* %res) {
 ; WIN32-NEXT:    seto %al
 ; WIN32-NEXT:    movl %edx, (%ecx)
 ; WIN32-NEXT:    retl
-  %v2 = load i32, i32* %ptr2
+  %v2 = load i32, ptr %ptr2
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi64_load(i64* %ptr1, i64 %v2, i64* %res) {
+define zeroext i1 @smuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: smuloi64_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulq (%rdi), %rsi
@@ -1751,15 +1751,15 @@ define zeroext i1 @smuloi64_load(i64* %ptr1, i64 %v2, i64* %res) {
 ; WIN32-NEXT:    popl %ebx
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
-  %v1 = load i64, i64* %ptr1
+  %v1 = load i64, ptr %ptr1
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @smuloi64_load2(i64 %v1, i64* %ptr2, i64* %res) {
+define zeroext i1 @smuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: smuloi64_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    imulq (%rsi), %rdi
@@ -1855,15 +1855,15 @@ define zeroext i1 @smuloi64_load2(i64 %v1, i64* %ptr2, i64* %res) {
 ; WIN32-NEXT:    popl %ebx
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
-  %v2 = load i64, i64* %ptr2
+  %v2 = load i64, ptr %ptr2
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi8_load(i8* %ptr1, i8 %v2, i8* %res) {
+define zeroext i1 @umuloi8_load(ptr %ptr1, i8 %v2, ptr %res) {
 ; SDAG-LABEL: umuloi8_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movl %esi, %eax
@@ -1903,15 +1903,15 @@ define zeroext i1 @umuloi8_load(i8* %ptr1, i8 %v2, i8* %res) {
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
-  %v1 = load i8, i8* %ptr1
+  %v1 = load i8, ptr %ptr1
   %t = call {i8, i1} @llvm.umul.with.overflow.i8(i8 %v1, i8 %v2)
   %val = extractvalue {i8, i1} %t, 0
   %obit = extractvalue {i8, i1} %t, 1
-  store i8 %val, i8* %res
+  store i8 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi8_load2(i8 %v1, i8* %ptr2, i8* %res) {
+define zeroext i1 @umuloi8_load2(i8 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: umuloi8_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movl %edi, %eax
@@ -1952,15 +1952,15 @@ define zeroext i1 @umuloi8_load2(i8 %v1, i8* %ptr2, i8* %res) {
 ; WIN32-NEXT:    movb %al, (%edx)
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    retl
-  %v2 = load i8, i8* %ptr2
+  %v2 = load i8, ptr %ptr2
   %t = call {i8, i1} @llvm.umul.with.overflow.i8(i8 %v1, i8 %v2)
   %val = extractvalue {i8, i1} %t, 0
   %obit = extractvalue {i8, i1} %t, 1
-  store i8 %val, i8* %res
+  store i8 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi16_load(i16* %ptr1, i16 %v2, i16* %res) {
+define zeroext i1 @umuloi16_load(ptr %ptr1, i16 %v2, ptr %res) {
 ; SDAG-LABEL: umuloi16_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -2004,15 +2004,15 @@ define zeroext i1 @umuloi16_load(i16* %ptr1, i16 %v2, i16* %res) {
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    retl
-  %v1 = load i16, i16* %ptr1
+  %v1 = load i16, ptr %ptr1
   %t = call {i16, i1} @llvm.umul.with.overflow.i16(i16 %v1, i16 %v2)
   %val = extractvalue {i16, i1} %t, 0
   %obit = extractvalue {i16, i1} %t, 1
-  store i16 %val, i16* %res
+  store i16 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi16_load2(i16 %v1, i16* %ptr2, i16* %res) {
+define zeroext i1 @umuloi16_load2(i16 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: umuloi16_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -2057,15 +2057,15 @@ define zeroext i1 @umuloi16_load2(i16 %v1, i16* %ptr2, i16* %res) {
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    retl
-  %v2 = load i16, i16* %ptr2
+  %v2 = load i16, ptr %ptr2
   %t = call {i16, i1} @llvm.umul.with.overflow.i16(i16 %v1, i16 %v2)
   %val = extractvalue {i16, i1} %t, 0
   %obit = extractvalue {i16, i1} %t, 1
-  store i16 %val, i16* %res
+  store i16 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi32_load(i32* %ptr1, i32 %v2, i32* %res) {
+define zeroext i1 @umuloi32_load(ptr %ptr1, i32 %v2, ptr %res) {
 ; SDAG-LABEL: umuloi32_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -2108,15 +2108,15 @@ define zeroext i1 @umuloi32_load(i32* %ptr1, i32 %v2, i32* %res) {
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    retl
-  %v1 = load i32, i32* %ptr1
+  %v1 = load i32, ptr %ptr1
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi32_load2(i32 %v1, i32* %ptr2, i32* %res) {
+define zeroext i1 @umuloi32_load2(i32 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: umuloi32_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -2159,15 +2159,15 @@ define zeroext i1 @umuloi32_load2(i32 %v1, i32* %ptr2, i32* %res) {
 ; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    retl
-  %v2 = load i32, i32* %ptr2
+  %v2 = load i32, ptr %ptr2
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32* %res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi64_load(i64* %ptr1, i64 %v2, i64* %res) {
+define zeroext i1 @umuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; SDAG-LABEL: umuloi64_load:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -2236,15 +2236,15 @@ define zeroext i1 @umuloi64_load(i64* %ptr1, i64 %v2, i64* %res) {
 ; WIN32-NEXT:    popl %ebx
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
-  %v1 = load i64, i64* %ptr1
+  %v1 = load i64, ptr %ptr1
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
-define zeroext i1 @umuloi64_load2(i64 %v1, i64* %ptr2, i64* %res) {
+define zeroext i1 @umuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; SDAG-LABEL: umuloi64_load2:
 ; SDAG:       # %bb.0:
 ; SDAG-NEXT:    movq %rdx, %rcx
@@ -2313,11 +2313,11 @@ define zeroext i1 @umuloi64_load2(i64 %v1, i64* %ptr2, i64* %res) {
 ; WIN32-NEXT:    popl %ebx
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
-  %v2 = load i64, i64* %ptr2
+  %v2 = load i64, ptr %ptr2
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 %v2)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64* %res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 

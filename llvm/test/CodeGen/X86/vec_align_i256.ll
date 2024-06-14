@@ -11,6 +11,6 @@ define void @foo() {
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovups %xmm0, (%eax)
 ; CHECK-NEXT:    retl
-  store <16 x i16> zeroinitializer, <16 x i16>* undef, align 1
+  store <16 x i16> zeroinitializer, ptr undef, align 1
   ret void
 }

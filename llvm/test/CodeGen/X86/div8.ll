@@ -8,15 +8,15 @@ entry:
   %dividend.addr = alloca i8, align 2
   %divisor.addr = alloca i8, align 1
   %quotient = alloca i8, align 1
-  store i8 %dividend, i8* %dividend.addr, align 2
-  store i8 %divisor, i8* %divisor.addr, align 1
-  %tmp = load i8, i8* %dividend.addr, align 2
-  %tmp1 = load i8, i8* %divisor.addr, align 1
+  store i8 %dividend, ptr %dividend.addr, align 2
+  store i8 %divisor, ptr %divisor.addr, align 1
+  %tmp = load i8, ptr %dividend.addr, align 2
+  %tmp1 = load i8, ptr %divisor.addr, align 1
 ; Insist on i8->i32 zero extension, even though divb demands only i16:
 ; CHECK: movzbl {{.*}}%eax
 ; CHECK: divb
   %div = udiv i8 %tmp, %tmp1
-  store i8 %div, i8* %quotient, align 1
-  %tmp4 = load i8, i8* %quotient, align 1
+  store i8 %div, ptr %quotient, align 1
+  %tmp4 = load i8, ptr %quotient, align 1
   ret i8 %tmp4
 }

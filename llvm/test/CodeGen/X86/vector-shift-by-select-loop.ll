@@ -11,7 +11,7 @@
 ; See test/Transforms/CodeGenPrepare/X86/vec-shift.ll for the 1st step in that
 ; sequence.
 
-define void @vector_variable_shift_left_loop(i32* nocapture %arr, i8* nocapture readonly %control, i32 %count, i32 %amt0, i32 %amt1) nounwind {
+define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture readonly %control, i32 %count, i32 %amt0, i32 %amt1) nounwind {
 ; SSE-LABEL: vector_variable_shift_left_loop:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    testl %edx, %edx
@@ -470,53 +470,41 @@ vector.ph:
 
 vector.body:
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i8, i8* %control, i64 %index
-  %1 = bitcast i8* %0 to <8 x i8>*
-  %wide.load = load <8 x i8>, <8 x i8>* %1, align 1
-  %2 = getelementptr inbounds i8, i8* %0, i64 8
-  %3 = bitcast i8* %2 to <8 x i8>*
-  %wide.load17 = load <8 x i8>, <8 x i8>* %3, align 1
-  %4 = getelementptr inbounds i8, i8* %0, i64 16
-  %5 = bitcast i8* %4 to <8 x i8>*
-  %wide.load18 = load <8 x i8>, <8 x i8>* %5, align 1
-  %6 = getelementptr inbounds i8, i8* %0, i64 24
-  %7 = bitcast i8* %6 to <8 x i8>*
-  %wide.load19 = load <8 x i8>, <8 x i8>* %7, align 1
-  %8 = icmp eq <8 x i8> %wide.load, zeroinitializer
-  %9 = icmp eq <8 x i8> %wide.load17, zeroinitializer
-  %10 = icmp eq <8 x i8> %wide.load18, zeroinitializer
-  %11 = icmp eq <8 x i8> %wide.load19, zeroinitializer
-  %12 = select <8 x i1> %8, <8 x i32> %broadcast.splat21, <8 x i32> %broadcast.splat23
-  %13 = select <8 x i1> %9, <8 x i32> %broadcast.splat25, <8 x i32> %broadcast.splat27
-  %14 = select <8 x i1> %10, <8 x i32> %broadcast.splat29, <8 x i32> %broadcast.splat31
-  %15 = select <8 x i1> %11, <8 x i32> %broadcast.splat33, <8 x i32> %broadcast.splat35
-  %16 = getelementptr inbounds i32, i32* %arr, i64 %index
-  %17 = bitcast i32* %16 to <8 x i32>*
-  %wide.load36 = load <8 x i32>, <8 x i32>* %17, align 4
-  %18 = getelementptr inbounds i32, i32* %16, i64 8
-  %19 = bitcast i32* %18 to <8 x i32>*
-  %wide.load37 = load <8 x i32>, <8 x i32>* %19, align 4
-  %20 = getelementptr inbounds i32, i32* %16, i64 16
-  %21 = bitcast i32* %20 to <8 x i32>*
-  %wide.load38 = load <8 x i32>, <8 x i32>* %21, align 4
-  %22 = getelementptr inbounds i32, i32* %16, i64 24
-  %23 = bitcast i32* %22 to <8 x i32>*
-  %wide.load39 = load <8 x i32>, <8 x i32>* %23, align 4
-  %24 = shl <8 x i32> %wide.load36, %12
-  %25 = shl <8 x i32> %wide.load37, %13
-  %26 = shl <8 x i32> %wide.load38, %14
-  %27 = shl <8 x i32> %wide.load39, %15
-  %28 = bitcast i32* %16 to <8 x i32>*
-  store <8 x i32> %24, <8 x i32>* %28, align 4
-  %29 = bitcast i32* %18 to <8 x i32>*
-  store <8 x i32> %25, <8 x i32>* %29, align 4
-  %30 = bitcast i32* %20 to <8 x i32>*
-  store <8 x i32> %26, <8 x i32>* %30, align 4
-  %31 = bitcast i32* %22 to <8 x i32>*
-  store <8 x i32> %27, <8 x i32>* %31, align 4
+  %0 = getelementptr inbounds i8, ptr %control, i64 %index
+  %wide.load = load <8 x i8>, ptr %0, align 1
+  %1 = getelementptr inbounds i8, ptr %0, i64 8
+  %wide.load17 = load <8 x i8>, ptr %1, align 1
+  %2 = getelementptr inbounds i8, ptr %0, i64 16
+  %wide.load18 = load <8 x i8>, ptr %2, align 1
+  %3 = getelementptr inbounds i8, ptr %0, i64 24
+  %wide.load19 = load <8 x i8>, ptr %3, align 1
+  %4 = icmp eq <8 x i8> %wide.load, zeroinitializer
+  %5 = icmp eq <8 x i8> %wide.load17, zeroinitializer
+  %6 = icmp eq <8 x i8> %wide.load18, zeroinitializer
+  %7 = icmp eq <8 x i8> %wide.load19, zeroinitializer
+  %8 = select <8 x i1> %4, <8 x i32> %broadcast.splat21, <8 x i32> %broadcast.splat23
+  %9 = select <8 x i1> %5, <8 x i32> %broadcast.splat25, <8 x i32> %broadcast.splat27
+  %10 = select <8 x i1> %6, <8 x i32> %broadcast.splat29, <8 x i32> %broadcast.splat31
+  %11 = select <8 x i1> %7, <8 x i32> %broadcast.splat33, <8 x i32> %broadcast.splat35
+  %12 = getelementptr inbounds i32, ptr %arr, i64 %index
+  %wide.load36 = load <8 x i32>, ptr %12, align 4
+  %13 = getelementptr inbounds i32, ptr %12, i64 8
+  %wide.load37 = load <8 x i32>, ptr %13, align 4
+  %14 = getelementptr inbounds i32, ptr %12, i64 16
+  %wide.load38 = load <8 x i32>, ptr %14, align 4
+  %15 = getelementptr inbounds i32, ptr %12, i64 24
+  %wide.load39 = load <8 x i32>, ptr %15, align 4
+  %16 = shl <8 x i32> %wide.load36, %8
+  %17 = shl <8 x i32> %wide.load37, %9
+  %18 = shl <8 x i32> %wide.load38, %10
+  %19 = shl <8 x i32> %wide.load39, %11
+  store <8 x i32> %16, ptr %12, align 4
+  store <8 x i32> %17, ptr %13, align 4
+  store <8 x i32> %18, ptr %14, align 4
+  store <8 x i32> %19, ptr %15, align 4
   %index.next = add i64 %index, 32
-  %32 = icmp eq i64 %index.next, %n.vec
-  br i1 %32, label %middle.block, label %vector.body
+  %20 = icmp eq i64 %index.next, %n.vec
+  br i1 %20, label %middle.block, label %vector.body
 
 middle.block:
   %cmp.n = icmp eq i64 %n.vec, %wide.trip.count
@@ -527,20 +515,20 @@ for.cond.cleanup:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ %indvars.iv.ph, %for.body.preheader40 ]
-  %arrayidx = getelementptr inbounds i8, i8* %control, i64 %indvars.iv
-  %33 = load i8, i8* %arrayidx, align 1
-  %tobool = icmp eq i8 %33, 0
+  %arrayidx = getelementptr inbounds i8, ptr %control, i64 %indvars.iv
+  %21 = load i8, ptr %arrayidx, align 1
+  %tobool = icmp eq i8 %21, 0
   %cond = select i1 %tobool, i32 %amt0, i32 %amt1
-  %arrayidx2 = getelementptr inbounds i32, i32* %arr, i64 %indvars.iv
-  %34 = load i32, i32* %arrayidx2, align 4
-  %shl = shl i32 %34, %cond
-  store i32 %shl, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %arr, i64 %indvars.iv
+  %22 = load i32, ptr %arrayidx2, align 4
+  %shl = shl i32 %22, %cond
+  store i32 %shl, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define void @vector_variable_shift_left_loop_simpler(i32* nocapture %arr, i8* nocapture readonly %control, i32 %count, i32 %amt0, i32 %amt1, i32 %x) nounwind {
+define void @vector_variable_shift_left_loop_simpler(ptr nocapture %arr, ptr nocapture readonly %control, i32 %count, i32 %amt0, i32 %amt1, i32 %x) nounwind {
 ; SSE-LABEL: vector_variable_shift_left_loop_simpler:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    testl %edx, %edx
@@ -677,18 +665,16 @@ vector.ph:
 
 vector.body:
   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i8, i8* %control, i64 %index
-  %1 = bitcast i8* %0 to <4 x i8>*
-  %wide.load = load <4 x i8>, <4 x i8>* %1, align 1
-  %2 = icmp eq <4 x i8> %wide.load, zeroinitializer
-  %3 = select <4 x i1> %2, <4 x i32> %splat1, <4 x i32> %splat2
-  %4 = shl <4 x i32> %splat3, %3
-  %5 = getelementptr inbounds i32, i32* %arr, i64 %index
-  %6 = bitcast i32* %5 to <4 x i32>*
-  store <4 x i32> %4, <4 x i32>* %6, align 4
+  %0 = getelementptr inbounds i8, ptr %control, i64 %index
+  %wide.load = load <4 x i8>, ptr %0, align 1
+  %1 = icmp eq <4 x i8> %wide.load, zeroinitializer
+  %2 = select <4 x i1> %1, <4 x i32> %splat1, <4 x i32> %splat2
+  %3 = shl <4 x i32> %splat3, %2
+  %4 = getelementptr inbounds i32, ptr %arr, i64 %index
+  store <4 x i32> %3, ptr %4, align 4
   %index.next = add i64 %index, 4
-  %7 = icmp eq i64 %index.next, %n.vec
-  br i1 %7, label %exit, label %vector.body
+  %5 = icmp eq i64 %index.next, %n.vec
+  br i1 %5, label %exit, label %vector.body
 
 exit:
   ret void

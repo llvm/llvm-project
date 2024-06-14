@@ -136,87 +136,87 @@ entry:
   %f14.addr = alloca float, align 4
   %f15.addr = alloca float, align 4
   %f16.addr = alloca float, align 4
-  store float %f1, float* %f1.addr, align 4
-  store float %f2, float* %f2.addr, align 4
-  store float %f3, float* %f3.addr, align 4
-  store float %f4, float* %f4.addr, align 4
-  store float %f5, float* %f5.addr, align 4
-  store float %f6, float* %f6.addr, align 4
-  store float %f7, float* %f7.addr, align 4
-  store float %f8, float* %f8.addr, align 4
-  store float %f9, float* %f9.addr, align 4
-  store float %f10, float* %f10.addr, align 4
-  store float %f11, float* %f11.addr, align 4
-  store float %f12, float* %f12.addr, align 4
-  store float %f13, float* %f13.addr, align 4
-  store float %f14, float* %f14.addr, align 4
-  store float %f15, float* %f15.addr, align 4
-  store float %f16, float* %f16.addr, align 4
-  %0 = load float, float* %f16.addr, align 4
-  %1 = load float, float* %f15.addr, align 4
-  %2 = load float, float* %f14.addr, align 4
-  %3 = load float, float* %f13.addr, align 4
-  %4 = load float, float* %f12.addr, align 4
-  %5 = load float, float* %f11.addr, align 4
-  %6 = load float, float* %f10.addr, align 4
-  %7 = load float, float* %f9.addr, align 4
-  %8 = load float, float* %f8.addr, align 4
-  %9 = load float, float* %f7.addr, align 4
-  %10 = load float, float* %f6.addr, align 4
-  %11 = load float, float* %f5.addr, align 4
-  %12 = load float, float* %f4.addr, align 4
-  %13 = load float, float* %f3.addr, align 4
-  %14 = load float, float* %f2.addr, align 4
-  %15 = load float, float* %f1.addr, align 4
-  store float %0, float* %__A.addr.i, align 4
-  store float %1, float* %__B.addr.i, align 4
-  store float %2, float* %__C.addr.i, align 4
-  store float %3, float* %__D.addr.i, align 4
-  store float %4, float* %__E.addr.i, align 4
-  store float %5, float* %__F.addr.i, align 4
-  store float %6, float* %__G.addr.i, align 4
-  store float %7, float* %__H.addr.i, align 4
-  store float %8, float* %__I.addr.i, align 4
-  store float %9, float* %__J.addr.i, align 4
-  store float %10, float* %__K.addr.i, align 4
-  store float %11, float* %__L.addr.i, align 4
-  store float %12, float* %__M.addr.i, align 4
-  store float %13, float* %__N.addr.i, align 4
-  store float %14, float* %__O.addr.i, align 4
-  store float %15, float* %__P.addr.i, align 4
-  %16 = load float, float* %__P.addr.i, align 4
+  store float %f1, ptr %f1.addr, align 4
+  store float %f2, ptr %f2.addr, align 4
+  store float %f3, ptr %f3.addr, align 4
+  store float %f4, ptr %f4.addr, align 4
+  store float %f5, ptr %f5.addr, align 4
+  store float %f6, ptr %f6.addr, align 4
+  store float %f7, ptr %f7.addr, align 4
+  store float %f8, ptr %f8.addr, align 4
+  store float %f9, ptr %f9.addr, align 4
+  store float %f10, ptr %f10.addr, align 4
+  store float %f11, ptr %f11.addr, align 4
+  store float %f12, ptr %f12.addr, align 4
+  store float %f13, ptr %f13.addr, align 4
+  store float %f14, ptr %f14.addr, align 4
+  store float %f15, ptr %f15.addr, align 4
+  store float %f16, ptr %f16.addr, align 4
+  %0 = load float, ptr %f16.addr, align 4
+  %1 = load float, ptr %f15.addr, align 4
+  %2 = load float, ptr %f14.addr, align 4
+  %3 = load float, ptr %f13.addr, align 4
+  %4 = load float, ptr %f12.addr, align 4
+  %5 = load float, ptr %f11.addr, align 4
+  %6 = load float, ptr %f10.addr, align 4
+  %7 = load float, ptr %f9.addr, align 4
+  %8 = load float, ptr %f8.addr, align 4
+  %9 = load float, ptr %f7.addr, align 4
+  %10 = load float, ptr %f6.addr, align 4
+  %11 = load float, ptr %f5.addr, align 4
+  %12 = load float, ptr %f4.addr, align 4
+  %13 = load float, ptr %f3.addr, align 4
+  %14 = load float, ptr %f2.addr, align 4
+  %15 = load float, ptr %f1.addr, align 4
+  store float %0, ptr %__A.addr.i, align 4
+  store float %1, ptr %__B.addr.i, align 4
+  store float %2, ptr %__C.addr.i, align 4
+  store float %3, ptr %__D.addr.i, align 4
+  store float %4, ptr %__E.addr.i, align 4
+  store float %5, ptr %__F.addr.i, align 4
+  store float %6, ptr %__G.addr.i, align 4
+  store float %7, ptr %__H.addr.i, align 4
+  store float %8, ptr %__I.addr.i, align 4
+  store float %9, ptr %__J.addr.i, align 4
+  store float %10, ptr %__K.addr.i, align 4
+  store float %11, ptr %__L.addr.i, align 4
+  store float %12, ptr %__M.addr.i, align 4
+  store float %13, ptr %__N.addr.i, align 4
+  store float %14, ptr %__O.addr.i, align 4
+  store float %15, ptr %__P.addr.i, align 4
+  %16 = load float, ptr %__P.addr.i, align 4
   %vecinit.i = insertelement <16 x float> undef, float %16, i32 0
-  %17 = load float, float* %__O.addr.i, align 4
+  %17 = load float, ptr %__O.addr.i, align 4
   %vecinit1.i = insertelement <16 x float> %vecinit.i, float %17, i32 1
-  %18 = load float, float* %__N.addr.i, align 4
+  %18 = load float, ptr %__N.addr.i, align 4
   %vecinit2.i = insertelement <16 x float> %vecinit1.i, float %18, i32 2
-  %19 = load float, float* %__M.addr.i, align 4
+  %19 = load float, ptr %__M.addr.i, align 4
   %vecinit3.i = insertelement <16 x float> %vecinit2.i, float %19, i32 3
-  %20 = load float, float* %__L.addr.i, align 4
+  %20 = load float, ptr %__L.addr.i, align 4
   %vecinit4.i = insertelement <16 x float> %vecinit3.i, float %20, i32 4
-  %21 = load float, float* %__K.addr.i, align 4
+  %21 = load float, ptr %__K.addr.i, align 4
   %vecinit5.i = insertelement <16 x float> %vecinit4.i, float %21, i32 5
-  %22 = load float, float* %__J.addr.i, align 4
+  %22 = load float, ptr %__J.addr.i, align 4
   %vecinit6.i = insertelement <16 x float> %vecinit5.i, float %22, i32 6
-  %23 = load float, float* %__I.addr.i, align 4
+  %23 = load float, ptr %__I.addr.i, align 4
   %vecinit7.i = insertelement <16 x float> %vecinit6.i, float %23, i32 7
-  %24 = load float, float* %__H.addr.i, align 4
+  %24 = load float, ptr %__H.addr.i, align 4
   %vecinit8.i = insertelement <16 x float> %vecinit7.i, float %24, i32 8
-  %25 = load float, float* %__G.addr.i, align 4
+  %25 = load float, ptr %__G.addr.i, align 4
   %vecinit9.i = insertelement <16 x float> %vecinit8.i, float %25, i32 9
-  %26 = load float, float* %__F.addr.i, align 4
+  %26 = load float, ptr %__F.addr.i, align 4
   %vecinit10.i = insertelement <16 x float> %vecinit9.i, float %26, i32 10
-  %27 = load float, float* %__E.addr.i, align 4
+  %27 = load float, ptr %__E.addr.i, align 4
   %vecinit11.i = insertelement <16 x float> %vecinit10.i, float %27, i32 11
-  %28 = load float, float* %__D.addr.i, align 4
+  %28 = load float, ptr %__D.addr.i, align 4
   %vecinit12.i = insertelement <16 x float> %vecinit11.i, float %28, i32 12
-  %29 = load float, float* %__C.addr.i, align 4
+  %29 = load float, ptr %__C.addr.i, align 4
   %vecinit13.i = insertelement <16 x float> %vecinit12.i, float %29, i32 13
-  %30 = load float, float* %__B.addr.i, align 4
+  %30 = load float, ptr %__B.addr.i, align 4
   %vecinit14.i = insertelement <16 x float> %vecinit13.i, float %30, i32 14
-  %31 = load float, float* %__A.addr.i, align 4
+  %31 = load float, ptr %__A.addr.i, align 4
   %vecinit15.i = insertelement <16 x float> %vecinit14.i, float %31, i32 15
-  store <16 x float> %vecinit15.i, <16 x float>* %.compoundliteral.i, align 64
-  %32 = load <16 x float>, <16 x float>* %.compoundliteral.i, align 64
+  store <16 x float> %vecinit15.i, ptr %.compoundliteral.i, align 64
+  %32 = load <16 x float>, ptr %.compoundliteral.i, align 64
   ret <16 x float> %32
 }

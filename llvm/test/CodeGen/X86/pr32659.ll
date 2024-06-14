@@ -4,9 +4,9 @@
 target triple = "i386-unknown-linux-gnu"
 
 @a = external dso_local global i32, align 4
-@d = external dso_local global i32*, align 4
-@k = external dso_local global i32**, align 4
-@j = external dso_local global i32***, align 4
+@d = external dso_local global ptr, align 4
+@k = external dso_local global ptr, align 4
+@j = external dso_local global ptr, align 4
 @h = external dso_local global i32, align 4
 @c = external dso_local global i32, align 4
 @i = external dso_local global i32, align 4
@@ -57,35 +57,35 @@ define void @fn2() nounwind optsize {
 ; CHECK-NEXT:    retl
 entry:
   %putchar = tail call i32 @putchar(i32 48)
-  %0 = load volatile i32, i32* @h, align 4
-  %1 = load i32, i32* @c, align 4, !tbaa !1
-  %2 = load i32***, i32**** @j, align 4
-  %3 = load i32**, i32*** %2, align 4
-  %4 = load i32*, i32** %3, align 4
-  %5 = load i32, i32* %4, align 4
+  %0 = load volatile i32, ptr @h, align 4
+  %1 = load i32, ptr @c, align 4, !tbaa !1
+  %2 = load ptr, ptr @j, align 4
+  %3 = load ptr, ptr %2, align 4
+  %4 = load ptr, ptr %3, align 4
+  %5 = load i32, ptr %4, align 4
   %cmp = icmp sgt i32 %1, %5
   %conv = zext i1 %cmp to i32
-  %6 = load i32, i32* @i, align 4
+  %6 = load i32, ptr @i, align 4
   %cmp1 = icmp sgt i32 %6, %conv
   %conv2 = zext i1 %cmp1 to i32
-  store i32 %conv2, i32* @b, align 4
+  store i32 %conv2, ptr @b, align 4
   %cmp3 = icmp sgt i32 %0, %conv2
   %conv4 = zext i1 %cmp3 to i32
-  %7 = load i32, i32* @a, align 4
+  %7 = load i32, ptr @a, align 4
   %or = xor i32 %7, %conv4
-  store i32 %or, i32* @a, align 4
-  %8 = load i32*, i32** @d, align 4
-  %9 = load i32, i32* %8, align 4
+  store i32 %or, ptr @a, align 4
+  %8 = load ptr, ptr @d, align 4
+  %9 = load i32, ptr %8, align 4
   %conv6 = sext i32 %9 to i64
-  %10 = load i64, i64* @e, align 8
+  %10 = load i64, ptr @e, align 8
   %and = and i64 %10, %conv6
-  store i64 %and, i64* @e, align 8
-  %11 = load i32, i32* @g, align 4
+  store i64 %and, ptr @e, align 8
+  %11 = load i32, ptr @g, align 4
   %dec = add nsw i32 %11, -1
-  store i32 %dec, i32* @g, align 4
-  %12 = load i64, i64* @f, align 8
+  store i32 %dec, ptr @g, align 4
+  %12 = load i64, ptr @f, align 8
   %inc = add nsw i64 %12, 1
-  store i64 %inc, i64* @f, align 8
+  store i64 %inc, ptr @f, align 8
   ret void
 }
 

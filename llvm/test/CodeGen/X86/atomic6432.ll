@@ -94,10 +94,10 @@ define void @atomic_fetch_add64() nounwind {
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 entry:
-  %t1 = atomicrmw add  i64* @sc64, i64 1 acquire
-  %t2 = atomicrmw add  i64* @sc64, i64 3 acquire
-  %t3 = atomicrmw add  i64* @sc64, i64 5 acquire
-  %t4 = atomicrmw add  i64* @sc64, i64 %t3 acquire
+  %t1 = atomicrmw add  ptr @sc64, i64 1 acquire
+  %t2 = atomicrmw add  ptr @sc64, i64 3 acquire
+  %t3 = atomicrmw add  ptr @sc64, i64 5 acquire
+  %t4 = atomicrmw add  ptr @sc64, i64 %t3 acquire
   ret void
 }
 
@@ -191,10 +191,10 @@ define void @atomic_fetch_sub64() nounwind {
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw sub  i64* @sc64, i64 1 acquire
-  %t2 = atomicrmw sub  i64* @sc64, i64 3 acquire
-  %t3 = atomicrmw sub  i64* @sc64, i64 5 acquire
-  %t4 = atomicrmw sub  i64* @sc64, i64 %t3 acquire
+  %t1 = atomicrmw sub  ptr @sc64, i64 1 acquire
+  %t2 = atomicrmw sub  ptr @sc64, i64 3 acquire
+  %t3 = atomicrmw sub  ptr @sc64, i64 5 acquire
+  %t4 = atomicrmw sub  ptr @sc64, i64 %t3 acquire
   ret void
 }
 
@@ -268,9 +268,9 @@ define void @atomic_fetch_and64() nounwind {
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw and  i64* @sc64, i64 3 acquire
-  %t2 = atomicrmw and  i64* @sc64, i64 4294967297 acquire
-  %t3 = atomicrmw and  i64* @sc64, i64 %t2 acquire
+  %t1 = atomicrmw and  ptr @sc64, i64 3 acquire
+  %t2 = atomicrmw and  ptr @sc64, i64 4294967297 acquire
+  %t3 = atomicrmw and  ptr @sc64, i64 %t2 acquire
   ret void
 }
 
@@ -344,9 +344,9 @@ define void @atomic_fetch_or64() nounwind {
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw or   i64* @sc64, i64 3 acquire
-  %t2 = atomicrmw or   i64* @sc64, i64 4294967297 acquire
-  %t3 = atomicrmw or   i64* @sc64, i64 %t2 acquire
+  %t1 = atomicrmw or   ptr @sc64, i64 3 acquire
+  %t2 = atomicrmw or   ptr @sc64, i64 4294967297 acquire
+  %t3 = atomicrmw or   ptr @sc64, i64 %t2 acquire
   ret void
 }
 
@@ -420,9 +420,9 @@ define void @atomic_fetch_xor64() nounwind {
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw xor  i64* @sc64, i64 3 acquire
-  %t2 = atomicrmw xor  i64* @sc64, i64 4294967297 acquire
-  %t3 = atomicrmw xor  i64* @sc64, i64 %t2 acquire
+  %t1 = atomicrmw xor  ptr @sc64, i64 3 acquire
+  %t2 = atomicrmw xor  ptr @sc64, i64 4294967297 acquire
+  %t3 = atomicrmw xor  ptr @sc64, i64 %t2 acquire
   ret void
 }
 
@@ -465,7 +465,7 @@ define void @atomic_fetch_nand64(i64 %x) nounwind {
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw nand i64* @sc64, i64 %x acquire
+  %t1 = atomicrmw nand ptr @sc64, i64 %x acquire
   ret void
 }
 
@@ -506,7 +506,7 @@ define void @atomic_fetch_max64(i64 %x) nounwind {
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw max  i64* @sc64, i64 %x acquire
+  %t1 = atomicrmw max  ptr @sc64, i64 %x acquire
   ret void
 }
 
@@ -547,7 +547,7 @@ define void @atomic_fetch_min64(i64 %x) nounwind {
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw min  i64* @sc64, i64 %x acquire
+  %t1 = atomicrmw min  ptr @sc64, i64 %x acquire
   ret void
 }
 
@@ -588,7 +588,7 @@ define void @atomic_fetch_umax64(i64 %x) nounwind {
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw umax i64* @sc64, i64 %x acquire
+  %t1 = atomicrmw umax ptr @sc64, i64 %x acquire
   ret void
 }
 
@@ -629,7 +629,7 @@ define void @atomic_fetch_umin64(i64 %x) nounwind {
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw umin i64* @sc64, i64 %x acquire
+  %t1 = atomicrmw umin ptr @sc64, i64 %x acquire
   ret void
 }
 
@@ -644,7 +644,7 @@ define void @atomic_fetch_cmpxchg64() nounwind {
 ; X32-NEXT:    lock cmpxchg8b sc64
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = cmpxchg i64* @sc64, i64 0, i64 1 acquire acquire
+  %t1 = cmpxchg ptr @sc64, i64 0, i64 1 acquire acquire
   ret void
 }
 
@@ -657,7 +657,7 @@ define void @atomic_fetch_store64(i64 %x) nounwind {
 ; X32-NEXT:    pinsrd $1, %eax, %xmm0
 ; X32-NEXT:    movq %xmm0, sc64
 ; X32-NEXT:    retl
-  store atomic i64 %x, i64* @sc64 release, align 8
+  store atomic i64 %x, ptr @sc64 release, align 8
   ret void
 }
 
@@ -690,6 +690,6 @@ define void @atomic_fetch_swap64(i64 %x) nounwind {
 ; X32-NEXT:    addl $16, %esp
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-  %t1 = atomicrmw xchg i64* @sc64, i64 %x acquire
+  %t1 = atomicrmw xchg ptr @sc64, i64 %x acquire
   ret void
 }

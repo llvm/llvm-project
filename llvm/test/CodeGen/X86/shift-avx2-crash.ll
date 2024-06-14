@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-unknown-linux-gnu"
 
-define void @f_f(float* noalias nocapture %RET, float %aFOO, i32 %div)  {
+define void @f_f(ptr noalias nocapture %RET, float %aFOO, i32 %div)  {
 allocas:
   %__idiv_table_u32_offset10_offset_load.i = add i64 0, -2
   br label %if_then18.i
@@ -32,8 +32,7 @@ if_then18.i:
 
 __fast_idiv___UM_vyuunu.exit:
   %calltmp_to_float = uitofp <8 x i32> %bitop22_to_uint32.i to <8 x float>
-  %ptrcast = bitcast float* %RET to <8 x float>*
-  store <8 x float> %calltmp_to_float, <8 x float>* %ptrcast, align 4
+  store <8 x float> %calltmp_to_float, ptr %RET, align 4
   ret void
 }
 

@@ -68,8 +68,7 @@ define void @t1(i32 %argc, ptr %argv) nounwind  {
 ; NHM_64-NEXT:    ud2
 entry:
   %tmp1 = alloca [25 x i8]
-  %tmp2 = bitcast [25 x i8]* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp2, i8* align 1 getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i32 0, i32 0), i32 25, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %tmp1, ptr align 1 @.str, i32 25, i1 false)
   unreachable
 }
 
@@ -273,10 +272,8 @@ define void @t4() nounwind {
 ; NHM_64-NEXT:    ud2
 entry:
   %tmp1 = alloca [30 x i8]
-  %tmp2 = bitcast [30 x i8]* %tmp1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %tmp2, i8* align 1 getelementptr inbounds ([30 x i8], [30 x i8]* @.str2, i32 0, i32 0), i32 30, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %tmp1, ptr align 1 @.str2, i32 30, i1 false)
   unreachable
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.p0.p0.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind

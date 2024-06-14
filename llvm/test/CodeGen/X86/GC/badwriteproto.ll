@@ -1,22 +1,19 @@
 ; RUN: not llvm-as < %s > /dev/null 2>&1
 
-	%list = type { i32, %list* }
+	%list = type { i32, ptr }
 
-; This usage is invalid now; instead, objects must be bitcast to i8* for input
+; This usage is invalid now; instead, objects must be bitcast to ptr for input
 ; to the gc intrinsics.
-declare void @llvm.gcwrite(%list*, %list*, %list**)
+declare void @llvm.gcwrite(ptr, ptr, ptr)
 
-define %list* @cons(i32 %hd, %list* %tl) gc "example" {
-	%tmp = call i8* @gcalloc(i32 bitcast(%list* getelementptr(%list, %list* null, i32 1) to i32))
-	%cell = bitcast i8* %tmp to %list*
+define ptr @cons(i32 %hd, ptr %tl) gc "example" {
+	%tmp = call ptr @gcalloc(i32 bitcast(ptr getelementptr(%list, ptr null, i32 1) to i32))
 	
-	%hd.ptr = getelementptr %list, %list* %cell, i32 0, i32 0
-	store i32 %hd, i32* %hd.ptr
+	store i32 %hd, ptr %tmp
 	
-	%tl.ptr = getelementptr %list, %list* %cell, i32 0, i32 0
-	call void @llvm.gcwrite(%list* %tl, %list* %cell, %list** %tl.ptr)
+	call void @llvm.gcwrite(ptr %tl, ptr %tmp, ptr %tmp)
 	
 	ret %cell.2
 }
 
-declare i8* @gcalloc(i32)
+declare ptr @gcalloc(i32)

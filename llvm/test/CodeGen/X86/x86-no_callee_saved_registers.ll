@@ -107,7 +107,7 @@ define void @test2() {
 }
 
 ; on an invoke instead
-define i32 @test3() personality i8* undef {
+define i32 @test3() personality ptr undef {
 ; CHECK-O0-LABEL: test3:
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    pushq %rbp
@@ -227,7 +227,7 @@ invoke.cont:
   ret i32 1
 
 lpad:
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
   ret i32 0
 }

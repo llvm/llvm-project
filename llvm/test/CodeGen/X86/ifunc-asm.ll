@@ -3,7 +3,7 @@
 
 define internal ptr @foo_resolver() {
 entry:
-  ret i32 (i32)* null
+  ret ptr null
 }
 ; ELF:             .type foo_resolver,@function
 ; ELF-NEXT:    foo_resolver:

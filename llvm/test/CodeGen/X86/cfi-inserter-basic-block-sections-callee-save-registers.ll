@@ -38,8 +38,8 @@ define dso_local void @_Z3foob(i1 zeroext %b) {
 entry:
   %b.addr = alloca i8, align 1
   %frombool = zext i1 %b to i8
-  store i8 %frombool, i8* %b.addr, align 1
-  %0 = load i8, i8* %b.addr, align 1
+  store i8 %frombool, ptr %b.addr, align 1
+  %0 = load i8, ptr %b.addr, align 1
   %tobool = trunc i8 %0 to i1
   br i1 %tobool, label %if.then, label %if.end
 

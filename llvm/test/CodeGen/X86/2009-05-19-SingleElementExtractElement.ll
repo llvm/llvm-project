@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64--
 ; PR3886
 
-define i32 @main(i32 %argc, i8** nocapture %argv) nounwind {
+define i32 @main(i32 %argc, ptr nocapture %argv) nounwind {
 entry:
         %a = call <1 x i64> @bar()
         %tmp5.i = extractelement <1 x i64> %a, i32 0

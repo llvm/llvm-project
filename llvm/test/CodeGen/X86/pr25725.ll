@@ -5,7 +5,7 @@
 
 %struct.s = type { [100 x i32] }
 
-define void @f(%struct.s* nocapture %s) #0 {
+define void @f(ptr nocapture %s) #0 {
 ; X64-LABEL: f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    xorps %xmm0, %xmm0
@@ -25,11 +25,10 @@ define void @f(%struct.s* nocapture %s) #0 {
 ; X86-NEXT:    movups %xmm0, (%eax)
 ; X86-NEXT:    retl
 entry:
-  %s5 = bitcast %struct.s* %s to i8*
-  call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 4 dereferenceable(64) %s5, i8 0, i32 64, i1 false)
+  call void @llvm.memset.p0.i32(ptr noundef nonnull align 4 dereferenceable(64) %s, i8 0, i32 64, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 
 attributes #0 = { "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }

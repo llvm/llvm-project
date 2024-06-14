@@ -3,6 +3,14 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown -mattr=+avx < %s | FileCheck %s --check-prefix=ALL
 
 define zeroext i16 @test1_fast(double %d) #0 {
+; ALL-LABEL: test1_fast:
+; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    pushq %rax
+; ALL-NEXT:    callq __truncdfhf2@PLT
+; ALL-NEXT:    vpextrw $0, %xmm0, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; ALL-NEXT:    popq %rcx
+; ALL-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f64(double %d)
   ret i16 %0
@@ -25,6 +33,14 @@ entry:
 }
 
 define zeroext i16 @test1(double %d) #1 {
+; ALL-LABEL: test1:
+; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    pushq %rax
+; ALL-NEXT:    callq __truncdfhf2@PLT
+; ALL-NEXT:    vpextrw $0, %xmm0, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; ALL-NEXT:    popq %rcx
+; ALL-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f64(double %d)
   ret i16 %0

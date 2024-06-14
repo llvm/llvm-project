@@ -16,7 +16,7 @@ define void @test1() {
 entry:
   br label %b
 b:
-  call void asm "# $0 $1 $2", "X,i,s"(i8* blockaddress(@test1, %b), i8* blockaddress(@test1, %b), i8* blockaddress(@test1, %b))
-  call void asm "# $0", "n"(i8* blockaddress(@test1, %b))
+  call void asm "# $0 $1 $2", "X,i,s"(ptr blockaddress(@test1, %b), ptr blockaddress(@test1, %b), ptr blockaddress(@test1, %b))
+  call void asm "# $0", "n"(ptr blockaddress(@test1, %b))
   ret void
 }

@@ -9,6 +9,6 @@ define void @foo(ptr %s, i32 %x) {
 ; CHECK-NEXT:    movl %esi, (%rdi) # encoding: [0x89,0x37]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %y = add nsw i32 %x, 42
-  store i32 %y, i32* %s, align 4
+  store i32 %y, ptr %s, align 4
   ret void
 }

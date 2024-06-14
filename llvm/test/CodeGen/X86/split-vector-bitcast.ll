@@ -3,7 +3,7 @@
 
 ; PR10497 + another isel issue with sse2 disabled
 ; (This is primarily checking that this construct doesn't crash.)
-define void @a(<2 x float>* %a, <2 x i32>* %b) {
+define void @a(ptr %a, ptr %b) {
 ; CHECK-LABEL: a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subl $8, %esp
@@ -25,10 +25,10 @@ define void @a(<2 x float>* %a, <2 x i32>* %b) {
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
-  %cc = load <2 x float>, <2 x float>* %a
+  %cc = load <2 x float>, ptr %a
   %c = fadd <2 x float> %cc, %cc
   %dd = bitcast <2 x float> %c to <2 x i32>
   %d = add <2 x i32> %dd, %dd
-  store <2 x i32> %d, <2 x i32>* %b
+  store <2 x i32> %d, ptr %b
   ret void
 }

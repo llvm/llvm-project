@@ -84,7 +84,7 @@ define i32 @t3_random_constant(i32 %ptr) nounwind {
 
 ; Extra use tests
 
-define i32 @t4_extrause(i32 %ptr, i32* %bias_storage) nounwind {
+define i32 @t4_extrause(i32 %ptr, ptr %bias_storage) nounwind {
 ; X86-LABEL: t4_extrause:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -104,7 +104,7 @@ define i32 @t4_extrause(i32 %ptr, i32* %bias_storage) nounwind {
 ; X64-NEXT:    andl $-16, %eax
 ; X64-NEXT:    retq
   %bias = and i32 %ptr, 15
-  store i32 %bias, i32* %bias_storage
+  store i32 %bias, ptr %bias_storage
   %r = sub i32 %ptr, %bias
   ret i32 %r
 }

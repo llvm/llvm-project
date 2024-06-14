@@ -2,7 +2,7 @@
 ; RUN: | FileCheck %s
 ; make sure scheduler honors the flags clobber.  PR 7882.
 
-define i32 @main(i32 %argc, i8** %argv) nounwind
+define i32 @main(i32 %argc, ptr %argv) nounwind
 {
 entry:
 ; CHECK: InlineAsm End

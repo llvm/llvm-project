@@ -20,15 +20,15 @@ land.lhs.true:                                    ; preds = %do.body.i
 
 for.body.i:                                       ; preds = %for.inc.i, %if.then
   %tmp3524.i = phi i32 [ 0, %land.lhs.true ], [ %tmp351.i, %for.inc.i ]
-  %tmp6.i12 = load i32, i32* undef, align 4
+  %tmp6.i12 = load i32, ptr undef, align 4
   br i1 undef, label %for.inc.i, label %if.then.i17
 
 if.then.i17:                                      ; preds = %for.body.i
   %shr.i14 = lshr i32 %tmp6.i12, 8
   %and14.i = and i32 %shr.i14, 255
   %idxprom15.i = zext i32 %and14.i to i64
-  %arrayidx16.i = getelementptr inbounds [256 x i32], [256 x i32]* @bit_count, i64 0, i64 %idxprom15.i
-  %tmp17.i15 = load i32, i32* %arrayidx16.i, align 4
+  %arrayidx16.i = getelementptr inbounds [256 x i32], ptr @bit_count, i64 0, i64 %idxprom15.i
+  %tmp17.i15 = load i32, ptr %arrayidx16.i, align 4
   %add.i = add i32 0, %tmp3524.i
   %add24.i = add i32 %add.i, %tmp17.i15
   %add31.i = add i32 %add24.i, 0

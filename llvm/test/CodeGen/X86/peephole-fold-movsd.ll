@@ -9,7 +9,7 @@
 
 @g = common dso_local global %struct.S1 zeroinitializer, align 8
 
-declare void @foo3(%struct.S1*)
+declare void @foo3(ptr)
 
 define dso_local void @foo1(double %a.coerce0, double %a.coerce1, double %b.coerce0, double %b.coerce1) nounwind {
 ; CHECK-LABEL: foo1:
@@ -25,17 +25,15 @@ define dso_local void @foo1(double %a.coerce0, double %a.coerce1, double %b.coer
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
   %1 = alloca <2 x double>, align 16
-  %tmpcast = bitcast <2 x double>* %1 to %struct.S1*
-  call void @foo3(%struct.S1* %tmpcast) #2
-  %p2 = getelementptr inbounds %struct.S1, %struct.S1* %tmpcast, i64 0, i32 0
-  %2 = load double, double* %p2, align 16
-  %p3 = getelementptr inbounds %struct.S1, %struct.S1* %tmpcast, i64 0, i32 1
-  %3 = load double, double* %p3, align 8
+  call void @foo3(ptr %1) #2
+  %2 = load double, ptr %1, align 16
+  %p3 = getelementptr inbounds %struct.S1, ptr %1, i64 0, i32 1
+  %3 = load double, ptr %p3, align 8
   %4 = insertelement <2 x double> undef, double %2, i32 0
   %5 = insertelement <2 x double> %4, double 0.000000e+00, i32 1
   %6 = insertelement <2 x double> undef, double %3, i32 1
   %7 = insertelement <2 x double> %6, double 1.000000e+00, i32 0
   %8 = fadd <2 x double> %5, %7
-  store <2 x double> %8, <2 x double>* bitcast (%struct.S1* @g to <2 x double>*), align 16
+  store <2 x double> %8, ptr @g, align 16
   ret void
 }

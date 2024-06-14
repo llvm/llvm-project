@@ -23,12 +23,12 @@ define i32 @test_x86_tbm_bextri_u32_subreg(i32 %a) nounwind {
   ret i32 %t1
 }
 
-define i32 @test_x86_tbm_bextri_u32_m(i32* nocapture %a) nounwind {
+define i32 @test_x86_tbm_bextri_u32_m(ptr nocapture %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u32_m:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bextrl $3076, (%rdi), %eax # imm = 0xC04
 ; CHECK-NEXT:    retq
-  %t0 = load i32, i32* %a
+  %t0 = load i32, ptr %a
   %t1 = lshr i32 %t0, 4
   %t2 = and i32 %t1, 4095
   ret i32 %t2
@@ -98,12 +98,12 @@ define i64 @test_x86_tbm_bextri_u64_subreg(i64 %a) nounwind {
   ret i64 %t1
 }
 
-define i64 @test_x86_tbm_bextri_u64_m(i64* nocapture %a) nounwind {
+define i64 @test_x86_tbm_bextri_u64_m(ptr nocapture %a) nounwind {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_m:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bextrl $3076, (%rdi), %eax # imm = 0xC04
 ; CHECK-NEXT:    retq
-  %t0 = load i64, i64* %a
+  %t0 = load i64, ptr %a
   %t1 = lshr i64 %t0, 4
   %t2 = and i64 %t1, 4095
   ret i64 %t2
@@ -1139,13 +1139,13 @@ entry:
   ret i64 %and
 }
 
-define i64 @test_and_large_constant_mask_load(i64* %x) {
+define i64 @test_and_large_constant_mask_load(ptr %x) {
 ; CHECK-LABEL: test_and_large_constant_mask_load:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bextrq $15872, (%rdi), %rax # imm = 0x3E00
 ; CHECK-NEXT:    retq
 entry:
-  %x1 = load i64, i64* %x
+  %x1 = load i64, ptr %x
   %and = and i64 %x1, 4611686018427387903
   ret i64 %and
 }

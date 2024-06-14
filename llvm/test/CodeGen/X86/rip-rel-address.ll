@@ -6,7 +6,7 @@
 
 @a = internal global double 3.4
 define double @foo() nounwind {
-  %a = load double, double* @a
+  %a = load double, ptr @a
   ret double %a
   
 ; PIC64:    movsd	_a(%rip), %xmm0

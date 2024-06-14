@@ -10,16 +10,16 @@ target triple = "x86_64-apple-unknown"
 
 ; CHECK: movsd
 
-define i32 @main(i32* %i, double %tmpv) {
+define i32 @main(ptr %i, double %tmpv) {
 bb:
   br label %bb7
 
 bb7:                                              ; preds = %bb7, %bb
   %storemerge = phi i32 [ 0, %bb ], [ %tmp19, %bb7 ]
   %tmp15 = zext i32 %storemerge to i64
-  %tmp16 = getelementptr inbounds [100000 x double], [100000 x double]* @TheArray, i64 0, i64 %tmp15
-  store double %tmpv, double* %tmp16, align 8
-  %tmp18 = load i32, i32* %i, align 4
+  %tmp16 = getelementptr inbounds [100000 x double], ptr @TheArray, i64 0, i64 %tmp15
+  store double %tmpv, ptr %tmp16, align 8
+  %tmp18 = load i32, ptr %i, align 4
   %tmp19 = add i32 %tmp18, 1
   br label %bb7
 }

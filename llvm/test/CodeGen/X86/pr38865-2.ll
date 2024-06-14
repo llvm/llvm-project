@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.a = type { i8 }
 
-define void @_Z1bv(%struct.a* noalias sret(%struct.a) %agg.result) {
+define void @_Z1bv(ptr noalias sret(%struct.a) %agg.result) {
 ; CHECK-LABEL: _Z1bv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -19,6 +19,6 @@ define void @_Z1bv(%struct.a* noalias sret(%struct.a) %agg.result) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  call void @_Z1bv(%struct.a* sret(%struct.a) %agg.result)
+  call void @_Z1bv(ptr sret(%struct.a) %agg.result)
   ret void
 }

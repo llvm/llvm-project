@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+movdiri --show-mc-encoding | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+movdiri,+egpr --show-mc-encoding | FileCheck %s -check-prefix=EGPR
 
-define void @test_movdiri(i8* %p, i64 %v) {
+define void @test_movdiri(ptr %p, i64 %v) {
 ; CHECK-LABEL: test_movdiri:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movdiri %rsi, (%rdi) # encoding: [0x48,0x0f,0x38,0xf9,0x37]
@@ -13,8 +13,8 @@ define void @test_movdiri(i8* %p, i64 %v) {
 ; EGPR-NEXT:    movdiri %rsi, (%rdi) # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x38,0xf9,0x37]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
 entry:
-  call void @llvm.x86.directstore64(i8* %p, i64 %v)
+  call void @llvm.x86.directstore64(ptr %p, i64 %v)
   ret void
 }
 
-declare void @llvm.x86.directstore64(i8*, i64)
+declare void @llvm.x86.directstore64(ptr, i64)

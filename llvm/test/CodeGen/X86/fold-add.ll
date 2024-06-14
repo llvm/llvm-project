@@ -29,7 +29,7 @@ define dso_local i64 @zero() #0 {
 ; MPIC-NEXT:    addq %rcx, %rax
 ; MPIC-NEXT:    retq
 entry:
-  ret i64 add (i64 ptrtoint (i32* @foo to i64), i64 0)
+  ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 0)
 }
 
 define dso_local i64 @one() #0 {
@@ -55,7 +55,7 @@ define dso_local i64 @one() #0 {
 ; MPIC-NEXT:    leaq 1(%rax,%rcx), %rax
 ; MPIC-NEXT:    retq
 entry:
-  ret i64 add (i64 ptrtoint (i32* @foo to i64), i64 1)
+  ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 1)
 }
 
 ;; Check we don't fold a large offset into leaq, otherwise
@@ -86,7 +86,7 @@ define dso_local i64 @large() #0 {
 ; MPIC-NEXT:    leaq 1701208431(%rax,%rcx), %rax
 ; MPIC-NEXT:    retq
 entry:
-  ret i64 add (i64 ptrtoint (i32* @foo to i64), i64 1701208431)
+  ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 1701208431)
 }
 
 ;; Test we don't emit movl foo-1, %eax. ELF R_X86_64_32 does not allow
@@ -115,7 +115,7 @@ define dso_local i64 @neg_1() #0 {
 ; MPIC-NEXT:    leaq -1(%rax,%rcx), %rax
 ; MPIC-NEXT:    retq
 entry:
-  ret i64 add (i64 ptrtoint (i32* @foo to i64), i64 -1)
+  ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -1)
 }
 
 ;; Test we don't emit movl foo-2147483648, %eax. ELF R_X86_64_32 does not allow
@@ -144,7 +144,7 @@ define dso_local i64 @neg_0x80000000() #0 {
 ; MPIC-NEXT:    leaq -2147483648(%rax,%rcx), %rax
 ; MPIC-NEXT:    retq
 entry:
-  ret i64 add (i64 ptrtoint (i32* @foo to i64), i64 -2147483648)
+  ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -2147483648)
 }
 
 define dso_local i64 @neg_0x80000001() #0 {
@@ -177,7 +177,7 @@ define dso_local i64 @neg_0x80000001() #0 {
 ; MPIC-NEXT:    addq %rcx, %rax
 ; MPIC-NEXT:    retq
 entry:
-  ret i64 add (i64 ptrtoint (i32* @foo to i64), i64 -2147483649)
+  ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -2147483649)
 }
 
 attributes #0 = { nounwind }

@@ -9,7 +9,7 @@
 @gd = thread_local global i32 0
 @ld = internal thread_local global i32 0
 
-define i32* @get_gd() {
+define ptr @get_gd() {
 entry:
 ; CHECK-LABEL: get_gd:
 ; X86: leal gd@TLSGD(%ebx), %eax
@@ -22,7 +22,7 @@ entry:
   ret ptr @gd
 }
 
-define i32* @get_ld() {
+define ptr @get_ld() {
 ; FIXME: This function uses a single thread-local variable, we might want to fall back to general-dynamic.
 ; CHECK-LABEL: get_ld:
 ; X86: leal ld@TLSLDM(%ebx), %eax

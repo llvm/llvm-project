@@ -282,7 +282,7 @@ define <8 x float> @test_x86_avx_hsub_ps_256(<8 x float> %a0, <8 x float> %a1) {
 declare <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
 
-define <32 x i8> @test_x86_avx_ldu_dq_256(i8* %a0) {
+define <32 x i8> @test_x86_avx_ldu_dq_256(ptr %a0) {
 ; X86-LABEL: test_x86_avx_ldu_dq_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -293,13 +293,13 @@ define <32 x i8> @test_x86_avx_ldu_dq_256(i8* %a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vlddqu (%rdi), %ymm0 # encoding: [0xc5,0xff,0xf0,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <32 x i8> @llvm.x86.avx.ldu.dq.256(i8* %a0) ; <<32 x i8>> [#uses=1]
+  %res = call <32 x i8> @llvm.x86.avx.ldu.dq.256(ptr %a0) ; <<32 x i8>> [#uses=1]
   ret <32 x i8> %res
 }
-declare <32 x i8> @llvm.x86.avx.ldu.dq.256(i8*) nounwind readonly
+declare <32 x i8> @llvm.x86.avx.ldu.dq.256(ptr) nounwind readonly
 
 
-define <2 x double> @test_x86_avx_maskload_pd(i8* %a0, <2 x i64> %mask) {
+define <2 x double> @test_x86_avx_maskload_pd(ptr %a0, <2 x i64> %mask) {
 ; X86-LABEL: test_x86_avx_maskload_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -310,13 +310,13 @@ define <2 x double> @test_x86_avx_maskload_pd(i8* %a0, <2 x i64> %mask) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovpd (%rdi), %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x79,0x2d,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx.maskload.pd(i8* %a0, <2 x i64> %mask) ; <<2 x double>> [#uses=1]
+  %res = call <2 x double> @llvm.x86.avx.maskload.pd(ptr %a0, <2 x i64> %mask) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res
 }
-declare <2 x double> @llvm.x86.avx.maskload.pd(i8*, <2 x i64>) nounwind readonly
+declare <2 x double> @llvm.x86.avx.maskload.pd(ptr, <2 x i64>) nounwind readonly
 
 
-define <4 x double> @test_x86_avx_maskload_pd_256(i8* %a0, <4 x i64> %mask) {
+define <4 x double> @test_x86_avx_maskload_pd_256(ptr %a0, <4 x i64> %mask) {
 ; X86-LABEL: test_x86_avx_maskload_pd_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -327,13 +327,13 @@ define <4 x double> @test_x86_avx_maskload_pd_256(i8* %a0, <4 x i64> %mask) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x2d,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8* %a0, <4 x i64> %mask) ; <<4 x double>> [#uses=1]
+  %res = call <4 x double> @llvm.x86.avx.maskload.pd.256(ptr %a0, <4 x i64> %mask) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
 }
-declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8*, <4 x i64>) nounwind readonly
+declare <4 x double> @llvm.x86.avx.maskload.pd.256(ptr, <4 x i64>) nounwind readonly
 
 
-define <4 x float> @test_x86_avx_maskload_ps(i8* %a0, <4 x i32> %mask) {
+define <4 x float> @test_x86_avx_maskload_ps(ptr %a0, <4 x i32> %mask) {
 ; X86-LABEL: test_x86_avx_maskload_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -344,13 +344,13 @@ define <4 x float> @test_x86_avx_maskload_ps(i8* %a0, <4 x i32> %mask) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovps (%rdi), %xmm0, %xmm0 # encoding: [0xc4,0xe2,0x79,0x2c,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx.maskload.ps(i8* %a0, <4 x i32> %mask) ; <<4 x float>> [#uses=1]
+  %res = call <4 x float> @llvm.x86.avx.maskload.ps(ptr %a0, <4 x i32> %mask) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
-declare <4 x float> @llvm.x86.avx.maskload.ps(i8*, <4 x i32>) nounwind readonly
+declare <4 x float> @llvm.x86.avx.maskload.ps(ptr, <4 x i32>) nounwind readonly
 
 
-define <8 x float> @test_x86_avx_maskload_ps_256(i8* %a0, <8 x i32> %mask) {
+define <8 x float> @test_x86_avx_maskload_ps_256(ptr %a0, <8 x i32> %mask) {
 ; X86-LABEL: test_x86_avx_maskload_ps_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -361,13 +361,13 @@ define <8 x float> @test_x86_avx_maskload_ps_256(i8* %a0, <8 x i32> %mask) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovps (%rdi), %ymm0, %ymm0 # encoding: [0xc4,0xe2,0x7d,0x2c,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8* %a0, <8 x i32> %mask) ; <<8 x float>> [#uses=1]
+  %res = call <8 x float> @llvm.x86.avx.maskload.ps.256(ptr %a0, <8 x i32> %mask) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res
 }
-declare <8 x float> @llvm.x86.avx.maskload.ps.256(i8*, <8 x i32>) nounwind readonly
+declare <8 x float> @llvm.x86.avx.maskload.ps.256(ptr, <8 x i32>) nounwind readonly
 
 
-define void @test_x86_avx_maskstore_pd(i8* %a0, <2 x i64> %mask, <2 x double> %a2) {
+define void @test_x86_avx_maskstore_pd(ptr %a0, <2 x i64> %mask, <2 x double> %a2) {
 ; X86-LABEL: test_x86_avx_maskstore_pd:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -378,13 +378,13 @@ define void @test_x86_avx_maskstore_pd(i8* %a0, <2 x i64> %mask, <2 x double> %a
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovpd %xmm1, %xmm0, (%rdi) # encoding: [0xc4,0xe2,0x79,0x2f,0x0f]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  call void @llvm.x86.avx.maskstore.pd(i8* %a0, <2 x i64> %mask, <2 x double> %a2)
+  call void @llvm.x86.avx.maskstore.pd(ptr %a0, <2 x i64> %mask, <2 x double> %a2)
   ret void
 }
-declare void @llvm.x86.avx.maskstore.pd(i8*, <2 x i64>, <2 x double>) nounwind
+declare void @llvm.x86.avx.maskstore.pd(ptr, <2 x i64>, <2 x double>) nounwind
 
 
-define void @test_x86_avx_maskstore_pd_256(i8* %a0, <4 x i64> %mask, <4 x double> %a2) {
+define void @test_x86_avx_maskstore_pd_256(ptr %a0, <4 x i64> %mask, <4 x double> %a2) {
 ; X86-LABEL: test_x86_avx_maskstore_pd_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -397,13 +397,13 @@ define void @test_x86_avx_maskstore_pd_256(i8* %a0, <4 x i64> %mask, <4 x double
 ; X64-NEXT:    vmaskmovpd %ymm1, %ymm0, (%rdi) # encoding: [0xc4,0xe2,0x7d,0x2f,0x0f]
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  call void @llvm.x86.avx.maskstore.pd.256(i8* %a0, <4 x i64> %mask, <4 x double> %a2)
+  call void @llvm.x86.avx.maskstore.pd.256(ptr %a0, <4 x i64> %mask, <4 x double> %a2)
   ret void
 }
-declare void @llvm.x86.avx.maskstore.pd.256(i8*, <4 x i64>, <4 x double>) nounwind
+declare void @llvm.x86.avx.maskstore.pd.256(ptr, <4 x i64>, <4 x double>) nounwind
 
 
-define void @test_x86_avx_maskstore_ps(i8* %a0, <4 x i32> %mask, <4 x float> %a2) {
+define void @test_x86_avx_maskstore_ps(ptr %a0, <4 x i32> %mask, <4 x float> %a2) {
 ; X86-LABEL: test_x86_avx_maskstore_ps:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -414,13 +414,13 @@ define void @test_x86_avx_maskstore_ps(i8* %a0, <4 x i32> %mask, <4 x float> %a2
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmaskmovps %xmm1, %xmm0, (%rdi) # encoding: [0xc4,0xe2,0x79,0x2e,0x0f]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  call void @llvm.x86.avx.maskstore.ps(i8* %a0, <4 x i32> %mask, <4 x float> %a2)
+  call void @llvm.x86.avx.maskstore.ps(ptr %a0, <4 x i32> %mask, <4 x float> %a2)
   ret void
 }
-declare void @llvm.x86.avx.maskstore.ps(i8*, <4 x i32>, <4 x float>) nounwind
+declare void @llvm.x86.avx.maskstore.ps(ptr, <4 x i32>, <4 x float>) nounwind
 
 
-define void @test_x86_avx_maskstore_ps_256(i8* %a0, <8 x i32> %mask, <8 x float> %a2) {
+define void @test_x86_avx_maskstore_ps_256(ptr %a0, <8 x i32> %mask, <8 x float> %a2) {
 ; X86-LABEL: test_x86_avx_maskstore_ps_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -433,10 +433,10 @@ define void @test_x86_avx_maskstore_ps_256(i8* %a0, <8 x i32> %mask, <8 x float>
 ; X64-NEXT:    vmaskmovps %ymm1, %ymm0, (%rdi) # encoding: [0xc4,0xe2,0x7d,0x2e,0x0f]
 ; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  call void @llvm.x86.avx.maskstore.ps.256(i8* %a0, <8 x i32> %mask, <8 x float> %a2)
+  call void @llvm.x86.avx.maskstore.ps.256(ptr %a0, <8 x i32> %mask, <8 x float> %a2)
   ret void
 }
-declare void @llvm.x86.avx.maskstore.ps.256(i8*, <8 x i32>, <8 x float>) nounwind
+declare void @llvm.x86.avx.maskstore.ps.256(ptr, <8 x i32>, <8 x float>) nounwind
 
 
 define <4 x double> @test_x86_avx_max_pd_256(<4 x double> %a0, <4 x double> %a1) {
@@ -682,7 +682,7 @@ define <4 x float> @test_x86_avx_vpermilvar_ps(<4 x float> %a0, <4 x i32> %a1) {
   %res = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> %a1) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
-define <4 x float> @test_x86_avx_vpermilvar_ps_load(<4 x float> %a0, <4 x i32>* %a1) {
+define <4 x float> @test_x86_avx_vpermilvar_ps_load(<4 x float> %a0, ptr %a1) {
 ; X86-AVX-LABEL: test_x86_avx_vpermilvar_ps_load:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -704,7 +704,7 @@ define <4 x float> @test_x86_avx_vpermilvar_ps_load(<4 x float> %a0, <4 x i32>* 
 ; X64-AVX512VL:       # %bb.0:
 ; X64-AVX512VL-NEXT:    vpermilps (%rdi), %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x0c,0x07]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  %a2 = load <4 x i32>, <4 x i32>* %a1
+  %a2 = load <4 x i32>, ptr %a1
   %res = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> %a2) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -910,7 +910,7 @@ define void @test_x86_avx_vzeroupper() {
 }
 declare void @llvm.x86.avx.vzeroupper() nounwind
 
-define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
+define void @movnt_dq(ptr %p, <2 x i64> %a1) nounwind {
 ; X86-AVX-LABEL: movnt_dq:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -942,12 +942,12 @@ define void @movnt_dq(i8* %p, <2 x i64> %a1) nounwind {
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
   %a2 = add <2 x i64> %a1, <i64 1, i64 1>
   %a3 = shufflevector <2 x i64> %a2, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-  tail call void @llvm.x86.avx.movnt.dq.256(i8* %p, <4 x i64> %a3) nounwind
+  tail call void @llvm.x86.avx.movnt.dq.256(ptr %p, <4 x i64> %a3) nounwind
   ret void
 }
-declare void @llvm.x86.avx.movnt.dq.256(i8*, <4 x i64>) nounwind
+declare void @llvm.x86.avx.movnt.dq.256(ptr, <4 x i64>) nounwind
 
-define void @movnt_ps(i8* %p, <8 x float> %a) nounwind {
+define void @movnt_ps(ptr %p, <8 x float> %a) nounwind {
 ; X86-AVX-LABEL: movnt_ps:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -973,12 +973,12 @@ define void @movnt_ps(i8* %p, <8 x float> %a) nounwind {
 ; X64-AVX512VL-NEXT:    vmovntps %ymm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfc,0x2b,0x07]
 ; X64-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  tail call void @llvm.x86.avx.movnt.ps.256(i8* %p, <8 x float> %a) nounwind
+  tail call void @llvm.x86.avx.movnt.ps.256(ptr %p, <8 x float> %a) nounwind
   ret void
 }
-declare void @llvm.x86.avx.movnt.ps.256(i8*, <8 x float>) nounwind
+declare void @llvm.x86.avx.movnt.ps.256(ptr, <8 x float>) nounwind
 
-define void @movnt_pd(i8* %p, <4 x double> %a1) nounwind {
+define void @movnt_pd(ptr %p, <4 x double> %a1) nounwind {
   ; add operation forces the execution domain.
 ; X86-AVX-LABEL: movnt_pd:
 ; X86-AVX:       # %bb.0:
@@ -1014,10 +1014,10 @@ define void @movnt_pd(i8* %p, <4 x double> %a1) nounwind {
 ; X64-AVX512VL-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
   %a2 = fadd <4 x double> %a1, <double 0x0, double 0x0, double 0x0, double 0x0>
-  tail call void @llvm.x86.avx.movnt.pd.256(i8* %p, <4 x double> %a2) nounwind
+  tail call void @llvm.x86.avx.movnt.pd.256(ptr %p, <4 x double> %a2) nounwind
   ret void
 }
-declare void @llvm.x86.avx.movnt.pd.256(i8*, <4 x double>) nounwind
+declare void @llvm.x86.avx.movnt.pd.256(ptr, <4 x double>) nounwind
 
 
 ; Check for pclmulqdq

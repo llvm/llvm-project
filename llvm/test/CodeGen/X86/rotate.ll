@@ -562,7 +562,7 @@ define i8 @rotr1_8(i8 %A) nounwind {
 	ret i8 %D
 }
 
-define void @rotr1_64_mem(i64* %Aptr) nounwind {
+define void @rotr1_64_mem(ptr %Aptr) nounwind {
 ; X86-LABEL: rotr1_64_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -582,15 +582,15 @@ define void @rotr1_64_mem(i64* %Aptr) nounwind {
 ; X64-NEXT:    rorq (%rdi)
 ; X64-NEXT:    retq
 
-  %A = load i64, i64 *%Aptr
+  %A = load i64, ptr%Aptr
   %B = shl i64 %A, 63
   %C = lshr i64 %A, 1
   %D = or i64 %B, %C
-  store i64 %D, i64* %Aptr
+  store i64 %D, ptr %Aptr
   ret void
 }
 
-define void @rotr1_32_mem(i32* %Aptr) nounwind {
+define void @rotr1_32_mem(ptr %Aptr) nounwind {
 ; X86-LABEL: rotr1_32_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -601,15 +601,15 @@ define void @rotr1_32_mem(i32* %Aptr) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    rorl (%rdi)
 ; X64-NEXT:    retq
-  %A = load i32, i32 *%Aptr
+  %A = load i32, ptr%Aptr
   %B = shl i32 %A, 31
   %C = lshr i32 %A, 1
   %D = or i32 %B, %C
-  store i32 %D, i32* %Aptr
+  store i32 %D, ptr %Aptr
   ret void
 }
 
-define void @rotr1_16_mem(i16* %Aptr) nounwind {
+define void @rotr1_16_mem(ptr %Aptr) nounwind {
 ; X86-LABEL: rotr1_16_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -620,15 +620,15 @@ define void @rotr1_16_mem(i16* %Aptr) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    rorw (%rdi)
 ; X64-NEXT:    retq
-  %A = load i16, i16 *%Aptr
+  %A = load i16, ptr%Aptr
   %B = shl i16 %A, 15
   %C = lshr i16 %A, 1
   %D = or i16 %B, %C
-  store i16 %D, i16* %Aptr
+  store i16 %D, ptr %Aptr
   ret void
 }
 
-define void @rotr1_8_mem(i8* %Aptr) nounwind {
+define void @rotr1_8_mem(ptr %Aptr) nounwind {
 ; X86-LABEL: rotr1_8_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -639,11 +639,11 @@ define void @rotr1_8_mem(i8* %Aptr) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    rorb (%rdi)
 ; X64-NEXT:    retq
-  %A = load i8, i8 *%Aptr
+  %A = load i8, ptr%Aptr
   %B = shl i8 %A, 7
   %C = lshr i8 %A, 1
   %D = or i8 %B, %C
-  store i8 %D, i8* %Aptr
+  store i8 %D, ptr %Aptr
   ret void
 }
 

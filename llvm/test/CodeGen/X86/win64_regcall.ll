@@ -3,7 +3,7 @@
 define dso_local x86_regcallcc void @ensure_align() local_unnamed_addr #0 {
 entry:
   %b = alloca i32, align 4
-  call void asm sideeffect "nopl $0", "=*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) nonnull %b)
+  call void asm sideeffect "nopl $0", "=*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) nonnull %b)
   ret void
 }
 

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-unknown -mattr=+sse2 | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+sse2 | FileCheck %s --check-prefix=X64
 
-define <2 x i64> @test(<2 x i64>* %p) nounwind {
+define <2 x i64> @test(ptr %p) nounwind {
 ; X86-LABEL: test:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -13,8 +13,7 @@ define <2 x i64> @test(<2 x i64>* %p) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    retq
-  %tmp = bitcast <2 x i64>* %p to double*
-  %tmp.upgrd.1 = load double, double* %tmp
+  %tmp.upgrd.1 = load double, ptr %p
   %tmp.upgrd.2 = insertelement <2 x double> undef, double %tmp.upgrd.1, i32 0
   %tmp5 = insertelement <2 x double> %tmp.upgrd.2, double 0.0, i32 1
   %tmp.upgrd.3 = bitcast <2 x double> %tmp5 to <2 x i64>

@@ -1,9 +1,9 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-win32-coreclr | FileCheck %s -check-prefix=WIN_X64
 ; RUN: llc < %s -mtriple=x86_64-pc-linux         | FileCheck %s -check-prefix=LINUX
 
-%Object = type <{ [0 x i64*]* }>
+%Object = type <{ ptr }>
 
-define void @C1(%Object addrspace(1)* %param0) gc "coreclr" {
+define void @C1(ptr addrspace(1) %param0) gc "coreclr" {
 entry:
 
 ; WIN_X64: # %bb.0:
@@ -11,13 +11,13 @@ entry:
 ; LINUX:   # %bb.0:                                 # %entry
 ; LINUX:	movq	$0, -8(%rsp)
 
-  %this = alloca %Object addrspace(1)*
-  store volatile %Object addrspace(1)* null, %Object addrspace(1)** %this
-  store volatile %Object addrspace(1)* %param0, %Object addrspace(1)** %this
+  %this = alloca ptr addrspace(1)
+  store volatile ptr addrspace(1) null, ptr %this
+  store volatile ptr addrspace(1) %param0, ptr %this
   br label %0
 
 ; <label>:0                                       ; preds = %entry
-  %1 = load %Object addrspace(1)*, %Object addrspace(1)** %this, align 8
+  %1 = load ptr addrspace(1), ptr %this, align 8
 
 ; WIN_X64:	xorl	%r8d, %r8d
 ; WIN_X64:	popq	%rax
@@ -25,11 +25,11 @@ entry:
 ; LINUX:	xorl	%edx, %edx
 ; LINUX:	jmp	C2                      # TAILCALL
 
-  tail call void @C2(%Object addrspace(1)* %1, i32 0, %Object addrspace(1)* null)
+  tail call void @C2(ptr addrspace(1) %1, i32 0, ptr addrspace(1) null)
   ret void
 }
 
-declare dso_local void @C2(%Object addrspace(1)*, i32, %Object addrspace(1)*)
+declare dso_local void @C2(ptr addrspace(1), i32, ptr addrspace(1))
 
 ; Function Attrs: nounwind
 declare dso_local void @llvm.localescape(...) #0

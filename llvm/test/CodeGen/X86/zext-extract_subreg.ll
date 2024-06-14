@@ -32,7 +32,7 @@ entry:
   br i1 undef, label %return, label %if.end.i
 
 if.end.i:                                         ; preds = %entry
-  %tmp7.i = load i32, i32* undef, align 4
+  %tmp7.i = load i32, ptr undef, align 4
   br i1 undef, label %return, label %if.end
 
 if.end:                                           ; preds = %if.end.i

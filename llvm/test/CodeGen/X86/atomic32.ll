@@ -26,10 +26,10 @@ define void @atomic_fetch_add32() nounwind {
 ; X86-NEXT:    lock addl %eax, sc32
 ; X86-NEXT:    retl
 entry:
-  %t1 = atomicrmw add  i32* @sc32, i32 1 acquire
-  %t2 = atomicrmw add  i32* @sc32, i32 3 acquire
-  %t3 = atomicrmw add  i32* @sc32, i32 5 acquire
-  %t4 = atomicrmw add  i32* @sc32, i32 %t3 acquire
+  %t1 = atomicrmw add  ptr @sc32, i32 1 acquire
+  %t2 = atomicrmw add  ptr @sc32, i32 3 acquire
+  %t3 = atomicrmw add  ptr @sc32, i32 5 acquire
+  %t4 = atomicrmw add  ptr @sc32, i32 %t3 acquire
   ret void
 }
 
@@ -51,10 +51,10 @@ define void @atomic_fetch_sub32() nounwind {
 ; X86-NEXT:    lock xaddl %eax, sc32
 ; X86-NEXT:    lock subl %eax, sc32
 ; X86-NEXT:    retl
-  %t1 = atomicrmw sub  i32* @sc32, i32 1 acquire
-  %t2 = atomicrmw sub  i32* @sc32, i32 3 acquire
-  %t3 = atomicrmw sub  i32* @sc32, i32 5 acquire
-  %t4 = atomicrmw sub  i32* @sc32, i32 %t3 acquire
+  %t1 = atomicrmw sub  ptr @sc32, i32 1 acquire
+  %t2 = atomicrmw sub  ptr @sc32, i32 3 acquire
+  %t3 = atomicrmw sub  ptr @sc32, i32 5 acquire
+  %t4 = atomicrmw sub  ptr @sc32, i32 %t3 acquire
   ret void
 }
 
@@ -104,9 +104,9 @@ define void @atomic_fetch_and32() nounwind {
 ; X86-NEXT:    lock andl %eax, sc32
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
-  %t1 = atomicrmw and  i32* @sc32, i32 3 acquire
-  %t2 = atomicrmw and  i32* @sc32, i32 5 acquire
-  %t3 = atomicrmw and  i32* @sc32, i32 %t2 acquire
+  %t1 = atomicrmw and  ptr @sc32, i32 3 acquire
+  %t2 = atomicrmw and  ptr @sc32, i32 5 acquire
+  %t3 = atomicrmw and  ptr @sc32, i32 %t2 acquire
   ret void
 }
 
@@ -156,9 +156,9 @@ define void @atomic_fetch_or32() nounwind {
 ; X86-NEXT:    lock orl %eax, sc32
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
-  %t1 = atomicrmw or   i32* @sc32, i32 3 acquire
-  %t2 = atomicrmw or   i32* @sc32, i32 5 acquire
-  %t3 = atomicrmw or   i32* @sc32, i32 %t2 acquire
+  %t1 = atomicrmw or   ptr @sc32, i32 3 acquire
+  %t2 = atomicrmw or   ptr @sc32, i32 5 acquire
+  %t3 = atomicrmw or   ptr @sc32, i32 %t2 acquire
   ret void
 }
 
@@ -208,9 +208,9 @@ define void @atomic_fetch_xor32() nounwind {
 ; X86-NEXT:    lock xorl %eax, sc32
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
-  %t1 = atomicrmw xor  i32* @sc32, i32 3 acquire
-  %t2 = atomicrmw xor  i32* @sc32, i32 5 acquire
-  %t3 = atomicrmw xor  i32* @sc32, i32 %t2 acquire
+  %t1 = atomicrmw xor  ptr @sc32, i32 3 acquire
+  %t2 = atomicrmw xor  ptr @sc32, i32 5 acquire
+  %t3 = atomicrmw xor  ptr @sc32, i32 %t2 acquire
   ret void
 }
 
@@ -259,7 +259,7 @@ define void @atomic_fetch_nand32(i32 %x) nounwind {
 ; X86-NEXT:  .LBB5_2: # %atomicrmw.end
 ; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
-  %t1 = atomicrmw nand i32* @sc32, i32 %x acquire
+  %t1 = atomicrmw nand ptr @sc32, i32 %x acquire
   ret void
 }
 
@@ -376,7 +376,7 @@ define void @atomic_fetch_max32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:  .LBB6_2: # %atomicrmw.end
 ; X86-NOX87-NEXT:    addl $16, %esp
 ; X86-NOX87-NEXT:    retl
-  %t1 = atomicrmw max  i32* @sc32, i32 %x acquire
+  %t1 = atomicrmw max  ptr @sc32, i32 %x acquire
   ret void
 }
 
@@ -493,7 +493,7 @@ define void @atomic_fetch_min32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:  .LBB7_2: # %atomicrmw.end
 ; X86-NOX87-NEXT:    addl $16, %esp
 ; X86-NOX87-NEXT:    retl
-  %t1 = atomicrmw min  i32* @sc32, i32 %x acquire
+  %t1 = atomicrmw min  ptr @sc32, i32 %x acquire
   ret void
 }
 
@@ -610,7 +610,7 @@ define void @atomic_fetch_umax32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:  .LBB8_2: # %atomicrmw.end
 ; X86-NOX87-NEXT:    addl $16, %esp
 ; X86-NOX87-NEXT:    retl
-  %t1 = atomicrmw umax i32* @sc32, i32 %x acquire
+  %t1 = atomicrmw umax ptr @sc32, i32 %x acquire
   ret void
 }
 
@@ -727,7 +727,7 @@ define void @atomic_fetch_umin32(i32 %x) nounwind {
 ; X86-NOX87-NEXT:  .LBB9_2: # %atomicrmw.end
 ; X86-NOX87-NEXT:    addl $16, %esp
 ; X86-NOX87-NEXT:    retl
-  %t1 = atomicrmw umin i32* @sc32, i32 %x acquire
+  %t1 = atomicrmw umin ptr @sc32, i32 %x acquire
   ret void
 }
 
@@ -745,7 +745,7 @@ define void @atomic_fetch_cmpxchg32() nounwind {
 ; X86-NEXT:    movl $1, %ecx
 ; X86-NEXT:    lock cmpxchgl %ecx, sc32
 ; X86-NEXT:    retl
-  %t1 = cmpxchg i32* @sc32, i32 0, i32 1 acquire acquire
+  %t1 = cmpxchg ptr @sc32, i32 0, i32 1 acquire acquire
   ret void
 }
 
@@ -760,7 +760,7 @@ define void @atomic_fetch_store32(i32 %x) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, sc32
 ; X86-NEXT:    retl
-  store atomic i32 %x, i32* @sc32 release, align 4
+  store atomic i32 %x, ptr @sc32 release, align 4
   ret void
 }
 
@@ -775,7 +775,7 @@ define void @atomic_fetch_swap32(i32 %x) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xchgl %eax, sc32
 ; X86-NEXT:    retl
-  %t1 = atomicrmw xchg i32* @sc32, i32 %x acquire
+  %t1 = atomicrmw xchg ptr @sc32, i32 %x acquire
   ret void
 }
 
@@ -808,6 +808,6 @@ define void @atomic_fetch_swapf32(float %x) nounwind {
 ; X86-NOX87-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NOX87-NEXT:    xchgl %eax, fsc32
 ; X86-NOX87-NEXT:    retl
-  %t1 = atomicrmw xchg float* @fsc32, float %x acquire
+  %t1 = atomicrmw xchg ptr @fsc32, float %x acquire
   ret void
 }

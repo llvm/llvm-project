@@ -3,9 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=i386-linux-gnu | FileCheck %s --check-prefix=X86
 
-declare i8* @llvm.thread.pointer()
+declare ptr @llvm.thread.pointer()
 
-define i8* @thread_pointer() nounwind {
+define ptr @thread_pointer() nounwind {
 ; X64-LABEL: thread_pointer:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %fs:0, %rax
@@ -20,8 +20,8 @@ define i8* @thread_pointer() nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl %gs:0, %eax
 ; X86-NEXT:    retl
-  %1 = tail call i8* @llvm.thread.pointer()
-  ret i8* %1
+  %1 = tail call ptr @llvm.thread.pointer()
+  ret ptr %1
 }
 
 define i32 @thread_pointer2(i32 %i) nounwind {
@@ -43,9 +43,8 @@ define i32 @thread_pointer2(i32 %i) nounwind {
 ; X86-NEXT:    movl %gs:(,%eax,4), %eax
 ; X86-NEXT:    retl
 entry:
-  %0 = tail call i8* @llvm.thread.pointer()
-  %1 = bitcast i8* %0 to i32*
-  %arrayidx = getelementptr inbounds i32, i32* %1, i32 %i
-  %2 = load i32, i32* %arrayidx, align 4
-  ret i32 %2
+  %0 = tail call ptr @llvm.thread.pointer()
+  %arrayidx = getelementptr inbounds i32, ptr %0, i32 %i
+  %1 = load i32, ptr %arrayidx, align 4
+  ret i32 %1
 }

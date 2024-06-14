@@ -61,13 +61,13 @@ bb5:
 
 declare void @G()
 
-define void @F3(i32 %y) personality i8* bitcast (void ()* @G to i8*) {
+define void @F3(i32 %y) personality ptr @G {
 bb0:
   invoke void @G()
           to label %bb2 unwind label %bb1
 bb1:
-  landingpad { i8*, i32 }
-          catch i8* null
+  landingpad { ptr, i32 }
+          catch ptr null
   br label %bb2
 bb2:
 
@@ -125,7 +125,7 @@ bb7:
 
 
 ; int * const G3 = &G1;
-@G3 = unnamed_addr constant i32* @G1
+@G3 = unnamed_addr constant ptr @G1
 
 ; DARWIN: .section        __DATA,__const
 ; DARWIN: .globl _G3
@@ -237,7 +237,7 @@ bb7:
 ; LINUX:G9
 
 
-@G10 = weak global [100 x i32] zeroinitializer, align 32 ; <[100 x i32]*> [#uses=0]
+@G10 = weak global [100 x i32] zeroinitializer, align 32 ; <ptr> [#uses=0]
 
 
 ; DARWIN:       .section        __DATA,__data{{$}}
@@ -331,6 +331,6 @@ bb7:
 ; WIN32-SECTIONS:.byte	0
 
 ; check weak ReadOnlyWithRel globals.
-@G18 = linkonce_odr unnamed_addr constant i64* @G15
+@G18 = linkonce_odr unnamed_addr constant ptr @G15
 ; DARWIN64: .section      __DATA,__const
 ; DARWIN64: _G18:

@@ -264,7 +264,7 @@ define <32 x i16> @shuffle_v32i16_lshr_00_02_04_06_32_34_36_38_08_10_12_14_40_42
   ret <32 x i16> %5
 }
 
-define <32 x i16> @insert_dup_mem_v32i16_i32(i32* %ptr) {
+define <32 x i16> @insert_dup_mem_v32i16_i32(ptr %ptr) {
 ; KNL-LABEL: insert_dup_mem_v32i16_i32:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw (%rdi), %ymm0
@@ -275,14 +275,14 @@ define <32 x i16> @insert_dup_mem_v32i16_i32(i32* %ptr) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw (%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = bitcast <4 x i32> %tmp1 to <8 x i16>
   %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> zeroinitializer
   ret <32 x i16> %tmp3
 }
 
-define <32 x i16> @insert_dup_mem_v32i16_sext_i16(i16* %ptr) {
+define <32 x i16> @insert_dup_mem_v32i16_sext_i16(ptr %ptr) {
 ; KNL-LABEL: insert_dup_mem_v32i16_sext_i16:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw (%rdi), %ymm0
@@ -293,7 +293,7 @@ define <32 x i16> @insert_dup_mem_v32i16_sext_i16(i16* %ptr) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw (%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i16, i16* %ptr, align 2
+  %tmp = load i16, ptr %ptr, align 2
   %tmp1 = sext i16 %tmp to i32
   %tmp2 = insertelement <4 x i32> zeroinitializer, i32 %tmp1, i32 0
   %tmp3 = bitcast <4 x i32> %tmp2 to <8 x i16>
@@ -301,7 +301,7 @@ define <32 x i16> @insert_dup_mem_v32i16_sext_i16(i16* %ptr) {
   ret <32 x i16> %tmp4
 }
 
-define <32 x i16> @insert_dup_elt1_mem_v32i16_i32(i32* %ptr) #0 {
+define <32 x i16> @insert_dup_elt1_mem_v32i16_i32(ptr %ptr) #0 {
 ; KNL-LABEL: insert_dup_elt1_mem_v32i16_i32:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw 2(%rdi), %ymm0
@@ -312,14 +312,14 @@ define <32 x i16> @insert_dup_elt1_mem_v32i16_i32(i32* %ptr) #0 {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw 2(%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
   %tmp2 = bitcast <4 x i32> %tmp1 to <8 x i16>
   %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x i16> %tmp3
 }
 
-define <32 x i16> @insert_dup_elt3_mem_v32i16_i32(i32* %ptr) #0 {
+define <32 x i16> @insert_dup_elt3_mem_v32i16_i32(ptr %ptr) #0 {
 ; KNL-LABEL: insert_dup_elt3_mem_v32i16_i32:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw 2(%rdi), %ymm0
@@ -330,14 +330,14 @@ define <32 x i16> @insert_dup_elt3_mem_v32i16_i32(i32* %ptr) #0 {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw 2(%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i32, i32* %ptr, align 4
+  %tmp = load i32, ptr %ptr, align 4
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 1
   %tmp2 = bitcast <4 x i32> %tmp1 to <8 x i16>
   %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <32 x i16> %tmp3
 }
 
-define <32 x i16> @insert_dup_mem_v16i16_i64(i64* %ptr) {
+define <32 x i16> @insert_dup_mem_v16i16_i64(ptr %ptr) {
 ; KNL-LABEL: insert_dup_mem_v16i16_i64:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw (%rdi), %ymm0
@@ -348,14 +348,14 @@ define <32 x i16> @insert_dup_mem_v16i16_i64(i64* %ptr) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw (%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i64, i64* %ptr, align 4
+  %tmp = load i64, ptr %ptr, align 4
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0
   %tmp2 = bitcast <2 x i64> %tmp1 to <8 x i16>
   %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> zeroinitializer
   ret <32 x i16> %tmp3
 }
 
-define <32 x i16> @insert_dup_elt1_mem_v16i16_i64(i64* %ptr) {
+define <32 x i16> @insert_dup_elt1_mem_v16i16_i64(ptr %ptr) {
 ; KNL-LABEL: insert_dup_elt1_mem_v16i16_i64:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw 2(%rdi), %ymm0
@@ -366,14 +366,14 @@ define <32 x i16> @insert_dup_elt1_mem_v16i16_i64(i64* %ptr) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw 2(%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i64, i64* %ptr, align 4
+  %tmp = load i64, ptr %ptr, align 4
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0
   %tmp2 = bitcast <2 x i64> %tmp1 to <8 x i16>
   %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <32 x i16> %tmp3
 }
 
-define <32 x i16> @insert_dup_elt3_mem_v16i16_i64(i64* %ptr) {
+define <32 x i16> @insert_dup_elt3_mem_v16i16_i64(ptr %ptr) {
 ; KNL-LABEL: insert_dup_elt3_mem_v16i16_i64:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw 6(%rdi), %ymm0
@@ -384,14 +384,14 @@ define <32 x i16> @insert_dup_elt3_mem_v16i16_i64(i64* %ptr) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw 6(%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i64, i64* %ptr, align 4
+  %tmp = load i64, ptr %ptr, align 4
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0
   %tmp2 = bitcast <2 x i64> %tmp1 to <8 x i16>
   %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
   ret <32 x i16> %tmp3
 }
 
-define <32 x i16> @insert_dup_elt7_mem_v16i16_i64(i64* %ptr) {
+define <32 x i16> @insert_dup_elt7_mem_v16i16_i64(ptr %ptr) {
 ; KNL-LABEL: insert_dup_elt7_mem_v16i16_i64:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw 6(%rdi), %ymm0
@@ -402,14 +402,14 @@ define <32 x i16> @insert_dup_elt7_mem_v16i16_i64(i64* %ptr) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw 6(%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i64, i64* %ptr, align 4
+  %tmp = load i64, ptr %ptr, align 4
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 1
   %tmp2 = bitcast <2 x i64> %tmp1 to <8 x i16>
   %tmp3 = shufflevector <8 x i16> %tmp2, <8 x i16> undef, <32 x i32> <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
   ret <32 x i16> %tmp3
 }
 
-define <32 x i16> @insert_dup_mem_v16i16_sext_i16_i64(i16* %ptr) {
+define <32 x i16> @insert_dup_mem_v16i16_sext_i16_i64(ptr %ptr) {
 ; KNL-LABEL: insert_dup_mem_v16i16_sext_i16_i64:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpbroadcastw (%rdi), %ymm0
@@ -420,7 +420,7 @@ define <32 x i16> @insert_dup_mem_v16i16_sext_i16_i64(i16* %ptr) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpbroadcastw (%rdi), %zmm0
 ; SKX-NEXT:    retq
-  %tmp = load i16, i16* %ptr, align 2
+  %tmp = load i16, ptr %ptr, align 2
   %tmp1 = sext i16 %tmp to i64
   %tmp2 = insertelement <2 x i64> zeroinitializer, i64 %tmp1, i32 0
   %tmp3 = bitcast <2 x i64> %tmp2 to <8 x i16>

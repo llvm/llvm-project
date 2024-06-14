@@ -1,10 +1,10 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux | FileCheck %s
 
 declare dso_local win64cc void @win64_callee(i32)
-declare dso_local win64cc void (i32)* @win64_indirect()
+declare dso_local win64cc ptr @win64_indirect()
 declare dso_local win64cc void @win64_other(i32)
 declare dso_local void @sysv_callee(i32)
-declare dso_local void (i32)* @sysv_indirect()
+declare dso_local ptr @sysv_indirect()
 declare dso_local void @sysv_other(i32)
 
 define void @sysv_caller(i32 %p1) {
@@ -46,7 +46,7 @@ define win64cc void @win64_matched(i32 %p1) {
 ; CHECK: jmp win64_callee # TAILCALL
 
 define win64cc void @win64_indirect_caller(i32 %p1) {
-  %1 = call win64cc void (i32)* @win64_indirect()
+  %1 = call win64cc ptr @win64_indirect()
   call win64cc void @win64_other(i32 0)
   tail call win64cc void %1(i32 %p1)
   ret void
@@ -56,7 +56,7 @@ define win64cc void @win64_indirect_caller(i32 %p1) {
 ; CHECK: jmpq *%{{rax|rcx|rdx|r8|r9|r11}} # TAILCALL
 
 define void @sysv_indirect_caller(i32 %p1) {
-  %1 = call void (i32)* @sysv_indirect()
+  %1 = call ptr @sysv_indirect()
   call void @sysv_other(i32 0)
   tail call void %1(i32 %p1)
   ret void

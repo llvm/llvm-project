@@ -698,3 +698,4 @@ declare x86_mmx @llvm.x86.mmx.padds.b(x86_mmx, x86_mmx)
 declare x86_mmx @llvm.x86.mmx.padds.w(x86_mmx, x86_mmx)
 declare x86_mmx @llvm.x86.mmx.psubs.b(x86_mmx, x86_mmx)
 declare x86_mmx @llvm.x86.mmx.psubs.w(x86_mmx, x86_mmx)
+

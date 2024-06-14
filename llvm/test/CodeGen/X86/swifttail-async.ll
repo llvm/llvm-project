@@ -17,12 +17,12 @@ define swifttailcc void @no_preserve_swiftself() {
   ret void
 }
 
-declare swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
-define swiftcc i8* @CallSwiftSelf(i8* swiftself %closure, i8* %context) {
+declare swifttailcc ptr @SwiftSelf(ptr swiftasync %context, ptr swiftself %closure)
+define swiftcc ptr @CallSwiftSelf(ptr swiftself %closure, ptr %context) {
 ; CHECK-LABEL: CallSwiftSelf:
 ; CHECK: pushq %r13
   ;call void asm "","~{r13}"() ; We get a push r13 but why not with the call
   ; below?
-  %res = call swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
-  ret i8* %res
+  %res = call swifttailcc ptr @SwiftSelf(ptr swiftasync %context, ptr swiftself %closure)
+  ret ptr %res
 }

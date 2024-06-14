@@ -27,13 +27,10 @@ define dso_local i32 @foo() {
 entry:
   %retval = alloca i32, align 4
   %f4 = alloca %struct.float4, align 4
-  store i32 0, i32* %retval, align 4
-  %f = getelementptr inbounds %struct.float4, %struct.float4* %f4, i32 0, i32 0
-  store float 4.000000e+00, float* %f, align 4
-  %0 = bitcast %struct.float4* %f4 to i32*
-  %1 = load i32, i32* %0, align 4
-  %2 = call i32 asm "fadd %st(0), %st(0)", "={st},0,~{dirflag},~{fpsr},~{flags}"(i32 %1)
-  %3 = bitcast %struct.float4* %f4 to i32*
-  store i32 %2, i32* %3, align 4
+  store i32 0, ptr %retval, align 4
+  store float 4.000000e+00, ptr %f4, align 4
+  %0 = load i32, ptr %f4, align 4
+  %1 = call i32 asm "fadd %st(0), %st(0)", "={st},0,~{dirflag},~{fpsr},~{flags}"(i32 %0)
+  store i32 %1, ptr %f4, align 4
   ret i32 0
 }

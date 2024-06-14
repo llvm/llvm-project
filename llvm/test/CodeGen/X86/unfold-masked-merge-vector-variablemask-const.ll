@@ -7,7 +7,7 @@
 ; Various cases with %x and/or %y being a constant
 ; ============================================================================ ;
 
-define <4 x i32> @out_constant_varx_mone(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @out_constant_varx_mone(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_varx_mone:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -36,9 +36,9 @@ define <4 x i32> @out_constant_varx_mone(<4 x i32> *%px, <4 x i32> *%py, <4 x i3
 ; CHECK-XOP-NEXT:    vpand (%rdi), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %mask, %x
   %my = and <4 x i32> %notmask, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -46,7 +46,7 @@ define <4 x i32> @out_constant_varx_mone(<4 x i32> *%px, <4 x i32> *%py, <4 x i3
   ret <4 x i32> %r
 }
 
-define <4 x i32> @in_constant_varx_mone(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @in_constant_varx_mone(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_varx_mone:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -71,9 +71,9 @@ define <4 x i32> @in_constant_varx_mone(<4 x i32> *%px, <4 x i32> *%py, <4 x i32
 ; CHECK-XOP-NEXT:    vpandn (%rdx), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %n0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1> ; %x
   %n1 = and <4 x i32> %n0, %mask
   %r = xor <4 x i32> %n1, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -81,7 +81,7 @@ define <4 x i32> @in_constant_varx_mone(<4 x i32> *%px, <4 x i32> *%py, <4 x i32
 }
 
 ; This is not a canonical form. Testing for completeness only.
-define <4 x i32> @out_constant_varx_mone_invmask(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @out_constant_varx_mone_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_varx_mone_invmask:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -101,9 +101,9 @@ define <4 x i32> @out_constant_varx_mone_invmask(<4 x i32> *%px, <4 x i32> *%py,
 ; CHECK-XOP-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-XOP-NEXT:    vorps (%rdx), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %notmask, %x
   %my = and <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -112,7 +112,7 @@ define <4 x i32> @out_constant_varx_mone_invmask(<4 x i32> *%px, <4 x i32> *%py,
 }
 
 ; This is not a canonical form. Testing for completeness only.
-define <4 x i32> @in_constant_varx_mone_invmask(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @in_constant_varx_mone_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_varx_mone_invmask:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -136,9 +136,9 @@ define <4 x i32> @in_constant_varx_mone_invmask(<4 x i32> *%px, <4 x i32> *%py, 
 ; CHECK-XOP-NEXT:    vmovaps (%rdi), %xmm0
 ; CHECK-XOP-NEXT:    vorps (%rdx), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %n0 = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1> ; %x
   %n1 = and <4 x i32> %n0, %notmask
@@ -146,7 +146,7 @@ define <4 x i32> @in_constant_varx_mone_invmask(<4 x i32> *%px, <4 x i32> *%py, 
   ret <4 x i32> %r
 }
 
-define <4 x i32> @out_constant_varx_42(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @out_constant_varx_42(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_varx_42:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -173,9 +173,9 @@ define <4 x i32> @out_constant_varx_42(<4 x i32> *%px, <4 x i32> *%py, <4 x i32>
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm1
 ; CHECK-XOP-NEXT:    vpcmov %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %mask, %x
   %my = and <4 x i32> %notmask, <i32 42, i32 42, i32 42, i32 42>
@@ -183,7 +183,7 @@ define <4 x i32> @out_constant_varx_42(<4 x i32> *%px, <4 x i32> *%py, <4 x i32>
   ret <4 x i32> %r
 }
 
-define <4 x i32> @in_constant_varx_42(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @in_constant_varx_42(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_varx_42:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -210,9 +210,9 @@ define <4 x i32> @in_constant_varx_42(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> 
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm1
 ; CHECK-XOP-NEXT:    vpcmov %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %n0 = xor <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42> ; %x
   %n1 = and <4 x i32> %n0, %mask
   %r = xor <4 x i32> %n1, <i32 42, i32 42, i32 42, i32 42>
@@ -220,7 +220,7 @@ define <4 x i32> @in_constant_varx_42(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> 
 }
 
 ; This is not a canonical form. Testing for completeness only.
-define <4 x i32> @out_constant_varx_42_invmask(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @out_constant_varx_42_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_varx_42_invmask:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -247,9 +247,9 @@ define <4 x i32> @out_constant_varx_42_invmask(<4 x i32> *%px, <4 x i32> *%py, <
 ; CHECK-XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [42,42,42,42]
 ; CHECK-XOP-NEXT:    vpcmov %xmm0, (%rdi), %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %notmask, %x
   %my = and <4 x i32> %mask, <i32 42, i32 42, i32 42, i32 42>
@@ -258,7 +258,7 @@ define <4 x i32> @out_constant_varx_42_invmask(<4 x i32> *%px, <4 x i32> *%py, <
 }
 
 ; This is not a canonical form. Testing for completeness only.
-define <4 x i32> @in_constant_varx_42_invmask(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @in_constant_varx_42_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_varx_42_invmask:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -285,9 +285,9 @@ define <4 x i32> @in_constant_varx_42_invmask(<4 x i32> *%px, <4 x i32> *%py, <4
 ; CHECK-XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [42,42,42,42]
 ; CHECK-XOP-NEXT:    vpcmov %xmm0, (%rdi), %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %n0 = xor <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42> ; %x
   %n1 = and <4 x i32> %n0, %notmask
@@ -295,7 +295,7 @@ define <4 x i32> @in_constant_varx_42_invmask(<4 x i32> *%px, <4 x i32> *%py, <4
   ret <4 x i32> %r
 }
 
-define <4 x i32> @out_constant_mone_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @out_constant_mone_vary(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_mone_vary:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -315,9 +315,9 @@ define <4 x i32> @out_constant_mone_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i3
 ; CHECK-XOP-NEXT:    vmovaps (%rsi), %xmm0
 ; CHECK-XOP-NEXT:    vorps (%rdx), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %my = and <4 x i32> %notmask, %y
@@ -325,7 +325,7 @@ define <4 x i32> @out_constant_mone_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i3
   ret <4 x i32> %r
 }
 
-define <4 x i32> @in_constant_mone_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @in_constant_mone_vary(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_mone_vary:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -345,9 +345,9 @@ define <4 x i32> @in_constant_mone_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32
 ; CHECK-XOP-NEXT:    vmovaps (%rdx), %xmm0
 ; CHECK-XOP-NEXT:    vorps (%rsi), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %n0 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %y ; %x
   %n1 = and <4 x i32> %n0, %mask
   %r = xor <4 x i32> %n1, %y
@@ -355,7 +355,7 @@ define <4 x i32> @in_constant_mone_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32
 }
 
 ; This is not a canonical form. Testing for completeness only.
-define <4 x i32> @out_constant_mone_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @out_constant_mone_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_mone_vary_invmask:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -384,9 +384,9 @@ define <4 x i32> @out_constant_mone_vary_invmask(<4 x i32> *%px, <4 x i32> *%py,
 ; CHECK-XOP-NEXT:    vpand (%rsi), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %notmask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %my = and <4 x i32> %mask, %y
@@ -395,7 +395,7 @@ define <4 x i32> @out_constant_mone_vary_invmask(<4 x i32> *%px, <4 x i32> *%py,
 }
 
 ; This is not a canonical form. Testing for completeness only.
-define <4 x i32> @in_constant_mone_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @in_constant_mone_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_mone_vary_invmask:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -418,9 +418,9 @@ define <4 x i32> @in_constant_mone_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, 
 ; CHECK-XOP-NEXT:    vpxor (%rdx), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    vpor (%rsi), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %n0 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %y ; %x
   %n1 = and <4 x i32> %n0, %notmask
@@ -428,7 +428,7 @@ define <4 x i32> @in_constant_mone_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, 
   ret <4 x i32> %r
 }
 
-define <4 x i32> @out_constant_42_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @out_constant_42_vary(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_42_vary:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -455,9 +455,9 @@ define <4 x i32> @out_constant_42_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32>
 ; CHECK-XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [42,42,42,42]
 ; CHECK-XOP-NEXT:    vpcmov %xmm0, (%rsi), %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %mask, <i32 42, i32 42, i32 42, i32 42>
   %my = and <4 x i32> %notmask, %y
@@ -465,7 +465,7 @@ define <4 x i32> @out_constant_42_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32>
   ret <4 x i32> %r
 }
 
-define <4 x i32> @in_constant_42_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @in_constant_42_vary(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_42_vary:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -492,9 +492,9 @@ define <4 x i32> @in_constant_42_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> 
 ; CHECK-XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [42,42,42,42]
 ; CHECK-XOP-NEXT:    vpcmov %xmm0, (%rsi), %xmm1, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %n0 = xor <4 x i32> <i32 42, i32 42, i32 42, i32 42>, %y ; %x
   %n1 = and <4 x i32> %n0, %mask
   %r = xor <4 x i32> %n1, %y
@@ -502,7 +502,7 @@ define <4 x i32> @in_constant_42_vary(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> 
 }
 
 ; This is not a canonical form. Testing for completeness only.
-define <4 x i32> @out_constant_42_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @out_constant_42_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: out_constant_42_vary_invmask:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -529,9 +529,9 @@ define <4 x i32> @out_constant_42_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, <
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm1
 ; CHECK-XOP-NEXT:    vpcmov %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %mx = and <4 x i32> %notmask, <i32 42, i32 42, i32 42, i32 42>
   %my = and <4 x i32> %mask, %y
@@ -540,7 +540,7 @@ define <4 x i32> @out_constant_42_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, <
 }
 
 ; This is not a canonical form. Testing for completeness only.
-define <4 x i32> @in_constant_42_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, <4 x i32> *%pmask) {
+define <4 x i32> @in_constant_42_vary_invmask(ptr%px, ptr%py, ptr%pmask) {
 ; CHECK-SSE1-LABEL: in_constant_42_vary_invmask:
 ; CHECK-SSE1:       # %bb.0:
 ; CHECK-SSE1-NEXT:    movq %rdi, %rax
@@ -567,9 +567,9 @@ define <4 x i32> @in_constant_42_vary_invmask(<4 x i32> *%px, <4 x i32> *%py, <4
 ; CHECK-XOP-NEXT:    vmovdqa (%rdx), %xmm1
 ; CHECK-XOP-NEXT:    vpcmov %xmm1, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
-  %x = load <4 x i32>, <4 x i32> *%px, align 16
-  %y = load <4 x i32>, <4 x i32> *%py, align 16
-  %mask = load <4 x i32>, <4 x i32> *%pmask, align 16
+  %x = load <4 x i32>, ptr%px, align 16
+  %y = load <4 x i32>, ptr%py, align 16
+  %mask = load <4 x i32>, ptr%pmask, align 16
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %n0 = xor <4 x i32> <i32 42, i32 42, i32 42, i32 42>, %y ; %x
   %n1 = and <4 x i32> %n0, %notmask

@@ -9,37 +9,37 @@ define i32 @check_boundaries() #0 {
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   %5 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
-  store i32 0, i32* %2, align 4
-  %6 = load i32, i32* %2, align 4
+  store i32 0, ptr %1, align 4
+  store i32 0, ptr %2, align 4
+  %6 = load i32, ptr %2, align 4
   %7 = icmp ne i32 %6, 0
   br i1 %7, label %9, label %8
 
   ; CHECK: callq 
   ; CHECK-SAME: [[OFUNC1:OUTLINED_FUNCTION_[0-9]+]]
   ; CHECK: cmpl  $0, -{{[0-9]+}}(%rbp)
-  store i32 1, i32* %2, align 4
-  store i32 2, i32* %3, align 4
-  store i32 3, i32* %4, align 4
-  store i32 4, i32* %5, align 4
+  store i32 1, ptr %2, align 4
+  store i32 2, ptr %3, align 4
+  store i32 3, ptr %4, align 4
+  store i32 4, ptr %5, align 4
   br label %10
 
-  store i32 1, i32* %4, align 4
+  store i32 1, ptr %4, align 4
   br label %10
 
-  %11 = load i32, i32* %2, align 4
+  %11 = load i32, ptr %2, align 4
   %12 = icmp ne i32 %11, 0
   br i1 %12, label %14, label %13
 
   ; CHECK: callq
   ; CHECK-SAME: [[OFUNC1]]
-  store i32 1, i32* %2, align 4
-  store i32 2, i32* %3, align 4
-  store i32 3, i32* %4, align 4
-  store i32 4, i32* %5, align 4
+  store i32 1, ptr %2, align 4
+  store i32 2, ptr %3, align 4
+  store i32 3, ptr %4, align 4
+  store i32 4, ptr %5, align 4
   br label %15
 
-  store i32 1, i32* %4, align 4
+  store i32 1, ptr %4, align 4
   br label %15
 
   ret i32 0
@@ -60,7 +60,7 @@ define i32 @empty_2() #0 {
 define i32 @no_empty_outlining() #0 {
   ; CHECK-LABEL: _no_empty_outlining:
   %1 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
+  store i32 0, ptr %1, align 4
   ; CHECK-NOT: OUTLINED_FUNCTION
   %2 = call i32 @empty_1() #1
   %3 = call i32 @empty_2() #1
@@ -79,22 +79,22 @@ define i32 @main() #0 {
   %4 = alloca i32, align 4
   %5 = alloca i32, align 4
 
-  store i32 0, i32* %1, align 4
-  store i32 0, i32* @x, align 4
+  store i32 0, ptr %1, align 4
+  store i32 0, ptr @x, align 4
   ; CHECK: callq
   ; CHECK-SAME: [[OFUNC2:OUTLINED_FUNCTION_[0-9]+]]
-  store i32 1, i32* %2, align 4
-  store i32 2, i32* %3, align 4
-  store i32 3, i32* %4, align 4
-  store i32 4, i32* %5, align 4
-  store i32 1, i32* @x, align 4
+  store i32 1, ptr %2, align 4
+  store i32 2, ptr %3, align 4
+  store i32 3, ptr %4, align 4
+  store i32 4, ptr %5, align 4
+  store i32 1, ptr @x, align 4
   call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: callq
   ; CHECK-SAME: [[OFUNC2]]
-  store i32 1, i32* %2, align 4
-  store i32 2, i32* %3, align 4
-  store i32 3, i32* %4, align 4
-  store i32 4, i32* %5, align 4
+  store i32 1, ptr %2, align 4
+  store i32 2, ptr %3, align 4
+  store i32 3, ptr %4, align 4
+  store i32 4, ptr %5, align 4
   ret i32 0
 }
 

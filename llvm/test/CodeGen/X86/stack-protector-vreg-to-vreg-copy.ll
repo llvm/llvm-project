@@ -10,14 +10,14 @@ target triple = "i386-unknown-freebsd10.0"
 ; Function Attrs: nounwind sspreq
 define void @set_state(i32 %s) #0 {
 entry:
-  store i32 %s, i32* @state, align 4
+  store i32 %s, ptr @state, align 4
   ret void
 }
 
 ; Function Attrs: nounwind sspreq
-define void @zero_char(i8* nocapture %p) #0 {
+define void @zero_char(ptr nocapture %p) #0 {
 entry:
-  store i8 0, i8* %p, align 1
+  store i8 0, ptr %p, align 1
   tail call void @g(i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0) #2
   ret void
 }
@@ -28,7 +28,7 @@ declare void @g(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32,
 define void @do_something(i32 %i) #0 {
 entry:
   %data = alloca [8 x i8], align 1
-  %0 = load i32, i32* @state, align 4
+  %0 = load i32, ptr @state, align 4
   %cmp = icmp eq i32 %0, 0
   br i1 %cmp, label %if.then, label %if.else
 
@@ -38,8 +38,7 @@ if.then:                                          ; preds = %entry
 
 if.else:                                          ; preds = %entry
   tail call fastcc void @send_int(i32 %i)
-  %arrayidx = getelementptr inbounds [8 x i8], [8 x i8]* %data, i32 0, i32 0
-  call void @zero_char(i8* %arrayidx)
+  call void @zero_char(ptr %data)
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

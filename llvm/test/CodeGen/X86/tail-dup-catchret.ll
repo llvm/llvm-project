@@ -2,7 +2,7 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"
 
-define void @f() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define void @f() personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @g()
           to label %try.cont unwind label %catch.dispatch
@@ -11,7 +11,7 @@ catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %0 = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %0 = catchpad within %cs1 [ptr null, i32 64, ptr null]
   catchret from %0 to label %try.cont
 
 try.cont:                                         ; preds = %entry, %catch

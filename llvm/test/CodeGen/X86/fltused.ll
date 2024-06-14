@@ -10,11 +10,11 @@
 
 define i32 @main() nounwind {
 entry:
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), double 1.000000e+000) nounwind
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, double 1.000000e+000) nounwind
   ret i32 0
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind
 
 ; WIN32: .globl __fltused
 ; WIN64: .globl _fltused

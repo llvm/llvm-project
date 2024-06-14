@@ -57,22 +57,22 @@ entry:
   ; CHECK-NEXT: movq hp(%rip), %r12
   ; CHECK-NEXT: movq sp(%rip), %rbp
   ; CHECK-NEXT: movq base(%rip), %r13
-  %0 = load double, double* @d2
-  %1 = load double, double* @d1
-  %2 = load float, float* @f4
-  %3 = load float, float* @f3
-  %4 = load float, float* @f2
-  %5 = load float, float* @f1
-  %6 = load i64, i64* @splim
-  %7 = load i64, i64* @r6
-  %8 = load i64, i64* @r5
-  %9 = load i64, i64* @r4
-  %10 = load i64, i64* @r3
-  %11 = load i64, i64* @r2
-  %12 = load i64, i64* @r1
-  %13 = load i64, i64* @hp
-  %14 = load i64, i64* @sp
-  %15 = load i64, i64* @base
+  %0 = load double, ptr @d2
+  %1 = load double, ptr @d1
+  %2 = load float, ptr @f4
+  %3 = load float, ptr @f3
+  %4 = load float, ptr @f2
+  %5 = load float, ptr @f1
+  %6 = load i64, ptr @splim
+  %7 = load i64, ptr @r6
+  %8 = load i64, ptr @r5
+  %9 = load i64, ptr @r4
+  %10 = load i64, ptr @r3
+  %11 = load i64, ptr @r2
+  %12 = load i64, ptr @r1
+  %13 = load i64, ptr @hp
+  %14 = load i64, ptr @sp
+  %15 = load i64, ptr @base
   ; CHECK: jmp bar
   tail call ghccc void @bar( i64 %15, i64 %14, i64 %13, i64 %12, i64 %11,
                              i64 %10, i64 %9, i64 %8, i64 %7, i64 %6,

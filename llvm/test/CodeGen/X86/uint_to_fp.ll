@@ -22,7 +22,7 @@ define void @test(i32 %x, ptr %y) nounwind {
 entry:
   lshr i32 %x, 23
   uitofp i32 %0 to float
-  store float %1, float* %y
+  store float %1, ptr %y
   ret void
 }
 

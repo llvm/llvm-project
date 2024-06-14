@@ -359,9 +359,9 @@ define void @test(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    popq %r15
 ; X64-NEXT:    retq
 entry:
-  %av = load i256, i256* %a
-  %bv = load i256, i256* %b
+  %av = load i256, ptr %a
+  %bv = load i256, ptr %b
   %r = mul i256 %av, %bv
-  store i256 %r, i256* %out
+  store i256 %r, ptr %out
   ret void
 }

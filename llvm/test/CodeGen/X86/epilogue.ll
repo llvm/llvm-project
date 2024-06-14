@@ -3,11 +3,11 @@
 ; CHECK-NOT: lea{{.*}}(%esp)
 ; CHECK: {{(mov.* %ebp, %esp)|(lea.*\(%ebp\), %esp)}}
 
-declare void @bar(<2 x i64>* %n)
+declare void @bar(ptr %n)
 
 define void @foo(i64 %h) {
   %k = trunc i64 %h to i32
   %p = alloca <2 x i64>, i32 %k
-  call void @bar(<2 x i64>* %p)
+  call void @bar(ptr %p)
   ret void
 }

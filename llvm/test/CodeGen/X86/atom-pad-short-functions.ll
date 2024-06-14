@@ -97,7 +97,7 @@ define void @test_call_others(i32 %x) nounwind {
   br i1 %tobool, label %if.end, label %true.case
 
 true.case:
-  tail call void bitcast (void (...)* @external_function to void ()*)() nounwind
+  tail call void @external_function() nounwind
   br label %if.end
 
 if.end:

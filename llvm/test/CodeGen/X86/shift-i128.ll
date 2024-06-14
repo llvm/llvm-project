@@ -6,7 +6,7 @@
 ; Scalars
 ;
 
-define void @test_lshr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
+define void @test_lshr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_lshr_i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -73,11 +73,11 @@ define void @test_lshr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; x86_64-NEXT:    retq
 entry:
 	%0 = lshr i128 %x, %a
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
+define void @test_ashr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_ashr_i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -146,11 +146,11 @@ define void @test_ashr_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; x86_64-NEXT:    retq
 entry:
 	%0 = ashr i128 %x, %a
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
+define void @test_shl_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_shl_i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -222,37 +222,37 @@ define void @test_shl_i128(i128 %x, i128 %a, i128* nocapture %r) nounwind {
 ; x86_64-NEXT:    retq
 entry:
 	%0 = shl i128 %x, %a
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_lshr_i128_outofrange(i128 %x, i128* nocapture %r) nounwind {
+define void @test_lshr_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_lshr_i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = lshr i128 %x, -1
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_i128_outofrange(i128 %x, i128* nocapture %r) nounwind {
+define void @test_ashr_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_ashr_i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = ashr i128 %x, -1
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_i128_outofrange(i128 %x, i128* nocapture %r) nounwind {
+define void @test_shl_i128_outofrange(i128 %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_shl_i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = shl i128 %x, -1
-	store i128 %0, i128* %r, align 16
+	store i128 %0, ptr %r, align 16
 	ret void
 }
 
@@ -260,7 +260,7 @@ entry:
 ; Vectors
 ;
 
-define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture %r) nounwind {
+define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_lshr_v2i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -394,11 +394,11 @@ define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocaptur
 ; x86_64-NEXT:    retq
 entry:
 	%0 = lshr <2 x i128> %x, %a
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture %r) nounwind {
+define void @test_ashr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_ashr_v2i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -538,11 +538,11 @@ define void @test_ashr_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocaptur
 ; x86_64-NEXT:    retq
 entry:
 	%0 = ashr <2 x i128> %x, %a
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture %r) nounwind {
+define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_shl_v2i128:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    pushl %ebp
@@ -684,41 +684,41 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, <2 x i128>* nocapture
 ; x86_64-NEXT:    retq
 entry:
 	%0 = shl <2 x i128> %x, %a
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_lshr_v2i128_outofrange(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_lshr_v2i128_outofrange(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_lshr_v2i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = lshr <2 x i128> %x, <i128 -1, i128 -1>
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_v2i128_outofrange(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_ashr_v2i128_outofrange(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_ashr_v2i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = ashr <2 x i128> %x, <i128 -1, i128 -1>
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_v2i128_outofrange(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_shl_v2i128_outofrange(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; ALL-LABEL: test_shl_v2i128_outofrange:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    ret{{[l|q]}}
 entry:
 	%0 = shl <2 x i128> %x, <i128 -1, i128 -1>
-	store <2 x i128> %0, <2 x i128>* %r, align 16
+	store <2 x i128> %0, ptr %r, align 16
 	ret void
 }
 
-define void @test_lshr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_lshr_v2i128_outofrange_sum(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_lshr_v2i128_outofrange_sum:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -741,11 +741,11 @@ define void @test_lshr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocaptur
 entry:
 	%0 = lshr <2 x i128> %x, <i128 -1, i128 -1>
 	%1 = lshr <2 x i128> %0, <i128  1, i128  1>
-	store <2 x i128> %1, <2 x i128>* %r, align 16
+	store <2 x i128> %1, ptr %r, align 16
 	ret void
 }
 
-define void @test_ashr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_ashr_v2i128_outofrange_sum(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_ashr_v2i128_outofrange_sum:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -768,11 +768,11 @@ define void @test_ashr_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocaptur
 entry:
 	%0 = ashr <2 x i128> %x, <i128 -1, i128 -1>
 	%1 = ashr <2 x i128> %0, <i128  1, i128  1>
-	store <2 x i128> %1, <2 x i128>* %r, align 16
+	store <2 x i128> %1, ptr %r, align 16
 	ret void
 }
 
-define void @test_shl_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture %r) nounwind {
+define void @test_shl_v2i128_outofrange_sum(<2 x i128> %x, ptr nocapture %r) nounwind {
 ; i686-LABEL: test_shl_v2i128_outofrange_sum:
 ; i686:       # %bb.0: # %entry
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -795,7 +795,7 @@ define void @test_shl_v2i128_outofrange_sum(<2 x i128> %x, <2 x i128>* nocapture
 entry:
 	%0 = shl <2 x i128> %x, <i128 -1, i128 -1>
 	%1 = shl <2 x i128> %0, <i128  1, i128  1>
-	store <2 x i128> %1, <2 x i128>* %r, align 16
+	store <2 x i128> %1, ptr %r, align 16
 	ret void
 }
 

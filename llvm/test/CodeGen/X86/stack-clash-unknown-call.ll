@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg);
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg);
 
 ; it's important that we don't use the call as a probe here
 define void @foo() local_unnamed_addr #0 {
@@ -22,7 +22,7 @@ define void @foo() local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %a = alloca i8, i64 8000, align 16
-  call void @llvm.memset.p0i8.i64(i8* align 16 %a, i8 0, i64 8000, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 16 %a, i8 0, i64 8000, i1 false)
   ret void
 }
 

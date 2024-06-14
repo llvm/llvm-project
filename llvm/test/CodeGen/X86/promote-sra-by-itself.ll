@@ -3,7 +3,7 @@
 
 declare void @use(<1 x i16>)
 
-define i16 @basic(i16* %p) {
+define i16 @basic(ptr %p) {
 ; CHECK-LABEL: basic:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movswl (%rdi), %eax
@@ -11,12 +11,12 @@ define i16 @basic(i16* %p) {
 ; CHECK-NEXT:    sarl %cl, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
-  %v = load i16, i16* %p
+  %v = load i16, ptr %p
   %s = ashr i16 %v, %v
   ret i16 %s
 }
 
-define void @crash(i1 %cond, <1 x i16>* %p) {
+define void @crash(i1 %cond, ptr %p) {
 ; CHECK-LABEL: crash:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -29,7 +29,7 @@ define void @crash(i1 %cond, <1 x i16>* %p) {
   br label %loop
 
 loop:
-  %v = load <1 x i16>, <1 x i16>* %p, align 2
+  %v = load <1 x i16>, ptr %p, align 2
   %ins = insertelement <4 x double> zeroinitializer, double 0.000000e+00, i32 0
   %cmp = fcmp uge <4 x double> %ins, zeroinitializer
   %ashr = ashr <1 x i16> %v, %v

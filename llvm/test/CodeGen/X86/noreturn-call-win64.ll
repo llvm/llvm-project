@@ -55,7 +55,7 @@ declare dso_local void @abort1() noreturn
 declare dso_local void @abort2() noreturn
 declare dso_local void @abort3() noreturn
 
-define dso_local void @throw_exception() uwtable personality i32 (...)* @__CxxFrameHandler3 {
+define dso_local void @throw_exception() uwtable personality ptr @__CxxFrameHandler3 {
 entry:
   %o = alloca %struct.MakeCleanup, align 1
   %call = invoke i32 @cond()
@@ -66,7 +66,7 @@ invoke.cont:                                      ; preds = %entry
   br i1 %cmp1, label %if.then, label %if.end
 
 if.then:                                          ; preds = %invoke.cont
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null)
+  invoke void @_CxxThrowException(ptr null, ptr null)
           to label %unreachable unwind label %ehcleanup
 
 if.end:                                           ; preds = %invoke.cont
@@ -78,16 +78,16 @@ invoke.cont1:                                     ; preds = %if.end
   br i1 %cmp2, label %if.then3, label %if.end4
 
 if.then3:                                         ; preds = %invoke.cont1
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null)
+  invoke void @_CxxThrowException(ptr null, ptr null)
           to label %unreachable unwind label %ehcleanup
 
 if.end4:                                          ; preds = %invoke.cont1
-  call void @"??1MakeCleanup@@QEAA@XZ"(%struct.MakeCleanup* nonnull %o)
+  call void @"??1MakeCleanup@@QEAA@XZ"(ptr nonnull %o)
   ret void
 
 ehcleanup:                                        ; preds = %if.then3, %if.end, %if.then, %entry
   %cp = cleanuppad within none []
-  call void @"??1MakeCleanup@@QEAA@XZ"(%struct.MakeCleanup* nonnull %o) [ "funclet"(token %cp) ]
+  call void @"??1MakeCleanup@@QEAA@XZ"(ptr nonnull %o) [ "funclet"(token %cp) ]
   cleanupret from %cp unwind to caller
 
 unreachable:                                      ; preds = %if.then3, %if.then
@@ -95,8 +95,8 @@ unreachable:                                      ; preds = %if.then3, %if.then
 }
 
 declare dso_local i32 @__CxxFrameHandler3(...)
-declare dso_local void @_CxxThrowException(i8*, %eh.ThrowInfo*)
-declare dso_local void @"??1MakeCleanup@@QEAA@XZ"(%struct.MakeCleanup*)
+declare dso_local void @_CxxThrowException(ptr, ptr)
+declare dso_local void @"??1MakeCleanup@@QEAA@XZ"(ptr)
 
 ; CHECK-LABEL: throw_exception:
 ; CHECK: callq cond

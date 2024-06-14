@@ -31,17 +31,17 @@ define void @_Z1av() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movb $0, var_163(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %bf.load = load i32, i32* bitcast (i24* getelementptr inbounds (%struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, %struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363* @struct_obj_3, i64 0, i32 0, i32 2) to i32*), align 2
-  %tmp = load i8, i8* @var_46, align 1
+  %bf.load = load i32, ptr getelementptr inbounds (%struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, ptr @struct_obj_3, i64 0, i32 0, i32 2), align 2
+  %tmp = load i8, ptr @var_46, align 1
   %conv1 = sext i8 %tmp to i32
-  %tmp1 = load i8, i8* @var_49, align 1
+  %tmp1 = load i8, ptr @var_49, align 1
   %tmp2 = zext i8 %tmp1 to i32
   %tmp3 = shl i32 %bf.load, 1
   %factor = and i32 %tmp3, 2
   %sub = sub nsw i32 %factor, %conv1
   %sub8 = sub nsw i32 %sub, %tmp2
   %add = add nsw i32 %sub8, 0
-  %tmp4 = load i8, i8* @var_44, align 1
+  %tmp4 = load i8, ptr @var_44, align 1
   %tmp5 = zext i8 %tmp4 to i32
   %xor = xor i32 %add, 255
   %xor20 = xor i32 %xor, 0
@@ -51,9 +51,9 @@ entry:
   %conv56 = trunc i32 %or55 to i16
   %bf.value = and i16 %conv56, 255
   %bf.set = or i16 %bf.value, 0
-  store i16 %bf.set, i16* getelementptr inbounds (%struct.c.2.6.10.14.38.70.74.90.94.98.106.122.362, %struct.c.2.6.10.14.38.70.74.90.94.98.106.122.362* @struct_obj_12, i64 0, i32 1, i32 1, i32 1), align 1
+  store i16 %bf.set, ptr getelementptr inbounds (%struct.c.2.6.10.14.38.70.74.90.94.98.106.122.362, ptr @struct_obj_12, i64 0, i32 1, i32 1, i32 1), align 1
   %lnot = icmp eq i8 undef, 0
-  %bf.load65 = load i32, i32* bitcast (i24* getelementptr inbounds (%struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, %struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363* @struct_obj_8, i64 0, i32 0, i32 2) to i32*), align 2
+  %bf.load65 = load i32, ptr getelementptr inbounds (%struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, ptr @struct_obj_8, i64 0, i32 0, i32 2), align 2
   %tmp6 = and i32 %bf.load65, 1
   %tmp7 = select i1 %lnot, i32 undef, i32 0
   %mul69 = and i32 %tmp6, %tmp7
@@ -69,7 +69,7 @@ entry:
   %mul95 = and i32 %sub94, %tmp11
   %tobool96 = icmp ne i32 %mul95, 0
   %frombool = zext i1 %tobool96 to i8
-  store i8 %frombool, i8* @var_163, align 1
+  store i8 %frombool, ptr @var_163, align 1
   ret void
 }
 

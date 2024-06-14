@@ -1088,7 +1088,7 @@ entry:
 ;   if ((a[c/32] >> (c % 32)) & 1)
 ;     b[c/32] |= 1 << (c % 32);
 ; }
-define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind {
+define void @demanded_i32(ptr nocapture readonly, ptr nocapture, i32) nounwind {
 ; X86-LABEL: demanded_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -1124,8 +1124,8 @@ define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind
 ; X64-NEXT:    retq
   %4 = lshr i32 %2, 5
   %5 = zext i32 %4 to i64
-  %6 = getelementptr inbounds i32, i32* %0, i64 %5
-  %7 = load i32, i32* %6, align 4
+  %6 = getelementptr inbounds i32, ptr %0, i64 %5
+  %7 = load i32, ptr %6, align 4
   %8 = and i32 %2, 31
   %9 = shl i32 1, %8
   %10 = and i32 %7, %9
@@ -1133,10 +1133,10 @@ define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind
   br i1 %11, label %16, label %12
 
 ; <label>:12:
-  %13 = getelementptr inbounds i32, i32* %1, i64 %5
-  %14 = load i32, i32* %13, align 4
+  %13 = getelementptr inbounds i32, ptr %1, i64 %5
+  %14 = load i32, ptr %13, align 4
   %15 = or i32 %14, %9
-  store i32 %15, i32* %13, align 4
+  store i32 %15, ptr %13, align 4
   br label %16
 
 ; <label>:16:

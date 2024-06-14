@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-unknown-linux-gnu"
 
-define float @convphi1(i32 *%s, i32 *%d, i32 %n) {
+define float @convphi1(ptr%s, ptr%d, i32 %n) {
 ; CHECK-LABEL: @convphi1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP15:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -25,11 +25,11 @@ entry:
   br i1 %cmp15, label %then, label %else
 
 then:
-  %ls = load i32, i32* %s, align 4
+  %ls = load i32, ptr %s, align 4
   br label %end
 
 else:
-  %ld = load i32, i32* %d, align 4
+  %ld = load i32, ptr %d, align 4
   br label %end
 
 end:

@@ -28,7 +28,7 @@ define i32 @andn32(i32 %x, i32 %y)   {
   ret i32 %tmp2
 }
 
-define i32 @andn32_load(i32 %x, i32* %y)   {
+define i32 @andn32_load(i32 %x, ptr %y)   {
 ; X86-LABEL: andn32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -459,7 +459,7 @@ define i32 @bextr32(i32 %x, i32 %y)   {
   ret i32 %tmp
 }
 
-define i32 @bextr32_load(i32* %x, i32 %y)   {
+define i32 @bextr32_load(ptr %x, i32 %y)   {
 ; X86-LABEL: bextr32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -542,7 +542,7 @@ define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
   ret i32 %2
 }
 
-define i32 @bextr32b_load(i32* %x)  uwtable  ssp {
+define i32 @bextr32b_load(ptr %x)  uwtable  ssp {
 ; X86-SLOW-BEXTR-LABEL: bextr32b_load:
 ; X86-SLOW-BEXTR:       # %bb.0:
 ; X86-SLOW-BEXTR-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -652,7 +652,7 @@ define i32 @blsi32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsi32_load(i32* %x)   {
+define i32 @blsi32_load(ptr %x)   {
 ; X86-LABEL: blsi32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -945,7 +945,7 @@ define i32 @blsmsk32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsmsk32_load(i32* %x)   {
+define i32 @blsmsk32_load(ptr %x)   {
 ; X86-LABEL: blsmsk32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1234,7 +1234,7 @@ define i32 @blsr32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsr32_load(i32* %x)   {
+define i32 @blsr32_load(ptr %x)   {
 ; X86-LABEL: blsr32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax

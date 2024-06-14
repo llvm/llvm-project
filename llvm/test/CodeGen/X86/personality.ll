@@ -2,13 +2,13 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin9 | FileCheck %s -check-prefix=X32
 ; PR1632
 
-define void @_Z1fv() personality i32 (...)* @__gxx_personality_v0 {
+define void @_Z1fv() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z1gv()
           to label %return unwind label %unwind
 
 unwind:                                           ; preds = %entry
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
   br i1 false, label %eh_then, label %cleanup20
 
@@ -17,9 +17,9 @@ eh_then:                                          ; preds = %unwind
           to label %return unwind label %unwind10
 
 unwind10:                                         ; preds = %eh_then
-  %exn10 = landingpad {i8*, i32}
+  %exn10 = landingpad {ptr, i32}
             cleanup
-  %upgraded.eh_select13 = extractvalue { i8*, i32 } %exn10, 1
+  %upgraded.eh_select13 = extractvalue { ptr, i32 } %exn10, 1
   %upgraded.eh_select131 = sext i32 %upgraded.eh_select13 to i64
   %tmp18 = icmp slt i64 %upgraded.eh_select131, 0
   br i1 %tmp18, label %filter, label %cleanup20

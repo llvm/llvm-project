@@ -141,8 +141,8 @@ bb2:
 
 }
 
-declare x86_thiscallcc zeroext i1 @baz(i8*, i32)
-define x86_thiscallcc zeroext i1 @BlockPlacementTest(i8* %this, i32 %x) !prof !14 {
+declare x86_thiscallcc zeroext i1 @baz(ptr, i32)
+define x86_thiscallcc zeroext i1 @BlockPlacementTest(ptr %this, i32 %x) !prof !14 {
 ; CHECK32-LABEL: BlockPlacementTest:
 ; CHECK32:       # %bb.0: # %entry
 ; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx # encoding: [0x8b,0x54,0x24,0x04]
@@ -211,7 +211,7 @@ land.rhs:
   br i1 %tobool7, label %lor.rhs, label %land.end
 
 lor.rhs:
-  %call = tail call x86_thiscallcc zeroext i1 @baz(i8* %this, i32 %x) #2
+  %call = tail call x86_thiscallcc zeroext i1 @baz(ptr %this, i32 %x) #2
   br label %land.end
 
 land.end:

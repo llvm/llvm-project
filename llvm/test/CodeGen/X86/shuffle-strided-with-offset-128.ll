@@ -13,7 +13,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512BWVL
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512BWVL
 
-define void @shuffle_v16i8_to_v8i8_1(<16 x i8>* %L, <8 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v8i8_1(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v8i8_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -42,13 +42,13 @@ define void @shuffle_v16i8_to_v8i8_1(<16 x i8>* %L, <8 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,3,5,7,9,11,13,15,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-  store <8 x i8> %strided.vec, <8 x i8>* %S
+  store <8 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v8i16_to_v4i16_1(<8 x i16>* %L, <4 x i16>* %S) nounwind {
+define void @shuffle_v8i16_to_v4i16_1(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v8i16_to_v4i16_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[3,1,2,3,4,5,6,7]
@@ -78,13 +78,13 @@ define void @shuffle_v8i16_to_v4i16_1(<8 x i16>* %L, <4 x i16>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <8 x i16>, <8 x i16>* %L
+  %vec = load <8 x i16>, ptr %L
   %strided.vec = shufflevector <8 x i16> %vec, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-  store <4 x i16> %strided.vec, <4 x i16>* %S
+  store <4 x i16> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v4i32_to_v2i32_1(<4 x i32>* %L, <2 x i32>* %S) nounwind {
+define void @shuffle_v4i32_to_v2i32_1(ptr %L, ptr %S) nounwind {
 ; SSE-LABEL: shuffle_v4i32_to_v2i32_1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[1,3,2,3]
@@ -102,13 +102,13 @@ define void @shuffle_v4i32_to_v2i32_1(<4 x i32>* %L, <2 x i32>* %S) nounwind {
 ; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = mem[1,3,2,3]
 ; AVX512-NEXT:    vmovlps %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <4 x i32>, <4 x i32>* %L
+  %vec = load <4 x i32>, ptr %L
   %strided.vec = shufflevector <4 x i32> %vec, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
-  store <2 x i32> %strided.vec, <2 x i32>* %S
+  store <2 x i32> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v4i8_1(<16 x i8>* %L, <4 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v4i8_1(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v4i8_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -145,13 +145,13 @@ define void @shuffle_v16i8_to_v4i8_1(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-  store <4 x i8> %strided.vec, <4 x i8>* %S
+  store <4 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v4i8_2(<16 x i8>* %L, <4 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v4i8_2(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v4i8_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[3,1,2,3,4,5,6,7]
@@ -183,13 +183,13 @@ define void @shuffle_v16i8_to_v4i8_2(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,6,10,14,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-  store <4 x i8> %strided.vec, <4 x i8>* %S
+  store <4 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v4i8_3(<16 x i8>* %L, <4 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v4i8_3(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v4i8_3:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -226,13 +226,13 @@ define void @shuffle_v16i8_to_v4i8_3(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,7,11,15,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-  store <4 x i8> %strided.vec, <4 x i8>* %S
+  store <4 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v8i16_to_v2i16_1(<8 x i16>* %L, <2 x i16>* %S) nounwind {
+define void @shuffle_v8i16_to_v2i16_1(ptr %L, ptr %S) nounwind {
 ; SSE-LABEL: shuffle_v8i16_to_v2i16_1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,2,2,3]
@@ -288,13 +288,13 @@ define void @shuffle_v8i16_to_v2i16_1(<8 x i16>* %L, <2 x i16>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,10,11,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512BWVL-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <8 x i16>, <8 x i16>* %L
+  %vec = load <8 x i16>, ptr %L
   %strided.vec = shufflevector <8 x i16> %vec, <8 x i16> undef, <2 x i32> <i32 1, i32 5>
-  store <2 x i16> %strided.vec, <2 x i16>* %S
+  store <2 x i16> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v8i16_to_v2i16_2(<8 x i16>* %L, <2 x i16>* %S) nounwind {
+define void @shuffle_v8i16_to_v2i16_2(ptr %L, ptr %S) nounwind {
 ; SSE-LABEL: shuffle_v8i16_to_v2i16_2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[3,1,2,3]
@@ -350,13 +350,13 @@ define void @shuffle_v8i16_to_v2i16_2(<8 x i16>* %L, <2 x i16>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,12,13,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512BWVL-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <8 x i16>, <8 x i16>* %L
+  %vec = load <8 x i16>, ptr %L
   %strided.vec = shufflevector <8 x i16> %vec, <8 x i16> undef, <2 x i32> <i32 2, i32 6>
-  store <2 x i16> %strided.vec, <2 x i16>* %S
+  store <2 x i16> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v8i16_to_v2i16_3(<8 x i16>* %L, <2 x i16>* %S) nounwind {
+define void @shuffle_v8i16_to_v2i16_3(ptr %L, ptr %S) nounwind {
 ; SSE-LABEL: shuffle_v8i16_to_v2i16_3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = mem[3,1,2,3]
@@ -412,13 +412,13 @@ define void @shuffle_v8i16_to_v2i16_3(<8 x i16>* %L, <2 x i16>* %S) nounwind {
 ; AVX512BWVL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[6,7,14,15,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512BWVL-NEXT:    vmovd %xmm0, (%rsi)
 ; AVX512BWVL-NEXT:    retq
-  %vec = load <8 x i16>, <8 x i16>* %L
+  %vec = load <8 x i16>, ptr %L
   %strided.vec = shufflevector <8 x i16> %vec, <8 x i16> undef, <2 x i32> <i32 3, i32 7>
-  store <2 x i16> %strided.vec, <2 x i16>* %S
+  store <2 x i16> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v2i8_1(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v2i8_1(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8_1:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -453,13 +453,13 @@ define void @shuffle_v16i8_to_v2i8_1(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,9,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 1, i32 9>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v2i8_2(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v2i8_2(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,2,2,3]
@@ -490,13 +490,13 @@ define void @shuffle_v16i8_to_v2i8_2(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,10,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 2, i32 10>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v2i8_3(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v2i8_3(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8_3:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -531,13 +531,13 @@ define void @shuffle_v16i8_to_v2i8_3(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,11,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 3, i32 11>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v2i8_4(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v2i8_4(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8_4:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[3,1,2,3]
@@ -568,13 +568,13 @@ define void @shuffle_v16i8_to_v2i8_4(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,12,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 4, i32 12>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v2i8_5(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v2i8_5(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8_5:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -609,13 +609,13 @@ define void @shuffle_v16i8_to_v2i8_5(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,13,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 5, i32 13>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v2i8_6(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v2i8_6(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8_6:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = mem[3,1,2,3]
@@ -646,13 +646,13 @@ define void @shuffle_v16i8_to_v2i8_6(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[6,14,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 6, i32 14>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }
 
-define void @shuffle_v16i8_to_v2i8_7(<16 x i8>* %L, <2 x i8>* %S) nounwind {
+define void @shuffle_v16i8_to_v2i8_7(ptr %L, ptr %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8_7:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -687,9 +687,9 @@ define void @shuffle_v16i8_to_v2i8_7(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,15,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; AVX512-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; AVX512-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %L
+  %vec = load <16 x i8>, ptr %L
   %strided.vec = shufflevector <16 x i8> %vec, <16 x i8> undef, <2 x i32> <i32 7, i32 15>
-  store <2 x i8> %strided.vec, <2 x i8>* %S
+  store <2 x i8> %strided.vec, ptr %S
   ret void
 }
 

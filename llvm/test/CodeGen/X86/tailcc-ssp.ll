@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=x86_64-windows-msvc %s -o - -verify-machineinstrs | FileCheck %s -check-prefix=WINDOWS
 ; RUN: llc -mtriple=x86_64-linux-gnu    %s -o - -verify-machineinstrs | FileCheck %s -check-prefix=LINUX
 
-declare void @h(i8*, i64, i8*)
+declare void @h(ptr, i64, ptr)
 
 define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-LABEL: tailcall_frame:
@@ -14,7 +14,7 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; LINUX: jmp h
 ; LINUX: callq __stack_chk_fail
 
-   tail call tailcc void @h(i8* null, i64 0, i8* null)
+   tail call tailcc void @h(ptr null, i64 0, ptr null)
    ret void
 }
 

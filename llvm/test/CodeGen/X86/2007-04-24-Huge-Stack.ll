@@ -5,17 +5,17 @@
 
 	%struct.md5_ctx = type { i32, i32, i32, i32, [2 x i32], i32, [128 x i8], [4294967288 x i8] }
 
-define i8* @md5_buffer(i8* %buffer, i64 %len, i8* %resblock) {
+define ptr @md5_buffer(ptr %buffer, i64 %len, ptr %resblock) {
 entry:
-	%ctx = alloca %struct.md5_ctx, align 16		; <%struct.md5_ctx*> [#uses=3]
-	call void @md5_init_ctx( %struct.md5_ctx* %ctx )
-	call void @md5_process_bytes( i8* %buffer, i64 %len, %struct.md5_ctx* %ctx )
-	%tmp4 = call i8* @md5_finish_ctx( %struct.md5_ctx* %ctx, i8* %resblock )		; <i8*> [#uses=1]
-	ret i8* %tmp4
+	%ctx = alloca %struct.md5_ctx, align 16		; <ptr> [#uses=3]
+	call void @md5_init_ctx( ptr %ctx )
+	call void @md5_process_bytes( ptr %buffer, i64 %len, ptr %ctx )
+	%tmp4 = call ptr @md5_finish_ctx( ptr %ctx, ptr %resblock )		; <ptr> [#uses=1]
+	ret ptr %tmp4
 }
 
-declare void @md5_init_ctx(%struct.md5_ctx*)
+declare void @md5_init_ctx(ptr)
 
-declare i8* @md5_finish_ctx(%struct.md5_ctx*, i8*)
+declare ptr @md5_finish_ctx(ptr, ptr)
 
-declare void @md5_process_bytes(i8*, i64, %struct.md5_ctx*)
+declare void @md5_process_bytes(ptr, i64, ptr)

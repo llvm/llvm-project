@@ -21,7 +21,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: norecurse nounwind optsize readnone uwtable
 define void @_Z3fn1v() #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.declare(metadata %struct.anon* undef, metadata !8, metadata !19), !dbg !20
+  tail call void @llvm.dbg.declare(metadata ptr undef, metadata !8, metadata !19), !dbg !20
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !8, metadata !21), !dbg !20
   ret void, !dbg !22
 }

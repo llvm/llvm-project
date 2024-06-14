@@ -28,12 +28,12 @@ define dso_local void @test1(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    jmp foo # TAILCALL
-  %3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32)
-  %4 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 1024), i64 32)
-  %5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32)
+  %3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 8, ptr @buf, i64 32)
+  %4 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 1024), i64 32)
+  %5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32)
   %6 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %0, i16 %1, i16 8, x86_amx %5, x86_amx %3, x86_amx %4)
   call void @llvm.dbg.value(metadata x86_amx %6, metadata !DILocalVariable(name: "1", scope: !2), metadata !DIExpression()), !dbg !3
-  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32, x86_amx %6)
+  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32, x86_amx %6)
   tail call void @foo()
   ret void
 }
@@ -98,18 +98,18 @@ define dso_local void @test2(i16 signext %0, i16 signext %1) nounwind {
 
 if.true:
   %t1 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %0, i16 8)
-  %t2 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 1024), i64 32)
-  %t3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32)
+  %t2 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 1024), i64 32)
+  %t3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32)
   %t4 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %0, i16 %1, i16 8, x86_amx %t1, x86_amx %t2, x86_amx %t3)
-  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32, x86_amx %t4)
+  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32, x86_amx %t4)
   br label %exit
 
 if.false:
-  %t5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32)
-  %t6 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 1024), i64 32)
-  %t7 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32)
+  %t5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 8, ptr @buf, i64 32)
+  %t6 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 1024), i64 32)
+  %t7 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %0, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32)
   %t8 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %0, i16 %1, i16 8, x86_amx %t5, x86_amx %t6, x86_amx %t7)
-  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32, x86_amx %t8)
+  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 2048), i64 32, x86_amx %t8)
   br label %exit
 
 exit:
@@ -155,7 +155,7 @@ if.false:
 exit:
   %5 = phi i16 [ %3, %if.true ], [ %4, %if.false ]
   %6 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %5, i16 %1)
-  tail call void @llvm.x86.tilestored64.internal(i16 %5, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx %6)
+  tail call void @llvm.x86.tilestored64.internal(i16 %5, i16 %1, ptr @buf, i64 32, x86_amx %6)
   ret void
 }
 
@@ -214,13 +214,13 @@ if.false:
 amx1:
   %5 = phi i16 [ %3, %if.true ], [ %4, %if.false ]
   %6 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %5, i16 %1)
-  tail call void @llvm.x86.tilestored64.internal(i16 %5, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx %6)
+  tail call void @llvm.x86.tilestored64.internal(i16 %5, i16 %1, ptr @buf, i64 32, x86_amx %6)
   br label %exit
 
 amx2:
   %7 = phi i16 [ %3, %if.true ], [ %4, %if.false ]
-  %8 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %7, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 1024), i64 32)
-  tail call void @llvm.x86.tilestored64.internal(i16 %7, i16 %1, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx %8)
+  %8 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %7, i16 %1, ptr getelementptr inbounds ([3072 x i8], ptr @buf, i64 0, i64 1024), i64 32)
+  tail call void @llvm.x86.tilestored64.internal(i16 %7, i16 %1, ptr @buf, i64 32, x86_amx %8)
   br label %exit
 
 exit:
@@ -272,7 +272,7 @@ loop.bb1:
 
 if.true:
   %3 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %0, i16 %2)
-  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %2, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx %3)
+  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %2, ptr @buf, i64 32, x86_amx %3)
   br label %loop.bb2
 
 if.false:
@@ -346,7 +346,7 @@ loop.bb2:
   %5 = icmp eq i16 %4, 7
   %6 = add i16 %0, %4
   %7 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %0, i16 %6)
-  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %6, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx %7)
+  tail call void @llvm.x86.tilestored64.internal(i16 %0, i16 %6, ptr @buf, i64 32, x86_amx %7)
   br i1 %5, label %loop.bb1, label %exit
 
 exit:
@@ -357,9 +357,9 @@ exit:
 declare dso_local void @foo() nounwind
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
-declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
+declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
+declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!1}

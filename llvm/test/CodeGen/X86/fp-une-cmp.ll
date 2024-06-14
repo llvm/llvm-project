@@ -104,7 +104,7 @@ if.end:
 
 ; Test that an FP oeq/une conditional branch can be inverted successfully even
 ; when the true and false targets are the same (PR27750).
-define void @pr27750(i32* %b, float %x, i1 %y) {
+define void @pr27750(ptr %b, float %x, i1 %y) {
 ; CHECK-LABEL: pr27750:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
@@ -133,7 +133,7 @@ for.cond1:
   br i1 %y, label %for.body3.lr.ph, label %for.end
 
 for.body3.lr.ph:
-  store i32 0, i32* %b, align 4
+  store i32 0, ptr %b, align 4
   br label %for.end
 
 for.end:

@@ -3,7 +3,7 @@
 
 	%struct.sockaddr = type <{ i8, i8, [14 x i8] }>
 
-define i32 @main(i32 %argc, i8** %argv) nounwind {
+define i32 @main(i32 %argc, ptr %argv) nounwind {
 entry:
 	br label %while.cond
 
@@ -127,11 +127,11 @@ if.end271:		; preds = %if.end261
 	%rem1.i = trunc i32 %rem.i to i16		; <i16> [#uses=1]
 	%conv2.i = or i16 %rem1.i, -16384		; <i16> [#uses=1]
 	%0 = call i16 asm "xchgb ${0:h}, ${0:b}", "=Q,0,~{dirflag},~{fpsr},~{flags}"(i16 %conv2.i) nounwind		; <i16> [#uses=1]
-	store i16 %0, i16* undef
-	%call281 = call i32 @bind(i32 undef, %struct.sockaddr* undef, i32 16) nounwind		; <i32> [#uses=0]
+	store i16 %0, ptr undef
+	%call281 = call i32 @bind(i32 undef, ptr undef, i32 16) nounwind		; <i32> [#uses=0]
 	unreachable
 }
 
-declare i32 @bind(i32, %struct.sockaddr*, i32)
+declare i32 @bind(i32, ptr, i32)
 
 declare i32 @arc4random()

@@ -14,14 +14,14 @@ define i64 @f1(i32 %a, i32 %b) {
   ret i64 %r
 }
 
-define i64 @f2(i32 %a, i32* %p) {
+define i64 @f2(i32 %a, ptr %p) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    mulxl (%eax), %eax, %edx
 ; CHECK-NEXT:    retl
-  %b = load i32, i32* %p
+  %b = load i32, ptr %p
   %x = zext i32 %a to i64
   %y = zext i32 %b to i64
   %r = mul i64 %x, %y

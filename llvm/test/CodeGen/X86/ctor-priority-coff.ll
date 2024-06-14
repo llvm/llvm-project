@@ -42,23 +42,23 @@ $h = comdat any
   { i32, ptr, ptr } { i32 250, ptr @k, ptr null }
 ]
 
-declare dso_local i32 @puts(i8* nocapture readonly) local_unnamed_addr
+declare dso_local i32 @puts(ptr nocapture readonly) local_unnamed_addr
 
 define dso_local void @g() {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @str0, i64 0, i64 0))
+  %call = tail call i32 @puts(ptr @str0)
   ret void
 }
 
 define dso_local void @f() {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @str1, i64 0, i64 0))
+  %call = tail call i32 @puts(ptr @str1)
   ret void
 }
 
 define dso_local void @init_h() {
 entry:
-  store i8 42, i8* @h
+  store i8 42, ptr @h
   ret void
 }
 
@@ -83,6 +83,6 @@ entry:
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() local_unnamed_addr {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str2, i64 0, i64 0))
+  %call = tail call i32 @puts(ptr @str2)
   ret i32 0
 }

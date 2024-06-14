@@ -285,8 +285,8 @@ define ptr @gep_and_xor(ptr %a, i64 %m) {
   %old = ptrtoint ptr %a to i64
   %old.not = and i64 %old, %m
   %offset = xor i64 %old.not, %m
-  %p = getelementptr i8, i8* %a, i64 %offset
-  ret i8* %p
+  %p = getelementptr i8, ptr %a, i64 %offset
+  ret ptr %p
 }
 
 define ptr @gep_and_xor_const(ptr %a) {
@@ -304,8 +304,8 @@ define ptr @gep_and_xor_const(ptr %a) {
   %old = ptrtoint ptr %a to i64
   %old.not = and i64 %old, 1
   %offset = xor i64 %old.not, 1
-  %p = getelementptr i8, i8* %a, i64 %offset
-  ret i8* %p
+  %p = getelementptr i8, ptr %a, i64 %offset
+  ret ptr %p
 }
 
 define i64 @add_and_xor_const_zext_trunc(i64 %x) {

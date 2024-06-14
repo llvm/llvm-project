@@ -91,7 +91,7 @@ define i32 @t4(i32 %a) {
 ; X64-NEXT:    adcw $1, %ax
 ; X64-NEXT:    shll $16, %eax
 ; X64-NEXT:    retq
-  %t0 = load i32, i32* @v4, align 4
+  %t0 = load i32, ptr @v4, align 4
   %not.tobool = icmp eq i32 %t0, 0
   %conv.i = sext i1 %not.tobool to i16
   %call.lobit = lshr i16 %conv.i, 15

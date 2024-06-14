@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s --check-prefixes=X64
 
-define i32 @PR40483_add1(i32*, i32) nounwind {
+define i32 @PR40483_add1(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_add1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -22,10 +22,10 @@ define i32 @PR40483_add1(i32*, i32) nounwind {
 ; X64-NEXT:    movl %esi, (%rdi)
 ; X64-NEXT:    cmovael %esi, %eax
 ; X64-NEXT:    retq
-  %3 = load i32, i32* %0, align 8
+  %3 = load i32, ptr %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.addcarry.32(i8 0, i32 %3, i32 %1)
   %5 = extractvalue { i8, i32 } %4, 1
-  store i32 %5, i32* %0, align 8
+  store i32 %5, ptr %0, align 8
   %6 = extractvalue { i8, i32 } %4, 0
   %7 = icmp eq i8 %6, 0
   %8 = add i32 %1, %3
@@ -34,7 +34,7 @@ define i32 @PR40483_add1(i32*, i32) nounwind {
   ret i32 %10
 }
 
-define i32 @PR40483_add2(i32*, i32) nounwind {
+define i32 @PR40483_add2(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_add2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -55,10 +55,10 @@ define i32 @PR40483_add2(i32*, i32) nounwind {
 ; X64-NEXT:    movl %esi, (%rdi)
 ; X64-NEXT:    cmovbl %esi, %eax
 ; X64-NEXT:    retq
-  %3 = load i32, i32* %0, align 8
+  %3 = load i32, ptr %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.addcarry.32(i8 0, i32 %3, i32 %1)
   %5 = extractvalue { i8, i32 } %4, 1
-  store i32 %5, i32* %0, align 8
+  store i32 %5, ptr %0, align 8
   %6 = extractvalue { i8, i32 } %4, 0
   %7 = icmp eq i8 %6, 0
   %8 = add i32 %3, %1

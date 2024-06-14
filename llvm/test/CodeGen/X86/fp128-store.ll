@@ -11,6 +11,6 @@ define dso_local void @set_FP128(fp128 %x) {
 ; CHECK-NEXT:    movaps %xmm0, myFP128(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  store fp128 %x, fp128* @myFP128, align 16
+  store fp128 %x, ptr @myFP128, align 16
   ret void
 }

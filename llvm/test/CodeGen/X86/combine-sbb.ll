@@ -4,7 +4,7 @@
 
 %WideUInt32 = type { i32, i32 }
 
-define void @PR25858_i32(%WideUInt32* sret(%WideUInt32), %WideUInt32*, %WideUInt32*) nounwind {
+define void @PR25858_i32(ptr sret(%WideUInt32), ptr, ptr) nounwind {
 ; X86-LABEL: PR25858_i32:
 ; X86:       # %bb.0: # %top
 ; X86-NEXT:    pushl %esi
@@ -31,23 +31,21 @@ define void @PR25858_i32(%WideUInt32* sret(%WideUInt32), %WideUInt32*, %WideUInt
 ; X64-NEXT:    movl %ecx, (%rdi)
 ; X64-NEXT:    retq
 top:
-  %3 = bitcast %WideUInt32* %1 to i32*
-  %4 = load i32, i32* %3, align 4
-  %5 = bitcast %WideUInt32* %2 to i32*
-  %6 = load i32, i32* %5, align 4
-  %7 = sub i32 %4, %6
-  %8 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %4, i32 %6)
-  %9 = extractvalue { i32, i1 } %8, 1
-  %10 = getelementptr inbounds %WideUInt32, %WideUInt32* %1, i32 0, i32 1
-  %11 = load i32, i32* %10, align 8
-  %12 = getelementptr inbounds %WideUInt32, %WideUInt32* %2, i32 0, i32 1
-  %13 = load i32, i32* %12, align 8
-  %14 = sub i32 %11, %13
-  %.neg1 = sext i1 %9 to i32
-  %15 = add i32 %14, %.neg1
-  %16 = insertvalue %WideUInt32 undef, i32 %7, 0
-  %17 = insertvalue %WideUInt32 %16, i32 %15, 1
-  store %WideUInt32 %17, %WideUInt32* %0, align 4
+  %3 = load i32, ptr %1, align 4
+  %4 = load i32, ptr %2, align 4
+  %5 = sub i32 %3, %4
+  %6 = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %3, i32 %4)
+  %7 = extractvalue { i32, i1 } %6, 1
+  %8 = getelementptr inbounds %WideUInt32, ptr %1, i32 0, i32 1
+  %9 = load i32, ptr %8, align 8
+  %10 = getelementptr inbounds %WideUInt32, ptr %2, i32 0, i32 1
+  %11 = load i32, ptr %10, align 8
+  %12 = sub i32 %9, %11
+  %.neg1 = sext i1 %7 to i32
+  %13 = add i32 %12, %.neg1
+  %14 = insertvalue %WideUInt32 undef, i32 %5, 0
+  %15 = insertvalue %WideUInt32 %14, i32 %13, 1
+  store %WideUInt32 %15, ptr %0, align 4
   ret void
 }
 
@@ -55,7 +53,7 @@ declare  { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32)
 
 %WideUInt64 = type { i64, i64 }
 
-define void @PR25858_i64(%WideUInt64* sret(%WideUInt64), %WideUInt64*, %WideUInt64*) nounwind {
+define void @PR25858_i64(ptr sret(%WideUInt64), ptr, ptr) nounwind {
 ; X86-LABEL: PR25858_i64:
 ; X86:       # %bb.0: # %top
 ; X86-NEXT:    pushl %ebx
@@ -94,30 +92,28 @@ define void @PR25858_i64(%WideUInt64* sret(%WideUInt64), %WideUInt64*, %WideUInt
 ; X64-NEXT:    movq %rcx, (%rdi)
 ; X64-NEXT:    retq
 top:
-  %3 = bitcast %WideUInt64* %1 to i64*
-  %4 = load i64, i64* %3, align 8
-  %5 = bitcast %WideUInt64* %2 to i64*
-  %6 = load i64, i64* %5, align 8
-  %7 = sub i64 %4, %6
-  %8 = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %4, i64 %6)
-  %9 = extractvalue { i64, i1 } %8, 1
-  %10 = getelementptr inbounds %WideUInt64, %WideUInt64* %1, i64 0, i32 1
-  %11 = load i64, i64* %10, align 8
-  %12 = getelementptr inbounds %WideUInt64, %WideUInt64* %2, i64 0, i32 1
-  %13 = load i64, i64* %12, align 8
-  %14 = sub i64 %11, %13
-  %.neg1 = sext i1 %9 to i64
-  %15 = add i64 %14, %.neg1
-  %16 = insertvalue %WideUInt64 undef, i64 %7, 0
-  %17 = insertvalue %WideUInt64 %16, i64 %15, 1
-  store %WideUInt64 %17, %WideUInt64* %0, align 8
+  %3 = load i64, ptr %1, align 8
+  %4 = load i64, ptr %2, align 8
+  %5 = sub i64 %3, %4
+  %6 = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %3, i64 %4)
+  %7 = extractvalue { i64, i1 } %6, 1
+  %8 = getelementptr inbounds %WideUInt64, ptr %1, i64 0, i32 1
+  %9 = load i64, ptr %8, align 8
+  %10 = getelementptr inbounds %WideUInt64, ptr %2, i64 0, i32 1
+  %11 = load i64, ptr %10, align 8
+  %12 = sub i64 %9, %11
+  %.neg1 = sext i1 %7 to i64
+  %13 = add i64 %12, %.neg1
+  %14 = insertvalue %WideUInt64 undef, i64 %5, 0
+  %15 = insertvalue %WideUInt64 %14, i64 %13, 1
+  store %WideUInt64 %15, ptr %0, align 8
   ret void
 }
 
 declare  { i64, i1 } @llvm.usub.with.overflow.i64(i64, i64)
 
 ; PR24545 less_than_ideal()
-define i8 @PR24545(i32, i32, i32* nocapture readonly) {
+define i8 @PR24545(i32, i32, ptr nocapture readonly) {
 ; X86-LABEL: PR24545:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -134,11 +130,11 @@ define i8 @PR24545(i32, i32, i32* nocapture readonly) {
 ; X64-NEXT:    sbbl 4(%rdx), %esi
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
-  %4 = load i32, i32* %2
+  %4 = load i32, ptr %2
   %5 = icmp ugt i32 %4, %0
   %6 = zext i1 %5 to i8
-  %7 = getelementptr inbounds i32, i32* %2, i32 1
-  %8 = load i32, i32* %7
+  %7 = getelementptr inbounds i32, ptr %2, i32 1
+  %8 = load i32, ptr %7
   %9 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 %6, i32 %1, i32 %8)
   %10 = extractvalue { i8, i32 } %9, 0
   %11 = icmp ne i8 %10, 0
@@ -146,7 +142,7 @@ define i8 @PR24545(i32, i32, i32* nocapture readonly) {
   ret i8 %12
 }
 
-define i32 @PR40483_sub1(i32*, i32) nounwind {
+define i32 @PR40483_sub1(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_sub1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -160,16 +156,16 @@ define i32 @PR40483_sub1(i32*, i32) nounwind {
 ; X64-NEXT:    subl %esi, (%rdi)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-  %3 = load i32, i32* %0, align 4
+  %3 = load i32, ptr %0, align 4
   %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
   %5 = extractvalue { i8, i32 } %4, 1
-  store i32 %5, i32* %0, align 4
+  store i32 %5, ptr %0, align 4
   %6 = sub i32 %1, %3
   %7 = add i32 %6, %5
   ret i32 %7
 }
 
-define i32 @PR40483_sub2(i32*, i32) nounwind {
+define i32 @PR40483_sub2(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_sub2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -183,16 +179,16 @@ define i32 @PR40483_sub2(i32*, i32) nounwind {
 ; X64-NEXT:    subl %esi, (%rdi)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-  %3 = load i32, i32* %0, align 4
+  %3 = load i32, ptr %0, align 4
   %4 = sub i32 %3, %1
   %5 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
   %6 = extractvalue { i8, i32 } %5, 1
-  store i32 %6, i32* %0, align 4
+  store i32 %6, ptr %0, align 4
   %7 = sub i32 %4, %6
   ret i32 %7
 }
 
-define i32 @PR40483_sub3(i32*, i32) nounwind {
+define i32 @PR40483_sub3(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_sub3:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
@@ -228,10 +224,10 @@ define i32 @PR40483_sub3(i32*, i32) nounwind {
 ; X64-NEXT:    movl %ecx, (%rdi)
 ; X64-NEXT:    cmovael %edx, %eax
 ; X64-NEXT:    retq
-  %3 = load i32, i32* %0, align 8
+  %3 = load i32, ptr %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
   %5 = extractvalue { i8, i32 } %4, 1
-  store i32 %5, i32* %0, align 8
+  store i32 %5, ptr %0, align 8
   %6 = extractvalue { i8, i32 } %4, 0
   %7 = icmp eq i8 %6, 0
   %8 = sub i32 %1, %3
@@ -240,7 +236,7 @@ define i32 @PR40483_sub3(i32*, i32) nounwind {
   ret i32 %10
 }
 
-define i32 @PR40483_sub4(i32*, i32) nounwind {
+define i32 @PR40483_sub4(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_sub4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -262,10 +258,10 @@ define i32 @PR40483_sub4(i32*, i32) nounwind {
 ; X64-NEXT:    movl %eax, (%rdi)
 ; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    retq
-  %3 = load i32, i32* %0, align 8
+  %3 = load i32, ptr %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
   %5 = extractvalue { i8, i32 } %4, 1
-  store i32 %5, i32* %0, align 8
+  store i32 %5, ptr %0, align 8
   %6 = extractvalue { i8, i32 } %4, 0
   %7 = icmp eq i8 %6, 0
   %8 = sub i32 %3, %1
@@ -276,7 +272,7 @@ define i32 @PR40483_sub4(i32*, i32) nounwind {
 
 ; Verify that a bogus cmov is simplified.
 
-define i32 @PR40483_sub5(i32*, i32) nounwind {
+define i32 @PR40483_sub5(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_sub5:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -290,10 +286,10 @@ define i32 @PR40483_sub5(i32*, i32) nounwind {
 ; X64-NEXT:    subl %esi, (%rdi)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
-  %3 = load i32, i32* %0, align 8
+  %3 = load i32, ptr %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
   %5 = extractvalue { i8, i32 } %4, 1
-  store i32 %5, i32* %0, align 8
+  store i32 %5, ptr %0, align 8
   %6 = extractvalue { i8, i32 } %4, 0
   %7 = icmp eq i8 %6, 0
   %8 = sub i32 %1, %3
@@ -302,7 +298,7 @@ define i32 @PR40483_sub5(i32*, i32) nounwind {
   ret i32 %10
 }
 
-define i32 @PR40483_sub6(i32*, i32) nounwind {
+define i32 @PR40483_sub6(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_sub6:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -325,10 +321,10 @@ define i32 @PR40483_sub6(i32*, i32) nounwind {
 ; X64-NEXT:    leal (%rax,%rax), %eax
 ; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    retq
-  %3 = load i32, i32* %0, align 8
+  %3 = load i32, ptr %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
   %5 = extractvalue { i8, i32 } %4, 1
-  store i32 %5, i32* %0, align 8
+  store i32 %5, ptr %0, align 8
   %6 = extractvalue { i8, i32 } %4, 0
   %7 = icmp eq i8 %6, 0
   %8 = sub i32 %3, %1

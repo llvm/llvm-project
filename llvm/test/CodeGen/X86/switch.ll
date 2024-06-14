@@ -1297,11 +1297,11 @@ bb4: tail call void @g(i32 4) br label %return
 return: ret void
 }
 
-%struct.S = type { %struct.S*, i32 }
+%struct.S = type { ptr, i32 }
 
 ; This will be lowered to a comparison with 4 and then bit tests. Make sure
 ; that the phi node in %header gets a value from the comparison block.
-define void @phi_node_trouble(%struct.S* %s) {
+define void @phi_node_trouble(ptr %s) {
 ; CHECK-LABEL: phi_node_trouble:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -1367,14 +1367,13 @@ define void @phi_node_trouble(%struct.S* %s) {
 entry:
   br label %header
 header:
-  %ptr = phi %struct.S* [ %s, %entry ], [ %next, %loop ]
-  %bool = icmp eq %struct.S* %ptr, null
+  %ptr = phi ptr [ %s, %entry ], [ %next, %loop ]
+  %bool = icmp eq ptr %ptr, null
   br i1 %bool, label %exit, label %loop
 loop:
-  %nextptr = getelementptr inbounds %struct.S, %struct.S* %ptr, i64 0, i32 0
-  %next = load %struct.S*, %struct.S** %nextptr
-  %xptr = getelementptr inbounds %struct.S, %struct.S* %next, i64 0, i32 1
-  %x = load i32, i32* %xptr
+  %next = load ptr, ptr %ptr
+  %xptr = getelementptr inbounds %struct.S, ptr %next, i64 0, i32 1
+  %x = load i32, ptr %xptr
   switch i32 %x, label %exit [
     i32 4, label %header
     i32 36, label %exit2

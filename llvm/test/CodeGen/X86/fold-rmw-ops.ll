@@ -25,10 +25,10 @@ define void @add64_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Add 0x00FFFFFE, a positive immediate requiring 24-bits.
   %add = add i64 %load1, 16777214
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp slt i64 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -55,10 +55,10 @@ define void @add64_sext_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Add -0x80000000, which requires sign-extended 32 bits.
   %add = add i64 %load1, -2147483648
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp slt i64 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -85,11 +85,11 @@ define void @add64_imm32_via_sub_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Add 0x80000000, which cannot fit in a sign extended 32-bit immediate. This
   ; get's folded because we can instead subtract -0x80000000.
   %add = add i64 %load1, 2147483648
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp slt i64 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -117,12 +117,12 @@ define void @add64_no_imm32_via_sub_due_to_cf_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Add 0x80000000, which cannot fit in a sign extended 32-bit immediate, but
   ; could in theory be folded into an immediate operand of a sub. However, we
   ; use the CF flag here and so shouldn't make that transformation.
   %add = add i64 %load1, 2147483648
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp ult i64 %add, 2147483648
   br i1 %cond, label %a, label %b
 
@@ -150,11 +150,11 @@ define void @add64_too_large_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Add 0x80000001, which cannot fit in a sign extended 32-bit immediate. This
   ; should not get folded into an immediate.
   %add = add i64 %load1, 2147483649
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp slt i64 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -180,11 +180,11 @@ define void @add64_imm8_via_sub_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Add 0x80 which can't quite fit into an imm8 because it would be sign
   ; extended, but which can fit if we convert to a sub and negate the value.
   %add = add i64 %load1, 128
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp slt i64 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -210,9 +210,9 @@ define void @add64_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %add = add i64 %load1, 42
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp slt i64 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -238,9 +238,9 @@ define void @add64_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %add = add i64 %load1, -42
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp slt i64 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -267,10 +267,10 @@ define void @add32_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   ; Add 0x80000000, a positive number requiring 32 bits of immediate.
   %add = add i32 %load1, 2147483648
-  store i32 %add, i32* @g32
+  store i32 %add, ptr @g32
   %cond = icmp slt i32 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -296,9 +296,9 @@ define void @add32_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %add = add i32 %load1, 42
-  store i32 %add, i32* @g32
+  store i32 %add, ptr @g32
   %cond = icmp slt i32 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -324,9 +324,9 @@ define void @add32_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %add = add i32 %load1, -42
-  store i32 %add, i32* @g32
+  store i32 %add, ptr @g32
   %cond = icmp slt i32 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -353,10 +353,10 @@ define void @add16_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   ; Add 0x8000, a positive number requiring 16 bits of immediate.
   %add = add i16 %load1, 32768
-  store i16 %add, i16* @g16
+  store i16 %add, ptr @g16
   %cond = icmp slt i16 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -382,9 +382,9 @@ define void @add16_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %add = add i16 %load1, 42
-  store i16 %add, i16* @g16
+  store i16 %add, ptr @g16
   %cond = icmp slt i16 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -410,9 +410,9 @@ define void @add16_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %add = add i16 %load1, -42
-  store i16 %add, i16* @g16
+  store i16 %add, ptr @g16
   %cond = icmp slt i16 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -438,9 +438,9 @@ define void @add8_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %add = add i8 %load1, -2
-  store i8 %add, i8* @g8
+  store i8 %add, ptr @g8
   %cond = icmp slt i8 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -466,9 +466,9 @@ define void @add64_reg_br(i64 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %add = add i64 %load1, %arg
-  store i64 %add, i64* @g64
+  store i64 %add, ptr @g64
   %cond = icmp slt i64 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -494,9 +494,9 @@ define void @add32_reg_br(i32 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %add = add i32 %load1, %arg
-  store i32 %add, i32* @g32
+  store i32 %add, ptr @g32
   %cond = icmp slt i32 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -522,9 +522,9 @@ define void @add16_reg_br(i16 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %add = add i16 %load1, %arg
-  store i16 %add, i16* @g16
+  store i16 %add, ptr @g16
   %cond = icmp slt i16 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -550,9 +550,9 @@ define void @add8_reg_br(i8 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %add = add i8 %load1, %arg
-  store i8 %add, i8* @g8
+  store i8 %add, ptr @g8
   %cond = icmp slt i8 %add, 0
   br i1 %cond, label %a, label %b
 
@@ -579,11 +579,11 @@ define void @sub64_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Subtract -0x80000000, which can't be negated into a sign-extended 32-bit
   ; immediate, so that we have to select sub here.
   %sub = sub i64 %load1, -2147483648
-  store i64 %sub, i64* @g64
+  store i64 %sub, ptr @g64
   %cond = icmp slt i64 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -611,11 +611,11 @@ define void @sub64_too_large_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Subtract 0xFFFFFFFF, which cannot fit in a sign extended 32-bit immediate,
   ; even if negated and sign extended as an add.
   %sub = sub i64 %load1, 4294967295
-  store i64 %sub, i64* @g64
+  store i64 %sub, ptr @g64
   %cond = icmp slt i64 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -641,11 +641,11 @@ define void @sub64_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Subtract -0x80, which can be done with an 8-bit immediate but only as
   ; a subtract where that immediate can be negative.
   %sub = sub i64 %load1, -128
-  store i64 %sub, i64* @g64
+  store i64 %sub, ptr @g64
   %cond = icmp slt i64 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -672,11 +672,11 @@ define void @sub32_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   ; Subtract -0x80000000, which requires 32 bits of immediate but still gets
   ; lowered as an add.
   %sub = sub i32 %load1, -2147483648
-  store i32 %sub, i32* @g32
+  store i32 %sub, ptr @g32
   %cond = icmp slt i32 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -702,11 +702,11 @@ define void @sub32_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   ; Subtract -0x80, which can be done with an 8-bit immediate but only as
   ; a subtract where that immediate can be negative.
   %sub = sub i32 %load1, -128
-  store i32 %sub, i32* @g32
+  store i32 %sub, ptr @g32
   %cond = icmp slt i32 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -733,11 +733,11 @@ define void @sub16_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   ; Subtract -0x8000, which requires a 16 bits of immediate but still gets
   ; lowered as an add.
   %sub = sub i16 %load1, -32768
-  store i16 %sub, i16* @g16
+  store i16 %sub, ptr @g16
   %cond = icmp slt i16 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -763,11 +763,11 @@ define void @sub16_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   ; Subtract -0x80, which can be done with an 8-bit immediate but only as
   ; a subtract where that immediate can be negative.
   %sub = sub i16 %load1, -128
-  store i16 %sub, i16* @g16
+  store i16 %sub, ptr @g16
   %cond = icmp slt i16 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -793,11 +793,11 @@ define void @sub8_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   ; Subtract -0x80, which requires an 8-bit immediate but still gets lowered as
   ; an add.
   %sub = sub i8 %load1, -128
-  store i8 %sub, i8* @g8
+  store i8 %sub, ptr @g8
   %cond = icmp slt i8 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -823,9 +823,9 @@ define void @sub64_reg_br(i64 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %sub = sub i64 %load1, %arg
-  store i64 %sub, i64* @g64
+  store i64 %sub, ptr @g64
   %cond = icmp slt i64 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -851,9 +851,9 @@ define void @sub32_reg_br(i32 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %sub = sub i32 %load1, %arg
-  store i32 %sub, i32* @g32
+  store i32 %sub, ptr @g32
   %cond = icmp slt i32 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -879,9 +879,9 @@ define void @sub16_reg_br(i16 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %sub = sub i16 %load1, %arg
-  store i16 %sub, i16* @g16
+  store i16 %sub, ptr @g16
   %cond = icmp slt i16 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -907,9 +907,9 @@ define void @sub8_reg_br(i8 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %sub = sub i8 %load1, %arg
-  store i8 %sub, i8* @g8
+  store i8 %sub, ptr @g8
   %cond = icmp slt i8 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -936,10 +936,10 @@ define void @and64_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; And 0x00FFFFFF, a positive immediate requiring 24-bits.
   %and = and i64 %load1, 16777215
-  store i64 %and, i64* @g64
+  store i64 %and, ptr @g64
   %cond = icmp eq i64 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -966,10 +966,10 @@ define void @and64_sext_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; And -0x80000000, which requires sign-extended 32 bits.
   %and = and i64 %load1, -2147483648
-  store i64 %and, i64* @g64
+  store i64 %and, ptr @g64
   %cond = icmp eq i64 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -995,9 +995,9 @@ define void @and64_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %and = and i64 %load1, 15
-  store i64 %and, i64* @g64
+  store i64 %and, ptr @g64
   %cond = icmp eq i64 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1023,9 +1023,9 @@ define void @and64_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %and = and i64 %load1, -4
-  store i64 %and, i64* @g64
+  store i64 %and, ptr @g64
   %cond = icmp eq i64 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1052,10 +1052,10 @@ define void @and32_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   ; And 0x80000000, a positive number requiring 32 bits of immediate.
   %and = and i32 %load1, 2147483648
-  store i32 %and, i32* @g32
+  store i32 %and, ptr @g32
   %cond = icmp eq i32 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1081,9 +1081,9 @@ define void @and32_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %and = and i32 %load1, 15
-  store i32 %and, i32* @g32
+  store i32 %and, ptr @g32
   %cond = icmp eq i32 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1109,9 +1109,9 @@ define void @and32_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %and = and i32 %load1, -4
-  store i32 %and, i32* @g32
+  store i32 %and, ptr @g32
   %cond = icmp eq i32 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1138,9 +1138,9 @@ define void @and16_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %and = and i16 %load1, 32768
-  store i16 %and, i16* @g16
+  store i16 %and, ptr @g16
   %cond = icmp eq i16 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1166,9 +1166,9 @@ define void @and16_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %and = and i16 %load1, 15
-  store i16 %and, i16* @g16
+  store i16 %and, ptr @g16
   %cond = icmp eq i16 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1194,9 +1194,9 @@ define void @and16_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %and = and i16 %load1, -4
-  store i16 %and, i16* @g16
+  store i16 %and, ptr @g16
   %cond = icmp eq i16 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1222,9 +1222,9 @@ define void @and8_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %and = and i8 %load1, -4
-  store i8 %and, i8* @g8
+  store i8 %and, ptr @g8
   %cond = icmp eq i8 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1250,9 +1250,9 @@ define void @and64_reg_br(i64 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %and = and i64 %load1, %arg
-  store i64 %and, i64* @g64
+  store i64 %and, ptr @g64
   %cond = icmp eq i64 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1278,9 +1278,9 @@ define void @and32_reg_br(i32 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %and = and i32 %load1, %arg
-  store i32 %and, i32* @g32
+  store i32 %and, ptr @g32
   %cond = icmp eq i32 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1306,9 +1306,9 @@ define void @and16_reg_br(i16 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %and = and i16 %load1, %arg
-  store i16 %and, i16* @g16
+  store i16 %and, ptr @g16
   %cond = icmp eq i16 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1334,9 +1334,9 @@ define void @and8_reg_br(i8 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %and = and i8 %load1, %arg
-  store i8 %and, i8* @g8
+  store i8 %and, ptr @g8
   %cond = icmp eq i8 %and, 0
   br i1 %cond, label %a, label %b
 
@@ -1363,10 +1363,10 @@ define void @or64_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Or 0x00FFFFFF, a positive immediate requiring 24-bits.
   %or = or i64 %load1, 16777215
-  store i64 %or, i64* @g64
+  store i64 %or, ptr @g64
   %cond = icmp eq i64 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1393,10 +1393,10 @@ define void @or64_sext_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Or -0x80000000, which requires sign-extended 32 bits.
   %or = or i64 %load1, -2147483648
-  store i64 %or, i64* @g64
+  store i64 %or, ptr @g64
   %cond = icmp eq i64 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1422,9 +1422,9 @@ define void @or64_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %or = or i64 %load1, 15
-  store i64 %or, i64* @g64
+  store i64 %or, ptr @g64
   %cond = icmp eq i64 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1450,9 +1450,9 @@ define void @or64_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %or = or i64 %load1, -4
-  store i64 %or, i64* @g64
+  store i64 %or, ptr @g64
   %cond = icmp eq i64 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1479,10 +1479,10 @@ define void @or32_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   ; Or 0x80000000, a positive number requiring 32 bits of immediate.
   %or = or i32 %load1, 2147483648
-  store i32 %or, i32* @g32
+  store i32 %or, ptr @g32
   %cond = icmp eq i32 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1508,9 +1508,9 @@ define void @or32_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %or = or i32 %load1, 15
-  store i32 %or, i32* @g32
+  store i32 %or, ptr @g32
   %cond = icmp eq i32 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1536,9 +1536,9 @@ define void @or32_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %or = or i32 %load1, -4
-  store i32 %or, i32* @g32
+  store i32 %or, ptr @g32
   %cond = icmp eq i32 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1565,9 +1565,9 @@ define void @or16_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %or = or i16 %load1, 32768
-  store i16 %or, i16* @g16
+  store i16 %or, ptr @g16
   %cond = icmp eq i16 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1593,9 +1593,9 @@ define void @or16_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %or = or i16 %load1, 15
-  store i16 %or, i16* @g16
+  store i16 %or, ptr @g16
   %cond = icmp eq i16 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1621,9 +1621,9 @@ define void @or16_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %or = or i16 %load1, -4
-  store i16 %or, i16* @g16
+  store i16 %or, ptr @g16
   %cond = icmp eq i16 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1649,9 +1649,9 @@ define void @or8_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %or = or i8 %load1, -4
-  store i8 %or, i8* @g8
+  store i8 %or, ptr @g8
   %cond = icmp eq i8 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1677,9 +1677,9 @@ define void @or64_reg_br(i64 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %or = or i64 %load1, %arg
-  store i64 %or, i64* @g64
+  store i64 %or, ptr @g64
   %cond = icmp eq i64 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1705,9 +1705,9 @@ define void @or32_reg_br(i32 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %or = or i32 %load1, %arg
-  store i32 %or, i32* @g32
+  store i32 %or, ptr @g32
   %cond = icmp eq i32 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1733,9 +1733,9 @@ define void @or16_reg_br(i16 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %or = or i16 %load1, %arg
-  store i16 %or, i16* @g16
+  store i16 %or, ptr @g16
   %cond = icmp eq i16 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1761,9 +1761,9 @@ define void @or8_reg_br(i8 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %or = or i8 %load1, %arg
-  store i8 %or, i8* @g8
+  store i8 %or, ptr @g8
   %cond = icmp eq i8 %or, 0
   br i1 %cond, label %a, label %b
 
@@ -1790,10 +1790,10 @@ define void @xor64_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Xor 0x00FFFFFF, a positive immediate requiring 24-bits.
   %xor = xor i64 %load1, 16777215
-  store i64 %xor, i64* @g64
+  store i64 %xor, ptr @g64
   %cond = icmp eq i64 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -1820,10 +1820,10 @@ define void @xor64_sext_imm32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   ; Xor -0x80000000, which requires sign-extended 32 bits.
   %xor = xor i64 %load1, -2147483648
-  store i64 %xor, i64* @g64
+  store i64 %xor, ptr @g64
   %cond = icmp eq i64 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -1849,9 +1849,9 @@ define void @xor64_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %xor = xor i64 %load1, 15
-  store i64 %xor, i64* @g64
+  store i64 %xor, ptr @g64
   %cond = icmp eq i64 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -1877,9 +1877,9 @@ define void @xor64_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %xor = xor i64 %load1, -4
-  store i64 %xor, i64* @g64
+  store i64 %xor, ptr @g64
   %cond = icmp eq i64 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -1906,10 +1906,10 @@ define void @xor32_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   ; Xor 0x80000000, a positive number requiring 32 bits of immediate.
   %xor = xor i32 %load1, 2147483648
-  store i32 %xor, i32* @g32
+  store i32 %xor, ptr @g32
   %cond = icmp eq i32 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -1935,9 +1935,9 @@ define void @xor32_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %xor = xor i32 %load1, 15
-  store i32 %xor, i32* @g32
+  store i32 %xor, ptr @g32
   %cond = icmp eq i32 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -1963,9 +1963,9 @@ define void @xor32_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %xor = xor i32 %load1, -4
-  store i32 %xor, i32* @g32
+  store i32 %xor, ptr @g32
   %cond = icmp eq i32 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -1992,9 +1992,9 @@ define void @xor16_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %xor = xor i16 %load1, 32768
-  store i16 %xor, i16* @g16
+  store i16 %xor, ptr @g16
   %cond = icmp eq i16 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -2020,9 +2020,9 @@ define void @xor16_imm8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %xor = xor i16 %load1, 15
-  store i16 %xor, i16* @g16
+  store i16 %xor, ptr @g16
   %cond = icmp eq i16 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -2048,9 +2048,9 @@ define void @xor16_imm8_neg_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %xor = xor i16 %load1, -4
-  store i16 %xor, i16* @g16
+  store i16 %xor, ptr @g16
   %cond = icmp eq i16 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -2076,9 +2076,9 @@ define void @xor8_imm_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %xor = xor i8 %load1, -4
-  store i8 %xor, i8* @g8
+  store i8 %xor, ptr @g8
   %cond = icmp eq i8 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -2104,9 +2104,9 @@ define void @xor64_reg_br(i64 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %xor = xor i64 %load1, %arg
-  store i64 %xor, i64* @g64
+  store i64 %xor, ptr @g64
   %cond = icmp eq i64 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -2132,9 +2132,9 @@ define void @xor32_reg_br(i32 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %xor = xor i32 %load1, %arg
-  store i32 %xor, i32* @g32
+  store i32 %xor, ptr @g32
   %cond = icmp eq i32 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -2160,9 +2160,9 @@ define void @xor16_reg_br(i16 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %xor = xor i16 %load1, %arg
-  store i16 %xor, i16* @g16
+  store i16 %xor, ptr @g16
   %cond = icmp eq i16 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -2188,9 +2188,9 @@ define void @xor8_reg_br(i8 %arg) nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %xor = xor i8 %load1, %arg
-  store i8 %xor, i8* @g8
+  store i8 %xor, ptr @g8
   %cond = icmp eq i8 %xor, 0
   br i1 %cond, label %a, label %b
 
@@ -2216,9 +2216,9 @@ define void @neg64_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i64, i64* @g64
+  %load1 = load i64, ptr @g64
   %sub = sub i64 0, %load1
-  store i64 %sub, i64* @g64
+  store i64 %sub, ptr @g64
   %cond = icmp slt i64 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -2244,9 +2244,9 @@ define void @neg32_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i32, i32* @g32
+  %load1 = load i32, ptr @g32
   %sub = sub i32 0, %load1
-  store i32 %sub, i32* @g32
+  store i32 %sub, ptr @g32
   %cond = icmp slt i32 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -2272,9 +2272,9 @@ define void @neg16_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i16, i16* @g16
+  %load1 = load i16, ptr @g16
   %sub = sub i16 0, %load1
-  store i16 %sub, i16* @g16
+  store i16 %sub, ptr @g16
   %cond = icmp slt i16 %sub, 0
   br i1 %cond, label %a, label %b
 
@@ -2300,9 +2300,9 @@ define void @neg8_br() nounwind {
 ; CHECK-NEXT:    # encoding: [0xeb,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: a-1, kind: FK_PCRel_1
 entry:
-  %load1 = load i8, i8* @g8
+  %load1 = load i8, ptr @g8
   %sub = sub i8 0, %load1
-  store i8 %sub, i8* @g8
+  store i8 %sub, ptr @g8
   %cond = icmp slt i8 %sub, 0
   br i1 %cond, label %a, label %b
 

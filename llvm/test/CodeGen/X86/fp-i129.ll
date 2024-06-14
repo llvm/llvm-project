@@ -99,7 +99,7 @@ define i257 @fptosi_half(half %a) nounwind {
 ; X86: __gnu_h2f_ieee
 ;
 ; X64-LABEL: fptosi_half:
-; X64: uitofp_half
+; X64: __extendhfsf2
   %res = fptosi half %a to i257
   ret i257 %res
 }
@@ -109,7 +109,7 @@ define half @uitofp_half(i257 %a) nounwind {
 ; X86: __gnu_f2h_ieee
 ;
 ; X64-LABEL: uitofp_half:
-; X64: uitofp_half
+; X64: __truncsfhf2
   %res = uitofp i257 %a to half
   ret half %res
 }

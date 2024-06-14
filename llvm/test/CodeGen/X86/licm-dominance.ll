@@ -35,32 +35,32 @@ define void @CMSColorWorldCreateParametricData(
 ; CHECK-NEXT:    jb LBB0_1
 ; CHECK-NEXT:  LBB0_6: ## %if.end28.i
 ; CHECK-NEXT:    retq
-  i8* dereferenceable(1) %a0,
-  i8* dereferenceable(1) %a1,
-  i8* dereferenceable(1) %a2,
-  i8* dereferenceable(1) %a3,
+  ptr dereferenceable(1) %a0,
+  ptr dereferenceable(1) %a1,
+  ptr dereferenceable(1) %a2,
+  ptr dereferenceable(1) %a3,
   i64 %count) nounwind uwtable optsize ssp readonly nofree nosync {
 entry:
   br label %for.body.i
 
 for.body.i:
   %i = phi i64 [0, %entry], [%i.inc, %for.inc.i]
-  %0 = load i8, i8* %a0, !invariant.load !0
+  %0 = load i8, ptr %a0, !invariant.load !0
   %cond0 = icmp eq i8 %0, 0
   br i1 %cond0, label %for.inc.i, label %if.then26.i
 
 if.then26.i:
-  %1 = load i8, i8* %a1, !invariant.load !0
+  %1 = load i8, ptr %a1, !invariant.load !0
   %cond1 = icmp eq i8 %1, 1
   br i1 %cond1, label %if.else.i.i, label %lor.lhs.false.i.i
 
 if.else.i.i:
-  %2 = load i8, i8* %a2, !invariant.load !0
+  %2 = load i8, ptr %a2, !invariant.load !0
   %cond2 = icmp eq i8 %2, 2
   br i1 %cond2, label %lor.lhs.false.i.i, label %for.inc.i
 
 lor.lhs.false.i.i:
-  %3 = load i8, i8* %a3, !invariant.load !0
+  %3 = load i8, ptr %a3, !invariant.load !0
   %cond3 = icmp eq i8 %3, 3
   br i1 %cond3, label %for.inc.i, label %if.end28.i
 

@@ -999,7 +999,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 }
 
 %struct.Box = type { i32, i32, i32, i32 }
-define zeroext i1 @PR44781(%struct.Box* %0) {
+define zeroext i1 @PR44781(ptr %0) {
 ; SSE2-LABEL: PR44781:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0

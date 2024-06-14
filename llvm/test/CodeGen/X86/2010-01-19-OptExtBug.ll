@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin11 -relocation-model=pic -frame-pointer=all -stats 2>&1 | not grep ext-opt
 
-define fastcc i8* @S_scan_str(i8* %start, i32 %keep_quoted, i32 %keep_delims) nounwind ssp {
+define fastcc ptr @S_scan_str(ptr %start, i32 %keep_quoted, i32 %keep_delims) nounwind ssp {
 entry:
   switch i8 undef, label %bb6 [
     i8 9, label %bb5
@@ -21,7 +21,7 @@ bb7:                                              ; preds = %bb6
   unreachable
 
 bb9:                                              ; preds = %bb6
-  %0 = load i8, i8* undef, align 1                    ; <i8> [#uses=3]
+  %0 = load i8, ptr undef, align 1                    ; <i8> [#uses=3]
   br i1 undef, label %bb12, label %bb10
 
 bb10:                                             ; preds = %bb9
@@ -34,7 +34,7 @@ bb12:                                             ; preds = %bb10, %bb9
   br i1 undef, label %bb13, label %bb14
 
 bb13:                                             ; preds = %bb12
-  store i8 %0, i8* undef, align 1
+  store i8 %0, ptr undef, align 1
   %1 = zext i8 %0 to i32                          ; <i32> [#uses=1]
   br label %bb18
 

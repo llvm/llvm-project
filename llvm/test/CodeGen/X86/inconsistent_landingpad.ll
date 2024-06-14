@@ -1,6 +1,6 @@
 ; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
-define void @test() personality i32 (...)* @dummy_personality {
+define void @test() personality ptr @dummy_personality {
 ; CHECK: The landingpad instruction should have a consistent result type inside a function
 entry:
   invoke void @dummy1()
@@ -16,7 +16,7 @@ next:
           to label %return unwind label %unwind2
 
 unwind2:
-  %lp2 = landingpad { i8*, i32 }
+  %lp2 = landingpad { ptr, i32 }
             cleanup
   br label %return
 

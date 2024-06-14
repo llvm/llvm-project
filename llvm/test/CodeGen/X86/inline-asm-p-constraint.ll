@@ -12,7 +12,7 @@ define ptr @foo(ptr %Ptr) {
 ; CHECK-NEXT: mov (%rdi), %rax
 ; CHECK-NEXT: lea -8(%rsp), %rax
 ; CHECK-NEXT: #NO_APP
-  ret i8* %1
+  ret ptr %1
 ; CHECK-NEXT: retq
 }
 

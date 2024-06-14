@@ -4,11 +4,11 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "i386-apple-darwin7"
-	%"struct.std::basic_ostream<char,std::char_traits<char> >.base" = type { i32 (...)** }
+	%"struct.std::basic_ostream<char,std::char_traits<char> >.base" = type { ptr }
 	%"struct.xercesc_2_5::ASCIIRangeFactory" = type { %"struct.std::basic_ostream<char,std::char_traits<char> >.base", i8, i8 }
-@_ZN11xercesc_2_5L17gIdeographicCharsE = external constant [7 x i16]		; <[7 x i16]*> [#uses=3]
+@_ZN11xercesc_2_5L17gIdeographicCharsE = external constant [7 x i16]		; <ptr> [#uses=3]
 
-define void @_ZN11xercesc_2_515XMLRangeFactory11buildRangesEv(%"struct.xercesc_2_5::ASCIIRangeFactory"* %this) {
+define void @_ZN11xercesc_2_515XMLRangeFactory11buildRangesEv(ptr %this) {
 entry:
 	br i1 false, label %bb5, label %return
 

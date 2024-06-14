@@ -94,7 +94,7 @@ entry:
 
 declare void @llvm.x86.saveprevssp()
 
-define void @test_rstorssp(i8* %__p) {
+define void @test_rstorssp(ptr %__p) {
 ; CHECK-LABEL: test_rstorssp:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    rstorssp (%rdi) ## encoding: [0xf3,0x0f,0x01,0x2f]
@@ -105,13 +105,13 @@ define void @test_rstorssp(i8* %__p) {
 ; EGPR-NEXT:    rstorssp (%rdi) ## encoding: [0xf3,0x0f,0x01,0x2f]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
-  tail call void @llvm.x86.rstorssp(i8* %__p)
+  tail call void @llvm.x86.rstorssp(ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.rstorssp(i8*)
+declare void @llvm.x86.rstorssp(ptr)
 
-define void @test_wrssd(i32 %a, i8* %__p) {
+define void @test_wrssd(i32 %a, ptr %__p) {
 ; CHECK-LABEL: test_wrssd:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrssd %edi, (%rsi) ## encoding: [0x0f,0x38,0xf6,0x3e]
@@ -122,13 +122,13 @@ define void @test_wrssd(i32 %a, i8* %__p) {
 ; EGPR-NEXT:    wrssd %edi, (%rsi) ## EVEX TO LEGACY Compression encoding: [0x0f,0x38,0xf6,0x3e]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
-  tail call void @llvm.x86.wrssd(i32 %a, i8* %__p)
+  tail call void @llvm.x86.wrssd(i32 %a, ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.wrssd(i32, i8*)
+declare void @llvm.x86.wrssd(i32, ptr)
 
-define void @test_wrssq(i64 %a, i8* %__p) {
+define void @test_wrssq(i64 %a, ptr %__p) {
 ; CHECK-LABEL: test_wrssq:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrssq %rdi, (%rsi) ## encoding: [0x48,0x0f,0x38,0xf6,0x3e]
@@ -139,13 +139,13 @@ define void @test_wrssq(i64 %a, i8* %__p) {
 ; EGPR-NEXT:    wrssq %rdi, (%rsi) ## EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x38,0xf6,0x3e]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
-  tail call void @llvm.x86.wrssq(i64 %a, i8* %__p)
+  tail call void @llvm.x86.wrssq(i64 %a, ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.wrssq(i64, i8*)
+declare void @llvm.x86.wrssq(i64, ptr)
 
-define void @test_wrussd(i32 %a, i8* %__p) {
+define void @test_wrussd(i32 %a, ptr %__p) {
 ; CHECK-LABEL: test_wrussd:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrussd %edi, (%rsi) ## encoding: [0x66,0x0f,0x38,0xf5,0x3e]
@@ -156,13 +156,13 @@ define void @test_wrussd(i32 %a, i8* %__p) {
 ; EGPR-NEXT:    wrussd %edi, (%rsi) ## EVEX TO LEGACY Compression encoding: [0x66,0x0f,0x38,0xf5,0x3e]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
-  tail call void @llvm.x86.wrussd(i32 %a, i8* %__p)
+  tail call void @llvm.x86.wrussd(i32 %a, ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.wrussd(i32, i8*)
+declare void @llvm.x86.wrussd(i32, ptr)
 
-define void @test_wrussq(i64 %a, i8* %__p) {
+define void @test_wrussq(i64 %a, ptr %__p) {
 ; CHECK-LABEL: test_wrussq:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    wrussq %rdi, (%rsi) ## encoding: [0x66,0x48,0x0f,0x38,0xf5,0x3e]
@@ -173,11 +173,11 @@ define void @test_wrussq(i64 %a, i8* %__p) {
 ; EGPR-NEXT:    wrussq %rdi, (%rsi) ## EVEX TO LEGACY Compression encoding: [0x66,0x48,0x0f,0x38,0xf5,0x3e]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
-  tail call void @llvm.x86.wrussq(i64 %a, i8* %__p)
+  tail call void @llvm.x86.wrussq(i64 %a, ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.wrussq(i64, i8*)
+declare void @llvm.x86.wrussq(i64, ptr)
 
 define void @test_setssbsy() {
 ; CHECK-LABEL: test_setssbsy:
@@ -196,7 +196,7 @@ entry:
 
 declare void @llvm.x86.setssbsy()
 
-define void @test_clrssbsy(i8* %__p) {
+define void @test_clrssbsy(ptr %__p) {
 ; CHECK-LABEL: test_clrssbsy:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    clrssbsy (%rdi) ## encoding: [0xf3,0x0f,0xae,0x37]
@@ -207,8 +207,8 @@ define void @test_clrssbsy(i8* %__p) {
 ; EGPR-NEXT:    clrssbsy (%rdi) ## encoding: [0xf3,0x0f,0xae,0x37]
 ; EGPR-NEXT:    retq ## encoding: [0xc3]
 entry:
-  tail call void @llvm.x86.clrssbsy(i8* %__p)
+  tail call void @llvm.x86.clrssbsy(ptr %__p)
   ret void
 }
 
-declare void @llvm.x86.clrssbsy(i8* %__p)
+declare void @llvm.x86.clrssbsy(ptr %__p)

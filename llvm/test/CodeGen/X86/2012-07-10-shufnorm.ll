@@ -9,7 +9,7 @@ entry:
   %vecinit3 = insertelement <8 x double> %vecinit1, double undef, i32 3
   %vecinit5 = insertelement <8 x double> %vecinit3, double 0.000000e+00, i32 4
   %vecinit9 = shufflevector <8 x double> %vecinit5, <8 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 9, i32 10>
-  store <8 x double> %vecinit9, <8 x double>* undef
+  store <8 x double> %vecinit9, ptr undef
   ret void
 ; CHECK: vxorps
 ; CHECK: ret

@@ -31,10 +31,9 @@ entry:
   unreachable
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) nounwind
-declare void @llvm.memset.p0.i32(i8* nocapture, i8, i32, i1) nounwind
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) nounwind
 
-define void @t3(i8* nocapture %s, i8 %a) nounwind {
+define void @t3(ptr nocapture %s, i8 %a) nounwind {
 ; CHECK-LABEL: t3:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -44,11 +43,11 @@ define void @t3(i8* nocapture %s, i8 %a) nounwind {
 ; CHECK-NEXT:    movl %ecx, (%eax)
 ; CHECK-NEXT:    retl
 entry:
-  tail call void @llvm.memset.p0i8.i32(i8* %s, i8 %a, i32 8, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr %s, i8 %a, i32 8, i1 false)
   ret void
 }
 
-define void @t4(i8* nocapture %s, i8 %a) nounwind {
+define void @t4(ptr nocapture %s, i8 %a) nounwind {
 ; CHECK-LABEL: t4:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -60,6 +59,6 @@ define void @t4(i8* nocapture %s, i8 %a) nounwind {
 ; CHECK-NEXT:    movl %ecx, (%eax)
 ; CHECK-NEXT:    retl
 entry:
-  tail call void @llvm.memset.p0i8.i32(i8* %s, i8 %a, i32 15, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr %s, i8 %a, i32 15, i1 false)
   ret void
 }

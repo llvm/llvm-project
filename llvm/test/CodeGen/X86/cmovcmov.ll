@@ -357,6 +357,6 @@ entry:
   %sel0 = select i1 %c1, i8 20, i8 %trunc
   %sel1 = select i1 %c2, i8 20, i8 %sel0
   %sel2 = select i1 %c0, i8 %sel1, i8 %sel0
-  store volatile i8 %sel2, i8* @g8
+  store volatile i8 %sel2, ptr @g8
   ret void
 }

@@ -9,7 +9,7 @@
 ; There may be a better way to do this using pshufb + pmovsx,
 ; but that is beyond our current codegen capabilities.
 
-define <4 x i32> @trunc_sext(<4 x i16>* %in) {
+define <4 x i32> @trunc_sext(ptr %in) {
 ; NO_SSE_41-LABEL: trunc_sext:
 ; NO_SSE_41:       # %bb.0:
 ; NO_SSE_41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -24,7 +24,7 @@ define <4 x i32> @trunc_sext(<4 x i16>* %in) {
 ; SSE_41-NEXT:    pslld $24, %xmm0
 ; SSE_41-NEXT:    psrad $24, %xmm0
 ; SSE_41-NEXT:    retq
-  %load = load <4 x i16>, <4 x i16>* %in
+  %load = load <4 x i16>, ptr %in
   %trunc = trunc <4 x i16> %load to <4 x i8>
   %sext = sext <4 x i8> %trunc to <4 x i32>
   ret <4 x i32> %sext

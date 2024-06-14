@@ -86,7 +86,7 @@ entry:
   ret <8 x i64> %2
 }
 
-define void @test_mm512_mask_compressstoreu_epi16(i8* %__P, i32 %__U, <8 x i64> %__D) {
+define void @test_mm512_mask_compressstoreu_epi16(ptr %__P, i32 %__U, <8 x i64> %__D) {
 ; X86-LABEL: test_mm512_mask_compressstoreu_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
@@ -103,13 +103,12 @@ define void @test_mm512_mask_compressstoreu_epi16(i8* %__P, i32 %__U, <8 x i64> 
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__D to <32 x i16>
-  %1 = bitcast i8* %__P to i16*
-  %2 = bitcast i32 %__U to <32 x i1>
-  tail call void @llvm.masked.compressstore.v32i16(<32 x i16> %0, i16* %1, <32 x i1> %2)
+  %1 = bitcast i32 %__U to <32 x i1>
+  tail call void @llvm.masked.compressstore.v32i16(<32 x i16> %0, ptr %__P, <32 x i1> %1)
   ret void
 }
 
-define void @test_mm512_mask_compressstoreu_epi8(i8* %__P, i64 %__U, <8 x i64> %__D) {
+define void @test_mm512_mask_compressstoreu_epi8(ptr %__P, i64 %__U, <8 x i64> %__D) {
 ; X86-LABEL: test_mm512_mask_compressstoreu_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
@@ -129,7 +128,7 @@ define void @test_mm512_mask_compressstoreu_epi8(i8* %__P, i64 %__U, <8 x i64> %
 entry:
   %0 = bitcast <8 x i64> %__D to <64 x i8>
   %1 = bitcast i64 %__U to <64 x i1>
-  tail call void @llvm.masked.compressstore.v64i8(<64 x i8> %0, i8* %__P, <64 x i1> %1)
+  tail call void @llvm.masked.compressstore.v64i8(<64 x i8> %0, ptr %__P, <64 x i1> %1)
   ret void
 }
 
@@ -215,7 +214,7 @@ entry:
   ret <8 x i64> %2
 }
 
-define <8 x i64> @test_mm512_mask_expandloadu_epi16(<8 x i64> %__S, i32 %__U, i8* readonly %__P) {
+define <8 x i64> @test_mm512_mask_expandloadu_epi16(<8 x i64> %__S, i32 %__U, ptr readonly %__P) {
 ; X86-LABEL: test_mm512_mask_expandloadu_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -230,14 +229,13 @@ define <8 x i64> @test_mm512_mask_expandloadu_epi16(<8 x i64> %__S, i32 %__U, i8
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__S to <32 x i16>
-  %1 = bitcast i8* %__P to i16*
-  %2 = bitcast i32 %__U to <32 x i1>
-  %3 = tail call <32 x i16> @llvm.masked.expandload.v32i16(i16* %1, <32 x i1> %2, <32 x i16> %0)
-  %4 = bitcast <32 x i16> %3 to <8 x i64>
-  ret <8 x i64> %4
+  %1 = bitcast i32 %__U to <32 x i1>
+  %2 = tail call <32 x i16> @llvm.masked.expandload.v32i16(ptr %__P, <32 x i1> %1, <32 x i16> %0)
+  %3 = bitcast <32 x i16> %2 to <8 x i64>
+  ret <8 x i64> %3
 }
 
-define <8 x i64> @test_mm512_maskz_expandloadu_epi16(i32 %__U, i8* readonly %__P) {
+define <8 x i64> @test_mm512_maskz_expandloadu_epi16(i32 %__U, ptr readonly %__P) {
 ; X86-LABEL: test_mm512_maskz_expandloadu_epi16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -251,14 +249,13 @@ define <8 x i64> @test_mm512_maskz_expandloadu_epi16(i32 %__U, i8* readonly %__P
 ; X64-NEXT:    vpexpandw (%rsi), %zmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
-  %0 = bitcast i8* %__P to i16*
-  %1 = bitcast i32 %__U to <32 x i1>
-  %2 = tail call <32 x i16> @llvm.masked.expandload.v32i16(i16* %0, <32 x i1> %1, <32 x i16> zeroinitializer)
-  %3 = bitcast <32 x i16> %2 to <8 x i64>
-  ret <8 x i64> %3
+  %0 = bitcast i32 %__U to <32 x i1>
+  %1 = tail call <32 x i16> @llvm.masked.expandload.v32i16(ptr %__P, <32 x i1> %0, <32 x i16> zeroinitializer)
+  %2 = bitcast <32 x i16> %1 to <8 x i64>
+  ret <8 x i64> %2
 }
 
-define <8 x i64> @test_mm512_mask_expandloadu_epi8(<8 x i64> %__S, i64 %__U, i8* readonly %__P) {
+define <8 x i64> @test_mm512_mask_expandloadu_epi8(<8 x i64> %__S, i64 %__U, ptr readonly %__P) {
 ; X86-LABEL: test_mm512_mask_expandloadu_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
@@ -276,12 +273,12 @@ define <8 x i64> @test_mm512_mask_expandloadu_epi8(<8 x i64> %__S, i64 %__U, i8*
 entry:
   %0 = bitcast <8 x i64> %__S to <64 x i8>
   %1 = bitcast i64 %__U to <64 x i1>
-  %2 = tail call <64 x i8> @llvm.masked.expandload.v64i8(i8* %__P, <64 x i1> %1, <64 x i8> %0)
+  %2 = tail call <64 x i8> @llvm.masked.expandload.v64i8(ptr %__P, <64 x i1> %1, <64 x i8> %0)
   %3 = bitcast <64 x i8> %2 to <8 x i64>
   ret <8 x i64> %3
 }
 
-define <8 x i64> @test_mm512_maskz_expandloadu_epi8(i64 %__U, i8* readonly %__P) {
+define <8 x i64> @test_mm512_maskz_expandloadu_epi8(i64 %__U, ptr readonly %__P) {
 ; X86-LABEL: test_mm512_maskz_expandloadu_epi8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k0
@@ -298,7 +295,7 @@ define <8 x i64> @test_mm512_maskz_expandloadu_epi8(i64 %__U, i8* readonly %__P)
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast i64 %__U to <64 x i1>
-  %1 = tail call <64 x i8> @llvm.masked.expandload.v64i8(i8* %__P, <64 x i1> %0, <64 x i8> zeroinitializer)
+  %1 = tail call <64 x i8> @llvm.masked.expandload.v64i8(ptr %__P, <64 x i1> %0, <64 x i8> zeroinitializer)
   %2 = bitcast <64 x i8> %1 to <8 x i64>
   ret <8 x i64> %2
 }
@@ -989,9 +986,9 @@ entry:
 
 declare <32 x i16> @llvm.x86.avx512.mask.compress.w.512(<32 x i16>, <32 x i16>, i32)
 declare <64 x i8> @llvm.x86.avx512.mask.compress.b.512(<64 x i8>, <64 x i8>, i64)
-declare void @llvm.masked.compressstore.v32i16(<32 x i16>, i16*, <32 x i1>)
-declare void @llvm.masked.compressstore.v64i8(<64 x i8>, i8*, <64 x i1>)
+declare void @llvm.masked.compressstore.v32i16(<32 x i16>, ptr, <32 x i1>)
+declare void @llvm.masked.compressstore.v64i8(<64 x i8>, ptr, <64 x i1>)
 declare <32 x i16> @llvm.x86.avx512.mask.expand.w.512(<32 x i16>, <32 x i16>, i32)
 declare <64 x i8> @llvm.x86.avx512.mask.expand.b.512(<64 x i8>, <64 x i8>, i64)
-declare <32 x i16> @llvm.masked.expandload.v32i16(i16*, <32 x i1>, <32 x i16>)
-declare <64 x i8> @llvm.masked.expandload.v64i8(i8*, <64 x i1>, <64 x i8>)
+declare <32 x i16> @llvm.masked.expandload.v32i16(ptr, <32 x i1>, <32 x i16>)
+declare <64 x i8> @llvm.masked.expandload.v64i8(ptr, <64 x i1>, <64 x i8>)

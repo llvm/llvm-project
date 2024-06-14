@@ -23,12 +23,12 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv8 = phi i64 [ 1, %entry ], [ %indvars.iv.next9.1, %for.body ]
   %0 = trunc i64 %indvars.iv8 to i8
   %conv = sub i8 0, %0
-  store i8 %conv, i8* undef, align 1
+  store i8 %conv, ptr undef, align 1
   %indvars.iv.next9 = add nuw nsw i64 %indvars.iv8, 1
   %1 = trunc i64 %indvars.iv.next9 to i8
   %conv.1 = sub i8 0, %1
-  %arrayidx.1 = getelementptr inbounds i8, i8* null, i64 %indvars.iv.next9
-  store i8 %conv.1, i8* %arrayidx.1, align 1
+  %arrayidx.1 = getelementptr inbounds i8, ptr null, i64 %indvars.iv.next9
+  store i8 %conv.1, ptr %arrayidx.1, align 1
   %indvars.iv.next9.1 = add nuw nsw i64 %indvars.iv8, 2
   br i1 false, label %for.end, label %for.body
 

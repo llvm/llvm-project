@@ -6,7 +6,7 @@
 ; CHECK:    L_Arr$non_lazy_ptr
 ; CHECK: LBB0_1:
 
-@Arr = external global [0 x i32]		; <[0 x i32]*> [#uses=1]
+@Arr = external global [0 x i32]		; <ptr> [#uses=1]
 
 define void @foo(i32 %N.in, i32 %x) nounwind {
 entry:
@@ -16,8 +16,8 @@ entry:
 cond_true:		; preds = %cond_true, %entry
 	%indvar = phi i32 [ %x, %entry ], [ %indvar.next, %cond_true ]		; <i32> [#uses=2]
 	%i.0.0 = bitcast i32 %indvar to i32		; <i32> [#uses=2]
-	%tmp = getelementptr [0 x i32], [0 x i32]* @Arr, i32 0, i32 %i.0.0		; <i32*> [#uses=1]
-	store i32 %i.0.0, i32* %tmp
+	%tmp = getelementptr [0 x i32], ptr @Arr, i32 0, i32 %i.0.0		; <ptr> [#uses=1]
+	store i32 %i.0.0, ptr %tmp
 	%indvar.next = add i32 %indvar, 1		; <i32> [#uses=2]
 	%exitcond = icmp eq i32 %indvar.next, %N		; <i1> [#uses=1]
 	br i1 %exitcond, label %return, label %cond_true

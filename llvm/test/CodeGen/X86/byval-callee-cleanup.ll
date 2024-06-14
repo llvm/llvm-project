@@ -8,19 +8,19 @@
 
 %struct.Six = type { [6 x i8] }
 
-define x86_stdcallcc void @f(%struct.Six* byval(%struct.Six) %a) {
+define x86_stdcallcc void @f(ptr byval(%struct.Six) %a) {
   ret void
 }
 ; CHECK-LABEL: _f@8:
 ; CHECK: retl $8
 
-define x86_thiscallcc void @g(i8* %this, %struct.Six* byval(%struct.Six) %a) {
+define x86_thiscallcc void @g(ptr %this, ptr byval(%struct.Six) %a) {
   ret void
 }
 ; CHECK-LABEL: _g:
 ; CHECK: retl $8
 
-define x86_fastcallcc void @h(i32 inreg %x, i32 inreg %y, %struct.Six* byval(%struct.Six) %a) {
+define x86_fastcallcc void @h(i32 inreg %x, i32 inreg %y, ptr byval(%struct.Six) %a) {
   ret void
 }
 ; CHECK-LABEL: @h@16:

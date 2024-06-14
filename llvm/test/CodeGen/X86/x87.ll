@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mattr=-x87,+sse | FileCheck %s -check-prefixes=NOX8732,NOX87
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=-x87,-sse2 | FileCheck %s -check-prefixes=NOX87
 
-define void @test(i32 %i, i64 %l, float* %pf, double* %pd, fp128* %pld) nounwind readnone {
+define void @test(i32 %i, i64 %l, ptr %pf, ptr %pd, ptr %pld) nounwind readnone {
 ; X87-LABEL: test:
 ; NOX87-LABEL: test:
 
@@ -24,7 +24,7 @@ define void @test(i32 %i, i64 %l, float* %pf, double* %pd, fp128* %pld) nounwind
   %tmp2 = fadd float %tmp, %tmp1
 
 ; X8732: fstp
-  store float %tmp2, float* %pf
+  store float %tmp2, ptr %pf
 
 ; X87: fild
 ; NOX87: __floatunsidf
@@ -39,7 +39,7 @@ define void @test(i32 %i, i64 %l, float* %pf, double* %pd, fp128* %pld) nounwind
   %tmp5 = fadd double %tmp3, %tmp4
 
 ; X87: fstp
-  store double %tmp5, double* %pd
+  store double %tmp5, ptr %pd
 
 ; X87: __floatsitf
 ; NOX87: __floatsitf
@@ -52,7 +52,7 @@ define void @test(i32 %i, i64 %l, float* %pf, double* %pd, fp128* %pld) nounwind
 ; X87: __addtf3
 ; NOX87: __addtf3
   %tmp8 = fadd fp128 %tmp6, %tmp7
-  store fp128 %tmp8, fp128* %pld
+  store fp128 %tmp8, ptr %pld
 
   ret void
 }

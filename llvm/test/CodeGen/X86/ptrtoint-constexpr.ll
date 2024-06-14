@@ -1,4 +1,4 @@
-; RUN: llc < %s  -mtriple=i386-linux | FileCheck %s
+; RUN: llc < %s -mtriple=i386-linux | FileCheck %s
 	%union.x = type { i32 }
 
 ; CHECK:	.globl r
@@ -11,4 +11,4 @@
 ; CHECK: x:
 ; CHECK: .quad	3
 
-@x = global i64 mul (i64 3, i64 ptrtoint (i2* getelementptr (i2, i2* null, i64 1) to i64))
+@x = global i64 mul (i64 3, i64 ptrtoint (ptr getelementptr (i2, ptr null, i64 1) to i64))

@@ -70,11 +70,11 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X32-NEXT:    retq
   %a = alloca i32, i64 18000, align 16
-  %b0 = getelementptr inbounds i32, i32* %a, i64 98
-  %b1 = getelementptr inbounds i32, i32* %a, i64 7198
-  store volatile i32 1, i32* %b0
-  store volatile i32 1, i32* %b1
-  %c = load volatile i32, i32* %a
+  %b0 = getelementptr inbounds i32, ptr %a, i64 98
+  %b1 = getelementptr inbounds i32, ptr %a, i64 7198
+  store volatile i32 1, ptr %b0
+  store volatile i32 1, ptr %b1
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -199,8 +199,8 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X32-NEXT:    retq
   %all = alloca i32, i64 18000, align 16
-  %b0 = getelementptr inbounds i32, i32* %all, i64 98
-  %b1 = getelementptr inbounds i32, i32* %all, i64 7198
+  %b0 = getelementptr inbounds i32, ptr %all, i64 98
+  %b1 = getelementptr inbounds i32, ptr %all, i64 7198
   %ab = add i32 %a, %b
   %cd = add i32 %c, %d
   %ef = add i32 %e, %f
@@ -208,8 +208,8 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
   %abcd = add i32 %ab, %cd
   %efgh = add i32 %ef, %gh
   %sum = add i32 %abcd, %efgh
-  store volatile i32 %sum, i32* %b0
-  store volatile i32 %sum, i32* %b1
+  store volatile i32 %sum, ptr %b0
+  store volatile i32 %sum, ptr %b1
   ret void
 }
 

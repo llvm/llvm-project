@@ -15,7 +15,7 @@ declare void @f9()
 
 declare void @llvm.icall.branch.funnel(...)
 
-define void @jt2(i8* nest, ...) {
+define void @jt2(ptr nest, ...) {
   ; CHECK: jt2:
   ; CHECK:      leaq g+1(%rip), %r11
   ; CHECK-NEXT: cmpq %r11, %r10
@@ -25,15 +25,15 @@ define void @jt2(i8* nest, ...) {
   ; CHECK-NEXT: .LBB0_1:
   ; CHECK-NEXT: jmp f1
   musttail call void (...) @llvm.icall.branch.funnel(
-      i8* %0,
-      i8* getelementptr (i8, i8* @g, i64 0), void ()* @f0,
-      i8* getelementptr (i8, i8* @g, i64 1), void ()* @f1,
+      ptr %0,
+      ptr @g, ptr @f0,
+      ptr getelementptr (i8, ptr @g, i64 1), ptr @f1,
       ...
   )
   ret void
 }
 
-define void @jt3(i8* nest, ...) {
+define void @jt3(ptr nest, ...) {
   ; CHECK: jt3:
   ; CHECK:      leaq g+1(%rip), %r11
   ; CHECK-NEXT: cmpq %r11, %r10
@@ -47,16 +47,16 @@ define void @jt3(i8* nest, ...) {
   ; CHECK-NEXT: .LBB1_2:
   ; CHECK-NEXT: jmp f2
   musttail call void (...) @llvm.icall.branch.funnel(
-      i8* %0,
-      i8* getelementptr (i8, i8* @g, i64 0), void ()* @f0,
-      i8* getelementptr (i8, i8* @g, i64 2), void ()* @f2,
-      i8* getelementptr (i8, i8* @g, i64 1), void ()* @f1,
+      ptr %0,
+      ptr @g, ptr @f0,
+      ptr getelementptr (i8, ptr @g, i64 2), ptr @f2,
+      ptr getelementptr (i8, ptr @g, i64 1), ptr @f1,
       ...
   )
   ret void
 }
 
-define void @jt7(i8* nest, ...) {
+define void @jt7(ptr nest, ...) {
   ; CHECK: jt7:
   ; CHECK:      leaq g+3(%rip), %r11
   ; CHECK-NEXT: cmpq %r11, %r10
@@ -90,20 +90,20 @@ define void @jt7(i8* nest, ...) {
   ; CHECK-NEXT: .LBB2_4:
   ; CHECK-NEXT: jmp f6
   musttail call void (...) @llvm.icall.branch.funnel(
-      i8* %0,
-      i8* getelementptr (i8, i8* @g, i64 0), void ()* @f0,
-      i8* getelementptr (i8, i8* @g, i64 1), void ()* @f1,
-      i8* getelementptr (i8, i8* @g, i64 2), void ()* @f2,
-      i8* getelementptr (i8, i8* @g, i64 3), void ()* @f3,
-      i8* getelementptr (i8, i8* @g, i64 4), void ()* @f4,
-      i8* getelementptr (i8, i8* @g, i64 5), void ()* @f5,
-      i8* getelementptr (i8, i8* @g, i64 6), void ()* @f6,
+      ptr %0,
+      ptr @g, ptr @f0,
+      ptr getelementptr (i8, ptr @g, i64 1), ptr @f1,
+      ptr getelementptr (i8, ptr @g, i64 2), ptr @f2,
+      ptr getelementptr (i8, ptr @g, i64 3), ptr @f3,
+      ptr getelementptr (i8, ptr @g, i64 4), ptr @f4,
+      ptr getelementptr (i8, ptr @g, i64 5), ptr @f5,
+      ptr getelementptr (i8, ptr @g, i64 6), ptr @f6,
       ...
   )
   ret void
 }
 
-define void @jt10(i8* nest, ...) {
+define void @jt10(ptr nest, ...) {
   ; CHECK: jt10:
   ; CHECK:      leaq g+5(%rip), %r11
   ; CHECK-NEXT: cmpq %r11, %r10
@@ -153,17 +153,17 @@ define void @jt10(i8* nest, ...) {
   ; CHECK-NEXT: .LBB3_5:
   ; CHECK-NEXT: jmp f9
   musttail call void (...) @llvm.icall.branch.funnel(
-      i8* %0,
-      i8* getelementptr (i8, i8* @g, i64 0), void ()* @f0,
-      i8* getelementptr (i8, i8* @g, i64 1), void ()* @f1,
-      i8* getelementptr (i8, i8* @g, i64 2), void ()* @f2,
-      i8* getelementptr (i8, i8* @g, i64 3), void ()* @f3,
-      i8* getelementptr (i8, i8* @g, i64 4), void ()* @f4,
-      i8* getelementptr (i8, i8* @g, i64 5), void ()* @f5,
-      i8* getelementptr (i8, i8* @g, i64 6), void ()* @f6,
-      i8* getelementptr (i8, i8* @g, i64 7), void ()* @f7,
-      i8* getelementptr (i8, i8* @g, i64 8), void ()* @f8,
-      i8* getelementptr (i8, i8* @g, i64 9), void ()* @f9,
+      ptr %0,
+      ptr @g, ptr @f0,
+      ptr getelementptr (i8, ptr @g, i64 1), ptr @f1,
+      ptr getelementptr (i8, ptr @g, i64 2), ptr @f2,
+      ptr getelementptr (i8, ptr @g, i64 3), ptr @f3,
+      ptr getelementptr (i8, ptr @g, i64 4), ptr @f4,
+      ptr getelementptr (i8, ptr @g, i64 5), ptr @f5,
+      ptr getelementptr (i8, ptr @g, i64 6), ptr @f6,
+      ptr getelementptr (i8, ptr @g, i64 7), ptr @f7,
+      ptr getelementptr (i8, ptr @g, i64 8), ptr @f8,
+      ptr getelementptr (i8, ptr @g, i64 9), ptr @f9,
       ...
   )
   ret void

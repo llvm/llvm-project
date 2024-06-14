@@ -26,7 +26,7 @@ for.body.prol.preheader:                          ; preds = %for.body.preheader
 for.body.prol:                                    ; preds = %for.body.prol, %for.body.prol.preheader
   %i.04.prol = phi i32 [ %inc.prol, %for.body.prol ], [ 0, %for.body.prol.preheader ]
   %prol.iter = phi i32 [ %prol.iter.sub, %for.body.prol ], [ %xtraiter, %for.body.prol.preheader ]
-  %tmp1 = load double, double* @b, align 8
+  %tmp1 = load double, ptr @b, align 8
   %call.prol = tail call double @pow(double %tmp1, double 2.500000e-01)
   %inc.prol = add nuw nsw i32 %i.04.prol, 1
   %prol.iter.sub = add i32 %prol.iter, -1
@@ -47,9 +47,9 @@ for.body.preheader.split.split:                   ; preds = %for.body.preheader.
 
 for.body:                                         ; preds = %for.body, %for.body.preheader.split.split
   %i.04 = phi i32 [ %i.04.unr, %for.body.preheader.split.split ], [ %inc.7, %for.body ]
-  %tmp3 = load double, double* @b, align 8
+  %tmp3 = load double, ptr @b, align 8
   %call = tail call double @pow(double %tmp3, double 2.500000e-01)
-  %tmp4 = load double, double* @b, align 8
+  %tmp4 = load double, ptr @b, align 8
   %call.1 = tail call double @pow(double %tmp4, double 2.500000e-01)
   %inc.7 = add nsw i32 %i.04, 8
   %exitcond.7 = icmp eq i32 %inc.7, %p1
@@ -62,7 +62,7 @@ for.end.loopexit:                                 ; preds = %for.end.loopexit.un
   br label %for.end
 
 for.end:                                          ; preds = %for.end.loopexit, %entry
-  %tmp5 = load i32, i32* @a, align 4
+  %tmp5 = load i32, ptr @a, align 4
   ret i32 %tmp5
 }
 

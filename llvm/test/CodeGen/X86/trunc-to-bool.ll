@@ -38,7 +38,7 @@ ret_false:
     ret i1 false
 }
 
-define i32 @test3(i8* %ptr) nounwind {
+define i32 @test3(ptr %ptr) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -50,7 +50,7 @@ define i32 @test3(i8* %ptr) nounwind {
 ; CHECK-NEXT:  .LBB2_2: # %cond_false
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retl
-    %val = load i8, i8* %ptr
+    %val = load i8, ptr %ptr
     %tmp = trunc i8 %val to i1
     br i1 %tmp, label %cond_true, label %cond_false
 cond_true:
@@ -59,7 +59,7 @@ cond_false:
     ret i32 42
 }
 
-define i32 @test4(i8* %ptr) nounwind {
+define i32 @test4(ptr %ptr) nounwind {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
@@ -70,7 +70,7 @@ define i32 @test4(i8* %ptr) nounwind {
 ; CHECK-NEXT:  .LBB3_2: # %cond_false
 ; CHECK-NEXT:    movl $42, %eax
 ; CHECK-NEXT:    retl
-    %tmp = ptrtoint i8* %ptr to i1
+    %tmp = ptrtoint ptr %ptr to i1
     br i1 %tmp, label %cond_true, label %cond_false
 cond_true:
     ret i32 21

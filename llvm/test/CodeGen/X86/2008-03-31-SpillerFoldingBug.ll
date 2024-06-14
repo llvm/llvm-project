@@ -2,17 +2,17 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin -relocation-model=pic -frame-pointer=all | FileCheck %s
 ; Don't fold re-materialized load into a two address instruction
 
-	%"struct.Smarts::Runnable" = type { i32 (...)**, i32 }
-	%struct.__sbuf = type { i8*, i32 }
-	%"struct.std::ios_base" = type { i32 (...)**, i32, i32, i32, i32, i32, %"struct.std::ios_base::_Callback_list"*, %struct.__sbuf, [8 x %struct.__sbuf], i32, %struct.__sbuf*, %"struct.std::locale" }
-	%"struct.std::ios_base::_Callback_list" = type { %"struct.std::ios_base::_Callback_list"*, void (i32, %"struct.std::ios_base"*, i32)*, i32, i32 }
-	%"struct.std::locale" = type { %"struct.std::locale::_Impl"* }
-	%"struct.std::locale::_Impl" = type { i32, %"struct.Smarts::Runnable"**, i32, %"struct.Smarts::Runnable"**, i8** }
-@_ZTVSt9basic_iosIcSt11char_traitsIcEE = external constant [4 x i32 (...)*]		; <[4 x i32 (...)*]*> [#uses=1]
-@_ZTTSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE = external constant [4 x i8*]		; <[4 x i8*]*> [#uses=1]
-@_ZTVSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE = external constant [10 x i32 (...)*]		; <[10 x i32 (...)*]*> [#uses=2]
-@_ZTVSt15basic_streambufIcSt11char_traitsIcEE = external constant [16 x i32 (...)*]		; <[16 x i32 (...)*]*> [#uses=1]
-@_ZTVSt15basic_stringbufIcSt11char_traitsIcESaIcEE = external constant [16 x i32 (...)*]		; <[16 x i32 (...)*]*> [#uses=1]
+	%"struct.Smarts::Runnable" = type { ptr, i32 }
+	%struct.__sbuf = type { ptr, i32 }
+	%"struct.std::ios_base" = type { ptr, i32, i32, i32, i32, i32, ptr, %struct.__sbuf, [8 x %struct.__sbuf], i32, ptr, %"struct.std::locale" }
+	%"struct.std::ios_base::_Callback_list" = type { ptr, ptr, i32, i32 }
+	%"struct.std::locale" = type { ptr }
+	%"struct.std::locale::_Impl" = type { i32, ptr, i32, ptr, ptr }
+@_ZTVSt9basic_iosIcSt11char_traitsIcEE = external constant [4 x ptr]		; <ptr> [#uses=1]
+@_ZTTSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE = external constant [4 x ptr]		; <ptr> [#uses=1]
+@_ZTVSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE = external constant [10 x ptr]		; <ptr> [#uses=2]
+@_ZTVSt15basic_streambufIcSt11char_traitsIcEE = external constant [16 x ptr]		; <ptr> [#uses=1]
+@_ZTVSt15basic_stringbufIcSt11char_traitsIcESaIcEE = external constant [16 x ptr]		; <ptr> [#uses=1]
 
 define void @_GLOBAL__I__ZN5Pooma5pinfoE() nounwind  {
 ; CHECK-LABEL: _GLOBAL__I__ZN5Pooma5pinfoE:
@@ -47,26 +47,23 @@ define void @_GLOBAL__I__ZN5Pooma5pinfoE() nounwind  {
 ; CHECK-NEXT:    movl %eax, 0
 ; CHECK-NEXT:    ud2
 entry:
-	store i32 (...)** getelementptr ([10 x i32 (...)*], [10 x i32 (...)*]* @_ZTVSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE, i32 0, i32 8), i32 (...)*** null, align 4
-	%tmp96.i.i142.i = call i8* @_Znwm( i32 180 ) nounwind 		; <i8*> [#uses=2]
-	call void @_ZNSt8ios_baseC2Ev( %"struct.std::ios_base"* null ) nounwind
-	store i32 (...)** getelementptr ([4 x i32 (...)*], [4 x i32 (...)*]* @_ZTVSt9basic_iosIcSt11char_traitsIcEE, i32 0, i32 2), i32 (...)*** null, align 4
-	store i32 (...)** null, i32 (...)*** null, align 4
-	%ctg2242.i.i163.i = getelementptr i8, i8* %tmp96.i.i142.i, i32 0		; <i8*> [#uses=1]
-	%tmp150.i.i164.i = load i8*, i8** getelementptr ([4 x i8*], [4 x i8*]* @_ZTTSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE, i32 0, i64 2), align 4		; <i8*> [#uses=1]
-	%tmp150151.i.i165.i = bitcast i8* %tmp150.i.i164.i to i32 (...)**		; <i32 (...)**> [#uses=1]
-	%tmp153.i.i166.i = bitcast i8* %ctg2242.i.i163.i to i32 (...)***		; <i32 (...)***> [#uses=1]
-	store i32 (...)** %tmp150151.i.i165.i, i32 (...)*** %tmp153.i.i166.i, align 4
-	%tmp159.i.i167.i = bitcast i8* %tmp96.i.i142.i to i32 (...)***		; <i32 (...)***> [#uses=1]
-	store i32 (...)** getelementptr ([10 x i32 (...)*], [10 x i32 (...)*]* @_ZTVSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE, i32 0, i32 3), i32 (...)*** %tmp159.i.i167.i, align 4
-	store i32 (...)** getelementptr ([16 x i32 (...)*], [16 x i32 (...)*]* @_ZTVSt15basic_streambufIcSt11char_traitsIcEE, i32 0, i32 2), i32 (...)*** null, align 4
-	call void @_ZNSt6localeC1Ev( %"struct.std::locale"* null ) nounwind
-	store i32 (...)** getelementptr ([16 x i32 (...)*], [16 x i32 (...)*]* @_ZTVSt15basic_stringbufIcSt11char_traitsIcESaIcEE, i32 0, i32 2), i32 (...)*** null, align 4
+	store ptr getelementptr ([10 x ptr], ptr @_ZTVSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE, i32 0, i32 8), ptr null, align 4
+	%tmp96.i.i142.i = call ptr @_Znwm( i32 180 ) nounwind 		; <ptr> [#uses=2]
+	call void @_ZNSt8ios_baseC2Ev( ptr null ) nounwind
+	store ptr getelementptr ([4 x ptr], ptr @_ZTVSt9basic_iosIcSt11char_traitsIcEE, i32 0, i32 2), ptr null, align 4
+	store ptr null, ptr null, align 4
+	%ctg2242.i.i163.i = getelementptr i8, ptr %tmp96.i.i142.i, i32 0		; <ptr> [#uses=1]
+	%tmp150.i.i164.i = load ptr, ptr getelementptr ([4 x ptr], ptr @_ZTTSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE, i32 0, i64 2), align 4		; <ptr> [#uses=1]
+	store ptr %tmp150.i.i164.i, ptr %ctg2242.i.i163.i, align 4
+	store ptr getelementptr ([10 x ptr], ptr @_ZTVSt19basic_ostringstreamIcSt11char_traitsIcESaIcEE, i32 0, i32 3), ptr %tmp96.i.i142.i, align 4
+	store ptr getelementptr ([16 x ptr], ptr @_ZTVSt15basic_streambufIcSt11char_traitsIcEE, i32 0, i32 2), ptr null, align 4
+	call void @_ZNSt6localeC1Ev( ptr null ) nounwind
+	store ptr getelementptr ([16 x ptr], ptr @_ZTVSt15basic_stringbufIcSt11char_traitsIcESaIcEE, i32 0, i32 2), ptr null, align 4
 	unreachable
 }
 
-declare i8* @_Znwm(i32)
+declare ptr @_Znwm(i32)
 
-declare void @_ZNSt8ios_baseC2Ev(%"struct.std::ios_base"*)
+declare void @_ZNSt8ios_baseC2Ev(ptr)
 
-declare void @_ZNSt6localeC1Ev(%"struct.std::locale"*) nounwind
+declare void @_ZNSt6localeC1Ev(ptr) nounwind

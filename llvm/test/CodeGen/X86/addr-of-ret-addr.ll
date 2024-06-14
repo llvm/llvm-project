@@ -1,10 +1,10 @@
 ; RUN: llc < %s -frame-pointer=all -mtriple=i686-- | FileCheck %s --check-prefix=CHECK-X86
 ; RUN: llc < %s -frame-pointer=all -mtriple=x86_64-- | FileCheck %s --check-prefix=CHECK-X64
 
-define i8* @f() nounwind readnone optsize {
+define ptr @f() nounwind readnone optsize {
 entry:
-  %0 = tail call i8* @llvm.addressofreturnaddress()    ; <i8*> [#uses=1]
-  ret i8* %0
+  %0 = tail call ptr @llvm.addressofreturnaddress()    ; <ptr> [#uses=1]
+  ret ptr %0
   ; CHECK-X86-LABEL: f:
   ; CHECK-X86: pushl   %ebp
   ; CHECK-X86: movl    %esp, %ebp
@@ -16,4 +16,4 @@ entry:
   ; CHECK-X64: leaq    8(%rbp), %rax
 }
 
-declare i8* @llvm.addressofreturnaddress() nounwind readnone
+declare ptr @llvm.addressofreturnaddress() nounwind readnone

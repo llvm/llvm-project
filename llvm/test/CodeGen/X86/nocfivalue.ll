@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-NEXT: .quad   f2
 ; CHECK-NEXT: .quad   f3
 ; CHECK-NEXT: .quad   f3.cfi
-@a = global [6 x void ()*] [void ()* no_cfi @f1, void ()* @f1, void ()* @f2, void ()* no_cfi @f2, void ()* @f3, void ()* no_cfi @f3]
+@a = global [6 x ptr] [ptr no_cfi @f1, ptr @f1, ptr @f2, ptr no_cfi @f2, ptr @f3, ptr no_cfi @f3]
 
 declare !type !0 void @f1()
 
@@ -22,10 +22,10 @@ define void @f3() #0 !type !0 {
   ret void
 }
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
-define i1 @foo(i8* %p) {
-  %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
+define i1 @foo(ptr %p) {
+  %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid1")
   ret i1 %x
 }
 

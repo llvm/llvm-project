@@ -51,7 +51,7 @@ define void @knownbits_zext_in_reg(ptr) nounwind {
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:    jmp .LBB0_1
 BB:
-  %L5 = load i8, i8* %0
+  %L5 = load i8, ptr %0
   %Sl9 = select i1 true, i8 %L5, i8 undef
   %B21 = udiv i8 %Sl9, -93
   %B22 = udiv i8 %Sl9,  93

@@ -3,7 +3,7 @@
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
 
-define i32 @mul_i8i8(i8 *%a, <16 x i8> %b, i32 %c) {
+define i32 @mul_i8i8(ptr%a, <16 x i8> %b, i32 %c) {
 ; CHECK-LABEL: mul_i8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovdqa (%rdi), %xmm1
@@ -17,13 +17,12 @@ define i32 @mul_i8i8(i8 *%a, <16 x i8> %b, i32 %c) {
 ; CHECK-NEXT:    addl %esi, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0, align 16
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %3 = sext <16 x i8> %b to <16 x i32>
-  %4 = mul nsw <16 x i32> %2, %3
-  %5 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %4)
-  %op.extra = add nsw i32 %5, %c
+  %0 = load <16 x i8>, ptr %a, align 16
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %2 = sext <16 x i8> %b to <16 x i32>
+  %3 = mul nsw <16 x i32> %1, %2
+  %4 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %3)
+  %op.extra = add nsw i32 %4, %c
   ret i32 %op.extra
 }
 

@@ -7,9 +7,9 @@
 
 define void @test_fetch_and_op() nounwind {
 entry:
-  %tmp40 = atomicrmw and i8* @sc, i8 11 monotonic
-  store i8 %tmp40, i8* @sc
-  %tmp41 = atomicrmw and i8* @uc, i8 11 monotonic
-  store i8 %tmp41, i8* @uc
+  %tmp40 = atomicrmw and ptr @sc, i8 11 monotonic
+  store i8 %tmp40, ptr @sc
+  %tmp41 = atomicrmw and ptr @uc, i8 11 monotonic
+  store i8 %tmp41, ptr @uc
   ret void
 }

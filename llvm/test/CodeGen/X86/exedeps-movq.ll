@@ -10,7 +10,7 @@
 ; movlpd for doubles
 ; movq for integers
 
-define void @store_floats(<4 x float> %x, i64* %p) {
+define void @store_floats(<4 x float> %x, ptr %p) {
 ; SSE-LABEL: store_floats:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addps %xmm0, %xmm0
@@ -25,11 +25,11 @@ define void @store_floats(<4 x float> %x, i64* %p) {
   %a = fadd <4 x float> %x, %x
   %b = shufflevector <4 x float> %a, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   %c = bitcast <2 x float> %b to i64
-  store i64 %c, i64* %p
+  store i64 %c, ptr %p
   ret void
 }
 
-define void @store_double(<2 x double> %x, i64* %p) {
+define void @store_double(<2 x double> %x, ptr %p) {
 ; SSE-LABEL: store_double:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsd %xmm0, %xmm0
@@ -44,11 +44,11 @@ define void @store_double(<2 x double> %x, i64* %p) {
   %a = fadd <2 x double> %x, %x
   %b = extractelement <2 x double> %a, i32 0
   %c = bitcast double %b to i64
-  store i64 %c, i64* %p
+  store i64 %c, ptr %p
   ret void
 }
 
-define void @store_int(<4 x i32> %x, <2 x float>* %p) {
+define void @store_int(<4 x i32> %x, ptr %p) {
 ; SSE-LABEL: store_int:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    paddd %xmm0, %xmm0
@@ -63,11 +63,11 @@ define void @store_int(<4 x i32> %x, <2 x float>* %p) {
   %a = add <4 x i32> %x, %x
   %b = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
   %c = bitcast <2 x i32> %b to <2 x float>
-  store <2 x float> %c, <2 x float>* %p
+  store <2 x float> %c, ptr %p
   ret void
 }
 
-define void @store_h_double(<2 x double> %x, i64* %p) {
+define void @store_h_double(<2 x double> %x, ptr %p) {
 ; SSE-LABEL: store_h_double:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addpd %xmm0, %xmm0
@@ -82,6 +82,6 @@ define void @store_h_double(<2 x double> %x, i64* %p) {
   %a = fadd <2 x double> %x, %x
   %b = extractelement <2 x double> %a, i32 1
   %c = bitcast double %b to i64
-  store i64 %c, i64* %p
+  store i64 %c, ptr %p
   ret void
 }
