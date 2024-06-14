@@ -1429,17 +1429,17 @@ let Command = "statistics dump" in {
     Arg<"Boolean">,
     Desc<"Dump statistics for the targets, including breakpoints, expression "
     "evaluations, frame variables, etc. "
-    "If both the '--targets' and the '--modules' options are specified, a "
-    "list of module identifiers will be added to the 'targets' section.">;
+    "If both the '--targets' and the '--modules' options are 'true', a list "
+    "of module identifiers will be added to the 'targets' section.">;
   def statistics_dump_modules: Option<"modules", "m">, Group<1>,
     Arg<"Boolean">,
     Desc<"Dump statistics for the modules, including time and size of various "
     "aspects of the module and debug information, type system, path, etc. "
-    "If both the '--targets' and the '--modules' options are specified, a "
-    "list of module identifiers will be added to the 'targets' section.">;
+    "If both the '--targets' and the '--modules' options are 'true', a list "
+    "of module identifiers will be added to the 'targets' section.">;
   def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
     Arg<"Boolean">,
     Desc<"If the setting interpreter.save-transcript is enabled and this "
-    "option is specified, include a JSON array with all commands the user and/"
-    "or scripts executed during a debug session.">;
+    "option is 'true', include a JSON array with all commands the user and/or "
+    "scripts executed during a debug session.">;
 }
