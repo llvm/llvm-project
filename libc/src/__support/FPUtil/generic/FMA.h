@@ -31,7 +31,6 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                              OutType>
 fma(InType x, InType y, InType z);
 
-#ifndef LIBC_TARGET_CPU_HAS_FMA
 // TODO(lntue): Implement fmaf that is correctly rounded to all rounding modes.
 // The implementation below only is only correct for the default rounding mode,
 // round-to-nearest tie-to-even.
@@ -82,7 +81,6 @@ template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
 
   return static_cast<float>(bit_sum.get_val());
 }
-#endif // LIBC_TARGET_CPU_HAS_FMA
 
 namespace internal {
 
