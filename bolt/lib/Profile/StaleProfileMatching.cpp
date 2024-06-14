@@ -429,8 +429,7 @@ void matchWeightsByHashes(BinaryContext &BC,
                           const BinaryFunction::BasicBlockOrderType &BlockOrder,
                           const yaml::bolt::BinaryFunctionProfile &YamlBF,
                           FlowFunction &Func,
-                          FunctionMatchingData &FuncMatchingData
-                          ) {
+                          FunctionMatchingData &FuncMatchingData) {
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
   std::vector<FlowBlock *> Blocks;
@@ -612,7 +611,8 @@ void preprocessUnreachableBlocks(FlowFunction &Func) {
 }
 
 /// Decide if stale profile matching can be applied for a given function.
-/// Currently we skip inference for (very) large instances and for instances
+/// Currently we skip inference for (very) large instances, instances where the
+/// number of matched basic blocks is below a set threshold,  and for instances
 /// having "unexpected" control flow (e.g., having no sink basic blocks).
 bool canApplyInference(const FlowFunction &Func,
                        const yaml::bolt::BinaryFunctionProfile &YamlBF,
@@ -620,11 +620,9 @@ bool canApplyInference(const FlowFunction &Func,
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
     return false;
 
-  if ((double)FuncMatchingData.MatchedExactBlocks/YamlBF.Blocks.size() >=
+  if ((double)FuncMatchingData.MatchedExactBlocks / YamlBF.Blocks.size() >=
       opts::MatchedProfileThreshold / 100.0)
     return false;
-
-  
 
   bool HasExitBlocks = llvm::any_of(
       Func.Blocks, [&](const FlowBlock &Block) { return Block.isExit(); });
@@ -782,7 +780,8 @@ bool YAMLProfileReader::inferStaleProfile(
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func, FuncMatchingData);
+  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func,
+                       FuncMatchingData);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.
