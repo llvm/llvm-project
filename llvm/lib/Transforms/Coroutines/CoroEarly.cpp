@@ -38,7 +38,7 @@ public:
                              ->getPointerTo()) {}
   void lowerEarlyIntrinsics(Function &F);
 };
-}
+} // namespace
 
 // Replace a direct call to coro.resume or coro.destroy with an indirect call to
 // an address returned by coro.subfn.addr intrinsic. This is done so that
@@ -66,8 +66,8 @@ void Lowerer::lowerCoroPromise(CoroPromiseInst *Intrin) {
   auto *SampleStruct =
       StructType::get(Context, {AnyResumeFnPtrTy, AnyResumeFnPtrTy, Int8Ty});
   const DataLayout &DL = TheModule.getDataLayout();
-  int64_t Offset = alignTo(
-      DL.getStructLayout(SampleStruct)->getElementOffset(2), Alignment);
+  int64_t Offset =
+      alignTo(DL.getStructLayout(SampleStruct)->getElementOffset(2), Alignment);
   if (Intrin->isFromPromise())
     Offset = -Offset;
 
@@ -104,7 +104,7 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
 static void buildDebugInfoForNoopResumeDestroyFunc(Function *NoopFn) {
   Module &M = *NoopFn->getParent();
   if (M.debug_compile_units().empty())
-     return;
+    return;
 
   DICompileUnit *CU = *M.debug_compile_units_begin();
   DIBuilder DB(M, /*AllowUnresolved*/ false, CU);
@@ -113,7 +113,7 @@ static void buildDebugInfoForNoopResumeDestroyFunc(Function *NoopFn) {
       DB.createSubroutineType(DB.getOrCreateTypeArray(Params));
   StringRef Name = NoopFn->getName();
   auto *SP = DB.createFunction(
-      CU, /*Name=*/Name, /*LinkageName=*/Name, /*File=*/ CU->getFile(),
+      CU, /*Name=*/Name, /*LinkageName=*/Name, /*File=*/CU->getFile(),
       /*LineNo=*/0, SubroutineType, /*ScopeLine=*/0, DINode::FlagArtificial,
       DISubprogram::SPFlagDefinition);
   NoopFn->setSubprogram(SP);
@@ -143,11 +143,11 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     ReturnInst::Create(C, Entry);
 
     // Create a constant struct for the frame.
-    Constant* Values[] = {NoopFn, NoopFn};
-    Constant* NoopCoroConst = ConstantStruct::get(FrameTy, Values);
-    NoopCoro = new GlobalVariable(M, NoopCoroConst->getType(), /*isConstant=*/true,
-                                GlobalVariable::PrivateLinkage, NoopCoroConst,
-                                "NoopCoro.Frame.Const");
+    Constant *Values[] = {NoopFn, NoopFn};
+    Constant *NoopCoroConst = ConstantStruct::get(FrameTy, Values);
+    NoopCoro = new GlobalVariable(
+        M, NoopCoroConst->getType(), /*isConstant=*/true,
+        GlobalVariable::PrivateLinkage, NoopCoroConst, "NoopCoro.Frame.Const");
   }
 
   Builder.SetInsertPoint(II);
@@ -176,57 +176,57 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       continue;
 
     switch (CB->getIntrinsicID()) {
-      default:
-        continue;
-      case Intrinsic::coro_free:
-        CoroFrees.push_back(cast<CoroFreeInst>(&I));
-        break;
-      case Intrinsic::coro_suspend:
-        // Make sure that final suspend point is not duplicated as CoroSplit
-        // pass expects that there is at most one final suspend point.
-        if (cast<CoroSuspendInst>(&I)->isFinal())
-          CB->setCannotDuplicate();
-        HasCoroSuspend = true;
-        break;
-      case Intrinsic::coro_end_async:
-      case Intrinsic::coro_end:
-        // Make sure that fallthrough coro.end is not duplicated as CoroSplit
-        // pass expects that there is at most one fallthrough coro.end.
-        if (cast<AnyCoroEndInst>(&I)->isFallthrough())
-          CB->setCannotDuplicate();
-        break;
-      case Intrinsic::coro_noop:
-        lowerCoroNoop(cast<IntrinsicInst>(&I));
-        break;
-      case Intrinsic::coro_id:
-        if (auto *CII = cast<CoroIdInst>(&I)) {
-          if (CII->getInfo().isPreSplit()) {
-            assert(F.isPresplitCoroutine() &&
-                   "The frontend uses Swtich-Resumed ABI should emit "
-                   "\"presplitcoroutine\" attribute for the coroutine.");
-            setCannotDuplicate(CII);
-            CII->setCoroutineSelf();
-            CoroId = cast<CoroIdInst>(&I);
-          }
+    default:
+      continue;
+    case Intrinsic::coro_free:
+      CoroFrees.push_back(cast<CoroFreeInst>(&I));
+      break;
+    case Intrinsic::coro_suspend:
+      // Make sure that final suspend point is not duplicated as CoroSplit
+      // pass expects that there is at most one final suspend point.
+      if (cast<CoroSuspendInst>(&I)->isFinal())
+        CB->setCannotDuplicate();
+      HasCoroSuspend = true;
+      break;
+    case Intrinsic::coro_end_async:
+    case Intrinsic::coro_end:
+      // Make sure that fallthrough coro.end is not duplicated as CoroSplit
+      // pass expects that there is at most one fallthrough coro.end.
+      if (cast<AnyCoroEndInst>(&I)->isFallthrough())
+        CB->setCannotDuplicate();
+      break;
+    case Intrinsic::coro_noop:
+      lowerCoroNoop(cast<IntrinsicInst>(&I));
+      break;
+    case Intrinsic::coro_id:
+      if (auto *CII = cast<CoroIdInst>(&I)) {
+        if (CII->getInfo().isPreSplit()) {
+          assert(F.isPresplitCoroutine() &&
+                 "The frontend uses Swtich-Resumed ABI should emit "
+                 "\"presplitcoroutine\" attribute for the coroutine.");
+          setCannotDuplicate(CII);
+          CII->setCoroutineSelf();
+          CoroId = cast<CoroIdInst>(&I);
         }
-        break;
-      case Intrinsic::coro_id_retcon:
-      case Intrinsic::coro_id_retcon_once:
-      case Intrinsic::coro_id_async:
-        F.setPresplitCoroutine();
-        break;
-      case Intrinsic::coro_resume:
-        lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
-        break;
-      case Intrinsic::coro_destroy:
-        lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
-        break;
-      case Intrinsic::coro_promise:
-        lowerCoroPromise(cast<CoroPromiseInst>(&I));
-        break;
-      case Intrinsic::coro_done:
-        lowerCoroDone(cast<IntrinsicInst>(&I));
-        break;
+      }
+      break;
+    case Intrinsic::coro_id_retcon:
+    case Intrinsic::coro_id_retcon_once:
+    case Intrinsic::coro_id_async:
+      F.setPresplitCoroutine();
+      break;
+    case Intrinsic::coro_resume:
+      lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
+      break;
+    case Intrinsic::coro_destroy:
+      lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
+      break;
+    case Intrinsic::coro_promise:
+      lowerCoroPromise(cast<CoroPromiseInst>(&I));
+      break;
+    case Intrinsic::coro_done:
+      lowerCoroDone(cast<IntrinsicInst>(&I));
+      break;
     }
   }
 

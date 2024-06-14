@@ -216,8 +216,7 @@ void coro::Shape::buildFrom(Function &F) {
         CoroSuspends.push_back(Suspend);
         if (Suspend->isFinal()) {
           if (HasFinalSuspend)
-            report_fatal_error(
-              "Only one suspend point can be marked as final");
+            report_fatal_error("Only one suspend point can be marked as final");
           HasFinalSuspend = true;
           FinalSuspendIndex = CoroSuspends.size() - 1;
         }
@@ -233,7 +232,7 @@ void coro::Shape::buildFrom(Function &F) {
 
         if (CoroBegin)
           report_fatal_error(
-                "coroutine should have exactly one defining @llvm.coro.begin");
+              "coroutine should have exactly one defining @llvm.coro.begin");
         CB->addRetAttr(Attribute::NonNull);
         CB->addRetAttr(Attribute::NoAlias);
         CB->removeFnAttr(Attribute::NoDuplicate);
@@ -334,9 +333,9 @@ void coro::Shape::buildFrom(Function &F) {
   case Intrinsic::coro_id_retcon_once: {
     auto ContinuationId = cast<AnyCoroIdRetconInst>(Id);
     ContinuationId->checkWellFormed();
-    this->ABI = (IdIntrinsic == Intrinsic::coro_id_retcon
-                  ? coro::ABI::Retcon
-                  : coro::ABI::RetconOnce);
+    this->ABI =
+        (IdIntrinsic == Intrinsic::coro_id_retcon ? coro::ABI::Retcon
+                                                  : coro::ABI::RetconOnce);
     auto Prototype = ContinuationId->getPrototype();
     this->RetconLowering.ResumePrototype = Prototype;
     this->RetconLowering.Alloc = ContinuationId->getAllocFunction();
@@ -392,7 +391,7 @@ void coro::Shape::buildFrom(Function &F) {
 
       // Check that the result type of the suspend matches the resume types.
       Type *SResultTy = Suspend->getType();
-      ArrayRef<Type*> SuspendResultTys;
+      ArrayRef<Type *> SuspendResultTys;
       if (SResultTy->isVoidTy()) {
         // leave as empty array
       } else if (auto SResultStructTy = dyn_cast<StructType>(SResultTy)) {
@@ -433,8 +432,7 @@ void coro::Shape::buildFrom(Function &F) {
   }
 
   // Move final suspend to be the last element in the CoroSuspends vector.
-  if (ABI == coro::ABI::Switch &&
-      SwitchLowering.HasFinalSuspend &&
+  if (ABI == coro::ABI::Switch && SwitchLowering.HasFinalSuspend &&
       FinalSuspendIndex != CoroSuspends.size() - 1)
     std::swap(CoroSuspends[FinalSuspendIndex], CoroSuspends.back());
 
@@ -448,7 +446,8 @@ static void propagateCallAttrsFromCallee(CallInst *Call, Function *Callee) {
   // TODO: attributes?
 }
 
-static void addCallToCallGraph(CallGraph *CG, CallInst *Call, Function *Callee){
+static void addCallToCallGraph(CallGraph *CG, CallInst *Call,
+                               Function *Callee) {
   if (CG)
     (*CG)[Call->getFunction()]->addCalledFunction(Call, (*CG)[Callee]);
 }
@@ -462,9 +461,9 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
     auto Alloc = RetconLowering.Alloc;
-    Size = Builder.CreateIntCast(Size,
-                                 Alloc->getFunctionType()->getParamType(0),
-                                 /*is signed*/ false);
+    Size =
+        Builder.CreateIntCast(Size, Alloc->getFunctionType()->getParamType(0),
+                              /*is signed*/ false);
     auto *Call = Builder.CreateCall(Alloc, Size);
     propagateCallAttrsFromCallee(Call, Alloc);
     addCallToCallGraph(CG, Call, Alloc);
@@ -485,8 +484,8 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
     auto Dealloc = RetconLowering.Dealloc;
-    Ptr = Builder.CreateBitCast(Ptr,
-                                Dealloc->getFunctionType()->getParamType(0));
+    Ptr =
+        Builder.CreateBitCast(Ptr, Dealloc->getFunctionType()->getParamType(0));
     auto *Call = Builder.CreateCall(Dealloc, Ptr);
     propagateCallAttrsFromCallee(Call, Dealloc);
     addCallToCallGraph(CG, Call, Dealloc);
@@ -525,27 +524,32 @@ static void checkWFRetconPrototype(const AnyCoroIdRetconInst *I, Value *V) {
     if (FT->getReturnType()->isPointerTy()) {
       ResultOkay = true;
     } else if (auto SRetTy = dyn_cast<StructType>(FT->getReturnType())) {
-      ResultOkay = (!SRetTy->isOpaque() &&
-                    SRetTy->getNumElements() > 0 &&
+      ResultOkay = (!SRetTy->isOpaque() && SRetTy->getNumElements() > 0 &&
                     SRetTy->getElementType(0)->isPointerTy());
     } else {
       ResultOkay = false;
     }
     if (!ResultOkay)
-      fail(I, "llvm.coro.id.retcon prototype must return pointer as first "
-              "result", F);
+      fail(I,
+           "llvm.coro.id.retcon prototype must return pointer as first "
+           "result",
+           F);
 
     if (FT->getReturnType() !=
-          I->getFunction()->getFunctionType()->getReturnType())
-      fail(I, "llvm.coro.id.retcon prototype return type must be same as"
-              "current function return type", F);
+        I->getFunction()->getFunctionType()->getReturnType())
+      fail(I,
+           "llvm.coro.id.retcon prototype return type must be same as"
+           "current function return type",
+           F);
   } else {
     // No meaningful validation to do here for llvm.coro.id.unique.once.
   }
 
   if (FT->getNumParams() == 0 || !FT->getParamType(0)->isPointerTy())
-    fail(I, "llvm.coro.id.retcon.* prototype must take pointer as "
-            "its first parameter", F);
+    fail(I,
+         "llvm.coro.id.retcon.* prototype must take pointer as "
+         "its first parameter",
+         F);
 }
 
 /// Check that the given value is a well-formed allocator.
@@ -558,8 +562,7 @@ static void checkWFAlloc(const Instruction *I, Value *V) {
   if (!FT->getReturnType()->isPointerTy())
     fail(I, "llvm.coro.* allocator must return a pointer", F);
 
-  if (FT->getNumParams() != 1 ||
-      !FT->getParamType(0)->isIntegerTy())
+  if (FT->getNumParams() != 1 || !FT->getParamType(0)->isIntegerTy())
     fail(I, "llvm.coro.* allocator must take integer as only param", F);
 }
 
@@ -573,8 +576,7 @@ static void checkWFDealloc(const Instruction *I, Value *V) {
   if (!FT->getReturnType()->isVoidTy())
     fail(I, "llvm.coro.* deallocator must return void", F);
 
-  if (FT->getNumParams() != 1 ||
-      !FT->getParamType(0)->isPointerTy())
+  if (FT->getNumParams() != 1 || !FT->getParamType(0)->isPointerTy())
     fail(I, "llvm.coro.* deallocator must take pointer as only param", F);
 }
 

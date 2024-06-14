@@ -8,10 +8,10 @@
 
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "CoroInternal.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 
 using namespace llvm;
@@ -25,7 +25,7 @@ struct Lowerer : coro::LowererBase {
   Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
   bool lower(Function &F);
 };
-}
+} // namespace
 
 static void lowerSubFn(IRBuilder<> &Builder, CoroSubFnInst *SubFn) {
   Builder.SetInsertPoint(SubFn);
@@ -114,8 +114,7 @@ static bool declaresCoroCleanupIntrinsics(const Module &M) {
           "llvm.coro.async.size.replace", "llvm.coro.async.resume"});
 }
 
-PreservedAnalyses CoroCleanupPass::run(Module &M,
-                                       ModuleAnalysisManager &MAM) {
+PreservedAnalyses CoroCleanupPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (!declaresCoroCleanupIntrinsics(M))
     return PreservedAnalyses::all();
 

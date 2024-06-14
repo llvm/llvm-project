@@ -430,19 +430,18 @@ bool CoroIdElider::attemptElide() {
     NumOfCoroElided++;
 
 #ifndef NDEBUG
-      if (!CoroElideInfoOutputFilename.empty())
-        *getOrCreateLogFile() << "Elide " << CalleeCoroutineName << " in "
-                              << FEI.ContainingFunction->getName() << "\n";
+    if (!CoroElideInfoOutputFilename.empty())
+      *getOrCreateLogFile() << "Elide " << CalleeCoroutineName << " in "
+                            << FEI.ContainingFunction->getName() << "\n";
 #endif
 
-      ORE.emit([&]() {
-        return OptimizationRemark(DEBUG_TYPE, "CoroElide", CoroId)
-               << "'" << ore::NV("callee", CalleeCoroutineName)
-               << "' elided in '" << ore::NV("caller", CallerFunctionName)
-               << "' (frame_size="
-               << ore::NV("frame_size", FrameSizeAndAlign->first) << ", align="
-               << ore::NV("align", FrameSizeAndAlign->second.value()) << ")";
-      });
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "CoroElide", CoroId)
+             << "'" << ore::NV("callee", CalleeCoroutineName) << "' elided in '"
+             << ore::NV("caller", CallerFunctionName) << "' (frame_size="
+             << ore::NV("frame_size", FrameSizeAndAlign->first) << ", align="
+             << ore::NV("align", FrameSizeAndAlign->second.value()) << ")";
+    });
   } else {
     ORE.emit([&]() {
       auto Remark = OptimizationRemarkMissed(DEBUG_TYPE, "CoroElide", CoroId)

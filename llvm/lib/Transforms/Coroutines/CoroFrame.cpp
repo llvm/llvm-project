@@ -602,7 +602,7 @@ private:
   std::optional<Align> MaxFrameAlignment;
 
   SmallVector<Field, 8> Fields;
-  DenseMap<Value*, unsigned> FieldIndexByKey;
+  DenseMap<Value *, unsigned> FieldIndexByKey;
 
 public:
   FrameTypeBuilder(LLVMContext &Context, const DataLayout &DL,
@@ -869,8 +869,7 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
     SWI->setDefaultDest(DestBB);
   }
   // This Debug Info could tell us which allocas are merged into one slot.
-  LLVM_DEBUG(for (auto &AllocaSet
-                  : NonOverlapedAllocas) {
+  LLVM_DEBUG(for (auto &AllocaSet : NonOverlapedAllocas) {
     if (AllocaSet.size() > 1) {
       dbgs() << "In Function:" << F.getName() << "\n";
       dbgs() << "Find Union Set "
@@ -900,7 +899,7 @@ void FrameTypeBuilder::finish(StructType *Ty) {
   StructAlign = SizeAndAlign.second;
 
   auto getField = [](const OptimizedStructLayoutField &LayoutField) -> Field & {
-    return *static_cast<Field *>(const_cast<void*>(LayoutField.Id));
+    return *static_cast<Field *>(const_cast<void *>(LayoutField.Id));
   };
 
   // We need to produce a packed struct type if there's a field whose
@@ -915,7 +914,7 @@ void FrameTypeBuilder::finish(StructType *Ty) {
   }();
 
   // Build the struct body.
-  SmallVector<Type*, 16> FieldTypes;
+  SmallVector<Type *, 16> FieldTypes;
   FieldTypes.reserve(LayoutFields.size() * 3 / 2);
   uint64_t LastOffset = 0;
   for (auto &LayoutField : LayoutFields) {
@@ -929,8 +928,8 @@ void FrameTypeBuilder::finish(StructType *Ty) {
     assert(Offset >= LastOffset);
     if (Offset != LastOffset) {
       if (Packed || alignTo(LastOffset, F.TyAlignment) != Offset)
-        FieldTypes.push_back(ArrayType::get(Type::getInt8Ty(Context),
-                                            Offset - LastOffset));
+        FieldTypes.push_back(
+            ArrayType::get(Type::getInt8Ty(Context), Offset - LastOffset));
     }
 
     F.Offset = Offset;
@@ -1145,10 +1144,9 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   unsigned LineNum = PromiseDIVariable->getLine();
 
   DICompositeType *FrameDITy = DBuilder.createStructType(
-      DIS->getUnit(), Twine(F.getName() + ".coro_frame_ty").str(),
-      DFile, LineNum, Shape.FrameSize * 8,
-      Shape.FrameAlign.value() * 8, llvm::DINode::FlagArtificial, nullptr,
-      llvm::DINodeArray());
+      DIS->getUnit(), Twine(F.getName() + ".coro_frame_ty").str(), DFile,
+      LineNum, Shape.FrameSize * 8, Shape.FrameAlign.value() * 8,
+      llvm::DINode::FlagArtificial, nullptr, llvm::DINodeArray());
   StructType *FrameTy = Shape.FrameTy;
   SmallVector<Metadata *, 16> Elements;
   DataLayout Layout = F.getParent()->getDataLayout();
@@ -1387,8 +1385,8 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce: {
     auto Id = Shape.getRetconCoroId();
-    Shape.RetconLowering.IsFrameInlineInStorage
-      = (B.getStructSize() <= Id->getStorageSize() &&
+    Shape.RetconLowering.IsFrameInlineInStorage =
+        (B.getStructSize() <= Id->getStorageSize() &&
          B.getStructAlign() <= Id->getStorageAlignment());
     break;
   }
@@ -1799,8 +1797,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       // AllocaInst. So We cast GEP to the AllocaInst here to re-use
       // the Frame storage.
       //
-      // Note: If we change the strategy dealing with alignment, we need to refine
-      // this casting.
+      // Note: If we change the strategy dealing with alignment, we need to
+      // refine this casting.
       if (GEP->getType() != Orig->getType())
         return Builder.CreateAddrSpaceCast(GEP, Orig->getType(),
                                            Orig->getName() + Twine(".cast"));
@@ -2406,7 +2404,7 @@ static bool isSuspendBlock(BasicBlock *BB) {
   return isa<AnyCoroSuspendInst>(BB->front());
 }
 
-typedef SmallPtrSet<BasicBlock*, 8> VisitedBlocksSet;
+typedef SmallPtrSet<BasicBlock *, 8> VisitedBlocksSet;
 
 /// Does control flow starting at the given block ever reach a suspend
 /// instruction before reaching a block in VisitedOrFreeBBs?
@@ -2451,10 +2449,12 @@ static bool willLeaveFunctionImmediatelyAfter(BasicBlock *BB,
                                               unsigned depth = 3) {
   // If we've bottomed out our depth count, stop searching and assume
   // that the path might loop back.
-  if (depth == 0) return false;
+  if (depth == 0)
+    return false;
 
   // If this is a suspend block, we're about to exit the resumption function.
-  if (isSuspendBlock(BB)) return true;
+  if (isSuspendBlock(BB))
+    return true;
 
   // Recurse into the successors.
   for (auto *Succ : successors(BB)) {
@@ -2472,7 +2472,8 @@ static bool localAllocaNeedsStackSave(CoroAllocaAllocInst *AI) {
   // the coro resumption frame.
   for (auto *U : AI->users()) {
     auto FI = dyn_cast<CoroAllocaFreeInst>(U);
-    if (!FI) continue;
+    if (!FI)
+      continue;
 
     if (!willLeaveFunctionImmediatelyAfter(FI->getParent()))
       return true;
@@ -2484,8 +2485,8 @@ static bool localAllocaNeedsStackSave(CoroAllocaAllocInst *AI) {
 
 /// Turn each of the given local allocas into a normal (dynamic) alloca
 /// instruction.
-static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
-                              SmallVectorImpl<Instruction*> &DeadInsts) {
+static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst *> LocalAllocas,
+                              SmallVectorImpl<Instruction *> &DeadInsts) {
   for (auto *AI : LocalAllocas) {
     IRBuilder<> Builder(AI);
 
@@ -2504,9 +2505,9 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
       if (isa<CoroAllocaGetInst>(U)) {
         U->replaceAllUsesWith(Alloca);
 
-      // Replace frees with stackrestores.  This is safe because
-      // alloca.alloc is required to obey a stack discipline, although we
-      // don't enforce that structurally.
+        // Replace frees with stackrestores.  This is safe because
+        // alloca.alloc is required to obey a stack discipline, although we
+        // don't enforce that structurally.
       } else {
         auto FI = cast<CoroAllocaFreeInst>(U);
         if (StackSave) {
@@ -2524,9 +2525,9 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
 /// Turn the given coro.alloca.alloc call into a dynamic allocation.
 /// This happens during the all-instructions iteration, so it must not
 /// delete the call.
-static Instruction *lowerNonLocalAlloca(CoroAllocaAllocInst *AI,
-                                        coro::Shape &Shape,
-                                   SmallVectorImpl<Instruction*> &DeadInsts) {
+static Instruction *
+lowerNonLocalAlloca(CoroAllocaAllocInst *AI, coro::Shape &Shape,
+                    SmallVectorImpl<Instruction *> &DeadInsts) {
   IRBuilder<> Builder(AI);
   auto Alloc = Shape.emitAlloc(Builder, AI->getSize(), nullptr);
 
@@ -2567,11 +2568,10 @@ static Value *emitGetSwiftErrorValue(IRBuilder<> &Builder, Type *ValueTy,
 static Value *emitSetSwiftErrorValue(IRBuilder<> &Builder, Value *V,
                                      coro::Shape &Shape) {
   // Make a fake function pointer as a sort of intrinsic.
-  auto FnTy = FunctionType::get(Builder.getPtrTy(),
-                                {V->getType()}, false);
+  auto FnTy = FunctionType::get(Builder.getPtrTy(), {V->getType()}, false);
   auto Fn = ConstantPointerNull::get(Builder.getPtrTy());
 
-  auto Call = Builder.CreateCall(FnTy, Fn, { V });
+  auto Call = Builder.CreateCall(FnTy, Fn, {V});
   Shape.SwiftErrorOps.push_back(Call);
 
   return Call;
@@ -2638,9 +2638,9 @@ static void eliminateSwiftErrorAlloca(Function &F, AllocaInst *Alloca,
 /// and then loading and storing in the prologue and epilog.
 ///
 /// The argument keeps the swifterror flag.
-static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
-                                        coro::Shape &Shape,
-                             SmallVectorImpl<AllocaInst*> &AllocasToPromote) {
+static void
+eliminateSwiftErrorArgument(Function &F, Argument &Arg, coro::Shape &Shape,
+                            SmallVectorImpl<AllocaInst *> &AllocasToPromote) {
   IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHIOrDbg());
 
   auto ArgTy = cast<PointerType>(Arg.getType());
@@ -2658,14 +2658,14 @@ static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
 
   // Find all the suspends in the function and save and restore around them.
   for (auto *Suspend : Shape.CoroSuspends) {
-    (void) emitSetAndGetSwiftErrorValueAround(Suspend, Alloca, Shape);
+    (void)emitSetAndGetSwiftErrorValueAround(Suspend, Alloca, Shape);
   }
 
   // Find all the coro.ends in the function and restore the error value.
   for (auto *End : Shape.CoroEnds) {
     Builder.SetInsertPoint(End);
     auto FinalValue = Builder.CreateLoad(ValueTy, Alloca);
-    (void) emitSetSwiftErrorValue(Builder, FinalValue, Shape);
+    (void)emitSetSwiftErrorValue(Builder, FinalValue, Shape);
   }
 
   // Now we can use the alloca logic.
@@ -2676,11 +2676,12 @@ static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
 /// Eliminate all problematic uses of swifterror arguments and allocas
 /// from the function.  We'll fix them up later when splitting the function.
 static void eliminateSwiftError(Function &F, coro::Shape &Shape) {
-  SmallVector<AllocaInst*, 4> AllocasToPromote;
+  SmallVector<AllocaInst *, 4> AllocasToPromote;
 
   // Look for a swifterror argument.
   for (auto &Arg : F.args()) {
-    if (!Arg.hasSwiftErrorAttr()) continue;
+    if (!Arg.hasSwiftErrorAttr())
+      continue;
 
     eliminateSwiftErrorArgument(F, Arg, Shape, AllocasToPromote);
     break;
@@ -2689,7 +2690,8 @@ static void eliminateSwiftError(Function &F, coro::Shape &Shape) {
   // Look for swifterror allocas.
   for (auto &Inst : F.getEntryBlock()) {
     auto Alloca = dyn_cast<AllocaInst>(&Inst);
-    if (!Alloca || !Alloca->isSwiftError()) continue;
+    if (!Alloca || !Alloca->isSwiftError())
+      continue;
 
     // Clear the swifterror flag.
     Alloca->setSwiftError(false);
@@ -2772,7 +2774,7 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
   }
 
   for (Instruction &I : instructions(F)) {
-    AllocaInst* AI = dyn_cast<AllocaInst>(&I);
+    AllocaInst *AI = dyn_cast<AllocaInst>(&I);
     if (!AI)
       continue;
 
@@ -2780,8 +2782,8 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
       bool Valid = true;
       SmallVector<Instruction *, 1> Lifetimes;
 
-      auto isLifetimeStart = [](Instruction* I) {
-        if (auto* II = dyn_cast<IntrinsicInst>(I))
+      auto isLifetimeStart = [](Instruction *I) {
+        if (auto *II = dyn_cast<IntrinsicInst>(I))
           return II->getIntrinsicID() == Intrinsic::lifetime_start;
         return false;
       };
@@ -3100,8 +3102,7 @@ void coro::buildCoroutineFrame(
   if (Shape.ABI != coro::ABI::Async || !Shape.CoroSuspends.empty())
     eliminateSwiftError(F, Shape);
 
-  if (Shape.ABI == coro::ABI::Switch &&
-      Shape.SwitchLowering.PromiseAlloca) {
+  if (Shape.ABI == coro::ABI::Switch && Shape.SwitchLowering.PromiseAlloca) {
     Shape.getSwitchCoroId()->clearPromise();
   }
 
@@ -3150,8 +3151,8 @@ void coro::buildCoroutineFrame(
 
   const DominatorTree DT(F);
   FrameDataInfo FrameData;
-  SmallVector<CoroAllocaAllocInst*, 4> LocalAllocas;
-  SmallVector<Instruction*, 4> DeadInstructions;
+  SmallVector<CoroAllocaAllocInst *, 4> LocalAllocas;
+  SmallVector<Instruction *, 4> DeadInstructions;
   if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
       Shape.ABI != coro::ABI::RetconOnce)
     sinkLifetimeStartMarkers(F, Shape, Checker, DT);
