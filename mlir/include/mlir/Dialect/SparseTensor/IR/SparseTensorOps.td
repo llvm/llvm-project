@@ -1603,7 +1603,7 @@ def IterateOp : SparseTensor_Op<"iterate",
     }
     std::optional<BlockArgument> getLvlCrd(Level lvl) {
       if (getCrdUsedLvls()[lvl]) {
-        uint64_t mask = (1 << lvl) - 1;
+        uint64_t mask = (static_cast<uint64_t>(0x01u) << lvl) - 1;
         return getCrds()[llvm::popcount(mask & getCrdUsedLvls())];
       }
       return std::nullopt;
