@@ -56,3 +56,14 @@ TEST(CopyAndUpdateDescriptor, Basic) {
   EXPECT_EQ(result.GetDimension(1).Extent(), x->GetDimension(1).Extent());
   EXPECT_EQ(result.GetDimension(1).LowerBound(), 1);
 }
+
+TEST(IsAssumedSize, Basic) {
+  auto x{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{2, 3}, std::vector<std::int32_t>{0, 1, 2, 3, 4, 5})};
+  EXPECT_FALSE(RTNAME(IsAssumedSize)(*x));
+  x->GetDimension(1).SetExtent(-1);
+  EXPECT_TRUE(RTNAME(IsAssumedSize)(*x));
+  auto scalar{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{}, std::vector<std::int32_t>{0})};
+  EXPECT_FALSE(RTNAME(IsAssumedSize)(*scalar));
+}

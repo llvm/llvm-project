@@ -115,6 +115,12 @@ static bool shouldInspect(MachineInstr &MI) {
   return isDomainMVE(&MI) || isVectorPredicate(&MI) || hasVPRUse(MI);
 }
 
+static bool isHorizontalReduction(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::HorizontalReduction) != 0;
+}
+
 namespace {
 
   using InstSet = SmallPtrSetImpl<MachineInstr *>;
@@ -251,6 +257,9 @@ namespace {
       SetVector<MachineInstr *> &Predicates = PredicatedInsts[MI];
       if (Exclusive && Predicates.size() != 1)
         return false;
+      // We do not know how to convert an else predicate of a VCTP.
+      if (getVPTInstrPredicate(*MI) == ARMVCC::Else)
+        return false;
       return llvm::any_of(Predicates, isVCTP);
     }
 
@@ -271,6 +280,16 @@ namespace {
 
       if (VPT->getOpcode() == ARM::MVE_VPST)
         return false;
+
+      // If the VPT block does not define something that is an "output", then
+      // the tail-predicated version will just perform a subset of the original
+      // vpt block, where the last lanes should not be used.
+      if (isVPTOpcode(VPT->getOpcode()) &&
+          all_of(Block.getInsts(), [](const MachineInstr *MI) {
+            return !MI->mayStore() && !MI->mayLoad() &&
+                   !isHorizontalReduction(*MI) && !isVCTP(MI);
+          }))
+        return true;
 
       auto IsOperandPredicated = [&](MachineInstr *MI, unsigned Idx) {
         MachineInstr *Op = RDA.getMIOperand(MI, MI->getOperand(Idx));
@@ -305,8 +324,12 @@ namespace {
       // isn't predicated on entry, check whether the vctp is within the block
       // and that all other instructions are then predicated on it.
       for (auto &Block : Blocks) {
-        if (isEntryPredicatedOnVCTP(Block, false) ||
-            hasImplicitlyValidVPT(Block, RDA))
+        if (isEntryPredicatedOnVCTP(Block, false) &&
+            !any_of(drop_begin(Block.getInsts()), [](const MachineInstr *MI) {
+              return getVPTInstrPredicate(*MI) == ARMVCC::Else;
+            }))
+          continue;
+        if (hasImplicitlyValidVPT(Block, RDA))
           continue;
 
         SmallVectorImpl<MachineInstr *> &Insts = Block.getInsts();
@@ -804,12 +827,6 @@ static bool producesDoubleWidthResult(const MachineInstr &MI) {
   const MCInstrDesc &MCID = MI.getDesc();
   uint64_t Flags = MCID.TSFlags;
   return (Flags & ARMII::DoubleWidthResult) != 0;
-}
-
-static bool isHorizontalReduction(const MachineInstr &MI) {
-  const MCInstrDesc &MCID = MI.getDesc();
-  uint64_t Flags = MCID.TSFlags;
-  return (Flags & ARMII::HorizontalReduction) != 0;
 }
 
 // Can this instruction generate a non-zero result when given only zeroed

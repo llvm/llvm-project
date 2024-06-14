@@ -442,6 +442,16 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   return NewBB;
 }
 
+void VPIRBasicBlock::execute(VPTransformState *State) {
+  assert(getHierarchicalPredecessors().empty() &&
+         "VPIRBasicBlock cannot have predecessors at the moment");
+  assert(getHierarchicalSuccessors().empty() &&
+         "VPIRBasicBlock cannot have successors at the moment");
+
+  State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
+  executeRecipes(State, getIRBasicBlock());
+}
+
 void VPBasicBlock::execute(VPTransformState *State) {
   bool Replica = State->Instance && !State->Instance->isFirstIteration();
   VPBasicBlock *PrevVPBB = State->CFG.PrevVPBB;
@@ -499,16 +509,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
   }
 
   // 2. Fill the IR basic block with IR instructions.
-  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-                    << " in BB:" << NewBB->getName() << '\n');
-
-  State->CFG.VPBB2IRBB[this] = NewBB;
-  State->CFG.PrevVPBB = this;
-
-  for (VPRecipeBase &Recipe : Recipes)
-    Recipe.execute(*State);
-
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *NewBB);
+  executeRecipes(State, NewBB);
 }
 
 void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
@@ -519,6 +520,19 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
     for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
       R.setOperand(I, NewValue);
   }
+}
+
+void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
+  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
+                    << " in BB:" << BB->getName() << '\n');
+
+  State->CFG.VPBB2IRBB[this] = BB;
+  State->CFG.PrevVPBB = this;
+
+  for (VPRecipeBase &Recipe : Recipes)
+    Recipe.execute(*State);
+
+  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *BB);
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
@@ -769,8 +783,9 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE) {
-  VPBasicBlock *Preheader = new VPBasicBlock("ph");
+VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
+                                   BasicBlock *PH) {
+  VPIRBasicBlock *Preheader = new VPIRBasicBlock(PH);
   VPBasicBlock *VecPreheader = new VPBasicBlock("vector.ph");
   auto Plan = std::make_unique<VPlan>(Preheader, VecPreheader);
   Plan->TripCount =

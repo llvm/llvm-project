@@ -34,13 +34,39 @@ define <8 x i32> @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %r
 ;
 ; NONEON-NOSVE-LABEL: fixed_bitselect_v8i32:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    ldp q0, q1, [x0]
+; NONEON-NOSVE-NEXT:    ldp q1, q0, [x0]
 ; NONEON-NOSVE-NEXT:    ldp q3, q2, [x1]
 ; NONEON-NOSVE-NEXT:    ldp q5, q4, [x2]
-; NONEON-NOSVE-NEXT:    neg v1.4s, v1.4s
-; NONEON-NOSVE-NEXT:    neg v0.4s, v0.4s
+; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-64]!
+; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
+; NONEON-NOSVE-NEXT:    neg w8, w8
+; NONEON-NOSVE-NEXT:    str w8, [sp, #60]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
+; NONEON-NOSVE-NEXT:    neg w8, w8
+; NONEON-NOSVE-NEXT:    str w8, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
+; NONEON-NOSVE-NEXT:    neg w8, w8
+; NONEON-NOSVE-NEXT:    str w8, [sp, #52]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
+; NONEON-NOSVE-NEXT:    neg w8, w8
+; NONEON-NOSVE-NEXT:    str w8, [sp, #48]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #12]
+; NONEON-NOSVE-NEXT:    neg w8, w8
+; NONEON-NOSVE-NEXT:    str w8, [sp, #44]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #8]
+; NONEON-NOSVE-NEXT:    neg w8, w8
+; NONEON-NOSVE-NEXT:    str w8, [sp, #40]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp, #4]
+; NONEON-NOSVE-NEXT:    neg w8, w8
+; NONEON-NOSVE-NEXT:    str w8, [sp, #36]
+; NONEON-NOSVE-NEXT:    ldr w8, [sp]
+; NONEON-NOSVE-NEXT:    neg w8, w8
+; NONEON-NOSVE-NEXT:    str w8, [sp, #32]
+; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:    bsl v0.16b, v3.16b, v5.16b
 ; NONEON-NOSVE-NEXT:    bsl v1.16b, v2.16b, v4.16b
+; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %pre_cond = load <8 x i32>, ptr %pre_cond_ptr
   %left = load <8 x i32>, ptr %left_ptr

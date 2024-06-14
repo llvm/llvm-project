@@ -861,26 +861,28 @@ static bool ValuesOverlap(std::vector<ValueEqualityComparisonCase> &C1,
 
 // Set branch weights on SwitchInst. This sets the metadata if there is at
 // least one non-zero weight.
-static void setBranchWeights(SwitchInst *SI, ArrayRef<uint32_t> Weights) {
+static void setBranchWeights(SwitchInst *SI, ArrayRef<uint32_t> Weights,
+                             bool IsExpected) {
   // Check that there is at least one non-zero weight. Otherwise, pass
   // nullptr to setMetadata which will erase the existing metadata.
   MDNode *N = nullptr;
   if (llvm::any_of(Weights, [](uint32_t W) { return W != 0; }))
-    N = MDBuilder(SI->getParent()->getContext()).createBranchWeights(Weights);
+    N = MDBuilder(SI->getParent()->getContext())
+            .createBranchWeights(Weights, IsExpected);
   SI->setMetadata(LLVMContext::MD_prof, N);
 }
 
 // Similar to the above, but for branch and select instructions that take
 // exactly 2 weights.
 static void setBranchWeights(Instruction *I, uint32_t TrueWeight,
-                             uint32_t FalseWeight) {
+                             uint32_t FalseWeight, bool IsExpected) {
   assert(isa<BranchInst>(I) || isa<SelectInst>(I));
   // Check that there is at least one non-zero weight. Otherwise, pass
   // nullptr to setMetadata which will erase the existing metadata.
   MDNode *N = nullptr;
   if (TrueWeight || FalseWeight)
     N = MDBuilder(I->getParent()->getContext())
-            .createBranchWeights(TrueWeight, FalseWeight);
+            .createBranchWeights(TrueWeight, FalseWeight, IsExpected);
   I->setMetadata(LLVMContext::MD_prof, N);
 }
 
@@ -1338,7 +1340,7 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
 
     SmallVector<uint32_t, 8> MDWeights(Weights.begin(), Weights.end());
 
-    setBranchWeights(NewSI, MDWeights);
+    setBranchWeights(NewSI, MDWeights, /*IsExpected=*/false);
   }
 
   EraseTerminatorAndDCECond(PTI);
@@ -1930,7 +1932,7 @@ static bool replacingOperandWithVariableIsCheap(const Instruction *I,
 // PHI node (because an operand varies in each input block), add to PHIOperands.
 static bool canSinkInstructions(
     ArrayRef<Instruction *> Insts,
-    DenseMap<Instruction *, SmallVector<Value *, 4>> &PHIOperands) {
+    DenseMap<const Use *, SmallVector<Value *, 4>> &PHIOperands) {
   // Prune out obviously bad instructions to move. Each instruction must have
   // exactly zero or one use, and we check later that use is by a single, common
   // PHI instruction in the successor.
@@ -1981,20 +1983,17 @@ static bool canSinkInstructions(
       return false;
   }
 
-  // All instructions in Insts are known to be the same opcode. If they have a
-  // use, check that the only user is a PHI or in the same block as the
-  // instruction, because if a user is in the same block as an instruction we're
-  // contemplating sinking, it must already be determined to be sinkable.
+  // Uses must be consistent: If I0 is used in a phi node in the sink target,
+  // then the other phi operands must match the instructions from Insts. This
+  // also has to hold true for any phi nodes that would be created as a result
+  // of sinking. Both of these cases are represented by PhiOperands.
   if (HasUse) {
-    auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
-    auto *Succ = I0->getParent()->getTerminator()->getSuccessor(0);
-    if (!all_of(Insts, [&PNUse,&Succ](const Instruction *I) -> bool {
-          auto *U = cast<Instruction>(*I->user_begin());
-          return (PNUse &&
-                  PNUse->getParent() == Succ &&
-                  PNUse->getIncomingValueForBlock(I->getParent()) == I) ||
-                 U->getParent() == I->getParent();
-        }))
+    const Use &U = *I0->use_begin();
+    auto It = PHIOperands.find(&U);
+    if (It == PHIOperands.end())
+      // There may be uses in other blocks when sinking into a loop header.
+      return false;
+    if (!equal(Insts, It->second))
       return false;
   }
 
@@ -2061,8 +2060,9 @@ static bool canSinkInstructions(
           !canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
         return false;
+      auto &Ops = PHIOperands[&I0->getOperandUse(OI)];
       for (auto *I : Insts)
-        PHIOperands[I].push_back(I->getOperand(OI));
+        Ops.push_back(I->getOperand(OI));
     }
   }
   return true;
@@ -2071,7 +2071,7 @@ static bool canSinkInstructions(
 // Assuming canSinkInstructions(Blocks) has returned true, sink the last
 // instruction of every block in Blocks to their common successor, commoning
 // into one instruction.
-static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
+static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   auto *BBEnd = Blocks[0]->getTerminator()->getSuccessor(0);
 
   // canSinkInstructions returning true guarantees that every block has at
@@ -2086,23 +2086,10 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       Insts.push_back(I);
   }
 
-  // The only checking we need to do now is that all users of all instructions
-  // are the same PHI node. canSinkInstructions should have checked this but
-  // it is slightly over-aggressive - it gets confused by commutative
-  // instructions so double-check it here.
-  Instruction *I0 = Insts.front();
-  if (!I0->user_empty()) {
-    auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
-    if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
-          auto *U = cast<Instruction>(*I->user_begin());
-          return U == PNUse;
-        }))
-      return false;
-  }
-
   // We don't need to do any more checking here; canSinkInstructions should
   // have done it all for us.
   SmallVector<Value*, 4> NewOperands;
+  Instruction *I0 = Insts.front();
   for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O) {
     // This check is different to that in canSinkInstructions. There, we
     // cared about the global view once simplifycfg (and instcombine) have
@@ -2170,8 +2157,6 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     I->replaceAllUsesWith(I0);
     I->eraseFromParent();
   }
-
-  return true;
 }
 
 namespace {
@@ -2312,9 +2297,19 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   // carry on. If we can sink an instruction but need to PHI-merge some operands
   // (because they're not identical in each instruction) we add these to
   // PHIOperands.
+  // We prepopulate PHIOperands with the phis that already exist in BB.
+  DenseMap<const Use *, SmallVector<Value *, 4>> PHIOperands;
+  for (PHINode &PN : BB->phis()) {
+    SmallDenseMap<BasicBlock *, const Use *, 4> IncomingVals;
+    for (const Use &U : PN.incoming_values())
+      IncomingVals.insert({PN.getIncomingBlock(U), &U});
+    auto &Ops = PHIOperands[IncomingVals[UnconditionalPreds[0]]];
+    for (BasicBlock *Pred : UnconditionalPreds)
+      Ops.push_back(*IncomingVals[Pred]);
+  }
+
   int ScanIdx = 0;
   SmallPtrSet<Value*,4> InstructionsToSink;
-  DenseMap<Instruction*, SmallVector<Value*,4>> PHIOperands;
   LockstepReverseIterator LRI(UnconditionalPreds);
   while (LRI.isValid() &&
          canSinkInstructions(*LRI, PHIOperands)) {
@@ -2336,20 +2331,19 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     // actually sink before encountering instruction that is unprofitable to
     // sink?
     auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
-      unsigned NumPHIdValues = 0;
-      for (auto *I : *LRI)
-        for (auto *V : PHIOperands[I]) {
-          if (!InstructionsToSink.contains(V))
-            ++NumPHIdValues;
+      unsigned NumPHIInsts = 0;
+      for (Use &U : (*LRI)[0]->operands()) {
+        auto It = PHIOperands.find(&U);
+        if (It != PHIOperands.end() && !all_of(It->second, [&](Value *V) {
+              return InstructionsToSink.contains(V);
+            })) {
+          ++NumPHIInsts;
           // FIXME: this check is overly optimistic. We may end up not sinking
           // said instruction, due to the very same profitability check.
           // See @creating_too_many_phis in sink-common-code.ll.
         }
-      LLVM_DEBUG(dbgs() << "SINK: #phid values: " << NumPHIdValues << "\n");
-      unsigned NumPHIInsts = NumPHIdValues / UnconditionalPreds.size();
-      if ((NumPHIdValues % UnconditionalPreds.size()) != 0)
-        NumPHIInsts++;
-
+      }
+      LLVM_DEBUG(dbgs() << "SINK: #phi insts: " << NumPHIInsts << "\n");
       return NumPHIInsts <= 1;
     };
 
@@ -2474,13 +2468,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     // sink is always at index 0.
     LRI.reset();
 
-    if (!sinkLastInstruction(UnconditionalPreds)) {
-      LLVM_DEBUG(
-          dbgs()
-          << "SINK: stopping here, failed to actually sink instruction!\n");
-      break;
-    }
-
+    sinkLastInstruction(UnconditionalPreds);
     NumSinkCommonInstrs++;
     Changed = true;
   }
@@ -3831,7 +3819,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     FitWeights(NewWeights);
 
     SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
-    setBranchWeights(PBI, MDWeights[0], MDWeights[1]);
+    setBranchWeights(PBI, MDWeights[0], MDWeights[1], /*IsExpected=*/false);
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
     // could replace PBI's branch probabilities with BI's.
@@ -4568,7 +4556,7 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     // Halve the weights if any of them cannot fit in an uint32_t
     FitWeights(NewWeights);
 
-    setBranchWeights(PBI, NewWeights[0], NewWeights[1]);
+    setBranchWeights(PBI, NewWeights[0], NewWeights[1], /*IsExpected=*/false);
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
@@ -4604,7 +4592,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
         FitWeights(NewWeights);
 
-        setBranchWeights(NV, NewWeights[0], NewWeights[1]);
+        setBranchWeights(NV, NewWeights[0], NewWeights[1],
+                         /*IsExpected=*/false);
       }
     }
   }
@@ -4667,7 +4656,7 @@ bool SimplifyCFGOpt::SimplifyTerminatorOnSelect(Instruction *OldTerm,
       // Create a conditional branch sharing the condition of the select.
       BranchInst *NewBI = Builder.CreateCondBr(Cond, TrueBB, FalseBB);
       if (TrueWeight != FalseWeight)
-        setBranchWeights(NewBI, TrueWeight, FalseWeight);
+        setBranchWeights(NewBI, TrueWeight, FalseWeight, /*IsExpected=*/false);
     }
   } else if (KeepEdge1 && (KeepEdge2 || TrueBB == FalseBB)) {
     // Neither of the selected blocks were successors, so this
@@ -5617,7 +5606,7 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
         TrueWeight /= 2;
         FalseWeight /= 2;
       }
-      setBranchWeights(NewBI, TrueWeight, FalseWeight);
+      setBranchWeights(NewBI, TrueWeight, FalseWeight, /*IsExpected=*/false);
     }
   }
 
@@ -6743,8 +6732,25 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     TableSize =
         (MaxCaseVal->getValue() - MinCaseVal->getValue()).getLimitedValue() + 1;
 
+  // If the default destination is unreachable, or if the lookup table covers
+  // all values of the conditional variable, branch directly to the lookup table
+  // BB. Otherwise, check that the condition is within the case range.
+  bool DefaultIsReachable = !SI->defaultDestUndefined();
+
   bool TableHasHoles = (NumResults < TableSize);
-  bool NeedMask = (TableHasHoles && !HasDefaultResults);
+
+  // If the table has holes but the default destination doesn't produce any
+  // constant results, the lookup table entries corresponding to the holes will
+  // contain undefined values.
+  bool AllHolesAreUndefined = TableHasHoles && !HasDefaultResults;
+
+  // If the default destination doesn't produce a constant result but is still
+  // reachable, and the lookup table has holes, we need to use a mask to
+  // determine if the current index should load from the lookup table or jump
+  // to the default case.
+  // The mask is unnecessary if the table has holes but the default destination
+  // is unreachable, as in that case the holes must also be unreachable.
+  bool NeedMask = AllHolesAreUndefined && DefaultIsReachable;
   if (NeedMask) {
     // As an extra penalty for the validity test we require more cases.
     if (SI->getNumCases() < 4) // FIXME: Find best threshold value (benchmark).
@@ -6765,12 +6771,6 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   assert(MaxTableSize >= TableSize &&
          "It is impossible for a switch to have more entries than the max "
          "representable value of its input integer type's size.");
-
-  // If the default destination is unreachable, or if the lookup table covers
-  // all values of the conditional variable, branch directly to the lookup table
-  // BB. Otherwise, check that the condition is within the case range.
-  bool DefaultIsReachable =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
 
   // Create the BB that does the lookups.
   Module &Mod = *CommonDest->getParent()->getParent();
@@ -6895,8 +6895,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   for (PHINode *PHI : PHIs) {
     const ResultListTy &ResultList = ResultLists[PHI];
 
-    // If using a bitmask, use any value to fill the lookup table holes.
-    Constant *DV = NeedMask ? ResultLists[PHI][0].second : DefaultResults[PHI];
+    // Use any value to fill the lookup table holes.
+    Constant *DV =
+        AllHolesAreUndefined ? ResultLists[PHI][0].second : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
                             DL, FuncName);

@@ -10,29 +10,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Interpreter/Interpreter.h"
+#include "InterpreterTestFixture.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Mangle.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "clang/Interpreter/Interpreter.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
-
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/TargetSelect.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
-
-#if defined(_AIX)
-#define CLANG_INTERPRETER_NO_SUPPORT_EXEC
-#endif
 
 int Global = 42;
 // JIT reports symbol not found on Windows without the visibility attribute.
@@ -40,6 +33,11 @@ REPL_EXTERNAL_VISIBILITY int getGlobal() { return Global; }
 REPL_EXTERNAL_VISIBILITY void setGlobal(int val) { Global = val; }
 
 namespace {
+
+class InterpreterTest : public InterpreterTestBase {
+  // TODO: Collect common variables and utility functions here
+};
+
 using Args = std::vector<const char *>;
 static std::unique_ptr<Interpreter>
 createInterpreter(const Args &ExtraArgs = {},
@@ -54,30 +52,11 @@ createInterpreter(const Args &ExtraArgs = {},
   return cantFail(clang::Interpreter::create(std::move(CI)));
 }
 
-static bool HostSupportsJit() {
-  auto J = llvm::orc::LLJITBuilder().create();
-  if (J)
-    return true;
-  LLVMConsumeError(llvm::wrap(J.takeError()));
-  return false;
-}
-
-struct LLVMInitRAII {
-  LLVMInitRAII() {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-  }
-  ~LLVMInitRAII() { llvm::llvm_shutdown(); }
-} LLVMInit;
-
 static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
-TEST(InterpreterTest, Sanity) {
-  if (!HostSupportsJit())
-    GTEST_SKIP();
-
+TEST_F(InterpreterTest, Sanity) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   using PTU = PartialTranslationUnit;
@@ -93,14 +72,7 @@ static std::string DeclToString(Decl *D) {
   return llvm::cast<NamedDecl>(D)->getQualifiedNameAsString();
 }
 
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(InterpreterTest, DISABLED_IncrementalInputTopLevelDecls) {
-#else
-TEST(InterpreterTest, IncrementalInputTopLevelDecls) {
-#endif
-  if (!HostSupportsJit())
-    GTEST_SKIP();
-
+TEST_F(InterpreterTest, IncrementalInputTopLevelDecls) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
   auto R1 = Interp->Parse("int var1 = 42; int f() { return var1; }");
   // gtest doesn't expand into explicit bool conversions.
@@ -117,14 +89,7 @@ TEST(InterpreterTest, IncrementalInputTopLevelDecls) {
   EXPECT_EQ("var2", DeclToString(*R2DeclRange.begin()));
 }
 
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(InterpreterTest, DISABLED_Errors) {
-#else
-TEST(InterpreterTest, Errors) {
-#endif
-  if (!HostSupportsJit())
-    GTEST_SKIP();
-
+TEST_F(InterpreterTest, Errors) {
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -147,14 +112,8 @@ TEST(InterpreterTest, Errors) {
 // Here we test whether the user can mix declarations and statements. The
 // interpreter should be smart enough to recognize the declarations from the
 // statements and wrap the latter into a declaration, producing valid code.
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(InterpreterTest, DISABLED_DeclsAndStatements) {
-#else
-TEST(InterpreterTest, DeclsAndStatements) {
-#endif
-  if (!HostSupportsJit())
-    GTEST_SKIP();
 
+TEST_F(InterpreterTest, DeclsAndStatements) {
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -176,14 +135,7 @@ TEST(InterpreterTest, DeclsAndStatements) {
   EXPECT_TRUE(!!R2);
 }
 
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(InterpreterTest, DISABLED_UndoCommand) {
-#else
-TEST(InterpreterTest, UndoCommand) {
-#endif
-  if (!HostSupportsJit())
-    GTEST_SKIP();
-
+TEST_F(InterpreterTest, UndoCommand) {
   Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
 
   // Create the diagnostic engine with unowned consumer.
@@ -237,14 +189,7 @@ static std::string MangleName(NamedDecl *ND) {
   return RawStr.str();
 }
 
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(InterpreterTest, DISABLED_FindMangledNameSymbol) {
-#else
-TEST(InterpreterTest, FindMangledNameSymbol) {
-#endif
-  if (!HostSupportsJit())
-    GTEST_SKIP();
-
+TEST_F(InterpreterTest, FindMangledNameSymbol) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   auto &PTU(cantFail(Interp->Parse("int f(const char*) {return 0;}")));
@@ -298,14 +243,7 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
   return R.getFoundDecl();
 }
 
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(InterpreterTest, DISABLED_InstantiateTemplate) {
-#else
-TEST(InterpreterTest, InstantiateTemplate) {
-#endif
-  if (!HostSupportsJit())
-    GTEST_SKIP();
-
+TEST_F(InterpreterTest, InstantiateTemplate) {
   // FIXME: We cannot yet handle delayed template parsing. If we run with
   // -fdelayed-template-parsing we try adding the newly created decl to the
   // active PTU which causes an assert.
@@ -344,16 +282,12 @@ TEST(InterpreterTest, InstantiateTemplate) {
   EXPECT_EQ(42, fn(NewA.getPtr()));
 }
 
-#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
-TEST(InterpreterTest, DISABLED_Value) {
-#else
-TEST(InterpreterTest, Value) {
-#endif
-  // We cannot execute on the platform.
-  if (!HostSupportsJit())
-    GTEST_SKIP();
-
-  std::unique_ptr<Interpreter> Interp = createInterpreter();
+// This test exposes an ARM specific problem in the interpreter, see
+// https://github.com/llvm/llvm-project/issues/94994.
+#ifndef __arm__
+TEST_F(InterpreterTest, Value) {
+  std::vector<const char *> Args = {"-fno-sized-deallocation"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
   Value V1;
   llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));
@@ -449,4 +383,6 @@ TEST(InterpreterTest, Value) {
   EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
   EXPECT_TRUE(V9.isManuallyAlloc());
 }
+#endif /* ifndef __arm__ */
+
 } // end anonymous namespace

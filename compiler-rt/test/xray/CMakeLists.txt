@@ -29,4 +29,3 @@ endif()
 add_lit_testsuite(check-xray "Running the XRay tests"
   ${XRAY_TESTSUITES}
   DEPENDS ${XRAY_TEST_DEPS})
-set_target_properties(check-xray PROPERTIES FOLDER "Compiler-RT Misc")

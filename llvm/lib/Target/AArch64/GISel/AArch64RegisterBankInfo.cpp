@@ -257,6 +257,7 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::QQRegClassID:
   case AArch64::QQQRegClassID:
   case AArch64::QQQQRegClassID:
+  case AArch64::ZPRRegClassID:
     return getRegBank(AArch64::FPRRegBankID);
   case AArch64::GPR32commonRegClassID:
   case AArch64::GPR32RegClassID:
@@ -493,6 +494,20 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
            SrcTy.getElementCount().getFixedValue() >= 4;
   }
   }
+}
+
+bool AArch64RegisterBankInfo::isPHIWithFPContraints(
+    const MachineInstr &MI, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI, const unsigned Depth) const {
+  if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
+    return false;
+
+  return any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                [&](const MachineInstr &UseMI) {
+                  if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
+                    return true;
+                  return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+                });
 }
 
 bool AArch64RegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
@@ -743,12 +758,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MO.getReg());
     if (!Ty.isValid())
       continue;
-    OpSize[Idx] = Ty.getSizeInBits();
+    OpSize[Idx] = Ty.getSizeInBits().getKnownMinValue();
 
-    // As a top-level guess, vectors go in FPRs, scalars and pointers in GPRs.
+    // As a top-level guess, vectors including both scalable and non-scalable
+    // ones go in FPRs, scalars and pointers in GPRs.
     // For floating-point instructions, scalars go in FPRs.
-    if (Ty.isVector() || isPreISelGenericFloatingPointOpcode(Opc) ||
-        Ty.getSizeInBits() > 64)
+    if (Ty.isVector())
+      OpRegBankIdx[Idx] = PMI_FirstFPR;
+    else if (isPreISelGenericFloatingPointOpcode(Opc) ||
+             Ty.getSizeInBits() > 64)
       OpRegBankIdx[Idx] = PMI_FirstFPR;
     else
       OpRegBankIdx[Idx] = PMI_FirstGPR;
@@ -847,13 +865,18 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // instead of blind map every scalar to GPR.
     if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](const MachineInstr &UseMI) {
-                 // If we have at least one direct use in a FP instruction,
+                 // If we have at least one direct or indirect use
+                 // in a FP instruction,
                  // assume this was a floating point load in the IR. If it was
                  // not, we would have had a bitcast before reaching that
                  // instruction.
                  //
                  // Int->FP conversion operations are also captured in
                  // onlyDefinesFP().
+
+                 if (isPHIWithFPContraints(UseMI, MRI, TRI))
+                   return true;
+
                  return onlyUsesFP(UseMI, MRI, TRI) ||
                         onlyDefinesFP(UseMI, MRI, TRI);
                }))

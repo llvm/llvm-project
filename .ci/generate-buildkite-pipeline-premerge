@@ -53,6 +53,8 @@ echo "Directories modified:" >&2
 echo "$modified_dirs" >&2
 
 function compute-projects-to-test() {
+  isForWindows=$1
+  shift
   projects=${@}
   for project in ${projects}; do
     echo "${project}"
@@ -63,12 +65,17 @@ function compute-projects-to-test() {
       done
     ;;
     llvm)
-      for p in bolt clang clang-tools-extra flang lld lldb mlir polly; do
+      for p in bolt clang clang-tools-extra lld lldb mlir polly; do
         echo $p
       done
+      # Flang is not stable in Windows CI at the moment
+      if [[ $isForWindows == 0 ]]; then
+        echo flang
+      fi
     ;;
     clang)
-      for p in clang-tools-extra compiler-rt lldb cross-project-tests; do
+      # lldb is temporarily removed to alleviate Linux pre-commit CI waiting times
+      for p in clang-tools-extra compiler-rt cross-project-tests; do
         echo $p
       done
     ;;
@@ -76,7 +83,10 @@ function compute-projects-to-test() {
       echo libc
     ;;
     mlir)
-      echo flang
+      # Flang is not stable in Windows CI at the moment
+      if [[ $isForWindows == 0 ]]; then
+        echo flang
+      fi
     ;;
     *)
       # Nothing to do
@@ -144,7 +154,6 @@ function exclude-linux() {
   for project in ${projects}; do
     case ${project} in
     cross-project-tests) ;; # tests failing
-    lldb)                ;; # tests failing
     openmp)              ;; # https://github.com/google/llvm-premerge-checks/issues/410
     *)
       echo "${project}"
@@ -161,7 +170,7 @@ function exclude-windows() {
     compiler-rt)         ;; # tests taking too long
     openmp)              ;; # TODO: having trouble with the Perl installation
     libc)                ;; # no Windows support
-    lldb)                ;; # tests failing
+    lldb)                ;; # custom environment requirements (https://github.com/llvm/llvm-project/pull/94208#issuecomment-2146256857)
     bolt)                ;; # tests are not supported yet
     *)
       echo "${project}"
@@ -204,7 +213,7 @@ function check-targets() {
       echo "check-unwind"
     ;;
     lldb)
-      echo "check-all" # TODO: check-lldb may not include all the LLDB tests?
+      echo "check-lldb"
     ;;
     pstl)
       echo "check-all"
@@ -241,7 +250,7 @@ fi
 all_projects="bolt clang clang-tools-extra compiler-rt cross-project-tests flang libc libclc lld lldb llvm mlir openmp polly pstl"
 modified_projects="$(keep-modified-projects ${all_projects})"
 
-linux_projects_to_test=$(exclude-linux $(compute-projects-to-test ${modified_projects}))
+linux_projects_to_test=$(exclude-linux $(compute-projects-to-test 0 ${modified_projects}))
 linux_check_targets=$(check-targets ${linux_projects_to_test} | sort | uniq)
 linux_projects=$(add-dependencies ${linux_projects_to_test} | sort | uniq)
 
@@ -249,7 +258,7 @@ linux_runtimes_to_test=$(compute-runtimes-to-test ${linux_projects_to_test})
 linux_runtime_check_targets=$(check-targets ${linux_runtimes_to_test} | sort | uniq)
 linux_runtimes=$(echo ${linux_runtimes_to_test} | sort | uniq)
 
-windows_projects_to_test=$(exclude-windows $(compute-projects-to-test ${modified_projects}))
+windows_projects_to_test=$(exclude-windows $(compute-projects-to-test 1 ${modified_projects}))
 windows_check_targets=$(check-targets ${windows_projects_to_test} | sort | uniq)
 windows_projects=$(add-dependencies ${windows_projects_to_test} | sort | uniq)
 

@@ -272,6 +272,13 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
     case Decoration::UserSemantic:
       printStringImm(MI, NumFixedOps, O);
       break;
+    case Decoration::HostAccessINTEL:
+      printOperand(MI, NumFixedOps, O);
+      if (NumFixedOps + 1 < MI->getNumOperands()) {
+        O << ' ';
+        printStringImm(MI, NumFixedOps + 1, O);
+      }
+      break;
     default:
       printRemainingVariableOps(MI, NumFixedOps, O, true);
       break;

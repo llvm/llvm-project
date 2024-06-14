@@ -170,7 +170,7 @@ LIBC_INLINE MemcmpReturnType cmp_uint32_t(uint32_t a, uint32_t b) {
 // otherwise. This implements the semantic of 'memcmp' when we know that 'a' and
 // 'b' differ.
 LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
   // On x86, the best strategy would be to use 'INT32_MAX' and 'INT32_MIN' for
   // positive and negative value respectively as they are one value apart:
   //   xor     eax, eax         <- free

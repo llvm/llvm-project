@@ -132,13 +132,13 @@ static cl::opt<bool>
 #ifndef NDEBUG
 static cl::list<std::string>
     SeedAllowList("attributor-seed-allow-list", cl::Hidden,
-                  cl::desc("Comma seperated list of attribute names that are "
+                  cl::desc("Comma separated list of attribute names that are "
                            "allowed to be seeded."),
                   cl::CommaSeparated);
 
 static cl::list<std::string> FunctionSeedAllowList(
     "attributor-function-seed-allow-list", cl::Hidden,
-    cl::desc("Comma seperated list of function names that are "
+    cl::desc("Comma separated list of function names that are "
              "allowed to be seeded."),
     cl::CommaSeparated);
 #endif
