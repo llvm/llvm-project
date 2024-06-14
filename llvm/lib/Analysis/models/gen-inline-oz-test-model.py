@@ -130,9 +130,9 @@ def get_signature():
 def main(argv):
     assert len(argv) == 2 or (len(argv) == 3 and argv[2] == "never")
     model_path = argv[1]
-    
+
     print(f"Output model to: [{argv[1]}]")
-    
+
     constant_advice = 1
     if len(argv) == 3:
         constant_advice = 0
