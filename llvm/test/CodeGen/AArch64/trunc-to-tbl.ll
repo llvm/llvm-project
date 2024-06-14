@@ -74,8 +74,8 @@ define void @trunc_v16i32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    add x10, x9, #16
 ; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
 ; CHECK-BE-NEXT:    add x11, x9, #32
-; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
 ; CHECK-BE-NEXT:    add x9, x9, #48
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
 ; CHECK-BE-NEXT:    ld1 { v3.16b }, [x11]
 ; CHECK-BE-NEXT:    ld1 { v4.16b }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, x8, lsl #4
@@ -363,21 +363,21 @@ define void @trunc_v16i64_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-BE-NEXT:    add x9, x0, x8, lsl #7
 ; CHECK-BE-NEXT:    add x13, x9, #64
+; CHECK-BE-NEXT:    add x10, x9, #112
+; CHECK-BE-NEXT:    add x11, x9, #96
 ; CHECK-BE-NEXT:    add x12, x9, #80
 ; CHECK-BE-NEXT:    add x14, x9, #16
 ; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
 ; CHECK-BE-NEXT:    ld1 { v16.16b }, [x13]
-; CHECK-BE-NEXT:    add x11, x9, #96
 ; CHECK-BE-NEXT:    add x13, x9, #32
+; CHECK-BE-NEXT:    add x9, x9, #48
 ; CHECK-BE-NEXT:    ld1 { v2.16b }, [x14]
 ; CHECK-BE-NEXT:    ld1 { v17.16b }, [x12]
-; CHECK-BE-NEXT:    add x10, x9, #112
-; CHECK-BE-NEXT:    add x9, x9, #48
 ; CHECK-BE-NEXT:    ld1 { v3.16b }, [x13]
 ; CHECK-BE-NEXT:    ld1 { v18.16b }, [x11]
 ; CHECK-BE-NEXT:    ld1 { v4.16b }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #4
 ; CHECK-BE-NEXT:    ld1 { v19.16b }, [x10]
+; CHECK-BE-NEXT:    add x9, x1, x8, lsl #4
 ; CHECK-BE-NEXT:    add x8, x8, #1
 ; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v0.16b
@@ -510,8 +510,8 @@ define void @trunc_v8i64_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    add x10, x9, #16
 ; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
 ; CHECK-BE-NEXT:    add x11, x9, #32
-; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
 ; CHECK-BE-NEXT:    add x9, x9, #48
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
 ; CHECK-BE-NEXT:    ld1 { v3.16b }, [x11]
 ; CHECK-BE-NEXT:    ld1 { v4.16b }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, x8, lsl #3

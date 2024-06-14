@@ -463,9 +463,7 @@ define <4 x i32> @test_perfectshuffle_dupext_v4i32(<4 x i32> %a, <4 x i32> %b) n
 ; CHECK-GI-LABEL: test_perfectshuffle_dupext_v4i32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI35_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; CHECK-GI-NEXT:    ret
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
@@ -482,9 +480,7 @@ define <4 x float> @test_perfectshuffle_dupext_v4f32(<4 x float> %a, <4 x float>
 ; CHECK-GI-LABEL: test_perfectshuffle_dupext_v4f32:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; CHECK-GI-NEXT:    ret
   %r = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
@@ -504,14 +500,13 @@ define void @disguised_dup(<4 x float> %x, ptr %p1, ptr %p2) {
 ; CHECK-GI-LABEL: disguised_dup:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI37_1
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI37_1]
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI37_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI37_0
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI37_0]
-; CHECK-GI-NEXT:    tbl.16b v2, { v0, v1 }, v2
+; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v1
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI37_0]
+; CHECK-GI-NEXT:    tbl.16b v1, { v0, v1 }, v1
 ; CHECK-GI-NEXT:    str q0, [x0]
-; CHECK-GI-NEXT:    str q2, [x1]
+; CHECK-GI-NEXT:    str q1, [x1]
 ; CHECK-GI-NEXT:    ret
   %shuf = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 0>
   %dup = shufflevector <4 x float> %shuf, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 3>

@@ -21,121 +21,55 @@ define <16 x i8> @tbl1_16b(<16 x i8> %A, <16 x i8> %B) nounwind {
 }
 
 define <8 x i8> @tbl2_8b(<16 x i8> %A, <16 x i8> %B, <8 x i8> %C) {
-; CHECK-SD-LABEL: tbl2_8b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    tbl.8b v0, { v0, v1 }, v2
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbl2_8b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl.8b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbl2_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbl.8b v0, { v0, v1 }, v2
+; CHECK-NEXT:    ret
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> %A, <16 x i8> %B, <8 x i8> %C)
   ret <8 x i8> %tmp3
 }
 
 define <16 x i8> @tbl2_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C) {
-; CHECK-SD-LABEL: tbl2_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbl2_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbl2_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbl.16b v0, { v0, v1 }, v2
+; CHECK-NEXT:    ret
   %tmp3 = call <16 x i8> @llvm.aarch64.neon.tbl2.v16i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C)
   ret <16 x i8> %tmp3
 }
 
 define <8 x i8> @tbl3_8b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <8 x i8> %D) {
-; CHECK-SD-LABEL: tbl3_8b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    tbl.8b v0, { v0, v1, v2 }, v3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbl3_8b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    tbl.8b v0, { v0, v1, v2 }, v3
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbl3_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbl.8b v0, { v0, v1, v2 }, v3
+; CHECK-NEXT:    ret
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <8 x i8> %D)
   ret <8 x i8> %tmp3
 }
 
 define <16 x i8> @tbl3_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D) {
-; CHECK-SD-LABEL: tbl3_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    tbl.16b v0, { v0, v1, v2 }, v3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbl3_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1, v2 }, v3
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbl3_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbl.16b v0, { v0, v1, v2 }, v3
+; CHECK-NEXT:    ret
   %tmp3 = call <16 x i8> @llvm.aarch64.neon.tbl3.v16i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D)
   ret <16 x i8> %tmp3
 }
 
 define <8 x i8> @tbl4_8b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <8 x i8> %E) {
-; CHECK-SD-LABEL: tbl4_8b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    tbl.8b v0, { v0, v1, v2, v3 }, v4
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbl4_8b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    tbl.8b v0, { v0, v1, v2, v3 }, v4
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbl4_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbl.8b v0, { v0, v1, v2, v3 }, v4
+; CHECK-NEXT:    ret
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <8 x i8> %E)
   ret <8 x i8> %tmp3
 }
 
 define <16 x i8> @tbl4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E) {
-; CHECK-SD-LABEL: tbl4_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    tbl.16b v0, { v0, v1, v2, v3 }, v4
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbl4_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1, v2, v3 }, v4
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbl4_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbl.16b v0, { v0, v1, v2, v3 }, v4
+; CHECK-NEXT:    ret
   %tmp3 = call <16 x i8> @llvm.aarch64.neon.tbl4.v16i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E)
   ret <16 x i8> %tmp3
 }
@@ -173,11 +107,7 @@ define <8 x i8> @shuffled_tbl2_to_tbl4_v8i8(<16 x i8> %a, <16 x i8> %b, <16 x i8
 ; CHECK-SD-LABEL: shuffled_tbl2_to_tbl4_v8i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    adrp x8, .LCPI8_0
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-SD-NEXT:    ldr d4, [x8, :lo12:.LCPI8_0]
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
 ; CHECK-SD-NEXT:    tbl.8b v0, { v0, v1 }, v4
 ; CHECK-SD-NEXT:    tbl.8b v1, { v2, v3 }, v4
 ; CHECK-SD-NEXT:    mov.s v0[1], v1[1]
@@ -187,11 +117,7 @@ define <8 x i8> @shuffled_tbl2_to_tbl4_v8i8(<16 x i8> %a, <16 x i8> %b, <16 x i8
 ; CHECK-GI-LABEL: shuffled_tbl2_to_tbl4_v8i8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI8_1
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    ldr d4, [x8, :lo12:.LCPI8_1]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-GI-NEXT:    tbl.8b v0, { v0, v1 }, v4
 ; CHECK-GI-NEXT:    tbl.8b v1, { v2, v3 }, v4
@@ -262,23 +188,15 @@ define <8 x i8> @shuffled_tbl2_to_tbl4_v8i8(<16 x i8> %a, <16 x i8> %b, <16 x i8
 define <16 x i8> @shuffled_tbl2_to_tbl4(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; CHECK-SD-LABEL: shuffled_tbl2_to_tbl4:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    adrp x8, .LCPI9_0
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI9_0]
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    tbl.16b v0, { v0, v1, v2, v3 }, v4
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shuffled_tbl2_to_tbl4:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI9_1
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI9_1]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    adrp x8, .LCPI9_0
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v4
 ; CHECK-GI-NEXT:    tbl.16b v1, { v2, v3 }, v4
@@ -331,11 +249,7 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_first_mask(<16 x i8> %a, <16 x 
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmov s4, w0
 ; CHECK-SD-NEXT:    mov w8, #32 // =0x20
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    mov.b v4[1], w0
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    mov.b v4[2], w0
 ; CHECK-SD-NEXT:    mov.b v4[3], w0
 ; CHECK-SD-NEXT:    mov.b v4[4], w0
@@ -364,10 +278,6 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_first_mask(<16 x i8> %a, <16 x 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s4, w0
 ; CHECK-GI-NEXT:    mov w8, #255 // =0xff
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    mov.16b v5, v4
 ; CHECK-GI-NEXT:    mov.b v5[1], v4[0]
 ; CHECK-GI-NEXT:    mov.b v5[2], v4[0]
@@ -454,11 +364,7 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_first_mask2(<16 x i8> %a, <16 x
 ; CHECK-SD-LABEL: shuffled_tbl2_to_tbl4_nonconst_first_mask2:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    fmov s4, w8
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    mov.b v4[1], w8
 ; CHECK-SD-NEXT:    mov.b v4[2], w8
 ; CHECK-SD-NEXT:    mov.b v4[3], w8
@@ -489,12 +395,8 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_first_mask2(<16 x i8> %a, <16 x
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    fmov s6, w0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    fmov s4, w8
 ; CHECK-GI-NEXT:    mov w8, #255 // =0xff
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    mov.16b v5, v4
 ; CHECK-GI-NEXT:    mov.b v5[1], v4[0]
 ; CHECK-GI-NEXT:    mov.b v5[2], v4[0]
@@ -600,11 +502,7 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask(<16 x i8> %a, <16 x
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi.2d v4, #0xffffffffffffffff
 ; CHECK-SD-NEXT:    adrp x8, .LCPI12_0
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ldr q5, [x8, :lo12:.LCPI12_0]
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    tbl.16b v2, { v2, v3 }, v5
 ; CHECK-SD-NEXT:    mov.b v4[0], w0
 ; CHECK-SD-NEXT:    mov.b v4[1], w0
@@ -623,10 +521,6 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask(<16 x i8> %a, <16 x
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s4, w0
 ; CHECK-GI-NEXT:    mov w8, #255 // =0xff
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov.16b v5, v4
 ; CHECK-GI-NEXT:    mov.b v5[1], v4[0]
 ; CHECK-GI-NEXT:    mov.b v5[2], v4[0]
@@ -749,10 +643,6 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask2(<16 x i8> %a, <16 
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    dup.16b v4, w0
 ; CHECK-SD-NEXT:    mov w8, #255 // =0xff
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    mov.b v4[8], w8
 ; CHECK-SD-NEXT:    mov.b v4[9], w8
 ; CHECK-SD-NEXT:    mov.b v4[10], w8
@@ -772,12 +662,8 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask2(<16 x i8> %a, <16 
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s4, w0
 ; CHECK-GI-NEXT:    mov w8, #255 // =0xff
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    fmov s6, w8
 ; CHECK-GI-NEXT:    adrp x8, .LCPI13_1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov.16b v5, v4
 ; CHECK-GI-NEXT:    mov.b v5[1], v4[0]
 ; CHECK-GI-NEXT:    mov.b v5[2], v4[0]
@@ -879,23 +765,15 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_nonconst_second_mask2(<16 x i8> %a, <16 
 define <16 x i8> @shuffled_tbl2_to_tbl4_mixed_shuffle(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; CHECK-SD-LABEL: shuffled_tbl2_to_tbl4_mixed_shuffle:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    adrp x8, .LCPI14_0
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI14_0]
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    tbl.16b v0, { v0, v1, v2, v3 }, v4
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shuffled_tbl2_to_tbl4_mixed_shuffle:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI14_1
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI14_1]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v4
 ; CHECK-GI-NEXT:    tbl.16b v1, { v2, v3 }, v4
@@ -981,24 +859,16 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_mixed_shuffle(<16 x i8> %a, <16 x i8> %b
 define <16 x i8> @shuffled_tbl2_to_tbl4_mixed_tbl2_mask1(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; CHECK-SD-LABEL: shuffled_tbl2_to_tbl4_mixed_tbl2_mask1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    adrp x8, .LCPI15_0
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI15_0]
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    tbl.16b v0, { v0, v1, v2, v3 }, v4
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shuffled_tbl2_to_tbl4_mixed_tbl2_mask1:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI15_2
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI15_2]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI15_1
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    ldr q5, [x8, :lo12:.LCPI15_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v4
@@ -1085,24 +955,16 @@ define <16 x i8> @shuffled_tbl2_to_tbl4_mixed_tbl2_mask1(<16 x i8> %a, <16 x i8>
 define <16 x i8> @shuffled_tbl2_to_tbl4_mixed_tbl2_mask2(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <16 x i8> %d) {
 ; CHECK-SD-LABEL: shuffled_tbl2_to_tbl4_mixed_tbl2_mask2:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    adrp x8, .LCPI16_0
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI16_0]
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    tbl.16b v0, { v0, v1, v2, v3 }, v4
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shuffled_tbl2_to_tbl4_mixed_tbl2_mask2:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI16_2
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    ldr q4, [x8, :lo12:.LCPI16_2]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI16_1
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q2_q3 def $q2_q3
 ; CHECK-GI-NEXT:    ldr q5, [x8, :lo12:.LCPI16_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI16_0
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v4
@@ -1144,121 +1006,55 @@ define <16 x i8> @tbx1_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C) nounwind {
 }
 
 define <8 x i8> @tbx2_8b(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <8 x i8> %D) {
-; CHECK-SD-LABEL: tbx2_8b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2 def $q1_q2
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2 def $q1_q2
-; CHECK-SD-NEXT:    tbx.8b v0, { v1, v2 }, v3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbx2_8b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2 def $q1_q2
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2 def $q1_q2
-; CHECK-GI-NEXT:    tbx.8b v0, { v1, v2 }, v3
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbx2_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbx.8b v0, { v1, v2 }, v3
+; CHECK-NEXT:    ret
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <8 x i8> %D)
   ret <8 x i8> %tmp3
 }
 
 define <16 x i8> @tbx2_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D) {
-; CHECK-SD-LABEL: tbx2_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2 def $q1_q2
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2 def $q1_q2
-; CHECK-SD-NEXT:    tbx.16b v0, { v1, v2 }, v3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbx2_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2 def $q1_q2
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2 def $q1_q2
-; CHECK-GI-NEXT:    tbx.16b v0, { v1, v2 }, v3
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbx2_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbx.16b v0, { v1, v2 }, v3
+; CHECK-NEXT:    ret
   %tmp3 = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D)
   ret <16 x i8> %tmp3
 }
 
 define <8 x i8> @tbx3_8b(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <8 x i8> %E) {
-; CHECK-SD-LABEL: tbx3_8b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-SD-NEXT:    tbx.8b v0, { v1, v2, v3 }, v4
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbx3_8b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-GI-NEXT:    tbx.8b v0, { v1, v2, v3 }, v4
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbx3_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbx.8b v0, { v1, v2, v3 }, v4
+; CHECK-NEXT:    ret
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(< 8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <8 x i8> %E)
   ret <8 x i8> %tmp3
 }
 
 define <16 x i8> @tbx3_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E) {
-; CHECK-SD-LABEL: tbx3_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-SD-NEXT:    tbx.16b v0, { v1, v2, v3 }, v4
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbx3_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3 def $q1_q2_q3
-; CHECK-GI-NEXT:    tbx.16b v0, { v1, v2, v3 }, v4
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbx3_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbx.16b v0, { v1, v2, v3 }, v4
+; CHECK-NEXT:    ret
   %tmp3 = call <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E)
   ret <16 x i8> %tmp3
 }
 
 define <8 x i8> @tbx4_8b(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, <8 x i8> %F) {
-; CHECK-SD-LABEL: tbx4_8b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q4 killed $q4 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-SD-NEXT:    tbx.8b v0, { v1, v2, v3, v4 }, v5
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbx4_8b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-GI-NEXT:    // kill: def $q4 killed $q4 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-GI-NEXT:    tbx.8b v0, { v1, v2, v3, v4 }, v5
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbx4_8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbx.8b v0, { v1, v2, v3, v4 }, v5
+; CHECK-NEXT:    ret
   %tmp3 = call <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, <8 x i8> %F)
   ret <8 x i8> %tmp3
 }
 
 define <16 x i8> @tbx4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, <16 x i8> %F) {
-; CHECK-SD-LABEL: tbx4_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q4 killed $q4 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-SD-NEXT:    tbx.16b v0, { v1, v2, v3, v4 }, v5
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: tbx4_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-GI-NEXT:    // kill: def $q4 killed $q4 killed $q1_q2_q3_q4 def $q1_q2_q3_q4
-; CHECK-GI-NEXT:    tbx.16b v0, { v1, v2, v3, v4 }, v5
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: tbx4_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    tbx.16b v0, { v1, v2, v3, v4 }, v5
+; CHECK-NEXT:    ret
   %tmp3 = call <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, <16 x i8> %F)
   ret <16 x i8> %tmp3
 }

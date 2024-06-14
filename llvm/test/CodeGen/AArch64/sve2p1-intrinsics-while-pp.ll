@@ -7,7 +7,6 @@ define <vscale x 16 x i1> @whilege_x2_nxv16i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilege_x2_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilege { p0.b, p1.b }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 16 x i1>, <vscale x 16 x i1> } @llvm.aarch64.sve.whilege.x2.nxv16i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 16 x i1>, <vscale x 16 x i1>} %pp, 0
@@ -18,7 +17,6 @@ define <vscale x 8 x i1> @whilege_x2_nxv8i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilege_x2_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilege { p0.h, p1.h }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 8 x i1>, <vscale x 8 x i1> } @llvm.aarch64.sve.whilege.x2.nxv8i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 8 x i1>, <vscale x 8 x i1>} %pp, 0
@@ -29,7 +27,6 @@ define <vscale x 4 x i1> @whilege_x2_nxv4i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilege_x2_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilege { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilege.x2.nxv4i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 4 x i1>, <vscale x 4 x i1>} %pp, 0
@@ -40,7 +37,6 @@ define <vscale x 2 x i1> @whilege_x2_nxv2i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilege_x2_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilege { p0.d, p1.d }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 2 x i1>, <vscale x 2 x i1> } @llvm.aarch64.sve.whilege.x2.nxv2i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 2 x i1>, <vscale x 2 x i1>} %pp, 0
@@ -54,7 +50,6 @@ define <vscale x 16 x i1> @whilegt_x2_nxv16i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilegt_x2_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilegt { p0.b, p1.b }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 16 x i1>, <vscale x 16 x i1> } @llvm.aarch64.sve.whilegt.x2.nxv16i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 16 x i1>, <vscale x 16 x i1>} %pp, 0
@@ -65,7 +60,6 @@ define <vscale x 8 x i1> @whilegt_x2_nxv8i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilegt_x2_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilegt { p0.h, p1.h }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 8 x i1>, <vscale x 8 x i1> } @llvm.aarch64.sve.whilegt.x2.nxv8i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 8 x i1>, <vscale x 8 x i1>} %pp, 0
@@ -76,7 +70,6 @@ define <vscale x 4 x i1> @whilegt_x2_nxv4i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilegt_x2_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilegt { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilegt.x2.nxv4i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 4 x i1>, <vscale x 4 x i1>} %pp, 0
@@ -87,7 +80,6 @@ define <vscale x 2 x i1> @whilegt_x2_nxv2i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilegt_x2_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilegt { p0.d, p1.d }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 2 x i1>, <vscale x 2 x i1> } @llvm.aarch64.sve.whilegt.x2.nxv2i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 2 x i1>, <vscale x 2 x i1>} %pp, 0
@@ -101,7 +93,6 @@ define <vscale x 16 x i1> @whilehi_x2_nxv16i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilehi_x2_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehi { p0.b, p1.b }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 16 x i1>, <vscale x 16 x i1> } @llvm.aarch64.sve.whilehi.x2.nxv16i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 16 x i1>, <vscale x 16 x i1>} %pp, 0
@@ -112,7 +103,6 @@ define <vscale x 8 x i1> @whilehi_x2_nxv8i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilehi_x2_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehi { p0.h, p1.h }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 8 x i1>, <vscale x 8 x i1> } @llvm.aarch64.sve.whilehi.x2.nxv8i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 8 x i1>, <vscale x 8 x i1>} %pp, 0
@@ -123,7 +113,6 @@ define <vscale x 4 x i1> @whilehi_x2_nxv4i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilehi_x2_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehi { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilehi.x2.nxv4i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 4 x i1>, <vscale x 4 x i1>} %pp, 0
@@ -134,7 +123,6 @@ define <vscale x 2 x i1> @whilehi_x2_nxv2i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilehi_x2_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehi { p0.d, p1.d }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 2 x i1>, <vscale x 2 x i1> } @llvm.aarch64.sve.whilehi.x2.nxv2i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 2 x i1>, <vscale x 2 x i1>} %pp, 0
@@ -148,7 +136,6 @@ define <vscale x 16 x i1> @whilehs_x2_nxv16i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilehs_x2_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehs { p0.b, p1.b }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 16 x i1>, <vscale x 16 x i1> } @llvm.aarch64.sve.whilehs.x2.nxv16i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 16 x i1>, <vscale x 16 x i1>} %pp, 0
@@ -159,7 +146,6 @@ define <vscale x 8 x i1> @whilehs_x2_nxv8i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilehs_x2_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehs { p0.h, p1.h }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 8 x i1>, <vscale x 8 x i1> } @llvm.aarch64.sve.whilehs.x2.nxv8i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 8 x i1>, <vscale x 8 x i1>} %pp, 0
@@ -170,7 +156,6 @@ define <vscale x 4 x i1> @whilehs_x2_nxv4i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilehs_x2_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehs { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilehs.x2.nxv4i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 4 x i1>, <vscale x 4 x i1>} %pp, 0
@@ -181,7 +166,6 @@ define <vscale x 2 x i1> @whilehs_x2_nxv2i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilehs_x2_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehs { p0.d, p1.d }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 2 x i1>, <vscale x 2 x i1> } @llvm.aarch64.sve.whilehs.x2.nxv2i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 2 x i1>, <vscale x 2 x i1>} %pp, 0
@@ -195,7 +179,6 @@ define <vscale x 16 x i1> @whilele_x2_nxv16i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilele_x2_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilele { p0.b, p1.b }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 16 x i1>, <vscale x 16 x i1> } @llvm.aarch64.sve.whilele.x2.nxv16i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 16 x i1>, <vscale x 16 x i1>} %pp, 0
@@ -206,7 +189,6 @@ define <vscale x 8 x i1> @whilele_x2_nxv8i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilele_x2_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilele { p0.h, p1.h }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 8 x i1>, <vscale x 8 x i1> } @llvm.aarch64.sve.whilele.x2.nxv8i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 8 x i1>, <vscale x 8 x i1>} %pp, 0
@@ -217,7 +199,6 @@ define <vscale x 4 x i1> @whilele_x2_nxv4i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilele_x2_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilele { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilele.x2.nxv4i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 4 x i1>, <vscale x 4 x i1>} %pp, 0
@@ -228,7 +209,6 @@ define <vscale x 2 x i1> @whilele_x2_nxv2i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilele_x2_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilele { p0.d, p1.d }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 2 x i1>, <vscale x 2 x i1> } @llvm.aarch64.sve.whilele.x2.nxv2i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 2 x i1>, <vscale x 2 x i1>} %pp, 0
@@ -242,7 +222,6 @@ define <vscale x 16 x i1> @whilelo_x2_nxv16i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilelo_x2_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelo { p0.b, p1.b }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 16 x i1>, <vscale x 16 x i1> } @llvm.aarch64.sve.whilelo.x2.nxv16i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 16 x i1>, <vscale x 16 x i1>} %pp, 0
@@ -253,7 +232,6 @@ define <vscale x 8 x i1> @whilelo_x2_nxv8i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilelo_x2_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelo { p0.h, p1.h }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 8 x i1>, <vscale x 8 x i1> } @llvm.aarch64.sve.whilelo.x2.nxv8i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 8 x i1>, <vscale x 8 x i1>} %pp, 0
@@ -264,7 +242,6 @@ define <vscale x 4 x i1> @whilelo_x2_nxv4i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilelo_x2_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelo { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilelo.x2.nxv4i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 4 x i1>, <vscale x 4 x i1>} %pp, 0
@@ -275,7 +252,6 @@ define <vscale x 2 x i1> @whilelo_x2_nxv2i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilelo_x2_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelo { p0.d, p1.d }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 2 x i1>, <vscale x 2 x i1> } @llvm.aarch64.sve.whilelo.x2.nxv2i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 2 x i1>, <vscale x 2 x i1>} %pp, 0
@@ -289,7 +265,6 @@ define <vscale x 16 x i1> @whilels_x2_nxv16i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilels_x2_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilels { p0.b, p1.b }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 16 x i1>, <vscale x 16 x i1> } @llvm.aarch64.sve.whilels.x2.nxv16i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 16 x i1>, <vscale x 16 x i1>} %pp, 0
@@ -300,7 +275,6 @@ define <vscale x 8 x i1> @whilels_x2_nxv8i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilels_x2_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilels { p0.h, p1.h }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 8 x i1>, <vscale x 8 x i1> } @llvm.aarch64.sve.whilels.x2.nxv8i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 8 x i1>, <vscale x 8 x i1>} %pp, 0
@@ -311,7 +285,6 @@ define <vscale x 4 x i1> @whilels_x2_nxv4i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilels_x2_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilels { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilels.x2.nxv4i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 4 x i1>, <vscale x 4 x i1>} %pp, 0
@@ -322,7 +295,6 @@ define <vscale x 2 x i1> @whilels_x2_nxv2i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilels_x2_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilels { p0.d, p1.d }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 2 x i1>, <vscale x 2 x i1> } @llvm.aarch64.sve.whilels.x2.nxv2i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 2 x i1>, <vscale x 2 x i1>} %pp, 0
@@ -336,7 +308,6 @@ define <vscale x 16 x i1> @whilelt_x2_nxv16i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilelt_x2_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelt { p0.b, p1.b }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 16 x i1>, <vscale x 16 x i1> } @llvm.aarch64.sve.whilelt.x2.nxv16i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 16 x i1>, <vscale x 16 x i1>} %pp, 0
@@ -347,7 +318,6 @@ define <vscale x 8 x i1> @whilelt_x2_nxv8i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilelt_x2_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelt { p0.h, p1.h }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 8 x i1>, <vscale x 8 x i1> } @llvm.aarch64.sve.whilelt.x2.nxv8i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 8 x i1>, <vscale x 8 x i1>} %pp, 0
@@ -358,7 +328,6 @@ define <vscale x 4 x i1> @whilelt_x2_nxv4i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilelt_x2_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelt { p0.s, p1.s }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 4 x i1>, <vscale x 4 x i1> } @llvm.aarch64.sve.whilelt.x2.nxv4i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 4 x i1>, <vscale x 4 x i1>} %pp, 0
@@ -369,7 +338,6 @@ define <vscale x 2 x i1> @whilelt_x2_nxv2i1(i64 %m, i64 %n) nounwind {
 ; CHECK-LABEL: whilelt_x2_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelt { p0.d, p1.d }, x0, x1
-; CHECK-NEXT:    // kill: def $p0 killed $p0 killed $p0_p1
 ; CHECK-NEXT:    ret
   %pp = call { <vscale x 2 x i1>, <vscale x 2 x i1> } @llvm.aarch64.sve.whilelt.x2.nxv2i1(i64 %m, i64 %n)
   %res = extractvalue {<vscale x 2 x i1>, <vscale x 2 x i1>} %pp, 0

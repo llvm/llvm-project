@@ -111,8 +111,8 @@ define <4 x float> @multiple_muls_shuffle_external(<4 x float> %a, <4 x float> %
 ; CHECK-NEXT:    fmul v17.2s, v6.2s, v5.2s
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmul v5.2s, v4.2s, v5.2s
-; CHECK-NEXT:    fmla v17.2s, v1.2s, v4.2s
 ; CHECK-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #0
+; CHECK-NEXT:    fmla v17.2s, v1.2s, v4.2s
 ; CHECK-NEXT:    str d1, [x0]
 ; CHECK-NEXT:    fneg v16.2s, v5.2s
 ; CHECK-NEXT:    fcmla v0.4s, v2.4s, v3.4s, #90
@@ -162,19 +162,19 @@ define <4 x float> @multiple_muls_shuffle_external_with_loads(ptr %ptr_a, ptr %p
 ; CHECK-NEXT:    ld2 { v0.2s, v1.2s }, [x0]
 ; CHECK-NEXT:    ld2 { v2.2s, v3.2s }, [x1]
 ; CHECK-NEXT:    fmul v4.2s, v3.2s, v1.2s
-; CHECK-NEXT:    fmul v6.2s, v2.2s, v1.2s
+; CHECK-NEXT:    fmul v1.2s, v2.2s, v1.2s
 ; CHECK-NEXT:    fneg v4.2s, v4.2s
-; CHECK-NEXT:    fmla v6.2s, v0.2s, v3.2s
+; CHECK-NEXT:    fmla v1.2s, v0.2s, v3.2s
 ; CHECK-NEXT:    fmla v4.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    str d4, [x4]
 ; CHECK-NEXT:    ldr q5, [x2]
-; CHECK-NEXT:    ext v7.16b, v5.16b, v5.16b, #8
-; CHECK-NEXT:    zip1 v0.2s, v5.2s, v7.2s
-; CHECK-NEXT:    zip2 v1.2s, v5.2s, v7.2s
-; CHECK-NEXT:    fmul v3.2s, v0.2s, v6.2s
-; CHECK-NEXT:    fmul v6.2s, v1.2s, v6.2s
-; CHECK-NEXT:    fmla v3.2s, v4.2s, v1.2s
-; CHECK-NEXT:    fneg v2.2s, v6.2s
+; CHECK-NEXT:    ext v2.16b, v5.16b, v5.16b, #8
+; CHECK-NEXT:    zip1 v0.2s, v5.2s, v2.2s
+; CHECK-NEXT:    zip2 v2.2s, v5.2s, v2.2s
+; CHECK-NEXT:    fmul v3.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fmul v1.2s, v2.2s, v1.2s
+; CHECK-NEXT:    fmla v3.2s, v4.2s, v2.2s
+; CHECK-NEXT:    fneg v2.2s, v1.2s
 ; CHECK-NEXT:    fmla v2.2s, v4.2s, v0.2s
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x5]
@@ -241,20 +241,20 @@ define <4 x float> @multiple_muls_mul_external(<4 x float> %a, <4 x float> %b, <
 ; CHECK-NEXT:    zip1 v3.2s, v3.2s, v17.2s
 ; CHECK-NEXT:    fmul v18.2s, v6.2s, v7.2s
 ; CHECK-NEXT:    fmul v5.2s, v19.2s, v16.2s
-; CHECK-NEXT:    fmul v16.2s, v2.2s, v16.2s
 ; CHECK-NEXT:    fmul v7.2s, v0.2s, v7.2s
+; CHECK-NEXT:    fmul v16.2s, v2.2s, v16.2s
 ; CHECK-NEXT:    fneg v4.2s, v18.2s
 ; CHECK-NEXT:    fmla v5.2s, v3.2s, v2.2s
-; CHECK-NEXT:    fneg v2.2s, v16.2s
 ; CHECK-NEXT:    fmla v7.2s, v1.2s, v6.2s
+; CHECK-NEXT:    fneg v2.2s, v16.2s
 ; CHECK-NEXT:    fmla v4.2s, v1.2s, v0.2s
-; CHECK-NEXT:    fmla v2.2s, v3.2s, v19.2s
 ; CHECK-NEXT:    fmul v0.2s, v7.2s, v5.2s
+; CHECK-NEXT:    fmla v2.2s, v3.2s, v19.2s
 ; CHECK-NEXT:    fmul v17.2s, v4.2s, v5.2s
 ; CHECK-NEXT:    str d4, [x0]
-; CHECK-NEXT:    fmla v17.2s, v2.2s, v7.2s
 ; CHECK-NEXT:    fneg v16.2s, v0.2s
 ; CHECK-NEXT:    zip1 v0.4s, v2.4s, v5.4s
+; CHECK-NEXT:    fmla v17.2s, v2.2s, v7.2s
 ; CHECK-NEXT:    fmla v16.2s, v2.2s, v4.2s
 ; CHECK-NEXT:    st2 { v16.2s, v17.2s }, [x1]
 ; CHECK-NEXT:    ret

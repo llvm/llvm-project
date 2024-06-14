@@ -21,9 +21,9 @@ define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x20]
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    mov z2.b, z0.b[1]
+; CHECK-NEXT:    mov z1.b, z0.b[1]
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s2
+; CHECK-NEXT:    fmov w9, s1
 ; CHECK-NEXT:    stp w8, w9, [sp, #8]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x19]
@@ -198,9 +198,9 @@ define void @alloc_v8f64(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x20]
-; CHECK-NEXT:    ld2d { z2.d, z3.d }, p0/z, [x20, x8, lsl #3]
+; CHECK-NEXT:    ld2d { z1.d, z2.d }, p0/z, [x20, x8, lsl #3]
 ; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
-; CHECK-NEXT:    stp q0, q2, [x19]
+; CHECK-NEXT:    stp q0, q1, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #96
 ; CHECK-NEXT:    ret

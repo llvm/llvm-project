@@ -1780,9 +1780,7 @@ define <16 x i8> @test_concat_v16i8_v16i8_v16i8(<16 x i8> %x, <16 x i8> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v16i8_v16i8_v16i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI126_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI126_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1799,11 +1797,9 @@ define <16 x i8> @test_concat_v16i8_v8i8_v16i8(<8 x i8> %x, <16 x i8> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v16i8_v8i8_v16i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI127_0
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov b2, v0.b[1]
 ; CHECK-GI-NEXT:    mov b3, v0.b[2]
+; CHECK-GI-NEXT:    adrp x8, .LCPI127_0
 ; CHECK-GI-NEXT:    mov b4, v0.b[3]
 ; CHECK-GI-NEXT:    mov b5, v0.b[4]
 ; CHECK-GI-NEXT:    mov b6, v0.b[5]
@@ -2003,9 +1999,7 @@ define <8 x i16> @test_concat_v8i16_v8i16_v8i16(<8 x i16> %x, <8 x i16> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v8i16_v8i16_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI130_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI130_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -2022,11 +2016,9 @@ define <8 x i16> @test_concat_v8i16_v4i16_v8i16(<4 x i16> %x, <8 x i16> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v8i16_v4i16_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI131_0
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov h2, v0.h[1]
 ; CHECK-GI-NEXT:    mov h3, v0.h[2]
+; CHECK-GI-NEXT:    adrp x8, .LCPI131_0
 ; CHECK-GI-NEXT:    mov h4, v0.h[3]
 ; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI131_0]
@@ -2146,9 +2138,7 @@ define <4 x i32> @test_concat_v4i32_v4i32_v4i32(<4 x i32> %x, <4 x i32> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v4i32_v4i32_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI134_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI134_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -2165,10 +2155,8 @@ define <4 x i32> @test_concat_v4i32_v2i32_v4i32(<2 x i32> %x, <4 x i32> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v4i32_v2i32_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI135_0
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov s2, v0.s[1]
+; CHECK-GI-NEXT:    adrp x8, .LCPI135_0
 ; CHECK-GI-NEXT:    mov v0.s[1], v2.s[0]
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI135_0]
 ; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b

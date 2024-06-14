@@ -53,10 +53,6 @@ define void @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ;
 ; CHECK-CAS-O1-LABEL: val_compare_and_swap:
 ; CHECK-CAS-O1:       // %bb.0:
-; CHECK-CAS-O1-NEXT:    // kill: def $x2 killed $x2 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x4 killed $x4 killed $x4_x5 def $x4_x5
-; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspa x2, x3, x4, x5, [x0]
 ; CHECK-CAS-O1-NEXT:    mov v0.d[0], x2
 ; CHECK-CAS-O1-NEXT:    mov v0.d[1], x3
@@ -180,10 +176,6 @@ define void @val_compare_and_swap_monotonic_seqcst(ptr %p, i128 %oldval, i128 %n
 ;
 ; CHECK-CAS-O1-LABEL: val_compare_and_swap_monotonic_seqcst:
 ; CHECK-CAS-O1:       // %bb.0:
-; CHECK-CAS-O1-NEXT:    // kill: def $x2 killed $x2 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x4 killed $x4 killed $x4_x5 def $x4_x5
-; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspal x2, x3, x4, x5, [x0]
 ; CHECK-CAS-O1-NEXT:    mov v0.d[0], x2
 ; CHECK-CAS-O1-NEXT:    mov v0.d[1], x3
@@ -307,10 +299,6 @@ define void @val_compare_and_swap_release_acquire(ptr %p, i128 %oldval, i128 %ne
 ;
 ; CHECK-CAS-O1-LABEL: val_compare_and_swap_release_acquire:
 ; CHECK-CAS-O1:       // %bb.0:
-; CHECK-CAS-O1-NEXT:    // kill: def $x2 killed $x2 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x4 killed $x4 killed $x4_x5 def $x4_x5
-; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspal x2, x3, x4, x5, [x0]
 ; CHECK-CAS-O1-NEXT:    mov v0.d[0], x2
 ; CHECK-CAS-O1-NEXT:    mov v0.d[1], x3
@@ -434,10 +422,6 @@ define void @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) 
 ;
 ; CHECK-CAS-O1-LABEL: val_compare_and_swap_monotonic:
 ; CHECK-CAS-O1:       // %bb.0:
-; CHECK-CAS-O1-NEXT:    // kill: def $x2 killed $x2 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x4 killed $x4 killed $x4_x5 def $x4_x5
-; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspal x2, x3, x4, x5, [x0]
 ; CHECK-CAS-O1-NEXT:    mov v0.d[0], x2
 ; CHECK-CAS-O1-NEXT:    mov v0.d[1], x3
@@ -658,10 +642,6 @@ define i128 @val_compare_and_swap_return(ptr %p, i128 %oldval, i128 %newval) {
 ;
 ; CHECK-CAS-O1-LABEL: val_compare_and_swap_return:
 ; CHECK-CAS-O1:       // %bb.0:
-; CHECK-CAS-O1-NEXT:    // kill: def $x2 killed $x2 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x4 killed $x4 killed $x4_x5 def $x4_x5
-; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
-; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspa x2, x3, x4, x5, [x0]
 ; CHECK-CAS-O1-NEXT:    mov x0, x2
 ; CHECK-CAS-O1-NEXT:    mov x1, x3

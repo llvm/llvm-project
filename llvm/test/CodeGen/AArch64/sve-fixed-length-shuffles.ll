@@ -13,7 +13,7 @@ define void @hang_when_merging_stores_after_legalisation(ptr %a, <2 x i32> %b) v
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #16
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x0]
 ; CHECK-NEXT:    ret
   %splat = shufflevector <2 x i32> %b, <2 x i32> undef, <8 x i32> zeroinitializer
