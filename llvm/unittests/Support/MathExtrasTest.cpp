@@ -8,6 +8,7 @@
 
 #include "llvm/Support/MathExtras.h"
 #include "gtest/gtest.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -175,6 +176,7 @@ TEST(MathExtras, MinAlign) {
   EXPECT_EQ(2u, MinAlign(2, 4));
   EXPECT_EQ(1u, MinAlign(17, 64));
   EXPECT_EQ(256u, MinAlign(256, 512));
+  EXPECT_EQ(2u, MinAlign(0, 2));
 }
 
 TEST(MathExtras, NextPowerOf2) {
@@ -183,15 +185,34 @@ TEST(MathExtras, NextPowerOf2) {
   EXPECT_EQ(256u, NextPowerOf2(128));
 }
 
-TEST(MathExtras, alignTo) {
+TEST(MathExtras, AlignTo) {
   EXPECT_EQ(8u, alignTo(5, 8));
   EXPECT_EQ(24u, alignTo(17, 8));
   EXPECT_EQ(0u, alignTo(~0LL, 8));
+  EXPECT_EQ(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1,
+            alignTo(std::numeric_limits<uint32_t>::max(), 2));
 
   EXPECT_EQ(7u, alignTo(5, 8, 7));
   EXPECT_EQ(17u, alignTo(17, 8, 1));
   EXPECT_EQ(3u, alignTo(~0LL, 8, 3));
   EXPECT_EQ(552u, alignTo(321, 255, 42));
+  EXPECT_EQ(std::numeric_limits<uint32_t>::max(),
+            alignTo(std::numeric_limits<uint32_t>::max(), 2, 1));
+}
+
+TEST(MathExtras, AlignToPowerOf2) {
+  EXPECT_EQ(8u, alignToPowerOf2(5, 8));
+  EXPECT_EQ(24u, alignToPowerOf2(17, 8));
+  EXPECT_EQ(0u, alignToPowerOf2(~0LL, 8));
+  EXPECT_EQ(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1,
+            alignToPowerOf2(std::numeric_limits<uint32_t>::max(), 2));
+}
+
+TEST(MathExtras, AlignDown) {
+  EXPECT_EQ(0u, alignDown(5, 8));
+  EXPECT_EQ(16u, alignDown(17, 8));
+  EXPECT_EQ(std::numeric_limits<uint32_t>::max() - 1,
+            alignDown(std::numeric_limits<uint32_t>::max(), 2));
 }
 
 template <typename T> void SaturatingAddTestHelper() {
@@ -434,7 +455,20 @@ TEST(MathExtras, IsShiftedInt) {
   EXPECT_FALSE((isShiftedInt<6, 10>(int64_t(1) << 15)));
 }
 
-TEST(MathExtras, DivideCeilSigned) {
+TEST(MathExtras, DivideNearest) {
+  EXPECT_EQ(divideNearest(14, 3), 5u);
+  EXPECT_EQ(divideNearest(15, 3), 5u);
+  EXPECT_EQ(divideNearest(0, 3), 0u);
+  EXPECT_EQ(divideNearest(std::numeric_limits<uint32_t>::max(), 2),
+            2147483648u);
+}
+
+TEST(MathExtras, DivideCeil) {
+  EXPECT_EQ(divideCeil(14, 3), 5u);
+  EXPECT_EQ(divideCeil(15, 3), 5u);
+  EXPECT_EQ(divideCeil(0, 3), 0u);
+  EXPECT_EQ(divideCeil(std::numeric_limits<uint32_t>::max(), 2), 2147483648u);
+
   EXPECT_EQ(divideCeilSigned(14, 3), 5);
   EXPECT_EQ(divideCeilSigned(15, 3), 5);
   EXPECT_EQ(divideCeilSigned(14, -3), -4);
@@ -443,6 +477,10 @@ TEST(MathExtras, DivideCeilSigned) {
   EXPECT_EQ(divideCeilSigned(-15, 3), -5);
   EXPECT_EQ(divideCeilSigned(0, 3), 0);
   EXPECT_EQ(divideCeilSigned(0, -3), 0);
+  EXPECT_EQ(divideCeilSigned(std::numeric_limits<int32_t>::max(), 2),
+            std::numeric_limits<int32_t>::max() / 2 + 1);
+  EXPECT_EQ(divideCeilSigned(std::numeric_limits<int32_t>::max(), -2),
+            std::numeric_limits<int32_t>::min() / 2 + 1);
 }
 
 TEST(MathExtras, DivideFloorSigned) {
@@ -454,6 +492,10 @@ TEST(MathExtras, DivideFloorSigned) {
   EXPECT_EQ(divideFloorSigned(-15, 3), -5);
   EXPECT_EQ(divideFloorSigned(0, 3), 0);
   EXPECT_EQ(divideFloorSigned(0, -3), 0);
+  EXPECT_EQ(divideFloorSigned(std::numeric_limits<int32_t>::max(), 2),
+            std::numeric_limits<int32_t>::max() / 2);
+  EXPECT_EQ(divideFloorSigned(std::numeric_limits<int32_t>::max(), -2),
+            std::numeric_limits<int32_t>::min() / 2);
 }
 
 TEST(MathExtras, Mod) {
