@@ -277,13 +277,22 @@ module attributes {transform.with_named_sequence} {
 
 // This test checks for loop coalescing success for non-index loop boundaries and step type
 func.func @coalesce_i32_loops() {
+  // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i32
+  // CHECK:           %[[VAL_1:.*]] = arith.constant 128 : i32
+  // CHECK:           %[[VAL_2:.*]] = arith.constant 2 : i32
+  // CHECK:           %[[VAL_3:.*]] = arith.constant 64 : i32
   %0 = arith.constant 0 : i32
   %1 = arith.constant 128 : i32
   %2 = arith.constant 2 : i32
   %3 = arith.constant 64 : i32
-  // CHECK-DAG: %[[C0_I32:.*]] = arith.constant 0 : i32
-  // CHECK-DAG: %[[C1_I32:.*]] = arith.constant 1 : i32
-  // CHECK: scf.for %[[ARG0:.*]] = %[[C0_I32]] to {{.*}} step %[[C1_I32]]  : i32
+  // CHECK:           %[[VAL_4:.*]] = arith.constant 64 : i32
+  // CHECK:           %[[ZERO:.*]] = arith.constant 0 : i32
+  // CHECK:           %[[ONE:.*]] = arith.constant 1 : i32
+  // CHECK:           %[[VAL_7:.*]] = arith.constant 32 : i32
+  // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : i32
+  // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i32
+  // CHECK:           %[[UB:.*]] = arith.muli %[[VAL_4]], %[[VAL_7]] : i32
+  // CHECK:           scf.for %[[VAL_11:.*]] = %[[ZERO]] to %[[UB]] step %[[ONE]]  : i32 {
   scf.for %i = %0 to %1 step %2 : i32 {
     scf.for %j = %0 to %3 step %2 : i32 {
       arith.addi %i, %j : i32
