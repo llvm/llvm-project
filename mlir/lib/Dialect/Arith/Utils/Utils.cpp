@@ -100,12 +100,20 @@ llvm::SmallBitVector mlir::getPositionsOfShapeOne(unsigned rank,
   return dimsToProject;
 }
 
+Value mlir::getValueOrCreateConstantIntOp(OpBuilder &b, Location loc,
+                                          OpFoldResult ofr) {
+  if (auto value = dyn_cast_if_present<Value>(ofr))
+    return value;
+  auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
+  return b.create<arith::ConstantOp>(
+      loc, b.getIntegerAttr(attr.getType(), attr.getValue().getSExtValue()));
+}
+
 Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                             OpFoldResult ofr) {
-  if (auto value = llvm::dyn_cast_if_present<Value>(ofr))
+  if (auto value = dyn_cast_if_present<Value>(ofr))
     return value;
-  auto attr = dyn_cast<IntegerAttr>(llvm::dyn_cast_if_present<Attribute>(ofr));
-  assert(attr && "expect the op fold result casts to an integer attribute");
+  auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
   return b.create<arith::ConstantIndexOp>(loc, attr.getValue().getSExtValue());
 }
 
@@ -292,6 +300,13 @@ Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,
         loc, type, builder.getFloatAttr(type, value));
   TypedAttr splat = SplatElementsAttr::get(cast<ShapedType>(type), value);
   return builder.createOrFold<arith::ConstantOp>(loc, type, splat);
+}
+
+Type mlir::getType(OpFoldResult ofr) {
+  if (auto value = dyn_cast_if_present<Value>(ofr))
+    return value.getType();
+  auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
+  return attr.getType();
 }
 
 Value ArithBuilder::_and(Value lhs, Value rhs) {
