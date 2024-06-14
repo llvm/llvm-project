@@ -18708,6 +18708,27 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
     return Builder.CreateCall(F, {Addr, Val, ZeroI32, ZeroI32, ZeroI1});
   }
+  case AMDGPU::BI__builtin_amdgcn_discard_b32:
+  case AMDGPU::BI__builtin_amdgcn_discard_b128:
+  case AMDGPU::BI__builtin_amdgcn_discard_b1024: {
+
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_discard_b32:
+      IID = Intrinsic::amdgcn_discard_b32;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_discard_b128:
+      IID = Intrinsic::amdgcn_discard_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_discard_b1024:
+      IID = Intrinsic::amdgcn_discard_b1024;
+      break;
+    }
+    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Cpol = EmitScalarExpr(E->getArg(1));
+    llvm::Function *F = CGM.getIntrinsic(IID, {Addr->getType()});
+    return Builder.CreateCall(F, {Addr, Cpol});
+  }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:

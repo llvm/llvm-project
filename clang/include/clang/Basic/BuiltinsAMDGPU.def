@@ -831,5 +831,9 @@ TARGET_BUILTIN(__builtin_amdgcn_wconv_i32_iu4_3x3_4x2, "V4iV4iV18iV3iV3iV3iIib",
 TARGET_BUILTIN(__builtin_amdgcn_wconv_i32_iu8_1x1_4x2, "V4iV4iV2iiiiiIib", "nc", "gfx13-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wconv_i32_iu8_3x3_4x2, "V4iV4iV18iV3iV3iV3iIib", "nc", "gfx13-insts,wavefrontsize32")
 
+TARGET_BUILTIN(__builtin_amdgcn_discard_b32, "vv*Ii", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_discard_b128, "vv*Ii", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_discard_b1024, "vv*Ii", "nc", "gfx13-insts")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

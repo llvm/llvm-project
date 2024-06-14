@@ -50,3 +50,54 @@ void test_wave_id_in_wavegroup(global uint *out)
 void test_prng_b32(global uint* out, uint a) {
   *out = __builtin_amdgcn_prng_b32(a);
 }
+
+// CHECK-LABEL: @test_flat_discard(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    store ptr [[PTR:%.*]], ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b32.p0(ptr [[TMP0]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b128.p0(ptr [[TMP1]], i32 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b1024.p0(ptr [[TMP2]], i32 0)
+// CHECK-NEXT:    ret void
+//
+void test_flat_discard(int* ptr) {
+  __builtin_amdgcn_discard_b32(ptr, 0);
+  __builtin_amdgcn_discard_b128(ptr, 0);
+  __builtin_amdgcn_discard_b1024(ptr, 0);
+}
+
+// CHECK-LABEL: @test_global_discard(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[PTR:%.*]], ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b32.p1(ptr addrspace(1) [[TMP0]], i32 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b128.p1(ptr addrspace(1) [[TMP1]], i32 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[PTR_ADDR]], align 8
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b1024.p1(ptr addrspace(1) [[TMP2]], i32 0)
+// CHECK-NEXT:    ret void
+//
+void test_global_discard(global int* ptr) {
+  __builtin_amdgcn_discard_b32(ptr, 0);
+  __builtin_amdgcn_discard_b128(ptr, 0);
+  __builtin_amdgcn_discard_b1024(ptr, 0);
+}
+
+// CHECK-LABEL: @test_scratch_discard(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TAB:%.*]] = alloca [10 x i32], align 4, addrspace(5)
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b32.p5(ptr addrspace(5) [[TAB]], i32 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b128.p5(ptr addrspace(5) [[TAB]], i32 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.discard.b1024.p5(ptr addrspace(5) [[TAB]], i32 0)
+// CHECK-NEXT:    ret void
+//
+void test_scratch_discard() {
+  int tab[10];
+  __builtin_amdgcn_discard_b32(&tab, 0);
+  __builtin_amdgcn_discard_b128(&tab, 0);
+  __builtin_amdgcn_discard_b1024(&tab, 0);
+}
