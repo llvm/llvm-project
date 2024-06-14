@@ -5038,7 +5038,9 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
 /// ensures that alignment is 16 or greater.
 Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
     const Function *F, Type *ArgTy, const DataLayout &DL) const {
-  const uint64_t ABITypeAlign = DL.getABITypeAlign(ArgTy).value();
+  // Capping the alignment to 128 bytes as that is the maximum alignment
+  // supported by PTX.
+  const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
 
   // If a function has linkage different from internal or private, we
   // must use default ABI alignment as external users rely on it. Same
@@ -5048,10 +5050,10 @@ Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
                          /*IgnoreCallbackUses=*/false,
                          /*IgnoreAssumeLikeCalls=*/true,
                          /*IgnoreLLVMUsed=*/true))
-    return Align(ABITypeAlign);
+    return ABITypeAlign;
 
   assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
-  return Align(std::max(uint64_t(16), ABITypeAlign));
+  return std::max(Align(16), ABITypeAlign);
 }
 
 /// Helper for computing alignment of a device function byval parameter.
