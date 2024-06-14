@@ -89,15 +89,12 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   DenseI32ArrayAttr knownGridSize = gpuFuncOp.getKnownGridSizeAttr();
   // Ensure we don't lose information if the function is lowered before its
   // surrounding context.
+  auto *gpuDialect = cast<GPUDialect>(gpuFuncOp.getDialect());
   if (knownBlockSize)
-    attributes.emplace_back(
-        rewriter.getStringAttr(
-            gpu::GPUDialect::KnownBlockSizeAttrHelper::getNameStr()),
+    attributes.emplace_back(gpuDialect.getKnownBlockSizeAttrHelper().getName()),
         knownBlockSize);
   if (knownGridSize)
-    attributes.emplace_back(
-        rewriter.getStringAttr(
-            gpu::GPUDialect::KnownGridSizeAttrHelper::getNameStr()),
+    attributes.emplace_back(gpuDialect.getKnownGridSizeAttrHelper().getName()),
         knownGridSize);
 
   // Add a dialect specific kernel attribute in addition to GPU kernel
