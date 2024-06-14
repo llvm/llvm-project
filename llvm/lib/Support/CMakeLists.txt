@@ -37,7 +37,7 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
-if( MSVC OR MINGW )
+if( WIN32 )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
   # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
@@ -72,7 +72,7 @@ elseif( CMAKE_HOST_UNIX )
     add_compile_definitions(_BSD_SOURCE)
     set(system_libs ${system_libs} bsd network)
   endif()
-endif( MSVC OR MINGW )
+endif( WIN32 )
 
 # Delay load shell32.dll if possible to speed up process startup.
 set (delayload_flags)
