@@ -173,8 +173,6 @@ class RegionPressureMap {
   DenseMap<unsigned, MachineInstr *> IdxToInstruction;
   // Whether we are calculating LiveOuts or LiveIns
   bool IsLiveOut;
-  // Whether or not the maps have been generated
-  bool IsMapGenerated = false;
 
 public:
   RegionPressureMap() {}
@@ -185,7 +183,6 @@ public:
 
   // Retrieve the LiveReg for a given RegionIdx
   GCNRPTracker::LiveRegSet &getLiveRegsForRegionIdx(unsigned RegionIdx) {
-    assert(IsMapGenerated);
     assert(IdxToInstruction.find(RegionIdx) != IdxToInstruction.end());
     MachineInstr *Key = IdxToInstruction[RegionIdx];
     return BBLiveRegMap[Key];

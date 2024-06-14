@@ -635,29 +635,24 @@ GCNScheduleDAGMILive::getBBLiveOutMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> BBEnders;
   BBEnders.reserve(Regions.size());
-  auto I = Regions.rbegin(), E = Regions.rend();
-  for (; I != E; I++)
-    BBEnders.push_back(getLastMIForRegion(I->first, I->second));
+  for (auto &[RegionBegin, RegionEnd] : reverse(Regions))
+    BBEnders.push_back(getLastMIForRegion(RegionBegin, RegionEnd));
 
   return getLiveRegMap(BBEnders, /*After= */ true, *LIS);
 }
 
 void RegionPressureMap::buildLiveRegMap() {
-  if (IsMapGenerated) {
-    IdxToInstruction.clear();
-    BBLiveRegMap.clear();
-    IsMapGenerated = false;
-  }
+  IdxToInstruction.clear();
+  BBLiveRegMap.clear();
 
   BBLiveRegMap = IsLiveOut ? DAG->getBBLiveOutMap() : DAG->getBBLiveInMap();
   for (unsigned I = 0; I < DAG->Regions.size(); I++) {
-    MachineInstr *RegionKey;
-    RegionKey = IsLiveOut ? getLastMIForRegion(DAG->Regions[I].first,
-                                               DAG->Regions[I].second)
-                          : &*DAG->Regions[I].first;
+    MachineInstr *RegionKey =
+        IsLiveOut
+            ? getLastMIForRegion(DAG->Regions[I].first, DAG->Regions[I].second)
+            : &*DAG->Regions[I].first;
     IdxToInstruction[I] = RegionKey;
   }
-  IsMapGenerated = true;
 }
 
 void GCNScheduleDAGMILive::finalizeSchedule() {
