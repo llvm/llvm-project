@@ -418,8 +418,14 @@ else()
       libc.src.string.memory_utils.inline_memcpy
       libc.src.string.memory_utils.inline_memset
   )
-  add_entrypoint_external(
+  add_entrypoint_object(
     malloc
+    SRCS
+      freelist_malloc.cpp
+    HDRS
+      malloc.h
+    DEPENDS
+      .freelist_heap
   )
   add_entrypoint_external(
     free
