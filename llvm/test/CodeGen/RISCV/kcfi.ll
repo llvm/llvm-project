@@ -4,7 +4,7 @@
 ; RUN:      | FileCheck %s --check-prefixes=CHECK,RV64
 
 ; CHECK:       .word 12345678
-define void @f1(ptr noundef %x) !kcfi_type !1 {
+define void @f1(ptr noundef %x) !cfi_type !1 {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
 ; CHECK:         lw t1, -4(a0)

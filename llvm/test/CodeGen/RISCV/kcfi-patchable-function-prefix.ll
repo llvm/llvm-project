@@ -8,7 +8,7 @@
 ; CHECK-NOT:        nop
 ; CHECK:          .word   12345678
 ; CHECK-LABEL:    f1:
-define void @f1(ptr noundef %x) !kcfi_type !1 {
+define void @f1(ptr noundef %x) !cfi_type !1 {
 ; CHECK:            lw      t1, -4(a0)
   call void %x() [ "kcfi"(i32 12345678) ]
   ret void
@@ -31,7 +31,7 @@ define void @f2(ptr noundef %x) {
 ; CHECK:          .word   12345678
 ; CHECK-COUNT-11:   nop
 ; CHECK-LABEL:    f3:
-define void @f3(ptr noundef %x) #0 !kcfi_type !1 {
+define void @f3(ptr noundef %x) #0 !cfi_type !1 {
 ; NOC:              lw      t1, -48(a0)
 ; C:                lw      t1, -26(a0)
   call void %x() [ "kcfi"(i32 12345678) ]

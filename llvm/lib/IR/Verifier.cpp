@@ -2413,19 +2413,19 @@ void Verifier::verifyFunctionMetadata(
             MD);
       Check(isa<ConstantAsMetadata>(MD->getOperand(1)),
             "expected integer argument to function_entry_count", MD);
-    } else if (Pair.first == LLVMContext::MD_kcfi_type) {
+    } else if (Pair.first == LLVMContext::MD_cfi_type) {
       MDNode *MD = Pair.second;
       Check(MD->getNumOperands() == 1,
-            "!kcfi_type must have exactly one operand", MD);
-      Check(MD->getOperand(0) != nullptr, "!kcfi_type operand must not be null",
+            "!cfi_type must have exactly one operand", MD);
+      Check(MD->getOperand(0) != nullptr, "!cfi_type operand must not be null",
             MD);
       Check(isa<ConstantAsMetadata>(MD->getOperand(0)),
-            "expected a constant operand for !kcfi_type", MD);
+            "expected a constant operand for !cfi_type", MD);
       Constant *C = cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
       Check(isa<ConstantInt>(C) && isa<IntegerType>(C->getType()),
-            "expected a constant integer operand for !kcfi_type", MD);
+            "expected a constant integer operand for !cfi_type", MD);
       Check(cast<ConstantInt>(C)->getBitWidth() == 32,
-            "expected a 32-bit integer constant operand for !kcfi_type", MD);
+            "expected a 32-bit integer constant operand for !cfi_type", MD);
     }
   }
 }
@@ -2927,7 +2927,7 @@ void Verifier::visitFunction(const Function &F) {
     }
 
     unsigned NumDebugAttachments = 0, NumProfAttachments = 0,
-             NumKCFIAttachments = 0;
+             NumCFIAttachments = 0;
     // Visit metadata attachments.
     for (const auto &I : MDs) {
       // Verify that the attachment is legal.
@@ -2958,11 +2958,10 @@ void Verifier::visitFunction(const Function &F) {
         Check(NumProfAttachments == 1,
               "function must have a single !prof attachment", &F, I.second);
         break;
-      case LLVMContext::MD_kcfi_type:
-        ++NumKCFIAttachments;
-        Check(NumKCFIAttachments == 1,
-              "function must have a single !kcfi_type attachment", &F,
-              I.second);
+      case LLVMContext::MD_cfi_type:
+        ++NumCFIAttachments;
+        Check(NumCFIAttachments == 1,
+              "function must have a single !cfi_type attachment", &F, I.second);
         break;
       }
 

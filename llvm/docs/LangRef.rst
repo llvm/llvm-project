@@ -2960,7 +2960,7 @@ KCFI Operand Bundles
 
 A ``"kcfi"`` operand bundle on an indirect call indicates that the call will
 be preceded by a runtime type check, which validates that the call target is
-prefixed with a :ref:`type identifier<md_kcfi_type>` that matches the operand
+prefixed with a :ref:`type identifier<md_cfi_type>` that matches the operand
 bundle attribute. For example:
 
 .. code-block:: llvm
@@ -7932,12 +7932,12 @@ Example:
     }
     !0 = !{i32 846595819, ptr @__llvm_rtti_proxy}
 
-.. _md_kcfi_type:
+.. _md_cfi_type:
 
-'``kcfi_type``' Metadata
+'``cfi_type``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``kcfi_type`` metadata can be used to attach a type identifier to
+The ``cfi_type`` metadata can be used to attach a type identifier to
 functions that can be called indirectly. The type data is emitted before the
 function entry in the assembly. Indirect calls with the :ref:`kcfi operand
 bundle<ob_kcfi>` will emit a check that compares the type identifier to the
@@ -7947,12 +7947,12 @@ Example:
 
 .. code-block:: text
 
-    define dso_local i32 @f() !kcfi_type !0 {
+    define dso_local i32 @f() !cfi_type !0 {
       ret i32 0
     }
     !0 = !{i32 12345678}
 
-Clang emits ``kcfi_type`` metadata nodes for address-taken functions with
+Clang emits ``cfi_type`` metadata nodes for address-taken functions with
 ``-fsanitize=kcfi``.
 
 .. _md_memprof:

@@ -1554,10 +1554,10 @@ public:
                                           llvm::Function *F);
 
   /// Set type metadata to the given function.
-  void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
+  void setCFIType(const FunctionDecl *FD, llvm::Function *F);
 
-  /// Emit KCFI type identifier constants and remove unused identifiers.
-  void finalizeKCFITypes();
+  /// Emit CFI type identifier constants and remove unused identifiers.
+  void finalizeCFITypes();
 
   /// Whether this function's return type has no side effects, and thus may
   /// be trivially discarded if it is unused.

@@ -19,7 +19,7 @@ define dso_local void @nosan() nounwind {
 ; CHECK-NEXT:  .code 16
 ; CHECK-NEXT:  .thumb_func
 ; CHECK-NEXT:  f1:
-define void @f1(ptr noundef %x) !kcfi_type !1 {
+define void @f1(ptr noundef %x) !cfi_type !1 {
   ret void
 }
 

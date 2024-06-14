@@ -11,7 +11,7 @@
 ; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -mattr=harden-sls-blr -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI-SLS
 
 ; ASM:       .word 12345678
-define void @f1(ptr noundef %x) !kcfi_type !1 {
+define void @f1(ptr noundef %x) !cfi_type !1 {
 ; ASM-LABEL: f1:
 ; ASM:       // %bb.0:
 ; ASM:         ldur w16, [x0, #-4]

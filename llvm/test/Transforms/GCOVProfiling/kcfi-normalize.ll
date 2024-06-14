@@ -1,4 +1,4 @@
-;; Ensure __llvm_gcov_(writeout|reset|init) have the correct !kcfi_type
+;; Ensure __llvm_gcov_(writeout|reset|init) have the correct !cfi_type
 ;; with integer normalization.
 ; RUN: mkdir -p %t && cd %t
 ; RUN: opt < %s -S -passes=insert-gcov-profiling | FileCheck %s
@@ -26,10 +26,10 @@ entry:
 !10 = !{i32 4, !"cfi-normalize-integers", i32 1}
 
 ; CHECK: define internal void @__llvm_gcov_writeout()
-; CHECK-SAME: !kcfi_type ![[#TYPE:]]
+; CHECK-SAME: !cfi_type ![[#TYPE:]]
 ; CHECK: define internal void @__llvm_gcov_reset()
-; CHECK-SAME: !kcfi_type ![[#TYPE]]
+; CHECK-SAME: !cfi_type ![[#TYPE]]
 ; CHECK: define internal void @__llvm_gcov_init()
-; CHECK-SAME: !kcfi_type ![[#TYPE]]
+; CHECK-SAME: !cfi_type ![[#TYPE]]
 
 ; CHECK: ![[#TYPE]] = !{i32 -440107680}

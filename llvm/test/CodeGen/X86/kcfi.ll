@@ -19,7 +19,7 @@
 ; ASM-NEXT:    movl $12345678, %eax
 ; ASM-LABEL: .Lcfi_func_end0:
 ; ASM-NEXT:  .size   __cfi_f1, .Lcfi_func_end0-__cfi_f1
-define void @f1(ptr noundef %x) !kcfi_type !1 {
+define void @f1(ptr noundef %x) !cfi_type !1 {
 ; ASM-LABEL: f1:
 ; ASM:       # %bb.0:
 ; ASM:         movl $4282621618, %r10d # imm = 0xFF439EB2
@@ -91,7 +91,7 @@ define void @f4(ptr noundef %x) #0 {
 ;; Ensure we emit Value + 1 for unwanted values (e.g. endbr64 == 4196274163).
 ; ASM-LABEL: __cfi_f5:
 ; ASM: movl $4196274164, %eax # imm = 0xFA1E0FF4
-define void @f5(ptr noundef %x) !kcfi_type !2 {
+define void @f5(ptr noundef %x) !cfi_type !2 {
 ; ASM-LABEL: f5:
 ; ASM: movl $98693132, %r10d # imm = 0x5E1F00C
   tail call void %x() [ "kcfi"(i32 4196274163) ]
@@ -101,7 +101,7 @@ define void @f5(ptr noundef %x) !kcfi_type !2 {
 ;; Ensure we emit Value + 1 for unwanted values (e.g. -endbr64 == 98693133).
 ; ASM-LABEL: __cfi_f6:
 ; ASM: movl $98693134, %eax # imm = 0x5E1F00E
-define void @f6(ptr noundef %x) !kcfi_type !3 {
+define void @f6(ptr noundef %x) !cfi_type !3 {
 ; ASM-LABEL: f6:
 ; ASM: movl $4196274162, %r10d # imm = 0xFA1E0FF2
   tail call void %x() [ "kcfi"(i32 98693133) ]

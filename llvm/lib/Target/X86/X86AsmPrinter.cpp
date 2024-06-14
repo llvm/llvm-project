@@ -158,7 +158,7 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
     return;
 
   ConstantInt *Type = nullptr;
-  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_kcfi_type))
+  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_cfi_type))
     Type = mdconst::extract<ConstantInt>(MD->getOperand(0));
 
   // If we don't have a type to emit, just emit padding if needed to maintain

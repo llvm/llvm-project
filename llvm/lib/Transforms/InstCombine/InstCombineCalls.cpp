@@ -3982,13 +3982,13 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         ConstantInt *FunctionType = nullptr;
         ConstantInt *ExpectedType = cast<ConstantInt>(Bundle->Inputs[0]);
 
-        if (MDNode *MD = CalleeF->getMetadata(LLVMContext::MD_kcfi_type))
+        if (MDNode *MD = CalleeF->getMetadata(LLVMContext::MD_cfi_type))
           FunctionType = mdconst::extract<ConstantInt>(MD->getOperand(0));
 
         if (FunctionType &&
             FunctionType->getZExtValue() != ExpectedType->getZExtValue())
           dbgs() << Call.getModule()->getName()
-                 << ": warning: kcfi: " << Call.getCaller()->getName()
+                 << ": warning: cfi: " << Call.getCaller()->getName()
                  << ": call to " << CalleeF->getName()
                  << " using a mismatching function pointer type\n";
       }

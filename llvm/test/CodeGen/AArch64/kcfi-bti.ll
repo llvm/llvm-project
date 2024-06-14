@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
 ; ASM:       .word 12345678
-define void @f1(ptr noundef %x) #1 !kcfi_type !2 {
+define void @f1(ptr noundef %x) #1 !cfi_type !2 {
 ; ASM-LABEL: f1:
 ; ASM:       // %bb.0:
 ; ASM:         ldur w16, [x0, #-4]
@@ -30,7 +30,7 @@ define void @f1(ptr noundef %x) #1 !kcfi_type !2 {
 }
 
 ; ASM:       .word 12345678
-define void @f2(ptr noundef %x)  #1 !kcfi_type !2 {
+define void @f2(ptr noundef %x)  #1 !cfi_type !2 {
 ; ASM-LABEL: f2:
 ; ASM:       // %bb.0:
 ; ASM:         ldur w16, [x0, #-4]

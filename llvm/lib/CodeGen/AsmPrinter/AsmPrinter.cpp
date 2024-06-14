@@ -1512,7 +1512,7 @@ void AsmPrinter::emitKCFITrapEntry(const MachineFunction &MF,
 
 void AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   const Function &F = MF.getFunction();
-  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_kcfi_type))
+  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_cfi_type))
     emitGlobalConstant(F.getDataLayout(),
                        mdconst::extract<ConstantInt>(MD->getOperand(0)));
 }

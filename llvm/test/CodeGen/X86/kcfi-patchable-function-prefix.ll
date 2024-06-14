@@ -7,7 +7,7 @@
 ; CHECK-LABEL:    .Lcfi_func_end0:
 ; CHECK-NEXT:     .size   __cfi_f1, .Lcfi_func_end0-__cfi_f1
 ; CHECK-LABEL:    f1:
-define void @f1(ptr noundef %x) !kcfi_type !1 {
+define void @f1(ptr noundef %x) !cfi_type !1 {
 ; CHECK:            addl -4(%r{{..}}), %r10d
   call void %x() [ "kcfi"(i32 12345678) ]
   ret void
@@ -29,7 +29,7 @@ define void @f2(ptr noundef %x) {
 ; CHECK-NEXT:       movl $12345678, %eax
 ; CHECK-COUNT-11:   nop
 ; CHECK-LABEL:    f3:
-define void @f3(ptr noundef %x) #0 !kcfi_type !1 {
+define void @f3(ptr noundef %x) #0 !cfi_type !1 {
 ; CHECK:            addl -15(%r{{..}}), %r10d
   call void %x() [ "kcfi"(i32 12345678) ]
   ret void

@@ -910,7 +910,7 @@ void CodeGenModule::Release() {
     CodeGenFunction(*this).EmitCfiCheckStub();
   }
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
-    finalizeKCFITypes();
+    finalizeCFITypes();
   emitAtAvailableLinkGuard();
   if (Context.getTargetInfo().getTriple().isWasm())
     EmitMainVoidAlias();
@@ -2818,10 +2818,10 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
       F->addTypeMetadata(0, llvm::ConstantAsMetadata::get(CrossDsoTypeId));
 }
 
-void CodeGenModule::setKCFIType(const FunctionDecl *FD, llvm::Function *F) {
+void CodeGenModule::setCFIType(const FunctionDecl *FD, llvm::Function *F) {
   llvm::LLVMContext &Ctx = F->getContext();
   llvm::MDBuilder MDB(Ctx);
-  F->setMetadata(llvm::LLVMContext::MD_kcfi_type,
+  F->setMetadata(llvm::LLVMContext::MD_cfi_type,
                  llvm::MDNode::get(
                      Ctx, MDB.createConstant(CreateKCFITypeId(FD->getType()))));
 }
@@ -2835,13 +2835,13 @@ static bool allowKCFIIdentifier(StringRef Name) {
   });
 }
 
-void CodeGenModule::finalizeKCFITypes() {
+void CodeGenModule::finalizeCFITypes() {
   llvm::Module &M = getModule();
   for (auto &F : M.functions()) {
-    // Remove KCFI type metadata from non-address-taken local functions.
+    // Remove CFI type metadata from non-address-taken local functions.
     bool AddressTaken = F.hasAddressTaken();
     if (!AddressTaken && F.hasLocalLinkage())
-      F.eraseMetadata(llvm::LLVMContext::MD_kcfi_type);
+      F.eraseMetadata(llvm::LLVMContext::MD_cfi_type);
 
     // Generate a constant with the expected KCFI type identifier for all
     // address-taken function declarations to support annotating indirectly
@@ -2850,7 +2850,7 @@ void CodeGenModule::finalizeKCFITypes() {
       continue;
 
     const llvm::ConstantInt *Type;
-    if (const llvm::MDNode *MD = F.getMetadata(llvm::LLVMContext::MD_kcfi_type))
+    if (const llvm::MDNode *MD = F.getMetadata(llvm::LLVMContext::MD_cfi_type))
       Type = llvm::mdconst::extract<llvm::ConstantInt>(MD->getOperand(0));
     else
       continue;
@@ -2949,7 +2949,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
     CreateFunctionTypeMetadataForIcall(FD, F);
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
-    setKCFIType(FD, F);
+    setCFIType(FD, F);
 
   if (getLangOpts().OpenMP && FD->hasAttr<OMPDeclareSimdDeclAttr>())
     getOpenMPRuntime().emitDeclareSimdFunction(FD, F);

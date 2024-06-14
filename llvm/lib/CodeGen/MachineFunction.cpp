@@ -225,7 +225,8 @@ void MachineFunction::init() {
   // by a least 4 to avoid unaligned access, which is especially important for
   // -mno-unaligned-access.
   if (F.hasMetadata(LLVMContext::MD_func_sanitize) ||
-      F.getMetadata(LLVMContext::MD_kcfi_type))
+      (F.getParent()->getModuleFlag("kcfi") &&
+       F.getMetadata(LLVMContext::MD_cfi_type)))
     Alignment = std::max(Alignment, Align(4));
 
   if (AlignAllFunctions)

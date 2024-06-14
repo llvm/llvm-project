@@ -6,7 +6,7 @@
 
 ; CHECK: define internal void @asan.module_ctor()
 ; CHECK-SAME: #[[#ATTR:]]
-; CHECK-SAME: !kcfi_type
+; CHECK-SAME: !cfi_type
 
 ; CHECK: attributes #[[#ATTR]] = { {{.*}} "patchable-function-prefix"="3" }
 
