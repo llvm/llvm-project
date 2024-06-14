@@ -731,10 +731,8 @@ void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
     uint64_t KindSum = 0;
     uint32_t NumValueSites = getNumValueSites(VK);
     for (size_t I = 0; I < NumValueSites; ++I) {
-      uint32_t NV = getNumValueDataForSite(VK, I);
-      std::unique_ptr<InstrProfValueData[]> VD = getValueForSite(VK, I);
-      for (uint32_t V = 0; V < NV; V++)
-        KindSum += VD[V].Count;
+      for (const auto &V : getValueArrayForSite(VK, I))
+        KindSum += V.Count;
     }
     Sum.ValueCounts[VK] += KindSum;
   }
@@ -1089,13 +1087,14 @@ uint32_t getNumValueDataInstrProf(const void *Record, uint32_t VKind) {
 
 uint32_t getNumValueDataForSiteInstrProf(const void *R, uint32_t VK,
                                          uint32_t S) {
-  return reinterpret_cast<const InstrProfRecord *>(R)
-      ->getNumValueDataForSite(VK, S);
+  const auto *IPR = reinterpret_cast<const InstrProfRecord *>(R);
+  return IPR->getValueArrayForSite(VK, S).size();
 }
 
 void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
                               uint32_t K, uint32_t S) {
-  reinterpret_cast<const InstrProfRecord *>(R)->getValueForSite(Dst, K, S);
+  const auto *IPR = reinterpret_cast<const InstrProfRecord *>(R);
+  llvm::copy(IPR->getValueArrayForSite(K, S), Dst);
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
@@ -1274,14 +1273,9 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        const InstrProfRecord &InstrProfR,
                        InstrProfValueKind ValueKind, uint32_t SiteIdx,
                        uint32_t MaxMDCount) {
-  uint32_t NV = InstrProfR.getNumValueDataForSite(ValueKind, SiteIdx);
-  if (!NV)
+  auto VDs = InstrProfR.getValueArrayForSite(ValueKind, SiteIdx);
+  if (VDs.empty())
     return;
-
-  std::unique_ptr<InstrProfValueData[]> VD =
-      InstrProfR.getValueForSite(ValueKind, SiteIdx);
-
-  ArrayRef<InstrProfValueData> VDs(VD.get(), NV);
   uint64_t Sum = 0;
   for (const InstrProfValueData &V : VDs)
     Sum = SaturatingAdd(Sum, V.Count);

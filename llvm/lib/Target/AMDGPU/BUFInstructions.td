@@ -399,12 +399,10 @@ class MUBUF_Invalidate <string opName, SDPatternOperator node = null_frag> :
 
 class getLdStVDataRegisterOperand<RegisterClass RC, bit isTFE> {
   RegisterOperand tfeVDataOp =
-    !if(!eq(RC.Size, 32), AVLdSt_64,
-    !if(!eq(RC.Size, 64), AVLdSt_96,
-    !if(!eq(RC.Size, 96), AVLdSt_128,
-    !if(!eq(RC.Size, 128), AVLdSt_160,
-    RegisterOperand<VReg_1>  // Invalid register.
-    ))));
+    !cond(!eq(RC.Size, 32)  : AVLdSt_64,
+          !eq(RC.Size, 64)  : AVLdSt_96,
+          !eq(RC.Size, 96)  : AVLdSt_128,
+          !eq(RC.Size, 128) : AVLdSt_160);
 
   RegisterOperand ret = !if(isTFE, tfeVDataOp, getLdStRegisterOperand<RC>.ret);
 }
