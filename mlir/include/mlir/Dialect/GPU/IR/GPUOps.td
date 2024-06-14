@@ -544,7 +544,8 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
                Optional<LaunchIndx>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
                Variadic<AnyType>:$kernelOperands,
-               Optional<AnyType>:$asyncObject)>,
+               Optional<AnyType>:$asyncObject,
+               OptionalAttr<BoolAttr>:$nonPortableClusterSize)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "Launches a function as a GPU kernel";
 
@@ -584,6 +585,10 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     `clusterSizeX`, `clusterSizeY`, and `clusterSizeZ` arguments. When these
     arguments are present, the Op launches a kernel that clusters the given
     thread blocks. This feature is exclusive to certain architectures.
+
+    The `gpu.launch_func` also supports the following optional runtime attributes:
+    - nonPortableClusterSize - launch kernel with non-portable cluster size (only
+    supported on certain architectures)
 
     Example:
 
@@ -640,7 +645,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
                                           // memory to allocate for a workgroup.
           args(%arg0 : f32,               // (Optional) Kernel arguments.
                %arg1 : memref<?xf32, 1>)
-    }
+    } { nonPortableClusterSize = true }   // Attributes
     ```
   }];
 
@@ -652,12 +657,14 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       "ValueRange":$kernelOperands,
       CArg<"Type", "nullptr">:$asyncTokenType,
       CArg<"ValueRange", "{}">:$asyncDependencies,
-      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>,
+      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize,
+      CArg<"BoolAttr", "{}">:$nonPortableClusterSize)>,
     OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
       CArg<"Value", "nullptr">:$asyncObject,
-      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>
+      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize,
+      CArg<"BoolAttr", "{}">:$nonPortableClusterSize)>
   ];
 
   let extraClassDeclaration = [{
@@ -720,7 +727,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Optional<Index>:$clusterSizeX, 
                Optional<Index>:$clusterSizeY, 
                Optional<Index>:$clusterSizeZ,
-               Optional<I32>:$dynamicSharedMemorySize)>,
+               Optional<I32>:$dynamicSharedMemorySize,
+               OptionalAttr<BoolAttr>:$nonPortableClusterSize)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -815,10 +823,20 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                blocks(%bx, %by, %bz) in (%sz_bx = %3, %sz_by = %4, %sz_bz = %5)
                threads(%tx, %ty, %tz) in (%sz_tx = %6, %sz_ty = %7, %sz_tz = %8)
     {
-      // Cluster, block and thread identifiers, as well as cluster/block/grid 
+      // Cluster, block and thread identifiers, as well as cluster/block/grid
       // sizes are immediately usable inside body region.
       "some_op"(%cx, %bx, %tx) : (index, index, index) -> ()
     }
+
+    // Launch with non-portable cluster size attribute.
+    gpu.launch clusters(%cx, %cy, %cz) in (%sz_cx = %0, %sz_cy = %1, %sz_cz = %2)
+               blocks(%bx, %by, %bz) in (%sz_bx = %3, %sz_by = %4, %sz_bz = %5)
+               threads(%tx, %ty, %tz) in (%sz_tx = %6, %sz_ty = %7, %sz_tz = %8)
+    {
+      // Cluster, block and thread identifiers, as well as cluster/block/grid
+      // sizes are immediately usable inside body region.
+      "some_op"(%cx, %bx, %tx) : (index, index, index) -> ()
+    } { nonPortabeClusterSize = true }
     ```
 
     Rationale: using operation/block arguments gives analyses a clear way of
@@ -843,7 +861,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       CArg<"TypeRange", "{}">:$privateAttributions,
       CArg<"Value", "nullptr">:$clusterSizeX,
       CArg<"Value", "nullptr">:$clusterSizeY,
-      CArg<"Value", "nullptr">:$clusterSizeZ)>
+      CArg<"Value", "nullptr">:$clusterSizeZ,
+      CArg<"BoolAttr", "{}">:$nonPortableClusterSize)>
   ];
 
   let extraClassDeclaration = [{

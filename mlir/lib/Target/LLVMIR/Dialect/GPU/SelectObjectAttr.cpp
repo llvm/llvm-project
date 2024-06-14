@@ -174,6 +174,7 @@ private:
   Module &module;
   IRBuilderBase &builder;
   mlir::LLVM::ModuleTranslation &moduleTranslation;
+  Type *i1Ty{};
   Type *i32Ty{};
   Type *i64Ty{};
   Type *voidTy{};
@@ -216,6 +217,7 @@ llvm::LaunchKernel::LaunchKernel(
     Module &module, IRBuilderBase &builder,
     mlir::LLVM::ModuleTranslation &moduleTranslation)
     : module(module), builder(builder), moduleTranslation(moduleTranslation) {
+  i1Ty = builder.getInt1Ty();
   i32Ty = builder.getInt32Ty();
   i64Ty = builder.getInt64Ty();
   ptrTy = builder.getPtrTy(0);
@@ -240,7 +242,7 @@ llvm::FunctionCallee llvm::LaunchKernel::getClusterKernelLaunchFn() {
           voidTy,
           ArrayRef<Type *>({ptrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
                             intPtrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
-                            i32Ty, ptrTy, ptrTy, ptrTy}),
+                            i32Ty, i1Ty, ptrTy, ptrTy, ptrTy}),
           false));
 }
 
@@ -371,6 +373,10 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   else
     dynamicMemorySize = ConstantInt::get(i32Ty, 0);
 
+  Value *nonPortableClusterSize = op.getNonPortableClusterSize()
+                                      ? ConstantInt::get(i1Ty, 1)
+                                      : ConstantInt::get(i1Ty, 0);
+
   // Create the argument array.
   Value *argArray = createKernelArgArray(op);
 
@@ -443,7 +449,8 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
     builder.CreateCall(
         getClusterKernelLaunchFn(),
         ArrayRef<Value *>({moduleFunction, cx, cy, cz, gx, gy, gz, bx, by, bz,
-                           dynamicMemorySize, stream, argArray, nullPtr}));
+                           dynamicMemorySize, nonPortableClusterSize, stream,
+                           argArray, nullPtr}));
   } else {
     builder.CreateCall(getKernelLaunchFn(),
                        ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by,

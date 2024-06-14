@@ -92,7 +92,8 @@ void ClusterDimOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void ClusterDimBlocksOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
                                            SetIntRangeFn setResultRange) {
-  setResultRange(getResult(), getIndexRange(1, kMaxClusterDim));
+  uint64_t max = APInt::getMaxValue(64).getZExtValue();
+  setResultRange(getResult(), getIndexRange(1, max));
 }
 
 void ClusterIdOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
