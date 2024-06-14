@@ -3,6 +3,7 @@ mlir_tablegen(OmpCommon.td --gen-directive-decl --directives-dialect=OpenMP)
 add_public_tablegen_target(omp_common_td)
 
 set(LLVM_TARGET_DEFINITIONS OpenMPOps.td)
+mlir_tablegen(no-output -verify-openmp-ops)
 mlir_tablegen(OpenMPOpsDialect.h.inc -gen-dialect-decls -dialect=omp)
 mlir_tablegen(OpenMPOpsDialect.cpp.inc -gen-dialect-defs -dialect=omp)
 mlir_tablegen(OpenMPOps.h.inc -gen-op-decls)
