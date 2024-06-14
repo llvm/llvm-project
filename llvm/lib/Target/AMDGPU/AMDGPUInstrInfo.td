@@ -506,5 +506,3 @@ def AMDGPUdiv_fmas : PatFrags<(ops node:$src0, node:$src1, node:$src2, node:$vcc
 def AMDGPUperm : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(int_amdgcn_perm node:$src0, node:$src1, node:$src2),
    (AMDGPUperm_impl node:$src0, node:$src1, node:$src2)]>;
-
-
