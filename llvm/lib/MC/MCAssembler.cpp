@@ -420,12 +420,6 @@ void MCAsmLayout::layoutBundle(MCFragment *F) {
   // The fragment's offset will point to after the padding, and its computed
   // size won't include the padding.
   //
-  // When the -mc-relax-all flag is used, we optimize bundling by writting the
-  // padding directly into fragments when the instructions are emitted inside
-  // the streamer. When the fragment is larger than the bundle size, we need to
-  // ensure that it's bundle aligned. This means that if we end up with
-  // multiple fragments, we must emit bundle padding between fragments.
-  //
   // ".align N" is an example of a directive that introduces multiple
   // fragments. We could add a special case to handle ".align N" by emitting
   // within-fragment padding (which would produce less padding when N is less
@@ -436,7 +430,7 @@ void MCAsmLayout::layoutBundle(MCFragment *F) {
   MCEncodedFragment *EF = cast<MCEncodedFragment>(F);
   uint64_t FSize = Assembler.computeFragmentSize(*this, *EF);
 
-  if (!Assembler.getRelaxAll() && FSize > Assembler.getBundleAlignSize())
+  if (FSize > Assembler.getBundleAlignSize())
     report_fatal_error("Fragment can't be larger than a bundle size");
 
   uint64_t RequiredBundlePadding =

@@ -39,7 +39,6 @@ public:
   /// state management
   void reset() override {
     SeenIdent = false;
-    BundleGroups.clear();
     MCObjectStreamer::reset();
   }
 
@@ -142,14 +141,7 @@ private:
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);
   void finalizeCGProfile();
 
-  /// Merge the content of the fragment \p EF into the fragment \p DF.
-  void mergeFragment(MCDataFragment *, MCDataFragment *);
-
   bool SeenIdent = false;
-
-  /// BundleGroups - The stack of fragments holding the bundle-locked
-  /// instructions.
-  SmallVector<MCDataFragment *, 4> BundleGroups;
 };
 
 MCELFStreamer *createARMELFStreamer(MCContext &Context,

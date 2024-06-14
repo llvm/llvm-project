@@ -73,9 +73,6 @@ private:
 
   void fixSymbolsInTLSFixups(const MCExpr *expr);
 
-  /// Merge the content of the fragment \p EF into the fragment \p DF.
-  void mergeFragment(MCDataFragment *, MCDataFragment *);
-
   bool SeenIdent;
 };
 

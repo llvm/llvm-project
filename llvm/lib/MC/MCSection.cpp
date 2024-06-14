@@ -82,15 +82,14 @@ void MCSection::addPendingLabel(MCSymbol *label, unsigned Subsection) {
   PendingLabels.push_back(PendingLabel(label, Subsection));
 }
 
-void MCSection::flushPendingLabels(MCFragment *F, uint64_t FOffset,
-				   unsigned Subsection) {
+void MCSection::flushPendingLabels(MCFragment *F, unsigned Subsection) {
   // Set the fragment and fragment offset for all pending symbols in the
   // specified Subsection, and remove those symbols from the pending list.
   for (auto It = PendingLabels.begin(); It != PendingLabels.end(); ++It) {
     PendingLabel& Label = *It;
     if (Label.Subsection == Subsection) {
       Label.Sym->setFragment(F);
-      Label.Sym->setOffset(FOffset);
+      assert(Label.Sym->getOffset() == 0);
       PendingLabels.erase(It--);
     }
   }
@@ -105,7 +104,7 @@ void MCSection::flushPendingLabels() {
     MCFragment *F = new MCDataFragment();
     addFragment(*F);
     F->setParent(this);
-    flushPendingLabels(F, 0, Label.Subsection);
+    flushPendingLabels(F, Label.Subsection);
   }
 }
 
