@@ -2691,6 +2691,10 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
       mold = nullptr;
     }
     if (mold) {
+      if (IsAssumedRank(*arguments[0])) {
+        context.messages().Say(arguments[0]->sourceLocation(),
+            "MOLD= argument to NULL() must not be assumed-rank"_err_en_US);
+      }
       bool isProcPtrTarget{
           IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(*mold)};
       if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold)) {

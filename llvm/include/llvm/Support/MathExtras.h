@@ -424,9 +424,41 @@ template <uint64_t Align> constexpr inline uint64_t alignTo(uint64_t Value) {
   return (Value + Align - 1) / Align * Align;
 }
 
-/// Returns the integer ceil(Numerator / Denominator).
+/// Returns the integer ceil(Numerator / Denominator). Unsigned integer version.
 inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
   return alignTo(Numerator, Denominator) / Denominator;
+}
+
+/// Returns the integer ceil(Numerator / Denominator). Signed integer version.
+inline int64_t divideCeilSigned(int64_t Numerator, int64_t Denominator) {
+  assert(Denominator && "Division by zero");
+  if (!Numerator)
+    return 0;
+  // C's integer division rounds towards 0.
+  int64_t X = (Denominator > 0) ? -1 : 1;
+  bool SameSign = (Numerator > 0) == (Denominator > 0);
+  return SameSign ? ((Numerator + X) / Denominator) + 1
+                  : Numerator / Denominator;
+}
+
+/// Returns the integer floor(Numerator / Denominator). Signed integer version.
+inline int64_t divideFloorSigned(int64_t Numerator, int64_t Denominator) {
+  assert(Denominator && "Division by zero");
+  if (!Numerator)
+    return 0;
+  // C's integer division rounds towards 0.
+  int64_t X = (Denominator > 0) ? -1 : 1;
+  bool SameSign = (Numerator > 0) == (Denominator > 0);
+  return SameSign ? Numerator / Denominator
+                  : -((-Numerator + X) / Denominator) - 1;
+}
+
+/// Returns the remainder of the Euclidean division of LHS by RHS. Result is
+/// always non-negative.
+inline int64_t mod(int64_t Numerator, int64_t Denominator) {
+  assert(Denominator >= 1 && "Mod by non-positive number");
+  int64_t Mod = Numerator % Denominator;
+  return Mod < 0 ? Mod + Denominator : Mod;
 }
 
 /// Returns the integer nearest(Numerator / Denominator).

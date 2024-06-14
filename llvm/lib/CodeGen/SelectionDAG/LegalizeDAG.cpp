@@ -3059,6 +3059,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if ((Tmp1 = TLI.expandABD(Node, DAG)))
       Results.push_back(Tmp1);
     break;
+  case ISD::AVGCEILS:
+  case ISD::AVGCEILU:
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
+    if ((Tmp1 = TLI.expandAVG(Node, DAG)))
+      Results.push_back(Tmp1);
+    break;
   case ISD::CTPOP:
     if ((Tmp1 = TLI.expandCTPOP(Node, DAG)))
       Results.push_back(Tmp1);
