@@ -37,7 +37,6 @@
 #include "src/unistd/fork.h"
 #include "test/IntegrationTest/test.h"
 #include <errno.h>
-#include <optional>
 #include <pthread.h>
 #include <time.h>
 
