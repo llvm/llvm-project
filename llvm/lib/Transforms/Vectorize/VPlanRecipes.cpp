@@ -39,6 +39,7 @@ using VectorParts = SmallVector<Value *, 2>;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -138,6 +139,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
     case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
     case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
@@ -254,6 +256,40 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
   insertBefore(BB, I);
 }
 
+InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(this)) {
+    auto *UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+    if (UI && Ctx.skipCostComputation(UI, VF.isVector()))
+      return 0;
+  }
+
+  InstructionCost RecipeCost = computeCost(VF, Ctx);
+  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+      RecipeCost.isValid())
+    RecipeCost = InstructionCost(ForceTargetInstructionCost);
+
+  LLVM_DEBUG({
+    dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
+    dump();
+  });
+  return RecipeCost;
+}
+
+InstructionCost VPRecipeBase::computeCost(ElementCount VF,
+                                          VPCostContext &Ctx) const {
+  // Compute the cost for the recipe falling back to the legacy cost model using
+  // the underlying instruction. If there is no underlying instruction, returns
+  // 0.
+  Instruction *UI = nullptr;
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(this))
+    UI = dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+  else if (auto *IG = dyn_cast<VPInterleaveRecipe>(this))
+    UI = IG->getInsertPos();
+  else if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(this))
+    UI = &WidenMem->getIngredient();
+  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
+}
+
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -324,9 +360,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    if (Part != 0 && vputils::onlyFirstPartUsed(this))
-      return State.get(this, 0, OnlyFirstLaneUsed);
-
     Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     auto *Res =
@@ -628,6 +661,7 @@ void VPInstruction::execute(VPTransformState &State) {
       canGenerateScalarForFirstLane() &&
       (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
+  bool OnlyFirstPartUsed = vputils::onlyFirstPartUsed(this);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (GeneratesPerAllLanes) {
       for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
@@ -636,6 +670,13 @@ void VPInstruction::execute(VPTransformState &State) {
         assert(GeneratedValue && "generatePerLane must produce a value");
         State.set(this, GeneratedValue, VPIteration(Part, Lane));
       }
+      continue;
+    }
+
+    if (Part != 0 && OnlyFirstPartUsed && hasResult()) {
+      Value *Part0 = State.get(this, 0, /*IsScalar*/ GeneratesPerFirstLaneOnly);
+      State.set(this, Part0, Part,
+                /*IsScalar*/ GeneratesPerFirstLaneOnly);
       continue;
     }
 
@@ -669,6 +710,25 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
+    return true;
+  };
+  llvm_unreachable("switch should return");
+}
+
+bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (Instruction::isBinaryOp(getOpcode()))
+    return vputils::onlyFirstPartUsed(this);
+
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::ICmp:
+  case Instruction::Select:
+    return vputils::onlyFirstPartUsed(this);
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
   llvm_unreachable("switch should return");

@@ -856,8 +856,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       llvm::BasicBlock *OrigBB = Branch->getParent();
 
       // Give hint that we very much don't expect to see NaNs.
-      // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
-      llvm::MDNode *BrWeight = MDHelper.createBranchWeights(1, (1U << 20) - 1);
+      llvm::MDNode *BrWeight = MDHelper.createUnlikelyBranchWeights();
       Branch->setMetadata(llvm::LLVMContext::MD_prof, BrWeight);
 
       // Now test the imaginary part and create its branch.

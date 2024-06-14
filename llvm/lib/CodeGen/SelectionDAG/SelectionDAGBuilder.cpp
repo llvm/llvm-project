@@ -729,8 +729,17 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       // prevents it from being picked up by the earlier bitcast case.
       if (ValueVT.getVectorElementCount().isScalar() &&
           (!ValueVT.isFloatingPoint() || !PartVT.isInteger())) {
-        Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
-                          DAG.getVectorIdxConstant(0, DL));
+        // If we reach this condition and PartVT is FP, this means that
+        // ValueVT is also FP and both have a different size, otherwise we
+        // would have bitcasted them. Producing an EXTRACT_VECTOR_ELT here
+        // would be invalid since that would mean the smaller FP type has to
+        // be extended to the larger one.
+        if (PartVT.isFloatingPoint()) {
+          Val = DAG.getBitcast(ValueVT.getScalarType(), Val);
+          Val = DAG.getNode(ISD::FP_EXTEND, DL, PartVT, Val);
+        } else
+          Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
+                            DAG.getVectorIdxConstant(0, DL));
       } else {
         uint64_t ValueSize = ValueVT.getFixedSizeInBits();
         assert(PartVT.getFixedSizeInBits() > ValueSize &&
@@ -4478,6 +4487,17 @@ static const MDNode *getRangeMetadata(const Instruction &I) {
   return I.getMetadata(LLVMContext::MD_range);
 }
 
+static std::optional<ConstantRange> getRange(const Instruction &I) {
+  if (const auto *CB = dyn_cast<CallBase>(&I)) {
+    // see comment in getRangeMetadata about this check
+    if (CB->hasRetAttr(Attribute::NoUndef))
+      return CB->getRange();
+  }
+  if (const MDNode *Range = getRangeMetadata(I))
+    return getConstantRangeFromMetadata(*Range);
+  return std::nullopt;
+}
+
 void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (I.isAtomic())
     return visitAtomicLoad(I);
@@ -6597,7 +6617,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::dbg_assign: {
-    // Debug intrinsics are handled seperately in assignment tracking mode.
+    // Debug intrinsics are handled separately in assignment tracking mode.
     if (AssignmentTrackingEnabled)
       return;
     // If assignment tracking hasn't been enabled then fall through and treat
@@ -6605,7 +6625,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     [[fallthrough]];
   }
   case Intrinsic::dbg_value: {
-    // Debug intrinsics are handled seperately in assignment tracking mode.
+    // Debug intrinsics are handled separately in assignment tracking mode.
     if (AssignmentTrackingEnabled)
       return;
     const DbgValueInst &DI = cast<DbgValueInst>(I);
@@ -8597,6 +8617,7 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
   if (EHPadBB) {
     DAG.setRoot(lowerEndEH(getRoot(), cast_or_null<InvokeInst>(CLI.CB), EHPadBB,
                            BeginLabel));
+    Result.second = getRoot();
   }
 
   return Result;
@@ -10220,19 +10241,16 @@ void SelectionDAGBuilder::visitVACopy(const CallInst &I) {
 SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
                                                     const Instruction &I,
                                                     SDValue Op) {
-  const MDNode *Range = getRangeMetadata(I);
-  if (!Range)
+  std::optional<ConstantRange> CR = getRange(I);
+
+  if (!CR || CR->isFullSet() || CR->isEmptySet() || CR->isUpperWrapped())
     return Op;
 
-  ConstantRange CR = getConstantRangeFromMetadata(*Range);
-  if (CR.isFullSet() || CR.isEmptySet() || CR.isUpperWrapped())
-    return Op;
-
-  APInt Lo = CR.getUnsignedMin();
+  APInt Lo = CR->getUnsignedMin();
   if (!Lo.isMinValue())
     return Op;
 
-  APInt Hi = CR.getUnsignedMax();
+  APInt Hi = CR->getUnsignedMax();
   unsigned Bits = std::max(Hi.getActiveBits(),
                            static_cast<unsigned>(IntegerType::MIN_INT_BITS));
 
@@ -10439,6 +10457,8 @@ void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   SDNode *CallEnd = Result.second.getNode();
+  if (CallEnd->getOpcode() == ISD::EH_LABEL)
+    CallEnd = CallEnd->getOperand(0).getNode();
   if (HasDef && (CallEnd->getOpcode() == ISD::CopyFromReg))
     CallEnd = CallEnd->getOperand(0).getNode();
 

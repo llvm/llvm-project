@@ -351,63 +351,30 @@ declare %struct.__neon_float64x1x4_t @llvm.aarch64.neon.ld4.v1f64.p0(ptr) nounwi
 
 define %struct.__neon_int8x16x2_t @ld2lane_16b(<16 x i8> %L1, <16 x i8> %L2, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld2lane_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    ld2.b { v0, v1 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld2lane_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ld2.b { v0, v1 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld2lane_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld2.b { v0, v1 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int8x16x2_t @llvm.aarch64.neon.ld2lane.v16i8.p0(<16 x i8> %L1, <16 x i8> %L2, i64 1, ptr %A)
 	ret %struct.__neon_int8x16x2_t  %tmp2
 }
 
 define %struct.__neon_int8x16x3_t @ld3lane_16b(<16 x i8> %L1, <16 x i8> %L2, <16 x i8> %L3, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld3lane_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    ld3.b { v0, v1, v2 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld3lane_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld3lane_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3.b { v0, v1, v2 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int8x16x3_t @llvm.aarch64.neon.ld3lane.v16i8.p0(<16 x i8> %L1, <16 x i8> %L2, <16 x i8> %L3, i64 1, ptr %A)
 	ret %struct.__neon_int8x16x3_t  %tmp2
 }
 
 define %struct.__neon_int8x16x4_t @ld4lane_16b(<16 x i8> %L1, <16 x i8> %L2, <16 x i8> %L3, <16 x i8> %L4, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld4lane_16b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    ld4.b { v0, v1, v2, v3 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld4lane_16b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld4lane_16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld4.b { v0, v1, v2, v3 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int8x16x4_t @llvm.aarch64.neon.ld4lane.v16i8.p0(<16 x i8> %L1, <16 x i8> %L2, <16 x i8> %L3, <16 x i8> %L4, i64 1, ptr %A)
 	ret %struct.__neon_int8x16x4_t  %tmp2
 }
@@ -418,63 +385,30 @@ declare %struct.__neon_int8x16x4_t @llvm.aarch64.neon.ld4lane.v16i8.p0(<16 x i8>
 
 define %struct.__neon_int16x8x2_t @ld2lane_8h(<8 x i16> %L1, <8 x i16> %L2, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld2lane_8h:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    ld2.h { v0, v1 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld2lane_8h:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ld2.h { v0, v1 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld2lane_8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld2.h { v0, v1 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int16x8x2_t @llvm.aarch64.neon.ld2lane.v8i16.p0(<8 x i16> %L1, <8 x i16> %L2, i64 1, ptr %A)
 	ret %struct.__neon_int16x8x2_t  %tmp2
 }
 
 define %struct.__neon_int16x8x3_t @ld3lane_8h(<8 x i16> %L1, <8 x i16> %L2, <8 x i16> %L3, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld3lane_8h:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    ld3.h { v0, v1, v2 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld3lane_8h:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld3lane_8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3.h { v0, v1, v2 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int16x8x3_t @llvm.aarch64.neon.ld3lane.v8i16.p0(<8 x i16> %L1, <8 x i16> %L2, <8 x i16> %L3, i64 1, ptr %A)
 	ret %struct.__neon_int16x8x3_t  %tmp2
 }
 
 define %struct.__neon_int16x8x4_t @ld4lane_8h(<8 x i16> %L1, <8 x i16> %L2, <8 x i16> %L3, <8 x i16> %L4, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld4lane_8h:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    ld4.h { v0, v1, v2, v3 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld4lane_8h:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld4lane_8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld4.h { v0, v1, v2, v3 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int16x8x4_t @llvm.aarch64.neon.ld4lane.v8i16.p0(<8 x i16> %L1, <8 x i16> %L2, <8 x i16> %L3, <8 x i16> %L4, i64 1, ptr %A)
 	ret %struct.__neon_int16x8x4_t  %tmp2
 }
@@ -485,63 +419,30 @@ declare %struct.__neon_int16x8x4_t @llvm.aarch64.neon.ld4lane.v8i16.p0(<8 x i16>
 
 define %struct.__neon_int32x4x2_t @ld2lane_4s(<4 x i32> %L1, <4 x i32> %L2, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld2lane_4s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    ld2.s { v0, v1 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld2lane_4s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld2lane_4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld2.s { v0, v1 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int32x4x2_t @llvm.aarch64.neon.ld2lane.v4i32.p0(<4 x i32> %L1, <4 x i32> %L2, i64 1, ptr %A)
 	ret %struct.__neon_int32x4x2_t  %tmp2
 }
 
 define %struct.__neon_int32x4x3_t @ld3lane_4s(<4 x i32> %L1, <4 x i32> %L2, <4 x i32> %L3, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld3lane_4s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld3lane_4s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld3lane_4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3.s { v0, v1, v2 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int32x4x3_t @llvm.aarch64.neon.ld3lane.v4i32.p0(<4 x i32> %L1, <4 x i32> %L2, <4 x i32> %L3, i64 1, ptr %A)
 	ret %struct.__neon_int32x4x3_t  %tmp2
 }
 
 define %struct.__neon_int32x4x4_t @ld4lane_4s(<4 x i32> %L1, <4 x i32> %L2, <4 x i32> %L3, <4 x i32> %L4, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld4lane_4s:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld4lane_4s:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld4lane_4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld4.s { v0, v1, v2, v3 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int32x4x4_t @llvm.aarch64.neon.ld4lane.v4i32.p0(<4 x i32> %L1, <4 x i32> %L2, <4 x i32> %L3, <4 x i32> %L4, i64 1, ptr %A)
 	ret %struct.__neon_int32x4x4_t  %tmp2
 }
@@ -552,63 +453,30 @@ declare %struct.__neon_int32x4x4_t @llvm.aarch64.neon.ld4lane.v4i32.p0(<4 x i32>
 
 define %struct.__neon_int64x2x2_t @ld2lane_2d(<2 x i64> %L1, <2 x i64> %L2, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld2lane_2d:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-SD-NEXT:    ld2.d { v0, v1 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld2lane_2d:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld2lane_2d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld2.d { v0, v1 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int64x2x2_t @llvm.aarch64.neon.ld2lane.v2i64.p0(<2 x i64> %L1, <2 x i64> %L2, i64 1, ptr %A)
 	ret %struct.__neon_int64x2x2_t  %tmp2
 }
 
 define %struct.__neon_int64x2x3_t @ld3lane_2d(<2 x i64> %L1, <2 x i64> %L2, <2 x i64> %L3, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld3lane_2d:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld3lane_2d:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld3lane_2d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld3.d { v0, v1, v2 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int64x2x3_t @llvm.aarch64.neon.ld3lane.v2i64.p0(<2 x i64> %L1, <2 x i64> %L2, <2 x i64> %L3, i64 1, ptr %A)
 	ret %struct.__neon_int64x2x3_t  %tmp2
 }
 
 define %struct.__neon_int64x2x4_t @ld4lane_2d(<2 x i64> %L1, <2 x i64> %L2, <2 x i64> %L3, <2 x i64> %L4, ptr %A) nounwind {
 ; Make sure we are using the operands defined by the ABI
-; CHECK-SD-LABEL: ld4lane_2d:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[1], [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ld4lane_2d:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[1], [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ld4lane_2d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld4.d { v0, v1, v2, v3 }[1], [x0]
+; CHECK-NEXT:    ret
 	%tmp2 = call %struct.__neon_int64x2x4_t @llvm.aarch64.neon.ld4lane.v2i64.p0(<2 x i64> %L1, <2 x i64> %L2, <2 x i64> %L3, <2 x i64> %L4, i64 1, ptr %A)
 	ret %struct.__neon_int64x2x4_t  %tmp2
 }

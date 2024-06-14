@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/array.h"
 #include "src/__support/fixedvector.h"
 #include "test/UnitTest/Test.h"
 
@@ -68,4 +69,30 @@ TEST(LlvmLibcFixedVectorTest, Iteration) {
     ASSERT_GT(*it, -1);
   for (int &x : v)
     ASSERT_GE(x, 0);
+}
+
+TEST(LlvmLibcFixedVectorTest, ConstructionFromIterators) {
+  LIBC_NAMESPACE::cpp::array<int, 4> arr{1, 2, 3, 4};
+  LIBC_NAMESPACE::FixedVector<int, 5> vec(arr.begin(), arr.end());
+  ASSERT_EQ(vec.size(), arr.size());
+  for (size_t i = 0; i < arr.size(); ++i)
+    ASSERT_EQ(vec[i], arr[i]);
+}
+
+TEST(LlvmLibcFixedVectorTest, ConstructionFromCountAndValue) {
+  constexpr int kVal = 10;
+  LIBC_NAMESPACE::FixedVector<int, 5> vec(4, kVal);
+  ASSERT_EQ(vec.size(), size_t(4));
+  for (size_t i = 0; i < vec.size(); ++i)
+    ASSERT_EQ(vec[i], kVal);
+}
+
+TEST(LlvmLibcFixedVectorTest, ForwardIteration) {
+  LIBC_NAMESPACE::cpp::array<int, 4> arr{1, 2, 3, 4};
+  LIBC_NAMESPACE::FixedVector<int, 5> vec(arr.begin(), arr.end());
+  ASSERT_EQ(vec.size(), arr.size());
+  for (auto it = vec.begin(); it != vec.end(); ++it) {
+    auto idx = it - vec.begin();
+    ASSERT_EQ(*it, arr[idx]);
+  }
 }

@@ -205,9 +205,9 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
   setOperationAction(ISD::SDIVREM, VT, Expand);
   setOperationAction(ISD::UDIVREM, VT, Expand);
 
-  if (!VT.isFloatingPoint() &&
-      VT != MVT::v2i64 && VT != MVT::v1i64)
-    for (auto Opcode : {ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX})
+  if (!VT.isFloatingPoint() && VT != MVT::v2i64 && VT != MVT::v1i64)
+    for (auto Opcode : {ISD::ABS, ISD::ABDS, ISD::ABDU, ISD::SMIN, ISD::SMAX,
+                        ISD::UMIN, ISD::UMAX})
       setOperationAction(Opcode, VT, Legal);
   if (!VT.isFloatingPoint())
     for (auto Opcode : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
@@ -365,6 +365,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       setOperationAction(ISD::FSQRT, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
+      setOperationAction(ISD::FTAN, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
       setOperationAction(ISD::FLOG, VT, Expand);
       setOperationAction(ISD::FLOG2, VT, Expand);
@@ -875,6 +876,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::v2f64, Expand);
     setOperationAction(ISD::FSIN, MVT::v2f64, Expand);
     setOperationAction(ISD::FCOS, MVT::v2f64, Expand);
+    setOperationAction(ISD::FTAN, MVT::v2f64, Expand);
     setOperationAction(ISD::FPOW, MVT::v2f64, Expand);
     setOperationAction(ISD::FLOG, MVT::v2f64, Expand);
     setOperationAction(ISD::FLOG2, MVT::v2f64, Expand);
@@ -897,6 +899,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
     setOperationAction(ISD::FSIN, MVT::v4f32, Expand);
     setOperationAction(ISD::FCOS, MVT::v4f32, Expand);
+    setOperationAction(ISD::FTAN, MVT::v4f32, Expand);
     setOperationAction(ISD::FPOW, MVT::v4f32, Expand);
     setOperationAction(ISD::FLOG, MVT::v4f32, Expand);
     setOperationAction(ISD::FLOG2, MVT::v4f32, Expand);
@@ -914,6 +917,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::v2f32, Expand);
     setOperationAction(ISD::FSIN, MVT::v2f32, Expand);
     setOperationAction(ISD::FCOS, MVT::v2f32, Expand);
+    setOperationAction(ISD::FTAN, MVT::v2f32, Expand);
     setOperationAction(ISD::FPOW, MVT::v2f32, Expand);
     setOperationAction(ISD::FLOG, MVT::v2f32, Expand);
     setOperationAction(ISD::FLOG2, MVT::v2f32, Expand);
@@ -1540,6 +1544,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
     setOperationAction(ISD::FSIN, MVT::f16, Promote);
     setOperationAction(ISD::FCOS, MVT::f16, Promote);
+    setOperationAction(ISD::FTAN, MVT::f16, Promote);
     setOperationAction(ISD::FSINCOS, MVT::f16, Promote);
     setOperationAction(ISD::FPOWI, MVT::f16, Promote);
     setOperationAction(ISD::FPOW, MVT::f16, Promote);
@@ -1623,9 +1628,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(Align(1ULL << Subtarget->getPrefLoopLogAlignment()));
 
   setMinFunctionAlignment(Subtarget->isThumb() ? Align(2) : Align(4));
-
-  if (Subtarget->isThumb() || Subtarget->isThumb2())
-    setTargetDAGCombine(ISD::ABS);
 }
 
 bool ARMTargetLowering::useSoftFloat() const {
@@ -4174,7 +4176,15 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   }
   case Intrinsic::arm_neon_vabs:
     return DAG.getNode(ISD::ABS, SDLoc(Op), Op.getValueType(),
-                        Op.getOperand(1));
+                       Op.getOperand(1));
+  case Intrinsic::arm_neon_vabds:
+    if (Op.getValueType().isInteger())
+      return DAG.getNode(ISD::ABDS, SDLoc(Op), Op.getValueType(),
+                         Op.getOperand(1), Op.getOperand(2));
+    return SDValue();
+  case Intrinsic::arm_neon_vabdu:
+    return DAG.getNode(ISD::ABDU, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::arm_neon_vmulls:
   case Intrinsic::arm_neon_vmullu: {
     unsigned NewOpc = (IntNo == Intrinsic::arm_neon_vmulls)
@@ -13496,18 +13506,6 @@ static SDValue PerformVSetCCToVCTPCombine(SDNode *N,
                          DCI.DAG.getZExtOrTrunc(Op1S, DL, MVT::i32));
 }
 
-static SDValue PerformABSCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const ARMSubtarget *Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  if (TLI.isOperationLegal(N->getOpcode(), N->getValueType(0)))
-    return SDValue();
-
-  return TLI.expandABS(N, DAG);
-}
-
 /// PerformADDECombine - Target-specific dag combine transform from
 /// ARMISD::ADDC, ARMISD::ADDE, and ISD::MUL_LOHI to MLAL or
 /// ARMISD::ADDC, ARMISD::ADDE and ARMISD::UMLAL to ARMISD::UMAAL
@@ -13716,7 +13714,7 @@ static SDValue PerformADDVecReduce(SDNode *N, SelectionDAG &DAG,
   //   t2: i64 = build_pair t1, t1:1
   //   t3: i64 = add t2, y
   // Otherwise we try to push the add up above VADDLVAx, to potentially allow
-  // the add to be simplified seperately.
+  // the add to be simplified separately.
   // We also need to check for sext / zext and commutitive adds.
   auto MakeVecReduce = [&](unsigned Opcode, unsigned OpcodeA, SDValue NA,
                            SDValue NB) {
@@ -18871,7 +18869,6 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT:     return PerformSELECTCombine(N, DCI, Subtarget);
   case ISD::VSELECT:    return PerformVSELECTCombine(N, DCI, Subtarget);
   case ISD::SETCC:      return PerformVSetCCToVCTPCombine(N, DCI, Subtarget);
-  case ISD::ABS:        return PerformABSCombine(N, DCI, Subtarget);
   case ARMISD::ADDE:    return PerformADDECombine(N, DCI, Subtarget);
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);
   case ISD::ADD:        return PerformADDCombine(N, DCI, Subtarget);
