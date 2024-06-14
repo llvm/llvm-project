@@ -378,19 +378,12 @@ TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 4);
   CheckDescriptorEqStr(cmdMsg.get(), "Command cannot be execu");
-#endif
-
-  // removing the file should have no error on Linux, have error on Windows
+  // removing the file only on Linux (file is not created on Win)
   OwningPtr<Descriptor> commandClean{
       CharDescriptor("rm -f NotExecutedCommandFile")};
   OwningPtr<Descriptor> cmdMsgNoErr{CharDescriptor("No Error")};
   RTNAME(ExecuteCommandLine)
   (*commandClean.get(), wait, exitStat.get(), cmdStat.get(), cmdMsgNoErr.get());
-#ifdef _WIN32
-  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
-  CheckDescriptorEqStr(cmdMsgNoErr.get(), "Invalid ");
-  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
-#else
   CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
   CheckDescriptorEqStr(cmdMsgNoErr.get(), "No Error");
   CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);

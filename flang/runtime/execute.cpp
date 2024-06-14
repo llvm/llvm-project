@@ -124,7 +124,7 @@ std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
     // On Windows, ENOENT means the command interpreter can't be found.
     // On Linux, system calls execl with filepath "/bin/sh", ENOENT means the
     // file pathname does not exist.
-    if (errno = ENOENT) {
+    if (errno == ENOENT) {
       if (!cmdstat) {
         terminator.Crash("Command line execution is not supported, system "
                          "returns -1 with errno ENOENT.");
