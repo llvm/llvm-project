@@ -35,9 +35,9 @@ struct MCSymbolTableValue {
   bool Used = false;
 };
 
-/// MCContext stores MCSymbolTableValue in a string map. To avoid redundant
-/// storage of the name, MCSymbol stores a pointer (8 bytes -- half the size of
-/// a StringRef) to the entry to access it.
+/// MCContext stores MCSymbolTableValue in a string map (see MCSymbol::operator
+/// new). To avoid redundant storage of the name, MCSymbol stores a pointer (8
+/// bytes -- half the size of a StringRef) to the entry to access it.
 using MCSymbolTableEntry = StringMapEntry<MCSymbolTableValue>;
 
 } // end namespace llvm

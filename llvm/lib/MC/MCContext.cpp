@@ -213,8 +213,18 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   assert(!NameRef.empty() && "Normal symbols cannot be unnamed!");
 
   MCSymbolTableEntry &Entry = getSymbolTableEntry(NameRef);
-  if (!Entry.second.Symbol)
-    Entry.second.Symbol = createSymbol(&Entry, NameRef, false, false);
+  if (!Entry.second.Symbol) {
+    bool IsRenamable = NameRef.starts_with(MAI->getPrivateGlobalPrefix());
+    bool IsTemporary = IsRenamable && !SaveTempLabels;
+    if (!Entry.second.Used) {
+      Entry.second.Used = true;
+      Entry.second.Symbol = createSymbolImpl(&Entry, IsTemporary);
+    } else {
+      assert(IsRenamable && "cannot rename non-private symbol");
+      // Slow path: we need to rename a temp symbol from the user.
+      Entry.second.Symbol = createRenamableSymbol(NameRef, false, IsTemporary);
+    }
+  }
 
   return Entry.second.Symbol;
 }
@@ -236,7 +246,7 @@ MCSymbol *MCContext::getOrCreateLSDASymbol(const Twine &FuncName) {
 }
 
 MCSymbolTableEntry &MCContext::getSymbolTableEntry(StringRef Name) {
-  return *Symbols.insert(std::make_pair(Name, MCSymbolTableValue{})).first;
+  return *Symbols.try_emplace(Name, MCSymbolTableValue{}).first;
 }
 
 MCSymbol *MCContext::createSymbolImpl(const MCSymbolTableEntry *Name,
@@ -275,28 +285,20 @@ MCSymbol *MCContext::createSymbolImpl(const MCSymbolTableEntry *Name,
       MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
 }
 
-MCSymbol *MCContext::createSymbol(MCSymbolTableEntry *Entry, StringRef Name,
-                                  bool AlwaysAddSuffix, bool IsTemporary) {
-  // Determine whether this is a user written assembler temporary or normal
-  // label, if used.
-  if (!SaveTempLabels && !IsTemporary)
-    IsTemporary = Name.starts_with(MAI->getPrivateGlobalPrefix());
-
+MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
+                                           bool AlwaysAddSuffix,
+                                           bool IsTemporary) {
   SmallString<128> NewName;
+  Name.toVector(NewName);
+  size_t NameLen = NewName.size();
 
-  if (!Entry)
-    Entry = &getSymbolTableEntry(Name);
-  MCSymbolTableEntry *EntryPtr = Entry;
-  assert((IsTemporary || AlwaysAddSuffix || !EntryPtr->second.Used) &&
-         "Cannot rename non-temporary symbols");
+  MCSymbolTableEntry &NameEntry = getSymbolTableEntry(NewName.str());
+  MCSymbolTableEntry *EntryPtr = &NameEntry;
   while (AlwaysAddSuffix || EntryPtr->second.Used) {
     AlwaysAddSuffix = false;
 
-    if (NewName.empty())
-      NewName = Name;
-    else
-      NewName.resize(Name.size());
-    raw_svector_ostream(NewName) << Entry->second.NextUniqueID++;
+    NewName.resize(NameLen);
+    raw_svector_ostream(NewName) << NameEntry.second.NextUniqueID++;
     EntryPtr = &getSymbolTableEntry(NewName.str());
   }
 
@@ -307,16 +309,13 @@ MCSymbol *MCContext::createSymbol(MCSymbolTableEntry *Entry, StringRef Name,
 MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
   if (!UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, /*IsTemporary=*/true);
-
-  SmallString<128> NameSV;
-  raw_svector_ostream(NameSV) << MAI->getPrivateGlobalPrefix() << Name;
-  return createSymbol(nullptr, NameSV, AlwaysAddSuffix, true);
+  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name,
+                               AlwaysAddSuffix, /*IsTemporary=*/true);
 }
 
 MCSymbol *MCContext::createNamedTempSymbol(const Twine &Name) {
-  SmallString<128> NameSV;
-  raw_svector_ostream(NameSV) << MAI->getPrivateGlobalPrefix() << Name;
-  return createSymbol(nullptr, NameSV, true, false);
+  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name, true,
+                               /*IsTemporary=*/!SaveTempLabels);
 }
 
 MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
@@ -324,9 +323,9 @@ MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
 }
 
 MCSymbol *MCContext::createLinkerPrivateSymbol(const Twine &Name) {
-  SmallString<128> NameSV;
-  raw_svector_ostream(NameSV) << MAI->getLinkerPrivateGlobalPrefix() << Name;
-  return createSymbol(nullptr, NameSV, true, false);
+  return createRenamableSymbol(MAI->getLinkerPrivateGlobalPrefix() + Name,
+                               /*AlwaysAddSuffix=*/true,
+                               /*IsTemporary=*/false);
 }
 
 MCSymbol *MCContext::createTempSymbol() { return createTempSymbol("tmp"); }
@@ -749,7 +748,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
 
   StringRef CachedName = Entry.first.SectionName;
 
-  MCSymbol *Begin = createSymbol(nullptr, CachedName, true, false);
+  MCSymbol *Begin = createRenamableSymbol(CachedName, true, false);
   // Begin always has a different name than CachedName... see #48596.
   getSymbolTableEntry(Begin->getName()).second.Symbol = Begin;
   cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);

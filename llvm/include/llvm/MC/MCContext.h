@@ -342,8 +342,8 @@ private:
   MCSymbolTableEntry &getSymbolTableEntry(StringRef Name);
 
   MCSymbol *createSymbolImpl(const MCSymbolTableEntry *Name, bool IsTemporary);
-  MCSymbol *createSymbol(MCSymbolTableEntry *Entry, StringRef Name,
-                         bool AlwaysAddSuffix, bool IsTemporary);
+  MCSymbol *createRenamableSymbol(const Twine &Name, bool AlwaysAddSuffix,
+                                  bool IsTemporary);
 
   MCSymbol *getOrCreateDirectionalLocalSymbol(unsigned LocalLabelVal,
                                               unsigned Instance);
