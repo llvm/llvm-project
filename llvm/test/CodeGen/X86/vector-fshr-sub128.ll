@@ -185,13 +185,13 @@ define <2 x i32> @var_funnnel_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %amt) 
 ; XOPAVX1-LABEL: var_funnnel_v2i32:
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [31,31,31,31]
-; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
-; XOPAVX1-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; XOPAVX1-NEXT:    vpsubd %xmm4, %xmm5, %xmm4
-; XOPAVX1-NEXT:    vpshld %xmm4, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm4
 ; XOPAVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpshld %xmm2, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpshld %xmm4, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; XOPAVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; XOPAVX1-NEXT:    vpsubd %xmm2, %xmm3, %xmm2
+; XOPAVX1-NEXT:    vpshld %xmm2, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    retq
 ;

@@ -9,11 +9,12 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTDOWNTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTDOWNTEST_H
 
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 template <typename T>
-class NextDownTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class NextDownTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

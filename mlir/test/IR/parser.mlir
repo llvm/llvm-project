@@ -597,7 +597,7 @@ func.func @funcattrwithblock() -> ()
   return
 }
 
-// CHECK-label func @funcsimplemap
+// CHECK-LABEL: func @funcsimplemap
 #map_simple0 = affine_map<()[] -> (10)>
 #map_simple1 = affine_map<()[s0] -> (s0)>
 #map_non_simple0 = affine_map<(d0)[] -> (d0)>
@@ -1101,6 +1101,30 @@ func.func @bfloat16_special_values() {
   // bfloat16 negative infinity.
   // CHECK: arith.constant 0xFF80 : bf16
   %5 = arith.constant 0xFF80 : bf16
+
+  return
+}
+
+// CHECK-LABEL: @f80_special_values
+func.func @f80_special_values() {
+  // F80 signaling NaNs.
+  // CHECK: arith.constant 0x7FFFE000000000000001 : f80
+  %0 = arith.constant 0x7FFFE000000000000001 : f80
+  // CHECK: arith.constant 0x7FFFB000000000000011 : f80
+  %1 = arith.constant 0x7FFFB000000000000011 : f80
+
+  // F80 quiet NaNs.
+  // CHECK: arith.constant 0x7FFFC000000000100000 : f80
+  %2 = arith.constant 0x7FFFC000000000100000 : f80
+  // CHECK: arith.constant 0x7FFFE000000001000000 : f80
+  %3 = arith.constant 0x7FFFE000000001000000 : f80
+
+  // F80 positive infinity.
+  // CHECK: arith.constant 0x7FFF8000000000000000 : f80
+  %4 = arith.constant 0x7FFF8000000000000000 : f80
+  // F80 negative infinity.
+  // CHECK: arith.constant 0xFFFF8000000000000000 : f80
+  %5 = arith.constant 0xFFFF8000000000000000 : f80
 
   return
 }

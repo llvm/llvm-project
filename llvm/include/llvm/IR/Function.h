@@ -46,6 +46,7 @@ typedef unsigned ID;
 
 class AssemblyAnnotationWriter;
 class Constant;
+class ConstantRange;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -120,6 +121,7 @@ public:
   void convertFromNewDbgValues();
 
   void setIsNewDbgInfoFormat(bool NewVal);
+  void setNewDbgInfoFormatFlag(bool NewVal);
 
 private:
   friend class TargetLibraryInfoImpl;
@@ -461,6 +463,9 @@ public:
   /// attributes for the given arg.
   void addDereferenceableOrNullParamAttr(unsigned ArgNo, uint64_t Bytes);
 
+  /// adds the range attribute to the list of attributes for the return value.
+  void addRangeRetAttr(const ConstantRange &CR);
+
   MaybeAlign getParamAlign(unsigned ArgNo) const {
     return AttributeSets.getParamAlignment(ArgNo);
   }
@@ -649,7 +654,10 @@ public:
     return getUWTableKind() != UWTableKind::None;
   }
   void setUWTableKind(UWTableKind K) {
-    addFnAttr(Attribute::getWithUWTableKind(getContext(), K));
+    if (K == UWTableKind::None)
+      removeFnAttr(Attribute::UWTable);
+    else
+      addFnAttr(Attribute::getWithUWTableKind(getContext(), K));
   }
   /// True if this function needs an unwind table.
   bool needsUnwindTableEntry() const {

@@ -13,7 +13,7 @@
 # ascending size (because the default memory manager lays out blocks by size).
 
 # Thumb relocation site emits thumb stub
-# jitlink-check: decode_operand(test_stub_thumb, 0) = stub_addr(out.o, ext, thumb) - (test_stub_thumb + 4)
+# jitlink-check: decode_operand(test_stub_thumb, 0) = stub_addr(out.o, ext, thumb) - next_pc(test_stub_thumb)
 	.globl  test_stub_thumb
 	.type	test_stub_thumb,%function
 	.p2align	1
@@ -24,7 +24,7 @@ test_stub_thumb:
 	.size	test_stub_thumb, .-test_stub_thumb
 
 # Arm relocation site emits arm stub
-# jitlink-check: decode_operand(test_stub_arm, 0) = stub_addr(out.o, ext, arm) - (test_stub_arm + 8)
+# jitlink-check: decode_operand(test_stub_arm, 0) = stub_addr(out.o, ext, arm) - next_pc(test_stub_arm)
 	.globl  test_stub_arm
 	.type	test_stub_arm,%function
 	.p2align	2

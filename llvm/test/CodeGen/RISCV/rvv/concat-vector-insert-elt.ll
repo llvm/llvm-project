@@ -189,16 +189,16 @@ define void @v4xi64_concat_vector_insert_idx3(ptr %a, ptr %b, i64 %x) {
 ; RV32-LABEL: v4xi64_concat_vector_insert_idx3:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    vle64.v v10, (a1)
+; RV32-NEXT:    vle64.v v8, (a1)
+; RV32-NEXT:    vle64.v v10, (a0)
 ; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; RV32-NEXT:    vslide1down.vx v9, v8, a2
 ; RV32-NEXT:    vslide1down.vx v9, v9, a3
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v10, v9, 1
+; RV32-NEXT:    vslideup.vi v8, v9, 1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 2
-; RV32-NEXT:    vse64.v v8, (a0)
+; RV32-NEXT:    vslideup.vi v10, v8, 2
+; RV32-NEXT:    vse64.v v10, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: v4xi64_concat_vector_insert_idx3:

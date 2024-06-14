@@ -30,21 +30,20 @@ enum FortranRounding {
   RoundCompatible, /* RC: like RN, but ties go away from 0 */
 };
 
-template <int BINARY_PRECISION>
-class BinaryFloatingPointNumber : public common::RealDetails<BINARY_PRECISION> {
+template <int BINARY_PRECISION> class BinaryFloatingPointNumber {
 public:
-  using Details = common::RealDetails<BINARY_PRECISION>;
-  using Details::binaryPrecision;
-  using Details::bits;
-  using Details::decimalPrecision;
-  using Details::decimalRange;
-  using Details::exponentBias;
-  using Details::exponentBits;
-  using Details::isImplicitMSB;
-  using Details::maxDecimalConversionDigits;
-  using Details::maxExponent;
-  using Details::maxHexadecimalConversionDigits;
-  using Details::significandBits;
+  static constexpr common::RealCharacteristics realChars{BINARY_PRECISION};
+  static constexpr int binaryPrecision{BINARY_PRECISION};
+  static constexpr int bits{realChars.bits};
+  static constexpr int isImplicitMSB{realChars.isImplicitMSB};
+  static constexpr int significandBits{realChars.significandBits};
+  static constexpr int exponentBits{realChars.exponentBits};
+  static constexpr int exponentBias{realChars.exponentBias};
+  static constexpr int maxExponent{realChars.maxExponent};
+  static constexpr int decimalPrecision{realChars.decimalPrecision};
+  static constexpr int decimalRange{realChars.decimalRange};
+  static constexpr int maxDecimalConversionDigits{
+      realChars.maxDecimalConversionDigits};
 
   using RawType = common::HostUnsignedIntType<bits>;
   static_assert(CHAR_BIT * sizeof(RawType) >= bits);

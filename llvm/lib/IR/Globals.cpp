@@ -21,6 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
@@ -69,6 +70,10 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
     setSanitizerMetadata(Src->getSanitizerMetadata());
   else
     removeSanitizerMetadata();
+}
+
+GlobalValue::GUID GlobalValue::getGUID(StringRef GlobalName) {
+  return MD5Hash(GlobalName);
 }
 
 void GlobalValue::removeFromParent() {

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -polly-pattern-matching-based-opts=true \
+; RUN: opt %loadNPMPolly -passes=polly-opt-isl -polly-pattern-matching-based-opts=true \
 ; RUN: -debug-only=polly-opt-isl -disable-output \
 ; RUN: -polly-tc-opt=true < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts

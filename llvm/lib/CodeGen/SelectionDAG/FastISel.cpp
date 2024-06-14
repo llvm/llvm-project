@@ -1424,7 +1424,7 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     // happened (such as an optimised function being always-inlined into an
     // optnone function). We will not be using the extra information in the
     // dbg.assign in that case, just use its dbg.value fields.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::dbg_value: {
     // This form of DBG_VALUE is target-independent.
     const DbgValueInst *DI = cast<DbgValueInst>(II);
@@ -1460,6 +1460,15 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
 
   case Intrinsic::is_constant:
     llvm_unreachable("llvm.is.constant.* should have been lowered already");
+
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check: {
+    Register ResultReg = getRegForValue(ConstantInt::getTrue(II->getType()));
+    if (!ResultReg)
+      return false;
+    updateValueMap(II, ResultReg);
+    return true;
+  }
 
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:

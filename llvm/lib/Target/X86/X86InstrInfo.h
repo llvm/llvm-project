@@ -26,6 +26,12 @@
 namespace llvm {
 class X86Subtarget;
 
+// X86 MachineCombiner patterns
+enum X86MachineCombinerPattern : unsigned {
+  // X86 VNNI
+  DPWSSD = MachineCombinerPattern::TARGET_PATTERN_START,
+};
+
 namespace X86 {
 
 enum AsmComments {
@@ -64,6 +70,15 @@ CondCode getCondFromCMov(const MachineInstr &MI);
 
 // Turn CFCMOV instruction into condition code.
 CondCode getCondFromCFCMov(const MachineInstr &MI);
+
+// Turn CCMP instruction into condition code.
+CondCode getCondFromCCMP(const MachineInstr &MI);
+
+// Turn condition code into condition flags for CCMP/CTEST.
+int getCCMPCondFlagsFromCondCode(CondCode CC);
+
+// Get the opcode of corresponding NF variant.
+unsigned getNFVariant(unsigned Opc);
 
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.
@@ -607,16 +622,15 @@ protected:
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
-  bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const override;
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<unsigned> &Patterns,
+                                  bool DoRegPressureReduce) const override;
 
   /// When getMachineCombinerPatterns() finds potential patterns,
   /// this function generates the instructions that could replace the
   /// original code sequence.
   void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;

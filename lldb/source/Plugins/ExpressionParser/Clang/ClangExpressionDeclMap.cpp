@@ -228,8 +228,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     std::string msg = llvm::formatv("redefinition of persistent variable '{0}'",
                                     name).str();
     m_parser_vars->m_diagnostics->AddDiagnostic(
-        msg, DiagnosticSeverity::eDiagnosticSeverityError,
-        DiagnosticOrigin::eDiagnosticOriginLLDB);
+        msg, lldb::eSeverityError, DiagnosticOrigin::eDiagnosticOriginLLDB);
     return false;
   }
 
@@ -1049,7 +1048,6 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
     context.AddNamedDecl(copied_function);
 
     context.m_found_function_with_type_info = true;
-    context.m_found_function = true;
   } else if (auto copied_var = dyn_cast<clang::VarDecl>(copied_decl)) {
     context.AddNamedDecl(copied_var);
     context.m_found_variable = true;
@@ -1299,7 +1297,6 @@ void ClangExpressionDeclMap::LookupFunction(
 
         AddOneFunction(context, sym_ctx.function, nullptr);
         context.m_found_function_with_type_info = true;
-        context.m_found_function = true;
       } else if (sym_ctx.symbol) {
         Symbol *symbol = sym_ctx.symbol;
         if (target && symbol->GetType() == eSymbolTypeReExported) {
@@ -1331,10 +1328,8 @@ void ClangExpressionDeclMap::LookupFunction(
     if (!context.m_found_function_with_type_info) {
       if (extern_symbol) {
         AddOneFunction(context, nullptr, extern_symbol);
-        context.m_found_function = true;
       } else if (non_extern_symbol) {
         AddOneFunction(context, nullptr, non_extern_symbol);
-        context.m_found_function = true;
       }
     }
   }

@@ -108,6 +108,18 @@ define i32 @NakedTest(ptr %a) naked sanitize_thread {
   ret i32 %tmp1
 }
 
+; vscale is unsupported, just don't crash here.
+define void @test_load_store_i32(ptr %a, ptr %b) sanitize_thread {
+; CHECK-LABEL: define void @test_load_store_i32(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 4 x i32>, ptr [[A]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> [[TMP1]], ptr [[B]], align 16
+; CHECK-NEXT:    ret void
+  %1 = load <vscale x 4 x i32>, ptr %a
+  store <vscale x 4 x i32> %1, ptr %b
+  ret void
+}
+
 declare void @foo() nounwind
 
 ; CHECK: define internal void @tsan.module_ctor()

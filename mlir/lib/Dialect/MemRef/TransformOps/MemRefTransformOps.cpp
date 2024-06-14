@@ -173,8 +173,8 @@ transform::MemRefAllocaToGlobalOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Assemble results.
-  results.set(getGlobal().cast<OpResult>(), globalOps);
-  results.set(getGetGlobal().cast<OpResult>(), getGlobalOps);
+  results.set(cast<OpResult>(getGlobal()), globalOps);
+  results.set(cast<OpResult>(getGetGlobal()), getGlobalOps);
 
   return DiagnosedSilenceableFailure::success();
 }

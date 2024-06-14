@@ -120,7 +120,7 @@ public:
       int unit, const Terminator &, bool &wasExtant);
   static RT_API_ATTRS ExternalFileUnit *LookUpOrCreateAnonymous(int unit,
       Direction, Fortran::common::optional<bool> isUnformatted,
-      const Terminator &);
+      IoErrorHandler &);
   static RT_API_ATTRS ExternalFileUnit *LookUp(
       const char *path, std::size_t pathLen);
   static RT_API_ATTRS ExternalFileUnit &CreateNew(int unit, const Terminator &);
@@ -204,6 +204,7 @@ private:
   RT_API_ATTRS void BackspaceVariableFormattedRecord(IoErrorHandler &);
   RT_API_ATTRS bool SetVariableFormattedRecordLength();
   RT_API_ATTRS void DoImpliedEndfile(IoErrorHandler &);
+  template <bool ANY_DIR = true, Direction DIR = Direction::Output>
   RT_API_ATTRS void DoEndfile(IoErrorHandler &);
   RT_API_ATTRS void CommitWrites();
   RT_API_ATTRS bool CheckDirectAccess(IoErrorHandler &);

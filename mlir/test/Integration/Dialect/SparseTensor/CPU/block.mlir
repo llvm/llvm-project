@@ -93,9 +93,9 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 4, 6 )
     // CHECK-NEXT: lvl = ( 2, 3, 2, 2 )
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 1,
-    // CHECK-NEXT: values : ( 1, 2, 0, 3, 4, 0, 0, 5, 6, 7, 8, 0,
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 1 )
+    // CHECK-NEXT: values : ( 1, 2, 0, 3, 4, 0, 0, 5, 6, 7, 8, 0 )
     // CHECK-NEXT: ----
     sparse_tensor.print %A : tensor<?x?xf64, #BSR>
 
@@ -103,9 +103,9 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 2, 3, 2, 2 )
     // CHECK-NEXT: lvl = ( 2, 3, 2, 2 )
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 1
-    // CHECK-NEXT: values : ( 1, 2, 0, 3, 4, 0, 0, 5, 6, 7, 8, 0,
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 1 )
+    // CHECK-NEXT: values : ( 1, 2, 0, 3, 4, 0, 0, 5, 6, 7, 8, 0 )
     // CHECK-NEXT: ----
     %t1 = sparse_tensor.reinterpret_map %A : tensor<?x?xf64, #BSR>
                                           to tensor<?x?x2x2xf64, #DSDD>
@@ -115,9 +115,9 @@ module {
     // CHECK-NEXT: nse = 12
     // CHECK-NEXT: dim = ( 4, 6 )
     // CHECK-NEXT: lvl = ( 2, 3, 2, 2 )
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3,
-    // CHECK-NEXT: crd[1] : ( 0, 2, 1,
-    // CHECK-NEXT: values : ( 3, 6, 0, 9, 12, 0, 0, 15, 18, 21, 24, 0,
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 2, 1 )
+    // CHECK-NEXT: values : ( 3, 6, 0, 9, 12, 0, 0, 15, 18, 21, 24, 0 )
     // CHECK-NEXT: ----
     %As = call @scale(%A) : (tensor<?x?xf64, #BSR>) -> (tensor<?x?xf64, #BSR>)
     sparse_tensor.print %As : tensor<?x?xf64, #BSR>

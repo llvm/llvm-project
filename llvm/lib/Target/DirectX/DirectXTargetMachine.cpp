@@ -79,8 +79,8 @@ public:
   void addCodeGenPrepare() override {
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
-    addPass(createDXILPrepareModulePass());
     addPass(createDXILTranslateMetadataPass());
+    addPass(createDXILPrepareModulePass());
   }
 };
 

@@ -18,6 +18,15 @@
 
 namespace Fortran::runtime {
 
+template <int KIND> struct RawStoreIntegerAt {
+  RT_API_ATTRS void operator()(
+      void *contiguousIntegerArray, std::size_t at, std::int64_t value) const {
+    reinterpret_cast<Fortran::runtime::CppTypeFor<
+        Fortran::common::TypeCategory::Integer, KIND> *>(
+        contiguousIntegerArray)[at] = value;
+  }
+};
+
 extern "C" {
 std::int64_t RTDEF(LboundDim)(
     const Descriptor &array, int dim, const char *sourceFile, int line) {
@@ -74,6 +83,28 @@ std::int64_t RTDEF(SizeDim)(
   }
   const Dimension &dimension{array.GetDimension(dim - 1)};
   return static_cast<std::int64_t>(dimension.Extent());
+}
+
+void RTDEF(Shape)(void *result, const Descriptor &array, int kind,
+    const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  INTERNAL_CHECK(array.rank() <= common::maxRank);
+  for (SubscriptValue i{0}; i < array.rank(); ++i) {
+    const Dimension &dimension{array.GetDimension(i)};
+    Fortran::runtime::ApplyIntegerKind<RawStoreIntegerAt, void>(
+        kind, terminator, result, i, dimension.Extent());
+  }
+}
+
+void RTDEF(Lbound)(void *result, const Descriptor &array, int kind,
+    const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  INTERNAL_CHECK(array.rank() <= common::maxRank);
+  for (SubscriptValue i{0}; i < array.rank(); ++i) {
+    const Dimension &dimension{array.GetDimension(i)};
+    Fortran::runtime::ApplyIntegerKind<RawStoreIntegerAt, void>(
+        kind, terminator, result, i, dimension.LowerBound());
+  }
 }
 
 } // extern "C"

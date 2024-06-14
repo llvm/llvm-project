@@ -11,7 +11,7 @@
 # CHECK: [[@LINE-1]]:12: error: attribute name not recognised: unknown
 
 .attribute arch, "foo"
-# CHECK: [[@LINE-1]]:18: error: invalid arch name 'foo', string must begin with rv32{i,e,g} or rv64{i,e,g}
+# CHECK: [[@LINE-1]]:18: error: invalid arch name 'foo', string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported profile name{{$}}
 
 .attribute arch, "rv32i2p1_y2p0"
 # CHECK: [[@LINE-1]]:18: error: invalid arch name 'rv32i2p1_y2p0', invalid standard user-level extension 'y'

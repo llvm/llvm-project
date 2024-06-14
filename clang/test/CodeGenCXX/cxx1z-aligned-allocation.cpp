@@ -1,10 +1,10 @@
 // Check that delete exprs call aligned (de)allocation functions if
 // -faligned-allocation is passed in both C++11 and C++14.
 // RUN: %clang_cc1 -std=c++11 -fexceptions -fsized-deallocation -faligned-allocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 -fexceptions -fsized-deallocation -faligned-allocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++1z -fexceptions -fsized-deallocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 -fexceptions -faligned-allocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z -fexceptions %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s
 
-// RUN: %clang_cc1 -std=c++1z -fexceptions -fsized-deallocation %s -emit-llvm -triple x86_64-windows-msvc -o - | FileCheck %s --check-prefix=CHECK-MS
+// RUN: %clang_cc1 -std=c++1z -fexceptions %s -emit-llvm -triple x86_64-windows-msvc -o - | FileCheck %s --check-prefix=CHECK-MS
 
 // Check that we don't used aligned (de)allocation without -faligned-allocation or C++1z.
 // RUN: %clang_cc1 -std=c++14 -DUNALIGNED -fexceptions %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefix=CHECK-UNALIGNED

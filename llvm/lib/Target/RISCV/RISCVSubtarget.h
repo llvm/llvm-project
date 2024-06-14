@@ -121,9 +121,7 @@ public:
   }
   bool enableMachineScheduler() const override { return true; }
 
-  bool enablePostRAScheduler() const override {
-    return getSchedModel().PostRAScheduler || UsePostRAScheduler;
-  }
+  bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
   Align getPrefFunctionAlignment() const {
     return Align(TuneInfo->PrefFunctionAlignment);
@@ -200,6 +198,17 @@ public:
     return Min;
   }
 
+  /// If the ElementCount or TypeSize \p X is scalable and VScale (VLEN) is
+  /// exactly known, returns \p X converted to a fixed quantity. Otherwise
+  /// returns \p X unmodified.
+  template <typename Quantity> Quantity expandVScale(Quantity X) const {
+    if (auto VLen = getRealVLen(); VLen && X.isScalable()) {
+      const unsigned VScale = *VLen / RISCV::RVVBitsPerBlock;
+      X = Quantity::getFixed(X.getKnownMinValue() * VScale);
+    }
+    return X;
+  }
+
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isSoftFPABI() const {
     return TargetABI == RISCVABI::ABI_LP64 ||
@@ -254,6 +263,7 @@ public:
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
 
+  bool isTargetAndroid() const { return getTargetTriple().isAndroid(); }
   bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }
 
   bool useConstantPoolForLargeInts() const;

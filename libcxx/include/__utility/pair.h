@@ -15,12 +15,11 @@
 #include <__config>
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
-#include <__fwd/subrange.h>
 #include <__fwd/tuple.h>
-#include <__tuple/pair_like.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__tuple/tuple_element.h>
 #include <__tuple/tuple_indices.h>
+#include <__tuple/tuple_like_no_subrange.h>
 #include <__tuple/tuple_size.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
@@ -59,14 +58,6 @@ struct __non_trivially_copyable_base {
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   __non_trivially_copyable_base(__non_trivially_copyable_base const&) _NOEXCEPT {}
 };
-
-#if _LIBCPP_STD_VER >= 23
-template <class _Tp>
-struct __is_specialization_of_subrange : false_type {};
-
-template <class _Iter, class _Sent, ranges::subrange_kind _Kind>
-struct __is_specialization_of_subrange<ranges::subrange<_Iter, _Sent, _Kind>> : true_type {};
-#endif
 
 template <class _T1, class _T2>
 struct _LIBCPP_TEMPLATE_VIS pair
@@ -138,9 +129,9 @@ struct _LIBCPP_TEMPLATE_VIS pair
       typename conditional< _MaybeEnable, _CheckArgs, __check_tuple_constructor_fail>::type;
 
   template <bool _Dummy = true, __enable_if_t<_CheckArgsDep<_Dummy>::__enable_default(), int> = 0>
-  explicit(!_CheckArgsDep<_Dummy>::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR pair()
-      _NOEXCEPT_(
-          is_nothrow_default_constructible<first_type>::value&& is_nothrow_default_constructible<second_type>::value)
+  explicit(!_CheckArgsDep<_Dummy>::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR pair() _NOEXCEPT_(
+      is_nothrow_default_constructible<first_type>::value&& is_nothrow_default_constructible<second_type>::value)
       : first(), second() {}
 
   template <bool _Dummy = true,
@@ -159,10 +150,10 @@ struct _LIBCPP_TEMPLATE_VIS pair
       class _U2,
 #  endif
       __enable_if_t<_CheckArgs::template __is_pair_constructible<_U1, _U2>(), int> = 0 >
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1, _U2>())
-      pair(_U1&& __u1, _U2&& __u2)
-          _NOEXCEPT_((is_nothrow_constructible<first_type, _U1>::value &&
-                      is_nothrow_constructible<second_type, _U2>::value))
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1, _U2>()) pair(_U1&& __u1, _U2&& __u2)
+      _NOEXCEPT_((is_nothrow_constructible<first_type, _U1>::value &&
+                  is_nothrow_constructible<second_type, _U2>::value))
       : first(std::forward<_U1>(__u1)), second(std::forward<_U2>(__u2)) {
   }
 
@@ -177,17 +168,18 @@ struct _LIBCPP_TEMPLATE_VIS pair
   template <class _U1,
             class _U2,
             __enable_if_t<_CheckArgs::template __is_pair_constructible<_U1 const&, _U2 const&>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(
-      !_CheckArgs::template __is_implicit<_U1 const&, _U2 const&>()) pair(pair<_U1, _U2> const& __p)
-      _NOEXCEPT_((is_nothrow_constructible<first_type, _U1 const&>::value &&
-                  is_nothrow_constructible<second_type, _U2 const&>::value))
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1 const&, _U2 const&>())
+      pair(pair<_U1, _U2> const& __p)
+          _NOEXCEPT_((is_nothrow_constructible<first_type, _U1 const&>::value &&
+                      is_nothrow_constructible<second_type, _U2 const&>::value))
       : first(__p.first), second(__p.second) {}
 
   template <class _U1, class _U2, __enable_if_t<_CheckArgs::template __is_pair_constructible<_U1, _U2>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1, _U2>())
-      pair(pair<_U1, _U2>&& __p)
-          _NOEXCEPT_((is_nothrow_constructible<first_type, _U1&&>::value &&
-                      is_nothrow_constructible<second_type, _U2&&>::value))
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_U1, _U2>()) pair(pair<_U1, _U2>&& __p)
+      _NOEXCEPT_((is_nothrow_constructible<first_type, _U1&&>::value &&
+                  is_nothrow_constructible<second_type, _U2&&>::value))
       : first(std::forward<_U1>(__p.first)), second(std::forward<_U2>(__p.second)) {}
 
 #  if _LIBCPP_STD_VER >= 23
@@ -201,19 +193,19 @@ struct _LIBCPP_TEMPLATE_VIS pair
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
+  // TODO: Remove this workaround in LLVM 20. The bug got fixed in Clang 18.
   // This is a workaround for http://llvm.org/PR60710. We should be able to remove it once Clang is fixed.
   template <class _PairLike>
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __pair_like_explicit_wknd() {
-    if constexpr (__pair_like<_PairLike>) {
+    if constexpr (__pair_like_no_subrange<_PairLike>) {
       return !is_convertible_v<decltype(std::get<0>(std::declval<_PairLike&&>())), first_type> ||
              !is_convertible_v<decltype(std::get<1>(std::declval<_PairLike&&>())), second_type>;
     }
     return false;
   }
 
-  template <__pair_like _PairLike>
-    requires(!__is_specialization_of_subrange<remove_cvref_t<_PairLike>>::value &&
-             is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike &&>()))> &&
+  template <__pair_like_no_subrange _PairLike>
+    requires(is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike &&>()))> &&
              is_constructible_v<second_type, decltype(std::get<1>(std::declval<_PairLike &&>()))>)
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(__pair_like_explicit_wknd<_PairLike>()) pair(_PairLike&& __p)
       : first(std::get<0>(std::forward<_PairLike>(__p))), second(std::get<1>(std::forward<_PairLike>(__p))) {}
@@ -306,8 +298,8 @@ struct _LIBCPP_TEMPLATE_VIS pair
     return *this;
   }
 
-  template <__pair_like _PairLike>
-    requires(__different_from<_PairLike, pair> && !__is_specialization_of_subrange<remove_cvref_t<_PairLike>>::value &&
+  template <__pair_like_no_subrange _PairLike>
+    requires(__different_from<_PairLike, pair> &&
              is_assignable_v<first_type&, decltype(std::get<0>(std::declval<_PairLike>()))> &&
              is_assignable_v<second_type&, decltype(std::get<1>(std::declval<_PairLike>()))>)
   _LIBCPP_HIDE_FROM_ABI constexpr pair& operator=(_PairLike&& __p) {
@@ -316,8 +308,8 @@ struct _LIBCPP_TEMPLATE_VIS pair
     return *this;
   }
 
-  template <__pair_like _PairLike>
-    requires(__different_from<_PairLike, pair> && !__is_specialization_of_subrange<remove_cvref_t<_PairLike>>::value &&
+  template <__pair_like_no_subrange _PairLike>
+    requires(__different_from<_PairLike, pair> &&
              is_assignable_v<first_type const&, decltype(std::get<0>(std::declval<_PairLike>()))> &&
              is_assignable_v<second_type const&, decltype(std::get<1>(std::declval<_PairLike>()))>)
   _LIBCPP_HIDE_FROM_ABI constexpr pair const& operator=(_PairLike&& __p) const {
@@ -440,7 +432,9 @@ private:
        tuple<_Args1...>& __first_args,
        tuple<_Args2...>& __second_args,
        __tuple_indices<_I1...>,
-       __tuple_indices<_I2...>);
+       __tuple_indices<_I2...>)
+      : first(std::forward<_Args1>(std::get<_I1>(__first_args))...),
+        second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
 #endif
 };
 
@@ -535,9 +529,9 @@ swap(const pair<_T1, _T2>& __x, const pair<_T1, _T2>& __y) noexcept(noexcept(__x
 #endif
 
 template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-    pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>
-    make_pair(_T1&& __t1, _T2&& __t2) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX14 pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>
+make_pair(_T1&& __t1, _T2&& __t2) {
   return pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>(
       std::forward<_T1>(__t1), std::forward<_T2>(__t2));
 }
