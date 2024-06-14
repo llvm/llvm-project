@@ -440,8 +440,8 @@ inline int64_t divideCeilSigned(int64_t Numerator, int64_t Denominator) {
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
-  int64_t Bias = (Denominator > 0 ? 1 : -1);
-  bool SameSign = (Numerator > 0) == (Denominator > 0);
+  int64_t Bias = (Denominator >= 0 ? 1 : -1);
+  bool SameSign = (Numerator >= 0) == (Denominator >= 0);
   return SameSign ? (Numerator - Bias) / Denominator + 1
                   : Numerator / Denominator;
 }
@@ -453,8 +453,8 @@ inline int64_t divideFloorSigned(int64_t Numerator, int64_t Denominator) {
   if (!Numerator)
     return 0;
   // C's integer division rounds towards 0.
-  int64_t Bias = Denominator > 0 ? 1 : -1;
-  bool SameSign = (Numerator > 0) == (Denominator > 0);
+  int64_t Bias = Denominator >= 0 ? 1 : -1;
+  bool SameSign = (Numerator >= 0) == (Denominator >= 0);
   return SameSign ? Numerator / Denominator
                   : -((-Numerator - Bias) / Denominator) - 1;
 }
