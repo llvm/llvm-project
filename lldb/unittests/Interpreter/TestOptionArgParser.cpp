@@ -13,18 +13,20 @@
 
 using namespace lldb_private;
 
-void TestToBoolean(llvm::StringRef option_arg, bool fail_value, bool expected_value, bool expected_success) {
+void TestToBoolean(llvm::StringRef option_arg, bool fail_value,
+                   bool expected_value, bool expected_success) {
   EXPECT_EQ(expected_value,
-    OptionArgParser::ToBoolean(option_arg, fail_value, nullptr));
+            OptionArgParser::ToBoolean(option_arg, fail_value, nullptr));
 
   bool success = false;
   EXPECT_EQ(expected_value,
-    OptionArgParser::ToBoolean(option_arg, fail_value, &success));
+            OptionArgParser::ToBoolean(option_arg, fail_value, &success));
   EXPECT_EQ(expected_success, success);
 
   Status status;
   EXPECT_EQ(expected_value,
-    OptionArgParser::ToBoolean(llvm::StringRef("--test"), option_arg, fail_value, status));
+            OptionArgParser::ToBoolean(llvm::StringRef("--test"), option_arg,
+                                       fail_value, status));
   EXPECT_EQ(expected_success, status.Success());
 }
 
