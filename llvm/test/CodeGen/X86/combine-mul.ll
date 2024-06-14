@@ -543,10 +543,10 @@ define <16 x i8> @PR35579(<16 x i8> %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; SSE-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [8,1,2,1,4,1,2,1]
 ; SSE-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
 ; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,1,2,1,4,1,2,1]
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    packuswb %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
@@ -555,7 +555,7 @@ define <16 x i8> @PR35579(<16 x i8> %x) {
 ; AVX-LABEL: PR35579:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,1,2,1,4,1,2,1,8,1,2,1,4,1,2,1]
 ; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
