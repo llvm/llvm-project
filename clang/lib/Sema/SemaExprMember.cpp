@@ -1136,7 +1136,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   //   an enumerator, the first expression is a discarded-value expression; if
   //   the id-expression names a non-static data member, the first expression
   //   shall be a glvalue.
-  auto MakeDiscardedValue = [&BaseExpr, IsArrow, this] {
+  auto MakeDiscardedValue = [&] {
     assert(getLangOpts().CPlusPlus &&
            "Static member / member enumerator outside of C++");
     if (IsArrow)
@@ -1145,11 +1145,10 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (Converted.isInvalid())
       return true;
     BaseExpr = Converted.get();
-    DiagnoseUnusedExprResult(BaseExpr,
-                             diag::warn_discarded_class_member_access);
+    DiagnoseDiscardedNodiscard(BaseExpr);
     return false;
   };
-  auto MakeGLValue = [&BaseExpr, IsArrow, this] {
+  auto MakeGLValue = [&] {
     if (IsArrow || !BaseExpr->isPRValue())
       return false;
     ExprResult Converted = TemporaryMaterializationConversion(BaseExpr);
@@ -1171,10 +1170,11 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
   }
 
   if (MSPropertyDecl *PD = dyn_cast<MSPropertyDecl>(MemberDecl)) {
-    // Properties treated as non-static data members for the purpose of
-    // temporary materialization
-    if (MakeGLValue())
-      return ExprError();
+    // No temporaries are materialized for property references yet.
+    // They might be materialized when this is transformed into a member call.
+    // Note that this is slightly different behaviour from MSVC which doesn't
+    // implement CWG2813 yet: MSVC might materialize an extra temporary if the
+    // getter or setter function is an explicit object member function.
     return BuildMSPropertyRefExpr(*this, BaseExpr, IsArrow, SS, PD,
                                   MemberNameInfo);
   }

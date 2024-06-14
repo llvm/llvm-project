@@ -1,17 +1,21 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,cxx11-17,cxx11 -Wc++17-extensions -Wc++20-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx11-17 -Wc++17-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected -Wc++20-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx11-17 -Wc++20-extensions %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify=expected %s
 
 struct [[nodiscard]] S {};
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 S get_s();
 S& get_s_ref();
 
 enum [[nodiscard]] E {};
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 E get_e();
 
 [[nodiscard]] int get_i();
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 [[nodiscard]] volatile int &get_vi();
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 
 void f() {
   get_s(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -28,6 +32,7 @@ void f() {
 }
 
 [[nodiscard]] volatile char &(*fp)(); // expected-warning {{'nodiscard' attribute only applies to functions, classes, or enumerations}}
+// cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
 void g() {
   fp(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
@@ -64,15 +69,20 @@ void f() {
 } // namespace PR31526
 
 struct [[nodiscard("reason")]] ReasonStruct {};
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 struct LaterReason;
 struct [[nodiscard("later reason")]] LaterReason {};
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 ReasonStruct get_reason();
 LaterReason get_later_reason();
 [[nodiscard("another reason")]] int another_reason();
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 [[nodiscard("conflicting reason")]] int conflicting_reason();
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 [[nodiscard("special reason")]] int conflicting_reason();
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 void cxx20_use() {
   get_reason(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: reason}}
@@ -83,17 +93,23 @@ void cxx20_use() {
 
 namespace p1771 {
 struct[[nodiscard("Don't throw me away!")]] ConvertTo{};
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 struct S {
   [[nodiscard]] S();
+  // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
   [[nodiscard("Don't let that S-Char go!")]] S(char);
+  // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
   S(int);
   [[gnu::warn_unused_result]] S(double);
   operator ConvertTo();
   [[nodiscard]] operator int();
+  // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
   [[nodiscard("Don't throw away as a double")]] operator double();
+  // cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 };
 
 struct[[nodiscard("Don't throw me away either!")]] Y{};
+// cxx11-17-warning@-1 {{use of the 'nodiscard' attribute is a C++20 extension}}
 
 void usage() {
   S();    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
@@ -123,7 +139,7 @@ void usage() {
   static_cast<int>(s); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   static_cast<double>(s); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw away as a double}}
 }
-}; // namespace p1771
+} // namespace p1771
 
 namespace discarded_member_access {
 struct X {
@@ -171,21 +187,3 @@ void f() {
 #endif
 }
 } // namespace discarded_member_access
-
-
-// cxx11-warning@5 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// cxx11-warning@9 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// cxx11-warning@12 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// cxx11-warning@13 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// cxx11-warning@29 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// cxx11-warning@65 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// cxx11-warning@67 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// cxx11-warning@71 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// cxx11-warning@73 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// cxx11-warning@74 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// cxx11-warning@84 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// cxx11-warning@86 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// cxx11-warning@87 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// cxx11-warning@91 {{use of the 'nodiscard' attribute is a C++17 extension}}
-// cxx11-warning@92 {{use of the 'nodiscard' attribute is a C++20 extension}}
-// cxx11-warning@95 {{use of the 'nodiscard' attribute is a C++20 extension}}
