@@ -5237,6 +5237,7 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
                        DAG.getShiftAmountConstant(1, VT, DL));
 
   // fold avgu(zext(x), zext(y)) -> zext(avgu(x, y))
+  // fold avgs(sext(x), sext(y)) -> sext(avgs(x, y))
   if (sd_match(
           N, m_BinOp(ISD::AVGFLOORU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
       X.getValueType() == Y.getValueType() &&
@@ -5250,6 +5251,20 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
       hasOperation(ISD::AVGCEILU, X.getValueType())) {
     SDValue AvgCeilU = DAG.getNode(ISD::AVGCEILU, DL, X.getValueType(), X, Y);
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgCeilU);
+  }
+  if (sd_match(
+          N, m_BinOp(ISD::AVGFLOORS, m_SExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
+      X.getValueType() == Y.getValueType() &&
+      hasOperation(ISD::AVGFLOORS, X.getValueType())) {
+    SDValue AvgFloorS = DAG.getNode(ISD::AVGFLOORS, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, AvgFloorS);
+  }
+  if (sd_match(
+          N, m_BinOp(ISD::AVGCEILS, m_SExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
+      X.getValueType() == Y.getValueType() &&
+      hasOperation(ISD::AVGCEILS, X.getValueType())) {
+    SDValue AvgCeilS = DAG.getNode(ISD::AVGCEILS, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, AvgCeilS);
   }
 
   // Fold avgflooru(x,y) -> avgceilu(x,y-1) iff y != 0
