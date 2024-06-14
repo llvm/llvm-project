@@ -74,17 +74,17 @@ entry:
 define <vscale x 2 x i32> @hadds_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i32> %s1) {
 ; SVE-LABEL: hadds_v2i32:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.d, z1.d, #1
-; SVE-NEXT:    asr z3.d, z0.d, #1
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.d, z3.d, z2.d
-; SVE-NEXT:    and z0.d, z0.d, #0x1
-; SVE-NEXT:    add z0.d, z1.d, z0.d
+; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    sxtw z0.d, p0/m, z0.d
+; SVE-NEXT:    adr z0.d, [z0.d, z1.d, sxtw]
+; SVE-NEXT:    asr z0.d, z0.d, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: hadds_v2i32:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    sxtw z1.d, p0/m, z1.d
+; SVE2-NEXT:    sxtw z0.d, p0/m, z0.d
 ; SVE2-NEXT:    shadd z0.d, p0/m, z0.d, z1.d
 ; SVE2-NEXT:    ret
 entry:
@@ -209,17 +209,18 @@ entry:
 define <vscale x 2 x i16> @hadds_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i16> %s1) {
 ; SVE-LABEL: hadds_v2i16:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.d, z1.d, #1
-; SVE-NEXT:    asr z3.d, z0.d, #1
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.d, z3.d, z2.d
-; SVE-NEXT:    and z0.d, z0.d, #0x1
-; SVE-NEXT:    add z0.d, z1.d, z0.d
+; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    sxth z1.d, p0/m, z1.d
+; SVE-NEXT:    sxth z0.d, p0/m, z0.d
+; SVE-NEXT:    add z0.d, z0.d, z1.d
+; SVE-NEXT:    asr z0.d, z0.d, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: hadds_v2i16:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    sxth z1.d, p0/m, z1.d
+; SVE2-NEXT:    sxth z0.d, p0/m, z0.d
 ; SVE2-NEXT:    shadd z0.d, p0/m, z0.d, z1.d
 ; SVE2-NEXT:    ret
 entry:
@@ -278,17 +279,18 @@ entry:
 define <vscale x 4 x i16> @hadds_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i16> %s1) {
 ; SVE-LABEL: hadds_v4i16:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.s, z1.s, #1
-; SVE-NEXT:    asr z3.s, z0.s, #1
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.s, z3.s, z2.s
-; SVE-NEXT:    and z0.s, z0.s, #0x1
-; SVE-NEXT:    add z0.s, z1.s, z0.s
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    sxth z1.s, p0/m, z1.s
+; SVE-NEXT:    sxth z0.s, p0/m, z0.s
+; SVE-NEXT:    add z0.s, z0.s, z1.s
+; SVE-NEXT:    asr z0.s, z0.s, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: hadds_v4i16:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    sxth z1.s, p0/m, z1.s
+; SVE2-NEXT:    sxth z0.s, p0/m, z0.s
 ; SVE2-NEXT:    shadd z0.s, p0/m, z0.s, z1.s
 ; SVE2-NEXT:    ret
 entry:
@@ -415,17 +417,18 @@ entry:
 define <vscale x 4 x i8> @hadds_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %s1) {
 ; SVE-LABEL: hadds_v4i8:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.s, z1.s, #1
-; SVE-NEXT:    asr z3.s, z0.s, #1
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.s, z3.s, z2.s
-; SVE-NEXT:    and z0.s, z0.s, #0x1
-; SVE-NEXT:    add z0.s, z1.s, z0.s
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    sxtb z1.s, p0/m, z1.s
+; SVE-NEXT:    sxtb z0.s, p0/m, z0.s
+; SVE-NEXT:    add z0.s, z0.s, z1.s
+; SVE-NEXT:    asr z0.s, z0.s, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: hadds_v4i8:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    sxtb z1.s, p0/m, z1.s
+; SVE2-NEXT:    sxtb z0.s, p0/m, z0.s
 ; SVE2-NEXT:    shadd z0.s, p0/m, z0.s, z1.s
 ; SVE2-NEXT:    ret
 entry:
@@ -484,17 +487,18 @@ entry:
 define <vscale x 8 x i8> @hadds_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s1) {
 ; SVE-LABEL: hadds_v8i8:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.h, z1.h, #1
-; SVE-NEXT:    asr z3.h, z0.h, #1
-; SVE-NEXT:    and z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.h, z3.h, z2.h
-; SVE-NEXT:    and z0.h, z0.h, #0x1
-; SVE-NEXT:    add z0.h, z1.h, z0.h
+; SVE-NEXT:    ptrue p0.h
+; SVE-NEXT:    sxtb z1.h, p0/m, z1.h
+; SVE-NEXT:    sxtb z0.h, p0/m, z0.h
+; SVE-NEXT:    add z0.h, z0.h, z1.h
+; SVE-NEXT:    asr z0.h, z0.h, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: hadds_v8i8:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    sxtb z1.h, p0/m, z1.h
+; SVE2-NEXT:    sxtb z0.h, p0/m, z0.h
 ; SVE2-NEXT:    shadd z0.h, p0/m, z0.h, z1.h
 ; SVE2-NEXT:    ret
 entry:
@@ -693,17 +697,20 @@ entry:
 define <vscale x 2 x i32> @rhadds_v2i32(<vscale x 2 x i32> %s0, <vscale x 2 x i32> %s1) {
 ; SVE-LABEL: rhadds_v2i32:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.d, z1.d, #1
-; SVE-NEXT:    asr z3.d, z0.d, #1
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.d, z3.d, z2.d
-; SVE-NEXT:    and z0.d, z0.d, #0x1
-; SVE-NEXT:    add z0.d, z1.d, z0.d
+; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
+; SVE-NEXT:    sxtw z0.d, p0/m, z0.d
+; SVE-NEXT:    sxtw z1.d, p0/m, z1.d
+; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    sub z0.d, z1.d, z0.d
+; SVE-NEXT:    asr z0.d, z0.d, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: rhadds_v2i32:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    sxtw z1.d, p0/m, z1.d
+; SVE2-NEXT:    sxtw z0.d, p0/m, z0.d
 ; SVE2-NEXT:    srhadd z0.d, p0/m, z0.d, z1.d
 ; SVE2-NEXT:    ret
 entry:
@@ -840,17 +847,20 @@ entry:
 define <vscale x 2 x i16> @rhadds_v2i16(<vscale x 2 x i16> %s0, <vscale x 2 x i16> %s1) {
 ; SVE-LABEL: rhadds_v2i16:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.d, z1.d, #1
-; SVE-NEXT:    asr z3.d, z0.d, #1
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.d, z3.d, z2.d
-; SVE-NEXT:    and z0.d, z0.d, #0x1
-; SVE-NEXT:    add z0.d, z1.d, z0.d
+; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
+; SVE-NEXT:    sxth z0.d, p0/m, z0.d
+; SVE-NEXT:    sxth z1.d, p0/m, z1.d
+; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    sub z0.d, z1.d, z0.d
+; SVE-NEXT:    asr z0.d, z0.d, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: rhadds_v2i16:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.d
+; SVE2-NEXT:    sxth z1.d, p0/m, z1.d
+; SVE2-NEXT:    sxth z0.d, p0/m, z0.d
 ; SVE2-NEXT:    srhadd z0.d, p0/m, z0.d, z1.d
 ; SVE2-NEXT:    ret
 entry:
@@ -916,17 +926,20 @@ entry:
 define <vscale x 4 x i16> @rhadds_v4i16(<vscale x 4 x i16> %s0, <vscale x 4 x i16> %s1) {
 ; SVE-LABEL: rhadds_v4i16:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.s, z1.s, #1
-; SVE-NEXT:    asr z3.s, z0.s, #1
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.s, z3.s, z2.s
-; SVE-NEXT:    and z0.s, z0.s, #0x1
-; SVE-NEXT:    add z0.s, z1.s, z0.s
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
+; SVE-NEXT:    sxth z0.s, p0/m, z0.s
+; SVE-NEXT:    sxth z1.s, p0/m, z1.s
+; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    sub z0.s, z1.s, z0.s
+; SVE-NEXT:    asr z0.s, z0.s, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: rhadds_v4i16:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    sxth z1.s, p0/m, z1.s
+; SVE2-NEXT:    sxth z0.s, p0/m, z0.s
 ; SVE2-NEXT:    srhadd z0.s, p0/m, z0.s, z1.s
 ; SVE2-NEXT:    ret
 entry:
@@ -1063,17 +1076,20 @@ entry:
 define <vscale x 4 x i8> @rhadds_v4i8(<vscale x 4 x i8> %s0, <vscale x 4 x i8> %s1) {
 ; SVE-LABEL: rhadds_v4i8:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.s, z1.s, #1
-; SVE-NEXT:    asr z3.s, z0.s, #1
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.s, z3.s, z2.s
-; SVE-NEXT:    and z0.s, z0.s, #0x1
-; SVE-NEXT:    add z0.s, z1.s, z0.s
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    mov z2.s, #-1 // =0xffffffffffffffff
+; SVE-NEXT:    sxtb z0.s, p0/m, z0.s
+; SVE-NEXT:    sxtb z1.s, p0/m, z1.s
+; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    sub z0.s, z1.s, z0.s
+; SVE-NEXT:    asr z0.s, z0.s, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: rhadds_v4i8:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    sxtb z1.s, p0/m, z1.s
+; SVE2-NEXT:    sxtb z0.s, p0/m, z0.s
 ; SVE2-NEXT:    srhadd z0.s, p0/m, z0.s, z1.s
 ; SVE2-NEXT:    ret
 entry:
@@ -1139,17 +1155,20 @@ entry:
 define <vscale x 8 x i8> @rhadds_v8i8(<vscale x 8 x i8> %s0, <vscale x 8 x i8> %s1) {
 ; SVE-LABEL: rhadds_v8i8:
 ; SVE:       // %bb.0: // %entry
-; SVE-NEXT:    asr z2.h, z1.h, #1
-; SVE-NEXT:    asr z3.h, z0.h, #1
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
-; SVE-NEXT:    add z1.h, z3.h, z2.h
-; SVE-NEXT:    and z0.h, z0.h, #0x1
-; SVE-NEXT:    add z0.h, z1.h, z0.h
+; SVE-NEXT:    ptrue p0.h
+; SVE-NEXT:    mov z2.h, #-1 // =0xffffffffffffffff
+; SVE-NEXT:    sxtb z0.h, p0/m, z0.h
+; SVE-NEXT:    sxtb z1.h, p0/m, z1.h
+; SVE-NEXT:    eor z0.d, z0.d, z2.d
+; SVE-NEXT:    sub z0.h, z1.h, z0.h
+; SVE-NEXT:    asr z0.h, z0.h, #1
 ; SVE-NEXT:    ret
 ;
 ; SVE2-LABEL: rhadds_v8i8:
 ; SVE2:       // %bb.0: // %entry
 ; SVE2-NEXT:    ptrue p0.h
+; SVE2-NEXT:    sxtb z1.h, p0/m, z1.h
+; SVE2-NEXT:    sxtb z0.h, p0/m, z0.h
 ; SVE2-NEXT:    srhadd z0.h, p0/m, z0.h, z1.h
 ; SVE2-NEXT:    ret
 entry:
