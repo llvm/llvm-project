@@ -27,7 +27,6 @@
 #include "Diagnostics.h"
 #include "FS.h"
 #include "Headers.h"
-
 #include "ModulesBuilder.h"
 
 #include "clang-include-cleaner/Record.h"

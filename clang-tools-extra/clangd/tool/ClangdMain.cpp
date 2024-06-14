@@ -869,7 +869,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   ClangdLSPServer::Options Opts;
   Opts.UseDirBasedCDB = (CompileArgsFrom == FilesystemCompileArgs);
-  Opts.ExperimentalModulesSupport = ExperimentalModulesSupport;
+  Opts.EnableExperimentalModulesSupport = ExperimentalModulesSupport;
 
   switch (PCHStorage) {
   case PCHStorageFlag::Memory:

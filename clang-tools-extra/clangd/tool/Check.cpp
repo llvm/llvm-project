@@ -146,8 +146,6 @@ class Checker {
   ClangdLSPServer::Options Opts;
   // from buildCommand
   tooling::CompileCommand Cmd;
-  std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
-  std::unique_ptr<OverlayCDB> CDB;
   // from buildInvocation
   ParseInputs Inputs;
   std::unique_ptr<CompilerInvocation> Invocation;
@@ -170,14 +168,14 @@ public:
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
     CDBOpts.CompileCommandsDir =
         Config::current().CompileFlags.CDBSearch.FixedCDBPath;
-    BaseCDB =
+    std::unique_ptr<GlobalCompilationDatabase> BaseCDB =
         std::make_unique<DirectoryBasedGlobalCompilationDatabase>(CDBOpts);
     auto Mangler = CommandMangler::detect();
     Mangler.SystemIncludeExtractor =
         getSystemIncludeExtractor(llvm::ArrayRef(Opts.QueryDriverGlobs));
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
-    CDB = std::make_unique<OverlayCDB>(
+    auto CDB = std::make_unique<OverlayCDB>(
         BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler));
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
@@ -236,7 +234,6 @@ public:
   // Build preamble and AST, and index them.
   bool buildAST() {
     log("Building preamble...");
-
     Preamble = buildPreamble(
         File, *Invocation, Inputs, /*StoreInMemory=*/true,
         [&](CapturedASTCtx Ctx,

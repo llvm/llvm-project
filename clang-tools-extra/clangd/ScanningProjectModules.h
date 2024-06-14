@@ -15,7 +15,7 @@
 namespace clang {
 namespace clangd {
 
-// Providing modules information for the project by scanning every file.
+/// Providing modules information for the project by scanning every file.
 std::unique_ptr<ProjectModules> scanningProjectModules(
     std::shared_ptr<const clang::tooling::CompilationDatabase> CDB,
     const ThreadsafeFS &TFS);

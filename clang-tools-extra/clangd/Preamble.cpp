@@ -587,10 +587,11 @@ public:
 };
 } // namespace
 
-std::shared_ptr<const PreambleData> buildPreamble(
-    PathRef FileName, CompilerInvocation CI, const ParseInputs &Inputs,
-    bool StoreInMemory, PreambleParsedCallback PreambleCallback,
-    PreambleBuildStats *Stats) {
+std::shared_ptr<const PreambleData>
+buildPreamble(PathRef FileName, CompilerInvocation CI,
+              const ParseInputs &Inputs, bool StoreInMemory,
+              PreambleParsedCallback PreambleCallback,
+              PreambleBuildStats *Stats) {
   // Note that we don't need to copy the input contents, preamble can live
   // without those.
   auto ContentsBuffer =
@@ -659,7 +660,6 @@ std::shared_ptr<const PreambleData> buildPreamble(
 
   WallTimer PreambleTimer;
   PreambleTimer.startTimer();
-
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),

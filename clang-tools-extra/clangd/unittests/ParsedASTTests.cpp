@@ -376,7 +376,6 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   MockFS FS;
   auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
-  MockCompilationDatabase CDB;
   auto EmptyPreamble =
       buildPreamble(testPath("foo.cpp"), *CI, Inputs, true, nullptr);
   ASSERT_TRUE(EmptyPreamble);
@@ -419,7 +418,6 @@ TEST(ParsedASTTest, PatchesDeletedIncludes) {
   MockFS FS;
   auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
-  MockCompilationDatabase CDB;
   auto BaselinePreamble =
       buildPreamble(testPath("foo.cpp"), *CI, Inputs, true, nullptr);
   ASSERT_TRUE(BaselinePreamble);

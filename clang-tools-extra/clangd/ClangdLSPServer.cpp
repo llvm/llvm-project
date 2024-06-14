@@ -52,6 +52,9 @@
 
 namespace clang {
 namespace clangd {
+
+extern llvm::cl::opt<bool> ExperimentalModulesSupport;
+
 namespace {
 // Tracks end-to-end latency of high level lsp calls. Measurements are in
 // seconds.
@@ -565,8 +568,10 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
               std::move(Mangler));
 
-  if (Opts.ExperimentalModulesSupport)
+  if (Opts.EnableExperimentalModulesSupport) {
     ModulesManager.emplace(*CDB);
+    Opts.ModulesManager = &*ModulesManager;
+  }
 
   {
     // Switch caller's context with LSPServer's background context. Since we
@@ -577,8 +582,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     if (Opts.Encoding)
       WithOffsetEncoding.emplace(kCurrentOffsetEncoding, *Opts.Encoding);
     Server.emplace(*CDB, TFS, Opts,
-                   static_cast<ClangdServer::Callbacks *>(this),
-                   ModulesManager ? &*ModulesManager : nullptr);
+                   static_cast<ClangdServer::Callbacks *>(this));
   }
 
   llvm::json::Object ServerCaps{

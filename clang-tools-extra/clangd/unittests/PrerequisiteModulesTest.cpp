@@ -12,6 +12,7 @@
 #ifndef _WIN32
 
 #include "ModulesBuilder.h"
+#include "ScanningProjectModules.h"
 
 #include "Annotations.h"
 #include "CodeComplete.h"
@@ -27,41 +28,80 @@
 
 namespace clang::clangd {
 namespace {
+
+class MockDirectoryCompilationDatabase : public MockCompilationDatabase {
+public:
+  MockDirectoryCompilationDatabase(StringRef TestDir, const ThreadsafeFS &TFS)
+      : MockCompilationDatabase(TestDir),
+        MockedCDBPtr(std::make_shared<MockClangCompilationDatabase>(*this)),
+        TFS(TFS) {
+    this->ExtraClangFlags.push_back("-std=c++20");
+    this->ExtraClangFlags.push_back("-c");
+  }
+
+  void addFile(llvm::StringRef Path, llvm::StringRef Contents);
+
+  std::unique_ptr<ProjectModules> getProjectModules(PathRef) const override {
+    return scanningProjectModules(MockedCDBPtr, TFS);
+  }
+
+private:
+  class MockClangCompilationDatabase : public tooling::CompilationDatabase {
+  public:
+    MockClangCompilationDatabase(MockDirectoryCompilationDatabase &MCDB)
+        : MCDB(MCDB) {}
+
+    std::vector<tooling::CompileCommand>
+    getCompileCommands(StringRef FilePath) const override {
+      std::optional<tooling::CompileCommand> Cmd =
+          MCDB.getCompileCommand(FilePath);
+      EXPECT_TRUE(Cmd);
+      return {*Cmd};
+    }
+
+    std::vector<std::string> getAllFiles() const override { return Files; }
+
+    void AddFile(StringRef File) { Files.push_back(File.str()); }
+
+  private:
+    MockDirectoryCompilationDatabase &MCDB;
+    std::vector<std::string> Files;
+  };
+
+  std::shared_ptr<MockClangCompilationDatabase> MockedCDBPtr;
+  const ThreadsafeFS &TFS;
+};
+
+// Add files to the working testing directory and the compilation database.
+void MockDirectoryCompilationDatabase::addFile(llvm::StringRef Path,
+                                               llvm::StringRef Contents) {
+  ASSERT_FALSE(llvm::sys::path::is_absolute(Path));
+
+  SmallString<256> AbsPath(Directory);
+  llvm::sys::path::append(AbsPath, Path);
+
+  ASSERT_FALSE(
+      llvm::sys::fs::create_directories(llvm::sys::path::parent_path(AbsPath)));
+
+  std::error_code EC;
+  llvm::raw_fd_ostream OS(AbsPath, EC);
+  ASSERT_FALSE(EC);
+  OS << Contents;
+
+  MockedCDBPtr->AddFile(Path);
+}
+
 class PrerequisiteModulesTests : public ::testing::Test {
-  protected:
+protected:
   void SetUp() override {
     ASSERT_FALSE(llvm::sys::fs::createUniqueDirectory("modules-test", TestDir));
   }
 
-  void TearDown() override { llvm::sys::fs::remove_directories(TestDir); }
-
-public:
-  // Add files to the working testing directory and repalce all the
-  // `__DIR__` to TestDir.
-  void addFile(llvm::StringRef Path, llvm::StringRef Contents) {
-    ASSERT_FALSE(llvm::sys::path::is_absolute(Path));
-
-    SmallString<256> AbsPath(TestDir);
-    llvm::sys::path::append(AbsPath, Path);
-
-    ASSERT_FALSE(llvm::sys::fs::create_directories(
-        llvm::sys::path::parent_path(AbsPath)));
-
-    std::error_code EC;
-    llvm::raw_fd_ostream OS(AbsPath, EC);
-    ASSERT_FALSE(EC);
-
-    std::size_t Pos = Contents.find("__DIR__");
-    while (Pos != llvm::StringRef::npos) {
-      OS << Contents.take_front(Pos);
-      OS << TestDir;
-      Contents = Contents.drop_front(Pos + sizeof("__DIR__") - 1);
-      Pos = Contents.find("__DIR__");
-    }
-
-    OS << Contents;
+  void TearDown() override {
+    ASSERT_FALSE(llvm::sys::fs::remove_directories(TestDir));
   }
 
+public:
   // Get the absolute path for file specified by Path under testing working
   // directory.
   std::string getFullPath(llvm::StringRef Path) {
@@ -96,12 +136,6 @@ public:
     return Inputs;
   }
 
-  std::unique_ptr<CompilerInvocation>
-  getCompilerInvocation(const ParseInputs &Inputs) {
-    std::vector<std::string> CC1Args;
-    return buildCompilerInvocation(Inputs, DiagConsumer, &CC1Args);
-  }
-
   SmallString<256> TestDir;
   // Noticed MockFS but its member variable 'OverlayRealFileSystemForModules'
   // implies that it will better to use RealThreadsafeFS directly.
@@ -111,73 +145,40 @@ public:
 };
 
 TEST_F(PrerequisiteModulesTests, PrerequisiteModulesTest) {
-  addFile("build/compile_commands.json", R"cpp(
-[
-{
-  "directory": "__DIR__",
-  "command": "clang++ -std=c++20 __DIR__/M.cppm -fmodule-output=__DIR__/M.pcm -c -o __DIR__/M.o",
-  "file": "__DIR__/M.cppm",
-  "output": "__DIR__/M.o"
-},
-{
-  "directory": "__DIR__",
-  "command": "clang++ -std=c++20 __DIR__/N.cppm -fmodule-file=M=__DIR__/M.pcm -fmodule-file=N:Part=__DIR__/N-partition.pcm -fprebuilt-module-path=__DIR__ -fmodule-output=__DIR__/N.pcm -c -o __DIR__/N.o",
-  "file": "__DIR__/N.cppm",
-  "output": "__DIR__/N.o"
-},
-{
-  "directory": "__DIR__",
-  "command": "clang++ -std=c++20 __DIR__/N-part.cppm -fmodule-output=__DIR__/N-partition.pcm -c -o __DIR__/N-part.o",
-  "file": "__DIR__/N-part.cppm",
-  "output": "__DIR__/N-part.o"
-},
-{
-  "directory": "__DIR__",
-  "command": "clang++ -std=c++20 __DIR__/L.cppm -fmodule-output=__DIR__/L.pcm -c -o __DIR__/L.o",
-  "file": "__DIR__/L.cppm",
-  "output": "__DIR__/L.o"
-},
-{
-  "directory": "__DIR__",
-  "command": "clang++ -std=c++20 __DIR__/NonModular.cpp -c -o __DIR__/NonModular.o",
-  "file": "__DIR__/NonModular.cpp",
-  "output": "__DIR__/NonModular.o"
-}
-]
-  )cpp");
+  MockDirectoryCompilationDatabase CDB(TestDir, TFS);
 
-  addFile("foo.h", R"cpp(
+  CDB.addFile("foo.h", R"cpp(
 inline void foo() {}
   )cpp");
 
-  addFile("M.cppm", R"cpp(
+  CDB.addFile("M.cppm", R"cpp(
 module;
 #include "foo.h"
 export module M;
   )cpp");
 
-  addFile("N.cppm", R"cpp(
+  CDB.addFile("N.cppm", R"cpp(
 export module N;
 import :Part;
 import M;
   )cpp");
 
-  addFile("N-part.cppm", R"cpp(
+  CDB.addFile("N-part.cppm", R"cpp(
 // Different name with filename intentionally.
 export module N:Part;
   )cpp");
 
-  addFile("bar.h", R"cpp(
+  CDB.addFile("bar.h", R"cpp(
 inline void bar() {}
   )cpp");
 
-  addFile("L.cppm", R"cpp(
+  CDB.addFile("L.cppm", R"cpp(
 module;
 #include "bar.h"
 export module L;
   )cpp");
 
-  addFile("NonModular.cpp", R"cpp(
+  CDB.addFile("NonModular.cpp", R"cpp(
 #include "bar.h"
 #include "foo.h"
 void use() {
@@ -186,34 +187,41 @@ void use() {
 }
   )cpp");
 
-  std::unique_ptr<GlobalCompilationDatabase> CDB =
-      getGlobalCompilationDatabase();
-  EXPECT_TRUE(CDB);
-  ModulesBuilder Builder(*CDB.get());
+  ModulesBuilder Builder(CDB);
 
   // NonModular.cpp is not related to modules. So nothing should be built.
-  auto NonModularInfo =
-      Builder.buildPrerequisiteModulesFor(getFullPath("NonModular.cpp"), TFS);
-  EXPECT_FALSE(NonModularInfo);
+  {
+    auto NonModularInfo =
+        Builder.buildPrerequisiteModulesFor(getFullPath("NonModular.cpp"), TFS);
+    EXPECT_TRUE(NonModularInfo);
+    auto Invocation =
+        buildCompilerInvocation(getInputs("NonModular.cpp", CDB), DiagConsumer);
+    EXPECT_TRUE(NonModularInfo->canReuse(*Invocation, TFS.view(TestDir)));
+  }
 
-  auto MInfo = Builder.buildPrerequisiteModulesFor(getFullPath("M.cppm"), TFS);
-  // buildPrerequisiteModulesFor won't built the module itself.
-  EXPECT_FALSE(MInfo);
+  {
+    auto MInfo =
+        Builder.buildPrerequisiteModulesFor(getFullPath("M.cppm"), TFS);
+    // buildPrerequisiteModulesFor won't built the module itself.
+    EXPECT_TRUE(MInfo);
+    auto Invocation =
+        buildCompilerInvocation(getInputs("M.cppm", CDB), DiagConsumer);
+    EXPECT_TRUE(MInfo->canReuse(*Invocation, TFS.view(TestDir)));
+  }
 
   // Module N shouldn't be able to be built.
   auto NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), TFS);
   EXPECT_TRUE(NInfo);
 
-  ParseInputs NInput = getInputs("N.cppm", *CDB);
-  std::vector<std::string> CC1Args;
+  ParseInputs NInput = getInputs("N.cppm", CDB);
   std::unique_ptr<CompilerInvocation> Invocation =
-      getCompilerInvocation(NInput);
+      buildCompilerInvocation(NInput, DiagConsumer);
   // Test that `PrerequisiteModules::canReuse` works basically.
   EXPECT_TRUE(NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 
   // Test that we can still reuse the NInfo after we touch a unrelated file.
   {
-    addFile("L.cppm", R"cpp(
+    CDB.addFile("L.cppm", R"cpp(
 module;
 #include "bar.h"
 export module L;
@@ -221,7 +229,7 @@ export int ll = 43;
   )cpp");
     EXPECT_TRUE(NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 
-    addFile("bar.h", R"cpp(
+    CDB.addFile("bar.h", R"cpp(
 inline void bar() {}
 inline void bar(int) {}
   )cpp");
@@ -230,7 +238,7 @@ inline void bar(int) {}
 
   // Test that we can't reuse the NInfo after we touch a related file.
   {
-    addFile("M.cppm", R"cpp(
+    CDB.addFile("M.cppm", R"cpp(
 module;
 #include "foo.h"
 export module M;
@@ -241,7 +249,7 @@ export int mm = 44;
     NInfo = Builder.buildPrerequisiteModulesFor(getFullPath("N.cppm"), TFS);
     EXPECT_TRUE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 
-    addFile("foo.h", R"cpp(
+    CDB.addFile("foo.h", R"cpp(
 inline void foo() {}
 inline void foo(int) {}
   )cpp");
@@ -251,7 +259,7 @@ inline void foo(int) {}
     EXPECT_TRUE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
   }
 
-  addFile("N-part.cppm", R"cpp(
+  CDB.addFile("N-part.cppm", R"cpp(
 export module N:Part;
 // Intentioned to make it uncompilable.
 export int NPart = 4LIdjwldijaw
@@ -262,7 +270,7 @@ export int NPart = 4LIdjwldijaw
   // So NInfo should be unreusable even after rebuild.
   EXPECT_FALSE(NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 
-  addFile("N-part.cppm", R"cpp(
+  CDB.addFile("N-part.cppm", R"cpp(
 export module N:Part;
 export int NPart = 43;
   )cpp");
@@ -274,13 +282,13 @@ export int NPart = 43;
 
   // Test that if we changed the modification time of the file, the module files
   // info is still reusable if its content doesn't change.
-  addFile("N-part.cppm", R"cpp(
+  CDB.addFile("N-part.cppm", R"cpp(
 export module N:Part;
 export int NPart = 43;
   )cpp");
   EXPECT_TRUE(NInfo && NInfo->canReuse(*Invocation, TFS.view(TestDir)));
 
-  addFile("N.cppm", R"cpp(
+  CDB.addFile("N.cppm", R"cpp(
 export module N;
 import :Part;
 import M;
@@ -294,10 +302,9 @@ export int nn = 43;
     // Check that
     // `PrerequisiteModules::adjustHeaderSearchOptions(HeaderSearchOptions&)`
     // can replace HeaderSearchOptions correctly.
-    ParseInputs NInput = getInputs("N.cppm", *CDB);
-    std::vector<std::string> CC1Args;
+    ParseInputs NInput = getInputs("N.cppm", CDB);
     std::unique_ptr<CompilerInvocation> NInvocation =
-        getCompilerInvocation(NInput);
+        buildCompilerInvocation(NInput, DiagConsumer);
     HeaderSearchOptions &HSOpts = NInvocation->getHeaderSearchOpts();
     NInfo->adjustHeaderSearchOptions(HSOpts);
 
@@ -308,50 +315,34 @@ export int nn = 43;
 
 // An End-to-End test for modules.
 TEST_F(PrerequisiteModulesTests, ParsedASTTest) {
-  addFile("A.cppm", R"cpp(
+  MockDirectoryCompilationDatabase CDB(TestDir, TFS);
+
+  CDB.addFile("A.cppm", R"cpp(
 export module A;
 export void printA();
   )cpp");
 
-  addFile("Use.cpp", R"cpp(
+  CDB.addFile("Use.cpp", R"cpp(
 import A;
 )cpp");
 
-  addFile("build/compile_commands.json", R"cpp(
-[
-{
-  "directory": "__DIR__",
-  "command": "clang++ -std=c++20 __DIR__/A.cppm -fmodule-output=__DIR__/A.pcm -c -o __DIR__/A.o",
-  "file": "__DIR__/A.cppm",
-  "output": "__DIR__/A.o"
-},
-{
-  "directory": "__DIR__",
-  "command": "clang++ -std=c++20 __DIR__/Use.cpp -c -o __DIR__/Use.o",
-  "file": "__DIR__/Use.cpp",
-  "output": "__DIR__/Use.o"
-}
-]
-  )cpp");
+  ModulesBuilder Builder(CDB);
 
-  std::unique_ptr<GlobalCompilationDatabase> CDB =
-      getGlobalCompilationDatabase();
-  EXPECT_TRUE(CDB);
-  ModulesBuilder Builder(*CDB.get());
-
-  ParseInputs Use = getInputs("Use.cpp", *CDB);
+  ParseInputs Use = getInputs("Use.cpp", CDB);
   Use.ModulesManager = &Builder;
 
-  std::unique_ptr<CompilerInvocation> CI = getCompilerInvocation(Use);
+  std::unique_ptr<CompilerInvocation> CI =
+      buildCompilerInvocation(Use, DiagConsumer);
   EXPECT_TRUE(CI);
 
-  auto Preamble = buildPreamble(getFullPath("Use.cpp"), *CI, Use, /*InMemory=*/true,
-      /*Callback=*/nullptr);
+  auto Preamble =
+      buildPreamble(getFullPath("Use.cpp"), *CI, Use, /*InMemory=*/true,
+                    /*Callback=*/nullptr);
   EXPECT_TRUE(Preamble);
   EXPECT_TRUE(Preamble->RequiredModules);
 
-  auto AST = ParsedAST::build(getFullPath("Use.cpp"), Use,
-            std::move(CI), {}, Preamble);
+  auto AST = ParsedAST::build(getFullPath("Use.cpp"), Use, std::move(CI), {},
+                              Preamble);
   EXPECT_TRUE(AST);
 
   const NamedDecl &D = findDecl(*AST, "printA");

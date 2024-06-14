@@ -61,19 +61,6 @@ llvm::SmallString<256> getUniqueModuleFilesPath(PathRef MainFile) {
   return Result;
 }
 
-// Get the absolute path for the filename from the compile command.
-llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
-  llvm::SmallString<128> AbsolutePath;
-  if (llvm::sys::path::is_absolute(Cmd.Filename)) {
-    AbsolutePath = Cmd.Filename;
-  } else {
-    AbsolutePath = Cmd.Directory;
-    llvm::sys::path::append(AbsolutePath, Cmd.Filename);
-    llvm::sys::path::remove_dots(AbsolutePath, true);
-  }
-  return AbsolutePath;
-}
-
 // Get a unique module file path under \param ModuleFilesPrefix.
 std::string getModuleFilePath(llvm::StringRef ModuleName,
                               PathRef ModuleFilesPrefix) {
@@ -181,19 +168,17 @@ private:
   llvm::StringSet<> BuiltModuleNames;
 };
 
-// Build a module file for module with `ModuleName`. Return false
-// when there are problem happens. Return true when the
-// module file exists or built successfully. The information of built
+// Build a module file for module with `ModuleName`. The information of built
 // module file are stored in \param BuiltModuleFiles.
 llvm::Error buildModuleFile(llvm::StringRef ModuleName,
                             const GlobalCompilationDatabase &CDB,
-                            const ThreadsafeFS &TFS, ProjectModules *MDB,
+                            const ThreadsafeFS &TFS, ProjectModules &MDB,
                             PathRef ModuleFilesPrefix,
                             StandalonePrerequisiteModules &BuiltModuleFiles) {
   if (BuiltModuleFiles.isModuleUnitBuilt(ModuleName))
     return llvm::Error::success();
 
-  PathRef ModuleUnitFileName = MDB->getSourceForModuleName(ModuleName);
+  PathRef ModuleUnitFileName = MDB.getSourceForModuleName(ModuleName);
   // It is possible that we're meeting third party modules (modules whose
   // source are not in the project. e.g, the std module may be a third-party
   // module for most projects) or something wrong with the implementation of
@@ -205,18 +190,21 @@ llvm::Error buildModuleFile(llvm::StringRef ModuleName,
     return llvm::createStringError(llvm::formatv(
         "Failed to build '{0}': Failed to get the primary source", ModuleName));
 
-  for (auto &RequiredModuleName : MDB->getRequiredModules(ModuleUnitFileName)) {
-    // Return early if there are errors building the module file.
-    if (llvm::Error Err = buildModuleFile(RequiredModuleName, CDB, TFS, MDB,
-                                          ModuleFilesPrefix, BuiltModuleFiles))
-      return Err;
-  }
-
+  // Try cheap operation earlier to boil-out cheaply if there are problems.
   auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
   if (!Cmd)
     return llvm::createStringError(
         llvm::formatv("Failed to build '{0}': No compile command for {1}",
                       ModuleName, ModuleUnitFileName));
+
+  for (auto &RequiredModuleName : MDB.getRequiredModules(ModuleUnitFileName)) {
+    // Return early if there are errors building the module file.
+    if (llvm::Error Err = buildModuleFile(RequiredModuleName, CDB, TFS, MDB,
+                                          ModuleFilesPrefix, BuiltModuleFiles))
+      return llvm::createStringError(
+          llvm::formatv("Failed to build dependency {0}: {1}",
+                        RequiredModuleName, toString(std::move(Err))));
+  }
 
   Cmd->Output = getModuleFilePath(ModuleName, ModuleFilesPrefix);
 
@@ -271,12 +259,14 @@ std::unique_ptr<PrerequisiteModules>
 ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
                                             const ThreadsafeFS &TFS) const {
   std::unique_ptr<ProjectModules> MDB = CDB.getProjectModules(File);
-  if (!MDB)
-    return {};
+  if (!MDB) {
+    elog("Failed to get Project Modules information for {0}", File);
+    return std::make_unique<FailedPrerequisiteModules>();
+  }
 
   std::vector<std::string> RequiredModuleNames = MDB->getRequiredModules(File);
   if (RequiredModuleNames.empty())
-    return {};
+    return std::make_unique<StandalonePrerequisiteModules>();
 
   llvm::SmallString<256> ModuleFilesPrefix = getUniqueModuleFilesPath(File);
 
@@ -288,7 +278,7 @@ ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
   for (llvm::StringRef RequiredModuleName : RequiredModuleNames) {
     // Return early if there is any error.
     if (llvm::Error Err =
-            buildModuleFile(RequiredModuleName, CDB, TFS, MDB.get(),
+            buildModuleFile(RequiredModuleName, CDB, TFS, *MDB.get(),
                             ModuleFilesPrefix, *RequiredModules.get())) {
       elog("Failed to build module {0}; due to {1}", RequiredModuleName,
            toString(std::move(Err)));
@@ -304,6 +294,9 @@ ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
 bool StandalonePrerequisiteModules::canReuse(
     const CompilerInvocation &CI,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) const {
+  if (RequiredModules.empty())
+    return true;
+
   CompilerInstance Clang;
 
   Clang.setInvocation(std::make_shared<CompilerInvocation>(CI));

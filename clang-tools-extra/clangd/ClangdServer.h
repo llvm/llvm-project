@@ -43,7 +43,6 @@
 
 namespace clang {
 namespace clangd {
-
 /// Manages a collection of source files and derived data (ASTs, indexes),
 /// and provides language-aware features such as code completion.
 ///
@@ -114,8 +113,8 @@ public:
     /// This throttler controls which preambles may be built at a given time.
     clangd::PreambleThrottler *PreambleThrottler = nullptr;
 
-    /// Enable experimental support for modules.
-    bool ExperimentalModulesSupport = false;
+    /// Manages to build module files.
+    ModulesBuilder *ModulesManager = nullptr;
 
     /// If true, ClangdServer builds a dynamic in-memory index for symbols in
     /// opened files and uses the index to augment code completion results.
@@ -204,8 +203,7 @@ public:
   /// those arguments for subsequent reparses. However, ClangdServer will check
   /// if compilation arguments changed on calls to forceReparse().
   ClangdServer(const GlobalCompilationDatabase &CDB, const ThreadsafeFS &TFS,
-               const Options &Opts, Callbacks *Callbacks = nullptr,
-               ModulesBuilder *ModulesManager = nullptr);
+               const Options &Opts, Callbacks *Callbacks = nullptr);
   ~ClangdServer();
 
   /// Gets the installed feature module of a given type, if any.

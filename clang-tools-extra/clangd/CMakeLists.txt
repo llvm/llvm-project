@@ -99,12 +99,12 @@ add_clang_library(clangDaemon
   JSONTransport.cpp
   ModulesBuilder.cpp
   PathMapping.cpp
-  ProjectModules.cpp
   Protocol.cpp
   Quality.cpp
   ParsedAST.cpp
   Preamble.cpp
   RIFF.cpp
+  ScanningProjectModules.cpp
   Selection.cpp
   SemanticHighlighting.cpp
   SemanticSelection.cpp

@@ -63,6 +63,9 @@ public:
 
     /// Limit the number of references returned (0 means no limit).
     size_t ReferencesLimit = 0;
+
+    /// Flag to hint the experimental modules support is enabled.
+    bool EnableExperimentalModulesSupport = false;
   };
 
   ClangdLSPServer(Transport &Transp, const ThreadsafeFS &TFS,

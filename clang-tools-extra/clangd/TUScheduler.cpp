@@ -710,7 +710,6 @@ private:
   TUScheduler::ASTCache &IdleASTs;
   TUScheduler::HeaderIncluderCache &HeaderIncluders;
   const bool RunSync;
-
   /// Time to wait after an update to see whether another update obsoletes it.
   const DebouncePolicy UpdateDebounce;
   /// File that ASTWorker is responsible for.
@@ -1083,7 +1082,6 @@ void PreambleThread::build(Request Req) {
 
   PreambleBuildStats Stats;
   bool IsFirstPreamble = !LatestBuild;
-
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
       [&](CapturedASTCtx ASTCtx,

@@ -213,10 +213,11 @@ ClangdServer::Options::operator TUScheduler::Options() const {
 
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const ThreadsafeFS &TFS, const Options &Opts,
-                           Callbacks *Callbacks, ModulesBuilder *ModulesManager)
+                           Callbacks *Callbacks)
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
-      ModulesManager(ModulesManager), ClangTidyProvider(Opts.ClangTidyProvider),
+      ModulesManager(Opts.ModulesManager),
+      ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
@@ -228,7 +229,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
   if (Opts.AsyncThreadsCount != 0)
     IndexTasks.emplace();
-
   // Pass a callback into `WorkScheduler` to extract symbols from a newly
   // parsed file and rebuild the file index synchronously each time an AST
   // is parsed.

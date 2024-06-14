@@ -336,8 +336,6 @@ TEST(FileIndexTest, RebuildWithPreamble) {
 
   FileIndex Index;
   bool IndexUpdated = false;
-
-  MockCompilationDatabase CDB;
   buildPreamble(
       FooCpp, *CI, PI,
       /*StoreInMemory=*/true,
