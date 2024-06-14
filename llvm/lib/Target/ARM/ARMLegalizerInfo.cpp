@@ -159,6 +159,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
     getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).legalFor({s32});
     getActionDefinitionsBuilder(G_RESET_FPENV).alwaysLegal();
+    getActionDefinitionsBuilder(G_GET_FPMODE).legalFor({s32});
+    getActionDefinitionsBuilder(G_SET_FPMODE).customFor({s32});
   } else {
     getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
         .libcallFor({s32, s64});
@@ -186,6 +188,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .libcallForCartesianProduct({s32, s64}, {s32});
 
     getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV})
+        .libcall();
+    getActionDefinitionsBuilder({G_GET_FPMODE, G_SET_FPMODE, G_RESET_FPMODE})
         .libcall();
   }
 
@@ -437,6 +441,23 @@ bool ARMLegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
         MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
     MIRBuilder.buildConstant(MI.getOperand(0),
                              *ConstantInt::get(Ctx, AsInteger));
+    break;
+  }
+  case G_SET_FPMODE: {
+    // New FPSCR = (FPSCR & FPStatusBits) | (Modes & ~FPStatusBits)
+    LLT FPEnvTy = LLT::scalar(32);
+    auto FPEnv = MRI.createGenericVirtualRegister(FPEnvTy);
+    auto Modes = MI.getOperand(0).getReg();
+    MIRBuilder.buildInstr(G_GET_FPENV).addDef({FPEnv});
+    auto StatusBitMask = MIRBuilder.buildConstant(FPEnvTy, ARM::FPStatusBits);
+    auto StatusBits =
+        MIRBuilder.buildAnd(FPEnvTy, FPEnv, StatusBitMask).getReg(0);
+    auto NotStatusBitMask =
+        MIRBuilder.buildConstant(FPEnvTy, ~ARM::FPStatusBits);
+    auto FPModeBits =
+        MIRBuilder.buildAnd(FPEnvTy, Modes, NotStatusBitMask).getReg(0);
+    auto NewFPSCR = MIRBuilder.buildOr(FPEnvTy, StatusBits, FPModeBits);
+    MIRBuilder.buildInstr(G_SET_FPENV).addUse(NewFPSCR.getReg(0));
     break;
   }
   }
