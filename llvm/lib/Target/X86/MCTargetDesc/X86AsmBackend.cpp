@@ -556,7 +556,9 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                           isFirstMacroFusibleInst(Inst, *MCII))) {
     // If we meet a unfused branch or the first instuction in a fusiable pair,
     // insert a BoundaryAlign fragment.
-    OS.insert(PendingBA = new MCBoundaryAlignFragment(AlignBoundary, STI));
+    PendingBA = OS.getContext().allocFragment<MCBoundaryAlignFragment>(
+        AlignBoundary, STI);
+    OS.insert(PendingBA);
   }
 }
 
@@ -589,7 +591,7 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
   // MCAssembler::relaxBoundaryAlign. The easiest way is to insert a new empty
   // DataFragment.
   if (isa_and_nonnull<MCDataFragment>(CF))
-    OS.insert(new MCDataFragment());
+    OS.insert(OS.getContext().allocFragment<MCDataFragment>());
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *Sec = OS.getCurrentSectionOnly();

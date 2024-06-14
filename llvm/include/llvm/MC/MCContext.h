@@ -44,6 +44,7 @@ namespace llvm {
 
 class CodeViewContext;
 class MCAsmInfo;
+class MCDataFragment;
 class MCInst;
 class MCLabel;
 class MCObjectFileInfo;
@@ -345,6 +346,8 @@ private:
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
+  MCDataFragment *allocInitialFragment(MCSection &Sec);
+
   MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
                              bool IsTemporary);
   MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
@@ -436,6 +439,10 @@ public:
 
   /// Create and return a new MC instruction.
   MCInst *createMCInst();
+
+  template <typename F, typename... Args> F *allocFragment(Args &&...args) {
+    return new F(std::forward<Args>(args)...);
+  }
 
   /// \name Symbol Management
   /// @{
