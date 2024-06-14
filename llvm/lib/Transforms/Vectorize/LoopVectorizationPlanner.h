@@ -344,16 +344,6 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
-  /// Computes the cost of \p Plan for vectorization factor \p VF.
-  ///
-  /// The current implementation requires access to the
-  /// LoopVectorizationLegality to handle inductions and reductions, which is
-  /// why it is kept separate from the VPlan-only cost infrastructure.
-  ///
-  /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
-  /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF) const;
-
 public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
@@ -374,9 +364,6 @@ public:
 
   /// Return the best VPlan for \p VF.
   VPlan &getBestPlanFor(ElementCount VF) const;
-
-  /// Return the most profitable plan and fix its VF to the most profitable one.
-  VPlan &getBestPlan() const;
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
@@ -456,9 +443,7 @@ private:
                                   ElementCount MinVF);
 
   /// \return The most profitable vectorization factor and the cost of that VF.
-  /// This method checks every VF in \p CandidateVFs. This is now only used to
-  /// verify the decisions by the new VPlan-based cost-model and will be retired
-  /// once the VPlan-based cost-model is stabilized.
+  /// This method checks every VF in \p CandidateVFs.
   VectorizationFactor
   selectVectorizationFactor(const ElementCountSet &CandidateVFs);
 
