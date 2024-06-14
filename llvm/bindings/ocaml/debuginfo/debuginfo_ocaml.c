@@ -969,45 +969,6 @@ value llvm_dibuild_create_parameter_variable_bytecode(value *argv, int arg) {
   );
 }
 
-value llvm_dibuild_insert_declare_before_native(value Builder, value Storage,
-                                                value VarInfo, value Expr,
-                                                value DebugLoc, value Instr) {
-  LLVMDbgRecordRef Value = LLVMDIBuilderInsertDeclareBefore(
-      DIBuilder_val(Builder), Value_val(Storage), Metadata_val(VarInfo),
-      Metadata_val(Expr), Metadata_val(DebugLoc), Value_val(Instr));
-  return to_val(Value);
-}
-
-value llvm_dibuild_insert_declare_before_bytecode(value *argv, int arg) {
-
-  return llvm_dibuild_insert_declare_before_native(argv[0], // Builder
-                                                   argv[1], // Storage
-                                                   argv[2], // VarInfo
-                                                   argv[3], // Expr
-                                                   argv[4], // DebugLoc
-                                                   argv[5]  // Instr
-  );
-}
-
-value llvm_dibuild_insert_declare_at_end_native(value Builder, value Storage,
-                                                value VarInfo, value Expr,
-                                                value DebugLoc, value Block) {
-  LLVMDbgRecordRef Value = LLVMDIBuilderInsertDeclareAtEnd(
-      DIBuilder_val(Builder), Value_val(Storage), Metadata_val(VarInfo),
-      Metadata_val(Expr), Metadata_val(DebugLoc), BasicBlock_val(Block));
-  return to_val(Value);
-}
-
-value llvm_dibuild_insert_declare_at_end_bytecode(value *argv, int arg) {
-  return llvm_dibuild_insert_declare_at_end_native(argv[0], // Builder
-                                                   argv[1], // Storage
-                                                   argv[2], // VarInfo
-                                                   argv[3], // Expr
-                                                   argv[4], // DebugLoc
-                                                   argv[5]  // Block
-  );
-}
-
 value llvm_dibuild_expression(value Builder, value Addr) {
   return to_val(LLVMDIBuilderCreateExpression(
       DIBuilder_val(Builder), (uint64_t *)Op_val(Addr), Wosize_val(Addr)));
