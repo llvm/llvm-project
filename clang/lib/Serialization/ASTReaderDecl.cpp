@@ -4220,8 +4220,11 @@ void ASTReader::PassInterestingDeclsToConsumer() {
   // If we add any new potential interesting decl in the last call, consume it.
   ConsumingPotentialInterestingDecls();
 
-  for (GlobalDeclID ID : VTablesToEmit)
-    PassVTableToConsumer(cast<CXXRecordDecl>(GetDecl(ID)));
+  for (GlobalDeclID ID : VTablesToEmit) {
+    auto *RD = cast<CXXRecordDecl>(GetDecl(ID));
+    assert(!RD->shouldEmitInExternalSource());
+    PassVTableToConsumer(RD);
+  }
   VTablesToEmit.clear();
 }
 
