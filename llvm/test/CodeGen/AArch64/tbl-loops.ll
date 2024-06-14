@@ -203,16 +203,17 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcmgt v3.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v4.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    fcmlt v5.4s, v1.4s, #0.0
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    bsl v4.16b, v0.16b, v2.16b
-; CHECK-NEXT:    fcmlt v1.4s, v2.4s, #0.0
-; CHECK-NEXT:    bic v2.16b, v3.16b, v5.16b
-; CHECK-NEXT:    bic v1.16b, v4.16b, v1.16b
-; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
+; CHECK-NEXT:    mov v3.16b, v4.16b
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v2.16b
+; CHECK-NEXT:    fcmlt v2.4s, v2.4s, #0.0
+; CHECK-NEXT:    bic v1.16b, v1.16b, v5.16b
+; CHECK-NEXT:    bic v2.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    trn1 v1.8b, v2.8b, v1.8b
+; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    trn1 v1.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    str d1, [x0], #8
 ; CHECK-NEXT:    b.ne .LBB1_9
 ; CHECK-NEXT:  // %bb.10: // %middle.block
@@ -352,21 +353,22 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcmgt v6.4s, v3.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v7.4s, v4.4s, v0.4s
 ; CHECK-NEXT:    fcmlt v16.4s, v2.4s, #0.0
-; CHECK-NEXT:    fcmlt v17.4s, v3.4s, #0.0
-; CHECK-NEXT:    bsl v5.16b, v0.16b, v2.16b
-; CHECK-NEXT:    bsl v6.16b, v0.16b, v3.16b
-; CHECK-NEXT:    bsl v7.16b, v0.16b, v4.16b
-; CHECK-NEXT:    fcmlt v2.4s, v4.4s, #0.0
-; CHECK-NEXT:    bic v3.16b, v5.16b, v16.16b
-; CHECK-NEXT:    bic v4.16b, v6.16b, v17.16b
-; CHECK-NEXT:    bic v2.16b, v7.16b, v2.16b
+; CHECK-NEXT:    bit v2.16b, v0.16b, v5.16b
+; CHECK-NEXT:    fcmlt v5.4s, v3.4s, #0.0
+; CHECK-NEXT:    bit v3.16b, v0.16b, v6.16b
+; CHECK-NEXT:    mov v6.16b, v7.16b
+; CHECK-NEXT:    bsl v6.16b, v0.16b, v4.16b
+; CHECK-NEXT:    fcmlt v4.4s, v4.4s, #0.0
+; CHECK-NEXT:    bic v2.16b, v2.16b, v16.16b
+; CHECK-NEXT:    bic v3.16b, v3.16b, v5.16b
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    bic v4.16b, v6.16b, v4.16b
 ; CHECK-NEXT:    fcvtzs v3.4s, v3.4s
 ; CHECK-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-NEXT:    xtn v5.4h, v3.4s
-; CHECK-NEXT:    xtn v6.4h, v4.4s
-; CHECK-NEXT:    xtn v7.4h, v2.4s
-; CHECK-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
+; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    xtn v3.4h, v3.4s
+; CHECK-NEXT:    xtn v4.4h, v4.4s
+; CHECK-NEXT:    tbl v2.16b, { v2.16b, v3.16b, v4.16b }, v1.16b
 ; CHECK-NEXT:    st1 { v2.s }[2], [x13]
 ; CHECK-NEXT:    str d2, [x0], #12
 ; CHECK-NEXT:    b.ne .LBB2_4
@@ -605,26 +607,27 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcmgt v16.4s, v4.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v17.4s, v5.4s, v0.4s
 ; CHECK-NEXT:    fcmlt v18.4s, v2.4s, #0.0
-; CHECK-NEXT:    fcmlt v19.4s, v3.4s, #0.0
-; CHECK-NEXT:    fcmlt v20.4s, v4.4s, #0.0
-; CHECK-NEXT:    bsl v6.16b, v0.16b, v2.16b
-; CHECK-NEXT:    bsl v7.16b, v0.16b, v3.16b
-; CHECK-NEXT:    bsl v16.16b, v0.16b, v4.16b
-; CHECK-NEXT:    bsl v17.16b, v0.16b, v5.16b
-; CHECK-NEXT:    fcmlt v2.4s, v5.4s, #0.0
-; CHECK-NEXT:    bic v3.16b, v6.16b, v18.16b
-; CHECK-NEXT:    bic v4.16b, v7.16b, v19.16b
-; CHECK-NEXT:    bic v5.16b, v16.16b, v20.16b
-; CHECK-NEXT:    bic v2.16b, v17.16b, v2.16b
+; CHECK-NEXT:    bit v2.16b, v0.16b, v6.16b
+; CHECK-NEXT:    fcmlt v6.4s, v3.4s, #0.0
+; CHECK-NEXT:    bit v3.16b, v0.16b, v7.16b
+; CHECK-NEXT:    fcmlt v7.4s, v4.4s, #0.0
+; CHECK-NEXT:    bit v4.16b, v0.16b, v16.16b
+; CHECK-NEXT:    mov v16.16b, v17.16b
+; CHECK-NEXT:    bsl v16.16b, v0.16b, v5.16b
+; CHECK-NEXT:    fcmlt v5.4s, v5.4s, #0.0
+; CHECK-NEXT:    bic v2.16b, v2.16b, v18.16b
+; CHECK-NEXT:    bic v3.16b, v3.16b, v6.16b
+; CHECK-NEXT:    bic v4.16b, v4.16b, v7.16b
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    bic v5.16b, v16.16b, v5.16b
 ; CHECK-NEXT:    fcvtzs v3.4s, v3.4s
 ; CHECK-NEXT:    fcvtzs v4.4s, v4.4s
 ; CHECK-NEXT:    fcvtzs v5.4s, v5.4s
-; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-NEXT:    xtn v16.4h, v3.4s
-; CHECK-NEXT:    xtn v17.4h, v4.4s
-; CHECK-NEXT:    xtn v18.4h, v5.4s
-; CHECK-NEXT:    xtn v19.4h, v2.4s
-; CHECK-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v1.16b
+; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    xtn v3.4h, v3.4s
+; CHECK-NEXT:    xtn v4.4h, v4.4s
+; CHECK-NEXT:    xtn v5.4h, v5.4s
+; CHECK-NEXT:    tbl v2.16b, { v2.16b, v3.16b, v4.16b, v5.16b }, v1.16b
 ; CHECK-NEXT:    str q2, [x0], #16
 ; CHECK-NEXT:    b.ne .LBB3_9
 ; CHECK-NEXT:  // %bb.10: // %middle.block
