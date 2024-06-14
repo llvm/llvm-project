@@ -107,7 +107,7 @@ def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPC_IMMO()">,
 
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicateWithAll<(all_of FeatureFPARMv8), "fp-armv8">;
-def HasNEON          : Predicate<"Subtarget->hasNEON()">,
+def HasNEON          : Predicate<"Subtarget->isNeonAvailable()">,
                                  AssemblerPredicateWithAll<(all_of FeatureNEON), "neon">;
 def HasSM4           : Predicate<"Subtarget->hasSM4()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSM4), "sm4">;
@@ -234,12 +234,9 @@ def HasSMEF16F16orSMEF8F16
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
                 "sme-f16f16 or sme-f8f16">;
 
-// A subset of NEON instructions are legal in Streaming SVE execution mode,
-// they should be enabled if either has been specified.
-def HasNEONorSME
-    : Predicate<"Subtarget->hasNEON() || Subtarget->hasSME()">,
-                AssemblerPredicateWithAll<(any_of FeatureNEON, FeatureSME),
-                "neon or sme">;
+// A subset of NEON instructions are legal in Streaming SVE execution mode.
+def HasNEONorSME     : Predicate<"Subtarget->hasNEON()">,
+                                 AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
 def HasAltNZCV       : Predicate<"Subtarget->hasAlternativeNZCV()">,
@@ -322,8 +319,6 @@ def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
-
-def IsNeonAvailable : Predicate<"Subtarget->isNeonAvailable()">;
 
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
@@ -6016,7 +6011,7 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
-let Predicates = [HasNEON] in {
+let Predicates = [HasNEONorSME] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
@@ -8379,7 +8374,7 @@ def : Ld1Lane64IdxOpPat<extloadi8, VectorIndexH, v4i16, i32, LD1i8, VectorIndexH
 
 // Same as above, but the first element is populated using
 // scalar_to_vector + insert_subvector instead of insert_vector_elt.
-let Predicates = [IsNeonAvailable] in {
+let Predicates = [HasNeonOrSME] in {
   class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
                           SDPatternOperator ExtLoad, Instruction LD1>
     : Pat<(ResultTy (scalar_to_vector (i32 (ExtLoad GPR64sp:$Rn)))),
