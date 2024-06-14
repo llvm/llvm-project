@@ -30,6 +30,7 @@ static constexpr cpp::array<size_t, 6> DEFAULT_BUCKETS{16,  32,  64,
 template <size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()> class FreeListHeap {
 public:
   using BlockType = Block<>;
+  using FreeListType = FreeList<NUM_BUCKETS>;
 
   struct HeapStats {
     size_t total_bytes;
@@ -39,7 +40,19 @@ public:
     size_t total_allocate_calls;
     size_t total_free_calls;
   };
-  FreeListHeap(span<cpp::byte> region);
+
+  FreeListHeap(span<cpp::byte> region)
+      : FreeListHeap(&*region.begin(), &*region.end(), region.size()) {
+    auto result = BlockType::init(region);
+    BlockType *block = *result;
+    freelist_.add_chunk(block_to_span(block));
+  }
+
+  constexpr FreeListHeap(void *start, cpp::byte *end, size_t total_bytes)
+      : block_region_start_(start), block_region_end_(end),
+        freelist_(DEFAULT_BUCKETS), heap_stats_{} {
+    heap_stats_.total_bytes = total_bytes;
+  }
 
   void *allocate(size_t size);
   void free(void *ptr);
@@ -47,27 +60,53 @@ public:
   void *calloc(size_t num, size_t size);
 
   const HeapStats &heap_stats() const { return heap_stats_; }
+  void reset_heap_stats() { heap_stats_ = {}; }
+
+  void *region_start() const { return block_region_start_; }
+  size_t region_size() const {
+    return reinterpret_cast<uintptr_t>(block_region_end_) -
+           reinterpret_cast<uintptr_t>(block_region_start_);
+  }
+
+protected:
+  constexpr void set_freelist_node(typename FreeListType::FreeListNode &node,
+                                   cpp::span<cpp::byte> chunk) {
+    freelist_.set_freelist_node(node, chunk);
+  }
 
 private:
   span<cpp::byte> block_to_span(BlockType *block) {
     return span<cpp::byte>(block->usable_space(), block->inner_size());
   }
 
-  span<cpp::byte> region_;
-  FreeList<NUM_BUCKETS> freelist_;
+  bool is_valid_ptr(void *ptr) {
+    return ptr >= block_region_start_ && ptr < block_region_end_;
+  }
+
+  void *block_region_start_;
+  void *block_region_end_;
+  FreeListType freelist_;
   HeapStats heap_stats_;
 };
 
-template <size_t NUM_BUCKETS>
-FreeListHeap<NUM_BUCKETS>::FreeListHeap(span<cpp::byte> region)
-    : region_(region), freelist_(DEFAULT_BUCKETS), heap_stats_() {
-  auto result = BlockType::init(region);
-  BlockType *block = *result;
+template <size_t BUFF_SIZE, size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()>
+struct FreeListHeapBuffer : public FreeListHeap<NUM_BUCKETS> {
+  using parent = FreeListHeap<NUM_BUCKETS>;
+  using FreeListNode = typename parent::FreeListType::FreeListNode;
 
-  freelist_.add_chunk(block_to_span(block));
+  constexpr FreeListHeapBuffer()
+      : FreeListHeap<NUM_BUCKETS>(&block, buffer + sizeof(buffer), BUFF_SIZE),
+        block(0, BUFF_SIZE), node{}, buffer{} {
+    block.mark_last();
 
-  heap_stats_.total_bytes = region.size();
-}
+    cpp::span<cpp::byte> chunk(buffer, sizeof(buffer));
+    parent::set_freelist_node(node, chunk);
+  }
+
+  typename parent::BlockType block;
+  FreeListNode node;
+  cpp::byte buffer[BUFF_SIZE - sizeof(block) - sizeof(node)];
+};
 
 template <size_t NUM_BUCKETS>
 void *FreeListHeap<NUM_BUCKETS>::allocate(size_t size) {
@@ -97,7 +136,7 @@ void *FreeListHeap<NUM_BUCKETS>::allocate(size_t size) {
 template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
   cpp::byte *bytes = static_cast<cpp::byte *>(ptr);
 
-  LIBC_ASSERT(bytes >= region_.data() && bytes < region_.data() + region_.size() && "Invalid pointer");
+  LIBC_ASSERT(is_valid_ptr(bytes) && "Invalid pointer");
 
   BlockType *chunk_block = BlockType::from_usable_space(bytes);
 
@@ -131,7 +170,7 @@ template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
   heap_stats_.total_free_calls += 1;
 }
 
-// Follows contract of the C standard realloc() function
+// Follows constract of the C standard realloc() function
 // If ptr is free'd, will return nullptr.
 template <size_t NUM_BUCKETS>
 void *FreeListHeap<NUM_BUCKETS>::realloc(void *ptr, size_t size) {
@@ -146,7 +185,7 @@ void *FreeListHeap<NUM_BUCKETS>::realloc(void *ptr, size_t size) {
 
   cpp::byte *bytes = static_cast<cpp::byte *>(ptr);
 
-  if (bytes < region_.data() || bytes >= region_.data() + region_.size())
+  if (!is_valid_ptr(bytes))
     return nullptr;
 
   BlockType *chunk_block = BlockType::from_usable_space(bytes);
@@ -176,6 +215,8 @@ void *FreeListHeap<NUM_BUCKETS>::calloc(size_t num, size_t size) {
     LIBC_NAMESPACE::inline_memset(ptr, 0, num * size);
   return ptr;
 }
+
+extern FreeListHeap<> *freelist_heap;
 
 } // namespace LIBC_NAMESPACE
 

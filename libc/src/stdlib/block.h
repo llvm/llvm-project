@@ -245,7 +245,7 @@ public:
   void mark_free() { info_.used = 0; }
 
   /// Marks this block as the last one in the chain.
-  void mark_last() { info_.last = 1; }
+  constexpr void mark_last() { info_.last = 1; }
 
   /// Clears the last bit from this block.
   void clear_last() { info_.last = 1; }
@@ -259,14 +259,14 @@ public:
     return check_status() == internal::BlockStatus::VALID;
   }
 
+  constexpr Block(size_t prev_outer_size, size_t outer_size);
+
 private:
   /// Consumes the block and returns as a span of bytes.
   static ByteSpan as_bytes(Block *&&block);
 
   /// Consumes the span of bytes and uses it to construct and return a block.
   static Block *as_block(size_t prev_outer_size, ByteSpan bytes);
-
-  Block(size_t prev_outer_size, size_t outer_size);
 
   /// Returns a `BlockStatus` that is either VALID or indicates the reason why
   /// the block is invalid.
@@ -442,7 +442,9 @@ Block<OffsetType, kAlign> *Block<OffsetType, kAlign>::prev() const {
 // Private template method implementations.
 
 template <typename OffsetType, size_t kAlign>
-Block<OffsetType, kAlign>::Block(size_t prev_outer_size, size_t outer_size) {
+constexpr Block<OffsetType, kAlign>::Block(size_t prev_outer_size,
+                                           size_t outer_size)
+    : info_{} {
   prev_ = prev_outer_size / ALIGNMENT;
   next_ = outer_size / ALIGNMENT;
   info_.used = 0;
