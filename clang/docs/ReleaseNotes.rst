@@ -135,6 +135,14 @@ Clang Frontend Potentially Breaking Changes
 - The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
   existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
 
+Clang Python Bindings Potentially Breaking Changes
+--------------------------------------------------
+- Renamed ``CursorKind`` variant 272 from ``OMP_TEAMS_DISTRIBUTE_DIRECTIVE``
+  to ``OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE``. The previous name was incorrect, it was a duplicate
+  of variant 271.
+- Renamed ``TypeKind`` variant 162 from ``OBJCCLASS`` to ``OBJCTYPEPARAM``.
+  The previous name was incorrect, it was a duplicate of variant 28.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -922,6 +930,10 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- The clang-cl ``/Ot`` compiler option ("optimize for speed", also implied by
+  ``/O2``) now maps to clang's ``-O3`` optimizataztion level instead of ``-O2``.
+  Users who prefer the old behavior can use ``clang-cl /Ot /clang:-O2 ...``.
 
 - Clang-cl now supports function targets with intrinsic headers. This allows
   for runtime feature detection of intrinsics. Previously under clang-cl

@@ -1,4 +1,5 @@
-! This test checks lowering of OpenMP combined loop constructs.
+! This test checks lowering of OpenMP compound (combined and composite) loop
+! constructs.
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
@@ -22,6 +23,7 @@ program main
   ! DO SIMD
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
   !$omp do simd
   do i = 1, 10
   end do
@@ -32,6 +34,7 @@ program main
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.parallel
   ! CHECK: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
   !$omp parallel do simd
   do i = 1, 10
   end do
@@ -42,6 +45,7 @@ program main
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.parallel
   ! CHECK: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
   !$omp parallel do
   do i = 1, 10
   end do
@@ -53,6 +57,7 @@ program main
   ! CHECK: omp.target
   ! CHECK: omp.parallel
   ! CHECK: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
   !$omp target parallel do simd
   do i = 1, 10
   end do
@@ -64,6 +69,7 @@ program main
   ! CHECK: omp.target
   ! CHECK: omp.parallel
   ! CHECK: omp.wsloop
+  ! CHECK-NEXT: omp.loop_nest
   !$omp target parallel do
   do i = 1, 10
   end do
@@ -74,6 +80,7 @@ program main
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.target
   ! CHECK: omp.simd
+  ! CHECK-NEXT: omp.loop_nest
   !$omp target simd
   do i = 1, 10
   end do
@@ -86,6 +93,7 @@ program main
   ! CHECK: omp.target
   ! CHECK: omp.teams
   ! CHECK: omp.distribute
+  ! CHECK-NEXT: omp.loop_nest
   !$omp target teams distribute
   do i = 1, 10
   end do
@@ -97,6 +105,7 @@ program main
 
   ! CHECK: omp.teams
   ! CHECK: omp.distribute
+  ! CHECK-NEXT: omp.loop_nest
   !$omp teams distribute
   do i = 1, 10
   end do

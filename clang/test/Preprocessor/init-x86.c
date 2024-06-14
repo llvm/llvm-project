@@ -999,6 +999,7 @@
 // X32:#define __x86_64__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-pc-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix X86_64-LINUX %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-unknown-fuchsia < /dev/null | FileCheck -match-full-lines -check-prefix X86_64-LINUX %s
 //
 // X86_64-LINUX:#define _LP64 1
 // X86_64-LINUX:#define __BIGGEST_ALIGNMENT__ 16

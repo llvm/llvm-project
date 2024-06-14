@@ -926,6 +926,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_CONDITIONAL_STACK);
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
   RECORD(PP_ASSUME_NONNULL_LOC);
+  RECORD(PP_UNSAFE_BUFFER_USAGE);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -2517,6 +2518,12 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
     Stream.EmitRecord(PP_CONDITIONAL_STACK, Record);
     Record.clear();
   }
+
+  // Write the safe buffer opt-out region map in PP
+  for (SourceLocation &S : PP.serializeSafeBufferOptOutMap())
+    AddSourceLocation(S, Record);
+  Stream.EmitRecord(PP_UNSAFE_BUFFER_USAGE, Record);
+  Record.clear();
 
   // Enter the preprocessor block.
   Stream.EnterSubblock(PREPROCESSOR_BLOCK_ID, 3);
