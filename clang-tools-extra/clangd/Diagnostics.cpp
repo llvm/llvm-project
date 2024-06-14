@@ -337,6 +337,35 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note,
   return capitalize(std::move(Result));
 }
 
+// Tests if any two `TextEdit`s in `Edits` conflict.  Two `TextEdit`s
+// conflict if they have overlapping source ranges.
+// NOTE: This function is inspired by clang::internal::anyConflict
+bool anyConflict(const llvm::SmallVector<TextEdit, 1> &Edits) {
+  // A simple interval overlap detection algorithm.  Sorts all ranges by their
+  // begin location then finds the first overlap in one pass.
+  llvm::SmallVector<const TextEdit *, 1> All; // a copy of `Edits`
+
+  for (const TextEdit &E : Edits)
+    All.push_back(&E);
+  std::sort(All.begin(), All.end(), [](const TextEdit *H1, const TextEdit *H2) {
+    return H1->range.start < H2->range.start;
+  });
+
+  const TextEdit *CurrHint = nullptr;
+
+  for (const TextEdit *Hint : All) {
+    if (!CurrHint || CurrHint->range.end < Hint->range.start) {
+      // Either to initialize `CurrHint` or `CurrHint` does not
+      // overlap with `Hint`:
+      CurrHint = Hint;
+    } else
+      // In case `Hint` overlaps the `CurrHint`, we found at least one
+      // conflict:
+      return true;
+  }
+  return false;
+}
+
 std::optional<Fix>
 generateApplyAllFromOption(const llvm::StringRef Name,
                            llvm::ArrayRef<Diag *> AllDiagnostics) {
@@ -350,8 +379,9 @@ generateApplyAllFromOption(const llvm::StringRef Name,
   ApplyAll.Edits.erase(
       std::unique(ApplyAll.Edits.begin(), ApplyAll.Edits.end()),
       ApplyAll.Edits.end());
-  // Skip diagnostic categories that don't have multiple fixes to apply
-  if (ApplyAll.Edits.size() < 2U) {
+  // Skip diagnostic categories that don't have multiple fixes to apply or that
+  // have conflicting fixes to apply
+  if (ApplyAll.Edits.size() < 2U || anyConflict(ApplyAll.Edits)) {
     return std::nullopt;
   }
   ApplyAll.Message = llvm::formatv("apply all '{0}' fixes", Name);
@@ -370,7 +400,9 @@ generateApplyAllFixesOption(llvm::ArrayRef<Diag> AllDiagnostics) {
   ApplyAll.Edits.erase(
       std::unique(ApplyAll.Edits.begin(), ApplyAll.Edits.end()),
       ApplyAll.Edits.end());
-  if (ApplyAll.Edits.size() < 2U) {
+  // Skip diagnostics that don't have multiple fixes to apply or that have
+  // conflicting fixes to apply
+  if (ApplyAll.Edits.size() < 2U || anyConflict(ApplyAll.Edits)) {
     return std::nullopt;
   }
   ApplyAll.Message = "apply all clangd fixes";
@@ -865,8 +897,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     }
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
-    LastDiag->Fixes.push_back(
-        Fix{std::string(Message), std::move(Edits), {}});
+    LastDiag->Fixes.push_back(Fix{std::string(Message), std::move(Edits), {}});
     return true;
   };
 
