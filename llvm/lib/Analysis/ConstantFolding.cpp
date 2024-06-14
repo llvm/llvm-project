@@ -2109,8 +2109,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
     if (Ty->isFP128Ty()) {
-      if (IntrinsicID == Intrinsic::log)
-        return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
+      if (IntrinsicID == Intrinsic::log) {
+        __float128 Result = logf128(Op->getValueAPF().convertToQuad());
+        return GetConstantFoldFPValue128(Result, Ty);
+      }
 
       LibFunc Fp128Func = NotLibFunc;
       if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
