@@ -306,7 +306,7 @@ add_object_library(
   SRCS
     pathconf_utils.cpp
   HDRS
-    ../pathconf_utils.h
+    pathconf_utils.h
   DEPENDS
     libc.include.unistd
     libc.include.sys_syscall
