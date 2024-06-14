@@ -2493,6 +2493,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::FIRST_NUMBER:
     break;
     MAKE_CASE(AArch64ISD::COALESCER_BARRIER)
+    MAKE_CASE(AArch64ISD::VG_SAVE)
+    MAKE_CASE(AArch64ISD::VG_RESTORE)
     MAKE_CASE(AArch64ISD::SMSTART)
     MAKE_CASE(AArch64ISD::SMSTOP)
     MAKE_CASE(AArch64ISD::RESTORE_ZA)
@@ -8514,6 +8516,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   SDValue InGlue;
   if (RequiresSMChange) {
+
+    Chain = DAG.getNode(AArch64ISD::VG_SAVE, DL,
+                        DAG.getVTList(MVT::Other, MVT::Glue), Chain);
+    InGlue = Chain.getValue(1);
+
     SDValue NewChain = changeStreamingMode(
         DAG, DL, CalleeAttrs.hasStreamingInterface(), Chain, InGlue,
         getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
@@ -8691,6 +8698,11 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Result = changeStreamingMode(
         DAG, DL, !CalleeAttrs.hasStreamingInterface(), Result, InGlue,
         getSMCondition(CallerAttrs, CalleeAttrs), PStateSM);
+    InGlue = Result.getValue(1);
+
+    Result =
+        DAG.getNode(AArch64ISD::VG_RESTORE, DL,
+                    DAG.getVTList(MVT::Other, MVT::Glue), {Result, InGlue});
   }
 
   if (CallerAttrs.requiresEnablingZAAfterCall(CalleeAttrs))
@@ -14995,55 +15007,13 @@ AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     return SDValue();
 }
 
-// When x and y are extended, lower:
-//   avgfloor(x, y) -> (x + y) >> 1
-//   avgceil(x, y)  -> (x + y + 1) >> 1
-
-// Otherwise, lower to:
-//   avgfloor(x, y) -> (x >> 1) + (y >> 1) + (x & y & 1)
-//   avgceil(x, y)  -> (x >> 1) + (y >> 1) + ((x || y) & 1)
 SDValue AArch64TargetLowering::LowerAVG(SDValue Op, SelectionDAG &DAG,
                                         unsigned NewOp) const {
   if (Subtarget->hasSVE2())
     return LowerToPredicatedOp(Op, DAG, NewOp);
 
-  SDLoc dl(Op);
-  SDValue OpA = Op->getOperand(0);
-  SDValue OpB = Op->getOperand(1);
-  EVT VT = Op.getValueType();
-  bool IsCeil =
-      (Op->getOpcode() == ISD::AVGCEILS || Op->getOpcode() == ISD::AVGCEILU);
-  bool IsSigned =
-      (Op->getOpcode() == ISD::AVGFLOORS || Op->getOpcode() == ISD::AVGCEILS);
-  unsigned ShiftOpc = IsSigned ? ISD::SRA : ISD::SRL;
-
-  assert(VT.isScalableVector() && "Only expect to lower scalable vector op!");
-
-  auto IsZeroExtended = [&DAG](SDValue &Node) {
-    KnownBits Known = DAG.computeKnownBits(Node, 0);
-    return Known.Zero.isSignBitSet();
-  };
-
-  auto IsSignExtended = [&DAG](SDValue &Node) {
-    return (DAG.ComputeNumSignBits(Node, 0) > 1);
-  };
-
-  SDValue ConstantOne = DAG.getConstant(1, dl, VT);
-  if ((!IsSigned && IsZeroExtended(OpA) && IsZeroExtended(OpB)) ||
-      (IsSigned && IsSignExtended(OpA) && IsSignExtended(OpB))) {
-    SDValue Add = DAG.getNode(ISD::ADD, dl, VT, OpA, OpB);
-    if (IsCeil)
-      Add = DAG.getNode(ISD::ADD, dl, VT, Add, ConstantOne);
-    return DAG.getNode(ShiftOpc, dl, VT, Add, ConstantOne);
-  }
-
-  SDValue ShiftOpA = DAG.getNode(ShiftOpc, dl, VT, OpA, ConstantOne);
-  SDValue ShiftOpB = DAG.getNode(ShiftOpc, dl, VT, OpB, ConstantOne);
-
-  SDValue tmp = DAG.getNode(IsCeil ? ISD::OR : ISD::AND, dl, VT, OpA, OpB);
-  tmp = DAG.getNode(ISD::AND, dl, VT, tmp, ConstantOne);
-  SDValue Add = DAG.getNode(ISD::ADD, dl, VT, ShiftOpA, ShiftOpB);
-  return DAG.getNode(ISD::ADD, dl, VT, Add, tmp);
+  // Default to expand.
+  return SDValue();
 }
 
 SDValue AArch64TargetLowering::LowerVSCALE(SDValue Op,

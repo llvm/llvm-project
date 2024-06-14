@@ -471,6 +471,8 @@ enum {
   LLVMAttributeFunctionIndex = -1,
 };
 
+typedef unsigned LLVMAttributeIndex;
+
 /**
  * Tail call kind for LLVMSetTailCallKind and LLVMGetTailCallKind.
  *
@@ -484,8 +486,6 @@ typedef enum {
   LLVMTailCallKindMustTail = 2,
   LLVMTailCallKindNoTail = 3,
 } LLVMTailCallKind;
-
-typedef unsigned LLVMAttributeIndex;
 
 enum {
   LLVMFastMathAllowReassoc = (1 << 0),

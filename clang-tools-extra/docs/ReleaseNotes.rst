@@ -237,6 +237,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check by eliminating
   false positives resulting from use of optionals in unevaluated context.
 
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
+  false positives and adding a new (off-by-default) option
+  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
+  (except for a few that are idiomatic).
+
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
   options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
@@ -259,6 +265,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
   calls to ``std::forward``.
+
+- Improved :doc:`cppcoreguidelines-macro-usage
+  <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
+  hash preprocessing token.
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
@@ -330,6 +340,10 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check by avoiding crash for self
   include cycles.
+
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by avoiding false positives for
+  the functions with the same name as standard library functions.
 
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local
