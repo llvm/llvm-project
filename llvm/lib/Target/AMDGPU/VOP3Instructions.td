@@ -1799,6 +1799,9 @@ multiclass VOP3_Realtriple_gfx11_gfx12<bits<10> op> :
 multiclass VOP3_Real_Base_gfx11_gfx12<bits<10> op> :
   VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Gen, op>;
 
+multiclass VOP3_Real_Base_gfx11_gfx12_not_gfx1210<bits<10> op> :
+  VOP3_Real_Base<GFX11Gen, op>, VOP3_Real_Base<GFX12Not12_10Gen, op>;
+
 multiclass VOP3_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
                                                  string asmName> :
   VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
@@ -1811,9 +1814,12 @@ multiclass VOP3be_Real_gfx11_gfx12<bits<10> op, string opName, string asmName> :
   VOP3be_Real<GFX11Gen, op, opName, asmName>,
   VOP3be_Real<GFX12Gen, op, opName, asmName>;
 
-multiclass VOP3be_Realtriple_gfx11_gfx12<bits<10> op> :
-  VOP3be_Realtriple<GFX11Gen, op>,
-  VOP3be_Realtriple<GFX12Gen, op>;
+multiclass VOP3be_Real_gfx11_gfx12_not_gfx1210<bits<10> op, string opName, string asmName> :
+  VOP3be_Real<GFX11Gen, op, opName, asmName>,
+  VOP3be_Real<GFX12Not12_10Gen, op, opName, asmName>;
+
+multiclass VOP3be_Realtriple_gfx1210<bits<10> op> :
+  VOP3be_Realtriple<GFX12_10Gen, op>;
 
 multiclass VOP3_Real_No_Suffix_gfx11_gfx12<bits<10> op> :
   VOP3_Real_No_Suffix<GFX11Gen, op>, VOP3_Real_No_Suffix<GFX12Gen, op>;
@@ -1829,7 +1835,7 @@ defm V_BFE_U32             : VOP3_Realtriple_gfx11_gfx12<0x210>;
 defm V_BFE_I32             : VOP3_Realtriple_gfx11_gfx12<0x211>;
 defm V_BFI_B32             : VOP3_Realtriple_gfx11_gfx12<0x212>;
 defm V_FMA_F32             : VOP3_Realtriple_gfx11_gfx12<0x213>;
-defm V_FMA_F64             : VOP3_Realtriple_gfx11_gfx12<0x214>;
+defm V_FMA_F64             : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x214>;
 defm V_LERP_U8             : VOP3_Realtriple_gfx11_gfx12<0x215>;
 defm V_ALIGNBIT_B32        : VOP3_Realtriple_gfx11_gfx12<0x216>;
 defm V_ALIGNBYTE_B32       : VOP3_Realtriple_gfx11_gfx12<0x217>;
@@ -1849,9 +1855,9 @@ defm V_SAD_U16             : VOP3_Realtriple_gfx11_gfx12<0x224>;
 defm V_SAD_U32             : VOP3_Realtriple_gfx11_gfx12<0x225>;
 defm V_CVT_PK_U8_F32       : VOP3_Realtriple_gfx11_gfx12<0x226>;
 defm V_DIV_FIXUP_F32       : VOP3_Real_Base_gfx11_gfx12<0x227>;
-defm V_DIV_FIXUP_F64       : VOP3_Realtriple_gfx11_gfx12<0x228>;
+defm V_DIV_FIXUP_F64       : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x228>;
 defm V_DIV_FMAS_F32        : VOP3_Real_Base_gfx11_gfx12<0x237>;
-defm V_DIV_FMAS_F64        : VOP3_Realtriple_gfx11_gfx12<0x238>;
+defm V_DIV_FMAS_F64        : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x238>;
 defm V_MSAD_U8             : VOP3_Realtriple_gfx11_gfx12<0x239>;
 defm V_QSAD_PK_U16_U8      : VOP3_Real_Base_gfx11_gfx12<0x23a>;
 defm V_MQSAD_PK_U16_U8     : VOP3_Real_Base_gfx11_gfx12<0x23b>;
@@ -1893,7 +1899,7 @@ defm V_MINMAX_I32          : VOP3_Realtriple_gfx11_gfx12<0x265>;
 defm V_DOT2_F16_F16        : VOP3Dot_Realtriple_gfx11_gfx12<0x266>;
 defm V_DOT2_BF16_BF16      : VOP3Dot_Realtriple_gfx11_gfx12<0x267>;
 defm V_DIV_SCALE_F32       : VOP3be_Real_gfx11_gfx12<0x2fc, "V_DIV_SCALE_F32", "v_div_scale_f32">;
-defm V_DIV_SCALE_F64       : VOP3be_Realtriple_gfx11_gfx12<0x2fd>;
+defm V_DIV_SCALE_F64       : VOP3be_Real_gfx11_gfx12_not_gfx1210<0x2fd, "V_DIV_SCALE_F64", "v_div_scale_f64">;
 defm V_MAD_U64_U32_gfx11   : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32_gfx11", "v_mad_u64_u32">;
 defm V_MAD_I64_I32_gfx11   : VOP3be_Real_gfx11<0x2ff, "V_MAD_I64_I32_gfx11", "v_mad_i64_i32">;
 defm V_ADD_NC_U16          : VOP3Only_Realtriple_gfx11_gfx12<0x303>;
@@ -1916,17 +1922,17 @@ defm V_ADD_F64             : VOP3_Real_Base_gfx11<0x327>;
 defm V_MUL_F64             : VOP3_Real_Base_gfx11<0x328>;
 defm V_MIN_F64             : VOP3_Real_Base_gfx11<0x329>;
 defm V_MAX_F64             : VOP3_Real_Base_gfx11<0x32a>;
-defm V_LDEXP_F64           : VOP3_Realtriple_gfx11_gfx12<0x32b>;
-defm V_MUL_LO_U32          : VOP3_Realtriple_gfx11_gfx12<0x32c>;
-defm V_MUL_HI_U32          : VOP3_Realtriple_gfx11_gfx12<0x32d>;
-defm V_MUL_HI_I32          : VOP3_Realtriple_gfx11_gfx12<0x32e>;
+defm V_LDEXP_F64           : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x32b>;
+defm V_MUL_LO_U32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x32c>;
+defm V_MUL_HI_U32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x32d>;
+defm V_MUL_HI_I32          : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x32e>;
 defm V_TRIG_PREOP_F64      : VOP3_Real_Base_gfx11_gfx12<0x32f>;
 defm V_LSHLREV_B16_t16     : VOP3Only_Realtriple_t16_gfx11_gfx12<0x338, "v_lshlrev_b16">;
 defm V_LSHRREV_B16_t16     : VOP3Only_Realtriple_t16_gfx11_gfx12<0x339, "v_lshrrev_b16">;
 defm V_ASHRREV_I16_t16     : VOP3Only_Realtriple_t16_gfx11_gfx12<0x33a, "v_ashrrev_i16">;
 defm V_LSHLREV_B64         : VOP3_Real_Base_gfx11<0x33c>;
-defm V_LSHRREV_B64         : VOP3_Realtriple_gfx11_gfx12<0x33d>;
-defm V_ASHRREV_I64         : VOP3_Realtriple_gfx11_gfx12<0x33e>;
+defm V_LSHRREV_B64         : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x33d>;
+defm V_ASHRREV_I64         : VOP3_Real_Base_gfx11_gfx12_not_gfx1210<0x33e>;
 defm V_READLANE_B32        : VOP3_Real_No_Suffix_gfx11_gfx12<0x360>; // Pseudo in VOP2
 let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in) in {
   defm V_WRITELANE_B32     : VOP3_Real_No_Suffix_gfx11_gfx12<0x361>; // Pseudo in VOP2
@@ -1934,6 +1940,18 @@ let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in)
 defm V_AND_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x362, "v_and_b16">;
 defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12<0x363, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12<0x364, "v_xor_b16">;
+
+// These instructions differ from GFX12 variant by supporting DPP:
+defm V_FMA_F64                       : VOP3Only_Realtriple_gfx1210<0x214>;
+defm V_DIV_FIXUP_F64                 : VOP3Only_Realtriple_gfx1210<0x228>;
+defm V_DIV_FMAS_F64                  : VOP3Only_Realtriple_gfx1210<0x238>;
+defm V_DIV_SCALE_F64                 : VOP3be_Realtriple_gfx1210<0x2fd>;
+defm V_LDEXP_F64                     : VOP3Only_Realtriple_gfx1210<0x32b>;
+defm V_MUL_LO_U32                    : VOP3Only_Realtriple_gfx1210<0x32c>;
+defm V_MUL_HI_U32                    : VOP3Only_Realtriple_gfx1210<0x32d>;
+defm V_MUL_HI_I32                    : VOP3Only_Realtriple_gfx1210<0x32e>;
+defm V_LSHRREV_B64                   : VOP3Only_Realtriple_gfx1210<0x33d>;
+defm V_ASHRREV_I64                   : VOP3Only_Realtriple_gfx1210<0x33e>;
 
 defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1210<0x23f>;
 defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1210<0x242>;
