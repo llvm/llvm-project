@@ -5490,14 +5490,18 @@ declare { <1 x double>, <1 x double>, <1 x double>, <1 x double> } @llvm.aarch64
 define { <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld2lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.b { v0, v1 }[0], [x0], #2
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.b { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.b { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, i64 0, ptr %A)
@@ -5509,14 +5513,18 @@ define { <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld2lane(ptr %A, ptr %ptr, <
 define { <16 x i8>, <16 x i8> } @test_v16i8_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <16 x i8> %B, <16 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.b { v0, v1 }[0], [x0], x2
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.b { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.b { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, i64 0, ptr %A)
@@ -5531,14 +5539,18 @@ declare { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2lane.v16i8.p0(<16 x i8>, 
 define { <8 x i8>, <8 x i8> } @test_v8i8_post_imm_ld2lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.b { v0, v1 }[0], [x0], #2
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.b { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.b { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, i64 0, ptr %A)
@@ -5550,14 +5562,18 @@ define { <8 x i8>, <8 x i8> } @test_v8i8_post_imm_ld2lane(ptr %A, ptr %ptr, <8 x
 define { <8 x i8>, <8 x i8> } @test_v8i8_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <8 x i8> %B, <8 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.b { v0, v1 }[0], [x0], x2
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.b { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.b { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, i64 0, ptr %A)
@@ -5572,14 +5588,18 @@ declare { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2lane.v8i8.p0(<8 x i8>, <8 x
 define { <8 x i16>, <8 x i16> } @test_v8i16_post_imm_ld2lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.h { v0, v1 }[0], [x0], #4
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.h { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #4
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.h { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld2lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, i64 0, ptr %A)
@@ -5591,15 +5611,19 @@ define { <8 x i16>, <8 x i16> } @test_v8i16_post_imm_ld2lane(ptr %A, ptr %ptr, <
 define { <8 x i16>, <8 x i16> } @test_v8i16_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <8 x i16> %B, <8 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.h { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.h { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.h { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld2lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, i64 0, ptr %A)
@@ -5614,14 +5638,18 @@ declare { <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld2lane.v8i16.p0(<8 x i16>, 
 define { <4 x i16>, <4 x i16> } @test_v4i16_post_imm_ld2lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.h { v0, v1 }[0], [x0], #4
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.h { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #4
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.h { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld2lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, i64 0, ptr %A)
@@ -5633,15 +5661,19 @@ define { <4 x i16>, <4 x i16> } @test_v4i16_post_imm_ld2lane(ptr %A, ptr %ptr, <
 define { <4 x i16>, <4 x i16> } @test_v4i16_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.h { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.h { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.h { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld2lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, i64 0, ptr %A)
@@ -5656,14 +5688,18 @@ declare { <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld2lane.v4i16.p0(<4 x i16>, 
 define { <4 x i32>, <4 x i32> } @test_v4i32_post_imm_ld2lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.s { v0, v1 }[0], [x0], #8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, i64 0, ptr %A)
@@ -5675,15 +5711,19 @@ define { <4 x i32>, <4 x i32> } @test_v4i32_post_imm_ld2lane(ptr %A, ptr %ptr, <
 define { <4 x i32>, <4 x i32> } @test_v4i32_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <4 x i32> %B, <4 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.s { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, i64 0, ptr %A)
@@ -5698,14 +5738,18 @@ declare { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2lane.v4i32.p0(<4 x i32>, 
 define { <2 x i32>, <2 x i32> } @test_v2i32_post_imm_ld2lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.s { v0, v1 }[0], [x0], #8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, i64 0, ptr %A)
@@ -5717,15 +5761,19 @@ define { <2 x i32>, <2 x i32> } @test_v2i32_post_imm_ld2lane(ptr %A, ptr %ptr, <
 define { <2 x i32>, <2 x i32> } @test_v2i32_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <2 x i32> %B, <2 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.s { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, i64 0, ptr %A)
@@ -5740,14 +5788,18 @@ declare { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2lane.v2i32.p0(<2 x i32>, 
 define { <2 x i64>, <2 x i64> } @test_v2i64_post_imm_ld2lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.d { v0, v1 }[0], [x0], #16
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld2lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, i64 0, ptr %A)
@@ -5759,15 +5811,19 @@ define { <2 x i64>, <2 x i64> } @test_v2i64_post_imm_ld2lane(ptr %A, ptr %ptr, <
 define { <2 x i64>, <2 x i64> } @test_v2i64_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <2 x i64> %B, <2 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.d { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld2lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, i64 0, ptr %A)
@@ -5782,14 +5838,18 @@ declare { <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld2lane.v2i64.p0(<2 x i64>, 
 define { <1 x i64>, <1 x i64> } @test_v1i64_post_imm_ld2lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.d { v0, v1 }[0], [x0], #16
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, i64 0, ptr %A)
@@ -5801,15 +5861,19 @@ define { <1 x i64>, <1 x i64> } @test_v1i64_post_imm_ld2lane(ptr %A, ptr %ptr, <
 define { <1 x i64>, <1 x i64> } @test_v1i64_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <1 x i64> %B, <1 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.d { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, i64 0, ptr %A)
@@ -5824,14 +5888,18 @@ declare { <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld2lane.v1i64.p0(<1 x i64>, 
 define { <4 x float>, <4 x float> } @test_v4f32_post_imm_ld2lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.s { v0, v1 }[0], [x0], #8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2lane.v4f32.p0(<4 x float> %B, <4 x float> %C, i64 0, ptr %A)
@@ -5843,15 +5911,19 @@ define { <4 x float>, <4 x float> } @test_v4f32_post_imm_ld2lane(ptr %A, ptr %pt
 define { <4 x float>, <4 x float> } @test_v4f32_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <4 x float> %B, <4 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.s { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2lane.v4f32.p0(<4 x float> %B, <4 x float> %C, i64 0, ptr %A)
@@ -5866,14 +5938,18 @@ declare { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2lane.v4f32.p0(<4 x fl
 define { <2 x float>, <2 x float> } @test_v2f32_post_imm_ld2lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.s { v0, v1 }[0], [x0], #8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <2 x float>, <2 x float> } @llvm.aarch64.neon.ld2lane.v2f32.p0(<2 x float> %B, <2 x float> %C, i64 0, ptr %A)
@@ -5885,15 +5961,19 @@ define { <2 x float>, <2 x float> } @test_v2f32_post_imm_ld2lane(ptr %A, ptr %pt
 define { <2 x float>, <2 x float> } @test_v2f32_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <2 x float> %B, <2 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.s { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.s { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <2 x float>, <2 x float> } @llvm.aarch64.neon.ld2lane.v2f32.p0(<2 x float> %B, <2 x float> %C, i64 0, ptr %A)
@@ -5908,14 +5988,18 @@ declare { <2 x float>, <2 x float> } @llvm.aarch64.neon.ld2lane.v2f32.p0(<2 x fl
 define { <2 x double>, <2 x double> } @test_v2f64_post_imm_ld2lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.d { v0, v1 }[0], [x0], #16
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <2 x double>, <2 x double> } @llvm.aarch64.neon.ld2lane.v2f64.p0(<2 x double> %B, <2 x double> %C, i64 0, ptr %A)
@@ -5927,15 +6011,19 @@ define { <2 x double>, <2 x double> } @test_v2f64_post_imm_ld2lane(ptr %A, ptr %
 define { <2 x double>, <2 x double> } @test_v2f64_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <2 x double> %B, <2 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.d { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <2 x double>, <2 x double> } @llvm.aarch64.neon.ld2lane.v2f64.p0(<2 x double> %B, <2 x double> %C, i64 0, ptr %A)
@@ -5950,14 +6038,18 @@ declare { <2 x double>, <2 x double> } @llvm.aarch64.neon.ld2lane.v2f64.p0(<2 x 
 define { <1 x double>, <1 x double> } @test_v1f64_post_imm_ld2lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.d { v0, v1 }[0], [x0], #16
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <1 x double>, <1 x double> } @llvm.aarch64.neon.ld2lane.v1f64.p0(<1 x double> %B, <1 x double> %C, i64 0, ptr %A)
@@ -5969,15 +6061,19 @@ define { <1 x double>, <1 x double> } @test_v1f64_post_imm_ld2lane(ptr %A, ptr %
 define { <1 x double>, <1 x double> } @test_v1f64_post_reg_ld2lane(ptr %A, ptr %ptr, i64 %inc, <1 x double> %B, <1 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_ld2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    ld2.d { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_ld2lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ld2.d { v0, v1 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld2 = call { <1 x double>, <1 x double> } @llvm.aarch64.neon.ld2lane.v1f64.p0(<1 x double> %B, <1 x double> %C, i64 0, ptr %A)
@@ -5992,14 +6088,20 @@ declare { <1 x double>, <1 x double> } @llvm.aarch64.neon.ld2lane.v1f64.p0(<1 x 
 define { <16 x i8>, <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld3lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.b { v0, v1, v2 }[0], [x0], #3
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld3lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, i64 0, ptr %A)
@@ -6011,14 +6113,20 @@ define { <16 x i8>, <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld3lane(ptr %A, 
 define { <16 x i8>, <16 x i8>, <16 x i8> } @test_v16i8_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.b { v0, v1, v2 }[0], [x0], x2
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld3lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, i64 0, ptr %A)
@@ -6033,14 +6141,20 @@ declare { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld3lane.v16i8.p0(
 define { <8 x i8>, <8 x i8>, <8 x i8> } @test_v8i8_post_imm_ld3lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.b { v0, v1, v2 }[0], [x0], #3
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, i64 0, ptr %A)
@@ -6052,14 +6166,20 @@ define { <8 x i8>, <8 x i8>, <8 x i8> } @test_v8i8_post_imm_ld3lane(ptr %A, ptr 
 define { <8 x i8>, <8 x i8>, <8 x i8> } @test_v8i8_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.b { v0, v1, v2 }[0], [x0], x2
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.b { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, i64 0, ptr %A)
@@ -6074,14 +6194,20 @@ declare { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3lane.v8i8.p0(<8 x
 define { <8 x i16>, <8 x i16>, <8 x i16> } @test_v8i16_post_imm_ld3lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.h { v0, v1, v2 }[0], [x0], #6
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #6
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld3lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 0, ptr %A)
@@ -6093,15 +6219,21 @@ define { <8 x i16>, <8 x i16>, <8 x i16> } @test_v8i16_post_imm_ld3lane(ptr %A, 
 define { <8 x i16>, <8 x i16>, <8 x i16> } @test_v8i16_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.h { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld3lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 0, ptr %A)
@@ -6116,14 +6248,20 @@ declare { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld3lane.v8i16.p0(
 define { <4 x i16>, <4 x i16>, <4 x i16> } @test_v4i16_post_imm_ld3lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.h { v0, v1, v2 }[0], [x0], #6
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #6
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 0, ptr %A)
@@ -6135,15 +6273,21 @@ define { <4 x i16>, <4 x i16>, <4 x i16> } @test_v4i16_post_imm_ld3lane(ptr %A, 
 define { <4 x i16>, <4 x i16>, <4 x i16> } @test_v4i16_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.h { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.h { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 0, ptr %A)
@@ -6158,14 +6302,20 @@ declare { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3lane.v4i16.p0(
 define { <4 x i32>, <4 x i32>, <4 x i32> } @test_v4i32_post_imm_ld3lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[0], [x0], #12
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #12
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld3lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 0, ptr %A)
@@ -6177,15 +6327,21 @@ define { <4 x i32>, <4 x i32>, <4 x i32> } @test_v4i32_post_imm_ld3lane(ptr %A, 
 define { <4 x i32>, <4 x i32>, <4 x i32> } @test_v4i32_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld3lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 0, ptr %A)
@@ -6200,14 +6356,20 @@ declare { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld3lane.v4i32.p0(
 define { <2 x i32>, <2 x i32>, <2 x i32> } @test_v2i32_post_imm_ld3lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[0], [x0], #12
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #12
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld3lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 0, ptr %A)
@@ -6219,15 +6381,21 @@ define { <2 x i32>, <2 x i32>, <2 x i32> } @test_v2i32_post_imm_ld3lane(ptr %A, 
 define { <2 x i32>, <2 x i32>, <2 x i32> } @test_v2i32_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld3lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 0, ptr %A)
@@ -6242,14 +6410,20 @@ declare { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld3lane.v2i32.p0(
 define { <2 x i64>, <2 x i64>, <2 x i64> } @test_v2i64_post_imm_ld3lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[0], [x0], #24
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld3lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 0, ptr %A)
@@ -6261,15 +6435,21 @@ define { <2 x i64>, <2 x i64>, <2 x i64> } @test_v2i64_post_imm_ld3lane(ptr %A, 
 define { <2 x i64>, <2 x i64>, <2 x i64> } @test_v2i64_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld3lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 0, ptr %A)
@@ -6284,14 +6464,20 @@ declare { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld3lane.v2i64.p0(
 define { <1 x i64>, <1 x i64>, <1 x i64> } @test_v1i64_post_imm_ld3lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[0], [x0], #24
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld3lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 0, ptr %A)
@@ -6303,15 +6489,21 @@ define { <1 x i64>, <1 x i64>, <1 x i64> } @test_v1i64_post_imm_ld3lane(ptr %A, 
 define { <1 x i64>, <1 x i64>, <1 x i64> } @test_v1i64_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld3lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 0, ptr %A)
@@ -6326,14 +6518,20 @@ declare { <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld3lane.v1i64.p0(
 define { <4 x float>, <4 x float>, <4 x float> } @test_v4f32_post_imm_ld3lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[0], [x0], #12
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #12
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld3lane.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, i64 0, ptr %A)
@@ -6345,15 +6543,21 @@ define { <4 x float>, <4 x float>, <4 x float> } @test_v4f32_post_imm_ld3lane(pt
 define { <4 x float>, <4 x float>, <4 x float> } @test_v4f32_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <4 x float> %B, <4 x float> %C, <4 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld3lane.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, i64 0, ptr %A)
@@ -6368,14 +6572,20 @@ declare { <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld3lane.v4f
 define { <2 x float>, <2 x float>, <2 x float> } @test_v2f32_post_imm_ld3lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[0], [x0], #12
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #12
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <2 x float>, <2 x float>, <2 x float> } @llvm.aarch64.neon.ld3lane.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, i64 0, ptr %A)
@@ -6387,15 +6597,21 @@ define { <2 x float>, <2 x float>, <2 x float> } @test_v2f32_post_imm_ld3lane(pt
 define { <2 x float>, <2 x float>, <2 x float> } @test_v2f32_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <2 x float> %B, <2 x float> %C, <2 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.s { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.s { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <2 x float>, <2 x float>, <2 x float> } @llvm.aarch64.neon.ld3lane.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, i64 0, ptr %A)
@@ -6410,14 +6626,20 @@ declare { <2 x float>, <2 x float>, <2 x float> } @llvm.aarch64.neon.ld3lane.v2f
 define { <2 x double>, <2 x double>, <2 x double> } @test_v2f64_post_imm_ld3lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[0], [x0], #24
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <2 x double>, <2 x double>, <2 x double> } @llvm.aarch64.neon.ld3lane.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, i64 0, ptr %A)
@@ -6429,15 +6651,21 @@ define { <2 x double>, <2 x double>, <2 x double> } @test_v2f64_post_imm_ld3lane
 define { <2 x double>, <2 x double>, <2 x double> } @test_v2f64_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <2 x double> %B, <2 x double> %C, <2 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <2 x double>, <2 x double>, <2 x double> } @llvm.aarch64.neon.ld3lane.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, i64 0, ptr %A)
@@ -6452,14 +6680,20 @@ declare { <2 x double>, <2 x double>, <2 x double> } @llvm.aarch64.neon.ld3lane.
 define { <1 x double>, <1 x double>, <1 x double> } @test_v1f64_post_imm_ld3lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[0], [x0], #24
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <1 x double>, <1 x double>, <1 x double> } @llvm.aarch64.neon.ld3lane.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, i64 0, ptr %A)
@@ -6471,15 +6705,21 @@ define { <1 x double>, <1 x double>, <1 x double> } @test_v1f64_post_imm_ld3lane
 define { <1 x double>, <1 x double>, <1 x double> } @test_v1f64_post_reg_ld3lane(ptr %A, ptr %ptr, i64 %inc, <1 x double> %B, <1 x double> %C, <1 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_ld3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    ld3.d { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_ld3lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ld3.d { v0, v1, v2 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld3 = call { <1 x double>, <1 x double>, <1 x double> } @llvm.aarch64.neon.ld3lane.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, i64 0, ptr %A)
@@ -6494,14 +6734,22 @@ declare { <1 x double>, <1 x double>, <1 x double> } @llvm.aarch64.neon.ld3lane.
 define { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld4lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0], #4
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #4
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, i64 0, ptr %A)
@@ -6513,14 +6761,22 @@ define { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @test_v16i8_post_imm_ld4la
 define { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @test_v16i8_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0], x2
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, i64 0, ptr %A)
@@ -6535,14 +6791,22 @@ declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4lan
 define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @test_v8i8_post_imm_ld4lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0], #4
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #4
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld4lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, i64 0, ptr %A)
@@ -6554,14 +6818,22 @@ define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @test_v8i8_post_imm_ld4lane(pt
 define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @test_v8i8_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0], x2
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.b { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld4lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, i64 0, ptr %A)
@@ -6576,14 +6848,22 @@ declare { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld4lane.v8
 define { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @test_v8i16_post_imm_ld4lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0], #8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld4lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, i64 0, ptr %A)
@@ -6595,15 +6875,23 @@ define { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @test_v8i16_post_imm_ld4la
 define { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @test_v8i16_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld4lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, i64 0, ptr %A)
@@ -6618,14 +6906,22 @@ declare { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @llvm.aarch64.neon.ld4lan
 define { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @test_v4i16_post_imm_ld4lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0], #8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, i64 0, ptr %A)
@@ -6637,15 +6933,23 @@ define { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @test_v4i16_post_imm_ld4la
 define { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @test_v4i16_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.h { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, i64 0, ptr %A)
@@ -6660,14 +6964,22 @@ declare { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4lan
 define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @test_v4i32_post_imm_ld4lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0], #16
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld4lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, i64 0, ptr %A)
@@ -6679,15 +6991,23 @@ define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @test_v4i32_post_imm_ld4la
 define { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @test_v4i32_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld4lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, i64 0, ptr %A)
@@ -6702,14 +7022,22 @@ declare { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld4lan
 define { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @test_v2i32_post_imm_ld4lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0], #16
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld4lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, i64 0, ptr %A)
@@ -6721,15 +7049,23 @@ define { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @test_v2i32_post_imm_ld4la
 define { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @test_v2i32_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld4lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, i64 0, ptr %A)
@@ -6744,14 +7080,22 @@ declare { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld4lan
 define { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @test_v2i64_post_imm_ld4lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0], #32
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, i64 0, ptr %A)
@@ -6763,15 +7107,23 @@ define { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @test_v2i64_post_imm_ld4la
 define { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @test_v2i64_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, i64 0, ptr %A)
@@ -6786,14 +7138,22 @@ declare { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.aarch64.neon.ld4lan
 define { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @test_v1i64_post_imm_ld4lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0], #32
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld4lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, i64 0, ptr %A)
@@ -6805,15 +7165,23 @@ define { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @test_v1i64_post_imm_ld4la
 define { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @test_v1i64_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld4lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, i64 0, ptr %A)
@@ -6828,14 +7196,22 @@ declare { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.aarch64.neon.ld4lan
 define { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @test_v4f32_post_imm_ld4lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0], #16
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld4lane.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, i64 0, ptr %A)
@@ -6847,15 +7223,23 @@ define { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @test_v4f32_post_i
 define { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @test_v4f32_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld4lane.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, i64 0, ptr %A)
@@ -6870,14 +7254,22 @@ declare { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neo
 define { <2 x float>, <2 x float>, <2 x float>, <2 x float> } @test_v2f32_post_imm_ld4lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0], #16
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <2 x float>, <2 x float>, <2 x float>, <2 x float> } @llvm.aarch64.neon.ld4lane.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, i64 0, ptr %A)
@@ -6889,15 +7281,23 @@ define { <2 x float>, <2 x float>, <2 x float>, <2 x float> } @test_v2f32_post_i
 define { <2 x float>, <2 x float>, <2 x float>, <2 x float> } @test_v2f32_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.s { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <2 x float>, <2 x float>, <2 x float>, <2 x float> } @llvm.aarch64.neon.ld4lane.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, i64 0, ptr %A)
@@ -6912,14 +7312,22 @@ declare { <2 x float>, <2 x float>, <2 x float>, <2 x float> } @llvm.aarch64.neo
 define { <2 x double>, <2 x double>, <2 x double>, <2 x double> } @test_v2f64_post_imm_ld4lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0], #32
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <2 x double>, <2 x double>, <2 x double>, <2 x double> } @llvm.aarch64.neon.ld4lane.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, i64 0, ptr %A)
@@ -6931,15 +7339,23 @@ define { <2 x double>, <2 x double>, <2 x double>, <2 x double> } @test_v2f64_po
 define { <2 x double>, <2 x double>, <2 x double>, <2 x double> } @test_v2f64_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <2 x double>, <2 x double>, <2 x double>, <2 x double> } @llvm.aarch64.neon.ld4lane.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, i64 0, ptr %A)
@@ -6954,14 +7370,22 @@ declare { <2 x double>, <2 x double>, <2 x double>, <2 x double> } @llvm.aarch64
 define { <1 x double>, <1 x double>, <1 x double>, <1 x double> } @test_v1f64_post_imm_ld4lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0], #32
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <1 x double>, <1 x double>, <1 x double>, <1 x double> } @llvm.aarch64.neon.ld4lane.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, i64 0, ptr %A)
@@ -6973,15 +7397,23 @@ define { <1 x double>, <1 x double>, <1 x double>, <1 x double> } @test_v1f64_po
 define { <1 x double>, <1 x double>, <1 x double>, <1 x double> } @test_v1f64_post_reg_ld4lane(ptr %A, ptr %ptr, i64 %inc, <1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_ld4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    str x0, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_ld4lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    add x8, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ld4.d { v0, v1, v2, v3 }[0], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
 ; CHECK-GI-NEXT:    ret
   %ld4 = call { <1 x double>, <1 x double>, <1 x double>, <1 x double> } @llvm.aarch64.neon.ld4lane.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, i64 0, ptr %A)
@@ -6996,13 +7428,17 @@ declare { <1 x double>, <1 x double>, <1 x double>, <1 x double> } @llvm.aarch64
 define ptr @test_v16i8_post_imm_st2(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.16b { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.16b { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> %B, <16 x i8> %C, ptr %A)
@@ -7013,13 +7449,17 @@ define ptr @test_v16i8_post_imm_st2(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C
 define ptr @test_v16i8_post_reg_st2(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.16b { v0, v1 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.16b { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> %B, <16 x i8> %C, ptr %A)
@@ -7033,13 +7473,17 @@ declare void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8>, <16 x i8>, ptr)
 define ptr @test_v8i8_post_imm_st2(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st2.8b { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st2.8b { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8> %B, <8 x i8> %C, ptr %A)
@@ -7050,13 +7494,17 @@ define ptr @test_v8i8_post_imm_st2(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C) n
 define ptr @test_v8i8_post_reg_st2(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st2.8b { v0, v1 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st2.8b { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8> %B, <8 x i8> %C, ptr %A)
@@ -7070,13 +7518,17 @@ declare void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8>, <8 x i8>, ptr)
 define ptr @test_v8i16_post_imm_st2(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.8h { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.8h { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v8i16.p0(<8 x i16> %B, <8 x i16> %C, ptr %A)
@@ -7088,6 +7540,8 @@ define ptr @test_v8i16_post_reg_st2(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.8h { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7095,6 +7549,8 @@ define ptr @test_v8i16_post_reg_st2(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.8h { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v8i16.p0(<8 x i16> %B, <8 x i16> %C, ptr %A)
@@ -7108,13 +7564,17 @@ declare void @llvm.aarch64.neon.st2.v8i16.p0(<8 x i16>, <8 x i16>, ptr)
 define ptr @test_v4i16_post_imm_st2(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st2.4h { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st2.4h { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v4i16.p0(<4 x i16> %B, <4 x i16> %C, ptr %A)
@@ -7126,6 +7586,8 @@ define ptr @test_v4i16_post_reg_st2(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st2.4h { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7133,6 +7595,8 @@ define ptr @test_v4i16_post_reg_st2(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st2.4h { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v4i16.p0(<4 x i16> %B, <4 x i16> %C, ptr %A)
@@ -7146,13 +7610,17 @@ declare void @llvm.aarch64.neon.st2.v4i16.p0(<4 x i16>, <4 x i16>, ptr)
 define ptr @test_v4i32_post_imm_st2(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.4s { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.4s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v4i32.p0(<4 x i32> %B, <4 x i32> %C, ptr %A)
@@ -7164,6 +7632,8 @@ define ptr @test_v4i32_post_reg_st2(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.4s { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7171,6 +7641,8 @@ define ptr @test_v4i32_post_reg_st2(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.4s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v4i32.p0(<4 x i32> %B, <4 x i32> %C, ptr %A)
@@ -7184,13 +7656,17 @@ declare void @llvm.aarch64.neon.st2.v4i32.p0(<4 x i32>, <4 x i32>, ptr)
 define ptr @test_v2i32_post_imm_st2(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st2.2s { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st2.2s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v2i32.p0(<2 x i32> %B, <2 x i32> %C, ptr %A)
@@ -7202,6 +7678,8 @@ define ptr @test_v2i32_post_reg_st2(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st2.2s { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7209,6 +7687,8 @@ define ptr @test_v2i32_post_reg_st2(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st2.2s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v2i32.p0(<2 x i32> %B, <2 x i32> %C, ptr %A)
@@ -7222,13 +7702,17 @@ declare void @llvm.aarch64.neon.st2.v2i32.p0(<2 x i32>, <2 x i32>, ptr)
 define ptr @test_v2i64_post_imm_st2(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.2d { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.2d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v2i64.p0(<2 x i64> %B, <2 x i64> %C, ptr %A)
@@ -7240,6 +7724,8 @@ define ptr @test_v2i64_post_reg_st2(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.2d { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7247,6 +7733,8 @@ define ptr @test_v2i64_post_reg_st2(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.2d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v2i64.p0(<2 x i64> %B, <2 x i64> %C, ptr %A)
@@ -7260,13 +7748,17 @@ declare void @llvm.aarch64.neon.st2.v2i64.p0(<2 x i64>, <2 x i64>, ptr)
 define ptr @test_v1i64_post_imm_st2(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.1d { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.1d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64> %B, <1 x i64> %C, ptr %A)
@@ -7278,6 +7770,8 @@ define ptr @test_v1i64_post_reg_st2(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.1d { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7285,6 +7779,8 @@ define ptr @test_v1i64_post_reg_st2(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.1d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64> %B, <1 x i64> %C, ptr %A)
@@ -7298,13 +7794,17 @@ declare void @llvm.aarch64.neon.st2.v1i64.p0(<1 x i64>, <1 x i64>, ptr)
 define ptr @test_v4f32_post_imm_st2(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.4s { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.4s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float> %B, <4 x float> %C, ptr %A)
@@ -7316,6 +7816,8 @@ define ptr @test_v4f32_post_reg_st2(ptr %A, ptr %ptr, <4 x float> %B, <4 x float
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.4s { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7323,6 +7825,8 @@ define ptr @test_v4f32_post_reg_st2(ptr %A, ptr %ptr, <4 x float> %B, <4 x float
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.4s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float> %B, <4 x float> %C, ptr %A)
@@ -7336,13 +7840,17 @@ declare void @llvm.aarch64.neon.st2.v4f32.p0(<4 x float>, <4 x float>, ptr)
 define ptr @test_v2f32_post_imm_st2(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st2.2s { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st2.2s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v2f32.p0(<2 x float> %B, <2 x float> %C, ptr %A)
@@ -7354,6 +7862,8 @@ define ptr @test_v2f32_post_reg_st2(ptr %A, ptr %ptr, <2 x float> %B, <2 x float
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st2.2s { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7361,6 +7871,8 @@ define ptr @test_v2f32_post_reg_st2(ptr %A, ptr %ptr, <2 x float> %B, <2 x float
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st2.2s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v2f32.p0(<2 x float> %B, <2 x float> %C, ptr %A)
@@ -7374,13 +7886,17 @@ declare void @llvm.aarch64.neon.st2.v2f32.p0(<2 x float>, <2 x float>, ptr)
 define ptr @test_v2f64_post_imm_st2(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.2d { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.2d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v2f64.p0(<2 x double> %B, <2 x double> %C, ptr %A)
@@ -7392,6 +7908,8 @@ define ptr @test_v2f64_post_reg_st2(ptr %A, ptr %ptr, <2 x double> %B, <2 x doub
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.2d { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7399,6 +7917,8 @@ define ptr @test_v2f64_post_reg_st2(ptr %A, ptr %ptr, <2 x double> %B, <2 x doub
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.2d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v2f64.p0(<2 x double> %B, <2 x double> %C, ptr %A)
@@ -7412,13 +7932,17 @@ declare void @llvm.aarch64.neon.st2.v2f64.p0(<2 x double>, <2 x double>, ptr)
 define ptr @test_v1f64_post_imm_st2(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.1d { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.1d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v1f64.p0(<1 x double> %B, <1 x double> %C, ptr %A)
@@ -7430,6 +7954,8 @@ define ptr @test_v1f64_post_reg_st2(ptr %A, ptr %ptr, <1 x double> %B, <1 x doub
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.1d { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -7437,6 +7963,8 @@ define ptr @test_v1f64_post_reg_st2(ptr %A, ptr %ptr, <1 x double> %B, <1 x doub
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.1d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2.v1f64.p0(<1 x double> %B, <1 x double> %C, ptr %A)
@@ -7450,13 +7978,19 @@ declare void @llvm.aarch64.neon.st2.v1f64.p0(<1 x double>, <1 x double>, ptr)
 define ptr @test_v16i8_post_imm_st3(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.16b { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.16b { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr %A)
@@ -7467,13 +8001,19 @@ define ptr @test_v16i8_post_imm_st3(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C
 define ptr @test_v16i8_post_reg_st3(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.16b { v0, v1, v2 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.16b { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr %A)
@@ -7487,13 +8027,19 @@ declare void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8>, <16 x i8>, <16 x i8>, pt
 define ptr @test_v8i8_post_imm_st3(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st3.8b { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st3.8b { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, ptr %A)
@@ -7504,13 +8050,19 @@ define ptr @test_v8i8_post_imm_st3(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <
 define ptr @test_v8i8_post_reg_st3(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st3.8b { v0, v1, v2 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st3.8b { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, ptr %A)
@@ -7524,13 +8076,19 @@ declare void @llvm.aarch64.neon.st3.v8i8.p0(<8 x i8>, <8 x i8>, <8 x i8>, ptr)
 define ptr @test_v8i16_post_imm_st3(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.8h { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.8h { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, ptr %A)
@@ -7541,14 +8099,20 @@ define ptr @test_v8i16_post_imm_st3(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C
 define ptr @test_v8i16_post_reg_st3(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.8h { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.8h { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, ptr %A)
@@ -7562,13 +8126,19 @@ declare void @llvm.aarch64.neon.st3.v8i16.p0(<8 x i16>, <8 x i16>, <8 x i16>, pt
 define ptr @test_v4i16_post_imm_st3(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st3.4h { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st3.4h { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, ptr %A)
@@ -7579,14 +8149,20 @@ define ptr @test_v4i16_post_imm_st3(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C
 define ptr @test_v4i16_post_reg_st3(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st3.4h { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st3.4h { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, ptr %A)
@@ -7600,13 +8176,19 @@ declare void @llvm.aarch64.neon.st3.v4i16.p0(<4 x i16>, <4 x i16>, <4 x i16>, pt
 define ptr @test_v4i32_post_imm_st3(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.4s { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.4s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, ptr %A)
@@ -7617,14 +8199,20 @@ define ptr @test_v4i32_post_imm_st3(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C
 define ptr @test_v4i32_post_reg_st3(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.4s { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.4s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, ptr %A)
@@ -7638,13 +8226,19 @@ declare void @llvm.aarch64.neon.st3.v4i32.p0(<4 x i32>, <4 x i32>, <4 x i32>, pt
 define ptr @test_v2i32_post_imm_st3(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st3.2s { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st3.2s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, ptr %A)
@@ -7655,14 +8249,20 @@ define ptr @test_v2i32_post_imm_st3(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C
 define ptr @test_v2i32_post_reg_st3(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st3.2s { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st3.2s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, ptr %A)
@@ -7676,13 +8276,19 @@ declare void @llvm.aarch64.neon.st3.v2i32.p0(<2 x i32>, <2 x i32>, <2 x i32>, pt
 define ptr @test_v2i64_post_imm_st3(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.2d { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.2d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, ptr %A)
@@ -7693,14 +8299,20 @@ define ptr @test_v2i64_post_imm_st3(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C
 define ptr @test_v2i64_post_reg_st3(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.2d { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.2d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, ptr %A)
@@ -7714,13 +8326,19 @@ declare void @llvm.aarch64.neon.st3.v2i64.p0(<2 x i64>, <2 x i64>, <2 x i64>, pt
 define ptr @test_v1i64_post_imm_st3(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, ptr %A)
@@ -7731,14 +8349,20 @@ define ptr @test_v1i64_post_imm_st3(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C
 define ptr @test_v1i64_post_reg_st3(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, ptr %A)
@@ -7752,13 +8376,19 @@ declare void @llvm.aarch64.neon.st3.v1i64.p0(<1 x i64>, <1 x i64>, <1 x i64>, pt
 define ptr @test_v4f32_post_imm_st3(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.4s { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.4s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, ptr %A)
@@ -7769,14 +8399,20 @@ define ptr @test_v4f32_post_imm_st3(ptr %A, ptr %ptr, <4 x float> %B, <4 x float
 define ptr @test_v4f32_post_reg_st3(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.4s { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.4s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, ptr %A)
@@ -7790,13 +8426,19 @@ declare void @llvm.aarch64.neon.st3.v4f32.p0(<4 x float>, <4 x float>, <4 x floa
 define ptr @test_v2f32_post_imm_st3(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st3.2s { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st3.2s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, ptr %A)
@@ -7807,14 +8449,20 @@ define ptr @test_v2f32_post_imm_st3(ptr %A, ptr %ptr, <2 x float> %B, <2 x float
 define ptr @test_v2f32_post_reg_st3(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st3.2s { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st3.2s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, ptr %A)
@@ -7828,13 +8476,19 @@ declare void @llvm.aarch64.neon.st3.v2f32.p0(<2 x float>, <2 x float>, <2 x floa
 define ptr @test_v2f64_post_imm_st3(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.2d { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.2d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, ptr %A)
@@ -7845,14 +8499,20 @@ define ptr @test_v2f64_post_imm_st3(ptr %A, ptr %ptr, <2 x double> %B, <2 x doub
 define ptr @test_v2f64_post_reg_st3(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.2d { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.2d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, ptr %A)
@@ -7866,13 +8526,19 @@ declare void @llvm.aarch64.neon.st3.v2f64.p0(<2 x double>, <2 x double>, <2 x do
 define ptr @test_v1f64_post_imm_st3(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, ptr %A)
@@ -7883,14 +8549,20 @@ define ptr @test_v1f64_post_imm_st3(ptr %A, ptr %ptr, <1 x double> %B, <1 x doub
 define ptr @test_v1f64_post_reg_st3(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_st3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, ptr %A)
@@ -7904,13 +8576,21 @@ declare void @llvm.aarch64.neon.st3.v1f64.p0(<1 x double>, <1 x double>, <1 x do
 define ptr @test_v16i8_post_imm_st4(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.16b { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.16b { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, ptr %A)
@@ -7921,13 +8601,21 @@ define ptr @test_v16i8_post_imm_st4(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C
 define ptr @test_v16i8_post_reg_st4(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.16b { v0, v1, v2, v3 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.16b { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, ptr %A)
@@ -7941,13 +8629,21 @@ declare void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8>, <16 x i8>, <16 x i8>, <1
 define ptr @test_v8i8_post_imm_st4(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st4.8b { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st4.8b { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, ptr %A)
@@ -7958,13 +8654,21 @@ define ptr @test_v8i8_post_imm_st4(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <
 define ptr @test_v8i8_post_reg_st4(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st4.8b { v0, v1, v2, v3 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st4.8b { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, ptr %A)
@@ -7978,13 +8682,21 @@ declare void @llvm.aarch64.neon.st4.v8i8.p0(<8 x i8>, <8 x i8>, <8 x i8>, <8 x i
 define ptr @test_v8i16_post_imm_st4(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.8h { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.8h { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, ptr %A)
@@ -7995,14 +8707,22 @@ define ptr @test_v8i16_post_imm_st4(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C
 define ptr @test_v8i16_post_reg_st4(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.8h { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.8h { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, ptr %A)
@@ -8016,13 +8736,21 @@ declare void @llvm.aarch64.neon.st4.v8i16.p0(<8 x i16>, <8 x i16>, <8 x i16>, <8
 define ptr @test_v4i16_post_imm_st4(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st4.4h { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st4.4h { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, ptr %A)
@@ -8033,14 +8761,22 @@ define ptr @test_v4i16_post_imm_st4(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C
 define ptr @test_v4i16_post_reg_st4(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st4.4h { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st4.4h { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, ptr %A)
@@ -8054,13 +8790,21 @@ declare void @llvm.aarch64.neon.st4.v4i16.p0(<4 x i16>, <4 x i16>, <4 x i16>,<4 
 define ptr @test_v4i32_post_imm_st4(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.4s { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.4s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, ptr %A)
@@ -8071,14 +8815,22 @@ define ptr @test_v4i32_post_imm_st4(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C
 define ptr @test_v4i32_post_reg_st4(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.4s { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.4s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, ptr %A)
@@ -8092,13 +8844,21 @@ declare void @llvm.aarch64.neon.st4.v4i32.p0(<4 x i32>, <4 x i32>, <4 x i32>,<4 
 define ptr @test_v2i32_post_imm_st4(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st4.2s { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st4.2s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, ptr %A)
@@ -8109,14 +8869,22 @@ define ptr @test_v2i32_post_imm_st4(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C
 define ptr @test_v2i32_post_reg_st4(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st4.2s { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st4.2s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, ptr %A)
@@ -8130,13 +8898,21 @@ declare void @llvm.aarch64.neon.st4.v2i32.p0(<2 x i32>, <2 x i32>, <2 x i32>, <2
 define ptr @test_v2i64_post_imm_st4(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.2d { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.2d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, ptr %A)
@@ -8147,14 +8923,22 @@ define ptr @test_v2i64_post_imm_st4(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C
 define ptr @test_v2i64_post_reg_st4(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.2d { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.2d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, ptr %A)
@@ -8168,13 +8952,21 @@ declare void @llvm.aarch64.neon.st4.v2i64.p0(<2 x i64>, <2 x i64>, <2 x i64>,<2 
 define ptr @test_v1i64_post_imm_st4(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, ptr %A)
@@ -8185,14 +8977,22 @@ define ptr @test_v1i64_post_imm_st4(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C
 define ptr @test_v1i64_post_reg_st4(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, ptr %A)
@@ -8206,13 +9006,21 @@ declare void @llvm.aarch64.neon.st4.v1i64.p0(<1 x i64>, <1 x i64>, <1 x i64>,<1 
 define ptr @test_v4f32_post_imm_st4(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.4s { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.4s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, ptr %A)
@@ -8223,14 +9031,22 @@ define ptr @test_v4f32_post_imm_st4(ptr %A, ptr %ptr, <4 x float> %B, <4 x float
 define ptr @test_v4f32_post_reg_st4(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.4s { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.4s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, ptr %A)
@@ -8244,13 +9060,21 @@ declare void @llvm.aarch64.neon.st4.v4f32.p0(<4 x float>, <4 x float>, <4 x floa
 define ptr @test_v2f32_post_imm_st4(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st4.2s { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st4.2s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, ptr %A)
@@ -8261,14 +9085,22 @@ define ptr @test_v2f32_post_imm_st4(ptr %A, ptr %ptr, <2 x float> %B, <2 x float
 define ptr @test_v2f32_post_reg_st4(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st4.2s { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st4.2s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, ptr %A)
@@ -8282,13 +9114,21 @@ declare void @llvm.aarch64.neon.st4.v2f32.p0(<2 x float>, <2 x float>, <2 x floa
 define ptr @test_v2f64_post_imm_st4(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.2d { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.2d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, ptr %A)
@@ -8299,14 +9139,22 @@ define ptr @test_v2f64_post_imm_st4(ptr %A, ptr %ptr, <2 x double> %B, <2 x doub
 define ptr @test_v2f64_post_reg_st4(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.2d { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.2d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, ptr %A)
@@ -8320,13 +9168,21 @@ declare void @llvm.aarch64.neon.st4.v2f64.p0(<2 x double>, <2 x double>, <2 x do
 define ptr @test_v1f64_post_imm_st4(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, ptr %A)
@@ -8337,14 +9193,22 @@ define ptr @test_v1f64_post_imm_st4(ptr %A, ptr %ptr, <1 x double> %B, <1 x doub
 define ptr @test_v1f64_post_reg_st4(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_st4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, ptr %A)
@@ -8358,13 +9222,17 @@ declare void @llvm.aarch64.neon.st4.v1f64.p0(<1 x double>, <1 x double>, <1 x do
 define ptr @test_v16i8_post_imm_st1x2(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.16b { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.16b { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v16i8.p0(<16 x i8> %B, <16 x i8> %C, ptr %A)
@@ -8375,13 +9243,17 @@ define ptr @test_v16i8_post_imm_st1x2(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> 
 define ptr @test_v16i8_post_reg_st1x2(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.16b { v0, v1 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.16b { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v16i8.p0(<16 x i8> %B, <16 x i8> %C, ptr %A)
@@ -8395,13 +9267,17 @@ declare void @llvm.aarch64.neon.st1x2.v16i8.p0(<16 x i8>, <16 x i8>, ptr)
 define ptr @test_v8i8_post_imm_st1x2(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.8b { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.8b { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v8i8.p0(<8 x i8> %B, <8 x i8> %C, ptr %A)
@@ -8412,13 +9288,17 @@ define ptr @test_v8i8_post_imm_st1x2(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C)
 define ptr @test_v8i8_post_reg_st1x2(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.8b { v0, v1 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.8b { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v8i8.p0(<8 x i8> %B, <8 x i8> %C, ptr %A)
@@ -8432,13 +9312,17 @@ declare void @llvm.aarch64.neon.st1x2.v8i8.p0(<8 x i8>, <8 x i8>, ptr)
 define ptr @test_v8i16_post_imm_st1x2(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.8h { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.8h { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v8i16.p0(<8 x i16> %B, <8 x i16> %C, ptr %A)
@@ -8450,6 +9334,8 @@ define ptr @test_v8i16_post_reg_st1x2(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> 
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.8h { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8457,6 +9343,8 @@ define ptr @test_v8i16_post_reg_st1x2(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> 
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.8h { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v8i16.p0(<8 x i16> %B, <8 x i16> %C, ptr %A)
@@ -8470,13 +9358,17 @@ declare void @llvm.aarch64.neon.st1x2.v8i16.p0(<8 x i16>, <8 x i16>, ptr)
 define ptr @test_v4i16_post_imm_st1x2(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.4h { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.4h { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v4i16.p0(<4 x i16> %B, <4 x i16> %C, ptr %A)
@@ -8488,6 +9380,8 @@ define ptr @test_v4i16_post_reg_st1x2(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> 
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.4h { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8495,6 +9389,8 @@ define ptr @test_v4i16_post_reg_st1x2(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> 
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.4h { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v4i16.p0(<4 x i16> %B, <4 x i16> %C, ptr %A)
@@ -8508,13 +9404,17 @@ declare void @llvm.aarch64.neon.st1x2.v4i16.p0(<4 x i16>, <4 x i16>, ptr)
 define ptr @test_v4i32_post_imm_st1x2(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.4s { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.4s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %B, <4 x i32> %C, ptr %A)
@@ -8526,6 +9426,8 @@ define ptr @test_v4i32_post_reg_st1x2(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> 
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.4s { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8533,6 +9435,8 @@ define ptr @test_v4i32_post_reg_st1x2(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> 
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.4s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32> %B, <4 x i32> %C, ptr %A)
@@ -8546,13 +9450,17 @@ declare void @llvm.aarch64.neon.st1x2.v4i32.p0(<4 x i32>, <4 x i32>, ptr)
 define ptr @test_v2i32_post_imm_st1x2(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.2s { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.2s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v2i32.p0(<2 x i32> %B, <2 x i32> %C, ptr %A)
@@ -8564,6 +9472,8 @@ define ptr @test_v2i32_post_reg_st1x2(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> 
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.2s { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8571,6 +9481,8 @@ define ptr @test_v2i32_post_reg_st1x2(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> 
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.2s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v2i32.p0(<2 x i32> %B, <2 x i32> %C, ptr %A)
@@ -8584,13 +9496,17 @@ declare void @llvm.aarch64.neon.st1x2.v2i32.p0(<2 x i32>, <2 x i32>, ptr)
 define ptr @test_v2i64_post_imm_st1x2(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.2d { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.2d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v2i64.p0(<2 x i64> %B, <2 x i64> %C, ptr %A)
@@ -8602,6 +9518,8 @@ define ptr @test_v2i64_post_reg_st1x2(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> 
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.2d { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8609,6 +9527,8 @@ define ptr @test_v2i64_post_reg_st1x2(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> 
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.2d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v2i64.p0(<2 x i64> %B, <2 x i64> %C, ptr %A)
@@ -8622,13 +9542,17 @@ declare void @llvm.aarch64.neon.st1x2.v2i64.p0(<2 x i64>, <2 x i64>, ptr)
 define ptr @test_v1i64_post_imm_st1x2(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.1d { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.1d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v1i64.p0(<1 x i64> %B, <1 x i64> %C, ptr %A)
@@ -8640,6 +9564,8 @@ define ptr @test_v1i64_post_reg_st1x2(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> 
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.1d { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8647,6 +9573,8 @@ define ptr @test_v1i64_post_reg_st1x2(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> 
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.1d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v1i64.p0(<1 x i64> %B, <1 x i64> %C, ptr %A)
@@ -8660,13 +9588,17 @@ declare void @llvm.aarch64.neon.st1x2.v1i64.p0(<1 x i64>, <1 x i64>, ptr)
 define ptr @test_v4f32_post_imm_st1x2(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.4s { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.4s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v4f32.p0(<4 x float> %B, <4 x float> %C, ptr %A)
@@ -8678,6 +9610,8 @@ define ptr @test_v4f32_post_reg_st1x2(ptr %A, ptr %ptr, <4 x float> %B, <4 x flo
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.4s { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8685,6 +9619,8 @@ define ptr @test_v4f32_post_reg_st1x2(ptr %A, ptr %ptr, <4 x float> %B, <4 x flo
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.4s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v4f32.p0(<4 x float> %B, <4 x float> %C, ptr %A)
@@ -8698,13 +9634,17 @@ declare void @llvm.aarch64.neon.st1x2.v4f32.p0(<4 x float>, <4 x float>, ptr)
 define ptr @test_v2f32_post_imm_st1x2(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.2s { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.2s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v2f32.p0(<2 x float> %B, <2 x float> %C, ptr %A)
@@ -8716,6 +9656,8 @@ define ptr @test_v2f32_post_reg_st1x2(ptr %A, ptr %ptr, <2 x float> %B, <2 x flo
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.2s { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8723,6 +9665,8 @@ define ptr @test_v2f32_post_reg_st1x2(ptr %A, ptr %ptr, <2 x float> %B, <2 x flo
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.2s { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v2f32.p0(<2 x float> %B, <2 x float> %C, ptr %A)
@@ -8736,13 +9680,17 @@ declare void @llvm.aarch64.neon.st1x2.v2f32.p0(<2 x float>, <2 x float>, ptr)
 define ptr @test_v2f64_post_imm_st1x2(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.2d { v0, v1 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.2d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v2f64.p0(<2 x double> %B, <2 x double> %C, ptr %A)
@@ -8754,6 +9702,8 @@ define ptr @test_v2f64_post_reg_st1x2(ptr %A, ptr %ptr, <2 x double> %B, <2 x do
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st1.2d { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8761,6 +9711,8 @@ define ptr @test_v2f64_post_reg_st1x2(ptr %A, ptr %ptr, <2 x double> %B, <2 x do
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st1.2d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v2f64.p0(<2 x double> %B, <2 x double> %C, ptr %A)
@@ -8774,13 +9726,17 @@ declare void @llvm.aarch64.neon.st1x2.v2f64.p0(<2 x double>, <2 x double>, ptr)
 define ptr @test_v1f64_post_imm_st1x2(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st1x2:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.1d { v0, v1 }, [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st1x2:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.1d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v1f64.p0(<1 x double> %B, <1 x double> %C, ptr %A)
@@ -8792,6 +9748,8 @@ define ptr @test_v1f64_post_reg_st1x2(ptr %A, ptr %ptr, <1 x double> %B, <1 x do
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st1x2:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
 ; CHECK-SD-NEXT:    st1.1d { v0, v1 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -8799,6 +9757,8 @@ define ptr @test_v1f64_post_reg_st1x2(ptr %A, ptr %ptr, <1 x double> %B, <1 x do
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
 ; CHECK-GI-NEXT:    st1.1d { v0, v1 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x2.v1f64.p0(<1 x double> %B, <1 x double> %C, ptr %A)
@@ -8812,13 +9772,19 @@ declare void @llvm.aarch64.neon.st1x2.v1f64.p0(<1 x double>, <1 x double>, ptr)
 define ptr @test_v16i8_post_imm_st1x3(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.16b { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.16b { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr %A)
@@ -8829,13 +9795,19 @@ define ptr @test_v16i8_post_imm_st1x3(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> 
 define ptr @test_v16i8_post_reg_st1x3(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.16b { v0, v1, v2 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.16b { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr %A)
@@ -8849,13 +9821,19 @@ declare void @llvm.aarch64.neon.st1x3.v16i8.p0(<16 x i8>, <16 x i8>, <16 x i8>, 
 define ptr @test_v8i8_post_imm_st1x3(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.8b { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.8b { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, ptr %A)
@@ -8866,13 +9844,19 @@ define ptr @test_v8i8_post_imm_st1x3(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C,
 define ptr @test_v8i8_post_reg_st1x3(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.8b { v0, v1, v2 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.8b { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, ptr %A)
@@ -8886,13 +9870,19 @@ declare void @llvm.aarch64.neon.st1x3.v8i8.p0(<8 x i8>, <8 x i8>, <8 x i8>, ptr)
 define ptr @test_v8i16_post_imm_st1x3(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.8h { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.8h { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, ptr %A)
@@ -8903,14 +9893,20 @@ define ptr @test_v8i16_post_imm_st1x3(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> 
 define ptr @test_v8i16_post_reg_st1x3(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.8h { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.8h { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, ptr %A)
@@ -8924,13 +9920,19 @@ declare void @llvm.aarch64.neon.st1x3.v8i16.p0(<8 x i16>, <8 x i16>, <8 x i16>, 
 define ptr @test_v4i16_post_imm_st1x3(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.4h { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.4h { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, ptr %A)
@@ -8941,14 +9943,20 @@ define ptr @test_v4i16_post_imm_st1x3(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> 
 define ptr @test_v4i16_post_reg_st1x3(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.4h { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.4h { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, ptr %A)
@@ -8962,13 +9970,19 @@ declare void @llvm.aarch64.neon.st1x3.v4i16.p0(<4 x i16>, <4 x i16>, <4 x i16>, 
 define ptr @test_v4i32_post_imm_st1x3(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.4s { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.4s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, ptr %A)
@@ -8979,14 +9993,20 @@ define ptr @test_v4i32_post_imm_st1x3(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> 
 define ptr @test_v4i32_post_reg_st1x3(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.4s { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.4s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, ptr %A)
@@ -9000,13 +10020,19 @@ declare void @llvm.aarch64.neon.st1x3.v4i32.p0(<4 x i32>, <4 x i32>, <4 x i32>, 
 define ptr @test_v2i32_post_imm_st1x3(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.2s { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.2s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, ptr %A)
@@ -9017,14 +10043,20 @@ define ptr @test_v2i32_post_imm_st1x3(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> 
 define ptr @test_v2i32_post_reg_st1x3(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.2s { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.2s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, ptr %A)
@@ -9038,13 +10070,19 @@ declare void @llvm.aarch64.neon.st1x3.v2i32.p0(<2 x i32>, <2 x i32>, <2 x i32>, 
 define ptr @test_v2i64_post_imm_st1x3(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.2d { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.2d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, ptr %A)
@@ -9055,14 +10093,20 @@ define ptr @test_v2i64_post_imm_st1x3(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> 
 define ptr @test_v2i64_post_reg_st1x3(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.2d { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.2d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, ptr %A)
@@ -9076,13 +10120,19 @@ declare void @llvm.aarch64.neon.st1x3.v2i64.p0(<2 x i64>, <2 x i64>, <2 x i64>, 
 define ptr @test_v1i64_post_imm_st1x3(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, ptr %A)
@@ -9093,14 +10143,20 @@ define ptr @test_v1i64_post_imm_st1x3(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> 
 define ptr @test_v1i64_post_reg_st1x3(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, ptr %A)
@@ -9114,13 +10170,19 @@ declare void @llvm.aarch64.neon.st1x3.v1i64.p0(<1 x i64>, <1 x i64>, <1 x i64>, 
 define ptr @test_v4f32_post_imm_st1x3(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.4s { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.4s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, ptr %A)
@@ -9131,14 +10193,20 @@ define ptr @test_v4f32_post_imm_st1x3(ptr %A, ptr %ptr, <4 x float> %B, <4 x flo
 define ptr @test_v4f32_post_reg_st1x3(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.4s { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.4s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, ptr %A)
@@ -9152,13 +10220,19 @@ declare void @llvm.aarch64.neon.st1x3.v4f32.p0(<4 x float>, <4 x float>, <4 x fl
 define ptr @test_v2f32_post_imm_st1x3(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.2s { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.2s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, ptr %A)
@@ -9169,14 +10243,20 @@ define ptr @test_v2f32_post_imm_st1x3(ptr %A, ptr %ptr, <2 x float> %B, <2 x flo
 define ptr @test_v2f32_post_reg_st1x3(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.2s { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.2s { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, ptr %A)
@@ -9190,13 +10270,19 @@ declare void @llvm.aarch64.neon.st1x3.v2f32.p0(<2 x float>, <2 x float>, <2 x fl
 define ptr @test_v2f64_post_imm_st1x3(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.2d { v0, v1, v2 }, [x0], #48
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #48
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.2d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, ptr %A)
@@ -9207,14 +10293,20 @@ define ptr @test_v2f64_post_imm_st1x3(ptr %A, ptr %ptr, <2 x double> %B, <2 x do
 define ptr @test_v2f64_post_reg_st1x3(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st1.2d { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st1.2d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, ptr %A)
@@ -9228,13 +10320,19 @@ declare void @llvm.aarch64.neon.st1x3.v2f64.p0(<2 x double>, <2 x double>, <2 x 
 define ptr @test_v1f64_post_imm_st1x3(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2 }, [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st1x3:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, ptr %A)
@@ -9245,14 +10343,20 @@ define ptr @test_v1f64_post_imm_st1x3(ptr %A, ptr %ptr, <1 x double> %B, <1 x do
 define ptr @test_v1f64_post_reg_st1x3(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st1x3:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_st1x3:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2 def $d0_d1_d2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2 def $d0_d1_d2
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x3.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, ptr %A)
@@ -9266,13 +10370,21 @@ declare void @llvm.aarch64.neon.st1x3.v1f64.p0(<1 x double>, <1 x double>, <1 x 
 define ptr @test_v16i8_post_imm_st1x4(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.16b { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.16b { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, ptr %A)
@@ -9283,13 +10395,21 @@ define ptr @test_v16i8_post_imm_st1x4(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> 
 define ptr @test_v16i8_post_reg_st1x4(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.16b { v0, v1, v2, v3 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.16b { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, ptr %A)
@@ -9303,13 +10423,21 @@ declare void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8>, <16 x i8>, <16 x i8>, 
 define ptr @test_v8i8_post_imm_st1x4(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.8b { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.8b { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, ptr %A)
@@ -9320,13 +10448,21 @@ define ptr @test_v8i8_post_imm_st1x4(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C,
 define ptr @test_v8i8_post_reg_st1x4(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.8b { v0, v1, v2, v3 }, [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.8b { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, ptr %A)
@@ -9340,13 +10476,21 @@ declare void @llvm.aarch64.neon.st1x4.v8i8.p0(<8 x i8>, <8 x i8>, <8 x i8>, <8 x
 define ptr @test_v8i16_post_imm_st1x4(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.8h { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.8h { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, ptr %A)
@@ -9357,14 +10501,22 @@ define ptr @test_v8i16_post_imm_st1x4(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> 
 define ptr @test_v8i16_post_reg_st1x4(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.8h { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.8h { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, ptr %A)
@@ -9378,13 +10530,21 @@ declare void @llvm.aarch64.neon.st1x4.v8i16.p0(<8 x i16>, <8 x i16>, <8 x i16>, 
 define ptr @test_v4i16_post_imm_st1x4(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.4h { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.4h { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, ptr %A)
@@ -9395,14 +10555,22 @@ define ptr @test_v4i16_post_imm_st1x4(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> 
 define ptr @test_v4i16_post_reg_st1x4(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.4h { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.4h { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, ptr %A)
@@ -9416,13 +10584,21 @@ declare void @llvm.aarch64.neon.st1x4.v4i16.p0(<4 x i16>, <4 x i16>, <4 x i16>,<
 define ptr @test_v4i32_post_imm_st1x4(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.4s { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.4s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, ptr %A)
@@ -9433,14 +10609,22 @@ define ptr @test_v4i32_post_imm_st1x4(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> 
 define ptr @test_v4i32_post_reg_st1x4(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.4s { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.4s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, ptr %A)
@@ -9454,13 +10638,21 @@ declare void @llvm.aarch64.neon.st1x4.v4i32.p0(<4 x i32>, <4 x i32>, <4 x i32>,<
 define ptr @test_v2i32_post_imm_st1x4(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.2s { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.2s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, ptr %A)
@@ -9471,14 +10663,22 @@ define ptr @test_v2i32_post_imm_st1x4(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> 
 define ptr @test_v2i32_post_reg_st1x4(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.2s { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.2s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, ptr %A)
@@ -9492,13 +10692,21 @@ declare void @llvm.aarch64.neon.st1x4.v2i32.p0(<2 x i32>, <2 x i32>, <2 x i32>, 
 define ptr @test_v2i64_post_imm_st1x4(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.2d { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.2d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, ptr %A)
@@ -9509,14 +10717,22 @@ define ptr @test_v2i64_post_imm_st1x4(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> 
 define ptr @test_v2i64_post_reg_st1x4(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.2d { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.2d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, ptr %A)
@@ -9530,13 +10746,21 @@ declare void @llvm.aarch64.neon.st1x4.v2i64.p0(<2 x i64>, <2 x i64>, <2 x i64>,<
 define ptr @test_v1i64_post_imm_st1x4(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, ptr %A)
@@ -9547,14 +10771,22 @@ define ptr @test_v1i64_post_imm_st1x4(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> 
 define ptr @test_v1i64_post_reg_st1x4(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, ptr %A)
@@ -9568,13 +10800,21 @@ declare void @llvm.aarch64.neon.st1x4.v1i64.p0(<1 x i64>, <1 x i64>, <1 x i64>,<
 define ptr @test_v4f32_post_imm_st1x4(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.4s { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.4s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, ptr %A)
@@ -9585,14 +10825,22 @@ define ptr @test_v4f32_post_imm_st1x4(ptr %A, ptr %ptr, <4 x float> %B, <4 x flo
 define ptr @test_v4f32_post_reg_st1x4(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.4s { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.4s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, ptr %A)
@@ -9606,13 +10854,21 @@ declare void @llvm.aarch64.neon.st1x4.v4f32.p0(<4 x float>, <4 x float>, <4 x fl
 define ptr @test_v2f32_post_imm_st1x4(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.2s { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.2s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, ptr %A)
@@ -9623,14 +10879,22 @@ define ptr @test_v2f32_post_imm_st1x4(ptr %A, ptr %ptr, <2 x float> %B, <2 x flo
 define ptr @test_v2f32_post_reg_st1x4(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.2s { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.2s { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, ptr %A)
@@ -9644,13 +10908,21 @@ declare void @llvm.aarch64.neon.st1x4.v2f32.p0(<2 x float>, <2 x float>, <2 x fl
 define ptr @test_v2f64_post_imm_st1x4(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.2d { v0, v1, v2, v3 }, [x0], #64
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #64
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.2d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, ptr %A)
@@ -9661,14 +10933,22 @@ define ptr @test_v2f64_post_imm_st1x4(ptr %A, ptr %ptr, <2 x double> %B, <2 x do
 define ptr @test_v2f64_post_reg_st1x4(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st1.2d { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st1.2d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, ptr %A)
@@ -9682,13 +10962,21 @@ declare void @llvm.aarch64.neon.st1x4.v2f64.p0(<2 x double>, <2 x double>, <2 x 
 define ptr @test_v1f64_post_imm_st1x4(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2, v3 }, [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, ptr %A)
@@ -9699,14 +10987,22 @@ define ptr @test_v1f64_post_imm_st1x4(ptr %A, ptr %ptr, <1 x double> %B, <1 x do
 define ptr @test_v1f64_post_reg_st1x4(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st1x4:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-SD-NEXT:    st1.1d { v0, v1, v2, v3 }, [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_st1x4:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $d0_d1_d2_d3 def $d0_d1_d2_d3
 ; CHECK-GI-NEXT:    st1.1d { v0, v1, v2, v3 }, [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st1x4.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, ptr %A)
@@ -9719,13 +11015,17 @@ declare void @llvm.aarch64.neon.st1x4.v1f64.p0(<1 x double>, <1 x double>, <1 x 
 define ptr @test_v16i8_post_imm_st2lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.b { v0, v1 }[0], [x0], #2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.b { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, i64 0, ptr %A)
@@ -9736,13 +11036,17 @@ define ptr @test_v16i8_post_imm_st2lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8
 define ptr @test_v16i8_post_reg_st2lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.b { v0, v1 }[0], [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.b { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, i64 0, ptr %A)
@@ -9756,13 +11060,17 @@ declare void @llvm.aarch64.neon.st2lane.v16i8.p0(<16 x i8>, <16 x i8>, i64, ptr)
 define ptr @test_v8i8_post_imm_st2lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.b { v0, v1 }[0], [x0], #2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.b { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, i64 0, ptr %A)
@@ -9773,13 +11081,17 @@ define ptr @test_v8i8_post_imm_st2lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %
 define ptr @test_v8i8_post_reg_st2lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.b { v0, v1 }[0], [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.b { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, i64 0, ptr %A)
@@ -9793,13 +11105,17 @@ declare void @llvm.aarch64.neon.st2lane.v8i8.p0(<8 x i8>, <8 x i8>, i64, ptr)
 define ptr @test_v8i16_post_imm_st2lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.h { v0, v1 }[0], [x0], #4
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #4
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.h { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, i64 0, ptr %A)
@@ -9811,6 +11127,8 @@ define ptr @test_v8i16_post_reg_st2lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.h { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -9818,6 +11136,8 @@ define ptr @test_v8i16_post_reg_st2lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.h { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, i64 0, ptr %A)
@@ -9831,13 +11151,17 @@ declare void @llvm.aarch64.neon.st2lane.v8i16.p0(<8 x i16>, <8 x i16>, i64, ptr)
 define ptr @test_v4i16_post_imm_st2lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.h { v0, v1 }[0], [x0], #4
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #4
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.h { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, i64 0, ptr %A)
@@ -9849,6 +11173,8 @@ define ptr @test_v4i16_post_reg_st2lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.h { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -9856,6 +11182,8 @@ define ptr @test_v4i16_post_reg_st2lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.h { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, i64 0, ptr %A)
@@ -9869,13 +11197,17 @@ declare void @llvm.aarch64.neon.st2lane.v4i16.p0(<4 x i16>, <4 x i16>, i64, ptr)
 define ptr @test_v4i32_post_imm_st2lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.s { v0, v1 }[0], [x0], #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.s { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, i64 0, ptr %A)
@@ -9887,6 +11219,8 @@ define ptr @test_v4i32_post_reg_st2lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.s { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -9894,6 +11228,8 @@ define ptr @test_v4i32_post_reg_st2lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.s { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, i64 0, ptr %A)
@@ -9907,13 +11243,17 @@ declare void @llvm.aarch64.neon.st2lane.v4i32.p0(<4 x i32>, <4 x i32>, i64, ptr)
 define ptr @test_v2i32_post_imm_st2lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.s { v0, v1 }[0], [x0], #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.s { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, i64 0, ptr %A)
@@ -9925,6 +11265,8 @@ define ptr @test_v2i32_post_reg_st2lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.s { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -9932,6 +11274,8 @@ define ptr @test_v2i32_post_reg_st2lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.s { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, i64 0, ptr %A)
@@ -9945,13 +11289,17 @@ declare void @llvm.aarch64.neon.st2lane.v2i32.p0(<2 x i32>, <2 x i32>, i64, ptr)
 define ptr @test_v2i64_post_imm_st2lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.d { v0, v1 }[0], [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.d { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, i64 0, ptr %A)
@@ -9963,6 +11311,8 @@ define ptr @test_v2i64_post_reg_st2lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.d { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -9970,6 +11320,8 @@ define ptr @test_v2i64_post_reg_st2lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.d { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, i64 0, ptr %A)
@@ -9983,13 +11335,17 @@ declare void @llvm.aarch64.neon.st2lane.v2i64.p0(<2 x i64>, <2 x i64>, i64, ptr)
 define ptr @test_v1i64_post_imm_st2lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.d { v0, v1 }[0], [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.d { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, i64 0, ptr %A)
@@ -10001,6 +11357,8 @@ define ptr @test_v1i64_post_reg_st2lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.d { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -10008,6 +11366,8 @@ define ptr @test_v1i64_post_reg_st2lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.d { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, i64 0, ptr %A)
@@ -10021,13 +11381,17 @@ declare void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64>, <1 x i64>, i64, ptr)
 define ptr @test_v4f32_post_imm_st2lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.s { v0, v1 }[0], [x0], #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.s { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v4f32.p0(<4 x float> %B, <4 x float> %C, i64 0, ptr %A)
@@ -10039,6 +11403,8 @@ define ptr @test_v4f32_post_reg_st2lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x f
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.s { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -10046,6 +11412,8 @@ define ptr @test_v4f32_post_reg_st2lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x f
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.s { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v4f32.p0(<4 x float> %B, <4 x float> %C, i64 0, ptr %A)
@@ -10059,13 +11427,17 @@ declare void @llvm.aarch64.neon.st2lane.v4f32.p0(<4 x float>, <4 x float>, i64, 
 define ptr @test_v2f32_post_imm_st2lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.s { v0, v1 }[0], [x0], #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.s { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v2f32.p0(<2 x float> %B, <2 x float> %C, i64 0, ptr %A)
@@ -10077,6 +11449,8 @@ define ptr @test_v2f32_post_reg_st2lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x f
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.s { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -10084,6 +11458,8 @@ define ptr @test_v2f32_post_reg_st2lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x f
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.s { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v2f32.p0(<2 x float> %B, <2 x float> %C, i64 0, ptr %A)
@@ -10097,13 +11473,17 @@ declare void @llvm.aarch64.neon.st2lane.v2f32.p0(<2 x float>, <2 x float>, i64, 
 define ptr @test_v2f64_post_imm_st2lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.d { v0, v1 }[0], [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.d { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v2f64.p0(<2 x double> %B, <2 x double> %C, i64 0, ptr %A)
@@ -10115,6 +11495,8 @@ define ptr @test_v2f64_post_reg_st2lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x 
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.d { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -10122,6 +11504,8 @@ define ptr @test_v2f64_post_reg_st2lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x 
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.d { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v2f64.p0(<2 x double> %B, <2 x double> %C, i64 0, ptr %A)
@@ -10135,13 +11519,17 @@ declare void @llvm.aarch64.neon.st2lane.v2f64.p0(<2 x double>, <2 x double>, i64
 define ptr @test_v1f64_post_imm_st2lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st2lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.d { v0, v1 }[0], [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st2lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.d { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v1f64.p0(<1 x double> %B, <1 x double> %C, i64 0, ptr %A)
@@ -10153,6 +11541,8 @@ define ptr @test_v1f64_post_reg_st2lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x 
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st2lane:
 ; CHECK-SD:       ; %bb.0:
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
 ; CHECK-SD-NEXT:    st2.d { v0, v1 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -10160,6 +11550,8 @@ define ptr @test_v1f64_post_reg_st2lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x 
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    st2.d { v0, v1 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st2lane.v1f64.p0(<1 x double> %B, <1 x double> %C, i64 0, ptr %A)
@@ -10173,13 +11565,19 @@ declare void @llvm.aarch64.neon.st2lane.v1f64.p0(<1 x double>, <1 x double>, i64
 define ptr @test_v16i8_post_imm_st3lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.b { v0, v1, v2 }[0], [x0], #3
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.b { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, i64 0, ptr %A)
@@ -10190,13 +11588,19 @@ define ptr @test_v16i8_post_imm_st3lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8
 define ptr @test_v16i8_post_reg_st3lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.b { v0, v1, v2 }[0], [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.b { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, i64 0, ptr %A)
@@ -10210,13 +11614,19 @@ declare void @llvm.aarch64.neon.st3lane.v16i8.p0(<16 x i8>, <16 x i8>, <16 x i8>
 define ptr @test_v8i8_post_imm_st3lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.b { v0, v1, v2 }[0], [x0], #3
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.b { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, i64 0, ptr %A)
@@ -10227,13 +11637,19 @@ define ptr @test_v8i8_post_imm_st3lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %
 define ptr @test_v8i8_post_reg_st3lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.b { v0, v1, v2 }[0], [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.b { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, i64 0, ptr %A)
@@ -10247,13 +11663,19 @@ declare void @llvm.aarch64.neon.st3lane.v8i8.p0(<8 x i8>, <8 x i8>, <8 x i8>, i6
 define ptr @test_v8i16_post_imm_st3lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.h { v0, v1, v2 }[0], [x0], #6
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #6
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.h { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 0, ptr %A)
@@ -10264,14 +11686,20 @@ define ptr @test_v8i16_post_imm_st3lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16
 define ptr @test_v8i16_post_reg_st3lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.h { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.h { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, i64 0, ptr %A)
@@ -10285,13 +11713,19 @@ declare void @llvm.aarch64.neon.st3lane.v8i16.p0(<8 x i16>, <8 x i16>, <8 x i16>
 define ptr @test_v4i16_post_imm_st3lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.h { v0, v1, v2 }[0], [x0], #6
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #6
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.h { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 0, ptr %A)
@@ -10302,14 +11736,20 @@ define ptr @test_v4i16_post_imm_st3lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16
 define ptr @test_v4i16_post_reg_st3lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.h { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.h { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, i64 0, ptr %A)
@@ -10323,13 +11763,19 @@ declare void @llvm.aarch64.neon.st3lane.v4i16.p0(<4 x i16>, <4 x i16>, <4 x i16>
 define ptr @test_v4i32_post_imm_st3lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.s { v0, v1, v2 }[0], [x0], #12
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #12
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.s { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 0, ptr %A)
@@ -10340,14 +11786,20 @@ define ptr @test_v4i32_post_imm_st3lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32
 define ptr @test_v4i32_post_reg_st3lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.s { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.s { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, i64 0, ptr %A)
@@ -10361,13 +11813,19 @@ declare void @llvm.aarch64.neon.st3lane.v4i32.p0(<4 x i32>, <4 x i32>, <4 x i32>
 define ptr @test_v2i32_post_imm_st3lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.s { v0, v1, v2 }[0], [x0], #12
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #12
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.s { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 0, ptr %A)
@@ -10378,14 +11836,20 @@ define ptr @test_v2i32_post_imm_st3lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32
 define ptr @test_v2i32_post_reg_st3lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.s { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.s { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, i64 0, ptr %A)
@@ -10399,13 +11863,19 @@ declare void @llvm.aarch64.neon.st3lane.v2i32.p0(<2 x i32>, <2 x i32>, <2 x i32>
 define ptr @test_v2i64_post_imm_st3lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.d { v0, v1, v2 }[0], [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.d { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 0, ptr %A)
@@ -10416,14 +11886,20 @@ define ptr @test_v2i64_post_imm_st3lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64
 define ptr @test_v2i64_post_reg_st3lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.d { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.d { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, i64 0, ptr %A)
@@ -10437,13 +11913,19 @@ declare void @llvm.aarch64.neon.st3lane.v2i64.p0(<2 x i64>, <2 x i64>, <2 x i64>
 define ptr @test_v1i64_post_imm_st3lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.d { v0, v1, v2 }[0], [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.d { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 0, ptr %A)
@@ -10454,14 +11936,20 @@ define ptr @test_v1i64_post_imm_st3lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64
 define ptr @test_v1i64_post_reg_st3lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.d { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.d { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, i64 0, ptr %A)
@@ -10475,13 +11963,19 @@ declare void @llvm.aarch64.neon.st3lane.v1i64.p0(<1 x i64>, <1 x i64>, <1 x i64>
 define ptr @test_v4f32_post_imm_st3lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.s { v0, v1, v2 }[0], [x0], #12
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #12
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.s { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, i64 0, ptr %A)
@@ -10492,14 +11986,20 @@ define ptr @test_v4f32_post_imm_st3lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x f
 define ptr @test_v4f32_post_reg_st3lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.s { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.s { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, i64 0, ptr %A)
@@ -10513,13 +12013,19 @@ declare void @llvm.aarch64.neon.st3lane.v4f32.p0(<4 x float>, <4 x float>, <4 x 
 define ptr @test_v2f32_post_imm_st3lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.s { v0, v1, v2 }[0], [x0], #12
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #12
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.s { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, i64 0, ptr %A)
@@ -10530,14 +12036,20 @@ define ptr @test_v2f32_post_imm_st3lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x f
 define ptr @test_v2f32_post_reg_st3lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.s { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.s { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, i64 0, ptr %A)
@@ -10551,13 +12063,19 @@ declare void @llvm.aarch64.neon.st3lane.v2f32.p0(<2 x float>, <2 x float>, <2 x 
 define ptr @test_v2f64_post_imm_st3lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.d { v0, v1, v2 }[0], [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.d { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, i64 0, ptr %A)
@@ -10568,14 +12086,20 @@ define ptr @test_v2f64_post_imm_st3lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x 
 define ptr @test_v2f64_post_reg_st3lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.d { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.d { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, i64 0, ptr %A)
@@ -10589,13 +12113,19 @@ declare void @llvm.aarch64.neon.st3lane.v2f64.p0(<2 x double>, <2 x double>, <2 
 define ptr @test_v1f64_post_imm_st3lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.d { v0, v1, v2 }[0], [x0], #24
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st3lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #24
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.d { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, i64 0, ptr %A)
@@ -10606,14 +12136,20 @@ define ptr @test_v1f64_post_imm_st3lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x 
 define ptr @test_v1f64_post_reg_st3lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st3lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-SD-NEXT:    st3.d { v0, v1, v2 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_st3lane:
 ; CHECK-GI:       ; %bb.0:
 ; CHECK-GI-NEXT:    mov x8, x0
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2 def $q0_q1_q2
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-GI-NEXT:    st3.d { v0, v1, v2 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st3lane.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, i64 0, ptr %A)
@@ -10627,13 +12163,21 @@ declare void @llvm.aarch64.neon.st3lane.v1f64.p0(<1 x double>, <1 x double>, <1 
 define ptr @test_v16i8_post_imm_st4lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.b { v0, v1, v2, v3 }[0], [x0], #4
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #4
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.b { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, i64 0, ptr %A)
@@ -10644,13 +12188,21 @@ define ptr @test_v16i8_post_imm_st4lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8
 define ptr @test_v16i8_post_reg_st4lane(ptr %A, ptr %ptr, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.b { v0, v1, v2, v3 }[0], [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.b { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v16i8.p0(<16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <16 x i8> %E, i64 0, ptr %A)
@@ -10664,13 +12216,21 @@ declare void @llvm.aarch64.neon.st4lane.v16i8.p0(<16 x i8>, <16 x i8>, <16 x i8>
 define ptr @test_v8i8_post_imm_st4lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.b { v0, v1, v2, v3 }[0], [x0], #4
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #4
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.b { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, i64 0, ptr %A)
@@ -10681,13 +12241,21 @@ define ptr @test_v8i8_post_imm_st4lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %
 define ptr @test_v8i8_post_reg_st4lane(ptr %A, ptr %ptr, <8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i8_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.b { v0, v1, v2, v3 }[0], [x0], x2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.b { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v8i8.p0(<8 x i8> %B, <8 x i8> %C, <8 x i8> %D, <8 x i8> %E, i64 0, ptr %A)
@@ -10701,13 +12269,21 @@ declare void @llvm.aarch64.neon.st4lane.v8i8.p0(<8 x i8>, <8 x i8>, <8 x i8>, <8
 define ptr @test_v8i16_post_imm_st4lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.h { v0, v1, v2, v3 }[0], [x0], #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.h { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, i64 0, ptr %A)
@@ -10718,14 +12294,22 @@ define ptr @test_v8i16_post_imm_st4lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16
 define ptr @test_v8i16_post_reg_st4lane(ptr %A, ptr %ptr, <8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v8i16_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.h { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v8i16_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.h { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v8i16.p0(<8 x i16> %B, <8 x i16> %C, <8 x i16> %D, <8 x i16> %E, i64 0, ptr %A)
@@ -10739,13 +12323,21 @@ declare void @llvm.aarch64.neon.st4lane.v8i16.p0(<8 x i16>, <8 x i16>, <8 x i16>
 define ptr @test_v4i16_post_imm_st4lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.h { v0, v1, v2, v3 }[0], [x0], #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #8
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.h { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, i64 0, ptr %A)
@@ -10756,14 +12348,22 @@ define ptr @test_v4i16_post_imm_st4lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16
 define ptr @test_v4i16_post_reg_st4lane(ptr %A, ptr %ptr, <4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i16_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #1
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.h { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i16_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #1
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.h { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v4i16.p0(<4 x i16> %B, <4 x i16> %C, <4 x i16> %D, <4 x i16> %E, i64 0, ptr %A)
@@ -10777,13 +12377,21 @@ declare void @llvm.aarch64.neon.st4lane.v4i16.p0(<4 x i16>, <4 x i16>, <4 x i16>
 define ptr @test_v4i32_post_imm_st4lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, i64 0, ptr %A)
@@ -10794,14 +12402,22 @@ define ptr @test_v4i32_post_imm_st4lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32
 define ptr @test_v4i32_post_reg_st4lane(ptr %A, ptr %ptr, <4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4i32_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4i32_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v4i32.p0(<4 x i32> %B, <4 x i32> %C, <4 x i32> %D, <4 x i32> %E, i64 0, ptr %A)
@@ -10815,13 +12431,21 @@ declare void @llvm.aarch64.neon.st4lane.v4i32.p0(<4 x i32>, <4 x i32>, <4 x i32>
 define ptr @test_v2i32_post_imm_st4lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, i64 0, ptr %A)
@@ -10832,14 +12456,22 @@ define ptr @test_v2i32_post_imm_st4lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32
 define ptr @test_v2i32_post_reg_st4lane(ptr %A, ptr %ptr, <2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i32_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i32_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v2i32.p0(<2 x i32> %B, <2 x i32> %C, <2 x i32> %D, <2 x i32> %E, i64 0, ptr %A)
@@ -10853,13 +12485,21 @@ declare void @llvm.aarch64.neon.st4lane.v2i32.p0(<2 x i32>, <2 x i32>, <2 x i32>
 define ptr @test_v2i64_post_imm_st4lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, i64 0, ptr %A)
@@ -10870,14 +12510,22 @@ define ptr @test_v2i64_post_imm_st4lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64
 define ptr @test_v2i64_post_reg_st4lane(ptr %A, ptr %ptr, <2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2i64_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2i64_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v2i64.p0(<2 x i64> %B, <2 x i64> %C, <2 x i64> %D, <2 x i64> %E, i64 0, ptr %A)
@@ -10891,13 +12539,21 @@ declare void @llvm.aarch64.neon.st4lane.v2i64.p0(<2 x i64>, <2 x i64>, <2 x i64>
 define ptr @test_v1i64_post_imm_st4lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, i64 0, ptr %A)
@@ -10908,14 +12564,22 @@ define ptr @test_v1i64_post_imm_st4lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64
 define ptr @test_v1i64_post_reg_st4lane(ptr %A, ptr %ptr, <1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1i64_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1i64_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v1i64.p0(<1 x i64> %B, <1 x i64> %C, <1 x i64> %D, <1 x i64> %E, i64 0, ptr %A)
@@ -10929,13 +12593,21 @@ declare void @llvm.aarch64.neon.st4lane.v1i64.p0(<1 x i64>, <1 x i64>, <1 x i64>
 define ptr @test_v4f32_post_imm_st4lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, i64 0, ptr %A)
@@ -10946,14 +12618,22 @@ define ptr @test_v4f32_post_imm_st4lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x f
 define ptr @test_v4f32_post_reg_st4lane(ptr %A, ptr %ptr, <4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v4f32_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v4f32_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v4f32.p0(<4 x float> %B, <4 x float> %C, <4 x float> %D, <4 x float> %E, i64 0, ptr %A)
@@ -10967,13 +12647,21 @@ declare void @llvm.aarch64.neon.st4lane.v4f32.p0(<4 x float>, <4 x float>, <4 x 
 define ptr @test_v2f32_post_imm_st4lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x0], #16
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #16
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, i64 0, ptr %A)
@@ -10984,14 +12672,22 @@ define ptr @test_v2f32_post_imm_st4lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x f
 define ptr @test_v2f32_post_reg_st4lane(ptr %A, ptr %ptr, <2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f32_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #2
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f32_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #2
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.s { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v2f32.p0(<2 x float> %B, <2 x float> %C, <2 x float> %D, <2 x float> %E, i64 0, ptr %A)
@@ -11005,13 +12701,21 @@ declare void @llvm.aarch64.neon.st4lane.v2f32.p0(<2 x float>, <2 x float>, <2 x 
 define ptr @test_v2f64_post_imm_st4lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, i64 0, ptr %A)
@@ -11022,14 +12726,22 @@ define ptr @test_v2f64_post_imm_st4lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x 
 define ptr @test_v2f64_post_reg_st4lane(ptr %A, ptr %ptr, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v2f64_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v2f64_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v2f64.p0(<2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E, i64 0, ptr %A)
@@ -11043,13 +12755,21 @@ declare void @llvm.aarch64.neon.st4lane.v2f64.p0(<2 x double>, <2 x double>, <2 
 define ptr @test_v1f64_post_imm_st4lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_imm_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x0], #32
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_imm_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, #32
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, i64 0, ptr %A)
@@ -11060,14 +12780,22 @@ define ptr @test_v1f64_post_imm_st4lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x 
 define ptr @test_v1f64_post_reg_st4lane(ptr %A, ptr %ptr, <1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, i64 %inc) nounwind {
 ; CHECK-SD-LABEL: test_v1f64_post_reg_st4lane:
 ; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    lsl x8, x2, #3
+; CHECK-SD-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-SD-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-SD-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x0], x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v1f64_post_reg_st4lane:
 ; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    mov x8, x0
 ; CHECK-GI-NEXT:    add x0, x0, x2, lsl #3
+; CHECK-GI-NEXT:    ; kill: def $d1 killed $d1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d2 killed $d2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-GI-NEXT:    ; kill: def $d3 killed $d3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-GI-NEXT:    st4.d { v0, v1, v2, v3 }[0], [x8]
 ; CHECK-GI-NEXT:    ret
   call void @llvm.aarch64.neon.st4lane.v1f64.p0(<1 x double> %B, <1 x double> %C, <1 x double> %D, <1 x double> %E, i64 0, ptr %A)

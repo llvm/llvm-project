@@ -1483,12 +1483,12 @@ define <8 x i16> @fptos_v8f64_v8i16(<8 x double> %a) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI70_0
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI70_0]
-; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
-; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
-; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
-; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
+; CHECK-SD-NEXT:    xtn v6.2s, v3.2d
+; CHECK-SD-NEXT:    xtn v5.2s, v2.2d
+; CHECK-SD-NEXT:    xtn v4.2s, v1.2d
+; CHECK-SD-NEXT:    xtn v3.2s, v0.2d
+; CHECK-SD-NEXT:    ldr q0, [x8, :lo12:.LCPI70_0]
+; CHECK-SD-NEXT:    tbl v0.16b, { v3.16b, v4.16b, v5.16b, v6.16b }, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fptos_v8f64_v8i16:
@@ -1514,12 +1514,12 @@ define <8 x i16> @fptou_v8f64_v8i16(<8 x double> %a) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI71_0
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI71_0]
-; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
-; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
-; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
-; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
+; CHECK-SD-NEXT:    xtn v6.2s, v3.2d
+; CHECK-SD-NEXT:    xtn v5.2s, v2.2d
+; CHECK-SD-NEXT:    xtn v4.2s, v1.2d
+; CHECK-SD-NEXT:    xtn v3.2s, v0.2d
+; CHECK-SD-NEXT:    ldr q0, [x8, :lo12:.LCPI71_0]
+; CHECK-SD-NEXT:    tbl v0.16b, { v3.16b, v4.16b, v5.16b, v6.16b }, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fptou_v8f64_v8i16:
@@ -1545,21 +1545,21 @@ define <16 x i16> @fptos_v16f64_v16i16(<16 x double> %a) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI72_0
 ; CHECK-SD-NEXT:    fcvtzs v2.2d, v2.2d
 ; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI72_0]
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
-; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
-; CHECK-SD-NEXT:    xtn v7.2s, v7.2d
-; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
-; CHECK-SD-NEXT:    xtn v6.2s, v6.2d
-; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
-; CHECK-SD-NEXT:    xtn v5.2s, v5.2d
-; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
-; CHECK-SD-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v16.16b
+; CHECK-SD-NEXT:    xtn v19.2s, v3.2d
+; CHECK-SD-NEXT:    xtn v23.2s, v7.2d
+; CHECK-SD-NEXT:    xtn v18.2s, v2.2d
+; CHECK-SD-NEXT:    xtn v22.2s, v6.2d
+; CHECK-SD-NEXT:    xtn v17.2s, v1.2d
+; CHECK-SD-NEXT:    xtn v21.2s, v5.2d
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI72_0]
+; CHECK-SD-NEXT:    xtn v16.2s, v0.2d
+; CHECK-SD-NEXT:    xtn v20.2s, v4.2d
+; CHECK-SD-NEXT:    tbl v0.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v1.16b
+; CHECK-SD-NEXT:    tbl v1.16b, { v20.16b, v21.16b, v22.16b, v23.16b }, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fptos_v16f64_v16i16:
@@ -1592,21 +1592,21 @@ define <16 x i16> @fptou_v16f64_v16i16(<16 x double> %a) {
 ; CHECK-SD-NEXT:    adrp x8, .LCPI73_0
 ; CHECK-SD-NEXT:    fcvtzs v2.2d, v2.2d
 ; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI73_0]
 ; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
 ; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
-; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
-; CHECK-SD-NEXT:    xtn v7.2s, v7.2d
-; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
-; CHECK-SD-NEXT:    xtn v6.2s, v6.2d
-; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
-; CHECK-SD-NEXT:    xtn v5.2s, v5.2d
-; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
-; CHECK-SD-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v16.16b
+; CHECK-SD-NEXT:    xtn v19.2s, v3.2d
+; CHECK-SD-NEXT:    xtn v23.2s, v7.2d
+; CHECK-SD-NEXT:    xtn v18.2s, v2.2d
+; CHECK-SD-NEXT:    xtn v22.2s, v6.2d
+; CHECK-SD-NEXT:    xtn v17.2s, v1.2d
+; CHECK-SD-NEXT:    xtn v21.2s, v5.2d
+; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI73_0]
+; CHECK-SD-NEXT:    xtn v16.2s, v0.2d
+; CHECK-SD-NEXT:    xtn v20.2s, v4.2d
+; CHECK-SD-NEXT:    tbl v0.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v1.16b
+; CHECK-SD-NEXT:    tbl v1.16b, { v20.16b, v21.16b, v22.16b, v23.16b }, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fptou_v16f64_v16i16:
@@ -1634,48 +1634,65 @@ entry:
 define <32 x i16> @fptos_v32f64_v32i16(<32 x double> %a) {
 ; CHECK-SD-LABEL: fptos_v32f64_v32i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp q16, q17, [sp, #64]
+; CHECK-SD-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    .cfi_offset b8, -8
+; CHECK-SD-NEXT:    .cfi_offset b9, -16
+; CHECK-SD-NEXT:    .cfi_offset b10, -24
+; CHECK-SD-NEXT:    .cfi_offset b11, -32
+; CHECK-SD-NEXT:    .cfi_offset b12, -40
+; CHECK-SD-NEXT:    .cfi_offset b13, -48
+; CHECK-SD-NEXT:    .cfi_offset b14, -56
+; CHECK-SD-NEXT:    .cfi_offset b15, -64
 ; CHECK-SD-NEXT:    fcvtzs v3.2d, v3.2d
-; CHECK-SD-NEXT:    ldp q18, q19, [sp, #96]
-; CHECK-SD-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-SD-NEXT:    ldp q20, q21, [sp, #32]
-; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-SD-NEXT:    ldp q22, q23, [sp]
-; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
-; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
-; CHECK-SD-NEXT:    fcvtzs v19.2d, v19.2d
-; CHECK-SD-NEXT:    fcvtzs v21.2d, v21.2d
-; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
-; CHECK-SD-NEXT:    fcvtzs v20.2d, v20.2d
-; CHECK-SD-NEXT:    fcvtzs v18.2d, v18.2d
-; CHECK-SD-NEXT:    fcvtzs v23.2d, v23.2d
-; CHECK-SD-NEXT:    fcvtzs v17.2d, v17.2d
-; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
-; CHECK-SD-NEXT:    fcvtzs v22.2d, v22.2d
-; CHECK-SD-NEXT:    fcvtzs v16.2d, v16.2d
-; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
-; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
+; CHECK-SD-NEXT:    fcvtzs v18.2d, v2.2d
 ; CHECK-SD-NEXT:    adrp x8, .LCPI74_0
-; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
-; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    xtn v7.2s, v7.2d
-; CHECK-SD-NEXT:    xtn v6.2s, v6.2d
-; CHECK-SD-NEXT:    xtn v21.2s, v21.2d
-; CHECK-SD-NEXT:    xtn v25.2s, v19.2d
-; CHECK-SD-NEXT:    xtn v5.2s, v5.2d
-; CHECK-SD-NEXT:    xtn v20.2s, v20.2d
-; CHECK-SD-NEXT:    xtn v24.2s, v18.2d
-; CHECK-SD-NEXT:    xtn v19.2s, v23.2d
-; CHECK-SD-NEXT:    xtn v23.2s, v17.2d
-; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
-; CHECK-SD-NEXT:    xtn v18.2s, v22.2d
-; CHECK-SD-NEXT:    xtn v22.2s, v16.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI74_0]
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
-; CHECK-SD-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v16.16b
-; CHECK-SD-NEXT:    tbl v2.16b, { v18.16b, v19.16b, v20.16b, v21.16b }, v16.16b
-; CHECK-SD-NEXT:    tbl v3.16b, { v22.16b, v23.16b, v24.16b, v25.16b }, v16.16b
+; CHECK-SD-NEXT:    fcvtzs v19.2d, v1.2d
+; CHECK-SD-NEXT:    ldp q20, q21, [sp, #160]
+; CHECK-SD-NEXT:    fcvtzs v22.2d, v0.2d
+; CHECK-SD-NEXT:    ldp q23, q24, [sp, #96]
+; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-SD-NEXT:    ldp q16, q17, [sp, #128]
+; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
+; CHECK-SD-NEXT:    fcvtzs v21.2d, v21.2d
+; CHECK-SD-NEXT:    fcvtzs v20.2d, v20.2d
+; CHECK-SD-NEXT:    xtn v2.2s, v18.2d
+; CHECK-SD-NEXT:    ldp q18, q25, [sp, #64]
+; CHECK-SD-NEXT:    xtn v1.2s, v19.2d
+; CHECK-SD-NEXT:    fcvtzs v19.2d, v24.2d
+; CHECK-SD-NEXT:    fcvtzs v17.2d, v17.2d
+; CHECK-SD-NEXT:    xtn v0.2s, v22.2d
+; CHECK-SD-NEXT:    fcvtzs v22.2d, v23.2d
+; CHECK-SD-NEXT:    xtn v29.2s, v7.2d
+; CHECK-SD-NEXT:    fcvtzs v7.2d, v25.2d
+; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-SD-NEXT:    fcvtzs v18.2d, v18.2d
+; CHECK-SD-NEXT:    fcvtzs v16.2d, v16.2d
+; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
+; CHECK-SD-NEXT:    xtn v15.2s, v21.2d
+; CHECK-SD-NEXT:    xtn v11.2s, v19.2d
+; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
+; CHECK-SD-NEXT:    xtn v14.2s, v20.2d
+; CHECK-SD-NEXT:    xtn v10.2s, v22.2d
+; CHECK-SD-NEXT:    xtn v13.2s, v17.2d
+; CHECK-SD-NEXT:    xtn v9.2s, v7.2d
+; CHECK-SD-NEXT:    xtn v28.2s, v6.2d
+; CHECK-SD-NEXT:    xtn v8.2s, v18.2d
+; CHECK-SD-NEXT:    xtn v12.2s, v16.2d
+; CHECK-SD-NEXT:    xtn v27.2s, v5.2d
+; CHECK-SD-NEXT:    xtn v26.2s, v4.2d
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI74_0]
+; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
+; CHECK-SD-NEXT:    tbl v2.16b, { v8.16b, v9.16b, v10.16b, v11.16b }, v4.16b
+; CHECK-SD-NEXT:    tbl v3.16b, { v12.16b, v13.16b, v14.16b, v15.16b }, v4.16b
+; CHECK-SD-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    tbl v1.16b, { v26.16b, v27.16b, v28.16b, v29.16b }, v4.16b
+; CHECK-SD-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fptos_v32f64_v32i16:
@@ -1721,48 +1738,65 @@ entry:
 define <32 x i16> @fptou_v32f64_v32i16(<32 x double> %a) {
 ; CHECK-SD-LABEL: fptou_v32f64_v32i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp q16, q17, [sp, #64]
+; CHECK-SD-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-SD-NEXT:    .cfi_offset b8, -8
+; CHECK-SD-NEXT:    .cfi_offset b9, -16
+; CHECK-SD-NEXT:    .cfi_offset b10, -24
+; CHECK-SD-NEXT:    .cfi_offset b11, -32
+; CHECK-SD-NEXT:    .cfi_offset b12, -40
+; CHECK-SD-NEXT:    .cfi_offset b13, -48
+; CHECK-SD-NEXT:    .cfi_offset b14, -56
+; CHECK-SD-NEXT:    .cfi_offset b15, -64
 ; CHECK-SD-NEXT:    fcvtzs v3.2d, v3.2d
-; CHECK-SD-NEXT:    ldp q18, q19, [sp, #96]
-; CHECK-SD-NEXT:    fcvtzs v2.2d, v2.2d
-; CHECK-SD-NEXT:    ldp q20, q21, [sp, #32]
-; CHECK-SD-NEXT:    fcvtzs v1.2d, v1.2d
-; CHECK-SD-NEXT:    ldp q22, q23, [sp]
-; CHECK-SD-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
-; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
-; CHECK-SD-NEXT:    fcvtzs v19.2d, v19.2d
-; CHECK-SD-NEXT:    fcvtzs v21.2d, v21.2d
-; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
-; CHECK-SD-NEXT:    fcvtzs v20.2d, v20.2d
-; CHECK-SD-NEXT:    fcvtzs v18.2d, v18.2d
-; CHECK-SD-NEXT:    fcvtzs v23.2d, v23.2d
-; CHECK-SD-NEXT:    fcvtzs v17.2d, v17.2d
-; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
-; CHECK-SD-NEXT:    fcvtzs v22.2d, v22.2d
-; CHECK-SD-NEXT:    fcvtzs v16.2d, v16.2d
-; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
-; CHECK-SD-NEXT:    xtn v2.2s, v2.2d
+; CHECK-SD-NEXT:    fcvtzs v18.2d, v2.2d
 ; CHECK-SD-NEXT:    adrp x8, .LCPI75_0
-; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
-; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    xtn v7.2s, v7.2d
-; CHECK-SD-NEXT:    xtn v6.2s, v6.2d
-; CHECK-SD-NEXT:    xtn v21.2s, v21.2d
-; CHECK-SD-NEXT:    xtn v25.2s, v19.2d
-; CHECK-SD-NEXT:    xtn v5.2s, v5.2d
-; CHECK-SD-NEXT:    xtn v20.2s, v20.2d
-; CHECK-SD-NEXT:    xtn v24.2s, v18.2d
-; CHECK-SD-NEXT:    xtn v19.2s, v23.2d
-; CHECK-SD-NEXT:    xtn v23.2s, v17.2d
-; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
-; CHECK-SD-NEXT:    xtn v18.2s, v22.2d
-; CHECK-SD-NEXT:    xtn v22.2s, v16.2d
-; CHECK-SD-NEXT:    ldr q16, [x8, :lo12:.LCPI75_0]
-; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v16.16b
-; CHECK-SD-NEXT:    tbl v1.16b, { v4.16b, v5.16b, v6.16b, v7.16b }, v16.16b
-; CHECK-SD-NEXT:    tbl v2.16b, { v18.16b, v19.16b, v20.16b, v21.16b }, v16.16b
-; CHECK-SD-NEXT:    tbl v3.16b, { v22.16b, v23.16b, v24.16b, v25.16b }, v16.16b
+; CHECK-SD-NEXT:    fcvtzs v19.2d, v1.2d
+; CHECK-SD-NEXT:    ldp q20, q21, [sp, #160]
+; CHECK-SD-NEXT:    fcvtzs v22.2d, v0.2d
+; CHECK-SD-NEXT:    ldp q23, q24, [sp, #96]
+; CHECK-SD-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-SD-NEXT:    ldp q16, q17, [sp, #128]
+; CHECK-SD-NEXT:    xtn v3.2s, v3.2d
+; CHECK-SD-NEXT:    fcvtzs v21.2d, v21.2d
+; CHECK-SD-NEXT:    fcvtzs v20.2d, v20.2d
+; CHECK-SD-NEXT:    xtn v2.2s, v18.2d
+; CHECK-SD-NEXT:    ldp q18, q25, [sp, #64]
+; CHECK-SD-NEXT:    xtn v1.2s, v19.2d
+; CHECK-SD-NEXT:    fcvtzs v19.2d, v24.2d
+; CHECK-SD-NEXT:    fcvtzs v17.2d, v17.2d
+; CHECK-SD-NEXT:    xtn v0.2s, v22.2d
+; CHECK-SD-NEXT:    fcvtzs v22.2d, v23.2d
+; CHECK-SD-NEXT:    xtn v29.2s, v7.2d
+; CHECK-SD-NEXT:    fcvtzs v7.2d, v25.2d
+; CHECK-SD-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-SD-NEXT:    fcvtzs v18.2d, v18.2d
+; CHECK-SD-NEXT:    fcvtzs v16.2d, v16.2d
+; CHECK-SD-NEXT:    fcvtzs v5.2d, v5.2d
+; CHECK-SD-NEXT:    xtn v15.2s, v21.2d
+; CHECK-SD-NEXT:    xtn v11.2s, v19.2d
+; CHECK-SD-NEXT:    fcvtzs v4.2d, v4.2d
+; CHECK-SD-NEXT:    xtn v14.2s, v20.2d
+; CHECK-SD-NEXT:    xtn v10.2s, v22.2d
+; CHECK-SD-NEXT:    xtn v13.2s, v17.2d
+; CHECK-SD-NEXT:    xtn v9.2s, v7.2d
+; CHECK-SD-NEXT:    xtn v28.2s, v6.2d
+; CHECK-SD-NEXT:    xtn v8.2s, v18.2d
+; CHECK-SD-NEXT:    xtn v12.2s, v16.2d
+; CHECK-SD-NEXT:    xtn v27.2s, v5.2d
+; CHECK-SD-NEXT:    xtn v26.2s, v4.2d
+; CHECK-SD-NEXT:    ldr q4, [x8, :lo12:.LCPI75_0]
+; CHECK-SD-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
+; CHECK-SD-NEXT:    tbl v2.16b, { v8.16b, v9.16b, v10.16b, v11.16b }, v4.16b
+; CHECK-SD-NEXT:    tbl v3.16b, { v12.16b, v13.16b, v14.16b, v15.16b }, v4.16b
+; CHECK-SD-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    tbl v1.16b, { v26.16b, v27.16b, v28.16b, v29.16b }, v4.16b
+; CHECK-SD-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fptou_v32f64_v32i16:

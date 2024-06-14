@@ -38,6 +38,8 @@ define void @interleave_store_without_splat(ptr %a, <4 x i32> %v1, <4 x i32> %v2
 ; CHECK-LABEL: interleave_store_without_splat:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    st2w { z0.s, z1.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 ;
@@ -73,12 +75,13 @@ define void @interleave_store_legalization(ptr %a, <8 x i32> %v1, <8 x i32> %v2)
 ; CHECK-LABEL: interleave_store_legalization:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z5.d, z2.d
-; CHECK-NEXT:    mov z4.d, z0.d
-; CHECK-NEXT:    mov x8, #8 // =0x8
-; CHECK-NEXT:    mov z2.d, z3.d
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z2_z3
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov x8, #8 // =0x8
+; CHECK-NEXT:    mov z4.d, z0.d
+; CHECK-NEXT:    mov z2.d, z1.d
 ; CHECK-NEXT:    st2w { z4.s, z5.s }, p0, [x0]
-; CHECK-NEXT:    st2w { z1.s, z2.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    st2w { z2.s, z3.s }, p0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: interleave_store_legalization:
