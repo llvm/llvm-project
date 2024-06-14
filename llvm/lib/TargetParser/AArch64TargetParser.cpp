@@ -156,17 +156,17 @@ std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
   return {};
 }
 
-void AArch64::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
+void AArch64::PrintSupportedExtensions() {
   outs() << "All available -march extensions for AArch64\n\n"
          << "    " << left_justify("Name", 20)
-         << (DescMap.empty() ? "\n" : "Description\n");
+         << "Description\n";
   for (const auto &Ext : Extensions) {
     // Extensions without a feature cannot be used with -march.
     if (!Ext.UserVisibleName.empty() && !Ext.TargetFeature.empty()) {
-      std::string Description = DescMap[Ext.UserVisibleName].str();
       outs() << "    "
-             << format(Description.empty() ? "%s\n" : "%-20s%s\n",
-                       Ext.UserVisibleName.str().c_str(), Description.c_str());
+             << format(Ext.Description.empty() ? "%s\n" : "%-20s%s\n",
+                       Ext.UserVisibleName.str().c_str(),
+                       Ext.Description.str().c_str());
     }
   }
 }

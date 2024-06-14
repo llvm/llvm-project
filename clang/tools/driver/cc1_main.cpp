@@ -148,7 +148,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   if (MachineTriple.isRISCV())
     llvm::riscvExtensionsHelp(DescMap);
   else if (MachineTriple.isAArch64())
-    llvm::AArch64::PrintSupportedExtensions(DescMap);
+    llvm::AArch64::PrintSupportedExtensions();
   else if (MachineTriple.isARM())
     llvm::ARM::PrintSupportedExtensions(DescMap);
   else {

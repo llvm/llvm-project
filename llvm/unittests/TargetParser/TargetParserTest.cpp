@@ -2352,17 +2352,11 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
 TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
   std::string expected =
       "All available -march extensions for AArch64\n\n"
-      "    Name                Description\n"
-      "    aes                 This is a long dummy description\n"
-      "    b16b16\n"
-      "    bf16\n";
-
-  StringMap<StringRef> DummyMap;
-  DummyMap["aes"] = "This is a long dummy description";
+      "    Name                Description\n";
 
   outs().flush();
   testing::internal::CaptureStdout();
-  AArch64::PrintSupportedExtensions(DummyMap);
+  AArch64::PrintSupportedExtensions();
   outs().flush();
   std::string captured = testing::internal::GetCapturedStdout();
 

@@ -120,6 +120,7 @@ struct ExtensionInfo {
   std::optional<StringRef> Alias; // An alias for this extension, if one exists.
   ArchExtKind ID;                 // Corresponding to the ArchExtKind, this
                                   // extensions representation in the bitfield.
+  StringRef Description;          // The textual description of the extension
   StringRef TargetFeature;        // -target-feature/-mattr enable string, e.g. "+spe"
   StringRef NegTargetFeature;     // -target-feature/-mattr disable string, e.g. "-spe"
 };
@@ -343,7 +344,7 @@ bool isX18ReservedByDefault(const Triple &TT);
 // themselves, they are sequential (0, 1, 2, 3, ...).
 uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
-void PrintSupportedExtensions(StringMap<StringRef> DescMap);
+void PrintSupportedExtensions();
 
 } // namespace AArch64
 } // namespace llvm
