@@ -986,26 +986,15 @@ using Int = BigInt<Bits, true, internal::WordTypeSelectorT<Bits>>;
 // Provides limits of BigInt.
 template <size_t Bits, bool Signed, typename T>
 struct cpp::numeric_limits<BigInt<Bits, Signed, T>> {
+  LIBC_INLINE static constexpr BigInt<Bits, Signed, T> max() {
+    return BigInt<Bits, Signed, T>::max();
+  }
+  LIBC_INLINE static constexpr BigInt<Bits, Signed, T> min() {
+    return BigInt<Bits, Signed, T>::min();
+  }
+  // Meant to match std::numeric_limits interface.
+  // NOLINTNEXTLINE(readability-identifier-naming)
   LIBC_INLINE_VAR static constexpr int digits = Bits - Signed;
-};
-
-// Provides limits of U/Int<128>.
-template <> class cpp::numeric_limits<UInt<128>> {
-public:
-  LIBC_INLINE static constexpr UInt<128> max() { return UInt<128>::max(); }
-  LIBC_INLINE static constexpr UInt<128> min() { return UInt<128>::min(); }
-  // Meant to match std::numeric_limits interface.
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  LIBC_INLINE_VAR static constexpr int digits = 128;
-};
-
-template <> class cpp::numeric_limits<Int<128>> {
-public:
-  LIBC_INLINE static constexpr Int<128> max() { return Int<128>::max(); }
-  LIBC_INLINE static constexpr Int<128> min() { return Int<128>::min(); }
-  // Meant to match std::numeric_limits interface.
-  // NOLINTNEXTLINE(readability-identifier-naming)
-  LIBC_INLINE_VAR static constexpr int digits = 128;
 };
 
 // type traits to determine whether a T is a BigInt.
@@ -1086,6 +1075,8 @@ struct is_unsigned_integral_or_big_int
           cpp::is_same_v<T, make_integral_or_big_int_unsigned_t<T>>> {};
 
 template <typename T>
+// Meant to look like <type_traits> helper variable templates.
+// NOLINTNEXTLINE(readability-identifier-naming)
 LIBC_INLINE_VAR constexpr bool is_unsigned_integral_or_big_int_v =
     is_unsigned_integral_or_big_int<T>::value;
 
