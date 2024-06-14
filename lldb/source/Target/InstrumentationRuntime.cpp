@@ -60,7 +60,7 @@ void InstrumentationRuntime::ModulesDidLoad(
       if (CheckIfRuntimeIsValid(module_sp)) {
         SetRuntimeModuleSP(module_sp);
         Activate();
-        if (IsActive())
+        if (!IsActive())
           SetRuntimeModuleSP({}); // Don't cache module if activation failed.
         return false; // Stop iterating, we're done.
       }
