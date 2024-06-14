@@ -1240,7 +1240,6 @@ public:
     SLPStore,
     ActiveLaneMask,
     ExplicitVectorLength,
-    ExplicitVectorLengthMask,
     /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
     /// The first operand is the incoming value from the predecessor in VPlan,
     /// the second operand is the incoming value for all other predecessors
