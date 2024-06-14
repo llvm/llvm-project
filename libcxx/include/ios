@@ -617,9 +617,9 @@ private:
   basic_ostream<char_type, traits_type>* __tie_;
 
 #if defined(_LIBCXX_IOS_USE_FILL_HELPER)
-  using _FillType = _FillHelper<_Traits>;
+  using _FillType = _FillHelper<traits_type>;
 #else
-  using _FillType = _SentinelValueFill<_Traits>;
+  using _FillType = _SentinelValueFill<traits_type>;
 #endif
   mutable _FillType __fill_;
 };
