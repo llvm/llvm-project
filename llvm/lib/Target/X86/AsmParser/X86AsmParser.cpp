@@ -90,6 +90,8 @@ class X86AsmParser : public MCTargetAsmParser {
 
   enum OpcodePrefix {
     OpcodePrefix_Default,
+    OpcodePrefix_REX,
+    OpcodePrefix_REX2,
     OpcodePrefix_VEX,
     OpcodePrefix_VEX2,
     OpcodePrefix_VEX3,
@@ -3201,7 +3203,11 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
         return Error(Parser.getTok().getLoc(), "Expected '}'");
       Parser.Lex(); // Eat curly.
 
-      if (Prefix == "vex")
+      if (Prefix == "rex")
+        ForcedOpcodePrefix = OpcodePrefix_REX;
+      else if (Prefix == "rex2")
+        ForcedOpcodePrefix = OpcodePrefix_REX2;
+      else if (Prefix == "vex")
         ForcedOpcodePrefix = OpcodePrefix_VEX;
       else if (Prefix == "vex2")
         ForcedOpcodePrefix = OpcodePrefix_VEX2;
@@ -4025,9 +4031,13 @@ bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   MCInst Inst;
 
-  // If VEX/EVEX encoding is forced, we need to pass the USE_* flag to the
-  // encoder and printer.
-  if (ForcedOpcodePrefix == OpcodePrefix_VEX)
+  // If REX/REX2/VEX/EVEX encoding is forced, we need to pass the USE_* flag to
+  // the encoder and printer.
+  if (ForcedOpcodePrefix == OpcodePrefix_REX)
+    Prefixes |= X86::IP_USE_REX;
+  else if (ForcedOpcodePrefix == OpcodePrefix_REX2)
+    Prefixes |= X86::IP_USE_REX2;
+  else if (ForcedOpcodePrefix == OpcodePrefix_VEX)
     Prefixes |= X86::IP_USE_VEX;
   else if (ForcedOpcodePrefix == OpcodePrefix_VEX2)
     Prefixes |= X86::IP_USE_VEX2;
@@ -4095,24 +4105,34 @@ bool X86AsmParser::ErrorMissingFeature(SMLoc IDLoc,
 unsigned X86AsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &MCID = MII.get(Opc);
+  uint64_t TSFlags = MCID.TSFlags;
 
   if (UseApxExtendedReg && !X86II::canUseApxExtendedReg(MCID))
     return Match_Unsupported;
-  if (ForcedNoFlag == !(MCID.TSFlags & X86II::EVEX_NF) && !X86::isCFCMOVCC(Opc))
+  if (ForcedNoFlag == !(TSFlags & X86II::EVEX_NF) && !X86::isCFCMOVCC(Opc))
     return Match_Unsupported;
 
-  if (ForcedOpcodePrefix == OpcodePrefix_EVEX &&
-      (MCID.TSFlags & X86II::EncodingMask) != X86II::EVEX)
-    return Match_Unsupported;
+  switch (ForcedOpcodePrefix) {
+  case OpcodePrefix_Default:
+    break;
+  case OpcodePrefix_REX:
+  case OpcodePrefix_REX2:
+    if (TSFlags & X86II::EncodingMask)
+      return Match_Unsupported;
+    break;
+  case OpcodePrefix_VEX:
+  case OpcodePrefix_VEX2:
+  case OpcodePrefix_VEX3:
+    if ((TSFlags & X86II::EncodingMask) != X86II::VEX)
+      return Match_Unsupported;
+    break;
+  case OpcodePrefix_EVEX:
+    if ((TSFlags & X86II::EncodingMask) != X86II::EVEX)
+      return Match_Unsupported;
+    break;
+  }
 
-  if ((ForcedOpcodePrefix == OpcodePrefix_VEX ||
-       ForcedOpcodePrefix == OpcodePrefix_VEX2 ||
-       ForcedOpcodePrefix == OpcodePrefix_VEX3) &&
-      (MCID.TSFlags & X86II::EncodingMask) != X86II::VEX)
-    return Match_Unsupported;
-
-  if ((MCID.TSFlags & X86II::ExplicitOpPrefixMask) ==
-          X86II::ExplicitVEXPrefix &&
+  if ((TSFlags & X86II::ExplicitOpPrefixMask) == X86II::ExplicitVEXPrefix &&
       (ForcedOpcodePrefix != OpcodePrefix_VEX &&
        ForcedOpcodePrefix != OpcodePrefix_VEX2 &&
        ForcedOpcodePrefix != OpcodePrefix_VEX3))
