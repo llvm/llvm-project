@@ -121,7 +121,7 @@ using MemoryMergeMutatorFunc = std::function<LogicalResult(
 
 struct MergeAllocationOptions {
   bool checkOnly = false;
-  bool noLocalityFirst = false;
+  std::string plannerOptions;
   int64_t alignment = 64;
   TraceCollectorFunc tracer;
   MemoryPlannerFunc planner;

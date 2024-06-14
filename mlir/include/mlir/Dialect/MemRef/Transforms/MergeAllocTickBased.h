@@ -27,10 +27,10 @@ namespace memref {
 /// Usually ticks should be non-negative numbers. There are two special ticks
 /// defined here.
 namespace special_ticks {
-/// the memref is not accessed
+/// the memref is not yet accessed
 static constexpr int64_t NO_ACCESS = -1;
-/// complex access happens on this memref, like func.return
-static constexpr int64_t COMPLEX_ACCESS = -2;
+/// untraceable access happens on this memref, like func.return
+static constexpr int64_t UNTRACEABLE_ACCESS = -2;
 } // namespace special_ticks
 
 /// the collected tick [first, last] for a memref allocation
@@ -44,7 +44,7 @@ struct Tick {
 
   /// access the memref at the tick, will update firstAccess and lastAccess
   /// based on the tick
-  void access(int64_t tick);
+  void update(int64_t tick);
 };
 
 /// A complex scope object is addition info for a RegionBranchOpInterface or

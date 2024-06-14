@@ -275,14 +275,16 @@ def MergeAlloc : Pass<"merge-alloc", "func::FuncOp">  {
     address ranges that are considered "hot" in cache for an later allocation. 
   }];
   let options = [
-    Option<"optionCheck", "check", "bool",
+    Option<"optionAnalysisOnly", "analysis-only", "bool",
        /*default=*/"false",
        "Skip the mutation of the IR and only mark the lifetime and scope on the"
-       " operations. Useful for debugging and testing.">,
-    Option<"optionNoLocality", "no-consider-locality", "bool",
-       /*default=*/"false",
-       "Don't consider the cache locality when reusing the buffers. "
-       "This option may result in smaller total memory usage.">,
+       " attr of operations. Useful for debugging and testing.">,
+    Option<"plannerOptions", "planner-options", "std::string",
+       /*default=*/"\"\"",
+       "The options for the memory-planner. `cost-model` for using a cost-"
+       "model considering both cache locality and memory size. `size-first`"
+       " may generate allocations with smaller total size without considering"
+       " cache locality. By default `cost-model` is used.">,
     Option<"optionAlignment", "alignment", "int64_t",
        /*default=*/"64",
        "The alignment of the merged allocations">,

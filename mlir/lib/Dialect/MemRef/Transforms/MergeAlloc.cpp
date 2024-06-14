@@ -1,4 +1,4 @@
-//===- MergeAlloc.cpp - Calling convention conversion ---------------------===//
+//===- MergeAlloc.cpp - General framework for merge-allocation ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -58,8 +58,8 @@ class MergeAllocPass : public memref::impl::MergeAllocBase<MergeAllocPass> {
   void runOnOperation() override {
     memref::MergeAllocationOptions opt;
     if (!options) {
-      opt.checkOnly = optionCheck;
-      opt.noLocalityFirst = optionNoLocality;
+      opt.checkOnly = optionAnalysisOnly;
+      opt.plannerOptions = plannerOptions;
       opt.alignment = optionAlignment;
       opt.tracer = memref::TickCollecter();
       opt.planner = memref::tickBasedPlanMemory;

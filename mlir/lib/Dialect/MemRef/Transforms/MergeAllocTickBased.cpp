@@ -36,12 +36,12 @@ static bool isMemRefTypeOk(MemRefType type) {
   return type.hasStaticShape() && type.getLayout().isIdentity();
 }
 
-void Tick::access(int64_t tick) {
-  if (tick == COMPLEX_ACCESS) {
-    firstAccess = COMPLEX_ACCESS;
-    lastAccess = COMPLEX_ACCESS;
+void Tick::update(int64_t tick) {
+  if (tick == UNTRACEABLE_ACCESS) {
+    firstAccess = UNTRACEABLE_ACCESS;
+    lastAccess = UNTRACEABLE_ACCESS;
   }
-  if (firstAccess == COMPLEX_ACCESS) {
+  if (firstAccess == UNTRACEABLE_ACCESS) {
     return;
   }
   if (firstAccess == NO_ACCESS) {
@@ -83,8 +83,8 @@ LogicalResult TickCollecter::onPopComplexScope(TickCollecterStates *s,
     if (needsResetTick(s, scope.scope, op)) {
       // let all referenced buffers have overlapped lifetime
       auto &tick = s->allocTicks[op];
-      tick.access(scope.startTick);
-      tick.access(endTick);
+      tick.update(scope.startTick);
+      tick.update(endTick);
     }
   }
   return success();
@@ -115,7 +115,7 @@ void TickCollecter::accessValue(TickCollecterStates *s, Value v,
     for (auto &&base : s->aliasAnaly.resolveReverse(refv)) {
       auto defop = base.getDefiningOp();
       if (isa_and_present<memref::AllocOp>(defop)) {
-        s->allocTicks[defop].access(complex ? COMPLEX_ACCESS : s->curTick);
+        s->allocTicks[defop].update(complex ? UNTRACEABLE_ACCESS : s->curTick);
         if (!s->complexScopeStack.empty()) {
           s->complexScopeStack.back().operations.insert(defop);
         }
@@ -159,7 +159,7 @@ void TickCollecter::pushComplexScope(TickCollecterStates *s,
 
 bool TickCollecter::isMergeableAlloc(TickCollecterStates *s, Operation *op,
                                      int64_t tick) const {
-  if (tick == COMPLEX_ACCESS) {
+  if (tick == UNTRACEABLE_ACCESS) {
     return false;
   }
   if (!isMemRefTypeOk(cast<MemRefType>(op->getResultTypes().front()))) {
@@ -311,16 +311,21 @@ FailureOr<MemorySchedule> tickBasedPlanMemory(Operation *op,
                                               const MergeAllocationOptions &o) {
   auto traceObj = dyn_cast<TickTraceResult>(&tr);
   if (!traceObj) {
-    return failure();
+    return op->emitOpError("Unrecognized trace result.");
   }
   auto &traces = traceObj->traces;
   if (traces.empty()) {
     return MemorySchedule{};
   }
+  bool useCostModel =
+      o.plannerOptions.empty() || o.plannerOptions == "cost-model";
+  if (!useCostModel && o.plannerOptions != "size-first") {
+    return op->emitOpError("Unrecognized planner option");
+  }
   std::unordered_map<uintptr_t, std::size_t> outSchedule;
   std::unordered_map<uintptr_t, std::vector<uintptr_t>> dummy;
   auto total = memoryplan::scheduleMemoryAllocations(
-      traces, o.alignment, !o.noLocalityFirst, memoryplan::InplaceInfoMap(),
+      traces, o.alignment, useCostModel, memoryplan::InplaceInfoMap(),
       outSchedule, dummy);
   MemorySchedule ret;
   ret.totalSize = total;

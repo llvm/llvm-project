@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -p 'builtin.module(func.func(merge-alloc{check}))'  %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -p 'builtin.module(func.func(merge-alloc{analysis-only}))'  %s | FileCheck %s
 
 // CHECK-DAG: func.func @basic() -> memref<8x64xf32>  attributes {__mergealloc_scope = [[TOPSCOPE:[0-9]+]]
 func.func @basic() -> memref<8x64xf32> {
