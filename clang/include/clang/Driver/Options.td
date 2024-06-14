@@ -8262,6 +8262,8 @@ def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,
   HelpText<"Only inline functions explicitly or implicitly marked inline">;
 def : CLFlag<"Ob2">, Alias<_SLASH_O>, AliasArgs<["b2"]>,
   HelpText<"Inline functions as deemed beneficial by the compiler">;
+def : CLFlag<"Ob3">, Alias<_SLASH_O>, AliasArgs<["b3"]>,
+  HelpText<"Same as /Ob2">;
 def : CLFlag<"Od", [CLOption, DXCOption]>, Alias<_SLASH_O>, AliasArgs<["d"]>,
   HelpText<"Disable optimization">;
 def : CLFlag<"Og">, Alias<_SLASH_O>, AliasArgs<["g"]>,
