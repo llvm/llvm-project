@@ -147,9 +147,9 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
   }
 }
 
-bool SampleProfileMatcher::isFunctionEqual(const FunctionId &IRFuncName,
-                                           const FunctionId &ProfileFuncName,
-                                           bool FindMatchedProfileOnly) {
+bool SampleProfileMatcher::functionMatchesProfile(
+    const FunctionId &IRFuncName, const FunctionId &ProfileFuncName,
+    bool FindMatchedProfileOnly) {
   if (IRFuncName == ProfileFuncName)
     return true;
   if (!SalvageUnusedProfile)
@@ -238,8 +238,9 @@ SampleProfileMatcher::longestCommonSequence(const AnchorList &AnchorList1,
         X = V[Index(K - 1)] + 1;
       Y = X - K;
       while (X < Size1 && Y < Size2 &&
-             isFunctionEqual(AnchorList1[X].second, AnchorList2[Y].second,
-                             !MatchUnusedFunction))
+             functionMatchesProfile(AnchorList1[X].second,
+                                    AnchorList2[Y].second,
+                                    !MatchUnusedFunction))
         X++, Y++;
 
       V[Index(K)] = X;
@@ -886,8 +887,21 @@ void SampleProfileMatcher::updateProfilesAndSymbolMap() {
   }
 }
 
-void SampleProfileMatcher::runOnModule(
-    std::vector<Function *> &OrderedFuncList) {
+std::vector<Function *> SampleProfileMatcher::buildTopDownFuncOrder() {
+  std::vector<Function *> FunctionOrderList;
+  FunctionOrderList.reserve(M.size());
+  ::buildTopDownFuncOrder(CG, FunctionOrderList);
+  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
+  LLVM_DEBUG({
+    dbgs() << "Function processing order:\n";
+    for (auto F : FunctionOrderList) {
+      dbgs() << F->getName() << "\n";
+    }
+  });
+  return FunctionOrderList;
+}
+
+void SampleProfileMatcher::runOnModule() {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
   if (SalvageUnusedProfile)
@@ -895,7 +909,7 @@ void SampleProfileMatcher::runOnModule(
 
   // Process the matching in top-down order so that the caller matching result
   // can be used to the callee matching.
-  for (auto *F : OrderedFuncList) {
+  for (auto *F : buildTopDownFuncOrder()) {
     if (skipProfileForFunction(*F))
       continue;
     runOnFunction(*F);

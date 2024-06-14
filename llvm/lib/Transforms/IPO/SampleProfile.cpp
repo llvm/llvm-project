@@ -462,12 +462,13 @@ public:
       IntrusiveRefCntPtr<vfs::FileSystem> FS,
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
-      std::function<const TargetLibraryInfo &(Function &)> GetTLI)
+      std::function<const TargetLibraryInfo &(Function &)> GetTLI,
+      LazyCallGraph &CG)
       : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName),
                                     std::move(FS)),
         GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), GetTLI(std::move(GetTLI)),
-        LTOPhase(LTOPhase),
+        CG(CG), LTOPhase(LTOPhase),
         AnnotatedPassName(AnnotateSampleProfileInlinePhase
                               ? llvm::AnnotateInlinePassName(InlineContext{
                                     LTOPhase, InlinePass::SampleProfileInliner})
@@ -475,7 +476,7 @@ public:
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
-                   ProfileSummaryInfo *_PSI, LazyCallGraph &CG);
+                   ProfileSummaryInfo *_PSI);
 
 protected:
   bool runOnFunction(Function &F, ModuleAnalysisManager *AM);
@@ -530,6 +531,7 @@ protected:
   std::function<AssumptionCache &(Function &)> GetAC;
   std::function<TargetTransformInfo &(Function &)> GetTTI;
   std::function<const TargetLibraryInfo &(Function &)> GetTLI;
+  LazyCallGraph &CG;
 
   /// Profile tracker for different context.
   std::unique_ptr<SampleContextTracker> ContextTracker;
@@ -1934,18 +1936,8 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
       }
       ++CGI;
     }
-  } else {
-    CG.buildRefSCCs();
-    for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
-      for (LazyCallGraph::SCC &C : RC) {
-        for (LazyCallGraph::Node &N : C) {
-          Function &F = N.getFunction();
-          if (!skipProfileForFunction(F))
-            FunctionOrderList.push_back(&F);
-        }
-      }
-    }
-  }
+  } else
+    buildTopDownFuncOrder(CG, FunctionOrderList);
 
   std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
 
@@ -2077,7 +2069,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
   if (ReportProfileStaleness || PersistProfileStaleness ||
       SalvageStaleProfile) {
     MatchingManager = std::make_unique<SampleProfileMatcher>(
-        M, *Reader, ProbeManager.get(), LTOPhase, SymbolMap, PSL);
+        M, *Reader, CG, ProbeManager.get(), LTOPhase, SymbolMap, PSL);
   }
 
   return true;
@@ -2147,8 +2139,7 @@ void SampleProfileLoader::removePseudoProbeInsts(Module &M) {
 }
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
-                                      ProfileSummaryInfo *_PSI,
-                                      LazyCallGraph &CG) {
+                                      ProfileSummaryInfo *_PSI) {
   GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
 
   PSI = _PSI;
@@ -2196,16 +2187,14 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   assert(SymbolMap.count(FunctionId()) == 0 &&
          "No empty StringRef should be added in SymbolMap");
 
-  std::vector<Function *> OrderedFuncList = buildFunctionOrder(M, CG);
-
   if (ReportProfileStaleness || PersistProfileStaleness ||
       SalvageStaleProfile) {
-    MatchingManager->runOnModule(OrderedFuncList);
+    MatchingManager->runOnModule();
     MatchingManager->clearMatchingData();
   }
 
   bool retval = false;
-  for (auto *F : OrderedFuncList) {
+  for (auto *F : buildFunctionOrder(M, CG)) {
     assert(!F->isDeclaration());
     clearFunctionData();
     retval |= runOnFunction(*F, AM);
@@ -2332,19 +2321,18 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
 
   if (!FS)
     FS = vfs::getRealFileSystem();
+  LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
 
   SampleProfileLoader SampleLoader(
       ProfileFileName.empty() ? SampleProfileFile : ProfileFileName,
       ProfileRemappingFileName.empty() ? SampleProfileRemappingFile
                                        : ProfileRemappingFileName,
-      LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI);
-
+      LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI, CG);
   if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();
 
   ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
-  LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
-  if (!SampleLoader.runOnModule(M, &AM, PSI, CG))
+  if (!SampleLoader.runOnModule(M, &AM, PSI))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

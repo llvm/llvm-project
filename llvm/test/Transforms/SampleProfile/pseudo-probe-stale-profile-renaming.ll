@@ -10,10 +10,10 @@
 ; CHECK: Run stale profile matching for main
 ; CHECK: The similarity between new_foo(IR) and foo(profile) is 0.86
 ; CHECK: Function:new_foo matches profile:foo
-; CHECK: Run stale profile matching for test_noninline
 ; CHECK: Run stale profile matching for cold_func
 ; CHECK: The checksums for new_block_only(IR) and block_only(Profile) match.
 ; CHECK: Function:new_block_only matches profile:block_only
+; CHECK: Run stale profile matching for test_noninline
 ; CHECK: Run stale profile matching for baz
 ; CHECK: Run stale profile matching for bar
 

@@ -26,6 +26,7 @@ using AnchorMap = std::map<LineLocation, FunctionId>;
 class SampleProfileMatcher {
   Module &M;
   SampleProfileReader &Reader;
+  LazyCallGraph &CG;
   const PseudoProbeManager *ProbeManager;
   const ThinOrFullLTOPhase LTOPhase;
   SampleProfileMap FlattenedProfiles;
@@ -110,13 +111,13 @@ class SampleProfileMatcher {
 
 public:
   SampleProfileMatcher(
-      Module &M, SampleProfileReader &Reader,
+      Module &M, SampleProfileReader &Reader, LazyCallGraph &CG,
       const PseudoProbeManager *ProbeManager, ThinOrFullLTOPhase LTOPhase,
       HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap,
       std::shared_ptr<ProfileSymbolList> PSL)
-      : M(M), Reader(Reader), ProbeManager(ProbeManager), LTOPhase(LTOPhase),
-        SymbolMap(&SymMap), PSL(PSL) {};
-  void runOnModule(std::vector<Function *> &OrderedFuncList);
+      : M(M), Reader(Reader), CG(CG), ProbeManager(ProbeManager),
+        LTOPhase(LTOPhase), SymbolMap(&SymMap), PSL(PSL){};
+  void runOnModule();
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.
@@ -143,6 +144,7 @@ private:
                              const AnchorMap &ProfileAnchors,
                              AnchorList &FilteredIRAnchorsList,
                              AnchorList &FilteredProfileAnchorList);
+  std::vector<Function *> buildTopDownFuncOrder();
   void runOnFunction(Function &F);
   void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
   void findProfileAnchors(const FunctionSamples &FS,
@@ -188,12 +190,6 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
-  // Check if the two functions are equal. If FindMatchedProfileOnly is set,
-  // only search the existing matched function. Otherwise, try matching the two
-  // functions.
-  bool isFunctionEqual(const FunctionId &IRFuncName,
-                       const FunctionId &ProfileFuncName,
-                       bool FindMatchedProfileOnly);
   // This function implements the Myers diff algorithm used for stale profile
   // matching. The algorithm provides a simple and efficient way to find the
   // Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
@@ -216,20 +212,23 @@ private:
                                bool RunCFGMatching, bool RunCGMatching);
   bool functionMatchesProfileHelper(const Function &IRFunc,
                                     const FunctionId &ProfFunc);
+  // Determine if the function matches profile. If FindMatchedProfileOnly is
+  // set, only search the existing matched function. Otherwise, try matching the
+  // two functions.
+  bool functionMatchesProfile(const FunctionId &IRFuncName,
+                              const FunctionId &ProfileFuncName,
+                              bool FindMatchedProfileOnly);
   // Determine if the function matches profile by computing a similarity ratio
   // between two callsite anchors extracted from function and profile. If it's
   // above the threshold, the function matches the profile.
   bool functionMatchesProfile(Function &IRFunc, const FunctionId &ProfFunc,
                               bool FindMatchedProfileOnly);
-  void matchProfileForNewFunctions(const StringMap<Function *> &NewIRFunctions,
-                                   FunctionSamples &FS);
   // Find functions that don't show in the profile or profile symbol list,
   // which are supposed to be new functions. We use them as the targets for
-  // renaming matching.
+  // call graph matching.
   void findNewIRFunctions();
   void updateProfilesAndSymbolMap();
   void updateProfileWithNewName(FunctionSamples &FuncProfile);
-  void runCallGraphMatching();
   void reportOrPersistProfileStats();
 };
 } // end namespace llvm
