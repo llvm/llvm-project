@@ -36,6 +36,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE``: Use large table for better printf long double performance.
 * **"pthread" options**
     - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is in contention (default to 100).
+    - ``LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a rwlock is in contention (default to 100).
     - ``LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY``: Automatically adjust timeout to CLOCK_MONOTONIC (default to true). POSIX API may require CLOCK_REALTIME, which can be unstable and leading to unexpected behavior. This option will convert the real-time timestamp to monotonic timestamp relative to the time of call.
 * **"string" options**
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
