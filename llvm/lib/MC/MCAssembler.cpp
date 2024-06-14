@@ -820,8 +820,11 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   for (MCSection &Sec : *this) {
     // Create dummy fragments to eliminate any empty sections, this simplifies
     // layout.
-    if (Sec.empty())
-      new MCDataFragment(&Sec);
+    if (Sec.empty()) {
+      auto *F = getContext().allocFragment<MCDataFragment>();
+      F->setParent(&Sec);
+      Sec.addFragment(*F);
+    }
 
     Sec.setOrdinal(SectionIndex++);
   }
