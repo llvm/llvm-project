@@ -33,8 +33,8 @@
 ;   - `NotOutlinedCost=20*6=120` and `OutliningCost=12*6+20+4=96`
 ;   - `Benefit=120-96=24` and `Priority=120/96=1.25`
 ;
-; The FOURTH `OutlinedFunction` has lower _priority_ compared to the first THREE `OutlinedFunction`
-; Hence, if we additionally include the `-sort-per-priority` flag,  the first THREE `OutlinedFunction` are outlined.
+; The FOURTH `OutlinedFunction` has lower _priority_ compared to the first THREE `OutlinedFunction`.
+; Hence, we use `-outliner-benefit-threshold=22` to check if the FOURTH `OutlinedFunction` is identified.
 
 ; RUN: llc %s -enable-machine-outliner=always -outliner-leaf-descendants=false -filetype=obj -o %t
 ; RUN: llvm-objdump -d %t | FileCheck %s --check-prefix=CHECK-BASELINE
