@@ -2407,6 +2407,7 @@ define <2 x i32> @test80(i32 %v) {
 ;
 ; CHECK-FISL-LABEL: test80:
 ; CHECK-FISL:       # %bb.0:
+; CHECK-FISL-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; CHECK-FISL-NEXT:    stw r3, -16(r1)
 ; CHECK-FISL-NEXT:    addi r3, r1, -16
 ; CHECK-FISL-NEXT:    lxvw4x vs0, 0, r3

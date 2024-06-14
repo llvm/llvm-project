@@ -403,8 +403,8 @@ define void @call_test_byval_mem32_2() #0 {
 ; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
 ; CHECK-NEXT:    vspltisw 2, 1
+; CHECK-NEXT:    addis 3, 2, .LC5@toc@ha
 ; CHECK-NEXT:    ld 3, .LC5@toc@l(3)
 ; CHECK-NEXT:    xvcvsxwdp 1, 34
 ; CHECK-NEXT:    ld 7, 24(3)

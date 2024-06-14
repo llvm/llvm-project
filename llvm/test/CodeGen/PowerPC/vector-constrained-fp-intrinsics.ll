@@ -1612,9 +1612,9 @@ define <2 x double> @constrained_vector_powi_v2f64(<2 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    xxlor 1, 63, 63
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    xxlor 62, 1, 1
 ; PC64LE-NEXT:    xxswapd 1, 63
+; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 64
@@ -1642,9 +1642,9 @@ define <2 x double> @constrained_vector_powi_v2f64(<2 x double> %x, i32 %y) #0 {
 ; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    xscpsgndp 62, 1, 1
 ; PC64LE9-NEXT:    xxswapd 1, 63
+; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xxmrghd 34, 62, 1
@@ -1873,9 +1873,9 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    vmr 31, 3
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    xxlor 61, 1, 1
 ; PC64LE-NEXT:    xxswapd 1, 62
+; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    xxmrghd 62, 61, 1
@@ -1883,9 +1883,9 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
-; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    xxlor 61, 1, 1
 ; PC64LE-NEXT:    xxswapd 1, 63
+; PC64LE-NEXT:    mr 4, 30
 ; PC64LE-NEXT:    bl __powidf2
 ; PC64LE-NEXT:    nop
 ; PC64LE-NEXT:    li 3, 80
@@ -1918,9 +1918,9 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE9-NEXT:    vmr 31, 3
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    xscpsgndp 61, 1, 1
 ; PC64LE9-NEXT:    xxswapd 1, 62
+; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xxmrghd 62, 61, 1
@@ -1928,9 +1928,9 @@ define <4 x double> @constrained_vector_powi_v4f64(<4 x double> %x, i32 %y) #0 {
 ; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
-; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    xscpsgndp 61, 1, 1
 ; PC64LE9-NEXT:    xxswapd 1, 63
+; PC64LE9-NEXT:    mr 4, 30
 ; PC64LE9-NEXT:    bl __powidf2
 ; PC64LE9-NEXT:    nop
 ; PC64LE9-NEXT:    xxmrghd 35, 61, 1
