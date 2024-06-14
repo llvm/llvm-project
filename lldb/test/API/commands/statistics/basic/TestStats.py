@@ -724,7 +724,7 @@ class TestCase(TestBase):
                     "targets": False,
                     "targets.moduleIdentifiers": False,
                     "targets.breakpoints": False,
-                    "targets.expressionEvaluation": True,
+                    "targets.expressionEvaluation": False,
                     "modules": True,
                     "transcript": False,
                 },
