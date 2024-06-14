@@ -76,9 +76,9 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK:             %[[T:.*]] = arith.muli %[[SI0]], %[[C10]] : index
 // CHECK:             %[[DI:.*]] = arith.addi %[[T]], %[[SI1]] : index
 // CHECK:             %[[R1:.*]] = tensor.insert %[[SV]] into %[[A1]]{{\[}}%[[DI]]]
-// CHECK              scf.yield %[[R1]]
-// CHECK            }
-// CHECK            scf.yield %[[RET_1]]
+// CHECK:             scf.yield %[[R1]]
+// CHECK:           }
+// CHECK:           scf.yield %[[RET_1]]
 // CHECK:         }
 // CHECK:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:    sparse_tensor.convert
@@ -170,9 +170,9 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>, %sz0: inde
 // CHECK:             %[[T4:.*]] = arith.muli %[[SI1]], %[[T3]] : index
 // CHECK:             %[[DI:.*]] = arith.addi %[[T2]], %[[T4]] : index
 // CHECK:             %[[NT:.*]] = tensor.insert %[[SV]] into %[[R1]]{{\[}}%[[DI]]]
-// CHECK              scf.yield %[[NT]]
-// CHECK            }
-// CHECK            scf.yield %[[RET_1]]
+// CHECK:             scf.yield %[[NT]]
+// CHECK:           }
+// CHECK:           scf.yield %[[RET_1]]
 // CHECK:        }
 // CHECK:        %[[NT1:.*]] = sparse_tensor.load %[[RET]] hasInserts
 // CHECK-NOT:    sparse_tensor.convert

@@ -342,15 +342,15 @@ func.func @loop_bounds(%N : index) {
 
 // CHECK-LABEL: func @ifinst(%{{.*}}: index) {
 func.func @ifinst(%N: index) {
-  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
-  affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
-    affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
+  %c = arith.constant 200 : index // CHECK:  %{{.*}} = arith.constant 200
+  affine.for %i = 1 to 10 {           // CHECK:  affine.for %{{.*}} = 1 to 10 {
+    affine.if #set0(%i)[%N, %c] {     // CHECK:    affine.if #set(%{{.*}})[%{{.*}}, %{{.*}}] {
       %x = arith.constant 1 : i32
        // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
     } else { // CHECK } else {
-      affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%N]  {      // CHECK  affine.if (#set1(%{{.*}})[%{{.*}}]) {
+      affine.if affine_set<(i)[N] : (i - 2 >= 0, 4 - i >= 0)>(%i)[%N]  {      // CHECK: affine.if #set1(%{{.*}})[%{{.*}}] {
         // CHECK: %{{.*}} = arith.constant 1 : index
         %u = arith.constant 1 : index
         // CHECK: %{{.*}} = affine.apply #map{{.*}}(%{{.*}}, %{{.*}})[%{{.*}}]
@@ -358,24 +358,24 @@ func.func @ifinst(%N: index) {
       } else {            // CHECK     } else {
         %v = arith.constant 3 : i32 // %c3_i32 = arith.constant 3 : i32
       }
-    }       // CHECK     }
-  }         // CHECK   }
-  return    // CHECK   return
-}           // CHECK }
+    }       // CHECK:    }
+  }         // CHECK:  }
+  return    // CHECK:  return
+}           // CHECK:}
 
 // CHECK-LABEL: func @simple_ifinst(%{{.*}}: index) {
 func.func @simple_ifinst(%N: index) {
-  %c = arith.constant 200 : index // CHECK   %{{.*}} = arith.constant 200
-  affine.for %i = 1 to 10 {           // CHECK   affine.for %{{.*}} = 1 to 10 {
-    affine.if #set0(%i)[%N, %c] {     // CHECK     affine.if #set0(%{{.*}})[%{{.*}}, %{{.*}}] {
+  %c = arith.constant 200 : index // CHECK:  %{{.*}} = arith.constant 200
+  affine.for %i = 1 to 10 {           // CHECK:  affine.for %{{.*}} = 1 to 10 {
+    affine.if #set0(%i)[%N, %c] {     // CHECK:    affine.if #set(%{{.*}})[%{{.*}}, %{{.*}}] {
       %x = arith.constant 1 : i32
        // CHECK: %{{.*}} = arith.constant 1 : i32
       %y = "add"(%x, %i) : (i32, index) -> i32 // CHECK: %{{.*}} = "add"(%{{.*}}, %{{.*}}) : (i32, index) -> i32
       %z = "mul"(%y, %y) : (i32, i32) -> i32 // CHECK: %{{.*}} = "mul"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
-    }       // CHECK     }
-  }         // CHECK   }
-  return    // CHECK   return
-}           // CHECK }
+    }       // CHECK:    }
+  }         // CHECK:  }
+  return    // CHECK:  return
+}           // CHECK:}
 
 // CHECK-LABEL: func @attributes() {
 func.func @attributes() {

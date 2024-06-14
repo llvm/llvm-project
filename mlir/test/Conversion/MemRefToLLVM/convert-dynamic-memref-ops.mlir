@@ -378,14 +378,14 @@ func.func @memref_cast_ranked_to_unranked(%arg : memref<42x2x?xf32>) {
 // CHECK-DAG:  %[[p:.*]] = llvm.alloca %[[c]] x !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)> : (i64) -> !llvm.ptr
 // CHECK-DAG:  llvm.store %{{.*}}, %[[p]] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>, !llvm.ptr
 // CHECK-DAG:  %[[r:.*]] = llvm.mlir.constant(3 : index) : i64
-// CHECK    :  llvm.mlir.undef : !llvm.struct<(i64, ptr)>
+//     CHECK:  llvm.mlir.undef : !llvm.struct<(i64, ptr)>
 // CHECK-DAG:  llvm.insertvalue %[[r]], %{{.*}}[0] : !llvm.struct<(i64, ptr)>
 // CHECK-DAG:  llvm.insertvalue %[[p]], %{{.*}}[1] : !llvm.struct<(i64, ptr)>
 // CHECK32-DAG:  %[[c:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK32-DAG:  %[[p:.*]] = llvm.alloca %[[c]] x !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)> : (i64) -> !llvm.ptr
 // CHECK32-DAG:  llvm.store %{{.*}}, %[[p]] : !llvm.struct<(ptr, ptr, i32, array<3 x i32>, array<3 x i32>)>, !llvm.ptr
 // CHECK32-DAG:  %[[r:.*]] = llvm.mlir.constant(3 : index) : i32
-// CHECK32    :  llvm.mlir.undef : !llvm.struct<(i32, ptr)>
+//     CHECK32:  llvm.mlir.undef : !llvm.struct<(i32, ptr)>
 // CHECK32-DAG:  llvm.insertvalue %[[r]], %{{.*}}[0] : !llvm.struct<(i32, ptr)>
 // CHECK32-DAG:  llvm.insertvalue %[[p]], %{{.*}}[1] : !llvm.struct<(i32, ptr)>
   %0 = memref.cast %arg : memref<42x2x?xf32> to memref<*xf32>
