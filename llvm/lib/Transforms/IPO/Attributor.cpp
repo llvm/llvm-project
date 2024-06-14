@@ -1749,7 +1749,7 @@ bool Attributor::checkForAllCallees(
   return Pred(Callees.getArrayRef());
 }
 
-bool noRevisitUser(const User *user) {
+bool canMarkAsVisited(const User *user) {
   return isa<PHINode>(user) || !isa<Instruction>(user);
 }
 
@@ -1800,7 +1800,7 @@ bool Attributor::checkForAllUses(
 
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    if (noRevisitUser(U->getUser()) && !Visited.insert(U).second)
+    if (canMarkAsVisited(U->getUser()) && !Visited.insert(U).second)
       continue;
     DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
       if (auto *Fn = dyn_cast<Function>(U->getUser()))
