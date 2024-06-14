@@ -696,6 +696,8 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "no previous prototype" warning for Win32 entry points under ``-Wmissing-prototypes``.
   Fixes #GH94366.
 
+- For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

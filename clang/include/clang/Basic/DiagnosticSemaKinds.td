@@ -340,6 +340,8 @@ def warn_arm_interrupt_vfp_clobber : Warning<
   "interrupt service routine with vfp enabled may clobber the "
   "interruptee's vfp state">,
   InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
+def err_arm_interrupt_called : Error<
+  "interrupt service routine cannot be called directly">;
 def warn_interrupt_attribute_invalid : Warning<
    "%select{MIPS|MSP430|RISC-V}0 'interrupt' attribute only applies to "
    "functions that have %select{no parameters|a 'void' return type}1">,

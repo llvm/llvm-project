@@ -6625,9 +6625,15 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
 
   // Functions with 'interrupt' attribute cannot be called directly.
-  if (FDecl && FDecl->hasAttr<AnyX86InterruptAttr>()) {
-    Diag(Fn->getExprLoc(), diag::err_anyx86_interrupt_called);
-    return ExprError();
+  if (FDecl) {
+    if (FDecl->hasAttr<AnyX86InterruptAttr>()) {
+      Diag(Fn->getExprLoc(), diag::err_anyx86_interrupt_called);
+      return ExprError();
+    }
+    if (FDecl->hasAttr<ARMInterruptAttr>()) {
+      Diag(Fn->getExprLoc(), diag::err_arm_interrupt_called);
+      return ExprError();
+    }
   }
 
   // X86 interrupt handlers may only call routines with attribute
