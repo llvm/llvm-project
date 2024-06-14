@@ -945,7 +945,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   uint64_t T;
   auto ValueData =
       getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, N, T);
-  ASSERT_TRUE(!!ValueData);
+  ASSERT_NE(ValueData, nullptr);
   ASSERT_EQ(3U, N);
   ASSERT_EQ(21U, T);
   // The result should be sorted already:
@@ -956,20 +956,20 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(4000U, ValueData[2].Value);
   ASSERT_EQ(4U, ValueData[2].Count);
   ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 1, N, T);
-  ASSERT_TRUE(!!ValueData);
+  ASSERT_NE(ValueData, nullptr);
   ASSERT_EQ(1U, N);
   ASSERT_EQ(21U, T);
 
   ValueData =
       getValueProfDataFromInst(*Inst2, IPVK_IndirectCallTarget, 5, N, T);
-  ASSERT_FALSE(!!ValueData);
+  ASSERT_EQ(ValueData, nullptr);
 
   // Remove the MD_prof metadata
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
   ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, N, T);
-  ASSERT_TRUE(!!ValueData);
+  ASSERT_NE(ValueData, nullptr);
   ASSERT_EQ(5U, N);
   ASSERT_EQ(21U, T);
   ASSERT_EQ(6000U, ValueData[0].Value);
@@ -991,7 +991,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   annotateValueSite(*M, *Inst, ArrayRef(VD0Sorted).slice(2), 10,
                     IPVK_IndirectCallTarget, 5);
   ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, N, T);
-  ASSERT_TRUE(!!ValueData);
+  ASSERT_NE(ValueData, nullptr);
   ASSERT_EQ(4U, N);
   ASSERT_EQ(10U, T);
   ASSERT_EQ(3000U, ValueData[0].Value);
