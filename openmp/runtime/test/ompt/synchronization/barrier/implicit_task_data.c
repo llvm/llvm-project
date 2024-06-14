@@ -96,12 +96,12 @@ on_ompt_callback_sync_region(
   case ompt_sync_region_barrier_teams:
   case ompt_sync_region_barrier_implementation:
     printf("%" PRIu64 ": %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
-           ", codeptr_ra=%p\n", ompt_get_thread_data()->value, event_name,
+           ", codeptr_ra=%p\n",
+           ompt_get_thread_data()->value, event_name,
            parallel_data ? parallel_data->value : 0, task_data->value,
            codeptr_ra);
     break;
-  default:
-    ; // do nothing
+  default:; // do nothing
   }
 }
 
@@ -132,12 +132,12 @@ on_ompt_callback_sync_region_wait(
   case ompt_sync_region_barrier_teams:
   case ompt_sync_region_barrier_implementation:
     printf("%" PRIu64 ": %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
-           ", codeptr_ra=%p\n", ompt_get_thread_data()->value, event_name,
+           ", codeptr_ra=%p\n",
+           ompt_get_thread_data()->value, event_name,
            parallel_data ? parallel_data->value : 0, task_data->value,
            codeptr_ra);
     break;
-  default:
-    ; // do nothing
+  default:; // do nothing
   }
 }
 
