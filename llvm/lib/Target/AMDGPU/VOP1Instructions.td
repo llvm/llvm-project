@@ -255,7 +255,7 @@ def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
 }
 
 foreach vt = Reg32Types.types in {
-  def : GCNPat<(vt (AMDGPUreadfirstlane (vt VRegOrLdsSrc_32:$src0))),
+  def : GCNPat<(vt (int_amdgcn_readfirstlane (vt VRegOrLdsSrc_32:$src0))),
         (V_READFIRSTLANE_B32 (vt VRegOrLdsSrc_32:$src0))
   >;
 }

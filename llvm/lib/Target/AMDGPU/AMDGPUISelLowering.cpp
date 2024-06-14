@@ -904,9 +904,6 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     return false;
   case AMDGPUISD::SETCC: // ballot-style instruction
     return true;
-  case AMDGPUISD::READFIRSTLANE:
-  case AMDGPUISD::READLANE:
-    return true;
   }
   return false;
 }
@@ -5511,9 +5508,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(LDS)
   NODE_NAME_CASE(FPTRUNC_ROUND_UPWARD)
   NODE_NAME_CASE(FPTRUNC_ROUND_DOWNWARD)
-  NODE_NAME_CASE(READLANE)
-  NODE_NAME_CASE(READFIRSTLANE)
-  NODE_NAME_CASE(WRITELANE)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
   NODE_NAME_CASE(LOAD_D16_HI)

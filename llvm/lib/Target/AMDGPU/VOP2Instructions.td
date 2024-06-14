@@ -789,11 +789,11 @@ def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []> {
 } // End isConvergent = 1
 
 foreach vt = Reg32Types.types in {
-  def : GCNPat<(vt (AMDGPUreadlane vt:$src0, i32:$src1)),
+  def : GCNPat<(vt (int_amdgcn_readlane vt:$src0, i32:$src1)),
         (V_READLANE_B32 VRegOrLdsSrc_32:$src0, SCSrc_b32:$src1)
   >;
 
-  def : GCNPat<(vt (AMDGPUwritelane vt:$src0, i32:$src1, vt:$src2)),
+  def : GCNPat<(vt (int_amdgcn_writelane vt:$src0, i32:$src1, vt:$src2)),
         (V_WRITELANE_B32 SCSrc_b32:$src0, SCSrc_b32:$src1, VGPR_32:$src2)
   >;
 }

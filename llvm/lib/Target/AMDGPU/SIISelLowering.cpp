@@ -6088,23 +6088,44 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
                            SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   unsigned ValSize = VT.getSizeInBits();
-  unsigned IntrinsicID = N->getConstantOperandVal(0);
-  SDValue Src0 = N->getOperand(1);
+  unsigned IID = N->getConstantOperandVal(0);
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
 
-  auto createLaneOp = [&DAG, &SL](SDValue Src0, SDValue Src1, SDValue Src2,
-                                  MVT VT) -> SDValue {
-    return (Src2 ? DAG.getNode(AMDGPUISD::WRITELANE, SL, VT, {Src0, Src1, Src2})
-            : Src1 ? DAG.getNode(AMDGPUISD::READLANE, SL, VT, {Src0, Src1})
-                   : DAG.getNode(AMDGPUISD::READFIRSTLANE, SL, VT, {Src0}));
+  auto createLaneOp = [&DAG, &SL, N, IID](SDValue Src0, SDValue Src1,
+                                          SDValue Src2, MVT ValT) -> SDValue {
+    SmallVector<SDValue, 8> Operands;
+    Operands.push_back(DAG.getTargetConstant(IID, SL, MVT::i32));
+    switch (IID) {
+    case Intrinsic::amdgcn_readfirstlane:
+      Operands.push_back(Src0);
+      break;
+    case Intrinsic::amdgcn_readlane:
+      Operands.push_back(Src0);
+      Operands.push_back(Src1);
+      break;
+    case Intrinsic::amdgcn_writelane:
+      Operands.push_back(Src0);
+      Operands.push_back(Src1);
+      Operands.push_back(Src2);
+      break;
+    }
+
+    if (SDNode *GL = N->getGluedNode()) {
+      assert(GL->getOpcode() == ISD::CONVERGENCECTRL_GLUE);
+      GL = GL->getOperand(0).getNode();
+      Operands.push_back(DAG.getNode(ISD::CONVERGENCECTRL_GLUE, SL, MVT::Glue,
+                                     SDValue(GL, 0)));
+    }
+
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, ValT, Operands);
   };
 
+  SDValue Src0 = N->getOperand(1);
   SDValue Src1, Src2;
-  if (IntrinsicID == Intrinsic::amdgcn_readlane ||
-      IntrinsicID == Intrinsic::amdgcn_writelane) {
+  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane) {
     Src1 = N->getOperand(2);
-    if (IntrinsicID == Intrinsic::amdgcn_writelane)
+    if (IID == Intrinsic::amdgcn_writelane)
       Src2 = N->getOperand(3);
   }
 
@@ -6129,13 +6150,55 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   if (ValSize % 32 != 0)
     return SDValue();
 
+  auto unrollLaneOp = [&DAG, &SL](SDNode *N) -> SDValue {
+    EVT VT = N->getValueType(0);
+    unsigned NE = VT.getVectorNumElements();
+    EVT EltVT = VT.getVectorElementType();
+    SmallVector<SDValue, 8> Scalars;
+    unsigned NumOperands = N->getNumOperands();
+    SmallVector<SDValue, 4> Operands(NumOperands);
+    SDNode *GL = N->getGluedNode();
+
+    if (GL) {
+      // only handle convegrencectrl_glue
+      assert(GL->getOpcode() == ISD::CONVERGENCECTRL_GLUE);
+    }
+
+    for (unsigned i = 0; i != NE; ++i) {
+      for (unsigned j = 0, e = GL ? NumOperands - 1 : NumOperands; j != e;
+           ++j) {
+        SDValue Operand = N->getOperand(j);
+        EVT OperandVT = Operand.getValueType();
+        if (OperandVT.isVector()) {
+          // A vector operand; extract a single element.
+          EVT OperandEltVT = OperandVT.getVectorElementType();
+          Operands[j] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, OperandEltVT,
+                                    Operand, DAG.getVectorIdxConstant(i, SL));
+        } else {
+          // A scalar operand; just use it as is.
+          Operands[j] = Operand;
+        }
+      }
+
+      if (GL)
+        Operands[NumOperands - 1] =
+            DAG.getNode(ISD::CONVERGENCECTRL_GLUE, SL, MVT::Glue,
+                        SDValue(GL->getOperand(0).getNode(), 0));
+
+      Scalars.push_back(DAG.getNode(N->getOpcode(), SL, EltVT, Operands));
+    }
+
+    EVT VecVT = EVT::getVectorVT(*DAG.getContext(), EltVT, NE);
+    return DAG.getBuildVector(VecVT, SL, Scalars);
+  };
+
   if (VT.isVector()) {
     switch (MVT::SimpleValueType EltTy =
                 VT.getVectorElementType().getSimpleVT().SimpleTy) {
     case MVT::i32:
     case MVT::f32: {
       SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VT.getSimpleVT());
-      return DAG.UnrollVectorOp(LaneOp.getNode());
+      return unrollLaneOp(LaneOp.getNode());
     }
     case MVT::i16:
     case MVT::f16:
@@ -6170,7 +6233,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     Src2 = DAG.getBitcast(VecVT, Src2);
 
   SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
-  SDValue UnrolledLaneOp = DAG.UnrollVectorOp(LaneOp.getNode());
+  SDValue UnrolledLaneOp = unrollLaneOp(LaneOp.getNode());
   return DAG.getBitcast(VT, UnrolledLaneOp);
 }
 
@@ -15930,8 +15993,6 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case AMDGPUISD::BUFFER_ATOMIC_FMIN:
   case AMDGPUISD::BUFFER_ATOMIC_FMAX:
     // Target-specific read-modify-write atomics are sources of divergence.
-    return true;
-  case AMDGPUISD::WRITELANE:
     return true;
   default:
     if (auto *A = dyn_cast<AtomicSDNode>(N)) {
