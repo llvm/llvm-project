@@ -680,35 +680,28 @@ Constant *FatPtrConstMaterializer::materializeBufferFatPtrConst(Constant *C) {
       report_fatal_error(
           "Scalable vector or unsized struct in fat pointer GEP");
     Constant *OffAccum = nullptr;
-    // Accumulate offsets together before adding to the base in order to
-    // preserve as many of the inbounds properties as possible.
     for (auto [Arg, Multiple] : VariableOffs) {
       Constant *NewArg = InternalMapper.mapConstant(*cast<Constant>(Arg));
       NewArg = ConstantFoldIntegerCast(NewArg, OffTy, /*IsSigned=*/true, DL);
       if (!Multiple.isOne()) {
         if (Multiple.isPowerOf2()) {
           NewArg = ConstantExpr::getShl(
-              NewArg,
-              CE->getIntegerValue(
-                  OffTy, APInt(BufferOffsetWidth, Multiple.logBase2())),
-              /*hasNUW=*/InBounds, /*HasNSW=*/InBounds);
+              NewArg, CE->getIntegerValue(OffTy, APInt(BufferOffsetWidth,
+                                                       Multiple.logBase2())));
         } else {
-          NewArg =
-              ConstantExpr::getMul(NewArg, CE->getIntegerValue(OffTy, Multiple),
-                                   /*hasNUW=*/InBounds, /*hasNSW=*/InBounds);
+          NewArg = ConstantExpr::getMul(NewArg,
+                                        CE->getIntegerValue(OffTy, Multiple));
         }
       }
       if (OffAccum) {
-        OffAccum = ConstantExpr::getAdd(OffAccum, NewArg, /*hasNUW=*/InBounds,
-                                        /*hasNSW=*/InBounds);
+        OffAccum = ConstantExpr::getAdd(OffAccum, NewArg);
       } else {
         OffAccum = NewArg;
       }
     }
     Constant *NewConstOff = CE->getIntegerValue(OffTy, NewConstOffVal);
     if (OffAccum)
-      OffAccum = ConstantExpr::getAdd(OffAccum, NewConstOff,
-                                      /*hasNUW=*/InBounds, /*hasNSW=*/InBounds);
+      OffAccum = ConstantExpr::getAdd(OffAccum, NewConstOff);
     else
       OffAccum = NewConstOff;
     bool HasNonNegativeOff = false;
