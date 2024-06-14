@@ -350,14 +350,14 @@ namespace {
 
 class ObjcCategoryMerger {
   // In which language was a particular construct originally defined
-  enum SourceLanguage { SourceObjC, SourceSwift, SourceUnknown };
+  enum SourceLanguage { ObjC, Swift, Unknown };
 
   // Information about an input category
   struct InfoInputCategory {
     ConcatInputSection *catListIsec;
     ConcatInputSection *catBodyIsec;
     uint32_t offCatListIsec = 0;
-    SourceLanguage sourceLanguage = SourceUnknown;
+    SourceLanguage sourceLanguage = SourceLanguage::Unknown;
 
     bool wasMerged = false;
   };
@@ -418,7 +418,7 @@ class ObjcCategoryMerger {
     std::string mergedContainerName;
     std::string baseClassName;
     const Symbol *baseClass = nullptr;
-    SourceLanguage baseClassSourceLanguage = SourceUnknown;
+    SourceLanguage baseClassSourceLanguage = SourceLanguage::Unknown;
 
     CategoryLayout &catLayout;
 
@@ -693,9 +693,9 @@ void ObjcCategoryMerger::parseProtocolListInfo(
       expectedListSize - target->wordSize;
 
   assert(((expectedListSize == ptrListSym->isec()->data.size() &&
-           sourceLang == SourceObjC) ||
+           sourceLang == SourceLanguage::ObjC) ||
           (expectedListSizeSwift == ptrListSym->isec()->data.size() &&
-           sourceLang == SourceSwift)) &&
+           sourceLang == SourceLanguage::Swift)) &&
          "Protocol list does not match expected size");
 
   uint32_t off = protocolListHeaderLayout.totalSize;
@@ -783,10 +783,10 @@ void ObjcCategoryMerger::parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
   assert(catNameReloc && "Category does not have a reloc at 'nameOffset'");
 
   // is this the first category we are parsing?
-  if (extInfo.mergedContainerName.empty()) {
+  if (extInfo.mergedContainerName.empty())
     extInfo.objFileForMergeData =
         dyn_cast_or_null<ObjFile>(catInfo.catBodyIsec->getFile());
-  } else
+  else
     extInfo.mergedContainerName += "|";
 
   assert(extInfo.objFileForMergeData &&
@@ -1168,10 +1168,10 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
 
       InfoInputCategory catInputInfo{catListCisec, catBodyIsec, off};
       if (categorySym->getName().starts_with(objc::symbol_names::category))
-        catInputInfo.sourceLanguage = SourceLanguage::SourceObjC;
+        catInputInfo.sourceLanguage = SourceLanguage::ObjC;
       else if (categorySym->getName().starts_with(
                    objc::symbol_names::swift_objc_category))
-        catInputInfo.sourceLanguage = SourceLanguage::SourceSwift;
+        catInputInfo.sourceLanguage = SourceLanguage::Swift;
       else
         llvm_unreachable("Unexpected category symbol name");
 
@@ -1384,10 +1384,10 @@ void ObjcCategoryMerger::mergeCategoriesIntoBaseClass(
   extInfo.baseClass = baseClass;
 
   if (baseClass->getName().starts_with(objc::symbol_names::klass))
-    extInfo.baseClassSourceLanguage = SourceLanguage::SourceObjC;
+    extInfo.baseClassSourceLanguage = SourceLanguage::ObjC;
   else if (baseClass->getName().starts_with(
                objc::symbol_names::swift_objc_klass))
-    extInfo.baseClassSourceLanguage = SourceLanguage::SourceSwift;
+    extInfo.baseClassSourceLanguage = SourceLanguage::Swift;
   else
     llvm_unreachable("Unexpected base class symbol name");
 
