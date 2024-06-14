@@ -1832,6 +1832,7 @@ private:
   bool validateMIMGDataSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGAddrSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGD16(const MCInst &Inst);
+  bool validateTensorR128(const MCInst &Inst);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
   bool validateNeg(const MCInst &Inst, int OpName);
@@ -4505,6 +4506,20 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
   return true;
 }
 
+bool AMDGPUAsmParser::validateTensorR128(const MCInst &Inst) {
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & SIInstrFlags::TENSOR_CNT) == 0)
+    return true;
+
+  int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
+  if (R128Idx >= 0 && !Inst.getOperand(R128Idx).getImm())
+    return false;
+
+  return true;
+}
+
 static bool IsRevOpcode(const unsigned Opcode)
 {
   switch (Opcode) {
@@ -5440,6 +5455,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMIMGD16(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
       "d16 modifier is not supported on this GPU");
+    return false;
+  }
+  if (!validateTensorR128(Inst)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
+      "instruction must set modifier r128=1");
     return false;
   }
   if (!validateMIMGMSAA(Inst)) {
