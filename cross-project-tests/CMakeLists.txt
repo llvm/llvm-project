@@ -3,6 +3,7 @@
 # The subset inside debuginfo-tests invoke clang to generate programs with
 # various types of debug info, and then run those programs under a debugger
 # such as GDB or LLDB to verify the results.
+set(LLVM_SUBPROJECT_TITLE "Cross-Project")
 
 find_package(Python3 COMPONENTS Interpreter)
 
@@ -97,8 +98,3 @@ add_lit_testsuite(check-cross-amdgpu "Running AMDGPU cross-project tests"
 add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
-
-set_target_properties(check-cross-project PROPERTIES FOLDER "Tests")
-set_target_properties(check-debuginfo PROPERTIES FOLDER "Tests")
-set_target_properties(check-intrinsic-headers PROPERTIES FOLDER "Tests")
-set_target_properties(check-cross-amdgpu PROPERTIES FOLDER "Tests")

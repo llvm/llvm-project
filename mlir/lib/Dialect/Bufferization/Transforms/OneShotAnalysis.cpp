@@ -611,7 +611,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
   // Before going through the main RaW analysis, find cases where a buffer must
   // be privatized due to parallelism. If the result of a write is never read,
   // privatization is not necessary (and large parts of the IR are likely dead).
-  if (!usesRead.empty()) {
+  if (options.checkParallelRegions && !usesRead.empty()) {
     for (OpOperand *uConflictingWrite : usesWrite) {
       // Find the allocation point or last write (definition) of the buffer.
       // Note: In contrast to `findDefinitions`, this also returns results of

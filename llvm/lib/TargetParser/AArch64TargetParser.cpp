@@ -181,12 +181,6 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
         !BaseArch->is_superset(ARMV9A))
       enable(AEK_FP16FML);
 
-    // For all architectures, +crypto enables +aes and +sha2.
-    if (E == AEK_CRYPTO) {
-      enable(AEK_AES);
-      enable(AEK_SHA2);
-    }
-
     // For v8.4A+ and v9.0A+, +crypto also enables +sha3 and +sm4.
     if (E == AEK_CRYPTO && BaseArch->is_superset(ARMV8_4A)) {
       enable(AEK_SHA3);

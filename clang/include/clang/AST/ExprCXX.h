@@ -3025,9 +3025,10 @@ protected:
 
 public:
   struct FindResult {
-    OverloadExpr *Expression;
-    bool IsAddressOfOperand;
-    bool HasFormOfMemberPointer;
+    OverloadExpr *Expression = nullptr;
+    bool IsAddressOfOperand = false;
+    bool IsAddressOfOperandWithParen = false;
+    bool HasFormOfMemberPointer = false;
   };
 
   /// Finds the overloaded expression in the given expression \p E of
@@ -3039,6 +3040,7 @@ public:
     assert(E->getType()->isSpecificBuiltinType(BuiltinType::Overload));
 
     FindResult Result;
+    bool HasParen = isa<ParenExpr>(E);
 
     E = E->IgnoreParens();
     if (isa<UnaryOperator>(E)) {
@@ -3048,10 +3050,9 @@ public:
 
       Result.HasFormOfMemberPointer = (E == Ovl && Ovl->getQualifier());
       Result.IsAddressOfOperand = true;
+      Result.IsAddressOfOperandWithParen = HasParen;
       Result.Expression = Ovl;
     } else {
-      Result.HasFormOfMemberPointer = false;
-      Result.IsAddressOfOperand = false;
       Result.Expression = cast<OverloadExpr>(E);
     }
 
@@ -4377,15 +4378,21 @@ class PackIndexingExpr final
   // The pack being indexed, followed by the index
   Stmt *SubExprs[2];
 
-  size_t TransformedExpressions;
+  // The size of the trailing expressions.
+  unsigned TransformedExpressions : 31;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExpandedToEmptyPack : 1;
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
-                   ArrayRef<Expr *> SubstitutedExprs = {})
+                   ArrayRef<Expr *> SubstitutedExprs = {},
+                   bool ExpandedToEmptyPack = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
         SubExprs{PackIdExpr, IndexExpr},
-        TransformedExpressions(SubstitutedExprs.size()) {
+        TransformedExpressions(SubstitutedExprs.size()),
+        ExpandedToEmptyPack(ExpandedToEmptyPack) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
@@ -4408,9 +4415,13 @@ public:
                                   SourceLocation EllipsisLoc,
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
                                   Expr *IndexExpr, std::optional<int64_t> Index,
-                                  ArrayRef<Expr *> SubstitutedExprs = {});
+                                  ArrayRef<Expr *> SubstitutedExprs = {},
+                                  bool ExpandedToEmptyPack = false);
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
+
+  /// Determine if the expression was expanded to empty.
+  bool expandsToEmptyPack() const { return ExpandedToEmptyPack; }
 
   /// Determine the location of the 'sizeof' keyword.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
@@ -4445,6 +4456,7 @@ public:
     return getTrailingObjects<Expr *>()[*Index];
   }
 
+  /// Return the trailing expressions, regardless of the expansion.
   ArrayRef<Expr *> getExpressions() const {
     return {getTrailingObjects<Expr *>(), TransformedExpressions};
   }

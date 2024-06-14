@@ -108,6 +108,7 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
     #include "unguarded.h"
     #include "unused.h"
     #include <system_header.h>
+    #include <non_system_angled_header.h>
     void foo() {
       a();
       b();
@@ -122,6 +123,7 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
   TU.AdditionalFiles["dir/c.h"] = guard("void c();");
   TU.AdditionalFiles["unused.h"] = guard("void unused();");
   TU.AdditionalFiles["dir/unused.h"] = guard("void dirUnused();");
+  TU.AdditionalFiles["dir/non_system_angled_header.h"] = guard("");
   TU.AdditionalFiles["system/system_header.h"] = guard("");
   TU.AdditionalFiles["unguarded.h"] = "";
   TU.ExtraArgs.push_back("-I" + testPath("dir"));
@@ -133,6 +135,48 @@ TEST(IncludeCleaner, GetUnusedHeaders) {
       Findings.UnusedIncludes,
       UnorderedElementsAre(Pointee(writtenInclusion("\"unused.h\"")),
                            Pointee(writtenInclusion("\"dir/unused.h\""))));
+}
+
+TEST(IncludeCleaner, IgnoredAngledHeaders) {
+  // Currently the default behavior is to ignore unused angled includes
+  auto TU = TestTU::withCode(R"cpp(
+    #include <system_header.h>
+    #include <system_unused.h>
+    #include <non_system_angled_unused.h>
+    SystemClass x;
+  )cpp");
+  TU.AdditionalFiles["system/system_header.h"] = guard("class SystemClass {};");
+  TU.AdditionalFiles["system/system_unused.h"] = guard("");
+  TU.AdditionalFiles["dir/non_system_angled_unused.h"] = guard("");
+  TU.ExtraArgs = {
+      "-isystem" + testPath("system"),
+      "-I" + testPath("dir"),
+  };
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
+}
+
+TEST(IncludeCleaner, UnusedAngledHeaders) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include <system_header.h>
+    #include <system_unused.h>
+    #include <non_system_angled_unused.h>
+    SystemClass x;
+  )cpp");
+  TU.AdditionalFiles["system/system_header.h"] = guard("class SystemClass {};");
+  TU.AdditionalFiles["system/system_unused.h"] = guard("");
+  TU.AdditionalFiles["dir/non_system_angled_unused.h"] = guard("");
+  TU.ExtraArgs = {
+      "-isystem" + testPath("system"),
+      "-I" + testPath("dir"),
+  };
+  auto AST = TU.build();
+  IncludeCleanerFindings Findings = computeIncludeCleanerFindings(AST, true);
+  EXPECT_THAT(Findings.UnusedIncludes,
+              UnorderedElementsAre(
+                  Pointee(writtenInclusion("<system_unused.h>")),
+                  Pointee(writtenInclusion("<non_system_angled_unused.h>"))));
 }
 
 TEST(IncludeCleaner, ComputeMissingHeaders) {

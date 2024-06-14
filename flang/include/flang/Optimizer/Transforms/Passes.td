@@ -163,7 +163,6 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let description = [{
     Demangle FIR internal name and mangle them for external interoperability.
   }];
-  let constructor = "::fir::createExternalNameConversionPass()";
   let options = [
     Option<"appendUnderscoreOpt", "append-underscore",
            "bool", /*default=*/"true",
@@ -261,6 +260,15 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
+def StackReclaim : Pass<"stack-reclaim"> {
+  let summary = "Insert stacksave/stackrestore in region with allocas";
+  let description = [{
+    Insert stacksave/stackrestore in loop region to reclaim alloca done in its
+    scope.
+  }];
+  let dependentDialects = [ "mlir::LLVM::LLVMDialect" ];
+}
+
 def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
   let summary = "Add tbaa tags to operations that implement FirAliasAnalysisOpInterface";
   let description = [{
@@ -324,28 +332,25 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
 }
 
 def OMPMapInfoFinalizationPass
-    : Pass<"omp-map-info-finalization", "mlir::func::FuncOp"> {
+    : Pass<"omp-map-info-finalization"> {
   let summary = "expands OpenMP MapInfo operations containing descriptors";
   let description = [{
     Expands MapInfo operations containing descriptor types into multiple 
     MapInfo's for each pointer element in the descriptor that requires 
     explicit individual mapping by the OpenMP runtime.
   }];
-  let constructor = "::fir::createOMPMapInfoFinalizationPass()";
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
 def OMPMarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
-  let constructor = "::fir::createOMPMarkDeclareTargetPass()";
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
 def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
   let summary = "Filters out functions intended for the host when compiling "
                 "for the target device.";
-  let constructor = "::fir::createOMPFunctionFilteringPass()";
   let dependentDialects = [
     "mlir::func::FuncDialect",
     "fir::FIROpsDialect"
@@ -363,7 +368,6 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
            "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
            "vector scale range">,
   ];
-  let constructor = "::fir::createVScaleAttrPass()";
 }
 
 def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
@@ -399,7 +403,18 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
            "bool", /*default=*/"false",
            "Set the unsafe-fp-math attribute on functions in the module.">,
   ];
-  let constructor = "::fir::createFunctionAttrPass()";
+}
+
+def AssumedRankOpConversion : Pass<"fir-assumed-rank-op", "mlir::ModuleOp"> {
+  let summary =
+    "Simplify operations on assumed-rank types";
+  let description = [{
+    This pass breaks up the lowering of operations on assumed-rank types by 
+    introducing an intermediate FIR level that simplifies code generation. 
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+  ];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

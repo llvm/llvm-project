@@ -46,7 +46,7 @@ contains
 ! CHECK:           %[[VAL_26:.*]] = fir.box_addr %[[VAL_10]] : (!fir.box<!fir.array<10x20x!fir.char<1,?>>>) -> !fir.ref<!fir.array<10x20x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_28:.*]] = fir.embox %[[VAL_27]](%[[VAL_24]]) typeparams %[[VAL_25]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CHECK:           fir.call @takes_char(%[[VAL_28]], %[[VAL_11]]#1) fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_char(%[[VAL_28]], %[[VAL_11]]#1) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_11]]#1, %[[VAL_11]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }
@@ -80,7 +80,7 @@ contains
 ! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_24:.*]] = fir.embox %[[VAL_23]](%[[VAL_20]]) typeparams %[[VAL_21]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CHECK:           fir.call @takes_char(%[[VAL_24]], %[[VAL_7]]#1) fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_char(%[[VAL_24]], %[[VAL_7]]#1) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.copy_out %[[VAL_3]]#0, %[[VAL_3]]#1 to %[[VAL_1]]#0 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i1, !fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
@@ -113,7 +113,7 @@ contains
 ! CHECK:           %[[VAL_20:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<10x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_22:.*]] = fir.embox %[[VAL_21]](%[[VAL_18]]) typeparams %[[VAL_19]] : (!fir.ref<!fir.array<10x?x!fir.char<1,?>>>, !fir.shapeshift<2>, index) -> !fir.box<!fir.array<10x?x!fir.char<1,?>>>
-! CHECK:           fir.call @takes_char_assumed_size(%[[VAL_22]]) fastmath<contract> : (!fir.box<!fir.array<10x?x!fir.char<1,?>>>) -> ()
+! CHECK:           fir.call @takes_char_assumed_size(%[[VAL_22]]) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<10x?x!fir.char<1,?>>>) -> ()
 ! CHECK:           hlfir.copy_out %[[VAL_2]]#0, %[[VAL_2]]#1 to %[[VAL_1]]#0 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i1, !fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -159,7 +159,7 @@ contains
 ! CHECK:             %[[VAL_33:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:             fir.result %[[VAL_33]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           }
-! CHECK:           fir.call @takes_optional_char(%[[VAL_15]], %[[VAL_14]]#1) fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_optional_char(%[[VAL_15]], %[[VAL_14]]#1) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_14]]#1, %[[VAL_14]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }

@@ -1041,7 +1041,7 @@ class NamelessValue:
         var = var.replace("-", "_")
         return var.upper()
 
-    def get_affixes_from_match(self, match: re.Match):
+    def get_affixes_from_match(self, match):
         prefix = re.match(self.ir_prefix, match.group(2)).group(0)
         suffix = re.search(self.ir_suffix + "$", match.group(2)).group(0)
         return prefix, suffix

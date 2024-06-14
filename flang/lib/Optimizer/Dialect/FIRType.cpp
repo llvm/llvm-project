@@ -1324,6 +1324,17 @@ fir::BaseBoxType::getBoxTypeWithNewShape(mlir::Type shapeMold) const {
   return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
 }
 
+fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewShape(int rank) const {
+  std::optional<fir::SequenceType::ShapeRef> newShape;
+  fir::SequenceType::Shape shapeVector;
+  if (rank > 0) {
+    shapeVector =
+        fir::SequenceType::Shape(rank, fir::SequenceType::getUnknownExtent());
+    newShape = shapeVector;
+  }
+  return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
+}
+
 bool fir::BaseBoxType::isAssumedRank() const {
   if (auto seqTy =
           mlir::dyn_cast<fir::SequenceType>(fir::unwrapRefType(getEleTy())))
