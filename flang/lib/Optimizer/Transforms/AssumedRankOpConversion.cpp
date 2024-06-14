@@ -152,7 +152,8 @@ public:
     patterns.insert<ReboxAssumedRankConv>(context, &symbolTable, kindMap);
     patterns.insert<IsAssumedSizeConv>(context, &symbolTable, kindMap);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
     (void)applyPatternsAndFoldGreedily(mod, std::move(patterns), config);
   }
 };
