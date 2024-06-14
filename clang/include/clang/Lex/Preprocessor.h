@@ -2895,13 +2895,13 @@ private:
   struct {
     // A map from unique IDs to region maps of loaded ASTs.  The ID identifies a
     // loaded AST. See `SourceManager::getUniqueLoadedASTID`.
-    llvm::DenseMap<unsigned, SafeBufferOptOutRegionsTy> LoadedRegions;
+    llvm::DenseMap<FileID, SafeBufferOptOutRegionsTy> LoadedRegions;
 
     // Returns a reference to the safe buffer opt-out regions of the loaded
     // AST where `Loc` belongs to. (Construct if absent)
     SafeBufferOptOutRegionsTy &
     findAndConsLoadedOptOutMap(SourceLocation Loc, SourceManager &SrcMgr) {
-      return LoadedRegions[SrcMgr.getUniqueLoadedASTID(Loc)];
+      return LoadedRegions[SrcMgr.getUniqueLoadedASTFileID(Loc)];
     }
 
     // Returns a reference to the safe buffer opt-out regions of the loaded
@@ -2910,8 +2910,8 @@ private:
     const SafeBufferOptOutRegionsTy *
     lookupLoadedOptOutMap(SourceLocation Loc,
                           const SourceManager &SrcMgr) const {
-      unsigned ID = SrcMgr.getUniqueLoadedASTID(Loc);
-      auto Iter = LoadedRegions.find(ID);
+      FileID FID = SrcMgr.getUniqueLoadedASTFileID(Loc);
+      auto Iter = LoadedRegions.find(FID);
 
       if (Iter == LoadedRegions.end())
         return nullptr;

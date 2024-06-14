@@ -1673,10 +1673,9 @@ public:
                              std::pair<FileID, unsigned> &ROffs) const;
 
   /// \param Loc a source location in a loaded AST (of a PCH/Module file).
-  /// \returns an unsigned integer uniquely refers to the AST of a loaded
-  /// module/PCH where `Loc` is in.  Note the uniqueness is only valid among all
-  /// loaded modules/PCHs.
-  unsigned getUniqueLoadedASTID(SourceLocation Loc) const;
+  /// \returns a FileID uniquely identifies the AST of a loaded
+  /// module/PCH where `Loc` is at.
+  FileID getUniqueLoadedASTFileID(SourceLocation Loc) const;
 
   /// Determines whether the two decomposed source location is in the same TU.
   bool isInTheSameTranslationUnitImpl(

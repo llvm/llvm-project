@@ -1911,7 +1911,7 @@ SourceManager::getDecomposedIncludedLoc(FileID FID) const {
   return DecompLoc;
 }
 
-unsigned SourceManager::getUniqueLoadedASTID(SourceLocation Loc) const {
+FileID SourceManager::getUniqueLoadedASTFileID(SourceLocation Loc) const {
   assert(isLoadedSourceLocation(Loc) &&
          "Must be a source location in a loaded PCH/Module file");
 
@@ -1926,7 +1926,7 @@ unsigned SourceManager::getUniqueLoadedASTID(SourceLocation Loc) const {
   assert(FirstFID &&
          "The failure to find the first FileID of a "
          "loaded AST from a loaded source location was unexpected.");
-  return FirstFID->getHashValue();
+  return *FirstFID;
 }
 
 bool SourceManager::isInTheSameTranslationUnitImpl(
