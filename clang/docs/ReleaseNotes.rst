@@ -351,6 +351,9 @@ Non-comprehensive list of changes in this release
 - Added ``__is_bitwise_cloneable`` which is used to check whether a type
   can be safely copied by memcpy/memmove.
 
+- ``#pragma GCC diagnostic warning "-Wfoo"`` can now downgrade ``-Werror=foo``
+  errors and certain default-to-error ``-W`` diagnostics to warnings.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
