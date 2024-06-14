@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -3151,6 +3152,94 @@ void transform::TileUsingForallOp::build(OpBuilder &builder,
         /*mapping=*/mapping);
 }
 
+/// Given `lbs`, `ubs` and `steps` of loops, return (for each loop), the
+/// normalized upper bound.
+static SmallVector<OpFoldResult>
+normalizeUpperBounds(RewriterBase &rewriter, Location loc,
+                     ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
+                     ArrayRef<OpFoldResult> steps) {
+  AffineExpr s0, s1, s2;
+  bindSymbols(rewriter.getContext(), s0, s1, s2);
+  AffineExpr normalizedUbExpr = (s1 - s0).ceilDiv(s2);
+  SmallVector<OpFoldResult> normalizedUbs;
+  for (auto [lb, ub, step] : llvm::zip_equal(lbs, ubs, steps)) {
+    OpFoldResult normalizedUb = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, normalizedUbExpr, {lb, ub, step});
+    normalizedUbs.push_back(normalizedUb);
+  }
+  return normalizedUbs;
+}
+
+/// When a loop is normalized, the uses of the induction variable within the
+/// loop need to replaced with `original_lb + old_iv * original_step`.
+static SmallVector<Value> denormalizeIndVar(RewriterBase &rewriter,
+                                            Location loc, ValueRange ivs,
+                                            ArrayRef<OpFoldResult> lbs,
+                                            ArrayRef<OpFoldResult> steps) {
+  AffineExpr s0, s1;
+  AffineExpr d0;
+  bindSymbols(rewriter.getContext(), s0, s1);
+  bindDims(rewriter.getContext(), d0);
+  AffineExpr denormExpr = s0 + d0 * s1;
+  SmallVector<Value> denormalizedIvs;
+
+  for (auto [iv, lb, step] : llvm::zip_equal(ivs, lbs, steps)) {
+    OpFoldResult denormValue = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, denormExpr, ArrayRef<OpFoldResult>{iv, lb, step});
+    denormalizedIvs.push_back(
+        getValueOrCreateConstantIndexOp(rewriter, loc, denormValue));
+  }
+  return denormalizedIvs;
+}
+
+/// Given a `scf.forall` loop return a loop op with the loop bounds
+/// normalized.
+/// TODO: Replace this with a general utility to normalize `scf.forall`.
+/// At the time of writing, this wasnt done since adding this to `scf`
+/// dialect would disallow using of `affine.apply` operations due
+/// to cyclic dependencies. To avoid churn in lit tests
+/// with the change this was added with, defer that to a follow up.
+static scf::ForallOp normalizeForallLoopOp(RewriterBase &rewriter,
+                                           scf::ForallOp loop) {
+  SmallVector<OpFoldResult> lbs = loop.getMixedLowerBound();
+  SmallVector<OpFoldResult> ubs = loop.getMixedUpperBound();
+  SmallVector<OpFoldResult> steps = loop.getMixedStep();
+
+  if (llvm::all_of(
+          lbs, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }) &&
+      llvm::all_of(
+          steps, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); })) {
+    return loop;
+  }
+
+  Location loc = loop.getLoc();
+  SmallVector<OpFoldResult> normalizedUbs =
+      normalizeUpperBounds(rewriter, loc, lbs, ubs, steps);
+  SmallVector<OpFoldResult> normalizedLbs(normalizedUbs.size(),
+                                          rewriter.getIndexAttr(0));
+  SmallVector<OpFoldResult> normalizedSteps(normalizedUbs.size(),
+                                            rewriter.getIndexAttr(1));
+
+  auto normalizedForallOp = rewriter.create<scf::ForallOp>(
+      loc, normalizedLbs, normalizedUbs, normalizedSteps, loop.getOutputs(),
+      loop.getMapping(), [](OpBuilder &, Location, ValueRange) {});
+
+  auto normalizedLoopIvs = normalizedForallOp.getInductionVars();
+  OpBuilder::InsertionGuard g(rewriter);
+  Block *normalizedLoopBlock = normalizedForallOp.getBody();
+  rewriter.setInsertionPointToStart(normalizedLoopBlock);
+
+  SmallVector<Value> argValues =
+      denormalizeIndVar(rewriter, loc, normalizedLoopIvs, lbs, steps);
+  argValues.append(normalizedForallOp.getRegionIterArgs().begin(),
+                   normalizedForallOp.getRegionIterArgs().end());
+  Block *origLoopBlock = loop.getBody();
+  rewriter.mergeBlocks(origLoopBlock, normalizedLoopBlock, argValues);
+
+  rewriter.replaceOp(loop, normalizedForallOp);
+  return normalizedForallOp;
+}
+
 DiagnosedSilenceableFailure transform::tileToForallOpImpl(
     RewriterBase &rewriter, transform::TransformState &state,
     TransformOpInterface transformOp, Operation *target,
@@ -3172,23 +3261,6 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
   if (!mixedNumThreads.empty()) {
     options.setNumThreads(mixedNumThreads);
   } else {
-    SmallVector<Range> loopRanges = tileableOp.getIterationDomain(rewriter);
-    unsigned nLoops = loopRanges.size();
-    SmallVector<OpFoldResult> numThreads;
-    numThreads.reserve(nLoops);
-    AffineExpr s0, s1;
-    bindSymbols(rewriter.getContext(), s0, s1);
-    AffineExpr divExpr = s0.ceilDiv(s1);
-    for (int i = 0, e = std::min(mixedTileSizes.size(), loopRanges.size());
-         i < e; ++i) {
-      OpFoldResult numTiles = mixedTileSizes[i];
-      if (!isConstantIntValue(numTiles, 0))
-        numTiles = affine::makeComposedFoldedAffineApply(
-            rewriter, tileableOp.getLoc(), divExpr,
-            {loopRanges[i].size, numTiles});
-      numThreads.push_back(numTiles);
-    }
-    options.setNumThreads(numThreads);
     options.setTileSizes(mixedTileSizes);
   }
   if (mapping) {
@@ -3199,9 +3271,20 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
 
   if (failed(maybeTilingResult))
     return transformOp.emitDefaultSilenceableFailure(tileableOp);
+
   rewriter.replaceOp(tileableOp, maybeTilingResult->replacements);
 
   tilingResult = *maybeTilingResult;
+
+  if (mixedNumThreads.empty()) {
+    auto generatedForallOp = cast<scf::ForallOp>(tilingResult.loops.front());
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(generatedForallOp);
+    scf::ForallOp normalizedForallOp =
+        normalizeForallLoopOp(rewriter, generatedForallOp);
+    tilingResult.loops.front() = normalizedForallOp;
+  }
+
   return DiagnosedSilenceableFailure::success();
 }
 

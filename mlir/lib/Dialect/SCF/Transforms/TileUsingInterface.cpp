@@ -217,10 +217,10 @@ static OpFoldResult getBoundedTileSize(OpBuilder &b, Location loc,
   AffineExpr s0, s1, d0;
   bindDims(b.getContext(), d0);
   bindSymbols(b.getContext(), s0, s1);
-  AffineMap minMap = AffineMap::get(1, 2, {s0, s1 - d0}, b.getContext());
+  AffineMap minMap = AffineMap::get(1, 2, {s0 - d0, s1}, b.getContext());
   Value size = getValueOrCreateConstantIndexOp(b, loc, loopRange.size);
   return affine::makeComposedFoldedAffineMin(
-      b, loc, minMap, SmallVector<OpFoldResult>{offset, tileSize, size});
+      b, loc, minMap, SmallVector<OpFoldResult>{offset, size, tileSize});
 }
 
 /// Returns true if the maximum tile offset `tileSize * numThreads-1` is less

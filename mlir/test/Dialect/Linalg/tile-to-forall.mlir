@@ -196,10 +196,10 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
   //      CHECK: %[[NT0:.+]] = affine.apply #[[$map0]]()[%[[M]]]
   //      CHECK: %[[NT1:.+]] = affine.apply #[[$map1]]()[%[[N]]]
   //      CHECK: scf.forall (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
-  //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
-  //      CHECK:   %[[TS1:.+]] = affine.min #[[$map4]](%[[IV1]])[%[[N]]]
-  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map5]](%[[IV0]])
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map6]](%[[IV1]])
+  //  CHECK-DAG:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
+  //  CHECK-DAG:   %[[TS1:.+]] = affine.min #[[$map4]](%[[IV1]])[%[[N]]]
+  //  CHECK-DAG:   %[[LB0:.+]] = affine.apply #[[$map5]](%[[IV0]])
+  //  CHECK-DAG:   %[[LB1:.+]] = affine.apply #[[$map6]](%[[IV1]])
   //      CHECK:   tensor.extract_slice %[[A]]
   //      CHECK:   tensor.extract_slice %[[B]]
   //      CHECK:   tensor.extract_slice %[[C_BLK]]
@@ -233,11 +233,11 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:   %[[C:[0-9a-z]+]]: tensor
 func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: tensor<100x300xf32>) -> tensor<100x300xf32> {
   //      CHECK: scf.forall (%[[IV0:.+]], %[[IV1:.+]]) in (10, 15) shared_outs(%[[C_BLK:.*]] = %[[C]])
-  //      CHECK:   %[[TS:.+]] = affine.min #[[$map0]](%[[IV1]])
+  //  CHECK-DAG:   %[[TS:.+]] = affine.min #[[$map0]](%[[IV1]])
+  //  CHECK-DAG:   %[[LB0:.+]] = affine.apply #[[$map2]](%[[IV0]])
+  //  CHECK-DAG:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
   //  CHECK-NOT:   affine.max
   //  CHECK-NOT:   affine.min
-  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map2]](%[[IV0]])
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
   //      CHECK:   %[[tA:.+]] = tensor.extract_slice %[[A]][%[[LB0]], 0] [10, 200] [1, 1] :
   //      CHECK:   %[[tB:.+]] = tensor.extract_slice %[[B]][0, %[[LB1]]] [200, %[[TS]]] [1, 1] :
   //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [10, %[[TS]]] [1, 1] :
@@ -452,10 +452,9 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0] -> (s0 ceildiv 10)>
 // CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 ceildiv 20)>
 // CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0] -> (d0 * -10 + s0, 10)>
-// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0) -> (0, d0)>
-// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
-// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 10)>
-// CHECK-DAG: #[[$map6:.+]] = affine_map<(d0) -> (d0 * 20)>
+// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
+// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0) -> (d0 * 10)>
+// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 20)>
 
 // CHECK-LABEL: matmul_tile_size_dynamic(
 //  CHECK-SAME:   %[[A:[0-9a-z]+]]: tensor<?x?xf32>
@@ -464,18 +463,16 @@ module attributes {transform.with_named_sequence} {
 func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
   //      CHECK: %[[c1:.*]] = arith.constant 1 : index
   //      CHECK: %[[c0:.*]] = arith.constant 0 : index
-  //      CHECK: %[[M:.+]] = tensor.dim %[[A]], %[[c0]] :
-  //      CHECK: %[[N:.+]] = tensor.dim %[[B]], %[[c1]] :
-  //      CHECK: %[[NT0:.+]] = affine.apply #map()[%[[M]]]
-  //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
-  //      CHECK: %[[K:.+]] = tensor.dim %[[A]], %[[c1]] :
+  //  CHECK-DAG: %[[M:.+]] = tensor.dim %[[A]], %[[c0]] :
+  //  CHECK-DAG: %[[N:.+]] = tensor.dim %[[B]], %[[c1]] :
+  //  CHECK-DAG: %[[NT0:.+]] = affine.apply #map()[%[[M]]]
+  //  CHECK-DAG: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
+  //  CHECK-DAG: %[[K:.+]] = tensor.dim %[[A]], %[[c1]] :
   //      CHECK: scf.forall (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
-  //      CHECK:   %[[TSMIN0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
-  //      CHECK:   %[[TS0:.+]] = affine.max #[[$map3]](%[[TSMIN0]])
-  //      CHECK:   %[[TSMIN1:.+]] = affine.min #[[$map4]](%[[IV1]])[%[[N]]]
-  //      CHECK:   %[[TS1:.+]] = affine.max #[[$map3]](%[[TSMIN1]])
-  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map5]](%[[IV0]])
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map6]](%[[IV1]])
+  //  CHECK-DAG:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
+  //  CHECK-DAG:   %[[TS1:.+]] = affine.min #[[$map3]](%[[IV1]])[%[[N]]]
+  //  CHECK-DAG:   %[[LB0:.+]] = affine.apply #[[$map4]](%[[IV0]])
+  //  CHECK-DAG:   %[[LB1:.+]] = affine.apply #[[$map5]](%[[IV1]])
   //      CHECK:   tensor.extract_slice %[[A]][%[[LB0]], 0] [%[[TS0]], %[[K]]] [1, 1] :
   //      CHECK:   tensor.extract_slice %[[B]][0, %[[LB1]]] [%[[K]], %[[TS1]]] [1, 1] :
   //      CHECK:   tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [%[[TS0]], %[[TS1]]] [1, 1] :
@@ -523,10 +520,9 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: #[[$map0:.+]] = affine_map<()[s0] -> (s0 ceildiv 10)>
 // CHECK-DAG: #[[$map1:.+]] = affine_map<()[s0] -> (s0 ceildiv 20)>
 // CHECK-DAG: #[[$map2:.+]] = affine_map<(d0)[s0] -> (d0 * -10 + s0, 10)>
-// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0) -> (0, d0)>
-// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
-// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 10)>
-// CHECK-DAG: #[[$map6:.+]] = affine_map<(d0) -> (d0 * 20)>
+// CHECK-DAG: #[[$map3:.+]] = affine_map<(d0)[s0] -> (d0 * -20 + s0, 20)>
+// CHECK-DAG: #[[$map4:.+]] = affine_map<(d0) -> (d0 * 10)>
+// CHECK-DAG: #[[$map5:.+]] = affine_map<(d0) -> (d0 * 20)>
 
 // CHECK-LABEL: matmul_tile_size_dynamic(
 //  CHECK-SAME:   %[[A:[0-9a-z]+]]: tensor<?x?xf32>
@@ -535,18 +531,16 @@ module attributes {transform.with_named_sequence} {
 func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
   //      CHECK: %[[c1:.*]] = arith.constant 1 : index
   //      CHECK: %[[c0:.*]] = arith.constant 0 : index
-  //      CHECK: %[[M:.+]] = tensor.dim %[[A]], %[[c0]] :
-  //      CHECK: %[[N:.+]] = tensor.dim %[[B]], %[[c1]] :
-  //      CHECK: %[[NT0:.+]] = affine.apply #map()[%[[M]]]
-  //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
-  //      CHECK: %[[K:.+]] = tensor.dim %[[A]], %[[c1]] :
+  //  CHECK-DAG: %[[M:.+]] = tensor.dim %[[A]], %[[c0]] :
+  //  CHECK-DAG: %[[N:.+]] = tensor.dim %[[B]], %[[c1]] :
+  //  CHECK-DAG: %[[NT0:.+]] = affine.apply #map()[%[[M]]]
+  //  CHECK-DAG: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
+  //  CHECK-DAG: %[[K:.+]] = tensor.dim %[[A]], %[[c1]] :
   //      CHECK: scf.forall (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
-  //      CHECK:   %[[TSMIN0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
-  //      CHECK:   %[[TS0:.+]] = affine.max #[[$map3]](%[[TSMIN0]])
-  //      CHECK:   %[[TSMIN1:.+]] = affine.min #[[$map4]](%[[IV1]])[%[[N]]]
-  //      CHECK:   %[[TS1:.+]] = affine.max #[[$map3]](%[[TSMIN1]])
-  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map5]](%[[IV0]])
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map6]](%[[IV1]])
+  //  CHECK-DAG:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
+  //  CHECK-DAG:   %[[TS1:.+]] = affine.min #[[$map3]](%[[IV1]])[%[[N]]]
+  //  CHECK-DAG:   %[[LB0:.+]] = affine.apply #[[$map4]](%[[IV0]])
+  //  CHECK-DAG:   %[[LB1:.+]] = affine.apply #[[$map5]](%[[IV1]])
   //      CHECK:   tensor.extract_slice %[[A]][%[[LB0]], 0] [%[[TS0]], %[[K]]] [1, 1] :
   //      CHECK:   tensor.extract_slice %[[B]][0, %[[LB1]]] [%[[K]], %[[TS1]]] [1, 1] :
   //      CHECK:   tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [%[[TS0]], %[[TS1]]] [1, 1] :

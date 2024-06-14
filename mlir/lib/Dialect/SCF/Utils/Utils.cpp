@@ -1363,3 +1363,37 @@ scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
 
   return fusedLoop;
 }
+
+FailureOr<scf::ForallOp> mlir::normalizeForallOp(RewriterBase &rewriter,
+                                                 scf::ForallOp forallOp) {
+  SmallVector<OpFoldResult> lbs = forallOp.getMixedLowerBound();
+  SmallVector<OpFoldResult> ubs = forallOp.getMixedUpperBound();
+  SmallVector<OpFoldResult> steps = forallOp.getMixedStep();
+
+  if (llvm::all_of(
+          lbs, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); }) &&
+      llvm::all_of(
+          steps, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); })) {
+    return forallOp;
+  }
+
+  SmallVector<OpFoldResult> newLbs, newUbs, newSteps;
+  for (auto [lb, ub, step] : llvm::zip_equal(lbs, ubs, steps)) {
+    LoopParams normalizedLoopParams =
+        emitNormalizedLoopBounds(rewriter, forallOp.getLoc(), lb, ub, step);
+    newLbs.push_back(normalizedLoopParams.lowerBound);
+    newUbs.push_back(normalizedLoopParams.upperBound);
+    newSteps.push_back(normalizedLoopParams.step);
+  }
+
+  auto normalizedForallOp = rewriter.create<scf::ForallOp>(
+      forallOp.getLoc(), newLbs, newUbs, newSteps, forallOp.getOutputs(),
+      forallOp.getMapping(), [](OpBuilder &, Location, ValueRange) {});
+
+  rewriter.inlineRegionBefore(forallOp.getBodyRegion(),
+                              normalizedForallOp.getBodyRegion(),
+                              normalizedForallOp.getBodyRegion().begin());
+
+  rewriter.replaceAllOpUsesWith(forallOp, normalizedForallOp);
+  return success();
+}
