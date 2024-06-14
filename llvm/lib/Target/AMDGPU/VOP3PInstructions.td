@@ -34,14 +34,18 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                     bit useTiedOutput = 0> : VOP3P_Profile<P, Features, 1> {
     bit UseTiedOutput = useTiedOutput;
 
+    defvar Src0RC = !if(!eq(P.Src0VT, bf16), VCSrc_bf16, VCSrc_f16);
+    defvar Src1RC = !if(!eq(P.Src1VT, bf16), VCSrc_bf16, VCSrc_f16);
+    defvar Src2RC = !if(!eq(P.Src2VT, bf16), VCSrc_bf16, VCSrc_f16);
+
     dag srcs =
-          (ins FP16InputMods:$src0_modifiers, VCSrc_f16:$src0,
-               FP16InputMods:$src1_modifiers, VCSrc_f16:$src1,
-               FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
+          (ins FP16InputMods:$src0_modifiers, Src0RC:$src0,
+               FP16InputMods:$src1_modifiers, Src1RC:$src1,
+               FP16InputMods:$src2_modifiers, Src2RC:$src2);
     dag dpp_srcs =
           (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0,
                FPVRegInputMods:$src1_modifiers, VRegSrc_32:$src1,
-               FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
+               FP16InputMods:$src2_modifiers, Src2RC:$src2);
 
            // FIXME: Clamp0 misbehaves with the non-default vdst_in
            // following it. For now workaround this by requiring clamp
@@ -155,33 +159,37 @@ defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_
 multiclass MadFmaMixPats<SDPatternOperator fma_like,
                          Instruction mix_inst,
                          Instruction mixlo_inst,
-                         Instruction mixhi_inst> {
+                         Instruction mixhi_inst,
+                         ValueType VT = f16,
+                         ValueType vecVT = v2f16> {
+  defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
+  defvar VOP3PMadMixModsExtPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsExt, VOP3PMadMixModsExt);
   // At least one of the operands needs to be an fpextend of an f16
   // for this to be worthwhile, so we need three patterns here.
   // TODO: Could we use a predicate to inspect src1/2/3 instead?
   def : GCNPat <
-    (f32 (fma_like (f32 (VOP3PMadMixModsExt f16:$src0, i32:$src0_mods)),
-                   (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_mods)),
-                   (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_mods)))),
+    (f32 (fma_like (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
+                   (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_mods)),
+                   (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_mods)))),
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
               DSTCLAMP.NONE)>;
   def : GCNPat <
-    (f32 (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_mods)),
-                   (f32 (VOP3PMadMixModsExt f16:$src1, i32:$src1_mods)),
-                   (f32 (VOP3PMadMixMods f32:$src2, i32:$src2_mods)))),
+    (f32 (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_mods)),
+                   (f32 (VOP3PMadMixModsExtPat VT:$src1, i32:$src1_mods)),
+                   (f32 (VOP3PMadMixModsPat f32:$src2, i32:$src2_mods)))),
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
               DSTCLAMP.NONE)>;
   def : GCNPat <
-    (f32 (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_mods)),
-                   (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_mods)),
-                   (f32 (VOP3PMadMixModsExt f16:$src2, i32:$src2_mods)))),
+    (f32 (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_mods)),
+                   (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)),
+                   (f32 (VOP3PMadMixModsExtPat VT:$src2, i32:$src2_mods)))),
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
               DSTCLAMP.NONE)>;
 
   def : GCNPat <
-    (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
-                            (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
-                            (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))),
+    (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                           (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                           (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))),
     (mixlo_inst $src0_modifiers, $src0,
                 $src1_modifiers, $src1,
                 $src2_modifiers, $src2,
@@ -193,10 +201,10 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   // because dealing with the write to high half of the register is
   // difficult.
   def : GCNPat <
-    (build_vector f16:$elt0, (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
-                                                     (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
-                                                     (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers)))))),
-    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+    (build_vector VT:$elt0, (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                                                   (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                                                   (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers)))))),
+    (vecVT (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
                        $src2_modifiers, $src2,
                        DSTCLAMP.NONE,
@@ -205,11 +213,11 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
 
   def : GCNPat <
     (build_vector
-      f16:$elt0,
-      (AMDGPUclamp (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$src0, i32:$src0_modifiers)),
-                                      (f32 (VOP3PMadMixMods f16:$src1, i32:$src1_modifiers)),
-                                      (f32 (VOP3PMadMixMods f16:$src2, i32:$src2_modifiers))))))),
-    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+      VT:$elt0,
+      (AMDGPUclamp (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$src0, i32:$src0_modifiers)),
+                                          (f32 (VOP3PMadMixModsPat VT:$src1, i32:$src1_modifiers)),
+                                          (f32 (VOP3PMadMixModsPat VT:$src2, i32:$src2_modifiers))))))),
+    (vecVT (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
                        $src2_modifiers, $src2,
                        DSTCLAMP.ENABLE,
@@ -218,13 +226,13 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
 
   def : GCNPat <
     (AMDGPUclamp (build_vector
-      (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$lo_src0, i32:$lo_src0_modifiers)),
-                         (f32 (VOP3PMadMixMods f16:$lo_src1, i32:$lo_src1_modifiers)),
-                         (f32 (VOP3PMadMixMods f16:$lo_src2, i32:$lo_src2_modifiers))))),
-      (f16 (fpround (fma_like (f32 (VOP3PMadMixMods f16:$hi_src0, i32:$hi_src0_modifiers)),
-                         (f32 (VOP3PMadMixMods f16:$hi_src1, i32:$hi_src1_modifiers)),
-                         (f32 (VOP3PMadMixMods f16:$hi_src2, i32:$hi_src2_modifiers))))))),
-    (v2f16 (mixhi_inst $hi_src0_modifiers, $hi_src0,
+      (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$lo_src0, i32:$lo_src0_modifiers)),
+                             (f32 (VOP3PMadMixModsPat VT:$lo_src1, i32:$lo_src1_modifiers)),
+                             (f32 (VOP3PMadMixModsPat VT:$lo_src2, i32:$lo_src2_modifiers))))),
+      (VT (fpround (fma_like (f32 (VOP3PMadMixModsPat VT:$hi_src0, i32:$hi_src0_modifiers)),
+                             (f32 (VOP3PMadMixModsPat VT:$hi_src1, i32:$hi_src1_modifiers)),
+                             (f32 (VOP3PMadMixModsPat VT:$hi_src2, i32:$hi_src2_modifiers))))))),
+    (vecVT (mixhi_inst $hi_src0_modifiers, $hi_src0,
                        $hi_src1_modifiers, $hi_src1,
                        $hi_src2_modifiers, $hi_src2,
                        DSTCLAMP.ENABLE,
@@ -236,8 +244,8 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   >;
 
   def : GCNPat <
-    (f16 (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
-                        (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers))))),
+    (VT (fpround (fmul (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                       (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers))))),
     (mixlo_inst $src0_modifiers, $src0,
                 $src1_modifiers, $src1,
                 (i32 0), (i32 0),
@@ -246,9 +254,9 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
   >;
 
   def : GCNPat <
-    (build_vector f16:$elt0, (f16 (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
-                                            (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers)))))),
-    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+    (build_vector VT:$elt0, (VT (fpround (fmul (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_modifiers)),
+                                         (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_modifiers)))))),
+    (vecVT (mixhi_inst $src0_modifiers, $src0,
                        $src1_modifiers, $src1,
                        (i32 0), (i32 0),
                        DSTCLAMP.NONE,
@@ -324,6 +332,8 @@ defm V_FMA_MIXHI_BF16 : VOP3_VOP3PInst<"v_fma_mixhi_bf16", VOP3P_Mix_Profile<VOP
 }
 } // End FPDPRounding = 1
 } // End isCommutable = 1
+
+defm : MadFmaMixPats<fma, V_FMA_MIX_F32_BF16, V_FMA_MIXLO_BF16, V_FMA_MIXHI_BF16, bf16, v2bf16>;
 } // End SubtargetPredicate = HasFmaMixBF16Insts
 
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {

@@ -24,6 +24,8 @@ declare i128 @llvm.read_volatile_register.i128(metadata) #1
 define void @test_wsr128(i128 noundef %v) #0 {
 ; CHECK-LE-LABEL: test_wsr128:
 ; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $x1 killed $x1 killed $x0_x1 def $x0_x1
+; CHECK-LE-NEXT:    // kill: def $x0 killed $x0 killed $x0_x1 def $x0_x1
 ; CHECK-LE-NEXT:    msrr S1_2_C3_C4_5, x0, x1
 ; CHECK-LE-NEXT:    ret
 ;
