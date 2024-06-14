@@ -165,13 +165,5 @@ int main(int, char**)
                                              test_allocator<Derived[4]> >::value, "");
     }
 
-#if TEST_STD_VER >= 14
-    {
-      // LWG 4110
-      auto deleter = [](auto pointer) { delete pointer; };
-      std::shared_ptr<int> p(new int, deleter, std::allocator<int>());
-    }
-#endif
-
   return 0;
 }
