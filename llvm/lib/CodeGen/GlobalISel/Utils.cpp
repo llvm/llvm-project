@@ -1909,7 +1909,7 @@ bool llvm::isGuaranteedNotToBeUndef(Register Reg,
 
 Type *llvm::getTypeForLLT(LLT Ty, LLVMContext &C) {
   if (Ty.isVector())
-    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
-                                Ty.getNumElements());
+    return VectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
+                                Ty.getElementCount());
   return IntegerType::get(C, Ty.getSizeInBits());
 }
