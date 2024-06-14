@@ -3583,6 +3583,17 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
+    case PP_UNSAFE_BUFFER_USAGE: {
+      if (!Record.empty()) {
+        SmallVector<SourceLocation, 64> SrcLocs;
+        unsigned Idx = 0;
+        while (Idx < Record.size())
+          SrcLocs.push_back(ReadSourceLocation(F, Record, Idx));
+        PP.setDeserializedSafeBufferOptOutMap(SrcLocs);
+      }
+      break;
+    }
+
     case PP_CONDITIONAL_STACK:
       if (!Record.empty()) {
         unsigned Idx = 0, End = Record.size() - 1;
