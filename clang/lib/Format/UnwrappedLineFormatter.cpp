@@ -57,7 +57,10 @@ public:
   /// Update the indent state given that \p Line is going to be formatted
   /// next.
   void nextLine(const AnnotatedLine &Line) {
-    Offset = getIndentOffset(*Line.First);
+    const auto *Tok = Line.First;
+    if (Tok->is(TT_AttributeMacro) && Tok->Next)
+      Tok = Tok->Next;
+    Offset = getIndentOffset(*Tok);
     // Update the indent level cache size so that we can rely on it
     // having the right size in adjustToUnmodifiedline.
     if (Line.Level >= IndentForLevel.size())
