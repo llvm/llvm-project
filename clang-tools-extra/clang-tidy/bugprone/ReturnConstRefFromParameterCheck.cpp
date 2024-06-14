@@ -32,11 +32,7 @@ void ReturnConstRefFromParameterCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static bool isSameTypeIgnoringConst(QualType A, QualType B) {
-  A = A.getCanonicalType();
-  B = B.getCanonicalType();
-  A.addConst();
-  B.addConst();
-  return A == B;
+  return A.getCanonicalType().withConst() == B.getCanonicalType().withConst();
 }
 
 static bool isSameTypeIgnoringConstRef(QualType A, QualType B) {
@@ -78,7 +74,6 @@ static const Decl *findRVRefOverload(const FunctionDecl &FD,
   for (const Decl *Overload : LookupResult) {
     if (Overload == &FD)
       continue;
-    Overload->dumpColor();
     if (const auto *O = dyn_cast<FunctionDecl>(Overload))
       if (hasSameParameterTypes(FD, *O, PD))
         return O;
