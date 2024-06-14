@@ -101,12 +101,13 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     else
       OS << ", \"" << Alias << "\"";
     OS << ", AArch64::" << AEK;
+    OS << ", \"" << Rec->getValueAsString("ArchFeatureName") << "\"";
     OS << ", \"" << Rec->getValueAsString("Desc") << "\"";
     OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
     OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
     OS << "},\n";
   };
-  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, {} },\n";
+  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, {}, {} },\n";
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"

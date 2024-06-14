@@ -14,11 +14,14 @@
 class Extension<
   string TargetFeatureName,            // String used for -target-feature and -march, unless overridden.
   string Spelling,                     // The XYZ in HasXYZ and AEK_XYZ.
+  string ArchitectureFeatureName,      // The extension's "FEAT_*"" name(s) defined by the architecture
   string Desc,                         // Description.
   list<SubtargetFeature> Implies = []  // List of dependent features.
 > : SubtargetFeature<TargetFeatureName, "Has" # Spelling, "true", Desc, Implies>
 {
     string ArchExtKindSpelling = "AEK_" # Spelling; // ArchExtKind enum name.
+
+    string ArchFeatureName = ArchitectureFeatureName;
 
     // By default, extensions are available as -march/-cpu command line options.
     string MArchName = "";
@@ -31,9 +34,10 @@ class Extension<
 class ExtensionWithMArch<
   string TargetFeatureName,            // String used for -target-feature and -march, unless overridden.
   string Spelling,                     // The XYZ in HasXYZ and AEK_XYZ.
+  string ArchitectureFeatureName,      // The extension's "FEAT_*"" name(s) defined by the architecture
   string Desc,                         // Description.
   list<SubtargetFeature> Implies = []  // List of dependent features.
-> : Extension<TargetFeatureName, Spelling, Desc, Implies> {
+> : Extension<TargetFeatureName, Spelling, ArchitectureFeatureName, Desc, Implies> {
     // In general, the name written on the command line should match the name
     // used for -target-feature. However, there are exceptions. Therefore we
     // add a separate field for this, to allow overriding it. Strongly prefer
@@ -55,18 +59,18 @@ class ExtensionWithMArch<
 //===----------------------------------------------------------------------===//
 
 let ArchExtKindSpelling = "AEK_FP", MArchName = "fp" in
-def FeatureFPARMv8 : ExtensionWithMArch<"fp-armv8", "FPARMv8",
-  "Enable ARMv8 (FEAT_FP)">;
+def FeatureFPARMv8 : ExtensionWithMArch<"fp-armv8", "FPARMv8", "FEAT_FP",
+  "Enable ARMv8">;
 
 let ArchExtKindSpelling = "AEK_SIMD", MArchName = "simd" in
-def FeatureNEON : ExtensionWithMArch<"neon", "NEON",
-  "Enable Advanced SIMD instructions (FEAT_AdvSIMD)", [FeatureFPARMv8]>;
+def FeatureNEON : ExtensionWithMArch<"neon", "NEON", "FEAT_AdvSIMD",
+  "Enable Advanced SIMD instructions", [FeatureFPARMv8]>;
 
-def FeatureSHA2 : ExtensionWithMArch<"sha2", "SHA2",
-  "Enable SHA1 and SHA256 support (FEAT_SHA1, FEAT_SHA256)", [FeatureNEON]>;
+def FeatureSHA2 : ExtensionWithMArch<"sha2", "SHA2", "FEAT_SHA1, FEAT_SHA256",
+  "Enable SHA1 and SHA256 support", [FeatureNEON]>;
 
-def FeatureAES : ExtensionWithMArch<"aes", "AES",
-  "Enable AES support (FEAT_AES, FEAT_PMULL)", [FeatureNEON]>;
+def FeatureAES : ExtensionWithMArch<"aes", "AES", "FEAT_AES, FEAT_PMULL",
+  "Enable AES support", [FeatureNEON]>;
 
 // Crypto has been split up and any combination is now valid (see the
 // crypto definitions above). Also, crypto is now context sensitive:
@@ -76,270 +80,272 @@ def FeatureAES : ExtensionWithMArch<"aes", "AES",
 // meaning anymore. We kept the Crypto definition here for backward
 // compatibility, and now imply features SHA2 and AES, which was the
 // "traditional" meaning of Crypto.
-def FeatureCrypto : ExtensionWithMArch<"crypto", "Crypto",
+def FeatureCrypto : ExtensionWithMArch<"crypto", "Crypto", "FEAT_Crypto",
   "Enable cryptographic instructions", [FeatureNEON, FeatureSHA2, FeatureAES]>;
 
-def FeatureCRC : ExtensionWithMArch<"crc", "CRC",
-  "Enable ARMv8 CRC-32 checksum instructions (FEAT_CRC32)">;
+def FeatureCRC : ExtensionWithMArch<"crc", "CRC", "FEAT_CRC32",
+  "Enable ARMv8 CRC-32 checksum instructions">;
 
 // This SubtargetFeature is special. It controls only whether codegen will turn
 // `llvm.readcyclecounter()` into an access to a PMUv3 System Register. The
 // `FEAT_PMUv3*` system registers are always available for assembly/disassembly.
 let MArchName = "pmuv3" in
-def FeaturePerfMon : ExtensionWithMArch<"perfmon", "PerfMon",
-  "Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension (FEAT_PMUv3)">;
+def FeaturePerfMon : ExtensionWithMArch<"perfmon", "PerfMon", "FEAT_PMUv3",
+  "Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension">;
 
-def FeatureSpecRestrict : Extension<"specrestrict", "SpecRestrict",
-  "Enable architectural speculation restriction (FEAT_CSV2_2)">;
+def FeatureSpecRestrict : Extension<"specrestrict", "SpecRestrict", "FEAT_CSV2_2",
+  "Enable architectural speculation restriction">;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.1 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureLSE : ExtensionWithMArch<"lse", "LSE",
-  "Enable ARMv8.1 Large System Extension (LSE) atomic instructions (FEAT_LSE)">;
+def FeatureLSE : ExtensionWithMArch<"lse", "LSE", "FEAT_LSE",
+  "Enable ARMv8.1 Large System Extension (LSE) atomic instructions">;
 
 let MArchAlias = "rdma" in
-def FeatureRDM : ExtensionWithMArch<"rdm", "RDM",
-  "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions (FEAT_RDM)",
+def FeatureRDM : ExtensionWithMArch<"rdm", "RDM", "FEAT_RDM",
+  "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions",
   [FeatureNEON]>;
 
-def FeaturePAN : Extension<"pan", "PAN",
-  "Enables ARM v8.1 Privileged Access-Never extension (FEAT_PAN)">;
+def FeaturePAN : Extension<"pan", "PAN", "FEAT_PAN",
+  "Enables ARM v8.1 Privileged Access-Never extension">;
 
-def FeatureLOR : Extension<"lor", "LOR",
-  "Enables ARM v8.1 Limited Ordering Regions extension (FEAT_LOR)">;
+def FeatureLOR : Extension<"lor", "LOR", "FEAT_LOR",
+  "Enables ARM v8.1 Limited Ordering Regions extension">;
 
 def FeatureCONTEXTIDREL2 : SubtargetFeature<"CONTEXTIDREL2", "HasCONTEXTIDREL2",
   "true", "Enable RW operand CONTEXTIDR_EL2">;
 
-def FeatureVH : Extension<"vh", "VH",
-  "Enables ARM v8.1 Virtual Host extension (FEAT_VHE)", [FeatureCONTEXTIDREL2]>;
+def FeatureVH : Extension<"vh", "VH", "FEAT_VHE",
+  "Enables ARM v8.1 Virtual Host extension", [FeatureCONTEXTIDREL2]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.2 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureSM4 : ExtensionWithMArch<"sm4", "SM4",
-  "Enable SM3 and SM4 support (FEAT_SM4, FEAT_SM3)", [FeatureNEON]>;
+def FeatureSM4 : ExtensionWithMArch<"sm4", "SM4", "FEAT_SM4, FEAT_SM3",
+  "Enable SM3 and SM4 support", [FeatureNEON]>;
 
-def FeatureSHA3 : ExtensionWithMArch<"sha3", "SHA3",
-  "Enable SHA512 and SHA3 support (FEAT_SHA3, FEAT_SHA512)", [FeatureNEON, FeatureSHA2]>;
+def FeatureSHA3 : ExtensionWithMArch<"sha3", "SHA3", "FEAT_SHA3, FEAT_SHA512",
+  "Enable SHA512 and SHA3 support", [FeatureNEON, FeatureSHA2]>;
 
-def FeatureRAS : ExtensionWithMArch<"ras", "RAS",
-  "Enable ARMv8 Reliability, Availability and Serviceability Extensions (FEAT_RAS, FEAT_RASv1p1)">;
+def FeatureRAS : ExtensionWithMArch<"ras", "RAS", "FEAT_RAS, FEAT_RASv1p1",
+  "Enable ARMv8 Reliability, Availability and Serviceability Extensions">;
 
 let ArchExtKindSpelling = "AEK_FP16", MArchName = "fp16" in
-def FeatureFullFP16 : ExtensionWithMArch<"fullfp16", "FullFP16",
-  "Full FP16 (FEAT_FP16)", [FeatureFPARMv8]>;
+def FeatureFullFP16 : ExtensionWithMArch<"fullfp16", "FullFP16", "FEAT_FP16",
+  "Full FP16", [FeatureFPARMv8]>;
 
 let ArchExtKindSpelling = "AEK_PROFILE", MArchName = "profile" in
-def FeatureSPE : ExtensionWithMArch<"spe", "SPE",
-  "Enable Statistical Profiling extension (FEAT_SPE)">;
+def FeatureSPE : ExtensionWithMArch<"spe", "SPE", "FEAT_SPE",
+  "Enable Statistical Profiling extension">;
 
-def FeaturePAN_RWV : Extension<"pan-rwv", "PAN_RWV",
-  "Enable v8.2 PAN s1e1R and s1e1W Variants (FEAT_PAN2)", [FeaturePAN]>;
+def FeaturePAN_RWV : Extension<"pan-rwv", "PAN_RWV", "FEAT_PAN2",
+  "Enable v8.2 PAN s1e1R and s1e1W Variants", [FeaturePAN]>;
 
-def FeaturePsUAO : Extension<"uaops", "PsUAO",
-  "Enable v8.2 UAO PState (FEAT_UAO)">;
+def FeaturePsUAO : Extension<"uaops", "PsUAO", "FEAT_UAO",
+  "Enable v8.2 UAO PState">;
 
-def FeatureCCPP : Extension<"ccpp", "CCPP",
-  "Enable v8.2 data Cache Clean to Point of Persistence (FEAT_DPB)" >;
+def FeatureCCPP : Extension<"ccpp", "CCPP", "FEAT_DPB",
+  "Enable v8.2 data Cache Clean to Point of Persistence">;
 
-def FeatureSVE : ExtensionWithMArch<"sve", "SVE",
-  "Enable Scalable Vector Extension (SVE) instructions (FEAT_SVE)", [FeatureFullFP16]>;
+def FeatureSVE : ExtensionWithMArch<"sve", "SVE", "FEAT_SVE",
+  "Enable Scalable Vector Extension (SVE) instructions", [FeatureFullFP16]>;
 
 let ArchExtKindSpelling = "AEK_I8MM" in
-def FeatureMatMulInt8 : ExtensionWithMArch<"i8mm", "MatMulInt8",
-  "Enable Matrix Multiply Int8 Extension (FEAT_I8MM)">;
+def FeatureMatMulInt8 : ExtensionWithMArch<"i8mm", "MatMulInt8", "FEAT_I8MM",
+  "Enable Matrix Multiply Int8 Extension">;
 
 let ArchExtKindSpelling = "AEK_F32MM" in
-def FeatureMatMulFP32 : ExtensionWithMArch<"f32mm", "MatMulFP32",
-  "Enable Matrix Multiply FP32 Extension (FEAT_F32MM)", [FeatureSVE]>;
+def FeatureMatMulFP32 : ExtensionWithMArch<"f32mm", "MatMulFP32", "FEAT_F32MM",
+  "Enable Matrix Multiply FP32 Extension", [FeatureSVE]>;
 
 let ArchExtKindSpelling = "AEK_F64MM" in
-def FeatureMatMulFP64 : ExtensionWithMArch<"f64mm", "MatMulFP64",
-  "Enable Matrix Multiply FP64 Extension (FEAT_F64MM)", [FeatureSVE]>;
+def FeatureMatMulFP64 : ExtensionWithMArch<"f64mm", "MatMulFP64", "FEAT_F64MM",
+  "Enable Matrix Multiply FP64 Extension", [FeatureSVE]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.3 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureRCPC : ExtensionWithMArch<"rcpc", "RCPC",
-  "Enable support for RCPC extension (FEAT_LRCPC)">;
+def FeatureRCPC : ExtensionWithMArch<"rcpc", "RCPC", "FEAT_LRCPC",
+  "Enable support for RCPC extension">;
 
-def FeaturePAuth : ExtensionWithMArch<"pauth", "PAuth",
-  "Enable v8.3-A Pointer Authentication extension (FEAT_PAuth)">;
+def FeaturePAuth : ExtensionWithMArch<"pauth", "PAuth", "FEAT_PAuth",
+  "Enable v8.3-A Pointer Authentication extension">;
 
 let ArchExtKindSpelling = "AEK_JSCVT", MArchName = "jscvt" in
-def FeatureJS : ExtensionWithMArch<"jsconv", "JS",
-  "Enable v8.3-A JavaScript FP conversion instructions (FEAT_JSCVT)",
+def FeatureJS : ExtensionWithMArch<"jsconv", "JS", "FEAT_JSCVT",
+  "Enable v8.3-A JavaScript FP conversion instructions",
   [FeatureFPARMv8]>;
 
-def FeatureCCIDX : Extension<"ccidx", "CCIDX",
-  "Enable v8.3-A Extend of the CCSIDR number of sets (FEAT_CCIDX)">;
+def FeatureCCIDX : Extension<"ccidx", "CCIDX", "FEAT_CCIDX",
+  "Enable v8.3-A Extend of the CCSIDR number of sets">;
 
 let ArchExtKindSpelling = "AEK_FCMA", MArchName = "fcma" in
-def FeatureComplxNum : ExtensionWithMArch<"complxnum", "ComplxNum",
-  "Enable v8.3-A Floating-point complex number support (FEAT_FCMA)",
+def FeatureComplxNum : ExtensionWithMArch<"complxnum", "ComplxNum", "FEAT_FCMA",
+  "Enable v8.3-A Floating-point complex number support",
   [FeatureNEON]>;
 
-def FeatureNV : Extension<"nv", "NV",
-  "Enable v8.4-A Nested Virtualization Enchancement (FEAT_NV, FEAT_NV2)">;
+def FeatureNV : Extension<"nv", "NV", "FEAT_NV, FEAT_NV2",
+  "Enable v8.4-A Nested Virtualization Enchancement">;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.4 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureLSE2 : Extension<"lse2", "LSE2",
-  "Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules (FEAT_LSE2)">;
+def FeatureLSE2 : Extension<"lse2", "LSE2", "FEAT_LSE2",
+  "Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules">;
 
-def FeatureFP16FML : ExtensionWithMArch<"fp16fml", "FP16FML",
-  "Enable FP16 FML instructions (FEAT_FHM)", [FeatureFullFP16]>;
+def FeatureFP16FML : ExtensionWithMArch<"fp16fml", "FP16FML", "FEAT_FHM",
+  "Enable FP16 FML instructions", [FeatureFullFP16]>;
 
-def FeatureDotProd : ExtensionWithMArch<"dotprod", "DotProd",
-  "Enable dot product support (FEAT_DotProd)", [FeatureNEON]>;
+def FeatureDotProd : ExtensionWithMArch<"dotprod", "DotProd", "FEAT_DotProd",
+  "Enable dot product support", [FeatureNEON]>;
 
-def FeatureMPAM : Extension<"mpam", "MPAM",
-  "Enable v8.4-A Memory system Partitioning and Monitoring extension (FEAT_MPAM)">;
+def FeatureMPAM : Extension<"mpam", "MPAM", "FEAT_MPAM",
+  "Enable v8.4-A Memory system Partitioning and Monitoring extension">;
 
-def FeatureDIT : ExtensionWithMArch<"dit", "DIT",
-  "Enable v8.4-A Data Independent Timing instructions (FEAT_DIT)">;
+def FeatureDIT : ExtensionWithMArch<"dit", "DIT", "FEAT_DIT",
+  "Enable v8.4-A Data Independent Timing instructions">;
 
-def FeatureTRACEV8_4 : Extension<"tracev8.4", "TRACEV8_4",
-  "Enable v8.4-A Trace extension (FEAT_TRF)">;
+def FeatureTRACEV8_4 : Extension<"tracev8.4", "TRACEV8_4", "FEAT_TRF",
+  "Enable v8.4-A Trace extension">;
 
-def FeatureAM : Extension<"am", "AM",
-  "Enable v8.4-A Activity Monitors extension (FEAT_AMUv1)">;
+def FeatureAM : Extension<"am", "AM", "FEAT_AMUv1",
+  "Enable v8.4-A Activity Monitors extension">;
 
-def FeatureSEL2 : Extension<"sel2", "SEL2",
-  "Enable v8.4-A Secure Exception Level 2 extension (FEAT_SEL2)">;
+def FeatureSEL2 : Extension<"sel2", "SEL2", "FEAT_SEL2",
+  "Enable v8.4-A Secure Exception Level 2 extension">;
 
 def FeatureTLB_RMI : Extension<"tlb-rmi", "TLB_RMI",
-  "Enable v8.4-A TLB Range and Maintenance Instructions (FEAT_TLBIOS, FEAT_TLBIRANGE)">;
+  "FEAT_TLBIOS, FEAT_TLBIRANGE",
+  "Enable v8.4-A TLB Range and Maintenance Instructions">;
 
-def FeatureFlagM : ExtensionWithMArch<"flagm", "FlagM",
-  "Enable v8.4-A Flag Manipulation Instructions (FEAT_FlagM)">;
+def FeatureFlagM : ExtensionWithMArch<"flagm", "FlagM", "FEAT_FlagM",
+  "Enable v8.4-A Flag Manipulation Instructions">;
 
-def FeatureRCPC_IMMO : Extension<"rcpc-immo", "RCPC_IMMO",
-  "Enable v8.4-A RCPC instructions with Immediate Offsets (FEAT_LRCPC2)",
+def FeatureRCPC_IMMO : Extension<"rcpc-immo", "RCPC_IMMO", "FEAT_LRCPC2",
+  "Enable v8.4-A RCPC instructions with Immediate Offsets",
   [FeatureRCPC]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.5 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV",
-  "Enable alternative NZCV format for floating point comparisons (FEAT_FlagM2)">;
+def FeatureAltFPCmp : Extension<"altnzcv", "AlternativeNZCV", "FEAT_FlagM2",
+  "Enable alternative NZCV format for floating point comparisons">;
 
-def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264",
+def FeatureFRInt3264 : Extension<"fptoint", "FRInt3264", "FEAT_FRINTTS",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
-  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int (FEAT_FRINTTS)">;
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int">;
 
-def FeatureSB : ExtensionWithMArch<"sb", "SB",
-  "Enable v8.5 Speculation Barrier (FEAT_SB)">;
+def FeatureSB : ExtensionWithMArch<"sb", "SB", "FEAT_SB",
+  "Enable v8.5 Speculation Barrier">;
 
-def FeatureSSBS : ExtensionWithMArch<"ssbs", "SSBS",
-  "Enable Speculative Store Bypass Safe bit (FEAT_SSBS, FEAT_SSBS2)">;
+def FeatureSSBS : ExtensionWithMArch<"ssbs", "SSBS", "FEAT_SSBS, FEAT_SSBS2",
+  "Enable Speculative Store Bypass Safe bit">;
 
-def FeaturePredRes : ExtensionWithMArch<"predres", "PredRes",
-  "Enable v8.5a execution and data prediction invalidation instructions (FEAT_SPECRES)">;
+def FeaturePredRes : ExtensionWithMArch<"predres", "PredRes", "FEAT_SPECRES",
+  "Enable v8.5a execution and data prediction invalidation instructions">;
 
-def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP",
-  "Enable v8.5 Cache Clean to Point of Deep Persistence (FEAT_DPB2)">;
+def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP", "FEAT_DPB2",
+  "Enable v8.5 Cache Clean to Point of Deep Persistence">;
 
 let ArchExtKindSpelling = "AEK_NONE" in
-def FeatureBranchTargetId : ExtensionWithMArch<"bti", "BTI",
-  "Enable Branch Target Identification (FEAT_BTI)">;
+def FeatureBranchTargetId : ExtensionWithMArch<"bti", "BTI", "FEAT_BTI",
+  "Enable Branch Target Identification">;
 
 let ArchExtKindSpelling = "AEK_RAND", MArchName = "rng" in
-def FeatureRandGen : ExtensionWithMArch<"rand", "RandGen",
-  "Enable Random Number generation instructions (FEAT_RNG)">;
+def FeatureRandGen : ExtensionWithMArch<"rand", "RandGen", "FEAT_RNG",
+  "Enable Random Number generation instructions">;
 
 // NOTE: "memtag" means FEAT_MTE + FEAT_MTE2 for -march or
 // __attribute((target(...))), but only FEAT_MTE for FMV.
 let MArchName = "memtag" in
-def FeatureMTE : ExtensionWithMArch<"mte", "MTE",
-  "Enable Memory Tagging Extension (FEAT_MTE, FEAT_MTE2)">;
+def FeatureMTE : ExtensionWithMArch<"mte", "MTE", "FEAT_MTE, FEAT_MTE2",
+  "Enable Memory Tagging Extension">;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.6 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureBF16 : ExtensionWithMArch<"bf16", "BF16",
-  "Enable BFloat16 Extension (FEAT_BF16)">;
+def FeatureBF16 : ExtensionWithMArch<"bf16", "BF16", "FEAT_BF16",
+  "Enable BFloat16 Extension">;
 
-def FeatureAMVS : Extension<"amvs", "AMVS",
-  "Enable v8.6-A Activity Monitors Virtualization support (FEAT_AMUv1p1)",
+def FeatureAMVS : Extension<"amvs", "AMVS", "FEAT_AMUv1p1",
+  "Enable v8.6-A Activity Monitors Virtualization support",
   [FeatureAM]>;
 
-def FeatureFineGrainedTraps : Extension<"fgt", "FineGrainedTraps",
-  "Enable fine grained virtualization traps extension (FEAT_FGT)">;
+def FeatureFineGrainedTraps : Extension<"fgt", "FineGrainedTraps", "FEAT_FGT",
+  "Enable fine grained virtualization traps extension">;
 
 def FeatureEnhancedCounterVirtualization :
-    Extension<"ecv", "EnhancedCounterVirtualization",
-      "Enable enhanced counter virtualization extension (FEAT_ECV)">;
+    Extension<"ecv", "EnhancedCounterVirtualization", "FEAT_ECV",
+      "Enable enhanced counter virtualization extension">;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.7 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureXS : Extension<"xs", "XS",
-  "Enable Armv8.7-A limited-TLB-maintenance instruction (FEAT_XS)">;
+def FeatureXS : Extension<"xs", "XS", "FEAT_XS",
+  "Enable Armv8.7-A limited-TLB-maintenance instruction">;
 
-def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT",
-  "Enable Armv8.7-A WFET and WFIT instruction (FEAT_WFxT)">;
+def FeatureWFxT : ExtensionWithMArch<"wfxt", "WFxT", "FEAT_WFxT",
+  "Enable Armv8.7-A WFET and WFIT instruction">;
 
-def FeatureHCX : Extension<"hcx", "HCX",
-  "Enable Armv8.7-A HCRX_EL2 system register (FEAT_HCX)">;
+def FeatureHCX : Extension<"hcx", "HCX", "FEAT_HCX",
+  "Enable Armv8.7-A HCRX_EL2 system register">;
 
 def FeatureLS64 : ExtensionWithMArch<"ls64", "LS64",
-  "Enable Armv8.7-A LD64B/ST64B Accelerator Extension (FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA)">;
+  "FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA",
+  "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
 
-def FeatureSPE_EEF : Extension<"spe-eef", "SPE_EEF",
-  "Enable extra register in the Statistical Profiling Extension (FEAT_SPEv1p2)">;
+def FeatureSPE_EEF : Extension<"spe-eef", "SPE_EEF", "FEAT_SPEv1p2",
+  "Enable extra register in the Statistical Profiling Extension">;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.8 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureHBC : ExtensionWithMArch<"hbc", "HBC",
-    "Enable Armv8.8-A Hinted Conditional Branches Extension (FEAT_HBC)">;
+def FeatureHBC : ExtensionWithMArch<"hbc", "HBC", "FEAT_HBC",
+    "Enable Armv8.8-A Hinted Conditional Branches Extension">;
 
-def FeatureMOPS : ExtensionWithMArch<"mops", "MOPS",
-    "Enable Armv8.8-A memcpy and memset acceleration instructions (FEAT_MOPS)">;
+def FeatureMOPS : ExtensionWithMArch<"mops", "MOPS", "FEAT_MOPS",
+    "Enable Armv8.8-A memcpy and memset acceleration instructions">;
 
-def FeatureNMI : Extension<"nmi", "NMI",
-  "Enable Armv8.8-A Non-maskable Interrupts (FEAT_NMI, FEAT_GICv3_NMI)">;
+def FeatureNMI : Extension<"nmi", "NMI", "FEAT_NMI, FEAT_GICv3_NMI",
+  "Enable Armv8.8-A Non-maskable Interrupts">;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.9 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureRASv2 : ExtensionWithMArch<"rasv2", "RASv2",
-  "Enable ARMv8.9-A Reliability, Availability and Serviceability Extensions (FEAT_RASv2)",
+def FeatureRASv2 : ExtensionWithMArch<"rasv2", "RASv2", "FEAT_RASv2",
+  "Enable ARMv8.9-A Reliability, Availability and Serviceability Extensions",
   [FeatureRAS]>;
 
-def FeatureCSSC : ExtensionWithMArch<"cssc", "CSSC",
-  "Enable Common Short Sequence Compression (CSSC) instructions (FEAT_CSSC)">;
+def FeatureCSSC : ExtensionWithMArch<"cssc", "CSSC", "FEAT_CSSC",
+  "Enable Common Short Sequence Compression (CSSC) instructions">;
 
-def FeatureCLRBHB : Extension<"clrbhb", "CLRBHB",
-  "Enable Clear BHB instruction (FEAT_CLRBHB)">;
+def FeatureCLRBHB : Extension<"clrbhb", "CLRBHB", "FEAT_CLRBHB",
+  "Enable Clear BHB instruction">;
 
-def FeaturePRFM_SLC : Extension<"prfm-slc-target", "PRFM_SLC",
+def FeaturePRFM_SLC : Extension<"prfm-slc-target", "PRFM_SLC", "FEAT_PRFMSLC",
   "Enable SLC target for PRFM instruction">;
 
 let MArchName = "predres2" in
-def FeatureSPECRES2 : ExtensionWithMArch<"specres2", "SPECRES2",
-  "Enable Speculation Restriction Instruction (FEAT_SPECRES2)",
+def FeatureSPECRES2 : ExtensionWithMArch<"specres2", "SPECRES2", "FEAT_SPECRES2",
+  "Enable Speculation Restriction Instruction",
   [FeaturePredRes]>;
 
-def FeatureRCPC3 : ExtensionWithMArch<"rcpc3", "RCPC3",
-  "Enable Armv8.9-A RCPC instructions for A64 and Advanced SIMD and floating-point instruction set (FEAT_LRCPC3)",
+def FeatureRCPC3 : ExtensionWithMArch<"rcpc3", "RCPC3", "FEAT_LRCPC3",
+  "Enable Armv8.9-A RCPC instructions for A64 and Advanced SIMD and floating-point instruction set",
   [FeatureRCPC_IMMO]>;
 
-def FeatureTHE : ExtensionWithMArch<"the", "THE",
-  "Enable Armv8.9-A Translation Hardening Extension (FEAT_THE)">;
+def FeatureTHE : ExtensionWithMArch<"the", "THE", "FEAT_THE",
+  "Enable Armv8.9-A Translation Hardening Extension">;
 
 //===----------------------------------------------------------------------===//
 //  Armv9.0 Architecture Extensions
@@ -348,31 +354,32 @@ def FeatureTHE : ExtensionWithMArch<"the", "THE",
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
-def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2",
-  "Enable Scalable Vector Extension 2 (SVE2) instructions (FEAT_SVE2)",
+def FeatureSVE2 : ExtensionWithMArch<"sve2", "SVE2", "FEAT_SVE2",
+  "Enable Scalable Vector Extension 2 (SVE2) instructions",
   [FeatureSVE, FeatureUseScalarIncVL]>;
 
 def FeatureSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
-  "Enable AES SVE2 instructions (FEAT_SVE_AES, FEAT_SVE_PMULL128)",
-  [FeatureSVE2, FeatureAES]>;
+  "FEAT_SVE_AES, FEAT_SVE_PMULL128",
+  "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
 
-def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4",
-  "Enable SM4 SVE2 instructions (FEAT_SVE_SM4)", [FeatureSVE2, FeatureSM4]>;
+def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
+  "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
 
-def FeatureSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3",
-  "Enable SHA3 SVE2 instructions (FEAT_SVE_SHA3)", [FeatureSVE2, FeatureSHA3]>;
+def FeatureSVE2SHA3 : ExtensionWithMArch<"sve2-sha3", "SVE2SHA3", "FEAT_SVE_SHA3",
+  "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
 
 def FeatureSVE2BitPerm : ExtensionWithMArch<"sve2-bitperm", "SVE2BitPerm",
-  "Enable bit permutation SVE2 instructions (FEAT_SVE_BitPerm)", [FeatureSVE2]>;
+  "FEAT_SVE_BitPerm",
+  "Enable bit permutation SVE2 instructions", [FeatureSVE2]>;
 
-def FeatureTRBE : Extension<"trbe", "TRBE",
-  "Enable Trace Buffer Extension (FEAT_TRBE)">;
+def FeatureTRBE : Extension<"trbe", "TRBE", "FEAT_TRBE",
+  "Enable Trace Buffer Extension">;
 
-def FeatureETE : Extension<"ete", "ETE",
-  "Enable Embedded Trace Extension (FEAT_ETE)", [FeatureTRBE]>;
+def FeatureETE : Extension<"ete", "ETE", "FEAT_ETE",
+  "Enable Embedded Trace Extension", [FeatureTRBE]>;
 
-def FeatureTME : ExtensionWithMArch<"tme", "TME",
-  "Enable Transactional Memory Extension (FEAT_TME)">;
+def FeatureTME : ExtensionWithMArch<"tme", "TME", "FEAT_TME",
+  "Enable Transactional Memory Extension">;
 
 //===----------------------------------------------------------------------===//
 //  Armv9.1 Architecture Extensions
@@ -382,118 +389,119 @@ def FeatureTME : ExtensionWithMArch<"tme", "TME",
 //  Armv9.2 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureBRBE : ExtensionWithMArch<"brbe", "BRBE",
-  "Enable Branch Record Buffer Extension (FEAT_BRBE)">;
+def FeatureBRBE : ExtensionWithMArch<"brbe", "BRBE", "FEAT_BRBE",
+  "Enable Branch Record Buffer Extension">;
 
-def FeatureRME : Extension<"rme", "RME",
-  "Enable Realm Management Extension (FEAT_RME)">;
+def FeatureRME : Extension<"rme", "RME", "FEAT_RME",
+  "Enable Realm Management Extension">;
 
-def FeatureSME : ExtensionWithMArch<"sme", "SME",
-  "Enable Scalable Matrix Extension (SME) (FEAT_SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
+def FeatureSME : ExtensionWithMArch<"sme", "SME", "FEAT_SME",
+  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
 
-def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64",
-  "Enable Scalable Matrix Extension (SME) F64F64 instructions (FEAT_SME_F64F64)", [FeatureSME]>;
+def FeatureSMEF64F64 : ExtensionWithMArch<"sme-f64f64", "SMEF64F64", "FEAT_SME_F64F64",
+  "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
 
-def FeatureSMEI16I64 : ExtensionWithMArch<"sme-i16i64", "SMEI16I64",
-  "Enable Scalable Matrix Extension (SME) I16I64 instructions (FEAT_SME_I16I64)", [FeatureSME]>;
+def FeatureSMEI16I64 : ExtensionWithMArch<"sme-i16i64", "SMEI16I64", "FEAT_SME_I16I64",
+  "Enable Scalable Matrix Extension (SME) I16I64 instructions", [FeatureSME]>;
 
-def FeatureSMEFA64 : ExtensionWithMArch<"sme-fa64", "SMEFA64",
-  "Enable the full A64 instruction set in streaming SVE mode (FEAT_SME_FA64)", [FeatureSME, FeatureSVE2]>;
+def FeatureSMEFA64 : ExtensionWithMArch<"sme-fa64", "SMEFA64", "FEAT_SME_FA64",
+  "Enable the full A64 instruction set in streaming SVE mode", [FeatureSME, FeatureSVE2]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv9.3 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureSME2 : ExtensionWithMArch<"sme2", "SME2",
+def FeatureSME2 : ExtensionWithMArch<"sme2", "SME2", "FEAT_SME2",
   "Enable Scalable Matrix Extension 2 (SME2) instructions", [FeatureSME]>;
 
-def FeatureMEC : Extension<"mec", "MEC",
+def FeatureMEC : Extension<"mec", "MEC", "FEAT_MEC",
   "Enable Memory Encryption Contexts Extension", [FeatureRME]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv9.4 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureSVE2p1: ExtensionWithMArch<"sve2p1", "SVE2p1",
+def FeatureSVE2p1: ExtensionWithMArch<"sve2p1", "SVE2p1", "FEAT_SVE2p1",
   "Enable Scalable Vector Extension 2.1 instructions", [FeatureSVE2]>;
 
-def FeatureB16B16 : ExtensionWithMArch<"b16b16", "B16B16",
-  "Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions (FEAT_B16B16)", [FeatureBF16]>;
+def FeatureB16B16 : ExtensionWithMArch<"b16b16", "B16B16", "FEAT_SVE_B16B16",
+  "Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions", [FeatureBF16]>;
 
-def FeatureSMEF16F16 : ExtensionWithMArch<"sme-f16f16", "SMEF16F16",
-  "Enable SME non-widening Float16 instructions (FEAT_SME_F16F16)", [FeatureSME2]>;
+def FeatureSMEF16F16 : ExtensionWithMArch<"sme-f16f16", "SMEF16F16", "FEAT_SME_F16F16",
+  "Enable SME non-widening Float16 instructions", [FeatureSME2]>;
 
-def FeatureSME2p1 : ExtensionWithMArch<"sme2p1", "SME2p1",
-  "Enable Scalable Matrix Extension 2.1 (FEAT_SME2p1) instructions", [FeatureSME2]>;
+def FeatureSME2p1 : ExtensionWithMArch<"sme2p1", "SME2p1", "FEAT_SME2p1",
+  "Enable Scalable Matrix Extension 2.1 instructions", [FeatureSME2]>;
 
-def FeatureCHK : Extension<"chk", "CHK",
-  "Enable Armv8.0-A Check Feature Status Extension (FEAT_CHK)">;
+def FeatureCHK : Extension<"chk", "CHK", "FEAT_CHK",
+  "Enable Armv8.0-A Check Feature Status Extension">;
 
-def FeatureGCS : ExtensionWithMArch<"gcs", "GCS",
+def FeatureGCS : ExtensionWithMArch<"gcs", "GCS", "FEAT_GCS",
   "Enable Armv9.4-A Guarded Call Stack Extension", [FeatureCHK]>;
 
-def FeatureITE : ExtensionWithMArch<"ite", "ITE",
-  "Enable Armv9.4-A Instrumentation Extension FEAT_ITE", [FeatureETE, FeatureTRBE]>;
+def FeatureITE : ExtensionWithMArch<"ite", "ITE", "FEAT_ITE",
+  "Enable Armv9.4-A Instrumentation Extension", [FeatureETE, FeatureTRBE]>;
 
-def FeatureLSE128 : ExtensionWithMArch<"lse128", "LSE128",
-  "Enable Armv9.4-A 128-bit Atomic Instructions (FEAT_LSE128)",
+def FeatureLSE128 : ExtensionWithMArch<"lse128", "LSE128", "FEAT_LSE128",
+  "Enable Armv9.4-A 128-bit Atomic Instructions",
   [FeatureLSE]>;
 
 // FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, and FEAT_SYSINSTR128 are mutually implicit.
 // Therefore group them all under a single feature flag, d128:
 def FeatureD128 : ExtensionWithMArch<"d128", "D128",
+  "FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128",
   "Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers "
-  "and Instructions (FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128)",
+  "and Instructions",
   [FeatureLSE128]>;
 
 //===----------------------------------------------------------------------===//
 //  Armv9.5 Architecture Extensions
 //===----------------------------------------------------------------------===//
 
-def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX",
- "Enable FAMIN and FAMAX instructions (FEAT_FAMINMAX)">;
+def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX", "FEAT_FAMINMAX",
+ "Enable FAMIN and FAMAX instructions">;
 
-def FeatureLUT: ExtensionWithMArch<"lut", "LUT",
- "Enable Lookup Table instructions (FEAT_LUT)">;
+def FeatureLUT: ExtensionWithMArch<"lut", "LUT", "FEAT_LUT",
+ "Enable Lookup Table instructions">;
    
-def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8",
-  "Enable FP8 instructions (FEAT_FP8)", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
+def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
+  "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
   
-def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA",
-  "Enable fp8 multiply-add instructions (FEAT_FP8FMA)", [FeatureFP8]>;
+def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
+  "Enable fp8 multiply-add instructions", [FeatureFP8]>;
 
-def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA",
-  "Enable SVE2 fp8 multiply-add instructions (FEAT_SSVE_FP8FMA)", [FeatureSME2, FeatureFP8]>;
+def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_SSVE_FP8FMA",
+  "Enable SVE2 fp8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;
 
-def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4",
-  "Enable fp8 4-way dot instructions (FEAT_FP8DOT4)", [FeatureFP8FMA]>;
+def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
+  "Enable fp8 4-way dot instructions", [FeatureFP8FMA]>;
   
-def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2",
-  "Enable fp8 2-way dot instructions (FEAT_FP8DOT2)", [FeatureFP8DOT4]>;
+def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
+  "Enable fp8 2-way dot instructions", [FeatureFP8DOT4]>;
 
-def FeatureSSVE_FP8DOT4 : ExtensionWithMArch<"ssve-fp8dot4", "SSVE_FP8DOT4",
-  "Enable SVE2 fp8 4-way dot product instructions (FEAT_SSVE_FP8DOT4)", [FeatureSSVE_FP8FMA]>;
+def FeatureSSVE_FP8DOT4 : ExtensionWithMArch<"ssve-fp8dot4", "SSVE_FP8DOT4", "FEAT_SSVE_FP8DOT4",
+  "Enable SVE2 fp8 4-way dot product instructions", [FeatureSSVE_FP8FMA]>;
 
-def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2",
-  "Enable SVE2 fp8 2-way dot product instructions (FEAT_SSVE_FP8DOT2)", [FeatureSSVE_FP8DOT4]>;
+def FeatureSSVE_FP8DOT2 : ExtensionWithMArch<"ssve-fp8dot2", "SSVE_FP8DOT2", "FEAT_SSVE_FP8DOT2",
+  "Enable SVE2 fp8 2-way dot product instructions", [FeatureSSVE_FP8DOT4]>;
 
-def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2",
-  "Enable Scalable Matrix Extension (SME) LUTv2 instructions (FEAT_SME_LUTv2)">;
+def FeatureSME_LUTv2 : ExtensionWithMArch<"sme-lutv2", "SME_LUTv2", "FEAT_SME_LUTv2",
+  "Enable Scalable Matrix Extension (SME) LUTv2 instructions">;
 
-def FeatureSMEF8F32 : ExtensionWithMArch<"sme-f8f32", "SMEF8F32",
-  "Enable Scalable Matrix Extension (SME) F8F32 instructions (FEAT_SME_F8F32)", [FeatureSME2, FeatureFP8]>;
+def FeatureSMEF8F32 : ExtensionWithMArch<"sme-f8f32", "SMEF8F32", "FEAT_SME_F8F32",
+  "Enable Scalable Matrix Extension (SME) F8F32 instructions", [FeatureSME2, FeatureFP8]>;
 
-def FeatureSMEF8F16 : ExtensionWithMArch<"sme-f8f16", "SMEF8F16",
-  "Enable Scalable Matrix Extension (SME) F8F16 instructions(FEAT_SME_F8F16)", [FeatureSMEF8F32]>;
+def FeatureSMEF8F16 : ExtensionWithMArch<"sme-f8f16", "SMEF8F16", "FEAT_SME_F8F16",
+  "Enable Scalable Matrix Extension (SME) F8F16 instructions", [FeatureSMEF8F32]>;
 
-def FeatureCPA : ExtensionWithMArch<"cpa", "CPA",
-  "Enable Armv9.5-A Checked Pointer Arithmetic (FEAT_CPA)">;
+def FeatureCPA : ExtensionWithMArch<"cpa", "CPA", "FEAT_CPA",
+  "Enable Armv9.5-A Checked Pointer Arithmetic">;
 
-def FeaturePAuthLR : ExtensionWithMArch<"pauth-lr", "PAuthLR",
-  "Enable Armv9.5-A PAC enhancements (FEAT_PAuth_LR)">;
+def FeaturePAuthLR : ExtensionWithMArch<"pauth-lr", "PAuthLR", "FEAT_PAuth_LR",
+  "Enable Armv9.5-A PAC enhancements">;
 
-def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW",
-  "Enable ARMv9.5-A TLBI VMALL for Dirty State (FEAT_TLBIW)">;
+def FeatureTLBIW : ExtensionWithMArch<"tlbiw", "TLBIW", "FEAT_TLBIW",
+  "Enable ARMv9.5-A TLBI VMALL for Dirty State">;
 
 //===----------------------------------------------------------------------===//
 //  Other Features

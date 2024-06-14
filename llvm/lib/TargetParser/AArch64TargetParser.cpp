@@ -159,13 +159,15 @@ std::optional<AArch64::CpuInfo> AArch64::parseCpu(StringRef Name) {
 void AArch64::PrintSupportedExtensions() {
   outs() << "All available -march extensions for AArch64\n\n"
          << "    " << left_justify("Name", 20)
+         << left_justify("Architecture Feature(s)", 55)
          << "Description\n";
   for (const auto &Ext : Extensions) {
     // Extensions without a feature cannot be used with -march.
     if (!Ext.UserVisibleName.empty() && !Ext.TargetFeature.empty()) {
       outs() << "    "
-             << format(Ext.Description.empty() ? "%s\n" : "%-20s%s\n",
+             << format(Ext.Description.empty() ? "%-20s%s\n" : "%-20s%-55s%s\n",
                        Ext.UserVisibleName.str().c_str(),
+                       Ext.ArchFeatureName.str().c_str(),
                        Ext.Description.str().c_str());
     }
   }
