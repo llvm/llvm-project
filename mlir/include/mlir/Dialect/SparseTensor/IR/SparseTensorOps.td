@@ -1601,6 +1601,13 @@ def IterateOp : SparseTensor_Op<"iterate",
     BlockArgument getIterator() {
       return getRegion().getArguments().front();
     }
+    std::optional<BlockArgument> getLvlCrd(Level lvl) {
+      if (getCrdUsedLvls()[lvl]) {
+        uint64_t mask = (static_cast<uint64_t>(0x01u) << lvl) - 1;
+        return getCrds()[llvm::popcount(mask & getCrdUsedLvls())];
+      }
+      return std::nullopt;
+    }
     Block::BlockArgListType getCrds() {
       // The first block argument is iterator, the remaining arguments are
       // referenced coordinates.
@@ -1613,6 +1620,7 @@ def IterateOp : SparseTensor_Op<"iterate",
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
 }
 
