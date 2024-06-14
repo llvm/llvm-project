@@ -189,6 +189,8 @@ class GCNUpwardRPTracker : public GCNRPTracker {
 public:
   GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
+  using GCNRPTracker::reset;
+
   /// reset tracker at the specified slot index \p SI.
   void reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
     GCNRPTracker::reset(MRI, llvm::getLiveRegs(SI, LIS, MRI));
@@ -205,10 +207,10 @@ public:
     reset(MI.getMF()->getRegInfo(), LIS.getInstructionIndex(MI).getDeadSlot());
   }
 
-  /// Move to the state of RP just before the \p MI . If \p ShouldTrackIt is
-  /// set, also update the internal iterators. Setting \p ShouldTrackIt to false
-  /// allows for an externally managed iterator / program order.
-  void recede(const MachineInstr &MI, bool ShouldTrackIt = true);
+  /// Move to the state of RP just before the \p MI . If \p UseInternalIterator
+  /// is set, also update the internal iterators. Setting \p UseInternalIterator
+  /// to false allows for an externally managed iterator / program order.
+  void recede(const MachineInstr &MI, bool UseInternalIterator = true);
 
   /// \p returns whether the tracker's state after receding MI corresponds
   /// to reported by LIS.
@@ -237,6 +239,8 @@ class GCNDownwardRPTracker : public GCNRPTracker {
 public:
   GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
 
+  using GCNRPTracker::reset;
+
   MachineBasicBlock::const_iterator getNext() const { return NextMI; }
 
   /// \p return MaxPressure and clear it.
@@ -253,33 +257,33 @@ public:
 
   /// Move to the state right before the next MI or after the end of MBB.
   /// \p returns false if reached end of the block.
-  /// If \p ShouldTrackIt is true, then internal iterators are used and set to
-  /// process in program order.
-  /// If \p ShouldTrackIt is false, then it is assumed that the tracker is using
-  /// an externally managed iterator, and advance* calls will not update the
-  /// state of the iterator. In such cases, the tracker will move to the state
-  /// right before the provided \p MI and use the provided \p TheLIS for RP
-  /// calculations.
-  bool advanceBeforeNext(MachineInstr *MI = nullptr, bool ShouldTrackIt = true,
+  /// If \p UseInternalIterator is true, then internal iterators are used and
+  /// set to process in program order. If \p UseInternalIterator is false, then
+  /// it is assumed that the tracker is using an externally managed iterator,
+  /// and advance* calls will not update the state of the iterator. In such
+  /// cases, the tracker will move to the state right before the provided \p MI
+  /// and use the provided \p TheLIS for RP calculations.
+  bool advanceBeforeNext(MachineInstr *MI = nullptr,
+                         bool UseInternalIterator = true,
                          LiveIntervals *TheLIS = nullptr);
 
   /// Move to the state at the MI, advanceBeforeNext has to be called first.
-  /// If \p ShouldTrackIt is true, then internal iterators are used and set to
-  /// process in program order.
-  /// If \p ShouldTrackIt is false, then it is assumed that the tracker is using
-  /// an externally managed iterator, and advance* calls will not update the
-  /// state of the iterator. In such cases, the tracker will move to the state
-  /// at the provided \p MI .
-  void advanceToNext(MachineInstr *MI = nullptr, bool ShouldTrackIt = true);
+  /// If \p UseInternalIterator is true, then internal iterators are used and
+  /// set to process in program order. If \p UseInternalIterator is false, then
+  /// it is assumed that the tracker is using an externally managed iterator,
+  /// and advance* calls will not update the state of the iterator. In such
+  /// cases, the tracker will move to the state at the provided \p MI .
+  void advanceToNext(MachineInstr *MI = nullptr,
+                     bool UseInternalIterator = true);
 
   /// Move to the state at the next MI. \p returns false if reached end of
-  /// block. If \p ShouldTrackIt is true, then internal iterators are used and
-  /// set to process in program order. If \p ShouldTrackIt is false, then it is
-  /// assumed that the tracker is using an externally managed iterator, and
-  /// advance* calls will not update the state of the iterator. In such cases,
-  /// the tracker will move to the state right before the provided \p MI and use
-  /// the provided \p TheLIS for RP calculations.
-  bool advance(MachineInstr *MI = nullptr, bool ShouldTrackIt = true,
+  /// block. If \p UseInternalIterator is true, then internal iterators are used
+  /// and set to process in program order. If \p UseInternalIterator is false,
+  /// then it is assumed that the tracker is using an externally managed
+  /// iterator, and advance* calls will not update the state of the iterator. In
+  /// such cases, the tracker will move to the state right before the provided
+  /// \p MI and use the provided \p TheLIS for RP calculations.
+  bool advance(MachineInstr *MI = nullptr, bool UseInternalIterator = true,
                LiveIntervals *TheLIS = nullptr);
 
   /// Advance instructions until before \p End.
