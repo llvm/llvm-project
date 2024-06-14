@@ -1602,7 +1602,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createSimdLoop(
   
   InsertPointTy DistanceIP(PrologBB, PrologBB->getTerminator()->getIterator());
   assert(DistanceCB && "expected loop trip count callback function!");
-  Value *DistVal = DistanceCB(EntryBB, DistanceIP);
+  //Value *DistVal = DistanceCB(EntryBB, DistanceIP);
+  Value *DistVal = DistanceCB(OuterAllocaBlock, DistanceIP);
   assert(DistVal && "trip count call back should return integer trip count");
   Type *DistValType = DistVal->getType();
   assert(DistValType->isIntegerTy() && "trip count should be integer type");
