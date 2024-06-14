@@ -13725,12 +13725,10 @@ void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
 
     // Make a copy of the features as passed on the command line into the
     // beginning of the additional features from the function to override.
-    // AArch64 handles command line option features in parseTargetAttr().
-    if (!Target->getTriple().isAArch64())
-      ParsedAttr.Features.insert(
-          ParsedAttr.Features.begin(),
-          Target->getTargetOpts().FeaturesAsWritten.begin(),
-          Target->getTargetOpts().FeaturesAsWritten.end());
+    ParsedAttr.Features.insert(
+        ParsedAttr.Features.begin(),
+        Target->getTargetOpts().FeaturesAsWritten.begin(),
+        Target->getTargetOpts().FeaturesAsWritten.end());
 
     if (ParsedAttr.CPU != "" && Target->isValidCPUName(ParsedAttr.CPU))
       TargetCPU = ParsedAttr.CPU;
