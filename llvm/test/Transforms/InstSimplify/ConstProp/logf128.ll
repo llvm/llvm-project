@@ -72,7 +72,8 @@ define fp128 @log_e_smallest_number_larger_than_one(){
 
 define fp128 @log_e_negative_2(){
 ; CHECK-LABEL: define fp128 @log_e_negative_2() {
-; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @llvm.log.f128(fp128 noundef 0xL0000000000000000C000000000000000)
+; CHECK-NEXT:    ret fp128 [[A]]
 ;
   %A = call fp128 @llvm.log.f128(fp128 noundef 0xL0000000000000000C000000000000000)
   ret fp128 %A
@@ -80,7 +81,8 @@ define fp128 @log_e_negative_2(){
 
 define fp128 @log_e_0(){
 ; CHECK-LABEL: define fp128 @log_e_0() {
-; CHECK-NEXT:    ret fp128 0xL0000000000000000FFFF000000000000
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000000000000000000000)
+; CHECK-NEXT:    ret fp128 [[A]]
 ;
   %A = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000000000000000000000)
   ret fp128 %A
@@ -88,7 +90,8 @@ define fp128 @log_e_0(){
 
 define fp128 @log_e_negative_0(){
 ; CHECK-LABEL: define fp128 @log_e_negative_0() {
-; CHECK-NEXT:    ret fp128 0xL0000000000000000FFFF000000000000
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000008000000000000000)
+; CHECK-NEXT:    ret fp128 [[A]]
 ;
   %A = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000008000000000000000)
   ret fp128 %A
@@ -104,7 +107,8 @@ define fp128 @log_e_infinity(){
 
 define fp128 @log_e_negative_infinity(){
 ; CHECK-LABEL: define fp128 @log_e_negative_infinity() {
-; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @llvm.log.f128(fp128 noundef 0xL0000000000000000FFFF000000000000)
+; CHECK-NEXT:    ret fp128 [[A]]
 ;
   %A = call fp128 @llvm.log.f128(fp128 noundef 0xL0000000000000000FFFF000000000000)
   ret fp128 %A
@@ -112,7 +116,8 @@ define fp128 @log_e_negative_infinity(){
 
 define fp128 @log_e_nan(){
 ; CHECK-LABEL: define fp128 @log_e_nan() {
-; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000001
+; CHECK-NEXT:    [[A:%.*]] = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000007FFF000000000001)
+; CHECK-NEXT:    ret fp128 [[A]]
 ;
   %A = call fp128 @llvm.log.f128(fp128 noundef 0xL00000000000000007FFF000000000001)
   ret fp128 %A
@@ -120,7 +125,8 @@ define fp128 @log_e_nan(){
 
 define <2 x fp128> @log_e_negative_2_vector(){
 ; CHECK-LABEL: define <2 x fp128> @log_e_negative_2_vector() {
-; CHECK-NEXT:    ret <2 x fp128> <fp128 0xL00000000000000007FFF800000000000, fp128 0xL00000000000000007FFF800000000000>
+; CHECK-NEXT:    [[A:%.*]] = call <2 x fp128> @llvm.log.v2f128(<2 x fp128> <fp128 0xL0000000000000000C000000000000000, fp128 0xL0000000000000000C000000000000001>)
+; CHECK-NEXT:    ret <2 x fp128> [[A]]
 ;
   %A = call <2 x fp128> @llvm.log.v2f128(<2 x fp128> <fp128 0xL0000000000000000C000000000000000, fp128 0xL0000000000000000C000000000000001>)
   ret <2 x fp128> %A
@@ -138,7 +144,7 @@ define fp128 @logl_e_64(){
 define fp128 @logl_e_0(){
 ; CHECK-LABEL: define fp128 @logl_e_0() {
 ; CHECK-NEXT:    [[A:%.*]] = call fp128 @logl(fp128 noundef 0xL00000000000000000000000000000000)
-; CHECK-NEXT:    ret fp128 0xL0000000000000000FFFF000000000000
+; CHECK-NEXT:    ret fp128 [[A]]
 ;
   %A = call fp128 @logl(fp128 noundef 0xL00000000000000000000000000000000)
   ret fp128 %A
@@ -156,7 +162,7 @@ define fp128 @logl_e_infinity(){
 define fp128 @logl_e_nan(){
 ; CHECK-LABEL: define fp128 @logl_e_nan() {
 ; CHECK-NEXT:    [[A:%.*]] = call fp128 @logl(fp128 noundef 0xL00000000000000007FFF000000000001)
-; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000001
+; CHECK-NEXT:    ret fp128 [[A]]
 ;
   %A = call fp128 @logl(fp128 noundef 0xL00000000000000007FFF000000000001)
   ret fp128 %A
@@ -166,7 +172,7 @@ define fp128 @logl_e_nan(){
 define fp128 @logl_e_negative_2(){
 ; CHECK-LABEL: define fp128 @logl_e_negative_2() {
 ; CHECK-NEXT:    [[A:%.*]] = call fp128 @logl(fp128 noundef 0xL0000000000000000C000000000000000)
-; CHECK-NEXT:    ret fp128 0xL00000000000000007FFF800000000000
+; CHECK-NEXT:    ret fp128 [[A]]
 ;
   %A = call fp128 @logl(fp128 noundef 0xL0000000000000000C000000000000000)
   ret fp128 %A

@@ -1734,6 +1734,14 @@ Constant *GetConstantFoldFPValue(double V, Type *Ty) {
   llvm_unreachable("Can only constant fold half/float/double");
 }
 
+#if defined(HAS_IEE754_FLOAT128)
+Constant *GetConstantFoldFPValue128(__float128 V, Type *Ty) {
+  if (Ty->isFP128Ty())
+    return ConstantFP::get(Ty, V);
+  llvm_unreachable("Can only constant fold fp128");
+}
+#endif
+
 /// Clear the floating-point exception state.
 inline void llvm_fenv_clearexcept() {
 #if defined(HAVE_FENV_H) && HAVE_DECL_FE_ALL_EXCEPT
@@ -1765,6 +1773,20 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
 
   return GetConstantFoldFPValue(Result, Ty);
 }
+
+#if defined(HAS_IEE754_FLOAT128)
+Constant *ConstantFoldFP128(long double (*NativeFP)(long double),
+                            const APFloat &V, Type *Ty) {
+  llvm_fenv_clearexcept();
+  __float128 Result = NativeFP(V.convertToQuad());
+  if (llvm_fenv_testexcept()) {
+    llvm_fenv_clearexcept();
+    return nullptr;
+  }
+
+  return GetConstantFoldFPValue128(Result, Ty);
+}
+#endif
 
 Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
                                const APFloat &V, const APFloat &W, Type *Ty) {
@@ -2085,18 +2107,16 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (IntrinsicID == Intrinsic::canonicalize)
       return constantFoldCanonicalize(Ty, Call, U);
 
-      // Try to handle special fp128 cases before bailing
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
     if (Ty->isFP128Ty()) {
-      const APFloat &Fp128APF = Op->getValueAPF();
       if (IntrinsicID == Intrinsic::log)
-        return ConstantFP::get(Ty, logf128(Fp128APF.convertToQuad()));
-    }
+        return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
 
-    LibFunc Fp128Func = NotLibFunc;
-    if (Ty->isFP128Ty() && TLI->getLibFunc(Name, Fp128Func) &&
-        TLI->has(Fp128Func) && Fp128Func == LibFunc_logl)
-      return ConstantFP::get(Ty, logf128(Op->getValueAPF().convertToQuad()));
+      LibFunc Fp128Func = NotLibFunc;
+      if (TLI->getLibFunc(Name, Fp128Func) && TLI->has(Fp128Func) &&
+          Fp128Func == LibFunc_logl)
+        return ConstantFoldFP128(logf128, Op->getValueAPF(), Ty);
+    }
 #endif
 
     if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
