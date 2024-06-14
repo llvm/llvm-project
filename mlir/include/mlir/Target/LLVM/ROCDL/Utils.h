@@ -27,60 +27,17 @@ namespace ROCDL {
 /// 5. Returns an empty string.
 StringRef getROCMPath();
 
-/// Helper class for specifying the AMD GCN device libraries required for
+/// Helper enum for specifying the AMD GCN device libraries required for
 /// compilation.
-class AMDGCNLibraryList {
-public:
-  typedef enum : uint32_t {
-    None = 0,
-    Ockl = 1,
-    Ocml = 2,
-    OpenCL = 4,
-    Hip = 8,
-    LastLib = Hip,
-    All = (LastLib << 1) - 1
-  } Library;
-
-  explicit AMDGCNLibraryList(uint32_t libs = All) : libList(All & libs) {}
-
-  /// Return a list with no libraries.
-  static AMDGCNLibraryList getEmpty() { return AMDGCNLibraryList(None); }
-
-  /// Return the libraries needed for compiling code with OpenCL calls.
-  static AMDGCNLibraryList getOpenCL() {
-    return AMDGCNLibraryList(Ockl | Ocml | OpenCL);
-  }
-
-  /// Returns true if the list is empty.
-  bool isEmpty() const { return libList == None; }
-
-  /// Adds a library to the list.
-  AMDGCNLibraryList addLibrary(Library lib) {
-    libList = libList | lib;
-    return *this;
-  }
-
-  /// Adds all the libraries in `list` to the library list.
-  AMDGCNLibraryList addList(AMDGCNLibraryList list) {
-    libList = libList | list.libList;
-    return *this;
-  }
-
-  /// Removes a library from the list.
-  AMDGCNLibraryList removeLibrary(Library lib) {
-    libList = libList & ~lib;
-    return *this;
-  }
-
-  /// Returns true if `lib` is in the list of libraries.
-  bool requiresLibrary(Library lib) const { return (libList & lib) == lib; }
-
-  /// Returns true if `libList` contains any of the libraries in `libs`.
-  bool requiresAnyOf(uint32_t libs) const { return (libList & libs) != None; }
-
-private:
-  /// Library list.
-  uint32_t libList;
+enum class AMDGCNLibraries : uint32_t {
+  None = 0,
+  Ockl = 1,
+  Ocml = 2,
+  OpenCL = 4,
+  Hip = 8,
+  LastLib = Hip,
+  LLVM_MARK_AS_BITMASK_ENUM(LastLib),
+  All = (LastLib << 1) - 1
 };
 
 /// Base class for all ROCDL serializations from GPU modules into binary
@@ -106,7 +63,7 @@ public:
   ArrayRef<std::string> getFileList() const;
 
   /// Appends standard ROCm device libraries to `fileList`.
-  LogicalResult appendStandardLibs(AMDGCNLibraryList libs);
+  LogicalResult appendStandardLibs(AMDGCNLibraries libs);
 
   /// Loads the bitcode files in `fileList`.
   virtual std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
@@ -120,7 +77,7 @@ public:
 
 protected:
   /// Adds `oclc` control variables to the LLVM module.
-  void addControlVariables(llvm::Module &module, AMDGCNLibraryList libs,
+  void addControlVariables(llvm::Module &module, AMDGCNLibraries libs,
                            bool wave64, bool daz, bool finiteOnly,
                            bool unsafeMath, bool fastMath, bool correctSqrt,
                            StringRef abiVer);
@@ -146,8 +103,8 @@ protected:
   /// List of LLVM bitcode files to link to.
   SmallVector<std::string> fileList;
 
-  /// AMD GCN libraries to use when linking, the default is using all.
-  AMDGCNLibraryList deviceLibs = AMDGCNLibraryList::getEmpty();
+  /// AMD GCN libraries to use when linking, the default is using none.
+  AMDGCNLibraries deviceLibs = AMDGCNLibraries::None;
 };
 } // namespace ROCDL
 } // namespace mlir

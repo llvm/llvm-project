@@ -111,7 +111,7 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
 
   // By default add all libraries if the toolkit path is not empty.
   if (!getToolkitPath().empty())
-    deviceLibs = AMDGCNLibraryList(AMDGCNLibraryList::All);
+    deviceLibs = AMDGCNLibraries::All;
 }
 
 void SerializeGPUModuleBase::init() {
@@ -136,9 +136,8 @@ ArrayRef<std::string> SerializeGPUModuleBase::getFileList() const {
   return fileList;
 }
 
-LogicalResult
-SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraryList libs) {
-  if (libs.isEmpty())
+LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
+  if (libs == AMDGCNLibraries::None)
     return success();
   StringRef pathRef = getToolkitPath();
   // Fail if the toolkit is empty.
@@ -180,12 +179,11 @@ SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraryList libs) {
 
   // Add ROCm device libraries. Fail if any of the libraries is not found, ie.
   // if any of the `addLib` failed.
-  if ((libs.requiresLibrary(AMDGCNLibraryList::Ocml) && addLib("ocml.bc")) ||
-      (libs.requiresLibrary(AMDGCNLibraryList::Ockl) && addLib("ockl.bc")) ||
-      (libs.requiresLibrary(AMDGCNLibraryList::Hip) && addLib("hip.bc")) ||
-      (libs.requiresLibrary(AMDGCNLibraryList::OpenCL) &&
-       addLib("opencl.bc")) ||
-      (libs.requiresAnyOf(AMDGCNLibraryList::Ocml | AMDGCNLibraryList::Ockl) &&
+  if ((any(libs & AMDGCNLibraries::Ocml) && addLib("ocml.bc")) ||
+      (any(libs & AMDGCNLibraries::Ockl) && addLib("ockl.bc")) ||
+      (any(libs & AMDGCNLibraries::Hip) && addLib("hip.bc")) ||
+      (any(libs & AMDGCNLibraries::OpenCL) && addLib("opencl.bc")) ||
+      (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl)) &&
        addLib("oclc_isa_version_" + isaVersion + ".bc")))
     return failure();
   return success();
@@ -195,7 +193,7 @@ std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
 SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
   SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
   // Return if there are no libs to load.
-  if (deviceLibs.isEmpty() && fileList.empty())
+  if (deviceLibs == AMDGCNLibraries::None && fileList.empty())
     return bcFiles;
   if (failed(appendStandardLibs(deviceLibs)))
     return std::nullopt;
@@ -224,16 +222,17 @@ void SerializeGPUModuleBase::handleModulePreLink(llvm::Module &module) {
   assert(targetMachine && "expect a TargetMachine");
   // If all libraries are not set, traverse the module to determine which
   // libraries are required.
-  if (!deviceLibs.requiresLibrary(AMDGCNLibraryList::All)) {
+  if (deviceLibs != AMDGCNLibraries::All) {
     for (llvm::Function &f : module.functions()) {
       if (f.hasExternalLinkage() && f.hasName() && !f.hasExactDefinition()) {
         StringRef funcName = f.getName();
         if ("printf" == funcName)
-          deviceLibs.addList(AMDGCNLibraryList::getOpenCL());
+          deviceLibs |= AMDGCNLibraries::OpenCL | AMDGCNLibraries::Ockl |
+                        AMDGCNLibraries::Ocml;
         if (funcName.starts_with("__ockl_"))
-          deviceLibs.addLibrary(AMDGCNLibraryList::Ockl);
+          deviceLibs |= AMDGCNLibraries::Ockl;
         if (funcName.starts_with("__ocml_"))
-          deviceLibs.addLibrary(AMDGCNLibraryList::Ocml);
+          deviceLibs |= AMDGCNLibraries::Ocml;
       }
     }
   }
@@ -244,11 +243,11 @@ void SerializeGPUModuleBase::handleModulePreLink(llvm::Module &module) {
 }
 
 void SerializeGPUModuleBase::addControlVariables(
-    llvm::Module &module, AMDGCNLibraryList libs, bool wave64, bool daz,
+    llvm::Module &module, AMDGCNLibraries libs, bool wave64, bool daz,
     bool finiteOnly, bool unsafeMath, bool fastMath, bool correctSqrt,
     StringRef abiVer) {
   // Return if no device libraries are required.
-  if (libs.isEmpty())
+  if (libs == AMDGCNLibraries::None)
     return;
   // Helper function for adding control variables.
   auto addControlVariable = [&module](StringRef name, uint32_t value,
@@ -270,7 +269,7 @@ void SerializeGPUModuleBase::addControlVariables(
     controlVariable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
   };
   // Add ocml related control variables.
-  if (libs.requiresLibrary(AMDGCNLibraryList::Ocml)) {
+  if (any(libs & AMDGCNLibraries::Ocml)) {
     addControlVariable("__oclc_finite_only_opt", finiteOnly || fastMath, 8);
     addControlVariable("__oclc_daz_opt", daz || fastMath, 8);
     addControlVariable("__oclc_correctly_rounded_sqrt32",
@@ -278,7 +277,7 @@ void SerializeGPUModuleBase::addControlVariables(
     addControlVariable("__oclc_unsafe_math_opt", unsafeMath || fastMath, 8);
   }
   // Add ocml or ockl related control variables.
-  if (libs.requiresAnyOf(AMDGCNLibraryList::Ocml | AMDGCNLibraryList::Ockl)) {
+  if (any(libs & (AMDGCNLibraries::Ocml | AMDGCNLibraries::Ockl))) {
     addControlVariable("__oclc_wavefrontsize64", wave64, 8);
     int abi = 500;
     abiVer.getAsInteger(0, abi);
