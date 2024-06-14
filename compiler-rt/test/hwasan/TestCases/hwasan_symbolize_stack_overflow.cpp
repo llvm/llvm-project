@@ -7,7 +7,7 @@
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t -1000 2>&1 | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s --check-prefixes=CHECK,BEFORE1000
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t 1000000 2>&1 | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s --check-prefixes=TOOFAR
 
-// REQUIRES: pointer-tagging
+// REQUIRES: aarch64-target-arch
 
 #include <stdlib.h>
 

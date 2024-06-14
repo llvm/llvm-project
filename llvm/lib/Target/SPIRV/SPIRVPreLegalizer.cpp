@@ -41,7 +41,8 @@ public:
 static void
 addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                     const SPIRVSubtarget &STI,
-                    DenseMap<MachineInstr *, Type *> &TargetExtConstTypes) {
+                    DenseMap<MachineInstr *, Type *> &TargetExtConstTypes,
+                    SmallSet<Register, 4> &TrackedConstRegs) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   DenseMap<MachineInstr *, Register> RegsAlreadyAddedToDT;
   SmallVector<MachineInstr *, 10> ToErase, ToEraseComposites;
@@ -80,6 +81,7 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             }
           }
           GR->add(Const, &MF, SrcReg);
+          TrackedConstRegs.insert(SrcReg);
           if (Const->getType()->isTargetExtTy()) {
             // remember association so that we can restore it when assign types
             MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
@@ -121,7 +123,9 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     MI->eraseFromParent();
 }
 
-static void foldConstantsIntoIntrinsics(MachineFunction &MF) {
+static void
+foldConstantsIntoIntrinsics(MachineFunction &MF,
+                            const SmallSet<Register, 4> &TrackedConstRegs) {
   SmallVector<MachineInstr *, 10> ToErase;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const unsigned AssignNameOperandShift = 2;
@@ -137,7 +141,8 @@ static void foldConstantsIntoIntrinsics(MachineFunction &MF) {
         MI.removeOperand(NumOp);
         MI.addOperand(MachineOperand::CreateImm(
             ConstMI->getOperand(1).getCImm()->getZExtValue()));
-        if (MRI.use_empty(ConstMI->getOperand(0).getReg()))
+        Register DefReg = ConstMI->getOperand(0).getReg();
+        if (MRI.use_empty(DefReg) && !TrackedConstRegs.contains(DefReg))
           ToErase.push_back(ConstMI);
       }
     }
@@ -836,8 +841,10 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineIRBuilder MIB(MF);
   // a registry of target extension constants
   DenseMap<MachineInstr *, Type *> TargetExtConstTypes;
-  addConstantsToTrack(MF, GR, ST, TargetExtConstTypes);
-  foldConstantsIntoIntrinsics(MF);
+  // to keep record of tracked constants
+  SmallSet<Register, 4> TrackedConstRegs;
+  addConstantsToTrack(MF, GR, ST, TargetExtConstTypes, TrackedConstRegs);
+  foldConstantsIntoIntrinsics(MF, TrackedConstRegs);
   insertBitcasts(MF, GR, MIB);
   generateAssignInstrs(MF, GR, MIB, TargetExtConstTypes);
   processSwitches(MF, GR, MIB);
