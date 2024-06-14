@@ -10,9 +10,9 @@ define void @vld2(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-NEXT:  .LBB0_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x0], #32
-; CHECK-NEXT:    fmul v2.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fmla v2.4s, v1.4s, v1.4s
-; CHECK-NEXT:    str q2, [x1, x8]
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    str q0, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    b.ne .LBB0_1
@@ -50,10 +50,10 @@ define void @vld3(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0], #48
-; CHECK-NEXT:    fmul v3.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fmla v3.4s, v1.4s, v1.4s
-; CHECK-NEXT:    fmla v3.4s, v2.4s, v2.4s
-; CHECK-NEXT:    str q3, [x1, x8]
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fmla v0.4s, v2.4s, v2.4s
+; CHECK-NEXT:    str q0, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    b.ne .LBB1_1
@@ -97,11 +97,11 @@ define void @vld4(ptr nocapture readonly %pSrc, ptr noalias nocapture %pDst, i32
 ; CHECK-NEXT:    add x9, x1, x8
 ; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
-; CHECK-NEXT:    fmul v5.4s, v2.4s, v2.4s
-; CHECK-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x9]
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fmul v1.4s, v2.4s, v2.4s
+; CHECK-NEXT:    fmla v1.4s, v3.4s, v3.4s
+; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x9]
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -149,9 +149,9 @@ define void @twosrc(ptr nocapture readonly %pSrc, ptr nocapture readonly %pSrc2,
 ; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
 ; CHECK-NEXT:    ld2 { v2.4s, v3.4s }, [x10]
-; CHECK-NEXT:    fmul v4.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fmla v4.4s, v1.4s, v3.4s
-; CHECK-NEXT:    str q4, [x2], #16
+; CHECK-NEXT:    fmul v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    fmla v0.4s, v1.4s, v3.4s
+; CHECK-NEXT:    str q0, [x2], #16
 ; CHECK-NEXT:    b.ne .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -190,9 +190,9 @@ define void @vld2_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-NEXT:  .LBB4_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld2 { v0.4s, v1.4s }, [x0], #32
-; CHECK-NEXT:    fmul v2.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fmla v2.4s, v1.4s, v1.4s
-; CHECK-NEXT:    str q2, [x1, x8]
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    str q0, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    b.ne .LBB4_1
@@ -229,10 +229,10 @@ define void @vld3_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-NEXT:  .LBB5_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld3 { v0.4s, v1.4s, v2.4s }, [x0], #48
-; CHECK-NEXT:    fmul v3.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fmla v3.4s, v1.4s, v1.4s
-; CHECK-NEXT:    fmla v3.4s, v2.4s, v2.4s
-; CHECK-NEXT:    str q3, [x1, x8]
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fmla v0.4s, v2.4s, v2.4s
+; CHECK-NEXT:    str q0, [x1, x8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    b.ne .LBB5_1
@@ -274,11 +274,11 @@ define void @vld4_multiuse(ptr nocapture readonly %pSrc, ptr noalias nocapture %
 ; CHECK-NEXT:    add x9, x1, x8
 ; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
-; CHECK-NEXT:    fmul v4.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fmla v4.4s, v1.4s, v1.4s
-; CHECK-NEXT:    fmul v5.4s, v2.4s, v2.4s
-; CHECK-NEXT:    fmla v5.4s, v3.4s, v3.4s
-; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x9]
+; CHECK-NEXT:    fmul v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    fmla v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fmul v1.4s, v2.4s, v2.4s
+; CHECK-NEXT:    fmla v1.4s, v3.4s, v3.4s
+; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x9]
 ; CHECK-NEXT:    b.ne .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    ret
@@ -369,16 +369,16 @@ define void @transpose_s16_8x8_simpler2(ptr nocapture noundef %a) {
 ; CHECK:       .Lfunc_begin8:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ldp q0, q2, [x0]
-; CHECK-NEXT:    ldp q3, q4, [x0, #64]
-; CHECK-NEXT:    ldp q5, q6, [x0, #32]
-; CHECK-NEXT:    ldp q7, q16, [x0, #96]
-; CHECK-NEXT:    mov v0.h[5], v2.h[4]
-; CHECK-NEXT:    zip1 v2.8h, v3.8h, v4.8h
-; CHECK-NEXT:    zip1 v3.8h, v5.8h, v6.8h
-; CHECK-NEXT:    mov v7.h[5], v16.h[4]
-; CHECK-NEXT:    mov v0.s[1], v2.s[0]
-; CHECK-NEXT:    uzp1 v1.4s, v3.4s, v7.4s
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x0, #64]
+; CHECK-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    mov v0.h[5], v1.h[4]
+; CHECK-NEXT:    zip1 v1.8h, v2.8h, v3.8h
+; CHECK-NEXT:    zip1 v2.8h, v4.8h, v5.8h
+; CHECK-NEXT:    mov v6.h[5], v7.h[4]
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    uzp1 v1.4s, v2.4s, v6.4s
 ; CHECK-NEXT:    zip2 v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x0]
 ; CHECK-NEXT:    str q2, [x0, #64]
@@ -424,23 +424,23 @@ define void @transpose_s16_8x8(ptr nocapture noundef %0, ptr nocapture noundef %
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ldr q2, [x2]
 ; CHECK-NEXT:    ldr q3, [x4]
 ; CHECK-NEXT:    ldr q4, [x5]
-; CHECK-NEXT:    ldr q2, [x2]
 ; CHECK-NEXT:    ldr q5, [x3]
 ; CHECK-NEXT:    trn1 v16.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    trn2 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ldr q6, [x6]
 ; CHECK-NEXT:    ldr q7, [x7]
 ; CHECK-NEXT:    trn1 v17.8h, v3.8h, v4.8h
-; CHECK-NEXT:    trn2 v1.8h, v3.8h, v4.8h
 ; CHECK-NEXT:    trn1 v18.8h, v2.8h, v5.8h
+; CHECK-NEXT:    trn2 v1.8h, v3.8h, v4.8h
 ; CHECK-NEXT:    trn2 v2.8h, v2.8h, v5.8h
 ; CHECK-NEXT:    trn1 v19.8h, v6.8h, v7.8h
 ; CHECK-NEXT:    trn2 v3.8h, v6.8h, v7.8h
 ; CHECK-NEXT:    trn1 v4.4s, v16.4s, v17.4s
-; CHECK-NEXT:    trn1 v6.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    trn2 v16.4s, v16.4s, v17.4s
+; CHECK-NEXT:    trn1 v6.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    trn2 v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    trn1 v5.4s, v18.4s, v19.4s
 ; CHECK-NEXT:    trn1 v7.4s, v2.4s, v3.4s
@@ -668,11 +668,11 @@ define void @store_factor3(ptr %ptr, <4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ext v3.16b, v0.16b, v1.16b, #12
-; CHECK-NEXT:    ext v6.16b, v1.16b, v2.16b, #12
+; CHECK-NEXT:    ext v4.16b, v1.16b, v2.16b, #12
 ; CHECK-NEXT:    zip2 v3.4s, v0.4s, v3.4s
+; CHECK-NEXT:    zip2 v4.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    mov v3.s[0], v0.s[0]
 ; CHECK-NEXT:    ext v0.16b, v2.16b, v0.16b, #12
-; CHECK-NEXT:    zip2 v4.4s, v1.4s, v6.4s
 ; CHECK-NEXT:    mov v4.s[0], v1.s[0]
 ; CHECK-NEXT:    zip2 v5.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    mov v5.s[0], v2.s[0]

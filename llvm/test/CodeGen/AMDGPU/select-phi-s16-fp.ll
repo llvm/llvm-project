@@ -14,9 +14,8 @@ define void @phi_vec1half_to_f32_with_const_folding(ptr addrspace(1) %dst) #0 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_cvt_f32_f16_e64 v2, s4
 ; CHECK-NEXT:  ; %bb.1: ; %bb
-; CHECK-NEXT:    v_cvt_f16_f32_e64 v2, v2
+; CHECK-NEXT:    v_cvt_f16_f32_e64 v2, s4
 ; CHECK-NEXT:    s_mov_b32 s7, 0xf000
 ; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    s_mov_b32 s4, s6

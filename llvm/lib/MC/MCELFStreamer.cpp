@@ -585,7 +585,7 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
       // When not in a bundle-locked group and the -mc-relax-all flag is used,
       // we create a new temporary fragment which will be later merged into
       // the current fragment.
-      DF = new MCDataFragment();
+      DF = getContext().allocFragment<MCDataFragment>();
     else if (isBundleLocked() && !Sec.isBundleGroupBeforeFirstInst()) {
       // If we are bundle-locked, we re-use the current fragment.
       // The bundle-locking directive ensures this is a new data fragment.
@@ -596,13 +596,14 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
       // Optimize memory usage by emitting the instruction to a
       // MCCompactEncodedInstFragment when not in a bundle-locked group and
       // there are no fixups registered.
-      MCCompactEncodedInstFragment *CEIF = new MCCompactEncodedInstFragment();
+      MCCompactEncodedInstFragment *CEIF =
+          getContext().allocFragment<MCCompactEncodedInstFragment>();
       insert(CEIF);
       CEIF->getContents().append(Code.begin(), Code.end());
       CEIF->setHasInstructions(STI);
       return;
     } else {
-      DF = new MCDataFragment();
+      DF = getContext().allocFragment<MCDataFragment>();
       insert(DF);
     }
     if (Sec.getBundleLockState() == MCSection::BundleLockedAlignToEnd) {
@@ -661,7 +662,7 @@ void MCELFStreamer::emitBundleLock(bool AlignToEnd) {
 
   if (getAssembler().getRelaxAll() && !isBundleLocked()) {
     // TODO: drop the lock state and set directly in the fragment
-    MCDataFragment *DF = new MCDataFragment();
+    MCDataFragment *DF = getContext().allocFragment<MCDataFragment>();
     BundleGroups.push_back(DF);
   }
 
