@@ -212,11 +212,11 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
         Pressure[AMDGPU::RegisterPressureSets::VGPR_32] !=
             CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32]) {
       errs() << "Register Pressure is inaccurate when calculated through "
-                "PressureDiff\n";
-      errs() << "SGPR got " << Pressure[AMDGPU::RegisterPressureSets::SReg_32]
+                "PressureDiff\n"
+             << "SGPR got " << Pressure[AMDGPU::RegisterPressureSets::SReg_32]
              << ", expected "
-             << CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] << "\n";
-      errs() << "VGPR got " << Pressure[AMDGPU::RegisterPressureSets::VGPR_32]
+             << CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] << "\n"
+             << "VGPR got " << Pressure[AMDGPU::RegisterPressureSets::VGPR_32]
              << ", expected "
              << CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n";
       report_fatal_error("inaccurate register pressure calculation");
