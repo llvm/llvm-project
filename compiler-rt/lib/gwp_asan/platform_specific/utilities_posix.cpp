@@ -38,7 +38,7 @@ void dieWithErrorCode(const char *Message, int64_t ErrorCode) {
     abort();
 
   size_t buffer_size = strlen(Message) + 48;
-  char *buffer = static_cast<char *>(alloca(strlen(Message) + 48));
+  char *buffer = static_cast<char *>(alloca(buffer_size));
   snprintf(buffer, buffer_size, "%s (Error Code: %" PRId64 ")", Message,
            ErrorCode);
   android_set_abort_message(buffer);

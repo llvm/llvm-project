@@ -21,7 +21,7 @@ void die(const char *Message) {
 
 void dieWithErrorCode(const char *Message, int64_t ErrorCode) {
   size_t buffer_size = strlen(Message) + 48;
-  char *buffer = static_cast<char *>(alloca(strlen(Message) + 48));
+  char *buffer = static_cast<char *>(alloca(buffer_size));
   snprintf(buffer, buffer_size, "%s (Error Code: %" PRId64 ")", Message,
            ErrorCode);
   __sanitizer_log_write(buffer, strlen(buffer));
