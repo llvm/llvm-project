@@ -7202,7 +7202,7 @@ static MachineInstr *fuseInst(MachineFunction &MF, unsigned Opcode,
   return MIB;
 }
 
-static MachineInstr *MakeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
+static MachineInstr *makeM0Inst(const TargetInstrInfo &TII, unsigned Opcode,
                                 ArrayRef<MachineOperand> MOs,
                                 MachineBasicBlock::iterator InsertPt,
                                 MachineInstr &MI) {
@@ -7281,6 +7281,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
         return NewMI;
       }
     }
+    break;
+  case X86::MOV32r0:
+    if (auto *NewMI =
+            makeM0Inst(*this, (Size == 4) ? X86::MOV32mi : X86::MOV64mi32, MOs,
+                       InsertPt, MI))
+      return NewMI;
     break;
   }
 
@@ -7382,10 +7388,6 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
                                                Size, Alignment))
     return CustomMI;
 
-  if (Opc == X86::MOV32r0)
-    if (auto *NewMI = MakeM0Inst(*this, X86::MOV32mi, MOs, InsertPt, MI))
-      return NewMI;
-
   // Folding a memory location into the two-address part of a two-address
   // instruction is different than folding it other places.  It requires
   // replacing the *two* registers with the memory location.
@@ -7483,6 +7485,10 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   for (auto Op : Ops) {
     MachineOperand &MO = MI.getOperand(Op);
     auto SubReg = MO.getSubReg();
+    // MOV32r0 is special b/c it's used to clear a 64-bit register too.
+    // (See patterns for MOV32r0 in TD files).
+    if (MI.getOpcode() == X86::MOV32r0 && SubReg == X86::sub_32bit)
+      continue;
     if (SubReg && (MO.isDef() || SubReg == X86::sub_8bit_hi))
       return nullptr;
   }

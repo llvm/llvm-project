@@ -2586,7 +2586,7 @@ int foobar() {
 // SIMD1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP12]], [[TMP11]]
 // SIMD1-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4
-// SIMD1-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([3 x %struct.S1], ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4
+// SIMD1-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1, i64 1), align 4
 // SIMD1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD1-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], [[TMP13]]
 // SIMD1-NEXT:    store i32 [[ADD4]], ptr [[RES]], align 4
@@ -2663,7 +2663,7 @@ int foobar() {
 // SIMD1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD1-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], [[TMP5]]
 // SIMD1-NEXT:    store i32 [[ADD2]], ptr [[RES]], align 4
-// SIMD1-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([3 x %struct.S1], ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4
+// SIMD1-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1, i64 1), align 4
 // SIMD1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], [[TMP7]]
 // SIMD1-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4
@@ -3052,7 +3052,7 @@ int foobar() {
 // SIMD2-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG187:![0-9]+]]
 // SIMD2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP12]], [[TMP11]], !dbg [[DBG187]]
 // SIMD2-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4, !dbg [[DBG187]]
-// SIMD2-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([3 x %struct.S1], ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4, !dbg [[DBG188:![0-9]+]]
+// SIMD2-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1, i64 1), align 4, !dbg [[DBG188:![0-9]+]]
 // SIMD2-NEXT:    [[TMP14:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG189:![0-9]+]]
 // SIMD2-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], [[TMP13]], !dbg [[DBG189]]
 // SIMD2-NEXT:    store i32 [[ADD4]], ptr [[RES]], align 4, !dbg [[DBG189]]
@@ -3133,7 +3133,7 @@ int foobar() {
 // SIMD2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG222:![0-9]+]]
 // SIMD2-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], [[TMP5]], !dbg [[DBG222]]
 // SIMD2-NEXT:    store i32 [[ADD2]], ptr [[RES]], align 4, !dbg [[DBG222]]
-// SIMD2-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([3 x %struct.S1], ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4, !dbg [[DBG223:![0-9]+]]
+// SIMD2-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1, i64 1), align 4, !dbg [[DBG223:![0-9]+]]
 // SIMD2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG224:![0-9]+]]
 // SIMD2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], [[TMP7]], !dbg [[DBG224]]
 // SIMD2-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4, !dbg [[DBG224]]
@@ -5707,7 +5707,7 @@ int foobar() {
 // SIMD3-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP12]], [[TMP11]]
 // SIMD3-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4
-// SIMD3-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([3 x %struct.S1], ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4
+// SIMD3-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1, i64 1), align 4
 // SIMD3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD3-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], [[TMP13]]
 // SIMD3-NEXT:    store i32 [[ADD4]], ptr [[RES]], align 4
@@ -5784,7 +5784,7 @@ int foobar() {
 // SIMD3-NEXT:    [[TMP6:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD3-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], [[TMP5]]
 // SIMD3-NEXT:    store i32 [[ADD2]], ptr [[RES]], align 4
-// SIMD3-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([3 x %struct.S1], ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4
+// SIMD3-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1, i64 1), align 4
 // SIMD3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RES]], align 4
 // SIMD3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], [[TMP7]]
 // SIMD3-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4
@@ -6173,7 +6173,7 @@ int foobar() {
 // SIMD4-NEXT:    [[TMP12:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG187:![0-9]+]]
 // SIMD4-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP12]], [[TMP11]], !dbg [[DBG187]]
 // SIMD4-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4, !dbg [[DBG187]]
-// SIMD4-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([3 x %struct.S1], ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4, !dbg [[DBG188:![0-9]+]]
+// SIMD4-NEXT:    [[TMP13:%.*]] = load i32, ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1, i64 1), align 4, !dbg [[DBG188:![0-9]+]]
 // SIMD4-NEXT:    [[TMP14:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG189:![0-9]+]]
 // SIMD4-NEXT:    [[ADD4:%.*]] = add nsw i32 [[TMP14]], [[TMP13]], !dbg [[DBG189]]
 // SIMD4-NEXT:    store i32 [[ADD4]], ptr [[RES]], align 4, !dbg [[DBG189]]
@@ -6254,7 +6254,7 @@ int foobar() {
 // SIMD4-NEXT:    [[TMP6:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG222:![0-9]+]]
 // SIMD4-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP6]], [[TMP5]], !dbg [[DBG222]]
 // SIMD4-NEXT:    store i32 [[ADD2]], ptr [[RES]], align 4, !dbg [[DBG222]]
-// SIMD4-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([3 x %struct.S1], ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1), i64 0, i64 1), align 4, !dbg [[DBG223:![0-9]+]]
+// SIMD4-NEXT:    [[TMP7:%.*]] = load i32, ptr getelementptr inbounds ([2 x [3 x %struct.S1]], ptr @arr_x, i64 0, i64 1, i64 1), align 4, !dbg [[DBG223:![0-9]+]]
 // SIMD4-NEXT:    [[TMP8:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG224:![0-9]+]]
 // SIMD4-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], [[TMP7]], !dbg [[DBG224]]
 // SIMD4-NEXT:    store i32 [[ADD3]], ptr [[RES]], align 4, !dbg [[DBG224]]

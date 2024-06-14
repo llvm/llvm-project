@@ -18,7 +18,6 @@ hash_code llvm::hash_value(const DynamicAPInt &X) {
   return detail::hash_value(X.getLarge());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 raw_ostream &DynamicAPInt::print(raw_ostream &OS) const {
   if (isSmall())
     return OS << ValSmall;
@@ -26,4 +25,3 @@ raw_ostream &DynamicAPInt::print(raw_ostream &OS) const {
 }
 
 void DynamicAPInt::dump() const { print(dbgs()); }
-#endif
