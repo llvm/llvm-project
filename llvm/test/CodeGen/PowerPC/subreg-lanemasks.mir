@@ -5,9 +5,8 @@
 
 # Keep track of all of the lanemasks for various subregsiters.
 #
-# TODO: The mask for %6.sub_vsx1:accrc is the same as the mask for %10.sub_vsx1_then_sub_64:accrc
-#       even though one is a 128 bit register and the other is a 64 bit subregister. This should
-#       be fixed in a later patch.
+# TODO: The mask for %6.sub_vsx1:accrc is the same as the mask for %10.sub_vsx1_then_sub_64:accrc.
+#       Ideally on PowerPC these masks should be different. To be addressed in a later patch.
 #
 # CHECK: %3 [80r,80d:0) 0@80r  L0000000000000004 [80r,80d:0) 0@80r  weight:0.000000e+00
 # CHECK: %4 [96r,96d:0) 0@96r  L0000000000000800 [96r,96d:0) 0@96r  weight:0.000000e+00
