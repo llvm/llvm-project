@@ -5760,7 +5760,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Add metadata if calling an __attribute__((error(""))) or warning fn.
   if (TargetDecl && TargetDecl->hasAttr<ErrorAttr>()) {
     llvm::ConstantInt *Line =
-        llvm::ConstantInt::get(Int32Ty, Loc.getRawEncoding());
+        llvm::ConstantInt::get(Int64Ty, Loc.getRawEncoding());
     llvm::ConstantAsMetadata *MD = llvm::ConstantAsMetadata::get(Line);
     llvm::MDTuple *MDT = llvm::MDNode::get(getLLVMContext(), {MD});
     CI->setMetadata("srcloc", MDT);
