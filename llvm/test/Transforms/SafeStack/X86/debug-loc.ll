@@ -22,11 +22,11 @@ entry:
   call void @llvm.dbg.declare(metadata ptr %xxx, metadata !21, metadata !19), !dbg !22
 
 ; dbg.declare for %zzz and %xxx are gone; replaced with dbg.declare based off the unsafe stack pointer
-; CHECK-NOT: call void @llvm.dbg.declare
-; CHECK: call void @llvm.dbg.declare(metadata ptr %[[USP]], metadata ![[VAR_ARG:.*]], metadata !DIExpression(DW_OP_constu, 104, DW_OP_minus))
-; CHECK-NOT: call void @llvm.dbg.declare
-; CHECK: call void @llvm.dbg.declare(metadata ptr %[[USP]], metadata ![[VAR_LOCAL:.*]], metadata !DIExpression(DW_OP_constu, 208, DW_OP_minus))
-; CHECK-NOT: call void @llvm.dbg.declare
+; CHECK-NOT: #dbg_declare
+; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_ARG:.*]], !DIExpression(DW_OP_constu, 104, DW_OP_minus),
+; CHECK-NOT: #dbg_declare
+; CHECK: #dbg_declare(ptr %[[USP]], ![[VAR_LOCAL:.*]], !DIExpression(DW_OP_constu, 208, DW_OP_minus),
+; CHECK-NOT: #dbg_declare
 
   call void @Capture(ptr %zzz), !dbg !23
   call void @Capture(ptr %xxx), !dbg !24
