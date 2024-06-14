@@ -1,4 +1,4 @@
-//===- ConstExtruder.cpp --------------------------------------------------===//
+//===- ConstantArgumentGlobalisation.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-#define DEBUG_TYPE "flang-const-extruder-opt"
+#define DEBUG_TYPE "flang-constang-argument-globalisation-opt"
 
 namespace {
 unsigned uniqueLitId = 1;
@@ -93,7 +93,8 @@ public:
 
       LLVM_DEBUG(llvm::dbgs() << " found define " << *constant_def << "\n");
 
-      std::string globalName = "_extruded_." + std::to_string(uniqueLitId++);
+      std::string globalName =
+          "_global_const_." + std::to_string(uniqueLitId++);
       assert(!builder.getNamedGlobal(globalName) &&
              "We should have a unique name here");
 
@@ -138,7 +139,7 @@ public:
 
       for (auto e : toErase)
         rewriter.eraseOp(e);
-      LLVM_DEBUG(llvm::dbgs() << "extruded constant for " << callOp << " as "
+      LLVM_DEBUG(llvm::dbgs() << "global constant for " << callOp << " as "
                               << newOp << '\n');
       return mlir::success();
     }
@@ -150,7 +151,8 @@ public:
 };
 
 // this pass attempts to convert immediate scalar literals in function calls
-// to global constants to allow transformations as Dead Argument Elimination
+// to global constants to allow transformations such as Dead Argument
+// Elimination
 class ConstantArgumentGlobalisationOpt
     : public fir::impl::ConstantArgumentGlobalisationOptBase<
           ConstantArgumentGlobalisationOpt> {
@@ -160,14 +162,6 @@ public:
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();
     mlir::DominanceInfo *di = &getAnalysis<mlir::DominanceInfo>();
-    mod.walk([di, this](mlir::func::FuncOp func) { runOnFunc(func, di); });
-  }
-
-  void runOnFunc(mlir::func::FuncOp &func, const mlir::DominanceInfo *di) {
-    // If func is a declaration, skip it.
-    if (func.empty())
-      return;
-
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
     mlir::GreedyRewriteConfig config;
@@ -176,15 +170,11 @@ public:
 
     patterns.insert<CallOpRewriter>(context, *di);
     if (mlir::failed(mlir::applyPatternsAndFoldGreedily(
-            func, std::move(patterns), config))) {
-      mlir::emitError(func.getLoc(),
-                      "error in constant extrusion optimization\n");
+            mod, std::move(patterns), config))) {
+      mlir::emitError(mod.getLoc(),
+                      "error in constant globalisation optimization\n");
       signalPassFailure();
     }
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> fir::createConstantArgumentGlobalisationPass() {
-  return std::make_unique<ConstantArgumentGlobalisationOpt>();
-}

@@ -273,7 +273,7 @@ inline void createDefaultFIROptimizerPassPipeline(
     pm.addPass(fir::createSimplifyIntrinsics());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
     if (!disableConstantArgumentGlobalisation)
-      pm.addPass(fir::createConstantArgumentGlobalisationPass());
+      pm.addPass(fir::createConstantArgumentGlobalisationOpt());
   }
 
   if (pc.LoopVersioning)

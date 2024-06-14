@@ -258,7 +258,6 @@ def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt
     Convert scalar literals of function arguments to global constants.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createConstantArgumentGlobalisationPass()";
 }
 
 def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {

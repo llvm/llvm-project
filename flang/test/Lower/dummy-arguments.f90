@@ -2,7 +2,7 @@
 
 ! CHECK-LABEL: _QQmain
 program test1
-  ! CHECK-DAG: %[[TEN:.*]] = fir.address_of(@_extruded_.{{.*}}) : !fir.ref<i32>
+  ! CHECK-DAG: %[[TEN:.*]] = fir.address_of(@_global_const_.{{.*}}) : !fir.ref<i32>
   ! CHECK-NEXT: fir.call @_QFPfoo
   call foo(10)
 contains

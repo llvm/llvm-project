@@ -449,7 +449,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPtest_proc_dummy_other(
 ! CHECK-SAME:           %[[VAL_0:.*]]: !fir.boxproc<() -> ()>) {
 ! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_0]] : (!fir.boxproc<() -> ()>) -> ((!fir.ref<i32>) -> ())
-! CHECK:         %[[VAL_1:.*]] = fir.address_of(@_extruded_.{{.*}}) : !fir.ref<i32>
+! CHECK:         %[[VAL_1:.*]] = fir.address_of(@_global_const_.{{.*}}) : !fir.ref<i32>
 ! CHECK:         fir.call %[[VAL_3]](%[[VAL_1]]) {{.*}}: (!fir.ref<i32>) -> ()
 
 ! CHECK:         return
