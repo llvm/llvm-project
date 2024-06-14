@@ -153,7 +153,7 @@ Object makeObject(const parser::OmpObject &object,
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx) {
   // If it's just the symbol, then there is no base.
-  if (!object.id())
+  if (!object.ref())
     return std::nullopt;
 
   auto maybeRef = evaluate::ExtractDataRef(*object.ref());
