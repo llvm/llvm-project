@@ -1405,12 +1405,18 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
                    fvti.AVL, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
+                                    (SplatFPOp (SelectFPImm (XLenVT GPR:$imm))),
+                                    fvti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
+                   (fvti.Vector (IMPLICIT_DEF)),
+                   fvti.RegClass:$rs2, GPR:$imm, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
+
+    def : Pat<(fvti.Vector (vselect (fvti.Mask V0),
                                     (SplatFPOp (fvti.Scalar fpimm0)),
                                     fvti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, 0, (fvti.Mask V0), fvti.AVL, fvti.Log2SEW)>;
-
   }
 }
 
