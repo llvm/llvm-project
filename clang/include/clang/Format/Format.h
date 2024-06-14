@@ -5430,9 +5430,7 @@ bool isClangFormatOff(StringRef Comment);
 } // end namespace format
 } // end namespace clang
 
-namespace std {
 template <>
-struct is_error_code_enum<clang::format::ParseError> : std::true_type {};
-} // namespace std
+struct std::is_error_code_enum<clang::format::ParseError> : std::true_type {};
 
 #endif // LLVM_CLANG_FORMAT_FORMAT_H
