@@ -302,28 +302,32 @@ public:
     bool hasMainProgram = false;
     const Fortran::semantics::Symbol *globalOmpRequiresSymbol = nullptr;
     for (Fortran::lower::pft::Program::Units &u : pft.getUnits()) {
-      std::visit(Fortran::common::visitors{
-                     [&](Fortran::lower::pft::FunctionLikeUnit &f) {
-                       if (f.isMainProgram())
-                         hasMainProgram = true;
-                       declareFunction(f);
-                       if (!globalOmpRequiresSymbol)
-                         globalOmpRequiresSymbol = f.getScope().symbol();
-                     },
-                     [&](Fortran::lower::pft::ModuleLikeUnit &m) {
-                       lowerModuleDeclScope(m);
-                       for (Fortran::lower::pft::FunctionLikeUnit &f :
-                            m.nestedFunctions)
-                         declareFunction(f);
-                     },
-                     [&](Fortran::lower::pft::BlockDataUnit &b) {
-                       if (!globalOmpRequiresSymbol)
-                         globalOmpRequiresSymbol = b.symTab.symbol();
-                     },
-                     [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
-                     [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
-                 },
-                 u);
+      std::visit(
+          Fortran::common::visitors{
+              [&](Fortran::lower::pft::FunctionLikeUnit &f) {
+                if (f.isMainProgram())
+                  hasMainProgram = true;
+                declareFunction(f);
+                if (!globalOmpRequiresSymbol)
+                  globalOmpRequiresSymbol = f.getScope().symbol();
+              },
+              [&](Fortran::lower::pft::ModuleLikeUnit &m) {
+                lowerModuleDeclScope(m);
+                for (Fortran::lower::pft::ContainedUnit &unit :
+                     m.containedUnitList)
+                  if (auto *f =
+                          std::get_if<Fortran::lower::pft::FunctionLikeUnit>(
+                              &unit))
+                    declareFunction(*f);
+              },
+              [&](Fortran::lower::pft::BlockDataUnit &b) {
+                if (!globalOmpRequiresSymbol)
+                  globalOmpRequiresSymbol = b.symTab.symbol();
+              },
+              [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
+          },
+          u);
     }
 
     // Create definitions of intrinsic module constants.
@@ -387,13 +391,15 @@ public:
 
     // Compute the set of host associated entities from the nested functions.
     llvm::SetVector<const Fortran::semantics::Symbol *> escapeHost;
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      collectHostAssociatedVariables(f, escapeHost);
+    for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
+        collectHostAssociatedVariables(*f, escapeHost);
     funit.setHostAssociatedSymbols(escapeHost);
 
     // Declare internal procedures
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      declareFunction(f);
+    for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
+        declareFunction(*f);
   }
 
   /// Get the scope that is defining or using \p sym. The returned scope is not
@@ -2669,6 +2675,35 @@ private:
         std::get<2>(dir.t);
     const std::optional<Fortran::parser::ScalarIntExpr> &stream =
         std::get<3>(dir.t);
+    const std::list<Fortran::parser::CUFReduction> &cufreds =
+        std::get<4>(dir.t);
+
+    llvm::SmallVector<mlir::Value> reduceOperands;
+    llvm::SmallVector<mlir::Attribute> reduceAttrs;
+
+    for (const Fortran::parser::CUFReduction &cufred : cufreds) {
+      fir::ReduceOperationEnum redOpEnum = getReduceOperationEnum(
+          std::get<Fortran::parser::ReductionOperator>(cufred.t));
+      const std::list<Fortran::parser::Scalar<Fortran::parser::Variable>>
+          &scalarvars = std::get<1>(cufred.t);
+      for (const Fortran::parser::Scalar<Fortran::parser::Variable> &scalarvar :
+           scalarvars) {
+        auto reduce_attr =
+            fir::ReduceAttr::get(builder->getContext(), redOpEnum);
+        reduceAttrs.push_back(reduce_attr);
+        const Fortran::parser::Variable &var = scalarvar.thing;
+        if (const auto *iDesignator = std::get_if<
+                Fortran::common::Indirection<Fortran::parser::Designator>>(
+                &var.u)) {
+          const Fortran::parser::Designator &designator = iDesignator->value();
+          if (const auto *name =
+                  Fortran::semantics::getDesignatorNameIfDataRef(designator)) {
+            auto val = getSymbolAddress(*name->symbol);
+            reduceOperands.push_back(val);
+          }
+        }
+      }
+    }
 
     auto isOnlyStars =
         [&](const std::list<Fortran::parser::CUFKernelDoConstruct::StarOrExpr>
@@ -2771,8 +2806,9 @@ private:
         loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
     }
 
-    auto op = builder->create<cuf::KernelOp>(loc, gridValues, blockValues,
-                                             streamValue, lbs, ubs, steps, n);
+    auto op = builder->create<cuf::KernelOp>(
+        loc, gridValues, blockValues, streamValue, lbs, ubs, steps, n,
+        mlir::ValueRange(reduceOperands), builder->getArrayAttr(reduceAttrs));
     builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
                          ivLocs);
     mlir::Block &b = op.getRegion().back();
@@ -5356,8 +5392,9 @@ private:
       endNewFunction(funit);
     }
     funit.setActiveEntry(0);
-    for (Fortran::lower::pft::FunctionLikeUnit &f : funit.nestedFunctions)
-      lowerFunc(f); // internal procedure
+    for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
+        lowerFunc(*f); // internal procedure
   }
 
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
@@ -5381,8 +5418,9 @@ private:
 
   /// Lower functions contained in a module.
   void lowerMod(Fortran::lower::pft::ModuleLikeUnit &mod) {
-    for (Fortran::lower::pft::FunctionLikeUnit &f : mod.nestedFunctions)
-      lowerFunc(f);
+    for (Fortran::lower::pft::ContainedUnit &unit : mod.containedUnitList)
+      if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
+        lowerFunc(*f);
   }
 
   void setCurrentPosition(const Fortran::parser::CharBlock &position) {

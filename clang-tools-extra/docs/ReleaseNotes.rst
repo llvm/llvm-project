@@ -266,6 +266,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
   calls to ``std::forward``.
 
+- Improved :doc:`cppcoreguidelines-macro-usage
+  <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
+  hash preprocessing token.
+
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
   giving false positives for deleted functions, by fixing false negatives when only
@@ -336,6 +340,10 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check by avoiding crash for self
   include cycles.
+
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by avoiding false positives for
+  the functions with the same name as standard library functions.
 
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by replacing the local

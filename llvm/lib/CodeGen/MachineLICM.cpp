@@ -155,7 +155,7 @@ namespace {
     }
 
     // Track 'estimated' register pressure.
-    SmallSet<Register, 32> RegSeen;
+    SmallDenseSet<Register> RegSeen;
     SmallVector<unsigned, 8> RegPressure;
 
     // Register pressure "limit" per register pressure set. If the pressure
@@ -191,7 +191,7 @@ namespace {
       AU.addRequired<MachineLoopInfo>();
       if (DisableHoistingToHotterBlocks != UseBFI::None)
         AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfo>();
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -224,7 +224,7 @@ namespace {
                      MachineBasicBlock *CurPreheader);
 
     void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
-                   SmallSet<int, 32> &StoredFIs,
+                   SmallDenseSet<int> &StoredFIs,
                    SmallVectorImpl<CandidateInfo> &Candidates,
                    MachineLoop *CurLoop);
 
@@ -325,7 +325,7 @@ INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineLICM, DEBUG_TYPE,
                     "Machine Loop Invariant Code Motion", false, false)
@@ -334,7 +334,7 @@ INITIALIZE_PASS_BEGIN(EarlyMachineLICM, "early-machinelicm",
                       "Early Machine Loop Invariant Code Motion", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(EarlyMachineLICM, "early-machinelicm",
                     "Early Machine Loop Invariant Code Motion", false, false)
@@ -375,7 +375,7 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   if (DisableHoistingToHotterBlocks != UseBFI::None)
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   MLI = &getAnalysis<MachineLoopInfo>();
-  DT  = &getAnalysis<MachineDominatorTree>();
+  DT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   if (HoistConstLoads)
@@ -464,7 +464,7 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
 /// gather register def and frame object update information.
 void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
                                 BitVector &RUClobbers,
-                                SmallSet<int, 32> &StoredFIs,
+                                SmallDenseSet<int> &StoredFIs,
                                 SmallVectorImpl<CandidateInfo> &Candidates,
                                 MachineLoop *CurLoop) {
   bool RuledOut = false;
@@ -568,7 +568,7 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
   BitVector RUClobbers(NumRegUnits); // RUs defined more than once.
 
   SmallVector<CandidateInfo, 32> Candidates;
-  SmallSet<int, 32> StoredFIs;
+  SmallDenseSet<int> StoredFIs;
 
   // Walk the entire region, count number of defs for each register, and
   // collect potential LICM candidates.

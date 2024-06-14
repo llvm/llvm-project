@@ -23,12 +23,15 @@
 
 namespace llvm {
 
+class MCAssembler;
 class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 
-class MCFragment : public ilist_node_with_parent<MCFragment, MCSection> {
+class MCFragment {
   friend class MCAsmLayout;
+  friend class MCAssembler;
+  friend class MCSection;
 
 public:
   enum FragmentType : uint8_t {
@@ -51,28 +54,23 @@ public:
   };
 
 private:
+  // The next fragment within the section.
+  MCFragment *Next = nullptr;
+
   /// The data for the section this fragment is in.
   MCSection *Parent;
 
-  /// The atom this fragment is in, as represented by its defining symbol.
-  const MCSymbol *Atom;
-
-  /// The offset of this fragment in its section. This is ~0 until
-  /// initialized.
-  uint64_t Offset;
+  /// The offset of this fragment in its section.
+  uint64_t Offset = 0;
 
   /// The layout order of this fragment.
-  unsigned LayoutOrder;
-
-  /// The subsection this fragment belongs to. This is 0 if the fragment is not
-  // in any subsection.
-  unsigned SubsectionNumber = 0;
+  unsigned LayoutOrder = 0;
 
   FragmentType Kind;
 
 protected:
-  bool HasInstructions;
-  bool LinkerRelaxable = false;
+  bool HasInstructions : 1;
+  bool LinkerRelaxable : 1;
 
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
@@ -88,13 +86,14 @@ public:
   /// This method will dispatch to the appropriate subclass.
   void destroy();
 
+  MCFragment *getNext() const { return Next; }
+
   FragmentType getKind() const { return Kind; }
 
   MCSection *getParent() const { return Parent; }
   void setParent(MCSection *Value) { Parent = Value; }
 
-  const MCSymbol *getAtom() const { return Atom; }
-  void setAtom(const MCSymbol *Value) { Atom = Value; }
+  const MCSymbol *getAtom() const;
 
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }
@@ -104,9 +103,6 @@ public:
   bool hasInstructions() const { return HasInstructions; }
 
   void dump() const;
-
-  void setSubsectionNumber(unsigned Value) { SubsectionNumber = Value; }
-  unsigned getSubsectionNumber() const { return SubsectionNumber; }
 };
 
 class MCDummyFragment : public MCFragment {

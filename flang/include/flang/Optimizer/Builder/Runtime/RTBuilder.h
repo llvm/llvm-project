@@ -53,10 +53,10 @@ namespace fir::runtime {
 using TypeBuilderFunc = mlir::Type (*)(mlir::MLIRContext *);
 using FuncTypeBuilderFunc = mlir::FunctionType (*)(mlir::MLIRContext *);
 
-#define REDUCTION_OPERATION_MODEL(T)                                           \
+#define REDUCTION_REF_OPERATION_MODEL(T)                                       \
   template <>                                                                  \
   constexpr TypeBuilderFunc                                                    \
-  getModel<Fortran::runtime::ReductionOperation<T>>() {                        \
+  getModel<Fortran::runtime::ReferenceReductionOperation<T>>() {               \
     return [](mlir::MLIRContext *context) -> mlir::Type {                      \
       TypeBuilderFunc f{getModel<T>()};                                        \
       auto refTy = fir::ReferenceType::get(f(context));                        \
@@ -480,18 +480,18 @@ constexpr TypeBuilderFunc getModel<void>() {
   };
 }
 
-REDUCTION_OPERATION_MODEL(std::int8_t)
-REDUCTION_OPERATION_MODEL(std::int16_t)
-REDUCTION_OPERATION_MODEL(std::int32_t)
-REDUCTION_OPERATION_MODEL(std::int64_t)
-REDUCTION_OPERATION_MODEL(Fortran::common::int128_t)
+REDUCTION_REF_OPERATION_MODEL(std::int8_t)
+REDUCTION_REF_OPERATION_MODEL(std::int16_t)
+REDUCTION_REF_OPERATION_MODEL(std::int32_t)
+REDUCTION_REF_OPERATION_MODEL(std::int64_t)
+REDUCTION_REF_OPERATION_MODEL(Fortran::common::int128_t)
 
-REDUCTION_OPERATION_MODEL(float)
-REDUCTION_OPERATION_MODEL(double)
-REDUCTION_OPERATION_MODEL(long double)
+REDUCTION_REF_OPERATION_MODEL(float)
+REDUCTION_REF_OPERATION_MODEL(double)
+REDUCTION_REF_OPERATION_MODEL(long double)
 
-REDUCTION_OPERATION_MODEL(std::complex<float>)
-REDUCTION_OPERATION_MODEL(std::complex<double>)
+REDUCTION_REF_OPERATION_MODEL(std::complex<float>)
+REDUCTION_REF_OPERATION_MODEL(std::complex<double>)
 
 REDUCTION_CHAR_OPERATION_MODEL(char)
 REDUCTION_CHAR_OPERATION_MODEL(char16_t)
