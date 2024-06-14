@@ -237,15 +237,21 @@ def FPTRUNC_DOWNWARD_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
 // restoring it after we're done.
 let Defs = [SCC], isConvergent = 1 in {
 def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VSrc_b32: $src, VSrc_b32:$inactive),
-  [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
-}
+  (ins VSrc_b32: $src, VSrc_b32:$inactive), []>;
 
 def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
-  (ins VSrc_b64: $src, VSrc_b64:$inactive),
-  [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
-}
+  (ins VSrc_b64: $src, VSrc_b64:$inactive), []>;
 } // End Defs = [SCC]
+
+foreach vt = Reg32Types.types in {
+def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
+     (V_SET_INACTIVE_B32 VSrc_b32:$src, VSrc_b32:$inactive)>;
+}
+
+foreach vt = Reg64Types.types in {
+def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
+     (V_SET_INACTIVE_B64 VSrc_b64:$src, VSrc_b64:$inactive)>;
+}
 
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 VGPR_32:$src, VGPR_32:$inactive)>;
