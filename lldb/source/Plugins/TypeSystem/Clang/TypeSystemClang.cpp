@@ -2676,9 +2676,9 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::RecordType *GetCompleteRecordType(clang::ASTContext *ast,
-                                                      clang::QualType qual_type,
-                                                      bool allow_completion) {
+static const clang::Type *GetCompleteRecordType(clang::ASTContext *ast,
+                                                clang::QualType qual_type,
+                                                bool allow_completion) {
   assert(qual_type->isRecordType());
 
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
@@ -2728,9 +2728,9 @@ static const clang::RecordType *GetCompleteRecordType(clang::ASTContext *ast,
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
-                                                  clang::QualType qual_type,
-                                                  bool allow_completion) {
+static const clang::Type *GetCompleteEnumType(clang::ASTContext *ast,
+                                              clang::QualType qual_type,
+                                              bool allow_completion) {
   assert(qual_type->isEnumeralType());
   assert(ast);
 
@@ -2771,7 +2771,7 @@ static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::ObjCObjectType *
+static const clang::Type *
 GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type,
                           bool allow_completion) {
   assert(qual_type->isObjCObjectType());
