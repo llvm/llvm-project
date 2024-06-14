@@ -230,6 +230,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.rename
 )
 
+add_entrypoint_object(
+  fdopen
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fdopen
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)
