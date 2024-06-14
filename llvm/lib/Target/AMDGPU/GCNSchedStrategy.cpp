@@ -614,37 +614,38 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
 }
 
 DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
-GCNScheduleDAGMILive::getBBLiveInMap() const {
+GCNScheduleDAGMILive::getRegionLiveInMap() const {
   assert(!Regions.empty());
-  std::vector<MachineInstr *> BBStarters;
-  BBStarters.reserve(Regions.size());
+  std::vector<MachineInstr *> RegionFirstMIs;
+  RegionFirstMIs.reserve(Regions.size());
   auto I = Regions.rbegin(), E = Regions.rend();
   auto *BB = I->first->getParent();
   do {
     auto *MI = &*skipDebugInstructionsForward(I->first, I->second);
-    BBStarters.push_back(MI);
+    RegionFirstMIs.push_back(MI);
     do {
       ++I;
     } while (I != E && I->first->getParent() == BB);
   } while (I != E);
-  return getLiveRegMap(BBStarters, /*After=*/false, *LIS);
+  return getLiveRegMap(RegionFirstMIs, /*After=*/false, *LIS);
 }
 
 DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
-GCNScheduleDAGMILive::getBBLiveOutMap() const {
+GCNScheduleDAGMILive::getRegionLiveOutMap() const {
   assert(!Regions.empty());
-  std::vector<MachineInstr *> BBEnders;
-  BBEnders.reserve(Regions.size());
+  std::vector<MachineInstr *> RegionLastMIs;
+  RegionLastMIs.reserve(Regions.size());
   for (auto &[RegionBegin, RegionEnd] : reverse(Regions))
-    BBEnders.push_back(getLastMIForRegion(RegionBegin, RegionEnd));
+    RegionLastMIs.push_back(getLastMIForRegion(RegionBegin, RegionEnd));
 
-  return getLiveRegMap(BBEnders, /*After= */ true, *LIS);
+  return getLiveRegMap(RegionLastMIs, /*After=*/true, *LIS);
 }
 
 void RegionPressureMap::buildLiveRegMap() {
   IdxToInstruction.clear();
 
-  BBLiveRegMap = IsLiveOut ? DAG->getBBLiveOutMap() : DAG->getBBLiveInMap();
+  BBLiveRegMap =
+      IsLiveOut ? DAG->getRegionLiveOutMap() : DAG->getRegionLiveInMap();
   for (unsigned I = 0; I < DAG->Regions.size(); I++) {
     MachineInstr *RegionKey =
         IsLiveOut
@@ -678,7 +679,7 @@ void GCNScheduleDAGMILive::runSchedStages() {
   LLVM_DEBUG(dbgs() << "All regions recorded, starting actual scheduling.\n");
 
   if (!Regions.empty()) {
-    BBLiveInMap = getBBLiveInMap();
+    BBLiveInMap = getRegionLiveInMap();
     if (GCNTrackers)
       RegionLiveOuts.buildLiveRegMap();
   }
