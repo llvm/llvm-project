@@ -81,7 +81,7 @@ void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
   }
 
   // Associate the labels with F.
-  CurSection->flushPendingLabels(F, FOffset, CurSubsectionIdx);
+  CurSection->flushPendingLabels(F, CurSubsectionIdx);
 }
 
 void MCObjectStreamer::flushPendingLabels() {
@@ -215,7 +215,7 @@ static bool canReuseDataFragment(const MCDataFragment &F,
   // When bundling is enabled, we don't want to add data to a fragment that
   // already has instructions (see MCELFStreamer::emitInstToData for details)
   if (Assembler.isBundlingEnabled())
-    return Assembler.getRelaxAll();
+    return false;
   // If the subtarget is changed mid fragment we start a new fragment to record
   // the new STI.
   return !STI || F.getSubtargetInfo() == STI;
@@ -292,8 +292,7 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // Otherwise queue the label and set its fragment pointer when we emit the
   // next fragment.
   auto *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
-  if (F && !(getAssembler().isBundlingEnabled() &&
-             getAssembler().getRelaxAll())) {
+  if (F) {
     Symbol->setFragment(F);
     Symbol->setOffset(F->getContents().size());
   } else {
@@ -465,9 +464,6 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
                                           const MCSubtargetInfo &STI) {
-  if (getAssembler().getRelaxAll() && getAssembler().isBundlingEnabled())
-    llvm_unreachable("All instructions should have already been relaxed");
-
   // Always create a new, separate fragment here, because its size can change
   // during relaxation.
   MCRelaxableFragment *IF =
