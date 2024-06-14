@@ -787,12 +787,9 @@ BranchProbabilityInfo::getInitialEstimatedBlockWeight(const BasicBlock *BB) {
                ? static_cast<uint32_t>(BlockExecWeight::NORETURN)
                : static_cast<uint32_t>(BlockExecWeight::UNREACHABLE);
 
-  // Check if the block is 'unwind' handler of  some invoke instruction.
-  for (const auto *Pred : predecessors(BB))
-    if (Pred)
-      if (const auto *II = dyn_cast<InvokeInst>(Pred->getTerminator()))
-        if (II->getUnwindDest() == BB)
-          return static_cast<uint32_t>(BlockExecWeight::UNWIND);
+  // Check if the block is an exception handling block.
+  if (BB->isEHPad())
+    return static_cast<uint32_t>(BlockExecWeight::UNWIND);
 
   // Check if the block contains 'cold' call.
   for (const auto &I : *BB)
