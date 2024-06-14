@@ -9,5 +9,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.sys.ioctl.ioctl
     libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.unistd.close
 )
 
