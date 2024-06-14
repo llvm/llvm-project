@@ -678,8 +678,7 @@ public:
   /// pairs.
   Expected<MCDCRecord>
   evaluateMCDCRegion(const CounterMappingRegion &Region,
-                     ArrayRef<const CounterMappingRegion *> Branches,
-                     bool IsVersion11);
+                     ArrayRef<const CounterMappingRegion *> Branches);
 
   unsigned getMaxCounterID(const Counter &C) const;
 };
