@@ -350,6 +350,8 @@ struct Evaluation : EvaluationVariant {
   parser::CharBlock position{};
   std::optional<parser::Label> label{};
   std::unique_ptr<EvaluationList> evaluationList; // nested evaluations
+  // associated compiler directives
+  llvm::SmallVector<const parser::CompilerDirective *, 1> dirs;
   Evaluation *parentConstruct{nullptr};  // set for nodes below the top level
   Evaluation *lexicalSuccessor{nullptr}; // set for leaf nodes, some directives
   Evaluation *controlSuccessor{nullptr}; // set for some leaf nodes

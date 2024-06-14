@@ -1834,6 +1834,9 @@ public:
               Word("!DIR$ ASSUME_ALIGNED ");
               Walk(" ", assumeAligned, ", ");
             },
+            [&](const CompilerDirective::VectorAlways &valways) {
+              Word("!DIR$ VECTOR ALWAYS");
+            },
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },

@@ -1935,7 +1935,7 @@ private:
 
     // Increment loop begin code. (Infinite/while code was already generated.)
     if (!infiniteLoop && !whileCondition)
-      genFIRIncrementLoopBegin(incrementLoopNestInfo);
+      genFIRIncrementLoopBegin(incrementLoopNestInfo, doStmtEval.dirs);
 
     // Loop body code.
     auto iter = eval.getNestedEvaluations().begin();
@@ -1980,8 +1980,20 @@ private:
     return builder->createIntegerConstant(loc, controlType, 1); // step
   }
 
+  void addLoopAnnotationAttr(IncrementLoopInfo &info) {
+    mlir::BoolAttr f = mlir::BoolAttr::get(builder->getContext(), false);
+    mlir::LLVM::LoopVectorizeAttr va = mlir::LLVM::LoopVectorizeAttr::get(
+        builder->getContext(), /*disable=*/f, {}, {}, {}, {}, {}, {});
+    mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
+        builder->getContext(), {}, /*vectorize=*/va, {}, {}, {}, {}, {}, {}, {},
+        {}, {}, {}, {}, {}, {});
+    info.doLoop.setLoopAnnotationAttr(la);
+  }
+
   /// Generate FIR to begin a structured or unstructured increment loop nest.
-  void genFIRIncrementLoopBegin(IncrementLoopNestInfo &incrementLoopNestInfo) {
+  void genFIRIncrementLoopBegin(
+      IncrementLoopNestInfo &incrementLoopNestInfo,
+      llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
     assert(!incrementLoopNestInfo.empty() && "empty loop nest");
     mlir::Location loc = toLocation();
     for (IncrementLoopInfo &info : incrementLoopNestInfo) {
@@ -2046,6 +2058,15 @@ private:
         }
         if (info.hasLocalitySpecs())
           handleLocalitySpecs(info);
+
+        for (const auto *dir : dirs) {
+          std::visit(
+              Fortran::common::visitors{
+                  [&](const Fortran::parser::CompilerDirective::VectorAlways
+                          &d) { addLoopAnnotationAttr(info); },
+                  [&](const auto &) {}},
+              dir->u);
+        }
         continue;
       }
 
@@ -2579,8 +2600,28 @@ private:
     }
   }
 
-  void genFIR(const Fortran::parser::CompilerDirective &) {
-    // TODO
+  void attachDirectiveToLoop(const Fortran::parser::CompilerDirective &dir,
+                             Fortran::lower::pft::Evaluation *e) {
+    while (e->isDirective())
+      e = e->lexicalSuccessor;
+
+    if (e->isA<Fortran::parser::NonLabelDoStmt>())
+      e->dirs.push_back(&dir);
+    else
+      fir::emitFatalError(toLocation(),
+                          "loop directive must appear before a loop");
+  }
+
+  void genFIR(const Fortran::parser::CompilerDirective &dir) {
+    Fortran::lower::pft::Evaluation &eval = getEval();
+
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const auto &) {}},
+        dir.u);
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
