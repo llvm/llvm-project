@@ -643,7 +643,6 @@ GCNScheduleDAGMILive::getBBLiveOutMap() const {
 
 void RegionPressureMap::buildLiveRegMap() {
   IdxToInstruction.clear();
-  BBLiveRegMap.clear();
 
   BBLiveRegMap = IsLiveOut ? DAG->getBBLiveOutMap() : DAG->getBBLiveInMap();
   for (unsigned I = 0; I < DAG->Regions.size(); I++) {
