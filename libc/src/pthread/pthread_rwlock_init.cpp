@@ -8,16 +8,13 @@
 
 #include "src/pthread/pthread_rwlock_init.h"
 
+#include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/threads/linux/rwlock.h"
 
 #include <errno.h>
 #include <pthread.h>
-
-LIBC_INLINE void *operator new(size_t, pthread_rwlock_t *addr) noexcept {
-  return addr;
-}
 
 namespace LIBC_NAMESPACE {
 

@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/OSUtil/linux/aarch64/syscall.h"
+#include "src/__support/threads/linux/raw_mutex.h"
+#include "src/__support/threads/linux/rwlock.h"
 #include "src/__support/threads/sleep.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
@@ -23,7 +26,9 @@
 #include "src/pthread/pthread_rwlockattr_init.h"
 #include "src/pthread/pthread_rwlockattr_setkind_np.h"
 #include "src/pthread/pthread_rwlockattr_setpshared.h"
+#include "src/stdio/printf.h"
 #include "src/stdlib/exit.h"
+#include "src/stdlib/getenv.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/random/getrandom.h"
@@ -32,8 +37,18 @@
 #include "src/unistd/fork.h"
 #include "test/IntegrationTest/test.h"
 #include <errno.h>
+#include <optional>
 #include <pthread.h>
 #include <time.h>
+
+namespace LIBC_NAMESPACE::rwlock {
+class RwLockTester {
+public:
+  static constexpr int full_reader_state() {
+    return (~0) & (~RwState::PENDING_MASK) & (~RwState::ACTIVE_WRITER_BIT);
+  }
+};
+} // namespace LIBC_NAMESPACE::rwlock
 
 static void smoke_test() {
   pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
@@ -105,10 +120,7 @@ static void nullptr_test() {
 // counts.
 static void high_reader_count_test() {
   pthread_rwlock_t rwlock = PTHREAD_RWLOCK_INITIALIZER;
-  rwlock.__state = 0b01111111'11111111'11111111'11111100;
-  //                 ^                                ^^
-  //                 |                                ||
-  //                 +-- writer bit                   ++-- pending bits
+  rwlock.__state = LIBC_NAMESPACE::rwlock::RwLockTester::full_reader_state();
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_rdlock(&rwlock), EAGAIN);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_rwlock_tryrdlock(&rwlock), EAGAIN);
   // allocate 4 reader slots.
@@ -252,22 +264,42 @@ struct SharedData {
 };
 
 enum class Operation : int {
-  READ,
-  WRITE,
-  TIMED_READ,
-  TIMED_WRITE,
-  TRY_READ,
-  TRY_WRITE,
-  COUNT
+  READ = 0,
+  WRITE = 1,
+  TIMED_READ = 2,
+  TIMED_WRITE = 3,
+  TRY_READ = 4,
+  TRY_WRITE = 5,
+  COUNT = 6
 };
 
-static void randomized_thread_operation(SharedData *data) {
+LIBC_NAMESPACE::RawMutex io_mutex{};
+struct ThreadGuard {
+  Operation record[64]{};
+  size_t cursor = 0;
+  void push(Operation op) { record[cursor++] = op; }
+  ~ThreadGuard() {
+    if (!LIBC_NAMESPACE::getenv("LIBC_PTHREAD_RWLOCK_TEST_VERBOSE"))
+      return;
+    pid_t pid = LIBC_NAMESPACE::syscall_impl(SYS_getpid);
+    pid_t tid = LIBC_NAMESPACE::syscall_impl(SYS_gettid);
+    io_mutex.lock(LIBC_NAMESPACE::cpp::nullopt, true);
+    LIBC_NAMESPACE::printf("process %d thread %d: ", pid, tid);
+    for (size_t i = 0; i < cursor; ++i)
+      LIBC_NAMESPACE::printf("%d ", static_cast<int>(record[i]));
+    LIBC_NAMESPACE::printf("\n");
+    io_mutex.unlock(true);
+  }
+};
+
+static void randomized_thread_operation(SharedData *data, ThreadGuard &guard) {
   int buffer;
   // We cannot reason about thread order anyway, let's go wild and randomize it
   // directly using getrandom.
   LIBC_NAMESPACE::getrandom(&buffer, sizeof(buffer), 0);
-  Operation op =
-      static_cast<Operation>(buffer % static_cast<int>(Operation::COUNT));
+  constexpr int TOTAL = static_cast<int>(Operation::COUNT);
+  Operation op = static_cast<Operation>(((buffer % TOTAL) + TOTAL) % TOTAL);
+  guard.push(op);
   auto read_ops = [data]() {
     ASSERT_FALSE(data->writer_flag);
     data->reader_count.fetch_add(1, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
@@ -354,9 +386,10 @@ randomized_process_operation(SharedData &data,
     ASSERT_EQ(LIBC_NAMESPACE::pthread_create(
                   &i, nullptr,
                   [](void *arg) -> void * {
+                    ThreadGuard guard{};
                     for (int i = 0; i < 64; ++i)
                       randomized_thread_operation(
-                          reinterpret_cast<SharedData *>(arg));
+                          reinterpret_cast<SharedData *>(arg), guard);
                     return nullptr;
                   },
                   &data),

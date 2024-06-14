@@ -36,6 +36,7 @@ LLVM_LIBC_FUNCTION(int, pthread_rwlock_timedwrlock,
     return EINVAL;
   case internal::AbsTimeout::Error::BeforeEpoch:
     return ETIMEDOUT;
+    // default: unreachable, all two cases are covered.
   }
 }
 

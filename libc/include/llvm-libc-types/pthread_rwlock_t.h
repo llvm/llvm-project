@@ -15,7 +15,7 @@ typedef struct {
   unsigned __is_pshared : 1;
   unsigned __preference : 1;
   int __state;
-  pid_t __writier_tid;
+  pid_t __writer_tid;
   __futex_word __wait_queue_mutex;
   __futex_word __pending_readers;
   __futex_word __pending_writers;

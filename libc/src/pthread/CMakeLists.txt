@@ -531,6 +531,7 @@ add_entrypoint_object(
   DEPENDS
     libc.include.pthread
     libc.src.__support.threads.linux.rwlock
+    libc.src.__support.CPP.new
 )
 
 add_entrypoint_object(
