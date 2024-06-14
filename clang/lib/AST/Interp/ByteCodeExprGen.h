@@ -321,6 +321,7 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
+  const ValueDecl *InitializingDecl = nullptr;
 
   /// Flag indicating if we're initializing a global variable.
   bool GlobalDecl = false;
