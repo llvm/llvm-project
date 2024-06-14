@@ -726,6 +726,22 @@ projectDimsPosIntoReassocPos(ArrayRef<int64_t> dimsPos,
 }
 
 /// Bubble up pack op through expand shape op.
+///
+/// For example:
+///
+/// %expand = tensor.expand_shape %in [[0], [1, 2]]
+///     : tensor<?x64xf32> into tensor<?x4x16xf32>
+/// %pack = tensor.pack %expand outer_dims_perm = [0, 1]
+///     inner_dims_pos = [2] inner_tiles = [8] into %empty
+///     : tensor<?x4x16xf32> -> tensor<?x4x2x8xf32>
+///
+/// can be transformed into:
+///
+/// %pack = tensor.pack %in outer_dims_perm = [1, 2]
+///     inner_dims_pos = [1] inner_tiles = [8] into %empty
+///     : tensor<?x64xf32> -> tensor<?x8x8xf32>
+/// %expand = tensor.expand_shape %pack [[0], [1, 2], [3]]
+///     : tensor<?x8x8xf32> into tensor<?x4x2x8xf32>
 static LogicalResult
 bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
                                  tensor::PackOp packOp,
@@ -746,20 +762,24 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
                                        packInnerDims.end());
 
   for (auto [idx, indices] : llvm::enumerate(reassoc)) {
+    // For each expand_shape reassociation, figure out which dimensions get
+    // packed if any.
     llvm::SetVector<int64_t> expandDimPos(indices.begin(), indices.end());
     llvm::SetVector<int64_t> packedDims =
         llvm::set_intersection(packDimsPos, expandDimPos);
 
-    // The expanded dimension is not packed - simply continue.
+    // The expanded dimension is not packed so, it does not affect moving pack
+    // before shape expansion - simply continue.
     if (packedDims.empty())
       continue;
     // Shape expansion cannot be propagated when multiple expanded dimension are
-    // packed.
+    // packed - in this case operation reordering would affect final element
+    // positions and/or shapes can no longer be projected.
     if (packedDims.size() != 1)
       return rewriter.notifyMatchFailure(
           packOp, "only one of the expanded dimensions can be packed");
-    // Only the inner-most dim should be packed. Otherwise, elements order will
-    // be affected after operation reordering.
+    // Only the inner-most expanded dimension should be packed. Otherwise,
+    // elements order will be affected after operation reordering.
     if (packedDims.front() != indices.back())
       return rewriter.notifyMatchFailure(
           packOp, "can only pack the inner-most expanded dimension");
@@ -773,6 +793,10 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   // The pack.outer_dims_perm is restricted to identity so, the permutation can
   // be omitted for simplicity.
   // TODO: Account for outer dimensions permutation.
+  //
+  // If reassociation is not possible, then reordering cannot happen.
+  // This can be caused by pack padding affecting previously expanded
+  // dimensions or packing extending dimensions.
   RankedTensorType newPackType = tensor::PackOp::inferPackedType(
       expandOp.getSrcType(), packOp.getStaticInnerTiles(),
       projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
