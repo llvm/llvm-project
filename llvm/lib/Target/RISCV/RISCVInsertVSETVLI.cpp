@@ -616,7 +616,7 @@ public:
   bool hasNonZeroAVL(const LiveIntervals *LIS) const {
     if (hasAVLImm())
       return getAVLImm() > 0;
-    if (hasAVLReg() && LIS) {
+    if (hasAVLReg()) {
       if (auto *DefMI = getAVLDefMI(LIS))
         return isNonZeroLoadImmediate(*DefMI);
     }
@@ -753,13 +753,7 @@ public:
     if (Other.isUnknown())
       return isUnknown();
 
-    // If what we know about the AVL is different, then they aren't equal.
-    if (State != Other.State)
-      return false;
-    if (hasAVLReg() && !(getAVLReg() == Other.getAVLReg() &&
-                         getAVLVNInfo() == Other.getAVLVNInfo()))
-      return false;
-    if (hasAVLImm() && getAVLImm() != Other.getAVLImm())
+    if (!hasSameAVL(Other))
       return false;
 
     // If the SEWLMULRatioOnly bits are different, then they aren't equal.
@@ -794,7 +788,7 @@ public:
       return VSETVLIInfo::getUnknown();
 
     // If we have an exact, match return this.
-    if (isCompatible(DemandedFields::all(), Other, nullptr))
+    if (*this == Other)
       return *this;
 
     // Not an exact match, but maybe the AVL and VLMAX are the same. If so,
@@ -1389,7 +1383,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     // We found a VSET(I)VLI make sure it matches the output of the
     // predecessor block.
     VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-    if (!DefInfo.isCompatible(DemandedFields::all(), PBBExit, nullptr))
+    if (DefInfo != PBBExit)
       return true;
 
     // Require has the same VL as PBBExit, so if the exit from the
@@ -1426,7 +1420,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 
     uint64_t TSFlags = MI.getDesc().TSFlags;
     if (RISCVII::hasSEWOp(TSFlags)) {
-      if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, nullptr)) {
+      if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
         // If this is the first implicit state change, and the state change
         // requested can be proven to produce the same register contents, we
         // can skip emitting the actual state change and continue as if we
