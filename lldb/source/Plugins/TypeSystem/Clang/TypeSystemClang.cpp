@@ -2665,9 +2665,9 @@ static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::Type *
-GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type,
-                          bool allow_completion) {
+static const clang::Type *GetCompleteObjCObjectType(clang::ASTContext *ast,
+                                                    QualType qual_type,
+                                                    bool allow_completion) {
   assert(qual_type->isObjCObjectType());
   assert(ast);
 
@@ -5398,7 +5398,8 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
             objc_class_type->getInterface();
 
         if (class_interface_decl) {
-          class_interface_decl = class_interface_decl->getDefinition();;
+          class_interface_decl = class_interface_decl->getDefinition();
+          ;
 
           clang::ObjCInterfaceDecl *superclass_interface_decl =
               class_interface_decl->getSuperClass();

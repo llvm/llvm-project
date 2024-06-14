@@ -277,7 +277,8 @@ static void PrepareContextToReceiveMembers(TypeSystemClang &ast,
 
   // We have already completed the type, or we have found its definition and are
   // ready to complete it later (cf. ParseStructureLikeDIE).
-  if (tag_decl_ctx->getDefinition() != nullptr || tag_decl_ctx->isBeingDefined())
+  if (tag_decl_ctx->getDefinition() != nullptr ||
+      tag_decl_ctx->isBeingDefined())
     return;
 
   // We reach this point of the tag was present in the debug info as a
@@ -1127,9 +1128,8 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
   // Neither GCC 4.2 nor clang++ currently set a valid
   // accessibility in the DWARF for C++ methods...
   // Default to public for now...
-  const auto accessibility = attrs.accessibility == eAccessNone
-                                 ? eAccessPublic
-                                 : attrs.accessibility;
+  const auto accessibility =
+      attrs.accessibility == eAccessNone ? eAccessPublic : attrs.accessibility;
 
   clang::CXXMethodDecl *cxx_method_decl = m_ast.AddMethodToCXXRecordType(
       class_opaque_type.GetOpaqueQualType(), attrs.name.GetCString(),
@@ -1889,8 +1889,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     clang_type_was_created = true;
     clang_type = m_ast.CreateRecordType(
         decl_ctx, GetOwningClangModule(die), attrs.accessibility,
-        attrs.name.GetCString(), tag_decl_kind, attrs.class_language,
-        &metadata, attrs.exports_symbols);
+        attrs.name.GetCString(), tag_decl_kind, attrs.class_language, &metadata,
+        attrs.exports_symbols);
     RegisterDIE(die.GetDIE(), clang_type);
     if (!should_directly_complete)
       if (auto *source = llvm::dyn_cast_or_null<ImporterBackedASTSource>(
@@ -1955,15 +1955,15 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     } else if (clang_type_was_created && !should_directly_complete) {
       if (attrs.class_language != eLanguageTypeObjC &&
           attrs.class_language != eLanguageTypeObjC_plus_plus)
-      // Leave this as a forward declaration until we need to know the
-      // details of the type. lldb_private::Type will automatically call
-      // the SymbolFile virtual function
-      // "SymbolFileDWARF::CompleteType(Type *)" When the definition
-      // needs to be defined.
-      assert(!dwarf->GetForwardDeclCompilerTypeToDIE().count(
-                 ClangUtil::RemoveFastQualifiers(clang_type)
-                     .GetOpaqueQualType()) &&
-             "Type already in the forward declaration map!");
+        // Leave this as a forward declaration until we need to know the
+        // details of the type. lldb_private::Type will automatically call
+        // the SymbolFile virtual function
+        // "SymbolFileDWARF::CompleteType(Type *)" When the definition
+        // needs to be defined.
+        assert(!dwarf->GetForwardDeclCompilerTypeToDIE().count(
+                   ClangUtil::RemoveFastQualifiers(clang_type)
+                       .GetOpaqueQualType()) &&
+               "Type already in the forward declaration map!");
       // Can't assume m_ast.GetSymbolFile() is actually a
       // SymbolFileDWARF, it can be a SymbolFileDWARFDebugMap for Apple
       // binaries.
@@ -2243,15 +2243,13 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     // declarations. If we don't do this, clang will crash with an
     // assertion in the call to clang_type.TransferBaseClasses()
     for (const auto &base_class : bases) {
-      clang::TypeSourceInfo *type_source_info =
-          base_class->getTypeSourceInfo();
+      clang::TypeSourceInfo *type_source_info = base_class->getTypeSourceInfo();
       if (type_source_info)
         TypeSystemClang::RequireCompleteType(
             m_ast.GetType(type_source_info->getType()));
     }
 
-    m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
-                              std::move(bases));
+    m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(), std::move(bases));
   }
 
   adjustArgPassing(m_ast, attrs, clang_type);

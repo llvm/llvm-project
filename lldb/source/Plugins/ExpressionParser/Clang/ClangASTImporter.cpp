@@ -836,10 +836,9 @@ bool ClangASTImporter::CompleteObjCInterfaceDecl(
   if (result)
     return true;
 
-  llvm::handleAllErrors(result.takeError(),
-                        [](const clang::ASTImportError &e) {
-                          llvm::errs() << "ERR: " << e.toString() << "\n";
-                        });
+  llvm::handleAllErrors(result.takeError(), [](const clang::ASTImportError &e) {
+    llvm::errs() << "ERR: " << e.toString() << "\n";
+  });
 
   return false;
 }
