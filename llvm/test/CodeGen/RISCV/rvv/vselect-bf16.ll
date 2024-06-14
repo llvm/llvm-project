@@ -3,6 +3,10 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+d,+v,+experimental-zfbfmin,+experimental-zvfbfmin -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+m,+d,+v,+zvfh,+experimental-zfbfmin,+experimental-zvfbfmin -target-abi=ilp32d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+m,+d,+v,+zvfh,+experimental-zfbfmin,+experimental-zvfbfmin -target-abi=lp64d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
 define <vscale x 1 x bfloat> @vfmerge_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb, <vscale x 1 x i1> %cond) {
 ; CHECK-LABEL: vfmerge_vv_nxv1bf16:
