@@ -738,6 +738,8 @@ TEST(Error, ErrorCodeConversions) {
 
 // Test that error messages work.
 TEST(Error, ErrorMessage) {
+  EXPECT_EQ(toString(Error::success()), "");
+
   Error E0 = Error::success();
   EXPECT_EQ(toStringWithoutConsuming(E0), "");
   EXPECT_EQ(toString(std::move(E0)), "");
