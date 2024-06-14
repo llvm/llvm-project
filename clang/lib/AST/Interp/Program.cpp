@@ -54,11 +54,11 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   }
 
   // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(S, CharType, Descriptor::InlineDescMD,
-                                        S->getLength() + 1,
-                                        /*isConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false);
+  Descriptor *Desc =
+      allocateDescriptor(S, CharType, Descriptor::GlobalMD, S->getLength() + 1,
+                         /*isConst=*/true,
+                         /*isTemporary=*/false,
+                         /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -207,11 +207,10 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
   if (std::optional<PrimType> T = Ctx.classify(Ty))
-    Desc =
-        createDescriptor(D, *T, Descriptor::InlineDescMD, IsConst, IsTemporary);
+    Desc = createDescriptor(D, *T, Descriptor::GlobalMD, IsConst, IsTemporary);
   else
-    Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::InlineDescMD,
-                            IsConst, IsTemporary);
+    Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::GlobalMD, IsConst,
+                            IsTemporary);
 
   if (!Desc)
     return std::nullopt;
@@ -224,7 +223,9 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   G->block()->invokeCtor();
 
   // Initialize InlineDescriptor fields.
-  new (G->block()->rawData()) InlineDescriptor(Desc);
+  auto *GD = new (G->block()->rawData()) GlobalInlineDescriptor();
+  if (!Init)
+    GD->InitState = GlobalInitState::NoInitializer;
   Globals.push_back(G);
 
   return I;

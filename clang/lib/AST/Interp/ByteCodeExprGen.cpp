@@ -30,15 +30,21 @@ template <class Emitter> class DeclScope final : public VariableScope<Emitter> {
 public:
   DeclScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
       : VariableScope<Emitter>(Ctx, nullptr), Scope(Ctx->P, VD),
-        OldGlobalDecl(Ctx->GlobalDecl) {
+        OldGlobalDecl(Ctx->GlobalDecl),
+        OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
+    Ctx->InitializingDecl = VD;
   }
 
-  ~DeclScope() { this->Ctx->GlobalDecl = OldGlobalDecl; }
+  ~DeclScope() {
+    this->Ctx->GlobalDecl = OldGlobalDecl;
+    this->Ctx->InitializingDecl = OldInitializingDecl;
+  }
 
 private:
   Program::DeclScope Scope;
   bool OldGlobalDecl;
+  const ValueDecl *OldInitializingDecl;
 };
 
 /// Scope used to handle initialization methods.
@@ -3125,11 +3131,16 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   assert(!VD->isInvalidDecl() && "Trying to constant evaluate an invalid decl");
 
-  // Global variable we've already seen but that's uninitialized means
-  // evaluating the initializer failed. Just return failure.
-  if (std::optional<unsigned> Index = P.getGlobal(VD);
-      Index && !P.getPtrGlobal(*Index).isInitialized())
-    return false;
+  // If we've seen the global variable already and the initializer failed,
+  // just return false immediately.
+  if (std::optional<unsigned> Index = P.getGlobal(VD)) {
+    const Pointer &Ptr = P.getPtrGlobal(*Index);
+    const GlobalInlineDescriptor &GD =
+        *reinterpret_cast<const GlobalInlineDescriptor *>(
+            Ptr.block()->rawData());
+    if (GD.InitState == GlobalInitState::InitializerFailed)
+      return false;
+  }
 
   // Create and initialize the variable.
   if (!this->visitVarDecl(VD))
@@ -3167,13 +3178,15 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
       auto GlobalIndex = P.getGlobal(VD);
       assert(GlobalIndex);
       Block *GlobalBlock = P.getGlobal(*GlobalIndex);
-      InlineDescriptor &ID =
-          *reinterpret_cast<InlineDescriptor *>(GlobalBlock->rawData());
-      ID.IsInitialized = false;
+      GlobalInlineDescriptor &GD =
+          *reinterpret_cast<GlobalInlineDescriptor *>(GlobalBlock->rawData());
+
+      GD.InitState = GlobalInitState::InitializerFailed;
       GlobalBlock->invokeDtor();
     }
     return false;
   }
+
   return true;
 }
 
@@ -3967,35 +3980,38 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
   }
 
-  // Try to lazily visit (or emit dummy pointers for) declarations
-  // we haven't seen yet.
-  if (Ctx.getLangOpts().CPlusPlus) {
-    if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      const auto typeShouldBeVisited = [&](QualType T) -> bool {
-        if (T.isConstant(Ctx.getASTContext()))
-          return true;
-        if (const auto *RT = T->getAs<ReferenceType>())
-          return RT->getPointeeType().isConstQualified();
-        return false;
-      };
+  if (D != InitializingDecl) {
+    // Try to lazily visit (or emit dummy pointers for) declarations
+    // we haven't seen yet.
+    if (Ctx.getLangOpts().CPlusPlus) {
+      if (const auto *VD = dyn_cast<VarDecl>(D)) {
+        const auto typeShouldBeVisited = [&](QualType T) -> bool {
+          if (T.isConstant(Ctx.getASTContext()))
+            return true;
+          if (const auto *RT = T->getAs<ReferenceType>())
+            return RT->getPointeeType().isConstQualified();
+          return false;
+        };
 
-      // Visit local const variables like normal.
-      if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
-          typeShouldBeVisited(VD->getType())) {
+        // Visit local const variables like normal.
+        if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
+             VD->isStaticDataMember()) &&
+            typeShouldBeVisited(VD->getType())) {
+          if (!this->visitVarDecl(VD))
+            return false;
+          // Retry.
+          return this->visitDeclRef(VD, E);
+        }
+      }
+    } else {
+      if (const auto *VD = dyn_cast<VarDecl>(D);
+          VD && VD->getAnyInitializer() &&
+          VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.
         return this->visitDeclRef(VD, E);
       }
-    }
-  } else {
-    if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->getAnyInitializer() &&
-        VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
-      if (!this->visitVarDecl(VD))
-        return false;
-      // Retry.
-      return this->visitDeclRef(VD, E);
     }
   }
 
