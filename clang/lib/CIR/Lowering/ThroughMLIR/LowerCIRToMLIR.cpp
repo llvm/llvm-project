@@ -29,6 +29,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
@@ -78,7 +79,8 @@ struct ConvertCIRToMLIRPass
     registry.insert<mlir::BuiltinDialect, mlir::func::FuncDialect,
                     mlir::affine::AffineDialect, mlir::memref::MemRefDialect,
                     mlir::arith::ArithDialect, mlir::cf::ControlFlowDialect,
-                    mlir::scf::SCFDialect, mlir::math::MathDialect>();
+                    mlir::scf::SCFDialect, mlir::math::MathDialect,
+                    mlir::vector::VectorDialect>();
   }
   void runOnOperation() final;
 
@@ -1083,6 +1085,64 @@ public:
   }
 };
 
+class CIRVectorCreateLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecCreateOp> {
+public:
+  using OpConversionPattern<mlir::cir::VecCreateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecCreateOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto vecTy = op.getType().dyn_cast<mlir::cir::VectorType>();
+    assert(vecTy && "result type of cir.vec.create op is not VectorType");
+    auto elementTy = typeConverter->convertType(vecTy.getEltType());
+    auto loc = op.getLoc();
+    auto zeroElement = rewriter.getZeroAttr(elementTy);
+    mlir::Value result = rewriter.create<mlir::arith::ConstantOp>(
+        loc,
+        mlir::DenseElementsAttr::get(
+            mlir::VectorType::get(vecTy.getSize(), elementTy), zeroElement));
+    assert(vecTy.getSize() == op.getElements().size() &&
+           "cir.vec.create op count doesn't match vector type elements count");
+    for (uint64_t i = 0; i < vecTy.getSize(); ++i) {
+      mlir::Value indexValue =
+          getConst(rewriter, loc, rewriter.getI64Type(), i);
+      result = rewriter.create<mlir::vector::InsertElementOp>(
+          loc, adaptor.getElements()[i], result, indexValue);
+    }
+    rewriter.replaceOp(op, result);
+    return mlir::success();
+  }
+};
+
+class CIRVectorInsertLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecInsertOp> {
+public:
+  using OpConversionPattern<mlir::cir::VecInsertOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecInsertOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::vector::InsertElementOp>(
+        op, adaptor.getValue(), adaptor.getVec(), adaptor.getIndex());
+    return mlir::success();
+  }
+};
+
+class CIRVectorExtractLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecExtractOp> {
+public:
+  using OpConversionPattern<mlir::cir::VecExtractOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecExtractOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::vector::ExtractElementOp>(
+        op, adaptor.getVec(), adaptor.getIndex());
+    return mlir::success();
+  }
+};
+
 class CIRCastOpLowering : public mlir::OpConversionPattern<mlir::cir::CastOp> {
 public:
   using OpConversionPattern<mlir::cir::CastOp>::OpConversionPattern;
@@ -1285,20 +1345,22 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering, CIRBrOpLowering>(patterns.getContext());
 
-  patterns.add<
-      CIRCmpOpLowering, CIRCallOpLowering, CIRUnaryOpLowering, CIRBinOpLowering,
-      CIRLoadOpLowering, CIRConstantOpLowering, CIRStoreOpLowering,
-      CIRAllocaOpLowering, CIRFuncOpLowering, CIRScopeOpLowering,
-      CIRBrCondOpLowering, CIRTernaryOpLowering, CIRYieldOpLowering,
-      CIRCosOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
-      CIRCastOpLowering, CIRPtrStrideOpLowering, CIRSqrtOpLowering,
-      CIRCeilOpLowering, CIRExp2OpLowering, CIRExpOpLowering, CIRFAbsOpLowering,
-      CIRFloorOpLowering, CIRLog10OpLowering, CIRLog2OpLowering,
-      CIRLogOpLowering, CIRRoundOpLowering, CIRPtrStrideOpLowering,
-      CIRSinOpLowering, CIRShiftOpLowering, CIRBitClzOpLowering,
-      CIRBitCtzOpLowering, CIRBitPopcountOpLowering, CIRBitClrsbOpLowering,
-      CIRBitFfsOpLowering, CIRBitParityOpLowering, CIRIfOpLowering>(
-      converter, patterns.getContext());
+  patterns
+      .add<CIRCmpOpLowering, CIRCallOpLowering, CIRUnaryOpLowering,
+           CIRBinOpLowering, CIRLoadOpLowering, CIRConstantOpLowering,
+           CIRStoreOpLowering, CIRAllocaOpLowering, CIRFuncOpLowering,
+           CIRScopeOpLowering, CIRBrCondOpLowering, CIRTernaryOpLowering,
+           CIRYieldOpLowering, CIRCosOpLowering, CIRGlobalOpLowering,
+           CIRGetGlobalOpLowering, CIRCastOpLowering, CIRPtrStrideOpLowering,
+           CIRSqrtOpLowering, CIRCeilOpLowering, CIRExp2OpLowering,
+           CIRExpOpLowering, CIRFAbsOpLowering, CIRFloorOpLowering,
+           CIRLog10OpLowering, CIRLog2OpLowering, CIRLogOpLowering,
+           CIRRoundOpLowering, CIRPtrStrideOpLowering, CIRSinOpLowering,
+           CIRShiftOpLowering, CIRBitClzOpLowering, CIRBitCtzOpLowering,
+           CIRBitPopcountOpLowering, CIRBitClrsbOpLowering, CIRBitFfsOpLowering,
+           CIRBitParityOpLowering, CIRIfOpLowering, CIRVectorCreateLowering,
+           CIRVectorInsertLowering, CIRVectorExtractLowering>(
+          converter, patterns.getContext());
 }
 
 static mlir::TypeConverter prepareTypeConverter() {
@@ -1352,6 +1414,10 @@ static mlir::TypeConverter prepareTypeConverter() {
       return nullptr;
     return mlir::MemRefType::get(shape, elementType);
   });
+  converter.addConversion([&](mlir::cir::VectorType type) -> mlir::Type {
+    auto ty = converter.convertType(type.getEltType());
+    return mlir::VectorType::get(type.getSize(), ty);
+  });
 
   return converter;
 }
@@ -1368,10 +1434,11 @@ void ConvertCIRToMLIRPass::runOnOperation() {
 
   mlir::ConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
-  target.addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect,
-                         mlir::memref::MemRefDialect, mlir::func::FuncDialect,
-                         mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect,
-                         mlir::math::MathDialect>();
+  target
+      .addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect,
+                       mlir::memref::MemRefDialect, mlir::func::FuncDialect,
+                       mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect,
+                       mlir::math::MathDialect, mlir::vector::VectorDialect>();
   target.addIllegalDialect<mlir::cir::CIRDialect>();
 
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
