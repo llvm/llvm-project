@@ -3411,6 +3411,40 @@ def int_amdgcn_swmmac_f16_16x16x64_fp8_bf8_clamp : AMDGPUSWmmacIntrinsicClamp<ll
 def int_amdgcn_swmmac_f16_16x16x64_bf8_fp8_clamp : AMDGPUSWmmacIntrinsicClamp<llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8f16_ty>;
 def int_amdgcn_swmmac_f16_16x16x64_bf8_bf8_clamp : AMDGPUSWmmacIntrinsicClamp<llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8f16_ty>;
 
+class AMDGPUSWmmacIntrinsicIUClamp<LLVMType D, LLVMType A, LLVMType B, LLVMType C> :
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [D],                // %D
+    [
+      llvm_i1_ty,       // %A_sign
+      A,                // %A
+      llvm_i1_ty,       // %B_sign
+      B,                // %B
+      C,                // %C
+      llvm_i16_ty,      // %Sparsity index for A
+      llvm_i1_ty,       // %clamp
+    ],
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>]
+>;
+
+
+def int_amdgcn_swmmac_f32_16x16x32_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_i32_ty, llvm_v2i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_swmmac_f32_16x16x32_iu8_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_swmmac_f32_16x16x64_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_swmmac_f32_16x16x64_iu8_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_swmmac_f32_16x16x128_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8f32_ty>;
+def int_amdgcn_swmmac_f32i32_16x16x32_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_i32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_f32i32_16x16x32_iu8_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_f32i32_16x16x64_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_f32i32_16x16x64_iu8_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_f32i32_16x16x128_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8f32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_i32_16x16x32_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8i32_ty, llvm_i32_ty, llvm_v2i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_i32_16x16x32_iu8_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8i32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_i32_16x16x64_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8i32_ty, llvm_v2i32_ty, llvm_v4i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_i32_16x16x64_iu8_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
+def int_amdgcn_swmmac_i32_16x16x128_iu4_clamp : AMDGPUSWmmacIntrinsicIUClamp<llvm_v8i32_ty, llvm_v4i32_ty, llvm_v8i32_ty, llvm_v8i32_ty>;
+
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
