@@ -1427,11 +1427,19 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
   // bail out if the plan contains any.
-  if (any_of(Header->phis(), [](VPRecipeBase &Phi) {
-        return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
-                isa<VPWidenPointerInductionRecipe>(&Phi));
-      }))
+  bool IncludeWidenInduction = any_of(Header->phis(), [](VPRecipeBase &Phi) {
+    return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
+            isa<VPWidenPointerInductionRecipe>(&Phi));
+  });
+  // FIXME: Remove this once we can transform (select header_mask, true_value,
+  // false_value) into vp.merge.
+  bool IncludeOutloopReduction = any_of(Header->phis(), [&](VPRecipeBase &Phi) {
+    auto *R = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    return R && !R->isInLoop();
+  });
+  if (IncludeWidenInduction || IncludeOutloopReduction)
     return false;
+
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
