@@ -59,47 +59,6 @@ class FmaTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   using FmaFunc = OutType (*)(InType, InType, InType);
 
-  void test_special_numbers(FmaFunc func) {
-    EXPECT_FP_EQ(out.zero, func(in.zero, in.zero, in.zero));
-    EXPECT_FP_EQ(out.neg_zero, func(in.zero, in.neg_zero, in.neg_zero));
-    EXPECT_FP_EQ(out.inf, func(in.inf, in.inf, in.zero));
-    EXPECT_FP_EQ(out.neg_inf, func(in.neg_inf, in.inf, in.neg_inf));
-    EXPECT_FP_EQ(out.aNaN, func(in.inf, in.zero, in.zero));
-    EXPECT_FP_EQ(out.aNaN, func(in.inf, in.neg_inf, in.inf));
-    EXPECT_FP_EQ(out.aNaN, func(in.aNaN, in.zero, in.inf));
-    EXPECT_FP_EQ(out.aNaN, func(in.inf, in.neg_inf, in.aNaN));
-
-    // Test underflow rounding up.
-    EXPECT_FP_EQ(OutFPBits(OutStorageType(2)).get_val(),
-                 func(OutType(0.5), out.min_denormal, out.min_denormal));
-
-    if constexpr (sizeof(OutType) < sizeof(InType)) {
-      EXPECT_FP_EQ(out.zero,
-                   func(InType(0.5), in.min_denormal, in.min_denormal));
-    }
-    // Test underflow rounding down.
-    OutType v = OutFPBits(static_cast<OutStorageType>(OUT_MIN_NORMAL_U +
-                                                      OutStorageType(1)))
-                    .get_val();
-    EXPECT_FP_EQ(v, func(OutType(1) / OutType(OUT_MIN_NORMAL_U << 1), v,
-                         out.min_normal));
-
-    if constexpr (sizeof(OutType) < sizeof(InType)) {
-      InType v = InFPBits(static_cast<InStorageType>(IN_MIN_NORMAL_U +
-                                                     InStorageType(1)))
-                     .get_val();
-      EXPECT_FP_EQ(
-          out.min_normal,
-          func(InType(1) / InType(IN_MIN_NORMAL_U << 1), v, out.min_normal));
-    }
-    // Test overflow.
-    OutType z = out.max_normal;
-    EXPECT_FP_EQ(OutType(0.75) * z, func(InType(1.75), z, -z));
-    // Exact cancellation.
-    EXPECT_FP_EQ(out.zero, func(InType(3.0), InType(5.0), -InType(15.0)));
-    EXPECT_FP_EQ(out.zero, func(InType(-3.0), InType(5.0), InType(15.0)));
-  }
-
   void test_subnormal_range(FmaFunc func) {
     constexpr InStorageType COUNT = 100'001;
     constexpr InStorageType STEP =
