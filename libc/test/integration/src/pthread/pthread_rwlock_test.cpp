@@ -273,7 +273,7 @@ enum class Operation : int {
   COUNT = 6
 };
 
-LIBC_NAMESPACE::RawMutex io_mutex{};
+LIBC_NAMESPACE::RawMutex *io_mutex;
 struct ThreadGuard {
   Operation record[64]{};
   size_t cursor = 0;
@@ -283,12 +283,12 @@ struct ThreadGuard {
       return;
     pid_t pid = LIBC_NAMESPACE::syscall_impl(SYS_getpid);
     pid_t tid = LIBC_NAMESPACE::syscall_impl(SYS_gettid);
-    io_mutex.lock(LIBC_NAMESPACE::cpp::nullopt, true);
+    io_mutex->lock(LIBC_NAMESPACE::cpp::nullopt, true);
     LIBC_NAMESPACE::printf("process %d thread %d: ", pid, tid);
     for (size_t i = 0; i < cursor; ++i)
       LIBC_NAMESPACE::printf("%d ", static_cast<int>(record[i]));
     LIBC_NAMESPACE::printf("\n");
-    io_mutex.unlock(true);
+    io_mutex->unlock(true);
   }
 };
 
@@ -459,6 +459,9 @@ static void multiple_process_test(int preference) {
 }
 
 TEST_MAIN() {
+  io_mutex = new (LIBC_NAMESPACE::mmap(
+      nullptr, sizeof(LIBC_NAMESPACE::RawMutex), PROT_READ | PROT_WRITE,
+      MAP_ANONYMOUS | MAP_SHARED, -1, 0)) LIBC_NAMESPACE::RawMutex();
   smoke_test();
   deadlock_detection_test();
   try_lock_test();
@@ -472,5 +475,7 @@ TEST_MAIN() {
   single_process_test(PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
   multiple_process_test(PTHREAD_RWLOCK_PREFER_READER_NP);
   multiple_process_test(PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
+  io_mutex->~RawMutex();
+  LIBC_NAMESPACE::munmap(io_mutex, sizeof(LIBC_NAMESPACE::RawMutex));
   return 0;
 }
