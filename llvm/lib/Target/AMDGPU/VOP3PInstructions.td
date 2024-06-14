@@ -34,9 +34,9 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                     bit useTiedOutput = 0> : VOP3P_Profile<P, Features, 1> {
     bit UseTiedOutput = useTiedOutput;
 
-    defvar Src0RC = !if(!eq(P.Src0VT, bf16), VCSrc_bf16, VCSrc_f16);
-    defvar Src1RC = !if(!eq(P.Src1VT, bf16), VCSrc_bf16, VCSrc_f16);
-    defvar Src2RC = !if(!eq(P.Src2VT, bf16), VCSrc_bf16, VCSrc_f16);
+    defvar Src0RC = getVCSrcForVT<P.Src0VT>.ret;
+    defvar Src1RC = getVCSrcForVT<P.Src1VT>.ret;
+    defvar Src2RC = getVCSrcForVT<P.Src2VT>.ret;
 
     dag srcs =
           (ins FP16InputMods:$src0_modifiers, Src0RC:$src0,

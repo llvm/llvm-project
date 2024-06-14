@@ -1656,13 +1656,11 @@ class getVCSrcForVT<ValueType VT> {
     !if(VT.isFP,
       !if(!eq(VT.Size, 64),
          VCSrc_f64,
-         !if(!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-            VCSrc_f16,
-            !if(!or(!eq(VT.Value, v2f16.Value), !eq(VT.Value, v2bf16.Value)),
-               VCSrc_v2f16,
-               VCSrc_f32
-            )
-         )
+         !cond(!eq(VT.Value, f16.Value)    : VCSrc_f16,
+               !eq(VT.Value, bf16.Value)   : VCSrc_bf16,
+               !eq(VT.Value, v2f16.Value)  : VCSrc_v2f16,
+               !eq(VT.Value, v2bf16.Value) : VCSrc_v2bf16,
+               1 : VCSrc_f32)
        ),
        !if(!eq(VT.Size, 64),
           VCSrc_b64,
