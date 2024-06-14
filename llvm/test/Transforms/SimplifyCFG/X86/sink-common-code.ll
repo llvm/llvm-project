@@ -1702,4 +1702,165 @@ return:
   ret void
 }
 
+define ptr @multi_use_in_phi(i1 %cond, ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: @multi_use_in_phi(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[GEP1_A:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP1_B:%.*]] = getelementptr i8, ptr [[P]], i64 [[A]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[GEP1_B_SINK:%.*]] = phi ptr [ [[GEP1_B]], [[ELSE]] ], [ [[GEP1_A]], [[IF]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr [ [[GEP1_A]], [[IF]] ], [ [[GEP1_B]], [[ELSE]] ]
+; CHECK-NEXT:    [[GEP2_B:%.*]] = getelementptr i8, ptr [[GEP1_B_SINK]], i64 [[B:%.*]]
+; CHECK-NEXT:    call void @use.ptr(ptr [[PHI1]])
+; CHECK-NEXT:    ret ptr [[GEP2_B]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep1.a = getelementptr i8, ptr %p, i64 %a
+  %gep2.a = getelementptr i8, ptr %gep1.a, i64 %b
+  br label %join
+
+else:
+  %gep1.b = getelementptr i8, ptr %p, i64 %a
+  %gep2.b = getelementptr i8, ptr %gep1.b, i64 %b
+  br label %join
+
+join:
+  %phi1 = phi ptr [ %gep1.a, %if ], [ %gep1.b, %else ]
+  %phi2 = phi ptr [ %gep2.a, %if ], [ %gep2.b, %else ]
+  call void @use.ptr(ptr %phi1)
+  ret ptr %phi2
+}
+
+define ptr @multi_use_in_phi_inconsistent(i1 %cond, ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: @multi_use_in_phi_inconsistent(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[GEP1_A:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP1_B:%.*]] = getelementptr i8, ptr [[P]], i64 [[A]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[GEP1_B_SINK:%.*]] = phi ptr [ [[GEP1_B]], [[ELSE]] ], [ [[GEP1_A]], [[IF]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr [ [[GEP1_A]], [[IF]] ], [ [[P]], [[ELSE]] ]
+; CHECK-NEXT:    [[GEP2_B:%.*]] = getelementptr i8, ptr [[GEP1_B_SINK]], i64 [[B:%.*]]
+; CHECK-NEXT:    call void @use.ptr(ptr [[PHI1]])
+; CHECK-NEXT:    ret ptr [[GEP2_B]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep1.a = getelementptr i8, ptr %p, i64 %a
+  %gep2.a = getelementptr i8, ptr %gep1.a, i64 %b
+  br label %join
+
+else:
+  %gep1.b = getelementptr i8, ptr %p, i64 %a
+  %gep2.b = getelementptr i8, ptr %gep1.b, i64 %b
+  br label %join
+
+join:
+  %phi1 = phi ptr [ %gep1.a, %if ], [ %p, %else ]
+  %phi2 = phi ptr [ %gep2.a, %if ], [ %gep2.b, %else ]
+  call void @use.ptr(ptr %phi1)
+  ret ptr %phi2
+}
+
+define i64 @multi_use_in_block(i1 %cond, ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: @multi_use_in_block(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[GEP1_A:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[V_A:%.*]] = load i64, ptr [[GEP1_A]], align 8
+; CHECK-NEXT:    [[GEP2_A:%.*]] = getelementptr i8, ptr [[GEP1_A]], i64 [[V_A]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP1_B:%.*]] = getelementptr i8, ptr [[P]], i64 [[A]]
+; CHECK-NEXT:    [[V_B:%.*]] = load i64, ptr [[GEP1_B]], align 8
+; CHECK-NEXT:    [[GEP2_B:%.*]] = getelementptr i8, ptr [[GEP1_B]], i64 [[V_B]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ [[V_A]], [[IF]] ], [ [[V_B]], [[ELSE]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi ptr [ [[GEP2_A]], [[IF]] ], [ [[GEP2_B]], [[ELSE]] ]
+; CHECK-NEXT:    call void @use.ptr(ptr [[PHI2]])
+; CHECK-NEXT:    ret i64 [[PHI1]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep1.a = getelementptr i8, ptr %p, i64 %a
+  %v.a = load i64, ptr %gep1.a
+  %gep2.a = getelementptr i8, ptr %gep1.a, i64 %v.a
+  br label %join
+
+else:
+  %gep1.b = getelementptr i8, ptr %p, i64 %a
+  %v.b = load i64, ptr %gep1.b
+  %gep2.b = getelementptr i8, ptr %gep1.b, i64 %v.b
+  br label %join
+
+join:
+  %phi1 = phi i64 [ %v.a, %if ], [ %v.b, %else ]
+  %phi2 = phi ptr [ %gep2.a, %if ], [ %gep2.b, %else ]
+  call void @use.ptr(ptr %phi2)
+  ret i64 %phi1
+}
+
+define i64 @multi_use_in_block_inconsistent(i1 %cond, ptr %p, i64 %a, i64 %b) {
+; CHECK-LABEL: @multi_use_in_block_inconsistent(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[GEP1_A:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[A:%.*]]
+; CHECK-NEXT:    [[V_A:%.*]] = load i64, ptr [[GEP1_A]], align 8
+; CHECK-NEXT:    [[GEP2_A:%.*]] = getelementptr i8, ptr [[GEP1_A]], i64 [[V_A]]
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[GEP1_B:%.*]] = getelementptr i8, ptr [[P]], i64 [[A]]
+; CHECK-NEXT:    [[V_B:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    [[GEP2_B:%.*]] = getelementptr i8, ptr [[GEP1_B]], i64 [[V_B]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i64 [ [[V_A]], [[IF]] ], [ [[V_B]], [[ELSE]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi ptr [ [[GEP2_A]], [[IF]] ], [ [[GEP2_B]], [[ELSE]] ]
+; CHECK-NEXT:    call void @use.ptr(ptr [[PHI2]])
+; CHECK-NEXT:    ret i64 [[PHI1]]
+;
+  br i1 %cond, label %if, label %else
+
+if:
+  call void @dummy()
+  %gep1.a = getelementptr i8, ptr %p, i64 %a
+  %v.a = load i64, ptr %gep1.a
+  %gep2.a = getelementptr i8, ptr %gep1.a, i64 %v.a
+  br label %join
+
+else:
+  %gep1.b = getelementptr i8, ptr %p, i64 %a
+  %v.b = load i64, ptr %p
+  %gep2.b = getelementptr i8, ptr %gep1.b, i64 %v.b
+  br label %join
+
+join:
+  %phi1 = phi i64 [ %v.a, %if ], [ %v.b, %else ]
+  %phi2 = phi ptr [ %gep2.a, %if ], [ %gep2.b, %else ]
+  call void @use.ptr(ptr %phi2)
+  ret i64 %phi1
+}
+
+declare void @dummy()
+declare void @use.ptr(ptr)
+
 !12 = !{i32 1}
