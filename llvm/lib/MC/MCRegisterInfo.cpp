@@ -91,8 +91,11 @@ ArrayRef<MCPhysReg> MCRegisterInfo::getCachedAliasesOf(MCPhysReg R) const {
   for (MCRegAliasIteratorImpl It(R, this); It.isValid(); ++It)
     Aliases.push_back(*It);
 
-  llvm::sort(Aliases);
+  sort(Aliases);
   Aliases.erase(unique(Aliases), Aliases.end());
+  assert(none_of(Aliases, [&](auto &Cur) { return R == Cur; }) &&
+         "MCRegAliasIteratorImpl includes Self!");
+
   // Always put "self" at the end, so the iterator can choose to ignore it.
   // For registers without aliases, it also serves as a sentinel value that
   // tells us to not recompute the alias set.
