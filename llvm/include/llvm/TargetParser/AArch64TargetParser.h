@@ -116,12 +116,12 @@ using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
 // SubtargetFeature which may represent either an actual extension or some
 // internal LLVM property.
 struct ExtensionInfo {
-  StringRef Name;                 // Human readable name, e.g. "profile".
+  StringRef UserVisibleName;      // Human readable name used in -march/-cpu, e.g. "profile"
   std::optional<StringRef> Alias; // An alias for this extension, if one exists.
   ArchExtKind ID;                 // Corresponding to the ArchExtKind, this
                                   // extensions representation in the bitfield.
-  StringRef Feature;              // -mattr enable string, e.g. "+spe"
-  StringRef NegFeature;           // -mattr disable string, e.g. "-spe"
+  StringRef TargetFeature;        // -target-feature/-mattr enable string, e.g. "+spe"
+  StringRef NegTargetFeature;     // -target-feature/-mattr disable string, e.g. "-spe"
 };
 
 #define EMIT_EXTENSIONS
@@ -286,12 +286,12 @@ struct ExtensionSet {
       Features.emplace_back(T(BaseArch->ArchFeature));
 
     for (const auto &E : Extensions) {
-      if (E.Feature.empty() || !Touched.test(E.ID))
+      if (E.TargetFeature.empty() || !Touched.test(E.ID))
         continue;
       if (Enabled.test(E.ID))
-        Features.emplace_back(T(E.Feature));
+        Features.emplace_back(T(E.TargetFeature));
       else
-        Features.emplace_back(T(E.NegFeature));
+        Features.emplace_back(T(E.NegTargetFeature));
     }
   }
 
