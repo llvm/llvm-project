@@ -1062,7 +1062,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 // A feature may correspond to an Extension (anything with a corresponding
 // AEK_), in which case an ExtensionSet is used to parse it and expand its
 // dependencies. If the feature does not yield a successful parse then it
-// is be passed through.
+// is passed through.
 ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   ParsedTargetAttr Ret;
   if (Features == "default")
