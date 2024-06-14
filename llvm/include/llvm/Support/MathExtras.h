@@ -472,9 +472,8 @@ inline int64_t mod(int64_t Numerator, int64_t Denominator) {
 inline uint64_t divideNearest(uint64_t Numerator, uint64_t Denominator) {
   uint64_t Mod = Numerator % Denominator;
   uint64_t HalfDenomFloor = Denominator / 2;
-  return (Numerator / Denominator) +
-         (Mod > HalfDenomFloor ||
-          ((Mod == HalfDenomFloor) & ~(Denominator & 1)));
+  uint64_t TieBreaker = ((Mod == HalfDenomFloor) & ~(Denominator & 1));
+  return (Numerator / Denominator) + (Mod > HalfDenomFloor || TieBreaker);
 }
 
 /// Returns the largest uint64_t less than or equal to \p Value and is
