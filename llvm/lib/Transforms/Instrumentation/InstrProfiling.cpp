@@ -926,10 +926,10 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
       if (TT.supportsCOMDAT())
         Bias->setComdat(M.getOrInsertComdat(Bias->getName()));
     }
-    BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias);
+    BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profc_bias");
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
-  return Builder.CreateIntToPtr(Add, Addr->getType());
+  return Builder.CreateIntToPtr(Add, Addr->getType(), "profc_addr");
 }
 
 Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
