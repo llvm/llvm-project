@@ -1993,9 +1993,8 @@ static bool canSinkInstructions(
     if (It == PHIOperands.end())
       // There may be uses in other blocks when sinking into a loop header.
       return false;
-    for (auto [I1, I2] : zip(Insts, It->second))
-      if (I1 != I2)
-        return false;
+    if (!equal(Insts, It->second))
+      return false;
   }
 
   // Because SROA can't handle speculating stores of selects, try not to sink
