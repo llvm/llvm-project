@@ -8701,6 +8701,13 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
   if (!AFI || AFI->hasRedZone().value_or(true))
     return false;
 
+  // FIXME: Determine whether it is safe to outline from functions which contain
+  // streaming-mode changes. We may need to ensure any smstart/smstop pairs are
+  // outlined together and ensure it is safe to outline with async unwind info,
+  // required for saving & restoring VG around calls.
+  if (AFI->hasStreamingModeChanges())
+    return false;
+
   // FIXME: Teach the outliner to generate/handle Windows unwind info.
   if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
     return false;

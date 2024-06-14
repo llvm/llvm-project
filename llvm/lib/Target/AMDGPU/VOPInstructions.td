@@ -17,6 +17,8 @@ class LetDummies {
   bit isReMaterializable;
   bit isAsCheapAsAMove;
   bit FPDPRounding;
+  bit IsInvalidSingleUseConsumer;
+  bit IsInvalidSingleUseProducer;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -81,6 +83,8 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   string Mnemonic = opName;
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
+  bit IsInvalidSingleUseConsumer = P.IsInvalidSingleUseConsumer;
+  bit IsInvalidSingleUseProducer = P.IsInvalidSingleUseProducer;
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -175,6 +179,8 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
 class VOP_Real<VOP_Pseudo ps> {
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsSingle = ps.Pfl.IsSingle;
+  bit IsInvalidSingleUseConsumer = ps.Pfl.IsInvalidSingleUseConsumer;
+  bit IsInvalidSingleUseProducer = ps.Pfl.IsInvalidSingleUseProducer;
 }
 
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
@@ -823,9 +829,7 @@ class VOP3P_DPPe_Common<bits<7> op, VOPProfile P> : VOP3P_DPPe_Common_Base<op, P
 
 class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   dag Ins = P.InsDPP, string asmOps = P.AsmDPP> :
-  InstSI <P.OutsDPP, Ins, OpName#asmOps, pattern>,
-  VOP <OpName>,
-  SIMCInstr <OpName#"_dpp", SIEncodingFamily.NONE> {
+  VOP_Pseudo<OpName, "_dpp", P, P.OutsDPP, Ins, asmOps, pattern> {
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
@@ -856,6 +860,9 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DisableEncoding = !if(P.NumSrcArgs, P.TieRegDPP, "");
   let DecoderNamespace = "GFX8";
+
+  let IsInvalidSingleUseConsumer = !not(VINTERP);
+  let IsInvalidSingleUseProducer = !not(VINTERP);
 
   VOPProfile Pfl = P;
 }
@@ -1724,4 +1731,13 @@ def VOPTrue16Table : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getTrue16OpcodeHelper";
+}
+
+def SingleUseExceptionTable : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let CppTypeName = "SingleUseExceptionInfo";
+  let Fields = ["Opcode", "IsInvalidSingleUseConsumer", "IsInvalidSingleUseProducer"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getSingleUseExceptionHelper";
 }

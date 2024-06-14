@@ -1015,7 +1015,35 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   const SPIRV::GroupBuiltin *GroupBuiltin =
       SPIRV::lookupGroupBuiltin(Builtin->Name);
+
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  if (Call->isSpirvOp()) {
+    if (GroupBuiltin->NoGroupOperation)
+      return buildOpFromWrapper(MIRBuilder, GroupBuiltin->Opcode, Call,
+                                GR->getSPIRVTypeID(Call->ReturnType));
+
+    // Group Operation is a literal
+    Register GroupOpReg = Call->Arguments[1];
+    const MachineInstr *MI = getDefInstrMaybeConstant(GroupOpReg, MRI);
+    if (!MI || MI->getOpcode() != TargetOpcode::G_CONSTANT)
+      report_fatal_error(
+          "Group Operation parameter must be an integer constant");
+    uint64_t GrpOp = MI->getOperand(1).getCImm()->getValue().getZExtValue();
+    Register ScopeReg = Call->Arguments[0];
+    if (!MRI->getRegClassOrNull(ScopeReg))
+      MRI->setRegClass(ScopeReg, &SPIRV::IDRegClass);
+    Register ValueReg = Call->Arguments[2];
+    if (!MRI->getRegClassOrNull(ValueReg))
+      MRI->setRegClass(ValueReg, &SPIRV::IDRegClass);
+    MIRBuilder.buildInstr(GroupBuiltin->Opcode)
+        .addDef(Call->ReturnRegister)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(ScopeReg)
+        .addImm(GrpOp)
+        .addUse(ValueReg);
+    return true;
+  }
+
   Register Arg0;
   if (GroupBuiltin->HasBoolArg) {
     Register ConstRegister = Call->Arguments[0];

@@ -281,8 +281,6 @@ SlowDynamicAPInt &SlowDynamicAPInt::operator--() {
 /// ---------------------------------------------------------------------------
 /// Printing.
 /// ---------------------------------------------------------------------------
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void SlowDynamicAPInt::print(raw_ostream &OS) const { OS << Val; }
 
 void SlowDynamicAPInt::dump() const { print(dbgs()); }
-#endif
