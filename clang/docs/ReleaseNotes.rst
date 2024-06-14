@@ -921,6 +921,10 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- The clang-cl ``/Ot`` compiler option ("optimize for speed", also implied by
+  ``/O2``) now maps to clang's ``-O3`` optimizataztion level instead of ``-O2``.
+  Users who prefer the old behavior can use ``clang-cl /Ot /clang:-O2 ...``.
+
 - Clang-cl now supports function targets with intrinsic headers. This allows
   for runtime feature detection of intrinsics. Previously under clang-cl
   ``immintrin.h`` and similar intrinsic headers would only include the intrinsics
