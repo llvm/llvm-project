@@ -23,9 +23,9 @@ define <16 x i8> @mul_v16i8c(<16 x i8> %i) nounwind  {
 ; SSE41-LABEL: mul_v16i8c:
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117]
 ; SSE41-NEXT:    psllw $8, %xmm1
-; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0]
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    por %xmm1, %xmm0
 ; SSE41-NEXT:    retq
@@ -420,18 +420,18 @@ define <32 x i8> @mul_v32i8c(<32 x i8> %i) nounwind  {
 ;
 ; AVX2-LABEL: mul_v32i8c:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117]
 ; AVX2-NEXT:    vpsllw $8, %ymm1, %ymm1
-; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0]
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: mul_v32i8c:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX512F-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117]
 ; AVX512F-NEXT:    vpsllw $8, %ymm1, %ymm1
-; AVX512F-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512F-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0]
 ; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
@@ -844,8 +844,8 @@ define <64 x i8> @mul_v64i8c(<64 x i8> %i) nounwind  {
 ;
 ; AVX512BW-LABEL: mul_v64i8c:
 ; AVX512BW:       # %bb.0: # %entry
-; AVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
-; AVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1 # [117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0]
+; AVX512BW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117,0,117]
 ; AVX512BW-NEXT:    vpsllw $8, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpternlogd $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
 ; AVX512BW-NEXT:    retq
