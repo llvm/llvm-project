@@ -2638,9 +2638,10 @@ foreach fvti = !listconcat(AllFloatVectors, AllBFloatVectors) in {
                  fvti.RegClass:$merge, fvti.RegClass:$rs2, 0, (fvti.Mask V0),
                  GPR:$vl, fvti.Log2SEW)>;
   }
+}
 
-  let Predicates = !listconcat(GetVTypePredicates<GetFpVTypeInfo<fvti>.Vti>.Predicates,
-                               GetVTypeScalarPredicates<fvti>.Predicates) in {
+foreach fvti = AllFloatVectors in {
+  let Predicates = GetVTypePredicates<fvti>.Predicates in {
     def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask V0),
                                             (SplatFPOp fvti.ScalarRegClass:$rs1),
                                             fvti.RegClass:$rs2,
