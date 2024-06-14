@@ -348,7 +348,7 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
 
 def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
   [AttrConstraint<Or<[IsNullAttr.predicate, DenseArrayCount<3>.predicate]>,
-    "array of 3 32-bit integers (if present)">]>;
+    "with 3 elements (if present)">]>;
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
@@ -573,8 +573,6 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     LogicalResult verifyBody();
   }];
   let hasCustomAssemblyFormat = 1;
-
-  let hasVerifier = 1;
 }
 
 def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
