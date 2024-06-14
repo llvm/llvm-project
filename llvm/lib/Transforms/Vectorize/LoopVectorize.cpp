@@ -7357,16 +7357,30 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   /// be a single condition to control the vector loop.
   SmallVector<BasicBlock *> Exiting;
   CM.TheLoop->getExitingBlocks(Exiting);
-  // Add the cost of all exit conditions.
+  SetVector<Instruction *> ExitInstrs;
+  // Collect all exit conditions.
   for (BasicBlock *EB : Exiting) {
     auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
     if (!Term)
       continue;
     if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
-      assert(!CostCtx.SkipCostComputation.contains(CondI) &&
-             "Condition already skipped?");
-      CostCtx.SkipCostComputation.insert(CondI);
-      Cost += CostCtx.getLegacyCost(CondI, VF);
+      ExitInstrs.insert(CondI);
+    }
+  }
+  // Compute the cost of all instructions only feeding the exit conditions.
+  for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
+    Instruction *CondI = ExitInstrs[I];
+    if (!OrigLoop->contains(CondI) ||
+        !CostCtx.SkipCostComputation.insert(CondI).second)
+      continue;
+    Cost += CostCtx.getLegacyCost(CondI, VF);
+    for (Value *Op : CondI->operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI || any_of(OpI->users(), [&ExitInstrs](User *U) {
+            return !ExitInstrs.contains(cast<Instruction>(U));
+          }))
+        continue;
+      ExitInstrs.insert(OpI);
     }
   }
 
