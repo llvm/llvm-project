@@ -1932,7 +1932,7 @@ static bool replacingOperandWithVariableIsCheap(const Instruction *I,
 // PHI node (because an operand varies in each input block), add to PHIOperands.
 static bool canSinkInstructions(
     ArrayRef<Instruction *> Insts,
-    DenseMap<Instruction *, SmallVector<Value *, 4>> &PHIOperands) {
+    DenseMap<const Use *, SmallVector<Value *, 4>> &PHIOperands) {
   // Prune out obviously bad instructions to move. Each instruction must have
   // exactly zero or one use, and we check later that use is by a single, common
   // PHI instruction in the successor.
@@ -1983,20 +1983,17 @@ static bool canSinkInstructions(
       return false;
   }
 
-  // All instructions in Insts are known to be the same opcode. If they have a
-  // use, check that the only user is a PHI or in the same block as the
-  // instruction, because if a user is in the same block as an instruction we're
-  // contemplating sinking, it must already be determined to be sinkable.
+  // Uses must be consistent: If I0 is used in a phi node in the sink target,
+  // then the other phi operands must match the instructions from Insts. This
+  // also has to hold true for any phi nodes that would be created as a result
+  // of sinking. Both of these cases are represented by PhiOperands.
   if (HasUse) {
-    auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
-    auto *Succ = I0->getParent()->getTerminator()->getSuccessor(0);
-    if (!all_of(Insts, [&PNUse,&Succ](const Instruction *I) -> bool {
-          auto *U = cast<Instruction>(*I->user_begin());
-          return (PNUse &&
-                  PNUse->getParent() == Succ &&
-                  PNUse->getIncomingValueForBlock(I->getParent()) == I) ||
-                 U->getParent() == I->getParent();
-        }))
+    const Use &U = *I0->use_begin();
+    auto It = PHIOperands.find(&U);
+    if (It == PHIOperands.end())
+      // There may be uses in other blocks when sinking into a loop header.
+      return false;
+    if (!equal(Insts, It->second))
       return false;
   }
 
@@ -2063,8 +2060,9 @@ static bool canSinkInstructions(
           !canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
         return false;
+      auto &Ops = PHIOperands[&I0->getOperandUse(OI)];
       for (auto *I : Insts)
-        PHIOperands[I].push_back(I->getOperand(OI));
+        Ops.push_back(I->getOperand(OI));
     }
   }
   return true;
@@ -2073,7 +2071,7 @@ static bool canSinkInstructions(
 // Assuming canSinkInstructions(Blocks) has returned true, sink the last
 // instruction of every block in Blocks to their common successor, commoning
 // into one instruction.
-static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
+static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   auto *BBEnd = Blocks[0]->getTerminator()->getSuccessor(0);
 
   // canSinkInstructions returning true guarantees that every block has at
@@ -2088,23 +2086,10 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
       Insts.push_back(I);
   }
 
-  // The only checking we need to do now is that all users of all instructions
-  // are the same PHI node. canSinkInstructions should have checked this but
-  // it is slightly over-aggressive - it gets confused by commutative
-  // instructions so double-check it here.
-  Instruction *I0 = Insts.front();
-  if (!I0->user_empty()) {
-    auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
-    if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
-          auto *U = cast<Instruction>(*I->user_begin());
-          return U == PNUse;
-        }))
-      return false;
-  }
-
   // We don't need to do any more checking here; canSinkInstructions should
   // have done it all for us.
   SmallVector<Value*, 4> NewOperands;
+  Instruction *I0 = Insts.front();
   for (unsigned O = 0, E = I0->getNumOperands(); O != E; ++O) {
     // This check is different to that in canSinkInstructions. There, we
     // cared about the global view once simplifycfg (and instcombine) have
@@ -2172,8 +2157,6 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
     I->replaceAllUsesWith(I0);
     I->eraseFromParent();
   }
-
-  return true;
 }
 
 namespace {
@@ -2314,9 +2297,19 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
   // carry on. If we can sink an instruction but need to PHI-merge some operands
   // (because they're not identical in each instruction) we add these to
   // PHIOperands.
+  // We prepopulate PHIOperands with the phis that already exist in BB.
+  DenseMap<const Use *, SmallVector<Value *, 4>> PHIOperands;
+  for (PHINode &PN : BB->phis()) {
+    SmallDenseMap<BasicBlock *, const Use *, 4> IncomingVals;
+    for (const Use &U : PN.incoming_values())
+      IncomingVals.insert({PN.getIncomingBlock(U), &U});
+    auto &Ops = PHIOperands[IncomingVals[UnconditionalPreds[0]]];
+    for (BasicBlock *Pred : UnconditionalPreds)
+      Ops.push_back(*IncomingVals[Pred]);
+  }
+
   int ScanIdx = 0;
   SmallPtrSet<Value*,4> InstructionsToSink;
-  DenseMap<Instruction*, SmallVector<Value*,4>> PHIOperands;
   LockstepReverseIterator LRI(UnconditionalPreds);
   while (LRI.isValid() &&
          canSinkInstructions(*LRI, PHIOperands)) {
@@ -2338,20 +2331,19 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     // actually sink before encountering instruction that is unprofitable to
     // sink?
     auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
-      unsigned NumPHIdValues = 0;
-      for (auto *I : *LRI)
-        for (auto *V : PHIOperands[I]) {
-          if (!InstructionsToSink.contains(V))
-            ++NumPHIdValues;
+      unsigned NumPHIInsts = 0;
+      for (Use &U : (*LRI)[0]->operands()) {
+        auto It = PHIOperands.find(&U);
+        if (It != PHIOperands.end() && !all_of(It->second, [&](Value *V) {
+              return InstructionsToSink.contains(V);
+            })) {
+          ++NumPHIInsts;
           // FIXME: this check is overly optimistic. We may end up not sinking
           // said instruction, due to the very same profitability check.
           // See @creating_too_many_phis in sink-common-code.ll.
         }
-      LLVM_DEBUG(dbgs() << "SINK: #phid values: " << NumPHIdValues << "\n");
-      unsigned NumPHIInsts = NumPHIdValues / UnconditionalPreds.size();
-      if ((NumPHIdValues % UnconditionalPreds.size()) != 0)
-        NumPHIInsts++;
-
+      }
+      LLVM_DEBUG(dbgs() << "SINK: #phi insts: " << NumPHIInsts << "\n");
       return NumPHIInsts <= 1;
     };
 
@@ -2476,13 +2468,7 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     // sink is always at index 0.
     LRI.reset();
 
-    if (!sinkLastInstruction(UnconditionalPreds)) {
-      LLVM_DEBUG(
-          dbgs()
-          << "SINK: stopping here, failed to actually sink instruction!\n");
-      break;
-    }
-
+    sinkLastInstruction(UnconditionalPreds);
     NumSinkCommonInstrs++;
     Changed = true;
   }
