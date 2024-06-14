@@ -102,12 +102,9 @@ void MCSection::flushPendingLabels() {
   while (!PendingLabels.empty()) {
     PendingLabel& Label = PendingLabels[0];
     switchSubsection(Label.Subsection);
-    const MCSymbol *Atom =
-        CurFragList->Tail ? CurFragList->Tail->getAtom() : nullptr;
     MCFragment *F = new MCDataFragment();
     addFragment(*F);
     F->setParent(this);
-    F->setAtom(Atom);
     flushPendingLabels(F, 0, Label.Subsection);
   }
 }
