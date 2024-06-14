@@ -147,7 +147,7 @@ using ZipX4OpLowering = OneToOneConvertToLLVMPattern<ZipX4Op, ZipX4IntrOp>;
 /// as its semantics don't neatly map on to `vector.create_mask`, as it does an
 /// unsigned comparison (whereas `create_mask` is signed), and is UB/posion if
 /// `n` is zero (whereas `create_mask` just returns an all-false mask).
-struct PredicateCreateMaskOpLowering
+struct CreateMaskOpLowering
     : public ConvertOpToLLVMPattern<vector::CreateMaskOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -157,17 +157,17 @@ struct PredicateCreateMaskOpLowering
                   ConversionPatternRewriter &rewriter) const override {
     auto maskType = createMaskOp.getVectorType();
     if (maskType.getRank() != 1 || !maskType.isScalable())
-      return failure();
+      return rewriter.notifyMatchFailure(createMaskOp, "not 1-D and scalable");
 
     // TODO: Support masks which are multiples of SVE predicates.
     auto maskBaseSize = maskType.getDimSize(0);
     if (maskBaseSize < 2 || maskBaseSize > 16 ||
         !llvm::isPowerOf2_32(uint32_t(maskBaseSize)))
-      return failure();
+      return rewriter.notifyMatchFailure(createMaskOp,
+                                         "not SVE predicate-sized");
 
     auto loc = createMaskOp.getLoc();
-    auto zero = rewriter.create<LLVM::ZeroOp>(
-        loc, typeConverter->convertType(rewriter.getI64Type()));
+    auto zero = rewriter.create<LLVM::ZeroOp>(loc, rewriter.getI64Type());
     rewriter.replaceOpWithNewOp<WhileLTIntrOp>(createMaskOp, maskType, zero,
                                                adaptor.getOperands()[0]);
     return success();
@@ -203,9 +203,9 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                ConvertFromSvboolOpLowering,
                ZipX2OpLowering,
                ZipX4OpLowering>(converter);
-  // Add predicate conversion with a high benefit as it produces much nicer code
-  // than the generic lowering.
-  patterns.add<PredicateCreateMaskOpLowering>(converter, /*benifit=*/4096);
+  // Add vector.create_mask conversion with a high benefit as it produces much
+  // nicer code than the generic lowering.
+  patterns.add<CreateMaskOpLowering>(converter, /*benefit=*/4096);
   // clang-format on
 }
 
