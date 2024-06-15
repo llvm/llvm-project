@@ -2850,10 +2850,121 @@ void CodeGenFunction::EmitMultiVersionResolver(
   case llvm::Triple::aarch64:
     EmitAArch64MultiVersionResolver(Resolver, Options);
     return;
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    EmitRISCVMultiVersionResolver(Resolver, Options);
+    return;
 
   default:
-    assert(false && "Only implemented for x86 and AArch64 targets");
+    assert(false && "Only implemented for x86, AArch64 and RISC-V targets");
   }
+}
+
+void CodeGenFunction::EmitRISCVMultiVersionResolver(
+    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
+
+  if (getContext().getTargetInfo().getTriple().getOS() !=
+      llvm::Triple::OSType::Linux) {
+    CGM.getDiags().Report(diag::err_os_unsupport_riscv_target_clones);
+    return;
+  }
+
+  llvm::BasicBlock *EntryBlock = createBasicBlock("resolver_entry", Resolver);
+  Builder.SetInsertPoint(EntryBlock);
+  EmitRISCVCpuInit();
+
+  llvm::BasicBlock *CurBlock = createBasicBlock("resolver_cond", Resolver);
+  llvm::BasicBlock *FirstCond = CurBlock;
+
+  bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
+  bool HasDefault = false;
+  int DefaultIndex = 0;
+  // Check the each candidate function.
+  for (unsigned Index = 0; Index < Options.size(); Index++) {
+
+    if (Options[Index].Conditions.Features[0].starts_with("default")) {
+      HasDefault = true;
+      DefaultIndex = Index;
+      continue;
+    }
+
+    Builder.SetInsertPoint(CurBlock);
+
+    std::vector<std::string> TargetAttrFeats =
+        getContext()
+            .getTargetInfo()
+            .parseTargetAttr(Options[Index].Conditions.Features[0])
+            .Features;
+
+    if (!TargetAttrFeats.empty()) {
+      // If this function doens't need override, then merge with module level
+      // target features. Otherwise, remain the current target features.
+      auto I = llvm::find(TargetAttrFeats, "+__RISCV_TargetAttrNeedOverride");
+      if (I == TargetAttrFeats.end())
+        TargetAttrFeats.insert(TargetAttrFeats.begin(),
+                               Target.getTargetOpts().FeaturesAsWritten.begin(),
+                               Target.getTargetOpts().FeaturesAsWritten.end());
+      else
+        TargetAttrFeats.erase(I);
+
+      // Only consider +<extension-feature>.
+      llvm::SmallVector<StringRef, 8> PlusTargetAttrFeats;
+      for (StringRef Feat : TargetAttrFeats) {
+        if (!getContext().getTargetInfo().isValidFeatureName(
+                Feat.substr(1).str()))
+          continue;
+        if (Feat.starts_with("+"))
+          PlusTargetAttrFeats.push_back(Feat.substr(1));
+      }
+
+      llvm::Value *Condition = EmitRISCVCpuSupports(PlusTargetAttrFeats);
+      llvm::BasicBlock *RetBlock =
+          createBasicBlock("resolver_return", Resolver);
+      CGBuilderTy RetBuilder(*this, RetBlock);
+      CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder,
+                                       Options[Index].Function, SupportsIFunc);
+      CurBlock = createBasicBlock("resolver_else", Resolver);
+      Builder.CreateCondBr(Condition, RetBlock, CurBlock);
+    }
+  }
+
+  // Finally, emit the default one.
+  if (HasDefault) {
+    Builder.SetInsertPoint(CurBlock);
+    CreateMultiVersionResolverReturn(
+        CGM, Resolver, Builder, Options[DefaultIndex].Function, SupportsIFunc);
+
+    Builder.SetInsertPoint(EntryBlock);
+    const unsigned FeatureBitSize = 2;
+    llvm::ArrayType *ArrayOfInt64Ty =
+        llvm::ArrayType::get(Int64Ty, FeatureBitSize);
+    llvm::Type *StructTy = llvm::StructType::get(Int32Ty, ArrayOfInt64Ty);
+    llvm::Constant *RISCVFeaturesBits =
+        CGM.CreateRuntimeVariable(StructTy, "__riscv_feature_bits");
+    cast<llvm::GlobalValue>(RISCVFeaturesBits)->setDSOLocal(true);
+    std::vector<llvm::Value *> GEPIndices = {
+        llvm::ConstantInt::get(Int32Ty, 0), llvm::ConstantInt::get(Int32Ty, 0)};
+    llvm::Value *Ptr =
+        Builder.CreateInBoundsGEP(StructTy, RISCVFeaturesBits, GEPIndices);
+    llvm::Value *Length =
+        Builder.CreateAlignedLoad(Int32Ty, Ptr, CharUnits::fromQuantity(8));
+
+    llvm::Value *FeatureBitSizeVal =
+        llvm::ConstantInt::get(Int32Ty, FeatureBitSize);
+    llvm::Value *Result = Builder.CreateICmpULE(Length, FeatureBitSizeVal);
+
+    Builder.CreateCondBr(Result, FirstCond, CurBlock);
+
+    return;
+  }
+
+  // If no generic/default, emit an unreachable.
+  Builder.SetInsertPoint(CurBlock);
+  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
+  TrapCall->setDoesNotReturn();
+  TrapCall->setDoesNotThrow();
+  Builder.CreateUnreachable();
+  Builder.ClearInsertionPoint();
 }
 
 void CodeGenFunction::EmitAArch64MultiVersionResolver(

@@ -257,7 +257,7 @@ bool RISCVTargetInfo::initFeatureMap(
 
   // If a target attribute specified a full arch string, override all the ISA
   // extension target features.
-  const auto I = llvm::find(FeaturesVec, "__RISCV_TargetAttrNeedOverride");
+  const auto I = llvm::find(FeaturesVec, "+__RISCV_TargetAttrNeedOverride");
   if (I != FeaturesVec.end()) {
     std::vector<std::string> OverrideFeatures(std::next(I), FeaturesVec.end());
 
@@ -367,6 +367,12 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   return true;
 }
 
+bool RISCVTargetInfo::isValidFeatureName(StringRef Feature) const {
+  if (Feature.starts_with("__RISCV_TargetAttrNeedOverride"))
+    return true;
+  return llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature);
+}
+
 bool RISCVTargetInfo::isValidCPUName(StringRef Name) const {
   bool Is64Bit = getTriple().isArch64Bit();
   return llvm::RISCV::parseCPU(Name, Is64Bit);
@@ -391,7 +397,7 @@ void RISCVTargetInfo::fillValidTuneCPUList(
 
 static void handleFullArchString(StringRef FullArchStr,
                                  std::vector<std::string> &Features) {
-  Features.push_back("__RISCV_TargetAttrNeedOverride");
+  Features.push_back("+__RISCV_TargetAttrNeedOverride");
   auto RII = llvm::RISCVISAInfo::parseArchString(
       FullArchStr, /* EnableExperimentalExtension */ true);
   if (llvm::errorToBool(RII.takeError())) {

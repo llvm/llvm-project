@@ -63,8 +63,31 @@ public:
                                                CharUnits Field2Off) const;
 
   ABIArgInfo coerceVLSVector(QualType Ty) const;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
 } // end anonymous namespace
+
+void RISCVABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
+                                           unsigned Index,
+                                           raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void RISCVABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                           raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  Out << '.';
+  Out << AttrStr;
+}
 
 void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   QualType RetTy = FI.getReturnType();

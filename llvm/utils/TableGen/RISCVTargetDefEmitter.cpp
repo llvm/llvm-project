@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -210,10 +211,61 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "\n#undef TUNE_PROC\n";
 }
 
+static inline uint64_t getValueFromBitsInit(const BitsInit *B,
+                                            const Record &R) {
+  assert(B->getNumBits() <= 64 && "BitInits' too long!");
+
+  uint64_t Value = 0;
+  for (unsigned i = 0, e = B->getNumBits(); i != e; ++i) {
+    const auto *Bit = cast<BitInit>(B->getBit(i));
+    if (Bit)
+      Value |= uint64_t(Bit->getValue()) << i;
+  }
+  return Value;
+}
+
+static void emitRISCVExtensionBitmask(RecordKeeper &RK, raw_ostream &OS) {
+
+  std::vector<Record *> Extensions =
+      RK.getAllDerivedDefinitionsIfDefined("RISCVExtensionBitmask");
+  llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
+    return getExtensionName(Rec1) < getExtensionName(Rec2);
+  });
+
+#ifndef NDEBUG
+  llvm::DenseSet<std::pair<uint64_t, uint64_t>> Seen;
+#endif
+
+  OS << "#ifdef GET_RISCVExtensionBitmaskTable_IMPL\n";
+  OS << "static const RISCVExtensionBitmask ExtensionBitmask[]={\n";
+  for (const Record *Rec : Extensions) {
+    BitsInit *GroupIDBits = Rec->getValueAsBitsInit("GroupID");
+    BitsInit *BitmaskBits = Rec->getValueAsBitsInit("Bitmask");
+
+    StringRef ExtName = Rec->getValueAsString("Name");
+    ExtName.consume_front("experimental-");
+    uint64_t GroupIDVal = getValueFromBitsInit(GroupIDBits, *Rec);
+    uint64_t BitmaskVal = getValueFromBitsInit(BitmaskBits, *Rec);
+
+#ifndef NDEBUG
+    assert(Seen.insert(std::make_pair(GroupIDVal, BitmaskVal)).second &&
+           "duplicated bitmask");
+#endif
+
+    OS << "    {"
+       << "\"" << ExtName << "\""
+       << ", " << GroupIDVal << ", " << BitmaskVal << "ULL"
+       << "},\n";
+  }
+  OS << "};\n";
+  OS << "#endif\n";
+}
+
 static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVExtensions(RK, OS);
   emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
+  emitRISCVExtensionBitmask(RK, OS);
 }
 
 static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,

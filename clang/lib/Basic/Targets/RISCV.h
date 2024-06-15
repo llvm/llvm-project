@@ -106,6 +106,8 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
 
+  bool isValidFeatureName(StringRef Feature) const override;
+
   bool hasBitIntType() const override { return true; }
 
   bool hasBFloat16Type() const override { return true; }

@@ -374,4 +374,8 @@ def warn_missing_symbol_graph_dir : Warning<
 def err_ast_action_on_llvm_ir : Error<
   "cannot apply AST actions to LLVM IR file '%0'">,
   DefaultFatal;
+
+def err_os_unsupport_riscv_target_clones : Error<
+  "target_clones is currently only supported on Linux">;
+
 }
