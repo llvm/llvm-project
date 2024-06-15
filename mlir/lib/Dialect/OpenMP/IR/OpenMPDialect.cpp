@@ -442,8 +442,6 @@ static void printScheduleClause(OpAsmPrinter &p, Operation *op,
 static ParseResult parseOrderClause(OpAsmParser &parser,
                                     ClauseOrderKindAttr &kindAttr,
                                     OrderModifierAttr &modifierAttr) {
-  using OrderKindT = decltype(std::declval<ClauseOrderKindAttr>().getValue());
-  using OrderModifierT = decltype(std::declval<OrderModifierAttr>().getValue());
   StringRef enumStr;
   SMLoc loc = parser.getCurrentLocation();
   if (parser.parseKeyword(&enumStr))

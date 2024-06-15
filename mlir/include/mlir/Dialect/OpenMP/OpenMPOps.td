@@ -459,17 +459,6 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
   let hasVerifier = 1;
 }
 
-def OMP_OrderModReproducible       : I32EnumAttrCase<"reproducible", 0>;
-def OMP_OrderModUnconstrained      : I32EnumAttrCase<"unconstrained", 1>;
-def OrderModifier
-    : I32EnumAttr<"OrderModifier", "OpenMP Order Modifier",
-                  [OMP_OrderModReproducible, OMP_OrderModUnconstrained]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::omp";
-}
-def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
-                                    "order_mod">;
-
 //===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
