@@ -740,7 +740,7 @@ bool YAMLProfileReader::inferStaleProfile(
       BF.getLayout().block_begin(), BF.getLayout().block_end());
 
   // Tracks the number of matched blocks.
-  uint64_t MatchedBlocks;
+  uint64_t MatchedBlocks{0};
 
   // Create a wrapper flow function to use with the profile inference algorithm.
   FlowFunction Func = createFlowFunction(BlockOrder);
