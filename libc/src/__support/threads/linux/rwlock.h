@@ -63,7 +63,7 @@ public:
     WaitingQueue &queue;
     bool is_pshared;
 
-    LIBC_INLINE constexpr Guard(WaitingQueue &queue, bool is_pshared)
+    LIBC_INLINE Guard(WaitingQueue &queue, bool is_pshared)
         : queue(queue), is_pshared(is_pshared) {
       queue.lock(cpp::nullopt, is_pshared);
     }
@@ -189,6 +189,7 @@ public:
       case Role::Writer:
         return !has_active_writer() && !has_pending_writer();
       }
+      __builtin_unreachable();
     } else
       return !has_acitve_owner();
   }
