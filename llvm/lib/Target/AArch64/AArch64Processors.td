@@ -398,6 +398,22 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
                                     FeatureZCRegMove,
                                     FeatureZCZeroing]>;
 
+def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
+                                     "Apple M4", [
+                                     FeatureAlternateSExtLoadCVTF32Pattern,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureDisableLatencySchedHeuristic,
+                                     FeatureFuseAddress,
+                                     FeatureFuseAES,
+                                     FeatureFuseArithmeticLogic,
+                                     FeatureFuseCCSelect,
+                                     FeatureFuseCryptoEOR,
+                                     FeatureFuseLiterals,
+                                     FeatureZCRegMove,
+                                     FeatureZCZeroing
+                                     ]>;
+
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
                                     [FeatureExynosCheapAsMoveHandling,
@@ -784,6 +800,14 @@ def ProcessorFeatures {
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
                                      FeatureHCX];
+  // Technically apple-m4 is ARMv9.2. See the corresponding comment in
+  // AArch64TargetParser.h.
+  list<SubtargetFeature> AppleM4 = [HasV8_7aOps, FeatureCrypto, FeatureFPARMv8,
+                                    FeatureNEON, FeaturePerfMon, FeatureSHA3,
+                                    FeatureFullFP16, FeatureFP16FML,
+                                    FeatureAES, FeatureBF16,
+                                    FeatureSME2,
+                                    FeatureSMEF64F64, FeatureSMEI16I64];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                      FeaturePerfMon];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
@@ -1010,6 +1034,9 @@ def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
 def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
                      [TuneAppleA17]>;
+def : ProcessorModel<"apple-m4", CycloneModel, ProcessorFeatures.AppleM4,
+                     [TuneAppleM4]>;
+
 // Mac CPUs
 def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
@@ -1025,8 +1052,8 @@ def : ProcessorModel<"apple-s5", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
 
 // Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA16,
-                     [TuneAppleA16]>;
+def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleM4,
+                     [TuneAppleM4]>;
 
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
