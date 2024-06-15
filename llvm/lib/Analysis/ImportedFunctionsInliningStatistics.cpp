@@ -175,9 +175,8 @@ void ImportedFunctionsInliningStatistics::dump(const bool Verbose) {
 void ImportedFunctionsInliningStatistics::calculateRealInlines() {
   // Removing duplicated Callers.
   llvm::sort(NonImportedCallers);
-  NonImportedCallers.erase(
-      std::unique(NonImportedCallers.begin(), NonImportedCallers.end()),
-      NonImportedCallers.end());
+  NonImportedCallers.erase(llvm::unique(NonImportedCallers),
+                           NonImportedCallers.end());
 
   for (const auto &Name : NonImportedCallers) {
     auto &Node = *NodesMap[Name];

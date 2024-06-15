@@ -4905,7 +4905,7 @@ bool SimplifyCFGOpt::SimplifyBranchOnICmpChain(BranchInst *BI,
   // There might be duplicate constants in the list, which the switch
   // instruction can't handle, remove them now.
   array_pod_sort(Values.begin(), Values.end(), ConstantIntSortPredicate);
-  Values.erase(std::unique(Values.begin(), Values.end()), Values.end());
+  Values.erase(llvm::unique(Values), Values.end());
 
   // If Extra was used, we require at least two switch values to do the
   // transformation.  A switch with one value is just a conditional branch.

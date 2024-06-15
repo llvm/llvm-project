@@ -696,8 +696,7 @@ void InstrProfSymtab::finalizeSymtab() {
   llvm::sort(MD5NameMap, less_first());
   llvm::sort(MD5FuncMap, less_first());
   llvm::sort(AddrToMD5Map, less_first());
-  AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
-                     AddrToMD5Map.end());
+  AddrToMD5Map.erase(llvm::unique(AddrToMD5Map), AddrToMD5Map.end());
   Sorted = true;
 }
 

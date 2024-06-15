@@ -1352,7 +1352,7 @@ std::vector<StringRef> CoverageMapping::getUniqueSourceFiles() const {
   for (const auto &Function : getCoveredFunctions())
     llvm::append_range(Filenames, Function.Filenames);
   llvm::sort(Filenames);
-  auto Last = std::unique(Filenames.begin(), Filenames.end());
+  auto Last = llvm::unique(Filenames);
   Filenames.erase(Last, Filenames.end());
   return Filenames;
 }

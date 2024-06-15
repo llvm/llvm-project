@@ -920,8 +920,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Remove duplicate binary ids.
   llvm::sort(BinaryIds);
-  BinaryIds.erase(std::unique(BinaryIds.begin(), BinaryIds.end()),
-                  BinaryIds.end());
+  BinaryIds.erase(llvm::unique(BinaryIds), BinaryIds.end());
 
   for (const auto &BI : BinaryIds) {
     // Increment by binary id length data type size.

@@ -1130,11 +1130,11 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
           return !!FragmentB;
         return FragmentA->OffsetInBits < FragmentB->OffsetInBits;
       });
-  GVEs.erase(std::unique(GVEs.begin(), GVEs.end(),
-                         [](DwarfCompileUnit::GlobalExpr A,
-                            DwarfCompileUnit::GlobalExpr B) {
-                           return A.Expr == B.Expr;
-                         }),
+  GVEs.erase(llvm::unique(GVEs,
+                          [](DwarfCompileUnit::GlobalExpr A,
+                             DwarfCompileUnit::GlobalExpr B) {
+                            return A.Expr == B.Expr;
+                          }),
              GVEs.end());
   return GVEs;
 }
