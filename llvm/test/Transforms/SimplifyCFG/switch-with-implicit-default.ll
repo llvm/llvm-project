@@ -55,6 +55,55 @@ end:
   ret void
 }
 
+define void @positive_with_i128(i128 %x) {
+; CHECK-LABEL: define void @positive_with_i128(
+; CHECK-SAME: i128 [[X:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i128 [[X]], 3
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C]], i128 [[X]], i128 1
+; CHECK-NEXT:    switch i128 [[X]], label %[[CASE1:.*]] [
+; CHECK-NEXT:      i128 0, label %[[CASE0:.*]]
+; CHECK-NEXT:      i128 2, label %[[CASE2:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[CASE0]]:
+; CHECK-NEXT:    tail call void @func0()
+; CHECK-NEXT:    br label %[[END:.*]]
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    tail call void @func1()
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    tail call void @func2()
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret void
+;
+  %c = icmp ult i128 %x, 3
+  %v = select i1 %c, i128 %x, i128 1
+  switch i128 %v, label %default [
+  i128 0, label %case0
+  i128 1, label %case1
+  i128 2, label %case2
+  ]
+
+default:
+  tail call void @unreachable()
+  br label %end
+
+case0:
+  tail call void @func0()
+  br label %end
+
+case1:
+  tail call void @func1()
+  br label %end
+
+case2:
+  tail call void @func2()
+  br label %end
+
+end:
+  ret void
+}
+
 define void @positive_manual_default_out_of_cases(i32 %x) {
 ; CHECK-LABEL: define void @positive_manual_default_out_of_cases(
 ; CHECK-SAME: i32 [[X:%.*]]) {
