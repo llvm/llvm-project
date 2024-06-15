@@ -1,20 +1,76 @@
 #include "LibcGpuBenchmark.h"
 #include "src/__support/CPP/algorithm.h"
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/string.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/GPU/utils.h"
+#include "src/__support/fixedvector.h"
 #include "src/time/gpu/time_utils.h"
 
 namespace LIBC_NAMESPACE {
 namespace benchmarks {
 
 FixedVector<Benchmark *, 64> benchmarks;
+cpp::array<BenchmarkResult, 1024> results;
 
 void Benchmark::add_benchmark(Benchmark *benchmark) {
   benchmarks.push_back(benchmark);
 }
 
+BenchmarkResult reduce_results(cpp::array<BenchmarkResult, 1024> &results) {
+  BenchmarkResult result;
+  uint64_t cycles_sum = 0;
+  double standard_deviation_sum = 0;
+  uint64_t min = UINT64_MAX;
+  uint64_t max = 0;
+  uint32_t samples_sum = 0;
+  uint32_t iterations_sum = 0;
+  clock_t time_sum = 0;
+  uint64_t num_threads = gpu::get_num_threads();
+  for (uint64_t i = 0; i < num_threads; i++) {
+    BenchmarkResult current_result = results[i];
+    cycles_sum += current_result.cycles;
+    standard_deviation_sum += current_result.standard_deviation;
+    min = cpp::min(min, current_result.min);
+    max = cpp::max(max, current_result.max);
+    samples_sum += current_result.samples;
+    iterations_sum += current_result.total_iterations;
+    time_sum += current_result.total_time;
+  }
+  result.cycles = cycles_sum / num_threads;
+  result.standard_deviation = standard_deviation_sum / num_threads;
+  result.min = min;
+  result.max = max;
+  result.samples = samples_sum / num_threads;
+  result.total_iterations = iterations_sum / num_threads;
+  result.total_time = time_sum / num_threads;
+  return result;
+}
+
 void Benchmark::run_benchmarks() {
-  for (auto it = benchmarks.rbegin(), e = benchmarks.rend(); it != e; ++it)
-    (*it)->run();
+  uint64_t id = gpu::get_thread_id();
+  gpu::sync_threads();
+
+  for (auto it = benchmarks.rbegin(), e = benchmarks.rend(); it != e; ++it) {
+    Benchmark *benchmark = *it;
+    results[id] = benchmark->run();
+  }
+  gpu::sync_threads();
+  if (id == 0) {
+    for (auto it = benchmarks.rbegin(), e = benchmarks.rend(); it != e; ++it) {
+      Benchmark *benchmark = *it;
+      BenchmarkResult all_results = reduce_results(results);
+      constexpr auto GREEN = "\033[32m";
+      constexpr auto RESET = "\033[0m";
+      log << GREEN << "[ RUN      ] " << RESET << benchmark->get_name() << '\n';
+      log << GREEN << "[       OK ] " << RESET << benchmark->get_name() << ": "
+          << all_results.cycles << " cycles, " << all_results.min << " min, "
+          << all_results.max << " max, " << all_results.total_iterations
+          << " iterations, " << all_results.total_time << " ns, "
+          << static_cast<long>(all_results.standard_deviation) << " stddev\n";
+    }
+  }
+  gpu::sync_threads();
 }
 
 BenchmarkResult benchmark(const BenchmarkOptions &options,

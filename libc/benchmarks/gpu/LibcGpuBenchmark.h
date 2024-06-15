@@ -6,7 +6,6 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/fixedvector.h"
 #include "src/time/clock.h"
 
 #include <stdint.h>
@@ -93,17 +92,9 @@ protected:
   static void add_benchmark(Benchmark *benchmark);
 
 private:
-  void run() {
+  BenchmarkResult run() {
     BenchmarkOptions options;
-    auto result = benchmark(options, func);
-    constexpr auto GREEN = "\033[32m";
-    constexpr auto RESET = "\033[0m";
-    log << GREEN << "[ RUN      ] " << RESET << name << '\n';
-    log << GREEN << "[       OK ] " << RESET << name << ": " << result.cycles
-        << " cycles, " << result.min << " min, " << result.max << " max, "
-        << result.total_iterations << " iterations, " << result.total_time
-        << " ns, " << static_cast<long>(result.standard_deviation)
-        << " stddev\n";
+    return benchmark(options, func);
   }
   const cpp::string_view get_name() const { return name; }
 };

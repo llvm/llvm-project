@@ -24,13 +24,11 @@ namespace LIBC_NAMESPACE {
 [[gnu::noinline]] static uint64_t overhead() {
   volatile uint32_t x = 1;
   uint32_t y = x;
-  gpu::sync_threads();
   uint64_t start = gpu::processor_clock();
   asm volatile("" ::"r"(y), "llr"(start));
   uint32_t result = y;
   asm volatile("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result) :);
   uint64_t stop = gpu::processor_clock();
-  gpu::sync_threads();
   volatile auto storage = result;
   return stop - start;
 }
@@ -47,7 +45,6 @@ template <typename F, typename T>
   asm volatile("" ::"r"(arg));
 
   // Get the current timestamp from the clock.
-  gpu::sync_threads();
   gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
 
@@ -66,7 +63,6 @@ template <typename F, typename T>
   // ordering.
   uint64_t stop = gpu::processor_clock();
   gpu::memory_fence();
-  gpu::sync_threads();
   asm volatile("" ::"r"(stop));
   volatile T output = result;
 
@@ -82,7 +78,6 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
   T2 arg2 = storage2;
   asm volatile("" ::"r"(arg), "r"(arg2));
 
-  gpu::sync_threads();
   gpu::memory_fence();
   uint64_t start = gpu::processor_clock();
 
@@ -94,7 +89,6 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
 
   uint64_t stop = gpu::processor_clock();
   gpu::memory_fence();
-  gpu::sync_threads();
   asm volatile("" ::"r"(stop));
   volatile auto output = result;
 
