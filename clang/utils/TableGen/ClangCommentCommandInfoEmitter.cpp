@@ -52,8 +52,7 @@ void clang::EmitClangCommentCommandInfo(RecordKeeper &Records,
        << Tag.getValueAsBit("IsFunctionDeclarationCommand") << ", "
        << Tag.getValueAsBit("IsRecordLikeDetailCommand") << ", "
        << Tag.getValueAsBit("IsRecordLikeDeclarationCommand") << ", "
-       << /* IsUnknownCommand = */ "0"
-       << " }";
+       << /* IsUnknownCommand = */ "0" << " }";
     if (i + 1 != e)
       OS << ",";
     OS << "\n";
