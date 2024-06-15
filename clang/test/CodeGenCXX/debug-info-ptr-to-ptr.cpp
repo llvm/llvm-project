@@ -25,7 +25,7 @@ public:
 // CHECK-LABEL: define dso_local noundef i32 @{{.*}}func1{{.*}}(
 // CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds %class.B, ptr {{%.*}}, i32 0, i32 0, !dbg [[DBG1:![0-9]+]]
 // CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[A_ADDR]], align {{.*}}, !dbg [[DBG1]]
-// CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[A]], metadata [[META1:![0-9]+]], metadata !DIExpression()), !dbg [[DBG1]]
+// CHECK-NEXT:      #dbg_value(ptr [[A]], [[META1:![0-9]+]], !DIExpression(), [[DBG1]])
 // CHECK-NEXT:    {{%.*}} = getelementptr inbounds %class.A, ptr [[A]], i32 0, i32 0,
 int func1(B *b) {
   return b->a->i;
@@ -33,9 +33,9 @@ int func1(B *b) {
 
 // Should generate a pseudo variable when pointer is type-casted.
 // CHECK-LABEL: define dso_local noundef ptr @{{.*}}func2{{.*}}(
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[B_ADDR:%.*]], metadata [[META2:![0-9]+]], metadata !DIExpression())
+// CHECK:           #dbg_declare(ptr [[B_ADDR:%.*]], [[META2:![0-9]+]], !DIExpression(),
 // CHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[B_ADDR]],
-// CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[B]], metadata [[META3:![0-9]+]], metadata !DIExpression())
+// CHECK-NEXT:      #dbg_value(ptr [[B]], [[META3:![0-9]+]], !DIExpression(),
 // CHECK-NEXT:    {{%.*}} = getelementptr inbounds %class.B, ptr [[B]], i32 0,
 A* func2(void *b) {
   return ((B*)b)->a;
@@ -43,9 +43,9 @@ A* func2(void *b) {
 
 // Should not generate pseudo variable in this case.
 // CHECK-LABEL: define dso_local noundef i32 @{{.*}}func3{{.*}}(
-// CHECK:    call void @llvm.dbg.declare(metadata ptr [[B_ADDR:%.*]], metadata [[META4:![0-9]+]], metadata !DIExpression())
-// CHECK:    call void @llvm.dbg.declare(metadata ptr [[LOCAL1:%.*]], metadata [[META5:![0-9]+]], metadata !DIExpression())
-// CHECK-NOT: call void @llvm.dbg.value(metadata ptr
+// CHECK:      #dbg_declare(ptr [[B_ADDR:%.*]], [[META4:![0-9]+]], !DIExpression(),
+// CHECK:      #dbg_declare(ptr [[LOCAL1:%.*]], [[META5:![0-9]+]], !DIExpression(),
+// CHECK-NOT:  #dbg_value(ptr
 int func3(B *b) {
   A *local1 = b->a;
   return local1->i;
@@ -54,10 +54,10 @@ int func3(B *b) {
 // CHECK-LABEL: define dso_local noundef signext i8 @{{.*}}func4{{.*}}(
 // CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds %class.C, ptr {{%.*}}, i32 0, i32 1
 // CHECK-NEXT:    [[A:%.*]] = load ptr, ptr [[A_ADDR]],
-// CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[A]], metadata [[META6:![0-9]+]], metadata !DIExpression())
+// CHECK-NEXT:      #dbg_value(ptr [[A]], [[META6:![0-9]+]], !DIExpression(),
 // CHECK-NEXT:    {{%.*}} = getelementptr inbounds %class.A, ptr [[A]], i32 0, i32 0,
 // CHECK:         [[CALL:%.*]] = call noundef ptr @{{.*}}foo{{.*}}(
-// CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[CALL]], metadata [[META6]], metadata !DIExpression())
+// CHECK-NEXT:      #dbg_value(ptr [[CALL]], [[META6]], !DIExpression(),
 // CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds %class.A, ptr [[CALL]], i32 0, i32 1
 char func4(C *c) {
   extern A* foo(int x);
@@ -65,25 +65,25 @@ char func4(C *c) {
 }
 
 // CHECK-LABEL: define dso_local noundef signext i8 @{{.*}}func5{{.*}}(
-// CHECK:         call void @llvm.dbg.declare(metadata ptr {{%.*}}, metadata [[META7:![0-9]+]], metadata !DIExpression())
-// CHECK:         call void @llvm.dbg.declare(metadata ptr {{%.*}}, metadata [[META8:![0-9]+]], metadata !DIExpression())
+// CHECK:           #dbg_declare(ptr {{%.*}}, [[META7:![0-9]+]], !DIExpression(),
+// CHECK:           #dbg_declare(ptr {{%.*}}, [[META8:![0-9]+]], !DIExpression(),
 // CHECK:         [[A_ADDR:%.*]] = getelementptr inbounds %class.A, ptr {{%.*}}, i64 {{%.*}},
-// CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[A_ADDR]], metadata [[META9:![0-9]+]], metadata !DIExpression())
+// CHECK-NEXT:      #dbg_value(ptr [[A_ADDR]], [[META9:![0-9]+]], !DIExpression(),
 // CHECK-NEXT:    {{%.*}} = getelementptr inbounds %class.A, ptr [[A_ADDR]], i32 0, i32 1,
 char func5(void *arr, int n) {
   return ((A*)arr)[n].c;
 }
 
 // CHECK-LABEL: define dso_local noundef i32 @{{.*}}func6{{.*}}(
-// CHECK:         call void @llvm.dbg.declare(metadata ptr {{%.*}}, metadata [[META10:![0-9]+]], metadata !DIExpression())
-// CHECK:         call void @llvm.dbg.value(metadata ptr {{%.*}}, metadata [[META11:![0-9]+]], metadata !DIExpression())
+// CHECK:           #dbg_declare(ptr {{%.*}}, [[META10:![0-9]+]], !DIExpression(),
+// CHECK:           #dbg_value(ptr {{%.*}}, [[META11:![0-9]+]], !DIExpression(),
 int func6(B &b) {
   return reinterpret_cast<A&>(b).i;
 }
 
 // CHECK-LABEL: define dso_local noundef i32 @{{.*}}global{{.*}}(
 // CHECK:         [[GA:%.*]] = load ptr, ptr @ga
-// CHECK-NEXT:    call void @llvm.dbg.value(metadata ptr [[GA]], metadata [[META12:![0-9]+]], metadata !DIExpression())
+// CHECK-NEXT:      #dbg_value(ptr [[GA]], [[META12:![0-9]+]], !DIExpression(),
 A *ga;
 int global() {
   return ga->i;
