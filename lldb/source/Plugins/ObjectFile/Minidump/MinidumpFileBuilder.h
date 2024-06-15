@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 
@@ -72,16 +73,16 @@ public:
   // contexts.
   lldb_private::Status AddThreadList();
   // Add Exception streams for any threads that stopped with exceptions.
-  void AddExceptions();
-  // Add MiscInfo stream, mainly providing ProcessId  8
-  void AddMiscInfo();
+  lldb_private::Status AddExceptions();
+  // Add MemoryList stream, containing dumps of important memory segments
+  lldb_private::Status AddMemoryList(lldb::SaveCoreStyle core_style);
+  // Add MiscInfo stream, mainly providing ProcessId
+  lldb_private::Status AddMiscInfo();
   // Add informative files about a Linux process
-  void AddLinuxFileStreams();
-
-  lldb_private::Status AddMemory(lldb::SaveCoreStyle core_style);
+  lldb_private::Status AddLinuxFileStreams();
 
   // Run cleanup and write all remaining bytes to file
-  lldb_private::Status DumpToFile();
+  lldb_private::Status DumpFile();
 
 private:
   // Add data to the end of the buffer, if the buffer exceeds the flush level,
@@ -93,19 +94,21 @@ private:
   lldb_private::Status
   AddMemoryList_32(lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status FixThreads();
-  lldb_private::Status FlushToDisk();
+  lldb_private::Status FlushBufferToDisk();
 
   lldb_private::Status DumpHeader() const;
   lldb_private::Status DumpDirectories() const;
   // Add directory of StreamType pointing to the current end of the prepared
   // file with the specified size.
-  void AddDirectory(llvm::minidump::StreamType type, uint64_t stream_size);
+  lldb_private::Status AddDirectory(llvm::minidump::StreamType type, uint64_t stream_size);
   lldb::offset_t GetCurrentDataEndOffset() const;
   // Stores directories to fill in later
   std::vector<llvm::minidump::Directory> m_directories;
   // When we write off the threads for the first time, we need to clean them up
   // and give them the correct RVA once we write the stack memory list.
-  std::map<lldb::addr_t, llvm::minidump::Thread> m_thread_by_range_start;
+  // We save by the end because we only take from the stack pointer up
+  // So the saved off range base can differ from the memory region the stack pointer is in.
+  std::unordered_map<lldb::addr_t, llvm::minidump::Thread> m_thread_by_range_end;
   // Main data buffer consisting of data without the minidump header and
   // directories
   lldb_private::DataBufferHeap m_data;
