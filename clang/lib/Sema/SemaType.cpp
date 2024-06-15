@@ -2117,7 +2117,8 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
 
     // Mentioning a member pointer type for an array type causes us to lock in
     // an inheritance model, even if it's inside an unused typedef.
-    if (Context.getTargetInfo().getCXXABI().isMicrosoft())
+    if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
+        getLangOpts().CompleteMemberPointers)
       if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>())
         if (!MPTy->getClass()->isDependentType())
           (void)isCompleteType(Loc, T);
@@ -9022,17 +9023,26 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
 
   if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
     if (!MPTy->getClass()->isDependentType()) {
-      if (getLangOpts().CompleteMemberPointers &&
-          !MPTy->getClass()->getAsCXXRecordDecl()->isBeingDefined() &&
-          RequireCompleteType(Loc, QualType(MPTy->getClass(), 0), Kind,
-                              diag::err_memptr_incomplete))
-        return true;
-
       // We lock in the inheritance model once somebody has asked us to ensure
       // that a pointer-to-member type is complete.
-      if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-        (void)isCompleteType(Loc, QualType(MPTy->getClass(), 0));
-        assignInheritanceModel(*this, MPTy->getMostRecentCXXRecordDecl());
+      if (Context.getTargetInfo().getCXXABI().isMicrosoft() ||
+          getLangOpts().CompleteMemberPointers) {
+        QualType Class = QualType(MPTy->getClass(), 0);
+        (void)isCompleteType(Loc, Class);
+        CXXRecordDecl *RD = MPTy->getMostRecentCXXRecordDecl();
+        assignInheritanceModel(*this, RD);
+
+        if (getLangOpts().CompleteMemberPointers &&
+            RD->getMSInheritanceModel() == MSInheritanceModel::Unspecified) {
+          if (RD->hasDefinition() && RD->isParsingBaseSpecifiers()) {
+            Diag(Loc, diag::err_memptr_incomplete) << Class;
+            Diag(RD->getDefinition()->getLocation(),
+                 diag::note_memptr_incomplete_until_bases);
+          } else if (!RequireCompleteType(Loc, Class,
+                                          diag::err_memptr_incomplete))
+            Diag(Loc, diag::err_memptr_incomplete) << Class;
+          return true;
+        }
       }
     }
   }
