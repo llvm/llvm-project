@@ -388,8 +388,8 @@ Changes in existing checks
   check by adding support for detection of typedefs declared on function level.
 
 - Improved :doc:`performance-move-const-arg
-  <clang-tidy/checks/performance/move-const-arg>` check ignoring the result
-  of ``std::move()`` is used as rvalue.
+  <clang-tidy/checks/performance/move-const-arg>` check by ignoring
+  ``std::move()`` calls when their target is used as an rvalue.
 
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by
