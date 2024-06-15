@@ -7104,6 +7104,48 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
+// Try to fold switch with manually selecting default branch
+// For example, for the switch
+//   switch (v) { case 0: case 1: case 2: ... case MaxC: default: }
+//     (continuous cases value from 0 to MaxC)
+//   and, v = select (x u<= MaxC), x, AnotherC.
+// so "AnotherC" is the de-facto default branch, and it will be folded to
+//   switch (x) { case 0: case 1: case 2: ... case MaxC:  default -> AnotherC: }
+static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
+  Value *Cond;
+  ConstantInt *Bound, *DefaultCase;
+  ICmpInst::Predicate Pred;
+  if (!(match(SI->getCondition(),
+              m_Select(m_ICmp(Pred, m_Value(Cond), m_ConstantInt(Bound)),
+                       m_Deferred(Cond), m_ConstantInt(DefaultCase))) &&
+        Pred == CmpInst::ICMP_ULT))
+    return false;
+
+  // In an ideal situation, the range of switch cases is continuous,
+  // and should match the range of ICmp. That is,
+  //   MaxCase (declared below) + 1 = SI->getNumCases() = OuterRange.Upper.
+  // Checking it partially here can be a fast-fail path
+  if (Bound->getValue() != SI->getNumCases())
+    return false;
+
+  SmallVector<uint64_t, 4> Values;
+  for (const auto &Case : SI->cases()) {
+    uint64_t CaseValue = Case.getCaseValue()->getValue().getZExtValue();
+    Values.push_back(CaseValue);
+  }
+  llvm::sort(Values);
+
+  // The cases should be continuous from 0 to some value
+  if (!(*Values.begin() == 0 && *Values.rbegin() == SI->getNumCases() - 1))
+    return false;
+
+  SI->setCondition(Cond);
+  if (auto It = SI->findCaseValue(DefaultCase); It != SI->case_end())
+    SI->setDefaultDest(It->getCaseSuccessor());
+
+  return true;
+}
+
 bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   BasicBlock *BB = SI->getParent();
 
@@ -7140,6 +7182,9 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return requestResimplify();
 
   if (Options.ForwardSwitchCondToPhi && ForwardSwitchConditionToPHI(SI))
+    return requestResimplify();
+
+  if (simplifySwitchWithImplicitDefault(SI))
     return requestResimplify();
 
   // The conversion from switch to lookup tables results in difficult-to-analyze

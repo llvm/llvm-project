@@ -11,17 +11,13 @@ define void @positive(i32 %x) {
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], 3
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[C]], i32 [[X]], i32 1
-; CHECK-NEXT:    switch i32 [[V]], label %[[DEFAULT:.*]] [
+; CHECK-NEXT:    switch i32 [[X]], label %[[CASE1:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[CASE0:.*]]
-; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
 ; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    tail call void @unreachable()
-; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[CASE0]]:
 ; CHECK-NEXT:    tail call void @func0()
-; CHECK-NEXT:    br label %[[END]]
+; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[CASE1]]:
 ; CHECK-NEXT:    tail call void @func1()
 ; CHECK-NEXT:    br label %[[END]]
@@ -64,7 +60,7 @@ define void @positive_manual_default_out_of_cases(i32 %x) {
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], 3
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[C]], i32 [[X]], i32 7
-; CHECK-NEXT:    switch i32 [[V]], label %[[DEFAULT:.*]] [
+; CHECK-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[CASE0:.*]]
 ; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
 ; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
