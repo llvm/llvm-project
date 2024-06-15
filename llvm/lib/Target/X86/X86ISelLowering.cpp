@@ -5209,29 +5209,10 @@ static void getPackDemandedElts(EVT VT, const APInt &DemandedElts,
 // Split the demanded elts of a HADD/HSUB node between its operands.
 static void getHorizDemandedElts(EVT VT, const APInt &DemandedElts,
                                  APInt &DemandedLHS, APInt &DemandedRHS) {
-  int NumLanes = VT.getSizeInBits() / 128;
-  int NumElts = DemandedElts.getBitWidth();
-  int NumEltsPerLane = NumElts / NumLanes;
-  int HalfEltsPerLane = NumEltsPerLane / 2;
-
-  DemandedLHS = APInt::getZero(NumElts);
-  DemandedRHS = APInt::getZero(NumElts);
-
-  // Map DemandedElts to the horizontal operands.
-  for (int Idx = 0; Idx != NumElts; ++Idx) {
-    if (!DemandedElts[Idx])
-      continue;
-    int LaneIdx = (Idx / NumEltsPerLane) * NumEltsPerLane;
-    int LocalIdx = Idx % NumEltsPerLane;
-    if (LocalIdx < HalfEltsPerLane) {
-      DemandedLHS.setBit(LaneIdx + 2 * LocalIdx + 0);
-      DemandedLHS.setBit(LaneIdx + 2 * LocalIdx + 1);
-    } else {
-      LocalIdx -= HalfEltsPerLane;
-      DemandedRHS.setBit(LaneIdx + 2 * LocalIdx + 0);
-      DemandedRHS.setBit(LaneIdx + 2 * LocalIdx + 1);
-    }
-  }
+  getHorizDemandedEltsForFirstOperand(VT.getSizeInBits(), DemandedElts,
+                                      DemandedLHS, DemandedRHS);
+  DemandedLHS |= DemandedLHS << 1;
+  DemandedRHS |= DemandedRHS << 1;
 }
 
 /// Calculates the shuffle mask corresponding to the target-specific opcode.
@@ -37082,6 +37063,34 @@ static void computeKnownBitsForPSADBW(SDValue LHS, SDValue RHS,
   Known = Known.zext(64);
 }
 
+static KnownBits computeKnownBitsForHorizontalOperation(
+    const SDValue Op, const APInt &DemandedElts, unsigned Depth,
+    unsigned OpIndexStart, const SelectionDAG &DAG,
+    const function_ref<KnownBits(const KnownBits &, const KnownBits &)>
+        KnownBitsFunc) {
+  APInt DemandedEltsLHS, DemandedEltsRHS;
+  getHorizDemandedEltsForFirstOperand(Op.getValueType().getSizeInBits(),
+                                      DemandedElts, DemandedEltsLHS,
+                                      DemandedEltsRHS);
+
+  const auto ComputeForSingleOpFunc =
+      [&DAG, Depth, KnownBitsFunc](const SDValue &Op, APInt &DemandedEltsOp) {
+        return KnownBitsFunc(
+            DAG.computeKnownBits(Op, DemandedEltsOp, Depth + 1),
+            DAG.computeKnownBits(Op, DemandedEltsOp << 1, Depth + 1));
+      };
+
+  if (!DemandedEltsLHS.isZero() && !DemandedEltsRHS.isZero()) {
+    return ComputeForSingleOpFunc(Op.getOperand(OpIndexStart), DemandedEltsLHS)
+        .intersectWith(ComputeForSingleOpFunc(Op.getOperand(OpIndexStart + 1),
+                                              DemandedEltsRHS));
+  }
+  if (!DemandedEltsLHS.isZero()) {
+    return ComputeForSingleOpFunc(Op.getOperand(OpIndexStart), DemandedEltsLHS);
+  }
+  return ComputeForSingleOpFunc(Op.getOperand(OpIndexStart + 1), DemandedEltsRHS);
+}
+
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       KnownBits &Known,
                                                       const APInt &DemandedElts,
@@ -37389,6 +37398,17 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       }
       return;
     }
+    break;
+  }
+  case X86ISD::HADD:
+  case X86ISD::HSUB: {
+    Known = computeKnownBitsForHorizontalOperation(
+        Op, DemandedElts, Depth, /*OpIndexStart=*/0, DAG,
+        [Opc](const KnownBits &KnownLHS, const KnownBits &KnownRHS) {
+          return KnownBits::computeForAddSub(
+              /*Add=*/Opc == X86ISD::HADD, /*NSW=*/false, /*NUW=*/false,
+              KnownLHS, KnownRHS);
+        });
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {
