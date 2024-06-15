@@ -83,7 +83,7 @@ void test() {
   }
 #    endif // TEST_HAS_NO_WIDE_CHARACTERS
 #  endif   // TEST_HAS_NO_UNICODE
-#endif   // TEST_STD_VER > 20
+#endif     // TEST_STD_VER > 20
 
   test(STR("10000000"), STR("b}"), char(128));
   test(STR("11111111"), STR("b}"), char(255));

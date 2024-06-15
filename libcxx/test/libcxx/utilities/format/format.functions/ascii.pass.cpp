@@ -8,6 +8,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
+// What would be the best way to force the test with unicode disabled?
 // Force unicode to be disabled.
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_HAS_NO_UNICODE
 

@@ -11,6 +11,7 @@
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
 
+// What would be the best way to force the test with unicode disabled?
 // Force unicode to be disabled.
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_HAS_NO_UNICODE
 
