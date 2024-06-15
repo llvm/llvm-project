@@ -7115,10 +7115,10 @@ static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
   Value *Cond;
   ConstantInt *Bound, *DefaultCase;
   ICmpInst::Predicate Pred;
-  if (!(match(SI->getCondition(),
-              m_Select(m_ICmp(Pred, m_Value(Cond), m_ConstantInt(Bound)),
-                       m_Deferred(Cond), m_ConstantInt(DefaultCase))) &&
-        Pred == CmpInst::ICMP_ULT))
+  if (!match(SI->getCondition(),
+             m_Select(m_ICmp(Pred, m_Value(Cond), m_ConstantInt(Bound)),
+                      m_Deferred(Cond), m_ConstantInt(DefaultCase))) ||
+      Pred != CmpInst::ICMP_ULT)
     return false;
 
   // In an ideal situation, the range of switch cases is continuous,
@@ -7136,7 +7136,7 @@ static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
   llvm::sort(Values);
 
   // The cases should be continuous from 0 to some value
-  if (!(*Values.begin() == 0 && *Values.rbegin() == SI->getNumCases() - 1))
+  if (*Values.begin() != 0 || *Values.rbegin() != SI->getNumCases() - 1)
     return false;
 
   SI->setCondition(Cond);
