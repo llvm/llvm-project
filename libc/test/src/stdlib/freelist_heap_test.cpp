@@ -14,27 +14,47 @@
 
 namespace LIBC_NAMESPACE {
 
-TEST(LlvmLibcFreeListHeap, CanAllocate) {
-  constexpr size_t N = 2048;
-  constexpr size_t ALLOC_SIZE = 512;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
+using LIBC_NAMESPACE::freelist_heap;
 
-  FreeListHeap<> allocator(buf);
+// Similar to `LlvmLibcBlockTest` in block_test.cpp, we'd like to run the same
+// tests independently for different parameters. In this case, we'd like to test
+// functionality for a `FreeListHeap` and the global `freelist_heap` which was
+// constinit'd. Functionally, it should operate the same if the FreeListHeap
+// were initialized locally at runtime or at compile-time.
+//
+// Note that calls to `allocate` for each test case here don't always explicitly
+// `free` them afterwards, so when testing the global allocator, allocations
+// made in tests leak and aren't free'd. This is fine for the purposes of this
+// test file.
+#define TEST_FOR_EACH_ALLOCATOR(TestCase, BufferSize)                          \
+  class LlvmLibcFreeListHeapTest##TestCase : public testing::Test {            \
+  public:                                                                      \
+    void RunTest(FreeListHeap<> &allocator, [[maybe_unused]] size_t N);        \
+  };                                                                           \
+  TEST_F(LlvmLibcFreeListHeapTest##TestCase, TestCase) {                       \
+    alignas(FreeListHeap<>::BlockType)                                         \
+        cpp::byte buf[BufferSize] = {cpp::byte(0)};                            \
+    FreeListHeap<> allocator(buf);                                             \
+    RunTest(allocator, BufferSize);                                            \
+    RunTest(*freelist_heap, freelist_heap->region_size());                     \
+  }                                                                            \
+  void LlvmLibcFreeListHeapTest##TestCase::RunTest(FreeListHeap<> &allocator,  \
+                                                   size_t N)
+
+TEST_FOR_EACH_ALLOCATOR(CanAllocate, 2048) {
+  constexpr size_t ALLOC_SIZE = 512;
 
   void *ptr = allocator.allocate(ALLOC_SIZE);
 
   ASSERT_NE(ptr, static_cast<void *>(nullptr));
   // In this case, the allocator should be returning us the start of the chunk.
   EXPECT_EQ(ptr, static_cast<void *>(
-                     &buf[0] + FreeListHeap<>::BlockType::BLOCK_OVERHEAD));
+                     reinterpret_cast<cpp::byte *>(allocator.region_start()) +
+                     FreeListHeap<>::BlockType::BLOCK_OVERHEAD));
 }
 
-TEST(LlvmLibcFreeListHeap, AllocationsDontOverlap) {
-  constexpr size_t N = 2048;
+TEST_FOR_EACH_ALLOCATOR(AllocationsDontOverlap, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
-
-  FreeListHeap<> allocator(buf);
 
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   void *ptr2 = allocator.allocate(ALLOC_SIZE);
@@ -49,14 +69,10 @@ TEST(LlvmLibcFreeListHeap, AllocationsDontOverlap) {
   EXPECT_GT(ptr2_start, ptr1_end);
 }
 
-TEST(LlvmLibcFreeListHeap, CanFreeAndRealloc) {
+TEST_FOR_EACH_ALLOCATOR(CanFreeAndRealloc, 2048) {
   // There's not really a nice way to test that free works, apart from to try
   // and get that value back again.
-  constexpr size_t N = 2048;
   constexpr size_t ALLOC_SIZE = 512;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
-
-  FreeListHeap<> allocator(buf);
 
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   allocator.free(ptr1);
@@ -65,15 +81,13 @@ TEST(LlvmLibcFreeListHeap, CanFreeAndRealloc) {
   EXPECT_EQ(ptr1, ptr2);
 }
 
-TEST(LlvmLibcFreeListHeap, ReturnsNullWhenAllocationTooLarge) {
-  constexpr size_t N = 2048;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
-
-  FreeListHeap<> allocator(buf);
-
+TEST_FOR_EACH_ALLOCATOR(ReturnsNullWhenAllocationTooLarge, 2048) {
   EXPECT_EQ(allocator.allocate(N), static_cast<void *>(nullptr));
 }
 
+// NOTE: This doesn't use TEST_FOR_EACH_ALLOCATOR because the first `allocate`
+// here will likely actually return a nullptr since the same global allocator
+// is used for other test cases and we don't explicitly free them.
 TEST(LlvmLibcFreeListHeap, ReturnsNullWhenFull) {
   constexpr size_t N = 2048;
   alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
@@ -85,12 +99,7 @@ TEST(LlvmLibcFreeListHeap, ReturnsNullWhenFull) {
   EXPECT_EQ(allocator.allocate(1), static_cast<void *>(nullptr));
 }
 
-TEST(LlvmLibcFreeListHeap, ReturnedPointersAreAligned) {
-  constexpr size_t N = 2048;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
-
-  FreeListHeap<> allocator(buf);
-
+TEST_FOR_EACH_ALLOCATOR(ReturnedPointersAreAligned, 2048) {
   void *ptr1 = allocator.allocate(1);
 
   // Should be aligned to native pointer alignment
@@ -105,13 +114,9 @@ TEST(LlvmLibcFreeListHeap, ReturnedPointersAreAligned) {
   EXPECT_EQ(ptr2_start % alignment, static_cast<size_t>(0));
 }
 
-TEST(LlvmLibcFreeListHeap, CanRealloc) {
-  constexpr size_t N = 2048;
+TEST_FOR_EACH_ALLOCATOR(CanRealloc, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
   constexpr size_t kNewAllocSize = 768;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(1)};
-
-  FreeListHeap<> allocator(buf);
 
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   void *ptr2 = allocator.realloc(ptr1, kNewAllocSize);
@@ -120,23 +125,19 @@ TEST(LlvmLibcFreeListHeap, CanRealloc) {
   ASSERT_NE(ptr2, static_cast<void *>(nullptr));
 }
 
-TEST(LlvmLibcFreeListHeap, ReallocHasSameContent) {
-  constexpr size_t N = 2048;
+TEST_FOR_EACH_ALLOCATOR(ReallocHasSameContent, 2048) {
   constexpr size_t ALLOC_SIZE = sizeof(int);
   constexpr size_t kNewAllocSize = sizeof(int) * 2;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(1)};
   // Data inside the allocated block.
   cpp::byte data1[ALLOC_SIZE];
   // Data inside the reallocated block.
   cpp::byte data2[ALLOC_SIZE];
 
-  FreeListHeap<> allocator(buf);
-
   int *ptr1 = reinterpret_cast<int *>(allocator.allocate(ALLOC_SIZE));
   *ptr1 = 42;
-  memcpy(data1, ptr1, ALLOC_SIZE);
+  LIBC_NAMESPACE::memcpy(data1, ptr1, ALLOC_SIZE);
   int *ptr2 = reinterpret_cast<int *>(allocator.realloc(ptr1, kNewAllocSize));
-  memcpy(data2, ptr2, ALLOC_SIZE);
+  LIBC_NAMESPACE::memcpy(data2, ptr2, ALLOC_SIZE);
 
   ASSERT_NE(ptr1, static_cast<int *>(nullptr));
   ASSERT_NE(ptr2, static_cast<int *>(nullptr));
@@ -144,13 +145,9 @@ TEST(LlvmLibcFreeListHeap, ReallocHasSameContent) {
   EXPECT_EQ(LIBC_NAMESPACE::memcmp(data1, data2, ALLOC_SIZE), 0);
 }
 
-TEST(LlvmLibcFreeListHeap, ReturnsNullReallocFreedPointer) {
-  constexpr size_t N = 2048;
+TEST_FOR_EACH_ALLOCATOR(ReturnsNullReallocFreedPointer, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
   constexpr size_t kNewAllocSize = 256;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
-
-  FreeListHeap<> allocator(buf);
 
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   allocator.free(ptr1);
@@ -159,13 +156,9 @@ TEST(LlvmLibcFreeListHeap, ReturnsNullReallocFreedPointer) {
   EXPECT_EQ(static_cast<void *>(nullptr), ptr2);
 }
 
-TEST(LlvmLibcFreeListHeap, ReallocSmallerSize) {
-  constexpr size_t N = 2048;
+TEST_FOR_EACH_ALLOCATOR(ReallocSmallerSize, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
   constexpr size_t kNewAllocSize = 256;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
-
-  FreeListHeap<> allocator(buf);
 
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   void *ptr2 = allocator.realloc(ptr1, kNewAllocSize);
@@ -174,13 +167,9 @@ TEST(LlvmLibcFreeListHeap, ReallocSmallerSize) {
   EXPECT_EQ(ptr1, ptr2);
 }
 
-TEST(LlvmLibcFreeListHeap, ReallocTooLarge) {
-  constexpr size_t N = 2048;
+TEST_FOR_EACH_ALLOCATOR(ReallocTooLarge, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
-  constexpr size_t kNewAllocSize = 4096;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(0)};
-
-  FreeListHeap<> allocator(buf);
+  size_t kNewAllocSize = N * 2; // Large enough to fail.
 
   void *ptr1 = allocator.allocate(ALLOC_SIZE);
   void *ptr2 = allocator.realloc(ptr1, kNewAllocSize);
@@ -190,49 +179,38 @@ TEST(LlvmLibcFreeListHeap, ReallocTooLarge) {
   EXPECT_EQ(static_cast<void *>(nullptr), ptr2);
 }
 
-TEST(LlvmLibcFreeListHeap, CanCalloc) {
-  constexpr size_t N = 2048;
+TEST_FOR_EACH_ALLOCATOR(CanCalloc, 2048) {
   constexpr size_t ALLOC_SIZE = 128;
-  constexpr size_t kNum = 4;
-  constexpr int size = kNum * ALLOC_SIZE;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(1)};
+  constexpr size_t NUM = 4;
+  constexpr int size = NUM * ALLOC_SIZE;
   constexpr cpp::byte zero{0};
 
-  FreeListHeap<> allocator(buf);
-
   cpp::byte *ptr1 =
-      reinterpret_cast<cpp::byte *>(allocator.calloc(kNum, ALLOC_SIZE));
+      reinterpret_cast<cpp::byte *>(allocator.calloc(NUM, ALLOC_SIZE));
 
   // calloc'd content is zero.
-  for (int i = 0; i < size; i++)
+  for (int i = 0; i < size; i++) {
     EXPECT_EQ(ptr1[i], zero);
+  }
 }
 
-TEST(LlvmLibcFreeListHeap, CanCallocWeirdSize) {
-  constexpr size_t N = 2048;
+TEST_FOR_EACH_ALLOCATOR(CanCallocWeirdSize, 2048) {
   constexpr size_t ALLOC_SIZE = 143;
-  constexpr size_t kNum = 3;
-  constexpr int size = kNum * ALLOC_SIZE;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(132)};
+  constexpr size_t NUM = 3;
+  constexpr int size = NUM * ALLOC_SIZE;
   constexpr cpp::byte zero{0};
 
-  FreeListHeap<> allocator(buf);
-
   cpp::byte *ptr1 =
-      reinterpret_cast<cpp::byte *>(allocator.calloc(kNum, ALLOC_SIZE));
+      reinterpret_cast<cpp::byte *>(allocator.calloc(NUM, ALLOC_SIZE));
 
   // calloc'd content is zero.
-  for (int i = 0; i < size; i++)
+  for (int i = 0; i < size; i++) {
     EXPECT_EQ(ptr1[i], zero);
+  }
 }
 
-TEST(LlvmLibcFreeListHeap, CallocTooLarge) {
-  constexpr size_t N = 2048;
-  constexpr size_t ALLOC_SIZE = 2049;
-  alignas(FreeListHeap<>::BlockType) cpp::byte buf[N] = {cpp::byte(1)};
-
-  FreeListHeap<> allocator(buf);
-
+TEST_FOR_EACH_ALLOCATOR(CallocTooLarge, 2048) {
+  size_t ALLOC_SIZE = N + 1;
   EXPECT_EQ(allocator.calloc(1, ALLOC_SIZE), static_cast<void *>(nullptr));
 }
 

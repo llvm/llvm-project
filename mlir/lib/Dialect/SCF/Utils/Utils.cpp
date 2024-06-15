@@ -464,9 +464,9 @@ LogicalResult mlir::loopUnrollByFactor(
   return success();
 }
 
-LoopParams mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
-                                          OpFoldResult lb, OpFoldResult ub,
-                                          OpFoldResult step) {
+Range mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
+                                     OpFoldResult lb, OpFoldResult ub,
+                                     OpFoldResult step) {
   // For non-index types, generate `arith` instructions
   // Check if the loop is already known to have a constant zero lower bound or
   // a constant one step.
@@ -478,8 +478,8 @@ LoopParams mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
   if (auto stepCst = getConstantIntValue(step))
     isStepOne = stepCst.value() == 1;
 
-  Type loopParamsType = getType(lb);
-  assert(loopParamsType == getType(ub) && loopParamsType == getType(step) &&
+  Type rangeType = getType(lb);
+  assert(rangeType == getType(ub) && rangeType == getType(step) &&
          "expected matching types");
 
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
@@ -501,8 +501,8 @@ LoopParams mlir::emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
         getValueOrCreateConstantIntOp(rewriter, loc, step));
   }
 
-  OpFoldResult newLowerBound = rewriter.getZeroAttr(loopParamsType);
-  OpFoldResult newStep = rewriter.getOneAttr(loopParamsType);
+  OpFoldResult newLowerBound = rewriter.getZeroAttr(rangeType);
+  OpFoldResult newStep = rewriter.getOneAttr(rangeType);
 
   return {newLowerBound, newUpperBound, newStep};
 }
@@ -626,18 +626,17 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
     Value lb = loop.getLowerBound();
     Value ub = loop.getUpperBound();
     Value step = loop.getStep();
-    auto newLoopParams =
+    auto newLoopRange =
         emitNormalizedLoopBounds(rewriter, loop.getLoc(), lb, ub, step);
 
     rewriter.modifyOpInPlace(loop, [&]() {
-      loop.setLowerBound(getValueOrCreateConstantIntOp(
-          rewriter, loop.getLoc(), newLoopParams.lowerBound));
-      loop.setUpperBound(getValueOrCreateConstantIntOp(
-          rewriter, loop.getLoc(), newLoopParams.upperBound));
+      loop.setLowerBound(getValueOrCreateConstantIntOp(rewriter, loop.getLoc(),
+                                                       newLoopRange.offset));
+      loop.setUpperBound(getValueOrCreateConstantIntOp(rewriter, loop.getLoc(),
+                                                       newLoopRange.size));
       loop.setStep(getValueOrCreateConstantIntOp(rewriter, loop.getLoc(),
-                                                 newLoopParams.step));
+                                                 newLoopRange.stride));
     });
-
     rewriter.setInsertionPointToStart(innermost.getBody());
     denormalizeInductionVariable(rewriter, loop.getLoc(),
                                  loop.getInductionVar(), lb, step);
@@ -780,9 +779,9 @@ void mlir::collapseParallelLoops(
     Value lb = loops.getLowerBound()[i];
     Value ub = loops.getUpperBound()[i];
     Value step = loops.getStep()[i];
-    auto newLoopParams = emitNormalizedLoopBounds(rewriter, loc, lb, ub, step);
+    auto newLoopRange = emitNormalizedLoopBounds(rewriter, loc, lb, ub, step);
     normalizedUpperBounds.push_back(getValueOrCreateConstantIntOp(
-        rewriter, loops.getLoc(), newLoopParams.upperBound));
+        rewriter, loops.getLoc(), newLoopRange.size));
 
     rewriter.setInsertionPointToStart(loops.getBody());
     denormalizeInductionVariable(rewriter, loc, loops.getInductionVars()[i], lb,
