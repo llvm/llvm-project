@@ -3369,11 +3369,19 @@ private:
       FormatToken *Next = Tok->getNextNonComment();
 
       if (Tok->is(tok::hash)) {
-        // Start of a macro expansion.
-        First = Tok;
-        Tok = Next;
-        if (Tok)
-          Tok = Tok->getNextNonComment();
+
+        if (Next && Next->is(tok::l_paren)) {
+          // Handle parameterized macro.
+          Next = Next->MatchingParen;
+          if (Next)
+            Tok = Next->getNextNonComment();
+        } else {
+          // Start of a macro expansion.
+          First = Tok;
+          Tok = Next;
+          if (Tok)
+            Tok = Tok->getNextNonComment();
+        }
       } else if (Tok->is(tok::hashhash)) {
         // Concatenation. Skip.
         Tok = Next;
@@ -3410,11 +3418,6 @@ private:
         } else {
           break;
         }
-      } else if (Tok->is(tok::hash)) {
-        if (Next->is(tok::l_paren))
-          Next = Next->MatchingParen;
-        if (Next)
-          Tok = Next->getNextNonComment();
       } else {
         break;
       }
