@@ -107,6 +107,10 @@ public:
   unsigned multiVersionSortPriority(StringRef Name) const override;
   unsigned multiVersionFeatureCost() const override;
 
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
