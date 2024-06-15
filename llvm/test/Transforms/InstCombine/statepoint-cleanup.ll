@@ -92,7 +92,7 @@ define void @test_invoke(ptr addrspace(1) %b) gc "statepoint-example" personalit
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(1) [[B:%.*]], i64 64
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[B]], ptr addrspace(1) [[D]]) ]
-; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
+; CHECK-NEXT:            to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    [[B_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[B_NEW_2:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
@@ -109,7 +109,7 @@ define void @test_invoke(ptr addrspace(1) %b) gc "statepoint-example" personalit
 ; CHECK-NEXT:    ret void
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    [[LPB_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 0)
 ; CHECK-NEXT:    [[LPB_NEW_2:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 0)
 ; CHECK-NEXT:    [[LPD_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 1)
@@ -166,14 +166,14 @@ define void @test_no_derived_use_invoke(ptr addrspace(1) %b) gc "statepoint-exam
 ; CHECK-LABEL: @test_no_derived_use_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[B:%.*]]) ]
-; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
+; CHECK-NEXT:            to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    [[B_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[B_NEW_1]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    [[LPB_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 0)
 ; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[LPB_NEW_1]], align 4
 ; CHECK-NEXT:    ret void
@@ -211,14 +211,14 @@ define void @test_no_base_use_invoke(ptr addrspace(1) %b) gc "statepoint-example
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D:%.*]] = getelementptr i8, ptr addrspace(1) [[B:%.*]], i64 64
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[B]], ptr addrspace(1) [[D]]) ]
-; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
+; CHECK-NEXT:            to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    [[D_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 1)
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[D_NEW_1]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    [[LPD_NEW_1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 1)
 ; CHECK-NEXT:    store i32 2, ptr addrspace(1) [[LPD_NEW_1]], align 4
 ; CHECK-NEXT:    ret void

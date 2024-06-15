@@ -65,14 +65,14 @@ define i1 @test_negative_invoke(ptr addrspace(1) %p) gc "statepoint-example" per
 ; CHECK-LABEL: @test_negative_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[P:%.*]]) ]
-; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
+; CHECK-NEXT:            to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    [[PNEW:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[SAFEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[PNEW]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    [[PNEW2:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 0)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr addrspace(1) [[PNEW2]], null
 ; CHECK-NEXT:    ret i1 [[CMP2]]
@@ -97,12 +97,12 @@ define i1 @test_nonnull_invoke(ptr addrspace(1) nonnull %p) gc "statepoint-examp
 ; CHECK-LABEL: @test_nonnull_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"() ]
-; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
+; CHECK-NEXT:            to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -125,12 +125,12 @@ define i1 @test_null_invoke() gc "statepoint-example" personality ptr @fake_pers
 ; CHECK-LABEL: @test_null_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"() ]
-; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
+; CHECK-NEXT:            to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -153,12 +153,12 @@ define i1 @test_undef_invoke() gc "statepoint-example" personality ptr @fake_per
 ; CHECK-LABEL: @test_undef_invoke(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SAFEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr nonnull elementtype(void ()) @func, i32 0, i32 0, i32 0, i32 0) [ "gc-live"() ]
-; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
+; CHECK-NEXT:            to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    ret i1 undef
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret i1 undef
 ;
 entry:

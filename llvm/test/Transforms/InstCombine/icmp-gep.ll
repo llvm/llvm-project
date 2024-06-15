@@ -514,11 +514,11 @@ define i1 @test_scalable_xc(ptr %x) {
 define i1 @test_scalable_xy(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test_scalable_xy(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[TMP2]], [[I:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[TMP4]], [[J:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], [[J:%.*]]
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[GEP2_IDX]], [[GEP1_IDX]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -533,11 +533,11 @@ define i1 @test_scalable_xy(ptr %foo, i64 %i, i64 %j) {
 define i1 @test_scalable_ij(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test_scalable_ij(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
-; CHECK-NEXT:    [[GEP1_IDX:%.*]] = mul nsw i64 [[TMP2]], [[I:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], [[I:%.*]]
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
-; CHECK-NEXT:    [[GEP2_IDX:%.*]] = mul nsw i64 [[TMP4]], [[J:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], [[J:%.*]]
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[GEP1_IDX]], [[GEP2_IDX]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

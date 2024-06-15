@@ -51,8 +51,8 @@ define i32 @test5(i32 %A) {
 
 define i32 @test6(i32 %A) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[ADDCONV:%.*]] = and i32 [[A:%.*]], 39
-; CHECK-NEXT:    ret i32 [[ADDCONV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 39
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %B = and i32 %A, 7
   %C = and i32 %A, 32

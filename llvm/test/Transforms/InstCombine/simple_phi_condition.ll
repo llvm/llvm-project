@@ -266,9 +266,9 @@ define i8 @test_switch(i8 %cond) {
 ; CHECK-LABEL: @test_switch(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -309,9 +309,9 @@ define i8 @test_switch_direct_edge(i8 %cond) {
 ; CHECK-LABEL: @test_switch_direct_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[MERGE:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[MERGE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -347,9 +347,9 @@ define i8 @test_switch_duplicate_direct_edge(i8 %cond) {
 ; CHECK-LABEL: @test_switch_duplicate_direct_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[MERGE:%.*]]
-; CHECK-NEXT:    i8 19, label [[MERGE]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[MERGE:%.*]]
+; CHECK-NEXT:      i8 19, label [[MERGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -381,9 +381,9 @@ define i8 @test_switch_subset(i8 %cond) {
 ; CHECK-LABEL: @test_switch_subset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -424,9 +424,9 @@ define i8 @test_switch_wrong_value(i8 %cond) {
 ; CHECK-LABEL: @test_switch_wrong_value(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -468,9 +468,9 @@ define i8 @test_switch_inverted(i8 %cond) {
 ; CHECK-LABEL: @test_switch_inverted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 0, label [[SW_0:%.*]]
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 2, label [[SW_2:%.*]]
+; CHECK-NEXT:      i8 0, label [[SW_0:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 2, label [[SW_2:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.0:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -512,9 +512,9 @@ define i8 @test_switch_duplicate_edge(i8 %cond) {
 ; CHECK-LABEL: @test_switch_duplicate_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_7]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_7]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
@@ -551,9 +551,9 @@ define i8 @test_switch_default_edge(i8 %cond) {
 ; CHECK-LABEL: @test_switch_default_edge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[MERGE:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19:%.*]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -590,9 +590,9 @@ define i8 @test_switch_default_edge_direct(i8 %cond) {
 ; CHECK-LABEL: @test_switch_default_edge_direct(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[MERGE:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[MERGE]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[MERGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -621,9 +621,9 @@ define i8 @test_switch_default_edge_duplicate(i8 %cond) {
 ; CHECK-LABEL: @test_switch_default_edge_duplicate(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i8 [[COND:%.*]], label [[SW_19:%.*]] [
-; CHECK-NEXT:    i8 1, label [[SW_1:%.*]]
-; CHECK-NEXT:    i8 7, label [[SW_7:%.*]]
-; CHECK-NEXT:    i8 19, label [[SW_19]]
+; CHECK-NEXT:      i8 1, label [[SW_1:%.*]]
+; CHECK-NEXT:      i8 7, label [[SW_7:%.*]]
+; CHECK-NEXT:      i8 19, label [[SW_19]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.1:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]

@@ -121,8 +121,8 @@ define i8 @prove_exact_with_high_mask(i8 %x, i8 %y) {
 
 define i8 @prove_exact_with_high_mask_limit(i8 %x, i8 %y) {
 ; CHECK-LABEL: @prove_exact_with_high_mask_limit(
-; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 3
-; CHECK-NEXT:    ret i8 [[A]]
+; CHECK-NEXT:    [[D:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i8 [[D]]
 ;
   %a = and i8 %x, -8
   %d = sdiv i8 %a, 8

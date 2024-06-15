@@ -50,8 +50,8 @@ entry:
 define void @test4_multiple_copy_first_field(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @test4_multiple_copy_first_field(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4, !tbaa [[TBAA0]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A:%.*]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -62,8 +62,8 @@ entry:
 define void @test5_multiple_copy_more_than_first_field(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: @test5_multiple_copy_more_than_first_field(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[B:%.*]], align 4, !tbaa.struct [[TBAA_STRUCT4:![0-9]+]]
+; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A:%.*]], align 4, !tbaa.struct [[TBAA_STRUCT4]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -87,4 +87,5 @@ entry:
 ; CHECK: [[META1]] = !{!"float", [[META2:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"Simple C/C++ TBAA"}
 ; CHECK: [[TBAA_STRUCT3]] = !{i64 0, i64 4, [[TBAA0]], i64 4, i64 4, [[TBAA0]]}
+; CHECK: [[TBAA_STRUCT4]] = !{i64 0, i64 2, [[TBAA0]], i64 4, i64 6, [[TBAA0]]}
 ;.

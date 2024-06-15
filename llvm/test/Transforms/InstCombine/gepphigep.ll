@@ -86,12 +86,12 @@ define i32 @test3(ptr %dm, i1 %tmp4, i64 %tmp9, i64 %tmp19, i64 %tmp20, i64 %tmp
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP19]], [[BB1]] ], [ [[TMP20]], [[BB2]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = invoke i32 @foo1(i32 11)
-; CHECK-NEXT:    to label [[BB4:%.*]] unwind label [[BB5:%.*]]
+; CHECK-NEXT:            to label [[BB4:%.*]] unwind label [[BB5:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[TMP27:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    catch ptr @_ZTIi
+; CHECK-NEXT:            catch ptr @_ZTIi
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT3]], ptr [[DM]], i64 [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT4:%.*]], ptr [[TMP1]], i64 [[TMP21:%.*]], i32 1, i32 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP35]], align 4

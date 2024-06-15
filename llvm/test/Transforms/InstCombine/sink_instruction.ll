@@ -86,8 +86,8 @@ define i32 @test3(ptr nocapture readonly %P, i32 %i) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[I:%.*]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 5, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB]]
+; CHECK-NEXT:      i32 5, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
@@ -190,8 +190,8 @@ define i32 @test6(ptr nocapture readonly %P, i32 %i, i1 %cond) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    switch i32 [[I]], label [[SW_BB:%.*]] [
-; CHECK-NEXT:    i32 5, label [[SW_EPILOG:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_EPILOG]]
+; CHECK-NEXT:      i32 5, label [[SW_EPILOG:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_EPILOG]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    br label [[SW_EPILOG]]

@@ -883,10 +883,9 @@ define <2 x i64> @bs_active_high_poison(<2 x i64> %0) {
 
 define i64 @bs_active_high8_multiuse(i64 %0) {
 ; CHECK-LABEL: @bs_active_high8_multiuse(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0:%.*]], 56
-; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP0]], 255
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    ret i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 56
+; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %2 = shl i64 %0, 56
   %3 = call i64 @llvm.bswap.i64(i64 %2)
@@ -1011,10 +1010,9 @@ define <2 x i32> @bs_active_low_undef(<2 x i32> %0) {
 
 define i64 @bs_active_low8_multiuse(i64 %0) {
 ; CHECK-LABEL: @bs_active_low8_multiuse(
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP0:%.*]], 255
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 56
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    ret i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0:%.*]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 56
+; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
   %2 = and i64 %0, 255
   %3 = call i64 @llvm.bswap.i64(i64 %2)
@@ -1025,8 +1023,8 @@ define i64 @bs_active_low8_multiuse(i64 %0) {
 define i64 @bs_active_low7_multiuse(i64 %0) {
 ; CHECK-LABEL: @bs_active_low7_multiuse(
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP0:%.*]], 127
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 56
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i64 [[TMP2]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 56
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %2 = and i64 %0, 127

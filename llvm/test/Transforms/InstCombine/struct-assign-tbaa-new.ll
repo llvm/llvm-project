@@ -50,9 +50,9 @@ define ptr @test2() {
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
-; CHECK: [[TBAA0]] = !{!1, !1, i64 0, i64 4}
-; CHECK: [[META1:![0-9]+]] = !{!2, i64 4, !"A", !4, i64 0, i64 4}
-; CHECK: [[META2:![0-9]+]] = !{!3, !"char"}
-; CHECK: [[META3:![0-9]+]] = !{!"root"}
-; CHECK: [[META4:![0-9]+]] = !{!2, !"float"}
+; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0, i64 4}
+; CHECK: [[META1]] = !{[[META2:![0-9]+]], i64 4, !"A", [[META4:![0-9]+]], i64 0, i64 4}
+; CHECK: [[META2]] = !{[[META3:![0-9]+]], !"char"}
+; CHECK: [[META3]] = !{!"root"}
+; CHECK: [[META4]] = !{[[META2]], !"float"}
 ;.

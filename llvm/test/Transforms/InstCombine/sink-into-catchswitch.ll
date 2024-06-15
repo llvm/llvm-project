@@ -12,13 +12,13 @@ define void @test1(ptr %p) personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
 ; CHECK-NEXT:    invoke void @throw()
-; CHECK-NEXT:    to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
+; CHECK-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       catch.dispatch:
 ; CHECK-NEXT:    [[CS:%.*]] = catchswitch within none [label %invoke.cont1] unwind label [[EHCLEANUP:%.*]]
 ; CHECK:       invoke.cont1:
 ; CHECK-NEXT:    [[CATCH:%.*]] = catchpad within [[CS]] [ptr null, i32 64, ptr null]
 ; CHECK-NEXT:    invoke void @throw() [ "funclet"(token [[CATCH]]) ]
-; CHECK-NEXT:    to label [[UNREACHABLE]] unwind label [[EHCLEANUP]]
+; CHECK-NEXT:            to label [[UNREACHABLE]] unwind label [[EHCLEANUP]]
 ; CHECK:       ehcleanup:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[TMP1]], [[CATCH_DISPATCH]] ], [ 9, [[INVOKE_CONT1:%.*]] ]
 ; CHECK-NEXT:    [[CLEANUP:%.*]] = cleanuppad within none []

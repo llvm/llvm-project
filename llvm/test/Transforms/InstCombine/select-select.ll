@@ -18,9 +18,9 @@ define float @foo1(float %a) {
 
 define float @foo2(float %a) {
 ; CHECK-LABEL: @foo2(
-; CHECK-NEXT:    [[B:%.*]] = fcmp ule float [[C:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[D:%.*]] = fcmp olt float [[C]], 1.000000e+00
-; CHECK-NEXT:    [[E:%.*]] = select i1 [[D]], float [[C]], float 1.000000e+00
+; CHECK-NEXT:    [[B:%.*]] = fcmp ule float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[A]], 1.000000e+00
+; CHECK-NEXT:    [[E:%.*]] = select i1 [[TMP1]], float [[A]], float 1.000000e+00
 ; CHECK-NEXT:    [[F:%.*]] = select i1 [[B]], float 0.000000e+00, float [[E]]
 ; CHECK-NEXT:    ret float [[F]]
 ;

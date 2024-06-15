@@ -56,8 +56,8 @@ define i7 @test5(i7 %A, ptr %P) {
 
 define i47 @test7(i47 %A) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i47 [[A:%.*]], 39
-; CHECK-NEXT:    ret i47 [[TMP1]]
+; CHECK-NEXT:    [[X:%.*]] = lshr i47 [[A:%.*]], 39
+; CHECK-NEXT:    ret i47 [[X]]
 ;
   %X = ashr i47 %A, 39 ;; sign extend
   %C1 = and i47 %X, 255
@@ -117,8 +117,8 @@ define i117 @test12(i117 %A, ptr %P) {
 
 define i1024 @test13(i1024 %A) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i1024 [[A:%.*]], 1016
-; CHECK-NEXT:    ret i1024 [[TMP1]]
+; CHECK-NEXT:    [[X:%.*]] = lshr i1024 [[A:%.*]], 1016
+; CHECK-NEXT:    ret i1024 [[X]]
 ;
   %X = ashr i1024 %A, 1016 ;; sign extend
   %C1 = and i1024 %X, 255

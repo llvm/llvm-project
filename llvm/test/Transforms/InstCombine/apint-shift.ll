@@ -144,10 +144,9 @@ define <2 x i19> @shl_shl_splat_vec(<2 x i19> %X) {
 
 define i42 @multiuse_shl_shl(i42 %x) {
 ; CHECK-LABEL: @multiuse_shl_shl(
-; CHECK-NEXT:    [[SH1:%.*]] = shl i42 [[X:%.*]], 8
-; CHECK-NEXT:    [[SH2:%.*]] = shl i42 [[X]], 17
-; CHECK-NEXT:    [[MUL:%.*]] = mul i42 [[SH1]], [[SH2]]
-; CHECK-NEXT:    ret i42 [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i42 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i42 [[TMP1]], 25
+; CHECK-NEXT:    ret i42 [[TMP2]]
 ;
   %sh1 = shl i42 %x, 8
   %sh2 = shl i42 %sh1, 9
@@ -157,10 +156,9 @@ define i42 @multiuse_shl_shl(i42 %x) {
 
 define <2 x i42> @multiuse_shl_shl_splat(<2 x i42> %x) {
 ; CHECK-LABEL: @multiuse_shl_shl_splat(
-; CHECK-NEXT:    [[SH1:%.*]] = shl <2 x i42> [[X:%.*]], <i42 8, i42 8>
-; CHECK-NEXT:    [[SH2:%.*]] = shl <2 x i42> [[X]], <i42 17, i42 17>
-; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i42> [[SH1]], [[SH2]]
-; CHECK-NEXT:    ret <2 x i42> [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i42> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i42> [[TMP1]], <i42 25, i42 25>
+; CHECK-NEXT:    ret <2 x i42> [[TMP2]]
 ;
   %sh1 = shl <2 x i42> %x, <i42 8, i42 8>
   %sh2 = shl <2 x i42> %sh1, <i42 9, i42 9>

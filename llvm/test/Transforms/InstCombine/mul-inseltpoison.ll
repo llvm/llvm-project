@@ -87,8 +87,8 @@ define i32 @test12(i32 %a, i32 %b) {
 ; rdar://7293527
 define i32 @test15(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[M1:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[M1]]
+; CHECK-NEXT:    [[M:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[M]]
 ;
   %shl = shl i32 1, %B
   %m = mul i32 %shl, %A
@@ -512,8 +512,8 @@ define <3 x i4> @neg_mul_constant_vec_weird(<3 x i4> %a) {
 
 define i32 @test26(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test26(
-; CHECK-NEXT:    [[D1:%.*]] = shl nsw i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D1]]
+; CHECK-NEXT:    [[D:%.*]] = shl nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %C = shl nsw i32 1, %B
   %D = mul nsw i32 %A, %C
@@ -522,8 +522,8 @@ define i32 @test26(i32 %A, i32 %B) {
 
 define i32 @test27(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test27(
-; CHECK-NEXT:    [[D1:%.*]] = shl nuw i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D1]]
+; CHECK-NEXT:    [[D:%.*]] = shl nuw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %C = shl i32 1, %B
   %D = mul nuw i32 %A, %C
@@ -572,8 +572,8 @@ define i32 @test31(i32 %V) {
 ; CHECK-LABEL: @test31(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr inttoptr (i64 1 to ptr), @PR22087
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 [[V:%.*]], [[EXT]]
-; CHECK-NEXT:    ret i32 [[MUL1]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[V:%.*]], [[EXT]]
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %cmp = icmp ne ptr inttoptr (i64 1 to ptr), @PR22087
   %ext = zext i1 %cmp to i32

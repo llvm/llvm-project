@@ -211,10 +211,10 @@ define i1 @PR59704(i1 %c, i1 %b, i64 %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[ARG:%.*]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ARG:%.*]], 0
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[CMP_NOT]], [[IF]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[CMP]], [[IF]] ]
 ; CHECK-NEXT:    ret i1 [[PHI]]
 ;
 entry:

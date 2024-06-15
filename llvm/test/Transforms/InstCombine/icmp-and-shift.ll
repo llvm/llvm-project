@@ -523,8 +523,8 @@ define i1 @slt_and_shl_one(i8 %x, i8 %y) {
 
 define i1 @fold_eq_lhs(i8 %x, i8 %y) {
 ; CHECK-LABEL: @fold_eq_lhs(
-; CHECK-NEXT:    [[AND:%.*]] = lshr i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i8 -1, %x
@@ -564,8 +564,8 @@ define i1 @fold_eq_lhs_fail_multiuse_shl(i8 %x, i8 %y) {
 define i1 @fold_ne_rhs(i8 %x, i8 %yy) {
 ; CHECK-LABEL: @fold_ne_rhs(
 ; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[YY:%.*]], 123
-; CHECK-NEXT:    [[AND:%.*]] = lshr i8 [[Y]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %y = xor i8 %yy, 123

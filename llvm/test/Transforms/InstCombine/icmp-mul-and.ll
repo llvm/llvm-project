@@ -270,8 +270,8 @@ define i1 @pr51551_neg2(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Y:%.*]] to i1
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    [[DOTNOT:%.*]] = xor i1 [[TMP1]], true
-; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[CMP1]]
+; CHECK-NEXT:    [[NOT_:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    [[CMP:%.*]] = select i1 [[NOT_]], i1 true, i1 [[CMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %t0 = and i32 %y, -7

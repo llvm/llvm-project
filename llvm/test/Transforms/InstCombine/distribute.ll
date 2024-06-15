@@ -38,7 +38,10 @@ define i32 @factorize3(i32 %x, i32 %a, i32 %b) {
 
 define i32 @factorize4(i32 %x, i32 %y) {
 ; CHECK-LABEL: @factorize4(
-; CHECK-NEXT:    [[S:%.*]] = mul i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ML:%.*]] = shl i32 [[TMP1]], 1
+; CHECK-NEXT:    [[MR:%.*]] = mul i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[S:%.*]] = sub i32 [[ML]], [[MR]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
 ; ((Y << 1) * X) - (X * Y) -> (X * (Y * 2 - Y)) -> (X * Y)
@@ -51,7 +54,10 @@ define i32 @factorize4(i32 %x, i32 %y) {
 
 define i32 @factorize5(i32 %x, i32 %y) {
 ; CHECK-LABEL: @factorize5(
-; CHECK-NEXT:    [[S:%.*]] = mul i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ML:%.*]] = shl i32 [[TMP1]], 1
+; CHECK-NEXT:    [[MR:%.*]] = mul i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[S:%.*]] = sub i32 [[ML]], [[MR]]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
 ; ((Y * 2) * X) - (X * Y) -> (X * Y)

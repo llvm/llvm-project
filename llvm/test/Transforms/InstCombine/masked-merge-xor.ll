@@ -84,8 +84,8 @@ define i32 @p_constmask(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p_constmask(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 65280
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
-; CHECK-NEXT:    [[RET1:%.*]] = or disjoint i32 [[AND]], [[AND1]]
-; CHECK-NEXT:    ret i32 [[RET1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, 65280
   %and1 = and i32 %y, -65281
@@ -97,8 +97,8 @@ define <2 x i32> @p_constmask_splatvec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p_constmask_splatvec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 65280, i32 65280>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -65281, i32 -65281>
-; CHECK-NEXT:    [[RET1:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
-; CHECK-NEXT:    ret <2 x i32> [[RET1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %and = and <2 x i32> %x, <i32 65280, i32 65280>
   %and1 = and <2 x i32> %y, <i32 -65281, i32 -65281>
@@ -140,8 +140,8 @@ define i32 @p_constmask2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p_constmask2(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 61440
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
-; CHECK-NEXT:    [[RET1:%.*]] = or disjoint i32 [[AND]], [[AND1]]
-; CHECK-NEXT:    ret i32 [[RET1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, 61440
   %and1 = and i32 %y, -65281
@@ -153,8 +153,8 @@ define <2 x i32> @p_constmask2_splatvec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p_constmask2_splatvec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 61440, i32 61440>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -65281, i32 -65281>
-; CHECK-NEXT:    [[RET1:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
-; CHECK-NEXT:    ret <2 x i32> [[RET1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
+; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %and = and <2 x i32> %x, <i32 61440, i32 61440>
   %and1 = and <2 x i32> %y, <i32 -65281, i32 -65281>
@@ -312,8 +312,8 @@ define i32 @p_constmask_commutative(i32 %x, i32 %y) {
 ; CHECK-LABEL: @p_constmask_commutative(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 65280
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
-; CHECK-NEXT:    [[RET1:%.*]] = or disjoint i32 [[AND1]], [[AND]]
-; CHECK-NEXT:    ret i32 [[RET1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND1]], [[AND]]
+; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, 65280
   %and1 = and i32 %y, -65281
@@ -354,10 +354,10 @@ define i32 @n0_constmask_oneuse(i32 %x, i32 %y) {
 ; CHECK-LABEL: @n0_constmask_oneuse(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 65280
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[Y:%.*]], -65281
-; CHECK-NEXT:    [[RET1:%.*]] = or disjoint i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[RET:%.*]] = or disjoint i32 [[AND]], [[AND1]]
 ; CHECK-NEXT:    call void @use32(i32 [[AND]])
 ; CHECK-NEXT:    call void @use32(i32 [[AND1]])
-; CHECK-NEXT:    ret i32 [[RET1]]
+; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %and = and i32 %x, 65280
   %and1 = and i32 %y, -65281

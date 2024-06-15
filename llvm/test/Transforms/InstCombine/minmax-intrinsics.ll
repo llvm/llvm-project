@@ -2584,9 +2584,9 @@ entry:
 
 define i8 @test_umax_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_umax_and(
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umax.i8(i8 [[X1:%.*]], i8 [[Y1:%.*]])
-; CHECK-NEXT:    [[RES1:%.*]] = and i8 [[RES]], -64
-; CHECK-NEXT:    ret i8 [[RES1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = and i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %x1 = and i8 %x, -64
   %y1 = and i8 %y, -64
@@ -2596,9 +2596,9 @@ define i8 @test_umax_and(i8 %x, i8 %y) {
 
 define i8 @test_umin_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_umin_and(
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umin.i8(i8 [[X1:%.*]], i8 [[Y1:%.*]])
-; CHECK-NEXT:    [[RES1:%.*]] = and i8 [[RES]], -64
-; CHECK-NEXT:    ret i8 [[RES1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = and i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %x1 = and i8 %x, -64
   %y1 = and i8 %y, -64
@@ -2608,9 +2608,9 @@ define i8 @test_umin_and(i8 %x, i8 %y) {
 
 define i8 @test_smax_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_smax_and(
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smax.i8(i8 [[X1:%.*]], i8 [[Y1:%.*]])
-; CHECK-NEXT:    [[RES1:%.*]] = and i8 [[RES]], -64
-; CHECK-NEXT:    ret i8 [[RES1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = and i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %x1 = and i8 %x, -64
   %y1 = and i8 %y, -64
@@ -2620,9 +2620,9 @@ define i8 @test_smax_and(i8 %x, i8 %y) {
 
 define i8 @test_smin_and(i8 %x, i8 %y) {
 ; CHECK-LABEL: @test_smin_and(
-; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[X1:%.*]], i8 [[Y1:%.*]])
-; CHECK-NEXT:    [[RES1:%.*]] = and i8 [[RES]], -64
-; CHECK-NEXT:    ret i8 [[RES1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = and i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i8 [[RES]]
 ;
   %x1 = and i8 %x, -64
   %y1 = and i8 %y, -64

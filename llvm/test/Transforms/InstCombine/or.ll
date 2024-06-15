@@ -1551,9 +1551,9 @@ define <2 x i1> @cmp_overlap_splat(<2 x i5> %x) {
 define i32 @mul_no_common_bits(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @mul_no_common_bits(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
-; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i32 [[Y]], 1
-; CHECK-NEXT:    [[R:%.*]] = mul i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], [[P2:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = shl i32 [[TMP1]], 3
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = and i32 %p1, 7
@@ -1590,8 +1590,8 @@ define <2 x i12> @mul_no_common_bits_commute(<2 x i12> %p) {
 define i32 @mul_no_common_bits_commute2(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @mul_no_common_bits_commute2(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
-; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], [[P2:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = shl i32 [[TMP1]], 3
 ; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -1628,8 +1628,8 @@ define i32 @mul_no_common_bits_const_op_disjoint(i32 %x, i32 %y) {
 define i32 @mul_no_common_bits_uses(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @mul_no_common_bits_uses(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[P1:%.*]], 7
-; CHECK-NEXT:    [[Y:%.*]] = shl i32 [[P2:%.*]], 3
-; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], [[P2:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = shl i32 [[TMP1]], 3
 ; CHECK-NEXT:    call void @use(i32 [[M]])
 ; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], [[X]]
 ; CHECK-NEXT:    ret i32 [[R]]

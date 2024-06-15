@@ -6,8 +6,8 @@ define i1 @SwitchTest(i32 %x, i32 %y) {
 ; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[X]], label [[BB1:%.*]] [
-; CHECK-NEXT:    i32 0, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[Y]], 1

@@ -156,8 +156,8 @@ define i64 @select_clz_to_ctz_i64_wrong_xor(i64 %a) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[SUB]], [[A]]
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[AND]], i1 true)
-; CHECK-NEXT:    [[SUB11:%.*]] = or disjoint i64 [[LZ]], 64
-; CHECK-NEXT:    ret i64 [[SUB11]]
+; CHECK-NEXT:    [[SUB1:%.*]] = or disjoint i64 [[LZ]], 64
+; CHECK-NEXT:    ret i64 [[SUB1]]
 ;
   %sub = sub i64 0, %a
   %and = and i64 %sub, %a

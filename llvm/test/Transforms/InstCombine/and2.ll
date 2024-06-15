@@ -217,8 +217,8 @@ define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec(<2 x i8> %x) {
 
 define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec_poison(<2 x i8> %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_vec_poison(
-; CHECK-NEXT:    [[AND:%.*]] = lshr <2 x i8> <i8 1, i8 poison>, [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i8> [[AND]]
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> <i8 1, i8 poison>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %sh = lshr <2 x i8> <i8 1, i8 poison>, %x
   %and = and <2 x i8> %sh, <i8 1, i8 poison>
@@ -228,9 +228,9 @@ define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec_poison(<2 x i8> %x) {
 ; The add in this test is unnecessary because the LSBs of the LHS are 0 and the 'and' only consumes bits from those LSBs. It doesn't matter what happens to the upper bits.
 define i32 @test11(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[X:%.*]] = shl i32 [[A:%.*]], 8
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[B:%.*]], 128
-; CHECK-NEXT:    [[W:%.*]] = mul i32 [[Z]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Z]], [[A:%.*]]
+; CHECK-NEXT:    [[W:%.*]] = shl i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i32 [[W]]
 ;
   %x = shl i32 %a, 8
@@ -243,9 +243,9 @@ define i32 @test11(i32 %a, i32 %b) {
 ; The add in this test is unnecessary because the LSBs of the RHS are 0 and the 'and' only consumes bits from those LSBs. It doesn't matter what happens to the upper bits.
 define i32 @test12(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[X:%.*]] = shl i32 [[A:%.*]], 8
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[B:%.*]], 128
-; CHECK-NEXT:    [[W:%.*]] = mul i32 [[Z]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Z]], [[A:%.*]]
+; CHECK-NEXT:    [[W:%.*]] = shl i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i32 [[W]]
 ;
   %x = shl i32 %a, 8
@@ -258,9 +258,9 @@ define i32 @test12(i32 %a, i32 %b) {
 ; The sub in this test is unnecessary because the LSBs of the RHS are 0 and the 'and' only consumes bits from those LSBs. It doesn't matter what happens to the upper bits.
 define i32 @test13(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[X:%.*]] = shl i32 [[A:%.*]], 8
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[B:%.*]], 128
-; CHECK-NEXT:    [[W:%.*]] = mul i32 [[Z]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Z]], [[A:%.*]]
+; CHECK-NEXT:    [[W:%.*]] = shl i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i32 [[W]]
 ;
   %x = shl i32 %a, 8
@@ -273,10 +273,10 @@ define i32 @test13(i32 %a, i32 %b) {
 ; The sub in this test cannot be removed because we need to keep the negation of %b. TODO: But we should be able to replace the LHS of it with a 0.
 define i32 @test14(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    [[X:%.*]] = shl i32 [[A:%.*]], 8
 ; CHECK-NEXT:    [[Y:%.*]] = sub i32 0, [[B:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = and i32 [[Y]], 128
-; CHECK-NEXT:    [[W:%.*]] = mul i32 [[Z]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[Z]], [[A:%.*]]
+; CHECK-NEXT:    [[W:%.*]] = shl i32 [[TMP1]], 8
 ; CHECK-NEXT:    ret i32 [[W]]
 ;
   %x = shl i32 %a, 8

@@ -22,7 +22,7 @@ entry:
 define i32 @umul_min_max_comm(i32 %a, i32 %b) {
 ; CHECK-LABEL: @umul_min_max_comm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
@@ -61,7 +61,7 @@ entry:
 define i32 @smul_min_max_comm(i32 %a, i32 %b) {
 ; CHECK-LABEL: @smul_min_max_comm(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = mul i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:

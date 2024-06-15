@@ -46,6 +46,13 @@ define float @test_shrink_libcall_floor(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_libcall_floor(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META9:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[C:%.*]]), !dbg [[DBG15:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META11:![0-9]+]], !DIExpression(), [[DBG15]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META12:![0-9]+]], !DIExpression(), [[META16:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG17:![0-9]+]]
+;
   %D = fpext float %C to double
   ; --> floorf
   %E = call double @floor(double %D)
@@ -57,6 +64,13 @@ define float @test_shrink_libcall_ceil(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_ceil(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_libcall_ceil(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META20:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[C:%.*]]), !dbg [[DBG24:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META21:![0-9]+]], !DIExpression(), [[DBG24]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META22:![0-9]+]], !DIExpression(), [[META25:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG26:![0-9]+]]
 ;
   %D = fpext float %C to double
   ; --> ceilf
@@ -70,6 +84,13 @@ define float @test_shrink_libcall_round(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_libcall_round(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META29:![0-9]+]], !DIExpression(), [[META32:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[C:%.*]]), !dbg [[DBG33:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META30:![0-9]+]], !DIExpression(), [[DBG33]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META31:![0-9]+]], !DIExpression(), [[META34:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG35:![0-9]+]]
+;
   %D = fpext float %C to double
   ; --> roundf
   %E = call double @round(double %D)
@@ -81,6 +102,13 @@ define float @test_shrink_libcall_roundeven(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_roundeven(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_libcall_roundeven(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META38:![0-9]+]], !DIExpression(), [[META41:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]]), !dbg [[DBG42:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META39:![0-9]+]], !DIExpression(), [[DBG42]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META40:![0-9]+]], !DIExpression(), [[META43:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG44:![0-9]+]]
 ;
   %D = fpext float %C to double
   ; --> roundeven
@@ -94,6 +122,13 @@ define float @test_shrink_libcall_nearbyint(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.nearbyint.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_libcall_nearbyint(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META47:![0-9]+]], !DIExpression(), [[META50:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.nearbyint.f32(float [[C:%.*]]), !dbg [[DBG51:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META48:![0-9]+]], !DIExpression(), [[DBG51]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META49:![0-9]+]], !DIExpression(), [[META52:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG53:![0-9]+]]
+;
   %D = fpext float %C to double
   ; --> nearbyintf
   %E = call double @nearbyint(double %D)
@@ -105,6 +140,13 @@ define float @test_shrink_libcall_trunc(float %C) {
 ; CHECK-LABEL: @test_shrink_libcall_trunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_libcall_trunc(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META56:![0-9]+]], !DIExpression(), [[META59:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]]), !dbg [[DBG60:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META57:![0-9]+]], !DIExpression(), [[DBG60]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META58:![0-9]+]], !DIExpression(), [[META61:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG62:![0-9]+]]
 ;
   %D = fpext float %C to double
   ; --> truncf
@@ -120,6 +162,13 @@ define float @test_shrink_libcall_fabs(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_libcall_fabs(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META65:![0-9]+]], !DIExpression(), [[META68:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]]), !dbg [[DBG69:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META66:![0-9]+]], !DIExpression(), [[DBG69]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META67:![0-9]+]], !DIExpression(), [[META70:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG71:![0-9]+]]
+;
   %D = fpext float %C to double
   %E = call double @fabs(double %D)
   %F = fptrunc double %E to float
@@ -132,6 +181,13 @@ define float @test_shrink_libcall_fabs_fast(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_libcall_fabs_fast(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META74:![0-9]+]], !DIExpression(), [[META77:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[C:%.*]]), !dbg [[DBG78:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META75:![0-9]+]], !DIExpression(), [[DBG78]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META76:![0-9]+]], !DIExpression(), [[META79:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG80:![0-9]+]]
+;
   %D = fpext float %C to double
   %E = call fast double @fabs(double %D)
   %F = fptrunc double %E to float
@@ -142,6 +198,13 @@ define float @test_shrink_intrin_ceil(float %C) {
 ; CHECK-LABEL: @test_shrink_intrin_ceil(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_ceil(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META83:![0-9]+]], !DIExpression(), [[META86:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.ceil.f32(float [[C:%.*]]), !dbg [[DBG87:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META84:![0-9]+]], !DIExpression(), [[DBG87]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META85:![0-9]+]], !DIExpression(), [[META88:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG89:![0-9]+]]
 ;
   %D = fpext float %C to double
   %E = call double @llvm.ceil.f64(double %D)
@@ -154,6 +217,13 @@ define float @test_shrink_intrin_fabs(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_fabs(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META92:![0-9]+]], !DIExpression(), [[META95:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[C:%.*]]), !dbg [[DBG96:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META93:![0-9]+]], !DIExpression(), [[DBG96]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META94:![0-9]+]], !DIExpression(), [[META97:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG98:![0-9]+]]
+;
   %D = fpext float %C to double
   %E = call double @llvm.fabs.f64(double %D)
   %F = fptrunc double %E to float
@@ -164,6 +234,13 @@ define float @test_shrink_intrin_floor(float %C) {
 ; CHECK-LABEL: @test_shrink_intrin_floor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_floor(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META101:![0-9]+]], !DIExpression(), [[META104:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.floor.f32(float [[C:%.*]]), !dbg [[DBG105:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META102:![0-9]+]], !DIExpression(), [[DBG105]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META103:![0-9]+]], !DIExpression(), [[META106:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG107:![0-9]+]]
 ;
   %D = fpext float %C to double
   %E = call double @llvm.floor.f64(double %D)
@@ -176,6 +253,13 @@ define float @test_shrink_intrin_nearbyint(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.nearbyint.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_nearbyint(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META110:![0-9]+]], !DIExpression(), [[META113:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.nearbyint.f32(float [[C:%.*]]), !dbg [[DBG114:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META111:![0-9]+]], !DIExpression(), [[DBG114]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META112:![0-9]+]], !DIExpression(), [[META115:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG116:![0-9]+]]
+;
   %D = fpext float %C to double
   %E = call double @llvm.nearbyint.f64(double %D)
   %F = fptrunc double %E to float
@@ -186,6 +270,13 @@ define half @test_shrink_intrin_rint(half %C) {
 ; CHECK-LABEL: @test_shrink_intrin_rint(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.rint.f16(half [[C:%.*]])
 ; CHECK-NEXT:    ret half [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_rint(
+; DBG-VALID-NEXT:      #dbg_value(float poison, [[META119:![0-9]+]], !DIExpression(), [[META123:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call half @llvm.rint.f16(half [[C:%.*]]), !dbg [[DBG124:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float poison, [[META120:![0-9]+]], !DIExpression(), [[DBG124]])
+; DBG-VALID-NEXT:      #dbg_value(half [[TMP1]], [[META121:![0-9]+]], !DIExpression(), [[META125:![0-9]+]])
+; DBG-VALID-NEXT:    ret half [[TMP1]], !dbg [[DBG126:![0-9]+]]
 ;
   %D = fpext half %C to float
   %E = call float @llvm.rint.f32(float %D)
@@ -198,6 +289,13 @@ define float @test_shrink_intrin_round(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_round(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META129:![0-9]+]], !DIExpression(), [[META132:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.round.f32(float [[C:%.*]]), !dbg [[DBG133:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META130:![0-9]+]], !DIExpression(), [[DBG133]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META131:![0-9]+]], !DIExpression(), [[META134:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG135:![0-9]+]]
+;
   %D = fpext float %C to double
   %E = call double @llvm.round.f64(double %D)
   %F = fptrunc double %E to float
@@ -209,6 +307,13 @@ define float @test_shrink_intrin_roundeven(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_roundeven(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META138:![0-9]+]], !DIExpression(), [[META141:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.roundeven.f32(float [[C:%.*]]), !dbg [[DBG142:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META139:![0-9]+]], !DIExpression(), [[DBG142]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META140:![0-9]+]], !DIExpression(), [[META143:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG144:![0-9]+]]
+;
   %D = fpext float %C to double
   %E = call double @llvm.roundeven.f64(double %D)
   %F = fptrunc double %E to float
@@ -219,6 +324,13 @@ define float @test_shrink_intrin_trunc(float %C) {
 ; CHECK-LABEL: @test_shrink_intrin_trunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_trunc(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META147:![0-9]+]], !DIExpression(), [[META150:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call float @llvm.trunc.f32(float [[C:%.*]]), !dbg [[DBG151:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META148:![0-9]+]], !DIExpression(), [[DBG151]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META149:![0-9]+]], !DIExpression(), [[META152:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG153:![0-9]+]]
 ;
   %D = fpext float %C to double
   %E = call double @llvm.trunc.f64(double %D)
@@ -237,6 +349,16 @@ define <2 x float> @test_shrink_intrin_ceil_multi_use(<2 x float> %C) {
 ; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[D]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_ceil_multi_use(
+; DBG-VALID-NEXT:    [[D:%.*]] = fpext <2 x float> [[C:%.*]] to <2 x double>, !dbg [[DBG160:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[D]], [[META156:![0-9]+]], !DIExpression(), [[DBG160]])
+; DBG-VALID-NEXT:    [[E:%.*]] = call <2 x double> @llvm.ceil.v2f64(<2 x double> [[D]]), !dbg [[DBG161:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META158:![0-9]+]], !DIExpression(), [[DBG161]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc <2 x double> [[E]] to <2 x float>, !dbg [[DBG162:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> [[F]], [[META159:![0-9]+]], !DIExpression(), [[DBG162]])
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[D]]), !dbg [[DBG163:![0-9]+]]
+; DBG-VALID-NEXT:    ret <2 x float> [[F]], !dbg [[DBG164:![0-9]+]]
+;
   %D = fpext <2 x float> %C to <2 x double>
   %E = call <2 x double> @llvm.ceil.v2f64(<2 x double> %D)
   %F = fptrunc <2 x double> %E to <2 x float>
@@ -250,6 +372,15 @@ define <2 x float> @test_shrink_intrin_fabs_multi_use(<2 x float> %C) {
 ; CHECK-NEXT:    [[E:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[E]])
 ; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_fabs_multi_use(
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> poison, [[META167:![0-9]+]], !DIExpression(), [[META170:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[C:%.*]]), !dbg [[DBG171:![0-9]+]]
+; DBG-VALID-NEXT:    [[E:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>, !dbg [[DBG171]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META168:![0-9]+]], !DIExpression(), [[DBG171]])
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> [[TMP1]], [[META169:![0-9]+]], !DIExpression(), [[META172:![0-9]+]])
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[E]]), !dbg [[DBG173:![0-9]+]]
+; DBG-VALID-NEXT:    ret <2 x float> [[TMP1]], !dbg [[DBG174:![0-9]+]]
 ;
   %D = fpext <2 x float> %C to <2 x double>
   %E = call <2 x double> @llvm.fabs.v2f64(<2 x double> %D)
@@ -267,6 +398,17 @@ define <2 x float> @test_shrink_intrin_floor_multi_use(<2 x float> %C) {
 ; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[E]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_floor_multi_use(
+; DBG-VALID-NEXT:    [[D:%.*]] = fpext <2 x float> [[C:%.*]] to <2 x double>, !dbg [[DBG180:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[D]], [[META177:![0-9]+]], !DIExpression(), [[DBG180]])
+; DBG-VALID-NEXT:    [[E:%.*]] = call <2 x double> @llvm.floor.v2f64(<2 x double> [[D]]), !dbg [[DBG181:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META178:![0-9]+]], !DIExpression(), [[DBG181]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc <2 x double> [[E]] to <2 x float>, !dbg [[DBG182:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> [[F]], [[META179:![0-9]+]], !DIExpression(), [[DBG182]])
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[D]]), !dbg [[DBG183:![0-9]+]]
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[E]]), !dbg [[DBG184:![0-9]+]]
+; DBG-VALID-NEXT:    ret <2 x float> [[F]], !dbg [[DBG185:![0-9]+]]
+;
   %D = fpext <2 x float> %C to <2 x double>
   %E = call <2 x double> @llvm.floor.v2f64(<2 x double> %D)
   %F = fptrunc <2 x double> %E to <2 x float>
@@ -283,6 +425,16 @@ define <2 x float> @test_shrink_intrin_nearbyint_multi_use(<2 x float> %C) {
 ; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[D]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_nearbyint_multi_use(
+; DBG-VALID-NEXT:    [[D:%.*]] = fpext <2 x float> [[C:%.*]] to <2 x double>, !dbg [[DBG191:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[D]], [[META188:![0-9]+]], !DIExpression(), [[DBG191]])
+; DBG-VALID-NEXT:    [[E:%.*]] = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> [[D]]), !dbg [[DBG192:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META189:![0-9]+]], !DIExpression(), [[DBG192]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc <2 x double> [[E]] to <2 x float>, !dbg [[DBG193:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> [[F]], [[META190:![0-9]+]], !DIExpression(), [[DBG193]])
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[D]]), !dbg [[DBG194:![0-9]+]]
+; DBG-VALID-NEXT:    ret <2 x float> [[F]], !dbg [[DBG195:![0-9]+]]
+;
   %D = fpext <2 x float> %C to <2 x double>
   %E = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %D)
   %F = fptrunc <2 x double> %E to <2 x float>
@@ -296,6 +448,15 @@ define <2 x half> @test_shrink_intrin_rint_multi_use(<2 x half> %C) {
 ; CHECK-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    call void @use_v2f32(<2 x float> [[E]])
 ; CHECK-NEXT:    ret <2 x half> [[TMP1]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_rint_multi_use(
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> poison, [[META198:![0-9]+]], !DIExpression(), [[META201:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.rint.v2f16(<2 x half> [[C:%.*]]), !dbg [[DBG202:![0-9]+]]
+; DBG-VALID-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x float>, !dbg [[DBG202]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> [[E]], [[META199:![0-9]+]], !DIExpression(), [[DBG202]])
+; DBG-VALID-NEXT:      #dbg_value(<2 x half> [[TMP1]], [[META200:![0-9]+]], !DIExpression(), [[META203:![0-9]+]])
+; DBG-VALID-NEXT:    call void @use_v2f32(<2 x float> [[E]]), !dbg [[DBG204:![0-9]+]]
+; DBG-VALID-NEXT:    ret <2 x half> [[TMP1]], !dbg [[DBG205:![0-9]+]]
 ;
   %D = fpext <2 x half> %C to <2 x float>
   %E = call <2 x float> @llvm.rint.v2f32(<2 x float> %D)
@@ -312,6 +473,17 @@ define <2 x float> @test_shrink_intrin_round_multi_use(<2 x float> %C) {
 ; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[D]])
 ; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[E]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_round_multi_use(
+; DBG-VALID-NEXT:    [[D:%.*]] = fpext <2 x float> [[C:%.*]] to <2 x double>, !dbg [[DBG211:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[D]], [[META208:![0-9]+]], !DIExpression(), [[DBG211]])
+; DBG-VALID-NEXT:    [[E:%.*]] = call <2 x double> @llvm.round.v2f64(<2 x double> [[D]]), !dbg [[DBG212:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META209:![0-9]+]], !DIExpression(), [[DBG212]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc <2 x double> [[E]] to <2 x float>, !dbg [[DBG213:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> [[F]], [[META210:![0-9]+]], !DIExpression(), [[DBG213]])
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[D]]), !dbg [[DBG214:![0-9]+]]
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[E]]), !dbg [[DBG215:![0-9]+]]
+; DBG-VALID-NEXT:    ret <2 x float> [[F]], !dbg [[DBG216:![0-9]+]]
 ;
   %D = fpext <2 x float> %C to <2 x double>
   %E = call <2 x double> @llvm.round.v2f64(<2 x double> %D)
@@ -330,6 +502,17 @@ define <2 x float> @test_shrink_intrin_roundeven_multi_use(<2 x float> %C) {
 ; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[E]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_roundeven_multi_use(
+; DBG-VALID-NEXT:    [[D:%.*]] = fpext <2 x float> [[C:%.*]] to <2 x double>, !dbg [[DBG222:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[D]], [[META219:![0-9]+]], !DIExpression(), [[DBG222]])
+; DBG-VALID-NEXT:    [[E:%.*]] = call <2 x double> @llvm.roundeven.v2f64(<2 x double> [[D]]), !dbg [[DBG223:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META220:![0-9]+]], !DIExpression(), [[DBG223]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc <2 x double> [[E]] to <2 x float>, !dbg [[DBG224:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> [[F]], [[META221:![0-9]+]], !DIExpression(), [[DBG224]])
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[D]]), !dbg [[DBG225:![0-9]+]]
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[E]]), !dbg [[DBG226:![0-9]+]]
+; DBG-VALID-NEXT:    ret <2 x float> [[F]], !dbg [[DBG227:![0-9]+]]
+;
   %D = fpext <2 x float> %C to <2 x double>
   %E = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %D)
   %F = fptrunc <2 x double> %E to <2 x float>
@@ -346,6 +529,16 @@ define <2 x float> @test_shrink_intrin_trunc_multi_use(<2 x float> %C) {
 ; CHECK-NEXT:    call void @use_v2f64(<2 x double> [[D]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_trunc_multi_use(
+; DBG-VALID-NEXT:    [[D:%.*]] = fpext <2 x float> [[C:%.*]] to <2 x double>, !dbg [[DBG233:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[D]], [[META230:![0-9]+]], !DIExpression(), [[DBG233]])
+; DBG-VALID-NEXT:    [[E:%.*]] = call <2 x double> @llvm.trunc.v2f64(<2 x double> [[D]]), !dbg [[DBG234:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META231:![0-9]+]], !DIExpression(), [[DBG234]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc <2 x double> [[E]] to <2 x float>, !dbg [[DBG235:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x float> [[F]], [[META232:![0-9]+]], !DIExpression(), [[DBG235]])
+; DBG-VALID-NEXT:    call void @use_v2f64(<2 x double> [[D]]), !dbg [[DBG236:![0-9]+]]
+; DBG-VALID-NEXT:    ret <2 x float> [[F]], !dbg [[DBG237:![0-9]+]]
+;
   %D = fpext <2 x float> %C to <2 x double>
   %E = call <2 x double> @llvm.trunc.v2f64(<2 x double> %D)
   %F = fptrunc <2 x double> %E to <2 x float>
@@ -359,6 +552,13 @@ define float @test_shrink_intrin_fabs_fast(float %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_fabs_fast(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META240:![0-9]+]], !DIExpression(), [[META243:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call fast float @llvm.fabs.f32(float [[C:%.*]]), !dbg [[DBG244:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META241:![0-9]+]], !DIExpression(), [[DBG244]])
+; DBG-VALID-NEXT:      #dbg_value(float [[TMP1]], [[META242:![0-9]+]], !DIExpression(), [[META245:![0-9]+]])
+; DBG-VALID-NEXT:    ret float [[TMP1]], !dbg [[DBG246:![0-9]+]]
+;
   %D = fpext float %C to double
   %E = call fast double @llvm.fabs.f64(double %D)
   %F = fptrunc double %E to float
@@ -371,6 +571,13 @@ define float @test_no_shrink_intrin_floor(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; CHECK-NEXT:    ret float [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_intrin_floor(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.floor.f64(double [[D:%.*]]), !dbg [[DBG251:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META249:![0-9]+]], !DIExpression(), [[DBG251]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float, !dbg [[DBG252:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META250:![0-9]+]], !DIExpression(), [[DBG252]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG253:![0-9]+]]
+;
   %E = call double @llvm.floor.f64(double %D)
   %F = fptrunc double %E to float
   ret float %F
@@ -381,6 +588,13 @@ define float @test_no_shrink_intrin_ceil(double %D) {
 ; CHECK-NEXT:    [[E:%.*]] = call double @llvm.ceil.f64(double [[D:%.*]])
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; CHECK-NEXT:    ret float [[F]]
+;
+; DBG-VALID-LABEL: @test_no_shrink_intrin_ceil(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.ceil.f64(double [[D:%.*]]), !dbg [[DBG258:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META256:![0-9]+]], !DIExpression(), [[DBG258]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float, !dbg [[DBG259:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META257:![0-9]+]], !DIExpression(), [[DBG259]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG260:![0-9]+]]
 ;
   %E = call double @llvm.ceil.f64(double %D)
   %F = fptrunc double %E to float
@@ -393,6 +607,13 @@ define float @test_no_shrink_intrin_round(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; CHECK-NEXT:    ret float [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_intrin_round(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.round.f64(double [[D:%.*]]), !dbg [[DBG265:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META263:![0-9]+]], !DIExpression(), [[DBG265]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float, !dbg [[DBG266:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META264:![0-9]+]], !DIExpression(), [[DBG266]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG267:![0-9]+]]
+;
   %E = call double @llvm.round.f64(double %D)
   %F = fptrunc double %E to float
   ret float %F
@@ -403,6 +624,13 @@ define float @test_no_shrink_intrin_roundeven(double %D) {
 ; CHECK-NEXT:    [[E:%.*]] = call double @llvm.roundeven.f64(double [[D:%.*]])
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; CHECK-NEXT:    ret float [[F]]
+;
+; DBG-VALID-LABEL: @test_no_shrink_intrin_roundeven(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.roundeven.f64(double [[D:%.*]]), !dbg [[DBG272:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META270:![0-9]+]], !DIExpression(), [[DBG272]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float, !dbg [[DBG273:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META271:![0-9]+]], !DIExpression(), [[DBG273]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG274:![0-9]+]]
 ;
   %E = call double @llvm.roundeven.f64(double %D)
   %F = fptrunc double %E to float
@@ -415,6 +643,13 @@ define float @test_no_shrink_intrin_nearbyint(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; CHECK-NEXT:    ret float [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_intrin_nearbyint(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.nearbyint.f64(double [[D:%.*]]), !dbg [[DBG279:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META277:![0-9]+]], !DIExpression(), [[DBG279]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float, !dbg [[DBG280:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META278:![0-9]+]], !DIExpression(), [[DBG280]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG281:![0-9]+]]
+;
   %E = call double @llvm.nearbyint.f64(double %D)
   %F = fptrunc double %E to float
   ret float %F
@@ -426,6 +661,13 @@ define float @test_no_shrink_intrin_trunc(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; CHECK-NEXT:    ret float [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_intrin_trunc(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.trunc.f64(double [[D:%.*]]), !dbg [[DBG286:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META284:![0-9]+]], !DIExpression(), [[DBG286]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float, !dbg [[DBG287:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META285:![0-9]+]], !DIExpression(), [[DBG287]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG288:![0-9]+]]
+;
   %E = call double @llvm.trunc.f64(double %D)
   %F = fptrunc double %E to float
   ret float %F
@@ -436,6 +678,13 @@ define float @test_shrink_intrin_fabs_double_src(double %D) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[D:%.*]] to float
 ; CHECK-NEXT:    [[F:%.*]] = call float @llvm.fabs.f32(float [[TMP1]])
 ; CHECK-NEXT:    ret float [[F]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_fabs_double_src(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META291:![0-9]+]], !DIExpression(), [[META293:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = fptrunc double [[D:%.*]] to float, !dbg [[DBG294:![0-9]+]]
+; DBG-VALID-NEXT:    [[F:%.*]] = call float @llvm.fabs.f32(float [[TMP1]]), !dbg [[DBG294]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META292:![0-9]+]], !DIExpression(), [[DBG294]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG295:![0-9]+]]
 ;
   %E = call double @llvm.fabs.f64(double %D)
   %F = fptrunc double %E to float
@@ -449,6 +698,13 @@ define float @test_shrink_intrin_fabs_fast_double_src(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = call fast float @llvm.fabs.f32(float [[TMP1]])
 ; CHECK-NEXT:    ret float [[F]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_fabs_fast_double_src(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META298:![0-9]+]], !DIExpression(), [[META300:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = fptrunc double [[D:%.*]] to float, !dbg [[DBG301:![0-9]+]]
+; DBG-VALID-NEXT:    [[F:%.*]] = call fast float @llvm.fabs.f32(float [[TMP1]]), !dbg [[DBG301]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META299:![0-9]+]], !DIExpression(), [[DBG301]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG302:![0-9]+]]
+;
   %E = call fast double @llvm.fabs.f64(double %D)
   %F = fptrunc double %E to float
   ret float %F
@@ -457,6 +713,11 @@ define float @test_shrink_intrin_fabs_fast_double_src(double %D) {
 define float @test_shrink_float_convertible_constant_intrin_floor() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_floor(
 ; CHECK-NEXT:    ret float 2.000000e+00
+;
+; DBG-VALID-LABEL: @test_shrink_float_convertible_constant_intrin_floor(
+; DBG-VALID-NEXT:      #dbg_value(double 2.000000e+00, [[META305:![0-9]+]], !DIExpression(), [[META307:![0-9]+]])
+; DBG-VALID-NEXT:      #dbg_value(float 2.000000e+00, [[META306:![0-9]+]], !DIExpression(), [[META308:![0-9]+]])
+; DBG-VALID-NEXT:    ret float 2.000000e+00, !dbg [[DBG309:![0-9]+]]
 ;
   %E = call double @llvm.floor.f64(double 2.1)
   %F = fptrunc double %E to float
@@ -467,6 +728,11 @@ define float @test_shrink_float_convertible_constant_intrin_ceil() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_ceil(
 ; CHECK-NEXT:    ret float 3.000000e+00
 ;
+; DBG-VALID-LABEL: @test_shrink_float_convertible_constant_intrin_ceil(
+; DBG-VALID-NEXT:      #dbg_value(double 3.000000e+00, [[META312:![0-9]+]], !DIExpression(), [[META314:![0-9]+]])
+; DBG-VALID-NEXT:      #dbg_value(float 3.000000e+00, [[META313:![0-9]+]], !DIExpression(), [[META315:![0-9]+]])
+; DBG-VALID-NEXT:    ret float 3.000000e+00, !dbg [[DBG316:![0-9]+]]
+;
   %E = call double @llvm.ceil.f64(double 2.1)
   %F = fptrunc double %E to float
   ret float %F
@@ -475,6 +741,11 @@ define float @test_shrink_float_convertible_constant_intrin_ceil() {
 define float @test_shrink_float_convertible_constant_intrin_round() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_round(
 ; CHECK-NEXT:    ret float 2.000000e+00
+;
+; DBG-VALID-LABEL: @test_shrink_float_convertible_constant_intrin_round(
+; DBG-VALID-NEXT:      #dbg_value(double 2.000000e+00, [[META319:![0-9]+]], !DIExpression(), [[META321:![0-9]+]])
+; DBG-VALID-NEXT:      #dbg_value(float 2.000000e+00, [[META320:![0-9]+]], !DIExpression(), [[META322:![0-9]+]])
+; DBG-VALID-NEXT:    ret float 2.000000e+00, !dbg [[DBG323:![0-9]+]]
 ;
   %E = call double @llvm.round.f64(double 2.1)
   %F = fptrunc double %E to float
@@ -485,6 +756,11 @@ define float @test_shrink_float_convertible_constant_intrin_roundeven() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_roundeven(
 ; CHECK-NEXT:    ret float 2.000000e+00
 ;
+; DBG-VALID-LABEL: @test_shrink_float_convertible_constant_intrin_roundeven(
+; DBG-VALID-NEXT:      #dbg_value(double 2.000000e+00, [[META326:![0-9]+]], !DIExpression(), [[META328:![0-9]+]])
+; DBG-VALID-NEXT:      #dbg_value(float 2.000000e+00, [[META327:![0-9]+]], !DIExpression(), [[META329:![0-9]+]])
+; DBG-VALID-NEXT:    ret float 2.000000e+00, !dbg [[DBG330:![0-9]+]]
+;
   %E = call double @llvm.roundeven.f64(double 2.1)
   %F = fptrunc double %E to float
   ret float %F
@@ -493,6 +769,11 @@ define float @test_shrink_float_convertible_constant_intrin_roundeven() {
 define float @test_shrink_float_convertible_constant_intrin_nearbyint() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_nearbyint(
 ; CHECK-NEXT:    ret float 2.000000e+00
+;
+; DBG-VALID-LABEL: @test_shrink_float_convertible_constant_intrin_nearbyint(
+; DBG-VALID-NEXT:      #dbg_value(double 2.000000e+00, [[META333:![0-9]+]], !DIExpression(), [[META335:![0-9]+]])
+; DBG-VALID-NEXT:      #dbg_value(float 2.000000e+00, [[META334:![0-9]+]], !DIExpression(), [[META336:![0-9]+]])
+; DBG-VALID-NEXT:    ret float 2.000000e+00, !dbg [[DBG337:![0-9]+]]
 ;
   %E = call double @llvm.nearbyint.f64(double 2.1)
   %F = fptrunc double %E to float
@@ -503,6 +784,11 @@ define float @test_shrink_float_convertible_constant_intrin_trunc() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_trunc(
 ; CHECK-NEXT:    ret float 2.000000e+00
 ;
+; DBG-VALID-LABEL: @test_shrink_float_convertible_constant_intrin_trunc(
+; DBG-VALID-NEXT:      #dbg_value(double 2.000000e+00, [[META340:![0-9]+]], !DIExpression(), [[META342:![0-9]+]])
+; DBG-VALID-NEXT:      #dbg_value(float 2.000000e+00, [[META341:![0-9]+]], !DIExpression(), [[META343:![0-9]+]])
+; DBG-VALID-NEXT:    ret float 2.000000e+00, !dbg [[DBG344:![0-9]+]]
+;
   %E = call double @llvm.trunc.f64(double 2.1)
   %F = fptrunc double %E to float
   ret float %F
@@ -511,6 +797,11 @@ define float @test_shrink_float_convertible_constant_intrin_trunc() {
 define float @test_shrink_float_convertible_constant_intrin_fabs() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_fabs(
 ; CHECK-NEXT:    ret float 0x4000CCCCC0000000
+;
+; DBG-VALID-LABEL: @test_shrink_float_convertible_constant_intrin_fabs(
+; DBG-VALID-NEXT:      #dbg_value(double 2.100000e+00, [[META347:![0-9]+]], !DIExpression(), [[META349:![0-9]+]])
+; DBG-VALID-NEXT:      #dbg_value(float 0x4000CCCCC0000000, [[META348:![0-9]+]], !DIExpression(), [[META350:![0-9]+]])
+; DBG-VALID-NEXT:    ret float 0x4000CCCCC0000000, !dbg [[DBG351:![0-9]+]]
 ;
   %E = call double @llvm.fabs.f64(double 2.1)
   %F = fptrunc double %E to float
@@ -521,6 +812,11 @@ define float @test_shrink_float_convertible_constant_intrin_fabs() {
 define float @test_shrink_float_convertible_constant_intrin_fabs_fast() {
 ; CHECK-LABEL: @test_shrink_float_convertible_constant_intrin_fabs_fast(
 ; CHECK-NEXT:    ret float 0x4000CCCCC0000000
+;
+; DBG-VALID-LABEL: @test_shrink_float_convertible_constant_intrin_fabs_fast(
+; DBG-VALID-NEXT:      #dbg_value(double 2.100000e+00, [[META354:![0-9]+]], !DIExpression(), [[META356:![0-9]+]])
+; DBG-VALID-NEXT:      #dbg_value(float 0x4000CCCCC0000000, [[META355:![0-9]+]], !DIExpression(), [[META357:![0-9]+]])
+; DBG-VALID-NEXT:    ret float 0x4000CCCCC0000000, !dbg [[DBG358:![0-9]+]]
 ;
   %E = call fast double @llvm.fabs.f64(double 2.1)
   %F = fptrunc double %E to float
@@ -533,6 +829,13 @@ define half @test_no_shrink_mismatched_type_intrin_floor(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half
 ; CHECK-NEXT:    ret half [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_mismatched_type_intrin_floor(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.floor.f64(double [[D:%.*]]), !dbg [[DBG363:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META361:![0-9]+]], !DIExpression(), [[DBG363]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half, !dbg [[DBG364:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(half [[F]], [[META362:![0-9]+]], !DIExpression(), [[DBG364]])
+; DBG-VALID-NEXT:    ret half [[F]], !dbg [[DBG365:![0-9]+]]
+;
   %E = call double @llvm.floor.f64(double %D)
   %F = fptrunc double %E to half
   ret half %F
@@ -543,6 +846,13 @@ define half @test_no_shrink_mismatched_type_intrin_ceil(double %D) {
 ; CHECK-NEXT:    [[E:%.*]] = call double @llvm.ceil.f64(double [[D:%.*]])
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half
 ; CHECK-NEXT:    ret half [[F]]
+;
+; DBG-VALID-LABEL: @test_no_shrink_mismatched_type_intrin_ceil(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.ceil.f64(double [[D:%.*]]), !dbg [[DBG370:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META368:![0-9]+]], !DIExpression(), [[DBG370]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half, !dbg [[DBG371:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(half [[F]], [[META369:![0-9]+]], !DIExpression(), [[DBG371]])
+; DBG-VALID-NEXT:    ret half [[F]], !dbg [[DBG372:![0-9]+]]
 ;
   %E = call double @llvm.ceil.f64(double %D)
   %F = fptrunc double %E to half
@@ -555,6 +865,13 @@ define half @test_no_shrink_mismatched_type_intrin_round(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half
 ; CHECK-NEXT:    ret half [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_mismatched_type_intrin_round(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.round.f64(double [[D:%.*]]), !dbg [[DBG377:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META375:![0-9]+]], !DIExpression(), [[DBG377]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half, !dbg [[DBG378:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(half [[F]], [[META376:![0-9]+]], !DIExpression(), [[DBG378]])
+; DBG-VALID-NEXT:    ret half [[F]], !dbg [[DBG379:![0-9]+]]
+;
   %E = call double @llvm.round.f64(double %D)
   %F = fptrunc double %E to half
   ret half %F
@@ -565,6 +882,13 @@ define half @test_no_shrink_mismatched_type_intrin_roundeven(double %D) {
 ; CHECK-NEXT:    [[E:%.*]] = call double @llvm.roundeven.f64(double [[D:%.*]])
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half
 ; CHECK-NEXT:    ret half [[F]]
+;
+; DBG-VALID-LABEL: @test_no_shrink_mismatched_type_intrin_roundeven(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.roundeven.f64(double [[D:%.*]]), !dbg [[DBG384:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META382:![0-9]+]], !DIExpression(), [[DBG384]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half, !dbg [[DBG385:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(half [[F]], [[META383:![0-9]+]], !DIExpression(), [[DBG385]])
+; DBG-VALID-NEXT:    ret half [[F]], !dbg [[DBG386:![0-9]+]]
 ;
   %E = call double @llvm.roundeven.f64(double %D)
   %F = fptrunc double %E to half
@@ -577,6 +901,13 @@ define half @test_no_shrink_mismatched_type_intrin_nearbyint(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half
 ; CHECK-NEXT:    ret half [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_mismatched_type_intrin_nearbyint(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.nearbyint.f64(double [[D:%.*]]), !dbg [[DBG391:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META389:![0-9]+]], !DIExpression(), [[DBG391]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half, !dbg [[DBG392:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(half [[F]], [[META390:![0-9]+]], !DIExpression(), [[DBG392]])
+; DBG-VALID-NEXT:    ret half [[F]], !dbg [[DBG393:![0-9]+]]
+;
   %E = call double @llvm.nearbyint.f64(double %D)
   %F = fptrunc double %E to half
   ret half %F
@@ -588,6 +919,13 @@ define half @test_no_shrink_mismatched_type_intrin_trunc(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half
 ; CHECK-NEXT:    ret half [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_mismatched_type_intrin_trunc(
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.trunc.f64(double [[D:%.*]]), !dbg [[DBG398:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META396:![0-9]+]], !DIExpression(), [[DBG398]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to half, !dbg [[DBG399:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(half [[F]], [[META397:![0-9]+]], !DIExpression(), [[DBG399]])
+; DBG-VALID-NEXT:    ret half [[F]], !dbg [[DBG400:![0-9]+]]
+;
   %E = call double @llvm.trunc.f64(double %D)
   %F = fptrunc double %E to half
   ret half %F
@@ -598,6 +936,13 @@ define half @test_shrink_mismatched_type_intrin_fabs_double_src(double %D) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[D:%.*]] to half
 ; CHECK-NEXT:    [[F:%.*]] = call half @llvm.fabs.f16(half [[TMP1]])
 ; CHECK-NEXT:    ret half [[F]]
+;
+; DBG-VALID-LABEL: @test_shrink_mismatched_type_intrin_fabs_double_src(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META403:![0-9]+]], !DIExpression(), [[META405:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = fptrunc double [[D:%.*]] to half, !dbg [[DBG406:![0-9]+]]
+; DBG-VALID-NEXT:    [[F:%.*]] = call half @llvm.fabs.f16(half [[TMP1]]), !dbg [[DBG406]]
+; DBG-VALID-NEXT:      #dbg_value(half [[F]], [[META404:![0-9]+]], !DIExpression(), [[DBG406]])
+; DBG-VALID-NEXT:    ret half [[F]], !dbg [[DBG407:![0-9]+]]
 ;
   %E = call double @llvm.fabs.f64(double %D)
   %F = fptrunc double %E to half
@@ -611,6 +956,13 @@ define half @test_mismatched_type_intrin_fabs_fast_double_src(double %D) {
 ; CHECK-NEXT:    [[F:%.*]] = call fast half @llvm.fabs.f16(half [[TMP1]])
 ; CHECK-NEXT:    ret half [[F]]
 ;
+; DBG-VALID-LABEL: @test_mismatched_type_intrin_fabs_fast_double_src(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META410:![0-9]+]], !DIExpression(), [[META412:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = fptrunc double [[D:%.*]] to half, !dbg [[DBG413:![0-9]+]]
+; DBG-VALID-NEXT:    [[F:%.*]] = call fast half @llvm.fabs.f16(half [[TMP1]]), !dbg [[DBG413]]
+; DBG-VALID-NEXT:      #dbg_value(half [[F]], [[META411:![0-9]+]], !DIExpression(), [[DBG413]])
+; DBG-VALID-NEXT:    ret half [[F]], !dbg [[DBG414:![0-9]+]]
+;
   %E = call fast double @llvm.fabs.f64(double %D)
   %F = fptrunc double %E to half
   ret half %F
@@ -622,6 +974,13 @@ define <2 x double> @test_shrink_intrin_floor_fp16_vec(<2 x half> %C) {
 ; CHECK-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    ret <2 x double> [[E]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_floor_fp16_vec(
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> poison, [[META417:![0-9]+]], !DIExpression(), [[META419:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call arcp <2 x half> @llvm.floor.v2f16(<2 x half> [[C:%.*]]), !dbg [[DBG420:![0-9]+]]
+; DBG-VALID-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>, !dbg [[DBG420]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META418:![0-9]+]], !DIExpression(), [[DBG420]])
+; DBG-VALID-NEXT:    ret <2 x double> [[E]], !dbg [[DBG421:![0-9]+]]
+;
   %D = fpext <2 x half> %C to <2 x double>
   %E = call arcp <2 x double> @llvm.floor.v2f64(<2 x double> %D)
   ret <2 x double> %E
@@ -632,6 +991,14 @@ define float @test_shrink_intrin_ceil_fp16_src(half %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.ceil.f16(half [[C:%.*]])
 ; CHECK-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[F]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_ceil_fp16_src(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META424:![0-9]+]], !DIExpression(), [[META427:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call half @llvm.ceil.f16(half [[C:%.*]]), !dbg [[DBG428:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META425:![0-9]+]], !DIExpression(), [[DBG428]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float, !dbg [[DBG429:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META426:![0-9]+]], !DIExpression(), [[DBG429]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG430:![0-9]+]]
 ;
   %D = fpext half %C to double
   %E = call double @llvm.ceil.f64(double %D)
@@ -645,6 +1012,13 @@ define <2 x double> @test_shrink_intrin_round_fp16_vec(<2 x half> %C) {
 ; CHECK-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    ret <2 x double> [[E]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_round_fp16_vec(
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> poison, [[META433:![0-9]+]], !DIExpression(), [[META435:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.round.v2f16(<2 x half> [[C:%.*]]), !dbg [[DBG436:![0-9]+]]
+; DBG-VALID-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>, !dbg [[DBG436]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META434:![0-9]+]], !DIExpression(), [[DBG436]])
+; DBG-VALID-NEXT:    ret <2 x double> [[E]], !dbg [[DBG437:![0-9]+]]
+;
   %D = fpext <2 x  half> %C to <2 x double>
   %E = call <2 x double> @llvm.round.v2f64(<2 x double> %D)
   ret <2 x double> %E
@@ -656,6 +1030,13 @@ define <2 x double> @test_shrink_intrin_roundeven_fp16_vec(<2 x half> %C) {
 ; CHECK-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    ret <2 x double> [[E]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_roundeven_fp16_vec(
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> poison, [[META440:![0-9]+]], !DIExpression(), [[META442:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.roundeven.v2f16(<2 x half> [[C:%.*]]), !dbg [[DBG443:![0-9]+]]
+; DBG-VALID-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>, !dbg [[DBG443]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META441:![0-9]+]], !DIExpression(), [[DBG443]])
+; DBG-VALID-NEXT:    ret <2 x double> [[E]], !dbg [[DBG444:![0-9]+]]
+;
   %D = fpext <2 x  half> %C to <2 x double>
   %E = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %D)
   ret <2 x double> %E
@@ -666,6 +1047,14 @@ define float @test_shrink_intrin_nearbyint_fp16_src(half %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.nearbyint.f16(half [[C:%.*]])
 ; CHECK-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[F]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_nearbyint_fp16_src(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META447:![0-9]+]], !DIExpression(), [[META450:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call half @llvm.nearbyint.f16(half [[C:%.*]]), !dbg [[DBG451:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META448:![0-9]+]], !DIExpression(), [[DBG451]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float, !dbg [[DBG452:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META449:![0-9]+]], !DIExpression(), [[DBG452]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG453:![0-9]+]]
 ;
   %D = fpext half %C to double
   %E = call double @llvm.nearbyint.f64(double %D)
@@ -679,6 +1068,13 @@ define <2 x double> @test_shrink_intrin_trunc_fp16_src(<2 x half> %C) {
 ; CHECK-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>
 ; CHECK-NEXT:    ret <2 x double> [[E]]
 ;
+; DBG-VALID-LABEL: @test_shrink_intrin_trunc_fp16_src(
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> poison, [[META456:![0-9]+]], !DIExpression(), [[META458:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.trunc.v2f16(<2 x half> [[C:%.*]]), !dbg [[DBG459:![0-9]+]]
+; DBG-VALID-NEXT:    [[E:%.*]] = fpext <2 x half> [[TMP1]] to <2 x double>, !dbg [[DBG459]]
+; DBG-VALID-NEXT:      #dbg_value(<2 x double> [[E]], [[META457:![0-9]+]], !DIExpression(), [[DBG459]])
+; DBG-VALID-NEXT:    ret <2 x double> [[E]], !dbg [[DBG460:![0-9]+]]
+;
   %D = fpext <2 x half> %C to <2 x double>
   %E = call <2 x double> @llvm.trunc.v2f64(<2 x double> %D)
   ret <2 x double> %E
@@ -689,6 +1085,14 @@ define float @test_shrink_intrin_fabs_fp16_src(half %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[C:%.*]])
 ; CHECK-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[F]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_fabs_fp16_src(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META463:![0-9]+]], !DIExpression(), [[META466:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call half @llvm.fabs.f16(half [[C:%.*]]), !dbg [[DBG467:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META464:![0-9]+]], !DIExpression(), [[DBG467]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float, !dbg [[DBG468:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META465:![0-9]+]], !DIExpression(), [[DBG468]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG469:![0-9]+]]
 ;
   %D = fpext half %C to double
   %E = call double @llvm.fabs.f64(double %D)
@@ -702,6 +1106,14 @@ define float @test_shrink_intrin_fabs_fast_fp16_src(half %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast half @llvm.fabs.f16(half [[C:%.*]])
 ; CHECK-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[F]]
+;
+; DBG-VALID-LABEL: @test_shrink_intrin_fabs_fast_fp16_src(
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META472:![0-9]+]], !DIExpression(), [[META475:![0-9]+]])
+; DBG-VALID-NEXT:    [[TMP1:%.*]] = call fast half @llvm.fabs.f16(half [[C:%.*]]), !dbg [[DBG476:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double poison, [[META473:![0-9]+]], !DIExpression(), [[DBG476]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fpext half [[TMP1]] to float, !dbg [[DBG477:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META474:![0-9]+]], !DIExpression(), [[DBG477]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG478:![0-9]+]]
 ;
   %D = fpext half %C to double
   %E = call fast double @llvm.fabs.f64(double %D)
@@ -724,6 +1136,16 @@ define float @test_no_shrink_intrin_floor_multi_use_fpext(half %C) {
 ; DOUBLE-8BYTE-ALIGN-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; DOUBLE-8BYTE-ALIGN-NEXT:    ret float [[F]]
 ;
+; DBG-VALID-LABEL: @test_no_shrink_intrin_floor_multi_use_fpext(
+; DBG-VALID-NEXT:    [[D:%.*]] = fpext half [[C:%.*]] to double, !dbg [[DBG484:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[D]], [[META481:![0-9]+]], !DIExpression(), [[DBG484]])
+; DBG-VALID-NEXT:    store volatile double [[D]], ptr undef, align 8, !dbg [[DBG485:![0-9]+]]
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.floor.f64(double [[D]]), !dbg [[DBG486:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META482:![0-9]+]], !DIExpression(), [[DBG486]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float, !dbg [[DBG487:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META483:![0-9]+]], !DIExpression(), [[DBG487]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG488:![0-9]+]]
+;
   %D = fpext half %C to double
   store volatile double %D, ptr undef
   %E = call double @llvm.floor.f64(double %D)
@@ -745,6 +1167,16 @@ define float @test_no_shrink_intrin_fabs_multi_use_fpext(half %C) {
 ; DOUBLE-8BYTE-ALIGN-NEXT:    [[E:%.*]] = call double @llvm.fabs.f64(double [[D]])
 ; DOUBLE-8BYTE-ALIGN-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float
 ; DOUBLE-8BYTE-ALIGN-NEXT:    ret float [[F]]
+;
+; DBG-VALID-LABEL: @test_no_shrink_intrin_fabs_multi_use_fpext(
+; DBG-VALID-NEXT:    [[D:%.*]] = fpext half [[C:%.*]] to double, !dbg [[DBG494:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[D]], [[META491:![0-9]+]], !DIExpression(), [[DBG494]])
+; DBG-VALID-NEXT:    store volatile double [[D]], ptr undef, align 8, !dbg [[DBG495:![0-9]+]]
+; DBG-VALID-NEXT:    [[E:%.*]] = call double @llvm.fabs.f64(double [[D]]), !dbg [[DBG496:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(double [[E]], [[META492:![0-9]+]], !DIExpression(), [[DBG496]])
+; DBG-VALID-NEXT:    [[F:%.*]] = fptrunc double [[E]] to float, !dbg [[DBG497:![0-9]+]]
+; DBG-VALID-NEXT:      #dbg_value(float [[F]], [[META493:![0-9]+]], !DIExpression(), [[DBG497]])
+; DBG-VALID-NEXT:    ret float [[F]], !dbg [[DBG498:![0-9]+]]
 ;
   %D = fpext half %C to double
   store volatile double %D, ptr undef

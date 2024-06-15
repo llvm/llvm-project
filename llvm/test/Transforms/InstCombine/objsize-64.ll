@@ -25,13 +25,13 @@ define i64 @f2(ptr %esc) nounwind uwtable ssp personality ptr @__gxx_personality
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = invoke noalias dereferenceable(13) ptr @_Znwm(i64 13)
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
+; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       invoke.cont:
 ; CHECK-NEXT:    store ptr [[CALL]], ptr [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i64 13
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:            filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 0
 ; CHECK-NEXT:    tail call void @__cxa_call_unexpected(ptr [[TMP1]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
