@@ -1577,4 +1577,45 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
   let hasRegionVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// 2.19.5.4 reduction clause
+//===----------------------------------------------------------------------===//
+
+def ReductionOp : OpenMP_Op<"reduction"> {
+  let summary = "reduction construct";
+  let description = [{
+    Indicates the value that is produced by the current reduction-participating
+    entity for a reduction requested in some ancestor. The reduction is
+    identified by the accumulator, but the value of the accumulator may not be
+    updated immediately.
+  }];
+
+  let arguments= (ins AnyType:$operand, OpenMP_PointerLikeType:$accumulator);
+  let assemblyFormat = [{
+    $operand `,` $accumulator attr-dict `:` type($operand) `,` type($accumulator)
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// [Spec 5.2] 10.5 masked Construct
+//===----------------------------------------------------------------------===//
+def MaskedOp : OpenMP_Op<"masked"> {
+  let summary = "masked construct";
+  let description = [{
+    Masked construct allows to specify a structured block to be executed by a subset of 
+    threads of the current team. Filter clause allows to select the threads expected to
+    execute the region
+  }];
+
+  let arguments = (ins Optional<I32>:$filteredThreadId);
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(
+      `filter` `(` $filteredThreadId `:` type($filteredThreadId) `)`
+    ) $region attr-dict
+  }];
+}
+
 #endif // OPENMP_OPS
