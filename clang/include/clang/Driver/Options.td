@@ -2122,7 +2122,7 @@ def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
     MarshallingInfoNegativeFlag<DiagnosticOpts<"ElideType">>;
 def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbols">, Group<f_Group>;
 defm eliminate_unused_debug_types : OptOutCC1FFlag<"eliminate-unused-debug-types",
-  "Do not emit ", "Emit ", " debug info for defined but unused types">;
+  "Do not emit ", "Emit ", " debug info for defined but unused types", [ClangOption, CLOption]>;
 def femit_all_decls : Flag<["-"], "femit-all-decls">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Emit all declarations, even if unused">,
