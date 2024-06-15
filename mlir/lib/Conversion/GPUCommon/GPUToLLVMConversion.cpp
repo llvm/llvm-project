@@ -971,7 +971,8 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
                       adaptor.getGridSizeZ()},
       gpu::KernelDim3{adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
                       adaptor.getBlockSizeZ()},
-      adaptor.getDynamicSharedMemorySize(), arguments, stream, clusterSize);
+      adaptor.getDynamicSharedMemorySize(), arguments, stream, clusterSize,
+      adaptor.getNonPortableClusterSizeAttr());
   if (launchOp.getAsyncToken())
     rewriter.replaceOp(launchOp, {stream});
   else

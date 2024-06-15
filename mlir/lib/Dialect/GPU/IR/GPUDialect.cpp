@@ -649,7 +649,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
                      Type asyncTokenType, ValueRange asyncDependencies,
                      TypeRange workgroupAttributions,
                      TypeRange privateAttributions, Value clusterSizeX,
-                     Value clusterSizeY, Value clusterSizeZ) {
+                     Value clusterSizeY, Value clusterSizeZ,
+                     BoolAttr nonPortableClusterSize) {
   OpBuilder::InsertionGuard g(builder);
 
   // Add a WorkGroup attribution attribute. This attribute is required to
@@ -673,6 +674,9 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands(clusterSizeZ);
   if (dynamicSharedMemorySize)
     result.addOperands(dynamicSharedMemorySize);
+
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.nonPortableClusterSize = nonPortableClusterSize;
 
   // Create a kernel body region with kNumConfigRegionAttributes + N memory
   // attributions, where the first kNumConfigRegionAttributes arguments have
@@ -1085,7 +1089,8 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Type asyncTokenType,
                          ValueRange asyncDependencies,
-                         std::optional<KernelDim3> clusterSize) {
+                         std::optional<KernelDim3> clusterSize,
+                         BoolAttr nonPortableClusterSize) {
   result.addOperands(asyncDependencies);
   if (asyncTokenType)
     result.types.push_back(builder.getType<AsyncTokenType>());
@@ -1105,6 +1110,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
 
   Properties &prop = result.getOrAddProperties<Properties>();
   prop.kernel = kernelSymbol;
+  prop.nonPortableClusterSize = nonPortableClusterSize;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
   for (auto &sz : prop.operandSegmentSizes)
@@ -1126,7 +1132,8 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
                          SymbolRefAttr kernel, KernelDim3 gridSize,
                          KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
                          ValueRange kernelOperands, Value asyncObject,
-                         std::optional<KernelDim3> clusterSize) {
+                         std::optional<KernelDim3> clusterSize,
+                         BoolAttr nonPortableClusterSize) {
   // Add grid and block sizes as op operands, followed by the data operands.
   result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
                       getBlockSize.y, getBlockSize.z});
@@ -1139,6 +1146,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
     result.addOperands(asyncObject);
   Properties &prop = result.getOrAddProperties<Properties>();
   prop.kernel = kernel;
+  prop.nonPortableClusterSize = nonPortableClusterSize;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
   for (auto &sz : prop.operandSegmentSizes)
