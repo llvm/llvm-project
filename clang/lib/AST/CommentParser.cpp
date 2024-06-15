@@ -232,8 +232,8 @@ public:
     while (isWhitespace(*(Pos.BufferPtr - Offset)))
       Offset++;
 
-    // Once we've reached the whitespace, backtrack and check if the previous four
-    // characters are \par or @par.
+    // Once we've reached the whitespace, backtrack and check if the previous
+    // four characters are \par or @par.
     llvm::StringRef LineStart(Pos.BufferPtr - Offset - 3, 4);
     return LineStart.starts_with("\\par") || LineStart.starts_with("@par");
   }
