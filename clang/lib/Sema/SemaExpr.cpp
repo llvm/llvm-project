@@ -18112,7 +18112,8 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 
         if (FirstInstantiation || TSK != TSK_ImplicitInstantiation ||
             Func->isConstexpr()) {
-          if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
+          if (!Func->isConstexpr() &&
+              isa<CXXRecordDecl>(Func->getDeclContext()) &&
               cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
               CodeSynthesisContexts.size())
             PendingLocalImplicitInstantiations.push_back(
