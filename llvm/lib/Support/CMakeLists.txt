@@ -127,9 +127,6 @@ endif()
 
 add_subdirectory(BLAKE3)
 
-# Temporarily ignore SipHash.cpp before we fully integrate it into LLVMSupport.
-set(LLVM_OPTIONAL_SOURCES SipHash.cpp)
-
 add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
   AMDGPUMetadata.cpp
@@ -227,6 +224,7 @@ add_llvm_component_library(LLVMSupport
   SHA1.cpp
   SHA256.cpp
   Signposts.cpp
+  SipHash.cpp
   SlowDynamicAPInt.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
