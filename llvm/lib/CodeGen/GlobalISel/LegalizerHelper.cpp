@@ -1123,17 +1123,13 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
     // FIXME: Support other types
-    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    Type *FromTy =
+        getFloatTypeForLLT(Ctx, MRI.getType(MI.getOperand(1).getReg()));
     unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    if ((ToSize != 32 && ToSize != 64 && ToSize != 128) ||
-        (FromSize != 32 && FromSize != 64 && FromSize != 128))
+    if ((ToSize != 32 && ToSize != 64 && ToSize != 128) || !FromTy)
       return UnableToLegalize;
-    LegalizeResult Status =
-        conversionLibcall(MI, MIRBuilder, Type::getIntNTy(Ctx, ToSize),
-                          FromSize == 128  ? Type::getFP128Ty(Ctx)
-                          : FromSize == 64 ? Type::getDoubleTy(Ctx)
-                                           : Type::getFloatTy(Ctx),
-                          LocObserver);
+    LegalizeResult Status = conversionLibcall(
+        MI, MIRBuilder, Type::getIntNTy(Ctx, ToSize), FromTy, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
