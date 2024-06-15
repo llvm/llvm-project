@@ -3,9 +3,6 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-# Temporarily ignore SipHashTest.cpp before we fully integrate it.
-set(LLVM_OPTIONAL_SOURCES SipHashTest.cpp)
-
 add_llvm_unittest(SupportTests
   AddressRangeTest.cpp
   AlignmentTest.cpp
@@ -78,6 +75,7 @@ add_llvm_unittest(SupportTests
   ScopedPrinterTest.cpp
   SHA256.cpp
   SignalsTest.cpp
+  SipHashTest.cpp
   SourceMgrTest.cpp
   SpecialCaseListTest.cpp
   SuffixTreeTest.cpp
