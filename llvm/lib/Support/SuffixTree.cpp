@@ -11,11 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SuffixTree.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/SuffixTreeNode.h"
-#include <stack>
 
 using namespace llvm;
 
@@ -131,8 +129,7 @@ void SuffixTree::setLeafNodes() {
 
   // Traverse the tree in post-order.
   while (!ToVisit.empty()) {
-    SuffixTreeNode *CurrNode = ToVisit.back();
-    ToVisit.pop_back();
+    SuffixTreeNode *CurrNode = ToVisit. pop_back_val();
     if (auto *CurrInternalNode = dyn_cast<SuffixTreeInternalNode>(CurrNode)) {
       // The current node is an internal node.
       auto I = ChildrenMap.find(CurrInternalNode);
