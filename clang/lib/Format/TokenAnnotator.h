@@ -22,6 +22,7 @@ namespace format {
 
 enum LineType {
   LT_Invalid,
+  LT_AccessModifier, // Contains public/protected/private followed by colon.
   LT_ImportStatement,
   LT_ObjCDecl, // An @interface, @implementation, or @protocol line.
   LT_ObjCMethodDecl,

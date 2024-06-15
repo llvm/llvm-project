@@ -1970,6 +1970,7 @@ public:
       }
     }
 
+    bool SeenAccessModifier = false;
     bool KeywordVirtualFound = false;
     bool ImportStatement = false;
 
@@ -1978,7 +1979,9 @@ public:
       ImportStatement = true;
 
     while (CurrentToken) {
-      if (CurrentToken->is(tok::kw_virtual))
+      if (CurrentToken->isAccessSpecifier())
+        SeenAccessModifier = true;
+      else if (CurrentToken->is(tok::kw_virtual))
         KeywordVirtualFound = true;
       if (Style.isJavaScript()) {
         // export {...} from '...';
@@ -1998,6 +2001,8 @@ public:
       if (!consumeToken())
         return LT_Invalid;
     }
+    if (SeenAccessModifier)
+      return LT_AccessModifier;
     if (KeywordVirtualFound)
       return LT_VirtualFunctionDecl;
     if (ImportStatement)
