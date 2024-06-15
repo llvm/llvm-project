@@ -50,7 +50,25 @@ TEST(SipHashTest, SipHash_2_4_128) {
   }
 }
 
-// Below are the unmodified expected outputs from vectors.h
+// Tests for the ptrauth-specific SipHash wrapper.
+TEST(SipHashTest, PointerAuthSipHash) {
+  // Test some basic cases.
+  EXPECT_EQ(0xE793, getPointerAuthStableSipHash(""));
+  EXPECT_EQ(0xF468, getPointerAuthStableSipHash("strlen"));
+  EXPECT_EQ(0x2D15, getPointerAuthStableSipHash("_ZN1 ind; f"));
+
+  // Test some known strings that are already enshrined in the ABI.
+  EXPECT_EQ(0x6AE1, getPointerAuthStableSipHash("isa"));
+  EXPECT_EQ(0xB5AB, getPointerAuthStableSipHash("objc_class:superclass"));
+  EXPECT_EQ(0xC0BB, getPointerAuthStableSipHash("block_descriptor"));
+  EXPECT_EQ(0xC310, getPointerAuthStableSipHash("method_list_t"));
+
+  // Test limit cases where we differ from naive truncations from 64-bit hashes.
+  EXPECT_EQ(1, getPointerAuthStableSipHash("_Zptrkvttf"));
+  EXPECT_EQ(0xFFFF, getPointerAuthStableSipHash("_Zaflhllod"));
+}
+
+// Below are the unmodified expected outputs from the reference vectors.h.
 
 const uint8_t ExpectedSipHash64[64][8] = {
     {
