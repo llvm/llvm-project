@@ -28527,7 +28527,7 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
         RLo = DAG.getNode(ISD::AND, dl, VT, DAG.getBitcast(VT, RLo), Mask);
         RHi = DAG.getNode(X86ISD::VSHLI, dl, ExVT, RHi,
                           DAG.getTargetConstant(8, dl, MVT::i8));
-        return VT, DAG.getNode(ISD::OR, dl, VT, RLo, DAG.getBitcast(VT, RHi));
+        return DAG.getNode(ISD::OR, dl, VT, RLo, DAG.getBitcast(VT, RHi));
       }
     }
 
