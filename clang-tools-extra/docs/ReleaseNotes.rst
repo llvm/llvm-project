@@ -387,6 +387,10 @@ Changes in existing checks
 - Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
   check by adding support for detection of typedefs declared on function level.
 
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check ignoring the result
+  of ``std::move()`` is used as rvalue.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by
   detecting more cases of constant access. In particular, pointers can be
