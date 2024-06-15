@@ -34,6 +34,26 @@ define <4 x i32> @combine_pmaddwd_zero_commute(<8 x i16> %a0, <8 x i16> %a1) {
   ret <4 x i32> %1
 }
 
+; TODO: pmaddwd knownbits handling
+define i32 @combine_pmaddwd_constant() {
+; SSE-LABEL: combine_pmaddwd_constant:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmovsxbw {{.*#+}} xmm0 = [65535,2,3,65532,65531,6,7,65528]
+; SSE-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [65531,7,65527,65525,13,65521,17,65517]
+; SSE-NEXT:    pextrd $2, %xmm0, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pmaddwd_constant:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovsxbw {{.*#+}} xmm0 = [65535,2,3,65532,65531,6,7,65528]
+; AVX-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [65531,7,65527,65525,13,65521,17,65517]
+; AVX-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX-NEXT:    retq
+  %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> <i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8>, <8 x i16> <i16 -5, i16 7, i16 -9, i16 -11, i16 13, i16 -15, i16 17, i16 -19>)
+  %2 = extractelement <4 x i32> %1, i32 2 ; (-5*13)+(6*-15) = -155
+  ret i32 %2
+}
+
 define <8 x i16> @combine_pmaddubsw_zero(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: combine_pmaddubsw_zero:
 ; SSE:       # %bb.0:
