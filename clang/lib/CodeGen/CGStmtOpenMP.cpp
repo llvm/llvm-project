@@ -40,6 +40,7 @@
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
+#define DEBUG_TYPE "clang-openmp-codegen"
 
 #define TTL_CODEGEN_TYPE "target-teams-loop-codegen"
 

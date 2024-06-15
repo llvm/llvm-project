@@ -40,12 +40,15 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
 #include <numeric>
 #include <optional>
+
+#define DEBUG_TYPE "clang-openmp-codegen"
 
 using namespace clang;
 using namespace CodeGen;
@@ -8868,9 +8871,11 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
   }
 
   PresumedLoc PLoc = CGF.getContext().getSourceManager().getPresumedLoc(Loc);
-  return OMPBuilder.getOrCreateSrcLocStr(PLoc.getFilename(), ExprName,
+  auto *Str =  OMPBuilder.getOrCreateSrcLocStr(PLoc.getFilename(), ExprName,
                                          PLoc.getLine(), PLoc.getColumn(),
                                          SrcLocStrSize);
+  LLVM_DEBUG(llvm::dbgs() << "Output of emitMappingInfo: " << *Str << "\n");
+  return Str;
 }
 
 /// Emit the arrays used to pass the captures and map information to the
@@ -9484,7 +9489,227 @@ llvm::Value *emitDynCGGroupMem(const OMPExecutableDirective &D,
   }
   return DynCGroupMem;
 }
+static void genMapInfo(const OMPExecutableDirective &D, CodeGenFunction &CGF,
+                       const CapturedStmt &CS, llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
+                       llvm::OpenMPIRBuilder &OMPBuilder,
+                       MappableExprsHandler::MapCombinedInfoTy &CombinedInfo) {
+  // Get mappable expression information.
+  MappableExprsHandler MEHandler(D, CGF);
+  llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
+  llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
+  CodeGenModule &CGM = CGF.CGM;
+  auto RI = CS.getCapturedRecordDecl()->field_begin();
+  auto *CV = CapturedVars.begin();
+  for (CapturedStmt::const_capture_iterator CI = CS.capture_begin(),
+                                            CE = CS.capture_end();
+       CI != CE; ++CI, ++RI, ++CV) {
+    MappableExprsHandler::MapCombinedInfoTy CurInfo;
+    MappableExprsHandler::StructRangeInfoTy PartialStruct;
 
+    // VLA sizes are passed to the outlined region by copy and do not have map
+    // information associated.
+    if (CI->capturesVariableArrayType()) {
+      CurInfo.Exprs.push_back(nullptr);
+      CurInfo.BasePointers.push_back(*CV);
+      CurInfo.DevicePtrDecls.push_back(nullptr);
+      CurInfo.DevicePointers.push_back(
+          MappableExprsHandler::DeviceInfoTy::None);
+      CurInfo.Pointers.push_back(*CV);
+      CurInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+          CGF.getTypeSize(RI->getType()), CGF.Int64Ty, /*isSigned=*/true));
+      // Copy to the device as an argument. No need to retrieve it.
+      CurInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
+                              OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
+                              OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      CurInfo.Mappers.push_back(nullptr);
+    } else {
+      // If we have any information in the map clause, we use it, otherwise we
+      // just do a default mapping.
+      MEHandler.generateInfoForCapture(CI, *CV, CurInfo, PartialStruct);
+      if (!CI->capturesThis())
+        MappedVarSet.insert(CI->getCapturedVar());
+      else
+        MappedVarSet.insert(nullptr);
+      if (CurInfo.BasePointers.empty() && !PartialStruct.Base.isValid())
+        MEHandler.generateDefaultMapInfo(*CI, **RI, *CV, CurInfo);
+      // Generate correct mapping for variables captured by reference in
+      // lambdas.
+      if (CI->capturesVariable())
+        MEHandler.generateInfoForLambdaCaptures(CI->getCapturedVar(), *CV,
+                                                CurInfo, LambdaPointers);
+    }
+    // We expect to have at least an element of information for this capture.
+    assert((!CurInfo.BasePointers.empty() || PartialStruct.Base.isValid()) &&
+           "Non-existing map pointer for capture!");
+    assert(CurInfo.BasePointers.size() == CurInfo.Pointers.size() &&
+           CurInfo.BasePointers.size() == CurInfo.Sizes.size() &&
+           CurInfo.BasePointers.size() == CurInfo.Types.size() &&
+           CurInfo.BasePointers.size() == CurInfo.Mappers.size() &&
+           "Inconsistent map information sizes!");
+
+    // If there is an entry in PartialStruct it means we have a struct with
+    // individual members mapped. Emit an extra combined entry.
+    if (PartialStruct.Base.isValid()) {
+      CombinedInfo.append(PartialStruct.PreliminaryMapData);
+      MEHandler.emitCombinedEntry(
+          CombinedInfo, CurInfo.Types, PartialStruct, CI->capturesThis(),
+          OMPBuilder, nullptr,
+          !PartialStruct.PreliminaryMapData.BasePointers.empty());
+    }
+
+    // We need to append the results of this capture to what we already have.
+    CombinedInfo.append(CurInfo);
+  }
+  // Adjust MEMBER_OF flags for the lambdas captures.
+  MEHandler.adjustMemberOfForLambdaCaptures(
+      OMPBuilder, LambdaPointers, CombinedInfo.BasePointers,
+      CombinedInfo.Pointers, CombinedInfo.Types);
+  // Map any list items in a map clause that were not captures because they
+  // weren't referenced within the construct.
+  MEHandler.generateAllInfo(CombinedInfo, OMPBuilder, MappedVarSet);
+
+  auto FillInfoMap = [&](MappableExprsHandler::MappingExprInfo &MapExpr) {
+    return emitMappingInformation(CGF, OMPBuilder, MapExpr);
+  };
+  if (CGM.getCodeGenOpts().getDebugInfo() !=
+      llvm::codegenoptions::NoDebugInfo) {
+    CombinedInfo.Names.resize(CombinedInfo.Exprs.size());
+    llvm::transform(CombinedInfo.Exprs, CombinedInfo.Names.begin(),
+                    FillInfoMap);
+  }
+}
+static void emitTargetCallKernelLaunchNew(
+    CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
+    const OMPExecutableDirective &D,
+    llvm::SmallVectorImpl<llvm::Value *> &CapturedVars, bool RequiresOuterTask,
+    const CapturedStmt &CS, bool OffloadingMandatory,
+    llvm::PointerIntPair<const Expr *, 2, OpenMPDeviceClauseModifier> Device,
+    llvm::Value *OutlinedFnID, CodeGenFunction::OMPTargetDataInfo &InputInfo,
+    llvm::Value *&MapTypesArray, llvm::Value *&MapNamesArray,
+    llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                     const OMPLoopDirective &D)>
+        SizeEmitter,
+    CodeGenFunction &CGF, CodeGenModule &CGM) {
+  llvm::OpenMPIRBuilder &OMPBuilder = OMPRuntime->getOMPBuilder();
+
+  // Fill up the arrays with all the captured variables.
+  MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
+  CGOpenMPRuntime::TargetDataInfo Info;
+
+  auto GenMapInfoCB = [&](llvm::OpenMPIRBuilder::InsertPointTy CodeGenIP)
+                          -> llvm::OpenMPIRBuilder::MapInfosTy & {
+    CGF.Builder.restoreIP(CodeGenIP);
+    genMapInfo(D, CGF, CS, CapturedVars, OMPBuilder, CombinedInfo);
+    return CombinedInfo;
+  };
+  auto DeviceAddrCB = [&](unsigned int I, llvm::Value *NewDecl) {
+    if (const ValueDecl *DevVD = CombinedInfo.DevicePtrDecls[I]) {
+      Info.CaptureDeviceAddrMap.try_emplace(DevVD, NewDecl);
+    }
+  };
+
+  auto CustomMapperCB = [&](unsigned int I) {
+    llvm::Value *MFunc = nullptr;
+    if (CombinedInfo.Mappers[I]) {
+      Info.HasMapper = true;
+      MFunc = CGF.CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
+          cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
+    }
+    return MFunc;
+  };
+  // Fill up the arrays and create the arguments.
+  LLVM_DEBUG(llvm::dbgs() << "emitTargetCallKernelLaunchNew:InsertBlock before emitting offload arrays: " << *CGF.Builder.GetInsertBlock() << "\n");
+  OMPBuilder.emitOffloadingArrays(llvm::OpenMPIRBuilder::InsertPointTy(CGF.AllocaInsertPt->getParent(),
+                                                                       CGF.AllocaInsertPt->getIterator()),
+                                  CGF.Builder.saveIP(), Info,
+                                  GenMapInfoCB, /*IsNonContiguous=*/true,
+                                  DeviceAddrCB, CustomMapperCB);
+  bool EmitDebug = !CombinedInfo.Names.empty();
+  OMPBuilder.emitOffloadingArraysArgument(CGF.Builder, Info.RTArgs, Info,
+                                          EmitDebug,
+                                          /*ForEndCall=*/false);
+
+  LLVM_DEBUG(llvm::dbgs() << "emitTargetCallKernelLaunchNew:InsertBlock after emitting offload arrays: " << *CGF.Builder.GetInsertBlock() << "\n");
+  InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
+  InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
+                                        CGF.VoidPtrTy, CGM.getPointerAlign());
+  InputInfo.PointersArray =
+      Address(Info.RTArgs.PointersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
+  InputInfo.SizesArray =
+      Address(Info.RTArgs.SizesArray, CGF.Int64Ty, CGM.getPointerAlign());
+  InputInfo.MappersArray =
+      Address(Info.RTArgs.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
+  MapTypesArray = Info.RTArgs.MapTypesArray;
+  MapNamesArray = Info.RTArgs.MapNamesArray;
+
+  auto &&ThenGen = [&OMPRuntime, OutlinedFn, &D, &CapturedVars,
+                    RequiresOuterTask, &CS, OffloadingMandatory, Device,
+                    OutlinedFnID, &InputInfo, &MapTypesArray, &MapNamesArray,
+                    SizeEmitter](CodeGenFunction &CGF, PrePostActionTy &) {
+    bool IsReverseOffloading = Device.getInt() == OMPC_DEVICE_ancestor;
+
+    if (IsReverseOffloading) {
+      // Reverse offloading is not supported, so just execute on the host.
+      // FIXME: This fallback solution is incorrect since it ignores the
+      // OMP_TARGET_OFFLOAD environment variable. Instead it would be better to
+      // assert here and ensure SEMA emits an error.
+      emitTargetCallFallback(OMPRuntime, OutlinedFn, D, CapturedVars,
+                             RequiresOuterTask, CS, OffloadingMandatory, CGF);
+      return;
+    }
+
+    bool HasNoWait = D.hasClausesOfKind<OMPNowaitClause>();
+    unsigned NumTargetItems = InputInfo.NumberOfTargetItems;
+
+    llvm::Value *BasePointersArray =
+        InputInfo.BasePointersArray.emitRawPointer(CGF);
+    llvm::Value *PointersArray = InputInfo.PointersArray.emitRawPointer(CGF);
+    llvm::Value *SizesArray = InputInfo.SizesArray.emitRawPointer(CGF);
+    llvm::Value *MappersArray = InputInfo.MappersArray.emitRawPointer(CGF);
+
+    auto &&EmitTargetCallFallbackCB =
+        [&OMPRuntime, OutlinedFn, &D, &CapturedVars, RequiresOuterTask, &CS,
+         OffloadingMandatory, &CGF](llvm::OpenMPIRBuilder::InsertPointTy IP)
+        -> llvm::OpenMPIRBuilder::InsertPointTy {
+      CGF.Builder.restoreIP(IP);
+      emitTargetCallFallback(OMPRuntime, OutlinedFn, D, CapturedVars,
+                             RequiresOuterTask, CS, OffloadingMandatory, CGF);
+      return CGF.Builder.saveIP();
+    };
+
+    llvm::Value *DeviceID = emitDeviceID(Device, CGF);
+    llvm::Value *NumTeams = OMPRuntime->emitNumTeamsForTargetDirective(CGF, D);
+    llvm::Value *NumThreads =
+        OMPRuntime->emitNumThreadsForTargetDirective(CGF, D);
+    llvm::Value *RTLoc = OMPRuntime->emitUpdateLocation(CGF, D.getBeginLoc());
+    llvm::Value *NumIterations =
+        OMPRuntime->emitTargetNumIterationsCall(CGF, D, SizeEmitter);
+    llvm::Value *DynCGGroupMem = emitDynCGGroupMem(D, CGF);
+    llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
+        CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
+
+    llvm::OpenMPIRBuilder::TargetDataRTArgs RTArgs(
+        BasePointersArray, PointersArray, SizesArray, MapTypesArray,
+        nullptr /* MapTypesArrayEnd */, MappersArray, MapNamesArray);
+
+    llvm::OpenMPIRBuilder::TargetKernelArgs Args(
+        NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
+        DynCGGroupMem, HasNoWait);
+
+    CGF.Builder.restoreIP(OMPRuntime->getOMPBuilder().emitKernelLaunch(
+        CGF.Builder, OutlinedFn, OutlinedFnID, EmitTargetCallFallbackCB, Args,
+        DeviceID, RTLoc, AllocaIP));
+  };
+
+  if (RequiresOuterTask) {
+    if (NewClangTargetTaskCodeGen) {
+      llvm::errs() << "Using OMPIRBuilder for target task codegen\n";
+    } else {
+      CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
+    }
+  } else
+    OMPRuntime->emitInlinedDirective(CGF, D.getDirectiveKind(), ThenGen);
+}
 static void emitTargetCallKernelLaunch(
     CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
     const OMPExecutableDirective &D,
@@ -9501,8 +9726,7 @@ static void emitTargetCallKernelLaunch(
 
   // Fill up the arrays with all the captured variables.
   MappableExprsHandler::MapCombinedInfoTy CombinedInfo;
-
-  // Get mappable expression information.
+// Get mappable expression information.
   MappableExprsHandler MEHandler(D, CGF);
   llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
   llvm::DenseSet<CanonicalDeclPtr<const Decl>> MappedVarSet;
@@ -9579,6 +9803,7 @@ static void emitTargetCallKernelLaunch(
 
   CGOpenMPRuntime::TargetDataInfo Info;
   // Fill up the arrays and create the arguments.
+  LLVM_DEBUG(llvm::dbgs() << "InsertBlock before emitting offload arrays: " << *CGF.Builder.GetInsertBlock() << "\n");
   emitOffloadingArrays(CGF, CombinedInfo, Info, OMPBuilder);
   bool EmitDebug = CGF.CGM.getCodeGenOpts().getDebugInfo() !=
                    llvm::codegenoptions::NoDebugInfo;
@@ -9586,6 +9811,7 @@ static void emitTargetCallKernelLaunch(
                                           EmitDebug,
                                           /*ForEndCall=*/false);
 
+  LLVM_DEBUG(llvm::dbgs() << "InsertBlock after emitting offload arrays: " << *CGF.Builder.GetInsertBlock() << "\n");
   InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
   InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
                                         CGF.VoidPtrTy, CGM.getPointerAlign());
@@ -9725,7 +9951,13 @@ void CGOpenMPRuntime::emitTargetCall(
                           OutlinedFnID, &InputInfo, &MapTypesArray,
                           &MapNamesArray, SizeEmitter](CodeGenFunction &CGF,
                                                        PrePostActionTy &) {
-    emitTargetCallKernelLaunch(this, OutlinedFn, D, CapturedVars,
+    if (OpenMPClangTargetCodegen)
+      emitTargetCallKernelLaunchNew(this, OutlinedFn, D, CapturedVars,
+                               RequiresOuterTask, CS, OffloadingMandatory,
+                               Device, OutlinedFnID, InputInfo, MapTypesArray,
+                               MapNamesArray, SizeEmitter, CGF, CGM);
+    else
+      emitTargetCallKernelLaunch(this, OutlinedFn, D, CapturedVars,
                                RequiresOuterTask, CS, OffloadingMandatory,
                                Device, OutlinedFnID, InputInfo, MapTypesArray,
                                MapNamesArray, SizeEmitter, CGF, CGM);
@@ -9748,6 +9980,7 @@ void CGOpenMPRuntime::emitTargetCall(
     } else {
       RegionCodeGenTy ThenRCG(TargetThenGen);
       ThenRCG(CGF);
+      LLVM_DEBUG(llvm::dbgs() << "Generated code after emitTargetCall:\n" << *(OutlinedFn->getParent()) << "\n");
     }
   } else {
     RegionCodeGenTy ElseRCG(TargetElseGen);

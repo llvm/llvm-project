@@ -7404,6 +7404,16 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
 }
 
 void OpenMPIRBuilder::emitOffloadingArrays(
+    InsertPointTy AllocaIP, InsertPointTy CodeGenIP, TargetDataInfo &Info,
+    GenMapInfoCallbackTy GenMapInfoCB, bool IsNonContiguous,
+    function_ref<void(unsigned int, Value *)> DeviceAddrCB,
+    function_ref<Value *(unsigned int)> CustomMapperCB) {
+
+  OpenMPIRBuilder::MapInfosTy &MapInfo = GenMapInfoCB(CodeGenIP);
+  emitOffloadingArrays(AllocaIP, CodeGenIP, MapInfo,
+                       Info, IsNonContiguous, DeviceAddrCB, CustomMapperCB);
+}
+void OpenMPIRBuilder::emitOffloadingArrays(
     InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
     TargetDataInfo &Info, bool IsNonContiguous,
     function_ref<void(unsigned int, Value *)> DeviceAddrCB,

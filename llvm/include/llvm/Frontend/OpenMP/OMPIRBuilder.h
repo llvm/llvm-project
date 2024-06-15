@@ -2358,6 +2358,22 @@ public:
                                    MapInfosTy &CombinedInfo,
                                    TargetDataInfo &Info);
 
+  /// Callback type for creating the map infos for the kernel parameters.
+  /// \param CodeGenIP is the insertion point where code should be generated,
+  ///        if any.
+  using GenMapInfoCallbackTy =
+      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)>;
+
+  /// Emit the arrays used to pass the captures and map information to the
+  /// offloading runtime library. If there is no map or capture information,
+  /// return nullptr by reference.
+  void emitOffloadingArrays(
+      InsertPointTy AllocaIP, InsertPointTy CodeGenIP,
+      TargetDataInfo &Info, GenMapInfoCallbackTy GenMapInfoCB,
+      bool IsNonContiguous = false,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
+      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+
   /// Emit the arrays used to pass the captures and map information to the
   /// offloading runtime library. If there is no map or capture information,
   /// return nullptr by reference.
@@ -2366,6 +2382,7 @@ public:
       TargetDataInfo &Info, bool IsNonContiguous = false,
       function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
+
 
   /// Creates offloading entry for the provided entry ID \a ID, address \a
   /// Addr, size \a Size, and flags \a Flags.
@@ -2770,11 +2787,6 @@ public:
   /// duplicating the body code.
   enum BodyGenTy { Priv, DupNoPriv, NoPriv };
 
-  /// Callback type for creating the map infos for the kernel parameters.
-  /// \param CodeGenIP is the insertion point where code should be generated,
-  ///        if any.
-  using GenMapInfoCallbackTy =
-      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)>;
 
   /// Generator for '#omp target data'
   ///
