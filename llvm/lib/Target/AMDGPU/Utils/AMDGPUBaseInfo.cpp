@@ -666,12 +666,18 @@ bool isAsyncStore(unsigned Opc) {
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx13;
 }
 
+bool isTensorStore(unsigned Opc) {
+  return Opc == TENSOR_STORE_FROM_LDS_gfx1210 ||
+         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1210;
+}
+
 unsigned getTemporalHintType(const MCInstrDesc TID) {
   if (TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet))
     return CPol::TH_TYPE_ATOMIC;
-
-  // An async store should have the temporal hint type of TH_TYPE_STORE
-  if (TID.mayStore() && (isAsyncStore(TID.getOpcode()) || !TID.mayLoad()))
+  unsigned Opc = TID.getOpcode();
+  // Async and Tensor store should have the temporal hint type of TH_TYPE_STORE
+  if (TID.mayStore() && (isAsyncStore(Opc) || isTensorStore(Opc) ||
+                         !TID.mayLoad()))
     return CPol::TH_TYPE_STORE;
 
   // This will default to returning TH_TYPE_LOAD when neither MayStore nor

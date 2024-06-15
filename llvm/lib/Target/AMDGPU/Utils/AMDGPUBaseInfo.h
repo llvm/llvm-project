@@ -949,6 +949,8 @@ getVOPDInstInfo(unsigned VOPDOpcode, const MCInstrInfo *InstrInfo);
 LLVM_READONLY
 bool isAsyncStore(unsigned Opc);
 LLVM_READONLY
+bool isTensorStore(unsigned Opc);
+LLVM_READONLY
 unsigned getTemporalHintType(const MCInstrDesc TID);
 
 LLVM_READONLY
