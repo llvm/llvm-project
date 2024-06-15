@@ -234,6 +234,27 @@ void initBufferWriter(ProfDataWriter *BufferWriter, char *Buffer) {
   BufferWriter->WriterCtx = Buffer;
 }
 
+/// Write all profile data size including value profile.
+COMPILER_RT_VISIBILITY int __llvm_profile_write_all_buffer(char *Buffer) {
+  ProfDataWriter BufferWriter;
+  initBufferWriter(&BufferWriter, Buffer);
+  return lprofWriteData(&BufferWriter, lprofGetVPDataReader(), 0);
+}
+
+/// Get all value profile data size. In this implementation,
+/// value profile data size is calculated with each function.
+COMPILER_RT_VISIBILITY
+uint64_t __llvm_profile_get_all_size_for_buffer(void) {
+  const __llvm_profile_data *DI = 0;
+  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
+  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
+  uint64_t TotalSize = 0;
+  for (DI = DataBegin; DI < DataEnd; DI++) {
+    TotalSize += lprofgetValueProfDataSize(lprofGetVPDataReader(), DI);
+  }
+  return __llvm_profile_get_size_for_buffer() + TotalSize;
+}
+
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer(char *Buffer) {
   ProfDataWriter BufferWriter;
   initBufferWriter(&BufferWriter, Buffer);
