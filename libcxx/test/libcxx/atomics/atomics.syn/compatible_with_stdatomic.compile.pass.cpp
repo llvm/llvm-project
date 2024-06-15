@@ -19,4 +19,4 @@
 
 #include <type_traits>
 
-static_assert(std::is_same<atomic_int, std::atomic<int>>::value, "");
+static_assert(std::is_same<atomic_int, std::atomic<int> >::value, "");
