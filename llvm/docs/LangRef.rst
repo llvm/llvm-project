@@ -1924,7 +1924,11 @@ example:
     even if this attribute says the frame pointer can be eliminated.
     The allowed string values are:
 
-     * ``"none"`` (default) - the frame pointer can be eliminated.
+     * ``"none"`` (default) - the frame pointer can be eliminated, and it's
+       register can be used for other purposes.
+     * ``"reserved"`` - the frame pointer register must either be updated to
+       point to a valid frame record for the current function, or not be
+       modified.
      * ``"non-leaf"`` - the frame pointer should be kept if the function calls
        other functions.
      * ``"all"`` - the frame pointer should be kept.
@@ -5654,7 +5658,7 @@ it. For example:
 
     call void asm sideeffect "something bad", ""(), !srcloc !42
     ...
-    !42 = !{ i32 1234567 }
+    !42 = !{ i64 1234567 }
 
 It is up to the front-end to make sense of the magic numbers it places
 in the IR. If the MDNode contains multiple constants, the code generator
@@ -6284,11 +6288,11 @@ DIExpression
 """"""""""""
 
 ``DIExpression`` nodes represent expressions that are inspired by the DWARF
-expression language. They are used in :ref:`debug intrinsics<dbg_intrinsics>`
-(such as ``llvm.dbg.declare`` and ``llvm.dbg.value``) to describe how the
+expression language. They are used in :ref:`debug records <debugrecords>`
+(such as ``#dbg_declare`` and ``#dbg_value``) to describe how the
 referenced LLVM variable relates to the source language variable. Debug
-intrinsics are interpreted left-to-right: start by pushing the value/address
-operand of the intrinsic onto a stack, then repeatedly push and evaluate
+expressions are interpreted left-to-right: start by pushing the value/address
+operand of the record onto a stack, then repeatedly push and evaluate
 opcodes from the DIExpression until the final variable description is produced.
 
 The current supported opcode vocabulary is limited:
@@ -6308,6 +6312,15 @@ The current supported opcode vocabulary is limited:
   (``16`` and ``DW_ATE_signed`` here, respectively) to which the top of the
   expression stack is to be converted. Maps into a ``DW_OP_convert`` operation
   that references a base type constructed from the supplied values.
+- ``DW_OP_LLVM_extract_bits_sext, 16, 8,`` specifies the offset and size
+  (``16`` and ``8`` here, respectively) of bits that are to be extracted and
+  sign-extended from the value at the top of the expression stack. If the top of
+  the expression stack is a memory location then these bits are extracted from
+  the value pointed to by that memory location. Maps into a ``DW_OP_shl``
+  followed by ``DW_OP_shra``.
+- ``DW_OP_LLVM_extract_bits_zext`` behaves similarly to
+  ``DW_OP_LLVM_extract_bits_sext``, but zero-extends instead of sign-extending.
+  Maps into a ``DW_OP_shl`` followed by ``DW_OP_shr``.
 - ``DW_OP_LLVM_tag_offset, tag_offset`` specifies that a memory tag should be
   optionally applied to the pointer. The memory tag is derived from the
   given tag offset in an implementation-defined manner.
@@ -6376,23 +6389,24 @@ The current supported opcode vocabulary is limited:
 
     IR for "*ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
+      #dbg_value(i32 4, !17, !DIExpression(DW_OP_LLVM_implicit_pointer), !20)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
+    !20 = !DILocation(line: 10, scope: !12)
 
     IR for "**ptr = 4;"
     --------------
-    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
+      #dbg_value(i32 4, !17,
+        !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer),
+        !21)
     !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
                            type: !18)
     !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
     !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
     !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
-                        DW_OP_LLVM_implicit_pointer))
+    !21 = !DILocation(line: 10, scope: !12)
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -6403,45 +6417,48 @@ sense that a debugger might modify its value), whereas *implicit locations*
 describe merely the actual *value* of a source variable which might not exist
 in registers or in memory (see ``DW_OP_stack_value``).
 
-A ``llvm.dbg.declare`` intrinsic describes an indirect value (the address) of a
-source variable. The first operand of the intrinsic must be an address of some
-kind. A DIExpression attached to the intrinsic refines this address to produce a
+A ``#dbg_declare`` record describes an indirect value (the address) of a
+source variable. The first operand of the record must be an address of some
+kind. A DIExpression operand to the record refines this address to produce a
 concrete location for the source variable.
 
-A ``llvm.dbg.value`` intrinsic describes the direct value of a source variable.
-The first operand of the intrinsic may be a direct or indirect value. A
-DIExpression attached to the intrinsic refines the first operand to produce a
+A ``#dbg_value`` record describes the direct value of a source variable.
+The first operand of the record may be a direct or indirect value. A
+DIExpression operand to the record refines the first operand to produce a
 direct value. For example, if the first operand is an indirect value, it may be
 necessary to insert ``DW_OP_deref`` into the DIExpression in order to produce a
-valid debug intrinsic.
+valid debug record.
 
 .. note::
 
    A DIExpression is interpreted in the same way regardless of which kind of
-   debug intrinsic it's attached to.
+   debug record it's attached to.
+
+   DIExpressions are always printed and parsed inline; they can never be
+   referenced by an ID (e.g. ``!1``).
 
 .. code-block:: text
 
-    !0 = !DIExpression(DW_OP_deref)
-    !1 = !DIExpression(DW_OP_plus_uconst, 3)
-    !1 = !DIExpression(DW_OP_constu, 3, DW_OP_plus)
-    !2 = !DIExpression(DW_OP_bit_piece, 3, 7)
-    !3 = !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
-    !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
-    !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
+    !DIExpression(DW_OP_deref)
+    !DIExpression(DW_OP_plus_uconst, 3)
+    !DIExpression(DW_OP_constu, 3, DW_OP_plus)
+    !DIExpression(DW_OP_bit_piece, 3, 7)
+    !DIExpression(DW_OP_deref, DW_OP_constu, 3, DW_OP_plus, DW_OP_LLVM_fragment, 3, 7)
+    !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
+    !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
 DIAssignID
 """"""""""
 
 ``DIAssignID`` nodes have no operands and are always distinct. They are used to
-link together `@llvm.dbg.assign` intrinsics (:ref:`debug
-intrinsics<dbg_intrinsics>`) and instructions that store in IR. See `Debug Info
-Assignment Tracking <AssignmentTracking.html>`_ for more info.
+link together (:ref:`#dbg_assign records <debugrecords>`) and instructions
+that store in IR. See `Debug Info Assignment Tracking
+<AssignmentTracking.html>`_ for more info.
 
 .. code-block:: llvm
 
     store i32 %a, ptr %a.addr, align 4, !DIAssignID !2
-    llvm.dbg.assign(metadata %a, metadata !1, metadata !DIExpression(), !2, metadata %a.addr, metadata !DIExpression()), !dbg !3
+    #dbg_assign(%a, !1, !DIExpression(), !2, %a.addr, !DIExpression(), !3)
 
     !2 = distinct !DIAssignID()
 
@@ -6455,17 +6472,18 @@ DIArgList
    also be updated to mirror whatever we decide here.
 
 ``DIArgList`` nodes hold a list of constant or SSA value references. These are
-used in :ref:`debug intrinsics<dbg_intrinsics>` (currently only in
-``llvm.dbg.value``) in combination with a ``DIExpression`` that uses the
+used in :ref:`debug records <debugrecords>` in combination with a
+``DIExpression`` that uses the
 ``DW_OP_LLVM_arg`` operator. Because a DIArgList may refer to local values
 within a function, it must only be used as a function argument, must always be
 inlined, and cannot appear in named metadata.
 
 .. code-block:: text
 
-    llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %b),
-                   metadata !16,
-                   metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus))
+    #dbg_value(!DIArgList(i32 %a, i32 %b),
+               !16,
+               !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus),
+               !26)
 
 DIFlags
 """""""
@@ -12944,12 +12962,12 @@ an extra level of indentation. As an example:
     #dbg_value(%inst1, !10, !DIExpression(), !11)
   %inst2 = op2 %inst1, %c
 
-These debug records are an optional replacement for
-:ref:`debug intrinsics<dbg_intrinsics>`. Debug records will be output if the
-``--write-experimental-debuginfo`` flag is passed to LLVM; it is an error for both
-records and intrinsics to appear in the same module. More information about
-debug records can be found in the `LLVM Source Level Debugging
-<SourceLevelDebugging.html#format-common-intrinsics>`_ document.
+These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
+Debug records will be disabled if ``--write-experimental-debuginfo=false`` is
+passed to LLVM; it is an error for both records and intrinsics to appear in the
+same module. More information about debug records can be found in the `LLVM
+Source Level Debugging <SourceLevelDebugging.html#format-common-intrinsics>`_
+document.
 
 .. _intrinsics:
 
@@ -14393,7 +14411,7 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.parameters(ptr <name>, i64 <hash>,
-                                                   i32 <bitmap-bytes>)
+                                                   i32 <bitmap-bits>)
 
 Overview:
 """""""""
@@ -14411,7 +14429,7 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bytes required by the function to
+The third argument is the number of bitmap bits required by the function to
 record the number of test vectors executed for each boolean expression.
 
 Semantics:
@@ -14478,7 +14496,7 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr <name>, i64 <hash>,
-                                                        i32 <bitmap-bytes>)
+                                                        i32 <unused>)
                                                         i32 <bitmap-index>,
                                                         ptr <mcdc-temp-addr>)
 
@@ -14488,10 +14506,9 @@ Overview:
 The '``llvm.instrprof.mcdc.tvbitmap.update``' intrinsic is used to track MC/DC
 test vector execution after each boolean expression has been fully executed.
 The overall value of the condition bitmap, after it has been successively
-updated using the '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic with
-the true or false evaluation of each condition, uniquely identifies an executed
-MC/DC test vector and is used as a bit index into the global test vector
-bitmap.
+updated with the true or false evaluation of each condition, uniquely identifies
+an executed MC/DC test vector and is used as a bit index into the global test
+vector bitmap.
 
 Arguments:
 """"""""""
@@ -14503,10 +14520,9 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bytes required by the function to
-record the number of test vectors executed for each boolean expression.
+The third argument is not used.
 
-The fourth argument is the byte index into the global test vector bitmap
+The fourth argument is the bit index into the global test vector bitmap
 corresponding to the function.
 
 The fifth argument is the address of the condition bitmap, which contains a
@@ -26228,6 +26244,42 @@ Semantics:
 
 This function returns the cosine of the specified operand, returning the
 same values as the libm ``cos`` functions would, and handles error
+conditions in the same way.
+
+
+'``llvm.experimental.constrained.tan``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.tan(<type> <op1>,
+                                         metadata <rounding mode>,
+                                         metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.tan``' intrinsic returns the tangent of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the tangent of the specified operand, returning the
+same values as the libm ``tan`` functions would, and handles error
 conditions in the same way.
 
 

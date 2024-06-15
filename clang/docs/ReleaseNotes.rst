@@ -135,6 +135,14 @@ Clang Frontend Potentially Breaking Changes
 - The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
   existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
 
+Clang Python Bindings Potentially Breaking Changes
+--------------------------------------------------
+- Renamed ``CursorKind`` variant 272 from ``OMP_TEAMS_DISTRIBUTE_DIRECTIVE``
+  to ``OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE``. The previous name was incorrect, it was a duplicate
+  of variant 271.
+- Renamed ``TypeKind`` variant 162 from ``OBJCCLASS`` to ``OBJCTYPEPARAM``.
+  The previous name was incorrect, it was a duplicate of variant 28.
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -213,6 +221,9 @@ C++23 Feature Support
 
 - Added a ``__reference_converts_from_temporary`` builtin, completing the necessary compiler support for
   `P2255R2: Type trait to determine if a reference binds to a temporary <https://wg21.link/P2255R2>`_.
+
+- Implemented `P2797R0: Static and explicit object member functions with the same parameter-type-lists <https://wg21.link/P2797R0>`_.
+  This completes the support for "deducing this".
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -336,6 +347,12 @@ Non-comprehensive list of changes in this release
   bodies when the function is defined in a system header file or when
   ``-Winvalid-constexpr`` is not enabled for the function definition, which
   should result in mild compile-time performance improvements.
+
+- Added ``__is_bitwise_cloneable`` which is used to check whether a type
+  can be safely copied by memcpy/memmove.
+
+- ``#pragma GCC diagnostic warning "-Wfoo"`` can now downgrade ``-Werror=foo``
+  errors and certain default-to-error ``-W`` diagnostics to warnings.
 
 New Compiler Flags
 ------------------
@@ -840,6 +857,7 @@ Bug Fixes to C++ Support
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+- Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
   forward-declared class. (#GH93512).
 
@@ -899,10 +917,13 @@ Arm and AArch64 Support
   a feature modifier for -march and -mcpu as well as via target attributes
   like ``target_version`` or ``target_clones``.
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
+    * Arm Cortex-R52+ (cortex-r52plus).
+    * Arm Cortex-R82AE (cortex-r82ae).
     * Arm Cortex-A78AE (cortex-a78ae).
     * Arm Cortex-A520AE (cortex-a520ae).
     * Arm Cortex-A720AE (cortex-a720ae).
-    * Arm Cortex-R82AE (cortex-r82ae).
+    * Arm Cortex-A725 (cortex-a725).
+    * Arm Cortex-X925 (cortex-x925).
     * Arm Neoverse-N3 (neoverse-n3).
     * Arm Neoverse-V3 (neoverse-v3).
     * Arm Neoverse-V3AE (neoverse-v3ae).
@@ -912,6 +933,10 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- The clang-cl ``/Ot`` compiler option ("optimize for speed", also implied by
+  ``/O2``) now maps to clang's ``-O3`` optimizataztion level instead of ``-O2``.
+  Users who prefer the old behavior can use ``clang-cl /Ot /clang:-O2 ...``.
 
 - Clang-cl now supports function targets with intrinsic headers. This allows
   for runtime feature detection of intrinsics. Previously under clang-cl
@@ -953,7 +978,7 @@ CUDA/HIP Language Changes
 
 CUDA Support
 ^^^^^^^^^^^^
-- Clang now supports CUDA SDK up to 12.4
+- Clang now supports CUDA SDK up to 12.5
 
 AIX Support
 ^^^^^^^^^^^
@@ -998,6 +1023,7 @@ AST Matchers
 - Fixed ``forEachArgumentWithParam`` and ``forEachArgumentWithParamType`` to
   not skip the explicit object parameter for operator calls.
 - Fixed captureVars assertion failure if not capturesVariables. (#GH76425)
+- ``forCallable`` now properly preserves binding on successful match. (#GH89657)
 
 clang-format
 ------------

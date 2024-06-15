@@ -23,7 +23,7 @@ bool equal(T LHS, T RHS) {
 template <typename T,
           std::enable_if_t<std::is_floating_point<T>::value, bool> = true>
 bool equal(T LHS, T RHS) {
-  return std::abs(LHS - RHS) < std::numeric_limits<T>::epsilon();
+  return __builtin_fabs(LHS - RHS) < std::numeric_limits<T>::epsilon();
 }
 
 template <typename T> void test() {

@@ -18,7 +18,6 @@ class XtensaInstrInfo;
 class XtensaRegisterInfo;
 
 class XtensaFrameLowering : public TargetFrameLowering {
-  const XtensaSubtarget &STI;
   const XtensaInstrInfo &TII;
   const XtensaRegisterInfo *TRI;
 

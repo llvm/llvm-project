@@ -12,7 +12,7 @@
 //
 //  1) This code must work with C programs that do not link to anything
 //     (including pthreads) and so it should not depend on any pthread
-//     functions.
+//     functions. If the user wishes to opt into using pthreads, they may do so.
 //  2) Atomic operations, rather than explicit mutexes, are most commonly used
 //     on code where contended operations are rate.
 //
@@ -51,20 +51,22 @@
 #endif
 static const long SPINLOCK_MASK = SPINLOCK_COUNT - 1;
 
-#ifndef CACHE_LINE_SIZE
-#define CACHE_LINE_SIZE 64
-#endif
-
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wgnu-designator"
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
 // Platform-specific lock implementation.  Falls back to spinlocks if none is
 // defined.  Each platform should define the Lock type, and corresponding
 // lock() and unlock() functions.
 ////////////////////////////////////////////////////////////////////////////////
-#if defined(__FreeBSD__) || defined(__DragonFly__)
+#if defined(_LIBATOMIC_USE_PTHREAD)
+#include <pthread.h>
+typedef pthread_mutex_t Lock;
+/// Unlock a lock.  This is a release operation.
+__inline static void unlock(Lock *l) { pthread_mutex_unlock(l); }
+/// Locks a lock.
+__inline static void lock(Lock *l) { pthread_mutex_lock(l); }
+/// locks for atomic operations
+static Lock locks[SPINLOCK_COUNT];
+
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
 #include <errno.h>
 // clang-format off
 #include <sys/types.h>
@@ -102,18 +104,21 @@ static Lock locks[SPINLOCK_COUNT]; // initialized to OS_SPINLOCK_INIT which is 0
 #else
 _Static_assert(__atomic_always_lock_free(sizeof(uintptr_t), 0),
                "Implementation assumes lock-free pointer-size cmpxchg");
-#include <pthread.h>
-#include <stdalign.h>
-typedef struct {
-  alignas(CACHE_LINE_SIZE) pthread_mutex_t m;
-} Lock;
+typedef _Atomic(uintptr_t) Lock;
 /// Unlock a lock.  This is a release operation.
-__inline static void unlock(Lock *l) { pthread_mutex_unlock(&l->m); }
-/// Locks a lock.
-__inline static void lock(Lock *l) { pthread_mutex_lock(&l->m); }
+__inline static void unlock(Lock *l) {
+  __c11_atomic_store(l, 0, __ATOMIC_RELEASE);
+}
+/// Locks a lock.  In the current implementation, this is potentially
+/// unbounded in the contended case.
+__inline static void lock(Lock *l) {
+  uintptr_t old = 0;
+  while (!__c11_atomic_compare_exchange_weak(l, &old, 1, __ATOMIC_ACQUIRE,
+                                             __ATOMIC_RELAXED))
+    old = 0;
+}
 /// locks for atomic operations
-static Lock locks[SPINLOCK_COUNT] = {
-    [0 ... SPINLOCK_COUNT - 1] = {PTHREAD_MUTEX_INITIALIZER}};
+static Lock locks[SPINLOCK_COUNT];
 #endif
 
 /// Returns a lock to use for a given pointer.

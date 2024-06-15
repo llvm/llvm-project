@@ -1105,7 +1105,7 @@ multiclass FlatAtomicNoRtnPatWithAddrSpace<string inst, string node, string addr
 
 multiclass FlatAtomicNoRtnPat <string inst, string node, ValueType vt,
                           ValueType data_vt = vt, bit isIntr = 0> :
-  FlatAtomicNoRtnPatBase<inst, node # "_noret" # !if(isIntr, "", "_"#vt.Size), vt, data_vt>;
+  FlatAtomicNoRtnPatBase<inst, node # "_noret" # !if(isIntr, "", "_"#vt), vt, data_vt>;
 
 
 multiclass FlatAtomicRtnPatBase <string inst, string node, ValueType vt,
@@ -1123,7 +1123,7 @@ multiclass FlatAtomicRtnPatWithAddrSpace<string inst, string intr, string addrSp
 
 multiclass FlatAtomicRtnPat <string inst, string node, ValueType vt,
                              ValueType data_vt = vt, bit isIntr = 0> :
-  FlatAtomicRtnPatBase<inst, node # !if(isIntr, "", "_"#vt.Size), vt, data_vt>;
+  FlatAtomicRtnPatBase<inst, node # !if(isIntr, "", "_"#vt), vt, data_vt>;
 
 
 multiclass FlatAtomicPat <string inst, string node, ValueType vt,
@@ -1155,8 +1155,8 @@ class FlatSignedAtomicPatBase <FLAT_Pseudo inst, SDPatternOperator node,
 multiclass FlatSignedAtomicPat <string inst, string node, ValueType vt,
                                 ValueType data_vt = vt, int complexity = 0,
                                 bit isIntr = 0> {
-  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_" # vt.Size));
-  defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_" # vt.Size));
+  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_" # vt));
+  defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_" # vt));
 
   let AddedComplexity = complexity in
   def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst#"_RTN"), rtnNode, vt, data_vt>;
@@ -1226,6 +1226,134 @@ class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
   (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset), vt:$in)),
   (inst $vaddr, $saddr, $offset, 0, $in)
 >;
+
+multiclass GlobalFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatLoadSignedPat <inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass GlobalFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : FlatSignedLoadPat_D16 <inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
+                               ValueType vt> {
+  def : FlatStoreSignedPat <inst, node, vt> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass GlobalFLATAtomicPatsNoRtnBase<string inst, string node, ValueType vt,
+                                         ValueType data_vt = vt> {
+  let AddedComplexity = 11 in
+  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<SDPatternOperator>(node), vt, data_vt>;
+
+  let AddedComplexity = 13 in
+  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node), vt, data_vt>;
+}
+
+multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
+                                       ValueType data_vt = vt, bit isPatFrags = 0> {
+  defvar rtnNode = !if(isPatFrags, !cast<PatFrags>(node), !cast<SDPatternOperator>(node));
+
+  let AddedComplexity = 10 in
+  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst#"_RTN"), rtnNode, vt, data_vt>;
+
+  let AddedComplexity = 12 in
+  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, vt, data_vt>;
+}
+
+multiclass GlobalFLATAtomicPatsNoRtn<string inst, string node, ValueType vt,
+                                     ValueType data_vt = vt, bit isIntr = 0> :
+  GlobalFLATAtomicPatsNoRtnBase<inst, node # "_noret" # !if(isIntr, "", "_" # vt), vt, data_vt>;
+
+multiclass GlobalFLATAtomicPatsRtn<string inst, string node, ValueType vt,
+                                   ValueType data_vt = vt, bit isIntr = 0> :
+  GlobalFLATAtomicPatsRtnBase<inst, node # !if(isIntr, "", "_" # vt), vt, data_vt>;
+
+multiclass GlobalFLATAtomicPats<string inst, string node, ValueType vt,
+                                ValueType data_vt = vt, bit isIntr = 0> :
+  GlobalFLATAtomicPatsNoRtn<inst, node, vt, data_vt, isIntr>,
+  GlobalFLATAtomicPatsRtn<inst, node, vt, data_vt, isIntr>;
+
+multiclass GlobalFLATAtomicPatsNoRtnWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
+                                                  ValueType vt, ValueType data_vt = vt> :
+  GlobalFLATAtomicPatsNoRtnBase<inst, intr # "_noret_" # addrSpaceSuffix, vt, data_vt>;
+
+multiclass GlobalFLATAtomicPatsRtnWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
+                                                ValueType vt, ValueType data_vt = vt> :
+  GlobalFLATAtomicPatsRtnBase<inst, intr # "_" # addrSpaceSuffix, vt, data_vt, /*isPatFrags*/ 1>;
+
+multiclass GlobalFLATAtomicPatsWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
+                                             ValueType vt, ValueType data_vt = vt> :
+  GlobalFLATAtomicPatsNoRtnWithAddrSpace<inst, intr, addrSpaceSuffix, vt, data_vt>,
+  GlobalFLATAtomicPatsRtnWithAddrSpace<inst, intr, addrSpaceSuffix, vt, data_vt>;
+
+multiclass GlobalFLATAtomicIntrPats<string inst, string node, ValueType vt,
+                                    ValueType data_vt = vt> {
+  defm : GlobalFLATAtomicPats<inst, node, vt, data_vt, /* isIntr */ 1>;
+}
+
+multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : ScratchLoadSignedPat <inst, node, vt> {
+    let AddedComplexity = 25;
+  }
+
+  def : ScratchLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 26;
+  }
+
+  def : ScratchLoadSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = HasFlatScratchSVSMode;
+    let AddedComplexity = 27;
+  }
+}
+
+multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
+                               ValueType vt> {
+  def : ScratchStoreSignedPat <inst, node, vt> {
+    let AddedComplexity = 25;
+  }
+
+  def : ScratchStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 26;
+  }
+
+  def : ScratchStoreSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = HasFlatScratchSVSMode;
+    let AddedComplexity = 27;
+  }
+}
+
+multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
+  def : ScratchLoadSignedPat_D16 <inst, node, vt> {
+    let AddedComplexity = 25;
+  }
+
+  def : ScratchLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
+    let AddedComplexity = 26;
+  }
+
+  def : ScratchLoadSVaddrPat_D16 <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = HasFlatScratchSVSMode;
+    let AddedComplexity = 27;
+  }
+}
 
 let OtherPredicates = [HasFlatAddressSpace] in {
 
@@ -1337,135 +1465,6 @@ def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
 }
 
 } // End OtherPredicates = [HasFlatAddressSpace]
-
-
-multiclass GlobalFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : FlatLoadSignedPat <inst, node, vt> {
-    let AddedComplexity = 10;
-  }
-
-  def : GlobalLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let AddedComplexity = 11;
-  }
-}
-
-multiclass GlobalFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : FlatSignedLoadPat_D16 <inst, node, vt> {
-    let AddedComplexity = 10;
-  }
-
-  def : GlobalLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let AddedComplexity = 11;
-  }
-}
-
-multiclass GlobalFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
-                               ValueType vt> {
-  def : FlatStoreSignedPat <inst, node, vt> {
-    let AddedComplexity = 10;
-  }
-
-  def : GlobalStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let AddedComplexity = 11;
-  }
-}
-
-multiclass GlobalFLATAtomicPatsNoRtnBase<string inst, string node, ValueType vt,
-                                         ValueType data_vt = vt> {
-  let AddedComplexity = 11 in
-  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), !cast<SDPatternOperator>(node), vt, data_vt>;
-
-  let AddedComplexity = 13 in
-  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR"), !cast<SDPatternOperator>(node), vt, data_vt>;
-}
-
-multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
-                                       ValueType data_vt = vt, bit isPatFrags = 0> {
-  defvar rtnNode = !if(isPatFrags, !cast<PatFrags>(node), !cast<SDPatternOperator>(node));
-
-  let AddedComplexity = 10 in
-  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst#"_RTN"), rtnNode, vt, data_vt>;
-
-  let AddedComplexity = 12 in
-  def : GlobalAtomicSaddrPat<!cast<FLAT_Pseudo>(inst#"_SADDR_RTN"), rtnNode, vt, data_vt>;
-}
-
-multiclass GlobalFLATAtomicPatsNoRtn<string inst, string node, ValueType vt,
-                                     ValueType data_vt = vt, bit isIntr = 0> :
-  GlobalFLATAtomicPatsNoRtnBase<inst, node # "_noret" # !if(isIntr, "", "_" # vt.Size), vt, data_vt>;
-
-multiclass GlobalFLATAtomicPatsRtn<string inst, string node, ValueType vt,
-                                   ValueType data_vt = vt, bit isIntr = 0> :
-  GlobalFLATAtomicPatsRtnBase<inst, node # !if(isIntr, "", "_" # vt.Size), vt, data_vt>;
-
-multiclass GlobalFLATAtomicPats<string inst, string node, ValueType vt,
-                                ValueType data_vt = vt, bit isIntr = 0> :
-  GlobalFLATAtomicPatsNoRtn<inst, node, vt, data_vt, isIntr>,
-  GlobalFLATAtomicPatsRtn<inst, node, vt, data_vt, isIntr>;
-
-multiclass GlobalFLATAtomicPatsNoRtnWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
-                                                  ValueType vt, ValueType data_vt = vt> :
-  GlobalFLATAtomicPatsNoRtnBase<inst, intr # "_noret_" # addrSpaceSuffix, vt, data_vt>;
-
-multiclass GlobalFLATAtomicPatsRtnWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
-                                                ValueType vt, ValueType data_vt = vt> :
-  GlobalFLATAtomicPatsRtnBase<inst, intr # "_" # addrSpaceSuffix, vt, data_vt, /*isPatFrags*/ 1>;
-
-multiclass GlobalFLATAtomicPatsWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
-                                             ValueType vt, ValueType data_vt = vt> :
-  GlobalFLATAtomicPatsNoRtnWithAddrSpace<inst, intr, addrSpaceSuffix, vt, data_vt>,
-  GlobalFLATAtomicPatsRtnWithAddrSpace<inst, intr, addrSpaceSuffix, vt, data_vt>;
-
-multiclass GlobalFLATAtomicIntrPats<string inst, string node, ValueType vt,
-                                    ValueType data_vt = vt> {
-  defm : GlobalFLATAtomicPats<inst, node, vt, data_vt, /* isIntr */ 1>;
-}
-
-multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : ScratchLoadSignedPat <inst, node, vt> {
-    let AddedComplexity = 25;
-  }
-
-  def : ScratchLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let AddedComplexity = 26;
-  }
-
-  def : ScratchLoadSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = HasFlatScratchSVSMode;
-    let AddedComplexity = 27;
-  }
-}
-
-multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
-                               ValueType vt> {
-  def : ScratchStoreSignedPat <inst, node, vt> {
-    let AddedComplexity = 25;
-  }
-
-  def : ScratchStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let AddedComplexity = 26;
-  }
-
-  def : ScratchStoreSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = HasFlatScratchSVSMode;
-    let AddedComplexity = 27;
-  }
-}
-
-multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
-  def : ScratchLoadSignedPat_D16 <inst, node, vt> {
-    let AddedComplexity = 25;
-  }
-
-  def : ScratchLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
-    let AddedComplexity = 26;
-  }
-
-  def : ScratchLoadSVaddrPat_D16 <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = HasFlatScratchSVSMode;
-    let AddedComplexity = 27;
-  }
-}
 
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
