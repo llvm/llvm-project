@@ -25,8 +25,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#if !(SANITIZER_NETBSD || SANITIZER_FREEBSD || SANITIZER_LINUX)
-#error "Support for your platform has not been implemented"
+#if !(SANITIZER_NETBSD || SANITIZER_FREEBSD || SANITIZER_LINUX || \
+      SANITIZER_SOLARIS)
+#  error "Support for your platform has not been implemented"
 #endif
 
 #if SANITIZER_NETBSD
@@ -37,6 +38,10 @@ extern "C" void *__mmap(void *, size_t, int, int, int, int, off_t);
 
 #if SANITIZER_FREEBSD
 #include <sys/thr.h>
+#endif
+
+#if SANITIZER_SOLARIS
+#  include <thread.h>
 #endif
 
 namespace safestack {
@@ -73,6 +78,8 @@ inline ThreadId GetTid() {
   long Tid;
   thr_self(&Tid);
   return Tid;
+#elif SANITIZER_SOLARIS
+  return thr_self();
 #else
   return syscall(SYS_gettid);
 #endif
@@ -83,6 +90,8 @@ inline int TgKill(pid_t pid, ThreadId tid, int sig) {
   DEFINE__REAL(int, _lwp_kill, int a, int b);
   (void)pid;
   return _REAL(_lwp_kill, tid, sig);
+#elif SANITIZER_SOLARIS
+  return syscall(SYS_lwp_kill, tid, sig);
 #elif SANITIZER_FREEBSD
   return syscall(SYS_thr_kill2, pid, tid, sig);
 #else
