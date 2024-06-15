@@ -71,6 +71,7 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
+#include "llvm/Transforms/Instrumentation/GPUSan.h"
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
@@ -162,6 +163,9 @@ static cl::opt<bool>
     EnablePGOInlineDeferral("enable-npm-pgo-inline-deferral", cl::init(true),
                             cl::Hidden,
                             cl::desc("Enable inline deferral during PGO"));
+
+static cl::opt<bool> EnableGPUSan("enable-gpu-san", cl::init(false), cl::Hidden,
+                                  cl::desc("Enable gpu san"));
 
 static cl::opt<bool> EnableModuleInliner("enable-module-inliner",
                                          cl::init(false), cl::Hidden,
@@ -1103,6 +1107,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
           PGOIndirectCallPromotion(true /* IsInLTO */, true /* SamplePGO */));
   }
 
+  if (EnableGPUSan)
+    MPM.addPass(GPUSanPass());
+
   // Try to perform OpenMP specific optimizations on the module. This is a
   // (quick!) no-op if there are no OpenMP runtime calls present in the module.
   MPM.addPass(OpenMPOptPass());
@@ -1887,6 +1894,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // Optimize globals again after we ran the inliner.
   MPM.addPass(GlobalOptPass());
+
+  if (EnableGPUSan)
+    MPM.addPass(GPUSanPass());
 
   // Run the OpenMPOpt pass again after global optimizations.
   MPM.addPass(OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink));

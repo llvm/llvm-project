@@ -85,6 +85,7 @@ set(include_files
 
 set(src_files
   ${source_directory}/Allocator.cpp
+  ${source_directory}/AllocationTracker.cpp
   ${source_directory}/Configuration.cpp
   ${source_directory}/Debug.cpp
   ${source_directory}/Kernel.cpp
