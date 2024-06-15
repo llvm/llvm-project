@@ -4326,6 +4326,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
+  unsigned BitWidth = VT.getScalarSizeInBits();
   SDLoc DL(N);
   bool UseVP = std::is_same_v<MatchContextClass, VPMatchContext>;
   MatchContextClass Matcher(DAG, TLI, N);
@@ -4355,8 +4356,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
         return FoldedVOp;
 
     N1IsConst = ISD::isConstantSplatVector(N1.getNode(), ConstValue1);
-    assert((!N1IsConst ||
-            ConstValue1.getBitWidth() == VT.getScalarSizeInBits()) &&
+    assert((!N1IsConst || ConstValue1.getBitWidth() == BitWidth) &&
            "Splat APInt should be element width");
   } else {
     N1IsConst = isa<ConstantSDNode>(N1);
@@ -4456,7 +4456,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
       unsigned ShAmt =
           MathOp == ISD::ADD ? (MulC - 1).logBase2() : (MulC + 1).logBase2();
       ShAmt += TZeros;
-      assert(ShAmt < VT.getScalarSizeInBits() &&
+      assert(ShAmt < BitWidth &&
              "multiply-by-constant generated out of bounds shift");
       SDValue Shl =
           DAG.getNode(ISD::SHL, DL, VT, N0, DAG.getConstant(ShAmt, DL, VT));
@@ -4523,6 +4523,16 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
     const APInt &C0 = N0.getConstantOperandAPInt(0);
     APInt NewStep = C0 * MulVal;
     return DAG.getStepVector(DL, VT, NewStep);
+  }
+
+  // Fold Y = sra (X, size(X)-1); mul (or (Y, 1), X) -> (abs X)
+  SDValue X;
+  if (!UseVP && (!LegalOperations || hasOperation(ISD::ABS, VT)) &&
+      sd_context_match(
+          N, Matcher,
+          m_Mul(m_Or(m_Sra(m_Value(X), m_SpecificInt(BitWidth - 1)), m_One()),
+                m_Deferred(X)))) {
+    return Matcher.getNode(ISD::ABS, DL, VT, X);
   }
 
   // Fold ((mul x, 0/undef) -> 0,
