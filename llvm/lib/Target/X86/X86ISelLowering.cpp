@@ -28503,17 +28503,19 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
 
     MVT ExVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
 
-    // For vXi8 mul-by-constant, try PMADDUBSW to avoid the need for extension.
+    // For vXi8 mul, try PMADDUBSW to avoid the need for extension.
     // Don't do this if we only need to unpack one half.
-    if (Subtarget.hasSSSE3() &&
-        ISD::isBuildVectorOfConstantSDNodes(B.getNode())) {
-      bool IsLoLaneAllZeroOrUndef = true;
-      bool IsHiLaneAllZeroOrUndef = true;
-      for (auto [Idx, Val] : enumerate(B->ops())) {
-        if ((Idx % NumEltsPerLane) >= (NumEltsPerLane / 2))
-          IsHiLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
-        else
-          IsLoLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
+    if (Subtarget.hasSSSE3()) {
+      bool BIsBuildVector = isa<BuildVectorSDNode>(B);
+      bool IsLoLaneAllZeroOrUndef = BIsBuildVector;
+      bool IsHiLaneAllZeroOrUndef = BIsBuildVector;
+      if (BIsBuildVector) {
+        for (auto [Idx, Val] : enumerate(B->ops())) {
+          if ((Idx % NumEltsPerLane) >= (NumEltsPerLane / 2))
+            IsHiLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
+          else
+            IsLoLaneAllZeroOrUndef &= isNullConstantOrUndef(Val);
+        }
       }
       if (!(IsLoLaneAllZeroOrUndef || IsHiLaneAllZeroOrUndef)) {
         SDValue Mask = DAG.getBitcast(VT, DAG.getConstant(0x00FF, dl, ExVT));
@@ -28527,6 +28529,7 @@ static SDValue LowerMUL(SDValue Op, const X86Subtarget &Subtarget,
         return DAG.getNode(ISD::OR, dl, VT, RLo, DAG.getBitcast(VT, RHi));
       }
     }
+
 
     // Extract the lo/hi parts to any extend to i16.
     // We're going to mask off the low byte of each result element of the
