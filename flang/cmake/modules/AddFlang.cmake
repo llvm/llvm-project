@@ -89,6 +89,7 @@ function(add_flang_library name)
       set_property(GLOBAL APPEND PROPERTY FLANG_LIBS ${name})
     endif()
     set_property(GLOBAL APPEND PROPERTY FLANG_EXPORTS ${name})
+    set_property(TARGET obj.${name} PROPERTY JOB_POOL_COMPILE flang_compile_job_pool)
   else()
     # Add empty "phony" target
     add_custom_target(${name})
