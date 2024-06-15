@@ -1459,18 +1459,18 @@ TEST(ConfigParseTest, GetStyleOutput) {
   testing::internal::CaptureStderr();
   auto Style = getStyle("{invalid_key=invalid_value}", "a.h", "LLVM", "", &FS,
                         /*AllowUnknownOptions=*/true);
-  const auto output = testing::internal::GetCapturedStderr();
+  auto Output = testing::internal::GetCapturedStderr();
   ASSERT_TRUE((bool)Style);
-  ASSERT_FALSE(output.empty());
+  ASSERT_FALSE(Output.empty());
 
   // Suppress stderr.
   testing::internal::CaptureStderr();
-  auto Style1 = getStyle("{invalid_key=invalid_value}", "a.h", "LLVM", "", &FS,
-                         /*AllowUnknownOptions=*/true,
-                         [](const llvm::SMDiagnostic &, void *) {});
-  const auto output1 = testing::internal::GetCapturedStderr();
-  ASSERT_TRUE((bool)Style1);
-  ASSERT_TRUE(output1.empty());
+  Style = getStyle("{invalid_key=invalid_value}", "a.h", "LLVM", "", &FS,
+                   /*AllowUnknownOptions=*/true,
+                   [](const llvm::SMDiagnostic &, void *) {});
+  Output = testing::internal::GetCapturedStderr();
+  ASSERT_TRUE((bool)Style);
+  ASSERT_TRUE(Output.empty());
 }
 
 } // namespace
