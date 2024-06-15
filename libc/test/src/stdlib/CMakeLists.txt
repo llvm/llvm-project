@@ -54,6 +54,44 @@ add_libc_test(
     libc.src.stdlib.atoll
 )
 
+add_libc_test(
+  block_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    block_test.cpp
+  DEPENDS
+    libc.src.stdlib.block
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.span
+    libc.src.string.memcpy
+)
+
+add_libc_test(
+  freelist_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    freelist_test.cpp
+  DEPENDS
+    libc.src.stdlib.freelist
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.span
+)
+
+add_libc_test(
+  freelist_heap_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    freelist_heap_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.span
+    libc.src.stdlib.freelist_heap
+    libc.src.string.memcmp
+    libc.src.string.memcpy
+)
+
 add_fp_unittest(
   strtod_test
   SUITE
@@ -354,7 +392,20 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.stdlib.exit
       libc.src.stdlib.atexit
       libc.src.__support.CPP.array
-      libc.src.__support.CPP.utility
+  )
+
+  add_libc_test(
+    at_quick_exit_test
+    # The EXPECT_EXITS test is only availible for unit tests.
+    UNIT_TEST_ONLY
+    SUITE
+      libc-stdlib-tests
+    SRCS
+      at_quick_exit_test.cpp
+    DEPENDS
+      libc.src.stdlib.quick_exit
+      libc.src.stdlib.at_quick_exit
+      libc.src.__support.CPP.array
   )
 
   add_libc_test(

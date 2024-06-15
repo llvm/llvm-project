@@ -61,6 +61,8 @@ public:
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
+  bool processDistSchedule(lower::StatementContext &stmtCtx,
+                           mlir::omp::DistScheduleClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
   bool processHasDeviceAddr(
@@ -205,11 +207,11 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
           lower::AddrAndBoundsInfo info =
               lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                                     mlir::omp::MapBoundsType>(
-                  converter, firOpBuilder, semaCtx, stmtCtx, *object.id(),
+                  converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
                   object.ref(), clauseLocation, asFortran, bounds,
                   treatIndexAsSection);
 
-          auto origSymbol = converter.getSymbolAddress(*object.id());
+          auto origSymbol = converter.getSymbolAddress(*object.sym());
           mlir::Value symAddr = info.addr;
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
@@ -226,12 +228,12 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          if (object.id()->owner().IsDerivedType()) {
+          if (object.sym()->owner().IsDerivedType()) {
             addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
                                         semaCtx);
           } else {
             result.mapVars.push_back(mapOp);
-            mapSymbols.push_back(object.id());
+            mapSymbols.push_back(object.sym());
           }
         }
       });

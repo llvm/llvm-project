@@ -184,8 +184,7 @@ static void replaceIndexOpsByInductionVariables(RewriterBase &rewriter,
   for (Operation *loopOp : loopOps) {
     llvm::TypeSwitch<Operation *>(loopOp)
         .Case([&](scf::ParallelOp parallelOp) {
-          allIvs.append(parallelOp.getInductionVars().begin(),
-                        parallelOp.getInductionVars().end());
+          allIvs.append(parallelOp.getInductionVars());
         })
         .Case([&](scf::ForOp forOp) {
           allIvs.push_back(forOp.getInductionVar());

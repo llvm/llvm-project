@@ -318,8 +318,8 @@ class isIntType<ValueType SrcVT> {
 // PatFrags for global memory operations
 //===----------------------------------------------------------------------===//
 
-defm atomic_load_fmin : binary_atomic_op_all_as<SIatomic_fmin, 0>;
-defm atomic_load_fmax : binary_atomic_op_all_as<SIatomic_fmax, 0>;
+defm atomic_load_fmin : binary_atomic_op_fp_all_as<SIatomic_fmin>;
+defm atomic_load_fmax : binary_atomic_op_fp_all_as<SIatomic_fmax>;
 
 //===----------------------------------------------------------------------===//
 // SDNodes PatFrags for loads/stores with a glue input.
@@ -709,15 +709,24 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
   >;
 
   let AddressSpaces = StoreAddress_local.AddrSpaces in {
-    defm _local_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue"), IsInt>;
-    defm _local_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue"),
-                                                 IsInt>;
+
+    if IsInt then {
+      defm _local_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+      defm _local_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+    } else {
+      defm _local_m0 : binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+      defm _local_m0 : noret_binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+     }
   }
 
   let AddressSpaces = StoreAddress_region.AddrSpaces in {
-    defm _region_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue"), IsInt>;
-    defm _region_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue"),
-                                                  IsInt>;
+    if IsInt then {
+      defm _region_m0 : binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+      defm _region_m0 : noret_binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+    } else {
+      defm _region_m0 : binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+      defm _region_m0 : noret_binary_atomic_op_fp <!cast<SDNode>(NAME#"_glue")>;
+    }
   }
 }
 
@@ -1071,8 +1080,8 @@ def omod0 : DefaultOperand<omod, 0>;
 // We need to make the cases with a default of 0 distinct from no
 // default to help deal with some cases where the operand appears
 // before a mandatory operand.
-def clampmod : NamedBitOperand<"clamp", "ClampSI">;
-def clampmod0 : DefaultOperand<clampmod, 0>;
+def Clamp : NamedBitOperand<"clamp">;
+def Clamp0 : DefaultOperand<Clamp, 0>;
 def highmod : NamedBitOperand<"high", "High">;
 
 def CPol : CustomOperand<i32, 1>;
@@ -1714,14 +1723,14 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
         // VOP1 with modifiers
         !if(HasOMod,
           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-               clampmod0:$clamp, omod0:$omod),
+               Clamp0:$clamp, omod0:$omod),
           !if (HasClamp,
-            (ins Src0Mod:$src0_modifiers, Src0RC:$src0, clampmod0:$clamp),
+            (ins Src0Mod:$src0_modifiers, Src0RC:$src0, Clamp0:$clamp),
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0)))
       /* else */,
         // VOP1 without modifiers
         !if (HasClamp,
-          (ins Src0RC:$src0, clampmod0:$clamp),
+          (ins Src0RC:$src0, Clamp0:$clamp),
           (ins Src0RC:$src0))
       /* endif */ ),
     !if (!eq(NumSrcArgs, 2),
@@ -1730,14 +1739,14 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
         !if(HasOMod,
           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                Src1Mod:$src1_modifiers, Src1RC:$src1,
-               clampmod0:$clamp, omod0:$omod),
+               Clamp0:$clamp, omod0:$omod),
           !con((ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                     Src1Mod:$src1_modifiers, Src1RC:$src1),
-                !if(HasClamp, (ins clampmod0:$clamp), (ins))))
+                !if(HasClamp, (ins Clamp0:$clamp), (ins))))
       /* else */,
         // VOP2 without modifiers
         !if (HasClamp,
-          (ins Src0RC:$src0, Src1RC:$src1, clampmod0:$clamp),
+          (ins Src0RC:$src0, Src1RC:$src1, Clamp0:$clamp),
           (ins Src0RC:$src0, Src1RC:$src1))
 
       /* endif */ )
@@ -1749,12 +1758,12 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                  Src1Mod:$src1_modifiers, Src1RC:$src1,
                  Src2Mod:$src2_modifiers, Src2RC:$src2,
-                 clampmod0:$clamp, omod0:$omod),
+                 Clamp0:$clamp, omod0:$omod),
             !if (HasClamp,
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2Mod:$src2_modifiers, Src2RC:$src2,
-                   clampmod0:$clamp),
+                   Clamp0:$clamp),
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2Mod:$src2_modifiers, Src2RC:$src2))),
@@ -1762,18 +1771,18 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
           !if (HasOMod,
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                  Src1Mod:$src1_modifiers, Src1RC:$src1,
-                 Src2RC:$src2, clampmod0:$clamp, omod0:$omod),
+                 Src2RC:$src2, Clamp0:$clamp, omod0:$omod),
             !if (HasClamp,
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2RC:$src2, clampmod0:$clamp),
+                   Src2RC:$src2, Clamp0:$clamp),
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2RC:$src2))))
       /* else */,
         // VOP3 without modifiers
         !if (HasClamp,
-          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, clampmod0:$clamp),
+          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, Clamp0:$clamp),
           (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2))
       /* endif */ ))));
 }
@@ -1919,12 +1928,12 @@ class getInsSDWA <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs
                !if(!not(HasSDWAOMod),
                   // VOP1_SDWA without omod
                   (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                       clampmod:$clamp,
+                       Clamp:$clamp,
                        dst_sel:$dst_sel, dst_unused:$dst_unused,
                        src0_sel:$src0_sel),
                   // VOP1_SDWA with omod
                   (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-                       clampmod:$clamp, omod:$omod,
+                       Clamp:$clamp, omod:$omod,
                        dst_sel:$dst_sel, dst_unused:$dst_unused,
                        src0_sel:$src0_sel)),
             !if(!eq(NumSrcArgs, 2),
@@ -1932,19 +1941,19 @@ class getInsSDWA <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs
                   // VOPC_SDWA
                   (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                        Src1Mod:$src1_modifiers, Src1RC:$src1,
-                       clampmod:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel),
+                       Clamp:$clamp, src0_sel:$src0_sel, src1_sel:$src1_sel),
                   // VOP2_SDWA
                   !if(!not(HasSDWAOMod),
                      // VOP2_SDWA without omod
                      (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                           Src1Mod:$src1_modifiers, Src1RC:$src1,
-                          clampmod:$clamp,
+                          Clamp:$clamp,
                           dst_sel:$dst_sel, dst_unused:$dst_unused,
                           src0_sel:$src0_sel, src1_sel:$src1_sel),
                      // VOP2_SDWA with omod
                      (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                           Src1Mod:$src1_modifiers, Src1RC:$src1,
-                          clampmod:$clamp, omod:$omod,
+                          Clamp:$clamp, omod:$omod,
                           dst_sel:$dst_sel, dst_unused:$dst_unused,
                           src0_sel:$src0_sel, src1_sel:$src1_sel))),
             (ins)/* endif */)));
@@ -2271,6 +2280,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field bit EnableClamp = _EnableClamp;
   field bit IsTrue16 = 0;
   field bit IsRealTrue16 = 0;
+  field bit IsInvalidSingleUseConsumer = 0;
+  field bit IsInvalidSingleUseProducer = 0;
 
   field ValueType DstVT = ArgVT[0];
   field ValueType Src0VT = ArgVT[1];

@@ -37,6 +37,7 @@ module mod { header "mod.h" }
 // CHECK-NEXT:         "[[PREFIX]]/mod.h"
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

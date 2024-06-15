@@ -41,12 +41,11 @@ convertExprToHLFIR(mlir::Location loc, Fortran::lower::AbstractConverter &,
                    const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
                    Fortran::lower::StatementContext &);
 
-inline fir::ExtendedValue
-translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         hlfir::Entity entity,
-                         Fortran::lower::StatementContext &context) {
+inline fir::ExtendedValue translateToExtendedValue(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity entity,
+    Fortran::lower::StatementContext &context, bool contiguityHint = false) {
   auto [exv, exvCleanup] =
-      hlfir::translateToExtendedValue(loc, builder, entity);
+      hlfir::translateToExtendedValue(loc, builder, entity, contiguityHint);
   if (exvCleanup)
     context.attachCleanup(*exvCleanup);
   return exv;

@@ -784,6 +784,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::C:
   case CallingConv::PreserveMost:
   case CallingConv::PreserveAll:
+  case CallingConv::PreserveNone:
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
@@ -1021,7 +1022,7 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
 
   if (!IsTailCall) {
     if (!PAI)
-      return IsIndirect ? getBLRCallOpcode(CallerF) : AArch64::BL;
+      return IsIndirect ? getBLRCallOpcode(CallerF) : (unsigned)AArch64::BL;
 
     assert(IsIndirect && "Direct call should not be authenticated");
     assert((PAI->Key == AArch64PACKey::IA || PAI->Key == AArch64PACKey::IB) &&

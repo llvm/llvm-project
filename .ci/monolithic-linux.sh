@@ -39,6 +39,7 @@ targets="${2}"
 
 echo "--- cmake"
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
+pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
