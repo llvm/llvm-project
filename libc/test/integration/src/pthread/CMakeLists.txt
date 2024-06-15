@@ -53,6 +53,7 @@ add_integration_test(
     libc.src.sys.wait.waitpid
     libc.src.stdlib.exit
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.new
     libc.src.__support.threads.sleep
 )
 

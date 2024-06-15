@@ -138,7 +138,7 @@ namespace {
     DenseSet<Register> RegsToClearKillFlags;
 
     using AllSuccsCache =
-        DenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
+        SmallDenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
 
     /// DBG_VALUE pointer and flag. The flag is true if this DBG_VALUE is
     /// post-dominated by another DBG_VALUE of the same variable location.

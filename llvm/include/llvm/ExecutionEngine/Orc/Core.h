@@ -361,7 +361,7 @@ public:
   /// by construction, this method can be used to turn it into a proper set.
   void removeDuplicates() {
     sortByAddress();
-    auto LastI = std::unique(Symbols.begin(), Symbols.end());
+    auto LastI = llvm::unique(Symbols);
     Symbols.erase(LastI, Symbols.end());
   }
 

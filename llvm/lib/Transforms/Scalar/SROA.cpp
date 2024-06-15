@@ -2178,8 +2178,7 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
              cast<FixedVectorType>(LHSTy)->getNumElements();
     };
     llvm::sort(CandidateTys, RankVectorTypesComp);
-    CandidateTys.erase(std::unique(CandidateTys.begin(), CandidateTys.end(),
-                                   RankVectorTypesEq),
+    CandidateTys.erase(llvm::unique(CandidateTys, RankVectorTypesEq),
                        CandidateTys.end());
   } else {
 // The only way to have the same element type in every vector type is to
