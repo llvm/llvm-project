@@ -37109,6 +37109,33 @@ static void computeKnownBitsForPMADDWD(SDValue LHS, SDValue RHS,
                                       /*NUW=*/false, Lo, Hi);
 }
 
+static void computeKnownBitsForPMADDUBSW(SDValue LHS, SDValue RHS,
+                                         KnownBits &Known,
+                                         const APInt &DemandedElts,
+                                         const SelectionDAG &DAG,
+                                         unsigned Depth) {
+  unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
+
+  // Multiply signed/unsigned i8 elements to create i16 values and add_sat Lo/Hi
+  // pairs.
+  APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+  APInt DemandedLoElts =
+      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
+  APInt DemandedHiElts =
+      DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
+  KnownBits LHSLo =
+      DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1).zext(16);
+  KnownBits LHSHi =
+      DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1).zext(16);
+  KnownBits RHSLo =
+      DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1).sext(16);
+  KnownBits RHSHi =
+      DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1).sext(16);
+  KnownBits Lo = KnownBits::mul(LHSLo, RHSLo);
+  KnownBits Hi = KnownBits::mul(LHSHi, RHSHi);
+  Known = KnownBits::sadd_sat(Lo, Hi);
+}
+
 void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                       KnownBits &Known,
                                                       const APInt &DemandedElts,
@@ -37294,6 +37321,16 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     computeKnownBitsForPMADDWD(LHS, RHS, Known, DemandedElts, DAG, Depth);
     break;
   }
+  case X86ISD::VPMADDUBSW: {
+    SDValue LHS = Op.getOperand(0);
+    SDValue RHS = Op.getOperand(1);
+    assert(VT.getVectorElementType() == MVT::i16 &&
+           LHS.getValueType() == RHS.getValueType() &&
+           LHS.getValueType().getVectorElementType() == MVT::i8 &&
+           "Unexpected PMADDUBSW types");
+    computeKnownBitsForPMADDUBSW(LHS, RHS, Known, DemandedElts, DAG, Depth);
+    break;
+  }
   case X86ISD::PMULUDQ: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -37440,6 +37477,18 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
              LHS.getValueType().getScalarType() == MVT::i16 &&
              "Unexpected PMADDWD types");
       computeKnownBitsForPMADDWD(LHS, RHS, Known, DemandedElts, DAG, Depth);
+      break;
+    }
+    case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
+    case Intrinsic::x86_avx2_pmadd_ub_sw:
+    case Intrinsic::x86_avx512_pmaddubs_w_512: {
+      SDValue LHS = Op.getOperand(1);
+      SDValue RHS = Op.getOperand(2);
+      assert(VT.getScalarType() == MVT::i16 &&
+             LHS.getValueType() == RHS.getValueType() &&
+             LHS.getValueType().getScalarType() == MVT::i8 &&
+             "Unexpected PMADDUBSW types");
+      computeKnownBitsForPMADDUBSW(LHS, RHS, Known, DemandedElts, DAG, Depth);
       break;
     }
     case Intrinsic::x86_sse2_psad_bw:
