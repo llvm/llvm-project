@@ -2442,6 +2442,11 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   assert(ArgSize >= F->getWrittenArgSize());
   uint32_t VarArgSize = ArgSize - F->getWrittenArgSize();
 
+  // We need to do this explicitly here since we don't have the necessary
+  // information to do it automatically.
+  if (F->isThisPointerExplicit())
+    VarArgSize -= align(primSize(PT_Ptr));
+
   if (F->isVirtual())
     return CallVirt(S, OpPC, F, VarArgSize);
 
