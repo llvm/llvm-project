@@ -422,6 +422,8 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
     int ExpectCycle = CurCycle;
     // The predecessors of current MI determine its earliest issue cycle.
     for (auto &Pred : SU->Preds) {
+      if (Pred.isWeak())
+        continue;
       auto *PredMI = Pred.getSUnit()->getInstr();
       int PredCycle = getOriCycle(PredMI);
       ExpectCycle = std::max(ExpectCycle, PredCycle + (int)Pred.getLatency());
@@ -479,7 +481,7 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
     auto *SU = TripleDAG->getSUnit(&MI);
     int DefCycle = getOriCycle(&MI);
     for (auto &Succ : SU->Succs) {
-      if (Succ.getSUnit() == &TripleDAG->ExitSU)
+      if (Succ.isWeak() || Succ.getSUnit() == &TripleDAG->ExitSU)
         continue;
       // If the expected cycle does not exceed MaxCycle, no check is needed.
       if (DefCycle + (int)Succ.getLatency() <= MaxCycle)
