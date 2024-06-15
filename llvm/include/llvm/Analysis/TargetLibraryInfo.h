@@ -321,7 +321,7 @@ public:
   TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) = default;
   TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
     Impl = TLI.Impl;
-    OverrideAsUnavailable = TLI.OverrideAsUnavailable;
+    OverrideAsUnavailable = std::move(TLI.OverrideAsUnavailable);
     return *this;
   }
 
