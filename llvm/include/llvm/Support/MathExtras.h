@@ -429,6 +429,7 @@ template <uint64_t Align> constexpr inline uint64_t alignTo(uint64_t Value) {
 /// Returns the integer ceil(Numerator / Denominator). Unsigned version.
 /// Guaranteed to never overflow.
 inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
+  assert(Denominator && "Division by zero");
   uint64_t Bias = (Numerator != 0);
   return (Numerator - Bias) / Denominator + Bias;
 }
@@ -456,7 +457,7 @@ inline int64_t divideFloorSigned(int64_t Numerator, int64_t Denominator) {
   int64_t Bias = Denominator >= 0 ? -1 : 1;
   bool SameSign = (Numerator >= 0) == (Denominator >= 0);
   return SameSign ? Numerator / Denominator
-                  : -((Bias - Numerator) / Denominator) - 1;
+                  : (Numerator - Bias) / Denominator - 1;
 }
 
 /// Returns the remainder of the Euclidean division of LHS by RHS. Result is
@@ -470,10 +471,9 @@ inline int64_t mod(int64_t Numerator, int64_t Denominator) {
 /// Returns (Numerator / Denominator) rounded by round-half-up. Guaranteed to
 /// never overflow.
 inline uint64_t divideNearest(uint64_t Numerator, uint64_t Denominator) {
+  assert(Denominator && "Division by zero");
   uint64_t Mod = Numerator % Denominator;
-  uint64_t HalfDenomFloor = Denominator / 2;
-  uint64_t TieBreaker = ((Mod == HalfDenomFloor) & ~(Denominator & 1));
-  return (Numerator / Denominator) + (Mod > HalfDenomFloor || TieBreaker);
+  return (Numerator / Denominator) + (Mod > (Denominator - 1) / 2);
 }
 
 /// Returns the largest uint64_t less than or equal to \p Value and is
