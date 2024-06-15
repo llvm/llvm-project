@@ -482,7 +482,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
     StaticInterfaceMethod<
       /*description=*/"Returns the max vector op width, if the property is "
                       "defined. Otherwise, it returns std::nullopt.",
-      /*retTy=*/"std::optional<uint32_t>",
+      /*retTy=*/"std::optional<int64_t>",
       /*methodName=*/"getMaxVectorOpWidth",
       /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
       /*methodBody=*/"",
@@ -493,7 +493,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
     StaticInterfaceMethod<
       /*description=*/"Returns the L1 cache size in bytes, if the property is "
                       "defined. Otherwise, it returns std::nullopt.",
-      /*retTy=*/"std::optional<uint32_t>",
+      /*retTy=*/"std::optional<int64_t>",
       /*methodName=*/"getL1CacheSizeInBytes",
       /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
       /*methodBody=*/"",

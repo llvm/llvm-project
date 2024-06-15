@@ -362,17 +362,17 @@ TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     if (entryName == DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey) {
       IntegerAttr value =
           llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
-      if (!value || !value.getType().isUnsignedInteger(32))
+      if (!value || !value.getType().isInteger())
         return emitError() << "target_device_spec requires value of key: "
                            << DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey
-                           << " to be of ui32 type";
+                           << " to be of integer type";
     } else if (entryName == DLTIDialect::kTargetDeviceMaxVectorOpWidthKey) {
       IntegerAttr value =
           llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
-      if (!value || !value.getType().isUnsignedInteger(32))
+      if (!value || !value.getType().isInteger())
         return emitError() << "target_device_spec requires value of key: "
                            << DLTIDialect::kTargetDeviceMaxVectorOpWidthKey
-                           << " to be of ui32 type";
+                           << " to be of integer type";
     } else {
       return emitError() << "unknown target device spec key name: "
                          << entryName;

@@ -93,11 +93,11 @@ uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
 /// Return max vector op width from the specified DataLayoutEntry. If the
 /// property is missing from the entry, then return std::nullopt.
-std::optional<uint32_t> getMaxVectorOpWidth(DataLayoutEntryInterface entry);
+std::optional<int64_t> getMaxVectorOpWidth(DataLayoutEntryInterface entry);
 
 /// Return L1 cache size in bytes from the specified DataLayoutEntry. If the
 /// property is missing from the entry, then return std::nullopt.
-std::optional<uint32_t> getL1CacheSizeInBytes(DataLayoutEntryInterface entry);
+std::optional<int64_t> getL1CacheSizeInBytes(DataLayoutEntryInterface entry);
 
 /// Given a list of data layout entries, returns a new list containing the
 /// entries with keys having the given type ID, i.e. belonging to the same type
@@ -249,12 +249,12 @@ public:
 
   /// Returns for max vector op width if the property is defined for the given
   /// device ID, otherwise return std::nullopt.
-  std::optional<uint32_t>
+  std::optional<int64_t>
       getMaxVectorOpWidth(TargetSystemSpecInterface::DeviceID) const;
 
   /// Returns for L1 cache size if the property is defined for the given
   /// device ID, otherwise return std::nullopt.
-  std::optional<uint32_t>
+  std::optional<int64_t>
       getL1CacheSizeInBytes(TargetSystemSpecInterface::DeviceID) const;
 
 private:

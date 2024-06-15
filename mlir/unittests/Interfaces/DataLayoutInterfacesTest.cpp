@@ -608,10 +608,10 @@ TEST(DataLayout, SpecWithTargetSystemDescEntries) {
   DataLayout layout(*module);
   EXPECT_EQ(layout.getL1CacheSizeInBytes(
                 Builder(&ctx).getStringAttr("CPU") /* device ID*/),
-            std::optional<uint32_t>(4096));
+            std::optional<int64_t>(4096));
   EXPECT_EQ(layout.getMaxVectorOpWidth(
                 Builder(&ctx).getStringAttr("CPU") /* device ID*/),
-            std::optional<uint32_t>(128));
+            std::optional<int64_t>(128));
 }
 
 TEST(DataLayout, Caching) {

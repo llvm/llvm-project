@@ -295,7 +295,7 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
 
 // Returns the max vector op width if specified in the given entry. If the entry
 // is empty (meaning the spec is missing), returns std::nullopt.
-std::optional<uint32_t>
+std::optional<int64_t>
 mlir::detail::getMaxVectorOpWidth(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
     return std::nullopt;
@@ -306,7 +306,7 @@ mlir::detail::getMaxVectorOpWidth(DataLayoutEntryInterface entry) {
 
 // Returns the L1 cache size if specified in the given entry. If the entry
 // is empty (meaning the spec is missing), returns std::nullopt.
-std::optional<uint32_t>
+std::optional<int64_t>
 mlir::detail::getL1CacheSizeInBytes(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
     return std::nullopt;
@@ -468,10 +468,10 @@ void checkMissingLayout(DataLayoutSpecInterface originalLayout, OpTy op) {
 mlir::DataLayout::DataLayout() : DataLayout(ModuleOp()) {}
 
 mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
-    : originalLayout(getCombinedDataLayout(op)), scope(op),
+    : originalLayout(getCombinedDataLayout(op)),
+      originalTargetSystemDesc(getTargetSystemSpec(op)), scope(op),
       allocaMemorySpace(std::nullopt), programMemorySpace(std::nullopt),
-      globalMemorySpace(std::nullopt), stackAlignment(std::nullopt),
-      originalTargetSystemDesc(getTargetSystemSpec(op)) {
+      globalMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
@@ -479,10 +479,10 @@ mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
 }
 
 mlir::DataLayout::DataLayout(ModuleOp op)
-    : originalLayout(getCombinedDataLayout(op)), scope(op),
+    : originalLayout(getCombinedDataLayout(op)),
+      originalTargetSystemDesc(getTargetSystemSpec(op)), scope(op),
       allocaMemorySpace(std::nullopt), programMemorySpace(std::nullopt),
-      globalMemorySpace(std::nullopt), stackAlignment(std::nullopt),
-      originalTargetSystemDesc(getTargetSystemSpec(op)) {
+      globalMemorySpace(std::nullopt), stackAlignment(std::nullopt) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   checkMissingLayout(originalLayout, op);
   collectParentLayouts(op, layoutStack);
@@ -677,7 +677,7 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
   return *stackAlignment;
 }
 
-std::optional<uint32_t> mlir::DataLayout::getMaxVectorOpWidth(
+std::optional<int64_t> mlir::DataLayout::getMaxVectorOpWidth(
     TargetSystemSpecInterface::DeviceID deviceID) const {
   checkValid();
   DataLayoutEntryInterface entry;
@@ -697,7 +697,7 @@ std::optional<uint32_t> mlir::DataLayout::getMaxVectorOpWidth(
     return detail::getMaxVectorOpWidth(entry);
 }
 
-std::optional<uint32_t> mlir::DataLayout::getL1CacheSizeInBytes(
+std::optional<int64_t> mlir::DataLayout::getL1CacheSizeInBytes(
     TargetSystemSpecInterface::DeviceID deviceID) const {
   checkValid();
   DataLayoutEntryInterface entry;
