@@ -129,7 +129,7 @@ void SuffixTree::setLeafNodes() {
 
   // Traverse the tree in post-order.
   while (!ToVisit.empty()) {
-    SuffixTreeNode *CurrNode = ToVisit. pop_back_val();
+    SuffixTreeNode *CurrNode = ToVisit.pop_back_val();
     if (auto *CurrInternalNode = dyn_cast<SuffixTreeInternalNode>(CurrNode)) {
       // The current node is an internal node.
       auto I = ChildrenMap.find(CurrInternalNode);
