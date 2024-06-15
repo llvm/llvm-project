@@ -11390,10 +11390,10 @@ For ``nuw`` (no unsigned wrap):
 For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
 if the ``getelementptr`` has any non-zero indices, the following rules apply:
 
- * The base pointer has an *in bounds* address of an allocated object, which
-   means that it points into an allocated object, or to its end. Note that the
-   object does not have to be live anymore; being in-bounds of a deallocated
-   object is sufficient.
+ * The base pointer has an *in bounds* address of the allocated object that it
+   is :ref:`based <pointeraliasing>` on. This means that it points into that
+   allocated object, or to its end. Note that the object does not have to be
+   live anymore; being in-bounds of a deallocated object is sufficient.
  * During the successive addition of offsets to the address, the resulting
    pointer must remain *in bounds* of the allocated object at each step.
 
