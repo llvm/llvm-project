@@ -1007,7 +1007,8 @@ def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
 
-// iPhone, iPad, Mac and Watch CPUs
+
+// Apple CPUs
 
 // Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
 def : ProcessorModel<"cyclone", CycloneModel, ProcessorFeatures.AppleA7,
@@ -1059,6 +1060,7 @@ def : ProcessorModel<"apple-m4", CycloneModel, ProcessorFeatures.AppleM4,
 // Alias for the latest Apple processor model supported by LLVM.
 def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleM4,
                      [TuneAppleM4]>;
+
 
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,
