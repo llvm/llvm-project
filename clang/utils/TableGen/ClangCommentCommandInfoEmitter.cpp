@@ -32,8 +32,7 @@ void clang::EmitClangCommentCommandInfo(RecordKeeper &Records,
     Record &Tag = *Tags[i];
     OS << "  { "
        << "\"" << Tag.getValueAsString("Name") << "\", "
-       << "\"" << Tag.getValueAsString("EndCommandName") << "\", "
-       << i << ", "
+       << "\"" << Tag.getValueAsString("EndCommandName") << "\", " << i << ", "
        << Tag.getValueAsInt("NumArgs") << ", "
        << Tag.getValueAsBit("IsInlineCommand") << ", "
        << Tag.getValueAsBit("IsBlockCommand") << ", "
