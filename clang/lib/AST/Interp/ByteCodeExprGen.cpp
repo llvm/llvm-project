@@ -311,6 +311,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_UserDefinedConversion:
+  case CK_AddressSpaceConversion:
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
