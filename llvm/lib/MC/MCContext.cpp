@@ -203,6 +203,15 @@ MCInst *MCContext::createMCInst() {
   return new (MCInstAllocator.Allocate()) MCInst;
 }
 
+// Allocate the initial MCDataFragment for the begin symbol.
+MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
+  assert(!Sec.curFragList()->Head);
+  auto *F = allocFragment<MCDataFragment>();
+  F->setParent(&Sec);
+  Sec.addFragment(*F);
+  return F;
+}
+
 //===----------------------------------------------------------------------===//
 // Symbol Manipulation
 //===----------------------------------------------------------------------===//
@@ -505,11 +514,8 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
       MCSectionELF(Section, Type, Flags, K, EntrySize, Group, Comdat, UniqueID,
                    R, LinkedToSym);
 
-  auto *F = new MCDataFragment();
-  Ret->addFragment(*F);
-  F->setParent(Ret);
+  auto *F = allocInitialFragment(*Ret);
   R->setFragment(F);
-
   return Ret;
 }
 
@@ -805,11 +811,8 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
       MCSectionWasm(CachedName, Kind, Flags, GroupSym, UniqueID, Begin);
   Entry.second = Result;
 
-  auto *F = new MCDataFragment();
-  Result->addFragment(*F);
-  F->setParent(Result);
+  auto *F = allocInitialFragment(*Result);
   Begin->setFragment(F);
-
   return Result;
 }
 
@@ -871,10 +874,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
 
   Entry.second = Result;
 
-  auto *F = new MCDataFragment();
-  Result->addFragment(*F);
-  F->setParent(Result);
-
+  auto *F = allocInitialFragment(*Result);
   if (Begin)
     Begin->setFragment(F);
 
@@ -894,10 +894,7 @@ MCSectionSPIRV *MCContext::getSPIRVSection() {
   MCSectionSPIRV *Result = new (SPIRVAllocator.Allocate())
       MCSectionSPIRV(SectionKind::getText(), Begin);
 
-  auto *F = new MCDataFragment();
-  Result->addFragment(*F);
-  F->setParent(Result);
-
+  allocInitialFragment(*Result);
   return Result;
 }
 
@@ -917,10 +914,7 @@ MCSectionDXContainer *MCContext::getDXContainerSection(StringRef Section,
       new (DXCAllocator.Allocate()) MCSectionDXContainer(Name, K, nullptr);
 
   // The first fragment will store the header
-  auto *F = new MCDataFragment();
-  MapIt->second->addFragment(*F);
-  F->setParent(MapIt->second);
-
+  allocInitialFragment(*MapIt->second);
   return MapIt->second;
 }
 
@@ -1051,7 +1045,7 @@ void MCContext::finalizeDwarfSections(MCStreamer &MCOS) {
 
 CodeViewContext &MCContext::getCVContext() {
   if (!CVContext)
-    CVContext.reset(new CodeViewContext);
+    CVContext.reset(new CodeViewContext(this));
   return *CVContext;
 }
 

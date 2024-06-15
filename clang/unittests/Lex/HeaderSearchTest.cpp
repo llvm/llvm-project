@@ -131,6 +131,21 @@ TEST_F(HeaderSearchTest, Dots) {
             "z");
 }
 
+TEST_F(HeaderSearchTest, RelativeDirs) {
+  ASSERT_FALSE(VFS->setCurrentWorkingDirectory("/root/some/dir"));
+  addSearchDir("..");
+  EXPECT_EQ(
+      Search.suggestPathToFileForDiagnostics("/root/some/foo.h",
+                                             /*WorkingDir=*/"/root/some/dir",
+                                             /*MainFile=*/""),
+      "foo.h");
+  EXPECT_EQ(
+      Search.suggestPathToFileForDiagnostics("../foo.h",
+                                             /*WorkingDir=*/"/root/some/dir",
+                                             /*MainFile=*/""),
+      "foo.h");
+}
+
 #ifdef _WIN32
 TEST_F(HeaderSearchTest, BackSlash) {
   addSearchDir("C:\\x\\y\\");
