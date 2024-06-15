@@ -3959,10 +3959,11 @@ loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
   return Text;
 }
 
-Expected<FormatStyle>
-getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyleName,
-         StringRef Code, llvm::vfs::FileSystem *FS, bool AllowUnknownOptions,
-         llvm::SourceMgr::DiagHandlerTy DiagHandler) {
+Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
+                               StringRef FallbackStyleName, StringRef Code,
+                               llvm::vfs::FileSystem *FS,
+                               bool AllowUnknownOptions,
+                               llvm::SourceMgr::DiagHandlerTy DiagHandler) {
   FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
@@ -4035,8 +4036,9 @@ getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyleName,
 
   auto applyChildFormatTexts = [&](FormatStyle *Style) {
     for (const auto &MemBuf : llvm::reverse(ChildFormatTextToApply)) {
-      auto EC = parseConfiguration(*MemBuf, Style, AllowUnknownOptions,
-                                   DiagHandler ? DiagHandler : dropDiagnosticHandler);
+      auto EC =
+          parseConfiguration(*MemBuf, Style, AllowUnknownOptions,
+                             DiagHandler ? DiagHandler : dropDiagnosticHandler);
       // It was already correctly parsed.
       assert(!EC);
       static_cast<void>(EC);
