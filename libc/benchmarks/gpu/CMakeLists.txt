@@ -5,9 +5,9 @@ add_custom_target(gpu-benchmark)
 function(add_benchmark benchmark_name)
   cmake_parse_arguments(
     "BENCHMARK"
-    "LINK_LIBRARIES" # Optional arguments
+    "" # Optional arguments
     "" # Single value arguments
-    "" # Multi-value arguments
+    "LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
   )
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
