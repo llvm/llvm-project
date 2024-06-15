@@ -538,10 +538,10 @@ endif()
 
 option(LLVM_ENABLE_WARNINGS "Enable compiler warnings." ON)
 
-option(LLVM_ENABLE_LIB_PRECOMPILED_HEADERS "Enable precompiled headers for LLVM Lib projects to improve build times." ON)
+option(LLVM_ENABLE_LIB_PRECOMPILED_HEADERS "Enable precompiled headers for LLVM Lib projects to improve build times." OFF)
 
 set(LLVM_LIB_DIRETORIES_FOR_PRECOMPILED_HEADERS ""
-    CACHE STRING "Semicolon-separated list of lib subdirectories to use precompiled headers")
+    CACHE STRING "Semicolon-separated list of llvm/lib/ subdirectories to use precompiled headers")
 
 if( MSVC )
 
