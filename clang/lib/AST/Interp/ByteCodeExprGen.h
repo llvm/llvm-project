@@ -128,6 +128,7 @@ public:
   bool VisitAddrLabelExpr(const AddrLabelExpr *E);
   bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
   bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
+  bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
 
 protected:

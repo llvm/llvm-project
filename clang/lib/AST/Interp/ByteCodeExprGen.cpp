@@ -2736,6 +2736,65 @@ bool ByteCodeExprGen<Emitter>::VisitShuffleVectorExpr(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExtVectorElementExpr(
+    const ExtVectorElementExpr *E) {
+  const Expr *Base = E->getBase();
+
+  SmallVector<uint32_t, 4> Indices;
+  E->getEncodedElementAccess(Indices);
+
+  if (Indices.size() == 1) {
+    if (!this->visit(Base))
+      return false;
+
+    if (E->isGLValue()) {
+      if (!this->emitConstUint32(Indices[0], E))
+        return false;
+      return this->emitArrayElemPtrPop(PT_Uint32, E);
+    }
+    // Else, also load the value.
+    return this->emitArrayElemPop(classifyPrim(E->getType()), Indices[0], E);
+  }
+
+  // Create a local variable for the base.
+  unsigned BaseOffset = allocateLocalPrimitive(Base, PT_Ptr, /*IsConst=*/true,
+                                               /*IsExtended=*/false);
+  if (!this->visit(Base))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, BaseOffset, E))
+    return false;
+
+  // Now the vector variable for the return value.
+  if (!Initializing) {
+    std::optional<unsigned> ResultIndex;
+    ResultIndex = allocateLocal(E);
+    if (!ResultIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*ResultIndex, E))
+      return false;
+  }
+
+  assert(Indices.size() == E->getType()->getAs<VectorType>()->getNumElements());
+
+  PrimType ElemT =
+      classifyPrim(E->getType()->getAs<VectorType>()->getElementType());
+  uint32_t DstIndex = 0;
+  for (uint32_t I : Indices) {
+    if (!this->emitGetLocal(PT_Ptr, BaseOffset, E))
+      return false;
+    if (!this->emitArrayElemPop(ElemT, I, E))
+      return false;
+    if (!this->emitInitElem(ElemT, DstIndex, E))
+      return false;
+    ++DstIndex;
+  }
+
+  // Leave the result pointer on the stack.
+  assert(!DiscardResult);
+  return true;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   if (!E->isExpressibleAsConstantInitializer())
     return this->emitInvalid(E);

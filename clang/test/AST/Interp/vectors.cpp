@@ -70,3 +70,14 @@ namespace BoolToSignedIntegralCast{
   static_assert(intsT[2] == -1, "");// ref-error {{not an integral constant expression}}
   static_assert(intsT[3] == -1, "");// ref-error {{not an integral constant expression}}
 }
+
+namespace VectorElementExpr {
+  typedef int int2 __attribute__((ext_vector_type(2)));
+  typedef int int4 __attribute__((ext_vector_type(4)));
+  constexpr int oneElt = int4(3).x;
+  static_assert(oneElt == 3);
+
+  constexpr int2 twoElts = ((int4){11, 22, 33, 44}).yz;
+  static_assert(twoElts.x == 22, ""); // ref-error {{not an integral constant expression}}
+  static_assert(twoElts.y == 33, ""); // ref-error {{not an integral constant expression}}
+}
