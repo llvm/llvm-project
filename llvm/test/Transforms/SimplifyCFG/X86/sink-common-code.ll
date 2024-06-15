@@ -568,16 +568,16 @@ define zeroext i1 @test_crash(i1 zeroext %flag, ptr %i4, ptr %m, ptr %n) {
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[I4:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[M:%.*]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[N:%.*]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP4_SINK:%.*]] = phi i32 [ [[TMP4]], [[IF_ELSE]] ], [ -1, [[IF_THEN]] ]
-; CHECK-NEXT:    [[TMP3_SINK:%.*]] = phi i32 [ [[TMP3]], [[IF_ELSE]] ], [ [[TMP1]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3_SINK]], [[TMP4_SINK]]
-; CHECK-NEXT:    store i32 [[TMP5]], ptr [[I4]], align 4
+; CHECK-NEXT:    [[TMP5_SINK:%.*]] = phi i32 [ [[TMP5]], [[IF_ELSE]] ], [ [[TMP2]], [[IF_THEN]] ]
+; CHECK-NEXT:    store i32 [[TMP5_SINK]], ptr [[I4]], align 4
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
