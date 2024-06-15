@@ -40,6 +40,9 @@
 #include <algorithm>
 #include <optional>
 #include <utility>
+#include <deque>
+#include <vector>
+#include <sstream>
 
 using namespace clang;
 using namespace CodeGen;
@@ -2595,204 +2598,254 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
   return RValue::get(CGF->Builder.CreateCall(UBF, Args));
 }
 
-template <class T>
-void RecursivelyClearPaddingImpl(CodeGenFunction &CGF, Value *Ptr, QualType Ty,
-                                 size_t CurrentStartOffset,
-                                 size_t &RunningOffset, T &&WriteZeroAtOffset,
-                                 bool VisitVirtualBase);
+namespace {
 
-template <class T>
-void ClearPaddingStruct(CodeGenFunction &CGF, Value *Ptr, QualType Ty,
-                        StructType *ST, size_t CurrentStartOffset,
-                        size_t &RunningOffset, T &&WriteZeroAtOffset,
-                        bool VisitVirtualBase) {
-  llvm::dbgs() << "clear padding struct: " << ST->getName().data() << '\n';
-  const auto &DL = CGF.CGM.getModule().getDataLayout();
-  auto *SL = DL.getStructLayout(ST);
-  auto *R = dyn_cast<CXXRecordDecl>(Ty->getAsRecordDecl());
-  if (!R) {
-    llvm::dbgs() << "Not a CXXRecordDecl\n";
-    return;
-  }
-  const ASTRecordLayout &ASTLayout = CGF.getContext().getASTRecordLayout(R);
-  if (ASTLayout.hasOwnVFPtr()) {
-    llvm::dbgs() << "vtable ptr. Incrementing RunningOffset from "
-                 << RunningOffset << " to "
-                 << RunningOffset + DL.getPointerSizeInBits() / 8 << '\n';
-    RunningOffset += DL.getPointerSizeInBits() / 8;
-  }
-  std::vector<std::pair<size_t, CXXBaseSpecifier>> Bases;
-  Bases.reserve(R->getNumBases());
-  // todo get vbases
-  for (auto Base : R->bases()) {
-    auto *BaseRecord = cast<CXXRecordDecl>(Base.getType()->getAsRecordDecl());
-    if (!Base.isVirtual()) {
-      auto Offset = static_cast<size_t>(
-          ASTLayout.getBaseClassOffset(BaseRecord).getQuantity());
-      Bases.emplace_back(Offset, Base);
+struct PaddingClearer {
+  PaddingClearer(CodeGenFunction &F)
+      : CGF(F), CharWidth(CGF.getContext().getCharWidth()) {}
+
+  void run(Value *Ptr, QualType Ty) {
+    OccuppiedIntervals.clear();
+    Queue.clear();
+
+    Queue.push_back(Data{0, Ty, true});
+    while (!Queue.empty()) {
+      auto Current = Queue.front();
+      Queue.pop_front();
+      Visit(Current);
+    }
+
+    MergeOccuppiedIntervals();
+    auto PaddingIntervals =
+        GetPaddingIntervals(CGF.getContext().getTypeSize(Ty));
+    llvm::dbgs() << "Occuppied Bits:\n";
+    for (auto [first, last] : OccuppiedIntervals) {
+      llvm::dbgs() << "[" << first << ", " << last << ")\n";
+    }
+    llvm::dbgs() << "Padding Bits:\n";
+    for (auto [first, last] : PaddingIntervals) {
+      llvm::dbgs() << "[" << first << ", " << last << ")\n";
+    }
+
+    for (const auto &Interval : PaddingIntervals) {
+      ClearPadding(Ptr, Interval);
     }
   }
 
-  auto VisitBases =
-      [&](std::vector<std::pair<size_t, CXXBaseSpecifier>> &BasesToVisit) {
-        std::sort(
-            BasesToVisit.begin(), BasesToVisit.end(),
-            [](const auto &P1, const auto &P2) { return P1.first < P2.first; });
-        for (const auto &Pair : BasesToVisit) {
-          // is it OK to use structured binding in clang? what is the language
-          // version?
-          auto Offset = Pair.first;
-          auto Base = Pair.second;
-
-          llvm::dbgs() << "visiting base at offset " << Offset << '\n';
-          // Recursively zero out base classes.
-          auto Index = SL->getElementContainingOffset(Offset);
-          Value *Idx = CGF.Builder.getSize(Index);
-          llvm::Type *CurrentBaseType = CGF.ConvertTypeForMem(Base.getType());
-          Value *BaseElement = CGF.Builder.CreateGEP(CurrentBaseType, Ptr, Idx);
-          RecursivelyClearPaddingImpl(CGF, BaseElement, Base.getType(),
-                                      CurrentStartOffset + Offset,
-                                      RunningOffset, WriteZeroAtOffset, false);
-        }
-      };
-
-  VisitBases(Bases);
-
-  size_t NumFields = std::distance(R->field_begin(), R->field_end());
-  std::vector<size_t> FieldOffsets;
-  FieldOffsets.reserve(NumFields);
-  auto CurrentField = R->field_begin();
-  for (size_t I = 0; I < NumFields; ++I, ++CurrentField) {
-    // Size needs to be in bytes so we can compare it later.
-    auto Offset = ASTLayout.getFieldOffset(I) / 8;
-    llvm::dbgs() << "visiting field at offset " << Offset << '\n';
-    auto Index = SL->getElementContainingOffset(Offset);
-    Value *Idx = CGF.Builder.getSize(Index);
-    llvm::Type *CurrentFieldType =
-        CGF.ConvertTypeForMem(CurrentField->getType());
-    Value *Element = CGF.Builder.CreateGEP(CurrentFieldType, Ptr, Idx);
-    RecursivelyClearPaddingImpl(CGF, Element, CurrentField->getType(),
-                                CurrentStartOffset + Offset, RunningOffset,
-                                WriteZeroAtOffset, true);
-  }
-
-  if (VisitVirtualBase) {
-
-    std::vector<std::pair<size_t, CXXBaseSpecifier>> VBases;
-    VBases.reserve(R->getNumVBases());
-    for (auto VBase : R->vbases()) {
-      auto *BaseRecord =
-          cast<CXXRecordDecl>(VBase.getType()->getAsRecordDecl());
-      auto Offset = static_cast<size_t>(
-          ASTLayout.getVBaseClassOffset(BaseRecord).getQuantity());
-      VBases.emplace_back(Offset, VBase);
-    }
-
-    VisitBases(VBases);
-  }
-}
-
-template <class T>
-void ClearPaddingConstantArray(CodeGenFunction &CGF, Value *Ptr,
-                               llvm::Type *Type, ConstantArrayType const *AT,
-                               size_t CurrentStartOffset, size_t &RunningOffset,
-                               T &&WriteZeroAtOffset) {
-  llvm::dbgs() << "clear padding constant array\n";
-  for (size_t ArrIndex = 0; ArrIndex < AT->getSize().getLimitedValue();
-       ++ArrIndex) {
-
-    QualType ElementQualType = AT->getElementType();
-
-    auto *ElementRecord = ElementQualType->getAsRecordDecl();
-    if (!ElementRecord) {
-      llvm::dbgs() << "null!\n";
-    }
-    auto ElementAlign =
-        ElementRecord
-            ? CGF.getContext().getASTRecordLayout(ElementRecord).getAlignment()
-            : CGF.getContext().getTypeAlignInChars(ElementQualType);
-
-    Address FieldElementAddr{Ptr, Type, ElementAlign};
-
-    auto Element = CGF.Builder.CreateConstArrayGEP(FieldElementAddr, ArrIndex);
-    auto *ElementType = CGF.ConvertTypeForMem(ElementQualType);
-    auto AllocSize =
-        CGF.CGM.getModule().getDataLayout().getTypeAllocSize(ElementType);
-    llvm::dbgs() << "clearing array index! " << ArrIndex << '\n';
-    RecursivelyClearPaddingImpl(CGF, Element.getBasePointer(), ElementQualType,
-                                CurrentStartOffset +
-                                    ArrIndex * AllocSize.getKnownMinValue(),
-                                RunningOffset, WriteZeroAtOffset, true);
-  }
-}
-
-template <class T>
-void RecursivelyClearPaddingImpl(CodeGenFunction &CGF, Value *Ptr, QualType Ty,
-                                 size_t CurrentStartOffset,
-                                 size_t &RunningOffset, T &&WriteZeroAtOffset,
-                                 bool VisitVirtualBase) {
-
-  llvm::dbgs() << "clear padding before current  [" << RunningOffset << ", "
-               << CurrentStartOffset << ")\n";
-  for (; RunningOffset < CurrentStartOffset; ++RunningOffset) {
-    WriteZeroAtOffset(RunningOffset);
-  }
-  auto *Type = CGF.ConvertTypeForMem(Ty);
-  auto Size = CGF.CGM.getModule()
-                  .getDataLayout()
-                  .getTypeSizeInBits(Type)
-                  .getKnownMinValue() /
-              8;
-
-  if (auto *AT = dyn_cast<ConstantArrayType>(Ty)) {
-    ClearPaddingConstantArray(CGF, Ptr, Type, AT, CurrentStartOffset,
-                              RunningOffset, WriteZeroAtOffset);
-  } else if (auto *ST = dyn_cast<StructType>(Type); ST && Ty->isRecordType()) {
-    ClearPaddingStruct(CGF, Ptr, Ty, ST, CurrentStartOffset, RunningOffset,
-                       WriteZeroAtOffset, VisitVirtualBase);
-  } else if (Ty->isAtomicType()) {
-    RecursivelyClearPaddingImpl(CGF, Ptr, Ty.getAtomicUnqualifiedType(),
-                                CurrentStartOffset, RunningOffset,
-                                WriteZeroAtOffset, true);
-  } else {
-    llvm::dbgs() << "increment running offset from: " << RunningOffset << " to "
-                 << RunningOffset + Size << '\n';
-    RunningOffset =
-        std::max(RunningOffset, CurrentStartOffset + static_cast<size_t>(Size));
-  }
-}
-
-static void RecursivelyClearPadding(CodeGenFunction &CGF, Value *Ptr,
-                                    QualType Ty) {
-  auto *I8Ptr = CGF.Builder.CreateBitCast(Ptr, CGF.Int8PtrTy);
-  auto *Zero = ConstantInt::get(CGF.Int8Ty, 0);
-  auto WriteZeroAtOffset = [&](uint64_t Offset) {
-    auto *Index = ConstantInt::get(CGF.IntTy, Offset);
-    auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
-    CGF.Builder.CreateAlignedStore(
-        Zero, Element,
-        CharUnits::One().alignmentAtOffset(CharUnits::fromQuantity(Offset)));
+private:
+  struct BitInterval {
+    // [First, Last)
+    uint64_t First;
+    uint64_t Last;
   };
 
-  size_t RunningOffset = 0;
+  struct Data {
+    uint64_t StartBitOffset;
+    QualType Ty;
+    bool VisitVirtualBase;
+  };
 
-  RecursivelyClearPaddingImpl(CGF, Ptr, Ty, 0, RunningOffset, WriteZeroAtOffset,
-                              true);
+  void Visit(Data const &D) {
+    if (auto *AT = dyn_cast<ConstantArrayType>(D.Ty)) {
+      VisitArray(AT, D.StartBitOffset);
+      return;
+    }
 
-  // Clear tail padding
-  auto *Type = CGF.ConvertTypeForMem(Ty);
+    if (auto *Record = D.Ty->getAsCXXRecordDecl()) {
+      VisitStruct(Record, D.StartBitOffset, D.VisitVirtualBase);
+      return;
+    }
 
-  auto Size = CGF.CGM.getModule()
-                  .getDataLayout()
-                  .getTypeAllocSize(Type)
-                  .getKnownMinValue();
+    if (D.Ty->isAtomicType()) {
+      auto Unwrapped = D;
+      Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType();
+      Queue.push_back(Unwrapped);
+      return;
+    }
 
-  llvm::dbgs() << "clear tail padding  [" << RunningOffset << ", " << Size
-               << ")\n";
-  for (; RunningOffset < Size; ++RunningOffset) {
-    WriteZeroAtOffset(RunningOffset);
+    if (const auto *Complex = D.Ty->getAs<ComplexType>()) {
+      VisitComplex(Complex, D.StartBitOffset);
+      return;
+    }
+
+    auto *Type = CGF.ConvertTypeForMem(D.Ty);
+    auto SizeBit = CGF.CGM.getModule()
+                       .getDataLayout()
+                       .getTypeSizeInBits(Type)
+                       .getKnownMinValue();
+    llvm::dbgs() << "clear_padding primitive type. adding Interval ["
+                 << D.StartBitOffset << ", " << D.StartBitOffset + SizeBit
+                 << ")\n";
+    OccuppiedIntervals.push_back(
+        BitInterval{D.StartBitOffset, D.StartBitOffset + SizeBit});
   }
-}
+
+  void VisitArray(const ConstantArrayType *AT, uint64_t StartBitOffset) {
+    llvm::dbgs() << "clear_padding visiting constant array starting from "
+                 << StartBitOffset << "\n";
+    for (uint64_t ArrIndex = 0; ArrIndex < AT->getSize().getLimitedValue();
+         ++ArrIndex) {
+
+      QualType ElementQualType = AT->getElementType();
+      auto ElementSize = CGF.getContext().getTypeSizeInChars(ElementQualType);
+      auto ElementAlign = CGF.getContext().getTypeAlignInChars(ElementQualType);
+      auto Offset = ElementSize.alignTo(ElementAlign);
+
+      Queue.push_back(
+          Data{StartBitOffset + ArrIndex * Offset.getQuantity() * CharWidth,
+               ElementQualType, true});
+    }
+  }
+
+  void VisitStruct(const CXXRecordDecl *R, uint64_t StartBitOffset,
+                   bool VisitVirtualBase) {
+    llvm::dbgs() << "clear_padding visiting struct: "
+                 << R->getQualifiedNameAsString() << " starting from offset "
+                 << StartBitOffset << '\n';
+    const auto &DL = CGF.CGM.getModule().getDataLayout();
+
+    const ASTRecordLayout &ASTLayout = CGF.getContext().getASTRecordLayout(R);
+    if (ASTLayout.hasOwnVFPtr()) {
+      llvm::dbgs()
+          << "clear_padding found vtable ptr. Adding occuppied interval ["
+          << StartBitOffset << ", "
+          << (StartBitOffset + DL.getPointerSizeInBits()) << ")\n";
+      OccuppiedIntervals.push_back(BitInterval{
+          StartBitOffset, StartBitOffset + DL.getPointerSizeInBits()});
+    }
+
+    const auto VisitBase = [&ASTLayout, StartBitOffset, this](
+                               const CXXBaseSpecifier &Base, auto GetOffset) {
+      auto *BaseRecord = Base.getType()->getAsCXXRecordDecl();
+      if (!BaseRecord) {
+        llvm::dbgs() << "Base is not a CXXRecord!\n";
+        return;
+      }
+      auto BaseOffset =
+          std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
+
+      llvm::dbgs() << "visiting base at offset " << StartBitOffset << " + "
+                   << BaseOffset * CharWidth << '\n';
+      Queue.push_back(
+          Data{StartBitOffset + BaseOffset * CharWidth, Base.getType(), false});
+    };
+
+    for (auto Base : R->bases()) {
+      if (!Base.isVirtual()) {
+        VisitBase(Base, &ASTRecordLayout::getBaseClassOffset);
+      }
+    }
+
+    if (VisitVirtualBase) {
+      for (auto VBase : R->vbases()) {
+        VisitBase(VBase, &ASTRecordLayout::getVBaseClassOffset);
+      }
+    }
+
+    for (auto *Field : R->fields()) {
+      auto FieldOffset = ASTLayout.getFieldOffset(Field->getFieldIndex());
+      llvm::dbgs() << "visiting field at offset " << StartBitOffset << " + "
+                   << FieldOffset << '\n';
+      if (Field->isBitField()) {
+        llvm::dbgs() << "clear_padding found bit field. Adding Interval ["
+                     << StartBitOffset + FieldOffset << " , "
+                     << FieldOffset + Field->getBitWidthValue(CGF.getContext())
+                     << ")\n";
+        OccuppiedIntervals.push_back(
+            BitInterval{StartBitOffset + FieldOffset,
+                        StartBitOffset + FieldOffset +
+                            Field->getBitWidthValue(CGF.getContext())});
+      } else {
+        Queue.push_back(
+            Data{StartBitOffset + FieldOffset, Field->getType(), true});
+      }
+    }
+  }
+
+  void VisitComplex(const ComplexType *CT, uint64_t StartBitOffset) {
+    QualType ElementQualType = CT->getElementType();
+    auto ElementSize = CGF.getContext().getTypeSizeInChars(ElementQualType);
+    auto ElementAlign = CGF.getContext().getTypeAlignInChars(ElementQualType);
+    auto ImgOffset = ElementSize.alignTo(ElementAlign);
+
+    llvm::dbgs() << "clear_padding visiting Complex Type. Real from "
+                 << StartBitOffset << "Img from "
+                 << StartBitOffset + ImgOffset.getQuantity() * CharWidth
+                 << "\n";
+    Queue.push_back(Data{StartBitOffset, ElementQualType, true});
+    Queue.push_back(Data{StartBitOffset + ImgOffset.getQuantity() * CharWidth,
+                         ElementQualType, true});
+  }
+
+  void MergeOccuppiedIntervals() {
+    std::sort(OccuppiedIntervals.begin(), OccuppiedIntervals.end(),
+              [](const BitInterval &lhs, const BitInterval &rhs) {
+                return std::tie(lhs.First, lhs.Last) <
+                       std::tie(rhs.First, rhs.Last);
+              });
+
+    std::vector<BitInterval> Merged;
+    Merged.reserve(OccuppiedIntervals.size());
+
+    for (const BitInterval &NextInterval : OccuppiedIntervals) {
+      if (Merged.empty()) {
+        Merged.push_back(NextInterval);
+        continue;
+      }
+      auto &LastInterval = Merged.back();
+
+      if (NextInterval.First > LastInterval.Last) {
+        Merged.push_back(NextInterval);
+      } else {
+        LastInterval.Last = std::max(LastInterval.Last, NextInterval.Last);
+      }
+    }
+
+    OccuppiedIntervals = Merged;
+  }
+
+  std::vector<BitInterval> GetPaddingIntervals(uint64_t SizeInBits) const {
+    std::vector<BitInterval> Results;
+    if (OccuppiedIntervals.size() == 1 &&
+        OccuppiedIntervals.front().First == 0 &&
+        OccuppiedIntervals.end()->Last == SizeInBits) {
+      return Results;
+    }
+    Results.reserve(OccuppiedIntervals.size() + 1);
+    uint64_t CurrentPos = 0;
+    for (const BitInterval &OccupiedInterval : OccuppiedIntervals) {
+      if (OccupiedInterval.First > CurrentPos) {
+        Results.push_back(BitInterval{CurrentPos, OccupiedInterval.First});
+      }
+      CurrentPos = OccupiedInterval.Last;
+    }
+    if (SizeInBits > CurrentPos) {
+      Results.push_back(BitInterval{CurrentPos, SizeInBits});
+    }
+    return Results;
+  }
+
+  void ClearPadding(Value *Ptr, const BitInterval &PaddingInteval) {
+    // TODO: support clearning non-one-byte clearing
+    auto *I8Ptr = CGF.Builder.CreateBitCast(Ptr, CGF.Int8PtrTy);
+    auto *Zero = ConstantInt::get(CGF.Int8Ty, 0);
+    for (auto Offset = PaddingInteval.First / CharWidth;
+         Offset < PaddingInteval.Last / CharWidth; ++Offset) {
+      auto *Index = ConstantInt::get(CGF.IntTy, Offset);
+      auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
+      CGF.Builder.CreateAlignedStore(
+          Zero, Element,
+          CharUnits::One().alignmentAtOffset(CharUnits::fromQuantity(Offset)));
+    }
+  }
+
+  CodeGenFunction &CGF;
+  const uint64_t CharWidth;
+  std::deque<Data> Queue;
+  std::vector<BitInterval> OccuppiedIntervals;
+};
+
+} // namespace
 
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
@@ -5045,7 +5098,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     const Expr *Op = E->getArg(0);
     Value *Address = EmitScalarExpr(Op);
     auto PointeeTy = Op->getType()->getPointeeType();
-    RecursivelyClearPadding(*this, Address, PointeeTy);
+    PaddingClearer clearer{*this};
+    clearer.run(Address, PointeeTy);
+    //RecursivelyClearPadding(*this, Address, PointeeTy);
     return RValue::get(nullptr);
   }
   case Builtin::BI__sync_fetch_and_add:
