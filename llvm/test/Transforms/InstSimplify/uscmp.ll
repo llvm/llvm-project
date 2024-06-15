@@ -219,6 +219,16 @@ define i8 @ucmp_with_addition2(i32 %x) {
   ret i8 %2
 }
 
+define <4 x i8> @ucmp_with_addition_vec(<4 x i32> %x) {
+; CHECK-LABEL: define <4 x i8> @ucmp_with_addition_vec(
+; CHECK-SAME: <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
+;
+  %1 = add nuw <4 x i32> %x, splat(i32 1)
+  %2 = call <4 x i8> @llvm.ucmp(<4 x i32> %x, <4 x i32> %1)
+  ret <4 x i8> %2
+}
+
 ; Negative case: mismatched signedness of predicates
 define i8 @scmp_known_ugt(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_known_ugt(
@@ -291,17 +301,4 @@ define i8 @ucmp_with_addition_no_nuw(i32 %x) {
   %1 = add i32 %x, 1
   %2 = call i8 @llvm.ucmp(i32 %x, i32 %1)
   ret i8 %2
-}
-
-; Negative case: vector types are not (yet) supported
-define <4 x i8> @scmp_with_addition_vec(<4 x i32> %x) {
-; CHECK-LABEL: define <4 x i8> @scmp_with_addition_vec(
-; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw <4 x i32> [[X]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i8> @llvm.scmp.v4i8.v4i32(<4 x i32> [[X]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret <4 x i8> [[TMP2]]
-;
-  %1 = add nuw <4 x i32> %x, splat(i32 1)
-  %2 = call <4 x i8> @llvm.scmp(<4 x i32> %x, <4 x i32> %1)
-  ret <4 x i8> %2
 }
