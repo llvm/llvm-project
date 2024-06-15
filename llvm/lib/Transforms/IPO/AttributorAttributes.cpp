@@ -1473,7 +1473,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
     // Make a strictly ascending list of offsets as required by addAccess()
     llvm::sort(Offsets);
-    auto *Last = std::unique(Offsets.begin(), Offsets.end());
+    auto *Last = llvm::unique(Offsets);
     Offsets.erase(Last, Offsets.end());
 
     VectorType *VT = dyn_cast<VectorType>(&Ty);
