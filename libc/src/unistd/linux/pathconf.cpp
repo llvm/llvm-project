@@ -6,17 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/unistd/pathconf.h"
 #include "src/errno/libc_errno.h"
-#include "src/unistd/pathconf_utils.h"
-
-#include <stdint.h> // For uint64_t.
-#include <sys/fstatvfs.h>
-#include <sys/syscall.h> // For syscall numbers.
+#include "src/sys/statvfs/linux/statfs_utils.h"
+#include "src/unistd/linux/pathconf_utils.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(long, pathconf, (char *path, int name)) {
-  if (cpp::optional<LinuxStatFs> result = linux_statfs(const char *path);) {
+LLVM_LIBC_FUNCTION(long, pathconf, (const char *path, int name)) {
+  if (cpp::optional<statfs_utils::LinuxStatFs> result =
+          statfs_utils::linux_statfs(path)) {
     return pathconfig(result.value(), name);
   }
   return -1;

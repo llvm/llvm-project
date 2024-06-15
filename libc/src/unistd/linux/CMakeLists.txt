@@ -308,10 +308,10 @@ add_object_library(
   HDRS
     pathconf_utils.h
   DEPENDS
-    libc.include.unistd
-    libc.include.sys_syscall
+    libc.hdr.unistd_macros
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+    libc.src.sys.statvfs.linux.statfs_utils
 )
 
 add_entrypoint_object(

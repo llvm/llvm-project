@@ -8,13 +8,22 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-
 #include "src/errno/libc_errno.h"
-#include <sys/syscall.h> // For syscall numbers.
+#include "src/sys/statvfs/linux/statfs_utils.h"
+#include <linux/bfs_fs.h>
+#if __has_include(<linux/ufs_fs.h>)
+#include <linux/ufs_fs.h>
+#else
+// from https://elixir.bootlin.com/linux/latest/source/fs/ufs/ufs_fs.h
+#define UFS_MAGIC 0x00011954
+#endif
+#include "hdr/unistd_macros.h"
+#include <linux/limits.h> // For LINK_MAX and other limits
+#include <linux/magic.h>  // For common FS magics
 
 namespace LIBC_NAMESPACE {
 
-long filesizebits(const struct statfs &s) {
+long filesizebits(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
   case JFFS2_SUPER_MAGIC:
   case MSDOS_SUPER_MAGIC:
@@ -24,7 +33,7 @@ long filesizebits(const struct statfs &s) {
   return 64;
 }
 
-long link_max(const struct statfs &s) {
+long link_max(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
   case EXT2_SUPER_MAGIC:
     return 32000;
@@ -40,7 +49,7 @@ long link_max(const struct statfs &s) {
   return LINK_MAX;
 }
 
-long _2_symlinks(const struct statfs &s) {
+long _2_symlinks(const statfs_utils::LinuxStatFs &s) {
   switch (s.f_type) {
   case ADFS_SUPER_MAGIC:
   case BFS_MAGIC:
@@ -53,7 +62,7 @@ long _2_symlinks(const struct statfs &s) {
   return 1;
 }
 
-long pathconfig(const struct fstatfs &s, int name) {
+long pathconfig(const statfs_utils::LinuxStatFs &s, int name) {
   switch (name) {
   case _PC_LINK_MAX:
     return link_max(s);
@@ -78,7 +87,7 @@ long pathconfig(const struct fstatfs &s, int name) {
     return _POSIX_MAX_INPUT;
 
   case _PC_NAME_MAX:
-    return s.f_namemax;
+    return s.f_namelen;
 
   case _PC_PATH_MAX:
     return _POSIX_PATH_MAX;
@@ -104,7 +113,7 @@ long pathconfig(const struct fstatfs &s, int name) {
     return -1;
 
   default:
-    errno = EINVAL;
+    libc_errno = EINVAL;
     return -1;
   }
 }

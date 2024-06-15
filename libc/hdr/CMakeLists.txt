@@ -68,4 +68,22 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_epoll_macros
 )
 
+add_proxy_header_library(
+  sys_stat_macros
+  HDRS
+    sys_stat_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_stat
+    libc.include.llvm-libc-macros.sys_stat_macros
+)
+
+add_proxy_header_library(
+  unistd_macros
+  HDRS
+    unistd_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.unistd
+    libc.include.llvm-libc-macros.unistd_macros
+)
+
 add_subdirectory(types)

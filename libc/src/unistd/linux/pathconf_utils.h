@@ -9,14 +9,11 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_PATHCONF_UTILS_H
 #define LLVM_LIBC_SRC_UNISTD_PATHCONF_UTILS_H
 
-#include <unistd.h>
+#include "src/sys/statvfs/linux/statfs_utils.h"
 
 namespace LIBC_NAMESPACE {
 
-long filesizebits(const struct statfs &s);
-long link_max(const struct statfs &s);
-long _2_symlinks(const struct statfs &s);
-long pathconfig(const struct fstatfs &s, int name);
+long pathconfig(const statfs_utils::LinuxStatFs &s, int name);
 
 } // namespace LIBC_NAMESPACE
 

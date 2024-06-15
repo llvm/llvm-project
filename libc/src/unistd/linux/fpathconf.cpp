@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/unistd/fpathconf.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/unistd/pathconf_utils.h"
-
-#include "src/errno/libc_errno.h"
-#include <sys/syscall.h> // For syscall numbers.
+#include "src/sys/statvfs/linux/statfs_utils.h"
+#include "src/unistd/linux/pathconf_utils.h"
 
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long, fpathconf, (int fd, int name)) {
-  if (cpp::optional<LinuxStatFs> result = linux_fstatfs(fd))
+  if (cpp::optional<statfs_utils::LinuxStatFs> result =
+          statfs_utils::linux_fstatfs(fd))
     return pathconfig(result.value(), name);
   return -1;
 }

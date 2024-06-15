@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE {
 
-long pathconf(char *path, int name);
+long pathconf(const char *path, int name);
 
 } // namespace LIBC_NAMESPACE
 
