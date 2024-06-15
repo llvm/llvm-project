@@ -4,8 +4,7 @@
 define float @fabs_fneg_basic(float %x) {
 ; CHECK-LABEL: define float @fabs_fneg_basic(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[NEG]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %neg = fneg float %x
@@ -16,8 +15,7 @@ define float @fabs_fneg_basic(float %x) {
 define <2 x float> @fabs_fneg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @fabs_fneg_v2f32(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[NEG]])
+; CHECK-NEXT:    [[FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X]])
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %neg = fneg <2 x float> %x
@@ -28,8 +26,7 @@ define <2 x float> @fabs_fneg_v2f32(<2 x float> %x) {
 define double @fabs_fneg_f64(double %x) {
 ; CHECK-LABEL: define double @fabs_fneg_f64(
 ; CHECK-SAME: double [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = fneg double [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[NEG]])
+; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X]])
 ; CHECK-NEXT:    ret double [[FABS]]
 ;
   %neg = fneg double %x
@@ -40,8 +37,7 @@ define double @fabs_fneg_f64(double %x) {
 define <4 x double> @fabs_fneg_v4f64(<4 x double> %x) {
 ; CHECK-LABEL: define <4 x double> @fabs_fneg_v4f64(
 ; CHECK-SAME: <4 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = fneg <4 x double> [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[NEG]])
+; CHECK-NEXT:    [[FABS:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[X]])
 ; CHECK-NEXT:    ret <4 x double> [[FABS]]
 ;
   %neg = fneg <4 x double> %x
@@ -52,8 +48,7 @@ define <4 x double> @fabs_fneg_v4f64(<4 x double> %x) {
 define half @fabs_fneg_f16(half %x) {
 ; CHECK-LABEL: define half @fabs_fneg_f16(
 ; CHECK-SAME: half [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = fneg half [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[NEG]])
+; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half [[X]])
 ; CHECK-NEXT:    ret half [[FABS]]
 ;
   %neg = fneg half %x
@@ -64,8 +59,7 @@ define half @fabs_fneg_f16(half %x) {
 define float @fabs_fneg_nnan(float %x) {
 ; CHECK-LABEL: define float @fabs_fneg_nnan(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = fneg nnan float [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = call nnan float @llvm.fabs.f32(float [[NEG]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %neg = fneg nnan float %x
@@ -76,8 +70,7 @@ define float @fabs_fneg_nnan(float %x) {
 define float @fabs_fneg_ninf(float %x) {
 ; CHECK-LABEL: define float @fabs_fneg_ninf(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = fneg ninf float [[X]]
-; CHECK-NEXT:    [[FABS:%.*]] = call ninf float @llvm.fabs.f32(float [[NEG]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %neg = fneg ninf float %x
@@ -134,7 +127,7 @@ define float @fabs_fneg_multi_use(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    call void @use(float [[NEG]])
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[NEG]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %neg = fneg float %x
