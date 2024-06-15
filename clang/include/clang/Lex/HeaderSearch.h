@@ -90,7 +90,9 @@ struct HeaderFileInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned isModuleHeader : 1;
 
-  /// Whether this header is a `textual header` in a module.
+  /// Whether this header is a `textual header` in a module. If a header is
+  /// textual in one module and normal in another module, this bit will not be
+  /// set, only `isModuleHeader`.
   LLVM_PREFERRED_TYPE(bool)
   unsigned isTextualModuleHeader : 1;
 
