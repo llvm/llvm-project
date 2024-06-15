@@ -6524,7 +6524,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     ICmpInst::Predicate PredLT =
         IID == Intrinsic::scmp ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
     if (isICmpTrue(PredLT, Op0, Op1, Q, RecursionLimit))
-      return ConstantInt::get(ReturnType, -1, /*IsSigned*/ true);
+      return ConstantInt::getSigned(ReturnType, -1);
 
     break;
   }
