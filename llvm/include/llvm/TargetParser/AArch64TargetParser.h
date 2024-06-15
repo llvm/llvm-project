@@ -521,7 +521,14 @@ inline constexpr CpuInfo CpuInfos[] = {
      AArch64::ExtensionBitset({AArch64::AEK_AES, AArch64::AEK_SHA2,
                                AArch64::AEK_SHA3, AArch64::AEK_FP16,
                                AArch64::AEK_FP16FML})},
-
+    // Technically apple-m4 is ARMv9.2a, but a quirk of LLVM defines v9.0 as
+    // requiring SVE, which is optional according to the Arm ARM and not
+    // supported by the core. ARMv8.7a is the next closest choice.
+    {"apple-m4", ARMV8_7A,
+     AArch64::ExtensionBitset(
+         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SME,
+          AArch64::AEK_SME2, AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64})},
     {"apple-s4", ARMV8_3A,
      AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_FP16})},
