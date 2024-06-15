@@ -7104,7 +7104,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
-// Try to fold switch with manually selecting default branch
+// Try to fold switch with manually selected default branch.
 // For example, for the switch
 //   switch (v) { case 0: case 1: case 2: ... case MaxC: default: }
 //     (continuous cases value from 0 to MaxC)
