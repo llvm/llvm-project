@@ -12917,7 +12917,7 @@ TEST_F(FormatTest, FormatsAccessModifiers) {
   verifyFormat("struct foo {\n"
                "FOO private:\n"
                "  int i;\n"
-               "BAR private:\n"
+               "BAR(x) protected:\n"
                "  int j;\n"
                "};",
                Style);

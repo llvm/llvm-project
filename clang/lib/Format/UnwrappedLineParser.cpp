@@ -368,6 +368,8 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
   do {
     if (FormatTok->isAttribute()) {
       nextToken();
+      if (FormatTok->is(tok::l_paren))
+        parseParens();
       continue;
     }
     tok::TokenKind Kind = FormatTok->Tok.getKind();
