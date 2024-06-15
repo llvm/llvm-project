@@ -398,8 +398,9 @@ else()
       freelist.h
     DEPENDS
       libc.src.__support.fixedvector
-      libc.src.__support.CPP.cstddef
       libc.src.__support.CPP.array
+      libc.src.__support.CPP.cstddef
+      libc.src.__support.CPP.new
       libc.src.__support.CPP.span
   )
   add_header_library(
@@ -417,8 +418,14 @@ else()
       libc.src.string.memory_utils.inline_memcpy
       libc.src.string.memory_utils.inline_memset
   )
-  add_entrypoint_external(
+  add_entrypoint_object(
     malloc
+    SRCS
+      freelist_malloc.cpp
+    HDRS
+      malloc.h
+    DEPENDS
+      .freelist_heap
   )
   add_entrypoint_external(
     free
