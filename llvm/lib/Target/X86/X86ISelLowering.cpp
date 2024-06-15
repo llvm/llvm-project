@@ -13353,11 +13353,11 @@ static SDValue lowerV8I16GeneralSingleInputShuffle(
   SmallVector<int, 4> LoInputs;
   copy_if(LoMask, std::back_inserter(LoInputs), [](int M) { return M >= 0; });
   array_pod_sort(LoInputs.begin(), LoInputs.end());
-  LoInputs.erase(std::unique(LoInputs.begin(), LoInputs.end()), LoInputs.end());
+  LoInputs.erase(llvm::unique(LoInputs), LoInputs.end());
   SmallVector<int, 4> HiInputs;
   copy_if(HiMask, std::back_inserter(HiInputs), [](int M) { return M >= 0; });
   array_pod_sort(HiInputs.begin(), HiInputs.end());
-  HiInputs.erase(std::unique(HiInputs.begin(), HiInputs.end()), HiInputs.end());
+  HiInputs.erase(llvm::unique(HiInputs), HiInputs.end());
   int NumLToL = llvm::lower_bound(LoInputs, 4) - LoInputs.begin();
   int NumHToL = LoInputs.size() - NumLToL;
   int NumLToH = llvm::lower_bound(HiInputs, 4) - HiInputs.begin();
@@ -14245,13 +14245,11 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       copy_if(Mask, std::back_inserter(LoInputs),
               [](int M) { return M >= 0 && M < 8; });
       array_pod_sort(LoInputs.begin(), LoInputs.end());
-      LoInputs.erase(std::unique(LoInputs.begin(), LoInputs.end()),
-                     LoInputs.end());
+      LoInputs.erase(llvm::unique(LoInputs), LoInputs.end());
       SmallVector<int, 4> HiInputs;
       copy_if(Mask, std::back_inserter(HiInputs), [](int M) { return M >= 8; });
       array_pod_sort(HiInputs.begin(), HiInputs.end());
-      HiInputs.erase(std::unique(HiInputs.begin(), HiInputs.end()),
-                     HiInputs.end());
+      HiInputs.erase(llvm::unique(HiInputs), HiInputs.end());
 
       bool TargetLo = LoInputs.size() >= HiInputs.size();
       ArrayRef<int> InPlaceInputs = TargetLo ? LoInputs : HiInputs;
