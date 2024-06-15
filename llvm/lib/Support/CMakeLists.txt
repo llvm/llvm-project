@@ -224,6 +224,7 @@ add_llvm_component_library(LLVMSupport
   SHA1.cpp
   SHA256.cpp
   Signposts.cpp
+  SipHash.cpp
   SlowDynamicAPInt.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
