@@ -1435,20 +1435,22 @@ PtrParts SplitPtrStructs::visitPtrToIntInst(PtrToIntInst &PI) {
   const DataLayout &DL = PI.getModule()->getDataLayout();
   unsigned FatPtrWidth = DL.getPointerSizeInBits(AMDGPUAS::BUFFER_FAT_POINTER);
 
-  Value *RsrcInt;
-  if (Width <= BufferOffsetWidth)
-    RsrcInt = ConstantExpr::getIntegerValue(ResTy, APInt::getZero(Width));
-  else
-    RsrcInt = IRB.CreatePtrToInt(Rsrc, ResTy, PI.getName() + ".rsrc");
-  copyMetadata(RsrcInt, &PI);
+  Value *Res;
+  if (Width <= BufferOffsetWidth) {
+    Res = IRB.CreateIntCast(Off, ResTy, /*isSigned=*/false,
+                            PI.getName() + ".off");
+  } else {
+    Value *RsrcInt = IRB.CreatePtrToInt(Rsrc, ResTy, PI.getName() + ".rsrc");
+    Value *Shl = IRB.CreateShl(
+        RsrcInt,
+        ConstantExpr::getIntegerValue(ResTy, APInt(Width, BufferOffsetWidth)),
+        "", Width >= FatPtrWidth, Width > FatPtrWidth);
+    Value *OffCast = IRB.CreateIntCast(Off, ResTy, /*isSigned=*/false,
+                                       PI.getName() + ".off");
+    Res = IRB.CreateOr(Shl, OffCast);
+  }
 
-  Value *Shl = IRB.CreateShl(
-      RsrcInt,
-      ConstantExpr::getIntegerValue(ResTy, APInt(Width, BufferOffsetWidth)), "",
-      Width >= FatPtrWidth, Width > FatPtrWidth);
-  Value *OffCast =
-      IRB.CreateIntCast(Off, ResTy, /*isSigned=*/false, PI.getName() + ".off");
-  Value *Res = IRB.CreateOr(Shl, OffCast);
+  copyMetadata(Res, &PI);
   Res->takeName(&PI);
   SplitUsers.insert(&PI);
   PI.replaceAllUsesWith(Res);

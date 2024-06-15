@@ -738,9 +738,14 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       TripCountNumBlocks = LoopTripCount;
     }
   }
+
   // If the loops are long running we rather reuse blocks than spawn too many.
   uint32_t PreferredNumBlocks = std::min(uint32_t(TripCountNumBlocks),
                                          GenericDevice.getDefaultNumBlocks());
+#if 0// Fixme, we have this already downstream 
+  if (GenericDevice.getReuseBlocksForHighTripCount())
+    PreferredNumBlocks = std::min(TripCountNumBlocks, DefaultNumBlocks);
+#endif//>>>>>>> f6947e479e14e7904aa0b2539a95f5dfdc8f9295
   return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
 }
 

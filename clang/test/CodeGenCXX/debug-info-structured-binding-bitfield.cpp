@@ -8,8 +8,8 @@ struct S0 {
 // CHECK-LABEL: define dso_local void @_Z3fS0v
 // CHECK:                        alloca %struct.S0, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S0, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S0_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S0_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 2))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S0_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S0_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
 //
 void fS0() {
   S0 s0;
@@ -24,8 +24,8 @@ struct S1 {
 // CHECK-LABEL: define dso_local void @_Z3fS1v
 // CHECK:                        alloca %struct.S1, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S1, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S1_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S1_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 2))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S1_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S1_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
 //
 void fS1() {
   S1 s1;
@@ -40,8 +40,8 @@ struct S2 {
 // CHECK-LABEL: define dso_local void @_Z3fS2v
 // CHECK:                        alloca %struct.S2, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S2, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S2_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S2_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 1))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S2_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S2_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 1),
 //
 void fS2() {
   S2 s2;
@@ -56,8 +56,8 @@ struct S3 {
 // CHECK-LABEL: define dso_local void @_Z3fS3v
 // CHECK:                        alloca %struct.S3, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S3, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S3_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S3_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 1))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S3_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S3_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 1),
 //
 void fS3() {
   S3 s3;
@@ -72,8 +72,8 @@ struct S4 {
 // CHECK-LABEL: define dso_local void @_Z3fS4v
 // CHECK:                        alloca %struct.S4, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S4, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S4_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S4_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 1))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S4_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S4_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 1),
 //
 void fS4() {
   S4 s4;
@@ -88,8 +88,8 @@ struct S5 {
 // CHECK-LABEL: define dso_local void @_Z3fS5v
 // CHECK:                        alloca %struct.S5, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S5, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S5_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S5_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 1))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S5_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S5_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 1),
 //
 void fS5() {
   S5 s5;
@@ -104,8 +104,8 @@ struct S6 {
 // CHECK-LABEL: define dso_local void @_Z3fS6v
 // CHECK:                        alloca %struct.S6, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S6, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S6_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S6_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 2))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S6_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S6_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
 //
 void fS6() {
   S6 s6;
@@ -120,8 +120,8 @@ struct S7 {
 // CHECK-LABEL: define dso_local void @_Z3fS7v
 // CHECK:                        alloca %struct.S7, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S7, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S7_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S7_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 2))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S7_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S7_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
 //
 void fS7() {
   S7 s7;
@@ -136,8 +136,8 @@ struct S8 {
 // CHECK-LABEL: define dso_local void @_Z3fS8v
 // CHECK:                        alloca %struct.S8, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S8, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S8_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S8_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 2))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S8_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S8_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 2),
 //
 void fS8() {
   S8 s8;
@@ -152,8 +152,8 @@ struct S9 {
 // CHECK-LABEL: define dso_local void @_Z3fS9v
 // CHECK:                        alloca %struct.S9, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S9, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S9_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S9_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 4))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S9_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S9_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 4),
 //
 void fS9() {
   S9 s9;
@@ -167,8 +167,8 @@ struct S10 {
 // CHECK-LABEL: define dso_local void @_Z4fS10v
 // CHECK:                        alloca %struct.S10, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S10, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S10_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S10_B:![0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 1))
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S10_A:![0-9]+]], !DIExpression(),
+// CHECK-NEXT:    #dbg_declare(ptr [[TMP0]], [[S10_B:![0-9]+]], !DIExpression(DW_OP_plus_uconst, 1),
 //
   S10() : x(0), y(0) {}
 };
@@ -189,7 +189,7 @@ struct S11 {
 // CHECK-LABEL: define dso_local void @_Z4fS11v
 // CHECK:                        alloca %struct.S11, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S11, align 4
-// CHECK-NOT:     call void @llvm.dbg.declare(metadata ptr [[TMP0]]
+// CHECK-NOT:     #dbg_declare(ptr [[TMP0]]
 //
 void fS11() {
   S11 s11;
@@ -204,8 +204,8 @@ struct S12 {
 // CHECK-LABEL: define dso_local void @_Z4fS12v
 // CHECK:                        alloca %struct.S12, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S12, align 4
-// CHECK:         call void @llvm.dbg.declare(metadata ptr [[TMP0]], metadata [[S12_A:![0-9]+]], metadata !DIExpression())
-// CHECK-NOT:     call void @llvm.dbg.declare(metadata ptr [[TMP0]]
+// CHECK:         #dbg_declare(ptr [[TMP0]], [[S12_A:![0-9]+]], !DIExpression(),
+// CHECK-NOT:     #dbg_declare(ptr [[TMP0]]
 //
 void fS12() {
   S12 s12;
@@ -220,7 +220,7 @@ struct __attribute__((packed)) S13 {
 // CHECK-LABEL: define dso_local void @_Z4fS13v
 // CHECK:                        alloca %struct.S13, align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = alloca %struct.S13, align 1
-// CHECK-NOT:     call void @llvm.dbg.declare(metadata ptr [[TMP0]]
+// CHECK-NOT:     #dbg_declare(ptr [[TMP0]]
 //
 void fS13() {
   S13 s13;
