@@ -848,6 +848,7 @@ Bug Fixes to C++ Support
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
+- Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
