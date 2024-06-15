@@ -51,14 +51,11 @@ void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
   gpu::sync_threads();
 
-  for (auto it = benchmarks.rbegin(), e = benchmarks.rend(); it != e; ++it) {
-    Benchmark *benchmark = *it;
+  for (Benchmark *benchmark : benchmarks)
     results[id] = benchmark->run();
-  }
   gpu::sync_threads();
   if (id == 0) {
-    for (auto it = benchmarks.rbegin(), e = benchmarks.rend(); it != e; ++it) {
-      Benchmark *benchmark = *it;
+    for (Benchmark *benchmark : benchmarks) {
       BenchmarkResult all_results = reduce_results(results);
       constexpr auto GREEN = "\033[32m";
       constexpr auto RESET = "\033[0m";
@@ -128,9 +125,9 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
     iterations *= options.scaling_factor;
   }
   result.cycles = best_guess;
-  result.standard_deviation =
-      fputil::sqrt(static_cast<double>(cycles_squared) / total_iterations -
-                   (best_guess * best_guess));
+  result.standard_deviation = fputil::sqrt<double>(
+      static_cast<double>(cycles_squared) / total_iterations -
+      static_cast<double>(best_guess * best_guess));
   result.min = min;
   result.max = max;
   result.samples = samples;

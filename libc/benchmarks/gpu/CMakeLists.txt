@@ -47,7 +47,7 @@ add_unittest_framework_library(
     libc.src.__support.macros.properties.types
     libc.src.__support.OSUtil.osutil
     libc.src.__support.uint128
-    libc.src.___support.FPUtil.sqrt
+    libc.src.__support.FPUtil.sqrt
     libc.src.__support.fixedvector
     libc.src.time.clock
     libc.benchmarks.gpu.timing.timing
