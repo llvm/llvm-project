@@ -4,12 +4,14 @@ class State {
     print("in class") // break here
   }
 
-  var number:Int
+  var number : Int
 }
 
-func f() {
+struct S {}
+
+func f(_ strct : S) {
   print("in function") // break here
 }
 
-f()
+f(S())
 State(x: 20)
