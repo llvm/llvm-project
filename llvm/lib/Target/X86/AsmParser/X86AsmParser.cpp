@@ -473,7 +473,9 @@ private:
     unsigned getLength() const { return CurType.Length; }
     int64_t getImm() { return Imm + IC.execute(); }
     bool isValidEndState() const {
-      return State == IES_RBRAC || State == IES_INTEGER;
+      return State == IES_RBRAC || State == IES_RPAREN ||
+             State == IES_INTEGER || State == IES_REGISTER ||
+             State == IES_OFFSET;
     }
 
     // Is the intel expression appended after an operand index.
@@ -1896,9 +1898,6 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       return Error(Tok.getLoc(), "unknown token in expression");
     case AsmToken::Error:
       return Error(getLexer().getErrLoc(), getLexer().getErr());
-      break;
-    case AsmToken::EndOfStatement:
-      Done = true;
       break;
     case AsmToken::Real:
       // DotOperator: [ebx].0
