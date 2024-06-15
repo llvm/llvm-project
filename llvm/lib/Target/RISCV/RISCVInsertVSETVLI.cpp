@@ -249,6 +249,13 @@ struct DemandedFields {
     VLZeroness = true;
   }
 
+  static DemandedFields all() {
+    DemandedFields DF;
+    DF.demandVTYPE();
+    DF.demandVL();
+    return DF;
+  }
+
   // Make this the result of demanding both the fields in this and B.
   void doUnion(const DemandedFields &B) {
     VLAny |= B.VLAny;
@@ -713,14 +720,12 @@ public:
                     const LiveIntervals *LIS) const {
     assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
-    assert(!Require.SEWLMULRatioOnly &&
-           "Expected a valid VTYPE for instruction!");
     // Nothing is compatible with Unknown.
     if (isUnknown() || Require.isUnknown())
       return false;
 
     // If only our VLMAX ratio is valid, then this isn't compatible.
-    if (SEWLMULRatioOnly)
+    if (SEWLMULRatioOnly || Require.SEWLMULRatioOnly)
       return false;
 
     if (Used.VLAny && !(hasSameAVL(Require) && hasSameVLMAX(Require)))
@@ -1412,7 +1417,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 
     uint64_t TSFlags = MI.getDesc().TSFlags;
     if (RISCVII::hasSEWOp(TSFlags)) {
-      if (PrevInfo != CurInfo) {
+      if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
         // If this is the first implicit state change, and the state change
         // requested can be proven to produce the same register contents, we
         // can skip emitting the actual state change and continue as if we
