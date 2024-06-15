@@ -112,6 +112,7 @@ public:
     Parser.Line->PPLevel = PreBlockLine->PPLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
+    Parser.Line->UnbracedBodyLevel = PreBlockLine->UnbracedBodyLevel;
   }
 
   ~ScopedLineState() {
@@ -2708,7 +2709,9 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
 
   addUnwrappedLine();
   ++Line->Level;
+  ++Line->UnbracedBodyLevel;
   parseStructuralElement();
+  --Line->UnbracedBodyLevel;
 
   if (Tok) {
     assert(!Line->InPPDirective);
@@ -4836,6 +4839,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
           PPBranchLevel > 0) {
         Line->Level += PPBranchLevel;
       }
+      assert(Line->Level >= Line->UnbracedBodyLevel);
+      Line->Level -= Line->UnbracedBodyLevel;
       flushComments(isOnNewLine(*FormatTok));
       parsePPDirective();
       PreviousWasComment = FormatTok->is(tok::comment);
