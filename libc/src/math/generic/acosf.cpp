@@ -113,7 +113,7 @@ LLVM_LIBC_FUNCTION(float, acosf, (float x)) {
   xbits.set_sign(Sign::POS);
   double xd = static_cast<double>(xbits.get_val());
   double u = fputil::multiply_add(-0.5, xd, 0.5);
-  double cv = 2 * fputil::sqrt(u);
+  double cv = 2 * fputil::sqrt<double>(u);
 
   double r3 = asin_eval(u);
   double r = fputil::multiply_add(cv * u, r3, cv);

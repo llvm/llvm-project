@@ -5746,6 +5746,48 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
   Var->addDebugInfo(GVE);
 }
 
+void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
+                                     llvm::Instruction *Value, QualType Ty) {
+  // Only when -g2 or above is specified, debug info for variables will be
+  // generated.
+  if (CGM.getCodeGenOpts().getDebugInfo() <=
+      llvm::codegenoptions::DebugLineTablesOnly)
+    return;
+
+  llvm::DILocation *DIL = Value->getDebugLoc().get();
+  if (!DIL)
+    return;
+
+  llvm::DIFile *Unit = DIL->getFile();
+  llvm::DIType *Type = getOrCreateType(Ty, Unit);
+
+  // Check if Value is already a declared variable and has debug info, in this
+  // case we have nothing to do. Clang emits a declared variable as alloca, and
+  // it is loaded upon use, so we identify such pattern here.
+  if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Value)) {
+    llvm::Value *Var = Load->getPointerOperand();
+    // There can be implicit type cast applied on a variable if it is an opaque
+    // ptr, in this case its debug info may not match the actual type of object
+    // being used as in the next instruction, so we will need to emit a pseudo
+    // variable for type-casted value.
+    auto DeclareTypeMatches = [&](auto *DbgDeclare) {
+      return DbgDeclare->getVariable()->getType() == Type;
+    };
+    if (any_of(llvm::findDbgDeclares(Var), DeclareTypeMatches) ||
+        any_of(llvm::findDVRDeclares(Var), DeclareTypeMatches))
+      return;
+  }
+
+  llvm::DILocalVariable *D =
+      DBuilder.createAutoVariable(LexicalBlockStack.back(), "", nullptr, 0,
+                                  Type, false, llvm::DINode::FlagArtificial);
+
+  if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
+    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
+                                     &**InsertPoint);
+  }
+}
+
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
                                   const GlobalDecl GD) {
 

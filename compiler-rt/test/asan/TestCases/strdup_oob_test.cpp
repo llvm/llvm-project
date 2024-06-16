@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   // CHECK: AddressSanitizer: heap-buffer-overflow
   // CHECK: #0 {{.*}}main {{.*}}strdup_oob_test.cpp:[[@LINE-2]]
   // CHECK-LABEL: allocated by thread T{{.*}} here:
-  // CHECK: #{{[0-9]+}} {{.*}}strdup
+  // CHECK: #{{[01]}} {{.*}}strdup
   // CHECK: #{{.*}}main {{.*}}strdup_oob_test.cpp:[[@LINE-6]]
   // CHECK-LABEL: SUMMARY
   // CHECK: strdup_oob_test.cpp:[[@LINE-7]]

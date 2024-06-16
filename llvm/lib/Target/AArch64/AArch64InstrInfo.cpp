@@ -8556,6 +8556,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
         NumBytesNoStackCalls <= RepeatedSequenceLocs.size() * 12) {
       RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
+      if (RepeatedSequenceLocs.size() < 2)
+        return std::nullopt;
     } else {
       SetCandidateCallInfo(MachineOutlinerDefault, 12);
 
