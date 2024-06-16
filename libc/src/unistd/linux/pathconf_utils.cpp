@@ -17,6 +17,7 @@
 // from https://elixir.bootlin.com/linux/latest/source/fs/ufs/ufs_fs.h
 #define UFS_MAGIC 0x00011954
 #endif
+#include "hdr/limits_macros.h"
 #include "hdr/unistd_macros.h"
 #include <linux/limits.h> // For LINK_MAX and other limits
 #include <linux/magic.h>  // For common FS magics

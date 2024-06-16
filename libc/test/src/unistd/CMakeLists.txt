@@ -453,6 +453,7 @@ add_libc_unittest(
   SRCS
     fpathconf_test.cpp
   DEPENDS
+    libc.hdr.limits_macros
     libc.hdr.unistd_macros
     libc.hdr.sys_stat_macros
     libc.src.unistd.fpathconf
@@ -467,6 +468,7 @@ add_libc_unittest(
   SRCS
     pathconf_test.cpp
   DEPENDS
+    libc.hdr.limits_macros
     libc.hdr.unistd_macros
     libc.hdr.sys_stat_macros
     libc.src.unistd.pathconf

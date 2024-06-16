@@ -115,4 +115,13 @@ add_proxy_header_library(
     libc.include.float
 )
 
+add_proxy_header_library(
+  limits_macros
+  HDRS
+    limits_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.limits
+    libc.include.llvm-libc-macros.limits_macros
+)
+
 add_subdirectory(types)
