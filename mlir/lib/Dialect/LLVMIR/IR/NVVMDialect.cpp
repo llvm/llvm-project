@@ -1136,6 +1136,14 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+StringRef NVVMTargetAttr::getTargetTriple() const { return getTriple(); }
+
+StringRef NVVMTargetAttr::getTargetChip() const { return getChip(); }
+
+std::string NVVMTargetAttr::getTargetFeatures() const {
+  return getFeatures().str();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
 

@@ -194,6 +194,39 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
   }];
 }
 
+def TargetInfoAttrInterface : AttrInterface<"TargetInfoAttrInterface"> {
+  let cppNamespace = "::mlir";
+
+  let description = [{
+    Attribute interface describing target information.
+
+    Target information attributes provide essential information on the
+    compilation target. This information includes the target triple identifier,
+    the target chip identifier, and a string representation of the target features.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the target triple identifier.",
+      /*retTy=*/"::mlir::StringRef",
+      /*methodName=*/"getTargetTriple",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target chip identifier.",
+      /*retTy=*/"::mlir::StringRef",
+      /*methodName=*/"getTargetChip",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target features as a string.",
+      /*retTy=*/"std::string",
+      /*methodName=*/"getTargetFeatures",
+      /*args=*/(ins)
+    >
+  ];
+}
+
 //===----------------------------------------------------------------------===//
 // Operation interface
 //===----------------------------------------------------------------------===//

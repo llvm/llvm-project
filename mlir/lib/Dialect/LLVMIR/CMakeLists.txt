@@ -61,6 +61,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
+  MLIRDataLayoutInterfaces
   MLIRSideEffectInterfaces
   )
 
@@ -83,6 +84,7 @@ add_mlir_dialect_library(MLIRROCDLDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
+  MLIRDataLayoutInterfaces
   MLIRSideEffectInterfaces
   )
 

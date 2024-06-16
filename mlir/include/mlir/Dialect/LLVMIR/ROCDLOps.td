@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -637,8 +638,9 @@ def ROCDL_CvtSrFp8F32Op :
 // ROCDL target attribute.
 //===----------------------------------------------------------------------===//
 
-def ROCDL_TargettAttr :
-    ROCDL_Attr<"ROCDLTarget", "target"> {
+def ROCDL_TargettAttr : ROCDL_Attr<"ROCDLTarget", "target", [
+    DeclareAttrInterfaceMethods<TargetInfoAttrInterface>
+  ]> {
   let description = [{
     ROCDL target attribute for controlling compilation of AMDGPU targets. All
     parameters decay into default values if not present.
