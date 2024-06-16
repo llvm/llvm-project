@@ -278,10 +278,6 @@ private:
   /// using the index represented by the a temp value into a bitmap.
   void lowerMCDCTestVectorBitmapUpdate(InstrProfMCDCTVBitmapUpdate *Ins);
 
-  /// Replace instrprof.mcdc.temp.update with a shift and or instruction using
-  /// the corresponding condition ID.
-  void lowerMCDCCondBitmapUpdate(InstrProfMCDCCondBitmapUpdate *Ins);
-
   /// Compute the address of the counter value that this profiling instruction
   /// acts on.
   Value *getCounterAddress(InstrProfCntrInstBase *I);
@@ -647,9 +643,6 @@ bool InstrLowerer::lowerIntrinsics(Function *F) {
         MadeChange = true;
       } else if (auto *IPBU = dyn_cast<InstrProfMCDCTVBitmapUpdate>(&Instr)) {
         lowerMCDCTestVectorBitmapUpdate(IPBU);
-        MadeChange = true;
-      } else if (auto *IPTU = dyn_cast<InstrProfMCDCCondBitmapUpdate>(&Instr)) {
-        lowerMCDCCondBitmapUpdate(IPTU);
         MadeChange = true;
       }
     }
@@ -1050,34 +1043,6 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   // Store the updated profile bitmap byte.
   //  store i8 %8, ptr %3, align 1
   Builder.CreateStore(Result, BitmapByteAddr);
-  Update->eraseFromParent();
-}
-
-void InstrLowerer::lowerMCDCCondBitmapUpdate(
-    InstrProfMCDCCondBitmapUpdate *Update) {
-  IRBuilder<> Builder(Update);
-  auto *Int32Ty = Type::getInt32Ty(M.getContext());
-  auto *MCDCCondBitmapAddr = Update->getMCDCCondBitmapAddr();
-
-  // Load the MCDC temporary value from the stack.
-  //  %mcdc.temp = load i32, ptr %mcdc.addr, align 4
-  auto *Temp = Builder.CreateLoad(Int32Ty, MCDCCondBitmapAddr, "mcdc.temp");
-
-  // Zero-extend the evaluated condition boolean value (0 or 1) by 32bits.
-  //  %1 = zext i1 %tobool to i32
-  auto *CondV_32 = Builder.CreateZExt(Update->getCondBool(), Int32Ty);
-
-  // Shift the boolean value left (by the condition's ID) to form a bitmap.
-  //  %2 = shl i32 %1, <Update->getCondID()>
-  auto *ShiftedVal = Builder.CreateShl(CondV_32, Update->getCondID());
-
-  // Perform logical OR of the bitmap against the loaded MCDC temporary value.
-  //  %3 = or i32 %mcdc.temp, %2
-  auto *Result = Builder.CreateOr(Temp, ShiftedVal);
-
-  // Store the updated temporary value back to the stack.
-  //  store i32 %3, ptr %mcdc.addr, align 4
-  Builder.CreateStore(Result, MCDCCondBitmapAddr);
   Update->eraseFromParent();
 }
 

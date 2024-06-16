@@ -939,12 +939,7 @@ def int_instrprof_mcdc_parameters : Intrinsic<[],
 // A test vector bitmap update for instrumentation based MCDC profiling.
 def int_instrprof_mcdc_tvbitmap_update : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
-                                         llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty]>;
-
-// A condition bitmap value update for instrumentation based MCDC profiling.
-def int_instrprof_mcdc_condbitmap_update : Intrinsic<[],
-                                        [llvm_ptr_ty, llvm_i64_ty,
-                                         llvm_i32_ty, llvm_ptr_ty, llvm_i1_ty]>;
+                                         llvm_i32_ty, llvm_ptr_ty]>;
 
 def int_call_preallocated_setup : DefaultAttrsIntrinsic<[llvm_token_ty], [llvm_i32_ty]>;
 def int_call_preallocated_arg : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_i32_ty]>;

@@ -22,14 +22,7 @@ entry:
   %0 = load i32, ptr %A.addr, align 4
   %tobool = icmp ne i32 %0, 0
 
-  call void @llvm.instrprof.mcdc.condbitmap.update(ptr @__profn_test, i64 99278, i32 0, ptr %mcdc.addr, i1 %tobool)
-  ; CHECK:      %[[TEMP:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
-  ; CHECK-NEXT: %[[LAB1:[0-9]+]] = zext i1 %tobool to i32
-  ; CHECK-NEXT: %[[LAB2:[0-9]+]] = shl i32 %[[LAB1]], 0
-  ; CHECK-NEXT: %[[LAB3:[0-9]+]] = or i32 %[[TEMP]], %[[LAB2]]
-  ; CHECK-NEXT: store i32 %[[LAB3]], ptr %mcdc.addr, align 4
-
-  call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 99278, i32 1, i32 0, ptr %mcdc.addr)
+  call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 99278, i32 0, ptr %mcdc.addr)
   ; CHECK:      %[[TEMP0:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
   ; CHECK-NEXT: %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
   ; CHECK-NEXT: %[[LAB4:[0-9]+]] = lshr i32 %[[TEMP]], 3
@@ -47,6 +40,4 @@ declare void @llvm.instrprof.cover(ptr, i64, i32, i32)
 
 declare void @llvm.instrprof.mcdc.parameters(ptr, i64, i32)
 
-declare void @llvm.instrprof.mcdc.condbitmap.update(ptr, i64, i32, ptr, i1)
-
-declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr, i64, i32, i32, ptr)
+declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr, i64, i32, ptr)

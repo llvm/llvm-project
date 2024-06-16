@@ -7576,8 +7576,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     llvm_unreachable("instrprof failed to lower mcdc parameters");
   case Intrinsic::instrprof_mcdc_tvbitmap_update:
     llvm_unreachable("instrprof failed to lower an mcdc tvbitmap update");
-  case Intrinsic::instrprof_mcdc_condbitmap_update:
-    llvm_unreachable("instrprof failed to lower an mcdc condbitmap update");
   case Intrinsic::localescape: {
     MachineFunction &MF = DAG.getMachineFunction();
     const TargetInstrInfo *TII = DAG.getSubtarget().getInstrInfo();
