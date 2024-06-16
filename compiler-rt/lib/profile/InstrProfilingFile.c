@@ -177,8 +177,7 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   uint64_t PageAlignedBitmapLength =
       NumBitmapBytes + PaddingBytesAfterBitmapBytes;
   uint64_t FileOffsetToBitmap =
-      CurrentFileOffset + sizeof(__llvm_profile_header) + DataSize +
-      PaddingBytesBeforeCounters + CountersSize + PaddingBytesAfterCounters;
+      FileOffsetToCounters + CountersSize + PaddingBytesAfterCounters;
   void *BitmapMmap =
       mmap((void *)BitmapBegin, PageAlignedBitmapLength, PROT_READ | PROT_WRITE,
            MAP_FIXED | MAP_SHARED, Fileno, FileOffsetToBitmap);
