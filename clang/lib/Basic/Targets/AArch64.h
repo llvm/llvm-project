@@ -202,6 +202,8 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
+
+  unsigned getBitIntLegalWidth(unsigned Width) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {

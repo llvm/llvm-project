@@ -1989,7 +1989,14 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
 
-  llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
+  llvm::LoadInst *Load = nullptr;
+  if (const auto *BitintTy = Ty->getAs<BitIntType>()) {
+    Address TempAddr(Addr.getBasePointer(), ConvertTypeForMem(Ty),
+                     Addr.getAlignment());
+    Load = Builder.CreateLoad(TempAddr, Volatile);
+  } else
+    Load = Builder.CreateLoad(Addr, Volatile);
+
   if (isNontemporal) {
     llvm::MDNode *Node = llvm::MDNode::get(
         Load->getContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
@@ -2021,6 +2028,12 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
     assert(Value->getType()->isIntegerTy(getContext().getTypeSize(Ty)) &&
            "wrong value rep of bool");
   }
+  if (auto *BitIntTy = Ty->getAs<BitIntType>()) {
+    if (CGM.getTarget().isBitIntSignExtended(BitIntTy->isSigned()))
+      return Builder.CreateSExt(Value, ConvertTypeForMem(Ty), "sext_bitint");
+    else
+      return Builder.CreateZExt(Value, ConvertTypeForMem(Ty), "zext_bitint");
+  }
 
   return Value;
 }
@@ -2043,6 +2056,8 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
     unsigned ValNumElems = cast<llvm::FixedVectorType>(ValTy)->getNumElements();
     return emitBoolVecConversion(V, ValNumElems, "extractvec");
   }
+  if (Ty->getAs<BitIntType>())
+    return Builder.CreateTrunc(Value, ConvertType(Ty), "to_bitint");
 
   return Value;
 }

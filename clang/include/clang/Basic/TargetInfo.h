@@ -667,6 +667,11 @@ public:
     return false;
   }
 
+  // Different targets may support different machine type width for the _BitInt
+  virtual unsigned getBitIntLegalWidth(unsigned Width) const { return Width; }
+
+  virtual bool isBitIntSignExtended(bool IsSigned) const { return false; }
+
   // Different targets may support a different maximum width for the _BitInt
   // type, depending on what operations are supported.
   virtual size_t getMaxBitIntWidth() const {
