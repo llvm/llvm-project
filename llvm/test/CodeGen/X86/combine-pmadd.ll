@@ -73,21 +73,10 @@ define <8 x i16> @combine_pmaddubsw_zero_commute(<16 x i8> %a0, <16 x i8> %a1) {
 }
 
 define i32 @combine_pmaddubsw_constant() {
-; SSE-LABEL: combine_pmaddubsw_constant:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,250,7,8,9,10,11,12,13,14,15]
-; SSE-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,3,4,5,6,7,248,9,10,11,12,13,14,15,16]
-; SSE-NEXT:    pextrw $3, %xmm0, %eax
-; SSE-NEXT:    cwtl
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: combine_pmaddubsw_constant:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = [0,1,2,3,4,5,250,7,8,9,10,11,12,13,14,15]
-; AVX-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,3,4,5,6,7,248,9,10,11,12,13,14,15,16]
-; AVX-NEXT:    vpextrw $3, %xmm0, %eax
-; AVX-NEXT:    cwtl
-; AVX-NEXT:    retq
+; CHECK-LABEL: combine_pmaddubsw_constant:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1694, %eax # imm = 0x69E
+; CHECK-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 -6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16>)
   %2 = extractelement <8 x i16> %1, i32 3 ; ((uint16_t)-6*7)+(7*-8) = (250*7)+(7*-8) = 1694
   %3 = sext i16 %2 to i32
@@ -95,21 +84,10 @@ define i32 @combine_pmaddubsw_constant() {
 }
 
 define i32 @combine_pmaddubsw_constant_sat() {
-; SSE-LABEL: combine_pmaddubsw_constant_sat:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,2,3,4,5,250,7,8,9,10,11,12,13,14,15]
-; SSE-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [128,128,3,4,5,6,7,248,9,10,11,12,13,14,15,16]
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    cwtl
-; SSE-NEXT:    retq
-;
-; AVX-LABEL: combine_pmaddubsw_constant_sat:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm0 = [255,255,2,3,4,5,250,7,8,9,10,11,12,13,14,15]
-; AVX-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,128,3,4,5,6,7,248,9,10,11,12,13,14,15,16]
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    cwtl
-; AVX-NEXT:    retq
+; CHECK-LABEL: combine_pmaddubsw_constant_sat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-32768, %eax # imm = 0x8000
+; CHECK-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> <i8 -1, i8 -1, i8 2, i8 3, i8 4, i8 5, i8 -6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, <16 x i8> <i8 -128, i8 -128, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16>)
   %2 = extractelement <8 x i16> %1, i32 0 ; add_sat_i16(((uint16_t)-1*-128),((uint16_t)-1*-128)_ = add_sat_i16(255*-128),(255*-128)) = sat_i16(-65280) = -32768
   %3 = sext i16 %2 to i32
