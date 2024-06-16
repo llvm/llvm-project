@@ -3369,12 +3369,12 @@ private:
       FormatToken *Next = Tok->getNextNonComment();
 
       if (Tok->is(tok::hash)) {
-          // Start of a macro expansion.
-          First = Tok;
-          Tok = Next;
-          if (Tok)
-            Tok = Tok->getNextNonComment();
-        }
+        // Start of a macro expansion.
+        First = Tok;
+        Tok = Next;
+        if (Tok)
+          Tok = Tok->getNextNonComment();
+      }
       } else if (Tok->is(tok::hashhash)) {
         // Concatenation. Skip.
         Tok = Next;
