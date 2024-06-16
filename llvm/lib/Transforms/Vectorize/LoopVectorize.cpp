@@ -2474,7 +2474,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   } else
     Idx = Builder.getInt32(-Index);
 
-  for (unsigned Part = 0; Part < UF; Part++) {
+  for (unsigned Part = 0; Part < State.UF; Part++) {
     Value *AddrPart = State.get(Addr, VPIteration(Part, 0));
     if (auto *I = dyn_cast<Instruction>(AddrPart))
       State.setDebugLocFrom(I->getDebugLoc());
@@ -2539,7 +2539,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
 
     // For each unroll part, create a wide load for the group.
     SmallVector<Value *, 2> NewLoads;
-    for (unsigned Part = 0; Part < UF; Part++) {
+    for (unsigned Part = 0; Part < State.UF; Part++) {
       Instruction *NewLoad;
       if (BlockInMask || MaskForGaps) {
         assert(useMaskedInterleavedAccesses(*TTI) &&
@@ -2560,7 +2560,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       assert(InterleaveFactor == 2 &&
              "Unsupported deinterleave factor for scalable vectors");
 
-      for (unsigned Part = 0; Part < UF; ++Part) {
+      for (unsigned Part = 0; Part < State.UF; ++Part) {
         // Scalable vectors cannot use arbitrary shufflevectors (only splats),
         // so must use intrinsics to deinterleave.
         Value *DI = Builder.CreateIntrinsic(
@@ -2603,7 +2603,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
 
       auto StrideMask =
           createStrideMask(I, InterleaveFactor, VF.getKnownMinValue());
-      for (unsigned Part = 0; Part < UF; Part++) {
+      for (unsigned Part = 0; Part < State.UF; Part++) {
         Value *StridedVec = Builder.CreateShuffleVector(
             NewLoads[Part], StrideMask, "strided.vec");
 
@@ -2634,7 +2634,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
          "masked interleaved groups are not allowed.");
   assert((!MaskForGaps || !VF.isScalable()) &&
          "masking gaps for scalable vectors is not yet supported.");
-  for (unsigned Part = 0; Part < UF; Part++) {
+  for (unsigned Part = 0; Part < State.UF; Part++) {
     // Collect the stored vector from each member.
     SmallVector<Value *, 4> StoredVecs;
     unsigned StoredIdx = 0;
