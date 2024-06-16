@@ -215,10 +215,43 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
 
   LLVMDIBuilderFinalize(DIB);
 
+  // Using the new debug format, debug records get attached to instructions.
+  // Insert a `br` and `ret` now to absorb the debug records which are
+  // currently "trailing", meaning that they're associated with a block
+  // but no particular instruction, which is only valid as a transient state.
+  LLVMContextRef Ctx = LLVMGetModuleContext(M);
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
+  LLVMPositionBuilderAtEnd(Builder, FooEntryBlock);
+  // Build `br label %vars` in entry.
+  LLVMBuildBr(Builder, FooVarBlock);
+  // Build `ret i64 0` in vars.
+  LLVMPositionBuilderAtEnd(Builder, FooVarBlock);
+  LLVMTypeRef I64 = LLVMInt64TypeInContext(Ctx);
+  LLVMValueRef Zero = LLVMConstInt(I64, 0, false);
+  LLVMValueRef Ret = LLVMBuildRet(Builder, Zero);
+
+  // Insert a `phi` before the `ret`. In the new debug info mode we need to
+  // be careful to insert before debug records too, else the debug records
+  // will come before the `phi` (and be absorbed onto it) which is an invalid
+  // state.
+  LLVMValueRef InsertPos = LLVMGetFirstInstruction(FooVarBlock);
+  LLVMPositionBuilderBeforeInstrAndDbgRecords(Builder, InsertPos);
+  LLVMValueRef Phi1 = LLVMBuildPhi(Builder, I64, "p1");
+  LLVMAddIncoming(Phi1, &Zero, &FooEntryBlock, 1);
+  // Do the same again using the other position-setting function.
+  LLVMPositionBuilderBeforeDbgRecords(Builder, FooVarBlock, InsertPos);
+  LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
+  LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
+  // Insert a non-phi before the `ret` but not before the debug records to
+  // test that works as expected.
+  LLVMPositionBuilder(Builder, FooVarBlock, Ret);
+  LLVMBuildAdd(Builder, Phi1, Phi2, "a");
+
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);
   LLVMDisposeMessage(MStr);
 
+  LLVMDisposeBuilder(Builder);
   LLVMDisposeDIBuilder(DIB);
   LLVMDisposeModule(M);
 

@@ -129,7 +129,7 @@ void Preprocessor::setLoadedMacroDirective(IdentifierInfo *II,
     II->setHasMacroDefinition(false);
 }
 
-ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, const IdentifierInfo *II,
+ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
                                           MacroInfo *Macro,
                                           ArrayRef<ModuleMacro *> Overrides,
                                           bool &New) {
@@ -162,7 +162,7 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, const IdentifierInfo *II,
   // The new macro is always a leaf macro.
   LeafMacros.push_back(MM);
   // The identifier now has defined macros (that may or may not be visible).
-  const_cast<IdentifierInfo *>(II)->setHasMacroDefinition(true);
+  II->setHasMacroDefinition(true);
 
   New = true;
   return MM;
@@ -226,7 +226,7 @@ void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,
   bool IsSystemMacro = true;
   bool IsAmbiguous = false;
   if (auto *MD = Info.MD) {
-    while (MD && isa<VisibilityMacroDirective>(MD))
+    while (isa_and_nonnull<VisibilityMacroDirective>(MD))
       MD = MD->getPrevious();
     if (auto *DMD = dyn_cast_or_null<DefMacroDirective>(MD)) {
       MI = DMD->getInfo();
@@ -1714,8 +1714,6 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           return llvm::StringSwitch<bool>(II->getName())
               .Case("__array_rank", true)
               .Case("__array_extent", true)
-              .Case("__reference_binds_to_temporary", true)
-              .Case("__reference_constructs_from_temporary", true)
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
 #include "clang/Basic/TransformTypeTraits.def"
               .Default(false);

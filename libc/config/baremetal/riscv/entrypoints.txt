@@ -80,8 +80,11 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # stdio.h entrypoints
     libc.src.stdio.remove
+    libc.src.stdio.printf
+    libc.src.stdio.putchar
     libc.src.stdio.sprintf
     libc.src.stdio.snprintf
+    libc.src.stdio.vprintf
     libc.src.stdio.vsprintf
     libc.src.stdio.vsnprintf
 
@@ -183,6 +186,10 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.difftime
+
+    # internal entrypoints
+    libc.startup.baremetal.init
+    libc.startup.baremetal.fini
 )
 
 set(TARGET_LIBM_ENTRYPOINTS

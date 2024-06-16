@@ -152,9 +152,11 @@ std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &);
 // Propagate std::optional from input to output.
 template <typename A>
 std::optional<Expr<SomeType>> AsGenericExpr(std::optional<A> &&x) {
-  if (!x)
+  if (x) {
+    return AsGenericExpr(std::move(*x));
+  } else {
     return std::nullopt;
-  return AsGenericExpr(std::move(*x));
+  }
 }
 
 template <typename A>
@@ -1015,10 +1017,11 @@ bool IsAllocatableOrPointerObject(const Expr<SomeType> &);
 bool IsAllocatableDesignator(const Expr<SomeType> &);
 
 // Procedure and pointer detection predicates
-bool IsProcedure(const Expr<SomeType> &);
-bool IsFunction(const Expr<SomeType> &);
+bool IsProcedureDesignator(const Expr<SomeType> &);
+bool IsFunctionDesignator(const Expr<SomeType> &);
 bool IsPointer(const Expr<SomeType> &);
 bool IsProcedurePointer(const Expr<SomeType> &);
+bool IsProcedure(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
 bool IsNullObjectPointer(const Expr<SomeType> &);

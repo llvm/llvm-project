@@ -15,8 +15,7 @@ namespace LIBC_NAMESPACE {
 // insufficient.
 // TODO: Once we have another use-case for this we should put it in a common
 // device environment struct.
-extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] __llvm_libc_clock_freq = clock_freq;
+gpu::Constant<uint64_t> __llvm_libc_clock_freq = clock_freq;
 #endif
 
 } // namespace LIBC_NAMESPACE

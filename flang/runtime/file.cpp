@@ -131,17 +131,17 @@ void OpenFile::Open(OpenStatus status, Fortran::common::optional<Action> action,
   }
   RUNTIME_CHECK(handler, action.has_value());
   pending_.reset();
-  if (position == Position::Append && !RawSeekToEnd()) {
+  if (fd_ >= 0 && position == Position::Append && !RawSeekToEnd()) {
     handler.SignalError(IostatOpenBadAppend);
   }
-  isTerminal_ = IsATerminal(fd_) == 1;
+  isTerminal_ = fd_ >= 0 && IsATerminal(fd_) == 1;
   mayRead_ = *action != Action::Write;
   mayWrite_ = *action != Action::Read;
   if (status == OpenStatus::Old || status == OpenStatus::Unknown) {
     knownSize_.reset();
 #ifndef _WIN32
     struct stat buf;
-    if (::fstat(fd_, &buf) == 0) {
+    if (fd_ >= 0 && ::fstat(fd_, &buf) == 0) {
       mayPosition_ = S_ISREG(buf.st_mode);
       knownSize_ = buf.st_size;
     }

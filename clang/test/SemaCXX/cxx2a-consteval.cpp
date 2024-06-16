@@ -1068,6 +1068,14 @@ void test() {
   constexpr int (*f2)(void) = lstatic; // expected-error {{constexpr variable 'f2' must be initialized by a constant expression}} \
                                        // expected-note  {{pointer to a consteval declaration is not a constant expression}}
 
+  int (*f3)(void) = []() consteval { return 3; };  // expected-error {{cannot take address of consteval call operator of '(lambda at}} \
+                                                   // expected-note {{declared here}}
+}
+
+consteval void consteval_test() {
+  constexpr auto l1 = []() consteval { return 3; };
+
+  int (*f1)(void) = l1;  // ok
 }
 }
 
@@ -1098,11 +1106,11 @@ int bad = 10; // expected-note 6{{declared here}}
 tester glob1(make_name("glob1"));
 tester glob2(make_name("glob2"));
 constexpr tester cglob(make_name("cglob"));
-tester paddedglob(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::make_name' is not a constant expression}} \
+tester paddedglob(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::tester::tester' is not a constant expression}} \
                                         // expected-note {{read of non-const variable 'bad' is not allowed in a constant expression}}
 
 constexpr tester glob3 = { make_name("glob3") };
-constexpr tester glob4 = { make_name(pad(bad)) }; // expected-error {{call to consteval function 'GH58207::make_name' is not a constant expression}} \
+constexpr tester glob4 = { make_name(pad(bad)) }; // expected-error {{call to consteval function 'GH58207::tester::tester' is not a constant expression}} \
                                                   // expected-error {{constexpr variable 'glob4' must be initialized by a constant expression}} \
                                                   // expected-note 2{{read of non-const variable 'bad' is not allowed in a constant expression}}
 
@@ -1114,12 +1122,12 @@ auto V1 = make_name(pad(bad)); // expected-error {{call to consteval function 'G
 void foo() {
   static tester loc1(make_name("loc1"));
   static constexpr tester loc2(make_name("loc2"));
-  static tester paddedloc(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::make_name' is not a constant expression}} \
+  static tester paddedloc(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::tester::tester' is not a constant expression}} \
                                                 // expected-note {{read of non-const variable 'bad' is not allowed in a constant expression}}
 }
 
 void bar() {
-  static tester paddedloc(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::make_name' is not a constant expression}} \
+  static tester paddedloc(make_name(pad(bad))); // expected-error {{call to consteval function 'GH58207::tester::tester' is not a constant expression}} \
                                                 // expected-note {{read of non-const variable 'bad' is not allowed in a constant expression}}
 }
 }

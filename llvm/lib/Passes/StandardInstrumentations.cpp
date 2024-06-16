@@ -822,8 +822,7 @@ PrintIRInstrumentation::PassRunDescriptor
 PrintIRInstrumentation::popPassRunDescriptor(StringRef PassID) {
   assert(!PassRunDescriptorStack.empty() && "empty PassRunDescriptorStack");
   PassRunDescriptor Descriptor = PassRunDescriptorStack.pop_back_val();
-  assert(Descriptor.PassID.equals(PassID) &&
-         "malformed PassRunDescriptorStack");
+  assert(Descriptor.PassID == PassID && "malformed PassRunDescriptorStack");
   return Descriptor;
 }
 
@@ -839,7 +838,7 @@ static int prepareDumpIRFileDescriptor(const StringRef DumpIRFilename) {
   }
   int Result = 0;
   EC = sys::fs::openFile(DumpIRFilename, Result, sys::fs::CD_OpenAlways,
-                         sys::fs::FA_Write, sys::fs::OF_None);
+                         sys::fs::FA_Write, sys::fs::OF_Text);
   if (EC)
     report_fatal_error(Twine("Failed to open ") + DumpIRFilename +
                        " to support -ir-dump-directory: " + EC.message());

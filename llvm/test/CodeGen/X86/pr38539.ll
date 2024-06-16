@@ -36,9 +36,9 @@ define void @f() nounwind {
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    sarl $30, %ecx
 ; X86-NEXT:    sarl $31, %eax
-; X86-NEXT:    shrdl $1, %eax, %ecx
 ; X86-NEXT:    xorl %eax, %edx
 ; X86-NEXT:    xorl %eax, %edi
+; X86-NEXT:    shrdl $1, %eax, %ecx
 ; X86-NEXT:    xorl %ecx, %esi
 ; X86-NEXT:    subl %ecx, %esi
 ; X86-NEXT:    sbbl %eax, %edi
