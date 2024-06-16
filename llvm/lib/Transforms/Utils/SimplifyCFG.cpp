@@ -7128,14 +7128,17 @@ static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
   if (Bound->getValue() != SI->getNumCases())
     return false;
 
-  SmallVector<APInt, 4> Values;
-  for (const auto &Case : SI->cases())
-    Values.push_back(Case.getCaseValue()->getValue());
-  llvm::sort(Values,
-             [](const APInt &lhs, const APInt &rhs) { return lhs.ult(rhs); });
+  APInt Min = SI->case_begin()->getCaseValue()->getValue(), Max = Min;
+  for (const auto &Case : SI->cases()) {
+    const APInt &CaseVal = Case.getCaseValue()->getValue();
+    if (CaseVal.ult(Min))
+      Min = CaseVal;
+    if (CaseVal.ugt(Max))
+      Max = CaseVal;
+  }
 
   // The cases should be continuous from 0 to some value
-  if (!Values.begin()->isZero() || *Values.rbegin() != SI->getNumCases() - 1)
+  if (!Min.isZero() || Max != SI->getNumCases() - 1)
     return false;
 
   SI->setCondition(Cond);
