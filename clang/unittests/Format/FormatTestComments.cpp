@@ -1087,6 +1087,36 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                Style);
 }
 
+TEST_F(FormatTestComments, CommentsBetweenUnbracedBodyAndPPDirective) {
+  verifyFormat("{\n"
+               "  if (a)\n"
+               "    f(); // comment\n"
+               "#define A\n"
+               "}");
+
+  verifyFormat("{\n"
+               "  while (a)\n"
+               "    f();\n"
+               "// comment\n"
+               "#define A\n"
+               "}");
+
+  verifyNoChange("{\n"
+                 "  if (a)\n"
+                 "    f();\n"
+                 "  // comment\n"
+                 "#define A\n"
+                 "}");
+
+  verifyNoChange("{\n"
+                 "  while (a)\n"
+                 "    if (b)\n"
+                 "      f();\n"
+                 "  // comment\n"
+                 "#define A\n"
+                 "}");
+}
+
 TEST_F(FormatTestComments, SplitsLongLinesInComments) {
   // FIXME: Do we need to fix up the "  */" at the end?
   // It doesn't look like any of our current logic triggers this.
