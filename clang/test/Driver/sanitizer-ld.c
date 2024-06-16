@@ -688,7 +688,7 @@
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
 
 // RUN: %clangxx -fsanitize=address -### %s 2>&1 \
-// RUN:     -mmacosx-version-min=10.6 \
+// RUN:     -mmacos-version-min=10.6 \
 // RUN:     --target=x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -699,7 +699,7 @@
 
 // Apple-Clang: Don't support LSan
 // RUN: not %clangxx -fsanitize=leak -### %s 2>&1 \
-// RUN:     -mmacosx-version-min=10.6 \
+// RUN:     -mmacos-version-min=10.6 \
 // RUN:     --target=x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
