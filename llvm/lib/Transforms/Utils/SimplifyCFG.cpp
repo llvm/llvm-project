@@ -7125,11 +7125,14 @@ static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
   if (!OuterRange.getLower().isZero())
     return false;
 
-  // In an ideal situation, the range of switch cases is continuous,
-  // and should match the range of ICmp. That is,
+  bool HasDefault =
+      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
+
+  // In an ideal situation, if default is reachable, the range of switch cases
+  // should be continuous, and should match the range of ICmp. That is,
   //   MaxCase (declared below) + 1 = SI->getNumCases() = OuterRange.Upper.
   // Checking it partially here can be a fast-fail path
-  if (OuterRange.getUpper() != SI->getNumCases())
+  if (HasDefault && OuterRange.getUpper() != SI->getNumCases())
     return false;
 
   APInt Min = SI->case_begin()->getCaseValue()->getValue(), Max = Min;
@@ -7141,15 +7144,19 @@ static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
       Max = CaseVal;
   }
 
-  // The cases should be continuous from 0 to some value
-  if (!Min.isZero() || Max != SI->getNumCases() - 1)
-    return false;
+  // If the switch has default, the cases should be continuous from 0 to some
+  // value. Otherwise, check whether all the cases satisfy the predicate, that
+  // is, all the cases are in the range `OuterRange`.
+  if ((HasDefault && Min.isZero() && Max == SI->getNumCases() - 1) ||
+      (!HasDefault && Max.ult(OuterRange.getUpper()))) {
+    SI->setCondition(Cond);
+    if (auto It = SI->findCaseValue(DefaultCase); It != SI->case_end())
+      SI->setDefaultDest(It->getCaseSuccessor());
 
-  SI->setCondition(Cond);
-  if (auto It = SI->findCaseValue(DefaultCase); It != SI->case_end())
-    SI->setDefaultDest(It->getCaseSuccessor());
+    return true;
+  }
 
-  return true;
+  return false;
 }
 
 bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {

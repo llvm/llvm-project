@@ -4,6 +4,7 @@
 declare void @func0()
 declare void @func1()
 declare void @func2()
+declare void @func3()
 declare void @unreachable()
 
 define void @positive(i32 %x) {
@@ -49,6 +50,54 @@ case1:
 
 case2:
   tail call void @func2()
+  br label %end
+
+end:
+  ret void
+}
+
+define void @positive_with_hole(i32 %x) {
+; CHECK-LABEL: define void @positive_with_hole(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], 5
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C]], i32 [[X]], i32 1
+; CHECK-NEXT:    switch i32 [[X]], label %[[CASE1:.*]] [
+; CHECK-NEXT:      i32 3, label %[[CASE3:.*]]
+; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    tail call void @func1()
+; CHECK-NEXT:    br label %[[END:.*]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    tail call void @func2()
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[CASE3]]:
+; CHECK-NEXT:    tail call void @func3()
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret void
+;
+  %c = icmp ult i32 %x, 5
+  %v = select i1 %c, i32 %x, i32 1
+  switch i32 %v, label %default [
+  i32 1, label %case1
+  i32 2, label %case2
+  i32 3, label %case3
+  ]
+
+default:
+  unreachable
+
+case1:
+  tail call void @func1()
+  br label %end
+
+case2:
+  tail call void @func2()
+  br label %end
+
+case3:
+  tail call void @func3()
   br label %end
 
 end:
