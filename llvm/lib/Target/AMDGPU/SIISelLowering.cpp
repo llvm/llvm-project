@@ -8833,6 +8833,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
     return lowerRawBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
     return lowerRawBufferAtomicIntrin(Op, DAG,
                                       AMDGPUISD::BUFFER_ATOMIC_FADD_BF16);
