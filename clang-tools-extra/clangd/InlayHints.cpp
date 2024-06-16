@@ -394,7 +394,9 @@ class TypeInlayHintLabelPartBuilder
   QualType CurrentType;
   NestedNameSpecifier *CurrentNestedNameSpecifier;
   ASTContext &Context;
+  StringRef MainFilePath;
   const PrintingPolicy &PP;
+  SourceManager &SM;
   std::vector<InlayHintLabelPart> &LabelChunks;
 
   struct CurrentTypeRAII {
@@ -416,13 +418,13 @@ class TypeInlayHintLabelPartBuilder
   };
 
   void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
-                llvm::function_ref<SourceRange()> SourceRangeGetter) {
+                llvm::function_ref<SourceLocation()> SourceLocationGetter) {
     std::string Label;
     llvm::raw_string_ostream OS(Label);
     NamePrinter(OS);
     auto &Name = LabelChunks.emplace_back();
     Name.value = std::move(Label);
-    Name.location = toLocation(Context.getSourceManager(), SourceRangeGetter());
+    Name.location = makeLocation(Context, SourceLocationGetter(), MainFilePath);
   }
 
   void addLabel(std::string Label) {
@@ -476,17 +478,16 @@ class TypeInlayHintLabelPartBuilder
     addLabel(std::move(Label));
   }
 
-  void
-  handleTemplateSpecialization(TemplateName TN,
-                               llvm::ArrayRef<TemplateArgument> Args,
-                               SourceRange TemplateNameRange = SourceRange()) {
-    SourceRange Range;
+  void handleTemplateSpecialization(
+      TemplateName TN, llvm::ArrayRef<TemplateArgument> Args,
+      SourceLocation TemplateNameLocation = SourceLocation()) {
+    SourceLocation Location;
     TemplateDecl *TD = nullptr;
     auto PrintType = TemplateName::Qualified::AsWritten;
     switch (TN.getKind()) {
     case TemplateName::Template:
       TD = TN.getAsTemplateDecl();
-      Range = TD->getSourceRange();
+      Location = nameLocation(*TD, SM);
       break;
     case TemplateName::QualifiedTemplate:
       if (NestedNameSpecifier *NNS =
@@ -509,9 +510,9 @@ class TypeInlayHintLabelPartBuilder
 
     addLabel([&](llvm::raw_ostream &OS) { TN.print(OS, PP, PrintType); },
              [&] {
-               if (TemplateNameRange.isValid())
-                 return TemplateNameRange;
-               return Range;
+               if (TemplateNameLocation.isValid())
+                 return TemplateNameLocation;
+               return Location;
              });
 
     addLabel("<");
@@ -537,11 +538,13 @@ class TypeInlayHintLabelPartBuilder
 
 public:
   TypeInlayHintLabelPartBuilder(QualType Current, ASTContext &Context,
+                                StringRef MainFilePath,
                                 const PrintingPolicy &PP,
                                 llvm::StringRef Prefix,
                                 std::vector<InlayHintLabelPart> &LabelChunks)
       : CurrentType(Current), CurrentNestedNameSpecifier(nullptr),
-        Context(Context), PP(PP), LabelChunks(LabelChunks) {
+        Context(Context), MainFilePath(MainFilePath), PP(PP),
+        SM(Context.getSourceManager()), LabelChunks(LabelChunks) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
@@ -559,8 +562,14 @@ public:
         RD && !RD->getTemplateInstantiationPattern())
       return addLabel(
           [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
-          [&] { return RD->getSourceRange(); });
+          [&] { return nameLocation(*RD, SM); });
     return VisitType(TT);
+  }
+
+  void VisitEnumType(const EnumType *ET) {
+    return addLabel(
+        [&](llvm::raw_ostream &OS) { return ET->getDecl()->printName(OS, PP); },
+        [&] { return nameLocation(*ET->getDecl(), SM); });
   }
 
   void VisitAutoType(const AutoType *AT) {
@@ -631,25 +640,25 @@ public:
              [&] {
                BaseUsingDecl *Introducer = UT->getFoundDecl()->getIntroducer();
                if (auto *UD = dyn_cast<UsingDecl>(Introducer))
-                 return UD->getSourceRange();
-               return Introducer->getSourceRange();
+                 return nameLocation(*UD, SM);
+               return nameLocation(*Introducer, SM);
              });
   }
 
   void VisitTypedefType(const TypedefType *TT) {
     addLabel([&](llvm::raw_ostream &OS) { TT->getDecl()->printName(OS); },
-             [&] { return TT->getDecl()->getSourceRange(); });
+             [&] { return nameLocation(*TT->getDecl(), SM); });
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
     maybeAddQualifiers();
-    SourceRange Range;
+    SourceLocation Location;
     if (auto *Specialization =
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(
                 TST->desugar().getCanonicalType()->getAsCXXRecordDecl()))
-      Range = Specialization->getSourceRange();
+      Location = nameLocation(*Specialization, SM);
     return handleTemplateSpecialization(TST->getTemplateName(),
-                                        TST->template_arguments(), Range);
+                                        TST->template_arguments(), Location);
   }
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
@@ -680,7 +689,7 @@ public:
       : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
-        Resolver(AST.getHeuristicResolver()),
+        MainFilePath(AST.tuPath()), Resolver(AST.getHeuristicResolver()),
         TypeHintPolicy(this->AST.getPrintingPolicy()) {
     bool Invalid = false;
     llvm::StringRef Buf =
@@ -1339,15 +1348,15 @@ private:
     // type in other cases.
     auto Desugared = maybeDesugar(AST, T);
     std::vector<InlayHintLabelPart> Chunks;
-    TypeInlayHintLabelPartBuilder Builder(Desugared, AST, TypeHintPolicy,
-                                          Prefix, Chunks);
+    TypeInlayHintLabelPartBuilder Builder(Desugared, AST, MainFilePath,
+                                          TypeHintPolicy, Prefix, Chunks);
     Builder.Visit(Desugared.getTypePtr());
     if (T != Desugared && !shouldPrintTypeHint(Chunks)) {
       // If the desugared type is too long to display, fallback to the sugared
       // type.
       Chunks.clear();
-      TypeInlayHintLabelPartBuilder Builder(T, AST, TypeHintPolicy, Prefix,
-                                            Chunks);
+      TypeInlayHintLabelPartBuilder Builder(T, AST, MainFilePath,
+                                            TypeHintPolicy, Prefix, Chunks);
       Builder.Visit(T.getTypePtr());
     }
     if (shouldPrintTypeHint(Chunks))
@@ -1452,6 +1461,7 @@ private:
   std::optional<Range> RestrictRange;
   FileID MainFileID;
   StringRef MainFileBuf;
+  StringRef MainFilePath;
   const HeuristicResolver *Resolver;
   PrintingPolicy TypeHintPolicy;
 };

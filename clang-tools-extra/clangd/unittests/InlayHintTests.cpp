@@ -1702,35 +1702,35 @@ void assertTypeLinkHints(StringRef Code, StringRef HintRange,
 
 TEST(TypeHints, Links) {
   StringRef Source(R"cpp(
-    $Package[[template <class T, class U>
-    struct Package {]]};
+    template <class T, class U>
+    struct $Package[[Package]] {};
 
-    $SpecializationOfPackage[[template <>
-    struct Package<float, const int> {]]};
+    template <>
+    struct $SpecializationOfPackage[[Package]]<float, const int> {};
 
-    $Container[[template <class... T>
-    struct Container {]]};
+    template <class... T>
+    struct $Container[[Container]] {};
 
-    $NttpContainer[[template <auto... T>
-    struct NttpContainer {]]};
+    template <auto... T>
+    struct $NttpContainer[[NttpContainer]] {};
 
-    enum struct ScopedEnum {
+    enum struct $ScopedEnum[[ScopedEnum]] {
       X = 1,
     };
 
-    enum Enum {
+    enum $Enum[[Enum]] {
       E = 2,
     };
 
     namespace ns {
-      $Nested[[template <class T>
-      struct Nested {
-        $NestedClass[[template <class U>
-        struct ]]Class {
+      template <class T>
+      struct $Nested[[Nested]] {
+        template <class U>
+        struct $NestedClass[[Class]] {
         };
-      ]]};
+      };
 
-      $NestedInt[[using NestedInt = Nested<int]]>;
+      using $NestedInt[[NestedInt]] = Nested<int>;
     }
 
     void basic() {
@@ -1748,13 +1748,15 @@ TEST(TypeHints, Links) {
     }
 
     namespace nns {
-      $UsingShadow[[using ns::]]NestedInt;
+      using ns::$UsingShadow[[NestedInt]];
 
       void aliases() {
         auto $9[[A]] = Container<NestedInt>();
         auto $10[[B]] = Container<ns::NestedInt>();
       }
     }
+
+    auto $11[[A]] = Container<Enum, ScopedEnum>();
 
   )cpp");
   assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
@@ -1827,6 +1829,14 @@ TEST(TypeHints, Links) {
                       ExpectedHintLabelPiece{"Container", "Container"},
                       ExpectedHintLabelPiece{"<ns::"},
                       ExpectedHintLabelPiece{"NestedInt", "NestedInt"},
+                      ExpectedHintLabelPiece{">"});
+
+  assertTypeLinkHints(Source, "11", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"Container", "Container"},
+                      ExpectedHintLabelPiece{"<"},
+                      ExpectedHintLabelPiece{"Enum", "Enum"},
+                      ExpectedHintLabelPiece{", "},
+                      ExpectedHintLabelPiece{"ScopedEnum", "ScopedEnum"},
                       ExpectedHintLabelPiece{">"});
 }
 

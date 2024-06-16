@@ -45,6 +45,9 @@ bool isImplementationDetail(const Decl *D);
 /// this function.
 SourceLocation nameLocation(const clang::Decl &D, const SourceManager &SM);
 
+std::optional<Location> makeLocation(const ASTContext &AST, SourceLocation Loc,
+                                     llvm::StringRef TUPath);
+
 /// Returns the qualified name of ND. The scope doesn't contain unwritten scopes
 /// like inline namespaces.
 std::string printQualifiedName(const NamedDecl &ND);
