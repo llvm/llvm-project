@@ -1284,6 +1284,14 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     return NewSub;
   }
 
+  // ((X % 2) + (Y % 2)) / 2 --> (X & Y & 1)
+  if (match(Op0,
+            m_Add(m_And(m_Value(X), m_One()), m_And(m_Value(Y), m_One()))) &&
+      match(Op1, m_One())) {
+    Value *And = Builder.CreateAnd(X, Y);
+    return BinaryOperator::CreateAnd(And, ConstantInt::get(And->getType(), 1));
+  }
+
   // (sub nuw X, (Y << nuw Z)) >>u exact Z --> (X >>u exact Z) sub nuw Y
   if (I.isExact() &&
       match(Op0, m_OneUse(m_NUWSub(m_Value(X),
