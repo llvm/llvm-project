@@ -47,7 +47,7 @@ function(llvm_lib_precompiled_headers)
         add_llvm_component_library(LLVMPchTarget ${pch_dummy_cpp} ${precompiled_header_path})
         target_precompile_headers(LLVMPchTarget PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${LLVM_MAIN_INCLUDE_DIR}/llvm/PrecompiledHeaders.h>")
 
-        if (NOT ${LLVM_LIB_DIRETORIES_FOR_PRECOMPILED_HEADERS})
+        if (NOT LLVM_LIB_DIRETORIES_FOR_PRECOMPILED_HEADERS)
             set(default_lib_dirs_for_pch
                 "Analysis"
                 "Codegen"
