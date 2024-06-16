@@ -605,16 +605,12 @@ struct BatchMatmulToMatmul : OpRewritePattern<BatchOpTy> {
     auto lhsType = cast<ShapedType>(lhs.getType());
     auto rhsType = cast<ShapedType>(rhs.getType());
     auto initType = cast<ShapedType>(init.getType());
-    if (ShapedType::isDynamic(lhsType.getShape()[0]) ||
-        lhsType.getShape()[0] != rhsType.getShape()[0] ||
-        rhsType.getShape()[0] != initType.getShape()[0])
-      return rewriter.notifyMatchFailure(
-          batchMatmulOp, "expected batch sizes of all operands to be same");
+    if (lhsType.getShape()[0] != 1 || rhsType.getShape()[0] != 1 ||
+        initType.getShape()[0] != 1)
+      return rewriter.notifyMatchFailure(batchMatmulOp, "batch size is not 1");
 
     auto results = batchMatmulOp.getResults();
-    if (results.size() > 1)
-      return rewriter.notifyMatchFailure(batchMatmulOp,
-                                         "expected at most one result");
+    assert(results.size() < 2 && "expected at most one result");
 
     SmallVector<Type, 1> resultType;
     if (results.size() == 1) {
