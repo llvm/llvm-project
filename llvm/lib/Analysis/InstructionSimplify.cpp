@@ -6507,10 +6507,6 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   }
   case Intrinsic::scmp:
   case Intrinsic::ucmp: {
-    // Fold cmp x, x -> 0
-    if (Op0 == Op1)
-      return Constant::getNullValue(ReturnType);
-
     // Fold to a constant if the relationship between operands can be
     // established with certainty
     if (isICmpTrue(CmpInst::ICMP_EQ, Op0, Op1, Q, RecursionLimit))
