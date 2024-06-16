@@ -4527,41 +4527,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_CMP(SDNode *N) {
   if (getTypeAction(OpVT) == TargetLowering::TypeWidenVector) {
     LHS = GetWidenedVector(LHS);
     RHS = GetWidenedVector(RHS);
+    OpVT = LHS.getValueType();
   }
 
   EVT WidenResVT = TLI.getTypeToTransformTo(Ctxt, N->getValueType(0));
   ElementCount WidenResEC = WidenResVT.getVectorElementCount();
-  EVT WidenResElementVT = WidenResVT.getVectorElementType();
-
-  // At this point we know that the type of LHS and RHS will not require
-  // widening any further, so we can use the current (updated) type of the
-  // operands as the return type of the CMP node, and then extend/truncate
-  // and resize it appropriately.
-  EVT CmpRetTy = LHS.getValueType();
-  SDValue CMP = DAG.getNode(N->getOpcode(), dl, CmpRetTy, LHS, RHS);
-  if (CmpRetTy.getVectorNumElements() < WidenResVT.getVectorNumElements()) {
-    EVT WideUndefVectorVT =
-        EVT::getVectorVT(Ctxt, CmpRetTy.getVectorElementType(), WidenResEC);
-    SDValue WideUndefValue = DAG.getUNDEF(WideUndefVectorVT);
-    CMP = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideUndefVectorVT,
-                      WideUndefValue, CMP, DAG.getVectorIdxConstant(0, dl));
-  } else if (CmpRetTy.getVectorNumElements() >
-             WidenResVT.getVectorNumElements()) {
-    EVT NarrowedVecVT =
-        EVT::getVectorVT(Ctxt, CmpRetTy.getVectorElementType(), WidenResEC);
-    CMP = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, NarrowedVecVT, CMP,
-                      DAG.getVectorIdxConstant(0, dl));
+  if (WidenResEC == OpVT.getVectorElementCount()) {
+    return DAG.getNode(N->getOpcode(), dl, WidenResVT, LHS, RHS);
   }
 
-  ISD::NodeType ExtendCode;
-  if (CMP.getValueType().getVectorElementType().getSizeInBits() >
-      WidenResElementVT.getSizeInBits()) {
-    ExtendCode = ISD::TRUNCATE;
-  } else {
-    ExtendCode =
-        (N->getOpcode() == ISD::SCMP ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND);
-  }
-  return DAG.getNode(ExtendCode, dl, WidenResVT, CMP);
+  return DAG.UnrollVectorOp(N, WidenResVT.getVectorNumElements());
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_BinaryWithExtraScalarOp(SDNode *N) {
