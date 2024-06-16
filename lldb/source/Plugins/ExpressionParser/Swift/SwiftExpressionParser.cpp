@@ -1775,8 +1775,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
           "Missing type debug information for variable \"%s\": %s",
           var.GetName().str().str().c_str(),
           llvm::toString(std::move(error)).c_str());
+      return ParseResult::unrecoverable_error;
     }
-
+    // Otherwise print the diagnostics from the Swift compiler.
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
