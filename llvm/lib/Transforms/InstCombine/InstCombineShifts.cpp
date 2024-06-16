@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -1284,10 +1285,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     return NewSub;
   }
 
-  // ((X % 2) + (Y % 2)) / 2 --> (X & Y & 1)
-  if (match(Op0,
-            m_Add(m_And(m_Value(X), m_One()), m_And(m_Value(Y), m_One()))) &&
-      match(Op1, m_One())) {
+  // Fold ((X % 2) + (Y % 2)) / 2 --> (X & Y & 1) iff (X u<= 1) && (Y u<= 1)
+  if (match(Op0, m_Add(m_Value(X), m_Value(Y))) && match(Op1, m_One()) &&
+      computeKnownBits(X, 0, &I).countMaxActiveBits() <= 1 &&
+      computeKnownBits(Y, 0, &I).countMaxActiveBits() <= 1) {
     Value *And = Builder.CreateAnd(X, Y);
     return BinaryOperator::CreateAnd(And, ConstantInt::get(And->getType(), 1));
   }
