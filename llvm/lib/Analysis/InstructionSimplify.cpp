@@ -2016,7 +2016,7 @@ static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
   // (X | ~Y) & (X | Y) --> X
   Value *X, *Y;
   if (match(Op0, m_c_Or(m_Value(X), m_Not(m_Value(Y)))) &&
-      match(Op1, m_c_Or(m_Deferred(X), m_Deferred(Y))))
+      match(Op1, m_c_Or(m_Specific(X), m_Specific(Y))))
     return X;
 
   // If we have a multiplication overflow check that is being 'and'ed with a
