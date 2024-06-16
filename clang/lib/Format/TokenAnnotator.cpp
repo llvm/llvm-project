@@ -3374,7 +3374,6 @@ private:
         Tok = Next;
         if (Tok)
           Tok = Tok->getNextNonComment();
-      }
       } else if (Tok->is(tok::hashhash)) {
         // Concatenation. Skip.
         Tok = Next;
