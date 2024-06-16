@@ -316,11 +316,12 @@ public:
   // Provide value semantics.
   TargetLibraryInfo(const TargetLibraryInfo &TLI) = default;
   TargetLibraryInfo(TargetLibraryInfo &&TLI)
-      : Impl(TLI.Impl), OverrideAsUnavailable(TLI.OverrideAsUnavailable) {}
+      : Impl(TLI.Impl),
+        OverrideAsUnavailable(std::move(TLI.OverrideAsUnavailable)) {}
   TargetLibraryInfo &operator=(const TargetLibraryInfo &TLI) = default;
   TargetLibraryInfo &operator=(TargetLibraryInfo &&TLI) {
     Impl = TLI.Impl;
-    OverrideAsUnavailable = TLI.OverrideAsUnavailable;
+    OverrideAsUnavailable = std::move(TLI.OverrideAsUnavailable);
     return *this;
   }
 
