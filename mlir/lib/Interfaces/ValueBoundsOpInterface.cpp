@@ -778,11 +778,11 @@ FailureOr<bool>
 ValueBoundsConstraintSet::areOverlappingSlices(MLIRContext *ctx,
                                                HyperrectangularSlice slice1,
                                                HyperrectangularSlice slice2) {
-  assert(slice1.getMixedOffsets().size() == slice1.getMixedOffsets().size() &&
+  assert(slice1.getMixedOffsets().size() == slice2.getMixedOffsets().size() &&
          "expected slices of same rank");
-  assert(slice1.getMixedSizes().size() == slice1.getMixedSizes().size() &&
+  assert(slice1.getMixedSizes().size() == slice2.getMixedSizes().size() &&
          "expected slices of same rank");
-  assert(slice1.getMixedStrides().size() == slice1.getMixedStrides().size() &&
+  assert(slice1.getMixedStrides().size() == slice2.getMixedStrides().size() &&
          "expected slices of same rank");
 
   Builder b(ctx);
@@ -843,11 +843,11 @@ FailureOr<bool>
 ValueBoundsConstraintSet::areEquivalentSlices(MLIRContext *ctx,
                                               HyperrectangularSlice slice1,
                                               HyperrectangularSlice slice2) {
-  assert(slice1.getMixedOffsets().size() == slice1.getMixedOffsets().size() &&
+  assert(slice1.getMixedOffsets().size() == slice2.getMixedOffsets().size() &&
          "expected slices of same rank");
-  assert(slice1.getMixedSizes().size() == slice1.getMixedSizes().size() &&
+  assert(slice1.getMixedSizes().size() == slice2.getMixedSizes().size() &&
          "expected slices of same rank");
-  assert(slice1.getMixedStrides().size() == slice1.getMixedStrides().size() &&
+  assert(slice1.getMixedStrides().size() == slice2.getMixedStrides().size() &&
          "expected slices of same rank");
 
   // The two slices are equivalent if all of their offsets, sizes and strides
