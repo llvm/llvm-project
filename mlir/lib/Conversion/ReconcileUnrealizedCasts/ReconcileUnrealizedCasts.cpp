@@ -49,7 +49,7 @@ struct ReconcileUnrealizedCasts
     auto enqueueOperands = [&](UnrealizedConversionCastOp castOp) {
       for (Value v : castOp.getInputs())
         if (auto inputCastOp = v.getDefiningOp<UnrealizedConversionCastOp>())
-          worklist.insert(castOp);
+          worklist.insert(inputCastOp);
     };
 
     // Helper function that return the unrealized_conversion_cast op that

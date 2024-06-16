@@ -184,3 +184,13 @@ func.func @matchingOperands(%arg0: index, %arg1: index) -> (index, index) {
     %2:2 = builtin.unrealized_conversion_cast %1#0, %1#1, %1#2 : i32, i32, i32 to index, index
     return %2#0, %2#1 : index, index
 }
+
+// -----
+
+// CHECK-LABEL: func @emptyCast()
+// CHECK:         %[[cast:.*]] = builtin.unrealized_conversion_cast to index
+// CHECK:         return %[[cast]]
+func.func @emptyCast() -> index {
+    %0 = builtin.unrealized_conversion_cast to index
+    return %0 : index
+}
