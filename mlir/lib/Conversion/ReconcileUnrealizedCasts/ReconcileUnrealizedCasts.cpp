@@ -89,7 +89,7 @@ struct ReconcileUnrealizedCasts
           // matched op. We can directly use those inputs and the matched op can
           // be removed.
           enqueueOperands(castOp);
-          castOp.getResults().replaceAllUsesWith(nextCast.getInputs());
+          castOp.replaceAllUsesWith(nextCast.getInputs());
           castOp->erase();
           break;
         }
