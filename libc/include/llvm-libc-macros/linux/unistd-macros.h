@@ -41,9 +41,6 @@
 
 // TODO: Move these limit macros to a separate file
 #define _POSIX_CHOWN_RESTRICTED 1
-#define _POSIX_MAX_CANON 255
-#define _POSIX_MAX_INPUT 255
-#define _POSIX_PATH_MAX 256
 #define _POSIX_PIPE_BUF 512
 #define _POSIX_NO_TRUNC 1
 #define _POSIX_VDISABLE '\0'

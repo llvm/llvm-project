@@ -308,6 +308,7 @@ add_object_library(
   HDRS
     pathconf_utils.h
   DEPENDS
+    libc.hdr.limits_macros
     libc.hdr.unistd_macros
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
