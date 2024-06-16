@@ -6037,8 +6037,6 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
         MinTeamsVal = MaxTeamsVal = 1;
         return nullptr;
       }
-      MinTeamsVal = MaxTeamsVal = 1;
-      return nullptr;
     }
     // A value of -1 is used to check if we need to emit no teams region
     MinTeamsVal = MaxTeamsVal = -1;
