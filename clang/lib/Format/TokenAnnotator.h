@@ -47,7 +47,7 @@ enum ScopeType {
 class AnnotatedLine {
 public:
   AnnotatedLine(const UnwrappedLine &Line)
-      : First(Line.Tokens.front().Tok), Level(Line.Level),
+      : First(Line.Tokens.front().Tok), Type(LT_Invalid), Level(Line.Level),
         PPLevel(Line.PPLevel),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
