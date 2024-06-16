@@ -55,6 +55,55 @@ end:
   ret void
 }
 
+define void @positive_with_ule(i32 %x) {
+; CHECK-LABEL: define void @positive_with_ule(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[C:%.*]] = icmp ule i32 [[X]], 2
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C]], i32 [[X]], i32 1
+; CHECK-NEXT:    switch i32 [[X]], label %[[CASE1:.*]] [
+; CHECK-NEXT:      i32 0, label %[[CASE0:.*]]
+; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[CASE0]]:
+; CHECK-NEXT:    tail call void @func0()
+; CHECK-NEXT:    br label %[[END:.*]]
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    tail call void @func1()
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    tail call void @func2()
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret void
+;
+  %c = icmp ule i32 %x, 2
+  %v = select i1 %c, i32 %x, i32 1
+  switch i32 %v, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+default:
+  tail call void @unreachable()
+  br label %end
+
+case0:
+  tail call void @func0()
+  br label %end
+
+case1:
+  tail call void @func1()
+  br label %end
+
+case2:
+  tail call void @func2()
+  br label %end
+
+end:
+  ret void
+}
+
 define void @positive_with_i128(i128 %x) {
 ; CHECK-LABEL: define void @positive_with_i128(
 ; CHECK-SAME: i128 [[X:%.*]]) {

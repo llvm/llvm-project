@@ -7117,15 +7117,19 @@ static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
   ICmpInst::Predicate Pred;
   if (!match(SI->getCondition(),
              m_Select(m_ICmp(Pred, m_Value(Cond), m_ConstantInt(Bound)),
-                      m_Deferred(Cond), m_ConstantInt(DefaultCase))) ||
-      Pred != CmpInst::ICMP_ULT)
+                      m_Deferred(Cond), m_ConstantInt(DefaultCase))))
+    return false;
+
+  ConstantRange OuterRange =
+      ConstantRange::makeExactICmpRegion(Pred, Bound->getValue());
+  if (!OuterRange.getLower().isZero())
     return false;
 
   // In an ideal situation, the range of switch cases is continuous,
   // and should match the range of ICmp. That is,
   //   MaxCase (declared below) + 1 = SI->getNumCases() = OuterRange.Upper.
   // Checking it partially here can be a fast-fail path
-  if (Bound->getValue() != SI->getNumCases())
+  if (OuterRange.getUpper() != SI->getNumCases())
     return false;
 
   APInt Min = SI->case_begin()->getCaseValue()->getValue(), Max = Min;
