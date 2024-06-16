@@ -84,6 +84,11 @@ namespace llvm {
     Tristate getPredicateAt(unsigned Pred, Value *LHS, Value *RHS,
                             Instruction *CxtI, bool UseBlockValue);
 
+    /// Determine whether the specified value comparison is known to be true
+    /// or false at the specified use-site.
+    /// \p Pred is a CmpInst predicate.
+    Tristate getPredicateAtUse(unsigned Pred, const Use &LHS, const Use &RHS);
+
     /// Determine whether the specified value is known to be a constant at the
     /// specified instruction. Return null if not.
     Constant *getConstant(Value *V, Instruction *CxtI);
