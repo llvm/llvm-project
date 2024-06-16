@@ -225,7 +225,7 @@ def IsStreamingCompatible           : FlagType<0x4000000000>;
 def IsReadZA                        : FlagType<0x8000000000>;
 def IsWriteZA                       : FlagType<0x10000000000>;
 def IsReductionQV                   : FlagType<0x20000000000>;
-def IsStreamingOrSVE2p1             : FlagType<0x40000000000>; // Use for intrinsics that are common between sme/sme2 and sve2p1.
+def VerifyRuntimeMode               : FlagType<0x40000000000>; // Use for intrinsics that are common between SVE and SME.
 def IsInZA                          : FlagType<0x80000000000>;
 def IsOutZA                         : FlagType<0x100000000000>;
 def IsInOutZA                       : FlagType<0x200000000000>;
