@@ -513,7 +513,7 @@ public:
       : InitListChecker(S, Entity, IL, T, /*VerifyOnly=*/true,
                         /*TreatUnavailableAsInvalid=*/false,
                         /*InOverloadResolution=*/false,
-                        &AggrDeductionCandidateParamTypes){};
+                        &AggrDeductionCandidateParamTypes) {}
 
   bool HadError() { return hadError; }
 
@@ -814,19 +814,13 @@ InitListChecker::FillInEmptyInitializations(const InitializedEntity &Entity,
 
   if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
     const RecordDecl *RDecl = RType->getDecl();
-    if (RDecl->isUnion() && ILE->getInitializedFieldInUnion())
-      FillInEmptyInitForField(0, ILE->getInitializedFieldInUnion(),
-                              Entity, ILE, RequiresSecondPass, FillWithNoInit);
-    else if (RDecl->isUnion() && isa<CXXRecordDecl>(RDecl) &&
-             cast<CXXRecordDecl>(RDecl)->hasInClassInitializer()) {
-      for (auto *Field : RDecl->fields()) {
-        if (Field->hasInClassInitializer()) {
-          FillInEmptyInitForField(0, Field, Entity, ILE, RequiresSecondPass,
-                                  FillWithNoInit);
-          break;
-        }
-      }
+    if (RDecl->isUnion() && ILE->getInitializedFieldInUnion()) {
+      FillInEmptyInitForField(0, ILE->getInitializedFieldInUnion(), Entity, ILE,
+                              RequiresSecondPass, FillWithNoInit);
     } else {
+      assert((!RDecl->isUnion() || !isa<CXXRecordDecl>(RDecl) ||
+              !cast<CXXRecordDecl>(RDecl)->hasInClassInitializer()) &&
+             "We should have computed initialized fields already");
       // The fields beyond ILE->getNumInits() are default initialized, so in
       // order to leave them uninitialized, the ILE is expanded and the extra
       // fields are then filled with NoInitExpr.
@@ -1449,7 +1443,21 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       //   dependent non-array type or an array type with a value-dependent
       //   bound
       assert(AggrDeductionCandidateParamTypes);
-      if (!isa_and_nonnull<ConstantArrayType>(
+
+      // In the presence of a braced-init-list within the initializer, we should
+      // not perform brace-elision, even if brace elision would otherwise be
+      // applicable. For example, given:
+      //
+      // template <class T> struct Foo {
+      //   T t[2];
+      // };
+      //
+      // Foo t = {{1, 2}};
+      //
+      // we don't want the (T, T) but rather (T [2]) in terms of the initializer
+      // {{1, 2}}.
+      if (isa<InitListExpr, DesignatedInitExpr>(expr) ||
+          !isa_and_present<ConstantArrayType>(
               SemaRef.Context.getAsArrayType(ElemType))) {
         ++Index;
         AggrDeductionCandidateParamTypes->push_back(ElemType);
@@ -2164,12 +2172,15 @@ void InitListChecker::CheckStructUnionTypes(
         return;
       for (RecordDecl::field_iterator FieldEnd = RD->field_end();
            Field != FieldEnd; ++Field) {
-        if (Field->hasInClassInitializer()) {
+        if (Field->hasInClassInitializer() ||
+            (Field->isAnonymousStructOrUnion() &&
+             Field->getType()->getAsCXXRecordDecl()->hasInClassInitializer())) {
           StructuredList->setInitializedFieldInUnion(*Field);
           // FIXME: Actually build a CXXDefaultInitExpr?
           return;
         }
       }
+      llvm_unreachable("Couldn't find in-class initializer");
     }
 
     // Value-initialize the first member of the union that isn't an unnamed
@@ -2197,7 +2208,7 @@ void InitListChecker::CheckStructUnionTypes(
 
     // Designated inits always initialize fields, so if we see one, all
     // remaining base classes have no explicit initializer.
-    if (Init && isa<DesignatedInitExpr>(Init))
+    if (isa_and_nonnull<DesignatedInitExpr>(Init))
       Init = nullptr;
 
     // C++ [over.match.class.deduct]p1.6:
@@ -6353,7 +6364,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
     // class member of array type from a parenthesized initializer list.
     else if (S.getLangOpts().CPlusPlus &&
              Entity.getKind() == InitializedEntity::EK_Member &&
-             Initializer && isa<InitListExpr>(Initializer)) {
+             isa_and_nonnull<InitListExpr>(Initializer)) {
       TryListInitialization(S, Entity, Kind, cast<InitListExpr>(Initializer),
                             *this, TreatUnavailableAsInvalid);
       AddParenthesizedArrayInitStep(DestType);
@@ -8066,6 +8077,11 @@ static void visitLocalsRetainedByInitializer(IndirectLocalPath &Path,
 enum PathLifetimeKind {
   /// Lifetime-extend along this path.
   Extend,
+  /// We should lifetime-extend, but we don't because (due to technical
+  /// limitations) we can't. This happens for default member initializers,
+  /// which we don't clone for every use, so we don't have a unique
+  /// MaterializeTemporaryExpr to update.
+  ShouldExtend,
   /// Do not lifetime extend along this path.
   NoExtend
 };
@@ -8077,7 +8093,7 @@ shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
   PathLifetimeKind Kind = PathLifetimeKind::Extend;
   for (auto Elem : Path) {
     if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
-      Kind = PathLifetimeKind::Extend;
+      Kind = PathLifetimeKind::ShouldExtend;
     else if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
       return PathLifetimeKind::NoExtend;
   }
@@ -8197,6 +8213,18 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
                               ExtendingEntity->allocateManglingNumber());
         // Also visit the temporaries lifetime-extended by this initializer.
         return true;
+
+      case PathLifetimeKind::ShouldExtend:
+        // We're supposed to lifetime-extend the temporary along this path (per
+        // the resolution of DR1815), but we don't support that yet.
+        //
+        // FIXME: Properly handle this situation. Perhaps the easiest approach
+        // would be to clone the initializer expression on each use that would
+        // lifetime extend its temporaries.
+        Diag(DiagLoc, diag::warn_unsupported_lifetime_extension)
+            << RK << DiagRange;
+        break;
+
       case PathLifetimeKind::NoExtend:
         // If the path goes through the initialization of a variable or field,
         // it can't possibly reach a temporary created in this full-expression.
@@ -8779,7 +8807,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
   // constant expressions here in order to perform narrowing checks =(
   EnterExpressionEvaluationContext Evaluated(
       S, EnterExpressionEvaluationContext::InitList,
-      CurInit.get() && isa<InitListExpr>(CurInit.get()));
+      isa_and_nonnull<InitListExpr>(CurInit.get()));
 
   // C++ [class.abstract]p2:
   //   no objects of an abstract class can be created except as subobjects
@@ -10926,14 +10954,14 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         //   if e_i is of array type and x_i is a braced-init-list, T_i is an
         //   rvalue reference to the declared type of e_i and
         // C++ [over.match.class.deduct]p1.9:
-        //   if e_i is of array type and x_i is a bstring-literal, T_i is an
+        //   if e_i is of array type and x_i is a string-literal, T_i is an
         //   lvalue reference to the const-qualified declared type of e_i and
         // C++ [over.match.class.deduct]p1.10:
         //   otherwise, T_i is the declared type of e_i
         for (int I = 0, E = ListInit->getNumInits();
              I < E && !isa<PackExpansionType>(ElementTypes[I]); ++I)
           if (ElementTypes[I]->isArrayType()) {
-            if (isa<InitListExpr>(ListInit->getInit(I)))
+            if (isa<InitListExpr, DesignatedInitExpr>(ListInit->getInit(I)))
               ElementTypes[I] = Context.getRValueReferenceType(ElementTypes[I]);
             else if (isa<StringLiteral>(
                          ListInit->getInit(I)->IgnoreParenImpCasts()))

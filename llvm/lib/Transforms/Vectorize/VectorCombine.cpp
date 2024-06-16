@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -1736,23 +1737,47 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
     Ops[Idx] = generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx),
                                    Ty, IdentityLeafs, SplatLeafs, Builder);
   }
+
+  SmallVector<Value *, 8> ValueList;
+  for (const auto &Lane : Item)
+    if (Lane.first)
+      ValueList.push_back(Lane.first);
+
   Builder.SetInsertPoint(I);
   Type *DstTy =
       FixedVectorType::get(I->getType()->getScalarType(), Ty->getNumElements());
-  if (auto *BI = dyn_cast<BinaryOperator>(I))
-    return Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(), Ops[0],
-                               Ops[1]);
-  if (auto *CI = dyn_cast<CmpInst>(I))
-    return Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
-  if (auto *SI = dyn_cast<SelectInst>(I))
-    return Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
-  if (auto *CI = dyn_cast<CastInst>(I))
-    return Builder.CreateCast((Instruction::CastOps)CI->getOpcode(), Ops[0],
-                              DstTy);
-  if (II)
-    return Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
+  if (auto *BI = dyn_cast<BinaryOperator>(I)) {
+    auto *Value = Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(),
+                                      Ops[0], Ops[1]);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *CI = dyn_cast<CmpInst>(I)) {
+    auto *Value = Builder.CreateCmp(CI->getPredicate(), Ops[0], Ops[1]);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *SI = dyn_cast<SelectInst>(I)) {
+    auto *Value = Builder.CreateSelect(Ops[0], Ops[1], Ops[2], "", SI);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (auto *CI = dyn_cast<CastInst>(I)) {
+    auto *Value = Builder.CreateCast((Instruction::CastOps)CI->getOpcode(),
+                                     Ops[0], DstTy);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
+  if (II) {
+    auto *Value = Builder.CreateIntrinsic(DstTy, II->getIntrinsicID(), Ops);
+    propagateIRFlags(Value, ValueList);
+    return Value;
+  }
   assert(isa<UnaryInstruction>(I) && "Unexpected instruction type in Generate");
-  return Builder.CreateUnOp((Instruction::UnaryOps)I->getOpcode(), Ops[0]);
+  auto *Value =
+      Builder.CreateUnOp((Instruction::UnaryOps)I->getOpcode(), Ops[0]);
+  propagateIRFlags(Value, ValueList);
+  return Value;
 }
 
 // Starting from a shuffle, look up through operands tracking the shuffled index

@@ -301,6 +301,9 @@ static const LLT V10S16 = LLT::fixed_vector(10, 16);
 static const LLT V12S16 = LLT::fixed_vector(12, 16);
 static const LLT V16S16 = LLT::fixed_vector(16, 16);
 
+static const LLT V2F16 = LLT::fixed_vector(2, LLT::float16());
+static const LLT V2BF16 = V2F16; // FIXME
+
 static const LLT V2S32 = LLT::fixed_vector(2, 32);
 static const LLT V3S32 = LLT::fixed_vector(3, 32);
 static const LLT V4S32 = LLT::fixed_vector(4, 32);
@@ -1638,7 +1641,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     if (ST.hasLdsAtomicAddF64())
       Atomic.legalFor({{S64, LocalPtr}});
     if (ST.hasAtomicDsPkAdd16Insts())
-      Atomic.legalFor({{V2S16, LocalPtr}});
+      Atomic.legalFor({{V2F16, LocalPtr}, {V2BF16, LocalPtr}});
   }
   if (ST.hasAtomicFaddInsts())
     Atomic.legalFor({{S32, GlobalPtr}});
@@ -6630,9 +6633,9 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   MI.removeOperand(1); // Remove intrinsic ID
 
   // FIXME: When intrinsic definition is fixed, this should have an MMO already.
-  // TODO: Should this use datalayout alignment?
   const unsigned MemSize = (Size + 7) / 8;
-  const Align MemAlign(std::min(MemSize, 4u));
+  const Align MemAlign = B.getDataLayout().getABITypeAlign(
+      getTypeForLLT(Ty, MF.getFunction().getContext()));
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(),
       MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |

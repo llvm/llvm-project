@@ -229,6 +229,21 @@ unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   return MI.getDesc().getSize();
 }
 
+bool LoongArchInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
+  const unsigned Opcode = MI.getOpcode();
+  switch (Opcode) {
+  default:
+    break;
+  case LoongArch::ADDI_D:
+  case LoongArch::ORI:
+  case LoongArch::XORI:
+    return (MI.getOperand(1).isReg() &&
+            MI.getOperand(1).getReg() == LoongArch::R0) ||
+           (MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0);
+  }
+  return MI.isAsCheapAsAMove();
+}
+
 MachineBasicBlock *
 LoongArchInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   assert(MI.getDesc().isBranch() && "Unexpected opcode!");

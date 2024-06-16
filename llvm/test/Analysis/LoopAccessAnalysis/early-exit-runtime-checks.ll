@@ -4,10 +4,21 @@
 define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations(ptr %A, ptr %B) {
 ; CHECK-LABEL: 'all_exits_dominate_latch_countable_exits_at_most_500_iterations'
 ; CHECK-NEXT:    loop.header:
-; CHECK-NEXT:      Report: could not determine number of loop iterations
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:          (Low: %B High: (2000 + %B))
+; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
+; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:          (Low: %A High: (2000 + %A))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -53,10 +64,21 @@ e.2:
 define i32 @all_exits_dominate_latch_countable_exits_at_most_1000_iterations(ptr %A, ptr %B) {
 ; CHECK-LABEL: 'all_exits_dominate_latch_countable_exits_at_most_1000_iterations'
 ; CHECK-NEXT:    loop.header:
-; CHECK-NEXT:      Report: could not determine number of loop iterations
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:          (Low: %B High: (4004 + %B))
+; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
+; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:          (Low: %A High: (4004 + %A))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -145,10 +167,21 @@ e.2:
 define i32 @b3_does_not_dominate_latch(ptr %A, ptr %B) {
 ; CHECK-LABEL: 'b3_does_not_dominate_latch'
 ; CHECK-NEXT:    loop.header:
-; CHECK-NEXT:      Report: could not determine number of loop iterations
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.B = getelementptr inbounds i32, ptr %B, i64 %iv
+; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:          (Low: %B High: (4004 + %B))
+; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
+; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:          (Low: %A High: (4004 + %A))
+; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

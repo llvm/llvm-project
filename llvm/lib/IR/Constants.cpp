@@ -2438,8 +2438,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   assert(Ty && "Must specify element type");
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
 
-  if (Constant *FC =
-          ConstantFoldGetElementPtr(Ty, C, NW.isInBounds(), InRange, Idxs))
+  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InRange, Idxs))
     return FC; // Fold a few common cases.
 
   assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
@@ -3361,11 +3360,8 @@ Instruction *ConstantExpr::getAsInstruction() const {
 
   case Instruction::GetElementPtr: {
     const auto *GO = cast<GEPOperator>(this);
-    if (GO->isInBounds())
-      return GetElementPtrInst::CreateInBounds(GO->getSourceElementType(),
-                                               Ops[0], Ops.slice(1), "");
     return GetElementPtrInst::Create(GO->getSourceElementType(), Ops[0],
-                                     Ops.slice(1), "");
+                                     Ops.slice(1), GO->getNoWrapFlags(), "");
   }
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");

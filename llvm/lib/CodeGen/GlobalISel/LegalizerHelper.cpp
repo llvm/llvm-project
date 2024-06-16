@@ -449,6 +449,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(SIN_F);
   case TargetOpcode::G_FCOS:
     RTLIBCASE(COS_F);
+  case TargetOpcode::G_FTAN:
+    RTLIBCASE(TAN_F);
   case TargetOpcode::G_FLOG10:
     RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
@@ -1037,6 +1039,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
@@ -2893,6 +2896,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
+  case TargetOpcode::G_FTAN:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
@@ -4659,6 +4663,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_INTRINSIC_TRUNC:
   case G_FCOS:
   case G_FSIN:
+  case G_FTAN:
   case G_FSQRT:
   case G_BSWAP:
   case G_BITREVERSE:
@@ -8387,8 +8392,6 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
   return UnableToLegalize;
 }
 
-static Type *getTypeForLLT(LLT Ty, LLVMContext &C);
-
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   MachineFunction &MF = *MI.getMF();
   const DataLayout &DL = MIRBuilder.getDataLayout();
@@ -8510,13 +8513,6 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
   }
 
   return true;
-}
-
-static Type *getTypeForLLT(LLT Ty, LLVMContext &C) {
-  if (Ty.isVector())
-    return FixedVectorType::get(IntegerType::get(C, Ty.getScalarSizeInBits()),
-                                Ty.getNumElements());
-  return IntegerType::get(C, Ty.getSizeInBits());
 }
 
 // Get a vectorized representation of the memset value operand, GISel edition.

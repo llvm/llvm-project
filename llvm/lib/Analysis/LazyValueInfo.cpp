@@ -1116,9 +1116,6 @@ LazyValueInfoImpl::getValueFromSimpleICmpCondition(CmpInst::Predicate Pred,
     if (!R)
       return std::nullopt;
     RHSRange = toConstantRange(*R, RHS->getType());
-  } else if (Instruction *I = dyn_cast<Instruction>(RHS)) {
-    if (auto *Ranges = I->getMetadata(LLVMContext::MD_range))
-      RHSRange = getConstantRangeFromMetadata(*Ranges);
   }
 
   ConstantRange TrueValues =

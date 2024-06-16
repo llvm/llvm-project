@@ -557,6 +557,17 @@ multiclass BoolMOption<string flag_base, KeyPathAndMacro kpm,
               Group<m_Group>;
 }
 
+/// Creates a BoolOption where both of the flags are prefixed with "W", are in
+/// the Group<W_Group>.
+/// Used for -cc1 frontend options. Driver-only options do not map to
+/// CompilerInvocation.
+multiclass BoolWOption<string flag_base, KeyPathAndMacro kpm,
+                       Default default, FlagDef flag1, FlagDef flag2,
+                       BothFlags both = BothFlags<[]>> {
+  defm NAME : BoolOption<"W", flag_base, kpm, default, flag1, flag2, both>,
+              Group<W_Group>;
+}
+
 // Works like BoolOption except without marshalling
 multiclass BoolOptionWithoutMarshalling<string prefix = "", string spelling_base,
                                         FlagDef flag1_base, FlagDef flag2_base,
@@ -606,6 +617,7 @@ defvar cpp11 = LangOpts<"CPlusPlus11">;
 defvar cpp14 = LangOpts<"CPlusPlus14">;
 defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
+defvar cpp23 = LangOpts<"CPlusPlus23">;
 defvar c99 = LangOpts<"C99">;
 defvar c23 = LangOpts<"C23">;
 defvar lang_std = LangOpts<"LangStd">;
@@ -961,6 +973,12 @@ def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>,
   HelpText<"Enable warnings for deprecated constructs and define __DEPRECATED">;
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>,
   Visibility<[ClangOption, CC1Option]>;
+defm invalid_constexpr : BoolWOption<"invalid-constexpr",
+  LangOpts<"CheckConstexprFunctionBodies">,
+  Default<!strconcat("!", cpp23.KeyPath)>,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  BothFlags<[], [ClangOption, CC1Option], " checking of constexpr function bodies for validity within a constant expression context">>;
 def Wl_COMMA : CommaJoined<["-"], "Wl,">, Visibility<[ClangOption, FlangOption]>,
   Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass the comma separated arguments in <arg> to the linker">,
@@ -1772,6 +1790,14 @@ defm mcdc_coverage : BoolFOption<"coverage-mcdc",
           "Enable MC/DC criteria when generating code coverage">,
   NegFlag<SetFalse, [], [ClangOption], "Disable MC/DC coverage criteria">,
           BothFlags<[], [ClangOption, CLOption]>>;
+def fmcdc_max_conditions_EQ : Joined<["-"], "fmcdc-max-conditions=">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Maximum number of conditions in MC/DC coverage">,
+  MarshallingInfoInt<CodeGenOpts<"MCDCMaxConds">, "32767">;
+def fmcdc_max_test_vectors_EQ : Joined<["-"], "fmcdc-max-test-vectors=">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Maximum number of test vectors in MC/DC coverage">,
+  MarshallingInfoInt<CodeGenOpts<"MCDCMaxTVs">, "0x7FFFFFFE">;
 def fprofile_generate : Flag<["-"], "fprofile-generate">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect execution counts into default.profraw (overridden by LLVM_PROFILE_FILE env var)">;
@@ -2096,7 +2122,7 @@ def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
     MarshallingInfoNegativeFlag<DiagnosticOpts<"ElideType">>;
 def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbols">, Group<f_Group>;
 defm eliminate_unused_debug_types : OptOutCC1FFlag<"eliminate-unused-debug-types",
-  "Do not emit ", "Emit ", " debug info for defined but unused types">;
+  "Do not emit ", "Emit ", " debug info for defined but unused types", [ClangOption, CLOption]>;
 def femit_all_decls : Flag<["-"], "femit-all-decls">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Emit all declarations, even if unused">,
@@ -3574,7 +3600,7 @@ def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<
   HelpText<"Do not create a host fallback if offloading to the device fails.">,
   MarshallingInfoFlag<LangOpts<"OpenMPOffloadMandatory">>;
 def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Force behvaior as if the user specified pragma omp requires unified_shared_memory.">,
   MarshallingInfoFlag<LangOpts<"OpenMPForceUSM">>;
 def fopenmp_target_jit : Flag<["-"], "fopenmp-target-jit">, Group<f_Group>,
@@ -7706,8 +7732,8 @@ def pic_is_pie : Flag<["-"], "pic-is-pie">,
   MarshallingInfoFlag<LangOpts<"PIE">>;
 
 def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
-  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,none">,
-  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
+  HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,reserved,none">,
+  NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "Reserved", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
 
 
@@ -8098,7 +8124,7 @@ def show_inst : Flag<["-"], "show-inst">,
 def dwarf_debug_producer : Separate<["-"], "dwarf-debug-producer">,
   HelpText<"The string to embed in the Dwarf debug AT_producer record.">;
 
-def defsym : Separate<["-"], "defsym">,
+def defsym : Separate<["--"], "defsym">,
   HelpText<"Define a value for a symbol">;
 
 } // let Visibility = [CC1AsOption]
@@ -8244,6 +8270,8 @@ def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,
   HelpText<"Only inline functions explicitly or implicitly marked inline">;
 def : CLFlag<"Ob2">, Alias<_SLASH_O>, AliasArgs<["b2"]>,
   HelpText<"Inline functions as deemed beneficial by the compiler">;
+def : CLFlag<"Ob3">, Alias<_SLASH_O>, AliasArgs<["b3"]>,
+  HelpText<"Same as /Ob2">;
 def : CLFlag<"Od", [CLOption, DXCOption]>, Alias<_SLASH_O>, AliasArgs<["d"]>,
   HelpText<"Disable optimization">;
 def : CLFlag<"Og">, Alias<_SLASH_O>, AliasArgs<["g"]>,
@@ -8253,9 +8281,9 @@ def : CLFlag<"Oi">, Alias<_SLASH_O>, AliasArgs<["i"]>,
 def : CLFlag<"Oi-">, Alias<_SLASH_O>, AliasArgs<["i-"]>,
   HelpText<"Disable use of builtin functions">;
 def : CLFlag<"Os">, Alias<_SLASH_O>, AliasArgs<["s"]>,
-  HelpText<"Optimize for size">;
+  HelpText<"Optimize for size (like clang -Os)">;
 def : CLFlag<"Ot">, Alias<_SLASH_O>, AliasArgs<["t"]>,
-  HelpText<"Optimize for speed">;
+  HelpText<"Optimize for speed (like clang -O3)">;
 def : CLFlag<"Ox">, Alias<_SLASH_O>, AliasArgs<["x"]>,
   HelpText<"Deprecated (like /Og /Oi /Ot /Oy /Ob2); use /O2">;
 def : CLFlag<"Oy">, Alias<_SLASH_O>, AliasArgs<["y"]>,

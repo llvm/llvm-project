@@ -419,7 +419,8 @@ struct AAReturnedFromReturnedValues : public BaseType {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     StateType S(StateType::getBestState(this->getState()));
-    clampReturnedValueStates<AAType, StateType, IRAttributeKind, RecurseForSelectAndPHI>(
+    clampReturnedValueStates<AAType, StateType, IRAttributeKind,
+                             RecurseForSelectAndPHI>(
         A, *this, S,
         PropagateCallBaseContext ? this->getCallBaseContext() : nullptr);
     // TODO: If we know we visited all returned values, thus no are assumed
@@ -1472,7 +1473,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
     // Make a strictly ascending list of offsets as required by addAccess()
     llvm::sort(Offsets);
-    auto *Last = std::unique(Offsets.begin(), Offsets.end());
+    auto *Last = llvm::unique(Offsets);
     Offsets.erase(Last, Offsets.end());
 
     VectorType *VT = dyn_cast<VectorType>(&Ty);
@@ -2445,7 +2446,7 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
               return true;
             },
             IRP.getAssociatedFunction(), nullptr, {Instruction::Ret},
-            UsedAssumedInformation))
+            UsedAssumedInformation, false, /*CheckPotentiallyDead=*/true))
       return false;
   }
 
@@ -6973,10 +6974,9 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared) {
       Instruction *CtxI = isa<InvokeInst>(AI.CB) ? AI.CB : AI.CB->getNextNode();
       if (!Explorer || !Explorer->findInContextOf(UniqueFree, CtxI)) {
-        LLVM_DEBUG(
-            dbgs()
-            << "[H2S] unique free call might not be executed with the allocation "
-            << *UniqueFree << "\n");
+        LLVM_DEBUG(dbgs() << "[H2S] unique free call might not be executed "
+                             "with the allocation "
+                          << *UniqueFree << "\n");
         return false;
       }
     }
@@ -10406,11 +10406,12 @@ struct AANoFPClassFloating : public AANoFPClassImpl {
 
 struct AANoFPClassReturned final
     : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl,
-                                   AANoFPClassImpl::StateType, false, Attribute::None, false> {
+                                   AANoFPClassImpl::StateType, false,
+                                   Attribute::None, false> {
   AANoFPClassReturned(const IRPosition &IRP, Attributor &A)
       : AAReturnedFromReturnedValues<AANoFPClass, AANoFPClassImpl,
-                                     AANoFPClassImpl::StateType, false, Attribute::None, false>(
-            IRP, A) {}
+                                     AANoFPClassImpl::StateType, false,
+                                     Attribute::None, false>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {

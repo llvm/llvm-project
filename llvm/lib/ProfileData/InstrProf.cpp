@@ -282,7 +282,7 @@ std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
 static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
   uint32_t Count = NumPrefix;
   uint32_t Pos = 0, LastPos = 0;
-  for (auto & CI : PathNameStr) {
+  for (const auto &CI : PathNameStr) {
     ++Pos;
     if (llvm::sys::path::is_separator(CI)) {
       LastPos = Pos;
@@ -731,10 +731,8 @@ void InstrProfRecord::accumulateCounts(CountSumOrPercent &Sum) const {
     uint64_t KindSum = 0;
     uint32_t NumValueSites = getNumValueSites(VK);
     for (size_t I = 0; I < NumValueSites; ++I) {
-      uint32_t NV = getNumValueDataForSite(VK, I);
-      std::unique_ptr<InstrProfValueData[]> VD = getValueForSite(VK, I);
-      for (uint32_t V = 0; V < NV; V++)
-        KindSum += VD[V].Count;
+      for (const auto &V : getValueArrayForSite(VK, I))
+        KindSum += V.Count;
     }
     Sum.ValueCounts[VK] += KindSum;
   }
@@ -847,19 +845,26 @@ void InstrProfValueSiteRecord::merge(InstrProfValueSiteRecord &Input,
   Input.sortByTargetValues();
   auto I = ValueData.begin();
   auto IE = ValueData.end();
+  std::vector<InstrProfValueData> Merged;
+  Merged.reserve(std::max(ValueData.size(), Input.ValueData.size()));
   for (const InstrProfValueData &J : Input.ValueData) {
-    while (I != IE && I->Value < J.Value)
+    while (I != IE && I->Value < J.Value) {
+      Merged.push_back(*I);
       ++I;
+    }
     if (I != IE && I->Value == J.Value) {
       bool Overflowed;
       I->Count = SaturatingMultiplyAdd(J.Count, Weight, I->Count, &Overflowed);
       if (Overflowed)
         Warn(instrprof_error::counter_overflow);
+      Merged.push_back(*I);
       ++I;
       continue;
     }
-    ValueData.insert(I, J);
+    Merged.push_back(J);
   }
+  Merged.insert(Merged.end(), I, IE);
+  ValueData = std::move(Merged);
 }
 
 void InstrProfValueSiteRecord::scale(uint64_t N, uint64_t D,
@@ -1082,13 +1087,14 @@ uint32_t getNumValueDataInstrProf(const void *Record, uint32_t VKind) {
 
 uint32_t getNumValueDataForSiteInstrProf(const void *R, uint32_t VK,
                                          uint32_t S) {
-  return reinterpret_cast<const InstrProfRecord *>(R)
-      ->getNumValueDataForSite(VK, S);
+  const auto *IPR = reinterpret_cast<const InstrProfRecord *>(R);
+  return IPR->getValueArrayForSite(VK, S).size();
 }
 
 void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
                               uint32_t K, uint32_t S) {
-  reinterpret_cast<const InstrProfRecord *>(R)->getValueForSite(Dst, K, S);
+  const auto *IPR = reinterpret_cast<const InstrProfRecord *>(R);
+  llvm::copy(IPR->getValueArrayForSite(K, S), Dst);
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
@@ -1176,16 +1182,6 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
   }
 }
 
-template <class T>
-static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
-  using namespace support;
-
-  if (Orig == llvm::endianness::little)
-    return endian::readNext<T, llvm::endianness::little>(D);
-  else
-    return endian::readNext<T, llvm::endianness::big>(D);
-}
-
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
   return std::unique_ptr<ValueProfData>(new (::operator new(TotalSize))
                                             ValueProfData());
@@ -1224,7 +1220,8 @@ ValueProfData::getValueProfData(const unsigned char *D,
     return make_error<InstrProfError>(instrprof_error::truncated);
 
   const unsigned char *Header = D;
-  uint32_t TotalSize = swapToHostOrder<uint32_t>(Header, Endianness);
+  uint32_t TotalSize = endian::readNext<uint32_t>(Header, Endianness);
+
   if (D + TotalSize > BufferEnd)
     return make_error<InstrProfError>(instrprof_error::too_large);
 
@@ -1276,15 +1273,12 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        const InstrProfRecord &InstrProfR,
                        InstrProfValueKind ValueKind, uint32_t SiteIdx,
                        uint32_t MaxMDCount) {
-  uint32_t NV = InstrProfR.getNumValueDataForSite(ValueKind, SiteIdx);
-  if (!NV)
+  auto VDs = InstrProfR.getValueArrayForSite(ValueKind, SiteIdx);
+  if (VDs.empty())
     return;
-
   uint64_t Sum = 0;
-  std::unique_ptr<InstrProfValueData[]> VD =
-      InstrProfR.getValueForSite(ValueKind, SiteIdx, &Sum);
-
-  ArrayRef<InstrProfValueData> VDs(VD.get(), NV);
+  for (const InstrProfValueData &V : VDs)
+    Sum = SaturatingAdd(Sum, V.Count);
   annotateValueSite(M, Inst, VDs, Sum, ValueKind, MaxMDCount);
 }
 
@@ -1308,7 +1302,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
 
   // Value Profile Data
   uint32_t MDCount = MaxMDCount;
-  for (auto &VD : VDs) {
+  for (const auto &VD : VDs) {
     Vals.push_back(MDHelper.createConstant(
         ConstantInt::get(Type::getInt64Ty(Ctx), VD.Value)));
     Vals.push_back(MDHelper.createConstant(

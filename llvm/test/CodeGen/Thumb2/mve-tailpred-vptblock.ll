@@ -20,50 +20,35 @@ define void @convert_vptblock(ptr %pchTarget, i16 signext %iTargetStride, ptr %p
 ; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    ldrd r4, r5, [sp, #88]
 ; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    cmp.w r10, #8
-; CHECK-NEXT:    mov.w r0, #1
-; CHECK-NEXT:    mov r3, r10
 ; CHECK-NEXT:    mov.w r11, #0
-; CHECK-NEXT:    it ge
-; CHECK-NEXT:    movge r3, #8
 ; CHECK-NEXT:    vidup.u16 q0, r8, #4
-; CHECK-NEXT:    sub.w r3, r10, r3
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    adds r3, #7
 ; CHECK-NEXT:    vmov.i16 q2, #0x100
 ; CHECK-NEXT:    vmov.i16 q3, #0xff
-; CHECK-NEXT:    add.w r9, r0, r3, lsr #3
 ; CHECK-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB0_3 Depth 2
-; CHECK-NEXT:    mov r3, r10
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    mov r6, r8
 ; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    dls lr, r9
+; CHECK-NEXT:    dlstp.16 lr, r10
 ; CHECK-NEXT:  .LBB0_3: @ %do.body
 ; CHECK-NEXT:    @ Parent Loop BB0_2 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vctp.16 r3
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrbt.u16 q5, [r2, q4]
+; CHECK-NEXT:    vldrb.u16 q5, [r2, q4]
 ; CHECK-NEXT:    vmul.i16 q4, q5, r5
 ; CHECK-NEXT:    vshr.u16 q4, q4, #8
 ; CHECK-NEXT:    vsub.i16 q5, q2, q4
 ; CHECK-NEXT:    vpt.i16 eq, q4, q3
 ; CHECK-NEXT:    vmovt q5, q1
-; CHECK-NEXT:    vctp.16 r3
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrbt.u16 q6, [r0]
+; CHECK-NEXT:    vldrb.u16 q6, [r0]
 ; CHECK-NEXT:    vsub.i16 q4, q2, q5
-; CHECK-NEXT:    subs r3, #8
 ; CHECK-NEXT:    vmul.i16 q5, q5, q6
 ; CHECK-NEXT:    vmla.i16 q5, q4, r4
 ; CHECK-NEXT:    vshr.u16 q4, q5, #8
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.16 q4, [r0], #8
+; CHECK-NEXT:    vstrb.16 q4, [r0], #8
 ; CHECK-NEXT:    vidup.u16 q4, r6, #4
-; CHECK-NEXT:    le lr, .LBB0_3
+; CHECK-NEXT:    letp lr, .LBB0_3
 ; CHECK-NEXT:  @ %bb.4: @ %do.end
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    add.w r0, r11, #1
