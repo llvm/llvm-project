@@ -327,11 +327,9 @@ public:
                            bool AllowCallerSuperset) const {
     if (!AllowCallerSuperset)
       return OverrideAsUnavailable == CalleeTLI.OverrideAsUnavailable;
-    BitVector B = OverrideAsUnavailable;
-    B |= CalleeTLI.OverrideAsUnavailable;
-    // We can inline if the union of the caller and callee's nobuiltin
-    // attributes is no stricter than the caller's nobuiltin attributes.
-    return B == OverrideAsUnavailable;
+    // We can inline if the callee's nobuiltin attributes are no stricter than
+    // the caller's.
+    return !CalleeTLI.OverrideAsUnavailable.test(OverrideAsUnavailable);
   }
 
   /// Return true if the function type FTy is valid for the library function
