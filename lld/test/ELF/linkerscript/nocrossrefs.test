@@ -1,0 +1,179 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: not ld.lld main.o -o main --script script1.ld 2>&1 | FileCheck -check-prefix=ERR %s
+# ERR: {{.*}} error: main.o:(.text+0x6): prohibited cross reference from .text to in .text1
+
+#--- script1.ld
+NOCROSSREFS(.text .text1);
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: not ld.lld main.o -o main --script script2.ld 2>&1 | FileCheck -check-prefix=ERR1 %s
+# ERR1: {{.*}} error: main.o:(.text+0x6): prohibited cross reference from .text to in .text1
+
+#--- script2.ld
+NOCROSSREFS_TO(.text1 .text);
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: not ld.lld main.o -o main --script script3.ld 2>&1 | FileCheck -check-prefix=ERR2 %s
+# ERR2: {{.*}} error: main.o:(.text+0x6): prohibited cross reference from .text to in .text1
+
+#--- script3.ld
+NOCROSSREFS(.text1 .text .text2);
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script4.ld 2>&1
+
+#--- script4.ld
+NOCROSSREFS_TO(.text .text1);
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script5.ld 2>&1
+
+#--- script5.ld
+NOCROSSREFS_TO();
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script6.ld 2>&1
+
+#--- script6.ld
+NOCROSSREFS();
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script7.ld 2>&1
+
+#--- script7.ld
+NOCROSSREFS(.text);
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script8.ld 2>&1
+
+#--- script8.ld
+NOCROSSREFS_TO(.text);
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script9.ld 2>&1
+
+#--- script9.ld
+NOCROSSREFS_TO(.text2 .text);
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script10.ld 2>&1
+
+#--- script10.ld
+NOCROSSREFS(.text .text2);
+SECTIONS {
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script11.ld 2>&1
+
+#--- script11.ld
+NOCROSSREFS(.text .text2);
+SECTIONS {
+	foo = ABSOLUTE(.);
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: ld.lld main.o -o main --script script12.ld 2>&1
+
+#--- script12.ld
+NOCROSSREFS(.text .text2);
+SECTIONS {
+	foo = ABSOLUTE(.);
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+	.bss   : { *(.unused) }
+}
+
+# RUN: llvm-mc --triple=x86_64-unknown-linux -filetype=obj -o main.o main.s
+# RUN: not ld.lld main.o -o main --script script13.ld 2>&1 | FileCheck -check-prefix=ERR3 %s
+# ERR3: {{.*}} error: main.o:(.text+0x5): prohibited cross reference from .text to unused in .bss
+
+#--- script13.ld
+NOCROSSREFS(.text .bss);
+SECTIONS {
+	foo = ABSOLUTE(.);
+	.text  : { *(.text) }
+	.text1 : { *(.text1) }
+	.text2 : { *(.text2) }
+	.bss   : { *(.unused) }
+}
+
+#--- main.s
+.global _start
+_start:
+	call test
+
+	.type	unused,@object
+	.comm	unused,4,4
+
+	.section	.noalloc,"",@progbits
+	.quad	unused
+
+.section .text
+test:
+	.reloc ., R_X86_64_32, unused
+	call test1
+
+.section .text2
+test2:
+	.reloc ., R_X86_64_32, foo
+	nop
+
+.section .text1
+test1:
+	nop

@@ -309,6 +309,9 @@ template <class ELFT> void Writer<ELFT>::run() {
   finalizeSections();
   checkExecuteOnly();
 
+  if (script->noCrossRefLists.size())
+    checkNoCrossRefs();
+
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
   for (OutputSection *sec : outputSections)

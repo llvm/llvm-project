@@ -256,6 +256,19 @@ struct InsertCommand {
   StringRef where;
 };
 
+struct NoCrossRefList {
+  SmallVector<StringRef, 2> outputSections;
+
+  // See documentation for NOCROSSREFS and NOCROSSREFS_TO. When toSection is
+  // NONE outputSections are output section names that must not have any cross
+  // references between them. Otherwise, toSection is tosection name and
+  // outputSections are fromsections.
+  std::optional<StringRef> toSection;
+
+  bool matchesRefFromSection(const OutputSection *section) const;
+  bool matchesRefToSection(const OutputSection *section) const;
+};
+
 struct PhdrsCommand {
   StringRef name;
   unsigned type = llvm::ELF::PT_NULL;
@@ -393,6 +406,9 @@ public:
 
   // OutputSections specified by OVERWRITE_SECTIONS.
   SmallVector<OutputDesc *, 0> overwriteSections;
+
+  // OutputSections names specified by NOCROSSREFS(_TO).
+  SmallVector<NoCrossRefList, 0> noCrossRefLists;
 
   // Sections that will be warned/errored by --orphan-handling.
   SmallVector<const InputSectionBase *, 0> orphanSections;

@@ -87,6 +87,7 @@ private:
   void readTarget();
   void readVersion();
   void readVersionScriptCommand();
+  void readNoCrossRefs(bool to);
 
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
@@ -235,6 +236,26 @@ void ScriptParser::readVersionScriptCommand() {
   }
 }
 
+void ScriptParser::readNoCrossRefs(bool to) {
+  expect("(");
+
+  script->noCrossRefLists.push_back({});
+  auto &list = script->noCrossRefLists.back();
+
+  if (to && peek() != ")")
+    list.toSection = next();
+
+  while (!atEOF() && !errorCount() && peek() != ")")
+    list.outputSections.push_back(next());
+
+  // Discard meaningless lists
+  if ((to && list.outputSections.empty()) ||
+      (!to && list.outputSections.size() < 2))
+    script->noCrossRefLists.pop_back();
+
+  expect(")");
+}
+
 void ScriptParser::readVersion() {
   expect("{");
   readVersionScriptCommand();
@@ -279,6 +300,10 @@ void ScriptParser::readLinkerScript() {
       readTarget();
     } else if (tok == "VERSION") {
       readVersion();
+    } else if (tok == "NOCROSSREFS") {
+      readNoCrossRefs(/*to=*/false);
+    } else if (tok == "NOCROSSREFS_TO") {
+      readNoCrossRefs(/*to=*/true);
     } else if (SymbolAssignment *cmd = readAssignment(tok)) {
       script->sectionCommands.push_back(cmd);
     } else {

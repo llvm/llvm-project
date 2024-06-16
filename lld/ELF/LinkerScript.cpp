@@ -1714,3 +1714,14 @@ bool LinkerScript::shouldAddProvideSym(StringRef symName) {
   Symbol *sym = symtab.find(symName);
   return sym && !sym->isDefined() && !sym->isCommon();
 }
+
+bool NoCrossRefList::matchesRefToSection(const OutputSection *section) const {
+  if (toSection)
+    return toSection.value() == section->name;
+
+  return llvm::is_contained(outputSections, section->name);
+}
+
+bool NoCrossRefList::matchesRefFromSection(const OutputSection *section) const {
+  return llvm::is_contained(outputSections, section->name);
+}
