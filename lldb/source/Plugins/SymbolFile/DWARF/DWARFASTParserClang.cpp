@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdlib>
+#include <iostream>
+#include <algorithm>
 
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"
@@ -44,6 +46,8 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "llvm/Demangle/Demangle.h"
+
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 
 #include <map>
 #include <memory>
@@ -843,11 +847,19 @@ DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
   if (llvm::StringRef(die.GetName()).contains("<"))
     return ConstString();
 
+#if 1
+  std::string R;
+  llvm::raw_string_ostream OS(R);
+  llvm::DWARFTypePrinter<DWARFDIE> p(OS);
+  p.appendAndTerminateTemplateParameters(die);
+  return ConstString(R);
+#else
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   if (ParseTemplateParameterInfos(die, template_param_infos)) {
     return ConstString(m_ast.PrintTemplateParams(template_param_infos));
   }
   return ConstString();
+#endif
 }
 
 TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
@@ -1607,6 +1619,15 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   const char *name = die.GetName();
   if (!name)
     return "";
+  static int indent = 0;
+  std::cerr << std::string(indent, ' ') << "starting qualified name for: " << name << '\n';
+  auto &FS = die.GetCU()->GetSymbolFileDWARF().GetObjectFile()->GetFileSpec();
+  std::string Directory = FS.GetDirectory().AsCString("");
+  std::cerr << std::string(indent, ' ')
+            << Directory.substr(std::min(59ul, Directory.size())) << '/'
+            << FS.GetFilename().AsCString("") << ':' << std::hex
+            << die.GetDIE()->GetOffset() << '\n';
+  ++indent;
   std::string qualified_name;
   DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
   // TODO: change this to get the correct decl context parent....
@@ -1631,9 +1652,9 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
       if (const char *class_union_struct_name = parent_decl_ctx_die.GetName()) {
+        qualified_name.insert(0, "::");
         qualified_name.insert(
             0, GetDIEClassTemplateParams(parent_decl_ctx_die).AsCString(""));
-        qualified_name.insert(0, "::");
         qualified_name.insert(0, class_union_struct_name);
       }
       parent_decl_ctx_die = parent_decl_ctx_die.GetParentDeclContextDIE();
@@ -1651,6 +1672,9 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
 
   qualified_name.append(name);
   qualified_name.append(GetDIEClassTemplateParams(die).AsCString(""));
+
+  --indent;
+  std::cerr << std::string(indent, ' ') << "computed qualified name: " << qualified_name << '\n';
 
   return qualified_name;
 }
