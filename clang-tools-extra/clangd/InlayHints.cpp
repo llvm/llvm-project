@@ -374,21 +374,6 @@ maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   return Params;
 }
 
-std::optional<Location> toLocation(SourceManager &SM, SourceRange Range) {
-  if (Range.isInvalid())
-    return std::nullopt;
-  if (auto URI =
-          toURI(SM.getFileEntryRefForID(SM.getFileID(Range.getBegin())))) {
-    Location L;
-    L.range.start = sourceLocToPosition(SM, Range.getBegin());
-    L.range.end = sourceLocToPosition(SM, Range.getEnd());
-    if (auto File = URIForFile::fromURI(*URI, ""))
-      L.uri = File.get();
-    return L;
-  }
-  return std::nullopt;
-}
-
 class TypeInlayHintLabelPartBuilder
     : public TypeVisitor<TypeInlayHintLabelPartBuilder> {
   QualType CurrentType;
