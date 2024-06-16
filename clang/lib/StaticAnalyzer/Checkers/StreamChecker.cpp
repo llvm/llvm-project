@@ -969,9 +969,9 @@ static std::optional<NonLoc> getStartIndex(SValBuilder &SVB,
 
   if (const auto *ER = dyn_cast<ElementRegion>(R))
     return ER->getIndex();
-  if (const auto *TR = dyn_cast<TypedValueRegion>(R))
+  if (isa<TypedValueRegion>(R))
     return Zero();
-  if (const auto *SR = dyn_cast<SymbolicRegion>(R))
+  if (isa<SymbolicRegion>(R))
     return Zero();
   return std::nullopt;
 }

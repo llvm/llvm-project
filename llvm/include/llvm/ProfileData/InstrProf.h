@@ -696,8 +696,7 @@ void InstrProfSymtab::finalizeSymtab() {
   llvm::sort(MD5NameMap, less_first());
   llvm::sort(MD5FuncMap, less_first());
   llvm::sort(AddrToMD5Map, less_first());
-  AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
-                     AddrToMD5Map.end());
+  AddrToMD5Map.erase(llvm::unique(AddrToMD5Map), AddrToMD5Map.end());
   Sorted = true;
 }
 
@@ -863,6 +862,10 @@ struct InstrProfRecord {
 
   /// Return the total number of ValueData for ValueKind.
   inline uint32_t getNumValueData(uint32_t ValueKind) const;
+
+  /// Return the array of profiled values at \p Site.
+  inline ArrayRef<InstrProfValueData> getValueArrayForSite(uint32_t ValueKind,
+                                                           uint32_t Site) const;
 
   /// Return the number of value data collected for ValueKind at profiling
   /// site: Site.
@@ -1058,6 +1061,11 @@ uint32_t InstrProfRecord::getNumValueSites(uint32_t ValueKind) const {
 uint32_t InstrProfRecord::getNumValueDataForSite(uint32_t ValueKind,
                                                  uint32_t Site) const {
   return getValueSitesForKind(ValueKind)[Site].ValueData.size();
+}
+
+ArrayRef<InstrProfValueData>
+InstrProfRecord::getValueArrayForSite(uint32_t ValueKind, uint32_t Site) const {
+  return getValueSitesForKind(ValueKind)[Site].ValueData;
 }
 
 std::unique_ptr<InstrProfValueData[]>
