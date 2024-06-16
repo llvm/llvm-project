@@ -280,3 +280,14 @@ namespace InvalidCapture {
     } ();
   }
 }
+
+namespace ExplicitInstancePointer {
+  struct C {
+      constexpr C(auto) { }
+  };
+  void foo() {
+      constexpr auto b = [](this C) { return 1; };
+      constexpr int (*fp)(C) = b;
+      static_assert(fp(1) == 1, "");
+  }
+}
