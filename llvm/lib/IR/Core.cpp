@@ -3081,6 +3081,10 @@ LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP) {
   return wrap(unwrap<GEPOperator>(GEP)->getSourceElementType());
 }
 
+LLVMTypeRef LLVMGetGEPResultElementType(LLVMValueRef GEP) {
+  return wrap(unwrap<GEPOperator>(GEP)->getResultElementType());
+}
+
 /*--.. Operations on phi nodes .............................................--*/
 
 void LLVMAddIncoming(LLVMValueRef PhiNode, LLVMValueRef *IncomingValues,

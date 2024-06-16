@@ -3870,6 +3870,11 @@ void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds);
 LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP);
 
 /**
+ * Get the result element type of the given GEP operator.
+ */
+LLVMTypeRef LLVMGetGEPResultElementType(LLVMValueRef GEP);
+
+/**
  * @}
  */
 
