@@ -1419,6 +1419,8 @@ private:
             Tok->setType(TT_CtorInitializerColon);
         } else {
           Tok->setType(TT_InheritanceColon);
+          if (Prev->isOneOf(tok::kw_public, tok::kw_private, tok::kw_protected))
+            Line.Type = LT_AccessModifier;
         }
       } else if (canBeObjCSelectorComponent(*Tok->Previous) && Tok->Next &&
                  (Tok->Next->isOneOf(tok::r_paren, tok::comma) ||
@@ -1998,6 +2000,8 @@ public:
       if (!consumeToken())
         return LT_Invalid;
     }
+    if (Line.Type == LT_AccessModifier)
+      return LT_AccessModifier;
     if (KeywordVirtualFound)
       return LT_VirtualFunctionDecl;
     if (ImportStatement)
