@@ -42,7 +42,7 @@
 #define LIBC_CONSTINIT
 #endif
 
-#ifdef __clang__
+#if defined(__clang__) && __has_attribute(preferred_type)
 #define LIBC_PREFERED_TYPE(TYPE) [[clang::preferred_type(TYPE)]]
 #else
 #define LIBC_PREFERED_TYPE(TYPE)
