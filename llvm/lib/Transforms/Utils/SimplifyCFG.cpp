@@ -7125,8 +7125,7 @@ static bool simplifySwitchWithImplicitDefault(SwitchInst *SI) {
   if (!OuterRange.getLower().isZero())
     return false;
 
-  bool HasDefault =
-      !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
+  bool HasDefault = !SI->defaultDestUndefined();
 
   // In an ideal situation, if default is reachable, the range of switch cases
   // should be continuous, and should match the range of ICmp. That is,
