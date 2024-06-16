@@ -72,7 +72,7 @@ struct ReconcileUnrealizedCasts
     // Process ops in the worklist bottom-to-top.
     while (!worklist.empty()) {
       UnrealizedConversionCastOp castOp = worklist.pop_back_val();
-      if (castOp->getUsers().empty()) {
+      if (castOp->use_empty()) {
         // DCE: If the op has no users, erase it. Add the operands to the
         // worklist to find additional DCE opportunities.
         enqueueOperands(castOp);
