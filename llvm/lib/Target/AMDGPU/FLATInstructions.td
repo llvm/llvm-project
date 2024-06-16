@@ -1645,6 +1645,7 @@ defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_ADD_F32", "int_amdgc
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in {
 defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_flat_atomic_fadd", "global_addrspace", v2f16>;
 defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_global_atomic_fadd", "global_addrspace", v2f16>;
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_F16", "atomic_load_fadd_global", v2f16>;
 }
 
 let OtherPredicates = [HasBufferFlatGlobalAtomicsF64] in {
@@ -1669,13 +1670,16 @@ defm : FlatSignedAtomicPatWithAddrSpace <"FLAT_ATOMIC_ADD_F32", "int_amdgcn_flat
 }
 
 let OtherPredicates = [HasAtomicFlatPkAdd16Insts] in {
+// FIXME: These do not have signed offsets
 defm : FlatSignedAtomicPatWithAddrSpace <"FLAT_ATOMIC_PK_ADD_F16", "int_amdgcn_flat_atomic_fadd", "flat_addrspace", v2f16>;
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_PK_ADD_BF16", "int_amdgcn_flat_atomic_fadd_v2bf16", v2i16>;
+defm : FlatSignedAtomicPat <"FLAT_ATOMIC_PK_ADD_F16", "atomic_load_fadd_flat", v2f16>;
+defm : FlatSignedAtomicPat <"FLAT_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_flat", v2bf16>;
 }
 
 let OtherPredicates = [HasAtomicGlobalPkAddBF16Inst] in
 defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "int_amdgcn_global_atomic_fadd_v2bf16", v2i16>;
-
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_global", v2bf16>;
 } // End OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10
 
 let OtherPredicates = [HasFlatScratchInsts, EnableFlatScratch] in {
