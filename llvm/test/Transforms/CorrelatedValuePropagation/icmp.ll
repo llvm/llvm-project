@@ -614,10 +614,10 @@ define void @test_cmp_phi(i8 %a) {
 ; CHECK-NEXT:    br i1 [[C0]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P:%.*]] = phi i8 [ [[A]], [[ENTRY:%.*]] ], [ [[B:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[P]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i8 [[P]] to i1
 ; CHECK-NEXT:    [[C4:%.*]] = call i1 @get_bool()
 ; CHECK-NEXT:    [[B]] = zext i1 [[C4]] to i8
-; CHECK-NEXT:    br i1 [[C1]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -1474,4 +1474,132 @@ entry:
   %cmp2 = icmp slt i64 %arg, %arg1
   %select = select i1 %cmp1, i1 %cmp2, i1 false
   ret i1 %select
+}
+
+define i1 @test_icmp_eq_on_valid_bool_range(i8 %x) {
+; CHECK-LABEL: @test_icmp_eq_on_valid_bool_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], 2
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @get_bool()
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP3]], [[BB1]] ], [ [[TMP2]], [[BB2]] ]
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %1 = icmp ult i8 %x, 2
+  br i1 %1, label %bb1, label %bb2
+
+bb2:
+  %2 = tail call i1 @get_bool()
+  br label %bb3
+
+bb1:
+  %3 = icmp eq i8 %x, 1
+  br label %bb3
+
+bb3:
+  %4 = phi i1 [ %3, %bb1 ], [ %2, %bb2 ]
+  ret i1 %4
+}
+
+define i1 @test_icmp_ne_on_valid_bool_range(i8 %x) {
+; CHECK-LABEL: @test_icmp_ne_on_valid_bool_range(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], 2
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i1 @get_bool()
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP3]], [[BB1]] ], [ [[TMP2]], [[BB2]] ]
+; CHECK-NEXT:    ret i1 [[TMP4]]
+;
+  %1 = icmp ult i8 %x, 2
+  br i1 %1, label %bb1, label %bb2
+
+bb2:
+  %2 = tail call i1 @get_bool()
+  br label %bb3
+
+bb1:
+  %3 = icmp ne i8 %x, 0
+  br label %bb3
+
+bb3:
+  %4 = phi i1 [ %3, %bb1 ], [ %2, %bb2 ]
+  ret i1 %4
+}
+
+define i1 @test_icmp_ne_on_wrapped_set(i8 %x) {
+; CHECK-LABEL: @test_icmp_ne_on_wrapped_set(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge i8 [[X]], 127
+; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i1 @get_bool()
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP5]], [[BB1]] ], [ [[TMP4]], [[BB2]] ]
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
+  %1 = icmp sle i8 %x, -128
+  %2 = icmp sge i8 %x, 127
+  %3 = or i1 %1, %2
+  br i1 %3, label %bb1, label %bb2
+
+bb2:
+  %4 = tail call i1 @get_bool()
+  br label %bb3
+
+bb1:
+  %5 = icmp eq i8 %x, 127
+  br label %bb3
+
+bb3:
+  %6 = phi i1 [ %5, %bb1 ], [ %4, %bb2 ]
+  ret i1 %6
+}
+
+define i1 @test_icmp_ne_on_nsw(i8 %x) {
+; CHECK-LABEL: @test_icmp_ne_on_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sge i8 [[X]], -1
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i1 @get_bool()
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc nsw i8 [[X]] to i1
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP5]], [[BB1]] ], [ [[TMP4]], [[BB2]] ]
+; CHECK-NEXT:    ret i1 [[TMP6]]
+;
+  %1 = icmp sle i8 %x, 0
+  %2 = icmp sge i8 %x, -1
+  %3 = and i1 %1, %2
+  br i1 %3, label %bb1, label %bb2
+
+bb2:
+  %4 = tail call i1 @get_bool()
+  br label %bb3
+
+bb1:
+  %5 = icmp eq i8 %x, -1
+  br label %bb3
+
+bb3:
+  %6 = phi i1 [ %5, %bb1 ], [ %4, %bb2 ]
+  ret i1 %6
 }

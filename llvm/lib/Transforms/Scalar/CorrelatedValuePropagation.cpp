@@ -34,6 +34,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -44,6 +45,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
@@ -286,7 +288,50 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
   return Changed;
 }
 
+/// Given an icmp `icmp eq X, C`,
+/// if we already know that C is 2k+1 and X is in [2k, 2k+1],
+/// then we can fold it to `trunc X to i1`.
+static bool processEqualityICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
+  if (Cmp->getType()->isVectorTy() ||
+      !Cmp->getOperand(0)->getType()->isIntegerTy() || !Cmp->isEquality())
+    return false;
+
+  Value *Op0 = Cmp->getOperand(0);
+  const APInt *RHSC;
+  if (!match(Cmp->getOperand(1), m_APInt(RHSC)))
+    return false;
+
+  ConstantRange Range =
+      LVI->getConstantRangeAtUse(Cmp->getOperandUse(0), /*UndefAllowed*/ true);
+  APInt RangeSize = Range.getUpper() - Range.getLower();
+  if (RangeSize != 2 || !Range.contains(*RHSC))
+    return false;
+
+  bool ShouldBeOdd = Cmp->getPredicate() == ICmpInst::Predicate::ICMP_EQ;
+  if ((*RHSC)[0] == ShouldBeOdd) {
+    IRBuilder<> B{Cmp};
+    Value *Trunc = B.CreateTrunc(Op0, Cmp->getType());
+    if (auto *I = dyn_cast<TruncInst>(Trunc)) {
+      // if Range == [0, 1], i.e. the value is already valid boolean
+      if (Range.getLower() == 0)
+        I->setHasNoUnsignedWrap(true);
+      // if Range == [-1, 0]
+      if (Range.getUpper() == 1)
+        I->setHasNoSignedWrap(true);
+    }
+
+    Cmp->replaceAllUsesWith(Trunc);
+    Cmp->eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
+  if (processEqualityICmp(Cmp, LVI))
+    return true;
+
   // Only for signed relational comparisons of scalar integers.
   if (Cmp->getType()->isVectorTy() ||
       !Cmp->getOperand(0)->getType()->isIntegerTy())
