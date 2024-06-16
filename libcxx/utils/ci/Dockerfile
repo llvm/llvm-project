@@ -48,14 +48,6 @@ FROM $BASE_IMAGE AS builder-base
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
 
-# populated in the docker-compose file
-ARG GCC_LATEST_VERSION
-ENV GCC_LATEST_VERSION=${GCC_LATEST_VERSION}
-
-# populated in the docker-compose file
-ARG LLVM_HEAD_VERSION
-ENV LLVM_HEAD_VERSION=${LLVM_HEAD_VERSION}
-
 # HACK: The github actions runner image already has sudo and requires its use. The buildkite base image does not.
 # Reconcile this.
 RUN <<EOF
@@ -73,6 +65,7 @@ RUN sudo apt-get update \
 RUN sudo apt-get update \
     && sudo apt-get install -y \
         bash \
+        build-essential \
         ccache \
         curl \
         gdb \
@@ -101,16 +94,6 @@ RUN sudo apt-get update \
     && sudo rm -rf /var/lib/apt/lists/*
 
 
-# Install various tools used by the build or the test suite
-#RUN apt-get update && apt-get install -y ninja-build python3 python3-distutils python3-psutil git gdb ccache
-# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
-RUN <<EOF
-  wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
-  gunzip /tmp/ninja.gz
-  chmod a+x /tmp/ninja
-  sudo mv /tmp/ninja /usr/local/bin/ninja
-EOF
-
 
 # These two locales are not enabled by default so generate them
 RUN <<EOF
@@ -120,43 +103,60 @@ RUN <<EOF
   sudo locale-gen
 EOF
 
-# Install Clang <latest>, <latest-1> and ToT, which are the ones we support.
-# We also install <latest-2> because we need to support the "latest-1" of the
-# current LLVM release branch, which is effectively the <latest-2> of the
-# tip-of-trunk LLVM. For example, after branching LLVM 14 but before branching
-# LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
-# 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
-# though.
-RUN <<EOF
-  sudo apt-get update
-  wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
-  chmod +x /tmp/llvm.sh
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) all  # for CI transitions
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 2)) all  # previous release
-  sudo /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) all  # latest release
-  sudo /tmp/llvm.sh $LLVM_HEAD_VERSION          all  # current ToT
-  sudo apt-get install -y libomp5-$LLVM_HEAD_VERSION
-  sudo rm -rf /var/lib/apt/lists/*
-EOF
+# See Dockerfile.tools for information on how to produce the tool images.
+RUN sudo mkdir /opt/libcxx-infra && sudo chown -R $(whoami):$(whoami) /opt/libcxx-infra
+COPY --from=ghcr.io/libcxx/tools:cmake-3.27.9 /opt/libcxx-infra/cmake-v3.27.9 /opt/libcxx-infra/cmake-3.27.9
+COPY --from=ghcr.io/libcxx/tools:ninja-1.11.1 /opt/libcxx-infra/ninja-v1.11.1 /opt/libcxx-infra/ninja-1.11.1
 
-# Install the most recent GCC, like clang install the previous version as a transition.
-RUN <<EOF
-  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-  sudo apt-get update
-  sudo apt-get install -y \
-    gcc-$((GCC_LATEST_VERSION - 1)) \
-    g++-$((GCC_LATEST_VERSION - 1)) \
-    gcc-$GCC_LATEST_VERSION \
-    g++-$GCC_LATEST_VERSION
-  sudo rm -rf /var/lib/apt/lists/*
-EOF
+# Install the GCC versions
+COPY --from=ghcr.io/libcxx/tools:gcc-13.3.0 /opt/libcxx-infra/gcc-13.3.0 /opt/libcxx-infra/gcc-13.3.0
+COPY --from=ghcr.io/libcxx/tools:gcc-14.1.0 /opt/libcxx-infra/gcc-14.1.0 /opt/libcxx-infra/gcc-14.1.0
 
-RUN <<EOF
-    # Install a recent CMake
-    wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
-    sudo bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
-    rm /tmp/install-cmake.sh
-EOF
+COPY --from=ghcr.io/libcxx/tools:clang-16.0.0 /opt/libcxx-infra/clang-16.0.0 /opt/libcxx-infra/clang-16.0.0
+COPY --from=ghcr.io/libcxx/tools:clang-17.0.1 /opt/libcxx-infra/clang-17.0.1 /opt/libcxx-infra/clang-17.0.1
+COPY --from=ghcr.io/libcxx/tools:clang-18.1.0 /opt/libcxx-infra/clang-18.1.0 /opt/libcxx-infra/clang-18.1.0
+COPY --from=ghcr.io/libcxx/tools:clang-trunk-20240615 /opt/libcxx-infra/clang-trunk-20240615 /opt/libcxx-infra/clang-trunk
+
+# Create /opt/libcxx-infra/bin/ to store the executables we want to use/test against for both the tools (ninja/cmake)
+# and the compilers (clang/gcc). The compilers are symlinked with a name that includes the major version.
+#
+# The binaries that are symlinked are:
+#  - ninja
+#  - cmake
+#  - clang-<version>
+#  - clang++-<version>
+#  - gcc-<version>
+#  - g++-<version>
+#  - llvm-symbolizer-<version> (likely only the latest clang version)
+RUN mkdir /opt/libcxx-infra/bin/ \
+    && ln -s /opt/libcxx-infra/ninja-1.11.1/ninja /opt/libcxx-infra/bin/ninja \
+    && ln -s /opt/libcxx-infra/cmake-3.27.9/bin/cmake /opt/libcxx-infra/bin/cmake \
+    && ln -s /opt/libcxx-infra/clang-16.0.0/bin/clang /opt/libcxx-infra/bin/clang-16 \
+    && ln -s /opt/libcxx-infra/clang-16.0.0/bin/clang++ /opt/libcxx-infra/bin/clang++-16 \
+    && ln -s /opt/libcxx-infra/clang-17.0.1/bin/clang /opt/libcxx-infra/bin/clang-17 \
+    && ln -s /opt/libcxx-infra/clang-17.0.1/bin/clang++ /opt/libcxx-infra/bin/clang++-17 \
+    && ln -s /opt/libcxx-infra/clang-18.1.0/bin/clang /opt/libcxx-infra/bin/clang-18 \
+    && ln -s /opt/libcxx-infra/clang-18.1.0/bin/clang++ /opt/libcxx-infra/bin/clang++-18 \
+    && ln -s /opt/libcxx-infra/clang-trunk/bin/clang /opt/libcxx-infra/bin/clang-19 \
+    && ln -s /opt/libcxx-infra/clang-trunk/bin/clang++ /opt/libcxx-infra/bin/clang++-19 \
+    && ln -s /opt/libcxx-infra/clang-trunk/bin/llvm-symbolizer /opt/libcxx-infra/bin/llvm-symbolizer-19 \
+    && ln -s /opt/libcxx-infra/gcc-13.3.0/bin/gcc /opt/libcxx-infra/bin/gcc-13 \
+    && ln -s /opt/libcxx-infra/gcc-13.3.0/bin/g++ /opt/libcxx-infra/bin/g++-13 \
+    && ln -s /opt/libcxx-infra/gcc-14.1.0/bin/gcc /opt/libcxx-infra/bin/gcc-14 \
+    && ln -s /opt/libcxx-infra/gcc-14.1.0/bin/g++ /opt/libcxx-infra/bin/g++-14
+
+
+ENV PATH="/opt/libcxx-infra/bin:${PATH}"
+
+RUN echo "testing Ninja" && ninja --version \
+    && echo "testing CMake" && cmake --version \
+    && echo "testing Clang 16" && clang-16 --version \
+    && echo "testing Clang 17" && clang-17 --version \
+    && echo "testing Clang 18" && clang-18 --version \
+    && echo "testing Clang 19" && clang-19 --version \
+    && echo "testing LLVM symbolizer 19" && llvm-symbolizer-19 --version \
+    && echo "testing GCC 13" && gcc-13 --version \
+    && echo "testing GCC 14" && gcc-14 --version
 
 # ===----------------------------------------------------------------------===##
 #                       Android Buildkite Image

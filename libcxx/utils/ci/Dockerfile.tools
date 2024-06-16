@@ -1,0 +1,115 @@
+#===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===----------------------------------------------------------------------===##
+#
+# This image is used to create the ghcr.io/tools:<tool:version> packages consumed by the libc++ builders.
+# Each image contains a single tool, and is created by installing the tool from Compiler Explorer's infra repository
+# into /opt/libcxx-infra/<tool>-<version>.
+#
+# The image is then copied into the final image libc++ builder image.
+#
+# This allows us to install tools independently of APT, and allows us to version the tools using docker tags, avoiding
+# issues with nightly builds polluting the other packages installed via apt.
+#
+# See https://github.com/compiler-explorer/infra for more information on the tools available.
+#
+# To create a new tool image using this Dockerfile, you need to set the following build arguments:
+# - TOOL_ID: The ID of the tool to install. This is the name of the tool as it appears in the list of tools available
+#            in the infra repository.
+#            Some examples of tool id's are:
+#            - compilers/c++/clang 16.0.0
+#            - compilers/c++/clang trunk (the nightly)
+#            - compilers/c++/x86/gcc 13.0.0
+#            - tools/ninja 1.11.1
+#            - tools/cmake 3.22.0
+# - NIGHTLY: Whether to install the nightly version of the tool. This is a boolean value, and must be either 'true' or
+#            'false'. Must be set to 'true' to install the nightly version of the tool.
+#
+# Example usage:
+#   docker build \
+#       --build-arg 'TOOL_ID=compilers/c++/clang trunk' \
+#       --build-arg NIGHTLY=true \
+#       -t ghcr.io/libcxx/tools:clang-trunk-YYYYMMDD \
+#       -f Dockerfile.tools .
+
+# Images built from nightly tools should be tagged with the suffix -YYYYMMDD, where YYYYMMDD is the date of the nightly
+# See the build-tool-image.yaml workflow in github.com/libcxx/builders
+FROM ubuntu:jammy-20240530 AS tool-installer
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    curl \
+    git \
+    make \
+    python3 \
+    python3-venv \
+    python3-pip \
+    uuid-dev \
+    wget \
+    unzip \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth=1 https://github.com/compiler-explorer/infra.git infra \
+    && cd infra/ \
+    && rm -rf .git \
+    && python3 -m venv .venv \
+    && . ./.venv/bin/activate \
+    && make ce \
+    && ./bin/ce_install list
+
+
+COPY <<EOF /usr/bin/installer
+#!/usr/bin/env bash
+set -ex
+set -o pipefail
+
+
+ARGS=()
+
+. /infra/.venv/bin/activate
+
+mkdir /tmp/staging
+mkdir /opt/libcxx-infra
+
+if [[ "\$NIGHTLY" == "true" ]]; then
+    ARGS+=("--enable" "nightly")
+elif [[ "\$NIGHTLY" == "false" ]]; then
+    echo "Not nightly"
+else
+    echo "NIGHTLY must be either 'true' or 'false'"
+    exit 1
+fi
+
+if [[ -z "\$TOOL_ID" ]]; then
+    echo "TOOL_ID must be set"
+    exit 1
+fi
+
+/infra/bin/ce_install --staging-dir /tmp/staging --dest /opt/libcxx-infra "\${ARGS[@]}" install "\$TOOL_ID"
+
+rm -rf /tmp/staging
+EOF
+
+RUN chmod +x /usr/bin/installer
+
+FROM tool-installer AS install-tool
+
+ARG TOOL_ID
+ENV TOOL_ID=${TOOL_ID}
+
+ARG NIGHTLY=false
+ENV NIGHTLY=${NIGHTLY}
+
+
+RUN /usr/bin/installer
+
+# Use alpine as the base for the minimal final image. The image should only contain the tool, and will be copied into
+# other images that will eventually use it.
+FROM alpine AS installed-tool
+
+COPY --from=install-tool /opt/libcxx-infra /opt/libcxx-infra
