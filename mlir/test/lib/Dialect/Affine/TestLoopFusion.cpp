@@ -182,12 +182,13 @@ static bool iterateLoops(ArrayRef<SmallVector<AffineForOp, 2>> depthToLoops,
 
 void TestLoopFusion::runOnOperation() {
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
+  auto &topRegion = getOperation().getBody();
   if (clTestLoopFusionTransformation) {
     // Run loop fusion until a fixed point is reached.
     do {
       depthToLoops.clear();
       // Gather all AffineForOps by loop depth.
-      gatherLoops(getOperation(), depthToLoops);
+      gatherLoops(topRegion, depthToLoops);
 
       // Try to fuse all combinations of src/dst loop nests in 'depthToLoops'.
     } while (iterateLoops(depthToLoops, testLoopFusionTransformation,
@@ -196,7 +197,7 @@ void TestLoopFusion::runOnOperation() {
   }
 
   // Gather all AffineForOps by loop depth.
-  gatherLoops(getOperation(), depthToLoops);
+  gatherLoops(topRegion, depthToLoops);
 
   // Run tests on all combinations of src/dst loop nests in 'depthToLoops'.
   if (clTestDependenceCheck)

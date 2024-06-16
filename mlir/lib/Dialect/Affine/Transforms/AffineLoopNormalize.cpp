@@ -38,11 +38,12 @@ struct AffineLoopNormalizePass
   }
 
   void runOnOperation() override {
+    auto &topRegion = getOperation().getBody();
     getOperation().walk([&](Operation *op) {
       if (auto affineParallel = dyn_cast<AffineParallelOp>(op))
         normalizeAffineParallel(affineParallel);
       else if (auto affineFor = dyn_cast<AffineForOp>(op))
-        (void)normalizeAffineFor(affineFor, promoteSingleIter);
+        (void)normalizeAffineFor(topRegion, affineFor, promoteSingleIter);
     });
   }
 };
