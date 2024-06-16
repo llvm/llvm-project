@@ -309,6 +309,7 @@ metadata: !LinalgOpMetadata
   cpp_class_name: ReciprocalOp
   doc: |-
     Applies reciprocal(x) elementwise.
+
     No numeric casting is performed on the input operand.
 structured_op: !LinalgStructuredOpConfig
   args:
