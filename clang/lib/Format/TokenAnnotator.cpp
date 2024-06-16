@@ -3369,13 +3369,6 @@ private:
       FormatToken *Next = Tok->getNextNonComment();
 
       if (Tok->is(tok::hash)) {
-
-        if (Next && Next->is(tok::l_paren)) {
-          // Handle parameterized macro.
-          Next = Next->MatchingParen;
-          if (Next)
-            Tok = Next->getNextNonComment();
-        } else {
           // Start of a macro expansion.
           First = Tok;
           Tok = Next;
