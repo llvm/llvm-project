@@ -241,6 +241,12 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
        emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
 }
 
+OpFoldResult emitc::CastOp::fold(FoldAdaptor adaptor) {
+  if (getOperand().getType() == getResult().getType())
+    return getOperand();
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // CallOpaqueOp
 //===----------------------------------------------------------------------===//
