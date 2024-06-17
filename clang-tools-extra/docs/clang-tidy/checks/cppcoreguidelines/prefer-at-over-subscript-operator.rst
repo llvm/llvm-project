@@ -8,12 +8,14 @@ Flags the unsafe ``operator[]`` and suggests replacing it with ``at()``.
 For example the code
 
 .. code-block:: c++
+
   std::array<int, 3> a;
   int b = a[4];
 
 will generate a warning but 
 
 .. code-block:: c++
+
   std::unique_ptr<int> a;
   int b = a[0];
 
