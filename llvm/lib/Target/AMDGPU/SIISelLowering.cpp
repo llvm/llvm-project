@@ -8841,6 +8841,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
     return lowerStructBufferAtomicIntrin(Op, DAG, AMDGPUISD::BUFFER_ATOMIC_FADD);
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16:
     return lowerStructBufferAtomicIntrin(Op, DAG,
                                          AMDGPUISD::BUFFER_ATOMIC_FADD_BF16);
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
@@ -15943,6 +15944,16 @@ static bool isHalf2OrBFloat2(Type *Ty) {
   return false;
 }
 
+static bool isHalf2(Type *Ty) {
+  FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
+  return VT && VT->getNumElements() == 2 && VT->getElementType()->isHalfTy();
+}
+
+static bool isBFloat2(Type *Ty) {
+  FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty);
+  return VT && VT->getNumElements() == 2 && VT->getElementType()->isBFloatTy();
+}
+
 TargetLowering::AtomicExpansionKind
 SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
@@ -16011,9 +16022,28 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
         AS != AMDGPUAS::BUFFER_FAT_POINTER)
       return AtomicExpansionKind::CmpXChg;
 
-    // TODO: gfx940 supports v2f16 and v2bf16
     if (Subtarget->hasGFX940Insts() && (Ty->isFloatTy() || Ty->isDoubleTy()))
       return AtomicExpansionKind::None;
+
+    if (AS == AMDGPUAS::FLAT_ADDRESS) {
+      // gfx940, gfx12
+      // FIXME: Needs to account for no fine-grained memory
+      if (Subtarget->hasAtomicFlatPkAdd16Insts() && isHalf2OrBFloat2(Ty))
+        return AtomicExpansionKind::None;
+    } else if (AMDGPU::isExtendedGlobalAddrSpace(AS)) {
+      // gfx90a, gfx940, gfx12
+      // FIXME: Needs to account for no fine-grained memory
+      if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
+        return AtomicExpansionKind::None;
+
+      // gfx940, gfx12
+      // FIXME: Needs to account for no fine-grained memory
+      if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isBFloat2(Ty))
+        return AtomicExpansionKind::None;
+    }
+
+    // TODO: Handle buffer case. gfx90a and gfx940 supports <2 x half>. gfx12
+    // supports <2 x half> and <2 x bfloat>.
 
     if (unsafeFPAtomicsDisabled(RMW->getFunction()))
       return AtomicExpansionKind::CmpXChg;
