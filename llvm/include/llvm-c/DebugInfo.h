@@ -1262,9 +1262,11 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
     LLVMMetadataRef Decl, uint32_t AlignInBits);
 
 /**
- * Soon to be deprecated.
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Only use in "new debug format" (LLVMIsNewDbgInfoFormat() is true).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
+ * The debug format can be switched later after inserting the records using
+ * LLVMSetIsNewDbgInfoFormat, if needed for legacy or transitionary reasons.
  *
  * Insert a Declare DbgRecord before the given instruction.
  * \param Builder     The DIBuilder.
@@ -1279,9 +1281,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 
 /**
- * Soon to be deprecated.
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Only use in "new debug format" (LLVMIsNewDbgInfoFormat() is true).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
+ * The debug format can be switched later after inserting the records using
+ * LLVMSetIsNewDbgInfoFormat, if needed for legacy or transitionary reasons.
  *
  * Insert a Declare DbgRecord at the end of the given basic block. If the basic
  * block has a terminator instruction, the record is inserted before that
@@ -1298,9 +1302,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block);
 
 /**
- * Soon to be deprecated.
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Only use in "new debug format" (LLVMIsNewDbgInfoFormat() is true).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
+ * The debug format can be switched later after inserting the records using
+ * LLVMSetIsNewDbgInfoFormat, if needed for legacy or transitionary reasons.
  *
  * Insert a new llvm.dbg.value intrinsic call before the given instruction.
  * \param Builder     The DIBuilder.
@@ -1315,9 +1321,11 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr);
 
 /**
- * Soon to be deprecated.
- * Only use in "new debug mode" (LLVMIsNewDbgInfoFormat() is true).
+ * Only use in "new debug format" (LLVMIsNewDbgInfoFormat() is true).
  * See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes
+ *
+ * The debug format can be switched later after inserting the records using
+ * LLVMSetIsNewDbgInfoFormat, if needed for legacy or transitionary reasons.
  *
  * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
  * block. If the basic block has a terminator instruction, the intrinsic is

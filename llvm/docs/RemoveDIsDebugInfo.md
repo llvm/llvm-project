@@ -147,11 +147,6 @@ LLVMDIBuilderInsertDeclareAtEnd    # Same as above.
 LLVMDIBuilderInsertDbgValueBefore  # Same as above.
 LLVMDIBuilderInsertDbgValueAtEnd   # Same as above.
 
-LLVMDIBuilderInsertDeclareIntrinsicBefore   # Insert a debug intrinsic (old debug info format).
-LLVMDIBuilderInsertDeclareIntrinsicAtEnd    # Same as above.
-LLVMDIBuilderInsertDbgValueIntrinsicBefore  # Same as above.
-LLVMDIBuilderInsertDbgValueIntrinsicAtEnd   # Same as above.
-
 New functions (to be deprecated)
 --------------------------------
 LLVMIsNewDbgInfoFormat     # Returns true if the module is in the new non-instruction mode.

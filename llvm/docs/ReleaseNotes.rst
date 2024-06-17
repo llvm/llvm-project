@@ -234,12 +234,12 @@ Changes to the C API
   See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info.
 
 * Added the following functions to get/set the new non-instruction debug info format.
+  They will be deprecated in the future and they are just a transition aid.
 
   * ``LLVMIsNewDbgInfoFormat``
   * ``LLVMSetIsNewDbgInfoFormat``
 
-* Added the following functions (no plans to deprecate) to insert a debug record
-  (new debug info format).
+* Added the following functions to insert a debug record (new debug info format).
 
   * ``LLVMDIBuilderInsertDeclareRecordBefore``
   * ``LLVMDIBuilderInsertDeclareRecordAtEnd``
@@ -252,11 +252,6 @@ Changes to the C API
   * ``LLVMDIBuilderInsertDeclareAtEnd``
   * ``LLVMDIBuilderInsertDbgValueBefore``
   * ``LLVMDIBuilderInsertDbgValueAtEnd``
-
-  * ``LLVMDIBuilderInsertDeclareIntrinsicBefore``
-  * ``LLVMDIBuilderInsertDeclareIntrinsicAtEnd``
-  * ``LLVMDIBuilderInsertDbgValueIntrinsicBefore``
-  * ``LLVMDIBuilderInsertDbgValueIntrinsicAtEnd``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

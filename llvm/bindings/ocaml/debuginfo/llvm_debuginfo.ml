@@ -592,6 +592,26 @@ external dibuild_create_parameter_variable :
   Llvm.llmetadata
   = "llvm_dibuild_create_parameter_variable_bytecode" "llvm_dibuild_create_parameter_variable_native"
 
+external dibuild_insert_declare_before :
+  lldibuilder ->
+  storage:Llvm.llvalue ->
+  var_info:Llvm.llmetadata ->
+  expr:Llvm.llmetadata ->
+  location:Llvm.llmetadata ->
+  instr:Llvm.llvalue ->
+  Llvm.lldbgrecord
+  = "llvm_dibuild_insert_declare_before_bytecode" "llvm_dibuild_insert_declare_before_native"
+
+external dibuild_insert_declare_at_end :
+  lldibuilder ->
+  storage:Llvm.llvalue ->
+  var_info:Llvm.llmetadata ->
+  expr:Llvm.llmetadata ->
+  location:Llvm.llmetadata ->
+  block:Llvm.llbasicblock ->
+  Llvm.lldbgrecord
+  = "llvm_dibuild_insert_declare_at_end_bytecode" "llvm_dibuild_insert_declare_at_end_native"
+
 external dibuild_expression :
   lldibuilder ->
   Int64.t array ->
