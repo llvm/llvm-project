@@ -69,15 +69,13 @@ void ValueObjectPrinter::Init(
   SetupMostSpecializedValue();
 }
 
-bool ValueObjectPrinter::PrintValueObject() {
+llvm::Error ValueObjectPrinter::PrintValueObject() {
   // If the incoming ValueObject is in an error state, the best we're going to 
   // get out of it is its type.  But if we don't even have that, just print
   // the error and exit early.
   if (m_orig_valobj.GetError().Fail() &&
-      !m_orig_valobj.GetCompilerType().IsValid()) {
-    m_stream->Printf("Error: '%s'", m_orig_valobj.GetError().AsCString());
-    return true;
-  }
+      !m_orig_valobj.GetCompilerType().IsValid())
+    return m_orig_valobj.GetError().ToError();
 
   if (ShouldPrintValueObject()) {
     PrintLocationIfNeeded();
@@ -97,7 +95,7 @@ bool ValueObjectPrinter::PrintValueObject() {
   else
     m_stream->EOL();
 
-  return true;
+  return llvm::Error::success();
 }
 
 ValueObject &ValueObjectPrinter::GetMostSpecializedValue() {
@@ -619,7 +617,13 @@ void ValueObjectPrinter::PrintChild(
     ValueObjectPrinter child_printer(*(child_sp.get()), m_stream, child_options,
                                      ptr_depth, m_curr_depth + 1,
                                      m_printed_instance_pointers);
-    child_printer.PrintValueObject();
+    llvm::Error error = child_printer.PrintValueObject();
+    if (error) {
+      if (m_stream)
+        *m_stream << "error: " << toString(std::move(error));
+      else
+        llvm::consumeError(std::move(error));
+    }
   }
 }
 

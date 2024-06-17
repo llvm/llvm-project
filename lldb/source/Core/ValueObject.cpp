@@ -2713,11 +2713,14 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
   }
 }
 
-void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
+llvm::Error ValueObject::Dump(Stream &s) {
+  return Dump(s, DumpValueObjectOptions(*this));
+}
 
-void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
+llvm::Error ValueObject::Dump(Stream &s,
+                              const DumpValueObjectOptions &options) {
   ValueObjectPrinter printer(*this, &s, options);
-  printer.PrintValueObject();
+  return printer.PrintValueObject();
 }
 
 ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {

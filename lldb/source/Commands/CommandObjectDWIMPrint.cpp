@@ -133,12 +133,17 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   auto dump_val_object = [&](ValueObject &valobj) {
     if (is_po) {
       StreamString temp_result_stream;
-      valobj.Dump(temp_result_stream, dump_options);
+      if (llvm::Error error = valobj.Dump(temp_result_stream, dump_options)) {
+        result.AppendError(toString(std::move(error)));
+        return;
+      }
       llvm::StringRef output = temp_result_stream.GetString();
       maybe_add_hint(output);
       result.GetOutputStream() << output;
     } else {
-      valobj.Dump(result.GetOutputStream(), dump_options);
+      if (llvm::Error error =
+              valobj.Dump(result.GetOutputStream(), dump_options))
+        result.AppendError(toString(std::move(error)));
     }
   };
 
