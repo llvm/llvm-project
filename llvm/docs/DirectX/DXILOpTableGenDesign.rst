@@ -14,36 +14,37 @@ Introduction
 encapsulates, among other information, various DXIL Operations in
 `hctdb.py <https://github.com/microsoft/DirectXShaderCompiler/blob/main/utils/hct/hctdb.py>`_.
 DXIL Operations are represented in one of the following `two ways
-<https://github.com/microsoft/DirectXShaderCompiler/blob/130877392c263888ef06bab768856d3dab1f1c9a/docs/DXIL.rst#L1978>`_:
+<https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#operations>`_:
 
 #. Using LLVM instructions.
 #. Using LLVM External functions. These are represented in LLVM IR as follows:
+
    * "Standard" LLVM intrinsics (e.g., ``llvm.sin.*``) and
    * HLSL intrinsics (defined as LLVM intrinsics in ``llvm/include/llvm/IR/IntrinsicsDirectX.td``, e.g., ``llvm.dx.*``)
 
    These are  collectively referred to as `LLVM Intrinsics` in this note.
 
-Following is the complete list of properties of DXIL Ops with the corresponding field name
-as used in ``hctdb.py``. A DXIL Op is represented by a set of associated properties. These
-are categorized into two groups - viz., those that are (1) consumed in DXIL backend passes
-and (2) consumed in other usage scenarios such as validation, DXIL reader, etc.
+Following is the complete list of attributes of DXIL Ops with the corresponding field name
+as used in ``hctdb.py``. A DXIL Op is represented by a set of associated attributes. These
+are consumed in DXIL backend passes as well as in other usage scenarios such as validation, 
+DXIL reader, etc.
 
-A. Properties consumed in DXIL backend passes
+A. Attributes consumed in DXIL backend passes
 
    1. Name of operation (``dxil_op``)
-   2. The generic or HLSL-specific intrinsic that maps to the operation (``llvm_name``).
-   3. Unique Integer ID (``dxil_opid``)
-   4. Operation Class signifying the name and function signature of the operation (``dxil_class``).
-      This string is an integral part of the DXIL Op function name and is constructed in
-      the format ``dx.op.<class-name>.<overload-type>``. The DXIL validator checks for any
-      deviation from this for each of the DXIL Op call.
-   5. List of valid overload types for the operation (``oload_types``).
-   6. Required DXIL Version with support for the operation.
-   7. A string that documents the operation (``doc``) - This is not strictly necessary but is included
+   2. A string that documents the operation (``doc``) - This is not strictly necessary but is included
       for readability and documentation of the operation.
+   3. The generic or HLSL-specific intrinsic that maps to the operation (``llvm_name``).
+   4. Unique Integer ID (``dxil_opid``)
+   5. Operation Class signifying the name and function signature of the operation (``dxil_class``).
+      This string is an integral part of the DXIL Op function name and is constructed in
+      the format ``dx.op.<class-name>.<overload-type>``. Each DXIL Op call target function name 
+      is required to conform to this format per existing contract with the driver.
+   6. List of valid overload types for the operation (``oload_types``).
+   7. Required DXIL Version with support for the operation.
    8. Required minimum Shader Model (``shader_model``).
    9. Minimum shader model required with translation by linker (``shader_model_translated``)
-   10.  List of shader stages applicable to (``shader_stages``), empty for all.
+   10.  List of shader stages applicable to (``shader_stages``), empty, if applicable to all stages.
    11.  Memory access attributes of the operation (``fn_attr``).
    12.  Boolean attributes of operation to indicate if it
 
@@ -57,24 +58,24 @@ A. Properties consumed in DXIL backend passes
 Motivation
 ==========
 
-DXIL backend passes depend on various properties of DXIL Operations. For example, ``DXILLowering``
+DXIL backend passes depend on various attributes of DXIL Operations. For example, ``DXILLowering``
 pass will need information such as the DXIL operation an LLVM intrinsic is to be lowered to,
 along with valid overload and parameter types etc. The TableGen file -
 ``llvm/lib/Target/DirectX/DXIL.td`` - is used to represent DXIL Operations
-by specifying their properties listed above. ``DXIL.td`` is designed to be the single source
+by specifying their attributes listed above. ``DXIL.td`` is designed to be the single source
 of reference of DXIL Operations for DXIL backend implementation in ``llvm-project`` repo -
 analogous to ``hctdb.py`` for ``DirectXShadeCompiler`` repo. It needs to have a rich
 representation capabilities that TableGen backends (such as ``DXILEmitter``) can rely on.
 Additionally, the DXIL Op specification should be easy to read and comprehend.
 
 This note provides the design of the specification DXIL Ops as TableGen class ``DXILOp``
-by specifying its properties identified above.
+by specifying its attributes identified above.
 
 DXIL Operation Specification
 ============================
 
-The DXIL Operation is represented using the TableGen ``class DXILOp``. The DXIL operation
-properties are specified as fields of the ``DXILOp`` class as described below.
+The DXIL Operation is represented using the TableGen class ``DXILOp``. The DXIL operation
+attributes are specified as fields of the ``DXILOp`` class as described below.
 
 1. Each DXIL Operation is represented as a TableGen record. The name of each of the records
    signifies operation name.
@@ -89,7 +90,7 @@ properties are specified as fields of the ``DXILOp`` class as described below.
         // Abstraction of DXIL Operation class.
         class DXILOpClass;
 
-   Concrete operation classes, such as ``unary`` are defined inheriting from ``DXILOpClass``.
+   Concrete operation records, such as ``unary`` are defined by inheriting from ``DXILOpClass``.
 6. Return and argument types of the operation are represented as ``dag``s using the
    special markers ``out`` and ``ins``. An overload type, if supported by the operation, is
    denoted as the positional type ``dxil_overload_ty`` in the argument or in the result, where
@@ -108,7 +109,7 @@ properties are specified as fields of the ``DXILOp`` class as described below.
    class is described in a later section.
 
 A DXIL Operation is represented by the following TableGen class by encapsulating the various
-TableGen representations of its properties described above.
+TableGen representations of its attributes described above.
 
 .. code-block::
 
@@ -143,13 +144,16 @@ TableGen representations of its properties described above.
 Constraint Specification
 ========================
 
-DXIL Operation properties such as valid overload types and valid shader stages are
-predicated on Shader Model version.hese are represented as list of constrained
-properties.
+DXIL Operation attributes such as valid overload types and valid shader stages are
+predicated on Shader Model version. These are represented as list of constrained
+attributes.
 
 Following is the definition of a generic constraint and the associated predicate
 
 .. code-block::
+
+   // Primitive predicate
+   class Pred;
 
    // Generic constraint
    class Constraint<Pred pred> {
@@ -198,11 +202,12 @@ and ``stages``, respectively.
 Examples
 ---------
 
-Consider a DXIL Operation that is valid in Shader Model version 6.2 or later
-  1. wiith valid overload types ``half``, ``float``, ``i16`` and ``i32``
-  2. is valid for stages ``pixel`` and ``compute``
-  3. with valid overload types ``double`` and ``i614`` if Shader Model version 6.3 and later
-  4. is valid for all stages if Shader Model version 6.3 and later
+Consider a DXIL Operation that is valid in Shader Model 6.2 and later,
+
+1. with valid overload types ``half``, ``float``, ``i16`` and ``i32``
+2. is valid for stages ``pixel`` and ``compute``
+3. with valid overload types ``double`` and ``i614`` if Shader Model version 6.3 and later
+4. is valid for all stages if Shader Model version 6.3 and later
 
 This is represented as
 
@@ -216,9 +221,10 @@ This is represented as
                                  llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
                           (stages allKinds)>];
 
-Consider a DXIL operation that is valid in Shader Model version 6.2 and later
-  1. with no overload types, i.e., types of all arguments and result are fixed.
-  2. is valid for all stages.
+Consider a DXIL operation that is valid in Shader Model version 6.2 and later,
+
+1. with no overload types, i.e., all argument typess and result type are fixed.
+2. is valid for all stages.
 
 This is represented as
 
@@ -227,10 +233,16 @@ This is represented as
      [SMVersionConstraints<SMVersion<SM6_2>, (overloads), (stages allKinds)>];
 
 
+Specifying attributes predicated on Shader Model version using the single field 
+``sm_constraints`` not only allows for all of them to be specified together but
+also allows for a single place to specify minimum shader model version that supports
+the operation. Thus, a separate fiels is not needed to specify minimum shader model 
+version.
+
 Attribute Specification
 =======================
 
-DXIL Operation properties that are not predicated on any constraint are represented as
+DXIL Operation attributes that are not predicated on any constraint, are represented as
 a ``dag`` of Attribute records of the following abstract ``DXILAttributes`` class.
 
 .. code-block::
@@ -249,5 +261,5 @@ Summary
 
 This note sketches the design of a readable and maintainable TableGen specification of
 DXIL Ops in ``DXIL.td`` intended to serve as a single source of reference for TableGen
-backends (such as ``DXILEmitter``) that generates C++ representations used in DXIL
+backends (such as ``DXILEmitter``) that generate C++ representations used in DXIL
 backend passes.
