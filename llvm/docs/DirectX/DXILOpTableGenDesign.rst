@@ -249,7 +249,7 @@ a ``dag`` of Attribute records of the following abstract ``DXILAttributes`` clas
 
   class DXILAttributes;
 
-Following example records represent memory arrtibutes 
+Following example records represent memory attributes 
 
 .. code-block::
 
