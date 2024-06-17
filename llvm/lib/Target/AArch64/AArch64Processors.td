@@ -189,6 +189,17 @@ def TuneA720AE : SubtargetFeature<"a720ae", "ARMProcFamily", "CortexA720",
                                  FeatureEnableSelectOptimize,
                                  FeaturePredictableSelectIsExpensive]>;
 
+def TuneA725 : SubtargetFeature<"cortex-a725", "ARMProcFamily",
+                                "CortexA725",
+                                "Cortex-A725 ARM processors", [
+                                FeatureFuseAES,
+                                FeaturePostRAScheduler,
+                                FeatureCmpBccFusion,
+                                FeatureALULSLFast,
+                                FeatureFuseAdrpAdd,
+                                FeatureEnableSelectOptimize,
+                                FeaturePredictableSelectIsExpensive]>;
+
 def TuneR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
                                "CortexR82",
                                "Cortex-R82 ARM processors", [
@@ -237,6 +248,15 @@ def TuneX4 : SubtargetFeature<"cortex-x4", "ARMProcFamily", "CortexX4",
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
                                FeaturePredictableSelectIsExpensive]>;
+
+def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
+                                "CortexX925", "Cortex-X925 ARM processors",[
+                                FeatureALULSLFast,
+                                FeatureFuseAdrpAdd,
+                                FeatureFuseAES,
+                                FeaturePostRAScheduler,
+                                FeatureEnableSelectOptimize,
+                                FeaturePredictableSelectIsExpensive]>;
 
 def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  "Fujitsu A64FX processors", [
@@ -377,6 +397,22 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
                                     FeatureStorePairSuppress,
                                     FeatureZCRegMove,
                                     FeatureZCZeroing]>;
+
+def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
+                                     "Apple M4", [
+                                     FeatureAlternateSExtLoadCVTF32Pattern,
+                                     FeatureArithmeticBccFusion,
+                                     FeatureArithmeticCbzFusion,
+                                     FeatureDisableLatencySchedHeuristic,
+                                     FeatureFuseAddress,
+                                     FeatureFuseAES,
+                                     FeatureFuseArithmeticLogic,
+                                     FeatureFuseCCSelect,
+                                     FeatureFuseCryptoEOR,
+                                     FeatureFuseLiterals,
+                                     FeatureZCRegMove,
+                                     FeatureZCZeroing
+                                     ]>;
 
 def TuneExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -691,6 +727,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> A720AE = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
                                  FeatureTRBE, FeatureSVE2BitPerm, FeatureETE,
                                  FeaturePerfMon, FeatureSPE, FeatureSPE_EEF];
+  list<SubtargetFeature> A725 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
+                                 FeatureETE, FeaturePerfMon, FeatureSPE,
+                                 FeatureSVE2BitPerm, FeatureSPE_EEF, FeatureTRBE];
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB, FeatureRDM, FeatureDotProd,
@@ -723,6 +762,9 @@ def ProcessorFeatures {
                                  FeaturePerfMon, FeatureETE, FeatureTRBE,
                                  FeatureSPE, FeatureMTE, FeatureSVE2BitPerm,
                                  FeatureFP16FML, FeatureSPE_EEF];
+  list<SubtargetFeature> X925 = [HasV9_2aOps, FeatureMTE, FeatureFP16FML,
+                                 FeatureETE, FeaturePerfMon, FeatureSPE,
+                                 FeatureSVE2BitPerm, FeatureSPE_EEF, FeatureTRBE];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum];
@@ -758,6 +800,14 @@ def ProcessorFeatures {
                                      FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                      FeatureFullFP16, FeatureFP16FML,
                                      FeatureHCX];
+  // Technically apple-m4 is ARMv9.2. See the corresponding comment in
+  // AArch64TargetParser.h.
+  list<SubtargetFeature> AppleM4 = [HasV8_7aOps, FeatureCrypto, FeatureFPARMv8,
+                                    FeatureNEON, FeaturePerfMon, FeatureSHA3,
+                                    FeatureFullFP16, FeatureFP16FML,
+                                    FeatureAES, FeatureBF16,
+                                    FeatureSME2,
+                                    FeatureSMEF64F64, FeatureSMEI16I64];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                      FeaturePerfMon];
   list<SubtargetFeature> ExynosM4 = [HasV8_2aOps, FeatureCrypto, FeatureDotProd,
@@ -891,6 +941,8 @@ def : ProcessorModel<"cortex-a720", NeoverseN2Model, ProcessorFeatures.A720,
                      [TuneA720]>;
 def : ProcessorModel<"cortex-a720ae", NeoverseN2Model, ProcessorFeatures.A720AE,
                      [TuneA720AE]>;
+def : ProcessorModel<"cortex-a725", NeoverseN2Model, ProcessorFeatures.A725,
+                     [TuneA725]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
 def : ProcessorModel<"cortex-r82ae", CortexA55Model, ProcessorFeatures.R82AE,
@@ -905,6 +957,8 @@ def : ProcessorModel<"cortex-x3", NeoverseN2Model, ProcessorFeatures.X3,
                      [TuneX3]>;
 def : ProcessorModel<"cortex-x4", NeoverseN2Model, ProcessorFeatures.X4,
                      [TuneX4]>;
+def : ProcessorModel<"cortex-x925", NeoverseV2Model, ProcessorFeatures.X925,
+                     [TuneX925]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model,
                      ProcessorFeatures.NeoverseE1, [TuneNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
@@ -953,50 +1007,60 @@ def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
 
+
+// Apple CPUs
+
 // Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
 def : ProcessorModel<"cyclone", CycloneModel, ProcessorFeatures.AppleA7,
                      [TuneAppleA7]>;
-
-// iPhone and iPad CPUs
 def : ProcessorModel<"apple-a7", CycloneModel, ProcessorFeatures.AppleA7,
                      [TuneAppleA7]>;
 def : ProcessorModel<"apple-a8", CycloneModel, ProcessorFeatures.AppleA7,
                      [TuneAppleA7]>;
 def : ProcessorModel<"apple-a9", CycloneModel, ProcessorFeatures.AppleA7,
                      [TuneAppleA7]>;
+
 def : ProcessorModel<"apple-a10", CycloneModel, ProcessorFeatures.AppleA10,
                      [TuneAppleA10]>;
+
 def : ProcessorModel<"apple-a11", CycloneModel, ProcessorFeatures.AppleA11,
                      [TuneAppleA11]>;
+
 def : ProcessorModel<"apple-a12", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
-def : ProcessorModel<"apple-a13", CycloneModel, ProcessorFeatures.AppleA13,
-                     [TuneAppleA13]>;
-def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
-                     [TuneAppleA14]>;
-def : ProcessorModel<"apple-a15", CycloneModel, ProcessorFeatures.AppleA15,
-                     [TuneAppleA15]>;
-def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
-                     [TuneAppleA16]>;
-def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
-                     [TuneAppleA17]>;
-// Mac CPUs
-def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
-                     [TuneAppleA14]>;
-def : ProcessorModel<"apple-m2", CycloneModel, ProcessorFeatures.AppleA15,
-                     [TuneAppleA15]>;
-def : ProcessorModel<"apple-m3", CycloneModel, ProcessorFeatures.AppleA16,
-                     [TuneAppleA16]>;
-
-// watch CPUs.
 def : ProcessorModel<"apple-s4", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
 def : ProcessorModel<"apple-s5", CycloneModel, ProcessorFeatures.AppleA12,
                      [TuneAppleA12]>;
 
-// Alias for the latest Apple processor model supported by LLVM.
-def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleA16,
+def : ProcessorModel<"apple-a13", CycloneModel, ProcessorFeatures.AppleA13,
+                     [TuneAppleA13]>;
+
+def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
+                     [TuneAppleA14]>;
+def : ProcessorModel<"apple-m1", CycloneModel, ProcessorFeatures.AppleA14,
+                     [TuneAppleA14]>;
+
+def : ProcessorModel<"apple-a15", CycloneModel, ProcessorFeatures.AppleA15,
+                     [TuneAppleA15]>;
+def : ProcessorModel<"apple-m2", CycloneModel, ProcessorFeatures.AppleA15,
+                     [TuneAppleA15]>;
+
+def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
+def : ProcessorModel<"apple-m3", CycloneModel, ProcessorFeatures.AppleA16,
+                     [TuneAppleA16]>;
+
+def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
+                     [TuneAppleA17]>;
+
+def : ProcessorModel<"apple-m4", CycloneModel, ProcessorFeatures.AppleM4,
+                     [TuneAppleM4]>;
+
+// Alias for the latest Apple processor model supported by LLVM.
+def : ProcessorModel<"apple-latest", CycloneModel, ProcessorFeatures.AppleM4,
+                     [TuneAppleM4]>;
+
 
 // Fujitsu A64FX
 def : ProcessorModel<"a64fx", A64FXModel, ProcessorFeatures.A64FX,

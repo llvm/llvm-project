@@ -5736,15 +5736,15 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
       llvm::codegenoptions::DebugLineTablesOnly)
     return;
 
-  llvm::DebugLoc SaveDebugLoc = Builder.getCurrentDebugLocation();
-  if (!SaveDebugLoc.get())
+  llvm::DILocation *DIL = Value->getDebugLoc().get();
+  if (!DIL)
     return;
 
-  llvm::DIFile *Unit = SaveDebugLoc->getFile();
+  llvm::DIFile *Unit = DIL->getFile();
   llvm::DIType *Type = getOrCreateType(Ty, Unit);
 
   // Check if Value is already a declared variable and has debug info, in this
-  // case we have nothing to do. Clang emits declared variable as alloca, and
+  // case we have nothing to do. Clang emits a declared variable as alloca, and
   // it is loaded upon use, so we identify such pattern here.
   if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Value)) {
     llvm::Value *Var = Load->getPointerOperand();
@@ -5760,44 +5760,14 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
       return;
   }
 
-  // Find the correct location to insert a sequence of instructions to
-  // materialize Value on the stack.
-  auto SaveInsertionPoint = Builder.saveIP();
-  if (llvm::InvokeInst *Invoke = dyn_cast<llvm::InvokeInst>(Value))
-    Builder.SetInsertPoint(Invoke->getNormalDest()->begin());
-  else if (llvm::Instruction *Next = Value->getIterator()->getNextNode())
-    Builder.SetInsertPoint(Next);
-  else
-    Builder.SetInsertPoint(Value->getParent());
-  llvm::DebugLoc DL = Value->getDebugLoc();
-  if (DL.get())
-    Builder.SetCurrentDebugLocation(DL);
-  else if (!Builder.getCurrentDebugLocation().get())
-    Builder.SetCurrentDebugLocation(SaveDebugLoc);
+  llvm::DILocalVariable *D =
+      DBuilder.createAutoVariable(LexicalBlockStack.back(), "", nullptr, 0,
+                                  Type, false, llvm::DINode::FlagArtificial);
 
-  llvm::AllocaInst *PseudoVar = Builder.CreateAlloca(Value->getType());
-  Address PseudoVarAddr(PseudoVar, Value->getType(),
-                        CharUnits::fromQuantity(PseudoVar->getAlign()));
-  llvm::LoadInst *Load = Builder.CreateLoad(PseudoVarAddr);
-  Value->replaceAllUsesWith(Load);
-  Builder.SetInsertPoint(Load);
-  Builder.CreateStore(Value, PseudoVarAddr);
-
-  // Emit debug info for materialized Value.
-  unsigned Line = Builder.getCurrentDebugLocation().getLine();
-  unsigned Column = Builder.getCurrentDebugLocation().getCol();
-  llvm::DILocalVariable *D = DBuilder.createAutoVariable(
-      LexicalBlockStack.back(), "", nullptr, 0, Type, false,
-      llvm::DINode::FlagArtificial);
-  llvm::DILocation *DIL =
-      llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
-                            LexicalBlockStack.back(), CurInlinedAt);
-  SmallVector<uint64_t> Expr;
-  DBuilder.insertDeclare(PseudoVar, D, DBuilder.createExpression(Expr), DIL,
-                         Load);
-
-  Builder.restoreIP(SaveInsertionPoint);
-  Builder.SetCurrentDebugLocation(SaveDebugLoc);
+  if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
+    DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
+                                     &**InsertPoint);
+  }
 }
 
 void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,

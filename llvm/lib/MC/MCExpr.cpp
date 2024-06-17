@@ -661,25 +661,16 @@ static void AttemptToFoldSymbolOffsetDifference(
     // this is important when the Subtarget is changed and a new MCDataFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
-    if (SA.isVariable() || SB.isVariable() ||
-        FA->getSubsectionNumber() != FB->getSubsectionNumber())
+    if (SA.isVariable() || SB.isVariable())
       return;
 
     // Try to find a constant displacement from FA to FB, add the displacement
     // between the offset in FA of SA and the offset in FB of SB.
     bool Reverse = false;
-    if (FA == FB) {
+    if (FA == FB)
       Reverse = SA.getOffset() < SB.getOffset();
-    } else if (!isa<MCDummyFragment>(FA)) {
-      // Testing FA < FB is slow. Use setLayoutOrder to speed up computation.
-      // The formal layout order will be finalized in MCAssembler::layout.
-      if (FA->getLayoutOrder() == 0 || FB->getLayoutOrder()== 0) {
-        unsigned LayoutOrder = 0;
-        for (MCFragment &F : *FA->getParent())
-          F.setLayoutOrder(++LayoutOrder);
-      }
+    else if (!isa<MCDummyFragment>(FA))
       Reverse = FA->getLayoutOrder() < FB->getLayoutOrder();
-    }
 
     uint64_t SAOffset = SA.getOffset(), SBOffset = SB.getOffset();
     int64_t Displacement = SA.getOffset() - SB.getOffset();
@@ -695,7 +686,7 @@ static void AttemptToFoldSymbolOffsetDifference(
     // instruction, the difference cannot be resolved as it may be changed by
     // the linker.
     bool BBeforeRelax = false, AAfterRelax = false;
-    for (auto FI = FB->getIterator(), FE = SecA.end(); FI != FE; ++FI) {
+    for (auto FI = FB; FI; FI = FI->getNext()) {
       auto DF = dyn_cast<MCDataFragment>(FI);
       if (DF && DF->isLinkerRelaxable()) {
         if (&*FI != FB || SBOffset != DF->getContents().size())
@@ -726,12 +717,14 @@ static void AttemptToFoldSymbolOffsetDifference(
         return;
       }
     }
-    // If the previous loop does not find FA, FA must be a dummy fragment not in
-    // the fragment list (which means SA is a pending label (see
-    // flushPendingLabels)). In either case, we can resolve the difference.
-    assert(Found || isa<MCDummyFragment>(FA));
-    Addend += Reverse ? -Displacement : Displacement;
-    FinalizeFolding();
+    // If FA and FB belong to the same subsection, either the previous loop
+    // found FA, or FA is a dummy fragment not in the fragment list (which means
+    // SA is a pending label (see flushPendingLabels)) or FA and FB belong to
+    // different subsections. In either case, we can resolve the difference.
+    if (Found || isa<MCDummyFragment>(FA)) {
+      Addend += Reverse ? -Displacement : Displacement;
+      FinalizeFolding();
+    }
   }
 }
 

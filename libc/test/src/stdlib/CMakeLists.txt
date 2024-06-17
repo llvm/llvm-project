@@ -79,6 +79,21 @@ add_libc_test(
     libc.src.__support.CPP.span
 )
 
+add_libc_test(
+  freelist_heap_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    freelist_heap_test.cpp
+    freelist_malloc_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.span
+    libc.src.stdlib.freelist_heap
+    libc.src.stdlib.malloc
+    libc.src.string.memcmp
+    libc.src.string.memcpy
+)
+
 add_fp_unittest(
   strtod_test
   SUITE

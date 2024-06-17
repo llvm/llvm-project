@@ -610,6 +610,17 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
     }
   }
 
+  // Set procedure attributes to the func op.
+  if (IsPureProcedure(sym))
+    func->setAttr(fir::getFuncPureAttrName(),
+                  mlir::UnitAttr::get(&mlirContext));
+  if (IsElementalProcedure(sym))
+    func->setAttr(fir::getFuncElementAttrName(),
+                  mlir::UnitAttr::get(&mlirContext));
+  if (sym.attrs().test(Fortran::semantics::Attr::RECURSIVE))
+    func->setAttr(fir::getFuncRecursiveAttrName(),
+                  mlir::UnitAttr::get(&mlirContext));
+
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
   if (!Fortran::semantics::IsBindCProcedure(sym))
