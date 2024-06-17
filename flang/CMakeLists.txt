@@ -453,7 +453,7 @@ endif()
 #
 # We want this set to infinity by default
 set(FLANG_PARALLEL_COMPILE_JOBS 0 CACHE STRING
-  "The maxmimum number of concurrent compilation jobs (Ninja only)")
+  "The maximum number of concurrent compilation jobs (Ninja only)")
 
 set_property(GLOBAL APPEND PROPERTY JOB_POOLS flang_compile_job_pool=${FLANG_PARALLEL_COMPILE_JOBS})
 
