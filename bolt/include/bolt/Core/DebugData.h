@@ -211,6 +211,8 @@ public:
     return Writer->getKind() == RangesWriterKind::DebugRangesWriter;
   }
 
+  void appendToRangeBuffer(const DebugBufferVector &CUBuffer);
+
   /// Writes out range lists for a current CU being processed.
   void virtual finalizeSection(){};
 

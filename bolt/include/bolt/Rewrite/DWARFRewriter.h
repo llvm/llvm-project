@@ -89,6 +89,15 @@ private:
   /// Store Rangelists writer for each DWO CU.
   RangeListsDWOWriers RangeListsWritersByCU;
 
+  /// Contains ranges writer and die.
+  struct RangesWriterAndDIE {
+    std::unique_ptr<DebugRangesSectionWriter> Writer;
+    DIE *Die;
+  };
+  /// Stores ranges writer and DIE for each DWO CU.
+  std::unordered_map<uint64_t, RangesWriterAndDIE>
+      LegacyRangesWritersAndDIEsByCU;
+
   std::mutex LocListDebugInfoPatchesMutex;
 
   /// Dwo id specific its RangesBase.
