@@ -1659,6 +1659,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       });
   }
 
+  if (ST.hasAtomicBufferGlobalPkAddF16Insts())
+    Atomic.legalFor({{V2F16, GlobalPtr}});
+  if (ST.hasAtomicGlobalPkAddBF16Inst())
+    Atomic.legalFor({{V2BF16, GlobalPtr}});
+  if (ST.hasAtomicFlatPkAdd16Insts())
+    Atomic.legalFor({{V2F16, FlatPtr}, {V2BF16, FlatPtr}});
+
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
