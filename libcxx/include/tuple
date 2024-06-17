@@ -240,6 +240,7 @@ template <class... Types>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
+#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/lazy.h>
 #include <__type_traits/maybe_const.h>
 #include <__type_traits/nat.h>
@@ -537,6 +538,8 @@ class _LIBCPP_TEMPLATE_VIS tuple {
   get(const tuple<_Up...>&&) _NOEXCEPT;
 
 public:
+  using __trivially_relocatable = __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
+
   // [tuple.cnstr]
 
   // tuple() constructors (including allocator_arg_t variants)

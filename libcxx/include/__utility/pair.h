@@ -34,6 +34,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
+#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/unwrap_ref.h>
@@ -70,6 +71,11 @@ struct _LIBCPP_TEMPLATE_VIS pair
 
   _T1 first;
   _T2 second;
+
+  using __trivially_relocatable =
+      __conditional_t<__libcpp_is_trivially_relocatable<_T1>::value && __libcpp_is_trivially_relocatable<_T2>::value,
+                      pair,
+                      void>;
 
   _LIBCPP_HIDE_FROM_ABI pair(pair const&) = default;
   _LIBCPP_HIDE_FROM_ABI pair(pair&&)      = default;

@@ -151,6 +151,7 @@ exception typeinfo
 exception version
 execution version
 expected cstddef
+expected cstdint
 expected initializer_list
 expected new
 expected version
@@ -484,6 +485,7 @@ regex typeinfo
 regex vector
 regex version
 scoped_allocator cstddef
+scoped_allocator cstdint
 scoped_allocator limits
 scoped_allocator new
 scoped_allocator tuple
@@ -640,6 +642,7 @@ thread typeinfo
 thread version
 tuple compare
 tuple cstddef
+tuple cstdint
 tuple version
 type_traits cstddef
 type_traits cstdint
@@ -674,6 +677,7 @@ unordered_set tuple
 unordered_set version
 utility compare
 utility cstddef
+utility cstdint
 utility initializer_list
 utility limits
 utility version

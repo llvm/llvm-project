@@ -209,6 +209,7 @@ namespace std {
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
+#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cvref.h>
@@ -579,6 +580,8 @@ class _LIBCPP_DECLSPEC_EMPTY_BASES optional
 
 public:
   using value_type = _Tp;
+
+  using __trivially_relocatable = conditional_t<__libcpp_is_trivially_relocatable<_Tp>::value, optional, void>;
 
 private:
   // Disable the reference extension using this static assert.
