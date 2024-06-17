@@ -844,8 +844,11 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         LLT MemTy = Handler.getStackValueStoreType(DL, VA, Flags);
 
         MachinePointerInfo MPO;
-        Register StackAddr = Handler.getStackAddress(
-            MemTy.getSizeInBytes(), VA.getLocMemOffset(), MPO, Flags);
+        Register StackAddr =
+            Handler.getStackAddress(VA.getLocInfo() == CCValAssign::Indirect
+                                        ? PointerTy.getSizeInBytes()
+                                        : MemTy.getSizeInBytes(),
+                                    VA.getLocMemOffset(), MPO, Flags);
 
         // Finish the handling of indirect passing from the passers
         // (OutgoingParameterHandler) side.
