@@ -90,8 +90,8 @@ void PreferAtOverSubscriptOperatorCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(
           callee(
               cxxMethodDecl(hasOverloadedOperatorName("[]")).bind("operator")),
-          callee(cxxMethodDecl(hasParent(
-              cxxRecordDecl(hasMethod(hasName("at"))).bind("parent")))))
+          callee(cxxMethodDecl(
+              ofClass(cxxRecordDecl(hasMethod(hasName("at"))).bind("parent")))))
           .bind("caller"),
       this);
 }
