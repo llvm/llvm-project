@@ -999,10 +999,6 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                                  : Instruction::ZExt;
         auto *VPC =
             new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
-        if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue()) {
-          // UnderlyingExt has distinct return type, used to retain legacy cost.
-          VPC->setUnderlyingValue(UnderlyingExt);
-        }
         VPC->insertBefore(&R);
         Trunc->replaceAllUsesWith(VPC);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
@@ -1522,7 +1518,6 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
           VPInstruction *New = Builder.createOverflowingOp(
               Instruction::Add, {A, B}, {false, false},
               RecWithFlags->getDebugLoc());
-          New->setUnderlyingValue(RecWithFlags->getUnderlyingValue());
           RecWithFlags->replaceAllUsesWith(New);
           RecWithFlags->eraseFromParent();
           CurRec = New;
