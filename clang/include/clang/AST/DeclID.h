@@ -230,7 +230,11 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static unsigned getHashValue(const GlobalDeclID &Key) {
-    return DenseMapInfo<DeclID>::getHashValue(Key.get());
+    // Our default hash algorithm for 64 bits integer may not be very good.
+    // In GlobalDeclID's case, it is pretty common that the lower 32 bits can
+    // be same.
+    return DenseMapInfo<uint32_t>::getHashValue(Key.getModuleFileIndex()) ^
+           DenseMapInfo<uint32_t>::getHashValue(Key.getLocalDeclIndex());
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {
