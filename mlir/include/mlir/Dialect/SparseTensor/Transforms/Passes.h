@@ -51,6 +51,7 @@ enum class ReinterpretMapScope {
 /// Defines a scope for reinterpret map pass.
 enum class SparseEmitStrategy {
   kFunctional,     // generate fully inlined (and functional) sparse iteration
+  kSparseIterator, // generate (experimental) loop using sparse iterator.
   kDebugInterface, // generate only place-holder for sparse iteration
 };
 

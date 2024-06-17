@@ -163,7 +163,9 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
            "mlir::SparseEmitStrategy::kFunctional",
            "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
              clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
-                        "Emit functional code."),
+                        "Emit functional code (with scf.for/while)."),
+             clEnumValN(mlir::SparseEmitStrategy::kSparseIterator, "sparse-iterator",
+                        "Emit (experimental) loops (with sparse.iterate)."),
              clEnumValN(mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
                         "Emit non-functional but easy-to-read interfaces to debug."))}]>,
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",

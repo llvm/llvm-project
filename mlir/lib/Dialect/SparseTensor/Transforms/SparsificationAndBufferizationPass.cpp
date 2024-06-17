@@ -159,6 +159,12 @@ public:
         pm.addPass(createSparseGPUCodegenPass(0, enableRuntimeLibrary));
       pm.addPass(createSparseReinterpretMapPass(ReinterpretMapScope::kAll));
       pm.addPass(createSparsificationPass(sparsificationOptions));
+      if (sparsificationOptions.sparseEmitStrategy ==
+          SparseEmitStrategy::kSparseIterator) {
+        pm.addNestedPass<func::FuncOp>(createSparseSpaceCollapsePass());
+        pm.addNestedPass<func::FuncOp>(createLowerSparseIterationToSCFPass());
+      }
+
       pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
       pm.addPass(createLowerSparseOpsToForeachPass(enableRuntimeLibrary,
                                                    /*enableConvert=*/true));
