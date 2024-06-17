@@ -824,7 +824,7 @@ def ProcessorFeatures {
                                     FeatureNEON, FeaturePerfMon, FeatureSHA3,
                                     FeatureFullFP16, FeatureFP16FML,
                                     FeatureAES, FeatureBF16,
-                                    FeatureSME2,
+                                    FeatureSME, FeatureSME2,
                                     FeatureSMEF64F64, FeatureSMEI16I64];
   list<SubtargetFeature> ExynosM3 = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                      FeaturePerfMon];
