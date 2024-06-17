@@ -450,12 +450,12 @@ struct ExtractSubstringHelper {
 
   template <typename T>
   static std::optional<Substring> visit(const Designator<T> &e) {
-    return std::visit([](auto &&s) { return visit(s); }, e.u);
+    return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
   template <typename T>
   static std::optional<Substring> visit(const Expr<T> &e) {
-    return std::visit([](auto &&s) { return visit(s); }, e.u);
+    return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 };
 
