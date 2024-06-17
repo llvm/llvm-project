@@ -166,20 +166,21 @@ static Attribute convertNode(Builder &builder, llvm::msgpack::DocNode &node) {
 }
 
 /// The following function should succeed for Code object V3 and above.
-static llvm::StringMap<DictionaryAttr> getELFMetadata(Builder &builder,
-                                                      ArrayRef<char> elfData) {
+std::optional<DenseMap<StringAttr, NamedAttrList>>
+mlir::ROCDL::getAMDHSAKernelsELFMetadata(Builder &builder,
+                                         ArrayRef<char> elfData) {
   std::optional<llvm::msgpack::Document> metadata = getAMDHSANote(elfData);
   if (!metadata)
-    return {};
-  llvm::StringMap<DictionaryAttr> kernelMD;
+    return std::nullopt;
+  DenseMap<StringAttr, NamedAttrList> kernelMD;
   llvm::msgpack::DocNode &root = (metadata)->getRoot();
   // Fail if `root` is not a map -it should be for AMD Obj Ver 3.
   if (!root.isMap())
-    return kernelMD;
+    return std::nullopt;
   auto &kernels = root.getMap()["amdhsa.kernels"];
   // Fail if `amdhsa.kernels` is not an array.
   if (!kernels.isArray())
-    return kernelMD;
+    return std::nullopt;
   // Convert each of the kernels.
   for (auto &kernel : kernels.getArray()) {
     if (!kernel.isMap())
@@ -202,24 +203,27 @@ static llvm::StringMap<DictionaryAttr> getELFMetadata(Builder &builder,
         attrList.append(key, attr);
     }
     if (!attrList.empty())
-      kernelMD[name.getString()] = builder.getDictionaryAttr(attrList);
+      kernelMD[builder.getStringAttr(name.getString())] = std::move(attrList);
   }
   return kernelMD;
 }
 
-gpu::KernelTableAttr
-mlir::ROCDL::getAMDHSAKernelsMetadata(Operation *gpuModule,
-                                      ArrayRef<char> elfData) {
+gpu::KernelTableAttr mlir::ROCDL::getKernelMetadata(Operation *gpuModule,
+                                                    ArrayRef<char> elfData) {
   auto module = cast<gpu::GPUModuleOp>(gpuModule);
   Builder builder(module.getContext());
   NamedAttrList moduleAttrs;
-  llvm::StringMap<DictionaryAttr> mdMap = getELFMetadata(builder, elfData);
+  std::optional<DenseMap<StringAttr, NamedAttrList>> mdMapOrNull =
+      getAMDHSAKernelsELFMetadata(builder, elfData);
   for (auto funcOp : module.getBody()->getOps<LLVM::LLVMFuncOp>()) {
     if (!funcOp->getDiscardableAttr("rocdl.kernel"))
       continue;
     moduleAttrs.append(
         funcOp.getName(),
-        gpu::KernelAttr::get(funcOp, mdMap.lookup(funcOp.getName())));
+        gpu::KernelAttr::get(
+            funcOp, mdMapOrNull ? builder.getDictionaryAttr(
+                                      mdMapOrNull->lookup(funcOp.getNameAttr()))
+                                : nullptr));
   }
   return gpu::KernelTableAttr::get(
       moduleAttrs.getDictionary(module.getContext()));
