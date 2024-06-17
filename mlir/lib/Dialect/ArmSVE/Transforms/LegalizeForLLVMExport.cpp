@@ -143,7 +143,7 @@ using ZipX4OpLowering = OneToOneConvertToLLVMPattern<ZipX4Op, ZipX4IntrOp>;
 /// Converts `vector.create_mask` ops that match the size of an SVE predicate
 /// to the `whilelt` intrinsic. This produces more canonical codegen than the
 /// generic LLVM lowering, see https://github.com/llvm/llvm-project/issues/81840
-/// for more details. Note that we can't (the more general) get.active.lane.mask
+/// for more details. Note that we can't use (the more general) active.lane.mask
 /// as its semantics don't neatly map on to `vector.create_mask`, as it does an
 /// unsigned comparison (whereas `create_mask` is signed), and is UB/posion if
 /// `n` is zero (whereas `create_mask` just returns an all-false mask).
