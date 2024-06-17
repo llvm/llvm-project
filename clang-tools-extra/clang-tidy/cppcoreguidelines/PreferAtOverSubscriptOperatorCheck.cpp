@@ -110,9 +110,11 @@ void PreferAtOverSubscriptOperatorCheck::check(
     return;
 
   diag(MatchedExpr->getBeginLoc(),
-       "found possibly unsafe operator[], consider using at() instead");
+       "found possibly unsafe operator[], consider using at() instead")
+      << MatchedExpr->getSourceRange();
   diag(Alternative->getBeginLoc(), "alternative at() defined here",
-       DiagnosticIDs::Note);
+       DiagnosticIDs::Note)
+      << Alternative->getSourceRange();
 }
 
 } // namespace clang::tidy::cppcoreguidelines
