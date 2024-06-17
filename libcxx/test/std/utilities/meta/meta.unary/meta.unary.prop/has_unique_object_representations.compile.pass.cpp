@@ -67,7 +67,7 @@ class NTTP_ClassType_WithoutPadding {
   int x;
 };
 
-int main(int, char**) {
+void test() {
   test<false, void>();
   test<false, Empty>();
   test<false, EmptyUnion>();
@@ -103,6 +103,4 @@ int main(int, char**) {
     test<true, NTTP_ClassType_WithoutPadding<0>[][3]>();
     test<true, NTTP_ClassType_WithoutPadding<0>>();
   }
-
-  return 0;
 }
