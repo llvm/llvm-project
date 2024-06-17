@@ -13,6 +13,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -39,13 +40,16 @@ Hints declHints(const Decl *D) {
 }
 
 std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
-  std::vector<Hinted<SymbolLocation>> Result;
-  // FIXME: Should we also provide physical locations?
-  if (auto SS = tooling::stdlib::Recognizer()(&D)) {
-    Result.push_back({*SS, Hints::CompleteSymbol});
-    if (!D.hasBody())
-      return Result;
-  }
+  SourceManager &SM = D.getASTContext().getSourceManager();
+  bool HasBodyInMainFile = llvm::any_of(D.redecls(), [&](Decl *Redecl) {
+    return Redecl->hasBody() && SM.isInMainFile(Redecl->getLocation());
+  });
+  // if decl has body and in main file, we don't need to do further search.
+  if (!HasBodyInMainFile)
+    // FIXME: Should we also provide physical locations?
+    if (auto SS = tooling::stdlib::Recognizer()(&D))
+      return {{*SS, Hints::CompleteSymbol}};
+
   // FIXME: Signal foreign decls, e.g. a forward declaration not owned by a
   // library. Some useful signals could be derived by checking the DeclContext.
   // Most incidental forward decls look like:
@@ -53,6 +57,7 @@ std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
   //   class SourceManager; // likely an incidental forward decl.
   //   namespace my_own_ns {}
   //   }
+  std::vector<Hinted<SymbolLocation>> Result;
   for (auto *Redecl : D.redecls())
     Result.push_back({Redecl->getLocation(), declHints(Redecl)});
   return Result;

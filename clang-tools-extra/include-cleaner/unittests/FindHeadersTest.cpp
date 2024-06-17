@@ -631,12 +631,9 @@ TEST_F(HeadersForSymbolTest, StandardHeaders) {
 TEST_F(HeadersForSymbolTest, NonStandardHeaders) {
   Inputs.Code = "void assert() {}";
   buildAST();
-  EXPECT_THAT(
-      headersFor("assert"),
-      // Respect the ordering from the stdlib mapping.
-      UnorderedElementsAre(physicalHeader("input.mm"),
-                           tooling::stdlib::Header::named("<cassert>"),
-                           tooling::stdlib::Header::named("<assert.h>")));
+  EXPECT_THAT(headersFor("assert"),
+              // Respect the ordering from the stdlib mapping.
+              UnorderedElementsAre(physicalHeader("input.mm")));
 }
 
 TEST_F(HeadersForSymbolTest, ExporterNoNameMatch) {
