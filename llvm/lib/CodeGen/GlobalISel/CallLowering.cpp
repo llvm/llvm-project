@@ -817,7 +817,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
       //
       // After this GMIR, the remaining part of the loop body will decide how
       // to get the value to the caller and we break out of the loop.
-      if (VA.getLocInfo() == CCValAssign::Indirect && Flags.isSplit() &&
+      if (VA.getLocInfo() == CCValAssign::Indirect &&
           !Handler.isIncomingArgumentHandler()) {
         Align StackAlign = DL.getPrefTypeAlign(Args[i].Ty);
         MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -916,7 +916,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
       // Finish the handling of indirect parameter passing when receiving
       // the value (we are in the called function or the caller when receiving
       // the return value).
-      if (VA.getLocInfo() == CCValAssign::Indirect && Flags.isSplit() &&
+      if (VA.getLocInfo() == CCValAssign::Indirect &&
           Handler.isIncomingArgumentHandler()) {
         Align Alignment = DL.getABITypeAlign(Args[i].Ty);
         MachinePointerInfo MPO(Args[i].Regs[0]);
