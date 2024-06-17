@@ -350,7 +350,7 @@ namespace {
 
 class ObjcCategoryMerger {
   // In which language was a particular construct originally defined
-  enum SourceLanguage { ObjC, Swift, Unknown };
+  enum SourceLanguage { Unknown, ObjC, Swift };
 
   // Information about an input category
   struct InfoInputCategory {
@@ -1166,14 +1166,16 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
       assert(catBodyIsec &&
              "Category data section is not an ConcatInputSection");
 
-      InfoInputCategory catInputInfo{catListCisec, catBodyIsec, off};
+      SourceLanguage eLang = SourceLanguage::Unknown;
       if (categorySym->getName().starts_with(objc::symbol_names::category))
-        catInputInfo.sourceLanguage = SourceLanguage::ObjC;
+        eLang = SourceLanguage::ObjC;
       else if (categorySym->getName().starts_with(
                    objc::symbol_names::swift_objc_category))
-        catInputInfo.sourceLanguage = SourceLanguage::Swift;
+        eLang = SourceLanguage::Swift;
       else
         llvm_unreachable("Unexpected category symbol name");
+
+      InfoInputCategory catInputInfo{catListCisec, catBodyIsec, off, eLang};
 
       // Check that the category has a reloc at 'klassOffset' (which is
       // a pointer to the class symbol)
