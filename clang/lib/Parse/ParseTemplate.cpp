@@ -787,6 +787,23 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
                                                   unsigned Position) {
   assert(Tok.is(tok::kw_template) && "Expected 'template' keyword");
 
+  if (Token ahead = GetLookAheadToken(1);
+      ahead.isOneOf(tok::identifier, tok::ellipsis,
+                    tok::equal, tok::comma,
+                    tok::greater, tok::greatergreater, tok::greatergreatergreater)) {
+    // Maybe they intended `typename` instead of `template` (given thats more common)
+    // Error early, to add a fixit hint
+
+    Diag(ahead.getLocation(), diag::err_expected_less_after) << "template";
+    
+    Diag(Tok.getLocation(), diag::note_meant_to_use_typename)
+      << FixItHint::CreateReplacement(CharSourceRange::getTokenRange(Tok.getLocation()),
+                                      "typename");
+
+    Tok.setKind(tok::kw_typename);
+    return ParseTypeParameter(Depth, Position);
+  }
+
   // Handle the template <...> part.
   SourceLocation TemplateLoc = ConsumeToken();
   SmallVector<NamedDecl*,8> TemplateParams;
