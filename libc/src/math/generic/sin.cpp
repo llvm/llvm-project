@@ -420,11 +420,14 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
 #ifdef LIBC_TARGET_CPU_HAS_FMA
       return fputil::multiply_add(x, -0x1.0p-54, x);
 #else
-      int rounding_mode = fputil::quick_get_round();
-      if (rounding_mode == FE_TOWARDZERO ||
-          (xbits.sign() == Sign::POS && rounding_mode == FE_DOWNWARD) ||
-          (xbits.sign() == Sign::NEG && rounding_mode == FE_UPWARD))
-        return FPBits(xbits.uintval() - 1).get_val();
+      if (LIBC_UNLIKELY(x_e < 4)) {
+        int rounding_mode = fputil::quick_get_round();
+        if (rounding_mode == FE_TOWARDZERO ||
+            (xbits.sign() == Sign::POS && rounding_mode == FE_DOWNWARD) ||
+            (xbits.sign() == Sign::NEG && rounding_mode == FE_UPWARD))
+          return FPBits(xbits.uintval() - 1).get_val();
+      }
+      return fputil::multiply_add(x, -0x1.0p-54, x);
 #endif // LIBC_TARGET_CPU_HAS_FMA
     }
 
