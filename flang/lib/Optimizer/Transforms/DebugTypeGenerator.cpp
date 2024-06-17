@@ -213,8 +213,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
       context, llvm::dwarf::DW_TAG_string_type,
       mlir::StringAttr::get(context, ""),
       charTy.getLen() * kindMapping.getCharacterBitsize(charTy.getFKind()),
-      /* alignInBits */ 0, /* stringLength */ nullptr,
-      /* stringLengthExp */ nullptr, /* stringLocationExp */ nullptr, encoding);
+      /*alignInBits=*/0, /*stringLength=*/nullptr,
+      /*stringLengthExp=*/nullptr, /*stringLocationExp=*/nullptr, encoding);
 }
 
 mlir::LLVM::DITypeAttr
