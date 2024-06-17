@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s -fexceptions -fcxx-exceptions -Wno-unevaluated-expression
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++2a %s -fexceptions -fcxx-exceptions -Wno-unevaluated-expression -fexperimental-new-constant-interpreter
 
+namespace std {
+struct type_info;
+}
+
 void f(); // expected-note {{possible target for call}}
 void f(int); // expected-note {{possible target for call}}
 
@@ -97,3 +101,17 @@ void j() noexcept(0);
 void k() noexcept(1);
 void l() noexcept(2); // expected-error {{noexcept specifier argument evaluates to 2, which cannot be narrowed to type 'bool'}}
 } // namespace P1401
+
+template<bool NoexceptConstructor, bool NoexceptDestructor>
+struct Polymorphic {
+  Polymorphic() noexcept(NoexceptConstructor) {}
+  virtual ~Polymorphic() noexcept(NoexceptDestructor) {}
+};
+
+static_assert(noexcept(typeid(Polymorphic<false, false>{})));  // Not evaluated (not glvalue)
+static_assert(noexcept(typeid((Polymorphic<true, true>&&) Polymorphic<true, true>{})));
+static_assert(!noexcept(typeid((Polymorphic<false, true>&&) Polymorphic<false, true>{})));
+static_assert(!noexcept(typeid((Polymorphic<true, false>&&) Polymorphic<true, false>{})));
+static_assert(!noexcept(typeid(*&(const Polymorphic<true, true>&) Polymorphic<true, true>{})));
+static_assert(!noexcept(typeid(*&(const Polymorphic<false, true>&) Polymorphic<false, true>{})));
+static_assert(!noexcept(typeid(*&(const Polymorphic<true, false>&) Polymorphic<true, false>{})));
