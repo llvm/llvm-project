@@ -149,8 +149,10 @@ define half @test_old_fneg(half %a) #0 {
 }
 
 ; CHECK-LABEL: test_fneg(
-; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_fneg_param_0];
-; CHECK-NEXT: xor.b16    [[R:%rs[0-9]+]], [[A]], -32768;
+; CHECK:  ld.param.b16    [[A:%rs[0-9]+]], [test_fneg_param_0];
+; CHECK-F16-NOFTZ-NEXT:   neg.f16     [[R:%rs[0-9]+]], [[A]];
+; CHECK-F16-FTZ-NEXT:   neg.ftz.f16     [[R:%rs[0-9]+]], [[A]];
+; CHECK-NOF16-NEXT:  xor.b16    [[R:%rs[0-9]+]], [[A]], -32768;
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
 ; CHECK-NEXT: ret;
 define half @test_fneg(half %a) #0 {
