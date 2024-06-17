@@ -37,10 +37,16 @@ def ArmSVE_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 def SVBool : ScalableVectorOfRankAndLengthAndType<
-  [1], [16], [I1]>;
+  [1], [16], [I1]>
+{
+  let summary = "vector<[16]xi1>";
+}
 
 def SVEPredicate : ScalableVectorOfRankAndLengthAndType<
-  [1], [16, 8, 4, 2, 1], [I1]>;
+  [1], [16, 8, 4, 2, 1], [I1]>
+{
+  let summary = "vector<[1]xi1>, vector<[2]xi1>, vector<[4]xi1>, vector<[8]xi1>, or vector<[16]xi1>";
+}
 
 // Generalizations of SVBool and SVEPredicate to ranks >= 1.
 // These are masks with a single trailing scalable dimension.
@@ -450,7 +456,7 @@ def PselOp : ArmSVE_Op<"psel", [
 
   let description = [{
     This operation returns the input predicate `p1` or an all-false predicate
-    based on the bit at `p2[index]`. Informally the semantics are:
+    based on the bit at `p2[index]`. Informally, the semantics are:
     ```
     if p2[index % num_elements(p2)] == 1:
       return p1 : type(p1)
