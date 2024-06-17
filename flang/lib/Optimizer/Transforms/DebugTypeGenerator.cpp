@@ -237,8 +237,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
   return mlir::LLVM::DIDerivedTypeAttr::get(
       context, llvm::dwarf::DW_TAG_pointer_type,
       mlir::StringAttr::get(context, ""), elTyAttr, ptrSize,
-      /*alignInBits*/ 0, /* offset */ 0,
-      /* optional<address space> */ std::nullopt, /* extra data */ nullptr);
+      /*alignInBits=*/0, /*offset=*/0,
+      /*optional<address space>=*/std::nullopt, /*extra data=*/nullptr);
 }
 
 mlir::LLVM::DITypeAttr
@@ -284,7 +284,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                       false);
     if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(elTy))
       return convertPointerLikeType(heapTy.getElementType(), fileAttr, scope,
-                                    loc, true, false);
+                                    loc, /*genAllocated=*/true,
+                                    /*genAssociated=*/false);
     return genPlaceholderType(context);
   } else {
     // FIXME: These types are currently unhandled. We are generating a
