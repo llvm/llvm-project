@@ -3505,6 +3505,33 @@ DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
   return DiagnosedSilenceableFailure::success();
 }
 
+DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  auto maybeTransformed =
+      TypeSwitch<Operation *, FailureOr<Operation *>>(target)
+          .Case([&](linalg::WinogradFilterTransformOp op) {
+            return decomposeWinogradFilterTransformOp(rewriter, op);
+          })
+          .Case([&](linalg::WinogradInputTransformOp op) {
+            return decomposeWinogradInputTransformOp(rewriter, op);
+          })
+          .Case([&](linalg::WinogradOutputTransformOp op) {
+            return decomposeWinogradOutputTransformOp(rewriter, op);
+          })
+          .Default([&](Operation *op) {
+            return rewriter.notifyMatchFailure(op, "not supported");
+          });
+
+  if (failed(maybeTransformed))
+    return emitDefaultSilenceableFailure(target);
+
+  results.push_back(*maybeTransformed);
+  return DiagnosedSilenceableFailure::success();
+}
+
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOpsEnums.cpp.inc"
 
 #define GET_OP_CLASSES
