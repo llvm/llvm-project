@@ -45,6 +45,10 @@ private:
                            mlir::LLVM::DIFileAttr fileAttr,
                            mlir::LLVM::DIScopeAttr scope, mlir::Location loc,
                            bool genAllocated, bool genAssociated);
+  mlir::LLVM::DITypeAttr convertCharacterType(fir::CharacterType charTy,
+                                              mlir::LLVM::DIFileAttr fileAttr,
+                                              mlir::LLVM::DIScopeAttr scope,
+                                              mlir::Location loc);
   mlir::ModuleOp module;
   KindMapping kindMapping;
   std::uint64_t dimsSize;

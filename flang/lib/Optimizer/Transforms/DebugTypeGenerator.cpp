@@ -190,6 +190,33 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
       /* associated */ nullptr);
 }
 
+mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
+    fir::CharacterType charTy, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, mlir::Location loc) {
+  mlir::MLIRContext *context = module.getContext();
+  if (!charTy.hasConstantLen())
+    return genPlaceholderType(context);
+
+  // DWARF 5 says the following about the character encoding in 5.1.1.2.
+  // "DW_ATE_ASCII and DW_ATE_UCS specify encodings for the Fortran 2003
+  // string kinds ASCII (ISO/IEC 646:1991) and ISO_10646 (UCS-4 in ISO/IEC
+  // 10646:2000)."
+  unsigned encoding = llvm::dwarf::DW_ATE_ASCII;
+  if (charTy.getFKind() != 1)
+    encoding = llvm::dwarf::DW_ATE_UCS;
+
+  // FIXME: Currently the DIStringType in llvm does not have the option to set
+  // type of the underlying character. This restricts out ability to represent
+  // string with non-default characters. Please see issue #95440 for more
+  // details.
+  return mlir::LLVM::DIStringTypeAttr::get(
+      context, llvm::dwarf::DW_TAG_string_type,
+      mlir::StringAttr::get(context, ""),
+      charTy.getLen() * kindMapping.getCharacterBitsize(charTy.getFKind()),
+      /*alignInBits=*/0, /*stringLength=*/nullptr,
+      /*stringLengthExp=*/nullptr, /*stringLocationExp=*/nullptr, encoding);
+}
+
 mlir::LLVM::DITypeAttr
 DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                 mlir::LLVM::DIScopeAttr scope,
@@ -224,6 +251,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(Ty)) {
     return convertSequenceType(seqTy, fileAttr, scope, loc);
+  } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(Ty)) {
+    return convertCharacterType(charTy, fileAttr, scope, loc);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
