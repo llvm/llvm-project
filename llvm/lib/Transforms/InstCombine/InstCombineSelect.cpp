@@ -485,7 +485,7 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   }
   if (auto *TGEP = dyn_cast<GetElementPtrInst>(TI)) {
     auto *FGEP = cast<GetElementPtrInst>(FI);
-    Type *ElementType = TGEP->getResultElementType();
+    Type *ElementType = TGEP->getSourceElementType();
     return TGEP->isInBounds() && FGEP->isInBounds()
                ? GetElementPtrInst::CreateInBounds(ElementType, Op0, {Op1})
                : GetElementPtrInst::Create(ElementType, Op0, {Op1});
@@ -3706,7 +3706,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     Value *Idx = Gep->getOperand(1);
     if (isa<VectorType>(CondVal->getType()) && !isa<VectorType>(Idx->getType()))
       return nullptr;
-    Type *ElementType = Gep->getResultElementType();
+    Type *ElementType = Gep->getSourceElementType();
     Value *NewT = Idx;
     Value *NewF = Constant::getNullValue(Idx->getType());
     if (Swap)
