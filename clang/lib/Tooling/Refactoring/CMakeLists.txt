@@ -13,6 +13,9 @@ add_clang_library(clangToolingRefactoring
   Rename/USRFinder.cpp
   Rename/USRFindingAction.cpp
   Rename/USRLocFinder.cpp
+  VarInits/PrimitivesInit.cpp
+  VarInits/PrimitiveVarDeclRequirement.cpp
+  VarInits/PrimitiveVarDecl.cpp
 
   LINK_LIBS
   clangAST

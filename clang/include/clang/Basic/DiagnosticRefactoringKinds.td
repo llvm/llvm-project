@@ -28,6 +28,12 @@ def err_refactor_extract_simple_expression : Error<"the selected expression "
 def err_refactor_extract_prohibited_expression : Error<"the selected "
   "expression can't be extracted">;
 
+def err_refactor_no_vardecl : Error<"refactoring action can't be initiated "
+  "without a vardecl">;
+def err_refactor_initialized_variable : Error<"the provided vardecl is already initialized">;
+def err_refactor_global_variable_init : Error<"no need to initialize global variable">;
+def err_refactor_non_primitive_variable : Error<"refactoring action can't be initiated "
+  "with non-primitive variable">;
 }
 
 } // end of Refactoring diagnostics

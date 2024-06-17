@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_REFACTORING_REFACTORINGACTIONRULEREQUIREMENTS_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Refactoring/ASTSelection.h"
 #include "clang/Tooling/Refactoring/RefactoringDiagnostic.h"
 #include "clang/Tooling/Refactoring/RefactoringOption.h"
@@ -77,6 +78,17 @@ public:
   evaluate(RefactoringRuleContext &Context) const;
 };
 
+/// A base class for any requirement that expects source code position
+/// (or the refactoring tool with the -location option).
+class SourceLocationRequirement : public RefactoringActionRuleRequirement {
+public:
+  Expected<SourceLocation> evaluate(RefactoringRuleContext &Context) const {
+    if (Context.getLocation().isValid())
+      return Context.getLocation();
+    return Context.createDiagnosticError(diag::err_refactor_no_location);
+  }
+};
+
 /// A base class for any requirement that requires some refactoring options.
 class RefactoringOptionsRequirement : public RefactoringActionRuleRequirement {
 public:
@@ -114,6 +126,11 @@ private:
   /// because the same option can be used by multiple rules in one refactoring
   /// action.
   std::shared_ptr<RefactoringOption> Opt;
+};
+
+class PrimitiveVarDeclRequirement : public SourceLocationRequirement {
+public:
+  Expected<VarDecl *> evaluate(RefactoringRuleContext &Context) const;
 };
 
 } // end namespace tooling

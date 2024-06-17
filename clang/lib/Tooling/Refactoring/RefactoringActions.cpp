@@ -10,6 +10,7 @@
 #include "clang/Tooling/Refactoring/RefactoringAction.h"
 #include "clang/Tooling/Refactoring/RefactoringOptions.h"
 #include "clang/Tooling/Refactoring/Rename/RenamingAction.h"
+#include "clang/Tooling/Refactoring/VarInits/PrimitivesInit.h"
 
 namespace clang {
 namespace tooling {
@@ -93,6 +94,22 @@ public:
   }
 };
 
+class PrimitivesInitAction : public RefactoringAction {
+public:
+  StringRef getCommand() const override { return "init-primitives"; }
+
+  StringRef getDescription() const override {
+    return "Initialization of declared-only primitives";
+  }
+
+  RefactoringActionRules createActionRules() const override {
+    RefactoringActionRules Rules;
+    Rules.push_back(createRefactoringActionRule<PrimitivesInit>(
+        PrimitiveVarDeclRequirement()));
+    return Rules;
+  }
+};
+
 } // end anonymous namespace
 
 std::vector<std::unique_ptr<RefactoringAction>> createRefactoringActions() {
@@ -100,6 +117,7 @@ std::vector<std::unique_ptr<RefactoringAction>> createRefactoringActions() {
 
   Actions.push_back(std::make_unique<LocalRename>());
   Actions.push_back(std::make_unique<ExtractRefactoring>());
+  Actions.push_back(std::make_unique<PrimitivesInitAction>());
 
   return Actions;
 }
