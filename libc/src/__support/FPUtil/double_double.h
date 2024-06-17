@@ -44,7 +44,12 @@ LIBC_INLINE constexpr DoubleDouble add(const DoubleDouble &a, double b) {
   return exact_add(r.hi, r.lo + a.lo);
 }
 
-// Velkamp's Splitting for double precision.
+// Veltkamp's Splitting for double precision.
+// Note: This is the original version of Veltkamp's Splitting, which is only
+// correct for round-to-nearest mode.  See:
+//   Graillat, S.,  Lafevre, V., and Muller, J.-M., "Alternative Split Functions
+//   and Dekker's Product," ARITH'2020.
+//   http://arith2020.arithsymposium.org/resources/paper_31.pdf
 LIBC_INLINE constexpr DoubleDouble split(double a) {
   DoubleDouble r{0.0, 0.0};
   // Splitting constant = 2^ceil(prec(double)/2) + 1 = 2^27 + 1.
@@ -56,6 +61,9 @@ LIBC_INLINE constexpr DoubleDouble split(double a) {
   return r;
 }
 
+// Note: When FMA instruction is not available, the `exact_mult` function relies
+// on Veltkamp's Splitting algorithm, and is only correct for round-to-nearest
+// mode.
 LIBC_INLINE DoubleDouble exact_mult(double a, double b) {
   DoubleDouble r{0.0, 0.0};
 

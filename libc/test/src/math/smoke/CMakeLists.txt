@@ -3576,3 +3576,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.f16sqrtf
 )
+
+add_fp_unittest(
+  sin_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    sin_test.cpp
+  DEPENDS
+    libc.src.math.sin
+)

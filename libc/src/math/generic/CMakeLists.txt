@@ -136,6 +136,22 @@ add_header_library(
 )
 
 add_header_library(
+  range_reduction_double
+  HDRS
+    range_reduction_double.h
+    range_reduction_double_fma.h
+  DEPENDS
+  libc.src.__support.FPUtil.double_double
+  libc.src.__support.FPUtil.dyadic_float
+  libc.src.__support.FPUtil.fp_bits
+  libc.src.__support.FPUtil.fma
+  libc.src.__support.FPUtil.multiply_add
+  libc.src.__support.FPUtil.nearest_integer
+  libc.src.__support.common
+  libc.src.__support.integer_literals
+)
+
+add_header_library(
   sincosf_utils
   HDRS
     sincosf_utils.h
@@ -144,6 +160,15 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.common
+)
+
+add_header_library(
+  sincos_eval
+  HDRS
+    sincos_eval.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.multiply_add
 )
 
 add_entrypoint_object(
@@ -162,6 +187,29 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fma
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  sin
+  SRCS
+    sin.cpp
+  HDRS
+    ../sin.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
   COMPILE_OPTIONS
     -O3
