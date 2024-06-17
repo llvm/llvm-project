@@ -19244,11 +19244,12 @@ Syntax:
 """""""
 This is an overloaded intrinsic. A number of scalar values of integer, floating point or pointer data type are collected
 from an input vector and placed adjacently within the result vector. A mask defines which elements to collect from the vector.
+The remaining lanes are filled with values from ``passthru``.
 
 :: code-block:: llvm
 
-      declare <8 x i32> @llvm.masked.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>)
-      declare <16 x float> @llvm.masked.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>)
+      declare <8 x i32> @llvm.masked.compress.v8i32(<8 x i32> <value>, <8 x i1> <mask>, <8 x i32> <passthru>)
+      declare <16 x float> @llvm.masked.compress.v16f32(<16 x float> <value>, <16 x i1> <mask>, <16 x float> undef)
 
 Overview:
 """""""""
@@ -19256,9 +19257,9 @@ Overview:
 Selects elements from input vector '``value``' according to the '``mask``'.
 All selected elements are written into adjacent lanes in the result vector, from lower to higher.
 The mask holds an entry for each vector lane, and is used to select elements to be kept.
-The number of valid lanes is equal to the number of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values are undefined.
-The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is that the remainder of the vector may
-contain undefined values.
+If ``passthru`` is undefined, the number of valid lanes is equal to the number of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values are undefined.
+If a ``passthru`` vector is given, all remaining lanes are filled with values from ``passthru``, starting from ``passthrough[0]``.
+The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is that the we do not need to guard against memory access for unselected lanes.
 This allows for branchless code and better optimization for all targets that do not support or have inefficient instructions
 of the explicit semantics of :ref:`llvm.masked.compressstore <int_compressstore>` but still have some form of compress operations.
 The result vector can be written with a similar effect, as all the selected values are at the lower positions of the
@@ -19269,27 +19270,33 @@ Arguments:
 
 The first operand is the input vector, from which elements are selected.
 The second operand is the mask, a vector of boolean values.
+The third operand is the passthru vector, from which elements are filled into remaining lanes.
 The mask and the input vector must have the same number of vector elements.
+The input and passthru vectors must have the same type.
 
 Semantics:
 """"""""""
 
 The ``llvm.masked.compress`` intrinsic compresses data within a vector.
-It collects elements from possibly non-adjacent lanes of a vector and place them contiguously in the result vector based on a selection mask.
+It collects elements from possibly non-adjacent lanes of a vector and place them contiguously in the result vector based
+on a selection mask and fill the remaining lanes with values from ``passthru``.
 This intrinsic performs the logic of the following C++ example.
-All values in ``out`` after the last selected one are undefined.
-If all entries in the ``mask`` are 0, the entire ``out`` vector is undefined.
+All values in ``out`` after the last selected one are undefined if ``passthru`` is undefined.
+If all entries in the ``mask`` are 0, the ``out`` vector is ``passthru``.
 
 .. code-block:: cpp
 
     // Consecutively place selected values in a vector.
     using VecT __attribute__((vector_size(N))) = int;
-    VecT compress(VecT vec, VecT mask) {
+    VecT compress(VecT vec, VecT mask, VecT passthru) {
       VecT out;
       int idx = 0;
       for (int i = 0; i < N / sizeof(int); ++i) {
         out[idx] = vec[i];
         idx += static_cast<bool>(mask[i]);
+      }
+      for (int i = idx; i < N / sizeof(int); ++i) {
+        out[idx] = passthru[i - idx];
       }
       return out;
     }
