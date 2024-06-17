@@ -538,25 +538,25 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name, InputFile *file) {
 }
 
 static LazyIntrusiveNode *getLazyNode(Symbol *s) {
-  if (auto *sym = dyn_cast<LazyArchive>(s))
+  if (auto *sym = dyn_cast_if_present<LazyArchive>(s))
     return &sym->node;
-  if (auto *sym = dyn_cast<LazyObject>(s))
+  if (auto *sym = dyn_cast_if_present<LazyObject>(s))
     return &sym->node;
   return nullptr;
 }
 
 static ArchiveFile *getLazyParent(InputFile *f) {
-  if (auto *obj = dyn_cast<ObjFile>(f))
+  if (auto *obj = dyn_cast_if_present<ObjFile>(f))
     return obj->parent;
-  if (auto *obj = dyn_cast<BitcodeFile>(f))
+  if (auto *obj = dyn_cast_if_present<BitcodeFile>(f))
     return obj->parent;
   return nullptr;
 }
 
 static ArchiveFile *getLazyArchive(Symbol *s) {
-  if (auto *sym = dyn_cast<LazyArchive>(s))
+  if (auto *sym = dyn_cast_if_present<LazyArchive>(s))
     return sym->file;
-  if (auto *sym = dyn_cast<LazyObject>(s))
+  if (auto *sym = dyn_cast_if_present<LazyObject>(s))
     return getLazyParent(sym->file);
   return nullptr;
 }
