@@ -30,6 +30,7 @@ module {
 // CHECK: [[CONST_R1:%.*]] = fir.address_of([[EXTR_1:@.*]]) : !fir.ref<f64>
 // CHECK: [[CONST_I:%.*]] = fir.address_of([[EXTR_2:@.*]]) : !fir.ref<i32>
 // CHECK: fir.call @sub2([[CONST_R0]], [[CONST_R1]], [[X]], [[Y]], [[CONST_I]])
+// CHECK-SAME: fastmath<contract>
 // CHECK: return
 
 // CHECK: fir.global internal [[EXTR_0]] constant : f64 {

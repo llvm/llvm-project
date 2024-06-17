@@ -134,7 +134,9 @@ public:
           loc, newResultTypes,
           callOp.getCallee().has_value() ? callOp.getCallee().value()
                                          : mlir::SymbolRefAttr{},
-          newOperands, callOp.getFastmathAttr());
+          newOperands);
+      // Copy all the attributes from the old to new op.
+      newOp->setAttrs(callOp->getAttrs());
       rewriter.replaceOp(callOp, newOp);
 
       for (auto e : toErase)
