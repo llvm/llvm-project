@@ -772,8 +772,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
 
       // When we have indirect parameter passing we are receiving a pointer,
       // that points to the actual value, so we need one "temporary" pointer.
-      if (VA.getLocInfo() == CCValAssign::Indirect &&
-          Args[i].Flags[0].isSplit()) {
+      if (VA.getLocInfo() == CCValAssign::Indirect) {
         if (Handler.isIncomingArgumentHandler())
           Args[i].Regs[0] = MRI.createGenericVirtualRegister(PointerTy);
       } else {
