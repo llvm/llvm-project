@@ -1809,7 +1809,7 @@ void AArch64AsmPrinter::LowerMOVaddrPAC(const MachineInstr &MI) {
                            .addReg(AArch64::X17)
                            .addImm((IsNeg ? ~UOffset : UOffset) & Mask16)
                            .addImm(/*shift=*/0));
-      auto NeedMovk = [IsNeg, UOffset](int BitPos) -> bool {
+      auto NeedMovk = [Mask16, IsNeg, UOffset](int BitPos) -> bool {
         assert(BitPos == 16 || BitPos == 32 || BitPos == 48);
         uint64_t Shifted = UOffset >> BitPos;
         if (!IsNeg)
