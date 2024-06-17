@@ -301,7 +301,9 @@ void BinaryFunction::computeBlockHashes(HashFunction HashFunction) const {
     BB->setHash(BlendedHashes[I].combine());
   }
 }
-
+// TODO: mediate the difference between flow function construction here in BOLT
+// and in the compiler by splitting blocks with exception throwing calls at the
+// call and adding the landing pad as the successor.
 /// Create a wrapper flow function to use with the profile inference algorithm,
 /// and initialize its jumps and metadata.
 FlowFunction
@@ -345,7 +347,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
       InDegree[Jump.Target]++;
       UniqueSuccs.insert(DstBB);
     }
-
+    // TODO: set jump from exit block to landing pad to Unlikely.
     // If the block is an exit, add a dummy edge from it to the sink block.
     if (UniqueSuccs.empty()) {
       Func.Jumps.emplace_back();
