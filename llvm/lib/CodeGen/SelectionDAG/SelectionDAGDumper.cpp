@@ -293,6 +293,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SMAX:                       return "smax";
   case ISD::UMIN:                       return "umin";
   case ISD::UMAX:                       return "umax";
+  case ISD::SCMP:                       return "scmp";
+  case ISD::UCMP:                       return "ucmp";
 
   case ISD::FLDEXP:                     return "fldexp";
   case ISD::STRICT_FLDEXP:              return "strict_fldexp";

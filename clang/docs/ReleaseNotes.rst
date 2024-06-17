@@ -858,6 +858,7 @@ Bug Fixes to C++ Support
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
+- Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 - Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
   forward-declared class. (#GH93512).
 
