@@ -19218,27 +19218,26 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %accum, <8 x i32> %in)
-      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %accum, <16 x i32> %in)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %accum, <vscale x 8 x i32> %in)
-      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %accum, <vscale x 16 x i32> %in)
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
 
 Overview:
 """""""""
 
 The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics reduce the
-input vector down to the number of elements dictated by the result vector, and
-then adds the resulting vector to the accumulator vector. The return type is a
-vector type that matches the type of the accumulator vector.
+second operand vector down to the number of elements dictated by the result
+vector, and then adds the resulting vector to the first operand vector. The
+return type is a vector type that matches the type of the first operand vector.
 
 Arguments:
 """"""""""
 
-The first argument is the accumulator vector. The type of this argument must match the
-return type. The second argument is the vector to reduceinto the accumulator, the length
-of this vector must be a positive integer multiple of the accumulator vector/return type.
-The arguments must be either be both fixed or both scalable vectors, and must have
-matching element types.
+Both arguments must be vectors of matching element types. The first argument type must
+match the return type, while the second argument type must have a vector length that is a
+positive integer multiple of the first vector/return type. The arguments must be either be
+both fixed or both scalable vectors.
 
 
 '``llvm.experimental.vector.histogram.*``' Intrinsic
