@@ -101,7 +101,7 @@ entry:
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; SATATIC32MMR6: jal
+; STATIC32MMR6: jal
 ; PIC64: jalr $25
 ; STATIC64: jal
 ; N64R6: jalr $25

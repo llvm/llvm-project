@@ -2,7 +2,7 @@
 
 define i16 @unnamed_stack() {
 entry:
-  ; CHECK-NAME: unnamed_stack
+  ; CHECK-LABEL: unnamed_stack
   ; CHECK:      stack:
   ; CHECK-NEXT:   - { id: 0, name: '',
   ; CHECK:      %0:_(p0) = G_FRAME_INDEX %stack.0
@@ -13,7 +13,7 @@ entry:
 
 define i16 @named_stack() {
 entry:
-  ; CHECK-NAME: named_stack
+  ; CHECK-LABEL: named_stack
   ; CHECK:      stack:
   ; CHECK-NEXT:   - { id: 0, name: ptr,
   ; CHECK:      %0:_(p0) = G_FRAME_INDEX %stack.0.ptr

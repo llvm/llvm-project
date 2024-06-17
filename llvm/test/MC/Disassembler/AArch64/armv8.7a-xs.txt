@@ -89,38 +89,38 @@
 # CHECK: tlbi vale3nxs, x1
 # CHECK: tlbi vmalls12e1nxs
 # CHECK: tlbi vaale1nxs, x1
-# CHECK_NO_XS: sys #4, c9, c0, #1, x1
-# CHECK_NO_XS: sys #4, c9, c0, #5, x1
-# CHECK_NO_XS: sys #0, c9, c3, #0
-# CHECK_NO_XS: sys #4, c9, c3, #0
-# CHECK_NO_XS: sys #6, c9, c3, #0
-# CHECK_NO_XS: sys #0, c9, c3, #1, x1
-# CHECK_NO_XS: sys #4, c9, c3, #1, x1
-# CHECK_NO_XS: sys #6, c9, c3, #1, x1
-# CHECK_NO_XS: sys #0, c9, c3, #2, x1
-# CHECK_NO_XS: sys #0, c9, c3, #3, x1
-# CHECK_NO_XS: sys #4, c9, c3, #4
-# CHECK_NO_XS: sys #0, c9, c3, #5, x1
-# CHECK_NO_XS: sys #4, c9, c3, #5, x1
-# CHECK_NO_XS: sys #6, c9, c3, #5, x1
-# CHECK_NO_XS: sys #4, c9, c3, #6
-# CHECK_NO_XS: sys #0, c9, c3, #7, x1
-# CHECK_NO_XS: sys #4, c9, c4, #1, x1
-# CHECK_NO_XS: sys #4, c9, c4, #5, x1
-# CHECK_NO_XS: sys #0, c9, c7, #0
-# CHECK_NO_XS: sys #4, c9, c7, #0
-# CHECK_NO_XS: sys #6, c9, c7, #0
-# CHECK_NO_XS: sys #0, c9, c7, #1, x1
-# CHECK_NO_XS: sys #4, c9, c7, #1, x1
-# CHECK_NO_XS: sys #6, c9, c7, #1, x1
-# CHECK_NO_XS: sys #0, c9, c7, #2, x1
-# CHECK_NO_XS: sys #0, c9, c7, #3, x1
-# CHECK_NO_XS: sys #4, c9, c7, #4
-# CHECK_NO_XS: sys #0, c9, c7, #5, x1
-# CHECK_NO_XS: sys #4, c9, c7, #5, x1
-# CHECK_NO_XS: sys #6, c9, c7, #5, x1
-# CHECK_NO_XS: sys #4, c9, c7, #6
-# CHECK_NO_XS: sys #0, c9, c7, #7, x1
+# CHECK-NO-XS: sys #4, c9, c0, #1, x1
+# CHECK-NO-XS: sys #4, c9, c0, #5, x1
+# CHECK-NO-XS: sys #0, c9, c3, #0
+# CHECK-NO-XS: sys #4, c9, c3, #0
+# CHECK-NO-XS: sys #6, c9, c3, #0
+# CHECK-NO-XS: sys #0, c9, c3, #1, x1
+# CHECK-NO-XS: sys #4, c9, c3, #1, x1
+# CHECK-NO-XS: sys #6, c9, c3, #1, x1
+# CHECK-NO-XS: sys #0, c9, c3, #2, x1
+# CHECK-NO-XS: sys #0, c9, c3, #3, x1
+# CHECK-NO-XS: sys #4, c9, c3, #4
+# CHECK-NO-XS: sys #0, c9, c3, #5, x1
+# CHECK-NO-XS: sys #4, c9, c3, #5, x1
+# CHECK-NO-XS: sys #6, c9, c3, #5, x1
+# CHECK-NO-XS: sys #4, c9, c3, #6
+# CHECK-NO-XS: sys #0, c9, c3, #7, x1
+# CHECK-NO-XS: sys #4, c9, c4, #1, x1
+# CHECK-NO-XS: sys #4, c9, c4, #5, x1
+# CHECK-NO-XS: sys #0, c9, c7, #0
+# CHECK-NO-XS: sys #4, c9, c7, #0
+# CHECK-NO-XS: sys #6, c9, c7, #0
+# CHECK-NO-XS: sys #0, c9, c7, #1, x1
+# CHECK-NO-XS: sys #4, c9, c7, #1, x1
+# CHECK-NO-XS: sys #6, c9, c7, #1, x1
+# CHECK-NO-XS: sys #0, c9, c7, #2, x1
+# CHECK-NO-XS: sys #0, c9, c7, #3, x1
+# CHECK-NO-XS: sys #4, c9, c7, #4
+# CHECK-NO-XS: sys #0, c9, c7, #5, x1
+# CHECK-NO-XS: sys #4, c9, c7, #5, x1
+# CHECK-NO-XS: sys #6, c9, c7, #5, x1
+# CHECK-NO-XS: sys #4, c9, c7, #6
+# CHECK-NO-XS: sys #0, c9, c7, #7, x1
 
 [0x1f,0x91,0x08,0xd5]
 [0x21,0x91,0x08,0xd5]
@@ -214,51 +214,51 @@
 # CHECK: tlbi rvale3isnxs, x1
 # CHECK: tlbi rvae3osnxs, x1
 # CHECK: tlbi rvale3osnxs, x1
-# CHECK_NO_XS: sys #0, c9, c1, #0
-# CHECK_NO_XS: sys #0, c9, c1, #1, x1
-# CHECK_NO_XS: sys #0, c9, c1, #2, x1
-# CHECK_NO_XS: sys #0, c9, c1, #3, x1
-# CHECK_NO_XS: sys #0, c9, c1, #5, x1
-# CHECK_NO_XS: sys #0, c9, c1, #7, x1
-# CHECK_NO_XS: sys #4, c9, c4, #0, x1
-# CHECK_NO_XS: sys #4, c9, c4, #4, x1
-# CHECK_NO_XS: sys #4, c9, c1, #1, x1
-# CHECK_NO_XS: sys #4, c9, c1, #5, x1
-# CHECK_NO_XS: sys #4, c9, c1, #6
-# CHECK_NO_XS: sys #6, c9, c1, #1, x1
-# CHECK_NO_XS: sys #6, c9, c1, #5, x1
-# CHECK_NO_XS: sys #4, c9, c1, #0
-# CHECK_NO_XS: sys #4, c9, c1, #4
-# CHECK_NO_XS: sys #6, c9, c1, #0
-# CHECK_NO_XS: sys #0, c9, c6, #1, x1
-# CHECK_NO_XS: sys #0, c9, c6, #3, x1
-# CHECK_NO_XS: sys #0, c9, c6, #5, x1
-# CHECK_NO_XS: sys #0, c9, c6, #7, x1
-# CHECK_NO_XS: sys #0, c9, c2, #1, x1
-# CHECK_NO_XS: sys #0, c9, c2, #3, x1
-# CHECK_NO_XS: sys #0, c9, c2, #5, x1
-# CHECK_NO_XS: sys #0, c9, c2, #7, x1
-# CHECK_NO_XS: sys #0, c9, c5, #1, x1
-# CHECK_NO_XS: sys #0, c9, c5, #3, x1
-# CHECK_NO_XS: sys #0, c9, c5, #5, x1
-# CHECK_NO_XS: sys #0, c9, c5, #7, x1
-# CHECK_NO_XS: sys #4, c9, c0, #2, x1
-# CHECK_NO_XS: sys #4, c9, c0, #6, x1
-# CHECK_NO_XS: sys #4, c9, c4, #2, x1
-# CHECK_NO_XS: sys #4, c9, c4, #6, x1
-# CHECK_NO_XS: sys #4, c9, c4, #3, x1
-# CHECK_NO_XS: sys #4, c9, c4, #7, x1
-# CHECK_NO_XS: sys #4, c9, c6, #1, x1
-# CHECK_NO_XS: sys #4, c9, c6, #5, x1
-# CHECK_NO_XS: sys #4, c9, c2, #1, x1
-# CHECK_NO_XS: sys #4, c9, c2, #5, x1
-# CHECK_NO_XS: sys #4, c9, c5, #1, x1
-# CHECK_NO_XS: sys #4, c9, c5, #5, x1
-# CHECK_NO_XS: sys #6, c9, c6, #1, x1
-# CHECK_NO_XS: sys #6, c9, c6, #5, x1
-# CHECK_NO_XS: sys #6, c9, c2, #1, x1
-# CHECK_NO_XS: sys #6, c9, c2, #5, x1
-# CHECK_NO_XS: sys #6, c9, c5, #1, x1
-# CHECK_NO_XS: sys #6, c9, c5, #5, x1
-# CHECK_NO_XS: sys #0, c9, c1, #0
-# CHECK_NO_XS: sys #4, c9, c0, #1, x1
+# CHECK-NO-XS: sys #0, c9, c1, #0
+# CHECK-NO-XS: sys #0, c9, c1, #1, x1
+# CHECK-NO-XS: sys #0, c9, c1, #2, x1
+# CHECK-NO-XS: sys #0, c9, c1, #3, x1
+# CHECK-NO-XS: sys #0, c9, c1, #5, x1
+# CHECK-NO-XS: sys #0, c9, c1, #7, x1
+# CHECK-NO-XS: sys #4, c9, c4, #0, x1
+# CHECK-NO-XS: sys #4, c9, c4, #4, x1
+# CHECK-NO-XS: sys #4, c9, c1, #1, x1
+# CHECK-NO-XS: sys #4, c9, c1, #5, x1
+# CHECK-NO-XS: sys #4, c9, c1, #6
+# CHECK-NO-XS: sys #6, c9, c1, #1, x1
+# CHECK-NO-XS: sys #6, c9, c1, #5, x1
+# CHECK-NO-XS: sys #4, c9, c1, #0
+# CHECK-NO-XS: sys #4, c9, c1, #4
+# CHECK-NO-XS: sys #6, c9, c1, #0
+# CHECK-NO-XS: sys #0, c9, c6, #1, x1
+# CHECK-NO-XS: sys #0, c9, c6, #3, x1
+# CHECK-NO-XS: sys #0, c9, c6, #5, x1
+# CHECK-NO-XS: sys #0, c9, c6, #7, x1
+# CHECK-NO-XS: sys #0, c9, c2, #1, x1
+# CHECK-NO-XS: sys #0, c9, c2, #3, x1
+# CHECK-NO-XS: sys #0, c9, c2, #5, x1
+# CHECK-NO-XS: sys #0, c9, c2, #7, x1
+# CHECK-NO-XS: sys #0, c9, c5, #1, x1
+# CHECK-NO-XS: sys #0, c9, c5, #3, x1
+# CHECK-NO-XS: sys #0, c9, c5, #5, x1
+# CHECK-NO-XS: sys #0, c9, c5, #7, x1
+# CHECK-NO-XS: sys #4, c9, c0, #2, x1
+# CHECK-NO-XS: sys #4, c9, c0, #6, x1
+# CHECK-NO-XS: sys #4, c9, c4, #2, x1
+# CHECK-NO-XS: sys #4, c9, c4, #6, x1
+# CHECK-NO-XS: sys #4, c9, c4, #3, x1
+# CHECK-NO-XS: sys #4, c9, c4, #7, x1
+# CHECK-NO-XS: sys #4, c9, c6, #1, x1
+# CHECK-NO-XS: sys #4, c9, c6, #5, x1
+# CHECK-NO-XS: sys #4, c9, c2, #1, x1
+# CHECK-NO-XS: sys #4, c9, c2, #5, x1
+# CHECK-NO-XS: sys #4, c9, c5, #1, x1
+# CHECK-NO-XS: sys #4, c9, c5, #5, x1
+# CHECK-NO-XS: sys #6, c9, c6, #1, x1
+# CHECK-NO-XS: sys #6, c9, c6, #5, x1
+# CHECK-NO-XS: sys #6, c9, c2, #1, x1
+# CHECK-NO-XS: sys #6, c9, c2, #5, x1
+# CHECK-NO-XS: sys #6, c9, c5, #1, x1
+# CHECK-NO-XS: sys #6, c9, c5, #5, x1
+# CHECK-NO-XS: sys #0, c9, c1, #0
+# CHECK-NO-XS: sys #4, c9, c0, #1, x1

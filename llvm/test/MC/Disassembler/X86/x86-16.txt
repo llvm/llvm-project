@@ -222,46 +222,46 @@
 # CHECK: movw (%eax), %cs
 0x67 0x8e 0x08
 
-# CHECKX: movl %cr0, %eax
+# CHECK: movl %cr0, %eax
 0x0f 0x20 0xc0
 
-# CHECKX: movl %cr1, %eax
+# CHECK: movl %cr1, %eax
 0x0f 0x20 0xc8
 
-# CHECKX: movl %cr2, %eax
+# CHECK: movl %cr2, %eax
 0x0f 0x20 0xd0
 
-# CHECKX: movl %cr3, %eax
+# CHECK: movl %cr3, %eax
 0x0f 0x20 0xd8
 
-# CHECKX: movl %cr4, %eax
+# CHECK: movl %cr4, %eax
 0x0f 0x20 0xe0
 
-# CHECKX: movl %dr0, %eax
+# CHECK: movl %dr0, %eax
 0x0f 0x21 0xc0
 
-# CHECKX: movl %dr1, %eax
+# CHECK: movl %dr1, %eax
 0x0f 0x21 0xc8
 
-# CHECKX: movl %dr1, %eax
+# CHECK: movl %dr1, %eax
 0x0f 0x21 0xc8
 
-# CHECKX: movl %dr2, %eax
+# CHECK: movl %dr2, %eax
 0x0f 0x21 0xd0
 
-# CHECKX: movl %dr3, %eax
+# CHECK: movl %dr3, %eax
 0x0f 0x21 0xd8
 
-# CHECKX: movl %dr4, %eax
+# CHECK: movl %dr4, %eax
 0x0f 0x21 0xe0
 
-# CHECKX: movl %dr5, %eax
+# CHECK: movl %dr5, %eax
 0x0f 0x21 0xe8
 
-# CHECKX: movl %dr6, %eax
+# CHECK: movl %dr6, %eax
 0x0f 0x21 0xf0
 
-# CHECKX: movl %dr7, %eax
+# CHECK: movl %dr7, %eax
 0x0f 0x21 0xf8
 
 # CHECK: wait
@@ -765,10 +765,10 @@
 # CHECK: fsubp %st, %st(2)
 0xde 0xe2
 
-# CHECKX: nop
+# CHECK: nop
 0x66 0x90
 
-# CHECKX: nop
+# CHECK: nop
 0x90
 
 # CHECK: xchgl %ecx, %eax

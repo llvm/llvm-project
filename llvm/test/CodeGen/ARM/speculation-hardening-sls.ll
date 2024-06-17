@@ -96,7 +96,7 @@ entry:
 ; CHECK-NEXT:      {{^[ \t]+b }}
 ; CHECK-NEXT:      @NO_APP
      ; For direct branches, no mitigation is needed.
-; ISDDSB-NOT: dsb sy
+; ISBDSB-NOT: dsb sy
 ; SB-NOT:     {{ sb$}}
 
 asm.fallthrough:               ; preds = %entry
@@ -248,7 +248,7 @@ entry:
 ; HARDEN-COMDAT-OFF-NOT:  .hidden {{__llvm_slsblr_thunk_(arm|thumb)_r5}}
 ; HARDEN-COMDAT-OFF-NOT:  .weak {{__llvm_slsblr_thunk_(arm|thumb)_r5}}
 ; HARDEN-COMDAT-OFF:      .type {{__llvm_slsblr_thunk_(arm|thumb)_r5}},%function
-; HARDEN-label: {{__llvm_slsblr_thunk_(arm|thumb)_r5}}:
+; HARDEN-LABEL: {{__llvm_slsblr_thunk_(arm|thumb)_r5}}:
 ; HARDEN:    bx r5
 ; ISBDSB-NEXT: dsb sy
 ; ISBDSB-NEXT: isb

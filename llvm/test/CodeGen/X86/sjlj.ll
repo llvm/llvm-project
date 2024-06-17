@@ -21,9 +21,9 @@ define i32 @sj0() nounwind {
   %r = tail call i32 @llvm.eh.sjlj.setjmp(ptr @buf)
   ret i32 %r
 ; X86: sj0
-; x86: movl %ebp, buf
+; X86: movl %ebp, buf
 ; X86: movl %esp, buf+8
-; x86: movl ${{.*LBB.*}}, buf+4
+; X86: movl ${{.*LBB.*}}, buf+4
 ; X86: ret
 ; PIC86: sj0
 ; PIC86: movl %ebp, buf@GOTOFF(%[[GOT:.*]])
@@ -32,8 +32,8 @@ define i32 @sj0() nounwind {
 ; PIC86: movl %[[LREG]], buf@GOTOFF+4
 ; PIC86: ret
 ; X64: sj0
-; x64: movq %rbp, buf(%rip)
-; x64: movq ${{.*LBB.*}}, buf+8(%rip)
+; X64: movq %rbp, buf(%rip)
+; X64: movq ${{.*LBB.*}}, buf+8(%rip)
 ; X64: movq %rsp, buf+16(%rip)
 ; X64: ret
 ; PIC64: sj0

@@ -4,12 +4,12 @@
 
 ## Check offset, size and index of text segment command
 # CHECK-ORIGINAL:      Load command 1
-# CHECK-ORIGINAL-NEXT  cmdsize
-# CHECK-ORIGINAL-NEXT  segname __TEXT
-# CHECK-ORIGINAL-NEXT  vmaddr
-# CHECK-ORIGINAL-NEXT  vmsize
-# CHECK-ORIGINAL-NEXT  fileoff 0
-# CHECK-ORIGINAL-NEXT  filesize 16384
+# CHECK-ORIGINAL-NEXT: cmdsize
+# CHECK-ORIGINAL-NEXT: segname __TEXT
+# CHECK-ORIGINAL-NEXT: vmaddr
+# CHECK-ORIGINAL-NEXT: vmsize
+# CHECK-ORIGINAL-NEXT: fileoff 0
+# CHECK-ORIGINAL-NEXT: filesize 16384
 
 ## Check offset and index of code signature command
 # CHECK-ORIGINAL:      Load command 14
@@ -29,12 +29,12 @@
 
 ## Verify the text segment command index increased by 1
 # CHECK-PREPEND:      Load command 2
-# CHECK-PREPEND-NEXT  cmdsize
-# CHECK-PREPEND-NEXT  segname __TEXT
-# CHECK-PREPEND-NEXT  vmaddr
-# CHECK-PREPEND-NEXT  vmsize
-# CHECK-PREPEND-NEXT  fileoff 0
-# CHECK-PREPEND-NEXT  filesize 16384
+# CHECK-PREPEND-NEXT: cmdsize
+# CHECK-PREPEND-NEXT: segname __TEXT
+# CHECK-PREPEND-NEXT: vmaddr
+# CHECK-PREPEND-NEXT: vmsize
+# CHECK-PREPEND-NEXT: fileoff 0
+# CHECK-PREPEND-NEXT: filesize 16384
 
 ## Verify the code signature command index increased by 1
 # CHECK-PREPEND:        Load command 15
@@ -54,12 +54,12 @@
 
 ## Verify text segment command index returned to orignal
 # CHECK-REMOVE:      Load command 1
-# CHECK-REMOVE-NEXT  cmdsize
-# CHECK-REMOVE-NEXT  segname __TEXT
-# CHECK-REMOVE-NEXT  vmaddr
-# CHECK-REMOVE-NEXT  vmsize
-# CHECK-REMOVE-NEXT  fileoff 0
-# CHECK-REMOVE-NEXT  filesize 16384
+# CHECK-REMOVE-NEXT: cmdsize
+# CHECK-REMOVE-NEXT: segname __TEXT
+# CHECK-REMOVE-NEXT: vmaddr
+# CHECK-REMOVE-NEXT: vmsize
+# CHECK-REMOVE-NEXT: fileoff 0
+# CHECK-REMOVE-NEXT: filesize 16384
 
 ## Verify text segment command index returned to original
 # CHECK-REMOVE:      Load command 14

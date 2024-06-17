@@ -103,9 +103,9 @@ entry:
 ; directly to a return value.
 
 ; TODO
-; HECK: define ptr @test5
-; HECK: call ptr @returner()
-; HECK-NEXT: ret ptr %call
+; COM: CHECK: define ptr @test5
+; COM: CHECK: call ptr @returner()
+; COM: CHECK-NEXT: ret ptr %call
 ;define ptr @test5() {
 ;entry:
 ;  %call = call ptr @returner()

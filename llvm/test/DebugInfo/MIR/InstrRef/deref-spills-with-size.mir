@@ -172,7 +172,7 @@ body:             |
     DBG_INSTR_REF !8, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value), dbg-instr-ref(1, 0), debug-location !7
     ; CHECK:      DBG_VALUE_LIST ![[VARNUM]],
     ; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 8, DW_ATE_signed,
-    ; CHECK-SAME     : DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value), $al
+    ; CHECK-SAME:    : DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value), $al
 
     MOV8mr $rsp, 1, $noreg, -8, $noreg, renamable $al :: (store 1 into %stack.0)
     ;; Clobber to force variable location onto stack. We should use a

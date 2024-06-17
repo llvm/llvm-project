@@ -3,7 +3,7 @@
 
 # CHECK: error: Simplified template DW_AT_name could not be reconstituted:
 # CHECK:           original: t1<it>
-# CHECK       reconstituted: t1<int>
+# CHECK:      reconstituted: t1<int>
 	.text
 	.file	"verify.cpp"
 	.file	1 "/usr/local/google/home/blaikie/dev/scratch" "verify.cpp"

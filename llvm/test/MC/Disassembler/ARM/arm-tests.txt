@@ -48,7 +48,7 @@
 # FIXME: LDC encoding information is incorrect. Re-enable this along with more
 # robust testing for other values when we get it fleshed out and working
 # properly.
-# CHECKx:	ldclvc	p5, cr15, [r8], #-0
+# COM: CHECK:	ldclvc	p5, cr15, [r8], #-0
 #0x00 0xf5 0x78 0x7c
 
 # CHECK:        ldc     p13, c9, [r2, #0]!

@@ -47,7 +47,7 @@
 ; X64:            .Ltmp4:
 ; X64-NEXT:       jmpq    *%{{.*}}
 ; A32:            .LCPI0_0:
-; A32-NEXT        add     pc, r{{.*}}
+; A32-NEXT:       add     pc, r{{.*}}
 ; NOTE: thumbv7a places the jump tables just after the branch, so verify the other branch below
 ; A64:            .Ltmp1:
 ; A64-NEXT:       br      x{{.*}}
@@ -62,7 +62,7 @@
 ; A64-NEXT:       .byte   (.LBB0_[[FIRSTBLOCK:[0-9]+]]-.LBB0_[[FIRSTBLOCK]])>>2
 ; NOTE: thumbv7a places the jump tables just after the branch, so check for the other branch now
 ; A32:            .LCPI0_1:
-; A32-NEXT        add     pc, r{{.*}}
+; A32-NEXT:       add     pc, r{{.*}}
 ; CHECK:          {{\.?}}LJTI0_1:
 ; I686-NEXT:      .long   LBB0_[[#]]
 ; X64-NEXT:       .long   .LBB0_[[#]]-.LJTI0_1

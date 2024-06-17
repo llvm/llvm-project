@@ -1,6 +1,6 @@
 ; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
-; CHECK=LABEL: UniformityInfo for function 'basic':
+; CHECK-LABEL: UniformityInfo for function 'basic':
 ; CHECK-NOT: CYCLES ASSSUMED DIVERGENT:
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
 ; CHECK:   depth=1: entries(P T) Q

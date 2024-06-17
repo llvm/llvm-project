@@ -142,9 +142,9 @@ entry:
 ; FASTISEL-INSTRREF-NEXT: - { srcinst: 3, srcop: 0, dstinst: 2, dstop: 0, subreg: 6 }
 ; FASTISEL-INSTRREF-NEXT: - { srcinst: 5, srcop: 0, dstinst: 4, dstop: 0, subreg: 6 }
 ; FASTISEL-INSTRREF-NEXT: - { srcinst: 6, srcop: 0, dstinst: 5, dstop: 0, subreg: 4 }
-; FASTISEL-INSTRREF-NEXT  - { srcinst: 8, srcop: 0, dstinst: 7, dstop: 0, subreg: 6 }
-; FASTISEL-INSTRREF-NEXT  - { srcinst: 9, srcop: 0, dstinst: 8, dstop: 0, subreg: 4 }
-; FASTISEL-INSTRREF-NEXT  - { srcinst: 10, srcop: 0, dstinst: 9, dstop: 0, subreg: 1 }
+; FASTISEL-INSTRREF-NEXT: - { srcinst: 8, srcop: 0, dstinst: 7, dstop: 0, subreg: 6 }
+; FASTISEL-INSTRREF-NEXT: - { srcinst: 9, srcop: 0, dstinst: 8, dstop: 0, subreg: 4 }
+; FASTISEL-INSTRREF-NEXT: - { srcinst: 10, srcop: 0, dstinst: 9, dstop: 0, subreg: 1 }
 
 ;; Those substitutions are anchored against these DBG_PHIs:
 

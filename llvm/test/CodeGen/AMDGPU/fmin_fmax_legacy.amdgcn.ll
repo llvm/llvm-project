@@ -114,7 +114,7 @@ define amdgpu_ps float @select_fneg_a_or_q_cmp_ogt_a_neg1(float %a, float %b) #0
 ; VI-SAFE: v_cmp_gt_f32_e32 vcc, -1.0, v0
 ; VI-SAFE-NEXT: v_cndmask_b32_e64 v0, 1.0, -v0, vcc
 
-; VI-NANN: v_max_f32_e64 v0, -v0, 1.0
+; VI-NNAN: v_max_f32_e64 v0, -v0, 1.0
 define amdgpu_ps float @select_fneg_a_or_q_cmp_olt_a_neg1(float %a, float %b) #0 {
   %fneg.a = fneg float %a
   %cmp.a = fcmp olt float %a, -1.0

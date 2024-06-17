@@ -6,7 +6,7 @@
 ;
 ; CHECK-LABEL: for.body
 ; CHECK: call void @llvm.prefetch.p0(ptr %scevgep, i32 1, i32 3, i32 1
-; CHECK-not: call void @llvm.prefetch
+; CHECK-NOT: call void @llvm.prefetch
 
 define void @fun(ptr nocapture %Src, ptr nocapture readonly %Dst) {
 entry:

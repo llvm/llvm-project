@@ -25,7 +25,7 @@
 # CHECK-RVE-NEXT:   ]
 
 # CHECK-TSO:        Flags [ (0x10)
-# CHECK-NEXT-TSO      EF_RISCV_TSO (0x10)
-# CHECK-NEXT-TSO    ]
+# CHECK-TSO-NEXT:     EF_RISCV_TSO (0x10)
+# CHECK-TSO-NEXT:   ]
 
 nop

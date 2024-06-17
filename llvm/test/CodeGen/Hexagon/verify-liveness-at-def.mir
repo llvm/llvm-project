@@ -38,7 +38,7 @@ body: |
 # CHECK-SUB-NOT: Bad machine code
 #
 # CHECK-SUB: Bad machine code: Live range continues after dead def flag
-# CHECK_SUB-NEXT: function:    test_fail
+# CHECK-SUB-NEXT: function:    test_fail
 # CHECK-SUB:      v. register: %0
 # CHECK-SUB:      lanemask:    0000000000000002
 #

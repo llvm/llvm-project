@@ -15,7 +15,7 @@ entry:
 ;CHECK-NOT: call __hexagon_divsf3
 ;CHECK: sfrecipa
 ;CHECK: sffixupn
-;CHEKC: and
+;CHECK: and
 ;CHECK: sfmpy
   %div = fdiv float %a, %b
   ret float %div

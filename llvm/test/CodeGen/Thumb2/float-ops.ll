@@ -305,7 +305,7 @@ define double @select_d(double %a, double %b, i1 %c) {
 ; DP: lsls   r0, r0, #31
 ; VFP4-DP: vmovne.f64      d1, d0
 ; VFP4-DP: vmov.f64        d0, d1
-; FP-ARMV8: vseleq.f64      d0, d1, d0
+; FP-ARMv8: vseleq.f64      d0, d1, d0
   %1 = select i1 %c, double %a, double %b
   ret double %1
 }

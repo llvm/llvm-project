@@ -31,8 +31,8 @@
 ; BASIC: .type  s0,@object
 ; BASIC-NEXT: .section .sdata,"aw",@progbits
 
-; EMDATA: .type  s0,@object
-; EMDATA-NEXT: .section .rodata,"a",@progbits
+; EMBDATA: .type  s0,@object
+; EMBDATA-NEXT: .section .rodata,"a",@progbits
 
 @s0 = constant [8 x i8] c"AAAAAAA\00", align 4
 

@@ -6,5 +6,5 @@ RUN: llvm-symbolizer -apCie%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %
 CHECK: ?? at ??:0:0
 CHECK: 0x40054d: inctwo
 CHECK: (inlined by) inc
-CHECK  (inlined by) main
+CHECK: (inlined by) main
 CHECK: ?? at ??:0:0

@@ -41,8 +41,8 @@ entry:
 }
 
 ; FIXME: This is treated like a kernel
-; XGCN-LABEL: {{^}}func:
-; XGCN: s_endpgm
+; COM: GCN-LABEL: {{^}}func:
+; COM: GCN: s_endpgm
 ; define spir_func void @func(ptr addrspace(1) %out) {
 ; entry:
 ;   store i32 0, ptr addrspace(1) %out

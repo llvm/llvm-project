@@ -25,7 +25,7 @@ branch24t_1:
 	bl target
 
 @ CHECK-ENCODING-LABEL: <branch24t_1>:
-@ CHECK-ENCODING-NEXR: bl {{.+}} @ imm = #0
+@ CHECK-ENCODING-NEXT: bl {{.+}} @ imm = #0
 
 	.thumb_func
 branch20t:

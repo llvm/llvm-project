@@ -168,7 +168,7 @@ declare double     @llvm.trunc.f64(double %Val)
 define double @trunc_d(double %a) {
 ; CHECK-LABEL: trunc_d:
 ; SOFT: {{(bl|b)}} trunc
-; FFP4: b trunc
+; VFP4: b trunc
 ; FP-ARMv8: vrintz.f64
   %1 = call double @llvm.trunc.f64(double %a)
   ret double %1
@@ -233,8 +233,8 @@ define double @h_to_d(i16 %a) {
 ; NONE: bl __aeabi_f2d
 ; SP: vcvt{{[bt]}}.f32.f16
 ; SP: bl __aeabi_f2d
-; VFPv4: vcvt{{[bt]}}.f32.f16
-; VFPv4: vcvt.f64.f32
+; VFP4: vcvt{{[bt]}}.f32.f16
+; VFP4: vcvt.f64.f32
 ; FP-ARMv8: vcvt{{[bt]}}.f64.f16
   %1 = call double @llvm.convert.from.fp16.f64(i16 %a)
   ret double %1

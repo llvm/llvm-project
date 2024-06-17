@@ -42,7 +42,7 @@ define %struct.S16 @i32_to_2xi16(i32 noundef %in) {
   %high = trunc i32 %high32 to i16
 ; CHECK:       ld.param.u32  %[[R32:r[0-9]+]], [i32_to_2xi16_param_0];
 ; CHECK-DAG:   cvt.u16.u32   %rs{{[0-9+]}}, %[[R32]];
-; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
+; CHECK-DAG:   mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
   %s1 = insertvalue %struct.S16 poison, i16 %low, 0
   %s = insertvalue %struct.S16 %s1, i16 %high, 1
   ret %struct.S16 %s
@@ -56,7 +56,7 @@ define %struct.S16 @i32_to_2xi16_lh(i32 noundef %in) {
   %low = trunc i32 %in to i16
 ; CHECK:       ld.param.u32  %[[R32:r[0-9]+]], [i32_to_2xi16_lh_param_0];
 ; CHECK-DAG:   cvt.u16.u32   %rs{{[0-9+]}}, %[[R32]];
-; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
+; CHECK-DAG:   mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
   %s1 = insertvalue %struct.S16 poison, i16 %low, 0
   %s = insertvalue %struct.S16 %s1, i16 %high, 1
   ret %struct.S16 %s
@@ -84,7 +84,7 @@ define %struct.S32 @i64_to_2xi32(i64 noundef %in) {
   %high = trunc i64 %high64 to i32
 ; CHECK:       ld.param.u64  %[[R64:rd[0-9]+]], [i64_to_2xi32_param_0];
 ; CHECK-DAG:   cvt.u32.u64   %r{{[0-9+]}}, %[[R64]];
-; CHECK-DAG    mov.b64       {tmp, %r{{[0-9+]}}}, %[[R64]];
+; CHECK-DAG:   mov.b64       {tmp, %r{{[0-9+]}}}, %[[R64]];
   %s1 = insertvalue %struct.S32 poison, i32 %low, 0
   %s = insertvalue %struct.S32 %s1, i32 %high, 1
   ret %struct.S32 %s
@@ -114,8 +114,8 @@ define %struct.S16 @i32_to_2xi16_shr(i32 noundef %i){
   %h = trunc i32 %h32 to i16
 ; CHECK:      ld.param.u32    %[[R32:r[0-9]+]], [i32_to_2xi16_shr_param_0];
 ; CHECK:      shr.s32         %[[R32H:r[0-9]+]], %[[R32]], 16;
-; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32]];
-; CHECK-DAG    mov.b32       {tmp, %rs{{[0-9+]}}}, %[[R32H]];
+; CHECK-DAG:  mov.b32         {tmp, %rs{{[0-9+]}}}, %[[R32]];
+; CHECK-DAG:  mov.b32         {tmp, %rs{{[0-9+]}}}, %[[R32H]];
   %s0 = insertvalue %struct.S16 poison, i16 %l, 0
   %s1 = insertvalue %struct.S16 %s0, i16 %h, 1
   ret %struct.S16 %s1

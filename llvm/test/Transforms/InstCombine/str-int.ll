@@ -123,7 +123,7 @@ define i32 @atol_test() #0 {
 ; CHECK-LABEL: @atol_test(
 ; CHECK-NEXT:    ret i32 499496729
 ;
-; CHECK-NEXT
+; FIXME: COM: CHECK-NEXT:
   %call = call i32 @atol(ptr @.str.6) #4
   ret i32 %call
 }
@@ -140,7 +140,7 @@ define i64 @strtoll_test() #0 {
 ; CHECK-LABEL: @strtoll_test(
 ; CHECK-NEXT:    ret i64 4994967295
 ;
-; CHECK-NEXT
+; FIXME: COM: CHECK-NEXT:
   %call = call i64 @strtoll(ptr @.str.7, ptr null, i32 10) #5
   ret i64 %call
 }

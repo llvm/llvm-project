@@ -29,7 +29,7 @@ entry:
 define void @d1() #0 {
 entry:
   store double 1.234567e+00, ptr @de, align 8
-; mip32r2:  .ent  d1
+; mips32r2:  .ent  d1
 ; mips32r2:  lui  $[[REG1a:[0-9]+]], 16371
 ; mips32r2:  ori  $[[REG2a:[0-9]+]], $[[REG1a]], 49353
 ; mips32r2:  lui  $[[REG1b:[0-9]+]], 21403

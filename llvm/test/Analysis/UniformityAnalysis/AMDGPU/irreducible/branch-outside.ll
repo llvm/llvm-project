@@ -1,6 +1,6 @@
 ; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
-; CHECK=LABEL: UniformityInfo for function 'basic':
+; CHECK-LABEL: UniformityInfo for function 'basic':
 ; CHECK: CYCLES ASSSUMED DIVERGENT:
 ; CHECK:   depth=1: entries(P T) Q
 define amdgpu_kernel void @basic(i32 %a, i32 %b, i32 %c) {
@@ -37,7 +37,7 @@ exit:
   ret void
 }
 
-; CHECK=LABEL: UniformityInfo for function 'nested':
+; CHECK-LABEL: UniformityInfo for function 'nested':
 ; CHECK: CYCLES ASSSUMED DIVERGENT:
 ; CHECK:  depth=1: entries(P T) Q A C B
 define amdgpu_kernel void @nested(i32 %a, i32 %b, i32 %c) {

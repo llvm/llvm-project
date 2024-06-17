@@ -1709,23 +1709,23 @@ define double @fadd_reduce_v4f64(double %a0, <4 x double> %a1) {
 }
 
 define float @PR39936_v8f32(<8 x float>) {
-; SSSE3-SLOW-LABEL: PR39936_v8f32:
-; SSSE3-SLOW:       # %bb.0:
-; SSSE3-SLOW-NEXT:    haddps %xmm1, %xmm0
-; SSSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm0[2,3]
-; SSSE3-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3,2,3]
-; SSSE3-SLOW-NEXT:    addps %xmm1, %xmm0
-; SSSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSSE3-SLOW-NEXT:    addss %xmm1, %xmm0
-; SSSE3-SLOW-NEXT:    retq
+; SSE3-SLOW-LABEL: PR39936_v8f32:
+; SSE3-SLOW:       # %bb.0:
+; SSE3-SLOW-NEXT:    haddps %xmm1, %xmm0
+; SSE3-SLOW-NEXT:    movaps %xmm0, %xmm1
+; SSE3-SLOW-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm0[2,3]
+; SSE3-SLOW-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; SSE3-SLOW-NEXT:    addps %xmm1, %xmm0
+; SSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; SSE3-SLOW-NEXT:    addss %xmm1, %xmm0
+; SSE3-SLOW-NEXT:    retq
 ;
-; SSSE3-FAST-LABEL: PR39936_v8f32:
-; SSSE3-FAST:       # %bb.0:
-; SSSE3-FAST-NEXT:    haddps %xmm1, %xmm0
-; SSSE3-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    haddps %xmm0, %xmm0
-; SSSE3-FAST-NEXT:    retq
+; SSE3-FAST-LABEL: PR39936_v8f32:
+; SSE3-FAST:       # %bb.0:
+; SSE3-FAST-NEXT:    haddps %xmm1, %xmm0
+; SSE3-FAST-NEXT:    haddps %xmm0, %xmm0
+; SSE3-FAST-NEXT:    haddps %xmm0, %xmm0
+; SSE3-FAST-NEXT:    retq
 ;
 ; SSE3-SLOW-LABEL: PR39936_v8f32:
 ; SSE3-SLOW:       # %bb.0:

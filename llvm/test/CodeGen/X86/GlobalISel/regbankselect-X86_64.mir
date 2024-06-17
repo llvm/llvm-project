@@ -2060,7 +2060,6 @@ body:             |
 ...
 ---
 name:            test_fconstant
-# ALL-LABEL: name:            test_fconstant
 legalized:       true
 registers:
   - { id: 0, class: _ }

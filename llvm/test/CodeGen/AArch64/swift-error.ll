@@ -10,7 +10,7 @@ entry:
   ret void
 }
 
-; CHEECK-LABEL: g
+; CHECK-LABEL: g
 ; CHECK: str x30, [sp, #-16]!
 ; CHECK: bl f
 ; CHECK: ldr x30, [sp], #16

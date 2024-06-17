@@ -375,13 +375,13 @@ define void @caller(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c) {
   ; GFX8: call void null(
   ; GFX9: call void @needs_gfx9_insts(
   ; GFX10: call void @needs_gfx9_insts(
-  ; GFX111: call void @needs_gfx9_insts(c
+  ; GFX11: call void @needs_gfx9_insts(c
   call void @needs_gfx9_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c)
   ; GFX7: call void null(
   ; GFX8: call void null(
   ; GFX9: call void null(
   ; GFX10: call void @needs_gfx10_insts(
-  ; GFX111: call void @needs_gfx10_insts(
+  ; GFX11: call void @needs_gfx10_insts(
   call void @needs_gfx10_insts(ptr %out, ptr %in, i64 %a, i64 %b, i64 %c)
   ; GFX7: call void null(
   ; GFX8: call void null(

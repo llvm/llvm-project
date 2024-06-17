@@ -18,7 +18,7 @@ B:
 C:
   ; CHECK-LABEL: C:
   ; CHECK: [[C:%.*]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[B]]) ]
-  ; CHEC K: call void @f() [ "convergencectrl"(token [[C]]) ]
+  ; CHECK: call void @f() [ "convergencectrl"(token [[C]]) ]
   ;
   %c = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %b) ]
   call void @f() [ "convergencectrl"(token %c) ]

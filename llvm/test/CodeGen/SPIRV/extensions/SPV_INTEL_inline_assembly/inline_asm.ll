@@ -32,7 +32,7 @@
 ; CHECK-DAG: %[[#Const42:]] = OpConstant %[[#DoubleTy:]] 42
 
 ; CHECK: %[[#Dialect:]] = OpAsmTargetINTEL "spirv64-unknown-unknown"
-; CHECK-NO: OpAsmTargetINTEL
+; CHECK-NOT: OpAsmTargetINTEL
 
 ; CHECK: %[[#Asm1:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "" ""
 ; CHECK: %[[#Asm2:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun1Ty]] %[[#Dialect]] "nop" ""
@@ -45,7 +45,7 @@
 ; CHECK: %[[#Asm9:]] = OpAsmINTEL %[[#Int64Ty]] %[[#Fun7Ty]] %[[#Dialect]] "icmdext $0 $3 $1 $2" "=r,r,r,r"
 ; CHECK: %[[#Asm10:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun8Ty]] %[[#Dialect]] "constcmd $0 $1" "r,r"
 ; CHECK: %[[#Asm11:]] = OpAsmINTEL %[[#VoidTy]] %[[#Fun8Ty]] %[[#Dialect]] "constcmd $0 $1" "i,i"
-; CHECK-NO: OpAsmINTEL
+; CHECK-NOT: OpAsmINTEL
 
 ; CHECK: OpFunction
 ; CHECK: OpAsmCallINTEL %[[#VoidTy]] %[[#Asm1]]
@@ -59,7 +59,7 @@
 ; CHECK: OpAsmCallINTEL %[[#Int64Ty]] %[[#Asm9]] %[[#]] %[[#]] %[[#]]
 ; CHECK: OpAsmCallINTEL %[[#VoidTy]] %[[#Asm10]] %[[#Const123]] %[[#Const42]]
 ; CHECK: OpAsmCallINTEL %[[#VoidTy]] %[[#Asm11]] %[[#Const123]] %[[#Const42]]
-; CHECK-NO: OpAsmCallINTEL
+; CHECK-NOT: OpAsmCallINTEL
 
 define spir_kernel void @foo(ptr addrspace(1) %_arg_int, ptr addrspace(1) %_arg_float, ptr addrspace(1) %_arg_half, i64 %_lng) {
   %i1 = load i32, ptr addrspace(1) %_arg_int

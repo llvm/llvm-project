@@ -10,7 +10,7 @@ entry:
 
 if.end:                                           ; preds = %entry
 ;; Check pseudo probes are next to each other at the beginning of this block.
-; IR-label: if.end
+; IR-LABEL: if.end
 ; IR: call void @llvm.pseudoprobe(i64 5116412291814990879, i64 1, i32 0, i64 -1)
 ; IR: call void @llvm.pseudoprobe(i64 5116412291814990879, i64 3, i32 0, i64 -1)
   call void @llvm.pseudoprobe(i64 5116412291814990879, i64 1, i32 0, i64 -1)
@@ -19,7 +19,7 @@ if.end:                                           ; preds = %entry
   %2          = and i16 %1, 16
   %3          = icmp eq i16 %2, 0
 ;; Check the load-and-cmp sequence is fold into a test instruction.
-; MIR-label: bb.1.if.end
+; MIR-LABEL: bb.1.if.end
 ; MIR: %[[#REG:]]:gr64 = IMPLICIT_DEF
 ; MIR: TEST8mi killed %[[#REG]], 1, $noreg, 0, $noreg, 16
 ; MIR: JCC_1

@@ -22,7 +22,7 @@
 ; CHECK-DEFAULT: ldr{{.*}}, #4]
 ; CHECK-DEFAULT: str{{.*}}, #4]
 ; CHECK-DEFAULT: ldr{{.*}}, #8]!
-; CHECK-DEAFULT: ldr{{.*}}, #8]!
+; CHECK-DEFAULT: ldr{{.*}}, #8]!
 ; CHECK-DEFAULT: str{{.*}}, #8]!
 
 ; CHECK-COMPLEX: ldr{{.*}}, #8]!

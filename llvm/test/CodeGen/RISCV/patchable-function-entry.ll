@@ -22,10 +22,10 @@ define void @f1() "patchable-function-entry"="1" {
 ; RVC:           c.nop
 ; RVC-NEXT:      c.jr ra
 ; CHECK:       .section __patchable_function_entries,"awo",@progbits,f1{{$}}
-; 32:          .p2align 2
-; 32-NEXT:     .word .Lfunc_begin1
-; 64:          .p2align 3
-; 64-NEXT:     .quad .Lfunc_begin1
+; RV32:        .p2align 2
+; RV32-NEXT:   .word .Lfunc_begin1
+; RV64:        .p2align 3
+; RV64-NEXT:   .quad .Lfunc_begin1
   ret void
 }
 

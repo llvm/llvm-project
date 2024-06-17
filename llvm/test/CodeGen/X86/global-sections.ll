@@ -35,9 +35,9 @@ bb5:
   ret void
 }
 
-; LINUX:     .size   F2,
-; LINUX-NEX: .cfi_endproc
-; LINUX-NEX: .section        .rodata,"a",@progbits
+; LINUX:      .size   F2,
+; LINUX-NEXT: .cfi_endproc
+; LINUX-NEXT: .section        .rodata,"a",@progbits
 
 ; LINUX-SECTIONS: .section        .text.F2,"ax",@progbits
 ; LINUX-SECTIONS: .size   F2,

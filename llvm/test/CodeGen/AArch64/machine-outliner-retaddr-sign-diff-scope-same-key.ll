@@ -28,7 +28,7 @@ define void @a() "sign-return-address"="all" {
 }
 
 define void @b() "sign-return-address"="non-leaf" {
-; CHECK-LABE:      b:                                     // @b
+; CHECK-LABEL:     b:                                     // @b
 ; V8A-NOT:         hint #25
 ; V83A-NOT:        paciasp
 ; CHECK-NOT:       .cfi_negate_ra_state

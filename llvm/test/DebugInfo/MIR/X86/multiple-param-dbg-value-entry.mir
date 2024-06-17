@@ -14,7 +14,7 @@
 # CHECK: INLINEASM
 # CHECK-DAG: DBG_VALUE $esi, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
 # CHECK-DAG: DBG_VALUE $edx, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location {{.*}}
-# CHECK $eax = MOV32ri 123
+# CHECK:$eax = MOV32ri 123
 
 --- |
   ; ModuleID = 'multiple-param-dbg-value-entry.ll'

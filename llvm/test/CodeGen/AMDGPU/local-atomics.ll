@@ -291,7 +291,7 @@ define amdgpu_kernel void @lds_atomic_xor_ret_i32_offset(ptr addrspace(1) %out, 
 }
 
 ; FIXME: There is no atomic nand instr
-; XFUNC-LABEL: {{^}}lds_atomic_nand_ret_i32:uction, so we somehow need to expand this.
+; COM: FUNC-LABEL: {{^}}lds_atomic_nand_ret_i32:uction, so we somehow need to expand this.
 ; define amdgpu_kernel void @lds_atomic_nand_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
 ;   %result = atomicrmw nand ptr addrspace(3) %ptr, i32 4 seq_cst
 ;   store i32 %result, ptr addrspace(1) %out, align 4
@@ -631,7 +631,7 @@ define amdgpu_kernel void @lds_atomic_xor_noret_i32_offset(ptr addrspace(3) %ptr
 }
 
 ; FIXME: There is no atomic nand instr
-; XFUNC-LABEL: {{^}}lds_atomic_nand_noret_i32:uction, so we somehow need to expand this.
+; COM: FUNC-LABEL: {{^}}lds_atomic_nand_noret_i32:uction, so we somehow need to expand this.
 ; define amdgpu_kernel void @lds_atomic_nand_noret_i32(ptr addrspace(3) %ptr) nounwind {
 ;   %result = atomicrmw nand ptr addrspace(3) %ptr, i32 4 seq_cst
 ;   ret void

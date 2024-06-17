@@ -911,7 +911,7 @@ define float @fadd_scalar_vf_fmf(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-UNORDERED: [[SUM_07:%.*]] = phi float [ [[MERGE_RDX]], %scalar.ph ], [ [[FADD5:%.*]], %for.body ]
 ; CHECK-UNORDERED: [[LOAD5:%.*]] = load float, ptr
 ; CHECK-UNORDERED: [[FADD5]] = fadd nnan float [[LOAD5]], [[SUM_07]]
-; CHECK-UORDERED: for.end
+; CHECK-UNORDERED: for.end
 ; CHECK-UNORDERED: [[RES:%.*]] = phi float [ [[FADD5]], %for.body ], [ [[BIN_RDX3]], %middle.block ]
 ; CHECK-UNORDERED: ret float [[RES]]
 

@@ -320,8 +320,8 @@ declare { <4 x bfloat>, <4 x bfloat>, <4 x bfloat> } @llvm.aarch64.neon.ld3lane.
 define %struct.bfloat16x8x3_t @test_vld3q_lane_bf16(ptr %ptr, [3 x <8 x bfloat>] %src.coerce) local_unnamed_addr nounwind {
 ; CHECK-LABEL: test_vld3q_lane_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECKT:    ld3 { v0.h, v1.h, v2.h }[7], [x0]
-; CHECKT:    ret
+; CHECK:    ld3 { v0.h, v1.h, v2.h }[7], [x0]
+; CHECK:    ret
 entry:
   %src.coerce.fca.0.extract = extractvalue [3 x <8 x bfloat>] %src.coerce, 0
   %src.coerce.fca.1.extract = extractvalue [3 x <8 x bfloat>] %src.coerce, 1

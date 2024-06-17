@@ -1415,7 +1415,7 @@ define ptr @dont_use_const() #0 {
 ;
 ; Verify we do not derive constraints for @_Z3fooP1X as if it was returning `null`.
 ;
-; CHEKC-NOT: noalias
+; CHECK-NOT: noalias
 ; CHECK-NOT: align 536870912
 
 %struct.Y = type { %struct.X }

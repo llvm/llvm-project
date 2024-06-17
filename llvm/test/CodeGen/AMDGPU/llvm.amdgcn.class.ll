@@ -303,7 +303,7 @@ define amdgpu_kernel void @v_test_class_full_mask_f64(ptr addrspace(1) %out, ptr
 }
 
 ; SI-LABEL: {{^}}test_class_inline_imm_constant_dynamic_mask_f64:
-; XSI: v_cmp_class_f64_e32 vcc, 1.0,
+; SI: v_cmp_class_f64_e32 vcc, 1.0,
 ; SI: v_cmp_class_f64_e32 vcc,
 ; SI: s_endpgm
 define amdgpu_kernel void @test_class_inline_imm_constant_dynamic_mask_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
