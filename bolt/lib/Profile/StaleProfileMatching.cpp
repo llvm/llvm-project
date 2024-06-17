@@ -397,10 +397,9 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-void matchWeightsByHashes(BinaryContext &BC,
-                          const BinaryFunction::BasicBlockOrderType &BlockOrder,
-                          const yaml::bolt::BinaryFunctionProfile &YamlBF,
-                          FlowFunction &Func, uint64_t &MatchedBlocksCount) {
+uint64_t matchWeightsByHashes(
+    BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
+    const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func) {
   assert(Func.Blocks.size() == BlockOrder.size() + 1);
 
   std::vector<FlowBlock *> Blocks;
@@ -457,8 +456,6 @@ void matchWeightsByHashes(BinaryContext &BC,
     BC.Stats.StaleSampleCount += YamlBB.ExecCount;
   }
 
-  MatchedBlocksCount = MatchedBlocks.size();
-
   // Match jumps from the profile to the jumps from CFG
   std::vector<uint64_t> OutWeight(Func.Blocks.size(), 0);
   std::vector<uint64_t> InWeight(Func.Blocks.size(), 0);
@@ -508,6 +505,8 @@ void matchWeightsByHashes(BinaryContext &BC,
     Block.HasUnknownWeight = false;
     Block.Weight = std::max(OutWeight[Block.Index], InWeight[Block.Index]);
   }
+
+  return MatchedBlocks.size();
 }
 
 /// The function finds all blocks that are (i) reachable from the Entry block
@@ -589,8 +588,8 @@ bool canApplyInference(const FlowFunction &Func,
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
     return false;
 
-  if ((double)(MatchedBlocks) / YamlBF.Blocks.size() <=
-      opts::StaleMatchingMinMatchedBlock / 100.0)
+  if (MatchedBlocks * 100 <
+      opts::StaleMatchingMinMatchedBlock * YamlBF.Blocks.size())
     return false;
 
   bool HasExitBlocks = llvm::any_of(
@@ -740,14 +739,13 @@ bool YAMLProfileReader::inferStaleProfile(
       BF.getLayout().block_begin(), BF.getLayout().block_end());
 
   // Tracks the number of matched blocks.
-  uint64_t MatchedBlocks{0};
 
   // Create a wrapper flow function to use with the profile inference algorithm.
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func,
-                       MatchedBlocks);
+  uint64_t MatchedBlocks =
+      matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.
