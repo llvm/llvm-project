@@ -858,7 +858,6 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
           Handler.assignValueToAddress(ArgReg, StackAddr, PointerTy, MPO, VA);
           break;
         }
-
         Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO, VA);
       } else if (VA.isMemLoc() && Flags.isByVal()) {
         assert(Args[i].Regs.size() == 1 &&
@@ -917,7 +916,20 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
       if (VA.getLocInfo() == CCValAssign::Indirect &&
           Handler.isIncomingArgumentHandler()) {
         Align Alignment = DL.getABITypeAlign(Args[i].Ty);
-        MachinePointerInfo MPO(Args[i].Regs[0]);
+        MachinePointerInfo MPO;
+
+        if (VA.isMemLoc()) {
+          if (!Flags.isByRef()) {
+            LLT MemTy = Handler.getStackValueStoreType(DL, VA, Flags);
+            Handler.getStackAddress(
+              MemTy.getSizeInBytes(), VA.getLocMemOffset(), MPO, Flags);
+          } else {
+            uint64_t MemSize = Flags.getByValSize();
+            int64_t Offset = VA.getLocMemOffset();
+  
+            Handler.getStackAddress(MemSize, Offset, MPO, Flags);
+          }
+        }
 
         // Since we are doing indirect parameter passing, we know that the value
         // in the temporary register is not the value passed to the function,
