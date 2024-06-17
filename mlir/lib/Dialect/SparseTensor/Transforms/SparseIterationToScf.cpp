@@ -104,7 +104,7 @@ public:
         return failure();
       rewriter.applySignatureConversion(loopBody, bodyTypeMapping);
 
-      forOp.getBody()->erase();
+      rewriter.eraseBlock(forOp.getBody());
       Region &dstRegion = forOp.getRegion();
       rewriter.inlineRegionBefore(op.getRegion(), dstRegion, dstRegion.end());
 
@@ -114,7 +114,7 @@ public:
       rewriter.setInsertionPointToEnd(forOp.getBody());
       // replace sparse_tensor.yield with scf.yield.
       rewriter.create<scf::YieldOp>(loc, yieldOp.getResults());
-      yieldOp.erase();
+      rewriter.eraseOp(yieldOp);
 
       const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
       rewriter.replaceOp(op, forOp.getResults(), resultMapping);
@@ -162,7 +162,7 @@ public:
       llvm::append_range(yields, yieldOp.getResults());
 
       // replace sparse_tensor.yield with scf.yield.
-      yieldOp->erase();
+      rewriter.eraseOp(yieldOp);
       rewriter.create<scf::YieldOp>(loc, yields);
 
       const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
