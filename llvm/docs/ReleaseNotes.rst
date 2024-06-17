@@ -69,7 +69,7 @@ Changes to building LLVM
   linking, especially on machines with lots of cores, to an order of magnitude
   or more. Clang compilation is also improved. Please see some build timings in
   (`#91862 <https://github.com/llvm/llvm-project/pull/91862#issue-2291033962>`_)
-  For more information, refer to the **LLVM_ENABLE_RPMALLOC** flag in `CMake variables <https://llvm.org/docs/CMake.html#llvm-related-variables>`_.
+  For more information, refer to the **LLVM_ENABLE_RPMALLOC** option in `CMake variables <https://llvm.org/docs/CMake.html#llvm-related-variables>`_.
 
 Changes to TableGen
 -------------------
