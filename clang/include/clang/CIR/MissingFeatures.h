@@ -192,21 +192,10 @@ struct MissingFeatures {
   //-- Missing AST queries
 
   static bool recordDeclCanPassInRegisters() { return false; }
-  static bool funcDeclIsCXXConstructorDecl() { return false; }
-  static bool funcDeclIsCXXDestructorDecl() { return false; }
-  static bool funcDeclIsCXXMethodDecl() { return false; }
-  static bool funcDeclIsInlineBuiltinDeclaration() { return false; }
-  static bool funcDeclIsReplaceableGlobalAllocationFunction() { return false; }
-  static bool qualTypeIsReferenceType() { return false; }
 
   //-- Missing types
 
   static bool vectorType() { return false; }
-
-  //-- Missing LLVM attributes
-
-  static bool noReturn() { return false; }
-  static bool csmeCall() { return false; }
 
   //-- Other missing features
 

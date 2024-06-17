@@ -64,28 +64,8 @@ public:
     return kind;
   }
 
-  void
-  constructAttributeList(StringRef Name, const LowerFunctionInfo &FI,
-                         FuncOp CalleeInfo, // TODO(cir): Implement CalleeInfo?
-                         FuncOp newFn, unsigned &CallingConv,
-                         bool AttrOnCallSite, bool IsThunk);
-
-  void setCIRFunctionAttributes(FuncOp GD, const LowerFunctionInfo &Info,
-                                FuncOp F, bool IsThunk);
-
-  /// Set function attributes for a function declaration.
-  void setFunctionAttributes(FuncOp oldFn, FuncOp newFn,
-                             bool IsIncompleteFunction, bool IsThunk);
-
-  // Create a CIR FuncOp with with the given signature.
-  FuncOp createCIRFunction(
-      StringRef MangledName, FuncType Ty, FuncOp D, bool ForVTable,
-      bool DontDefer = false, bool IsThunk = false,
-      ArrayRef<Attribute> = {}, // TODO(cir): __attribute__(()) stuff.
-      bool IsForDefinition = false);
-
   // Rewrite CIR FuncOp to match the target ABI.
-  LogicalResult rewriteFunctionDefinition(FuncOp op);
+  LogicalResult rewriteGlobalFunctionDefinition(FuncOp op, LowerModule &state);
 
   // Rewrite CIR CallOp to match the target ABI.
   LogicalResult rewriteFunctionCall(CallOp callOp, FuncOp funcOp);
