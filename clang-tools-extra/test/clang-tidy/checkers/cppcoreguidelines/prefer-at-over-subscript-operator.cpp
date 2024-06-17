@@ -1,3 +1,7 @@
+// RUN: %check_clang_tidy %s \
+// RUN: cppcoreguidelines-prefer-at-over-subscript-operator %t -- \
+// RUN: -config='{CheckOptions: {cppcoreguidelines-prefer-at-over-subscript-operator.ExcludeClasses: "ExcludedClass1;ExcludedClass2"}}'
+
 namespace std {
   template<typename T, unsigned size>
   struct array {
@@ -65,10 +69,6 @@ class ExcludedClass2 {
     }
 };
 
-
-// RUN: %check_clang_tidy %s \
-// RUN: cppcoreguidelines-prefer-at-over-subscript-operator %t -- \
-// RUN: -config='{CheckOptions: {cppcoreguidelines-prefer-at-over-subscript-operator.ExcludeClasses: "ExcludedClass1;ExcludedClass2"}}'
 std::array<int, 3> a;
 
 auto b = a[0];
