@@ -1751,7 +1751,7 @@ let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
 defm : SIBufferAtomicPat<"SIbuffer_atomic_csub", i32, "BUFFER_ATOMIC_CSUB", ["noret"]>;
 
 let SubtargetPredicate = isGFX12Plus in {
-  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd_bf16", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
+  defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_fadd", v2bf16, "BUFFER_ATOMIC_PK_ADD_BF16_VBUFFER">;
   defm : SIBufferAtomicPat_Common<"SIbuffer_atomic_cond_sub_u32", i32, "BUFFER_ATOMIC_COND_SUB_U32_VBUFFER", ["ret"]>;
 
   let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
