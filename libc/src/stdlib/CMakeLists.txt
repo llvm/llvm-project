@@ -418,15 +418,23 @@ else()
       libc.src.string.memory_utils.inline_memcpy
       libc.src.string.memory_utils.inline_memset
   )
-  add_entrypoint_object(
-    malloc
-    SRCS
-      freelist_malloc.cpp
-    HDRS
-      malloc.h
-    DEPENDS
-      .freelist_heap
-  )
+  # Only add malloc in full build mode.  Use the system malloc in overlay mode.
+  if(LLVM_LIBC_FULL_BUILD)
+    add_entrypoint_object(
+      malloc
+      SRCS
+        freelist_malloc.cpp
+      HDRS
+        malloc.h
+      DEPENDS
+        .freelist_heap
+    )
+  else()
+    add_entrypoint_external(
+      malloc
+    )
+  endif()
+
   add_entrypoint_external(
     free
   )
