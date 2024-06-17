@@ -915,10 +915,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
       if (VA.getLocInfo() == CCValAssign::Indirect &&
           Handler.isIncomingArgumentHandler()) {
         Align Alignment = DL.getABITypeAlign(Args[i].Ty);
-        MachinePointerInfo MPO;
-
-        if (VA.isMemLoc())
-          MPO = MachinePointerInfo::getStack(MF, VA.getLocMemOffset());
+        MachinePointerInfo MPO = MachinePointerInfo::getUnknownStack(MF);
 
         // Since we are doing indirect parameter passing, we know that the value
         // in the temporary register is not the value passed to the function,
