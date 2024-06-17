@@ -41,7 +41,7 @@ convertIteratorType(IteratorType itTp, SmallVectorImpl<Type> &fields) {
   // TODO: handle batch dimension.
   assert(itTp.getEncoding().getBatchLvlRank() == 0);
   if (!itTp.isUnique()) {
-    // Segment high for non-unqiue iterator.
+    // Segment high for non-unique iterator.
     fields.push_back(idxTp);
   }
   fields.push_back(idxTp);
