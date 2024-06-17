@@ -427,6 +427,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   }
 
   for (auto YamlBF : YamlBP.Functions) {
+    if (YamlBF.Used)
+      continue;
     auto It = StrictBinaryFunctionHashes.find(YamlBF.Hash);
     if (It != StrictBinaryFunctionHashes.end() &&
         !ProfiledFunctions.count(It->second)) {
