@@ -1764,6 +1764,13 @@ public:
     return 0;
   }
 
+  /// \returns Target specific flat ptr address space; a flat ptr is a ptr that
+  /// can be casted to / from all other target address spaces. If the target
+  /// exposes no such address space / does not care, we return 0.
+  virtual unsigned getFlatPtrAddressSpace() const {
+    return 0;
+  }
+
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the
   /// corresponding target specific DWARF address space.
