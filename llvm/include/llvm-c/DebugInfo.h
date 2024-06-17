@@ -1308,13 +1308,13 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
  * The debug format can be switched later after inserting the records using
  * LLVMSetIsNewDbgInfoFormat, if needed for legacy or transitionary reasons.
  *
- * Insert a new llvm.dbg.value intrinsic call before the given instruction.
+ * Insert a new debug record before the given instruction.
  * \param Builder     The DIBuilder.
  * \param Val         The value of the variable.
  * \param VarInfo     The variable's debug info descriptor.
  * \param Expr        A complex location expression for the variable.
  * \param DebugLoc    Debug info location.
- * \param Instr       Instruction acting as a location for the new intrinsic.
+ * \param Instr       Instruction acting as a location for the new record.
  */
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
@@ -1327,15 +1327,15 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
  * The debug format can be switched later after inserting the records using
  * LLVMSetIsNewDbgInfoFormat, if needed for legacy or transitionary reasons.
  *
- * Insert a new llvm.dbg.value intrinsic call at the end of the given basic
- * block. If the basic block has a terminator instruction, the intrinsic is
- * inserted before that terminator instruction.
+ * Insert a new debug record at the end of the given basic block. If the
+ * basic block has a terminator instruction, the record is inserted before
+ * that terminator instruction.
  * \param Builder     The DIBuilder.
  * \param Val         The value of the variable.
  * \param VarInfo     The variable's debug info descriptor.
  * \param Expr        A complex location expression for the variable.
  * \param DebugLoc    Debug info location.
- * \param Block       Basic block acting as a location for the new intrinsic.
+ * \param Block       Basic block acting as a location for the new record.
  */
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,

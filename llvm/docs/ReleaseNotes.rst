@@ -220,6 +220,10 @@ Changes to the C API
   * ``LLVMConstICmp``
   * ``LLVMConstFCmp``
 
+**Note:** The following changes are due to the removal of the debug info
+intrinsics from LLVM and to the introduction of debug records into LLVM.
+They are described in detail in the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
+
 * Added the following functions to insert before the indicated instruction but
   after any attached debug records.
 
@@ -230,8 +234,6 @@ Changes to the C API
   insertion position is set to before the debug records that precede the target
   instruction. ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` are
   unchanged.
-
-  See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info.
 
 * Added the following functions to get/set the new non-instruction debug info format.
   They will be deprecated in the future and they are just a transition aid.
@@ -246,7 +248,7 @@ Changes to the C API
   * ``LLVMDIBuilderInsertDbgValueRecordBefore``
   * ``LLVMDIBuilderInsertDbgValueRecordAtEnd``
 
-* Deleted the following functions that inserted a debug intrinsic (old debug info format)
+* Deleted the following functions that inserted a debug intrinsic (old debug info format).
 
   * ``LLVMDIBuilderInsertDeclareBefore``
   * ``LLVMDIBuilderInsertDeclareAtEnd``
