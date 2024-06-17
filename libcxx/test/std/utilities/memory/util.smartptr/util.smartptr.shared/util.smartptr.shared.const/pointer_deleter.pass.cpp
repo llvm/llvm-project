@@ -123,6 +123,13 @@ int main(int, char**)
     }
 #endif
 
-  test_function_type();
-  return 0;
+#if TEST_STD_VER >= 17
+    {
+      // See https://github.com/llvm/llvm-project/pull/93071#issuecomment-2166047398
+      std::shared_ptr<char[]> a(new char[10], std::default_delete<char[]>());
+    }
+#endif
+
+    test_function_type();
+    return 0;
 }
