@@ -58,8 +58,7 @@ void InitializePlatformExceptionHandlers() {}
 uptr FindDynamicShadowStart() {
   uptr shadow_size_bytes = MemToShadowSize(kHighMemEnd);
   return MapDynamicShadow(shadow_size_bytes, SHADOW_SCALE,
-                          /*min_shadow_base_alignment*/ 0, kHighMemEnd,
-                          GetMmapGranularity());
+                          /*min_shadow_base_alignment*/ 0, kHighMemEnd);
 }
 
 void *MemprofDlSymNext(const char *sym) { return dlsym(RTLD_NEXT, sym); }
