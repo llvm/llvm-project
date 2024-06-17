@@ -72,7 +72,6 @@ module {
     // CHECK: 4
     vector.print %v : i32
 
-
     bufferization.dealloc_tensor %input : tensor<2x3x4x5xi32, #COO>
     bufferization.dealloc_tensor %0 : tensor<i32>
     return

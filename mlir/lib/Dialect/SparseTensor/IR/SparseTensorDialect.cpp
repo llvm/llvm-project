@@ -2321,7 +2321,7 @@ void IterateOp::build(OpBuilder &builder, OperationState &odsState,
   odsState.addTypes(initArgs.getTypes());
   Block *bodyBlock = builder.createBlock(bodyRegion);
 
-  // 1st args, sparse iterator
+  // First argument, sparse iterator
   bodyBlock->addArgument(
       llvm::cast<IterSpaceType>(iterSpace.getType()).getIteratorType(),
       odsState.location);
