@@ -1233,7 +1233,10 @@ bool SBValue::GetDescription(SBStream &description) {
     DumpValueObjectOptions options;
     options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
     options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
-    value_sp->Dump(strm, options);
+    if (llvm::Error error = value_sp->Dump(strm, options)) {
+      strm << "error: " << toString(std::move(error));
+      return false;
+    }
   } else {
     strm.PutCString("No value");
   }

@@ -122,7 +122,7 @@ class TestCase(TestBase):
         """Test dwim-print with nested values (structs, etc)."""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "break here", lldb.SBFileSpec("main.c")
         )
         self.runCmd("settings set auto-one-line-summaries false")
         self._expect_cmd(f"dwim-print s", "frame variable")
@@ -132,7 +132,7 @@ class TestCase(TestBase):
         """Test dwim-print with nested values (structs, etc)."""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "break here", lldb.SBFileSpec("main.c")
         )
         self.runCmd("settings set auto-one-line-summaries false")
         self.runCmd("type summary add -e -s 'stub summary' Structure")
@@ -143,7 +143,7 @@ class TestCase(TestBase):
         """Test dwim-print does not surface an error message for void expressions."""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "break here", lldb.SBFileSpec("main.c")
         )
         self.expect("dwim-print (void)15", matching=False, patterns=["(?i)error"])
 
@@ -151,10 +151,18 @@ class TestCase(TestBase):
         """Test dwim-print does not delete persistent variables."""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
+            self, "break here", lldb.SBFileSpec("main.c")
         )
         self.expect("dwim-print int $i = 15")
         # Run the same expression twice and verify success. This ensures the
         # first command does not delete the persistent variable.
         for _ in range(2):
             self.expect("dwim-print $i", startstr="(int) 15")
+
+    def test_missing_type(self):
+        """The expected output of po opaque is its address (no error)"""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.c")
+        )
+        self.expect("dwim-print -O -- opaque", substrs=['0x'])
