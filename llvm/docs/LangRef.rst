@@ -14250,7 +14250,7 @@ Arguments:
 """"""""""
 The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
 is specific to callsites, meaning callsites are indexed from 0, independent from
-the indexes used by the other intrinsics (such as
+the indexes used by the other intrinsics (such as 
 ``llvm.instrprof.increment[.step]``).
 
 The last argument is the called value of the callsite this intrinsic precedes.
@@ -14264,7 +14264,7 @@ a buffer LLVM can use to perform counter increments (i.e. the lowering of
 ``llvm.instrprof.increment[.step]``. The address range following the counter
 buffer, ``<num-counters>`` x ``sizeof(ptr)`` - sized, is expected to contain
 pointers to contexts of functions called from this function ("subcontexts").
-LLVM does not dereference into that memory region, just calculates GEPs.
+LLVM does not dereference into that memory region, just calculates GEPs. 
 
 The lowering of ``llvm.instrprof.callsite`` consists of:
 
@@ -19226,18 +19226,19 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics perform an integer
-``ADD`` reduction of subvectors within a vector, before adding the resulting vector
-to the provided accumulator vector. The return type is a vector type that matches
-the type of the accumulator vector.
+The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics reduce the
+input vector down to the number of elements dictated by the result vector, and
+then adds the resulting vector to the accumulator vector. The return type is a
+vector type that matches the type of the accumulator vector.
 
 Arguments:
 """"""""""
 
-The first argument is the accumulator vector, or a `zeroinitializer`. The type of
-this argument must match the return type. The second argument is the vector to reduce
-into the accumulator, the width of this vector must be a positive integer multiple of
-the accumulator vector/return type.
+The first argument is the accumulator vector. The type of this argument must match the
+return type. The second argument is the vector to reduceinto the accumulator, the length
+of this vector must be a positive integer multiple of the accumulator vector/return type.
+The arguments must be either be both fixed or both scalable vectors, and must have
+matching element types.
 
 
 '``llvm.experimental.vector.histogram.*``' Intrinsic

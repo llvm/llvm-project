@@ -141,22 +141,12 @@ entry:
   ret <vscale x 8 x i32> %partial.reduce
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>) #1
+declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
+declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32>, <vscale x 8 x i32>)
+declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32>, <vscale x 16 x i32>)
+declare <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add.nxv8i32.nxv8i32.nxv16i32(<vscale x 8 x i32>, <vscale x 16 x i32>)
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32>, <vscale x 8 x i32>) #1
+declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>)
+declare i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32>)
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32>, <vscale x 16 x i32>) #1
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-declare <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add.nxv8i32.nxv8i32.nxv16i32(<vscale x 8 x i32>, <vscale x 16 x i32>) #1
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32>) #2
-declare i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32>) #2
-
-attributes #0 = { "target-features"="+fp-armv8,+fullfp16,+neon,+sve,+sve2,+v8a" }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
-attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #0 = { "target-features"="+sve2" }
