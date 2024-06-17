@@ -828,9 +828,8 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
             MIRBuilder.buildFrameIndex(PointerTy, FrameIdx).getReg(0);
         MachinePointerInfo DstMPO =
             MachinePointerInfo::getFixedStack(MF, FrameIdx);
-        Align DstAlign = inferAlignFromPtrInfo(MF, DstMPO);
         MIRBuilder.buildStore(Args[i].OrigRegs[Part], PointerToStackReg, DstMPO,
-                              DstAlign);
+                              inferAlignFromPtrInfo(MF, DstMPO));
 
         ArgReg = PointerToStackReg;
         IndirectParameterPassingHandled = true;
