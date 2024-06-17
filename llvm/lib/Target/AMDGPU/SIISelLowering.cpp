@@ -6101,8 +6101,8 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   SDLoc SL(N);
   MVT IntVT = MVT::getIntegerVT(ValSize);
 
-  auto createLaneOp = [&DAG, &SL, N, IID](SDValue Src0, SDValue Src1, SDValue Src2,
-                                     MVT ValT) -> SDValue {
+  auto createLaneOp = [&DAG, &SL, N, IID](SDValue Src0, SDValue Src1,
+                                          SDValue Src2, MVT ValT) -> SDValue {
     SmallVector<SDValue, 8> Operands;
     switch (IID) {
     case Intrinsic::amdgcn_permlane16:
@@ -6140,8 +6140,8 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
 
   SDValue Src0 = N->getOperand(1);
   SDValue Src1, Src2;
-  if (IID == Intrinsic::amdgcn_readlane ||
-      IID == Intrinsic::amdgcn_writelane || IsPermLane16) {
+  if (IID == Intrinsic::amdgcn_readlane || IID == Intrinsic::amdgcn_writelane ||
+      IsPermLane16) {
     Src1 = N->getOperand(2);
     if (IID == Intrinsic::amdgcn_writelane || IsPermLane16)
       Src2 = N->getOperand(3);
@@ -6174,7 +6174,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
 
   if (ValSize % 32 != 0)
     return SDValue();
-  
+
   auto unrollLaneOp = [&DAG, &SL](SDNode *N) -> SDValue {
     EVT VT = N->getValueType(0);
     unsigned NE = VT.getVectorNumElements();
