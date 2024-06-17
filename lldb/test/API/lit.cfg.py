@@ -7,6 +7,7 @@ import platform
 import shlex
 import shutil
 import subprocess
+import sys
 
 import lit.formats
 
@@ -64,7 +65,7 @@ def find_python_interpreter():
 
     # If we're running in a virtual environment, we already have a copy of the
     # Python executable.
-    if "VIRTUAL_ENV" in config.environment:
+    if sys.prefix != sys.base_prefix:
         return None
 
     # Avoid doing any work if we already copied the binary.
