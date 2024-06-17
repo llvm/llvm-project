@@ -1868,7 +1868,7 @@ and non-0 as true.
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
 
-``!range([``\ *start*\ ``,]`` *end*\ ``[, ``\ *step*\ ``])``
+``!range([``\ *start*\ ``,]`` *end*\ ``[,``\ *step*\ ``])``
     This operator produces half-open range sequence ``[start : end : step)`` as
     ``list<int>``. *start* is ``0`` and *step* is ``1`` by default. *step* can
     be negative and cannot be 0. If *start* ``<`` *end* and *step* is negative,
