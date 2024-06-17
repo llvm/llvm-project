@@ -106,7 +106,7 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
       "Building mlir with ROCm support requires the AMDGPU backend")
   endif()
 
-  set(DEFAULT_ROCM_PATH "/opt/rocm" CACHE PATH "Fallback path to search for ROCm installs")
+  set(DEFAULT_ROCM_PATH "" CACHE PATH "Fallback path to search for ROCm installs")
   target_compile_definitions(obj.MLIRGPUTransforms
     PRIVATE
     __DEFAULT_ROCM_PATH__="${DEFAULT_ROCM_PATH}"
