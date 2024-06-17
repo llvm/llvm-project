@@ -2735,6 +2735,113 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
 }
 
 //===----------------------------------------------------------------------===//
+// WinogradFilterTransformOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WinogradFilterTransformOp::verify() {
+  auto filterType = cast<ShapedType>(getFilter().getType());
+  ArrayRef<int64_t> filterShape = filterType.getShape();
+  int64_t filterH = filterShape[1];
+  int64_t filterW = filterShape[2];
+  int64_t r = getR();
+
+  if (filterH != r && filterH != 1)
+    return failure();
+  if (filterW != r && filterW != 1)
+    return failure();
+  if (filterH == 1 && filterW == 1)
+    return failure();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WinogradInputTransformOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WinogradInputTransformOp::verify() {
+  auto inputType = cast<ShapedType>(getInput().getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputH = inputShape[1];
+  int64_t inputW = inputShape[2];
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  int64_t outputH = outputShape[0];
+  int64_t outputW = outputShape[1];
+  int64_t outputTileH = outputShape[2];
+  int64_t outputTileW = outputShape[3];
+  int m = getM();
+  int r = getR();
+  bool leftTransform = inputH != 1;
+  bool rightTransform = inputW != 1;
+
+  if (!leftTransform && !rightTransform)
+    return failure();
+
+  if (leftTransform) {
+    int64_t tileH = (inputH - (r - 1)) / m;
+    if (inputH != tileH * m + (r - 1))
+      return failure();
+    if (tileH != outputTileH)
+      return failure();
+    if (outputH != m + r - 1)
+      return failure();
+  }
+
+  if (rightTransform) {
+    int64_t tileW = (inputW - (r - 1)) / m;
+    if (inputW != tileW * m + (r - 1))
+      return failure();
+    if (tileW != outputTileW)
+      return failure();
+    if (outputW != m + r - 1)
+      return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WinogradOutputTransformOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult WinogradOutputTransformOp::verify() {
+  auto valueType = cast<ShapedType>(getValue().getType());
+  ArrayRef<int64_t> valueShape = valueType.getShape();
+  int64_t valueH = valueShape[0];
+  int64_t valueW = valueShape[1];
+  int64_t valueTileH = valueShape[2];
+  int64_t valueTileW = valueShape[3];
+  auto outputType = cast<ShapedType>(getOutput().getType());
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  int64_t outputH = outputShape[1];
+  int64_t outputW = outputShape[2];
+  int m = getM();
+  int r = getR();
+  bool leftTransform = valueH != 1;
+  bool rightTransform = valueW != 1;
+
+  if (!leftTransform && !rightTransform)
+    return failure();
+
+  if (leftTransform) {
+    if (valueH != m + r - 1)
+      return failure();
+    if (outputH != m * valueTileH)
+      return failure();
+  }
+
+  if (rightTransform) {
+    if (valueW != m + r - 1)
+      return failure();
+    if (outputW != m * valueTileW)
+      return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // LinalgDialect
 //===----------------------------------------------------------------------===//
 
