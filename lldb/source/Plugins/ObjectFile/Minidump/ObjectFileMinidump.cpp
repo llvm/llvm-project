@@ -78,7 +78,8 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddHeaderAndCalculateDirectories();
   if (error.Fail()) {
-    LLDB_LOGF(log, "AddHeaderAndCalculateDirectories failed: %s", error.AsCString());
+    LLDB_LOGF(log, "AddHeaderAndCalculateDirectories failed: %s",
+              error.AsCString());
     return false;
   };
   error = builder.AddSystemInfo();
@@ -103,7 +104,7 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
     LLDB_LOGF(log, "AddThreadList failed: %s", error.AsCString());
     return false;
   }
-  
+
   error = builder.AddLinuxFileStreams();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddLinuxFileStreams failed: %s", error.AsCString());

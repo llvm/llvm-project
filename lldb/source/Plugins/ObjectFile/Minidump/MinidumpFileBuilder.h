@@ -44,14 +44,39 @@ lldb_private::Status WriteString(const std::string &to_write,
 /// Minidump writer for Linux
 ///
 /// This class provides a Minidump writer that is able to
-/// snapshot the current process state. For the whole time, it stores all
-/// the data on heap.
+/// snapshot the current process state.
+///
+/// Minidumps are a Microsoft format for dumping process state.
+/// This class constructs the minidump on disk starting with
+/// Headers and Directories are written at the top of the file,
+/// with the amount of bytes being precalculates before any writing takes place
+/// Then the smaller data sections are written
+/// SystemInfo, ModuleList, Misc Info.
+/// Then Threads are emitted, threads are the first section that needs to be
+/// 'fixed up' this happens when later we emit the memory stream, we identify if
+/// that stream is the expected stack, and if so we update the stack with the
+/// current RVA. Lastly the Memory lists are added. For Memory List, this will
+/// contain everything that can fit within 4.2gb. MemoryList has it's
+/// descriptors written at the end so it cannot be allowed to overflow.
+///
+/// Memory64List is a special case where it has to be begin before 4.2gb but can
+/// expand forever The difference in Memory64List is there are no RVA's and all
+/// the addresses are figured out by starting at the base RVA, and adding the
+/// antecedent memory sections.
+///
+/// Because Memory64List can be arbitrarily large, this class has to write
+/// chunks to disk this means we have to precalculate the descriptors and write
+/// them first, and if we encounter any error, or are unable to read the same
+/// number of bytes we have to go back and update them on disk.
+///
+/// And as the last step, after all the directories have been added, we go back
+/// to the top of the file to fill in the header and the redirectory sections
+/// that we preallocated.
 class MinidumpFileBuilder {
 public:
   MinidumpFileBuilder(lldb::FileUP &&core_file,
                       const lldb::ProcessSP &process_sp)
-      : m_process_sp(process_sp),
-        m_core_file(std::move(core_file)) {};
+      : m_process_sp(process_sp), m_core_file(std::move(core_file)){};
 
   MinidumpFileBuilder(const MinidumpFileBuilder &) = delete;
   MinidumpFileBuilder &operator=(const MinidumpFileBuilder &) = delete;
@@ -61,6 +86,9 @@ public:
 
   ~MinidumpFileBuilder() = default;
 
+  // This method only calculates the amount of bytes the header and directories
+  // will take up. It does not write the directories or headers. This function
+  // must be called with a followup to fill in the data.
   lldb_private::Status AddHeaderAndCalculateDirectories();
   // Add SystemInfo stream, used for storing the most basic information
   // about the system, platform etc...
@@ -93,22 +121,26 @@ private:
   AddMemoryList_64(lldb_private::Process::CoreFileMemoryRanges &ranges);
   lldb_private::Status
   AddMemoryList_32(lldb_private::Process::CoreFileMemoryRanges &ranges);
-  lldb_private::Status FixThreads();
+  // Update the thread list on disk with the newly emitted stack RVAs.
+  lldb_private::Status FixThreadStacks();
   lldb_private::Status FlushBufferToDisk();
 
   lldb_private::Status DumpHeader() const;
   lldb_private::Status DumpDirectories() const;
   // Add directory of StreamType pointing to the current end of the prepared
   // file with the specified size.
-  lldb_private::Status AddDirectory(llvm::minidump::StreamType type, uint64_t stream_size);
+  lldb_private::Status AddDirectory(llvm::minidump::StreamType type,
+                                    uint64_t stream_size);
   lldb::offset_t GetCurrentDataEndOffset() const;
   // Stores directories to fill in later
   std::vector<llvm::minidump::Directory> m_directories;
   // When we write off the threads for the first time, we need to clean them up
   // and give them the correct RVA once we write the stack memory list.
   // We save by the end because we only take from the stack pointer up
-  // So the saved off range base can differ from the memory region the stack pointer is in.
-  std::unordered_map<lldb::addr_t, llvm::minidump::Thread> m_thread_by_range_end;
+  // So the saved off range base can differ from the memory region the stack
+  // pointer is in.
+  std::unordered_map<lldb::addr_t, llvm::minidump::Thread>
+      m_thread_by_range_end;
   // Main data buffer consisting of data without the minidump header and
   // directories
   lldb_private::DataBufferHeap m_data;
@@ -121,15 +153,16 @@ private:
   // but we want to try to keep the size of m_data small
   // and we will only exceed a 128 mb buffer if we get a memory region
   // that is larger than 128 mb.
-  static constexpr size_t m_write_chunk_max = (1024 * 1024 * 128);
+  static constexpr size_t MAX_WRITE_CHUNK_SIZE = (1024 * 1024 * 128);
 
-  static constexpr size_t header_size = sizeof(llvm::minidump::Header);
-  static constexpr size_t directory_size = sizeof(llvm::minidump::Directory);
+  static constexpr size_t HEADER_SIZE = sizeof(llvm::minidump::Header);
+  static constexpr size_t DIRECTORY_SIZE = sizeof(llvm::minidump::Directory);
 
   // More that one place can mention the register thread context locations,
   // so when we emit the thread contents, remember where it is so we don't have
   // to duplicate it in the exception data.
-  std::map<lldb::tid_t, llvm::minidump::LocationDescriptor> m_tid_to_reg_ctx;
+  std::unordered_map<lldb::tid_t, llvm::minidump::LocationDescriptor>
+      m_tid_to_reg_ctx;
   lldb::FileUP m_core_file;
 };
 
