@@ -1,0 +1,52 @@
+// RUN: cir-opt -cir-to-llvm -o - %s | FileCheck -check-prefix=MLIR %s
+// RUN: cir-translate -cir-to-llvmir -o - %s  | FileCheck -check-prefix=LLVM %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!structT = !cir.struct<struct "Point" {!cir.int<s, 32>, !cir.int<s, 32>, !cir.int<s, 32>}>
+
+module @test {
+  cir.global external @pt_member = #cir.data_member<1> : !cir.data_member<!s32i in !structT>
+  // MLIR: llvm.mlir.global external @pt_member(4 : i64) {addr_space = 0 : i32} : i64
+  // LLVM: @pt_member = global i64 4
+
+  cir.func @constant() -> !cir.data_member<!s32i in !structT> {
+    %0 = cir.const #cir.data_member<1> : !cir.data_member<!s32i in !structT>
+    cir.return %0 : !cir.data_member<!s32i in !structT>
+  }
+  //      MLIR: llvm.func @constant() -> i64
+  // MLIR-NEXT:   %0 = llvm.mlir.constant(4 : i64) : i64
+  // MLIR-NEXT:   llvm.return %0 : i64
+  // MLIR-NEXT: }
+
+  //      LLVM: define i64 @constant()
+  // LLVM-NEXT:   ret i64 4
+  // LLVM-NEXT: }
+
+  cir.func @null_constant() -> !cir.data_member<!s32i in !structT> {
+    %0 = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !structT>
+    cir.return %0 : !cir.data_member<!s32i in !structT>
+  }
+  //      MLIR: llvm.func @null_constant() -> i64
+  // MLIR-NEXT:   %0 = llvm.mlir.constant(-1 : i64) : i64
+  // MLIR-NEXT:   llvm.return %0 : i64
+  // MLIR-NEXT: }
+
+  //      LLVM: define i64 @null_constant() !dbg !7 {
+  // LLVM-NEXT:   ret i64 -1
+  // LLVM-NEXT: }
+
+  cir.func @get_runtime_member(%arg0: !cir.ptr<!structT>, %arg1: !cir.data_member<!s32i in !structT>) -> !cir.ptr<!s32i> {
+    %0 = cir.get_runtime_member %arg0[%arg1 : !cir.data_member<!s32i in !structT>] : !cir.ptr<!structT> -> !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+  //      MLIR: llvm.func @get_runtime_member(%arg0: !llvm.ptr, %arg1: i64) -> !llvm.ptr
+  // MLIR-NEXT:   %0 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  // MLIR-NEXT:   llvm.return %0 : !llvm.ptr
+  // MLIR-NEXT: }
+
+  //      LLVM: define ptr @get_runtime_member(ptr %0, i64 %1)
+  // LLVM-NEXT:   %3 = getelementptr i8, ptr %0, i64 %1
+  // LLVM-NEXT:   ret ptr %3
+  // LLVM-NEXT: }
+}

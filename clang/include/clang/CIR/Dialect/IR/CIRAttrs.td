@@ -345,12 +345,12 @@ def DataMemberAttr : CIR_Attr<"DataMember", "data_member",
   let parameters = (ins AttributeSelfTypeParameter<
                             "", "mlir::cir::DataMemberType">:$type,
                         OptionalParameter<
-                            "std::optional<size_t>">:$memberIndex);
+                            "std::optional<unsigned>">:$member_index);
   let description = [{
     A data member attribute is a literal attribute that represents a constant
     pointer-to-data-member value.
 
-    The `memberIndex` parameter represents the index of the pointed-to member
+    The `member_index` parameter represents the index of the pointed-to member
     within its containing struct. It is an optional parameter; lack of this
     parameter indicates a null pointer-to-data-member value.
 
@@ -365,7 +365,13 @@ def DataMemberAttr : CIR_Attr<"DataMember", "data_member",
   let genVerifyDecl = 1;
 
   let assemblyFormat = [{
-    `<` ($memberIndex^):(`null`)? `>`
+    `<` ($member_index^):(`null`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isNullPtr() const {
+      return !getMemberIndex().has_value();
+    }
   }];
 }
 

@@ -51,6 +51,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1064,6 +1065,28 @@ bool hasTrailingZeros(mlir::cir::ConstArrayAttr attr) {
           }));
 }
 
+static mlir::Attribute
+lowerDataMemberAttr(mlir::ModuleOp moduleOp, mlir::cir::DataMemberAttr attr,
+                    const mlir::TypeConverter &typeConverter) {
+  mlir::DataLayout layout{moduleOp};
+
+  uint64_t memberOffset;
+  if (attr.isNullPtr()) {
+    // TODO(cir): the numerical value of a null data member pointer is
+    // ABI-specific and should be queried through ABI.
+    assert(!MissingFeatures::targetCodeGenInfoGetNullPointer());
+    memberOffset = -1ull;
+  } else {
+    auto memberIndex = attr.getMemberIndex().value();
+    memberOffset =
+        attr.getType().getClsTy().getElementOffset(layout, memberIndex);
+  }
+
+  auto underlyingIntTy = mlir::IntegerType::get(
+      moduleOp->getContext(), layout.getTypeSizeInBits(attr.getType()));
+  return mlir::IntegerAttr::get(underlyingIntTy, memberOffset);
+}
+
 class CIRConstantLowering
     : public mlir::OpConversionPattern<mlir::cir::ConstantOp> {
 public:
@@ -1105,6 +1128,10 @@ public:
         return mlir::success();
       }
       attr = op.getValue();
+    } else if (op.getType().isa<mlir::cir::DataMemberType>()) {
+      auto dataMember = op.getValue().cast<mlir::cir::DataMemberAttr>();
+      attr = lowerDataMemberAttr(op->getParentOfType<mlir::ModuleOp>(),
+                                 dataMember, *typeConverter);
     }
     // TODO(cir): constant arrays are currently just pushed into the stack using
     // the store instruction, instead of being stored as global variables and
@@ -1688,6 +1715,10 @@ public:
           lowerCirAttrAsValue(op, init.value(), rewriter, typeConverter);
       rewriter.create<mlir::LLVM::ReturnOp>(loc, value);
       return mlir::success();
+    } else if (auto dataMemberAttr =
+                   init.value().dyn_cast<mlir::cir::DataMemberAttr>()) {
+      init = lowerDataMemberAttr(op->getParentOfType<mlir::ModuleOp>(),
+                                 dataMemberAttr, *typeConverter);
     } else if (const auto structAttr =
                    init.value().dyn_cast<mlir::cir::ConstStructAttr>()) {
       setupRegionInitializedLLVMGlobalOp(op, rewriter);
@@ -2690,6 +2721,24 @@ public:
   }
 };
 
+class CIRGetRuntimeMemberOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::GetRuntimeMemberOp> {
+public:
+  using mlir::OpConversionPattern<
+      mlir::cir::GetRuntimeMemberOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::GetRuntimeMemberOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto llvmResTy = getTypeConverter()->convertType(op.getType());
+    auto llvmElementTy = mlir::IntegerType::get(op.getContext(), 8);
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        op, llvmResTy, llvmElementTy, adaptor.getAddr(), adaptor.getMember());
+    return mlir::success();
+  }
+};
+
 class CIRPtrDiffOpLowering
     : public mlir::OpConversionPattern<mlir::cir::PtrDiffOp> {
 public:
@@ -3240,20 +3289,21 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering, CIRCastOpLowering,
       CIRGlobalOpLowering, CIRGetGlobalOpLowering, CIRVAStartLowering,
       CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
-      CIRGetMemberOpLowering, CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering,
-      CIRCopyOpLowering, CIRMemCpyOpLowering, CIRFAbsOpLowering,
-      CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
-      CIRVectorCreateLowering, CIRVectorInsertLowering,
-      CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
-      CIRVectorTernaryLowering, CIRVectorShuffleIntsLowering,
-      CIRVectorShuffleVecLowering, CIRStackSaveLowering,
-      CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
-      CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
-      CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering,
-      CIRCmpThreeWayOpLowering, CIRCeilOpLowering, CIRFloorOpLowering,
-      CIRFAbsOpLowering, CIRNearbyintOpLowering, CIRRintOpLowering,
-      CIRRoundOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
-      CIRFMaxOpLowering, CIRFMinOpLowering>(converter, patterns.getContext());
+      CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
+      CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering, CIRCopyOpLowering,
+      CIRMemCpyOpLowering, CIRFAbsOpLowering, CIRExpectOpLowering,
+      CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
+      CIRVectorInsertLowering, CIRVectorExtractLowering, CIRVectorCmpOpLowering,
+      CIRVectorSplatLowering, CIRVectorTernaryLowering,
+      CIRVectorShuffleIntsLowering, CIRVectorShuffleVecLowering,
+      CIRStackSaveLowering, CIRStackRestoreLowering, CIRUnreachableLowering,
+      CIRTrapLowering, CIRInlineAsmOpLowering, CIRSetBitfieldLowering,
+      CIRGetBitfieldLowering, CIRPrefetchLowering, CIRObjSizeOpLowering,
+      CIRIsConstantOpLowering, CIRCmpThreeWayOpLowering, CIRCeilOpLowering,
+      CIRFloorOpLowering, CIRFAbsOpLowering, CIRNearbyintOpLowering,
+      CIRRintOpLowering, CIRRoundOpLowering, CIRTruncOpLowering,
+      CIRCopysignOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {
@@ -3263,6 +3313,10 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     // Drop pointee type since LLVM dialect only allows opaque pointers.
     return mlir::LLVM::LLVMPointerType::get(type.getContext(),
                                             type.getAddrSpace());
+  });
+  converter.addConversion([&](mlir::cir::DataMemberType type) -> mlir::Type {
+    return mlir::IntegerType::get(type.getContext(),
+                                  dataLayout.getTypeSizeInBits(type));
   });
   converter.addConversion([&](mlir::cir::ArrayType type) -> mlir::Type {
     auto ty = converter.convertType(type.getEltType());
