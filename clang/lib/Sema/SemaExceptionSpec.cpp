@@ -1114,21 +1114,10 @@ static CanThrowResult canTypeidThrow(Sema &S, const CXXTypeidExpr *DC) {
   if (DC->isTypeOperand())
     return CT_Cannot;
 
-  Expr *Op = DC->getExprOperand();
-  if (Op->isTypeDependent())
+  if (DC->isValueDependent())
     return CT_Dependent;
 
-  const RecordType *RT = Op->getType()->getAs<RecordType>();
-  if (!RT)
-    return CT_Cannot;
-
-  if (!cast<CXXRecordDecl>(RT->getDecl())->isPolymorphic())
-    return CT_Cannot;
-
-  if (Op->Classify(S.Context).isPRValue())
-    return CT_Cannot;
-
-  return CT_Can;
+  return DC->hasNullCheck() ? CT_Can : CT_Cannot;
 }
 
 CanThrowResult Sema::canThrow(const Stmt *S) {
@@ -1157,8 +1146,9 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   }
 
   case Expr::CXXTypeidExprClass:
-    //   - a potentially evaluated typeid expression applied to a glvalue
-    //     expression whose type is a polymorphic class type
+    //   - a potentially evaluated typeid expression applied to a (possibly
+    //     parenthesized) built-in unary * operator applied to a pointer to a
+    //     polymorphic class type
     return canTypeidThrow(*this, cast<CXXTypeidExpr>(S));
 
     //   - a potentially evaluated call to a function, member function, function

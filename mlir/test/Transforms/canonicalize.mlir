@@ -387,16 +387,21 @@ func.func @dead_dealloc_fold() {
 
 // CHECK-LABEL: func @dead_dealloc_fold_multi_use
 func.func @dead_dealloc_fold_multi_use(%cond : i1) {
-  // CHECK-NEXT: return
+  // CHECK-NOT: alloc
   %a = memref.alloc() : memref<4xf32>
+  // CHECK: cond_br
   cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
+  // CHECK-NOT: alloc
   memref.dealloc %a: memref<4xf32>
+  // CHECK: return
   return
 
 ^bb2:
+  // CHECK-NOT: alloc
   memref.dealloc %a: memref<4xf32>
+  // CHECK: return
   return
 }
 

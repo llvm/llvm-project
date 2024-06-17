@@ -542,7 +542,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
   }
   // The remaining block arguments are user-provided reduction values and an
   // optional universal index. Make sure their sizes match.
-  assert(bArgs.size() == reduc.size() + needsUniv ? 1 : 0);
+  assert(bArgs.size() == reduc.size() + needsUniv);
   builder.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
 
   // Generates loop body.
@@ -560,7 +560,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
   }
 
   // In-place update on reduction variable.
-  assert(aArgs.size() == reduc.size() + needsUniv ? 1 : 0);
+  assert(aArgs.size() == reduc.size() + needsUniv);
   for (unsigned i = 0, e = reduc.size(); i < e; i++)
     reduc[i] = aArgs[i];
 
