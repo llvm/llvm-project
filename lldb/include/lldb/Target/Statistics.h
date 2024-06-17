@@ -144,8 +144,8 @@ public:
   bool GetIncludeTargets() const {
     if (m_include_targets.has_value())
       return m_include_targets.value();
-    // `m_include_targets` has no value set, so return a value base on
-    // `m_summary_only`
+    // `m_include_targets` has no value set, so return a value based on
+    // `m_summary_only`.
     return !GetSummaryOnly();
   }
 
@@ -153,8 +153,8 @@ public:
   bool GetIncludeModules() const {
     if (m_include_modules.has_value())
       return m_include_modules.value();
-    // `m_include_modules` has no value set, so return a value base on
-    // `m_summary_only`
+    // `m_include_modules` has no value set, so return a value based on
+    // `m_summary_only`.
     return !GetSummaryOnly();
   }
 
@@ -162,8 +162,8 @@ public:
   bool GetIncludeTranscript() const {
     if (m_include_transcript.has_value())
       return m_include_transcript.value();
-    // `m_include_transcript` has no value set, so return a value base on
-    // `m_summary_only`
+    // `m_include_transcript` has no value set, so return a value based on
+    // `m_summary_only`.
     return !GetSummaryOnly();
   }
 
