@@ -47,7 +47,6 @@ def get_input_signature():
             "edge_count",
             "callsite_height",
             "cost_estimate",
-            "inlining_default",
             "sroa_savings",
             "sroa_losses",
             "load_elimination",
