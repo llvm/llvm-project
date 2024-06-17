@@ -463,10 +463,9 @@ define void @test_readfirstlane_i16(ptr addrspace(1) %out, i16 %src) {
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v2
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, 0xffff
-; CHECK-SDAG-NEXT:    v_and_b32_e32 v0, s4, v0
+; CHECK-SDAG-NEXT:    s_and_b32 s4, s4, 0xffff
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use v0
+; CHECK-SDAG-NEXT:    ; use s4
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
