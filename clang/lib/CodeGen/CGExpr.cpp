@@ -2161,6 +2161,21 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
   return RValue::get(CGF.EmitLoadOfScalar(LV, Loc));
 }
 
+RValue CodeGenFunction::EmitLoadOfAnyValue(LValue LV, AggValueSlot Slot,
+                                           SourceLocation Loc) {
+  QualType Ty = LV.getType();
+  switch (getEvaluationKind(Ty)) {
+  case TEK_Scalar:
+    return EmitLoadOfLValue(LV, Loc);
+  case TEK_Complex:
+    return RValue::getComplex(EmitLoadOfComplex(LV, Loc));
+  case TEK_Aggregate:
+    EmitAggFinalDestCopy(Ty, Slot, LV, EVK_NonRValue);
+    return Slot.asRValue();
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
 /// EmitLoadOfLValue - Given an expression that represents a value lvalue, this
 /// method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
