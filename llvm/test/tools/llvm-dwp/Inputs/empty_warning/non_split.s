@@ -6,7 +6,7 @@
 # RUN: mkdir -p %t
 # RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj -dwarf-version=4 %s -o %t/non_split.o
 # RUN: llvm-dwp -e %t/non_split.o -o %t/non_split.dwp 2>&1 | FileCheck %s --check-prefix=CHECK-WARNING
-# CHECK-WARNING: warning: no dwo files found
+# CHECK-WARNING: warning: executable file does not contain any references to dwo files
 
 #include <stdio.h>
 #int main() {
