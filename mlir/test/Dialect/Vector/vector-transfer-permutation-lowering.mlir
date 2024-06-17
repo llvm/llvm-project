@@ -18,7 +18,7 @@
 // CHECK:           vector.transfer_write
 // CHECK-NOT:       permutation_map
 // CHECK-SAME:      %[[TR]], %[[MEM]]{{.*}} {in_bounds = [true, true]} : vector<8x4xi16>, memref<2x2x8x4xi16>
-func.func @xfer_write_transposing_permutation_map
+func.func @xfer_write_transposing_permutation_map(
     %arg0: vector<4x8xi16>,
     %mem: memref<2x2x8x4xi16>) {
 
