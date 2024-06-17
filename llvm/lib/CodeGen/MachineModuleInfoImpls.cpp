@@ -13,6 +13,7 @@
 
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCSymbol.h"
 
 using namespace llvm;
@@ -40,4 +41,26 @@ MachineModuleInfoImpl::SymbolListTy MachineModuleInfoImpl::getSortedStubs(
 
   Map.clear();
   return List;
+}
+
+template <typename MachineModuleInfoTarget>
+static typename MachineModuleInfoTarget::AuthStubListTy getAuthGVStubListHelper(
+    DenseMap<MCSymbol *, typename MachineModuleInfoTarget::AuthStubInfo>
+        &AuthPtrStubs) {
+  typename MachineModuleInfoTarget::AuthStubListTy List(AuthPtrStubs.begin(),
+                                                        AuthPtrStubs.end());
+
+  if (!List.empty())
+    llvm::sort(List.begin(), List.end(),
+               [](const typename MachineModuleInfoTarget::AuthStubPairTy &LHS,
+                  const typename MachineModuleInfoTarget::AuthStubPairTy &RHS) {
+                 return LHS.first->getName() < RHS.first->getName();
+               });
+
+  AuthPtrStubs.clear();
+  return List;
+}
+
+MachineModuleInfoELF::AuthStubListTy MachineModuleInfoELF::getAuthGVStubList() {
+  return getAuthGVStubListHelper<MachineModuleInfoELF>(AuthPtrStubs);
 }
