@@ -40,12 +40,12 @@ entry:
 ; CHECK-LABEL: define ptr @passthru(ptr %a, i32 %b, i64 %c)
 ; CHECK-NOT: alloca
 ; CHECK-NOT: store
-; CHECK-NOT: call void @llvm.dbg.declare
-; CHECK: call void @llvm.dbg.value(metadata ptr %a, {{.*}})
+; CHECK-NOT: #dbg_declare
+; CHECK: #dbg_value(ptr %a, {{.*}})
 ; CHECK-NOT: store
-; CHECK: call void @llvm.dbg.value(metadata i32 %b, {{.*}})
+; CHECK: #dbg_value(i32 %b, {{.*}})
 ; CHECK-NOT: store
-; CHECK: call void @llvm.dbg.value(metadata i64 %c, {{.*}})
+; CHECK: #dbg_value(i64 %c, {{.*}})
 ; CHECK-NOT: store
 ; CHECK: call ptr @passthru_callee(ptr %a, i32 %b, i64 %c, i64 %{{.*}})
 
@@ -72,12 +72,12 @@ entry:
 ; NOLOWER-LABEL: define void @tworegs(i64 %o.coerce0, i64 %o.coerce1)
 ; NOLOWER-NOT: alloca
 ; NOLOWER-NOT: store
-; NOLOWER-NOT: call void @llvm.dbg.declare
+; NOLOWER-NOT: #dbg_declare
 ; Here we want to find:  call void @llvm.dbg.value(metadata i64 %o.coerce0, metadata [[VARIABLE_O]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
-; NOLOWER: call void @llvm.dbg.value(metadata i64 undef, {{.*}})
+; NOLOWER: #dbg_value(i64 undef, {{.*}})
 ; NOLOWER-NOT: store
 ; Here we want to find:  call void @llvm.dbg.value(metadata i64 %o.coerce1, metadata [[VARIABLE_O]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
-; NOLOWER: call void @llvm.dbg.value(metadata i64 undef, {{.*}})
+; NOLOWER: #dbg_value(i64 undef, {{.*}})
 ; NOLOWER-NOT: store
 ; NOLOWER: call void @tworegs_callee(i64 %o.coerce0, i64 %o.coerce1)
 

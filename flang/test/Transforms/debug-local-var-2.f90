@@ -6,12 +6,12 @@
 ! This tests checks the debug information for local variables in llvm IR.
 
 ! BOTH-LABEL: define void @_QQmain
-! BOTH-DAG: %[[AL11:.*]] = alloca i32
-! BOTH-DAG: %[[AL12:.*]] = alloca i64
-! BOTH-DAG: %[[AL13:.*]] = alloca i8
-! BOTH-DAG: %[[AL14:.*]] = alloca i32
-! BOTH-DAG: %[[AL15:.*]] = alloca float
 ! BOTH-DAG: %[[AL16:.*]] = alloca double
+! BOTH-DAG: %[[AL15:.*]] = alloca float
+! BOTH-DAG: %[[AL14:.*]] = alloca i32
+! BOTH-DAG: %[[AL13:.*]] = alloca i8
+! BOTH-DAG: %[[AL12:.*]] = alloca i64
+! BOTH-DAG: %[[AL11:.*]] = alloca i32
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL11]], metadata ![[I4:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL12]], metadata ![[I8:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[AL13]], metadata ![[L1:.*]], metadata !DIExpression())
