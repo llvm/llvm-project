@@ -347,6 +347,8 @@ uint64_t getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
 
 void PrintSupportedExtensions();
 
+void printEnabledExtensions(std::vector<StringRef> EnabledFeatureNames);
+
 } // namespace AArch64
 } // namespace llvm
 
