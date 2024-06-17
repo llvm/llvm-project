@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -823,15 +824,11 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         MachineFrameInfo &MFI = MF.getFrameInfo();
         int FrameIdx = MFI.CreateStackObject(OrigTy.getScalarSizeInBits(),
                                              StackAlign, false);
-
         Register PointerToStackReg =
             MIRBuilder.buildFrameIndex(PointerTy, FrameIdx).getReg(0);
-
         MachinePointerInfo DstMPO =
             MachinePointerInfo::getFixedStack(MF, FrameIdx);
-
         Align DstAlign = inferAlignFromPtrInfo(MF, DstMPO);
-
         MIRBuilder.buildStore(Args[i].OrigRegs[Part], PointerToStackReg, DstMPO,
                               DstAlign);
 
