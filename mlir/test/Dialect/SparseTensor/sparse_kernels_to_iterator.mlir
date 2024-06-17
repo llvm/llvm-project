@@ -27,7 +27,13 @@
 // CHECK:         }
 func.func @sqsum(%arg0: tensor<?x?x?x?xi32, #COO>) -> tensor<i32> {
   %cst = arith.constant dense<0> : tensor<i32>
-  %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>, affine_map<(d0, d1, d2, d3) -> ()>], iterator_types = ["reduction", "reduction", "reduction", "reduction"]} ins(%arg0 : tensor<?x?x?x?xi32, #COO>) outs(%cst : tensor<i32>) {
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>,
+      affine_map<(d0, d1, d2, d3) -> ()>
+    ],
+    iterator_types = ["reduction", "reduction", "reduction", "reduction"]
+  } ins(%arg0 : tensor<?x?x?x?xi32, #COO>) outs(%cst : tensor<i32>) {
   ^bb0(%in: i32, %out: i32):
     %1 = arith.muli %in, %in : i32
     %2 = arith.addi %out, %1 : i32
