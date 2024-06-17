@@ -6255,18 +6255,18 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     }
   }
 
-    MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
-    Src0 = DAG.getBitcast(VecVT, Src0);
+  MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
+  Src0 = DAG.getBitcast(VecVT, Src0);
 
-    if (IsPermLane16)
-      Src1 = DAG.getBitcast(VecVT, Src1);
+  if (IsPermLane16)
+    Src1 = DAG.getBitcast(VecVT, Src1);
 
-    if (IID == Intrinsic::amdgcn_writelane)
-      Src2 = DAG.getBitcast(VecVT, Src2);
+  if (IID == Intrinsic::amdgcn_writelane)
+    Src2 = DAG.getBitcast(VecVT, Src2);
 
-    SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
-    SDValue UnrolledLaneOp = unrollLaneOp(LaneOp.getNode());
-    return DAG.getBitcast(VT, UnrolledLaneOp);
+  SDValue LaneOp = createLaneOp(Src0, Src1, Src2, VecVT);
+  SDValue UnrolledLaneOp = unrollLaneOp(LaneOp.getNode());
+  return DAG.getBitcast(VT, UnrolledLaneOp);
 }
 
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
