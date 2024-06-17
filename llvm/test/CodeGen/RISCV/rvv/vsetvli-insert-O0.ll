@@ -54,12 +54,10 @@ define <vscale x 1 x double> @intrinsic_same_vlmax(<vscale x 1 x double> %a, <vs
 ; CHECK-LABEL: intrinsic_same_vlmax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, tu, ma
 ; CHECK-NEXT:    # implicit-def: $v9
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfadd.vv v9, v8, v10
 ; CHECK-NEXT:    # implicit-def: $v8
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -82,12 +80,10 @@ define <vscale x 1 x double> @intrinsic_same_avl_imm(<vscale x 1 x double> %a, <
 ; CHECK-LABEL: intrinsic_same_avl_imm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vsetivli a0, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli a0, 2, e64, m1, tu, ma
 ; CHECK-NEXT:    # implicit-def: $v9
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfadd.vv v9, v8, v10
 ; CHECK-NEXT:    # implicit-def: $v8
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -109,12 +105,10 @@ define <vscale x 1 x double> @intrinsic_same_avl_reg(i64 %avl, <vscale x 1 x dou
 ; CHECK-LABEL: intrinsic_same_avl_reg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    # implicit-def: $v9
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfadd.vv v9, v8, v10
 ; CHECK-NEXT:    # implicit-def: $v8
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -136,13 +130,11 @@ define <vscale x 1 x double> @intrinsic_diff_avl_reg(i64 %avl, i64 %avl2, <vscal
 ; CHECK-LABEL: intrinsic_diff_avl_reg:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vsetvli a0, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    # implicit-def: $v9
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfadd.vv v9, v8, v10
-; CHECK-NEXT:    vsetvli a0, a1, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, a1, e64, m1, tu, ma
 ; CHECK-NEXT:    # implicit-def: $v8
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
