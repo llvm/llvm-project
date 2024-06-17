@@ -26,6 +26,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cassert>
 #include <cstdint>
 
 #define DEBUG_TYPE "call-lowering"
@@ -800,6 +801,9 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     bool IndirectParameterPassingHandled = false;
     bool BigEndianPartOrdering = TLI->hasBigEndianPartOrdering(OrigVT, DL);
     for (unsigned Part = 0; Part < NumParts; ++Part) {
+      assert((VA.getLocInfo() != CCValAssign::Indirect || Part == 0) &&
+             "Only the first parameter should be processed when "
+             "handling indirect passing!");
       Register ArgReg = Args[i].Regs[Part];
       // There should be Regs.size() ArgLocs per argument.
       unsigned Idx = BigEndianPartOrdering ? NumParts - 1 - Part : Part;
