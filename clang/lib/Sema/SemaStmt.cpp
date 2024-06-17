@@ -222,8 +222,12 @@ static bool DiagnoseNoDiscard(Sema &S, const WarnUnusedResultAttr *A,
   return S.Diag(Loc, diag::warn_unused_result_msg) << A << Msg << R1 << R2;
 }
 
-namespace {
-void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
+static void DiagnoseUnused(Sema &S, const Expr *E,
+                           std::optional<unsigned> DiagID) {
+  // When called from Sema::DiagnoseUnusedExprResult, DiagID is a diagnostic for
+  // where this expression is not used. When called from
+  // Sema::DiagnoseDiscardedNodiscard, DiagID is std::nullopt and this function
+  // will only diagnose [[nodiscard]], [[gnu::warn_unused_result]] and similar
   bool NoDiscardOnly = !DiagID.has_value();
 
   // If we are in an unevaluated expression context, then there can be no unused
@@ -395,7 +399,6 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
   S.DiagIfReachable(Loc, llvm::ArrayRef<const Stmt *>(E),
                     S.PDiag(*DiagID) << R1 << R2);
 }
-} // namespace
 
 void Sema::DiagnoseDiscardedNodiscard(const Expr *E) {
   DiagnoseUnused(*this, E, std::nullopt);
