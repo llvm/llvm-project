@@ -1111,10 +1111,29 @@ void fuseTerminator(RewriterBase &rewriter, scf::ForOp source,
   rewriter.replaceOp(fused.getBody()->getTerminator(), newTerm);
 }
 
-template <typename LoopTy>
-LoopLikeOpInterface
-createFused(LoopLikeOpInterface target, LoopLikeOpInterface source,
-            RewriterBase &rewriter, NewYieldValuesFn newYieldValuesFn) {
+// TODO: We should maybe add this as a method to LoopLikeOpInterface.
+//       For now, this acts as a placeholder.
+template <>
+void fuseTerminator(RewriterBase &rewriter, LoopLikeOpInterface source,
+                    LoopLikeOpInterface &fused, IRMapping &mapping) {
+  if (isa<scf::ForOp>(source) && isa<scf::ForOp>(fused)) {
+    fuseTerminator(rewriter, cast<scf::ForOp>(source), cast<scf::ForOp>(fused),
+                   mapping);
+  } else if (isa<scf::ForallOp>(source) && isa<scf::ForallOp>(fused)) {
+    fuseTerminator(rewriter, cast<scf::ForallOp>(source),
+                   cast<scf::ForallOp>(fused), mapping);
+  } else if (isa<scf::ParallelOp>(source) && isa<scf::ParallelOp>(fused)) {
+    fuseTerminator(rewriter, cast<scf::ParallelOp>(source),
+                   cast<scf::ParallelOp>(fused), mapping);
+  } else {
+    return;
+  }
+}
+
+LoopLikeOpInterface createFused(LoopLikeOpInterface target,
+                                LoopLikeOpInterface source,
+                                RewriterBase &rewriter,
+                                NewYieldValuesFn newYieldValuesFn) {
   auto targetIterArgs = target.getRegionIterArgs();
   auto targetInductionVar = *target.getLoopInductionVars();
   SmallVector<Value> targetYieldOperands(target.getYieldedValues());
@@ -1144,8 +1163,8 @@ createFused(LoopLikeOpInterface target, LoopLikeOpInterface source,
   for (Operation &op : sourceRegion->front().without_terminator())
     rewriter.clone(op, mapping);
 
-  fuseTerminator<LoopTy>(rewriter, cast<LoopTy>(source),
-                         cast<LoopTy>(fusedLoop), mapping);
+  // TODO: Replace with interface method if added
+  fuseTerminator(rewriter, source, fusedLoop, mapping);
 
   return fusedLoop;
 }
@@ -1153,7 +1172,7 @@ createFused(LoopLikeOpInterface target, LoopLikeOpInterface source,
 scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
                                                       scf::ForallOp source,
                                                       RewriterBase &rewriter) {
-  scf::ForallOp fusedLoop = cast<scf::ForallOp>(createFused<scf::ForallOp>(
+  scf::ForallOp fusedLoop = cast<scf::ForallOp>(createFused(
       target, source, rewriter,
       [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
         for (Operation &op : source.getTerminator().getYieldingOps())
@@ -1169,7 +1188,7 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
 scf::ForOp mlir::fuseIndependentSiblingForLoops(scf::ForOp target,
                                                 scf::ForOp source,
                                                 RewriterBase &rewriter) {
-  scf::ForOp fusedLoop = cast<scf::ForOp>(createFused<scf::ForOp>(
+  scf::ForOp fusedLoop = cast<scf::ForOp>(createFused(
       target, source, rewriter,
       [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
         return source.getYieldedValues();
