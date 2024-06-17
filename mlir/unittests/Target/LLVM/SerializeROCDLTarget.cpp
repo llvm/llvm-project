@@ -187,7 +187,7 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(GetELFMetadata)) {
       continue;
     // Get the metadata.
     gpu::KernelTableAttr metadata =
-        ROCDL::getAMDHSAKernelsMetadata(gpuModule, *object);
+        ROCDL::getKernelMetadata(gpuModule, *object);
     ASSERT_TRUE(metadata != nullptr);
     // There should be only a single kernel.
     ASSERT_TRUE(metadata.size() == 1);
