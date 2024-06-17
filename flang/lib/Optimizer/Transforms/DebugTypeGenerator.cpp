@@ -60,8 +60,10 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m)
   // The debug information requires the offset of certain fields in the
   // descriptors like lower_bound and extent for each dimension.
   mlir::Type llvmDimsType = getDescFieldTypeModel<kDimsPosInBox>()(context);
+  mlir::Type llvmPtrType = getDescFieldTypeModel<kAddrPosInBox>()(context);
   dimsOffset = getComponentOffset<kDimsPosInBox>(*dl, context, llvmDimsType);
   dimsSize = dl->getTypeSize(llvmDimsType);
+  ptrSize = dl->getTypeSize(llvmPtrType);
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
@@ -104,8 +106,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
   // allocated = associated = (*base_addr != 0)
   mlir::LLVM::DIExpressionAttr valid =
       mlir::LLVM::DIExpressionAttr::get(context, ops);
-  mlir::LLVM::DIExpressionAttr associated = genAllocated ? valid : nullptr;
-  mlir::LLVM::DIExpressionAttr allocated = genAssociated ? valid : nullptr;
+  mlir::LLVM::DIExpressionAttr allocated = genAllocated ? valid : nullptr;
+  mlir::LLVM::DIExpressionAttr associated = genAssociated ? valid : nullptr;
   ops.clear();
 
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
@@ -217,6 +219,28 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
       /*stringLengthExp=*/nullptr, /*stringLocationExp=*/nullptr, encoding);
 }
 
+mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
+    mlir::Type elTy, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, mlir::Location loc, bool genAllocated,
+    bool genAssociated) {
+  mlir::MLIRContext *context = module.getContext();
+
+  // Arrays and character need different treatment because DWARF have special
+  // constructs for them to get the location from the descriptor. Rest of
+  // types are handled like pointer to underlying type.
+  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
+    return convertBoxedSequenceType(seqTy, fileAttr, scope, loc, genAllocated,
+                                    genAssociated);
+
+  mlir::LLVM::DITypeAttr elTyAttr = convertType(elTy, fileAttr, scope, loc);
+
+  return mlir::LLVM::DIDerivedTypeAttr::get(
+      context, llvm::dwarf::DW_TAG_pointer_type,
+      mlir::StringAttr::get(context, ""), elTyAttr, ptrSize,
+      /*alignInBits=*/0, /*offset=*/0,
+      /*optional<address space>=*/std::nullopt, /*extra data=*/nullptr);
+}
+
 mlir::LLVM::DITypeAttr
 DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                 mlir::LLVM::DIScopeAttr scope,
@@ -258,6 +282,10 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
       return convertBoxedSequenceType(seqTy, fileAttr, scope, loc, false,
                                       false);
+    if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(elTy))
+      return convertPointerLikeType(heapTy.getElementType(), fileAttr, scope,
+                                    loc, /*genAllocated=*/true,
+                                    /*genAssociated=*/false);
     return genPlaceholderType(context);
   } else {
     // FIXME: These types are currently unhandled. We are generating a

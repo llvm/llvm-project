@@ -49,10 +49,17 @@ private:
                                               mlir::LLVM::DIFileAttr fileAttr,
                                               mlir::LLVM::DIScopeAttr scope,
                                               mlir::Location loc);
+
+  mlir::LLVM::DITypeAttr
+  convertPointerLikeType(mlir::Type elTy, mlir::LLVM::DIFileAttr fileAttr,
+                         mlir::LLVM::DIScopeAttr scope, mlir::Location loc,
+                         bool genAllocated, bool genAssociated);
+
   mlir::ModuleOp module;
   KindMapping kindMapping;
   std::uint64_t dimsSize;
   std::uint64_t dimsOffset;
+  std::uint64_t ptrSize;
 };
 
 } // namespace fir
