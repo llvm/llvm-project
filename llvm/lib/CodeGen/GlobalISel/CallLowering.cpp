@@ -851,11 +851,10 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         // (OutgoingParameterHandler) side.
         // This branch is needed, so the pointer to the value is loaded onto the
         // stack.
-        if (IndirectParameterPassingHandled) {
+        if (VA.getLocInfo() == CCValAssign::Indirect)
           Handler.assignValueToAddress(ArgReg, StackAddr, PointerTy, MPO, VA);
-          break;
-        }
-        Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO, VA);
+        else
+          Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO, VA);
       } else if (VA.isMemLoc() && Flags.isByVal()) {
         assert(Args[i].Regs.size() == 1 &&
                "didn't expect split byval pointer");
