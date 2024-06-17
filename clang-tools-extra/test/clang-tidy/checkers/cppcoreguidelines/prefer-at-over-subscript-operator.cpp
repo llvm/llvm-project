@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s \
 // RUN: cppcoreguidelines-prefer-at-over-subscript-operator %t -- \
-// RUN: -config='{CheckOptions: {cppcoreguidelines-prefer-at-over-subscript-operator.ExcludeClasses: "ExcludedClass1;ExcludedClass2"}}'
+// RUN: -config='{CheckOptions: {cppcoreguidelines-prefer-at-over-subscript-operator.ExcludeClasses: "::ExcludedClass1;::ExcludedClass2"}}'
 
 namespace std {
   template<typename T, unsigned size>
