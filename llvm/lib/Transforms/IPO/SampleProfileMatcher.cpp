@@ -266,6 +266,21 @@ void SampleProfileMatcher::matchNonCallsiteLocs(
   }
 }
 
+// Filter the non-call locations from IRAnchors and ProfileAnchors and write
+// them into a list for random access later.
+void SampleProfileMatcher::getFilteredAnchorList(
+    const AnchorMap &IRAnchors, const AnchorMap &ProfileAnchors,
+    AnchorList &FilteredIRAnchorsList, AnchorList &FilteredProfileAnchorList) {
+  for (const auto &I : IRAnchors) {
+    if (I.second.stringRef().empty())
+      continue;
+    FilteredIRAnchorsList.emplace_back(I);
+  }
+
+  for (const auto &I : ProfileAnchors)
+    FilteredProfileAnchorList.emplace_back(I);
+}
+
 // Call target name anchor based profile fuzzy matching.
 // Input:
 // For IR locations, the anchor is the callee name of direct callsite; For
@@ -292,16 +307,9 @@ void SampleProfileMatcher::runStaleProfileMatching(
          "Run stale profile matching only once per function");
 
   AnchorList FilteredProfileAnchorList;
-  for (const auto &I : ProfileAnchors)
-    FilteredProfileAnchorList.emplace_back(I);
-
   AnchorList FilteredIRAnchorsList;
-  // Filter the non-callsite from IRAnchors.
-  for (const auto &I : IRAnchors) {
-    if (I.second.stringRef().empty())
-      continue;
-    FilteredIRAnchorsList.emplace_back(I);
-  }
+  getFilteredAnchorList(IRAnchors, ProfileAnchors, FilteredIRAnchorsList,
+                        FilteredProfileAnchorList);
 
   if (FilteredIRAnchorsList.empty() || FilteredProfileAnchorList.empty())
     return;
