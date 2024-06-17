@@ -290,6 +290,13 @@ public:
   Address getAddress() const { return Addr; }
 };
 
+enum class FnInfoOpts {
+  None = 0,
+  IsInstanceMethod = 1 << 0,
+  IsChainCall = 1 << 1,
+  IsDelegateCall = 1 << 2,
+};
+
 } // namespace cir
 
 #endif

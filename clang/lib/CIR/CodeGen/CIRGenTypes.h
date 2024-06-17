@@ -22,7 +22,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "clang/CIR/FnInfoOpts.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 
