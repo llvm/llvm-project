@@ -421,7 +421,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   StrictBinaryFunctionHashes.reserve(BC.getBinaryFunctions().size());
 
   for (auto &[_, BF] : BC.getBinaryFunctions()) {
-    if (!ProfiledFunctions.count(&BF))
+    if (ProfiledFunctions.count(&BF))
       continue;
     StrictBinaryFunctionHashes[BF.getHash()] = &BF;
   }
