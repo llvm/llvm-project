@@ -3769,10 +3769,18 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
   }
 
-  case CXXTypeidExprClass:
-    // typeid might throw if its subexpression is potentially-evaluated, so has
-    // side-effects in that case whether or not its subexpression does.
-    return cast<CXXTypeidExpr>(this)->isPotentiallyEvaluated();
+  case CXXTypeidExprClass: {
+    const auto *TE = cast<CXXTypeidExpr>(this);
+    if (!TE->isPotentiallyEvaluated())
+      return false;
+
+    // If this type id expression can throw because of a null pointer, that is a
+    // side-effect independent of if the operand has a side-effect
+    if (IncludePossibleEffects && TE->hasNullCheck())
+      return true;
+
+    break;
+  }
 
   case CXXConstructExprClass:
   case CXXTemporaryObjectExprClass: {

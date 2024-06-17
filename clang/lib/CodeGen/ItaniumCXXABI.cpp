@@ -178,7 +178,7 @@ public:
     return CatchTypeInfo{getAddrOfRTTIDescriptor(Ty), 0};
   }
 
-  bool shouldTypeidBeNullChecked(bool IsDeref, QualType SrcRecordTy) override;
+  bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -1419,9 +1419,8 @@ static llvm::FunctionCallee getBadTypeidFn(CodeGenFunction &CGF) {
   return CGF.CGM.CreateRuntimeFunction(FTy, "__cxa_bad_typeid");
 }
 
-bool ItaniumCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
-                                              QualType SrcRecordTy) {
-  return IsDeref;
+bool ItaniumCXXABI::shouldTypeidBeNullChecked(QualType SrcRecordTy) {
+  return true;
 }
 
 void ItaniumCXXABI::EmitBadTypeidCall(CodeGenFunction &CGF) {
