@@ -40,7 +40,7 @@ FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
 ModulePass *createNVPTXAssignValidGlobalNamesPass();
 ModulePass *createGenericToNVVMLegacyPass();
 ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
-FunctionPass *createNVVMIntrRangePass(unsigned int SmVersion);
+FunctionPass *createNVVMIntrRangePass();
 FunctionPass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
@@ -53,12 +53,7 @@ MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 
 struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
-  NVVMIntrRangePass();
-  NVVMIntrRangePass(unsigned SmVersion) : SmVersion(SmVersion) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-private:
-  unsigned SmVersion;
 };
 
 struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
@@ -194,7 +189,7 @@ enum PrmtMode {
 };
 }
 }
-void initializeNVPTXDAGToDAGISelPass(PassRegistry &);
+void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 } // namespace llvm
 
 // Defines symbolic names for NVPTX registers.  This defines a mapping from

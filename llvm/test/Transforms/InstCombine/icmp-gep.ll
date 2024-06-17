@@ -546,3 +546,37 @@ define i1 @test_scalable_ij(ptr %foo, i64 %i, i64 %j) {
   %cmp = icmp ult ptr %gep1, %gep2
   ret i1 %cmp
 }
+
+define i1 @gep_nuw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
+; CHECK-LABEL: @gep_nuw(
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nuw i64 [[A:%.*]], 2
+; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = shl nuw i64 [[B:%.*]], 1
+; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nuw i64 [[GEP1_IDX]], [[GEP1_IDX1]]
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nuw i64 [[C:%.*]], 3
+; CHECK-NEXT:    [[GEP2_IDX2:%.*]] = shl nuw i64 [[D:%.*]], 2
+; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nuw i64 [[GEP2_IDX]], [[GEP2_IDX2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw [2 x i16], ptr %p, i64 %a, i64 %b
+  %gep2 = getelementptr nuw [2 x i32], ptr %p, i64 %c, i64 %d
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_nusw(ptr %p, i64 %a, i64 %b, i64 %c, i64 %d) {
+; CHECK-LABEL: @gep_nusw(
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[A:%.*]], 2
+; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = shl nsw i64 [[B:%.*]], 1
+; CHECK-NEXT:    [[GEP1_OFFS:%.*]] = add nsw i64 [[GEP1_IDX]], [[GEP1_IDX1]]
+; CHECK-NEXT:    [[GEP2_IDX:%.*]] = shl nsw i64 [[C:%.*]], 3
+; CHECK-NEXT:    [[GEP2_IDX2:%.*]] = shl nsw i64 [[D:%.*]], 2
+; CHECK-NEXT:    [[GEP2_OFFS:%.*]] = add nsw i64 [[GEP2_IDX]], [[GEP2_IDX2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP1_OFFS]], [[GEP2_OFFS]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nusw [2 x i16], ptr %p, i64 %a, i64 %b
+  %gep2 = getelementptr nusw [2 x i32], ptr %p, i64 %c, i64 %d
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}

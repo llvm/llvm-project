@@ -96,9 +96,14 @@ AST_MATCHER(QualType, isIntegralType) {
 
 AST_MATCHER_P(UserDefinedLiteral, hasLiteral,
               clang::ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  if (const Expr *CookedLiteral = Node.getCookedLiteral()) {
+  const UserDefinedLiteral::LiteralOperatorKind LOK =
+      Node.getLiteralOperatorKind();
+  if (LOK == UserDefinedLiteral::LOK_Template ||
+      LOK == UserDefinedLiteral::LOK_Raw)
+    return false;
+
+  if (const Expr *CookedLiteral = Node.getCookedLiteral())
     return InnerMatcher.matches(*CookedLiteral, Finder, Builder);
-  }
   return false;
 }
 
