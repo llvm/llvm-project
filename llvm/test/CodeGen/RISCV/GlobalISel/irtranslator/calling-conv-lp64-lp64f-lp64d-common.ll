@@ -137,10 +137,9 @@ define i64 @callee_256i_in_regs_stack(i64 %x1, i64 %x2, i64 %x3, i64 %x4, i64 %x
   ; RV64I-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x15
   ; RV64I-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x16
   ; RV64I-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x17
-  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
-  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.1, align 16)
-  ; RV64I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
-  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[LOAD]](p0) :: (load (s256) from %fixed-stack.0, align 16)
+  ; RV64I-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64I-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s64) from %fixed-stack.0, align 16)
+  ; RV64I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[LOAD]](p0) :: (load (s256) from stack, align 16)
   ; RV64I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD1]](s256)
   ; RV64I-NEXT:   $x10 = COPY [[TRUNC]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10

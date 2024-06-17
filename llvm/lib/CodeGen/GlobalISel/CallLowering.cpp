@@ -25,6 +25,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cstdint>
 
 #define DEBUG_TYPE "call-lowering"
 
@@ -918,18 +919,8 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         Align Alignment = DL.getABITypeAlign(Args[i].Ty);
         MachinePointerInfo MPO;
 
-        if (VA.isMemLoc()) {
-          if (!Flags.isByVal()) {
-            LLT MemTy = Handler.getStackValueStoreType(DL, VA, Flags);
-            Handler.getStackAddress(
-              MemTy.getSizeInBytes(), VA.getLocMemOffset(), MPO, Flags);
-          } else {
-            uint64_t MemSize = Flags.getByValSize();
-            int64_t Offset = VA.getLocMemOffset();
-  
-            Handler.getStackAddress(MemSize, Offset, MPO, Flags);
-          }
-        }
+        if (VA.isMemLoc())
+          MPO = MachinePointerInfo::getStack(MF, VA.getLocMemOffset());
 
         // Since we are doing indirect parameter passing, we know that the value
         // in the temporary register is not the value passed to the function,
