@@ -6,6 +6,7 @@ typedef unsigned int uint;
 typedef unsigned char uchar;
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
+typedef int    v8i   __attribute__((ext_vector_type(8)));
 typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
 typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
 typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
@@ -97,4 +98,12 @@ void test_amdgcn_async_load_store_lds(global char* gaddr8, global int *gaddr32, 
   __builtin_amdgcn_global_store_async_from_lds_b32(gaddr32, laddr32, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b32' must be a constant integer}}
   __builtin_amdgcn_global_store_async_from_lds_b64(gaddr64, laddr64, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b64' must be a constant integer}}
   __builtin_amdgcn_global_store_async_from_lds_b128(gaddr128, laddr128, cpol); // expected-error {{'__builtin_amdgcn_global_store_async_from_lds_b128' must be a constant integer}}
+}
+
+void test_amdgcn_tensor_load_store(v4i sg0, v8i sg1, v4i sg2, v4i sg3, int cpol)
+{
+  __builtin_amdgcn_tensor_load_to_lds(sg0, sg1, sg2, sg3, cpol); // expected-error {{'__builtin_amdgcn_tensor_load_to_lds' must be a constant integer}}
+  __builtin_amdgcn_tensor_load_to_lds_d2(sg0, sg1, cpol); // expected-error {{'__builtin_amdgcn_tensor_load_to_lds_d2' must be a constant integer}}
+  __builtin_amdgcn_tensor_store_from_lds(sg0, sg1, sg2, sg3, cpol); // expected-error {{'__builtin_amdgcn_tensor_store_from_lds' must be a constant integer}}
+  __builtin_amdgcn_tensor_store_from_lds_d2(sg0, sg1, cpol); // expected-error {{'__builtin_amdgcn_tensor_store_from_lds_d2' must be a constant integer}}
 }
