@@ -787,10 +787,7 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
                                                   unsigned Position) {
   assert(Tok.is(tok::kw_template) && "Expected 'template' keyword");
 
-  if (Token ahead = GetLookAheadToken(1);
-      ahead.isOneOf(tok::identifier, tok::ellipsis,
-                    tok::equal, tok::comma,
-                    tok::greater, tok::greatergreater, tok::greatergreatergreater)) {
+  if (Token ahead = GetLookAheadToken(1); ahead.isNot(tok::less)) {
     // Maybe they intended `typename` instead of `template` (given thats more common)
     // Error early, to add a fixit hint
 
