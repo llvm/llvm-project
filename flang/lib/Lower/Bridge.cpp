@@ -1801,14 +1801,16 @@ private:
               std::get_if<Fortran::parser::LocalitySpec::LocalInit>(&x.u))
         for (const Fortran::parser::Name &x : localInitList->v)
           info.localInitSymList.push_back(x.symbol);
-      if (const auto *reduceList =
-              std::get_if<Fortran::parser::LocalitySpec::Reduce>(&x.u)) {
-        fir::ReduceOperationEnum reduce_operation = getReduceOperationEnum(
-            std::get<Fortran::parser::ReductionOperator>(reduceList->t));
-        for (const Fortran::parser::Name &x :
-             std::get<std::list<Fortran::parser::Name>>(reduceList->t)) {
-          info.reduceSymList.push_back(
-              std::make_pair(reduce_operation, x.symbol));
+      for (IncrementLoopInfo &info : incrementLoopNestInfo) {
+        if (const auto *reduceList =
+                std::get_if<Fortran::parser::LocalitySpec::Reduce>(&x.u)) {
+          fir::ReduceOperationEnum reduce_operation = getReduceOperationEnum(
+              std::get<Fortran::parser::ReductionOperator>(reduceList->t));
+          for (const Fortran::parser::Name &x :
+               std::get<std::list<Fortran::parser::Name>>(reduceList->t)) {
+            info.reduceSymList.push_back(
+                std::make_pair(reduce_operation, x.symbol));
+          }
         }
       }
       if (const auto *sharedList =
