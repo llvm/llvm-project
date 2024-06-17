@@ -133,7 +133,7 @@ public:
 
 protected:
   bool visitExpr(const Expr *E) override;
-  bool visitDecl(const VarDecl *VD) override;
+  bool visitDecl(const VarDecl *VD, bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.

@@ -3223,8 +3223,20 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
 /// We get here from evaluateAsInitializer().
 /// We need to evaluate the initializer and return its value.
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
+bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD,
+                                         bool ConstantContext) {
   assert(!VD->isInvalidDecl() && "Trying to constant evaluate an invalid decl");
+
+  std::optional<PrimType> VarT = classify(VD->getType());
+
+  // We only create variables if we're evaluating in a constant context.
+  // Otherwise, just evaluate the initializer and return it.
+  if (!ConstantContext) {
+    DeclScope<Emitter> LocalScope(this, VD);
+    if (!this->visit(VD->getAnyInitializer()))
+      return false;
+    return this->emitRet(VarT.value_or(PT_Ptr), VD);
+  }
 
   // If we've seen the global variable already and the initializer failed,
   // just return false immediately.
@@ -3241,7 +3253,6 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   if (!this->visitVarDecl(VD))
     return false;
 
-  std::optional<PrimType> VarT = classify(VD->getType());
   // Get a pointer to the variable
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto GlobalIndex = P.getGlobal(VD);
