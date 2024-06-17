@@ -2380,7 +2380,10 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
   // Build BPI/BFI before any changes are made to IR.
   bool HasProfile = doesBlockHaveProfileData(BB);
   auto *BFI = getOrCreateBFI(HasProfile);
-  auto *BPI = getOrCreateBPI(BFI != nullptr);
+  BranchProbabilityInfo *BPI = nullptr;
+  if (BFI) {
+    BPI = getOrCreateBPI(true);
+  }
 
   // And finally, do it!  Start by factoring the predecessors if needed.
   BasicBlock *PredBB;
