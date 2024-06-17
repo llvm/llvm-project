@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRAMXTransforms
   LegalizeForLLVMExport.cpp
+  EnableAMXTileBinding.cpp
 
   DEPENDS
   MLIRAMXConversionsIncGen

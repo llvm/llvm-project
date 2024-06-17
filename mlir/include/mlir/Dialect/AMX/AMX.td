@@ -84,7 +84,7 @@ class AMX_IntrOpBase<string mnemonic, int numResults,
 
 // The "internal" intrinsics are meant for compiler usage.
 class AMX_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
-  AMX_IntrOp<mnemonic # "_internal", numResults, [], [], traits>;
+  AMX_IntrOpBase<mnemonic # "_internal", numResults, [], [], traits>;
 
 //===----------------------------------------------------------------------===//
 // AMX Op definitions (user facing).
@@ -344,7 +344,7 @@ def LLVM_x86_amx_tdpbuud : AMX_IntrOp<"tdpbuud", 1>,
 
 //===----------------------------------------------------------------------===//
 // AMX IntrOp definitions (direct mapping to physical assembly).
-// The `dm` suffixes in Op names stand for `direct mapping`.
+// The `plain` suffixes in Op names stand for plain direct mapping.
 //===----------------------------------------------------------------------===//
 
 //
@@ -352,7 +352,7 @@ def LLVM_x86_amx_tdpbuud : AMX_IntrOp<"tdpbuud", 1>,
 //
 
 def LLVM_x86_amx_ldtilecfg_plain : AMX_IntrOpBase<"ldtilecfg", 0>,
-  Arguments<(int LLVM_AnyPointer)>;
+  Arguments<(ins LLVM_AnyPointer)>;
 
 def LLVM_x86_amx_tilerelease_plain : AMX_IntrOpBase<"tilerelease", 0>;
 
