@@ -202,13 +202,12 @@ public:
 
 REGISTER_LIST_WITH_PROGRAMSTATE(ActiveCritSections, CritSectionMarker)
 
-namespace std {
 // Iterator traits for ImmutableList data structure
 // that enable the use of STL algorithms.
 // TODO: Move these to llvm::ImmutableList when overhauling immutable data
 // structures for proper iterator concept support.
 template <>
-struct iterator_traits<
+struct std::iterator_traits<
     typename llvm::ImmutableList<CritSectionMarker>::iterator> {
   using iterator_category = std::forward_iterator_tag;
   using value_type = CritSectionMarker;
@@ -216,7 +215,6 @@ struct iterator_traits<
   using reference = CritSectionMarker &;
   using pointer = CritSectionMarker *;
 };
-} // namespace std
 
 std::optional<MutexDescriptor>
 BlockInCriticalSectionChecker::checkDescriptorMatch(const CallEvent &Call,

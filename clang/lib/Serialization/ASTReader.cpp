@@ -3583,6 +3583,17 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
+    case PP_UNSAFE_BUFFER_USAGE: {
+      if (!Record.empty()) {
+        SmallVector<SourceLocation, 64> SrcLocs;
+        unsigned Idx = 0;
+        while (Idx < Record.size())
+          SrcLocs.push_back(ReadSourceLocation(F, Record, Idx));
+        PP.setDeserializedSafeBufferOptOutMap(SrcLocs);
+      }
+      break;
+    }
+
     case PP_CONDITIONAL_STACK:
       if (!Record.empty()) {
         unsigned Idx = 0, End = Record.size() - 1;
@@ -3890,6 +3901,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           DelayedDeleteExprs.push_back(IsArrayForm);
         }
       }
+      break;
+
+    case VTABLES_TO_EMIT:
+      if (F.Kind == MK_MainFile ||
+          getContext().getLangOpts().BuildingPCHWithObjectFile)
+        for (unsigned I = 0, N = Record.size(); I != N;)
+          VTablesToEmit.push_back(getGlobalDeclID(F, LocalDeclID(Record[I++])));
       break;
 
     case IMPORTED_MODULES:
@@ -8054,6 +8072,10 @@ void ASTReader::PassInterestingDeclToConsumer(Decl *D) {
     PassObjCImplDeclToConsumer(ImplD, Consumer);
   else
     Consumer->HandleInterestingDecl(DeclGroupRef(D));
+}
+
+void ASTReader::PassVTableToConsumer(CXXRecordDecl *RD) {
+  Consumer->HandleVTable(RD);
 }
 
 void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
