@@ -19258,7 +19258,7 @@ Selects elements from input vector '``value``' according to the '``mask``'.
 All selected elements are written into adjacent lanes in the result vector, from lower to higher.
 The mask holds an entry for each vector lane, and is used to select elements to be kept.
 If ``passthru`` is undefined, the number of valid lanes is equal to the number of ``true`` entries in the mask, i.e., all lanes >= number-of-selected-values are undefined.
-If a ``passthru`` vector is given, all remaining lanes are filled with values from ``passthru``, starting from ``passthrough[0]``.
+If a ``passthru`` vector is given, all remaining lanes are filled with the corresponding lane's value from ``passthru``.
 The main difference to :ref:`llvm.masked.compressstore <int_compressstore>` is that the we do not need to guard against memory access for unselected lanes.
 This allows for branchless code and better optimization for all targets that do not support or have inefficient instructions
 of the explicit semantics of :ref:`llvm.masked.compressstore <int_compressstore>` but still have some form of compress operations.
@@ -19295,8 +19295,8 @@ If all entries in the ``mask`` are 0, the ``out`` vector is ``passthru``.
         out[idx] = vec[i];
         idx += static_cast<bool>(mask[i]);
       }
-      for (int i = idx; i < N / sizeof(int); ++i) {
-        out[idx] = passthru[i - idx];
+      for (; idx < N / sizeof(int); ++idx) {
+        out[idx] = passthru[idx];
       }
       return out;
     }
