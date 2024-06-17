@@ -3480,6 +3480,35 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
   return DiagnosedSilenceableFailure::success();
 }
 
+//===----------------------------------------------------------------------===//
+// WinogradConv2DOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  FailureOr<Operation *> maybeTransformed = failure();
+  bool supported = TypeSwitch<Operation *, bool>(target)
+                       .Case([&](linalg::Conv2DNhwcFhwcOp op) {
+                         maybeTransformed =
+                             winogradConv2D(rewriter, op, getM(), getR());
+                         return true;
+                       })
+                       .Default([&](Operation *op) {
+                         op->emitError("not supported");
+                         return false;
+                       });
+
+  if (supported && failed(maybeTransformed)) {
+    return emitSilenceableError() << "apply Winograd Conv2D failed";
+  }
+
+  results.push_back(*maybeTransformed);
+  return DiagnosedSilenceableFailure::success();
+}
+
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOpsEnums.cpp.inc"
 
 #define GET_OP_CLASSES
