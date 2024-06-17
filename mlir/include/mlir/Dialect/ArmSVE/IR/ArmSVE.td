@@ -442,6 +442,43 @@ def ZipX4Op  : ArmSVE_Op<"zip.x4", [
   }];
 }
 
+def PselOp : ArmSVE_Op<"psel", [
+  Pure,
+  AllTypesMatch<["p1", "result"]>,
+]> {
+  let summary = "Predicate select";
+
+  let description = [{
+    This operation returns the input predicate `p1` or an all-false predicate
+    based on the bit at `p2[index]`. Informally the semantics are:
+    ```
+    if p2[index % num_elements(p2)] == 1:
+      return p1 : type(p1)
+    return all-false : type(p1)
+    ```
+
+    Example:
+    ```mlir
+    // Note: p1 and p2 can have different sizes.
+    %pd = arm_sve.psel %p1, %p2[%index] : vector<[4]xi1>, vector<[8]xi1>
+    ```
+
+    Note: This requires SME or SVE2 (`+sme` or `+sve2` in LLVM target features).
+  }];
+
+  let arguments = (ins SVEPredicate:$p1, SVEPredicate:$p2, Index:$index);
+  let results = (outs SVEPredicate:$result);
+
+  let builders = [
+    OpBuilder<(ins "Value":$p1, "Value":$p2, "Value":$index), [{
+      build($_builder, $_state, p1.getType(), p1, p2, index);
+  }]>];
+
+  let assemblyFormat = [{
+    $p1 `,` $p2 `[` $index `]` attr-dict `:` type($p1) `,` type($p2)
+  }];
+}
+
 def ScalableMaskedAddIOp : ScalableMaskedIOp<"masked.addi", "addition",
                                              [Commutative]>;
 
@@ -551,6 +588,14 @@ def ZipX4IntrOp : ArmSVE_IntrOp<"zip.x4",
                    Arg<AnyScalableVector, "v2">:$v2,
                    Arg<AnyScalableVector, "v3">:$v3,
                    Arg<AnyScalableVector, "v3">:$v4)>;
+
+// Note: This intrinsic requires SME or SVE2.
+def PselIntrOp : ArmSVE_IntrOp<"psel",
+  /*traits=*/[Pure, TypeIs<"res", SVBool>],
+  /*overloadedOperands=*/[1]>,
+  Arguments<(ins Arg<SVBool, "p1">:$p1,
+                 Arg<SVEPredicate, "p2">:$p2,
+                 Arg<I32, "index">:$index)>;
 
 def WhileLTIntrOp :
   ArmSVE_IntrOp<"whilelt",

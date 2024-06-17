@@ -64,3 +64,11 @@ func.func @arm_sve_zip_x4_bad_vector_type(%a : vector<[5]xf64>) {
   arm_sve.zip.x4 %a, %a, %a, %a : vector<[5]xf64>
   return
 }
+
+// -----
+
+func.func @arm_sve_psel_bad_vector_type(%a : vector<[7]xi1>, %index: index) {
+  // expected-error@+1 {{op operand #0 must be  of ranks 1scalable vector of 1-bit signless integer values of length 16/8/4/2/1, but got 'vector<[7]xi1>'}}
+  arm_sve.psel %a, %a[%index] : vector<[7]xi1>, vector<[7]xi1>
+  return
+}
