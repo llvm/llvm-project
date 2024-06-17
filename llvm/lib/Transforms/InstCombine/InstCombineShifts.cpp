@@ -1286,10 +1286,9 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
   // Fold (X + Y) / 2 --> (X & Y) iff (X u<= 1) && (Y u<= 1)
   if (match(Op0, m_Add(m_Value(X), m_Value(Y))) && match(Op1, m_One()) &&
-      computeKnownBits(X, 0, &I).countMaxActiveBits() <= 1 &&
-      computeKnownBits(Y, 0, &I).countMaxActiveBits() <= 1) {
+      computeKnownBits(X, /*Depth=*/0, &I).countMaxActiveBits() <= 1 &&
+      computeKnownBits(Y, /*Depth=*/0, &I).countMaxActiveBits() <= 1)
     return BinaryOperator::CreateAnd(X, Y);
-  }
 
   // (sub nuw X, (Y << nuw Z)) >>u exact Z --> (X >>u exact Z) sub nuw Y
   if (I.isExact() &&
