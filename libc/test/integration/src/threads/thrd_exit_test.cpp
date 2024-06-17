@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/threads/thrd_create.h"
-#include "src/threads/thrd_exit.h"
-#include "src/threads/thrd_join.h"
 #include "test/IntegrationTest/test.h"
 
 #include <threads.h>
@@ -33,7 +30,7 @@ thread_local A thread_local_a(123);
 
 int func(void *) {
   thread_local_a.set(321);
-  LIBC_NAMESPACE::thrd_exit(0);
+  thrd_exit(0);
   return 0;
 }
 
@@ -41,11 +38,11 @@ TEST_MAIN() {
   thrd_t th;
   int retval;
 
-  ASSERT_EQ(LIBC_NAMESPACE::thrd_create(&th, func, nullptr), thrd_success);
-  ASSERT_EQ(LIBC_NAMESPACE::thrd_join(th, &retval), thrd_success);
+  ASSERT_EQ(thrd_create(&th, func, nullptr), thrd_success);
+  ASSERT_EQ(thrd_join(th, &retval), thrd_success);
 
   ASSERT_TRUE(dtor_called);
-  LIBC_NAMESPACE::thrd_exit(0);
+  thrd_exit(0);
   return 0;
 }
 

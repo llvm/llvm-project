@@ -108,16 +108,17 @@ file(GLOB spec_files ${LIBC_SOURCE_DIR}/spec/*.td)
 
 # Generate api test souce code.
 add_custom_command(
-  OUTPUT ${public_test}
-  COMMAND $<TARGET_FILE:libc-prototype-testgen> -o ${public_test}
-          ${entrypoints_name_list}
-          -I ${LIBC_SOURCE_DIR}
-          ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-
-  DEPENDS ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td ${spec_files}
-          libc-prototype-testgen ${TARGET_PUBLIC_HEADERS}
-          ${LIBC_TARGET}
+  OUTPUT "${public_test}"
+  COMMAND "$<TARGET_FILE:libc-prototype-testgen> -o ${public_test} ${entrypoints_name_list} -I ${LIBC_SOURCE_DIR} ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td"
+  DEPENDS 
+    ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+    ${spec_files}
+    libc-prototype-testgen
+    ${TARGET_PUBLIC_HEADERS}
+    ${LIBC_TARGET}
 )
+
+# message(FATAL_ERROR "${public_test}")
 
 add_custom_target(libc-api-test)
 add_dependencies(check-libc libc-api-test)
