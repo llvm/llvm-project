@@ -508,17 +508,18 @@ static bool DoubleCheckedRWLocker(llvm::sys::RWMutex &Mutex,
     return true;
   // If we get here, then the reader function returned false. This means that
   // no one else is currently writing to this data structure and it's safe for
-  // us to write to it now. We can use a scoped writer lock since there are no
+  // us to write to it now. The scoped writer lock guarantees there are no
   // other readers or writers at this point.
   writer();
   return false;
 }
 
+// Helper to safely check if the Compile-Unit DIE has been extracted already.
+// If not, then extract it, and return false, indicating that it was *not*
+// already extracted.
 bool DWARFUnit::extractCUDieIfNeeded(bool CUDieOnly, bool &HasCUDie) {
-  // Safely check if the CU DIE has been extract already. If not, then extract
-  // it.
   return DoubleCheckedRWLocker(
-      CUDieArrayMutex,
+      ExtractCUDieMutex,
       // Calculate if the CU DIE has been extracted already.
       [&]() {
         return ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1);
@@ -530,17 +531,17 @@ bool DWARFUnit::extractCUDieIfNeeded(bool CUDieOnly, bool &HasCUDie) {
       });
 }
 
-Error DWARFUnit::extractAllDIEsIfNeeded(bool HasCUDie) {
-  // Safely check if *all* the DIEs have been parsed already. If not, then parse
-  // them.
+// Helper to safely check if the non-Compile-Unit DIEs have been parsed
+// already. If they haven't been parsed, go ahead and parse them.
+Error DWARFUnit::extractNonCUDIEsIfNeeded(bool HasCUDie) {
   Error Result = Error::success();
   DoubleCheckedRWLocker(
-      AllDieArrayMutex,
+      ExtractNonCUDIEsMutex,
       // Lambda to check if all DIEs have been extracted already.
       [=]() { return (DieArray.empty() || HasCUDie); },
       // Lambda to extract all the DIEs using the helper function
       [&]() {
-        if (Error E = extractAllDIEsHelper()) {
+        if (Error E = extractNonCUDIEsHelper()) {
           // Consume the success placeholder and save the actual error
           consumeError(std::move(Result));
           Result = std::move(E);
@@ -550,18 +551,21 @@ Error DWARFUnit::extractAllDIEsIfNeeded(bool HasCUDie) {
 }
 
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
-  // Take the CUDieFreeMutex lock to prevent the CU DIE from being freed
-  // after it was just parsed, but before the rest of the DIES are parsed.
-  llvm::sys::ScopedReader FreeLock(CUDieFreeMutex);
+  // Acquire the FreeDIEsMutex lock (in read-mode) to prevent the Compile Unit
+  // DIE from being freed by a thread calling clearDIEs() after the CU DIE was
+  // parsed, but before the rest of the DIEs are parsed, as there are no other
+  // locks held during that brief period.
+  llvm::sys::ScopedReader FreeLock(FreeDIEsMutex);
   bool HasCUDie = false;
   if (extractCUDieIfNeeded(CUDieOnly, HasCUDie))
     return Error::success();
-  return extractAllDIEsIfNeeded(HasCUDie);
+  // Right here is where the above-mentioned race condition exists.
+  return extractNonCUDIEsIfNeeded(HasCUDie);
 }
 
-// This should only be used from the tryExtractDIEsIfNeeded function:
-// it must already have all the proper locks acquired.
-Error DWARFUnit::extractAllDIEsHelper() {
+// Helper used from the tryExtractDIEsIfNeeded function: it must already have
+// acquired the ExtractNonCUDIEsMutex for writing.
+Error DWARFUnit::extractNonCUDIEsHelper() {
   // If CU DIE was just parsed, copy several attribute values from it.
   DWARFDie UnitDie(this, &DieArray[0]);
   if (std::optional<uint64_t> DWOId =
@@ -706,12 +710,15 @@ bool DWARFUnit::parseDWO(StringRef DWOAlternativeLocation) {
 }
 
 void DWARFUnit::clearDIEs(bool KeepCUDie) {
+  // We need to acquire the FreeDIEsMutex lock in write-mode, because we are
+  // going to free the DIEs, when other threads might be trying to create them.
+  llvm::sys::ScopedWriter FreeLock(FreeDIEsMutex);
+
   // Do not use resize() + shrink_to_fit() to free memory occupied by dies.
   // shrink_to_fit() is a *non-binding* request to reduce capacity() to size().
   // It depends on the implementation whether the request is fulfilled.
   // Create a new vector with a small capacity and assign it to the DieArray to
   // have previous contents freed.
-  llvm::sys::ScopedWriter FreeLock(CUDieFreeMutex);
   DieArray = (KeepCUDie && !DieArray.empty())
                  ? std::vector<DWARFDebugInfoEntry>({DieArray[0]})
                  : std::vector<DWARFDebugInfoEntry>();

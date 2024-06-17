@@ -258,9 +258,9 @@ class DWARFUnit {
 
   std::shared_ptr<DWARFUnit> DWO;
 
-  mutable llvm::sys::RWMutex CUDieFreeMutex;
-  mutable llvm::sys::RWMutex CUDieArrayMutex;
-  mutable llvm::sys::RWMutex AllDieArrayMutex;
+  mutable llvm::sys::RWMutex FreeDIEsMutex;
+  mutable llvm::sys::RWMutex ExtractCUDieMutex;
+  mutable llvm::sys::RWMutex ExtractNonCUDIEsMutex;
 
 protected:
   friend dwarf_linker::parallel::CompileUnit;
@@ -589,13 +589,13 @@ private:
   /// Only to be used from extractDIEsIfNeeded, which holds the correct locks.
   bool extractCUDieIfNeeded(bool CUDieOnly, bool &HasCUDie);
 
-  /// extractAllDIEsIfNeeded - Parses non-CU DIE's for a given CU if needed.
+  /// extractNonCUDIEsIfNeeded - Parses non-CU DIE's for a given CU if needed.
   /// Only to be used from extractDIEsIfNeeded, which holds the correct locks.
-  Error extractAllDIEsIfNeeded(bool HasCUDie);
+  Error extractNonCUDIEsIfNeeded(bool HasCUDie);
 
-  /// extractAllDIEsHelper - helper to be invoked *only* from inside
+  /// extractNonCUDIEsHelper - helper to be invoked *only* from inside
   /// tryExtractDIEsIfNeeded, which holds the correct locks.
-  Error extractAllDIEsHelper();
+  Error extractNonCUDIEsHelper();
 
   /// extractDIEsToVector - Appends all parsed DIEs to a vector.
   void extractDIEsToVector(bool AppendCUDie, bool AppendNonCUDIEs,
