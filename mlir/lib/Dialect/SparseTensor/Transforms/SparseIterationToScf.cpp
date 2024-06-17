@@ -38,7 +38,8 @@ static std::optional<LogicalResult>
 convertIteratorType(IteratorType itTp, SmallVectorImpl<Type> &fields) {
   // The actually Iterator Values (that are updated every iteration).
   auto idxTp = IndexType::get(itTp.getContext());
-  // TODO: This assumes there is no batch dimenstion in the sparse tensor.
+  // TODO: handle batch dimension.
+  assert(itTp.getEncoding().getBatchLvlRank() == 0);
   if (!itTp.isUnique()) {
     // Segment high for non-unqiue iterator.
     fields.push_back(idxTp);
@@ -77,7 +78,8 @@ public:
   matchAndRewrite(IterateOp op, OpAdaptor adaptor,
                   OneToNPatternRewriter &rewriter) const override {
     if (!op.getCrdUsedLvls().empty())
-      llvm_unreachable("Not implemented.");
+      return rewriter.notifyMatchFailure(
+          op, "non-empty coordinates list not implemented.");
 
     Location loc = op.getLoc();
 
