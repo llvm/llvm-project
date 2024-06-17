@@ -245,7 +245,7 @@ public:
   }
 
   mlir::cir::DataMemberAttr getDataMemberAttr(mlir::cir::DataMemberType ty,
-                                              size_t memberIndex) {
+                                              unsigned memberIndex) {
     return mlir::cir::DataMemberAttr::get(getContext(), ty, memberIndex);
   }
 

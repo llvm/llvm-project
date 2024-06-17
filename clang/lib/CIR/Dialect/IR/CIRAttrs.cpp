@@ -423,7 +423,7 @@ CmpThreeWayInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 LogicalResult
 DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        mlir::cir::DataMemberType ty,
-                       std::optional<size_t> memberIndex) {
+                       std::optional<unsigned> memberIndex) {
   if (!memberIndex.has_value()) {
     // DataMemberAttr without a given index represents a null value.
     return success();
