@@ -43,7 +43,7 @@ int main(int Argc, char *Argv[]) {
   char *BufSource;
   size_t SizeSource;
   amd_comgr_data_t DataSrc;
-  amd_comgr_data_set_t DataSetSrc, DataSetBc, DataSetLinkedBc,
+  amd_comgr_data_set_t DataSetSrc, DataSetPreproc, DataSetBc, DataSetLinkedBc,
       DataSetAsm, DataSetReloc, DataSetExec;
   amd_comgr_action_info_t ActionInfo;
   amd_comgr_status_t Status;
@@ -70,10 +70,16 @@ int main(int Argc, char *Argv[]) {
                                               "amdgcn-amd-amdhsa--gfx906");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
 
+  Status = amd_comgr_create_data_set(&DataSetPreproc);
+  checkError(Status, "amd_comgr_create_data_set");
+  Status = amd_comgr_do_action(AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR,
+                               ActionInfo, DataSetSrc, DataSetPreproc);
+  checkError(Status, "amd_comgr_do_action");
+
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC,
-                               ActionInfo, DataSetSrc, DataSetBc);
+                               ActionInfo, DataSetPreproc, DataSetBc);
   checkError(Status, "amd_comgr_do_action");
 
   Status = amd_comgr_create_data_set(&DataSetLinkedBc);
@@ -103,6 +109,8 @@ int main(int Argc, char *Argv[]) {
   Status = amd_comgr_destroy_action_info(ActionInfo);
   checkError(Status, "amd_comgr_destroy_action_info");
   Status = amd_comgr_destroy_data_set(DataSetSrc);
+  checkError(Status, "amd_comgr_destroy_data_set");
+  Status = amd_comgr_destroy_data_set(DataSetPreproc);
   checkError(Status, "amd_comgr_destroy_data_set");
   Status = amd_comgr_destroy_data_set(DataSetBc);
   checkError(Status, "amd_comgr_destroy_data_set");

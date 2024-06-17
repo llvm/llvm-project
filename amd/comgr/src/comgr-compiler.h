@@ -127,7 +127,7 @@ class AMDGPUCompiler {
                                   const char *OutputSuffix);
   amd_comgr_status_t addIncludeFlags();
   amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr,
-                                              bool SrcToBC);
+                                              bool CompilingSrc);
   amd_comgr_status_t addCompilationFlags();
   amd_comgr_status_t addDeviceLibraries();
   amd_comgr_status_t

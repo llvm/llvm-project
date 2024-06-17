@@ -1001,7 +1001,7 @@ amd_comgr_status_t AMDGPUCompiler::addIncludeFlags() {
 
 amd_comgr_status_t
 AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
-                                         bool SrcToBC = false) {
+                                         bool CompilingSrc= false) {
   TargetIdentifier Ident;
   if (auto Status = parseTargetIdentifier(IdentStr, Ident)) {
     return Status;
@@ -1013,7 +1013,7 @@ AMDGPUCompiler::addTargetIdentifierFlags(llvm::StringRef IdentStr,
     GPUArch += ":" + join(Ident.Features, ":");
   }
 
-  if (SrcToBC && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
+  if (CompilingSrc && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
     OffloadArch = (Twine("--offload-arch=") + GPUArch).str();
     Args.push_back(OffloadArch.c_str());
   } else {
@@ -1109,7 +1109,7 @@ amd_comgr_status_t AMDGPUCompiler::preprocessToSource() {
   }
 
   if (ActionInfo->IsaName) {
-    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName)) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName, true)) {
       return Status;
     }
   }
