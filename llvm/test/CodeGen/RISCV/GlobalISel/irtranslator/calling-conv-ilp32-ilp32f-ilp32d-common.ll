@@ -39,12 +39,14 @@ define i64 @callee_128i_in_regs_stack_fst(i64 %x1, i64 %x2, i64 %x3, i64 %x4, i1
   ; RV32I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (p0) from %fixed-stack.0)
   ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[LOAD2]](p0) :: (load (s128) from stack + 4, align 4, basealign 8)
-  ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD1]](s128)
+  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s128) = G_ADD [[LOAD1]], [[LOAD3]]
+  ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[ADD]](s128)
   ; RV32I-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s64)
   ; RV32I-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[UV1]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10, implicit $x11
-  %2 = trunc i128 %y to i64
+  %1 = add i128 %y, %y2
+  %2 = trunc i128 %1 to i64
   ret i64 %2
 }
 
@@ -432,11 +434,13 @@ define i64 @callee_128i_in_regs(i128 %x, i128 %y ) {
   ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128), align 8)
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
   ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[COPY1]](p0) :: (load (s128), align 8)
+  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s128) = G_ADD [[LOAD]], [[LOAD1]]
   ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD]](s128)
   ; RV32I-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s64)
   ; RV32I-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[UV1]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10, implicit $x11
+  %1 = add i128 %x, %y
   %2 = trunc i128 %x to i64
   ret i64 %2
 }
@@ -516,11 +520,13 @@ define i64 @callee_256i_in_regs(i256 %x, i256 %y ) {
   ; RV32I-NEXT:   [[LOAD:%[0-9]+]]:_(s256) = G_LOAD [[COPY]](p0) :: (load (s256), align 8)
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
   ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s256) = G_LOAD [[COPY1]](p0) :: (load (s256), align 8)
+  ; RV32I-NEXT:   [[ADD:%[0-9]+]]:_(s256) = G_ADD [[LOAD]], [[LOAD1]]
   ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD]](s256)
   ; RV32I-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s64)
   ; RV32I-NEXT:   $x10 = COPY [[UV]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[UV1]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10, implicit $x11
+  %1 = add i256 %x, %y
   %2 = trunc i256 %x to i64
   ret i64 %2
 }
