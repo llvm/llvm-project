@@ -6867,7 +6867,6 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
         if (ES->hasExternalDefinitions(D) == ExternalASTSource::EK_Never)
           DI->completeUnusedClass(*CRD);
     }
-
     // Emit any static data members, they may be definitions.
     for (auto *I : CRD->decls())
       if (isa<VarDecl>(I) || isa<CXXRecordDecl>(I))
