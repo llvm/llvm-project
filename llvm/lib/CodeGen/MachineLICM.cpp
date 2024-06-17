@@ -430,13 +430,17 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
   const unsigned NumRegs = TRI.getNumRegs();
   const unsigned MaskWords = (NumRegs + 31) / 32;
   for (unsigned K = 0; K < MaskWords; ++K) {
-    uint32_t Word = Mask[K];
+    const uint32_t Word = Mask[K];
+    if (!Word)
+      continue;
+
     for (unsigned Bit = 0; Bit < 32; ++Bit) {
       const unsigned PhysReg = (K * 32) + Bit;
       if (PhysReg == NumRegs)
         break;
 
       // Check if we have a valid PhysReg that is set in the mask.
+      // FIXME: We shouldn't have to check for PhysReg.
       if (PhysReg && ((Word >> Bit) & 1)) {
         for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
           ClobberedRUs.reset(*RUI);
