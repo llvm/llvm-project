@@ -81,6 +81,14 @@ func.func @arith_cmpf_tensor(%arg0: tensor<5xf32>, %arg1: tensor<5xf32>) -> tens
 
 // -----
 
+func.func @arith_negf_f80(%arg0: tensor<5xf80>) -> tensor<5xf80> {
+  // expected-error @+1 {{failed to legalize operation 'arith.negf'}}
+  %n = arith.negf %arg0 : tensor<5xf80>
+  return %n: tensor<5xf80>
+}
+
+// -----
+
 func.func @arith_negf_tensor(%arg0: tensor<5xf32>) -> tensor<5xf32> {
   // expected-error @+1 {{failed to legalize operation 'arith.negf'}}
   %n = arith.negf %arg0 : tensor<5xf32>
