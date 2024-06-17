@@ -3245,7 +3245,7 @@ static kmp_task_t *__kmp_steal_task(kmp_int32 victim_tid, kmp_int32 gtid,
   threads_data = task_team->tt.tt_threads_data;
   KMP_DEBUG_ASSERT(threads_data != NULL); // Caller should check this condition
   KMP_DEBUG_ASSERT(victim_tid >= 0);
-  KMP_DEBUG_ASSERT(victim_tid < task_team->tt.tt_nproc);
+  KMP_DEBUG_ASSERT(victim_tid < task_team->tt.tt_max_threads);
 
   victim_td = &threads_data[victim_tid];
   victim_thr = victim_td->td.td_thr;
