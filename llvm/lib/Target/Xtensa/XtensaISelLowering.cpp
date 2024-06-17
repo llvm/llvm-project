@@ -541,42 +541,26 @@ SDValue XtensaTargetLowering::LowerGlobalAddress(SDValue Op,
                                                  SelectionDAG &DAG) const {
   const GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
   SDLoc DL(Op);
-  auto PtrVt = getPointerTy(DAG.getDataLayout());
+  auto PtrVT = Op.getValueType();
   const GlobalValue *GV = G->getGlobal();
 
-  // Check Op SDNode users
-  // If there are only CALL nodes, don't expand Global Address
-  SDNode &OpNode = *Op.getNode();
-  bool Val = false;
-  for (SDNode::use_iterator UI = OpNode.use_begin(); UI != OpNode.use_end();
-       ++UI) {
-    SDNode &User = *UI.getUse().getUser();
-    unsigned OpCode = User.getOpcode();
-    if (OpCode != XtensaISD::CALL) {
-      Val = true;
-      break;
-    }
-  }
-  if (!Val) {
-    SDValue TargAddr = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVt, 0,
-                                                  0 /* TargetFlags */);
-    return TargAddr;
-  }
-
-  SDValue CPAddr = DAG.getTargetConstantPool(GV, PtrVt, Align(4));
+  SDValue CPAddr = DAG.getTargetConstantPool(GV, PtrVT, Align(4));
   SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
 
   return CPWrap;
 }
 
-SDValue XtensaTargetLowering::LowerBlockAddress(BlockAddressSDNode *Node,
+SDValue XtensaTargetLowering::LowerBlockAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
+  BlockAddressSDNode *Node = cast<BlockAddressSDNode>(Op);
   const BlockAddress *BA = Node->getBlockAddress();
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
+
   XtensaConstantPoolValue *CPV =
       XtensaConstantPoolConstant::Create(BA, 0, XtensaCP::CPBlockAddress);
   SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
   SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
+
   return CPWrap;
 }
 
@@ -590,30 +574,31 @@ SDValue XtensaTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
   const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
   SDValue TargetJT = DAG.getTargetJumpTable(JT->getIndex(), MVT::i32);
   const DataLayout &TD = DAG.getDataLayout();
-  EVT PTy = getPointerTy(TD);
+  EVT PtrVT = Table.getValueType();
   unsigned EntrySize = MJTI->getEntrySize(TD);
 
   Index = DAG.getNode(ISD::MUL, DL, Index.getValueType(), Index,
                       DAG.getConstant(EntrySize, DL, Index.getValueType()));
   SDValue Addr = DAG.getNode(ISD::ADD, DL, Index.getValueType(), Index, Table);
   SDValue LD =
-      DAG.getLoad(PTy, DL, Chain, Addr,
+      DAG.getLoad(PtrVT, DL, Chain, Addr,
                   MachinePointerInfo::getJumpTable(DAG.getMachineFunction()));
+
   return DAG.getNode(XtensaISD::BR_JT, DL, MVT::Other, LD.getValue(1), LD,
                      TargetJT);
 }
 
-SDValue XtensaTargetLowering::LowerJumpTable(JumpTableSDNode *JT,
+SDValue XtensaTargetLowering::LowerJumpTable(SDValue Op,
                                              SelectionDAG &DAG) const {
-  SDLoc DL(JT);
-  EVT PtrVt = getPointerTy(DAG.getDataLayout());
+  JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
+  EVT PtrVT = Op.getValueType();
 
   // Create a constant pool entry for the callee address
   XtensaConstantPoolValue *CPV =
       XtensaConstantPoolJumpTable::Create(*DAG.getContext(), JT->getIndex());
 
   // Get the address of the callee into a register
-  SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVt, Align(4));
+  SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
 
   return getAddrPCRel(CPAddr, DAG);
 }
@@ -686,9 +671,9 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   case ISD::BlockAddress:
-    return LowerBlockAddress(cast<BlockAddressSDNode>(Op), DAG);
+    return LowerBlockAddress(Op, DAG);
   case ISD::JumpTable:
-    return LowerJumpTable(cast<JumpTableSDNode>(Op), DAG);
+    return LowerJumpTable(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(cast<ConstantPoolSDNode>(Op), DAG);
   case ISD::STACKSAVE:

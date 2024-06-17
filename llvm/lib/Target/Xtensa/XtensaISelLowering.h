@@ -80,9 +80,9 @@ private:
 
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerBlockAddress(BlockAddressSDNode *Node, SelectionDAG &DAG) const;
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerJumpTable(JumpTableSDNode *JT, SelectionDAG &DAG) const;
+  SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerConstantPool(ConstantPoolSDNode *CP, SelectionDAG &DAG) const;
 

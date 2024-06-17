@@ -46,17 +46,17 @@ void XtensaAsmPrinter::emitInstruction(const MachineInstr *MI) {
   unsigned Opc = MI->getOpcode();
 
   switch (Opc) {
-  case Xtensa::BR_JT: {
+  case Xtensa::BR_JT:
     EmitToStreamer(
         *OutStreamer,
         MCInstBuilder(Xtensa::JX).addReg(MI->getOperand(0).getReg()));
     return;
+  default:
+    MCInst LoweredMI;
+    lowerToMCInst(MI, LoweredMI);
+    EmitToStreamer(*OutStreamer, LoweredMI);
+    return;
   }
-  }
-
-  MCInst LoweredMI;
-  lowerToMCInst(MI, LoweredMI);
-  EmitToStreamer(*OutStreamer, LoweredMI);
 }
 
 void XtensaAsmPrinter::emitMachineConstantPoolValue(
@@ -74,13 +74,15 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
   } else {
     assert(ACPV->isExtSymbol() && "unrecognized constant pool value");
     XtensaConstantPoolSymbol *XtensaSym = cast<XtensaConstantPoolSymbol>(ACPV);
-    const char *Sym = XtensaSym->getSymbol();
-    std::string SymName(Sym);
+    const char *SymName = XtensaSym->getSymbol();
 
-    if (XtensaSym->isPrivateLinkage())
-      SymName = ".L" + SymName;
-
-    MCSym = GetExternalSymbolSymbol(StringRef(SymName));
+    if (XtensaSym->isPrivateLinkage()) {
+      const DataLayout &DL = getDataLayout();
+      MCSym = OutContext.getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+                                           SymName);
+    } else {
+      MCSym = OutContext.getOrCreateSymbol(SymName);
+    }
   }
 
   MCSymbol *LblSym = GetCPISymbol(ACPV->getLabelId());
@@ -92,7 +94,7 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
     std::string SymName(MCSym->getName());
     StringRef Modifier = ACPV->getModifierText();
     SymName += Modifier;
-    MCSym = GetExternalSymbolSymbol(StringRef(SymName));
+    MCSym = OutContext.getOrCreateSymbol(SymName);
   }
 
   const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, VK, OutContext);
