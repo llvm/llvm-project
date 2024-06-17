@@ -327,30 +327,12 @@ raw_socket_stream::createConnectedUnix(StringRef SocketPath) {
   return std::make_unique<raw_socket_stream>(*FD);
 }
 
-Expected<std::string>
-raw_socket_stream::readFromSocket(std::chrono::milliseconds Timeout) {
+llvm::Expected<ssize_t>
+raw_socket_stream::read(char *Ptr, size_t Size,
+                        std::chrono::milliseconds Timeout) {
   auto getActiveFD = [this]() -> int { return this->get_fd(); };
   llvm::Error TimeoutErr = manageTimeout(Timeout, getActiveFD);
   if (TimeoutErr)
     return TimeoutErr;
-
-  std::vector<char> Buffer;
-  constexpr ssize_t TmpBufferSize = 1024;
-  char TmpBuffer[TmpBufferSize];
-
-  while (true) {
-    std::memset(TmpBuffer, 0, TmpBufferSize);
-    ssize_t BytesRead = this->read(TmpBuffer, TmpBufferSize);
-    if (BytesRead == -1)
-      return llvm::make_error<StringError>(this->error(), "read failed");
-    else if (BytesRead == 0)
-      break;
-    else
-      Buffer.insert(Buffer.end(), TmpBuffer, TmpBuffer + BytesRead);
-    // All available bytes have been read. Another call to read will block
-    if (BytesRead < TmpBufferSize)
-      break;
-  }
-
-  return std::string(Buffer.begin(), Buffer.end());
+  return raw_fd_stream::read(Ptr, Size);
 }

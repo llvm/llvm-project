@@ -132,18 +132,21 @@ public:
   static Expected<std::unique_ptr<raw_socket_stream>>
   createConnectedUnix(StringRef SocketPath);
 
-  /// Attempt to read from the raw_socket_stream's file descriptor. This method
-  /// can optionally either block until data is read or an error has occurred or
-  /// timeout after a specified amount of time has passed. By default the method
-  /// will block until the socket has read data or encountered an error. If the
-  /// read timesout this method will return std::errc:timed_out
+  /// Attempt to read from the raw_socket_stream's file descriptor.
   ///
-  /// \param Timeout An optional timeout duration in milliseconds
+  /// This method can optionally either block until data is read or an error has
+  /// occurred or timeout after a specified amount of time has passed. By
+  /// default the method will block until the socket has read data or
+  /// encountered an error. If the read times out this method will return
+  /// std::errc:timed_out
+  ///
   /// \param Ptr The start of the buffer that will hold any read data
   /// \param Size The number of bytes to be read
+  /// \param Timeout An optional timeout duration in milliseconds
   ///
-  Expected<std::string> readFromSocket(
-      std::chrono::milliseconds Timeout = std::chrono::milliseconds(-1));
+  llvm::Expected<ssize_t>
+  read(char *Ptr, size_t Size,
+       std::chrono::milliseconds Timeout = std::chrono::milliseconds(-1));
 };
 
 } // end namespace llvm
