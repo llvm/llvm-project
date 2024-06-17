@@ -394,7 +394,7 @@ Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
     }
     Result.push_back(static_cast<Meta>(Tag));
   }
-  // Advace the buffer to one past the schema if we succeeded.
+  // Advance the buffer to one past the schema if we succeeded.
   Buffer = Ptr;
   return Result;
 }

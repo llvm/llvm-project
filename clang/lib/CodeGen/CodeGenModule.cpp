@@ -4512,6 +4512,19 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   return Resolver;
 }
 
+bool CodeGenModule::shouldDropDLLAttribute(const Decl *D,
+                                           const llvm::GlobalValue *GV) const {
+  auto SC = GV->getDLLStorageClass();
+  if (SC == llvm::GlobalValue::DefaultStorageClass)
+    return false;
+  const Decl *MRD = D->getMostRecentDecl();
+  return (((SC == llvm::GlobalValue::DLLImportStorageClass &&
+            !MRD->hasAttr<DLLImportAttr>()) ||
+           (SC == llvm::GlobalValue::DLLExportStorageClass &&
+            !MRD->hasAttr<DLLExportAttr>())) &&
+          !shouldMapVisibilityToDLLExport(cast<NamedDecl>(MRD)));
+}
+
 /// GetOrCreateLLVMFunction - If the specified mangled name is not in the
 /// module, create and return an llvm Function with the specified type. If there
 /// is something in the module with the specified name, return it potentially
@@ -4564,8 +4577,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
     }
 
     // Handle dropped DLL attributes.
-    if (D && !D->hasAttr<DLLImportAttr>() && !D->hasAttr<DLLExportAttr>() &&
-        !shouldMapVisibilityToDLLExport(cast_or_null<NamedDecl>(D))) {
+    if (D && shouldDropDLLAttribute(D, Entry)) {
       Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
       setDSOLocal(Entry);
     }
@@ -4859,8 +4871,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     }
 
     // Handle dropped DLL attributes.
-    if (D && !D->hasAttr<DLLImportAttr>() && !D->hasAttr<DLLExportAttr>() &&
-        !shouldMapVisibilityToDLLExport(D))
+    if (D && shouldDropDLLAttribute(D, Entry))
       Entry->setDLLStorageClass(llvm::GlobalValue::DefaultStorageClass);
 
     if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && D)

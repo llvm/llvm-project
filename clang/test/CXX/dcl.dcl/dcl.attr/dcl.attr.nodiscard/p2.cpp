@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,cxx11-17,cxx11 -Wc++17-extensions -Wc++20-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx11-17 -Wc++20-extensions %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify=expected %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,cxx11,cxx11-17 -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,cxx11-17,since-cxx17 -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected,since-cxx17 -pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify=expected,since-cxx17 -pedantic %s
 
 struct [[nodiscard]] S {};
 // cxx11-warning@-1 {{use of the 'nodiscard' attribute is a C++17 extension}}
@@ -120,21 +120,16 @@ void usage() {
   S s;
   ConvertTo{}; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
 
-// AST is different in C++20 mode, pre-2017 a move ctor for ConvertTo is there
-// as well, hense the constructor warning.
-#if __cplusplus >= 201703L
-// expected-warning@+4 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
-#else
-// expected-warning@+2 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
-#endif
+  // AST is different in C++17 mode. Before, a move ctor for ConvertTo is there
+  // as well, hence the constructor warning.
+
+  // since-cxx17-warning@+2 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
+  // cxx11-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
   (ConvertTo) s;
   (int)s; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   (S)'c'; // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't let that S-Char go!}}
-#if __cplusplus >= 201703L
-// expected-warning@+4 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
-#else
-// expected-warning@+2 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
-#endif
+  // since-cxx17-warning@+2 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
+  // cxx11-warning@+1 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
   static_cast<ConvertTo>(s);
   static_cast<int>(s); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   static_cast<double>(s); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw away as a double}}
