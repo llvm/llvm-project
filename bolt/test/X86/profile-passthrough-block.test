@@ -57,7 +57,7 @@ header:
 functions:
   - name:            main
     fid:             0
-    hash:            0x0000000000000001
+    hash:            0x0000000000000000
     exec:            1
     nblocks:         6
     blocks:
