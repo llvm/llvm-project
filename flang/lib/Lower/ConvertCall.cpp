@@ -935,7 +935,8 @@ struct CallCleanUp {
     mlir::Value mustFree;
   };
   void genCleanUp(mlir::Location loc, fir::FirOpBuilder &builder) {
-    std::visit([&](auto &c) { c.genCleanUp(loc, builder); }, cleanUp);
+    Fortran::common::visit([&](auto &c) { c.genCleanUp(loc, builder); },
+                           cleanUp);
   }
   std::variant<CopyIn, ExprAssociate> cleanUp;
 };
