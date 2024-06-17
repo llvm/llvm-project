@@ -963,21 +963,20 @@ define void @masked_store_v16f16(ptr %dst, <16 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    uunpklo z1.h, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    mov x8, #8 // =0x8
-; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    lsl z1.h, z1.h, #15
-; CHECK-NEXT:    asr z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z1.h, z1.h, #15
-; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    mov z1.h, #0 // =0x0
-; CHECK-NEXT:    st1h { z1.h }, p1, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z1.h }, p0, [x0]
+; CHECK-NEXT:    lsl z0.h, z0.h, #15
+; CHECK-NEXT:    asr z0.h, z0.h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, #0
+; CHECK-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NEXT:    st1h { z0.h }, p1, [x0, x8, lsl #1]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: masked_store_v16f16:
