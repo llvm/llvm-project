@@ -450,6 +450,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
   case ISD::MASKED_COMPRESS:
+  case ISD::SCMP:
+  case ISD::UCMP:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
