@@ -20,7 +20,7 @@ Cpp emitter and therefore need to be considered while implementing conversions.
 Type conversions are provided for the MLIR type `index` into the unsigned `size_t`
 type and its signed counterpart `ptrdiff_t`. Conversions between these two types
 are only valid if the `index`-typed values are within 
-`[-PTRDIFF_MAX, PTRDIFF_MAX]`.
+`[PTRDIFF_MIN, PTRDIFF_MAX]`.
 
 After the conversion, C/C++ code can be emitted with `mlir-translate`. The tool
 supports translating MLIR to C/C++ by passing `-mlir-to-cpp`. Furthermore, code
