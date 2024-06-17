@@ -48,9 +48,19 @@ static uint32_t calculateFileAlignment(const MachOObjectFile &O) {
                    : O.getSegmentLoadCommand(LC).nsects);
       P2CurrentAlignment = NumberOfSections ? 2 : P2MinAlignment;
       for (unsigned SI = 0; SI < NumberOfSections; ++SI) {
-        P2CurrentAlignment = std::max(P2CurrentAlignment,
-                                      (Is64Bit ? O.getSection64(LC, SI).align
-                                               : O.getSection(LC, SI).align));
+        uint32_t Alignment;
+        if (Is64Bit) {
+          auto Sect = O.getSection64(LC, SI);
+          if (!Sect)
+            report_fatal_error(Sect.takeError());
+          Alignment = Sect.get().align;
+        } else {
+          auto Sect = O.getSection(LC, SI);
+          if (!Sect)
+            report_fatal_error(Sect.takeError());
+          Alignment = Sect.get().align;
+        }
+        P2CurrentAlignment = std::max(P2CurrentAlignment, Alignment);
       }
     } else {
       P2CurrentAlignment =

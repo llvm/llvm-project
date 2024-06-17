@@ -644,10 +644,12 @@ public:
   SectionRef getAnyRelocationSection(const MachO::any_relocation_info &RE) const;
 
   // MachO specific structures.
-  MachO::section getSection(DataRefImpl DRI) const;
-  MachO::section_64 getSection64(DataRefImpl DRI) const;
-  MachO::section getSection(const LoadCommandInfo &L, unsigned Index) const;
-  MachO::section_64 getSection64(const LoadCommandInfo &L,unsigned Index) const;
+  Expected<MachO::section> getSection(DataRefImpl DRI) const;
+  Expected<MachO::section_64> getSection64(DataRefImpl DRI) const;
+  Expected<MachO::section> getSection(const LoadCommandInfo &L,
+                                      unsigned Index) const;
+  Expected<MachO::section_64> getSection64(const LoadCommandInfo &L,
+                                           unsigned Index) const;
   MachO::nlist getSymbolTableEntry(DataRefImpl DRI) const;
   MachO::nlist_64 getSymbol64TableEntry(DataRefImpl DRI) const;
 

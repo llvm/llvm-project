@@ -338,33 +338,39 @@ static std::string getMask(uint32_t prot)
   return Prot;
 }
 
-static void getSection(const MachOObjectFile *Obj,
-                       DataRefImpl Sec,
+static void getSection(const MachOObjectFile *Obj, DataRefImpl Sec,
                        MachOSection &Section) {
   if (!Obj->is64Bit()) {
-    MachO::section Sect = Obj->getSection(Sec);
-    Section.Address     = Sect.addr;
-    Section.Size        = Sect.size;
-    Section.Offset      = Sect.offset;
-    Section.Alignment   = Sect.align;
+    auto SOrErr = Obj->getSection(Sec);
+    if (!SOrErr)
+      report_fatal_error(SOrErr.takeError());
+    MachO::section Sect = SOrErr.get();
+    Section.Address = Sect.addr;
+    Section.Size = Sect.size;
+    Section.Offset = Sect.offset;
+    Section.Alignment = Sect.align;
     Section.RelocationTableOffset = Sect.reloff;
     Section.NumRelocationTableEntries = Sect.nreloc;
-    Section.Flags       = Sect.flags;
-    Section.Reserved1   = Sect.reserved1;
-    Section.Reserved2   = Sect.reserved2;
+    Section.Flags = Sect.flags;
+    Section.Reserved1 = Sect.reserved1;
+    Section.Reserved2 = Sect.reserved2;
     return;
   }
-  MachO::section_64 Sect = Obj->getSection64(Sec);
-  Section.Address     = Sect.addr;
-  Section.Size        = Sect.size;
-  Section.Offset      = Sect.offset;
-  Section.Alignment   = Sect.align;
+
+  auto SOrErr = Obj->getSection64(Sec);
+  if (!SOrErr)
+    report_fatal_error(SOrErr.takeError());
+  MachO::section_64 Sect = SOrErr.get();
+  Section.Address = Sect.addr;
+  Section.Size = Sect.size;
+  Section.Offset = Sect.offset;
+  Section.Alignment = Sect.align;
   Section.RelocationTableOffset = Sect.reloff;
   Section.NumRelocationTableEntries = Sect.nreloc;
-  Section.Flags       = Sect.flags;
-  Section.Reserved1   = Sect.reserved1;
-  Section.Reserved2   = Sect.reserved2;
-  Section.Reserved3   = Sect.reserved3;
+  Section.Flags = Sect.flags;
+  Section.Reserved1 = Sect.reserved1;
+  Section.Reserved2 = Sect.reserved2;
+  Section.Reserved3 = Sect.reserved3;
 }
 
 static void getSegment(const MachOObjectFile *Obj,

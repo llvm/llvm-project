@@ -371,8 +371,8 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
 }
 
 // The implementation of makeRelocationInfo and makeScatteredRelocationInfo is
-// consistent with how libObject parses MachO binary files. For the reference
-// see getStruct, getRelocation, getPlainRelocationPCRel,
+// consistent with how libObject parses MachO binary files. For reference,
+// see getStructOrErr, getRelocation, getPlainRelocationPCRel,
 // getPlainRelocationLength and related methods in MachOObjectFile.cpp
 static MachO::any_relocation_info
 makeRelocationInfo(const MachOYAML::Relocation &R, bool IsLE) {

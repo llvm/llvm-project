@@ -658,7 +658,10 @@ static void PrintIndirectSymbols(MachOObjectFile *O, bool verbose) {
     if (Load.C.cmd == MachO::LC_SEGMENT_64) {
       MachO::segment_command_64 Seg = O->getSegment64LoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section_64 Sec = O->getSection64(Load, J);
+        auto SOrErr = O->getSection64(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        const MachO::section_64 Sec = SOrErr.get();
         uint32_t section_type = Sec.flags & MachO::SECTION_TYPE;
         if (section_type == MachO::S_NON_LAZY_SYMBOL_POINTERS ||
             section_type == MachO::S_LAZY_SYMBOL_POINTERS ||
@@ -686,7 +689,10 @@ static void PrintIndirectSymbols(MachOObjectFile *O, bool verbose) {
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
       MachO::segment_command Seg = O->getSegmentLoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section Sec = O->getSection(Load, J);
+        auto SOrErr = O->getSection(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section Sec = SOrErr.get();
         uint32_t section_type = Sec.flags & MachO::SECTION_TYPE;
         if (section_type == MachO::S_NON_LAZY_SYMBOL_POINTERS ||
             section_type == MachO::S_LAZY_SYMBOL_POINTERS ||
@@ -994,7 +1000,10 @@ static void PrintRelocations(const MachOObjectFile *O, const bool verbose) {
     if (Load.C.cmd == MachO::LC_SEGMENT_64) {
       const MachO::segment_command_64 Seg = O->getSegment64LoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        const MachO::section_64 Sec = O->getSection64(Load, J);
+        auto SOrErr = O->getSection64(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section_64 Sec = SOrErr.get();
         if (Sec.nreloc != 0) {
           DataRefImpl DRI;
           DRI.d.a = J;
@@ -1014,7 +1023,10 @@ static void PrintRelocations(const MachOObjectFile *O, const bool verbose) {
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
       const MachO::segment_command Seg = O->getSegmentLoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        const MachO::section Sec = O->getSection(Load, J);
+        auto SOrErr = O->getSection(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        const MachO::section Sec = SOrErr.get();
         if (Sec.nreloc != 0) {
           DataRefImpl DRI;
           DRI.d.a = J;
@@ -1654,10 +1666,17 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
     DataRefImpl Ref = Section.getRawDataRefImpl();
     uint32_t section_type;
     if (O->is64Bit()) {
-      const MachO::section_64 Sec = O->getSection64(Ref);
+      auto SOrErr = O->getSection64(Ref);
+      if (!SOrErr)
+        report_fatal_error(SOrErr.takeError());
+      const MachO::section_64 Sec = SOrErr.get();
+
       section_type = Sec.flags & MachO::SECTION_TYPE;
     } else {
-      const MachO::section Sec = O->getSection(Ref);
+      auto SOrErr = O->getSection(Ref);
+      if (!SOrErr)
+        report_fatal_error(SOrErr.takeError());
+      const MachO::section Sec = SOrErr.get();
       section_type = Sec.flags & MachO::SECTION_TYPE;
     }
     if (section_type == MachO::S_CSTRING_LITERALS ||
@@ -1744,10 +1763,16 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
 
     uint32_t section_type;
     if (O->is64Bit()) {
-      const MachO::section_64 Sec = O->getSection64(Ref);
+      auto SOrErr = O->getSection64(Ref);
+      if (!SOrErr)
+        report_fatal_error(SOrErr.takeError());
+      const MachO::section_64 Sec = SOrErr.get();
       section_type = Sec.flags & MachO::SECTION_TYPE;
     } else {
-      const MachO::section Sec = O->getSection(Ref);
+      auto SOrErr = O->getSection(Ref);
+      if (!SOrErr)
+        report_fatal_error(SOrErr.takeError());
+      const MachO::section Sec = SOrErr.get();
       section_type = Sec.flags & MachO::SECTION_TYPE;
     }
 
@@ -1958,11 +1983,17 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
 
         uint32_t section_flags;
         if (O->is64Bit()) {
-          const MachO::section_64 Sec = O->getSection64(Ref);
+          auto SOrErr = O->getSection64(Ref);
+          if (!SOrErr)
+            report_fatal_error(SOrErr.takeError());
+          const MachO::section_64 Sec = SOrErr.get();
           section_flags = Sec.flags;
 
         } else {
-          const MachO::section Sec = O->getSection(Ref);
+          auto SOrErr = O->getSection(Ref);
+          if (!SOrErr)
+            report_fatal_error(SOrErr.takeError());
+          const MachO::section Sec = SOrErr.get();
           section_flags = Sec.flags;
         }
         uint32_t section_type = section_flags & MachO::SECTION_TYPE;
@@ -3224,7 +3255,10 @@ static const char *GuessCstringPointer(uint64_t ReferenceValue,
     if (Load.C.cmd == MachO::LC_SEGMENT_64) {
       MachO::segment_command_64 Seg = info->O->getSegment64LoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section_64 Sec = info->O->getSection64(Load, J);
+        auto SOrErr = info->O->getSection64(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section_64 Sec = SOrErr.get();
         uint32_t section_type = Sec.flags & MachO::SECTION_TYPE;
         if (section_type == MachO::S_CSTRING_LITERALS &&
             ReferenceValue >= Sec.addr &&
@@ -3245,7 +3279,10 @@ static const char *GuessCstringPointer(uint64_t ReferenceValue,
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
       MachO::segment_command Seg = info->O->getSegmentLoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section Sec = info->O->getSection(Load, J);
+        auto SOrErr = info->O->getSection(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section Sec = SOrErr.get();
         uint32_t section_type = Sec.flags & MachO::SECTION_TYPE;
         if (section_type == MachO::S_CSTRING_LITERALS &&
             ReferenceValue >= Sec.addr &&
@@ -3280,7 +3317,10 @@ static const char *GuessIndirectSymbol(uint64_t ReferenceValue,
     if (Load.C.cmd == MachO::LC_SEGMENT_64) {
       MachO::segment_command_64 Seg = info->O->getSegment64LoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section_64 Sec = info->O->getSection64(Load, J);
+        auto SOrErr = info->O->getSection64(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section_64 Sec = SOrErr.get();
         uint32_t section_type = Sec.flags & MachO::SECTION_TYPE;
         if ((section_type == MachO::S_NON_LAZY_SYMBOL_POINTERS ||
              section_type == MachO::S_LAZY_SYMBOL_POINTERS ||
@@ -3311,7 +3351,10 @@ static const char *GuessIndirectSymbol(uint64_t ReferenceValue,
     } else if (Load.C.cmd == MachO::LC_SEGMENT) {
       MachO::segment_command Seg = info->O->getSegmentLoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section Sec = info->O->getSection(Load, J);
+        auto SOrErr = info->O->getSection(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section Sec = SOrErr.get();
         uint32_t section_type = Sec.flags & MachO::SECTION_TYPE;
         if ((section_type == MachO::S_NON_LAZY_SYMBOL_POINTERS ||
              section_type == MachO::S_LAZY_SYMBOL_POINTERS ||
@@ -3431,7 +3474,10 @@ static uint64_t GuessPointerPointer(uint64_t ReferenceValue,
     if (Load.C.cmd == MachO::LC_SEGMENT_64) {
       MachO::segment_command_64 Seg = info->O->getSegment64LoadCommand(Load);
       for (unsigned J = 0; J < Seg.nsects; ++J) {
-        MachO::section_64 Sec = info->O->getSection64(Load, J);
+        auto SOrErr = info->O->getSection64(Load, J);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section_64 Sec = SOrErr.get();
         if ((strncmp(Sec.sectname, "__objc_selrefs", 16) == 0 ||
              strncmp(Sec.sectname, "__objc_classrefs", 16) == 0 ||
              strncmp(Sec.sectname, "__objc_superrefs", 16) == 0 ||
@@ -10101,7 +10147,10 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
                           SLC.initprot, SLC.nsects, SLC.flags, Buf.size(),
                           verbose);
       for (unsigned j = 0; j < SLC.nsects; j++) {
-        MachO::section S = Obj->getSection(Command, j);
+        auto SOrErr = Obj->getSection(Command, j);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section S = SOrErr.get();
         PrintSection(S.sectname, S.segname, S.addr, S.size, S.offset, S.align,
                      S.reloff, S.nreloc, S.flags, S.reserved1, S.reserved2,
                      SLC.cmd, sg_segname, filetype, Buf.size(), verbose);
@@ -10114,7 +10163,10 @@ static void PrintLoadCommands(const MachOObjectFile *Obj, uint32_t filetype,
                           SLC_64.filesize, SLC_64.maxprot, SLC_64.initprot,
                           SLC_64.nsects, SLC_64.flags, Buf.size(), verbose);
       for (unsigned j = 0; j < SLC_64.nsects; j++) {
-        MachO::section_64 S_64 = Obj->getSection64(Command, j);
+        auto SOrErr = Obj->getSection64(Command, j);
+        if (!SOrErr)
+          report_fatal_error(SOrErr.takeError());
+        MachO::section_64 S_64 = SOrErr.get();
         PrintSection(S_64.sectname, S_64.segname, S_64.addr, S_64.size,
                      S_64.offset, S_64.align, S_64.reloff, S_64.nreloc,
                      S_64.flags, S_64.reserved1, S_64.reserved2, SLC_64.cmd,
