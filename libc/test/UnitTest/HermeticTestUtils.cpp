@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
-#include "src/sys/auxv/getauxval.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -111,6 +110,8 @@ void __cxa_pure_virtual() {
 void *__dso_handle = nullptr;
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#include "src/sys/auxv/getauxval.h"
+
 // Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
 // defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
 unsigned long __getauxval(unsigned long id) {
