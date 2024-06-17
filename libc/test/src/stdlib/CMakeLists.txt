@@ -79,6 +79,7 @@ add_libc_test(
     libc.src.__support.CPP.span
 )
 
+if(LLVM_LIBC_FULL_BUILD)
 add_libc_test(
   freelist_heap_test
   SUITE
@@ -93,6 +94,7 @@ add_libc_test(
     libc.src.string.memcmp
     libc.src.string.memcpy
 )
+endif()
 
 add_fp_unittest(
   strtod_test
