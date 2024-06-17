@@ -529,7 +529,7 @@ class VSETVLIInfo {
     AVLIsReg,
     AVLIsImm,
     AVLIsVLMAX,
-    Unknown,       // AVL and VTYPE are fully unknown
+    Unknown, // AVL and VTYPE are fully unknown
   } State = Uninitialized;
 
   // Fields from VTYPE.
@@ -767,7 +767,7 @@ public:
       return isUnknown();
 
     if (!hasSameAVLLatticeValue(Other))
-        return false;
+      return false;
 
     // If the SEWLMULRatioOnly bits are different, then they aren't equal.
     if (SEWLMULRatioOnly != Other.SEWLMULRatioOnly)
@@ -1144,9 +1144,9 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
                 .addImm(Info.encodeVTYPE());
   if (LIS) {
     LIS->InsertMachineInstrInMaps(*MI);
-    // Normally the AVL's live range will already extend past the inserted vsetvli
-    // because the pseudos below will already use the AVL. But this isn't always
-    // the case, e.g. PseudoVMV_X_S doesn't have an AVL operand.
+    // Normally the AVL's live range will already extend past the inserted
+    // vsetvli because the pseudos below will already use the AVL. But this
+    // isn't always the case, e.g. PseudoVMV_X_S doesn't have an AVL operand.
     LIS->getInterval(AVLReg).extendInBlock(
         LIS->getMBBStartIdx(&MBB), LIS->getInstructionIndex(*MI).getRegSlot());
   }
@@ -1265,7 +1265,8 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
     assert(MI.getOperand(1).getReg().isVirtual());
     if (LIS) {
       auto &LI = LIS->getInterval(MI.getOperand(1).getReg());
-      SlotIndex SI = LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
+      SlotIndex SI =
+          LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
       VNInfo *VNI = LI.getVNInfoAt(SI);
       Info.setAVLRegDef(VNI, MI.getOperand(1).getReg());
     } else
@@ -1740,7 +1741,7 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
         // Move the LiveInterval's definition down to PseudoReadVL.
         if (LIS) {
           SlotIndex NewDefSI =
-            LIS->InsertMachineInstrInMaps(*ReadVLMI).getRegSlot();
+              LIS->InsertMachineInstrInMaps(*ReadVLMI).getRegSlot();
           LiveInterval &DefLI = LIS->getInterval(VLOutput);
           VNInfo *DefVNI = DefLI.getVNInfoAt(DefLI.beginIndex());
           DefLI.removeSegment(DefLI.beginIndex(), NewDefSI);
