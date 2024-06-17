@@ -616,8 +616,6 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
   regions.push_back(RegionSuccessor(getResults()));
 }
 
-std::optional<ResultRange> ForallOp::getLoopResults() { return getResults(); }
-
 SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
 
 FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
@@ -1467,10 +1465,6 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
     }
   }
   return storeOps;
-}
-
-std::optional<MutableArrayRef<OpOperand>> ForallOp::getYieldedValuesMutable() {
-  return getOutputsMutable();
 }
 
 std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
