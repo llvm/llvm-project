@@ -1978,9 +1978,9 @@ example:
     The supported access kinds are:
 
     - ``readwrite``: Any kind of access to the location is allowed.
-    - ``read``: The location is only read. Writing the location is immediate
-      undefined behavior. This includes the case where the location is read and
-      then the same value is written back.
+    - ``read``: The location is only read. Writing to the location is immediate
+      undefined behavior. This includes the case where the location is read from
+      and then the same value is written back.
     - ``write``: Only writes to the location are observable outside the function
       call. However, the function may still internally read the location after
       writing it, as this is not observable. Reading the location prior to
