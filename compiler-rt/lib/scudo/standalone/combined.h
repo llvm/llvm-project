@@ -578,7 +578,6 @@ public:
             storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
           }
         }
-
         return OldTaggedPtr;
       }
     }
