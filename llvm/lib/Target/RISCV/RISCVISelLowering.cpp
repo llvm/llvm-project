@@ -662,7 +662,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
-  if (getTargetMachine().getTargetTriple().isOSGlibc()) {
+  if (getTargetMachine().getTargetTriple().isOSLinux()) {
     // Custom lowering of llvm.clear_cache.
     setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Custom);
   }
@@ -7158,8 +7158,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::EXPERIMENTAL_VP_REVERSE:
     return lowerVPReverseExperimental(Op, DAG);
   case ISD::CLEAR_CACHE: {
-    assert(getTargetMachine().getTargetTriple().isOSGlibc() &&
-           "llvm.clear_cache only needs custom lower on glibc targets");
+    assert(getTargetMachine().getTargetTriple().isOSLinux() &&
+           "llvm.clear_cache only needs custom lower on Linux targets");
     SDLoc DL(Op);
     SDValue Flags = DAG.getConstant(0, DL, Subtarget.getXLenVT());
     return emitFlushICache(DAG, Op.getOperand(0), Op.getOperand(1),
