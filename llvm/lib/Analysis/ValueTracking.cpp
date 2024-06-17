@@ -771,6 +771,10 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
                                        unsigned Depth, const SimplifyQuery &Q) {
+  // Handle injected condition.
+  if (Q.CC && Q.CC->AffectedValues.contains(V))
+    computeKnownBitsFromCond(V, Q.CC->Cond, Known, Depth, Q, Q.CC->Invert);
+
   if (!Q.CxtI)
     return;
 
