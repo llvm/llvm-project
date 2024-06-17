@@ -371,6 +371,10 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
+  bool preferFixedIfEqualToScalable() const {
+    return ST->useFixedIfEqualToScalable();
+  }
+
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI);
 
   bool supportsScalableVectors() const { return ST->hasSVE(); }

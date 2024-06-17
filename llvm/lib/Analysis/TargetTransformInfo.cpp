@@ -1282,6 +1282,10 @@ unsigned TargetTransformInfo::getStoreVectorFactor(unsigned VF,
   return TTIImpl->getStoreVectorFactor(VF, StoreSize, ChainSizeInBytes, VecTy);
 }
 
+bool TargetTransformInfo::preferFixedIfEqualToScalable() const {
+  return TTIImpl->preferFixedIfEqualToScalable();
+}
+
 bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode, Type *Ty,
                                                 ReductionFlags Flags) const {
   return TTIImpl->preferInLoopReduction(Opcode, Ty, Flags);

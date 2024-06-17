@@ -244,6 +244,9 @@ def FeatureExperimentalZeroingPseudos
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
+def FeatureUseFixedIfEqualToScalable : SubtargetFeature<"use-fixed-if-equal-to-scalable",
+  "UseFixedIfEqualToScalable", "true", "Prefer fixed width loop vectorization over scalable if cost-model assigns equal costs">;
+
 def FeatureBF16 : Extension<"bf16", "BF16",
     "Enable BFloat16 Extension (FEAT_BF16)", [],
     "FEAT_BF16", "+bf16", 280>;
