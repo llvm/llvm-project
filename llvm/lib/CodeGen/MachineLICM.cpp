@@ -426,38 +426,33 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
 static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
                                                 BitVector &RUs,
                                                 const uint32_t *Mask) {
-  // Iterate over the RegMask raw to avoid constructing a BitVector, which is
-  // expensive as it implies dynamically allocating memory.
-  //
-  // We also work backwards.
+  const unsigned NumRUs = TRI.getNumRegUnits();
+  BitVector RUsInMask(NumRUs);
+  BitVector RUsNotInMask(NumRUs);
   const unsigned NumRegs = TRI.getNumRegs();
   const unsigned MaskWords = (NumRegs + 31) / 32;
   for (unsigned K = 0; K < MaskWords; ++K) {
-    // We want to set the bits that aren't in RegMask, so flip it.
-    uint32_t Word = ~Mask[K];
-
-    // Iterate all set bits, starting from the right.
-    while (Word) {
-      const unsigned SetBitIdx = countr_zero(Word);
-
-      // The bits are numbered from the LSB in each word.
-      const unsigned PhysReg = (K * 32) + SetBitIdx;
-
-      // Clear the bit at SetBitIdx. Doing it this way appears to generate less
-      // instructions on x86. This works because negating a number will flip all
-      // the bits after SetBitIdx. So (Word & -Word) == (1 << SetBitIdx), but
-      // faster.
-      Word ^= Word & -Word;
-
+    uint32_t Word = Mask[K];
+    for (unsigned Bit = 0; Bit < 32; ++Bit) {
+      const unsigned PhysReg = (K * 32) + Bit;
       if (PhysReg == NumRegs)
-        return;
+        break;
 
-      if (PhysReg) {
-        for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
-          RUs.set(*RUI);
-      }
+      if (!PhysReg)
+        continue;
+
+      // Extract the bit and apply it to the appropriate mask.
+      auto &Mask = ((Word >> Bit) & 1) ? RUsInMask : RUsNotInMask;
+      for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
+        Mask.set(*RUI);
     }
   }
+
+  // If a RU needs to be set because it's not in the RegMask, only set it
+  // if all registers from that RU are not in the mask either.
+  RUsNotInMask &= RUsInMask.flip();
+
+  RUs |= RUsNotInMask;
 }
 
 /// Examine the instruction for potentai LICM candidate. Also
