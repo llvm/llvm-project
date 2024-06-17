@@ -235,8 +235,8 @@ def HasSMEF16F16orSMEF8F16
                 "sme-f16f16 or sme-f8f16">;
 
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
-// so don't need the additional check for 'isStreamingAvailable'.
-def HasNEONAndIsStreamingSafe
+// so don't need the additional check for 'isNeonAvailable'.
+def HasNEONandIsStreamingSafe
     : Predicate<"Subtarget->hasNEON()">,
       AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
@@ -1347,7 +1347,7 @@ def : Pat<(v2f32 (int_aarch64_neon_bfdot
                              VectorIndexS:$idx)>;
 }
 
-let Predicates = [HasNEONAndIsStreamingSafe, HasBF16] in {
+let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in {
 def BFCVT : BF16ToSinglePrecision<"bfcvt">;
 // Round FP32 to BF16.
 def : Pat<(bf16 (any_fpround (f32 FPR32:$Rn))), (BFCVT $Rn)>;
@@ -5786,9 +5786,9 @@ defm FACGT    : SIMDThreeScalarFPCmp<1, 1, 0b101, "facgt",
 defm FCMEQ    : SIMDThreeScalarFPCmp<0, 0, 0b100, "fcmeq", AArch64fcmeq>;
 defm FCMGE    : SIMDThreeScalarFPCmp<1, 0, 0b100, "fcmge", AArch64fcmge>;
 defm FCMGT    : SIMDThreeScalarFPCmp<1, 1, 0b100, "fcmgt", AArch64fcmgt>;
-defm FMULX    : SIMDFPThreeScalar<0, 0, 0b011, "fmulx", int_aarch64_neon_fmulx, HasNEONAndIsStreamingSafe>;
-defm FRECPS   : SIMDFPThreeScalar<0, 0, 0b111, "frecps", int_aarch64_neon_frecps, HasNEONAndIsStreamingSafe>;
-defm FRSQRTS  : SIMDFPThreeScalar<0, 1, 0b111, "frsqrts", int_aarch64_neon_frsqrts, HasNEONAndIsStreamingSafe>;
+defm FMULX    : SIMDFPThreeScalar<0, 0, 0b011, "fmulx", int_aarch64_neon_fmulx, HasNEONandIsStreamingSafe>;
+defm FRECPS   : SIMDFPThreeScalar<0, 0, 0b111, "frecps", int_aarch64_neon_frecps, HasNEONandIsStreamingSafe>;
+defm FRSQRTS  : SIMDFPThreeScalar<0, 1, 0b111, "frsqrts", int_aarch64_neon_frsqrts, HasNEONandIsStreamingSafe>;
 defm SQADD    : SIMDThreeScalarBHSD<0, 0b00001, "sqadd", int_aarch64_neon_sqadd>;
 defm SQDMULH  : SIMDThreeScalarHS<  0, 0b10110, "sqdmulh", int_aarch64_neon_sqdmulh>;
 defm SQRDMULH : SIMDThreeScalarHS<  1, 0b10110, "sqrdmulh", int_aarch64_neon_sqrdmulh>;
@@ -5817,7 +5817,7 @@ let Predicates = [HasRDM] in {
 
 defm : FMULScalarFromIndexedLane0Patterns<"FMULX", "16", "32", "64",
                                           int_aarch64_neon_fmulx,
-                                          [HasNEONAndIsStreamingSafe]>;
+                                          [HasNEONandIsStreamingSafe]>;
 
 let Predicates = [HasNEON] in {
 def : InstAlias<"cmls $dst, $src1, $src2",
@@ -5891,9 +5891,9 @@ defm FCVTPU : SIMDFPTwoScalar<   1, 1, 0b11010, "fcvtpu">;
 def  FCVTXNv1i64 : SIMDInexactCvtTwoScalar<0b10110, "fcvtxn">;
 defm FCVTZS : SIMDFPTwoScalar<   0, 1, 0b11011, "fcvtzs">;
 defm FCVTZU : SIMDFPTwoScalar<   1, 1, 0b11011, "fcvtzu">;
-defm FRECPE : SIMDFPTwoScalar<   0, 1, 0b11101, "frecpe", HasNEONAndIsStreamingSafe>;
-defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx", HasNEONAndIsStreamingSafe>;
-defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte", HasNEONAndIsStreamingSafe>;
+defm FRECPE : SIMDFPTwoScalar<   0, 1, 0b11101, "frecpe", HasNEONandIsStreamingSafe>;
+defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx", HasNEONandIsStreamingSafe>;
+defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte", HasNEONandIsStreamingSafe>;
 defm NEG    : SIMDTwoScalarD<    1, 0b01011, "neg",
                                  UnOpFrag<(sub immAllZerosV, node:$LHS)> >;
 defm SCVTF  : SIMDFPTwoScalarCVT<   0, 0, 0b11101, "scvtf", AArch64sitof>;
@@ -5912,7 +5912,7 @@ def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
           (CMLTv1i64rz V64:$Rn)>;
 
 // Round FP64 to BF16.
-let Predicates = [HasNEONAndIsStreamingSafe, HasBF16] in
+let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in
 def : Pat<(bf16 (any_fpround (f64 FPR64:$Rn))),
           (BFCVT (FCVTXNv1i64 $Rn))>;
 
@@ -6013,7 +6013,7 @@ def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
-let Predicates = [HasNEONAndIsStreamingSafe] in {
+let Predicates = [HasNEONandIsStreamingSafe] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint f32:$Rn)))),
@@ -8376,7 +8376,7 @@ def : Ld1Lane64IdxOpPat<extloadi8, VectorIndexH, v4i16, i32, LD1i8, VectorIndexH
 
 // Same as above, but the first element is populated using
 // scalar_to_vector + insert_subvector instead of insert_vector_elt.
-let Predicates = [HasNeonOrSME] in {
+let Predicates = [HasNEONandIsStreamingSafe] in {
   class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
                           SDPatternOperator ExtLoad, Instruction LD1>
     : Pat<(ResultTy (scalar_to_vector (i32 (ExtLoad GPR64sp:$Rn)))),
