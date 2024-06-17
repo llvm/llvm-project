@@ -1097,15 +1097,15 @@ define <2 x i1> @trunc_nuw_xor_vector(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i1> %r
 }
 
-; FIXME: This is a miscompile.
 define void @pr95547(i32 %x) {
 ; CHECK-LABEL: @pr95547(
-; CHECK-NEXT:    [[X_TRUNC:%.*]] = trunc i32 [[X:%.*]] to i8
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 11, [[X_TRUNC]]
+; CHECK-NEXT:    [[X_TRUNC:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i16 11, [[X_TRUNC]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], 256
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    call void @use.i8(i8 [[DIV]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i16 [[DIV]] to i8
+; CHECK-NEXT:    call void @use.i8(i8 [[TRUNC]])
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
