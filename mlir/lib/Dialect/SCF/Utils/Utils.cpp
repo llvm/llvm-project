@@ -1175,9 +1175,8 @@ scf::ForallOp mlir::fuseIndependentSiblingForallLoops(scf::ForallOp target,
   scf::ForallOp fusedLoop = cast<scf::ForallOp>(createFused(
       target, source, rewriter,
       [&](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
-        for (Operation &op : source.getTerminator().getYieldingOps())
-          b.clone(op);
-        return source.getYieldedValues();
+        // `ForallOp` does not have yields, rather an `InParallelOp` terminator.
+        return ValueRange{};
       }));
   rewriter.replaceOp(source,
                      fusedLoop.getResults().take_back(source.getNumResults()));

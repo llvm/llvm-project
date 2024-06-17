@@ -633,12 +633,7 @@ FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
       getLoc(), getMixedLowerBound(), getMixedUpperBound(), getMixedStep(),
       inits, getMapping());
 
-  // Generate the new yield values and append them to the scf.yield operation.
-  auto yieldOp = cast<scf::InParallelOp>(getTerminator());
-  ArrayRef<BlockArgument> newIterArgs =
-      newLoop.getBody()->getArguments().take_back(newInitOperands.size());
   newLoop.getTerminator().erase();
-
   // Move the loop body to the new op.
   rewriter.mergeBlocks(getBody(), newLoop.getBody(),
                        newLoop.getBody()->getArguments().take_front(
@@ -647,7 +642,9 @@ FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
   if (replaceInitOperandUsesInLoop) {
     // Replace all uses of `newInitOperands` with the corresponding basic block
     // arguments.
-    for (auto it : llvm::zip(newInitOperands, newIterArgs)) {
+    for (auto it :
+         llvm::zip(newInitOperands, newLoop.getBody()->getArguments().take_back(
+                                        newInitOperands.size()))) {
       rewriter.replaceUsesWithIf(std::get<0>(it), std::get<1>(it),
                                  [&](OpOperand &use) {
                                    Operation *user = use.getOwner();
