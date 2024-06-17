@@ -1,4 +1,7 @@
 ; RUN: llc -stop-after=amdgpu-isel -mtriple=amdgcn-- -mcpu=gfx1100 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,ISEL %s
+; RUN: not --crash llc -mtriple=amdgcn--amdhsa -mcpu=1100 -verify-machineinstrs < %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
+
+; FIXME: Merge these tests with existing lane op tests (llvm.amdgcn.readlane.ll, llvm.amdgcn.writelane.ll ...) once the crash is fixed.
 
 ; CHECK-LABEL: name:            basic_readfirstlane_i64
 ;       CHECK:    [[TOKEN:%[0-9]+]]{{[^ ]*}} = CONVERGENCECTRL_ANCHOR
@@ -13,6 +16,8 @@ entry:
   br i1 %cond, label %then, label %else
 
 then:
+; CHECK-ERROR: Cannot mix controlled and uncontrolled convergence in the same function.
+; CHECK-ERROR: V_READFIRSTLANE_B32
   %r = call i64 @llvm.amdgcn.readfirstlane.i64(i64 %x) [ "convergencectrl"(token %t) ]
   br label %else
 

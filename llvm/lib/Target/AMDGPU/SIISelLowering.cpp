@@ -6159,10 +6159,8 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
     SmallVector<SDValue, 4> Operands(NumOperands);
     SDNode *GL = N->getGluedNode();
 
-    if (GL) {
-      // only handle convegrencectrl_glue
-      assert(GL->getOpcode() == ISD::CONVERGENCECTRL_GLUE);
-    }
+    // only handle convergencectrl_glue
+    assert(!GL || GL->getOpcode() == ISD::CONVERGENCECTRL_GLUE);
 
     for (unsigned i = 0; i != NE; ++i) {
       for (unsigned j = 0, e = GL ? NumOperands - 1 : NumOperands; j != e;
