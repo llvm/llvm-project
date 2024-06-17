@@ -880,6 +880,9 @@ will be ignored}]>;
 def L : JoinedOrSeparate<["-"], "L">, Flags<[RenderJoined]>, Group<Link_Group>,
     Visibility<[ClangOption, FlangOption]>,
     MetaVarName<"<dir>">, HelpText<"Add directory to library search path">;
+def embed_dir_EQ : Joined<["--"], "embed-dir=">, Group<Preprocessor_Group>,
+    Visibility<[ClangOption, CC1Option]>, MetaVarName<"<dir>">,
+    HelpText<"Add directory to embed search path">;
 def MD : Flag<["-"], "MD">, Group<M_Group>,
     HelpText<"Write a depfile containing user and system headers">;
 def MMD : Flag<["-"], "MMD">, Group<M_Group>,
@@ -1473,6 +1476,9 @@ def dD : Flag<["-"], "dD">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>
 def dI : Flag<["-"], "dI">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Print include directives in -E mode in addition to normal output">,
   MarshallingInfoFlag<PreprocessorOutputOpts<"ShowIncludeDirectives">>;
+def dE : Flag<["-"], "dE">, Group<d_Group>, Visibility<[CC1Option]>,
+  HelpText<"Print embed directives in -E mode in addition to normal output">,
+  MarshallingInfoFlag<PreprocessorOutputOpts<"ShowEmbedDirectives">>;
 def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
