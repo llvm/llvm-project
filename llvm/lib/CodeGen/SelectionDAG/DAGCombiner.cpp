@@ -2577,13 +2577,13 @@ SDValue DAGCombiner::foldSubToAvg(SDNode *N, const SDLoc &DL) {
   EVT VT = N0.getValueType();
   SDValue A, B;
 
-  if (hasOperation(ISD::AVGCEILU, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::AVGCEILU, VT)) &&
       sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
                         m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
                               m_SpecificInt(1))))) {
     return DAG.getNode(ISD::AVGCEILU, DL, VT, A, B);
   }
-  if (hasOperation(ISD::AVGCEILS, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::AVGCEILS, VT)) &&
       sd_match(N, m_Sub(m_Or(m_Value(A), m_Value(B)),
                         m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
                               m_SpecificInt(1))))) {
@@ -2949,13 +2949,13 @@ SDValue DAGCombiner::foldAddToAvg(SDNode *N, const SDLoc &DL) {
   EVT VT = N0.getValueType();
   SDValue A, B;
 
-  if (hasOperation(ISD::AVGFLOORU, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::AVGFLOORU, VT)) &&
       sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
                         m_Srl(m_Xor(m_Deferred(A), m_Deferred(B)),
                               m_SpecificInt(1))))) {
     return DAG.getNode(ISD::AVGFLOORU, DL, VT, A, B);
   }
-  if (hasOperation(ISD::AVGFLOORS, VT) &&
+  if ((!LegalOperations || hasOperation(ISD::AVGFLOORS, VT)) &&
       sd_match(N, m_Add(m_And(m_Value(A), m_Value(B)),
                         m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)),
                               m_SpecificInt(1))))) {
@@ -4328,6 +4328,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
+  unsigned BitWidth = VT.getScalarSizeInBits();
   SDLoc DL(N);
   bool UseVP = std::is_same_v<MatchContextClass, VPMatchContext>;
   MatchContextClass Matcher(DAG, TLI, N);
@@ -4357,8 +4358,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
         return FoldedVOp;
 
     N1IsConst = ISD::isConstantSplatVector(N1.getNode(), ConstValue1);
-    assert((!N1IsConst ||
-            ConstValue1.getBitWidth() == VT.getScalarSizeInBits()) &&
+    assert((!N1IsConst || ConstValue1.getBitWidth() == BitWidth) &&
            "Splat APInt should be element width");
   } else {
     N1IsConst = isa<ConstantSDNode>(N1);
@@ -4458,7 +4458,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
       unsigned ShAmt =
           MathOp == ISD::ADD ? (MulC - 1).logBase2() : (MulC + 1).logBase2();
       ShAmt += TZeros;
-      assert(ShAmt < VT.getScalarSizeInBits() &&
+      assert(ShAmt < BitWidth &&
              "multiply-by-constant generated out of bounds shift");
       SDValue Shl =
           DAG.getNode(ISD::SHL, DL, VT, N0, DAG.getConstant(ShAmt, DL, VT));
@@ -4525,6 +4525,16 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
     const APInt &C0 = N0.getConstantOperandAPInt(0);
     APInt NewStep = C0 * MulVal;
     return DAG.getStepVector(DL, VT, NewStep);
+  }
+
+  // Fold Y = sra (X, size(X)-1); mul (or (Y, 1), X) -> (abs X)
+  SDValue X;
+  if (!UseVP && (!LegalOperations || hasOperation(ISD::ABS, VT)) &&
+      sd_context_match(
+          N, Matcher,
+          m_Mul(m_Or(m_Sra(m_Value(X), m_SpecificInt(BitWidth - 1)), m_One()),
+                m_Deferred(X)))) {
+    return Matcher.getNode(ISD::ABS, DL, VT, X);
   }
 
   // Fold ((mul x, 0/undef) -> 0,
@@ -5230,13 +5240,59 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
     return N0;
 
   // fold (avgfloor x, 0) -> x >> 1
-  SDValue X;
+  SDValue X, Y;
   if (sd_match(N, m_c_BinOp(ISD::AVGFLOORS, m_Value(X), m_Zero())))
     return DAG.getNode(ISD::SRA, DL, VT, X,
                        DAG.getShiftAmountConstant(1, VT, DL));
   if (sd_match(N, m_c_BinOp(ISD::AVGFLOORU, m_Value(X), m_Zero())))
     return DAG.getNode(ISD::SRL, DL, VT, X,
                        DAG.getShiftAmountConstant(1, VT, DL));
+
+  // fold avgu(zext(x), zext(y)) -> zext(avgu(x, y))
+  // fold avgs(sext(x), sext(y)) -> sext(avgs(x, y))
+  if (sd_match(
+          N, m_BinOp(ISD::AVGFLOORU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
+      X.getValueType() == Y.getValueType() &&
+      hasOperation(ISD::AVGFLOORU, X.getValueType())) {
+    SDValue AvgFloorU = DAG.getNode(ISD::AVGFLOORU, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgFloorU);
+  }
+  if (sd_match(
+          N, m_BinOp(ISD::AVGCEILU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
+      X.getValueType() == Y.getValueType() &&
+      hasOperation(ISD::AVGCEILU, X.getValueType())) {
+    SDValue AvgCeilU = DAG.getNode(ISD::AVGCEILU, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, AvgCeilU);
+  }
+  if (sd_match(
+          N, m_BinOp(ISD::AVGFLOORS, m_SExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
+      X.getValueType() == Y.getValueType() &&
+      hasOperation(ISD::AVGFLOORS, X.getValueType())) {
+    SDValue AvgFloorS = DAG.getNode(ISD::AVGFLOORS, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, AvgFloorS);
+  }
+  if (sd_match(
+          N, m_BinOp(ISD::AVGCEILS, m_SExt(m_Value(X)), m_SExt(m_Value(Y)))) &&
+      X.getValueType() == Y.getValueType() &&
+      hasOperation(ISD::AVGCEILS, X.getValueType())) {
+    SDValue AvgCeilS = DAG.getNode(ISD::AVGCEILS, DL, X.getValueType(), X, Y);
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, AvgCeilS);
+  }
+
+  // Fold avgflooru(x,y) -> avgceilu(x,y-1) iff y != 0
+  // Fold avgflooru(x,y) -> avgceilu(x-1,y) iff x != 0
+  // Check if avgflooru isn't legal/custom but avgceilu is.
+  if (Opcode == ISD::AVGFLOORU && !hasOperation(ISD::AVGFLOORU, VT) &&
+      (!LegalOperations || hasOperation(ISD::AVGCEILU, VT))) {
+    if (DAG.isKnownNeverZero(N1))
+      return DAG.getNode(
+          ISD::AVGCEILU, DL, VT, N0,
+          DAG.getNode(ISD::ADD, DL, VT, N1, DAG.getAllOnesConstant(DL, VT)));
+    if (DAG.isKnownNeverZero(N0))
+      return DAG.getNode(
+          ISD::AVGCEILU, DL, VT, N1,
+          DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getAllOnesConstant(DL, VT)));
+  }
 
   return SDValue();
 }

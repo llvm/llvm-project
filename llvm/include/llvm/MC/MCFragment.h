@@ -60,21 +60,17 @@ private:
   /// The data for the section this fragment is in.
   MCSection *Parent;
 
-  /// The atom this fragment is in, as represented by its defining symbol.
-  const MCSymbol *Atom;
-
-  /// The offset of this fragment in its section. This is ~0 until
-  /// initialized.
-  uint64_t Offset;
+  /// The offset of this fragment in its section.
+  uint64_t Offset = 0;
 
   /// The layout order of this fragment.
-  unsigned LayoutOrder;
+  unsigned LayoutOrder = 0;
 
   FragmentType Kind;
 
 protected:
-  bool HasInstructions;
-  bool LinkerRelaxable = false;
+  bool HasInstructions : 1;
+  bool LinkerRelaxable : 1;
 
   MCFragment(FragmentType Kind, bool HasInstructions,
              MCSection *Parent = nullptr);
@@ -97,8 +93,7 @@ public:
   MCSection *getParent() const { return Parent; }
   void setParent(MCSection *Value) { Parent = Value; }
 
-  const MCSymbol *getAtom() const { return Atom; }
-  void setAtom(const MCSymbol *Value) { Atom = Value; }
+  const MCSymbol *getAtom() const;
 
   unsigned getLayoutOrder() const { return LayoutOrder; }
   void setLayoutOrder(unsigned Value) { LayoutOrder = Value; }

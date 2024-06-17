@@ -30,15 +30,21 @@ template <class Emitter> class DeclScope final : public VariableScope<Emitter> {
 public:
   DeclScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
       : VariableScope<Emitter>(Ctx, nullptr), Scope(Ctx->P, VD),
-        OldGlobalDecl(Ctx->GlobalDecl) {
+        OldGlobalDecl(Ctx->GlobalDecl),
+        OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
+    Ctx->InitializingDecl = VD;
   }
 
-  ~DeclScope() { this->Ctx->GlobalDecl = OldGlobalDecl; }
+  ~DeclScope() {
+    this->Ctx->GlobalDecl = OldGlobalDecl;
+    this->Ctx->InitializingDecl = OldInitializingDecl;
+  }
 
 private:
   Program::DeclScope Scope;
   bool OldGlobalDecl;
+  const ValueDecl *OldInitializingDecl;
 };
 
 /// Scope used to handle initialization methods.
@@ -305,6 +311,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_UserDefinedConversion:
+  case CK_AddressSpaceConversion:
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
@@ -343,6 +350,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_IntegralToBoolean:
+  case CK_BooleanToSignedIntegral:
   case CK_IntegralCast: {
     if (DiscardResult)
       return this->discard(SubExpr);
@@ -362,7 +370,12 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (FromT == ToT)
       return true;
-    return this->emitCast(*FromT, *ToT, CE);
+    if (!this->emitCast(*FromT, *ToT, CE))
+      return false;
+
+    if (CE->getCastKind() == CK_BooleanToSignedIntegral)
+      return this->emitNeg(*ToT, CE);
+    return true;
   }
 
   case CK_PointerToBoolean:
@@ -1201,19 +1214,28 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (T->isArrayType()) {
-    auto Eval = [&](Expr *Init, unsigned ElemIndex) {
-      return visitArrayElemInit(ElemIndex, Init);
-    };
-    unsigned ElementIndex = 0;
-    for (const Expr *Init : Inits) {
-      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
-        if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
+    // Prepare composite return value.
+    if (!Initializing) {
+      if (GlobalDecl) {
+        std::optional<unsigned> GlobalIndex = P.createGlobal(E);
+        if (!GlobalIndex)
+          return false;
+        if (!this->emitGetPtrGlobal(*GlobalIndex, E))
           return false;
       } else {
-        if (!this->visitArrayElemInit(ElementIndex, Init))
+        std::optional<unsigned> LocalIndex = allocateLocal(E);
+        if (!LocalIndex)
           return false;
-        ++ElementIndex;
+        if (!this->emitGetPtrLocal(*LocalIndex, E))
+          return false;
       }
+    }
+
+    unsigned ElementIndex = 0;
+    for (const Expr *Init : Inits) {
+      if (!this->visitArrayElemInit(ElementIndex, Init))
+        return false;
+      ++ElementIndex;
     }
 
     // Expand the filler expression.
@@ -1357,12 +1379,6 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
       return true;
   }
   return this->delegate(E->getSubExpr());
-}
-
-template <class Emitter>
-bool ByteCodeExprGen<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
-  auto It = E->begin();
-  return this->visit(*It);
 }
 
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
@@ -2720,6 +2736,65 @@ bool ByteCodeExprGen<Emitter>::VisitShuffleVectorExpr(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExtVectorElementExpr(
+    const ExtVectorElementExpr *E) {
+  const Expr *Base = E->getBase();
+
+  SmallVector<uint32_t, 4> Indices;
+  E->getEncodedElementAccess(Indices);
+
+  if (Indices.size() == 1) {
+    if (!this->visit(Base))
+      return false;
+
+    if (E->isGLValue()) {
+      if (!this->emitConstUint32(Indices[0], E))
+        return false;
+      return this->emitArrayElemPtrPop(PT_Uint32, E);
+    }
+    // Else, also load the value.
+    return this->emitArrayElemPop(classifyPrim(E->getType()), Indices[0], E);
+  }
+
+  // Create a local variable for the base.
+  unsigned BaseOffset = allocateLocalPrimitive(Base, PT_Ptr, /*IsConst=*/true,
+                                               /*IsExtended=*/false);
+  if (!this->visit(Base))
+    return false;
+  if (!this->emitSetLocal(PT_Ptr, BaseOffset, E))
+    return false;
+
+  // Now the vector variable for the return value.
+  if (!Initializing) {
+    std::optional<unsigned> ResultIndex;
+    ResultIndex = allocateLocal(E);
+    if (!ResultIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*ResultIndex, E))
+      return false;
+  }
+
+  assert(Indices.size() == E->getType()->getAs<VectorType>()->getNumElements());
+
+  PrimType ElemT =
+      classifyPrim(E->getType()->getAs<VectorType>()->getElementType());
+  uint32_t DstIndex = 0;
+  for (uint32_t I : Indices) {
+    if (!this->emitGetLocal(PT_Ptr, BaseOffset, E))
+      return false;
+    if (!this->emitArrayElemPop(ElemT, I, E))
+      return false;
+    if (!this->emitInitElem(ElemT, DstIndex, E))
+      return false;
+    ++DstIndex;
+  }
+
+  // Leave the result pointer on the stack.
+  assert(!DiscardResult);
+  return true;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   if (!E->isExpressibleAsConstantInitializer())
     return this->emitInvalid(E);
@@ -3116,11 +3191,16 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   assert(!VD->isInvalidDecl() && "Trying to constant evaluate an invalid decl");
 
-  // Global variable we've already seen but that's uninitialized means
-  // evaluating the initializer failed. Just return failure.
-  if (std::optional<unsigned> Index = P.getGlobal(VD);
-      Index && !P.getPtrGlobal(*Index).isInitialized())
-    return false;
+  // If we've seen the global variable already and the initializer failed,
+  // just return false immediately.
+  if (std::optional<unsigned> Index = P.getGlobal(VD)) {
+    const Pointer &Ptr = P.getPtrGlobal(*Index);
+    const GlobalInlineDescriptor &GD =
+        *reinterpret_cast<const GlobalInlineDescriptor *>(
+            Ptr.block()->rawData());
+    if (GD.InitState == GlobalInitState::InitializerFailed)
+      return false;
+  }
 
   // Create and initialize the variable.
   if (!this->visitVarDecl(VD))
@@ -3158,13 +3238,15 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
       auto GlobalIndex = P.getGlobal(VD);
       assert(GlobalIndex);
       Block *GlobalBlock = P.getGlobal(*GlobalIndex);
-      InlineDescriptor &ID =
-          *reinterpret_cast<InlineDescriptor *>(GlobalBlock->rawData());
-      ID.IsInitialized = false;
+      GlobalInlineDescriptor &GD =
+          *reinterpret_cast<GlobalInlineDescriptor *>(GlobalBlock->rawData());
+
+      GD.InitState = GlobalInitState::InitializerFailed;
       GlobalBlock->invokeDtor();
     }
     return false;
   }
+
   return true;
 }
 
@@ -3958,27 +4040,38 @@ bool ByteCodeExprGen<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     }
   }
 
-  // Try to lazily visit (or emit dummy pointers for) declarations
-  // we haven't seen yet.
-  if (Ctx.getLangOpts().CPlusPlus) {
-    if (const auto *VD = dyn_cast<VarDecl>(D)) {
-      // Visit local const variables like normal.
-      if ((VD->isLocalVarDecl() || VD->isStaticDataMember()) &&
-          VD->getType().isConstant(Ctx.getASTContext())) {
+  if (D != InitializingDecl) {
+    // Try to lazily visit (or emit dummy pointers for) declarations
+    // we haven't seen yet.
+    if (Ctx.getLangOpts().CPlusPlus) {
+      if (const auto *VD = dyn_cast<VarDecl>(D)) {
+        const auto typeShouldBeVisited = [&](QualType T) -> bool {
+          if (T.isConstant(Ctx.getASTContext()))
+            return true;
+          if (const auto *RT = T->getAs<ReferenceType>())
+            return RT->getPointeeType().isConstQualified();
+          return false;
+        };
+
+        // Visit local const variables like normal.
+        if ((VD->hasGlobalStorage() || VD->isLocalVarDecl() ||
+             VD->isStaticDataMember()) &&
+            typeShouldBeVisited(VD->getType())) {
+          if (!this->visitVarDecl(VD))
+            return false;
+          // Retry.
+          return this->visitDeclRef(VD, E);
+        }
+      }
+    } else {
+      if (const auto *VD = dyn_cast<VarDecl>(D);
+          VD && VD->getAnyInitializer() &&
+          VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
         if (!this->visitVarDecl(VD))
           return false;
         // Retry.
         return this->visitDeclRef(VD, E);
       }
-    }
-  } else {
-    if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->getAnyInitializer() &&
-        VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak()) {
-      if (!this->visitVarDecl(VD))
-        return false;
-      // Retry.
-      return this->visitDeclRef(VD, E);
     }
   }
 

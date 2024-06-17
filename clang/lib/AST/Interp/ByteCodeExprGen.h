@@ -115,7 +115,6 @@ public:
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
   bool VisitGenericSelectionExpr(const GenericSelectionExpr *E);
   bool VisitChooseExpr(const ChooseExpr *E);
-  bool VisitEmbedExpr(const EmbedExpr *E);
   bool VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E);
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
   bool VisitExpressionTraitExpr(const ExpressionTraitExpr *E);
@@ -129,6 +128,7 @@ public:
   bool VisitAddrLabelExpr(const AddrLabelExpr *E);
   bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
   bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
+  bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
   bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
 
 protected:
@@ -322,6 +322,7 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
+  const ValueDecl *InitializingDecl = nullptr;
 
   /// Flag indicating if we're initializing a global variable.
   bool GlobalDecl = false;

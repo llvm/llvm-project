@@ -93,8 +93,8 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
-  Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
+* Added support for Cortex-R82AE, Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
+  Cortex-A725, Cortex-X925, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 * ``-mbranch-protection=standard`` now enables FEAT_PAuth_LR by
   default when the feature is enabled. The new behaviour results 
@@ -231,6 +231,13 @@ Changes to the Metadata Info
 
 Changes to the Debug Info
 ---------------------------------
+
+* LLVM has switched from using debug intrinsics internally to using debug
+  records by default. This should happen transparently when using the DIBuilder
+  to construct debug variable information, but will require changes for any code
+  that interacts with debug intrinsics directly. Debug intrinsics will only be
+  supported on a best-effort basis from here onwards; for more information, see
+  the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to the LLVM tools
 ---------------------------------

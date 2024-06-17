@@ -37,7 +37,7 @@ namespace clang {
     unsigned AbbrevToUse;
 
     /// A helper that can help us to write a packed bit across function
-    /// calls. For example, we may write seperate bits in seperate functions:
+    /// calls. For example, we may write separate bits in separate functions:
     ///
     ///  void VisitA(A* a) {
     ///     Record.push_back(a->isSomething());
@@ -1260,17 +1260,6 @@ void ASTStmtWriter::VisitSourceLocExpr(SourceLocExpr *E) {
   Record.AddSourceLocation(E->getEndLoc());
   Record.push_back(llvm::to_underlying(E->getIdentKind()));
   Code = serialization::EXPR_SOURCE_LOC;
-}
-
-void ASTStmtWriter::VisitEmbedExpr(EmbedExpr *E) {
-  VisitExpr(E);
-  Record.AddSourceLocation(E->getBeginLoc());
-  Record.AddSourceLocation(E->getEndLoc());
-  Record.AddStmt(E->getFilenameStringLiteral());
-  Record.AddStmt(E->getDataStringLiteral());
-  Record.writeUInt32(E->getStartingElementPos());
-  Record.writeUInt32(E->getDataElementCount());
-  Code = serialization::EXPR_BUILTIN_PP_EMBED;
 }
 
 void ASTStmtWriter::VisitAddrLabelExpr(AddrLabelExpr *E) {
