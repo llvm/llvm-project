@@ -237,10 +237,24 @@ define <2 x half> @global_atomic_fadd_ret_v2f16_agent_offset(ptr addrspace(1) %p
 ; GFX940-LABEL: global_atomic_fadd_ret_v2f16_agent_offset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    global_load_dword v3, v[0:1], off offset:1024
+; GFX940-NEXT:    s_mov_b64 s[0:1], 0
+; GFX940-NEXT:  .LBB17_1: ; %atomicrmw.start
+; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX940-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-NEXT:    v_mov_b32_e32 v5, v3
+; GFX940-NEXT:    v_pk_add_f16 v4, v5, v2
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    global_atomic_pk_add_f16 v0, v[0:1], v2, off offset:1024 sc0
+; GFX940-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:1024 sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
+; GFX940-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
+; GFX940-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX940-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX940-NEXT:    s_cbranch_execnz .LBB17_1
+; GFX940-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX940-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX940-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr <2 x half>, ptr addrspace(1) %ptr, i32 256
   %result = atomicrmw fadd ptr addrspace(1) %gep, <2 x half> %val syncscope("agent") seq_cst
@@ -251,10 +265,23 @@ define void @global_atomic_fadd_noret_v2f16_agent_offset(ptr addrspace(1) %ptr, 
 ; GFX940-LABEL: global_atomic_fadd_noret_v2f16_agent_offset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    global_load_dword v5, v[0:1], off offset:1024
+; GFX940-NEXT:    s_mov_b64 s[0:1], 0
+; GFX940-NEXT:  .LBB18_1: ; %atomicrmw.start
+; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX940-NEXT:    s_waitcnt vmcnt(0)
+; GFX940-NEXT:    v_pk_add_f16 v4, v5, v2
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off offset:1024
+; GFX940-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:1024 sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
+; GFX940-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
+; GFX940-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX940-NEXT:    v_mov_b32_e32 v5, v3
+; GFX940-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX940-NEXT:    s_cbranch_execnz .LBB18_1
+; GFX940-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX940-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr <2 x half>, ptr addrspace(1) %ptr, i32 256
   %unused = atomicrmw fadd ptr addrspace(1) %gep, <2 x half> %val syncscope("agent") seq_cst
@@ -265,10 +292,24 @@ define <2 x half> @flat_atomic_fadd_ret_v2f16_agent_offset(ptr %ptr, <2 x half> 
 ; GFX940-LABEL: flat_atomic_fadd_ret_v2f16_agent_offset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    flat_load_dword v3, v[0:1] offset:1024
+; GFX940-NEXT:    s_mov_b64 s[0:1], 0
+; GFX940-NEXT:  .LBB19_1: ; %atomicrmw.start
+; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_mov_b32_e32 v5, v3
+; GFX940-NEXT:    v_pk_add_f16 v4, v5, v2
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 offset:1024 sc0
+; GFX940-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[4:5] offset:1024 sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
+; GFX940-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
+; GFX940-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX940-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX940-NEXT:    s_cbranch_execnz .LBB19_1
+; GFX940-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX940-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX940-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr <2 x half>, ptr %ptr, i32 256
   %result = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst
@@ -279,10 +320,23 @@ define void @flat_atomic_fadd_noret_v2f16_agent_offset(ptr %ptr, <2 x half> %val
 ; GFX940-LABEL: flat_atomic_fadd_noret_v2f16_agent_offset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    flat_load_dword v5, v[0:1] offset:1024
+; GFX940-NEXT:    s_mov_b64 s[0:1], 0
+; GFX940-NEXT:  .LBB20_1: ; %atomicrmw.start
+; GFX940-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_pk_add_f16 v4, v5, v2
 ; GFX940-NEXT:    buffer_wbl2 sc1
-; GFX940-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 offset:1024
+; GFX940-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[4:5] offset:1024 sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    buffer_inv sc1
+; GFX940-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v5
+; GFX940-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; GFX940-NEXT:    v_mov_b32_e32 v5, v3
+; GFX940-NEXT:    s_andn2_b64 exec, exec, s[0:1]
+; GFX940-NEXT:    s_cbranch_execnz .LBB20_1
+; GFX940-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX940-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr <2 x half>, ptr %ptr, i32 256
   %unused = atomicrmw fadd ptr %gep, <2 x half> %val syncscope("agent") seq_cst

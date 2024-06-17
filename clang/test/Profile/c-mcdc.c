@@ -82,7 +82,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 
 // UPDATE FINAL BITMASK WITH RESULT.
 // NOPROFPASS-LABEL: lor.end:
-// NOPROFPASS: call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 [[HASH]], i32 0, i32 0, ptr %mcdc.addr)
+// NOPROFPASS: call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 [[HASH]], i32 0, ptr %mcdc.addr)
 // MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3

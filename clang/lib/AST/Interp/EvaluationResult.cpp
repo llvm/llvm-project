@@ -141,7 +141,9 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
                                              const Pointer &Ptr) const {
   assert(Source);
   assert(empty());
-  assert(!Ptr.isZero());
+
+  if (Ptr.isZero())
+    return true;
 
   SourceLocation InitLoc;
   if (const auto *D = Source.dyn_cast<const Decl *>())
