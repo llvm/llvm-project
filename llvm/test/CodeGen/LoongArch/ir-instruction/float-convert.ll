@@ -504,11 +504,11 @@ define float @convert_u32_to_float(i32 %a) nounwind {
 ; LA32D-NEXT:    lu12i.w $a1, 275200
 ; LA32D-NEXT:    st.w $a1, $sp, 12
 ; LA32D-NEXT:    st.w $a0, $sp, 8
-; LA32D-NEXT:    fld.d $fa0, $sp, 8
 ; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI14_0)
 ; LA32D-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI14_0)
-; LA32D-NEXT:    fld.d $fa1, $a0, 0
-; LA32D-NEXT:    fsub.d $fa0, $fa0, $fa1
+; LA32D-NEXT:    fld.d $fa0, $a0, 0
+; LA32D-NEXT:    fld.d $fa1, $sp, 8
+; LA32D-NEXT:    fsub.d $fa0, $fa1, $fa0
 ; LA32D-NEXT:    fcvt.s.d $fa0, $fa0
 ; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret

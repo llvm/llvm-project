@@ -43,39 +43,40 @@ define signext i32 @rotr_32(i32 signext %x, i32 signext %y) nounwind {
 define i64 @rotl_64(i64 %x, i64 %y) nounwind {
 ; LA32-LABEL: rotl_64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sll.w $a3, $a1, $a2
-; LA32-NEXT:    xori $a4, $a2, 31
-; LA32-NEXT:    srli.w $a5, $a0, 1
-; LA32-NEXT:    srl.w $a4, $a5, $a4
-; LA32-NEXT:    or $a3, $a3, $a4
-; LA32-NEXT:    addi.w $a4, $a2, -32
-; LA32-NEXT:    slti $a5, $a4, 0
-; LA32-NEXT:    maskeqz $a3, $a3, $a5
-; LA32-NEXT:    sll.w $a6, $a0, $a4
-; LA32-NEXT:    masknez $a5, $a6, $a5
-; LA32-NEXT:    or $a3, $a3, $a5
-; LA32-NEXT:    sll.w $a5, $a0, $a2
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    and $a4, $a4, $a5
-; LA32-NEXT:    sub.w $a5, $zero, $a2
-; LA32-NEXT:    srl.w $a6, $a1, $a5
-; LA32-NEXT:    ori $a7, $zero, 32
+; LA32-NEXT:    sub.w $a4, $zero, $a2
+; LA32-NEXT:    srl.w $a5, $a1, $a4
+; LA32-NEXT:    ori $a3, $zero, 32
+; LA32-NEXT:    sub.w $a6, $a3, $a2
+; LA32-NEXT:    srai.w $a3, $a6, 31
+; LA32-NEXT:    and $a3, $a3, $a5
+; LA32-NEXT:    sll.w $a7, $a1, $a2
+; LA32-NEXT:    xori $t0, $a2, 31
+; LA32-NEXT:    srli.w $t1, $a0, 1
+; LA32-NEXT:    srl.w $t0, $t1, $t0
+; LA32-NEXT:    or $a7, $a7, $t0
+; LA32-NEXT:    addi.w $t0, $a2, -32
+; LA32-NEXT:    slti $t1, $t0, 0
+; LA32-NEXT:    maskeqz $a7, $a7, $t1
+; LA32-NEXT:    sll.w $t2, $a0, $t0
+; LA32-NEXT:    masknez $t1, $t2, $t1
+; LA32-NEXT:    or $a7, $a7, $t1
+; LA32-NEXT:    or $a3, $a7, $a3
+; LA32-NEXT:    slti $a6, $a6, 0
+; LA32-NEXT:    masknez $a5, $a5, $a6
+; LA32-NEXT:    srl.w $a4, $a0, $a4
+; LA32-NEXT:    ori $a7, $zero, 64
 ; LA32-NEXT:    sub.w $a7, $a7, $a2
-; LA32-NEXT:    slti $t0, $a7, 0
-; LA32-NEXT:    masknez $t1, $a6, $t0
-; LA32-NEXT:    srl.w $a0, $a0, $a5
-; LA32-NEXT:    ori $a5, $zero, 64
-; LA32-NEXT:    sub.w $a2, $a5, $a2
-; LA32-NEXT:    xori $a2, $a2, 31
+; LA32-NEXT:    xori $a7, $a7, 31
 ; LA32-NEXT:    slli.w $a1, $a1, 1
-; LA32-NEXT:    sll.w $a1, $a1, $a2
+; LA32-NEXT:    sll.w $a1, $a1, $a7
+; LA32-NEXT:    or $a1, $a4, $a1
+; LA32-NEXT:    maskeqz $a1, $a1, $a6
+; LA32-NEXT:    or $a1, $a1, $a5
+; LA32-NEXT:    sll.w $a0, $a0, $a2
+; LA32-NEXT:    srai.w $a2, $t0, 31
+; LA32-NEXT:    and $a0, $a2, $a0
 ; LA32-NEXT:    or $a0, $a0, $a1
-; LA32-NEXT:    maskeqz $a0, $a0, $t0
-; LA32-NEXT:    or $a0, $a0, $t1
-; LA32-NEXT:    srai.w $a1, $a7, 31
-; LA32-NEXT:    and $a1, $a1, $a6
-; LA32-NEXT:    or $a1, $a3, $a1
-; LA32-NEXT:    or $a0, $a4, $a0
+; LA32-NEXT:    move $a1, $a3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64:
@@ -94,39 +95,40 @@ define i64 @rotl_64(i64 %x, i64 %y) nounwind {
 define i64 @rotr_64(i64 %x, i64 %y) nounwind {
 ; LA32-LABEL: rotr_64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srl.w $a3, $a0, $a2
-; LA32-NEXT:    xori $a4, $a2, 31
-; LA32-NEXT:    slli.w $a5, $a1, 1
-; LA32-NEXT:    sll.w $a4, $a5, $a4
-; LA32-NEXT:    or $a3, $a3, $a4
-; LA32-NEXT:    addi.w $a4, $a2, -32
-; LA32-NEXT:    slti $a5, $a4, 0
-; LA32-NEXT:    maskeqz $a3, $a3, $a5
-; LA32-NEXT:    srl.w $a6, $a1, $a4
-; LA32-NEXT:    masknez $a5, $a6, $a5
-; LA32-NEXT:    or $a3, $a3, $a5
-; LA32-NEXT:    srl.w $a5, $a1, $a2
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    and $a4, $a4, $a5
-; LA32-NEXT:    sub.w $a5, $zero, $a2
-; LA32-NEXT:    sll.w $a6, $a0, $a5
-; LA32-NEXT:    ori $a7, $zero, 32
+; LA32-NEXT:    sub.w $a4, $zero, $a2
+; LA32-NEXT:    sll.w $a5, $a0, $a4
+; LA32-NEXT:    ori $a3, $zero, 32
+; LA32-NEXT:    sub.w $a6, $a3, $a2
+; LA32-NEXT:    srai.w $a3, $a6, 31
+; LA32-NEXT:    and $a3, $a3, $a5
+; LA32-NEXT:    srl.w $a7, $a0, $a2
+; LA32-NEXT:    xori $t0, $a2, 31
+; LA32-NEXT:    slli.w $t1, $a1, 1
+; LA32-NEXT:    sll.w $t0, $t1, $t0
+; LA32-NEXT:    or $a7, $a7, $t0
+; LA32-NEXT:    addi.w $t0, $a2, -32
+; LA32-NEXT:    slti $t1, $t0, 0
+; LA32-NEXT:    maskeqz $a7, $a7, $t1
+; LA32-NEXT:    srl.w $t2, $a1, $t0
+; LA32-NEXT:    masknez $t1, $t2, $t1
+; LA32-NEXT:    or $a7, $a7, $t1
+; LA32-NEXT:    or $a3, $a7, $a3
+; LA32-NEXT:    slti $a6, $a6, 0
+; LA32-NEXT:    masknez $a5, $a5, $a6
+; LA32-NEXT:    sll.w $a4, $a1, $a4
+; LA32-NEXT:    ori $a7, $zero, 64
 ; LA32-NEXT:    sub.w $a7, $a7, $a2
-; LA32-NEXT:    slti $t0, $a7, 0
-; LA32-NEXT:    masknez $t1, $a6, $t0
-; LA32-NEXT:    sll.w $a1, $a1, $a5
-; LA32-NEXT:    ori $a5, $zero, 64
-; LA32-NEXT:    sub.w $a2, $a5, $a2
-; LA32-NEXT:    xori $a2, $a2, 31
+; LA32-NEXT:    xori $a7, $a7, 31
 ; LA32-NEXT:    srli.w $a0, $a0, 1
-; LA32-NEXT:    srl.w $a0, $a0, $a2
-; LA32-NEXT:    or $a0, $a1, $a0
-; LA32-NEXT:    maskeqz $a0, $a0, $t0
-; LA32-NEXT:    or $a1, $a0, $t1
-; LA32-NEXT:    srai.w $a0, $a7, 31
-; LA32-NEXT:    and $a0, $a0, $a6
-; LA32-NEXT:    or $a0, $a3, $a0
-; LA32-NEXT:    or $a1, $a4, $a1
+; LA32-NEXT:    srl.w $a0, $a0, $a7
+; LA32-NEXT:    or $a0, $a4, $a0
+; LA32-NEXT:    maskeqz $a0, $a0, $a6
+; LA32-NEXT:    or $a0, $a0, $a5
+; LA32-NEXT:    srl.w $a1, $a1, $a2
+; LA32-NEXT:    srai.w $a2, $t0, 31
+; LA32-NEXT:    and $a1, $a2, $a1
+; LA32-NEXT:    or $a1, $a1, $a0
+; LA32-NEXT:    move $a0, $a3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64:
@@ -264,38 +266,39 @@ define signext i32 @rotr_32_mask_or_64_or_32(i32 signext %x, i32 signext %y) nou
 define i64 @rotl_64_mask(i64 %x, i64 %y) nounwind {
 ; LA32-LABEL: rotl_64_mask:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sll.w $a3, $a1, $a2
-; LA32-NEXT:    xori $a4, $a2, 31
-; LA32-NEXT:    srli.w $a5, $a0, 1
-; LA32-NEXT:    srl.w $a4, $a5, $a4
-; LA32-NEXT:    or $a3, $a3, $a4
-; LA32-NEXT:    addi.w $a4, $a2, -32
-; LA32-NEXT:    slti $a5, $a4, 0
-; LA32-NEXT:    maskeqz $a3, $a3, $a5
-; LA32-NEXT:    sll.w $a6, $a0, $a4
-; LA32-NEXT:    masknez $a5, $a6, $a5
-; LA32-NEXT:    or $a3, $a3, $a5
-; LA32-NEXT:    sll.w $a5, $a0, $a2
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    and $a4, $a4, $a5
-; LA32-NEXT:    sub.w $a2, $zero, $a2
-; LA32-NEXT:    andi $a5, $a2, 63
+; LA32-NEXT:    sub.w $a4, $zero, $a2
+; LA32-NEXT:    srl.w $a3, $a1, $a4
+; LA32-NEXT:    andi $a5, $a4, 63
 ; LA32-NEXT:    addi.w $a6, $a5, -32
+; LA32-NEXT:    srai.w $a7, $a6, 31
+; LA32-NEXT:    and $a3, $a7, $a3
+; LA32-NEXT:    sll.w $a7, $a1, $a2
+; LA32-NEXT:    xori $t0, $a2, 31
+; LA32-NEXT:    srli.w $t1, $a0, 1
+; LA32-NEXT:    srl.w $t0, $t1, $t0
+; LA32-NEXT:    or $a7, $a7, $t0
+; LA32-NEXT:    addi.w $t0, $a2, -32
+; LA32-NEXT:    slti $t1, $t0, 0
+; LA32-NEXT:    maskeqz $a7, $a7, $t1
+; LA32-NEXT:    sll.w $t2, $a0, $t0
+; LA32-NEXT:    masknez $t1, $t2, $t1
+; LA32-NEXT:    or $a7, $a7, $t1
+; LA32-NEXT:    or $a3, $a7, $a3
 ; LA32-NEXT:    srl.w $a7, $a1, $a6
-; LA32-NEXT:    slti $t0, $a6, 0
-; LA32-NEXT:    masknez $a7, $a7, $t0
-; LA32-NEXT:    srl.w $a0, $a0, $a2
+; LA32-NEXT:    slti $a6, $a6, 0
+; LA32-NEXT:    masknez $a7, $a7, $a6
+; LA32-NEXT:    srl.w $a4, $a0, $a4
 ; LA32-NEXT:    xori $a5, $a5, 31
-; LA32-NEXT:    slli.w $t1, $a1, 1
-; LA32-NEXT:    sll.w $a5, $t1, $a5
-; LA32-NEXT:    or $a0, $a0, $a5
-; LA32-NEXT:    maskeqz $a0, $a0, $t0
-; LA32-NEXT:    or $a0, $a0, $a7
-; LA32-NEXT:    srl.w $a1, $a1, $a2
-; LA32-NEXT:    srai.w $a2, $a6, 31
-; LA32-NEXT:    and $a1, $a2, $a1
-; LA32-NEXT:    or $a1, $a3, $a1
-; LA32-NEXT:    or $a0, $a4, $a0
+; LA32-NEXT:    slli.w $a1, $a1, 1
+; LA32-NEXT:    sll.w $a1, $a1, $a5
+; LA32-NEXT:    or $a1, $a4, $a1
+; LA32-NEXT:    maskeqz $a1, $a1, $a6
+; LA32-NEXT:    or $a1, $a1, $a7
+; LA32-NEXT:    sll.w $a0, $a0, $a2
+; LA32-NEXT:    srai.w $a2, $t0, 31
+; LA32-NEXT:    and $a0, $a2, $a0
+; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    move $a1, $a3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64_mask:
@@ -314,39 +317,40 @@ define i64 @rotl_64_mask(i64 %x, i64 %y) nounwind {
 define i64 @rotl_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 ; LA32-LABEL: rotl_64_mask_and_127_and_63:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sll.w $a3, $a1, $a2
-; LA32-NEXT:    srli.w $a4, $a0, 1
-; LA32-NEXT:    andi $a5, $a2, 127
-; LA32-NEXT:    xori $a6, $a5, 31
-; LA32-NEXT:    srl.w $a4, $a4, $a6
-; LA32-NEXT:    or $a3, $a3, $a4
-; LA32-NEXT:    addi.w $a4, $a5, -32
-; LA32-NEXT:    slti $a5, $a4, 0
-; LA32-NEXT:    maskeqz $a3, $a3, $a5
-; LA32-NEXT:    sll.w $a6, $a0, $a4
-; LA32-NEXT:    masknez $a5, $a6, $a5
-; LA32-NEXT:    or $a3, $a3, $a5
-; LA32-NEXT:    sll.w $a5, $a0, $a2
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    and $a4, $a4, $a5
-; LA32-NEXT:    sub.w $a2, $zero, $a2
-; LA32-NEXT:    andi $a5, $a2, 63
+; LA32-NEXT:    sub.w $a4, $zero, $a2
+; LA32-NEXT:    srl.w $a3, $a1, $a4
+; LA32-NEXT:    andi $a5, $a4, 63
 ; LA32-NEXT:    addi.w $a6, $a5, -32
+; LA32-NEXT:    srai.w $a7, $a6, 31
+; LA32-NEXT:    and $a3, $a7, $a3
+; LA32-NEXT:    sll.w $a7, $a1, $a2
+; LA32-NEXT:    srli.w $t0, $a0, 1
+; LA32-NEXT:    andi $t1, $a2, 127
+; LA32-NEXT:    xori $t2, $t1, 31
+; LA32-NEXT:    srl.w $t0, $t0, $t2
+; LA32-NEXT:    or $a7, $a7, $t0
+; LA32-NEXT:    addi.w $t0, $t1, -32
+; LA32-NEXT:    slti $t1, $t0, 0
+; LA32-NEXT:    maskeqz $a7, $a7, $t1
+; LA32-NEXT:    sll.w $t2, $a0, $t0
+; LA32-NEXT:    masknez $t1, $t2, $t1
+; LA32-NEXT:    or $a7, $a7, $t1
+; LA32-NEXT:    or $a3, $a7, $a3
 ; LA32-NEXT:    srl.w $a7, $a1, $a6
-; LA32-NEXT:    slti $t0, $a6, 0
-; LA32-NEXT:    masknez $a7, $a7, $t0
-; LA32-NEXT:    srl.w $a0, $a0, $a2
+; LA32-NEXT:    slti $a6, $a6, 0
+; LA32-NEXT:    masknez $a7, $a7, $a6
+; LA32-NEXT:    srl.w $a4, $a0, $a4
 ; LA32-NEXT:    xori $a5, $a5, 31
-; LA32-NEXT:    slli.w $t1, $a1, 1
-; LA32-NEXT:    sll.w $a5, $t1, $a5
-; LA32-NEXT:    or $a0, $a0, $a5
-; LA32-NEXT:    maskeqz $a0, $a0, $t0
-; LA32-NEXT:    or $a0, $a0, $a7
-; LA32-NEXT:    srl.w $a1, $a1, $a2
-; LA32-NEXT:    srai.w $a2, $a6, 31
-; LA32-NEXT:    and $a1, $a2, $a1
-; LA32-NEXT:    or $a1, $a3, $a1
-; LA32-NEXT:    or $a0, $a4, $a0
+; LA32-NEXT:    slli.w $a1, $a1, 1
+; LA32-NEXT:    sll.w $a1, $a1, $a5
+; LA32-NEXT:    or $a1, $a4, $a1
+; LA32-NEXT:    maskeqz $a1, $a1, $a6
+; LA32-NEXT:    or $a1, $a1, $a7
+; LA32-NEXT:    sll.w $a0, $a0, $a2
+; LA32-NEXT:    srai.w $a2, $t0, 31
+; LA32-NEXT:    and $a0, $a2, $a0
+; LA32-NEXT:    or $a0, $a0, $a1
+; LA32-NEXT:    move $a1, $a3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64_mask_and_127_and_63:
@@ -387,38 +391,39 @@ define i64 @rotl_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
 define i64 @rotr_64_mask(i64 %x, i64 %y) nounwind {
 ; LA32-LABEL: rotr_64_mask:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srl.w $a3, $a0, $a2
-; LA32-NEXT:    xori $a4, $a2, 31
-; LA32-NEXT:    slli.w $a5, $a1, 1
-; LA32-NEXT:    sll.w $a4, $a5, $a4
-; LA32-NEXT:    or $a3, $a3, $a4
-; LA32-NEXT:    addi.w $a4, $a2, -32
-; LA32-NEXT:    slti $a5, $a4, 0
-; LA32-NEXT:    maskeqz $a3, $a3, $a5
-; LA32-NEXT:    srl.w $a6, $a1, $a4
-; LA32-NEXT:    masknez $a5, $a6, $a5
-; LA32-NEXT:    or $a3, $a3, $a5
-; LA32-NEXT:    srl.w $a5, $a1, $a2
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    and $a4, $a4, $a5
-; LA32-NEXT:    sub.w $a2, $zero, $a2
-; LA32-NEXT:    andi $a5, $a2, 63
+; LA32-NEXT:    sub.w $a4, $zero, $a2
+; LA32-NEXT:    sll.w $a3, $a0, $a4
+; LA32-NEXT:    andi $a5, $a4, 63
 ; LA32-NEXT:    addi.w $a6, $a5, -32
+; LA32-NEXT:    srai.w $a7, $a6, 31
+; LA32-NEXT:    and $a3, $a7, $a3
+; LA32-NEXT:    srl.w $a7, $a0, $a2
+; LA32-NEXT:    xori $t0, $a2, 31
+; LA32-NEXT:    slli.w $t1, $a1, 1
+; LA32-NEXT:    sll.w $t0, $t1, $t0
+; LA32-NEXT:    or $a7, $a7, $t0
+; LA32-NEXT:    addi.w $t0, $a2, -32
+; LA32-NEXT:    slti $t1, $t0, 0
+; LA32-NEXT:    maskeqz $a7, $a7, $t1
+; LA32-NEXT:    srl.w $t2, $a1, $t0
+; LA32-NEXT:    masknez $t1, $t2, $t1
+; LA32-NEXT:    or $a7, $a7, $t1
+; LA32-NEXT:    or $a3, $a7, $a3
 ; LA32-NEXT:    sll.w $a7, $a0, $a6
-; LA32-NEXT:    slti $t0, $a6, 0
-; LA32-NEXT:    masknez $a7, $a7, $t0
-; LA32-NEXT:    sll.w $a1, $a1, $a2
+; LA32-NEXT:    slti $a6, $a6, 0
+; LA32-NEXT:    masknez $a7, $a7, $a6
+; LA32-NEXT:    sll.w $a4, $a1, $a4
 ; LA32-NEXT:    xori $a5, $a5, 31
-; LA32-NEXT:    srli.w $t1, $a0, 1
-; LA32-NEXT:    srl.w $a5, $t1, $a5
-; LA32-NEXT:    or $a1, $a1, $a5
-; LA32-NEXT:    maskeqz $a1, $a1, $t0
-; LA32-NEXT:    or $a1, $a1, $a7
-; LA32-NEXT:    sll.w $a0, $a0, $a2
-; LA32-NEXT:    srai.w $a2, $a6, 31
-; LA32-NEXT:    and $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a3, $a0
-; LA32-NEXT:    or $a1, $a4, $a1
+; LA32-NEXT:    srli.w $a0, $a0, 1
+; LA32-NEXT:    srl.w $a0, $a0, $a5
+; LA32-NEXT:    or $a0, $a4, $a0
+; LA32-NEXT:    maskeqz $a0, $a0, $a6
+; LA32-NEXT:    or $a0, $a0, $a7
+; LA32-NEXT:    srl.w $a1, $a1, $a2
+; LA32-NEXT:    srai.w $a2, $t0, 31
+; LA32-NEXT:    and $a1, $a2, $a1
+; LA32-NEXT:    or $a1, $a1, $a0
+; LA32-NEXT:    move $a0, $a3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64_mask:
@@ -436,39 +441,40 @@ define i64 @rotr_64_mask(i64 %x, i64 %y) nounwind {
 define i64 @rotr_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 ; LA32-LABEL: rotr_64_mask_and_127_and_63:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srl.w $a3, $a0, $a2
-; LA32-NEXT:    slli.w $a4, $a1, 1
-; LA32-NEXT:    andi $a5, $a2, 127
-; LA32-NEXT:    xori $a6, $a5, 31
-; LA32-NEXT:    sll.w $a4, $a4, $a6
-; LA32-NEXT:    or $a3, $a3, $a4
-; LA32-NEXT:    addi.w $a4, $a5, -32
-; LA32-NEXT:    slti $a5, $a4, 0
-; LA32-NEXT:    maskeqz $a3, $a3, $a5
-; LA32-NEXT:    srl.w $a6, $a1, $a4
-; LA32-NEXT:    masknez $a5, $a6, $a5
-; LA32-NEXT:    or $a3, $a3, $a5
-; LA32-NEXT:    srl.w $a5, $a1, $a2
-; LA32-NEXT:    srai.w $a4, $a4, 31
-; LA32-NEXT:    and $a4, $a4, $a5
-; LA32-NEXT:    sub.w $a2, $zero, $a2
-; LA32-NEXT:    andi $a5, $a2, 63
+; LA32-NEXT:    sub.w $a4, $zero, $a2
+; LA32-NEXT:    sll.w $a3, $a0, $a4
+; LA32-NEXT:    andi $a5, $a4, 63
 ; LA32-NEXT:    addi.w $a6, $a5, -32
+; LA32-NEXT:    srai.w $a7, $a6, 31
+; LA32-NEXT:    and $a3, $a7, $a3
+; LA32-NEXT:    srl.w $a7, $a0, $a2
+; LA32-NEXT:    slli.w $t0, $a1, 1
+; LA32-NEXT:    andi $t1, $a2, 127
+; LA32-NEXT:    xori $t2, $t1, 31
+; LA32-NEXT:    sll.w $t0, $t0, $t2
+; LA32-NEXT:    or $a7, $a7, $t0
+; LA32-NEXT:    addi.w $t0, $t1, -32
+; LA32-NEXT:    slti $t1, $t0, 0
+; LA32-NEXT:    maskeqz $a7, $a7, $t1
+; LA32-NEXT:    srl.w $t2, $a1, $t0
+; LA32-NEXT:    masknez $t1, $t2, $t1
+; LA32-NEXT:    or $a7, $a7, $t1
+; LA32-NEXT:    or $a3, $a7, $a3
 ; LA32-NEXT:    sll.w $a7, $a0, $a6
-; LA32-NEXT:    slti $t0, $a6, 0
-; LA32-NEXT:    masknez $a7, $a7, $t0
-; LA32-NEXT:    sll.w $a1, $a1, $a2
+; LA32-NEXT:    slti $a6, $a6, 0
+; LA32-NEXT:    masknez $a7, $a7, $a6
+; LA32-NEXT:    sll.w $a4, $a1, $a4
 ; LA32-NEXT:    xori $a5, $a5, 31
-; LA32-NEXT:    srli.w $t1, $a0, 1
-; LA32-NEXT:    srl.w $a5, $t1, $a5
-; LA32-NEXT:    or $a1, $a1, $a5
-; LA32-NEXT:    maskeqz $a1, $a1, $t0
-; LA32-NEXT:    or $a1, $a1, $a7
-; LA32-NEXT:    sll.w $a0, $a0, $a2
-; LA32-NEXT:    srai.w $a2, $a6, 31
-; LA32-NEXT:    and $a0, $a2, $a0
-; LA32-NEXT:    or $a0, $a3, $a0
-; LA32-NEXT:    or $a1, $a4, $a1
+; LA32-NEXT:    srli.w $a0, $a0, 1
+; LA32-NEXT:    srl.w $a0, $a0, $a5
+; LA32-NEXT:    or $a0, $a4, $a0
+; LA32-NEXT:    maskeqz $a0, $a0, $a6
+; LA32-NEXT:    or $a0, $a0, $a7
+; LA32-NEXT:    srl.w $a1, $a1, $a2
+; LA32-NEXT:    srai.w $a2, $t0, 31
+; LA32-NEXT:    and $a1, $a2, $a1
+; LA32-NEXT:    or $a1, $a1, $a0
+; LA32-NEXT:    move $a0, $a3
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64_mask_and_127_and_63:

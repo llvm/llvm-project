@@ -32,20 +32,20 @@ define dso_local noundef signext i32 @main() nounwind {
 ; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI0_3)
 ; CHECK-NEXT:    xvld $xr3, $a0, 0
 ; CHECK-NEXT:    xvst $xr3, $sp, 0 # 32-byte Folded Spill
-; CHECK-NEXT:    xvst $xr0, $sp, 136
-; CHECK-NEXT:    xvst $xr1, $sp, 168
-; CHECK-NEXT:    xvst $xr2, $sp, 200
-; CHECK-NEXT:    xvst $xr3, $sp, 232
+; CHECK-NEXT:    xvst $xr0, $sp, 232
+; CHECK-NEXT:    xvst $xr1, $sp, 200
+; CHECK-NEXT:    xvst $xr2, $sp, 168
+; CHECK-NEXT:    xvst $xr3, $sp, 136
 ; CHECK-NEXT:    addi.d $a0, $sp, 136
 ; CHECK-NEXT:    bl %plt(foo)
 ; CHECK-NEXT:    xvld $xr0, $sp, 96 # 32-byte Folded Reload
-; CHECK-NEXT:    xvst $xr0, $sp, 136
-; CHECK-NEXT:    xvld $xr0, $sp, 64 # 32-byte Folded Reload
-; CHECK-NEXT:    xvst $xr0, $sp, 168
-; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
-; CHECK-NEXT:    xvst $xr0, $sp, 200
-; CHECK-NEXT:    xvld $xr0, $sp, 0 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvst $xr0, $sp, 232
+; CHECK-NEXT:    xvld $xr0, $sp, 64 # 32-byte Folded Reload
+; CHECK-NEXT:    xvst $xr0, $sp, 200
+; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
+; CHECK-NEXT:    xvst $xr0, $sp, 168
+; CHECK-NEXT:    xvld $xr0, $sp, 0 # 32-byte Folded Reload
+; CHECK-NEXT:    xvst $xr0, $sp, 136
 ; CHECK-NEXT:    addi.d $a0, $sp, 136
 ; CHECK-NEXT:    bl %plt(bar)
 ; CHECK-NEXT:    move $a0, $zero

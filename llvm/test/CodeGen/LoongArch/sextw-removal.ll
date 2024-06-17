@@ -11,14 +11,15 @@ define void @test1(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $fp, $a1
-; CHECK-NEXT:    sra.w $s0, $a0, $a1
+; CHECK-NEXT:    sra.w $a0, $a0, $a1
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB0_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    move $a0, $s0
+; CHECK-NEXT:    sll.w $s0, $a0, $fp
 ; CHECK-NEXT:    bl %plt(bar)
-; CHECK-NEXT:    sll.w $s0, $s0, $fp
-; CHECK-NEXT:    bnez $a0, .LBB0_1
+; CHECK-NEXT:    move $a1, $a0
+; CHECK-NEXT:    move $a0, $s0
+; CHECK-NEXT:    bnez $a1, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -33,13 +34,14 @@ define void @test1(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; NORMV-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; NORMV-NEXT:    move $fp, $a1
-; NORMV-NEXT:    sra.w $s0, $a0, $a1
+; NORMV-NEXT:    sra.w $a1, $a0, $a1
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB0_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
-; NORMV-NEXT:    addi.w $a0, $s0, 0
+; NORMV-NEXT:    sll.w $s0, $a1, $fp
+; NORMV-NEXT:    addi.w $a0, $a1, 0
 ; NORMV-NEXT:    bl %plt(bar)
-; NORMV-NEXT:    sll.w $s0, $s0, $fp
+; NORMV-NEXT:    move $a1, $s0
 ; NORMV-NEXT:    bnez $a0, .LBB0_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
 ; NORMV-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
@@ -251,19 +253,19 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    sra.w $fp, $a0, $a1
+; CHECK-NEXT:    sra.w $a0, $a0, $a1
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB5_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    addi.w $a0, $fp, 0
+; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    bl %plt(baz)
-; CHECK-NEXT:    move $s0, $a0
-; CHECK-NEXT:    bl %plt(__fixsfsi)
 ; CHECK-NEXT:    move $fp, $a0
-; CHECK-NEXT:    move $a0, $s0
 ; CHECK-NEXT:    move $a1, $zero
 ; CHECK-NEXT:    bl %plt(__nesf2)
-; CHECK-NEXT:    bnez $a0, .LBB5_1
+; CHECK-NEXT:    move $s0, $a0
+; CHECK-NEXT:    move $a0, $fp
+; CHECK-NEXT:    bl %plt(__fixsfsi)
+; CHECK-NEXT:    bnez $s0, .LBB5_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -277,19 +279,19 @@ define void @test6(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; NORMV-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
 ; NORMV-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
-; NORMV-NEXT:    sra.w $fp, $a0, $a1
+; NORMV-NEXT:    sra.w $a0, $a0, $a1
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB5_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
-; NORMV-NEXT:    addi.w $a0, $fp, 0
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    bl %plt(baz)
-; NORMV-NEXT:    move $s0, $a0
-; NORMV-NEXT:    bl %plt(__fixsfsi)
 ; NORMV-NEXT:    move $fp, $a0
-; NORMV-NEXT:    move $a0, $s0
 ; NORMV-NEXT:    move $a1, $zero
 ; NORMV-NEXT:    bl %plt(__nesf2)
-; NORMV-NEXT:    bnez $a0, .LBB5_1
+; NORMV-NEXT:    move $s0, $a0
+; NORMV-NEXT:    move $a0, $fp
+; NORMV-NEXT:    bl %plt(__fixsfsi)
+; NORMV-NEXT:    bnez $s0, .LBB5_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
 ; NORMV-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; NORMV-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -1078,49 +1080,49 @@ define signext i32 @bug(i32 signext %x) {
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    bstrpick.d $a1, $a0, 31, 16
 ; CHECK-NEXT:    sltui $a1, $a1, 1
-; CHECK-NEXT:    slli.d $a2, $a0, 16
-; CHECK-NEXT:    masknez $a0, $a0, $a1
-; CHECK-NEXT:    maskeqz $a2, $a2, $a1
-; CHECK-NEXT:    or $a0, $a2, $a0
 ; CHECK-NEXT:    ori $a2, $zero, 32
 ; CHECK-NEXT:    masknez $a2, $a2, $a1
 ; CHECK-NEXT:    ori $a3, $zero, 16
-; CHECK-NEXT:    maskeqz $a1, $a3, $a1
-; CHECK-NEXT:    or $a1, $a1, $a2
-; CHECK-NEXT:    bstrpick.d $a2, $a0, 31, 24
-; CHECK-NEXT:    sltui $a2, $a2, 1
-; CHECK-NEXT:    slli.d $a3, $a0, 8
-; CHECK-NEXT:    addi.d $a4, $a1, -8
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    maskeqz $a3, $a3, $a2
-; CHECK-NEXT:    or $a0, $a3, $a0
-; CHECK-NEXT:    masknez $a1, $a1, $a2
-; CHECK-NEXT:    maskeqz $a2, $a4, $a2
-; CHECK-NEXT:    or $a1, $a2, $a1
-; CHECK-NEXT:    bstrpick.d $a2, $a0, 31, 28
-; CHECK-NEXT:    sltui $a2, $a2, 1
-; CHECK-NEXT:    slli.d $a3, $a0, 4
-; CHECK-NEXT:    addi.d $a4, $a1, -4
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    maskeqz $a3, $a3, $a2
-; CHECK-NEXT:    or $a0, $a3, $a0
-; CHECK-NEXT:    masknez $a1, $a1, $a2
-; CHECK-NEXT:    maskeqz $a2, $a4, $a2
-; CHECK-NEXT:    or $a1, $a2, $a1
-; CHECK-NEXT:    bstrpick.d $a2, $a0, 31, 30
-; CHECK-NEXT:    sltui $a2, $a2, 1
-; CHECK-NEXT:    slli.d $a3, $a0, 2
-; CHECK-NEXT:    addi.d $a4, $a1, -2
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    maskeqz $a3, $a3, $a2
-; CHECK-NEXT:    or $a0, $a3, $a0
+; CHECK-NEXT:    maskeqz $a3, $a3, $a1
+; CHECK-NEXT:    or $a2, $a3, $a2
+; CHECK-NEXT:    masknez $a3, $a0, $a1
+; CHECK-NEXT:    slli.d $a0, $a0, 16
+; CHECK-NEXT:    maskeqz $a0, $a0, $a1
+; CHECK-NEXT:    or $a0, $a0, $a3
+; CHECK-NEXT:    bstrpick.d $a1, $a0, 31, 24
+; CHECK-NEXT:    sltui $a1, $a1, 1
+; CHECK-NEXT:    masknez $a3, $a2, $a1
+; CHECK-NEXT:    addi.d $a2, $a2, -8
+; CHECK-NEXT:    maskeqz $a2, $a2, $a1
+; CHECK-NEXT:    or $a2, $a2, $a3
+; CHECK-NEXT:    masknez $a3, $a0, $a1
+; CHECK-NEXT:    slli.d $a0, $a0, 8
+; CHECK-NEXT:    maskeqz $a0, $a0, $a1
+; CHECK-NEXT:    or $a0, $a0, $a3
+; CHECK-NEXT:    bstrpick.d $a1, $a0, 31, 28
+; CHECK-NEXT:    sltui $a1, $a1, 1
+; CHECK-NEXT:    masknez $a3, $a2, $a1
+; CHECK-NEXT:    addi.d $a2, $a2, -4
+; CHECK-NEXT:    maskeqz $a2, $a2, $a1
+; CHECK-NEXT:    or $a2, $a2, $a3
+; CHECK-NEXT:    masknez $a3, $a0, $a1
+; CHECK-NEXT:    slli.d $a0, $a0, 4
+; CHECK-NEXT:    maskeqz $a0, $a0, $a1
+; CHECK-NEXT:    or $a0, $a0, $a3
+; CHECK-NEXT:    bstrpick.d $a1, $a0, 31, 30
+; CHECK-NEXT:    sltui $a1, $a1, 1
+; CHECK-NEXT:    masknez $a3, $a2, $a1
+; CHECK-NEXT:    addi.d $a2, $a2, -2
+; CHECK-NEXT:    maskeqz $a2, $a2, $a1
+; CHECK-NEXT:    or $a2, $a2, $a3
+; CHECK-NEXT:    masknez $a3, $a0, $a1
+; CHECK-NEXT:    slli.d $a0, $a0, 2
+; CHECK-NEXT:    maskeqz $a0, $a0, $a1
+; CHECK-NEXT:    or $a0, $a0, $a3
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
-; CHECK-NEXT:    masknez $a1, $a1, $a2
-; CHECK-NEXT:    maskeqz $a2, $a4, $a2
-; CHECK-NEXT:    or $a1, $a2, $a1
 ; CHECK-NEXT:    nor $a0, $a0, $zero
 ; CHECK-NEXT:    srli.d $a0, $a0, 31
-; CHECK-NEXT:    add.w $a0, $a1, $a0
+; CHECK-NEXT:    add.w $a0, $a2, $a0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB18_2:
 ; CHECK-NEXT:    move $a0, $zero
@@ -1132,49 +1134,49 @@ define signext i32 @bug(i32 signext %x) {
 ; NORMV-NEXT:  # %bb.1: # %if.end
 ; NORMV-NEXT:    bstrpick.d $a1, $a0, 31, 16
 ; NORMV-NEXT:    sltui $a1, $a1, 1
-; NORMV-NEXT:    slli.d $a2, $a0, 16
-; NORMV-NEXT:    masknez $a0, $a0, $a1
-; NORMV-NEXT:    maskeqz $a2, $a2, $a1
-; NORMV-NEXT:    or $a0, $a2, $a0
 ; NORMV-NEXT:    ori $a2, $zero, 32
 ; NORMV-NEXT:    masknez $a2, $a2, $a1
 ; NORMV-NEXT:    ori $a3, $zero, 16
-; NORMV-NEXT:    maskeqz $a1, $a3, $a1
-; NORMV-NEXT:    or $a1, $a1, $a2
-; NORMV-NEXT:    bstrpick.d $a2, $a0, 31, 24
-; NORMV-NEXT:    sltui $a2, $a2, 1
-; NORMV-NEXT:    slli.d $a3, $a0, 8
-; NORMV-NEXT:    addi.d $a4, $a1, -8
-; NORMV-NEXT:    masknez $a0, $a0, $a2
-; NORMV-NEXT:    maskeqz $a3, $a3, $a2
-; NORMV-NEXT:    or $a0, $a3, $a0
-; NORMV-NEXT:    masknez $a1, $a1, $a2
-; NORMV-NEXT:    maskeqz $a2, $a4, $a2
-; NORMV-NEXT:    or $a1, $a2, $a1
-; NORMV-NEXT:    bstrpick.d $a2, $a0, 31, 28
-; NORMV-NEXT:    sltui $a2, $a2, 1
-; NORMV-NEXT:    slli.d $a3, $a0, 4
-; NORMV-NEXT:    addi.d $a4, $a1, -4
-; NORMV-NEXT:    masknez $a0, $a0, $a2
-; NORMV-NEXT:    maskeqz $a3, $a3, $a2
-; NORMV-NEXT:    or $a0, $a3, $a0
-; NORMV-NEXT:    masknez $a1, $a1, $a2
-; NORMV-NEXT:    maskeqz $a2, $a4, $a2
-; NORMV-NEXT:    or $a1, $a2, $a1
-; NORMV-NEXT:    bstrpick.d $a2, $a0, 31, 30
-; NORMV-NEXT:    sltui $a2, $a2, 1
-; NORMV-NEXT:    slli.d $a3, $a0, 2
-; NORMV-NEXT:    addi.d $a4, $a1, -2
-; NORMV-NEXT:    masknez $a0, $a0, $a2
-; NORMV-NEXT:    maskeqz $a3, $a3, $a2
-; NORMV-NEXT:    or $a0, $a3, $a0
+; NORMV-NEXT:    maskeqz $a3, $a3, $a1
+; NORMV-NEXT:    or $a2, $a3, $a2
+; NORMV-NEXT:    masknez $a3, $a0, $a1
+; NORMV-NEXT:    slli.d $a0, $a0, 16
+; NORMV-NEXT:    maskeqz $a0, $a0, $a1
+; NORMV-NEXT:    or $a0, $a0, $a3
+; NORMV-NEXT:    bstrpick.d $a1, $a0, 31, 24
+; NORMV-NEXT:    sltui $a1, $a1, 1
+; NORMV-NEXT:    masknez $a3, $a2, $a1
+; NORMV-NEXT:    addi.d $a2, $a2, -8
+; NORMV-NEXT:    maskeqz $a2, $a2, $a1
+; NORMV-NEXT:    or $a2, $a2, $a3
+; NORMV-NEXT:    masknez $a3, $a0, $a1
+; NORMV-NEXT:    slli.d $a0, $a0, 8
+; NORMV-NEXT:    maskeqz $a0, $a0, $a1
+; NORMV-NEXT:    or $a0, $a0, $a3
+; NORMV-NEXT:    bstrpick.d $a1, $a0, 31, 28
+; NORMV-NEXT:    sltui $a1, $a1, 1
+; NORMV-NEXT:    masknez $a3, $a2, $a1
+; NORMV-NEXT:    addi.d $a2, $a2, -4
+; NORMV-NEXT:    maskeqz $a2, $a2, $a1
+; NORMV-NEXT:    or $a2, $a2, $a3
+; NORMV-NEXT:    masknez $a3, $a0, $a1
+; NORMV-NEXT:    slli.d $a0, $a0, 4
+; NORMV-NEXT:    maskeqz $a0, $a0, $a1
+; NORMV-NEXT:    or $a0, $a0, $a3
+; NORMV-NEXT:    bstrpick.d $a1, $a0, 31, 30
+; NORMV-NEXT:    sltui $a1, $a1, 1
+; NORMV-NEXT:    masknez $a3, $a2, $a1
+; NORMV-NEXT:    addi.d $a2, $a2, -2
+; NORMV-NEXT:    maskeqz $a2, $a2, $a1
+; NORMV-NEXT:    or $a2, $a2, $a3
+; NORMV-NEXT:    masknez $a3, $a0, $a1
+; NORMV-NEXT:    slli.d $a0, $a0, 2
+; NORMV-NEXT:    maskeqz $a0, $a0, $a1
+; NORMV-NEXT:    or $a0, $a0, $a3
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
-; NORMV-NEXT:    masknez $a1, $a1, $a2
-; NORMV-NEXT:    maskeqz $a2, $a4, $a2
-; NORMV-NEXT:    or $a1, $a2, $a1
 ; NORMV-NEXT:    nor $a0, $a0, $zero
 ; NORMV-NEXT:    srli.d $a0, $a0, 31
-; NORMV-NEXT:    add.d $a0, $a1, $a0
+; NORMV-NEXT:    add.d $a0, $a2, $a0
 ; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    ret
 ; NORMV-NEXT:  .LBB18_2:
@@ -1223,14 +1225,14 @@ define void @test16(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $fp, $a1
 ; CHECK-NEXT:    bl %plt(bar)
-; CHECK-NEXT:    move $s0, $a0
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB19_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    move $a0, $s0
+; CHECK-NEXT:    sll.w $s0, $a0, $fp
 ; CHECK-NEXT:    bl %plt(bar)
-; CHECK-NEXT:    sll.w $s0, $s0, $fp
-; CHECK-NEXT:    bnez $a0, .LBB19_1
+; CHECK-NEXT:    move $a1, $a0
+; CHECK-NEXT:    move $a0, $s0
+; CHECK-NEXT:    bnez $a1, .LBB19_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -1246,14 +1248,15 @@ define void @test16(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; NORMV-NEXT:    move $fp, $a1
 ; NORMV-NEXT:    bl %plt(bar)
-; NORMV-NEXT:    move $s0, $a0
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB19_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
-; NORMV-NEXT:    addi.w $a0, $s0, 0
+; NORMV-NEXT:    sll.w $s0, $a0, $fp
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    bl %plt(bar)
-; NORMV-NEXT:    sll.w $s0, $s0, $fp
-; NORMV-NEXT:    bnez $a0, .LBB19_1
+; NORMV-NEXT:    move $a1, $a0
+; NORMV-NEXT:    move $a0, $s0
+; NORMV-NEXT:    bnez $a1, .LBB19_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
 ; NORMV-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; NORMV-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -1284,14 +1287,14 @@ define void @test17(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $fp, $a1
 ; CHECK-NEXT:    bl %plt(bat)
-; CHECK-NEXT:    move $s0, $a0
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB20_1: # %bb2
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    move $a0, $s0
+; CHECK-NEXT:    sll.w $s0, $a0, $fp
 ; CHECK-NEXT:    bl %plt(bar)
-; CHECK-NEXT:    sll.w $s0, $s0, $fp
-; CHECK-NEXT:    bnez $a0, .LBB20_1
+; CHECK-NEXT:    move $a1, $a0
+; CHECK-NEXT:    move $a0, $s0
+; CHECK-NEXT:    bnez $a1, .LBB20_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -1307,14 +1310,15 @@ define void @test17(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NORMV-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; NORMV-NEXT:    move $fp, $a1
 ; NORMV-NEXT:    bl %plt(bat)
-; NORMV-NEXT:    move $s0, $a0
 ; NORMV-NEXT:    .p2align 4, , 16
 ; NORMV-NEXT:  .LBB20_1: # %bb2
 ; NORMV-NEXT:    # =>This Inner Loop Header: Depth=1
-; NORMV-NEXT:    addi.w $a0, $s0, 0
+; NORMV-NEXT:    sll.w $s0, $a0, $fp
+; NORMV-NEXT:    addi.w $a0, $a0, 0
 ; NORMV-NEXT:    bl %plt(bar)
-; NORMV-NEXT:    sll.w $s0, $s0, $fp
-; NORMV-NEXT:    bnez $a0, .LBB20_1
+; NORMV-NEXT:    move $a1, $a0
+; NORMV-NEXT:    move $a0, $s0
+; NORMV-NEXT:    bnez $a1, .LBB20_1
 ; NORMV-NEXT:  # %bb.2: # %bb7
 ; NORMV-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; NORMV-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload

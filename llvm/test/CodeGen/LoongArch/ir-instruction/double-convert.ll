@@ -232,11 +232,11 @@ define double @convert_u32_to_double(i32 %a) nounwind {
 ; LA32-NEXT:    lu12i.w $a1, 275200
 ; LA32-NEXT:    st.w $a1, $sp, 12
 ; LA32-NEXT:    st.w $a0, $sp, 8
-; LA32-NEXT:    fld.d $fa0, $sp, 8
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI12_0)
 ; LA32-NEXT:    addi.w $a0, $a0, %pc_lo12(.LCPI12_0)
-; LA32-NEXT:    fld.d $fa1, $a0, 0
-; LA32-NEXT:    fsub.d $fa0, $fa0, $fa1
+; LA32-NEXT:    fld.d $fa0, $a0, 0
+; LA32-NEXT:    fld.d $fa1, $sp, 8
+; LA32-NEXT:    fsub.d $fa0, $fa1, $fa0
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;

@@ -285,19 +285,19 @@ define signext i32 @and_i32_0xfff0(i32 %a) {
 define signext i32 @and_i32_0xfff0_twice(i32 %a, i32 %b) {
 ; LA32-LABEL: and_i32_0xfff0_twice:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
-; LA32-NEXT:    slli.w $a0, $a0, 4
 ; LA32-NEXT:    bstrpick.w $a1, $a1, 15, 4
 ; LA32-NEXT:    slli.w $a1, $a1, 4
+; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
+; LA32-NEXT:    slli.w $a0, $a0, 4
 ; LA32-NEXT:    sub.w $a0, $a0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i32_0xfff0_twice:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
-; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 4
 ; LA64-NEXT:    slli.d $a1, $a1, 4
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %c = and i32 %a, 65520
@@ -326,21 +326,21 @@ define i64 @and_i64_0xfff0(i64 %a) {
 define i64 @and_i64_0xfff0_twice(i64 %a, i64 %b) {
 ; LA32-LABEL: and_i64_0xfff0_twice:
 ; LA32:       # %bb.0:
+; LA32-NEXT:    bstrpick.w $a1, $a2, 15, 4
+; LA32-NEXT:    slli.w $a1, $a1, 4
 ; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 4
-; LA32-NEXT:    slli.w $a1, $a0, 4
-; LA32-NEXT:    bstrpick.w $a0, $a2, 15, 4
 ; LA32-NEXT:    slli.w $a2, $a0, 4
-; LA32-NEXT:    sub.w $a0, $a1, $a2
-; LA32-NEXT:    sltu $a1, $a1, $a2
+; LA32-NEXT:    sub.w $a0, $a2, $a1
+; LA32-NEXT:    sltu $a1, $a2, $a1
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i64_0xfff0_twice:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
-; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 4
 ; LA64-NEXT:    slli.d $a1, $a1, 4
+; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 4
+; LA64-NEXT:    slli.d $a0, $a0, 4
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %c = and i64 %a, 65520
@@ -390,26 +390,26 @@ define i64 @and_i64_0xfff0_multiple_times(i64 %a, i64 %b, i64 %c) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    lu12i.w $a1, 15
 ; LA32-NEXT:    ori $a1, $a1, 4080
-; LA32-NEXT:    and $a0, $a0, $a1
-; LA32-NEXT:    and $a2, $a2, $a1
 ; LA32-NEXT:    and $a3, $a4, $a1
-; LA32-NEXT:    sltu $a1, $a0, $a2
+; LA32-NEXT:    and $a2, $a2, $a1
+; LA32-NEXT:    mul.w $a3, $a2, $a3
+; LA32-NEXT:    and $a1, $a0, $a1
+; LA32-NEXT:    sub.w $a0, $a1, $a2
+; LA32-NEXT:    xor $a0, $a0, $a3
+; LA32-NEXT:    sltu $a1, $a1, $a2
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
-; LA32-NEXT:    sub.w $a0, $a0, $a2
-; LA32-NEXT:    mul.w $a2, $a2, $a3
-; LA32-NEXT:    xor $a0, $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_i64_0xfff0_multiple_times:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    lu12i.w $a3, 15
 ; LA64-NEXT:    ori $a3, $a3, 4080
-; LA64-NEXT:    and $a0, $a0, $a3
-; LA64-NEXT:    and $a1, $a1, $a3
 ; LA64-NEXT:    and $a2, $a2, $a3
+; LA64-NEXT:    and $a1, $a1, $a3
+; LA64-NEXT:    mul.d $a2, $a1, $a2
+; LA64-NEXT:    and $a0, $a0, $a3
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
-; LA64-NEXT:    mul.d $a1, $a1, $a2
-; LA64-NEXT:    xor $a0, $a0, $a1
+; LA64-NEXT:    xor $a0, $a0, $a2
 ; LA64-NEXT:    ret
   %d = and i64 %a, 65520
   %e = and i64 %b, 65520
@@ -444,8 +444,8 @@ define i32 @and_add_lsr(i32 %x, i32 %y) {
 ;
 ; LA64-LABEL: and_add_lsr:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    addi.w $a0, $a0, -1
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 20
+; LA64-NEXT:    addi.w $a0, $a0, -1
 ; LA64-NEXT:    and $a0, $a1, $a0
 ; LA64-NEXT:    ret
   %1 = add i32 %x, 4095
