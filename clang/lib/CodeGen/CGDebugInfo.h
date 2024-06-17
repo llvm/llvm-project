@@ -338,9 +338,6 @@ class CGDebugInfo {
                                           llvm::DIScope *RecordTy,
                                           const RecordDecl *RD);
 
-  /// Create type for binding declarations.
-  llvm::DIType *CreateBindingDeclType(const BindingDecl *BD);
-
   /// Create an anonnymous zero-size separator for bit-field-decl if needed on
   /// the target.
   llvm::DIDerivedType *createBitFieldSeparatorIfNeeded(
