@@ -805,9 +805,10 @@ class TestCase(TestBase):
         self.runCmd("settings set interpreter.save-transcript false")
 
         # Expectation
-        should_always_exist_or_not, test_cases = (
-            self.get_test_cases_for_sections_existence()
-        )
+        (
+            should_always_exist_or_not,
+            test_cases,
+        ) = self.get_test_cases_for_sections_existence()
 
         # Verification
         for test_case in test_cases:
@@ -835,9 +836,10 @@ class TestCase(TestBase):
         self.runCmd("settings set interpreter.save-transcript false")
 
         # Expectation
-        should_always_exist_or_not, test_cases = (
-            self.get_test_cases_for_sections_existence()
-        )
+        (
+            should_always_exist_or_not,
+            test_cases,
+        ) = self.get_test_cases_for_sections_existence()
 
         # Verification
         for test_case in test_cases:

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/Status.h"
+#include "gtest/gtest.h"
 
 using namespace lldb_private;
 
