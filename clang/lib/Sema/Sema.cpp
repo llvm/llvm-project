@@ -382,6 +382,9 @@ void Sema::Initialize() {
     addImplicitTypedef("size_t", Context.getSizeType());
   }
 
+  if (getLangOpts().HLSL)
+    addImplicitTypedef("__builtin_hlsl_resource_t", Context.HLSLResourceTy);
+
   // Initialize predefined OpenCL types and supported extensions and (optional)
   // core features.
   if (getLangOpts().OpenCL) {

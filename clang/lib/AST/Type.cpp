@@ -3482,7 +3482,7 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case OCLReserveID:
     return "reserve_id_t";
   case HLSLResource:
-    return "<hlsl resource>";
+    return "__builtin_hlsl_resource_t";
   case IncompleteMatrixIdx:
     return "<incomplete matrix index type>";
   case ArraySection:

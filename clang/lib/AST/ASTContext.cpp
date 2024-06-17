@@ -2162,9 +2162,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = Target->getPointerAlign(AS);
       break;
     case BuiltinType::HLSLResource:
-      // TODO: What should we do here? Matching `void *` for now...
-      Width = 0;
-      Align = 8;
+      // TODO: We actually want this to have a size of zero, but for now we'll
+      // just treat it like a pointer to make progress.
+      Width = Target->getPointerWidth(LangAS::Default);
+      Align = Target->getPointerAlign(LangAS::Default);
       break;
     // The SVE types are effectively target-specific.  The length of an
     // SVE_VECTOR_TYPE is only known at runtime, but it is always a multiple
