@@ -1937,7 +1937,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
       ++CGI;
     }
   } else
-    buildTopDownFuncOrder(CG, FunctionOrderList);
+    buildBottomUpFuncOrder(CG, FunctionOrderList);
 
   std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
 

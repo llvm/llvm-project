@@ -101,8 +101,8 @@ class SampleProfileMatcher {
   uint64_t RecoveredCallsiteSamples = 0;
 
   // Profile call-graph matching statstics:
-  uint64_t NumRecoveredUnusedSamples = 0;
-  uint64_t NumRecoveredUnusedFunc = 0;
+  uint64_t NumCallGraphRecoveredProfiledFunc = 0;
+  uint64_t NumCallGraphRecoveredFuncSamples = 0;
 
   // A dummy name for unknown indirect callee, used to differentiate from a
   // non-call instruction that also has an empty callee name.
@@ -116,17 +116,17 @@ public:
       HashKeyMap<std::unordered_map, FunctionId, Function *> &SymMap,
       std::shared_ptr<ProfileSymbolList> PSL)
       : M(M), Reader(Reader), CG(CG), ProbeManager(ProbeManager),
-        LTOPhase(LTOPhase), SymbolMap(&SymMap), PSL(PSL){};
+        LTOPhase(LTOPhase), SymbolMap(&SymMap), PSL(PSL) {};
   void runOnModule();
   void clearMatchingData() {
     // Do not clear FuncMappings, it stores IRLoc to ProfLoc remappings which
     // will be used for sample loader.
-    FuncCallsiteMatchStates.clear();
-    FlattenedProfiles.clear();
+    freeContainer(FuncCallsiteMatchStates);
+    freeContainer(FlattenedProfiles);
 
-    NewIRFunctions.clear();
-    FuncToProfileNameMap.clear();
-    ProfileNameToFuncMap.clear();
+    freeContainer(NewIRFunctions);
+    freeContainer(ProfileNameToFuncMap);
+    freeContainer(FuncToProfileNameMap);
   }
 
 private:
@@ -139,6 +139,10 @@ private:
   FunctionSamples *getFlattenedSamplesFor(const Function &F) {
     StringRef CanonFName = FunctionSamples::getCanonicalFnName(F);
     return getFlattenedSamplesFor(FunctionId(CanonFName));
+  }
+  template <typename T> inline void freeContainer(T &C) {
+    T Empty;
+    std::swap(C, Empty);
   }
   void getFilteredAnchorList(const AnchorMap &IRAnchors,
                              const AnchorMap &ProfileAnchors,
@@ -210,6 +214,8 @@ private:
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap,
                                bool RunCFGMatching, bool RunCGMatching);
+  Function *findIfFunctionIsNew(const FunctionId &IRFuncName);
+  bool isProfileUnused(const FunctionId &ProfileFuncName);
   bool functionMatchesProfileHelper(const Function &IRFunc,
                                     const FunctionId &ProfFunc);
   // Determine if the function matches profile. If FindMatchedProfileOnly is

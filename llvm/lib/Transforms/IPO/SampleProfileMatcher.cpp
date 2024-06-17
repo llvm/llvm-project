@@ -27,8 +27,8 @@ static cl::opt<bool> SalvageUnusedProfile(
 
 static cl::opt<unsigned> FuncProfileSimilarityThreshold(
     "func-profile-similarity-threshold", cl::Hidden, cl::init(80),
-    cl::desc("The profile matches the function if their similarity is above "
-             "the given number(percentage)."));
+    cl::desc("Consider a profile matches a function if the similarity of their "
+             "callee sequences is above the specified percentile."));
 
 static cl::opt<unsigned> MinFuncCountForCGMatching(
     "min-func-count-for-cg-matching", cl::Hidden, cl::init(5),
@@ -147,6 +147,19 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
   }
 }
 
+Function *
+SampleProfileMatcher::findIfFunctionIsNew(const FunctionId &IRFuncName) {
+  auto R = NewIRFunctions.find(IRFuncName);
+  if (R == NewIRFunctions.end())
+    return nullptr;
+  return R->second;
+}
+
+bool SampleProfileMatcher::isProfileUnused(const FunctionId &ProfileFuncName) {
+  auto F = SymbolMap->find(ProfileFuncName);
+  return F == SymbolMap->end();
+}
+
 bool SampleProfileMatcher::functionMatchesProfile(
     const FunctionId &IRFuncName, const FunctionId &ProfileFuncName,
     bool FindMatchedProfileOnly) {
@@ -154,23 +167,16 @@ bool SampleProfileMatcher::functionMatchesProfile(
     return true;
   if (!SalvageUnusedProfile)
     return false;
-  // If IR function and profile function don't appear on either side, try
-  // matching the profile function.
 
-  // Check whether IR function appears in profile.
-  auto R = NewIRFunctions.find(IRFuncName);
-  if (R == NewIRFunctions.end() || !R->second)
+  // If IR function doesn't have profile and the profile is unused, try
+  // matching them.
+  Function *IRFunc = findIfFunctionIsNew(IRFuncName);
+  if (!IRFunc || !isProfileUnused(ProfileFuncName))
     return false;
-  Function &IRFunc = *R->second;
-  assert(FunctionId(IRFunc.getName()) != ProfileFuncName &&
+
+  assert(FunctionId(IRFunc->getName()) != ProfileFuncName &&
          "IR function should be different from profile function to match");
-
-  // Check whether profile function appears in IR.
-  auto F = SymbolMap->find(ProfileFuncName);
-  if (F != SymbolMap->end())
-    return false;
-
-  return functionMatchesProfile(IRFunc, ProfileFuncName,
+  return functionMatchesProfile(*IRFunc, ProfileFuncName,
                                 FindMatchedProfileOnly);
 }
 
@@ -238,9 +244,9 @@ SampleProfileMatcher::longestCommonSequence(const AnchorList &AnchorList1,
         X = V[Index(K - 1)] + 1;
       Y = X - K;
       while (X < Size1 && Y < Size2 &&
-             functionMatchesProfile(AnchorList1[X].second,
-                                    AnchorList2[Y].second,
-                                    !MatchUnusedFunction))
+             functionMatchesProfile(
+                 AnchorList1[X].second, AnchorList2[Y].second,
+                 !MatchUnusedFunction /* Find matched function only */))
         X++, Y++;
 
       V[Index(K)] = X;
@@ -372,8 +378,9 @@ void SampleProfileMatcher::runStaleProfileMatching(
   // appear on either side to reduce the matching scope. Note that we need to
   // use IR anchor as base(A side) to align with the order of
   // IRToProfileLocationMap.
-  LocToLocMap MatchedAnchors = longestCommonSequence(
-      FilteredIRAnchorsList, FilteredProfileAnchorList, RunCGMatching);
+  LocToLocMap MatchedAnchors =
+      longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
+                            RunCGMatching /* Match unused functions */);
 
   // CFG level matching:
   // Apply the callsite matchings to infer matching for the basic
@@ -600,7 +607,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
     for (const auto &I : ProfileNameToFuncMap) {
       if (GlobalValue::isAvailableExternallyLinkage(I.second->getLinkage()))
         continue;
-      NumRecoveredUnusedFunc++;
+      NumCallGraphRecoveredProfiledFunc++;
     }
   }
 
@@ -635,9 +642,9 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
              << ") of samples are discarded due to function hash mismatch.\n";
     }
     if (SalvageUnusedProfile) {
-      errs() << "(" << NumRecoveredUnusedFunc << "/" << TotalProfiledFunc
-             << ") of functions' profile are matched and ("
-             << NumRecoveredUnusedSamples << "/" << TotalFunctionSamples
+      errs() << "(" << NumCallGraphRecoveredProfiledFunc << "/"
+             << TotalProfiledFunc << ") of functions' profile are matched and ("
+             << NumCallGraphRecoveredFuncSamples << "/" << TotalFunctionSamples
              << ") of samples are reused by call graph matching.\n";
     }
 
@@ -668,10 +675,10 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
     }
 
     if (SalvageUnusedProfile) {
-      ProfStatsVec.emplace_back("NumRecoveredUnusedFunc",
-                                NumRecoveredUnusedFunc);
-      ProfStatsVec.emplace_back("NumRecoveredUnusedSamples",
-                                NumRecoveredUnusedSamples);
+      ProfStatsVec.emplace_back("NumCallGraphRecoveredProfiledFunc",
+                                NumCallGraphRecoveredProfiledFunc);
+      ProfStatsVec.emplace_back("NumCallGraphRecoveredFuncSamples",
+                                NumCallGraphRecoveredFuncSamples);
     }
 
     ProfStatsVec.emplace_back("NumMismatchedCallsites", NumMismatchedCallsites);
@@ -709,7 +716,7 @@ void SampleProfileMatcher::findNewIRFunctions() {
     if (FS)
       continue;
 
-    // For extended binary, functions are fully inlined may not be loaded in the
+    // For extended binary, functions fully inlined may not be loaded in the
     // top-level profile, so check the NameTable which has the all symbol names
     // in profile.
     if (NamesInProfile.count(CanonFName))
@@ -721,7 +728,7 @@ void SampleProfileMatcher::findNewIRFunctions() {
       continue;
 
     LLVM_DEBUG(dbgs() << "Function " << CanonFName
-                      << " is not in profile or symbol list table.\n");
+                      << " is not in profile or profile symbol list.\n");
     NewIRFunctions[FunctionId(CanonFName)] = &F;
   }
 }
@@ -830,21 +837,21 @@ void SampleProfileMatcher::updateProfileWithNewName(
         }
       };
 
+  // A list of new function to old function pair.
+  std::vector<std::pair<FunctionId, FunctionId>> MatchResult;
+
   // Update non-inline callees.
   for (auto &BS : const_cast<BodySampleMap &>(FuncProfile.getBodySamples())) {
-    // New function to old function pairs used to update the CallTargetMap.
-    std::vector<std::pair<FunctionId, FunctionId>> MatchResult;
-    SampleRecord::CallTargetMap &CTM =
-        const_cast<SampleRecord::CallTargetMap &>(BS.second.getCallTargets());
-    for (const auto &TS : CTM)
+    SampleRecord &SR = BS.second;
+    MatchResult.clear();
+    for (const auto &TS : SR.getCallTargets())
       FindNewMatch(TS.first, MatchResult, FuncProfile.getFunction());
     // Update the CallTargetMap.
     for (const auto &P : MatchResult) {
-      uint64_t Samples = CTM[P.second];
+      uint64_t Samples = SR.removeCalledTarget(P.second);
+      SR.addCalledTarget(P.first, Samples);
       if (ReportProfileStaleness || PersistProfileStaleness)
-        NumRecoveredUnusedSamples += Samples;
-      CTM[P.first] = Samples;
-      CTM.erase(P.second);
+        NumCallGraphRecoveredFuncSamples += Samples;
     }
   }
 
@@ -852,8 +859,7 @@ void SampleProfileMatcher::updateProfileWithNewName(
   for (auto &CM :
        const_cast<CallsiteSampleMap &>(FuncProfile.getCallsiteSamples())) {
     auto &CalleeMap = CM.second;
-    // New function to old function pairs used to update the CallsiteSampleMap.
-    std::vector<std::pair<FunctionId, FunctionId>> MatchResult;
+    MatchResult.clear();
     for (auto &CS : CalleeMap) {
       FindNewMatch(CS.second.getFunction(), MatchResult,
                    FuncProfile.getFunction());
@@ -865,7 +871,7 @@ void SampleProfileMatcher::updateProfileWithNewName(
              "Renamed function name should be different from the old map key");
       FunctionSamples &FS = CalleeMap[P.second];
       if (ReportProfileStaleness || PersistProfileStaleness)
-        NumRecoveredUnusedSamples += FS.getTotalSamples();
+        NumCallGraphRecoveredFuncSamples += FS.getTotalSamples();
       FS.setFunction(P.first);
       CalleeMap[P.first] = FS;
       CalleeMap.erase(P.second);
@@ -890,7 +896,7 @@ void SampleProfileMatcher::updateProfilesAndSymbolMap() {
 std::vector<Function *> SampleProfileMatcher::buildTopDownFuncOrder() {
   std::vector<Function *> FunctionOrderList;
   FunctionOrderList.reserve(M.size());
-  ::buildTopDownFuncOrder(CG, FunctionOrderList);
+  ::buildBottomUpFuncOrder(CG, FunctionOrderList);
   std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
   LLVM_DEBUG({
     dbgs() << "Function processing order:\n";

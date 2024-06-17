@@ -4,8 +4,8 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-count-for-cg-matching=10 --min-func-count-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
 
 ; Verify find new IR functions.
-; CHECK: Function new_block_only is not in profile or symbol list table.
-; CHECK: Function new_foo is not in profile or symbol list table.
+; CHECK: Function new_block_only is not in profile or profile symbol list.
+; CHECK: Function new_foo is not in profile or profile symbol list.
 
 ; CHECK: Run stale profile matching for main
 ; CHECK: The similarity between new_foo(IR) and foo(profile) is 0.86
@@ -33,7 +33,7 @@
 ; CHECK: 'new_block_only' inlined into 'main' to match profiling context with (cost=75, threshold=3000) at callsite baz:1:3.2 @ new_foo:2:3.3 @ main:2:7.5;
 ; CHECK: 'new_foo' inlined into 'test_noninline' to match profiling context with (cost=110, threshold=3000) at callsite test_noninline:1:3.2;
 
-; CHECK: !"NumRecoveredUnusedFunc", i64 2, !"NumRecoveredUnusedSamples", i64 78
+; CHECK: !"NumCallGraphRecoveredProfiledFunc", i64 2, !"NumCallGraphRecoveredFuncSamples", i64 78
 
 ; TINY-FUNC-NOT: Function:new_foo matches profile:foo
 ; TINY-FUNC-NOT: Function:new_block_only matches profile:block_only
