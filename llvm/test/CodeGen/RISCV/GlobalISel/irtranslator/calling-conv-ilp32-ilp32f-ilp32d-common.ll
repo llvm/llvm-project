@@ -16,7 +16,7 @@
 ; Check that on RV32, i64 is passed in a pair of registers. Unlike
 ; the convention for varargs, this need not be an aligned pair.
 
-define i64 @callee_128i_in_regs_stack_fst(i64 %x1, i64 %x2, i64 %x3, i64 %x4, i128 %y, i127 %y2) {
+define i64 @callee_128i_in_regs_stack_fst(i64 %x1, i64 %x2, i64 %x3, i64 %x4, i128 %y, i128 %y2) {
   ; RV32I-LABEL: name: callee_128i_in_regs_stack_fst
   ; RV32I: bb.1 (%ir-block.0):
   ; RV32I-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17
@@ -38,7 +38,7 @@ define i64 @callee_128i_in_regs_stack_fst(i64 %x1, i64 %x2, i64 %x3, i64 %x4, i1
   ; RV32I-NEXT:   [[LOAD1:%[0-9]+]]:_(s128) = G_LOAD [[LOAD]](p0) :: (load (s128) from stack, align 8)
   ; RV32I-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; RV32I-NEXT:   [[LOAD2:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %fixed-stack.0)
-  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s127) = G_LOAD [[LOAD2]](p0) :: (load (s127) from stack + 4, align 4, basealign 8)
+  ; RV32I-NEXT:   [[LOAD3:%[0-9]+]]:_(s128) = G_LOAD [[LOAD2]](p0) :: (load (s128) from stack + 4, align 4, basealign 8)
   ; RV32I-NEXT:   [[TRUNC:%[0-9]+]]:_(s64) = G_TRUNC [[LOAD1]](s128)
   ; RV32I-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[TRUNC]](s64)
   ; RV32I-NEXT:   $x10 = COPY [[UV]](s32)
