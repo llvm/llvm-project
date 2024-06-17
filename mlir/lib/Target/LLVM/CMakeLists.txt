@@ -128,7 +128,13 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
   elseif(DEFINED ENV{ROCM_PATH})
     set(DEFAULT_ROCM_PATH "$ENV{ROCM_PATH}" CACHE PATH "Fallback path to search for ROCm installs")
   else()
-    set(DEFAULT_ROCM_PATH "" CACHE PATH "Fallback path to search for ROCm installs")
+    IF (WIN32)
+      # Avoid setting an UNIX path for Windows.
+      # TODO: Eventually migrate to FindHIP once it becomes a part of CMake.
+      set(DEFAULT_ROCM_PATH "" CACHE PATH "Fallback path to search for ROCm installs")
+    else()
+      set(DEFAULT_ROCM_PATH "/opt/rocm" CACHE PATH "Fallback path to search for ROCm installs")
+    endif()
   endif()
   message(VERBOSE "MLIR Default ROCM toolkit path: ${DEFAULT_ROCM_PATH}")
 

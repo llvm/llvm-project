@@ -153,7 +153,7 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
   // Fail if the path is invalid.
   if (!llvm::sys::fs::is_directory(pathRef)) {
     getOperation().emitRemark() << "ROCm amdgcn bitcode path: " << pathRef
-                                << " does not exist or is not a directory.";
+                                << " does not exist or is not a directory";
     return failure();
   }
 
@@ -168,8 +168,8 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
     llvm::sys::path::append(path, lib);
     StringRef pathRef(path.data(), path.size());
     if (!llvm::sys::fs::is_regular_file(pathRef)) {
-      getOperation().emitRemark() << "Bitcode library path: " << pathRef
-                                  << " does not exist or is not a file.\n";
+      getOperation().emitRemark() << "bitcode library path: " << pathRef
+                                  << " does not exist or is not a file";
       return true;
     }
     fileList.push_back(pathRef.str());
@@ -217,9 +217,6 @@ LogicalResult SerializeGPUModuleBase::handleBitcodeFile(llvm::Module &module) {
 }
 
 void SerializeGPUModuleBase::handleModulePreLink(llvm::Module &module) {
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  assert(targetMachine && "expect a TargetMachine");
   // If all libraries are not set, traverse the module to determine which
   // libraries are required.
   if (deviceLibs != AMDGCNLibraries::All) {
@@ -356,7 +353,7 @@ SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
   std::optional<SmallVector<char, 0>> isaBinary = assembleIsa(serializedISA);
 
   if (!isaBinary) {
-    getOperation().emitError() << "Failed during ISA assembling.";
+    getOperation().emitError() << "failed during ISA assembling";
     return std::nullopt;
   }
 
@@ -366,7 +363,7 @@ SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
   if (llvm::sys::fs::createTemporaryFile("kernel%%", "o", tempIsaBinaryFd,
                                          tempIsaBinaryFilename)) {
     getOperation().emitError()
-        << "Failed to create a temporary file for dumping the ISA binary.";
+        << "failed to create a temporary file for dumping the ISA binary";
     return std::nullopt;
   }
   llvm::FileRemover cleanupIsaBinary(tempIsaBinaryFilename);
@@ -381,7 +378,7 @@ SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
   if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco",
                                          tempHsacoFilename)) {
     getOperation().emitError()
-        << "Failed to create a temporary file for the HSA code object.";
+        << "failed to create a temporary file for the HSA code object";
     return std::nullopt;
   }
   llvm::FileRemover cleanupHsaco(tempHsacoFilename);
@@ -392,7 +389,7 @@ SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
       lldPath,
       {"ld.lld", "-shared", tempIsaBinaryFilename, "-o", tempHsacoFilename});
   if (lldResult != 0) {
-    getOperation().emitError() << "lld invocation failed.";
+    getOperation().emitError() << "lld invocation failed";
     return std::nullopt;
   }
 
@@ -401,7 +398,7 @@ SerializeGPUModuleBase::compileToBinary(const std::string &serializedISA) {
       llvm::MemoryBuffer::getFile(tempHsacoFilename, /*IsText=*/false);
   if (!hsacoFile) {
     getOperation().emitError()
-        << "Failed to read the HSA code object from the temp file.";
+        << "failed to read the HSA code object from the temp file";
     return std::nullopt;
   }
 
@@ -426,8 +423,8 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   std::optional<llvm::TargetMachine *> targetMachine =
       getOrCreateTargetMachine();
   if (!targetMachine) {
-    getOperation().emitError() << "Target Machine unavailable for triple "
-                               << triple << ", can't compile with LLVM\n";
+    getOperation().emitError() << "target Machine unavailable for triple "
+                               << triple << ", can't compile with LLVM";
     return std::nullopt;
   }
 
@@ -435,7 +432,7 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   std::optional<std::string> serializedISA =
       translateToISA(llvmModule, **targetMachine);
   if (!serializedISA) {
-    getOperation().emitError() << "Failed translating the module to ISA.";
+    getOperation().emitError() << "failed translating the module to ISA";
     return std::nullopt;
   }
 #define DEBUG_TYPE "serialize-to-isa"
@@ -448,6 +445,10 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
   // Return ISA assembly code if the compilation target is assembly.
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Assembly)
     return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
+
+  // Compiling to binary requires a valid ROCm path, fail if it's not found.
+  if (getToolkitPath().empty())
+    getOperation().emitError() << "invalid ROCm path, please set a valid path";
 
   // Compile to binary.
   return compileToBinary(*serializedISA);
@@ -493,7 +494,7 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
   if (!module)
     return std::nullopt;
   if (!mlir::isa<gpu::GPUModuleOp>(module)) {
-    module->emitError("Module must be a GPU module.");
+    module->emitError("module must be a GPU module");
     return std::nullopt;
   }
 #if MLIR_ENABLE_ROCM_CONVERSIONS
@@ -502,8 +503,8 @@ std::optional<SmallVector<char, 0>> ROCDLTargetAttrImpl::serializeToObject(
   serializer.init();
   return serializer.run();
 #else
-  module->emitError("The `AMDGPU` target was not built. Please enable it when "
-                    "building LLVM.");
+  module->emitError("the `AMDGPU` target was not built. Please enable it when "
+                    "building LLVM");
   return std::nullopt;
 #endif // MLIR_ENABLE_ROCM_CONVERSIONS
 }
