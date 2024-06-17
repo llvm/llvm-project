@@ -12594,7 +12594,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_ptrauth_string_discriminator: {
     const auto *Literal =
         cast<StringLiteral>(E->getArg(0)->IgnoreParenImpCasts());
-    uint64_t Result = getPointerAuthStableSipHash16(Literal->getString());
+    uint64_t Result = getPointerAuthStableSipHash(Literal->getString());
     return Success(Result, E);
   }
 
