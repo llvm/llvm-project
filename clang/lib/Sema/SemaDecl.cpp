@@ -14911,53 +14911,53 @@ Sema::DeclGroupPtrTy Sema::FinalizeDeclaratorGroup(Scope *S, const DeclSpec &DS,
   DeclaratorDecl *FirstNonDeducedAutoInGroup = nullptr;
   bool DiagnosedNonDeducedAuto = false;
 
-  for (unsigned i = 0, e = Group.size(); i != e; ++i) {
-    if (Decl *D = Group[i]) {
-      // Check if the Decl has been declared in '#pragma omp declare target'
-      // directive and has static storage duration.
-      if (auto *VD = dyn_cast<VarDecl>(D);
-          LangOpts.OpenMP && VD && VD->hasAttr<OMPDeclareTargetDeclAttr>() &&
-          VD->hasGlobalStorage())
-        OpenMP().ActOnOpenMPDeclareTargetInitializer(D);
-      // For declarators, there are some additional syntactic-ish checks we need
-      // to perform.
-      if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
-        if (!FirstDeclaratorInGroup)
-          FirstDeclaratorInGroup = DD;
-        if (!FirstDecompDeclaratorInGroup)
-          FirstDecompDeclaratorInGroup = dyn_cast<DecompositionDecl>(D);
-        if (!FirstNonDeducedAutoInGroup && DS.hasAutoTypeSpec() &&
-            !hasDeducedAuto(DD))
-          FirstNonDeducedAutoInGroup = DD;
+  for (Decl *D : Group) {
+    if (!D)
+      continue;
+    // Check if the Decl has been declared in '#pragma omp declare target'
+    // directive and has static storage duration.
+    if (auto *VD = dyn_cast<VarDecl>(D);
+        LangOpts.OpenMP && VD && VD->hasAttr<OMPDeclareTargetDeclAttr>() &&
+        VD->hasGlobalStorage())
+      OpenMP().ActOnOpenMPDeclareTargetInitializer(D);
+    // For declarators, there are some additional syntactic-ish checks we need
+    // to perform.
+    if (auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+      if (!FirstDeclaratorInGroup)
+        FirstDeclaratorInGroup = DD;
+      if (!FirstDecompDeclaratorInGroup)
+        FirstDecompDeclaratorInGroup = dyn_cast<DecompositionDecl>(D);
+      if (!FirstNonDeducedAutoInGroup && DS.hasAutoTypeSpec() &&
+          !hasDeducedAuto(DD))
+        FirstNonDeducedAutoInGroup = DD;
 
-        if (FirstDeclaratorInGroup != DD) {
-          // A decomposition declaration cannot be combined with any other
-          // declaration in the same group.
-          if (FirstDecompDeclaratorInGroup && !DiagnosedMultipleDecomps) {
-            Diag(FirstDecompDeclaratorInGroup->getLocation(),
-                 diag::err_decomp_decl_not_alone)
-                << FirstDeclaratorInGroup->getSourceRange()
-                << DD->getSourceRange();
-            DiagnosedMultipleDecomps = true;
-          }
+      if (FirstDeclaratorInGroup != DD) {
+        // A decomposition declaration cannot be combined with any other
+        // declaration in the same group.
+        if (FirstDecompDeclaratorInGroup && !DiagnosedMultipleDecomps) {
+          Diag(FirstDecompDeclaratorInGroup->getLocation(),
+               diag::err_decomp_decl_not_alone)
+              << FirstDeclaratorInGroup->getSourceRange()
+              << DD->getSourceRange();
+          DiagnosedMultipleDecomps = true;
+        }
 
-          // A declarator that uses 'auto' in any way other than to declare a
-          // variable with a deduced type cannot be combined with any other
-          // declarator in the same group.
-          if (FirstNonDeducedAutoInGroup && !DiagnosedNonDeducedAuto) {
-            Diag(FirstNonDeducedAutoInGroup->getLocation(),
-                 diag::err_auto_non_deduced_not_alone)
-                << FirstNonDeducedAutoInGroup->getType()
-                       ->hasAutoForTrailingReturnType()
-                << FirstDeclaratorInGroup->getSourceRange()
-                << DD->getSourceRange();
-            DiagnosedNonDeducedAuto = true;
-          }
+        // A declarator that uses 'auto' in any way other than to declare a
+        // variable with a deduced type cannot be combined with any other
+        // declarator in the same group.
+        if (FirstNonDeducedAutoInGroup && !DiagnosedNonDeducedAuto) {
+          Diag(FirstNonDeducedAutoInGroup->getLocation(),
+               diag::err_auto_non_deduced_not_alone)
+              << FirstNonDeducedAutoInGroup->getType()
+                     ->hasAutoForTrailingReturnType()
+              << FirstDeclaratorInGroup->getSourceRange()
+              << DD->getSourceRange();
+          DiagnosedNonDeducedAuto = true;
         }
       }
-
-      Decls.push_back(D);
     }
+
+    Decls.push_back(D);
   }
 
   if (DeclSpec::isDeclRep(DS.getTypeSpecType())) {
