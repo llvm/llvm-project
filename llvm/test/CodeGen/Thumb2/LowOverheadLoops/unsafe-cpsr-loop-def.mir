@@ -32,13 +32,10 @@
     ret i32 0
   }
 
-  ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.start.loop.iterations.i32(i32) #0
 
-  ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
 
-  ; Function Attrs: nounwind
   declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { noduplicate nounwind }
@@ -93,32 +90,36 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: do_copy
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r7, $lr
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   $lr = tMOVr killed $r0, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r1, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r2 = t2LSRri renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr = tMOVr renamable $lr, 14 /* CC::al */, $noreg
-  ; CHECK: bb.1.while.body:
-  ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2
-  ; CHECK:   renamable $r3, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep7)
-  ; CHECK:   tCMPhir renamable $lr, renamable $r2, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   t2IT 2, 8, implicit-def $itstate
-  ; CHECK:   renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2 /* CC::hs */, killed $cpsr, implicit renamable $r3, implicit killed $itstate
-  ; CHECK:   early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep4)
-  ; CHECK:   t2CMPri renamable $lr, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   tBcc %bb.1, 4 /* CC::mi */, killed $cpsr
-  ; CHECK:   tB %bb.2, 14 /* CC::al */, $noreg
-  ; CHECK: bb.2.while.end:
-  ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2, $r7, $lr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   $lr = tMOVr killed $r0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r1, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r2 = t2LSRri renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   $lr = tMOVr renamable $lr, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.while.body:
+  ; CHECK-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r1, $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r3, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep7)
+  ; CHECK-NEXT:   tCMPhir renamable $lr, renamable $r2, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   t2IT 2, 8, implicit-def $itstate
+  ; CHECK-NEXT:   renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2 /* CC::hs */, killed $cpsr, implicit renamable $r3, implicit killed $itstate
+  ; CHECK-NEXT:   early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14 /* CC::al */, $noreg :: (store (s32) into %ir.scevgep4)
+  ; CHECK-NEXT:   t2CMPri renamable $lr, 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   tBcc %bb.1, 4 /* CC::mi */, killed $cpsr
+  ; CHECK-NEXT:   tB %bb.2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.while.end:
+  ; CHECK-NEXT:   $r0, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0
   bb.0.entry:
     successors: %bb.1(0x80000000)
     liveins: $r0, $r1, $r2, $r7, $lr

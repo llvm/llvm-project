@@ -18,7 +18,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -496,6 +495,10 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
+  /// A list of classes which need to emit the VTable in the corresponding
+  /// object file.
+  llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
+
   /// Computes input files that didn't affect compilation of the current module,
   /// and initializes data structures necessary for leaving those files out
   /// during \c SourceManager serialization.
@@ -565,7 +568,8 @@ private:
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
-  uint64_t WriteDeclContextLexicalBlock(ASTContext &Context, DeclContext *DC);
+  uint64_t WriteDeclContextLexicalBlock(ASTContext &Context,
+                                        const DeclContext *DC);
   uint64_t WriteDeclContextVisibleBlock(ASTContext &Context, DeclContext *DC);
   void WriteTypeDeclOffsets();
   void WriteFileDeclIDsMap();
@@ -714,9 +718,6 @@ public:
   /// Force a type to be emitted and get its ID.
   serialization::TypeID GetOrCreateTypeID(QualType T);
 
-  /// Determine the type ID of an already-emitted type.
-  serialization::TypeID getTypeID(QualType T) const;
-
   /// Find the first local declaration of a given local redeclarable
   /// decl.
   const Decl *getFirstLocalDecl(const Decl *D);
@@ -852,6 +853,8 @@ public:
 
   bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
 
+  void handleVTable(CXXRecordDecl *RD);
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
@@ -946,6 +949,7 @@ public:
 
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
   void HandleTranslationUnit(ASTContext &Ctx) override;
+  void HandleVTable(CXXRecordDecl *RD) override { Writer.handleVTable(RD); }
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }

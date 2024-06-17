@@ -53,6 +53,7 @@
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -477,6 +478,15 @@ void DebugUnparseWithSymbolsAction::executeAction() {
   reportFatalSemanticErrors();
 }
 
+void DebugUnparseWithModulesAction::executeAction() {
+  auto &parseTree{*getInstance().getParsing().parseTree()};
+  CompilerInstance &ci{getInstance()};
+  Fortran::semantics::UnparseWithModules(
+      llvm::outs(), ci.getSemantics().context(), parseTree,
+      /*encoding=*/Fortran::parser::Encoding::UTF_8);
+  reportFatalSemanticErrors();
+}
+
 void DebugDumpSymbolsAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
 
@@ -809,6 +819,9 @@ void CodeGenAction::generateLLVMIR() {
     config.VScaleMax = vsr->second;
   }
 
+  if (ci.getInvocation().getLoweringOpts().getNSWOnLoopVarInc())
+    config.NSWOnLoopVarInc = true;
+
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -983,6 +996,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC)
     mpm.addPass(llvm::BitcodeWriterPass(os));
+  else if (action == BackendActionTy::Backend_EmitLL)
+    mpm.addPass(llvm::PrintModulePass(os));
 
   // Run the passes.
   mpm.run(*llvmModule, mam);
@@ -1258,13 +1273,8 @@ void CodeGenAction::executeAction() {
   // Run LLVM's middle-end (i.e. the optimizer).
   runOptimizationPipeline(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
 
-  if (action == BackendActionTy::Backend_EmitLL) {
-    llvmModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream(),
-                      /*AssemblyAnnotationWriter=*/nullptr);
-    return;
-  }
-
-  if (action == BackendActionTy::Backend_EmitBC) {
+  if (action == BackendActionTy::Backend_EmitLL ||
+      action == BackendActionTy::Backend_EmitBC) {
     // This action has effectively been completed in runOptimizationPipeline.
     return;
   }

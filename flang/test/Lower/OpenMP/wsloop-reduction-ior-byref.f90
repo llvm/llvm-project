@@ -28,12 +28,12 @@
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:           hlfir.assign %[[VAL_6]] to %[[VAL_4]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel
-! CHECK:             %[[VAL_7:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
+! CHECK:             %[[VAL_7:.*]] = fir.alloca i32 {bindc_name = "i", pinned, {{.*}}}
 ! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFreduction_iorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@ior_byref_i32 %[[VAL_4]]#0 -> %[[VAL_12:.*]] : !fir.ref<i32>) {
+! CHECK:             omp.wsloop reduction(byref @ior_byref_i32 %[[VAL_4]]#0 -> %[[VAL_12:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_13:.*]]) : i32 = (%[[VAL_9]]) to (%[[VAL_10]]) inclusive step (%[[VAL_11]]) {
 ! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFreduction_iorEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 fir.store %[[VAL_13]] to %[[VAL_8]]#1 : !fir.ref<i32>

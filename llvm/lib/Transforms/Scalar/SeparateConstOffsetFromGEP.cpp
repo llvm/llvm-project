@@ -972,13 +972,8 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
 
 bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                             TargetTransformInfo &TTI) {
-  if (GEP->getNumIndices() != 1)
-    return false;
-
   auto PtrGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
   if (!PtrGEP)
-    return false;
-  if (PtrGEP->getNumIndices() != 1)
     return false;
 
   bool NestedNeedsExtraction;
@@ -997,18 +992,16 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   bool PtrGEPInBounds = PtrGEP->isInBounds();
   bool IsChainInBounds = GEPInBounds && PtrGEPInBounds;
   if (IsChainInBounds) {
-    auto GEPIdx = GEP->indices().begin();
-    auto KnownGEPIdx = computeKnownBits(GEPIdx->get(), *DL);
-    IsChainInBounds &= KnownGEPIdx.isNonNegative();
-    if (IsChainInBounds) {
-      auto PtrGEPIdx = GEP->indices().begin();
-      auto KnownPtrGEPIdx = computeKnownBits(PtrGEPIdx->get(), *DL);
-      IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
-    }
+    auto IsKnownNonNegative = [this](Value *V) {
+      return isKnownNonNegative(V, *DL);
+    };
+    IsChainInBounds &= all_of(GEP->indices(), IsKnownNonNegative);
+    if (IsChainInBounds)
+      IsChainInBounds &= all_of(PtrGEP->indices(), IsKnownNonNegative);
   }
 
   IRBuilder<> Builder(GEP);
-  // For trivial GEP chains, we can swap the indicies.
+  // For trivial GEP chains, we can swap the indices.
   Value *NewSrc = Builder.CreateGEP(
       GEP->getSourceElementType(), PtrGEP->getPointerOperand(),
       SmallVector<Value *, 4>(GEP->indices()), "", IsChainInBounds);
@@ -1109,8 +1102,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   //
   // TODO(jingyue): do some range analysis to keep as many inbounds as
   // possible. GEPs with inbounds are more friendly to alias analysis.
+  // TODO(gep_nowrap): Preserve nuw at least.
   bool GEPWasInBounds = GEP->isInBounds();
-  GEP->setIsInBounds(false);
+  GEP->setNoWrapFlags(GEPNoWrapFlags::none());
 
   // Lowers a GEP to either GEPs with a single index or arithmetic operations.
   if (LowerGEP) {
@@ -1384,8 +1378,9 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
   uint64_t ObjectSize;
   if (!getObjectSize(NewBase, ObjectSize, DAL, TLI) ||
      Offset.ugt(ObjectSize)) {
-    First->setIsInBounds(false);
-    Second->setIsInBounds(false);
+    // TODO(gep_nowrap): Make flag preservation more precise.
+    First->setNoWrapFlags(GEPNoWrapFlags::none());
+    Second->setNoWrapFlags(GEPNoWrapFlags::none());
   } else
     First->setIsInBounds(true);
 }

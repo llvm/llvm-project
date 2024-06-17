@@ -28,6 +28,13 @@ bool tryToFindPtrOrigin(
       E = tempExpr->getSubExpr();
       continue;
     }
+    if (auto *tempExpr = dyn_cast<CXXTemporaryObjectExpr>(E)) {
+      if (auto *C = tempExpr->getConstructor()) {
+        if (auto *Class = C->getParent(); Class && isRefCounted(Class))
+          return callback(E, true);
+        break;
+      }
+    }
     if (auto *tempExpr = dyn_cast<ParenExpr>(E)) {
       E = tempExpr->getSubExpr();
       continue;

@@ -52,7 +52,7 @@ def GPU_DimensionAttr : EnumAttr<GPU_Dialect, GPU_Dimension, "dim">;
 class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
     GPU_Op<mnemonic, !listconcat(traits, [
         Pure,
-        DeclareOpInterfaceMethods<InferIntRangeInterface>,
+        DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>])>,
     Arguments<(ins GPU_DimensionAttr:$dimension)>, Results<(outs Index)> {
   let assemblyFormat = "$dimension attr-dict";
@@ -70,13 +70,26 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
 
 def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
   let description = [{
-    Returns the number of thread blocks in the cluster along
+    Returns the number of cluster identifiers per grid along
     the x, y, or z `dimension`.
 
     Example:
 
     ```mlir
     %cDimX = gpu.cluster_dim x
+    ```
+  }];
+}
+
+def GPU_ClusterDimBlocksOp : GPU_IndexOp<"cluster_dim_blocks"> {
+  let description = [{
+    Returns the number of thread blocks in the cluster along
+    the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cDimBlocksX = gpu.cluster_dim_blocks x
     ```
   }];
 }
@@ -90,6 +103,18 @@ def GPU_ClusterIdOp : GPU_IndexOp<"cluster_id"> {
 
     ```mlir
     %cIdY = gpu.cluster_id y
+    ```
+  }];
+}
+
+def GPU_ClusterBlockIdOp : GPU_IndexOp<"cluster_block_id"> {
+  let description = [{
+    Returns the block id within the cluster along the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cBlockIdY = gpu.cluster_block_id y
     ```
   }];
 }
@@ -144,7 +169,7 @@ def GPU_ThreadIdOp : GPU_IndexOp<"thread_id"> {
 }
 
 def GPU_LaneIdOp : GPU_Op<"lane_id", [
-      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]> {
+      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let description = [{
     Returns the lane id within the subgroup (warp/wave).
 
@@ -158,7 +183,7 @@ def GPU_LaneIdOp : GPU_Op<"lane_id", [
 }
 
 def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [
-      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
+      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
     Returns the subgroup id, i.e., the index of the current subgroup within the
@@ -190,7 +215,7 @@ def GPU_GlobalIdOp : GPU_IndexOp<"global_id"> {
 
 
 def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [
-      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
+      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
     Returns the number of subgroups within a workgroup.
@@ -206,7 +231,7 @@ def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [
 }
 
 def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
-      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
+      Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
     Returns the number of threads within a subgroup.
@@ -631,6 +656,12 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
+      "Type":$asyncTokenType,
+      CArg<"ValueRange", "{}">:$asyncDependencies,
+      CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>,
+    OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
+      "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
+      "ValueRange":$kernelOperands,
       CArg<"Value", "nullptr">:$asyncObject,
       CArg<"std::optional<KernelDim3>", "std::nullopt">:$clusterSize)>
   ];
@@ -687,7 +718,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
 
 def GPU_LaunchOp : GPU_Op<"launch", [
       AutomaticAllocationScope, AttrSizedOperandSegments, GPU_AsyncOpInterface,
-      DeclareOpInterfaceMethods<InferIntRangeInterface>,
+      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
       RecursiveMemoryEffects]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
@@ -1241,7 +1272,7 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 def GPU_GPUModuleOp : GPU_Op<"module", [
       DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
       SymbolTable, Symbol, SingleBlockImplicitTerminator<"ModuleEndOp">
-    ]>, Arguments<(ins
+    ]>, Arguments<(ins SymbolNameAttr:$sym_name,
           OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
           OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler)> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";

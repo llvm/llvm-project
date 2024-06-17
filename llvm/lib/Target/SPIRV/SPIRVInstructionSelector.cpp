@@ -495,6 +495,15 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_UMULH:
     return selectExtInst(ResVReg, ResType, I, CL::u_mul_hi);
 
+  case TargetOpcode::G_SADDSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::s_add_sat);
+  case TargetOpcode::G_UADDSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::u_add_sat);
+  case TargetOpcode::G_SSUBSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::s_sub_sat);
+  case TargetOpcode::G_USUBSAT:
+    return selectExtInst(ResVReg, ResType, I, CL::u_sub_sat);
+
   case TargetOpcode::G_SEXT:
     return selectExt(ResVReg, ResType, I, true);
   case TargetOpcode::G_ANYEXT:
@@ -1077,7 +1086,11 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
 
   // don't generate a cast between identical storage classes
   if (SrcSC == DstSC)
-    return true;
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(TargetOpcode::COPY))
+        .addDef(ResVReg)
+        .addUse(SrcPtr)
+        .constrainAllUses(TII, TRI, RBI);
 
   // Casting from an eligible pointer to Generic.
   if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
@@ -1112,10 +1125,13 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   if (SrcSC == SPIRV::StorageClass::CrossWorkgroup && isUSMStorageClass(DstSC))
     return selectUnOp(ResVReg, ResType, I,
                       SPIRV::OpCrossWorkgroupCastToPtrINTEL);
+  if (isUSMStorageClass(SrcSC) && DstSC == SPIRV::StorageClass::Generic)
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpPtrCastToGeneric);
+  if (SrcSC == SPIRV::StorageClass::Generic && isUSMStorageClass(DstSC))
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpGenericCastToPtr);
 
-  // TODO Should this case just be disallowed completely?
-  // We're casting 2 other arbitrary address spaces, so have to bitcast.
-  return selectUnOp(ResVReg, ResType, I, SPIRV::OpBitcast);
+  // Bitcast for pointers requires that the address spaces must match
+  return false;
 }
 
 static unsigned getFCmpOpcode(unsigned PredNum) {

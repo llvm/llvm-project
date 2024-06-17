@@ -341,7 +341,7 @@ serialization::getDefinitiveDeclContext(const DeclContext *DC) {
 
   // FIXME: These are defined in one place, but properties in class extensions
   // end up being back-patched into the main interface. See
-  // Sema::HandlePropertyInClassExtension for the offending code.
+  // SemaObjC::HandlePropertyInClassExtension for the offending code.
   case Decl::ObjCInterface:
     return nullptr;
 

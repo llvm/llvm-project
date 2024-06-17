@@ -327,7 +327,7 @@ void X86_32TargetCodeGenInfo::addReturnRegisterOutputs(
   ResultTruncRegTypes.push_back(CoerceTy);
 
   // Coerce the integer by bitcasting the return slot pointer.
-  ReturnSlot.setAddress(ReturnSlot.getAddress(CGF).withElementType(CoerceTy));
+  ReturnSlot.setAddress(ReturnSlot.getAddress().withElementType(CoerceTy));
   ResultRegDests.push_back(ReturnSlot);
 
   rewriteInputConstraintReferences(NumOutputs, 1, AsmString);

@@ -132,13 +132,13 @@ static cl::opt<bool>
 #ifndef NDEBUG
 static cl::list<std::string>
     SeedAllowList("attributor-seed-allow-list", cl::Hidden,
-                  cl::desc("Comma seperated list of attribute names that are "
+                  cl::desc("Comma separated list of attribute names that are "
                            "allowed to be seeded."),
                   cl::CommaSeparated);
 
 static cl::list<std::string> FunctionSeedAllowList(
     "attributor-function-seed-allow-list", cl::Hidden,
-    cl::desc("Comma seperated list of function names that are "
+    cl::desc("Comma separated list of function names that are "
              "allowed to be seeded."),
     cl::CommaSeparated);
 #endif
@@ -3954,7 +3954,7 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
     // We look at internal functions only on-demand but if any use is not a
     // direct call or outside the current set of analyzed functions, we have
     // to do it eagerly.
-    if (F->hasLocalLinkage()) {
+    if (AC.UseLiveness && F->hasLocalLinkage()) {
       if (llvm::all_of(F->uses(), [&Functions](const Use &U) {
             const auto *CB = dyn_cast<CallBase>(U.getUser());
             return CB && CB->isCallee(&U) &&

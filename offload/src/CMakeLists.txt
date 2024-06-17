@@ -1,16 +1,4 @@
-##===----------------------------------------------------------------------===##
-#
-# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-# See https://llvm.org/LICENSE.txt for license information.
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-#
-##===----------------------------------------------------------------------===##
-#
-# Build offloading library libomptarget.so.
-#
-##===----------------------------------------------------------------------===##
-
-libomptarget_say("Building offloading runtime library libomptarget.")
+message(STATUS "Building offloading runtime library libomptarget.")
 
 if(LIBOMP_STANDALONE)
   set(LIBOMP ${LIBOMP_STANDALONE})
@@ -50,7 +38,7 @@ add_llvm_library(omptarget
   NO_INSTALL_RPATH
   BUILDTREE_ONLY
 )
-target_include_directories(omptarget PRIVATE 
+target_include_directories(omptarget PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 )
 
@@ -69,8 +57,8 @@ foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
   target_link_libraries(omptarget PRIVATE omptarget.rtl.${plugin})
 endforeach()
 
-target_compile_options(omptarget PUBLIC ${offload_compile_flags})
-target_link_options(omptarget PUBLIC ${offload_link_flags})
+target_compile_options(omptarget PRIVATE ${offload_compile_flags})
+target_link_options(omptarget PRIVATE ${offload_link_flags})
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.

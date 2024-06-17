@@ -349,6 +349,13 @@ func.func @vector_interleave2(%vec1: vector<[4]xf16>, %vec2 : vector<[4]xf16>) {
   return
 }
 
+// CHECK-LABEL: @vector_deinterleave2
+func.func @vector_deinterleave2(%vec: vector<[8]xf16>) {
+  // CHECK: = "llvm.intr.vector.deinterleave2"({{.*}}) : (vector<[8]xf16>) -> !llvm.struct<(vector<[4]xf16>, vector<[4]xf16>)>
+  %0 = "llvm.intr.vector.deinterleave2"(%vec) : (vector<[8]xf16>) -> !llvm.struct<(vector<[4]xf16>, vector<[4]xf16>)>
+  return
+}
+
 // CHECK-LABEL: @alloca
 func.func @alloca(%size : i64) {
   // CHECK: llvm.alloca %{{.*}} x i32 : (i64) -> !llvm.ptr
@@ -378,15 +385,19 @@ func.func @atomic_load(%ptr : !llvm.ptr) {
   %0 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> f32
   // CHECK: llvm.load volatile %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
   %1 = llvm.load volatile %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr -> f32
+  // CHECK: llvm.load %{{.*}} atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> i128
+  %2 = llvm.load %ptr atomic monotonic {alignment = 4 : i64} : !llvm.ptr -> i128
   llvm.return
 }
 
 // CHECK-LABEL: @atomic_store
-func.func @atomic_store(%val : f32, %ptr : !llvm.ptr) {
+func.func @atomic_store(%val : f32, %large_val : i256, %ptr : !llvm.ptr) {
   // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
   llvm.store %val, %ptr atomic monotonic {alignment = 4 : i64} : f32, !llvm.ptr
   // CHECK: llvm.store volatile %{{.*}}, %{{.*}} atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
   llvm.store volatile %val, %ptr atomic syncscope("singlethread") monotonic {alignment = 16 : i64} : f32, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} atomic monotonic {alignment = 4 : i64} : i256, !llvm.ptr
+  llvm.store %large_val, %ptr atomic monotonic {alignment = 4 : i64} : i256, !llvm.ptr
   llvm.return
 }
 

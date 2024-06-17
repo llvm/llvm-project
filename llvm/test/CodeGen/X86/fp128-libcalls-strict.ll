@@ -1047,6 +1047,46 @@ entry:
   ret fp128 %sqrt
 }
 
+define fp128 @tan(fp128 %x) nounwind strictfp {
+; ANDROID-LABEL: tan:
+; ANDROID:       # %bb.0: # %entry
+; ANDROID-NEXT:    pushq %rax
+; ANDROID-NEXT:    callq tanl@PLT
+; ANDROID-NEXT:    popq %rax
+; ANDROID-NEXT:    retq
+;
+; GNU-LABEL: tan:
+; GNU:       # %bb.0: # %entry
+; GNU-NEXT:    pushq %rax
+; GNU-NEXT:    callq tanf128@PLT
+; GNU-NEXT:    popq %rax
+; GNU-NEXT:    retq
+;
+; X86-LABEL: tan:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    calll tanl
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    movaps (%esp), %xmm0
+; X86-NEXT:    movaps %xmm0, (%esi)
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $24, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl $4
+entry:
+  %tan = call fp128 @llvm.experimental.constrained.tan.f128(fp128 %x, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret fp128 %tan
+}
+
 define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; ANDROID-LABEL: trunc:
 ; ANDROID:       # %bb.0: # %entry
@@ -1663,6 +1703,7 @@ declare fp128 @llvm.experimental.constrained.round.f128(fp128, metadata)
 declare fp128 @llvm.experimental.constrained.roundeven.f128(fp128, metadata)
 declare fp128 @llvm.experimental.constrained.sin.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.sqrt.f128(fp128, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.tan.f128(fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.trunc.f128(fp128, metadata)
 declare i32 @llvm.experimental.constrained.lrint.i32.f128(fp128, metadata, metadata)
 declare i64 @llvm.experimental.constrained.llrint.i64.f128(fp128, metadata, metadata)

@@ -37,6 +37,7 @@ class raw_ostream;
 
 namespace AMDGPU {
 
+struct AMDGPUMCKernelCodeT;
 struct IsaVersion;
 
 /// Generic target versions emitted by this version of LLVM.
@@ -48,6 +49,7 @@ static constexpr unsigned GFX9 = 1;
 static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
+static constexpr unsigned GFX12 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -855,12 +857,18 @@ LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
+bool isInvalidSingleUseConsumerInst(unsigned Opc);
+
+LLVM_READONLY
+bool isInvalidSingleUseProducerInst(unsigned Opc);
+
+LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
 LLVM_READONLY
 unsigned mapWMMA3AddrTo2AddrOpcode(unsigned Opc);
 
-void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,
+void initDefaultAMDKernelCodeT(AMDGPUMCKernelCodeT &Header,
                                const MCSubtargetInfo *STI);
 
 bool isGroupSegment(const GlobalValue *GV);

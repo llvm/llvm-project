@@ -54,11 +54,11 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   }
 
   // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(S, CharType, Descriptor::InlineDescMD,
-                                        S->getLength() + 1,
-                                        /*isConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false);
+  Descriptor *Desc =
+      allocateDescriptor(S, CharType, Descriptor::GlobalMD, S->getLength() + 1,
+                         /*isConst=*/true,
+                         /*isTemporary=*/false,
+                         /*isMutable=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -144,12 +144,15 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   if (auto It = DummyVariables.find(VD); It != DummyVariables.end())
     return It->second;
 
+  QualType QT = VD->getType();
+  if (const auto *RT = QT->getAs<ReferenceType>())
+    QT = RT->getPointeeType();
+
   Descriptor *Desc;
-  if (std::optional<PrimType> T = Ctx.classify(VD->getType()))
+  if (std::optional<PrimType> T = Ctx.classify(QT))
     Desc = createDescriptor(VD, *T, std::nullopt, true, false);
   else
-    Desc = createDescriptor(VD, VD->getType().getTypePtr(), std::nullopt, true,
-                            false);
+    Desc = createDescriptor(VD, QT.getTypePtr(), std::nullopt, true, false);
   if (!Desc)
     Desc = allocateDescriptor(VD);
 
@@ -204,11 +207,10 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
   if (std::optional<PrimType> T = Ctx.classify(Ty))
-    Desc =
-        createDescriptor(D, *T, Descriptor::InlineDescMD, IsConst, IsTemporary);
+    Desc = createDescriptor(D, *T, Descriptor::GlobalMD, IsConst, IsTemporary);
   else
-    Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::InlineDescMD,
-                            IsConst, IsTemporary);
+    Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::GlobalMD, IsConst,
+                            IsTemporary);
 
   if (!Desc)
     return std::nullopt;
@@ -221,7 +223,9 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   G->block()->invokeCtor();
 
   // Initialize InlineDescriptor fields.
-  new (G->block()->rawData()) InlineDescriptor(Desc);
+  auto *GD = new (G->block()->rawData()) GlobalInlineDescriptor();
+  if (!Init)
+    GD->InitState = GlobalInitState::NoInitializer;
   Globals.push_back(G);
 
   return I;
@@ -372,7 +376,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
         const Descriptor *ElemDesc = createDescriptor(
-            D, ElemTy.getTypePtr(), MDSize, IsConst, IsTemporary);
+            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
         unsigned ElemSize =
@@ -386,7 +390,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
     // Array of unknown bounds - cannot be accessed and pointer arithmetic
     // is forbidden on pointers to such objects.
-    if (isa<IncompleteArrayType>(ArrayType)) {
+    if (isa<IncompleteArrayType>(ArrayType) ||
+        isa<VariableArrayType>(ArrayType)) {
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
         return allocateDescriptor(D, *T, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});

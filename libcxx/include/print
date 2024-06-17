@@ -34,7 +34,6 @@ namespace std {
 */
 
 #include <__assert>
-#include <__availability>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__system_error/system_error.h>

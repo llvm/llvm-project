@@ -1034,32 +1034,47 @@ void RuleMatcher::emit(MatchTable &Table) {
   for (const auto &PM : EpilogueMatchers)
     PM->emitPredicateOpcodes(Table, *this);
 
-  // Emit all actions except the last one, then emit coverage and emit the
-  // final action.
-  //
-  // This is because some actions, such as GIR_EraseRootFromParent_Done, also
-  // double as a GIR_Done and terminate execution of the rule.
-  if (!Actions.empty()) {
-    for (const auto &MA : drop_end(Actions))
+  if (!CustomCXXAction.empty()) {
+    /// Handle combiners relying on custom C++ code instead of actions.
+    assert(Table.isCombiner() && "CustomCXXAction is only for combiners!");
+    // We cannot have actions other than debug comments.
+    assert(none_of(Actions, [](auto &A) {
+      return A->getKind() != MatchAction::AK_DebugComment;
+    }));
+    for (const auto &MA : Actions)
       MA->emitActionOpcodes(Table, *this);
-  }
-
-  assert((Table.isWithCoverage() ? !Table.isCombiner() : true) &&
-         "Combiner tables don't support coverage!");
-  if (Table.isWithCoverage())
-    Table << MatchTable::Opcode("GIR_Coverage")
-          << MatchTable::IntValue(4, RuleID) << MatchTable::LineBreak;
-  else if (!Table.isCombiner())
-    Table << MatchTable::Comment(("GIR_Coverage, " + Twine(RuleID) + ",").str())
+    Table << MatchTable::Opcode("GIR_DoneWithCustomAction", -1)
+          << MatchTable::Comment("Fn")
+          << MatchTable::NamedValue(2, CustomCXXAction)
           << MatchTable::LineBreak;
+  } else {
+    // Emit all actions except the last one, then emit coverage and emit the
+    // final action.
+    //
+    // This is because some actions, such as GIR_EraseRootFromParent_Done, also
+    // double as a GIR_Done and terminate execution of the rule.
+    if (!Actions.empty()) {
+      for (const auto &MA : drop_end(Actions))
+        MA->emitActionOpcodes(Table, *this);
+    }
 
-  if (Actions.empty() ||
-      !Actions.back()->emitActionOpcodesAndDone(Table, *this)) {
-    Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak;
+    assert((Table.isWithCoverage() ? !Table.isCombiner() : true) &&
+           "Combiner tables don't support coverage!");
+    if (Table.isWithCoverage())
+      Table << MatchTable::Opcode("GIR_Coverage")
+            << MatchTable::IntValue(4, RuleID) << MatchTable::LineBreak;
+    else if (!Table.isCombiner())
+      Table << MatchTable::Comment(
+                   ("GIR_Coverage, " + Twine(RuleID) + ",").str())
+            << MatchTable::LineBreak;
+
+    if (Actions.empty() ||
+        !Actions.back()->emitActionOpcodesAndDone(Table, *this)) {
+      Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak;
+    }
   }
 
   Table << MatchTable::Label(LabelID);
-
   ++NumPatternEmitted;
 }
 
@@ -2106,14 +2121,6 @@ void CustomOperandRenderer::emitRenderOpcodes(MatchTable &Table,
         << MatchTable::NamedValue(
                2, "GICR_" + Renderer.getValueAsString("RendererFn").str())
         << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
-}
-
-//===- CustomCXXAction ----------------------------------------------------===//
-
-void CustomCXXAction::emitActionOpcodes(MatchTable &Table,
-                                        RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIR_CustomAction")
-        << MatchTable::NamedValue(2, FnEnumName) << MatchTable::LineBreak;
 }
 
 //===- BuildMIAction ------------------------------------------------------===//

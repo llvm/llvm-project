@@ -827,7 +827,8 @@ private:
         return false;
       }
 
-      if (Metrics.convergent) {
+      // FIXME: Allow jump threading with controlled convergence.
+      if (Metrics.Convergence != ConvergenceKind::None) {
         LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, contains "
                           << "convergent instructions.\n");
         ORE->emit([&]() {

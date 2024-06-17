@@ -1375,3 +1375,667 @@ entry:
   %s = select <32 x i1> %c, <32 x i8> %d, <32 x i8> %e
   ret <32 x i8> %s
 }
+
+; ===== ICMP Zero RHS =====
+
+define <8 x i1> @icmp_eq_v8i8_Zero_RHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_eq_v8i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp eq <8 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_eq_v16i8_Zero_RHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_eq_v16i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp eq <16 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_eq_v4i16_Zero_RHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_eq_v4i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp eq <4 x i16> %a, <i16 0, i16 0, i16 0, i16 0>
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_eq_v8i16_Zero_RHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_eq_v8i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp eq <8 x i16> %a, <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_eq_v2i32_Zero_RHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_eq_v2i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp eq <2 x i32> %a, <i32 0, i32 0>
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_eq_v4i32_Zero_RHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_eq_v4i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp eq <4 x i32> %a, <i32 0, i32 0, i32 0, i32 0>
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_eq_v2i64_Zero_RHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_eq_v2i64_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp eq <2 x i64> %a, <i64 0, i64 0>
+    ret <2 x i1> %c
+}
+
+define <8 x i1> @icmp_sge_v8i8_Zero_RHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_sge_v8i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sge <8 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_sge_v16i8_Zero_RHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_sge_v16i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sge <16 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_sge_v4i16_Zero_RHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_sge_v4i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp sge <4 x i16> %a, <i16 0, i16 0, i16 0, i16 0>
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_sge_v8i16_Zero_RHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_sge_v8i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp sge <8 x i16> %a, <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_sge_v2i32_Zero_RHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_sge_v2i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp sge <2 x i32> %a, <i32 0, i32 0>
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_sge_v4i32_Zero_RHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_sge_v4i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp sge <4 x i32> %a, <i32 0, i32 0, i32 0, i32 0>
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_sge_v2i64_Zero_RHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_sge_v2i64_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp sge <2 x i64> %a, <i64 0, i64 0>
+    ret <2 x i1> %c
+}
+
+define <8 x i1> @icmp_sgt_v8i8_Zero_RHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_sgt_v8i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sgt <8 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_sgt_v16i8_Zero_RHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_sgt_v16i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sgt <16 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_sgt_v4i16_Zero_RHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_sgt_v4i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp sgt <4 x i16> %a, <i16 0, i16 0, i16 0, i16 0>
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_sgt_v8i16_Zero_RHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_sgt_v8i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp sgt <8 x i16> %a, <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_sgt_v2i32_Zero_RHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_sgt_v2i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp sgt <2 x i32> %a, <i32 0, i32 0>
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_sgt_v4i32_Zero_RHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_sgt_v4i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp sgt <4 x i32> %a, <i32 0, i32 0, i32 0, i32 0>
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_sgt_v2i64_Zero_RHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_sgt_v2i64_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp sgt <2 x i64> %a, <i64 0, i64 0>
+    ret <2 x i1> %c
+}
+
+define <8 x i1> @icmp_sle_v8i8_Zero_RHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_sle_v8i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sle <8 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_sle_v16i8_Zero_RHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_sle_v16i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sle <16 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_sle_v4i16_Zero_RHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_sle_v4i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp sle <4 x i16> %a, <i16 0, i16 0, i16 0, i16 0>
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_sle_v8i16_Zero_RHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_sle_v8i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp sle <8 x i16> %a, <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_sle_v2i32_Zero_RHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_sle_v2i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp sle <2 x i32> %a, <i32 0, i32 0>
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_sle_v4i32_Zero_RHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_sle_v4i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp sle <4 x i32> %a, <i32 0, i32 0, i32 0, i32 0>
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_sle_v2i64_Zero_RHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_sle_v2i64_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp sle <2 x i64> %a, <i64 0, i64 0>
+    ret <2 x i1> %c
+}
+
+define <8 x i1> @icmp_slt_v8i8_Zero_RHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_slt_v8i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp slt <8 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_slt_v16i8_Zero_RHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_slt_v16i8_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp slt <16 x i8> %a, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_slt_v4i16_Zero_RHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_slt_v4i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp slt <4 x i16> %a, <i16 0, i16 0, i16 0, i16 0>
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_slt_v8i16_Zero_RHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_slt_v8i16_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp slt <8 x i16> %a, <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_slt_v2i32_Zero_RHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_slt_v2i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp slt <2 x i32> %a, <i32 0, i32 0>
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_slt_v4i32_Zero_RHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_slt_v4i32_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp slt <4 x i32> %a, <i32 0, i32 0, i32 0, i32 0>
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_slt_v2i64_Zero_RHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_slt_v2i64_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp slt <2 x i64> %a, <i64 0, i64 0>
+    ret <2 x i1> %c
+}
+
+; ===== ICMP Zero LHS =====
+
+define <8 x i1> @icmp_eq_v8i8_Zero_LHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_eq_v8i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp eq <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_eq_v16i8_Zero_LHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_eq_v16i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp eq <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_eq_v4i16_Zero_LHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_eq_v4i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp eq <4 x i16> <i16 0, i16 0, i16 0, i16 0>, %a
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_eq_v8i16_Zero_LHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_eq_v8i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp eq <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, %a
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_eq_v2i32_Zero_LHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_eq_v2i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp eq <2 x i32> <i32 0, i32 0>, %a
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_eq_v4i32_Zero_LHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_eq_v4i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp eq <4 x i32> <i32 0, i32 0, i32 0, i32 0>, %a
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_eq_v2i64_Zero_LHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_eq_v2i64_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp eq <2 x i64> <i64 0, i64 0>, %a
+    ret <2 x i1> %c
+}
+
+define <8 x i1> @icmp_sge_v8i8_Zero_LHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_sge_v8i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sge <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_sge_v16i8_Zero_LHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_sge_v16i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sge <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_sge_v4i16_Zero_LHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_sge_v4i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp sge <4 x i16> <i16 0, i16 0, i16 0, i16 0>, %a
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_sge_v8i16_Zero_LHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_sge_v8i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp sge <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, %a
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_sge_v2i32_Zero_LHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_sge_v2i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp sge <2 x i32> <i32 0, i32 0>, %a
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_sge_v4i32_Zero_LHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_sge_v4i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp sge <4 x i32> <i32 0, i32 0, i32 0, i32 0>, %a
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_sge_v2i64_Zero_LHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_sge_v2i64_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmle v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp sge <2 x i64> <i64 0, i64 0>, %a
+    ret <2 x i1> %c
+}
+
+define <8 x i1> @icmp_sgt_v8i8_Zero_LHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_sgt_v8i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sgt <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_sgt_v16i8_Zero_LHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_sgt_v16i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sgt <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_sgt_v4i16_Zero_LHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_sgt_v4i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp sgt <4 x i16> <i16 0, i16 0, i16 0, i16 0>, %a
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_sgt_v8i16_Zero_LHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_sgt_v8i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp sgt <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, %a
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_sgt_v2i32_Zero_LHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_sgt_v2i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp sgt <2 x i32> <i32 0, i32 0>, %a
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_sgt_v4i32_Zero_LHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_sgt_v4i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp sgt <4 x i32> <i32 0, i32 0, i32 0, i32 0>, %a
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_sgt_v2i64_Zero_LHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_sgt_v2i64_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp sgt <2 x i64> <i64 0, i64 0>, %a
+    ret <2 x i1> %c
+}
+
+define <8 x i1> @icmp_sle_v8i8_Zero_LHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_sle_v8i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sle <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_sle_v16i8_Zero_LHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_sle_v16i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp sle <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_sle_v4i16_Zero_LHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_sle_v4i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp sle <4 x i16> <i16 0, i16 0, i16 0, i16 0>, %a
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_sle_v8i16_Zero_LHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_sle_v8i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp sle <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, %a
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_sle_v2i32_Zero_LHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_sle_v2i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp sle <2 x i32> <i32 0, i32 0>, %a
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_sle_v4i32_Zero_LHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_sle_v4i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp sle <4 x i32> <i32 0, i32 0, i32 0, i32 0>, %a
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_sle_v2i64_Zero_LHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_sle_v2i64_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmge v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp sle <2 x i64> <i64 0, i64 0>, %a
+    ret <2 x i1> %c
+}
+
+define <8 x i1> @icmp_slt_v8i8_Zero_LHS(<8 x i8> %a) {
+; CHECK-LABEL: icmp_slt_v8i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.8b, v0.8b, #0
+; CHECK-NEXT:    ret
+    %c = icmp slt <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <8 x i1> %c
+}
+
+define <16 x i1> @icmp_slt_v16i8_Zero_LHS(<16 x i8> %a) {
+; CHECK-LABEL: icmp_slt_v16i8_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.16b, v0.16b, #0
+; CHECK-NEXT:    ret
+    %c = icmp slt <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, %a
+    ret <16 x i1> %c
+}
+
+define <4 x i1> @icmp_slt_v4i16_Zero_LHS(<4 x i16> %a) {
+; CHECK-LABEL: icmp_slt_v4i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.4h, v0.4h, #0
+; CHECK-NEXT:    ret
+    %c = icmp slt <4 x i16> <i16 0, i16 0, i16 0, i16 0>, %a
+    ret <4 x i1> %c
+}
+
+define <8 x i1> @icmp_slt_v8i16_Zero_LHS(<8 x i16> %a) {
+; CHECK-LABEL: icmp_slt_v8i16_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.8h, v0.8h, #0
+; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    ret
+    %c = icmp slt <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, %a
+    ret <8 x i1> %c
+}
+
+define <2 x i1> @icmp_slt_v2i32_Zero_LHS(<2 x i32> %a) {
+; CHECK-LABEL: icmp_slt_v2i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.2s, v0.2s, #0
+; CHECK-NEXT:    ret
+    %c = icmp slt <2 x i32> <i32 0, i32 0>, %a
+    ret <2 x i1> %c
+}
+
+define <4 x i1> @icmp_slt_v4i32_Zero_LHS(<4 x i32> %a) {
+; CHECK-LABEL: icmp_slt_v4i32_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.4s, v0.4s, #0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+    %c = icmp slt <4 x i32> <i32 0, i32 0, i32 0, i32 0>, %a
+    ret <4 x i1> %c
+}
+
+define <2 x i1> @icmp_slt_v2i64_Zero_LHS(<2 x i64> %a) {
+; CHECK-LABEL: icmp_slt_v2i64_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp slt <2 x i64> <i64 0, i64 0>, %a
+    ret <2 x i1> %c
+}

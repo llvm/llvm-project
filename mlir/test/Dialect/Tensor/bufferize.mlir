@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -tensor-bufferize -cse -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --one-shot-bufferize="dialect-filter=tensor,bufferization copy-before-write unknown-type-conversion=identity-layout-map" -cse -split-input-file | FileCheck %s
 
 // CHECK-LABEL:   func @dim(
 // CHECK-SAME:              %[[TENSOR:.*]]: tensor<*xf32>,

@@ -180,6 +180,9 @@ static inline void genOmpAccAtomicWriteStatement(
   // Generate `atomic.write` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
+  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
+  rhsExpr = firOpBuilder.createConvert(loc, varType, rhsExpr);
+
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
     // If no hint clause is specified, the effect is as if

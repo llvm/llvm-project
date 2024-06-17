@@ -1,6 +1,6 @@
 ! Offloading test checking interaction of two
-! explicit arrau member maps with bounds from 
-! two nested derived types 
+! explicit arrau member maps with bounds from
+! two nested derived types
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
@@ -25,20 +25,20 @@ program main
       integer, allocatable :: array_j(:)
       integer(4) :: k
     end type top_layer
-    
+
     type(top_layer) :: top_dtype
     type(top_layer) :: top_dtype2
 
 !$omp target map(tofrom: top_dtype%nested%array_i2(4:8), top_dtype2%nested%array_j2(4:8))
-    do i = 4, 8 
+    do i = 4, 8
       top_dtype%nested%array_i2(i) = i * 2
-    end do 
+    end do
 
-    do i = 4, 8 
+    do i = 4, 8
       top_dtype2%nested%array_j2(i) = i * 2
-    end do 
+    end do
 !$omp end target
-  
+
   print *, top_dtype%nested%array_i2
   print *, top_dtype2%nested%array_j2
 end program main
