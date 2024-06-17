@@ -6121,7 +6121,10 @@ bool Sema::CheckArgsForPlaceholders(MultiExprArg args) {
 ///                  it does not contain any pointer arguments without
 ///                  an address space qualifer.  Otherwise the rewritten
 ///                  FunctionDecl is returned.
-/// TODO: Handle pointer return types.
+///
+/// Pointer return type with no explicit address space is assigned the
+/// default address space where pointer points to based on the language
+/// option used to compile it.
 static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
                                                 FunctionDecl *FDecl,
                                                 MultiExprArg ArgExprs) {
@@ -6165,13 +6168,27 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     OverloadParams.push_back(Context.getPointerType(PointeeType));
   }
 
+  QualType ReturnTy = FT->getReturnType();
+  QualType OverloadReturnTy = ReturnTy;
+  if (ReturnTy->isPointerType() &&
+      !ReturnTy->getPointeeType().hasAddressSpace()) {
+    if (Sema->getLangOpts().OpenCL) {
+      NeedsNewDecl = true;
+
+      QualType ReturnPtTy = ReturnTy->getPointeeType();
+      LangAS defClAS = Context.getDefaultOpenCLPointeeAddrSpace();
+      ReturnPtTy = Context.getAddrSpaceQualType(ReturnPtTy, defClAS);
+      OverloadReturnTy = Context.getPointerType(ReturnPtTy);
+    }
+  }
+
   if (!NeedsNewDecl)
     return nullptr;
 
   FunctionProtoType::ExtProtoInfo EPI;
   EPI.Variadic = FT->isVariadic();
-  QualType OverloadTy = Context.getFunctionType(FT->getReturnType(),
-                                                OverloadParams, EPI);
+  QualType OverloadTy =
+      Context.getFunctionType(OverloadReturnTy, OverloadParams, EPI);
   DeclContext *Parent = FDecl->getParent();
   FunctionDecl *OverloadDecl = FunctionDecl::Create(
       Context, Parent, FDecl->getLocation(), FDecl->getLocation(),
