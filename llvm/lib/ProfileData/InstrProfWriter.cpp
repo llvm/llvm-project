@@ -920,8 +920,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Remove duplicate binary ids.
   llvm::sort(BinaryIds);
-  BinaryIds.erase(std::unique(BinaryIds.begin(), BinaryIds.end()),
-                  BinaryIds.end());
+  BinaryIds.erase(llvm::unique(BinaryIds), BinaryIds.end());
 
   for (const auto &BI : BinaryIds) {
     // Increment by binary id length data type size.
@@ -1088,15 +1087,14 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
     OS << "# ValueKind = " << ValueProfKindStr[VK] << ":\n" << VK << "\n";
     OS << "# NumValueSites:\n" << NS << "\n";
     for (uint32_t S = 0; S < NS; S++) {
-      uint32_t ND = Func.getNumValueDataForSite(VK, S);
-      OS << ND << "\n";
-      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
-      for (uint32_t I = 0; I < ND; I++) {
+      auto VD = Func.getValueArrayForSite(VK, S);
+      OS << VD.size() << "\n";
+      for (const auto &V : VD) {
         if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
-          OS << Symtab.getFuncOrVarNameIfDefined(VD[I].Value) << ":"
-             << VD[I].Count << "\n";
+          OS << Symtab.getFuncOrVarNameIfDefined(V.Value) << ":" << V.Count
+             << "\n";
         else
-          OS << VD[I].Value << ":" << VD[I].Count << "\n";
+          OS << V.Value << ":" << V.Count << "\n";
       }
     }
   }

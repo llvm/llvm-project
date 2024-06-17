@@ -3577,3 +3577,53 @@ add_entrypoint_object(
   COMPILE_OPTIONS
     -O3
 )
+
+add_entrypoint_object(
+  totalorderf16
+  SRCS
+    totalorderf16.cpp
+  HDRS
+    ../totalorderf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  totalordermagf16
+  SRCS
+    totalordermagf16.cpp
+  HDRS
+    ../totalordermagf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16fmaf
+  SRCS
+    f16fmaf.cpp
+  HDRS
+    ../f16fmaf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.fma
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  f16sqrtf
+  SRCS
+    f16sqrtf.cpp
+  HDRS
+    ../f16sqrtf.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
+  COMPILE_OPTIONS
+    -O3
+)

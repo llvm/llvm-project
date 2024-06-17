@@ -2452,21 +2452,6 @@ Check for pointer subtractions on two pointers pointing to different memory chun
    int d = &y - &x; // warn
  }
 
-.. _alpha-core-SizeofPtr:
-
-alpha.core.SizeofPtr (C)
-""""""""""""""""""""""""
-Warn about unintended use of ``sizeof()`` on pointer expressions.
-
-.. code-block:: c
-
- struct s {};
-
- int test(struct s *p) {
-   return sizeof(p);
-     // warn: sizeof(ptr) can produce an unexpected result
- }
-
 .. _alpha-core-StackAddressAsyncEscape:
 
 alpha.core.StackAddressAsyncEscape (C)

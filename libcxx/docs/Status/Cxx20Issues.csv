@@ -200,7 +200,7 @@
 "`3200 <https://wg21.link/LWG3200>`__","``midpoint``\  should not constrain ``T``\  is complete","Prague","|Nothing To Do|",""
 "`3201 <https://wg21.link/LWG3201>`__","``lerp``\  should be marked as ``noexcept``\ ","Prague","|Complete|",""
 "`3226 <https://wg21.link/LWG3226>`__","``zoned_time``\  constructor from ``string_view``\  should accept ``zoned_time<Duration2, TimeZonePtr2>``\ ","Prague","","","|chrono|"
-"`3233 <https://wg21.link/LWG3233>`__","Broken requirements for ``shared_ptr``\  converting constructors","Prague","|Complete|","19.0"
+"`3233 <https://wg21.link/LWG3233>`__","Broken requirements for ``shared_ptr``\  converting constructors","Prague","",""
 "`3237 <https://wg21.link/LWG3237>`__","LWG 3038 and 3190 have inconsistent PRs","Prague","|Complete|","16.0"
 "`3238 <https://wg21.link/LWG3238>`__","Insufficiently-defined behavior of ``std::function``\  deduction guides","Prague","|Nothing To Do|",""
 "`3242 <https://wg21.link/LWG3242>`__","``std::format``\ : missing rules for ``arg-id``\  in ``width``\  and ``precision``\ ","Prague","|Complete|","14.0","|format|"

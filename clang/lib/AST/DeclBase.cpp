@@ -1116,7 +1116,7 @@ bool Decl::isInExportDeclContext() const {
   while (DC && !isa<ExportDecl>(DC))
     DC = DC->getLexicalParent();
 
-  return DC && isa<ExportDecl>(DC);
+  return isa_and_nonnull<ExportDecl>(DC);
 }
 
 bool Decl::isInAnotherModuleUnit() const {
@@ -1126,6 +1126,15 @@ bool Decl::isInAnotherModuleUnit() const {
     return false;
 
   return M != getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::isInCurrentModuleUnit() const {
+  auto *M = getOwningModule();
+
+  if (!M || !M->isNamedModule())
+    return false;
+
+  return M == getASTContext().getCurrentNamedModule();
 }
 
 bool Decl::shouldEmitInExternalSource() const {
