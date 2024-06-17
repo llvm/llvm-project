@@ -1455,11 +1455,12 @@ add_fp_unittest(
     libc-math-unittests
   SRCS
     fmaf_test.cpp
+  HDRS
+    FmaTest.h
   DEPENDS
     libc.src.math.fmaf
     libc.src.stdlib.rand
     libc.src.stdlib.srand
-    libc.src.__support.FPUtil.fp_bits
   FLAGS
     FMA_OPT__ONLY
 )
@@ -1471,11 +1472,12 @@ add_fp_unittest(
     libc-math-unittests
   SRCS
     fma_test.cpp
+  HDRS
+    FmaTest.h
   DEPENDS
     libc.src.math.fma
     libc.src.stdlib.rand
     libc.src.stdlib.srand
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(
@@ -1886,6 +1888,21 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.atan2f
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  f16fmaf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    f16fmaf_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.f16fmaf
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
 )
 
 add_subdirectory(generic)

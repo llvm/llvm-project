@@ -70,13 +70,26 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
 
 def GPU_ClusterDimOp : GPU_IndexOp<"cluster_dim"> {
   let description = [{
-    Returns the number of thread blocks in the cluster along
+    Returns the number of cluster identifiers per grid along
     the x, y, or z `dimension`.
 
     Example:
 
     ```mlir
     %cDimX = gpu.cluster_dim x
+    ```
+  }];
+}
+
+def GPU_ClusterDimBlocksOp : GPU_IndexOp<"cluster_dim_blocks"> {
+  let description = [{
+    Returns the number of thread blocks in the cluster along
+    the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cDimBlocksX = gpu.cluster_dim_blocks x
     ```
   }];
 }
@@ -90,6 +103,18 @@ def GPU_ClusterIdOp : GPU_IndexOp<"cluster_id"> {
 
     ```mlir
     %cIdY = gpu.cluster_id y
+    ```
+  }];
+}
+
+def GPU_ClusterBlockIdOp : GPU_IndexOp<"cluster_block_id"> {
+  let description = [{
+    Returns the block id within the cluster along the x, y, or z `dimension`.
+
+    Example:
+
+    ```mlir
+    %cBlockIdY = gpu.cluster_block_id y
     ```
   }];
 }
