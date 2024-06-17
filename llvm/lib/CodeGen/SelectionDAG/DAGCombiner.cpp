@@ -12104,7 +12104,9 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
 
   APInt SplatVal;
   if (ISD::isConstantSplatVector(Mask.getNode(), SplatVal))
-    return SplatVal.isAllOnes() ? Vec : (HasPassthru ? Passthru : DAG.getUNDEF(VecVT));
+    return SplatVal.isAllOnes()
+               ? Vec
+               : (HasPassthru ? Passthru : DAG.getUNDEF(VecVT));
 
   if (Vec.isUndef() || Mask.isUndef())
     return DAG.getUNDEF(VecVT);
@@ -12129,11 +12131,12 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
       }
     }
     for (unsigned Rest = NumSelected; Rest < NumElmts; ++Rest) {
-      SDValue Val = HasPassthru ? DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Passthru,
-                                  DAG.getVectorIdxConstant(Rest - NumSelected, DL))
-                                : DAG.getUNDEF(ScalarVT);
+      SDValue Val =
+          HasPassthru
+              ? DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Passthru,
+                            DAG.getVectorIdxConstant(Rest - NumSelected, DL))
+              : DAG.getUNDEF(ScalarVT);
       Ops.push_back(Val);
-
     }
     return DAG.getBuildVector(VecVT, DL, Ops);
   }

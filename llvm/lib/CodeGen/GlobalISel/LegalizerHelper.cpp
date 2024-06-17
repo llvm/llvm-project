@@ -7514,7 +7514,8 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
-  auto [Dst, DstTy, Vec, VecTy, Mask, MaskTy, Passthru, PassthruTy] = MI.getFirst4RegLLTs();
+  auto [Dst, DstTy, Vec, VecTy, Mask, MaskTy, Passthru, PassthruTy] =
+      MI.getFirst4RegLLTs();
 
   if (VecTy.isScalableVector())
     report_fatal_error("Cannot expand masked_compress for scalable vectors.");
@@ -7525,7 +7526,8 @@ LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
       createStackTemporary(TypeSize::getFixed(VecTy.getSizeInBytes()), VecAlign,
                            PtrInfo)
           .getReg(0);
-  MachinePointerInfo ValPtrInfo = MachinePointerInfo::getUnknownStack(*MI.getMF());
+  MachinePointerInfo ValPtrInfo =
+      MachinePointerInfo::getUnknownStack(*MI.getMF());
 
   LLT IdxTy = LLT::scalar(32);
   LLT ValTy = VecTy.getElementType();
@@ -7533,24 +7535,30 @@ LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
 
   auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
 
-  bool HasPassthru = MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF; // isGuaranteedNotToBeUndef(Passthru, MRI);
+  bool HasPassthru =
+      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF;
 
   if (HasPassthru)
     MIRBuilder.buildStore(Passthru, StackPtr, PtrInfo, VecAlign);
 
   Register LastWriteVal;
   std::optional<APInt> PassthruSplatVal =
-      isConstantOrConstantSplatVector(*MRI.getVRegDef(Passthru), MRI);;
+      isConstantOrConstantSplatVector(*MRI.getVRegDef(Passthru), MRI);
+  ;
 
   if (PassthruSplatVal.has_value()) {
-    LastWriteVal = MIRBuilder.buildConstant(ValTy, PassthruSplatVal.value()).getReg(0);
+    LastWriteVal =
+        MIRBuilder.buildConstant(ValTy, PassthruSplatVal.value()).getReg(0);
   } else if (HasPassthru) {
     auto Popcount = MIRBuilder.buildZExt(MaskTy.changeElementSize(32), Mask);
-    Popcount = MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_ADD, {LLT::scalar(32)}, {Popcount});
+    Popcount = MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_ADD,
+                                     {LLT::scalar(32)}, {Popcount});
 
     Register LastElmtPtr =
         getVectorElementPointer(StackPtr, VecTy, Popcount.getReg(0));
-    LastWriteVal = MIRBuilder.buildLoad(ValTy, LastElmtPtr, ValPtrInfo, ValAlign).getReg(0);
+    LastWriteVal =
+        MIRBuilder.buildLoad(ValTy, LastElmtPtr, ValPtrInfo, ValAlign)
+            .getReg(0);
   }
 
   unsigned NumElmts = VecTy.getNumElements();
@@ -7570,13 +7578,17 @@ LegalizerHelper::lowerMASKED_COMPRESS(llvm::MachineInstr &MI) {
     OutPos = MIRBuilder.buildAdd(IdxTy, OutPos, MaskI);
 
     if (HasPassthru && I == NumElmts - 1) {
-      auto EndOfVector = MIRBuilder.buildConstant(IdxTy, VecTy.getNumElements() - 1);
-      auto AllLanesSelected =
-          MIRBuilder.buildICmp(CmpInst::ICMP_UGT, LLT::scalar(1), OutPos, EndOfVector);
-      OutPos = MIRBuilder.buildInstr(TargetOpcode::G_UMIN, {IdxTy}, {OutPos, EndOfVector});
+      auto EndOfVector =
+          MIRBuilder.buildConstant(IdxTy, VecTy.getNumElements() - 1);
+      auto AllLanesSelected = MIRBuilder.buildICmp(
+          CmpInst::ICMP_UGT, LLT::scalar(1), OutPos, EndOfVector);
+      OutPos = MIRBuilder.buildInstr(TargetOpcode::G_UMIN, {IdxTy},
+                                     {OutPos, EndOfVector});
       ElmtPtr = getVectorElementPointer(StackPtr, VecTy, OutPos.getReg(0));
 
-      LastWriteVal = MIRBuilder.buildSelect(ValTy, AllLanesSelected, Val, LastWriteVal).getReg(0);
+      LastWriteVal =
+          MIRBuilder.buildSelect(ValTy, AllLanesSelected, Val, LastWriteVal)
+              .getReg(0);
       MIRBuilder.buildStore(LastWriteVal, ElmtPtr, ValPtrInfo, ValAlign);
     }
   }
