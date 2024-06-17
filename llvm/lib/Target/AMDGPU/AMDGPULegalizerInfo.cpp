@@ -1659,6 +1659,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       });
   }
 
+  if (ST.hasAtomicBufferGlobalPkAddF16Insts())
+    Atomic.legalFor({{V2F16, GlobalPtr}});
+  if (ST.hasAtomicGlobalPkAddBF16Inst())
+    Atomic.legalFor({{V2BF16, GlobalPtr}});
+  if (ST.hasAtomicFlatPkAdd16Insts())
+    Atomic.legalFor({{V2F16, FlatPtr}, {V2BF16, FlatPtr}});
+
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
   getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG)
@@ -6013,6 +6020,8 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD;
   case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16;
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin:
