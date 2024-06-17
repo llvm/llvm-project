@@ -10,6 +10,10 @@
 // This test pins down the ABI of std::pair with respect to being "trivially copyable".
 //
 
+// This test doesn't work when the deprecated ABI to turn off pair triviality is enabled.
+// See libcxx/test/libcxx/utilities/utility/pairs/pairs.pair/abi.non_trivial_copy_move.pass.cpp instead.
+// UNSUPPORTED: libcpp-deprecated-abi-disable-pair-trivial-copy-ctor
+
 #include <type_traits>
 #include <utility>
 
