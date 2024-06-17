@@ -256,9 +256,7 @@ public:
     if (isIntegralPointer())
       return false;
 
-    unsigned Base = asBlockPointer().Base;
-    return Base != 0 && Base != sizeof(InlineDescriptor) &&
-           Base != RootPtrMark && getFieldDesc()->asDecl();
+    return !isRoot() && getFieldDesc()->asDecl();
   }
 
   /// Accessor for information about the declaration site.
@@ -314,11 +312,13 @@ public:
   /// Returns the type of the innermost field.
   QualType getType() const {
     if (inPrimitiveArray() && Offset != asBlockPointer().Base) {
-      // Unfortunately, complex types are not array types in clang, but they are
-      // for us.
+      // Unfortunately, complex and vector types are not array types in clang,
+      // but they are for us.
       if (const auto *AT = getFieldDesc()->getType()->getAsArrayTypeUnsafe())
         return AT->getElementType();
       if (const auto *CT = getFieldDesc()->getType()->getAs<ComplexType>())
+        return CT->getElementType();
+      if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
     return getFieldDesc()->getType();
@@ -460,9 +460,7 @@ public:
   bool isMutable() const {
     if (!isBlockPointer())
       return false;
-    return asBlockPointer().Base != 0 &&
-           asBlockPointer().Base != sizeof(InlineDescriptor) &&
-           getInlineDesc()->IsFieldMutable;
+    return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
 
   bool isWeak() const {
@@ -534,9 +532,6 @@ public:
 
     if (isZero())
       return 0;
-
-    if (isElementPastEnd())
-      return 1;
 
     // narrow()ed element in a composite array.
     if (asBlockPointer().Base > sizeof(InlineDescriptor) &&
@@ -621,12 +616,14 @@ public:
 private:
   friend class Block;
   friend class DeadBlock;
+  friend class MemberPointer;
   friend struct InitMap;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
+    assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
     return getDescriptor(asBlockPointer().Base);
   }
 

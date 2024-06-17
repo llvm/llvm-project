@@ -20,10 +20,6 @@
 
 #include "cstdlib"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #if defined(__MVS__)
 #  include <wctype.h>
 // POSIX routines
@@ -93,7 +89,8 @@ inline _LIBCPP_HIDE_FROM_ABI unsigned long strtoul_l(const char* __nptr, char** 
   return ::strtoul(__nptr, __endptr, __base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI int vasprintf(char** strp, const char* fmt, va_list ap) {
+inline _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char* fmt, va_list ap) {
   const size_t buff_size = 256;
   if ((*strp = (char*)malloc(buff_size)) == NULL) {
     return -1;
@@ -118,7 +115,4 @@ inline _LIBCPP_HIDE_FROM_ABI int vasprintf(char** strp, const char* fmt, va_list
   return str_size;
 }
 
-#ifdef __cplusplus
-}
-#endif
 #endif // _LIBCPP___LOCALE_LOCALE_BASE_API_IBM_H

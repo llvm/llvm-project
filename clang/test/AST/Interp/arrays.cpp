@@ -54,6 +54,10 @@ constexpr int derefPtr(const int *d) {
 }
 static_assert(derefPtr(data) == 5, "");
 
+/// Make sure we can refer to the one-past-the-end element
+/// and then return back to the end of the array.
+static_assert((&data[5])[-1] == 1, "");
+
 constexpr int storePtr() {
   int b[] = {1,2,3,4};
   int *c = b;
@@ -604,4 +608,18 @@ namespace ArrayMemberAccess {
   void f(const A (&a)[]) {
     bool cond = a->x;
   }
+}
+
+namespace OnePastEndSub {
+  struct A {};
+  constexpr A a[3][3];
+  constexpr int diff2 = &a[1][3] - &a[1][0]; /// Used to crash.
+}
+
+static int same_entity_2[3];
+constexpr int *get2() {
+  // This is a redeclaration of the same entity, even though it doesn't
+  // inherit the type of the prior declaration.
+  extern int same_entity_2[];
+  return same_entity_2;
 }

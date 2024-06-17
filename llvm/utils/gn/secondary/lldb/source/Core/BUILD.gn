@@ -45,6 +45,7 @@ static_library("Core") {
   sources = [
     "Address.cpp",
     "AddressRange.cpp",
+    "AddressRangeListImpl.cpp",
     "AddressResolver.cpp",
     "AddressResolverFileLine.cpp",
     "Communication.cpp",

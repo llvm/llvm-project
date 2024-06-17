@@ -341,9 +341,7 @@ static std::optional<std::string> findFromSearchPaths(StringRef path) {
 // search paths.
 static std::optional<std::string> searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
-    // Currently we don't enable dynamic linking at all unless -shared or -pie
-    // are used, so don't even look for .so files in that case..
-    if (ctx.isPic && !config->isStatic)
+    if (!config->isStatic)
       if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
         return s;
     if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
@@ -555,6 +553,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->noGrowableMemory = args.hasArg(OPT_no_growable_memory);
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
+
+  // -Bdynamic by default if -pie or -shared is specified.
+  if (config->pie || config->shared)
+    config->isStatic = false;
 
   if (config->maxMemory != 0 && config->noGrowableMemory) {
     // Erroring out here is simpler than defining precedence rules.
@@ -870,13 +872,6 @@ static void createSyntheticSymbols() {
     WasmSym::tableBase = createUndefinedGlobal("__table_base", globalType);
     WasmSym::memoryBase->markLive();
     WasmSym::tableBase->markLive();
-    if (is64) {
-      WasmSym::tableBase32 =
-          createUndefinedGlobal("__table_base32", &globalTypeI32);
-      WasmSym::tableBase32->markLive();
-    } else {
-      WasmSym::tableBase32 = nullptr;
-    }
   } else {
     // For non-PIC code
     WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true);
@@ -923,9 +918,6 @@ static void createOptionalSymbols() {
     WasmSym::heapEnd = symtab->addOptionalDataSymbol("__heap_end");
     WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
     WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
-    if (config->is64.value_or(false))
-      WasmSym::definedTableBase32 =
-          symtab->addOptionalDataSymbol("__table_base32");
   }
 
   // For non-shared memory programs we still need to define __tls_base since we

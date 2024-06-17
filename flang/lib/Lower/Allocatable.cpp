@@ -831,7 +831,7 @@ genDeallocate(fir::FirOpBuilder &builder,
               const Fortran::semantics::Symbol *symbol = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
   // Deallocate intrinsic types inline.
-  if (!box.isDerived() && !box.isPolymorphic() &&
+  if (!box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
       !useAllocateRuntime && !box.isPointer() && !isCudaSymbol) {
     // Pointers must use PointerDeallocate so that their deallocations

@@ -184,8 +184,7 @@ void LoopEmitter::initialize(ValueRange ts, StringAttr loopTag, bool hasOutput,
       for (Level l = 0; l < lvlRank; l++) {
         std::vector<std::pair<LoopId, unsigned>> deps = dimGetter(tid, l);
         // Sort the loop by order.
-        std::sort(deps.begin(), deps.end(),
-                  [](auto &lhs, auto &rhs) { return lhs.first < rhs.first; });
+        llvm::sort(deps, llvm::less_first());
 
         dependentLvlMap[tid][l] = std::move(deps);
         unsigned depends = dependentLvlMap[tid][l].size();
@@ -543,7 +542,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
   }
   // The remaining block arguments are user-provided reduction values and an
   // optional universal index. Make sure their sizes match.
-  assert(bArgs.size() == reduc.size() + needsUniv ? 1 : 0);
+  assert(bArgs.size() == reduc.size() + needsUniv);
   builder.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
 
   // Generates loop body.
@@ -561,7 +560,7 @@ std::pair<Operation *, Value> LoopEmitter::emitWhileLoopOverTensorsAtLvls(
   }
 
   // In-place update on reduction variable.
-  assert(aArgs.size() == reduc.size() + needsUniv ? 1 : 0);
+  assert(aArgs.size() == reduc.size() + needsUniv);
   for (unsigned i = 0, e = reduc.size(); i < e; i++)
     reduc[i] = aArgs[i];
 

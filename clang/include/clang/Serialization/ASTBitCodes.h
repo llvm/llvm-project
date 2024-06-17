@@ -255,6 +255,12 @@ public:
   }
 };
 
+// The unaligned decl ID used in the Blobs of bistreams.
+using unaligned_decl_id_t =
+    llvm::support::detail::packed_endian_specific_integral<
+        serialization::DeclID, llvm::endianness::native,
+        llvm::support::unaligned>;
+
 /// The number of predefined preprocessed entity IDs.
 const unsigned int NUM_PREDEF_PP_ENTITY_IDS = 1;
 
@@ -688,6 +694,12 @@ enum ASTRecordTypes {
   /// Record code for lexical and visible block for delayed namespace in
   /// reduced BMI.
   DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD = 68,
+
+  /// Record code for \#pragma clang unsafe_buffer_usage begin/end
+  PP_UNSAFE_BUFFER_USAGE = 69,
+
+  /// Record code for vtables to emit.
+  VTABLES_TO_EMIT = 70,
 };
 
 /// Record types used within a source manager block.
@@ -1946,6 +1958,7 @@ enum StmtCode {
 
   // OpenACC Constructs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
+  STMT_OPENACC_LOOP_CONSTRUCT,
 };
 
 /// The kinds of designators that can occur in a
@@ -1979,32 +1992,43 @@ enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
 
 /// Describes the categories of an Objective-C class.
 struct ObjCCategoriesInfo {
-  // The ID of the definition
-  LocalDeclID DefinitionID;
+  // The ID of the definition. Use unaligned_decl_id_t to keep
+  // ObjCCategoriesInfo 32-bit aligned.
+  unaligned_decl_id_t DefinitionID;
 
   // Offset into the array of category lists.
   unsigned Offset;
 
+  ObjCCategoriesInfo() = default;
+  ObjCCategoriesInfo(LocalDeclID ID, unsigned Offset)
+      : DefinitionID(ID.get()), Offset(Offset) {}
+
+  LocalDeclID getDefinitionID() const { return LocalDeclID(DefinitionID); }
+
   friend bool operator<(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID < Y.DefinitionID;
+    return X.getDefinitionID() < Y.getDefinitionID();
   }
 
   friend bool operator>(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID > Y.DefinitionID;
+    return X.getDefinitionID() > Y.getDefinitionID();
   }
 
   friend bool operator<=(const ObjCCategoriesInfo &X,
                          const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID <= Y.DefinitionID;
+    return X.getDefinitionID() <= Y.getDefinitionID();
   }
 
   friend bool operator>=(const ObjCCategoriesInfo &X,
                          const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID >= Y.DefinitionID;
+    return X.getDefinitionID() >= Y.getDefinitionID();
   }
 };
+
+static_assert(alignof(ObjCCategoriesInfo) <= 4);
+static_assert(std::is_standard_layout_v<ObjCCategoriesInfo> &&
+              std::is_trivial_v<ObjCCategoriesInfo>);
 
 /// A key used when looking up entities by \ref DeclarationName.
 ///

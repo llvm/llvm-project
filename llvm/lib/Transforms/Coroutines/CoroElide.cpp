@@ -464,13 +464,9 @@ bool CoroIdElider::attemptElide() {
   return true;
 }
 
-static bool declaresCoroElideIntrinsics(Module &M) {
-  return coro::declaresIntrinsics(M, {"llvm.coro.id", "llvm.coro.id.async"});
-}
-
 PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &M = *F.getParent();
-  if (!declaresCoroElideIntrinsics(M))
+  if (!coro::declaresIntrinsics(M, {"llvm.coro.id"}))
     return PreservedAnalyses::all();
 
   FunctionElideInfo FEI{&F};

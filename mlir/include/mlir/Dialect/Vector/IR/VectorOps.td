@@ -480,24 +480,25 @@ def Vector_ShuffleOp :
   let hasCanonicalizer = 1;
 }
 
-def Vector_InterleaveOp :
-  Vector_Op<"interleave", [Pure,
-    AllTypesMatch<["lhs", "rhs"]>,
-    TypesMatchWith<
+def ResultIsDoubleSourceVectorType : TypesMatchWith<
     "type of 'result' is double the width of the inputs",
     "lhs", "result",
     [{
       [&]() -> ::mlir::VectorType {
-        auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+        auto vectorType = ::llvm::cast<::mlir::VectorType>($_self);
         ::mlir::VectorType::Builder builder(vectorType);
         if (vectorType.getRank() == 0) {
-          static constexpr int64_t v2xty_shape[] = { 2 };
-          return builder.setShape(v2xty_shape);
+          static constexpr int64_t v2xTyShape[] = {2};
+          return builder.setShape(v2xTyShape);
         }
         auto lastDim = vectorType.getRank() - 1;
         return builder.setDim(lastDim, vectorType.getDimSize(lastDim) * 2);
       }()
-    }]>]> {
+    }]>;
+
+def Vector_InterleaveOp :
+  Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
+    ResultIsDoubleSourceVectorType]> {
   let summary = "constructs a vector by interleaving two input vectors";
   let description = [{
     The interleave operation constructs a new vector by interleaving the
@@ -513,16 +514,16 @@ def Vector_InterleaveOp :
 
     Example:
     ```mlir
-    %0 = vector.interleave %a, %b
-               : vector<[4]xi32>     ; yields vector<[8]xi32>
-    %1 = vector.interleave %c, %d
-               : vector<8xi8>        ; yields vector<16xi8>
-    %2 = vector.interleave %e, %f
-               : vector<f16>         ; yields vector<2xf16>
-    %3 = vector.interleave %g, %h
-               : vector<2x4x[2]xf64> ; yields vector<2x4x[4]xf64>
-    %4 = vector.interleave %i, %j
-               : vector<6x3xf32>     ; yields vector<6x6xf32>
+    %a = arith.constant dense<[0, 1]> : vector<2xi32>
+    %b = arith.constant dense<[2, 3]> : vector<2xi32>
+    // The value of `%0` is `[0, 2, 1, 3]`.
+    %0 = vector.interleave %a, %b : vector<2xi32> -> vector<4xi32>
+
+    // Examples showing allowed input and result types.
+    %1 = vector.interleave %c, %d : vector<f16> -> vector<2xf16>
+    %2 = vector.interleave %e, %f : vector<6x3xf32> -> vector<6x6xf32>
+    %3 = vector.interleave %g, %h : vector<[4]xi32> -> vector<[8]xi32>
+    %4 = vector.interleave %i, %j : vector<2x4x[2]xf64> -> vector<2x4x[4]xf64>
     ```
   }];
 
@@ -530,7 +531,7 @@ def Vector_InterleaveOp :
   let results = (outs AnyVector:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs  attr-dict `:` type($lhs)
+    $lhs `,` $rhs  attr-dict `:` type($lhs) `->` type($result)
   }];
 
   let extraClassDeclaration = [{
@@ -542,6 +543,86 @@ def Vector_InterleaveOp :
     }
   }];
 }
+
+class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
+  "the trailing dimension of the results is half the width of source trailing dimension",
+  "source", result,
+  [{
+    [&]() -> ::mlir::VectorType {
+      auto vectorType = ::llvm::cast<mlir::VectorType>($_self);
+      ::mlir::VectorType::Builder builder(vectorType);
+      auto lastDim = vectorType.getRank() - 1;
+      auto newDimSize = vectorType.getDimSize(lastDim) / 2;;
+      if (newDimSize <= 0)
+         return vectorType; // (invalid input type)
+      return builder.setDim(lastDim, newDimSize);
+    }()
+  }]
+>;
+
+def SourceVectorEvenElementCount : PredOpTrait<
+  "the trailing dimension of the source vector has an even number of elements",
+  CPred<[{
+    [&](){
+      auto srcVec = getSourceVectorType();
+      return srcVec.getDimSize(srcVec.getRank() - 1) % 2 == 0;
+    }()
+  }]>
+>;
+
+def Vector_DeinterleaveOp :
+  Vector_Op<"deinterleave", [Pure,
+    SourceVectorEvenElementCount,
+    ResultIsHalfSourceVectorType<"res1">,
+    AllTypesMatch<["res1", "res2"]>
+    ]> {
+      let summary = "constructs two vectors by deinterleaving an input vector";
+      let description = [{
+        The deinterleave operation constructs two vectors from a single input
+        vector. The first result vector contains the elements from even indexes
+        of the input, and the second contains elements from odd indexes. This is
+        the inverse of a `vector.interleave` operation.
+
+        Each output's trailing dimension is half of the size of the input
+        vector's trailing dimension. This operation requires the input vector
+        to have a rank > 0 and an even number of elements in its trailing
+        dimension.
+
+        The operation supports scalable vectors.
+
+        Example:
+        ```mlir
+        %0, %1 = vector.deinterleave %a
+                   : vector<8xi8> -> vector<4xi8>
+        %2, %3 = vector.deinterleave %b
+                   : vector<2x8xi8> -> vector<2x4xi8>
+        %4, %5 = vector.deinterleave %c
+                   : vector<2x8x4xi8> -> vector<2x8x2xi8>
+        %6, %7 = vector.deinterleave %d
+                   : vector<[8]xf32> -> vector<[4]xf32>
+        %8, %9 = vector.deinterleave %e
+                   : vector<2x[6]xf64> -> vector<2x[3]xf64>
+        %10, %11 = vector.deinterleave %f
+                   : vector<2x4x[6]xf64> -> vector<2x4x[3]xf64>
+        ```
+      }];
+
+      let arguments = (ins AnyVector:$source);
+      let results = (outs AnyVector:$res1, AnyVector:$res2);
+
+      let assemblyFormat = [{
+        $source attr-dict `:` type($source) `->` type($res1)
+      }];
+
+      let extraClassDeclaration = [{
+        VectorType getSourceVectorType() {
+          return ::llvm::cast<VectorType>(getSource().getType());
+        }
+        VectorType getResultVectorType() {
+          return ::llvm::cast<VectorType>(getRes1().getType());
+        }
+      }];
+    }
 
 def Vector_ExtractElementOp :
   Vector_Op<"extractelement", [Pure,

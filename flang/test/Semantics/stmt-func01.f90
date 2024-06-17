@@ -37,7 +37,13 @@ program main
   !ERROR: Statement function 'sf10' may not reference another statement function 'sf11' that is defined later
   sf10(n) = sf11(n)
   sf11(n) = sf10(n) ! mutual recursion, caused crash
-  sf13 = 1.
+  integer(1) iarg1
+  !PORTABILITY: nonstandard usage: based POINTER
+  pointer(iarg1p, iarg1)
+  sf13(iarg1) = iarg1
+  ! executable part
+  print *, sf13(iarg1) ! ok
+  sf14 = 1.
  contains
   real function explicit(x,y)
     integer, intent(in) :: x
@@ -50,7 +56,7 @@ program main
   end function
   subroutine foo
     !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope
-    sf13(x) = 2.*x
+    sf14(x) = 2.*x
   end subroutine
 end
 

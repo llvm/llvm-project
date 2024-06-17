@@ -10,7 +10,7 @@
 ;; void p1(void);
 ;; int unknown(void);
 ;; void unknown_pure(void) __attribute__((pure));
-;; void unknown_no_openmp(void) __attribute__((assume("omp_no_openmp")));
+;; [[omp::assume("omp_no_openmp")]] void unknown_no_openmp(void);
 ;;
 ;; int G;
 ;; void no_parallel_region_in_here(void) {

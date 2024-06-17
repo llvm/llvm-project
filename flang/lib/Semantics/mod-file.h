@@ -57,7 +57,6 @@ private:
   llvm::raw_string_ostream decls_{declsBuf_};
   llvm::raw_string_ostream contains_{containsBuf_};
   bool isSubmodule_{false};
-  std::map<const Symbol *, SourceName> renamings_;
 
   void WriteAll(const Scope &);
   void WriteOne(const Scope &);

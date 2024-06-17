@@ -16,6 +16,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/OneToNTypeConversion.h"
 
 //===----------------------------------------------------------------------===//
 // Include the generated pass header (which needs some early definitions).
@@ -64,12 +65,6 @@ void populateSparseAssembler(RewritePatternSet &patterns, bool directOut);
 
 std::unique_ptr<Pass> createSparseAssembler();
 std::unique_ptr<Pass> createSparseAssembler(bool directOut);
-
-//===----------------------------------------------------------------------===//
-// The SparseEncodingPropagation pass.
-//===----------------------------------------------------------------------===//
-
-std::unique_ptr<Pass> createSparseEncodingPropagationPass();
 
 //===----------------------------------------------------------------------===//
 // The SparseReinterpretMap pass.
@@ -148,6 +143,20 @@ std::unique_ptr<Pass> createLowerSparseOpsToForeachPass(bool enableRT,
 void populateLowerForeachToSCFPatterns(RewritePatternSet &patterns);
 
 std::unique_ptr<Pass> createLowerForeachToSCFPass();
+
+//===----------------------------------------------------------------------===//
+// The LowerSparseIterationToSCF pass.
+//===----------------------------------------------------------------------===//
+
+/// Type converter for iter_space and iterator.
+struct SparseIterationTypeConverter : public OneToNTypeConverter {
+  SparseIterationTypeConverter();
+};
+
+void populateLowerSparseIterationToSCFPatterns(TypeConverter &converter,
+                                               RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createLowerSparseIterationToSCFPass();
 
 //===----------------------------------------------------------------------===//
 // The SparseTensorConversion pass.
@@ -253,6 +262,12 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
     bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen);
+
+//===----------------------------------------------------------------------===//
+// Sparse Iteration Transform Passes
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass> createSparseSpaceCollapsePass();
 
 //===----------------------------------------------------------------------===//
 // Registration.

@@ -58,7 +58,20 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
+  // Function call, authenticating the callee value first:
+  // AUTH_CALL chain, callee, auth key #, int disc, addr disc, operands.
+  AUTH_CALL,
+  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, int disc, addr disc,
+  // operands.
+  AUTH_TC_RETURN,
+
+  // Authenticated variant of CALL_RVMARKER.
+  AUTH_CALL_RVMARKER,
+
   COALESCER_BARRIER,
+
+  VG_SAVE,
+  VG_RESTORE,
 
   SMSTART,
   SMSTOP,
@@ -911,6 +924,8 @@ public:
     return true;
   }
 
+  bool supportPtrAuthBundles() const override { return true; }
+
   bool supportKCFIBundles() const override { return true; }
 
   MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
@@ -1017,8 +1032,10 @@ private:
 
   void addTypeForNEON(MVT VT);
   void addTypeForFixedLengthSVE(MVT VT);
-  void addDRTypeForNEON(MVT VT);
-  void addQRTypeForNEON(MVT VT);
+  void addDRType(MVT VT);
+  void addQRType(MVT VT);
+
+  bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
 
   unsigned allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
                                   SelectionDAG &DAG) const;

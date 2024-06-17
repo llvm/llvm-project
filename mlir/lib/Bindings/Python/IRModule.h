@@ -22,6 +22,7 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
+#include "mlir-c/Transforms.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
 #include "llvm/ADT/DenseMap.h"
 
@@ -218,12 +219,18 @@ public:
   /// This is useful for when some non-bindings code destroys the operation and
   /// the bindings need to made aware. For example, in the case when pass
   /// manager is run.
+  ///
+  /// Note that this does *NOT* clear the nested operations.
   void clearOperation(MlirOperation op);
 
   /// Clears all operations nested inside the given op using
   /// `clearOperation(MlirOperation)`.
   void clearOperationsInside(PyOperationBase &op);
   void clearOperationsInside(MlirOperation op);
+
+  /// Clears the operaiton _and_ all operations inside using
+  /// `clearOperation(MlirOperation)`.
+  void clearOperationAndInside(PyOperationBase &op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
@@ -246,6 +253,7 @@ public:
 
 private:
   PyMlirContext(MlirContext context);
+
   // Interns the mapping of live MlirContext::ptr to PyMlirContext instances,
   // preserving the relationship that an MlirContext maps to a single
   // PyMlirContext wrapper. This could be replaced in the future with an
