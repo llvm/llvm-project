@@ -51,6 +51,12 @@ cl::opt<bool>
                       cl::desc("Infer counts from stale profile data."),
                       cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
+cl::opt<unsigned> StaleMatchingMinMatchedBlock(
+    "stale-matching-min-matched-block",
+    cl::desc("Percentage threshold of matched basic blocks at which stale "
+             "profile inference is executed."),
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
+
 cl::opt<unsigned> StaleMatchingMaxFuncSize(
     "stale-matching-max-func-size",
     cl::desc("The maximum size of a function to consider for inference."),
@@ -391,10 +397,9 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-void matchWeightsByHashes(BinaryContext &BC,
-                          const BinaryFunction::BasicBlockOrderType &BlockOrder,
-                          const yaml::bolt::BinaryFunctionProfile &YamlBF,
-                          FlowFunction &Func) {
+size_t matchWeightsByHashes(
+    BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
+    const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func) {
   assert(Func.Blocks.size() == BlockOrder.size() + 1);
 
   std::vector<FlowBlock *> Blocks;
@@ -500,6 +505,8 @@ void matchWeightsByHashes(BinaryContext &BC,
     Block.HasUnknownWeight = false;
     Block.Weight = std::max(OutWeight[Block.Index], InWeight[Block.Index]);
   }
+
+  return MatchedBlocks.size();
 }
 
 /// The function finds all blocks that are (i) reachable from the Entry block
@@ -575,8 +582,14 @@ void preprocessUnreachableBlocks(FlowFunction &Func) {
 /// Decide if stale profile matching can be applied for a given function.
 /// Currently we skip inference for (very) large instances and for instances
 /// having "unexpected" control flow (e.g., having no sink basic blocks).
-bool canApplyInference(const FlowFunction &Func) {
+bool canApplyInference(const FlowFunction &Func,
+                       const yaml::bolt::BinaryFunctionProfile &YamlBF,
+                       const uint64_t &MatchedBlocks) {
   if (Func.Blocks.size() > opts::StaleMatchingMaxFuncSize)
+    return false;
+
+  if (MatchedBlocks * 100 <
+      opts::StaleMatchingMinMatchedBlock * YamlBF.Blocks.size())
     return false;
 
   bool HasExitBlocks = llvm::any_of(
@@ -725,18 +738,21 @@ bool YAMLProfileReader::inferStaleProfile(
   const BinaryFunction::BasicBlockOrderType BlockOrder(
       BF.getLayout().block_begin(), BF.getLayout().block_end());
 
+  // Tracks the number of matched blocks.
+
   // Create a wrapper flow function to use with the profile inference algorithm.
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func);
+  size_t MatchedBlocks =
+      matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.
   preprocessUnreachableBlocks(Func);
 
   // Check if profile inference can be applied for the instance.
-  if (!canApplyInference(Func))
+  if (!canApplyInference(Func, YamlBF, MatchedBlocks))
     return false;
 
   // Apply the profile inference algorithm.
