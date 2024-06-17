@@ -426,9 +426,7 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
 static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
                                                 BitVector &RUs,
                                                 const uint32_t *Mask) {
-  const unsigned NumRUs = TRI.getNumRegUnits();
-  BitVector RUsInMask(NumRUs);
-  BitVector RUsNotInMask(NumRUs);
+  BitVector ClobberedRUs(TRI.getNumRegUnits(), true);
   const unsigned NumRegs = TRI.getNumRegs();
   const unsigned MaskWords = (NumRegs + 31) / 32;
   for (unsigned K = 0; K < MaskWords; ++K) {
@@ -438,21 +436,15 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
       if (PhysReg == NumRegs)
         break;
 
-      if (!PhysReg)
-        continue;
-
-      // Extract the bit and apply it to the appropriate mask.
-      auto &Mask = ((Word >> Bit) & 1) ? RUsInMask : RUsNotInMask;
-      for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
-        Mask.set(*RUI);
+      // Check if we have a valid PhysReg that is set in the mask.
+      if (PhysReg && ((Word >> Bit) & 1)) {
+        for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
+          ClobberedRUs.reset(*RUI);
+      }
     }
   }
 
-  // If a RU needs to be set because it's not in the RegMask, only set it
-  // if all registers from that RU are not in the mask either.
-  RUsNotInMask &= RUsInMask.flip();
-
-  RUs |= RUsNotInMask;
+  RUs |= ClobberedRUs;
 }
 
 /// Examine the instruction for potentai LICM candidate. Also
