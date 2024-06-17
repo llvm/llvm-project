@@ -658,10 +658,140 @@ class TestCase(TestBase):
         # The second "statistics dump" in the transcript should have no output
         self.assertNotIn("output", transcript[2])
 
-    def test_sections_existence(self):
+    def verify_stats(self, stats, expectation, options):
+        for field_name in expectation:
+            idx = field_name.find(".")
+            if idx == -1:
+                # `field` is a top-level field
+                exists = field_name in stats
+                should_exist = expectation[field_name]
+                should_exist_string = "" if should_exist else "not "
+                self.assertEqual(
+                    exists,
+                    should_exist,
+                    f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
+                )
+            else:
+                # `field` is a string of "<top-level field>.<second-level field>"
+                top_level_field_name = field_name[0:idx]
+                second_level_field_name = field_name[idx + 1 :]
+                for top_level_field in (
+                    stats[top_level_field_name] if top_level_field_name in stats else {}
+                ):
+                    exists = second_level_field_name in top_level_field
+                    should_exist = expectation[field_name]
+                    should_exist_string = "" if should_exist else "not "
+                    self.assertEqual(
+                        exists,
+                        should_exist,
+                        f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
+                    )
+
+    def get_expectations_for_sections_existence(self):
+        should_always_exist_or_not = {
+            "totalDebugInfoEnabled": True,
+            "memory": True,
+        }
+        test_cases = [
+            {  # Everything mode
+                "command_options": "",
+                "api_options": {},
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": True,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "modules": True,
+                    "transcript": True,
+                },
+            },
+            {  # Summary mode
+                "command_options": " --summary",
+                "api_options": {
+                    "SetSummaryOnly": True,
+                },
+                "expect": {
+                    "commands": False,
+                    "targets": False,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "targets.expressionEvaluation": False,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Summary mode with targets
+                "command_options": " --summary --targets=true",
+                "api_options": {
+                    "SetSummaryOnly": True,
+                    "SetIncludeTargets": True,
+                },
+                "expect": {
+                    "commands": False,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "targets.expressionEvaluation": False,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Summary mode with modules
+                "command_options": " --summary --modules=true",
+                "api_options": {
+                    "SetSummaryOnly": True,
+                    "SetIncludeModules": True,
+                },
+                "expect": {
+                    "commands": False,
+                    "targets": False,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": False,
+                    "targets.expressionEvaluation": False,
+                    "modules": True,
+                    "transcript": False,
+                },
+            },
+            {  # Everything mode but without modules and transcript
+                "command_options": " --modules=false --transcript=false",
+                "api_options": {
+                    "SetIncludeModules": False,
+                    "SetIncludeTranscript": False,
+                },
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Everything mode but without modules
+                "command_options": " --modules=false",
+                "api_options": {
+                    "SetIncludeModules": False,
+                },
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "modules": False,
+                    "transcript": True,
+                },
+            },
+        ]
+        return (should_always_exist_or_not, test_cases)
+
+    def test_sections_existence_through_command(self):
         """
         Test "statistics dump" and the existence of sections when different
-        options are given.
+        options are given through the command line (CLI or HandleCommand).
         """
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -675,121 +805,54 @@ class TestCase(TestBase):
         self.runCmd("settings set interpreter.save-transcript false")
 
         # Expectation
-        should_always_exist_or_not = {
-            "totalDebugInfoEnabled": True,
-            "memory": True,
-        }
-        test_cases = [
-            {  # Everything mode
-                "options": "",
-                "expect": {
-                    "commands": True,
-                    "targets": True,
-                    "targets.moduleIdentifiers": True,
-                    "targets.breakpoints": True,
-                    "targets.expressionEvaluation": True,
-                    "modules": True,
-                    "transcript": True,
-                },
-            },
-            {  # Summary mode
-                "options": " --summary",
-                "expect": {
-                    "commands": False,
-                    "targets": False,
-                    "targets.moduleIdentifiers": False,
-                    "targets.breakpoints": False,
-                    "targets.expressionEvaluation": False,
-                    "modules": False,
-                    "transcript": False,
-                },
-            },
-            {  # Summary mode with targets
-                "options": " --summary --targets=true",
-                "expect": {
-                    "commands": False,
-                    "targets": True,
-                    "targets.moduleIdentifiers": False,
-                    "targets.breakpoints": False,
-                    "targets.expressionEvaluation": False,
-                    "targets.totalSharedLibraryEventHitCount": True,
-                    "modules": False,
-                    "transcript": False,
-                },
-            },
-            {  # Summary mode with modules
-                "options": " --summary --modules=true",
-                "expect": {
-                    "commands": False,
-                    "targets": False,
-                    "targets.moduleIdentifiers": False,
-                    "targets.breakpoints": False,
-                    "targets.expressionEvaluation": False,
-                    "modules": True,
-                    "transcript": False,
-                },
-            },
-            {  # Everything mode but without modules and transcript
-                "options": " --modules=false --transcript=false",
-                "expect": {
-                    "commands": True,
-                    "targets": True,
-                    "targets.moduleIdentifiers": False,
-                    "targets.breakpoints": True,
-                    "targets.expressionEvaluation": True,
-                    "modules": False,
-                    "transcript": False,
-                },
-            },
-            {  # Everything mode but without modules
-                "options": " --modules=false",
-                "expect": {
-                    "commands": True,
-                    "targets": True,
-                    "targets.moduleIdentifiers": False,
-                    "targets.breakpoints": True,
-                    "targets.expressionEvaluation": True,
-                    "modules": False,
-                    "transcript": True,
-                },
-            },
-        ]
+        should_always_exist_or_not, test_cases = (
+            self.get_expectations_for_sections_existence()
+        )
 
         # Verification
         for test_case in test_cases:
-            options = test_case["options"]
-            debug_stats = self.get_stats(options)
+            options = test_case["command_options"]
+            # Get statistics dump result
+            stats = self.get_stats(options)
             # Verify that each field should exist (or not)
             expectation = {**should_always_exist_or_not, **test_case["expect"]}
-            for field_name in expectation:
-                idx = field_name.find(".")
-                if idx == -1:
-                    # `field` is a top-level field
-                    exists = field_name in debug_stats
-                    should_exist = expectation[field_name]
-                    should_exist_string = "" if should_exist else "not "
-                    self.assertEqual(
-                        exists,
-                        should_exist,
-                        f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
-                    )
-                else:
-                    # `field` is a string of "<top-level field>.<second-level field>"
-                    top_level_field_name = field_name[0:idx]
-                    second_level_field_name = field_name[idx + 1 :]
-                    for top_level_field in (
-                        debug_stats[top_level_field_name]
-                        if top_level_field_name in debug_stats
-                        else []
-                    ):
-                        exists = second_level_field_name in top_level_field
-                        should_exist = expectation[field_name]
-                        should_exist_string = "" if should_exist else "not "
-                        self.assertEqual(
-                            exists,
-                            should_exist,
-                            f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
-                        )
+            self.verify_stats(stats, expectation, options)
+
+    def test_sections_existence_through_api(self):
+        """
+        Test "statistics dump" and the existence of sections when different
+        options are given through the public API.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+
+        # Create some transcript so that it can be tested.
+        self.runCmd("settings set interpreter.save-transcript true")
+        self.runCmd("version")
+        self.runCmd("b main")
+        # But disable transcript so that it won't change during verification
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # Expectation
+        should_always_exist_or_not, test_cases = (
+            self.get_expectations_for_sections_existence()
+        )
+
+        # Verification
+        for test_case in test_cases:
+            # Create options
+            options = test_case["api_options"]
+            sb_options = lldb.SBStatisticsOptions()
+            for method_name, param_value in options.items():
+                getattr(sb_options, method_name)(param_value)
+            # Get statistics dump result
+            stream = lldb.SBStream()
+            target.GetStatistics(sb_options).GetAsJSON(stream)
+            stats = json.loads(stream.GetData())
+            # Verify that each field should exist (or not)
+            expectation = {**should_always_exist_or_not, **test_case["expect"]}
+            self.verify_stats(stats, expectation, options)
 
     def test_order_of_options_do_not_matter(self):
         """

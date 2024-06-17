@@ -107,8 +107,8 @@ TargetStats::ToJSON(Target &target,
                     const lldb_private::StatisticsOptions &options) {
   json::Object target_metrics_json;
   ProcessSP process_sp = target.GetProcessSP();
-  const bool summary_only = options.summary_only;
-  const bool include_modules = options.include_modules;
+  const bool summary_only = options.GetSummaryOnly();
+  const bool include_modules = options.GetIncludeModules();
   if (!summary_only) {
     CollectStats(target);
 
@@ -226,11 +226,11 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     Debugger &debugger, Target *target,
     const lldb_private::StatisticsOptions &options) {
 
-  const bool summary_only = options.summary_only;
-  const bool load_all_debug_info = options.load_all_debug_info;
-  const bool include_targets = options.include_targets;
-  const bool include_modules = options.include_modules;
-  const bool include_transcript = options.include_transcript;
+  const bool summary_only = options.GetSummaryOnly();
+  const bool load_all_debug_info = options.GetLoadAllDebugInfo();
+  const bool include_targets = options.GetIncludeTargets();
+  const bool include_modules = options.GetIncludeModules();
+  const bool include_transcript = options.GetIncludeTranscript();
 
   json::Array json_targets;
   json::Array json_modules;
