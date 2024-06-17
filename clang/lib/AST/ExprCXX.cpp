@@ -166,7 +166,6 @@ QualType CXXTypeidExpr::getTypeOperand(ASTContext &Context) const {
       Operand.get<TypeSourceInfo *>()->getType().getNonReferenceType(), Quals);
 }
 
-namespace {
 static bool isGLValueFromPointerDeref(const Expr *E) {
   E = E->IgnoreParens();
 
@@ -198,7 +197,6 @@ static bool isGLValueFromPointerDeref(const Expr *E) {
 
   return false;
 }
-} // namespace
 
 bool CXXTypeidExpr::hasNullCheck() const {
   if (!isPotentiallyEvaluated())
