@@ -417,10 +417,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   // Uses the strict hash of profiled and binary functions to match functions
   // that are not matched by name or common name.
-  std::unordered_map<size_t, BinaryFunction*> StrictBinaryFunctionHashes;
+  std::unordered_map<size_t, BinaryFunction *> StrictBinaryFunctionHashes;
   StrictBinaryFunctionHashes.reserve(BC.getBinaryFunctions().size());
 
-  for (auto& [_, BF] : BC.getBinaryFunctions()) {
+  for (auto &[_, BF] : BC.getBinaryFunctions()) {
     if (!ProfiledFunctions.count(&BF))
       continue;
     StrictBinaryFunctionHashes[BF.getHash()] = &BF;
@@ -428,7 +428,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   for (auto YamlBF : YamlBP.Functions) {
     auto It = StrictBinaryFunctionHashes.find(YamlBF.Hash);
-    if (It != StrictBinaryFunctionHashes.end() && !ProfiledFunctions.count(It->second)) {
+    if (It != StrictBinaryFunctionHashes.end() &&
+        !ProfiledFunctions.count(It->second)) {
       auto *BF = It->second;
       matchProfileToFunction(YamlBF, *BF);
     }
