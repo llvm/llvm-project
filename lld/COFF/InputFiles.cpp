@@ -818,19 +818,6 @@ void ObjFile::initializeDependencies() {
   debugTypesObj = makeTpiSource(ctx, this);
 }
 
-// Make a PDB path assuming the PDB is in the same folder as the OBJ
-static std::string getPdbBaseName(ObjFile *file, StringRef tSPath) {
-  StringRef localPath =
-      !file->parentName.empty() ? file->parentName : file->getName();
-  SmallString<128> path = sys::path::parent_path(localPath);
-
-  // Currently, type server PDBs are only created by MSVC cl, which only runs
-  // on Windows, so we can assume type server paths are Windows style.
-  sys::path::append(path,
-                    sys::path::filename(tSPath, sys::path::Style::windows));
-  return std::string(path);
-}
-
 // The casing of the PDB path stamped in the OBJ can differ from the actual path
 // on disk. With this, we ensure to always use lowercase as a key for the
 // pdbInputFileInstances map, at least on Windows.
@@ -843,17 +830,35 @@ static std::string normalizePdbPath(StringRef path) {
 }
 
 // If existing, return the actual PDB path on disk.
-static std::optional<std::string> findPdbPath(StringRef pdbPath,
-                                              ObjFile *dependentFile) {
+static std::optional<std::string>
+findPdbPath(StringRef pdbPath, ObjFile *dependentFile, StringRef outputPath) {
   // Ensure the file exists before anything else. In some cases, if the path
   // points to a removable device, Driver::enqueuePath() would fail with an
   // error (EAGAIN, "resource unavailable try again") which we want to skip
   // silently.
   if (llvm::sys::fs::exists(pdbPath))
     return normalizePdbPath(pdbPath);
-  std::string ret = getPdbBaseName(dependentFile, pdbPath);
-  if (llvm::sys::fs::exists(ret))
-    return normalizePdbPath(ret);
+
+  StringRef objPath = !dependentFile->parentName.empty()
+                          ? dependentFile->parentName
+                          : dependentFile->getName();
+
+  // Currently, type server PDBs are only created by MSVC cl, which only runs
+  // on Windows, so we can assume type server paths are Windows style.
+  StringRef pdbName = sys::path::filename(pdbPath, sys::path::Style::windows);
+
+  // Check if the PDB is in the same folder as the OBJ.
+  SmallString<128> path;
+  sys::path::append(path, sys::path::parent_path(objPath), pdbName);
+  if (llvm::sys::fs::exists(path))
+    return normalizePdbPath(path);
+
+  // Check if the PDB is in the output folder.
+  path.clear();
+  sys::path::append(path, sys::path::parent_path(outputPath), pdbName);
+  if (llvm::sys::fs::exists(path))
+    return normalizePdbPath(path);
+
   return std::nullopt;
 }
 
@@ -865,7 +870,7 @@ PDBInputFile::~PDBInputFile() = default;
 PDBInputFile *PDBInputFile::findFromRecordPath(const COFFLinkerContext &ctx,
                                                StringRef path,
                                                ObjFile *fromFile) {
-  auto p = findPdbPath(path.str(), fromFile);
+  auto p = findPdbPath(path.str(), fromFile, ctx.config.outputFile);
   if (!p)
     return nullptr;
   auto it = ctx.pdbInputFileInstances.find(*p);
@@ -931,7 +936,7 @@ std::optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
 }
 
 void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
-  auto p = findPdbPath(path.str(), fromFile);
+  auto p = findPdbPath(path.str(), fromFile, ctx.config.outputFile);
   if (!p)
     return;
   auto it = ctx.pdbInputFileInstances.emplace(*p, nullptr);
