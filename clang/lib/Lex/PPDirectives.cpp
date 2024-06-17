@@ -3762,8 +3762,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
 
         bool WaitingForInnerCloseParen = false;
         while (CurTok.isNot(tok::eod) &&
-               (WaitingForInnerCloseParen ||
-                (!WaitingForInnerCloseParen && CurTok.isNot(tok::r_paren)))) {
+               (WaitingForInnerCloseParen || CurTok.isNot(tok::r_paren))) {
           switch (CurTok.getKind()) {
           default: // Shutting up diagnostics about not fully-covered switch.
             break;
