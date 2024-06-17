@@ -5731,7 +5731,7 @@ public:
 
   // #embed
   ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
-                            StringLiteral *Filename, StringLiteral *BinaryData);
+                            StringLiteral *BinaryData);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,

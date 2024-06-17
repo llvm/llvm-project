@@ -16700,10 +16700,8 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
 }
 
 ExprResult Sema::ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
-                                StringLiteral *Filename,
                                 StringLiteral *BinaryData) {
   EmbedDataStorage *Data = new (Context) EmbedDataStorage;
-  Data->Filename = Filename;
   Data->BinaryData = BinaryData;
   return new (Context)
       EmbedExpr(Context, EmbedKeywordLoc, Data, /*NumOfElements=*/0,
