@@ -6176,7 +6176,26 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
       NeedsNewDecl = true;
 
       QualType ReturnPtTy = ReturnTy->getPointeeType();
-      LangAS defClAS = Context.getDefaultOpenCLPointeeAddrSpace();
+      unsigned BuiltinID = FDecl->getBuiltinID();
+      LangAS defClAS;
+
+      // __builtin_alloca* should always return pointer to stack/private
+      // Address Space, while for other builtins with return pointer type,
+      // it should depend on the OpenCL version.
+      switch (BuiltinID) {
+      case Builtin::BI__builtin_alloca_uninitialized:
+      case Builtin::BI__builtin_alloca:
+      case Builtin::BI__builtin_alloca_with_align_uninitialized:
+      case Builtin::BI__builtin_alloca_with_align: {
+        defClAS = LangAS::opencl_private;
+        break;
+      }
+      default: {
+        defClAS = Context.getDefaultOpenCLPointeeAddrSpace();
+        break;
+      }
+      }
+
       ReturnPtTy = Context.getAddrSpaceQualType(ReturnPtTy, defClAS);
       OverloadReturnTy = Context.getPointerType(ReturnPtTy);
     }
