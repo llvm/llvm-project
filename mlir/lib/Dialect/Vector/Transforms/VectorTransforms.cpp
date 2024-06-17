@@ -1225,11 +1225,19 @@ struct FoldI1Select : public OpRewritePattern<arith::SelectOp> {
 
 /// Returns the number of dims can be folded away from transfer ops. It returns
 /// a failure if it can not determine the number of dims to be folded.
-/// Example 1: it returns "2" if `srcType` is memref<512x16x1x1xf32> and
-/// `vectorType` is vector<16x16x1x1xf32>. Because there two inner most dims
-/// can be dropped by memref.subview ops.
-/// Example 2: it returns "1" if `srcType` is the same memref type with
-/// [8192, 16, 8, 1] strides.
+///
+/// Ex 1: returns "2" if `srcType` is memref<512x16x1x1xf32> and
+/// `vectorType` is vector<16x16x1x1xf32>
+/// (there two inner most dims can be dropped by memref.subview ops)
+///
+/// Ex 2: returns "1" if `srcType` is memref<512x16x1x1xf32> with
+/// [8192, 16, 8, 1] strides and `vectorType` is vector<16x16x1x1xf32>
+/// (only the inner most unit dim of `srcType` can be dropped)
+///
+/// Ex 3: return "0" if `srcType` is memref<512x16x1x1xf32> and
+/// `vectorType` is vector<16x16x1x[1]xf32>
+/// (the most inner dim in `vectorType` is not a unit dim (it's a "scalable
+/// unit")
 static FailureOr<size_t>
 getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   SmallVector<int64_t> srcStrides;
@@ -1351,6 +1359,8 @@ class DropInnerMostUnitDimsTransferRead
 ///    vector.transfer_write %0, %subview[%c0, %arg2, %c0]
 ///      {in_bounds = [true, true, true]}
 ///      : vector<1x16x16xf32>, memref<1x512x16xf32>
+///
+/// Note, this pattern will not collapse "scalable unit" dims (i.e. `[1]`).
 class DropInnerMostUnitDimsTransferWrite
     : public OpRewritePattern<vector::TransferWriteOp> {
   using OpRewritePattern::OpRewritePattern;

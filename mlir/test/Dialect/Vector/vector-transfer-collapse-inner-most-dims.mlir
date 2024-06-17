@@ -41,27 +41,27 @@ func.func @contiguous_inner_most_scalable_inner_dim(%in: memref<1x1x8x1xf32, str
 // Same as the top example within this split, but the trailing unit dim was
 // replaced with a dyn dim - not supported
 
-func.func @non_unit_trailing_dim(%in: memref<1x1x8x?xf32, strided<[3072, 8, 1, 1], offset: ?>>) -> vector<1x8x1xf32>{
+func.func @negative_dynamic_trailing_dim(%in: memref<1x1x8x?xf32, strided<[3072, 8, 1, 1], offset: ?>>) -> vector<1x8x1xf32>{
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
   %0 = vector.transfer_read %in[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true, true]} : memref<1x1x8x?xf32, strided<[3072, 8, 1, 1], offset: ?>>, vector<1x8x1xf32>
   return %0 : vector<1x8x1xf32>
 }
 
-//  CHECK-LABEL: func @non_unit_trailing_dim
+//  CHECK-LABEL: func @negative_dynamic_trailing_dim
 //    CHECK-NOT: memref.subview
 //    CHECK-NOT: vector.shape_cast
 
-// Same as the top example within this split, but with a scalable unit dim in
-// the output vector - not supported (scalable 1 is _not_ a unit dimension).
+// Same as the top example within this split, but with a "scalable unit" dim in
+// the output vector - not supported (scalable 1, [1], is _not_ a unit dimension).
 
-func.func @negative_scalable_unit_dim(%in: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>) -> vector<1x8x[1]xf32>{
+func.func @negative_scalable_one_trailing_dim(%in: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>) -> vector<1x8x[1]xf32>{
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
   %0 = vector.transfer_read %in[%c0, %c0, %c0, %c0], %cst {in_bounds = [true, true, true]} : memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, vector<1x8x[1]xf32>
   return %0 : vector<1x8x[1]xf32>
 }
-//  CHECK-LABEL: func @negative_scalable_unit_dim
+//  CHECK-LABEL: func @negative_scalable_one_trailing_dim
 //    CHECK-NOT: memref.subview
 //    CHECK-NOT: vector.shape_cast
 
