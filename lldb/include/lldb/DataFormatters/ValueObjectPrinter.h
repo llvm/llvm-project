@@ -33,7 +33,7 @@ public:
 
   ~ValueObjectPrinter() = default;
 
-  bool PrintValueObject();
+  llvm::Error PrintValueObject();
 
 protected:
   typedef std::set<uint64_t> InstancePointersSet;
