@@ -859,6 +859,8 @@ Bug Fixes to C++ Support
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
+- Fixed a failed assertion when attempting to convert an integer representing the difference
+  between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
