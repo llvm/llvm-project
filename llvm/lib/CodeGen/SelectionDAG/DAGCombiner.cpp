@@ -26473,12 +26473,13 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
       return N1.getOperand(0);
     // TODO: To remove the zero check, need to adjust the offset to
     // a multiple of the new src type.
-    if (isNullConstant(N2) &&
-        VT.isScalableVector() == SrcVT.isScalableVector()) {
-      if (VT.getVectorMinNumElements() >= SrcVT.getVectorMinNumElements())
+    if (isNullConstant(N2)) {
+      if (VT.knownBitsGE(SrcVT) &&
+          !(VT.isFixedLengthVector() && SrcVT.isScalableVector()))
         return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N),
                            VT, N0, N1.getOperand(0), N2);
-      else
+      else if (VT.knownBitsLE(SrcVT) &&
+               !(VT.isScalableVector() && SrcVT.isFixedLengthVector()))
         return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N),
                            VT, N1.getOperand(0), N2);
     }
