@@ -919,7 +919,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         MachinePointerInfo MPO;
 
         if (VA.isMemLoc()) {
-          if (!Flags.isByRef()) {
+          if (!Flags.isByVal()) {
             LLT MemTy = Handler.getStackValueStoreType(DL, VA, Flags);
             Handler.getStackAddress(
               MemTy.getSizeInBytes(), VA.getLocMemOffset(), MPO, Flags);
