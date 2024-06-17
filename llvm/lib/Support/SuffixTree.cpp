@@ -138,13 +138,13 @@ void SuffixTree::setLeafNodes() {
         // Its children have not been added to the stack yet.
         // We add current node back, and add its children to the stack.
         // We keep track of the first and last children of the current node.
-        auto it = CurrInternalNode->Children.begin();
-        if (it != CurrInternalNode->Children.end()) {
+        auto J = CurrInternalNode->Children.begin();
+        if (J != CurrInternalNode->Children.end()) {
           ToVisit.push_back(CurrNode);
-          SuffixTreeNode *FirstChild = it->second;
+          SuffixTreeNode *FirstChild = J->second;
           SuffixTreeNode *LastChild = nullptr;
-          for (; it != CurrInternalNode->Children.end(); ++it) {
-            LastChild = it->second;
+          for (; J != CurrInternalNode->Children.end(); ++J) {
+            LastChild = J->second;
             ToVisit.push_back(LastChild);
           }
           ChildrenMap[CurrInternalNode] = {FirstChild, LastChild};
@@ -169,7 +169,7 @@ void SuffixTree::setLeafNodes() {
       // We can simply set its LeftLeafIdx and RightLeafIdx.
       CurrNode->setLeftLeafIdx(LeafCounter);
       CurrNode->setRightLeafIdx(LeafCounter);
-      LeafCounter++;
+      ++LeafCounter;
       auto *CurrLeafNode = cast<SuffixTreeLeafNode>(CurrNode);
       LeafNodes.push_back(CurrLeafNode);
     }
@@ -330,14 +330,14 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
       continue;
 
     // Collect leaf children or leaf descendants by OutlinerLeafDescendants.
-    if (!OutlinerLeafDescendants) {
-      for (auto &ChildPair : Curr->Children)
-        if (auto *Leaf = dyn_cast<SuffixTreeLeafNode>(ChildPair.second))
-          RepeatedSubstringStarts.push_back(Leaf->getSuffixIdx());
-    } else {
+    if (OutlinerLeafDescendants) {
       for (unsigned I = Curr->getLeftLeafIdx(); I <= Curr->getRightLeafIdx();
            ++I)
         RepeatedSubstringStarts.push_back(LeafNodes[I]->getSuffixIdx());
+    } else {
+      for (auto &ChildPair : Curr->Children)
+        if (auto *Leaf = dyn_cast<SuffixTreeLeafNode>(ChildPair.second))
+          RepeatedSubstringStarts.push_back(Leaf->getSuffixIdx());
     }
 
     // Do we have any repeated substrings?
