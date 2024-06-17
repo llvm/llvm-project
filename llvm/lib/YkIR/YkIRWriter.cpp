@@ -73,13 +73,21 @@ enum TypeKind {
   TypeKindPtr,
   TypeKindFunction,
   TypeKindStruct,
+  TypeKindFloat,
   TypeKindUnimplemented = 255, // YKFIXME: Will eventually be deleted.
+};
+
+enum FloatKind {
+  FloatKindFloat,
+  FloatKindDouble,
 };
 
 enum CastKind {
   CastKindSignExt = 0,
   CastKindZeroExt = 1,
   CastKindTrunc = 2,
+  CastKindSIToFP = 3,
+  CastKindFPExt = 4,
 };
 
 // A predicate used in a numeric comparison.
@@ -557,11 +565,11 @@ private:
     AttributeList Attrs = I->getAttributes();
     for (unsigned AI = 0; AI < I->arg_size(); AI++) {
       for (auto &Attr : Attrs.getParamAttrs(AI)) {
-        // `nonull` and `noundef` are used a lot. I think for our purposes they
-        // can be safely ignored.
-        if (Attr.isEnumAttribute() &&
-            ((Attr.getKindAsEnum() == Attribute::NonNull) ||
-             (Attr.getKindAsEnum() == Attribute::NoUndef))) {
+        // `nonull`, `noundef` and `dereferencable` are used a lot. I think
+        // for our purposes they can be safely ignored.
+        if (((Attr.getKindAsEnum() == Attribute::NonNull) ||
+             (Attr.getKindAsEnum() == Attribute::NoUndef) ||
+             (Attr.getKindAsEnum() == Attribute::Dereferenceable))) {
           continue;
         }
         serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
@@ -1006,6 +1014,10 @@ private:
       return CastKindZeroExt;
     case Instruction::SExt:
       return CastKindSignExt;
+    case Instruction::SIToFP:
+      return CastKindSIToFP;
+    case Instruction::FPExt:
+      return CastKindFPExt;
     case Instruction::Trunc:
       return CastKindTrunc;
     default:
@@ -1267,6 +1279,19 @@ private:
     }
   }
 
+  void serialiseFloatTy(Type *FTy) {
+    if (FTy->isFloatTy()) {
+      serialiseTypeKind(TypeKindFloat);
+      OutStreamer.emitInt8(FloatKindFloat);
+    } else if (FTy->isDoubleTy()) {
+      serialiseTypeKind(TypeKindFloat);
+      OutStreamer.emitInt8(FloatKindDouble);
+    } else {
+      serialiseTypeKind(TypeKindUnimplemented);
+      serialiseString(toString(FTy));
+    }
+  }
+
   void serialiseType(llvm::Type *Ty) {
     if (Ty->isVoidTy()) {
       serialiseTypeKind(TypeKindVoid);
@@ -1277,6 +1302,8 @@ private:
     } else if (IntegerType *ITy = dyn_cast<IntegerType>(Ty)) {
       serialiseTypeKind(TypeKindInteger);
       OutStreamer.emitInt32(ITy->getBitWidth());
+    } else if (Ty->isFloatingPointTy()) {
+      serialiseFloatTy(Ty);
     } else if (FunctionType *FTy = dyn_cast<FunctionType>(Ty)) {
       serialiseFunctionType(FTy);
     } else if (StructType *STy = dyn_cast<StructType>(Ty)) {
