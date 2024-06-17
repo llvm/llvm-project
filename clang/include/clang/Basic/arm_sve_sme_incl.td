@@ -272,7 +272,7 @@ class Inst<string n, string p, string t, MergeType mt, string i,
   string Name = n;
   string Prototype = p;
   string Types = t;
-  string TargetGuard = "sve";
+  string TargetGuard = "sve|sme";
   int Merge = mt.Value;
   string MergeSuffix = mt.Suffix;
   string LLVMIntrinsic = i;
