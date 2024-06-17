@@ -292,6 +292,12 @@ Changes to the LLVM tools
   now has a map for the mapped files. (`#92835
   <https://github.com/llvm/llvm-project/pull/92835>`).
 
+* llvm-cov now generates HTML report with JavaScript code to allow simple
+  jumping between uncovered parts (lines/regions/branches) of code 
+  using buttons on top-right corner of the page or using keys (L/R/B or 
+  jumping in reverse direction with shift+L/R/B). (`#95662
+  <https://github.com/llvm/llvm-project/pull/95662>`).
+
 Changes to LLDB
 ---------------------------------
 
