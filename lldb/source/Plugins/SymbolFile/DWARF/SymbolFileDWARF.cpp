@@ -481,13 +481,6 @@ static ConstString GetDWARFMachOSegmentName() {
   return g_dwarf_section_name;
 }
 
-llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
-SymbolFileDWARF::GetForwardDeclCompilerTypeToDIE() {
-  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
-    return debug_map_symfile->GetForwardDeclCompilerTypeToDIE();
-  return m_forward_decl_compiler_type_to_die;
-}
-
 UniqueDWARFASTTypeMap &SymbolFileDWARF::GetUniqueDWARFASTTypeMap() {
   SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
   if (debug_map_symfile)
@@ -1639,33 +1632,27 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     return true;
   }
 
-  // Once we start resolving this type, remove it from the forward
-  // declaration map in case anyone's child members or other types require this
-  // type to get resolved.
-  DWARFDIE dwarf_die = GetDIE(die_it->second);
-  GetForwardDeclCompilerTypeToDIE().erase(die_it);
-  Type *type = nullptr;
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-    type = dwarf_ast->FindDefinitionTypeForDIE(dwarf_die);
-  if (!type)
-    return false;
-
-  die_it = GetForwardDeclCompilerTypeToDIE().find(
-      compiler_type_no_qualifiers.GetOpaqueQualType());
-  if (die_it != GetForwardDeclCompilerTypeToDIE().end()) {
-    dwarf_die = GetDIE(die_it->getSecond());
+  DWARFDIE dwarf_die = GetDIE(die_it->getSecond());
+  if (dwarf_die) {
+    // Once we start resolving this type, remove it from the forward
+    // declaration map in case anyone child members or other types require this
+    // type to get resolved. The type will get resolved when all of the calls
+    // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
     GetForwardDeclCompilerTypeToDIE().erase(die_it);
-  }
 
-  if (Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion))
-    GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-        log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
-        dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
-        dwarf_die.Tag(), type->GetName().AsCString());
-  assert(compiler_type);
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-    return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
-  return true;
+    Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
+
+    Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
+    if (log)
+      GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
+          log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
+          dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
+          dwarf_die.Tag(), type->GetName().AsCString());
+    assert(compiler_type);
+    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
+      return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
+  }
+  return false;
 }
 
 Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
@@ -2105,16 +2092,14 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
               if (var_sp && !var_sp->GetLocationIsConstantValueData()) {
                 const DWARFExpressionList &location =
                     var_sp->LocationExpressionList();
-                Value location_result;
-                Status error;
                 ExecutionContext exe_ctx;
-                if (location.Evaluate(&exe_ctx, nullptr, LLDB_INVALID_ADDRESS,
-                                      nullptr, nullptr, location_result,
-                                      &error)) {
-                  if (location_result.GetValueType() ==
+                llvm::Expected<Value> location_result = location.Evaluate(
+                    &exe_ctx, nullptr, LLDB_INVALID_ADDRESS, nullptr, nullptr);
+                if (location_result) {
+                  if (location_result->GetValueType() ==
                       Value::ValueType::FileAddress) {
                     lldb::addr_t file_addr =
-                        location_result.GetScalar().ULongLong();
+                        location_result->GetScalar().ULongLong();
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
                       byte_size =
@@ -2122,6 +2107,10 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
+                } else {
+                  LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols),
+                                 location_result.takeError(),
+                                 "location expression failed to execute: {0}");
                 }
               }
             }
@@ -3050,95 +3039,6 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
   return type_sp;
 }
 
-// This function helps to ensure that the declaration contexts match for two
-// different DIEs. Often times debug information will refer to a forward
-// declaration of a type (the equivalent of "struct my_struct;". There will
-// often be a declaration of that type elsewhere that has the full definition.
-// When we go looking for the full type "my_struct", we will find one or more
-// matches in the accelerator tables and we will then need to make sure the
-// type was in the same declaration context as the original DIE. This function
-// can efficiently compare two DIEs and will return true when the declaration
-// context matches, and false when they don't.
-bool SymbolFileDWARF::DIEDeclContextsMatch(const DWARFDIE &die1,
-                                           const DWARFDIE &die2) {
-  if (die1 == die2)
-    return true;
-
-  std::vector<DWARFDIE> decl_ctx_1;
-  std::vector<DWARFDIE> decl_ctx_2;
-  // The declaration DIE stack is a stack of the declaration context DIEs all
-  // the way back to the compile unit. If a type "T" is declared inside a class
-  // "B", and class "B" is declared inside a class "A" and class "A" is in a
-  // namespace "lldb", and the namespace is in a compile unit, there will be a
-  // stack of DIEs:
-  //
-  //   [0] DW_TAG_class_type for "B"
-  //   [1] DW_TAG_class_type for "A"
-  //   [2] DW_TAG_namespace  for "lldb"
-  //   [3] DW_TAG_compile_unit or DW_TAG_partial_unit for the source file.
-  //
-  // We grab both contexts and make sure that everything matches all the way
-  // back to the compiler unit.
-
-  // First lets grab the decl contexts for both DIEs
-  decl_ctx_1 = die1.GetDeclContextDIEs();
-  decl_ctx_2 = die2.GetDeclContextDIEs();
-  // Make sure the context arrays have the same size, otherwise we are done
-  const size_t count1 = decl_ctx_1.size();
-  const size_t count2 = decl_ctx_2.size();
-  if (count1 != count2)
-    return false;
-
-  // Make sure the DW_TAG values match all the way back up the compile unit. If
-  // they don't, then we are done.
-  DWARFDIE decl_ctx_die1;
-  DWARFDIE decl_ctx_die2;
-  size_t i;
-  for (i = 0; i < count1; i++) {
-    decl_ctx_die1 = decl_ctx_1[i];
-    decl_ctx_die2 = decl_ctx_2[i];
-    if (decl_ctx_die1.Tag() != decl_ctx_die2.Tag())
-      return false;
-  }
-#ifndef NDEBUG
-
-  // Make sure the top item in the decl context die array is always
-  // DW_TAG_compile_unit or DW_TAG_partial_unit. If it isn't then
-  // something went wrong in the DWARFDIE::GetDeclContextDIEs()
-  // function.
-  dw_tag_t cu_tag = decl_ctx_1[count1 - 1].Tag();
-  UNUSED_IF_ASSERT_DISABLED(cu_tag);
-  assert(cu_tag == DW_TAG_compile_unit || cu_tag == DW_TAG_partial_unit);
-
-#endif
-  // Always skip the compile unit when comparing by only iterating up to "count
-  // - 1". Here we compare the names as we go.
-  for (i = 0; i < count1 - 1; i++) {
-    decl_ctx_die1 = decl_ctx_1[i];
-    decl_ctx_die2 = decl_ctx_2[i];
-    const char *name1 = decl_ctx_die1.GetName();
-    const char *name2 = decl_ctx_die2.GetName();
-    // If the string was from a DW_FORM_strp, then the pointer will often be
-    // the same!
-    if (name1 == name2)
-      continue;
-
-    // Name pointers are not equal, so only compare the strings if both are not
-    // NULL.
-    if (name1 && name2) {
-      // If the strings don't compare, we are done...
-      if (strcmp(name1, name2) != 0)
-        return false;
-    } else {
-      // One name was NULL while the other wasn't
-      return false;
-    }
-  }
-  // We made it through all of the checks and the declaration contexts are
-  // equal.
-  return true;
-}
-
 TypeSP
 SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
   TypeSP type_sp;
@@ -3180,7 +3080,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
         template_params = dwarf_ast->GetDIEClassTemplateParams(die);
     }
 
-    const DWARFDeclContext die_dwarf_decl_ctx = GetDWARFDeclContext(die);
+    const DWARFDeclContext die_dwarf_decl_ctx = die.GetDWARFDeclContext();
     m_index->GetFullyQualifiedType(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
       // Make sure type_die's language matches the type system we are
       // looking for. We don't want to find a "Foo" type from Java if we
@@ -3209,7 +3109,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       }
 
       if (log) {
-        DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
+        DWARFDeclContext type_dwarf_decl_ctx = type_die.GetDWARFDeclContext();
         GetObjectFile()->GetModule()->LogMessage(
             log,
             "SymbolFileDWARF::"
@@ -3635,8 +3535,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     if ((parent_tag == DW_TAG_compile_unit ||
          parent_tag == DW_TAG_partial_unit) &&
         Language::LanguageIsCPlusPlus(GetLanguage(*die.GetCU())))
-      mangled =
-          GetDWARFDeclContext(die).GetQualifiedNameAsConstString().GetCString();
+      mangled = die.GetDWARFDeclContext()
+                    .GetQualifiedNameAsConstString()
+                    .GetCString();
   }
 
   if (tag == DW_TAG_formal_parameter)
@@ -4459,14 +4360,6 @@ SymbolFileDWARF::GetContainingDeclContext(const DWARFDIE &die) {
   if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU()))
     return dwarf_ast->GetDeclContextContainingUIDFromDWARF(die);
   return CompilerDeclContext();
-}
-
-DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(const DWARFDIE &die) {
-  if (!die.IsValid())
-    return {};
-  DWARFDeclContext dwarf_decl_ctx =
-      die.GetDIE()->GetDWARFDeclContext(die.GetCU());
-  return dwarf_decl_ctx;
 }
 
 LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {

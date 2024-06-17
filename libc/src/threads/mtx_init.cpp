@@ -20,7 +20,8 @@ static_assert(sizeof(Mutex) <= sizeof(mtx_t),
 
 LLVM_LIBC_FUNCTION(int, mtx_init, (mtx_t * m, int type)) {
   auto err = Mutex::init(reinterpret_cast<Mutex *>(m), type & mtx_timed,
-                         type & mtx_recursive, 0);
+                         type & mtx_recursive, /* is_robust */ false,
+                         /* is_pshared */ false);
   return err == MutexError::NONE ? thrd_success : thrd_error;
 }
 

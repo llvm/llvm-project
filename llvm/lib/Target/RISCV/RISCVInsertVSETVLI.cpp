@@ -249,6 +249,13 @@ struct DemandedFields {
     VLZeroness = true;
   }
 
+  static DemandedFields all() {
+    DemandedFields DF;
+    DF.demandVTYPE();
+    DF.demandVL();
+    return DF;
+  }
+
   // Make this the result of demanding both the fields in this and B.
   void doUnion(const DemandedFields &B) {
     VLAny |= B.VLAny;
@@ -397,7 +404,9 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
   if (RISCVII::hasSEWOp(TSFlags)) {
     Res.demandVTYPE();
     if (RISCVII::hasVLOp(TSFlags))
-      Res.demandVL();
+      if (const MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
+          !VLOp.isReg() || !VLOp.isUndef())
+        Res.demandVL();
 
     // Behavior is independent of mask policy.
     if (!RISCVII::usesMaskPolicy(TSFlags))
@@ -504,7 +513,7 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
 class VSETVLIInfo {
   struct AVLDef {
     // Every AVLDef should have a VNInfo.
-    unsigned ValNo;
+    const VNInfo *ValNo;
     Register DefReg;
   };
   union {
@@ -517,7 +526,6 @@ class VSETVLIInfo {
     AVLIsReg,
     AVLIsImm,
     AVLIsVLMAX,
-    AVLIsIgnored,
     Unknown,
   } State = Uninitialized;
 
@@ -543,9 +551,9 @@ public:
   void setUnknown() { State = Unknown; }
   bool isUnknown() const { return State == Unknown; }
 
-  void setAVLRegDef(unsigned ValNo, Register AVLReg) {
-    assert(AVLReg.isVirtual());
-    AVLRegDef.ValNo = ValNo;
+  void setAVLRegDef(const VNInfo *VNInfo, Register AVLReg) {
+    assert(VNInfo && AVLReg.isVirtual());
+    AVLRegDef.ValNo = VNInfo;
     AVLRegDef.DefReg = AVLReg;
     State = AVLIsReg;
   }
@@ -557,12 +565,9 @@ public:
 
   void setAVLVLMAX() { State = AVLIsVLMAX; }
 
-  void setAVLIgnored() { State = AVLIsIgnored; }
-
   bool hasAVLImm() const { return State == AVLIsImm; }
   bool hasAVLReg() const { return State == AVLIsReg; }
   bool hasAVLVLMAX() const { return State == AVLIsVLMAX; }
-  bool hasAVLIgnored() const { return State == AVLIsIgnored; }
   Register getAVLReg() const {
     assert(hasAVLReg() && AVLRegDef.DefReg.isVirtual());
     return AVLRegDef.DefReg;
@@ -571,7 +576,7 @@ public:
     assert(hasAVLImm());
     return AVLImm;
   }
-  unsigned getAVLValNo() const {
+  const VNInfo *getAVLVNInfo() const {
     assert(hasAVLReg());
     return AVLRegDef.ValNo;
   }
@@ -580,10 +585,8 @@ public:
   // boundary slot.
   const MachineInstr *getAVLDefMI(const LiveIntervals *LIS) const {
     assert(hasAVLReg());
-    const VNInfo *VNI =
-        LIS->getInterval(getAVLReg()).getValNumInfo(getAVLValNo());
-    auto *MI = LIS->getInstructionFromIndex(VNI->def);
-    assert(!(VNI->isPHIDef() && MI));
+    auto *MI = LIS->getInstructionFromIndex(getAVLVNInfo()->def);
+    assert(!(getAVLVNInfo()->isPHIDef() && MI));
     return MI;
   }
 
@@ -592,11 +595,9 @@ public:
     if (Info.isUnknown())
       setUnknown();
     else if (Info.hasAVLReg())
-      setAVLRegDef(Info.getAVLValNo(), Info.getAVLReg());
+      setAVLRegDef(Info.getAVLVNInfo(), Info.getAVLReg());
     else if (Info.hasAVLVLMAX())
       setAVLVLMAX();
-    else if (Info.hasAVLIgnored())
-      setAVLIgnored();
     else {
       assert(Info.hasAVLImm());
       setAVLImm(Info.getAVLImm());
@@ -617,8 +618,6 @@ public:
     }
     if (hasAVLVLMAX())
       return true;
-    if (hasAVLIgnored())
-      return false;
     return false;
   }
 
@@ -631,7 +630,7 @@ public:
 
   bool hasSameAVL(const VSETVLIInfo &Other) const {
     if (hasAVLReg() && Other.hasAVLReg())
-      return getAVLValNo() == Other.getAVLValNo() &&
+      return getAVLVNInfo()->id == Other.getAVLVNInfo()->id &&
              getAVLReg() == Other.getAVLReg();
 
     if (hasAVLImm() && Other.hasAVLImm())
@@ -639,9 +638,6 @@ public:
 
     if (hasAVLVLMAX())
       return Other.hasAVLVLMAX() && hasSameVLMAX(Other);
-
-    if (hasAVLIgnored())
-      return Other.hasAVLIgnored();
 
     return false;
   }
@@ -715,14 +711,12 @@ public:
                     const LiveIntervals *LIS) const {
     assert(isValid() && Require.isValid() &&
            "Can't compare invalid VSETVLIInfos");
-    assert(!Require.SEWLMULRatioOnly &&
-           "Expected a valid VTYPE for instruction!");
     // Nothing is compatible with Unknown.
     if (isUnknown() || Require.isUnknown())
       return false;
 
     // If only our VLMAX ratio is valid, then this isn't compatible.
-    if (SEWLMULRatioOnly)
+    if (SEWLMULRatioOnly || Require.SEWLMULRatioOnly)
       return false;
 
     if (Used.VLAny && !(hasSameAVL(Require) && hasSameVLMAX(Require)))
@@ -818,8 +812,6 @@ public:
       OS << "AVLImm=" << (unsigned)AVLImm;
     if (hasAVLVLMAX())
       OS << "AVLVLMAX";
-    if (hasAVLIgnored())
-      OS << "AVLIgnored";
     OS << ", "
        << "VLMul=" << (unsigned)VLMul << ", "
        << "SEW=" << (unsigned)SEW << ", "
@@ -934,11 +926,12 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
            "Can't handle X0, X0 vsetvli yet");
     if (AVLReg == RISCV::X0)
       NewInfo.setAVLVLMAX();
-    else if (VNInfo *VNI = getVNInfoFromReg(AVLReg, MI, LIS))
-      NewInfo.setAVLRegDef(VNI->id, AVLReg);
+    else if (MI.getOperand(1).isUndef())
+      // Otherwise use an AVL of 1 to avoid depending on previous vl.
+      NewInfo.setAVLImm(1);
     else {
-      assert(MI.getOperand(1).isUndef());
-      NewInfo.setAVLIgnored();
+      VNInfo *VNI = getVNInfoFromReg(AVLReg, MI, LIS);
+      NewInfo.setAVLRegDef(VNI, AVLReg);
     }
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
@@ -1010,18 +1003,18 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
       }
       else
         InstrInfo.setAVLImm(Imm);
-    } else if (VNInfo *VNI = getVNInfoFromReg(VLOp.getReg(), MI, LIS)) {
-      InstrInfo.setAVLRegDef(VNI->id, VLOp.getReg());
+    } else if (VLOp.isUndef()) {
+      // Otherwise use an AVL of 1 to avoid depending on previous vl.
+      InstrInfo.setAVLImm(1);
     } else {
-      assert(VLOp.isUndef());
-      InstrInfo.setAVLIgnored();
+      VNInfo *VNI = getVNInfoFromReg(VLOp.getReg(), MI, LIS);
+      InstrInfo.setAVLRegDef(VNI, VLOp.getReg());
     }
   } else {
     assert(isScalarExtractInstr(MI));
-    // TODO: If we are more clever about x0,x0 insertion then we should be able
-    // to deduce that the VL is ignored based off of DemandedFields, and remove
-    // the AVLIsIgnored state. Then we can just use an arbitrary immediate AVL.
-    InstrInfo.setAVLIgnored();
+    // Pick a random value for state tracking purposes, will be ignored via
+    // the demanded fields mechanism
+    InstrInfo.setAVLImm(1);
   }
 #ifndef NDEBUG
   if (std::optional<unsigned> EEW = getEEWForLoadStore(MI)) {
@@ -1096,28 +1089,6 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
                   .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                   .addImm(Info.getAVLImm())
-                  .addImm(Info.encodeVTYPE());
-    LIS->InsertMachineInstrInMaps(*MI);
-    return;
-  }
-
-  if (Info.hasAVLIgnored()) {
-    // We can only use x0, x0 if there's no chance of the vtype change causing
-    // the previous vl to become invalid.
-    if (PrevInfo.isValid() && !PrevInfo.isUnknown() &&
-        Info.hasSameVLMAX(PrevInfo)) {
-      auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETVLIX0))
-                    .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-                    .addReg(RISCV::X0, RegState::Kill)
-                    .addImm(Info.encodeVTYPE())
-                    .addReg(RISCV::VL, RegState::Implicit);
-      LIS->InsertMachineInstrInMaps(*MI);
-      return;
-    }
-    // Otherwise use an AVL of 1 to avoid depending on previous vl.
-    auto MI = BuildMI(MBB, InsertPt, DL, TII->get(RISCV::PseudoVSETIVLI))
-                  .addReg(RISCV::X0, RegState::Define | RegState::Dead)
-                  .addImm(1)
                   .addImm(Info.encodeVTYPE());
     LIS->InsertMachineInstrInMaps(*MI);
     return;
@@ -1262,7 +1233,7 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
     auto &LI = LIS->getInterval(MI.getOperand(1).getReg());
     SlotIndex SI = LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
     VNInfo *VNI = LI.getVNInfoAt(SI);
-    Info.setAVLRegDef(VNI->id, MI.getOperand(1).getReg());
+    Info.setAVLRegDef(VNI, MI.getOperand(1).getReg());
     return;
   }
 
@@ -1357,8 +1328,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     return true;
 
   // We need the AVL to have been produced by a PHI node in this basic block.
-  const VNInfo *Valno = LIS->getInterval(Require.getAVLReg())
-                            .getValNumInfo(Require.getAVLValNo());
+  const VNInfo *Valno = Require.getAVLVNInfo();
   if (!Valno->isPHIDef() || LIS->getMBBFromIndex(Valno->def) != &MBB)
     return true;
 
@@ -1415,7 +1385,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
 
     uint64_t TSFlags = MI.getDesc().TSFlags;
     if (RISCVII::hasSEWOp(TSFlags)) {
-      if (PrevInfo != CurInfo) {
+      if (!PrevInfo.isCompatible(DemandedFields::all(), CurInfo, LIS)) {
         // If this is the first implicit state change, and the state change
         // requested can be proven to produce the same register contents, we
         // can skip emitting the actual state change and continue as if we
@@ -1522,8 +1492,7 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
   // we need to prove the value is available at the point we're going
   // to insert the vsetvli at.
   if (AvailableInfo.hasAVLReg()) {
-    const LiveInterval &LI = LIS->getInterval(AvailableInfo.getAVLReg());
-    SlotIndex SI = LI.getValNumInfo(AvailableInfo.getAVLValNo())->def;
+    SlotIndex SI = AvailableInfo.getAVLVNInfo()->def;
     // This is an inline dominance check which covers the case of
     // UnavailablePred being the preheader of a loop.
     if (LIS->getMBBFromIndex(SI) != UnavailablePred)
@@ -1532,11 +1501,6 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
         SI >= LIS->getInstructionIndex(*UnavailablePred->getFirstTerminator()))
       return;
   }
-
-  // If the AVL isn't used in its predecessors then bail, since we have no AVL
-  // to insert a vsetvli with.
-  if (AvailableInfo.hasAVLIgnored())
-    return;
 
   // Model the effect of changing the input state of the block MBB to
   // AvailableInfo.  We're looking for two issues here; one legality,

@@ -11,7 +11,7 @@
 # RUN:    --print-finalized --tail-duplication=cache -o %t.out2 \
 # RUN:    | FileCheck --check-prefix="CHECK2" %s
 
-# A test where the tail is duplicated to eliminate an unconditional jump
+## A test where the tail is duplicated to eliminate an unconditional jump
 # FDATA: 1 main #.BB0_br# 1 main #.BB4# 0 100
 # FDATA: 1 main #.BB0_br# 1 main #.BB1# 0 100
 # FDATA: 1 main #.BB1_br# 1 main #.BB3# 0 50
@@ -20,7 +20,7 @@
 # CHECK: BOLT-INFO: tail duplication modified 1 ({{.*}}%) functions; duplicated 1 blocks (13 bytes) responsible for 50 dynamic executions ({{.*}}% of all block executions)
 # CHECK: BB Layout   : .LBB00, .Ltmp0, .Ltmp1, .Ltmp2, .Ltmp3, .Ltmp4, .Ltmp5, .Ltail-dup0, .Ltmp6
 
-# A test where the tail is not duplicated due to the cache score
+## A test where the tail is not duplicated due to the cache score
 # FDATA2: 1 main #.BB0_br# 1 main #.BB4# 0 100
 # FDATA2: 1 main #.BB0_br# 1 main #.BB1# 0 2
 # FDATA2: 1 main #.BB1_br# 1 main #.BB3# 0 1

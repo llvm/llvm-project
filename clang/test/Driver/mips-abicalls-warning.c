@@ -1,4 +1,3 @@
-// REQUIRES: mips-registered-target
 // RUN: %clang -### -c --target=mips64-mti-elf -fno-pic %s 2>&1 | FileCheck -check-prefix=CHECK-PIC1-IMPLICIT %s
 // CHECK-PIC1-IMPLICIT: warning: ignoring '-fno-pic' option as it cannot be used with implicit usage of -mabicalls and the N64 ABI
 

@@ -151,7 +151,7 @@ public:
       }
       extents.push_back(builder.createIntegerConstant(loc, idxTy, extent));
     }
-    if (!hasNonDefaultLowerBounds(componentSym))
+    if (!mayHaveNonDefaultLowerBounds(componentSym))
       return builder.create<fir::ShapeOp>(loc, extents);
 
     llvm::SmallVector<mlir::Value> lbounds;
@@ -215,7 +215,7 @@ private:
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
     if (fir::hasDynamicSize(resultValueType) ||
-        hasNonDefaultLowerBounds(partInfo))
+        mayHaveNonDefaultLowerBounds(partInfo))
       return fir::BoxType::get(resultValueType);
     // Non simply contiguous ref require a fir.box to carry the byte stride.
     if (mlir::isa<fir::SequenceType>(resultValueType) &&
@@ -600,7 +600,7 @@ private:
   }
 
   static bool
-  hasNonDefaultLowerBounds(const Fortran::semantics::Symbol &componentSym) {
+  mayHaveNonDefaultLowerBounds(const Fortran::semantics::Symbol &componentSym) {
     if (const auto *objDetails =
             componentSym.detailsIf<Fortran::semantics::ObjectEntityDetails>())
       for (const Fortran::semantics::ShapeSpec &bounds : objDetails->shape())
@@ -610,7 +610,7 @@ private:
               return true;
     return false;
   }
-  static bool hasNonDefaultLowerBounds(const PartInfo &partInfo) {
+  static bool mayHaveNonDefaultLowerBounds(const PartInfo &partInfo) {
     return partInfo.resultShape &&
            mlir::isa<fir::ShiftType, fir::ShapeShiftType>(
                partInfo.resultShape.getType());

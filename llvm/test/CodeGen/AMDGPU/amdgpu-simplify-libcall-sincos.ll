@@ -1046,9 +1046,9 @@ define void @sincos_f32_debuginfo(float %x, ptr addrspace(1) nocapture writeonly
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5), !dbg [[DBG14:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]]), !dbg [[DBG14]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4, !dbg [[DBG14]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata float [[TMP0]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(float [[TMP0]], [[META11:![0-9]+]], !DIExpression(), [[META15:![0-9]+]])
 ; CHECK-NEXT:    store float [[TMP0]], ptr addrspace(1) [[SIN_OUT]], align 4, !dbg [[DBG16:![0-9]+]]
-; CHECK-NEXT:    tail call void @llvm.dbg.value(metadata float [[TMP1]], metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(float [[TMP1]], [[META13:![0-9]+]], !DIExpression(), [[META17:![0-9]+]])
 ; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[COS_OUT]], align 4, !dbg [[DBG18:![0-9]+]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG19:![0-9]+]]
 ;

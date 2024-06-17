@@ -690,7 +690,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
         Callees.push_back(CS.first.Callee);
 
     llvm::sort(Callees);
-    Callees.erase(std::unique(Callees.begin(), Callees.end()), Callees.end());
+    Callees.erase(llvm::unique(Callees), Callees.end());
 
     for (auto &Callee : Callees)
       Callers[Callee].push_back(F.first);

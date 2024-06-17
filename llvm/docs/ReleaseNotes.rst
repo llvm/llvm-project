@@ -47,6 +47,11 @@ Non-comprehensive list of changes in this release
 Update on required toolchains to build LLVM
 -------------------------------------------
 
+* The minimum Python version has been raised from 3.6 to 3.8 across all of LLVM.
+  This enables the use of many new Python features, aligning more closely with
+  modern Python best practices, and improves CI maintainability
+  See `#78828 <https://github.com/llvm/llvm-project/pull/78828>`_ for more info.
+
 Changes to the LLVM IR
 ----------------------
 
@@ -56,6 +61,15 @@ Changes to the LLVM IR
 * Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
 * Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
 * Renamed ``llvm.experimental.vector.deinterleave2`` intrinsic to ``llvm.vector.deinterleave2``.
+* The constant expression variants of the following instructions have been
+  removed:
+
+  * ``icmp``
+  * ``fcmp``
+* LLVM has switched from using debug intrinsics in textual IR to using debug
+  records by default. Details of the change and instructions on how to update
+  any downstream tools and tests can be found in the `migration docs
+  <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -78,8 +92,8 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
-  Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
+* Added support for Cortex-R82AE, Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
+  Cortex-A725, Cortex-X925, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 * ``-mbranch-protection=standard`` now enables FEAT_PAuth_LR by
   default when the feature is enabled. The new behaviour results 
@@ -96,6 +110,7 @@ Changes to the AMDGPU Backend
 Changes to the ARM Backend
 --------------------------
 
+* Added support for Cortex-R52+ CPU.
 * FEAT_F32MM is no longer activated by default when using `+sve` on v8.6-A or greater. The feature is still available and can be used by adding `+f32mm` to the command line options.
 * armv8-r now implies only fp-armv8d16sp, rather than neon and full fp-armv8. These features are still included by default for cortex-r52. The default cpu for armv8-r is now "generic", for compatibility with variants that do not include neon, fp64, and d32.
 
@@ -110,6 +125,10 @@ Changes to the Hexagon Backend
 
 Changes to the LoongArch Backend
 --------------------------------
+
+* i32 is now a native type in the datalayout string. This enables
+  LoopStrengthReduce for loops with i32 induction variables, among other
+  optimizations.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -136,6 +155,9 @@ Changes to the RISC-V Backend
 * Added smstateen extension to -march. CSR names for smstateen were already supported.
 * Zaamo and Zalrsc are no longer experimental.
 * Processors that enable post reg-alloc scheduling (PostMachineScheduler) by default should use the `UsePostRAScheduler` subtarget feature. Setting `PostRAScheduler = 1` in the scheduler model will have no effect on the enabling of the PostMachineScheduler.
+* Zabha is no longer experimental.
+* B (the collection of the Zba, Zbb, Zbs extensions) is supported.
+* Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -190,6 +212,16 @@ Changes to the C API
   * ``LLVMGetCallBrNumIndirectDests``
   * ``LLVMGetCallBrIndirectDest``
 
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+
+  * ``LLVMConstICmp``
+  * ``LLVMConstFCmp``
+
+* Added ``LLVMPositionBuilderBeforeDbgRecords`` and ``LLVMPositionBuilderBeforeInstrAndDbgRecords``. Same as ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` except the insertion position is set to before the debug records that precede the target instruction. See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info. ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` are unchanged; they insert before the indicated instruction but after any attached debug records.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -198,6 +230,13 @@ Changes to the Metadata Info
 
 Changes to the Debug Info
 ---------------------------------
+
+* LLVM has switched from using debug intrinsics internally to using debug
+  records by default. This should happen transparently when using the DIBuilder
+  to construct debug variable information, but will require changes for any code
+  that interacts with debug intrinsics directly. Debug intrinsics will only be
+  supported on a best-effort basis from here onwards; for more information, see
+  the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to the LLVM tools
 ---------------------------------
