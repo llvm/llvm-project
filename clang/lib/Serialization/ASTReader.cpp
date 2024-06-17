@@ -3903,6 +3903,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
       break;
 
+    case VTABLES_TO_EMIT:
+      if (F.Kind == MK_MainFile ||
+          getContext().getLangOpts().BuildingPCHWithObjectFile)
+        for (unsigned I = 0, N = Record.size(); I != N;)
+          VTablesToEmit.push_back(getGlobalDeclID(F, LocalDeclID(Record[I++])));
+      break;
+
     case IMPORTED_MODULES:
       if (!F.isModule()) {
         // If we aren't loading a module (which has its own exports), make
@@ -8065,6 +8072,10 @@ void ASTReader::PassInterestingDeclToConsumer(Decl *D) {
     PassObjCImplDeclToConsumer(ImplD, Consumer);
   else
     Consumer->HandleInterestingDecl(DeclGroupRef(D));
+}
+
+void ASTReader::PassVTableToConsumer(CXXRecordDecl *RD) {
+  Consumer->HandleVTable(RD);
 }
 
 void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
