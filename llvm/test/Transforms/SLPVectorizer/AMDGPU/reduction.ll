@@ -553,14 +553,8 @@ entry:
 define i8 @reduction_v4i8(<4 x i8> %a) {
 ; GCN-LABEL: @reduction_v4i8(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x i8> [[A:%.*]], i64 0
-; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x i8> [[A]], i64 1
-; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x i8> [[A]], i64 2
-; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x i8> [[A]], i64 3
-; GCN-NEXT:    [[ADD1:%.*]] = add i8 [[ELT1]], [[ELT0]]
-; GCN-NEXT:    [[ADD2:%.*]] = add i8 [[ELT2]], [[ADD1]]
-; GCN-NEXT:    [[ADD3:%.*]] = add i8 [[ELT3]], [[ADD2]]
-; GCN-NEXT:    ret i8 [[ADD3]]
+; GCN-NEXT:    [[TMP0:%.*]] = call i8 @llvm.vector.reduce.add.v4i8(<4 x i8> [[A:%.*]])
+; GCN-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
   %elt0 = extractelement <4 x i8> %a, i64 0
@@ -578,22 +572,8 @@ entry:
 define i8 @reduction_v8i8(<8 x i8> %vec8) {
 ; GCN-LABEL: @reduction_v8i8(
 ; GCN-NEXT:  entry:
-; GCN-NEXT:    [[ELT0:%.*]] = extractelement <8 x i8> [[VEC8:%.*]], i64 0
-; GCN-NEXT:    [[ELT1:%.*]] = extractelement <8 x i8> [[VEC8]], i64 1
-; GCN-NEXT:    [[ELT2:%.*]] = extractelement <8 x i8> [[VEC8]], i64 2
-; GCN-NEXT:    [[ELT3:%.*]] = extractelement <8 x i8> [[VEC8]], i64 3
-; GCN-NEXT:    [[ELT4:%.*]] = extractelement <8 x i8> [[VEC8]], i64 4
-; GCN-NEXT:    [[ELT5:%.*]] = extractelement <8 x i8> [[VEC8]], i64 5
-; GCN-NEXT:    [[ELT6:%.*]] = extractelement <8 x i8> [[VEC8]], i64 6
-; GCN-NEXT:    [[ELT7:%.*]] = extractelement <8 x i8> [[VEC8]], i64 7
-; GCN-NEXT:    [[ADD1:%.*]] = add i8 [[ELT1]], [[ELT0]]
-; GCN-NEXT:    [[ADD2:%.*]] = add i8 [[ELT2]], [[ADD1]]
-; GCN-NEXT:    [[ADD3:%.*]] = add i8 [[ELT3]], [[ADD2]]
-; GCN-NEXT:    [[ADD4:%.*]] = add i8 [[ELT4]], [[ADD3]]
-; GCN-NEXT:    [[ADD5:%.*]] = add i8 [[ELT5]], [[ADD4]]
-; GCN-NEXT:    [[ADD6:%.*]] = add i8 [[ELT6]], [[ADD5]]
-; GCN-NEXT:    [[ADD7:%.*]] = add i8 [[ELT7]], [[ADD6]]
-; GCN-NEXT:    ret i8 [[ADD7]]
+; GCN-NEXT:    [[TMP0:%.*]] = call i8 @llvm.vector.reduce.add.v8i8(<8 x i8> [[VEC8:%.*]])
+; GCN-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
   %elt0 = extractelement <8 x i8> %vec8, i64 0
