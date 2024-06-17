@@ -5627,6 +5627,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N) {
 SDValue DAGTypeLegalizer::WidenVecRes_MASKED_COMPRESS(SDNode *N) {
   SDValue Vec = N->getOperand(0);
   SDValue Mask = N->getOperand(1);
+  SDValue Passthru = N->getOperand(2);
   EVT WideVecVT =
       TLI.getTypeToTransformTo(*DAG.getContext(), Vec.getValueType());
   EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
@@ -5635,8 +5636,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_MASKED_COMPRESS(SDNode *N) {
 
   SDValue WideVec = ModifyToType(Vec, WideVecVT);
   SDValue WideMask = ModifyToType(Mask, WideMaskVT);
+  SDValue WidePassthru = ModifyToType(Passthru, WideVecVT);
   return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), WideVecVT, WideVec,
-                     WideMask);
+                     WideMask, WidePassthru);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {

@@ -266,8 +266,10 @@ def SDTMaskedScatter : SDTypeProfile<0, 4, [
   SDTCisSameNumEltsAs<0, 1>, SDTCisSameNumEltsAs<0, 3>
 ]>;
 
-def SDTMaskedCompress : SDTypeProfile<1, 2, [
-  SDTCisVec<0>, SDTCisVec<1>, SDTCisSameNumEltsAs<0, 1>,
+def SDTMaskedCompress : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisSameAs<0, 1>,
+  SDTCisVec<2>, SDTCisSameNumEltsAs<1, 2>,
+  SDTCisSameAs<1, 3>
 ]>;
 
 def SDTVecShuffle : SDTypeProfile<1, 2, [

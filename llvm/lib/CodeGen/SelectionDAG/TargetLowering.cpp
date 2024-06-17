@@ -11320,10 +11320,12 @@ SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
   SDLoc DL(Node);
   SDValue Vec = Node->getOperand(0);
   SDValue Mask = Node->getOperand(1);
+  SDValue Passthru = Node->getOperand(2);
 
   EVT VecVT = Vec.getValueType();
   EVT ScalarVT = VecVT.getScalarType();
-  EVT MaskScalarVT = Mask.getValueType().getScalarType();
+  EVT MaskVT = Mask.getValueType();
+  EVT MaskScalarVT = MaskVT.getScalarType();
 
   // Needs to be handled by targets that have scalable vector types.
   if (VecVT.isScalableVector())
@@ -11331,8 +11333,47 @@ SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
 
   SDValue StackPtr = DAG.CreateStackTemporary(
       VecVT.getStoreSize(), DAG.getReducedAlign(VecVT, /*UseABI=*/false));
+  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+
   SDValue Chain = DAG.getEntryNode();
   SDValue OutPos = DAG.getConstant(0, DL, MVT::i32);
+
+  bool HasPassthru = !Passthru.isUndef();
+
+  // If we have a passthru vector, store it on the stack, overwrite the matching
+  // positions and then re-write the last element that was potentially
+  // overwritten even though mask[i] = false.
+  if (HasPassthru)
+    Chain = DAG.getStore(Chain, DL, Passthru, StackPtr, PtrInfo);
+
+  SDValue LastWriteVal;
+  APInt PassthruSplatVal;
+  bool IsSplatPassthru =
+      ISD::isConstantSplatVector(Passthru.getNode(), PassthruSplatVal);
+
+  if (HasPassthru && IsSplatPassthru) {
+    // As we do not know which position we wrote to last, we cannot simply
+    // access that index from the passthru vector. So we first check if passthru
+    // is a splat vector, to use any element ...
+    LastWriteVal = DAG.getConstant(PassthruSplatVal, DL, ScalarVT);
+  } else {
+    // ... if it is not a splat vector, we need to get the passthru value at
+    // position = popcount(mask) and re-load it from the stack before it is
+    // overwritten in the loop below.
+    SDValue Popcount = DAG.getNode(
+        ISD::TRUNCATE, DL, MaskVT.changeVectorElementType(MVT::i1), Mask);
+    Popcount = DAG.getNode(ISD::ZERO_EXTEND, DL,
+                           MaskVT.changeVectorElementType(MVT::i32), Popcount);
+    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, Popcount);
+    SDValue LastElmtPtr =
+        getVectorElementPointer(DAG, StackPtr, VecVT, Popcount);
+    LastWriteVal = DAG.getLoad(
+        ScalarVT, DL, Chain, LastElmtPtr,
+        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
+    Chain = LastWriteVal.getValue(1);
+  }
 
   unsigned NumElms = VecVT.getVectorNumElements();
   for (unsigned I = 0; I < NumElms; I++) {
@@ -11344,21 +11385,32 @@ SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
         Chain, DL, ValI, OutPtr,
         MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
 
-    // Skip this for last element.
-    if (I < NumElms - 1) {
-      // Get the mask value and add it to the current output position. This
-      // either increments by 1 if MaskI is true or adds 0 otherwise.
-      SDValue MaskI =
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MaskScalarVT, Mask, Idx);
-      MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
-      MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, MaskI);
-      OutPos = DAG.getNode(ISD::ADD, DL, MVT::i32, OutPos, MaskI);
+    // Get the mask value and add it to the current output position. This
+    // either increments by 1 if MaskI is true or adds 0 otherwise.
+    SDValue MaskI =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MaskScalarVT, Mask, Idx);
+    MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
+    MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, MaskI);
+    OutPos = DAG.getNode(ISD::ADD, DL, MVT::i32, OutPos, MaskI);
+
+    if (HasPassthru && I == NumElms - 1) {
+      SDValue EndOfVector =
+          DAG.getConstant(VecVT.getVectorNumElements() - 1, DL, MVT::i32);
+      SDValue AllLanesSelected =
+          DAG.getSetCC(DL, MVT::i1, OutPos, EndOfVector, ISD::CondCode::SETUGT);
+      OutPos = DAG.getNode(ISD::UMIN, DL, MVT::i32, OutPos, EndOfVector);
+      OutPtr = getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
+
+      // Re-write the last ValI if all lanes were selected. Otherwise,
+      // overwrite the last write it with the passthru value.
+      LastWriteVal =
+          DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI, LastWriteVal);
+      Chain = DAG.getStore(
+          Chain, DL, LastWriteVal, OutPtr,
+          MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
     }
   }
 
-  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-  MachinePointerInfo PtrInfo =
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
 }
 

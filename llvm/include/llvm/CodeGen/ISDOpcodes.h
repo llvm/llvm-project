@@ -1296,10 +1296,12 @@ enum NodeType {
   MLOAD,
   MSTORE,
 
-  // MASKED_COMPRESS(Vec, Mask)
+  // MASKED_COMPRESS(Vec, Mask, Passthru)
   // consecutively place vector elements based on mask
   // e.g., vec = {A, B, C, D} and mask = {1, 0, 1, 0}
   //         --> {A, C, ?, ?} where ? is undefined
+  // If passthru is defined, ?s are replaced with elements at corresponding
+  // positions from passthru. If passthru is undef, ?s remain undefined.
   MASKED_COMPRESS,
 
   // Masked gather and scatter - load and store operations for a vector of

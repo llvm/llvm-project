@@ -968,8 +968,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_MASKED_COMPRESS(SDNode *N) {
   SDValue Vec = GetPromotedInteger(N->getOperand(0));
+  SDValue Passthru = GetPromotedInteger(N->getOperand(2));
   return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), Vec.getValueType(), Vec,
-                     N->getOperand(1));
+                     N->getOperand(1), Passthru);
 }
 
 /// Promote the overflow flag of an overflowing arithmetic node.
@@ -2401,8 +2402,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MASKED_COMPRESS(SDNode *N,
   assert(OpNo == 1 && "Can only promote MASKED_COMPRESS mask.");
   SDValue Vec = N->getOperand(0);
   EVT VT = Vec.getValueType();
+  SDValue Passthru = N->getOperand(2);
   SDValue Mask = PromoteTargetBoolean(N->getOperand(1), VT);
-  return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), VT, Vec, Mask);
+  return DAG.getNode(ISD::MASKED_COMPRESS, SDLoc(N), VT, Vec, Mask, Passthru);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {

@@ -6340,11 +6340,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // We can't create a scalar CONCAT_VECTORS so skip it. It will break
   // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
   // foldCONCAT_VECTORS in getNode before this is called.
-  // MASKED_COMPRESS is not defined for scalars. We handle constants before this
-  // call.
-  // TODO: Make this aware of vector-only opcodes and skip all of them.
-  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS ||
-      Opcode == ISD::MASKED_COMPRESS)
+  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
     return SDValue();
 
   unsigned NumOps = Ops.size();
@@ -7277,20 +7273,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return N1.getOperand(1);
     break;
   }
-  case ISD::MASKED_COMPRESS: {
-    EVT VecVT = N1.getValueType();
-    [[maybe_unused]] EVT MaskVT = N2.getValueType();
-    assert(VT == VecVT && "Vector and result type don't match.");
-    assert(VecVT.isVector() && MaskVT.isVector() &&
-           "Both inputs must be vectors.");
-    assert(VecVT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
-           "Vector and mask must have same number of elements.");
-
-    if (N1.isUndef() || N2.isUndef())
-      return getUNDEF(VecVT);
-
-    break;
-  }
   }
 
   // Perform trivial constant folding.
@@ -7525,6 +7507,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType() == VT)
       return N1;
     break;
+  case ISD::MASKED_COMPRESS: {
+    EVT VecVT = N1.getValueType();
+    [[maybe_unused]] EVT MaskVT = N2.getValueType();
+    [[maybe_unused]] EVT PassthruVT = N3.getValueType();
+    assert(VT == VecVT && "Vector and result type don't match.");
+    assert(VecVT.isVector() && MaskVT.isVector() && PassthruVT.isVector() &&
+           "All inputs must be vectors.");
+    assert(VecVT == PassthruVT && "Vector and passthru types don't match.");
+    assert(VecVT.getVectorElementCount() == MaskVT.getVectorElementCount() &&
+           "Vector and mask must have same number of elements.");
+
+    if (N1.isUndef() || N2.isUndef())
+      return getUNDEF(VecVT);
+
+    break;
+  }
   }
 
   // Memoize node if it doesn't produce a glue result.

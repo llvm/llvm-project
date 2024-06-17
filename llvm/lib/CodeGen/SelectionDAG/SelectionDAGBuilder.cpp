@@ -6735,7 +6735,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::MASKED_COMPRESS, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
                              getValue(I.getArgOperand(0)),
-                             getValue(I.getArgOperand(1)), Flags));
+                             getValue(I.getArgOperand(1)),
+                             getValue(I.getArgOperand(2)), Flags));
     return;
   case Intrinsic::powi:
     setValue(&I, ExpandPowI(sdl, getValue(I.getArgOperand(0)),
