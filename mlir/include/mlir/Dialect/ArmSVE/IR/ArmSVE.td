@@ -463,7 +463,7 @@ def PselOp : ArmSVE_Op<"psel", [
     %pd = arm_sve.psel %p1, %p2[%index] : vector<[4]xi1>, vector<[8]xi1>
     ```
 
-    Note: This requires SME or SVE2 (`+sme` or `+sve2` in LLVM target features).
+    Note: This requires SME or SVE2.1 (`+sme` or `+sve2p1` in LLVM target features).
   }];
 
   let arguments = (ins SVEPredicate:$p1, SVEPredicate:$p2, Index:$index);
@@ -589,7 +589,7 @@ def ZipX4IntrOp : ArmSVE_IntrOp<"zip.x4",
                    Arg<AnyScalableVector, "v3">:$v3,
                    Arg<AnyScalableVector, "v3">:$v4)>;
 
-// Note: This intrinsic requires SME or SVE2.
+// Note: This intrinsic requires SME or SVE2.1.
 def PselIntrOp : ArmSVE_IntrOp<"psel",
   /*traits=*/[Pure, TypeIs<"res", SVBool>],
   /*overloadedOperands=*/[1]>,
