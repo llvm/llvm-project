@@ -15,7 +15,6 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace cir {
 
@@ -24,18 +23,6 @@ class CIRDataLayout {
 
 public:
   mlir::DataLayout layout;
-
-  /// Constructs a DataLayout from a specification string. See reset().
-  explicit CIRDataLayout(llvm::StringRef dataLayout, mlir::ModuleOp module)
-      : layout(module) {
-    reset(dataLayout);
-  }
-
-  /// Parse a data layout string (with fallback to default values).
-  void reset(llvm::StringRef dataLayout);
-
-  // Free all internal data structures.
-  void clear();
 
   CIRDataLayout(mlir::ModuleOp modOp);
   bool isBigEndian() const { return bigEndian; }

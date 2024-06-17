@@ -10,25 +10,3 @@
 // adapted to operate on the CIR dialect, however.
 //
 //===----------------------------------------------------------------------===//
-
-#include "ABIInfo.h"
-#include "CIRCXXABI.h"
-#include "LowerFunctionInfo.h"
-#include "llvm/Support/ErrorHandling.h"
-
-namespace mlir {
-namespace cir {
-
-bool classifyReturnType(const CIRCXXABI &CXXABI, LowerFunctionInfo &FI,
-                        const ABIInfo &Info) {
-  Type Ty = FI.getReturnType();
-
-  if (const auto RT = Ty.dyn_cast<StructType>()) {
-    llvm_unreachable("NYI");
-  }
-
-  return CXXABI.classifyReturnType(FI);
-}
-
-} // namespace cir
-} // namespace mlir
