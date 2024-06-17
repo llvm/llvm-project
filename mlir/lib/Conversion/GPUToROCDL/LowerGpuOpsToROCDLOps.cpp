@@ -351,6 +351,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
   using mlir::gpu::amd::Runtime;
+  auto *rocdlDialect =
+      converter.getContext().getLoadedDialect<ROCDL::ROCDLDialect>();
   populateWithGenerated(patterns);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
@@ -371,9 +373,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
       converter,
       /*allocaAddrSpace=*/ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace,
       /*workgroupAddrSpace=*/ROCDL::ROCDLDialect::kSharedMemoryAddressSpace,
-      ROCDL::ROCDLDialect::KernelAttrHelper(&converter.getContext()).getName(),
-      ROCDL::ROCDLDialect::ReqdWorkGroupSizeAttrHelper(&converter.getContext())
-          .getName());
+      rocdlDialect->getKernelAttrHelper().getName(),
+      rocdlDialect->getReqdWorkGroupSizeAttrHelper().getName());
   if (Runtime::HIP == runtime) {
     patterns.add<GPUPrintfOpToHIPLowering>(converter);
   } else if (Runtime::OpenCL == runtime) {
