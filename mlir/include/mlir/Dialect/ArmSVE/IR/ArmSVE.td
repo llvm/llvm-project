@@ -552,4 +552,11 @@ def ZipX4IntrOp : ArmSVE_IntrOp<"zip.x4",
                    Arg<AnyScalableVector, "v3">:$v3,
                    Arg<AnyScalableVector, "v3">:$v4)>;
 
+def WhileLTIntrOp :
+  ArmSVE_IntrOp<"whilelt",
+    [TypeIs<"res", SVEPredicate>, Pure],
+    /*overloadedOperands=*/[0],
+    /*overloadedResults=*/[0]>,
+  Arguments<(ins I64:$base, I64:$n)>;
+
 #endif // ARMSVE_OPS
