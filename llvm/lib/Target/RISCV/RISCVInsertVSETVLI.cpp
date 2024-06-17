@@ -48,7 +48,8 @@ static cl::opt<bool> DisableInsertVSETVLPHIOpt(
 namespace {
 
 /// Given a virtual register \p Reg, return the corresponding VNInfo for it.
-/// This will return nullptr if the virtual register is an implicit_def.
+/// This will return nullptr if the virtual register is an implicit_def or
+/// if LiveIntervals is not available.
 static VNInfo *getVNInfoFromReg(Register Reg, const MachineInstr &MI,
                                 const LiveIntervals *LIS) {
   assert(Reg.isVirtual());
