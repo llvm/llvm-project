@@ -1190,7 +1190,7 @@ static bool isExportedFromModuleInterfaceUnit(const NamedDecl *D) {
     return false;
   case Decl::ModuleOwnershipKind::Visible:
   case Decl::ModuleOwnershipKind::VisibleWhenImported:
-    return isInNamedModule(D);
+    return D->isInNamedModule();
   }
   llvm_unreachable("unexpected module ownership kind");
 }
@@ -1208,7 +1208,7 @@ Linkage NamedDecl::getFormalLinkage() const {
   // [basic.namespace.general]/p2
   //   A namespace is never attached to a named module and never has a name with
   //   module linkage.
-  if (isInNamedModule(this) && InternalLinkage == Linkage::External &&
+  if (isInNamedModule() && InternalLinkage == Linkage::External &&
       !isExportedFromModuleInterfaceUnit(
           cast<NamedDecl>(this->getCanonicalDecl())) &&
       !isa<NamespaceDecl>(this))
