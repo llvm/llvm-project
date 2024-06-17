@@ -236,18 +236,19 @@ void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
     NewVR = GetValueInMiddleOfBlock(UseMI->getParent());
   }
 
-  // Insert a COPY if register class contraint isn't fulfilled.
-  if (const TargetRegisterClass *RC =
-          dyn_cast_or_null<const TargetRegisterClass *>(RegAttrs.RCOrRB)) {
-    if (NewVR && !RC->hasSubClassEq(MRI->getRegClass(NewVR))) {
-      MachineBasicBlock *UseBB = UseMI->getParent();
-      MachineInstr *InsertedCopy =
-          InsertNewDef(TargetOpcode::COPY, UseBB, UseBB->getFirstNonPHI(),
-                       RegAttrs, MRI, TII)
-              .addReg(NewVR);
-      NewVR = InsertedCopy->getOperand(0).getReg();
-      LLVM_DEBUG(dbgs() << "  Inserted COPY: " << *InsertedCopy << "\n");
-    }
+  // Insert a COPY if needed to satisfy register class constraints for the using
+  // MO. Or, if possible, just constrain the class for NewVR to avoid the need
+  // for a COPY.
+  const TargetRegisterClass *UseRC =
+      dyn_cast_or_null<const TargetRegisterClass *>(RegAttrs.RCOrRB);
+  if (NewVR && UseRC && !MRI->constrainRegClass(NewVR, UseRC)) {
+    MachineBasicBlock *UseBB = UseMI->getParent();
+    MachineInstr *InsertedCopy =
+        InsertNewDef(TargetOpcode::COPY, UseBB, UseBB->getFirstNonPHI(),
+                     RegAttrs, MRI, TII)
+        .addReg(NewVR);
+    NewVR = InsertedCopy->getOperand(0).getReg();
+    LLVM_DEBUG(dbgs() << "  Inserted COPY: " << *InsertedCopy << "\n");
   }
   U.setReg(NewVR);
 }
