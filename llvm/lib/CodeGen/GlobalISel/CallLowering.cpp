@@ -829,8 +829,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         MachinePointerInfo DstMPO =
             MachinePointerInfo::getFixedStack(MF, FrameIdx);
 
-        Align DstAlign =
-            std::max(DL.getStackAlignment(), inferAlignFromPtrInfo(MF, DstMPO));
+        Align DstAlign = inferAlignFromPtrInfo(MF, DstMPO);
 
         MIRBuilder.buildStore(Args[i].OrigRegs[Part], PointerToStackReg, DstMPO,
                               DstAlign);
