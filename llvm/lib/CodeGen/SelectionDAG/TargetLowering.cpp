@@ -11353,12 +11353,12 @@ SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
   bool IsSplatPassthru =
       ISD::isConstantSplatVector(Passthru.getNode(), PassthruSplatVal);
 
-  if (HasPassthru && IsSplatPassthru) {
+  if (IsSplatPassthru) {
     // As we do not know which position we wrote to last, we cannot simply
     // access that index from the passthru vector. So we first check if passthru
     // is a splat vector, to use any element ...
     LastWriteVal = DAG.getConstant(PassthruSplatVal, DL, ScalarVT);
-  } else {
+  } else if (HasPassthru) {
     // ... if it is not a splat vector, we need to get the passthru value at
     // position = popcount(mask) and re-load it from the stack before it is
     // overwritten in the loop below.

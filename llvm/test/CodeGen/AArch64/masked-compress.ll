@@ -279,7 +279,9 @@ define <4 x i32> @test_compress_const_mask(<4 x i32> %vec) {
 define <4 x i32> @test_compress_const_mask_passthrough(<4 x i32> %vec, <4 x i32> %passthru) {
 ; CHECK-LABEL: test_compress_const_mask_passthrough:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov.s v0[1], v0[3]
+; CHECK-NEXT:    ext.16b v1, v0, v1, #8
+; CHECK-NEXT:    mov.s v1[0], v0[0]
+; CHECK-NEXT:    mov.16b v0, v1
 ; CHECK-NEXT:    ret
     %out = call <4 x i32> @llvm.masked.compress(<4 x i32> %vec, <4 x i1> <i1 1, i1 undef, i1 0, i1 1>, <4 x i32> %passthru)
     ret <4 x i32> %out
