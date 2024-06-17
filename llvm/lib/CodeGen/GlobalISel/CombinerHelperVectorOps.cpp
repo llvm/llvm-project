@@ -485,8 +485,7 @@ bool CombinerHelper::matchShlOfVScale(const MachineOperand &MO,
   return true;
 }
 
-bool CombinerHelper::matchPtrAddWithAddVScale(const MachineOperand &MO,
-                                              BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchPtrAddWithAddVScale(const MachineOperand &MO) {
   GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
   GAdd *Add = cast<GAdd>(MRI.getVRegDef(Inner->getOffsetReg()));
   GVScale *VScale = cast<GVScale>(MRI.getVRegDef(Add->getRHSReg()));
@@ -495,14 +494,6 @@ bool CombinerHelper::matchPtrAddWithAddVScale(const MachineOperand &MO,
   if (!MRI.hasOneNonDBGUse(Add->getReg(0)) ||
       !MRI.hasOneNonDBGUse(VScale->getReg(0)))
     return false;
-
-  Register Dst = MO.getReg();
-  LLT DstTy = MRI.getType(Dst);
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    auto PtrAdd = B.buildPtrAdd(DstTy, Inner->getBaseReg(), Add->getLHSReg());
-    B.buildPtrAdd(Dst, PtrAdd, Add->getRHSReg());
-  };
 
   return true;
 }

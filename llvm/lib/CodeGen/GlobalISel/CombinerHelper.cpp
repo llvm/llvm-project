@@ -7471,8 +7471,7 @@ bool CombinerHelper::matchPtrAddWithSub(const MachineOperand &MO,
   return true;
 }
 
-bool CombinerHelper::matchPtrAddWithAdd(const MachineOperand &MO,
-                                        BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchPtrAddWithAdd(const MachineOperand &MO) {
   GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
   GAdd *Add = cast<GAdd>(MRI.getVRegDef(Inner->getOffsetReg()));
 
@@ -7480,18 +7479,10 @@ bool CombinerHelper::matchPtrAddWithAdd(const MachineOperand &MO,
   if (!MRI.hasOneNonDBGUse(Add->getReg(0)))
     return false;
 
-  Register Dst = MO.getReg();
-  LLT DstTy = MRI.getType(Dst);
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    auto PtrAdd = B.buildPtrAdd(DstTy, Inner->getBaseReg(), Add->getLHSReg());
-    B.buildPtrAdd(Dst, PtrAdd, Add->getRHSReg());
-  };
-
   return true;
 }
 
-bool CombinerHelper::matchPtrAddsFoldConstants(MachineOperand &MO,
+bool CombinerHelper::matchPtrAddsFoldConstants(const MachineOperand &MO,
                                                BuildFnTy &MatchInfo) {
   GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
   GPtrAdd *Second = cast<GPtrAdd>(MRI.getVRegDef(Inner->getBaseReg()));
@@ -7627,22 +7618,12 @@ bool CombinerHelper::matchPtrAddWFoldDistributedConstants(
   return true;
 }
 
-bool CombinerHelper::matchPtrAddMoveInner(MachineOperand &MO,
-                                          BuildFnTy &MatchInfo) {
+bool CombinerHelper::matchPtrAddMoveInner(const MachineOperand &MO) {
   GPtrAdd *Inner = cast<GPtrAdd>(MRI.getVRegDef(MO.getReg()));
   GPtrAdd *Second = cast<GPtrAdd>(MRI.getVRegDef(Inner->getBaseReg()));
 
   if (!MRI.hasOneNonDBGUse(Second->getReg(0)))
     return false;
-
-  Register Dst = MO.getReg();
-  LLT DstTy = MRI.getType(Dst);
-
-  MatchInfo = [=](MachineIRBuilder &B) {
-    auto PtrAdd =
-        B.buildPtrAdd(DstTy, Second->getBaseReg(), Inner->getOffsetReg());
-    B.buildPtrAdd(Dst, PtrAdd, Second->getOffsetReg());
-  };
 
   return true;
 }

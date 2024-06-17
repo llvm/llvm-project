@@ -1684,12 +1684,13 @@ def PtrAddWithSub : GICombineRule<
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 def PtrAddWithAdd : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (defs root:$root),
    (match (G_CONSTANT $right, $imm),
           (G_ADD $offset, $left, $right),
           (G_PTR_ADD $root, $base, $offset),
-   [{ return Helper.matchPtrAddWithAdd(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+   [{ return Helper.matchPtrAddWithAdd(${root}); }]),
+   (apply (G_PTR_ADD $inner, $base, $left),
+          (G_PTR_ADD $root, $inner, $right))>;
 
 def PtrAdd2DistributedConstOffsets : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1711,20 +1712,22 @@ def PtrAdd2ConstOffsets : GICombineRule<
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 def PtrAddMoveInner : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (defs root:$root),
    (match (G_CONSTANT $const, $imm),
           (G_PTR_ADD $pointer, $base, $const),
           (G_PTR_ADD $root, $pointer, $nonconst),
-   [{ return Helper.matchPtrAddMoveInner(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+   [{ return Helper.matchPtrAddMoveInner(${root}); }]),
+   (apply (G_PTR_ADD $inner, $base, $nonconst),
+          (G_PTR_ADD $root, $inner, $const))>;
 
 def PtrAddWithAddVScale : GICombineRule<
-   (defs root:$root, build_fn_matchinfo:$matchinfo),
+   (defs root:$root),
    (match (G_VSCALE $right, $imm),
           (G_ADD $offset, $left, $right),
           (G_PTR_ADD $root, $base, $offset),
-   [{ return Helper.matchPtrAddWithAddVScale(${root}, ${matchinfo}); }]),
-   (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+   [{ return Helper.matchPtrAddWithAddVScale(${root}); }]),
+   (apply (G_PTR_ADD $inner, $base, $left),
+          (G_PTR_ADD $root, $inner, $right))>;
 
 def PtrSubWithSubVScale : GICombineRule<
    (defs root:$root, build_fn_matchinfo:$matchinfo),
