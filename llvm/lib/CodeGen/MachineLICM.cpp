@@ -440,8 +440,7 @@ static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
         break;
 
       // Check if we have a valid PhysReg that is set in the mask.
-      // FIXME: We shouldn't have to check for PhysReg.
-      if (PhysReg && ((Word >> Bit) & 1)) {
+      if ((Word >> Bit) & 1) {
         for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
           ClobberedRUs.reset(*RUI);
       }
