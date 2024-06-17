@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferAtOverSubscriptOperatorCheck.h"
+#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/StringRef.h"
-#include <algorithm>
 #include <numeric>
 
 using namespace clang::ast_matchers;
@@ -18,8 +18,8 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::cppcoreguidelines {
 
 static constexpr std::array<llvm::StringRef, 3> DefaultExclusions = {
-    llvm::StringRef("std::map"), llvm::StringRef("std::unordered_map"),
-    llvm::StringRef("std::flat_map")};
+    llvm::StringRef("::std::map"), llvm::StringRef("::std::unordered_map"),
+    llvm::StringRef("::std::flat_map")};
 
 PreferAtOverSubscriptOperatorCheck::PreferAtOverSubscriptOperatorCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -91,7 +91,8 @@ void PreferAtOverSubscriptOperatorCheck::registerMatchers(MatchFinder *Finder) {
           callee(
               cxxMethodDecl(hasOverloadedOperatorName("[]")).bind("operator")),
           callee(cxxMethodDecl(
-              ofClass(cxxRecordDecl(hasMethod(hasName("at"))).bind("parent")))))
+              ofClass(cxxRecordDecl(hasMethod(hasName("at"))).bind("parent")),
+              unless(matchers::matchesAnyListedName(ExcludedClasses)))))
           .bind("caller"),
       this);
 }
@@ -102,12 +103,6 @@ void PreferAtOverSubscriptOperatorCheck::check(
   const auto *MatchedOperator =
       Result.Nodes.getNodeAs<CXXMethodDecl>("operator");
   const auto *MatchedParent = Result.Nodes.getNodeAs<CXXRecordDecl>("parent");
-
-  std::string ClassIdentifier = MatchedParent->getQualifiedNameAsString();
-
-  if (std::find(ExcludedClasses.begin(), ExcludedClasses.end(),
-                ClassIdentifier) != ExcludedClasses.end())
-    return;
 
   const CXXMethodDecl *Alternative =
       findAlternative(MatchedParent, MatchedOperator);
