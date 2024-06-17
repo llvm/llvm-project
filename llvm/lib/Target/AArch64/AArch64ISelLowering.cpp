@@ -15830,8 +15830,9 @@ static bool createTblShuffleMask(unsigned SrcWidth, unsigned DstWidth,
   if (DstWidth % 8 != 0 || DstWidth <= 16 || DstWidth >= 64)
     return false;
 
-  if (DstWidth % SrcWidth != 0)
-    return false;
+  assert(DstWidth % SrcWidth == 0 &&
+         "TBL lowering is not supported for a conversion instruction with this "
+         "source and destination element type.");
 
   unsigned Factor = DstWidth / SrcWidth;
   unsigned MaskLen = NumElts * Factor;
