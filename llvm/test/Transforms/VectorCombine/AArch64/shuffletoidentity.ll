@@ -262,9 +262,9 @@ define <8 x half> @splatandidentity(<8 x half> %a, <8 x half> %b) {
 
 define <8 x half> @splattwice(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: @splattwice(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x half> [[B:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <8 x half> [[R]]
 ;
   %as = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> zeroinitializer
@@ -352,9 +352,9 @@ define <8 x half> @constantsplatf(<8 x half> %a) {
 
 define <8 x i8> @inner_shuffle(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ; CHECK-LABEL: @inner_shuffle(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[C:%.*]], <8 x i8> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i8> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i8> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i8> [[C:%.*]], <8 x i8> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -839,16 +839,16 @@ define void @v8f64interleave(i64 %0, ptr %1, ptr %x, double %z) {
 ; CHECK-LABEL: @v8f64interleave(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[Z:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x double>, ptr [[TMP1:%.*]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <16 x double> [[WIDE_VEC]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[X:%.*]], i64 [[TMP0:%.*]]
-; CHECK-NEXT:    [[WIDE_VEC34:%.*]] = load <16 x double>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x double> [[WIDE_VEC34]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[TMP0]], 7
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 -56
-; CHECK-NEXT:    store <16 x double> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[X:%.*]], i64 [[TMP0:%.*]]
+; CHECK-NEXT:    [[WIDE_VEC34:%.*]] = load <16 x double>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP0]], 7
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 -56
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <16 x double> [[WIDE_VEC]], [[TMP6]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x double> [[WIDE_VEC34]], [[TMP7]]
+; CHECK-NEXT:    store <16 x double> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -905,10 +905,10 @@ entry:
 
 define <4 x i8> @singleop(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-LABEL: @singleop(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[B:%.*]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[A:%.*]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[A:%.*]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[B:%.*]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[R:%.*]] = trunc <4 x i16> [[TMP4]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
@@ -953,9 +953,9 @@ define <4 x float> @fadd_mismatched_types(<4 x float> %x, <4 x float> %y) {
 define void @maximal_legal_fpmath(ptr %addr1, ptr %addr2, ptr %result, float %val) {
 ; CHECK-LABEL: @maximal_legal_fpmath(
 ; CHECK-NEXT:    [[SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[SPLATINSERT]], <4 x float> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC1:%.*]] = load <16 x float>, ptr [[ADDR1:%.*]], align 4
 ; CHECK-NEXT:    [[VEC2:%.*]] = load <16 x float>, ptr [[ADDR2:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[SPLATINSERT]], <4 x float> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <16 x float> [[TMP1]], [[VEC2]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd reassoc contract <16 x float> [[VEC1]], [[TMP2]]
 ; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[RESULT:%.*]], align 4
