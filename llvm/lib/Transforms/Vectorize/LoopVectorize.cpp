@@ -2971,32 +2971,33 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
       SplitBlock(LoopMiddleBlock, LoopMiddleBlock->getTerminator(), DT, LI,
                  nullptr, Twine(Prefix) + "scalar.ph");
 
-  auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
-
   // Set up the middle block terminator.  Two cases:
-  // 1) If we know that we must execute the scalar epilogue, emit an
-  //    unconditional branch.
+  // 1) If we know that we must execute the scalar epilogue, retain the existing
+  // unconditional branch from the middle block to the scalar preheader. In that
+  // case, there's no edge from the middle block to exit blocks  and thus no
+  // need to update the immediate dominator of the exit blocks.
+  if (Cost->requiresScalarEpilogue(VF.isVector())) {
+    assert(
+        LoopMiddleBlock->getSingleSuccessor() == LoopScalarPreHeader &&
+        " middle block should have the scalar preheader as single successor");
+    return;
+  }
+
   // 2) Otherwise, we must have a single unique exit block (due to how we
   //    implement the multiple exit case).  In this case, set up a conditional
   //    branch from the middle block to the loop scalar preheader, and the
   //    exit block.  completeLoopSkeleton will update the condition to use an
   //    iteration check, if required to decide whether to execute the remainder.
   BranchInst *BrInst =
-      Cost->requiresScalarEpilogue(VF.isVector())
-          ? BranchInst::Create(LoopScalarPreHeader)
-          : BranchInst::Create(LoopExitBlock, LoopScalarPreHeader,
-                               Builder.getTrue());
+      BranchInst::Create(LoopExitBlock, LoopScalarPreHeader, Builder.getTrue());
+  auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
   BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
   // Update dominator for loop exit. During skeleton creation, only the vector
   // pre-header and the middle block are created. The vector loop is entirely
   // created during VPlan exection.
-  if (!Cost->requiresScalarEpilogue(VF.isVector()))
-    // If there is an epilogue which must run, there's no edge from the
-    // middle block to exit blocks  and thus no need to update the immediate
-    // dominator of the exit blocks.
-    DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
+  DT->changeImmediateDominator(LoopExitBlock, LoopMiddleBlock);
 }
 
 PHINode *InnerLoopVectorizer::createInductionResumeValue(
