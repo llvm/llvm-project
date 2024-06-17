@@ -787,11 +787,11 @@ NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
                                                   unsigned Position) {
   assert(Tok.is(tok::kw_template) && "Expected 'template' keyword");
 
-  if (Token ahead = GetLookAheadToken(1); ahead.isNot(tok::less)) {
-    // Maybe they intended `typename` instead of `template` (given thats more
-    // common) Error early, to add a fixit hint
+  if (Token Next = NextToken(); Next.isNot(tok::less)) {
+    // `template` may have been a typo for `typename`, given that the
+    // latter is more common.
 
-    Diag(ahead.getLocation(), diag::err_expected_less_after) << "template";
+    Diag(Next.getLocation(), diag::err_expected_less_after) << "template";
 
     Diag(Tok.getLocation(), diag::note_meant_to_use_typename)
         << FixItHint::CreateReplacement(
