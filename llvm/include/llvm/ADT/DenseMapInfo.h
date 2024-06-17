@@ -151,7 +151,7 @@ template<> struct DenseMapInfo<unsigned long long> {
   static inline unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
 
   static unsigned getHashValue(const unsigned long long& Val) {
-    return (unsigned)(Val * 37ULL);
+    return DenseMapInfo<unsigned>(Val) ^ DenseMapInfo<unsigned>(Val >> 32);
   }
 
   static bool isEqual(const unsigned long long& LHS,
