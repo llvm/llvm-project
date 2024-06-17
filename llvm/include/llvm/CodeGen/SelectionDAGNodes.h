@@ -649,7 +649,9 @@ private:
   /// Return a pointer to the specified value type.
   static const EVT *getValueTypeList(EVT VT);
 
-  /// Index in worklist of DAGCombiner, or -1.
+  /// Index in worklist of DAGCombiner, or negative if the node is not in the
+  /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
+  /// combined at least once.
   int CombinerWorklistIndex = -1;
 
   uint32_t CFIType = 0;
@@ -1751,6 +1753,9 @@ public:
 
 /// Returns true if \p V is a constant integer zero.
 bool isNullConstant(SDValue V);
+
+/// Returns true if \p V is a constant integer zero or an UNDEF node.
+bool isNullConstantOrUndef(SDValue V);
 
 /// Returns true if \p V is an FP constant with a value of positive zero.
 bool isNullFPConstant(SDValue V);

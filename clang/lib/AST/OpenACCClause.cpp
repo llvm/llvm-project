@@ -104,7 +104,7 @@ OpenACCClause::child_range OpenACCClause::children() {
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
     return cast<OpenACC##CLAUSE_NAME##Clause>(this)->children();
-#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)                                  \
+#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME, DEPRECATED)                      \
   case OpenACCClauseKind::ALIAS_NAME:                                          \
     return cast<OpenACC##CLAUSE_NAME##Clause>(this)->children();
 

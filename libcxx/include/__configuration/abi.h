@@ -127,8 +127,7 @@
 //
 // Supported containers:
 // - `span`;
-// - `string_view`;
-// - `array`.
+// - `string_view`.
 // #define _LIBCPP_ABI_BOUNDED_ITERATORS
 
 #if defined(_LIBCPP_COMPILER_CLANG_BASED)
