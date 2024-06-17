@@ -1,9 +1,14 @@
-# Note: This file is compiled from the following code, for 
-# 		the purpose of creating a valid split-dwarf binary,
-#       where the dwo path is modified to a non-existent path.
-# 
-# clang -g -S -gsplit-dwarf -gdwarf-4 main.c
-#
+## Note: This file is compiled from the following code, for 
+## 		the purpose of creating a valid split-dwarf binary,
+##       where the dwo path is modified to a non-existent path.
+## clang -g -S -gsplit-dwarf -gdwarf-4 main.c
+
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+# RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t/split.dwo -dwarf-version=4 %s -o %t/split.o
+# RUN: not llvm-dwp -e %t/split.o -o %t/split.dwp 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+# CHECK-ERROR: error: 'xxx/xxx/xxx/split_invalid.dwo': No such file or directory
+
 #include <stdio.h>
 #int main() {
 #    printf("hello\n");
