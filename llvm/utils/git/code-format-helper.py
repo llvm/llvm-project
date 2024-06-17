@@ -221,7 +221,9 @@ class ClangFormatHelper(FormatHelper):
         extensions = set()
         for file in cpp_files:
             _, ext = os.path.splitext(file)
-            extensions.add(ext.strip(".")) # Exclude periods since git-clang-format takes extensions without them
+            extensions.add(
+                ext.strip(".")
+            )  # Exclude periods since git-clang-format takes extensions without them
         cf_cmd.append("--extensions")
         cf_cmd.append("'{}'".format(",".join(extensions)))
 
