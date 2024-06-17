@@ -3,7 +3,15 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -S -disable-O0-optnone -Werror -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -S -disable-O0-optnone -Werror -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 // CHECK-LABEL: @test_svptrue_b8(
 // CHECK-NEXT:  entry:
@@ -15,7 +23,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_b8()
+svbool_t test_svptrue_b8(void) MODE_ATTR
 {
   return svptrue_b8();
 }
@@ -32,7 +40,7 @@ svbool_t test_svptrue_b8()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svptrue_b16()
+svbool_t test_svptrue_b16(void) MODE_ATTR
 {
   return svptrue_b16();
 }
@@ -49,7 +57,7 @@ svbool_t test_svptrue_b16()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svptrue_b32()
+svbool_t test_svptrue_b32(void) MODE_ATTR
 {
   return svptrue_b32();
 }
@@ -66,7 +74,7 @@ svbool_t test_svptrue_b32()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svptrue_b64()
+svbool_t test_svptrue_b64(void) MODE_ATTR
 {
   return svptrue_b64();
 }
@@ -81,7 +89,7 @@ svbool_t test_svptrue_b64()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8()
+svbool_t test_svptrue_pat_b8(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_POW2);
 }
@@ -96,7 +104,7 @@ svbool_t test_svptrue_pat_b8()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 1)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_1()
+svbool_t test_svptrue_pat_b8_1(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL1);
 }
@@ -111,7 +119,7 @@ svbool_t test_svptrue_pat_b8_1()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 2)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_2()
+svbool_t test_svptrue_pat_b8_2(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL2);
 }
@@ -126,7 +134,7 @@ svbool_t test_svptrue_pat_b8_2()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 3)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_3()
+svbool_t test_svptrue_pat_b8_3(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL3);
 }
@@ -141,7 +149,7 @@ svbool_t test_svptrue_pat_b8_3()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 4)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_4()
+svbool_t test_svptrue_pat_b8_4(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL4);
 }
@@ -156,7 +164,7 @@ svbool_t test_svptrue_pat_b8_4()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 5)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_5()
+svbool_t test_svptrue_pat_b8_5(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL5);
 }
@@ -171,7 +179,7 @@ svbool_t test_svptrue_pat_b8_5()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 6)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_6()
+svbool_t test_svptrue_pat_b8_6(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL6);
 }
@@ -186,7 +194,7 @@ svbool_t test_svptrue_pat_b8_6()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 7)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_7()
+svbool_t test_svptrue_pat_b8_7(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL7);
 }
@@ -201,7 +209,7 @@ svbool_t test_svptrue_pat_b8_7()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 8)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_8()
+svbool_t test_svptrue_pat_b8_8(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL8);
 }
@@ -216,7 +224,7 @@ svbool_t test_svptrue_pat_b8_8()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 9)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_9()
+svbool_t test_svptrue_pat_b8_9(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL16);
 }
@@ -231,7 +239,7 @@ svbool_t test_svptrue_pat_b8_9()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 10)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_10()
+svbool_t test_svptrue_pat_b8_10(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL32);
 }
@@ -246,7 +254,7 @@ svbool_t test_svptrue_pat_b8_10()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 11)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_11()
+svbool_t test_svptrue_pat_b8_11(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL64);
 }
@@ -261,7 +269,7 @@ svbool_t test_svptrue_pat_b8_11()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 12)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_12()
+svbool_t test_svptrue_pat_b8_12(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL128);
 }
@@ -276,7 +284,7 @@ svbool_t test_svptrue_pat_b8_12()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 13)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_13()
+svbool_t test_svptrue_pat_b8_13(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_VL256);
 }
@@ -291,7 +299,7 @@ svbool_t test_svptrue_pat_b8_13()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 29)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_14()
+svbool_t test_svptrue_pat_b8_14(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_MUL4);
 }
@@ -306,7 +314,7 @@ svbool_t test_svptrue_pat_b8_14()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 30)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_15()
+svbool_t test_svptrue_pat_b8_15(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_MUL3);
 }
@@ -321,7 +329,7 @@ svbool_t test_svptrue_pat_b8_15()
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svptrue_pat_b8_16()
+svbool_t test_svptrue_pat_b8_16(void) MODE_ATTR
 {
   return svptrue_pat_b8(SV_ALL);
 }
@@ -338,7 +346,7 @@ svbool_t test_svptrue_pat_b8_16()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svptrue_pat_b16()
+svbool_t test_svptrue_pat_b16(void) MODE_ATTR
 {
   return svptrue_pat_b16(SV_POW2);
 }
@@ -355,7 +363,7 @@ svbool_t test_svptrue_pat_b16()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svptrue_pat_b32()
+svbool_t test_svptrue_pat_b32(void) MODE_ATTR
 {
   return svptrue_pat_b32(SV_VL1);
 }
@@ -372,7 +380,7 @@ svbool_t test_svptrue_pat_b32()
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svptrue_pat_b64()
+svbool_t test_svptrue_pat_b64(void) MODE_ATTR
 {
   return svptrue_pat_b64(SV_VL2);
 }
