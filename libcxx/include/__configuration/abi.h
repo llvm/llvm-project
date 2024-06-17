@@ -91,6 +91,14 @@
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 // Dont' add an inline namespace for `std::filesystem`
 #    define _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
+// libcxx std::basic_ios uses WEOF to indicate that the fill value is
+// uninitialized. However, on platforms where the size of char_type is
+// equal to or greater than the size of int_type and char_type is unsigned,
+// std::char_traits<char_type>::eq_int_type() cannot distinguish between WEOF
+// and WCHAR_MAX. New helper class _FillHelper uses a boolean variable to indicate
+// whether the fill value has been initialized so that a fill value WEOF set
+// by the user won't be treated as indicating the fill value is uninitialized.
+#  define _LIBCXX_IOS_USE_FILL_HELPER
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
 // Enable compiling copies of now inline methods into the dylib to support
@@ -107,6 +115,10 @@
 // are deprecated.
 #  if defined(__FreeBSD__) && __FreeBSD__ < 14
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
+#  endif
+// AIX and 64-bit MVS must use _FillHelper for ABI backward compatibility.
+#  if defined(_AIX) || (defined(__MVS__) && defined(__64BIT__))
+#    define _LIBCXX_IOS_USE_FILL_HELPER
 #  endif
 #endif
 
