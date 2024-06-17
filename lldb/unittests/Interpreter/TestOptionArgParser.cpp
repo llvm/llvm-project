@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/Status.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace lldb_private;
 

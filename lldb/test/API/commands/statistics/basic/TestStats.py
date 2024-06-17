@@ -662,7 +662,7 @@ class TestCase(TestBase):
         for field_name in expectation:
             idx = field_name.find(".")
             if idx == -1:
-                # `field` is a top-level field
+                # `field_name` is a top-level field
                 exists = field_name in stats
                 should_exist = expectation[field_name]
                 should_exist_string = "" if should_exist else "not "
@@ -672,7 +672,7 @@ class TestCase(TestBase):
                     f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
                 )
             else:
-                # `field` is a string of "<top-level field>.<second-level field>"
+                # `field_name` is a string of "<top-level field>.<second-level field>"
                 top_level_field_name = field_name[0:idx]
                 second_level_field_name = field_name[idx + 1 :]
                 for top_level_field in (
@@ -687,7 +687,7 @@ class TestCase(TestBase):
                         f"'{field_name}' should {should_exist_string}exist for 'statistics dump{options}'",
                     )
 
-    def get_expectations_for_sections_existence(self):
+    def get_test_cases_for_sections_existence(self):
         should_always_exist_or_not = {
             "totalDebugInfoEnabled": True,
             "memory": True,
@@ -801,12 +801,12 @@ class TestCase(TestBase):
         self.runCmd("settings set interpreter.save-transcript true")
         self.runCmd("version")
         self.runCmd("b main")
-        # But disable transcript so that it won't change during verification
+        # Then disable transcript so that it won't change during verification
         self.runCmd("settings set interpreter.save-transcript false")
 
         # Expectation
         should_always_exist_or_not, test_cases = (
-            self.get_expectations_for_sections_existence()
+            self.get_test_cases_for_sections_existence()
         )
 
         # Verification
@@ -836,7 +836,7 @@ class TestCase(TestBase):
 
         # Expectation
         should_always_exist_or_not, test_cases = (
-            self.get_expectations_for_sections_existence()
+            self.get_test_cases_for_sections_existence()
         )
 
         # Verification
@@ -866,7 +866,7 @@ class TestCase(TestBase):
         self.runCmd("settings set interpreter.save-transcript true")
         self.runCmd("version")
         self.runCmd("b main")
-        # But disable transcript so that it won't change during verification
+        # Then disable transcript so that it won't change during verification
         self.runCmd("settings set interpreter.save-transcript false")
 
         # The order of the following options shouldn't matter

@@ -170,9 +170,9 @@ public:
 private:
   std::optional<bool> m_summary_only;
   std::optional<bool> m_load_all_debug_info;
-  std::optional<bool> m_include_transcript;
   std::optional<bool> m_include_targets;
   std::optional<bool> m_include_modules;
+  std::optional<bool> m_include_transcript;
 };
 
 /// A class that represents statistics for a since lldb_private::Target.
