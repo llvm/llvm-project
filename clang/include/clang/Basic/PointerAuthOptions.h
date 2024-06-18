@@ -58,7 +58,7 @@ private:
   unsigned AuthenticatesNullValues : 1;
   PointerAuthenticationMode SelectedAuthenticationMode : 2;
   Discrimination DiscriminationKind : 2;
-  unsigned Key : 4;
+  unsigned Key : 2;
   unsigned ConstantDiscriminator : 16;
 
 public:

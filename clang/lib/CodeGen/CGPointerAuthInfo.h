@@ -26,7 +26,7 @@ private:
   PointerAuthenticationMode AuthenticationMode : 2;
   unsigned IsIsaPointer : 1;
   unsigned AuthenticatesNullValues : 1;
-  unsigned Key : 4;
+  unsigned Key : 2;
   llvm::Value *Discriminator;
 
 public:

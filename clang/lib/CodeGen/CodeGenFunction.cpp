@@ -3054,12 +3054,11 @@ void CodeGenFunction::EmitPointerAuthOperandBundle(
   if (!PointerAuth.isSigned())
     return;
 
-  auto Key = Builder.getInt32(PointerAuth.getKey());
+  auto *Key = Builder.getInt32(PointerAuth.getKey());
 
   llvm::Value *Discriminator = PointerAuth.getDiscriminator();
-  if (!Discriminator) {
+  if (!Discriminator)
     Discriminator = Builder.getSize(0);
-  }
 
   llvm::Value *Args[] = {Key, Discriminator};
   Bundles.emplace_back("ptrauth", Args);

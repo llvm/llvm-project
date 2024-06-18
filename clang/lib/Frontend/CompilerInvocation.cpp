@@ -1458,36 +1458,27 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
     Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
 }
 
-bool CompilerInvocation::setDefaultPointerAuthOptions(
+void CompilerInvocation::setDefaultPointerAuthOptions(
     PointerAuthOptions &Opts, const LangOptions &LangOpts,
     const llvm::Triple &Triple) {
-  if (Triple.getArch() == llvm::Triple::aarch64) {
-    if (LangOpts.PointerAuthCalls) {
-      using Key = PointerAuthSchema::ARM8_3Key;
-      using Discrimination = PointerAuthSchema::Discrimination;
-      // If you change anything here, be sure to update <ptrauth.h>.
-      Opts.FunctionPointers =
-          PointerAuthSchema(Key::ASIA, false, Discrimination::None);
-    }
-    return true;
+  assert(Triple.getArch() == llvm::Triple::aarch64);
+  if (LangOpts.PointerAuthCalls) {
+    using Key = PointerAuthSchema::ARM8_3Key;
+    using Discrimination = PointerAuthSchema::Discrimination;
+    // If you change anything here, be sure to update <ptrauth.h>.
+    Opts.FunctionPointers =
+        PointerAuthSchema(Key::ASIA, false, Discrimination::None);
   }
-
-  return false;
 }
 
-static bool parsePointerAuthOptions(PointerAuthOptions &Opts,
+static void parsePointerAuthOptions(PointerAuthOptions &Opts,
                                     const LangOptions &LangOpts,
                                     const llvm::Triple &Triple,
                                     DiagnosticsEngine &Diags) {
   if (!LangOpts.PointerAuthCalls)
-    return true;
+    return;
 
-  if (CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple))
-    return true;
-
-  Diags.Report(diag::err_drv_ptrauth_not_supported)
-    << Triple.str();
-  return false;
+  CompilerInvocation::setDefaultPointerAuthOptions(Opts, LangOpts, Triple);
 }
 
 void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
