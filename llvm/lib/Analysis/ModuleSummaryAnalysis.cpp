@@ -483,11 +483,11 @@ static void computeFunctionSummary(
           }
         }
 
-        uint32_t NumVals, NumCandidates;
+        uint32_t NumCandidates;
         uint64_t TotalCount;
         auto CandidateProfileData =
-            ICallAnalysis.getPromotionCandidatesForInstruction(
-                &I, NumVals, TotalCount, NumCandidates);
+            ICallAnalysis.getPromotionCandidatesForInstruction(&I, TotalCount,
+                                                               NumCandidates);
         for (const auto &Candidate : CandidateProfileData)
           CallGraphEdges[Index.getOrInsertValueInfo(Candidate.Value)]
               .updateHotness(getHotness(Candidate.Count, PSI));
