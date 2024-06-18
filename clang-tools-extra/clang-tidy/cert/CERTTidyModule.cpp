@@ -332,8 +332,8 @@ public:
   ClangTidyOptions getModuleOptions() override {
     ClangTidyOptions Options;
     ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
-    Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
     Opts["cert-ctr56-cpp.IgnoreInheritedVirtualFunctions"] = "false";
+    Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
     Opts["cert-err33-c.CheckedFunctions"] = CertErr33CCheckedFunctions;
     Opts["cert-err33-c.AllowCastToVoid"] = "true";
     Opts["cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField"] = "false";
