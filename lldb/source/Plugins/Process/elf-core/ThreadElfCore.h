@@ -13,6 +13,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "llvm/ADT/DenseMap.h"
+#include <optional>
 #include <string>
 
 struct compat_timeval {
@@ -55,6 +56,9 @@ struct ELFLinuxPrStatus {
 
   lldb_private::Status Parse(const lldb_private::DataExtractor &data,
                              const lldb_private::ArchSpec &arch);
+
+  static std::optional<ELFLinuxPrStatus>
+  Populate(const lldb::ThreadSP &thread_sp);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
@@ -111,6 +115,9 @@ struct ELFLinuxPrPsInfo {
 
   lldb_private::Status Parse(const lldb_private::DataExtractor &data,
                              const lldb_private::ArchSpec &arch);
+
+  static std::optional<ELFLinuxPrPsInfo>
+  Populate(const lldb::ProcessSP &process_sp);
 
   // Return the bytesize of the structure
   // 64 bit - just sizeof
