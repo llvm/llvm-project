@@ -6,35 +6,25 @@
 
 ; Function Attrs: nobuiltin nounwind readonly
 define i8 @popcount128(ptr nocapture nonnull readonly %0) {
-; NEON-LABEL: popcount128:
-; NEON:       // %bb.0: // %Entry
-; NEON-NEXT:    ldr d0, [x0]
-; NEON-NEXT:    add x8, x0, #8
-; NEON-NEXT:    ld1 { v0.d }[1], [x8]
-; NEON-NEXT:    cnt v0.16b, v0.16b
-; NEON-NEXT:    uaddlv h0, v0.16b
-; NEON-NEXT:    fmov w0, s0
-; NEON-NEXT:    ret
+; CHECKO0-LABEL: popcount128:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    ldr q0, [x0]
+; CHECKO0-NEXT:    cnt v0.16b, v0.16b
+; CHECKO0-NEXT:    uaddlv h0, v0.16b
+; CHECKO0-NEXT:    // kill: def $q0 killed $h0
+; CHECKO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECKO0-NEXT:    fmov w0, s0
+; CHECKO0-NEXT:    ret
 ;
-; DOT-LABEL: popcount128:
-; DOT:       // %bb.0: // %Entry
-; DOT-NEXT:    ldr d0, [x0]
-; DOT-NEXT:    add x8, x0, #8
-; DOT-NEXT:    ld1 { v0.d }[1], [x8]
-; DOT-NEXT:    cnt v0.16b, v0.16b
-; DOT-NEXT:    uaddlv h0, v0.16b
-; DOT-NEXT:    fmov w0, s0
-; DOT-NEXT:    ret
-;
-; SVE-LABEL: popcount128:
-; SVE:       // %bb.0: // %Entry
-; SVE-NEXT:    ldr d0, [x0]
-; SVE-NEXT:    add x8, x0, #8
-; SVE-NEXT:    ld1 { v0.d }[1], [x8]
-; SVE-NEXT:    cnt v0.16b, v0.16b
-; SVE-NEXT:    uaddlv h0, v0.16b
-; SVE-NEXT:    fmov w0, s0
-; SVE-NEXT:    ret
+; CHECK-LABEL: popcount128:
+; CHECK:       // %bb.0: // %Entry
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    add x8, x0, #8
+; CHECK-NEXT:    ld1 { v0.d }[1], [x8]
+; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
 Entry:
   %1 = load i128, ptr %0, align 16
   %2 = tail call i128 @llvm.ctpop.i128(i128 %1)
@@ -47,56 +37,55 @@ declare i128 @llvm.ctpop.i128(i128)
 
 ; Function Attrs: nobuiltin nounwind readonly
 define i16 @popcount256(ptr nocapture nonnull readonly %0) {
-; NEON-LABEL: popcount256:
-; NEON:       // %bb.0: // %Entry
-; NEON-NEXT:    ldr d0, [x0, #16]
-; NEON-NEXT:    ldr d1, [x0]
-; NEON-NEXT:    add x8, x0, #8
-; NEON-NEXT:    add x9, x0, #24
-; NEON-NEXT:    ld1 { v0.d }[1], [x9]
-; NEON-NEXT:    ld1 { v1.d }[1], [x8]
-; NEON-NEXT:    cnt v0.16b, v0.16b
-; NEON-NEXT:    cnt v1.16b, v1.16b
-; NEON-NEXT:    uaddlv h0, v0.16b
-; NEON-NEXT:    uaddlv h1, v1.16b
-; NEON-NEXT:    fmov w8, s0
-; NEON-NEXT:    fmov w9, s1
-; NEON-NEXT:    add w0, w9, w8
-; NEON-NEXT:    ret
+; CHECKO0-LABEL: popcount256:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    ldr x11, [x0]
+; CHECKO0-NEXT:    ldr x10, [x0, #8]
+; CHECKO0-NEXT:    ldr x9, [x0, #16]
+; CHECKO0-NEXT:    ldr x8, [x0, #24]
+; CHECKO0-NEXT:    // implicit-def: $q1
+; CHECKO0-NEXT:    mov v1.d[0], x11
+; CHECKO0-NEXT:    mov v1.d[1], x10
+; CHECKO0-NEXT:    // implicit-def: $q0
+; CHECKO0-NEXT:    mov v0.d[0], x9
+; CHECKO0-NEXT:    mov v0.d[1], x8
+; CHECKO0-NEXT:    cnt v1.16b, v1.16b
+; CHECKO0-NEXT:    uaddlv h1, v1.16b
+; CHECKO0-NEXT:    // kill: def $q1 killed $h1
+; CHECKO0-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECKO0-NEXT:    fmov w0, s1
+; CHECKO0-NEXT:    mov w10, wzr
+; CHECKO0-NEXT:    mov w9, w0
+; CHECKO0-NEXT:    mov w8, w10
+; CHECKO0-NEXT:    bfi x9, x8, #32, #32
+; CHECKO0-NEXT:    cnt v0.16b, v0.16b
+; CHECKO0-NEXT:    uaddlv h0, v0.16b
+; CHECKO0-NEXT:    // kill: def $q0 killed $h0
+; CHECKO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECKO0-NEXT:    fmov w0, s0
+; CHECKO0-NEXT:    mov w8, w0
+; CHECKO0-NEXT:    // kill: def $x10 killed $w10
+; CHECKO0-NEXT:    bfi x8, x10, #32, #32
+; CHECKO0-NEXT:    adds x8, x8, x9
+; CHECKO0-NEXT:    mov w0, w8
+; CHECKO0-NEXT:    ret
 ;
-; DOT-LABEL: popcount256:
-; DOT:       // %bb.0: // %Entry
-; DOT-NEXT:    ldr d0, [x0, #16]
-; DOT-NEXT:    ldr d1, [x0]
-; DOT-NEXT:    add x8, x0, #8
-; DOT-NEXT:    add x9, x0, #24
-; DOT-NEXT:    ld1 { v0.d }[1], [x9]
-; DOT-NEXT:    ld1 { v1.d }[1], [x8]
-; DOT-NEXT:    cnt v0.16b, v0.16b
-; DOT-NEXT:    cnt v1.16b, v1.16b
-; DOT-NEXT:    uaddlv h0, v0.16b
-; DOT-NEXT:    uaddlv h1, v1.16b
-; DOT-NEXT:    fmov w8, s0
-; DOT-NEXT:    fmov w9, s1
-; DOT-NEXT:    add w0, w9, w8
-; DOT-NEXT:    ret
-;
-; SVE-LABEL: popcount256:
-; SVE:       // %bb.0: // %Entry
-; SVE-NEXT:    ldr d0, [x0, #16]
-; SVE-NEXT:    ldr d1, [x0]
-; SVE-NEXT:    add x8, x0, #8
-; SVE-NEXT:    add x9, x0, #24
-; SVE-NEXT:    ld1 { v0.d }[1], [x9]
-; SVE-NEXT:    ld1 { v1.d }[1], [x8]
-; SVE-NEXT:    cnt v0.16b, v0.16b
-; SVE-NEXT:    cnt v1.16b, v1.16b
-; SVE-NEXT:    uaddlv h0, v0.16b
-; SVE-NEXT:    uaddlv h1, v1.16b
-; SVE-NEXT:    fmov w8, s0
-; SVE-NEXT:    fmov w9, s1
-; SVE-NEXT:    add w0, w9, w8
-; SVE-NEXT:    ret
+; CHECK-LABEL: popcount256:
+; CHECK:       // %bb.0: // %Entry
+; CHECK-NEXT:    ldr d0, [x0, #16]
+; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    add x8, x0, #8
+; CHECK-NEXT:    add x9, x0, #24
+; CHECK-NEXT:    ld1 { v0.d }[1], [x9]
+; CHECK-NEXT:    ld1 { v1.d }[1], [x8]
+; CHECK-NEXT:    cnt v0.16b, v0.16b
+; CHECK-NEXT:    cnt v1.16b, v1.16b
+; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    uaddlv h1, v1.16b
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    add w0, w9, w8
+; CHECK-NEXT:    ret
 Entry:
   %1 = load i256, ptr %0, align 16
   %2 = tail call i256 @llvm.ctpop.i256(i256 %1)
@@ -108,41 +97,34 @@ Entry:
 declare i256 @llvm.ctpop.i256(i256)
 
 define <1 x i128> @popcount1x128(<1 x i128> %0) {
-; NEON-LABEL: popcount1x128:
-; NEON:       // %bb.0: // %Entry
-; NEON-NEXT:    fmov d1, x0
-; NEON-NEXT:    movi v0.2d, #0000000000000000
-; NEON-NEXT:    mov v1.d[1], x1
-; NEON-NEXT:    cnt v1.16b, v1.16b
-; NEON-NEXT:    uaddlv h1, v1.16b
-; NEON-NEXT:    mov v0.s[0], v1.s[0]
-; NEON-NEXT:    mov x1, v0.d[1]
-; NEON-NEXT:    fmov x0, d0
-; NEON-NEXT:    ret
+; CHECKO0-LABEL: popcount1x128:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    // implicit-def: $q0
+; CHECKO0-NEXT:    mov v0.d[0], x0
+; CHECKO0-NEXT:    mov v0.d[1], x1
+; CHECKO0-NEXT:    cnt v0.16b, v0.16b
+; CHECKO0-NEXT:    uaddlv h0, v0.16b
+; CHECKO0-NEXT:    // kill: def $q0 killed $h0
+; CHECKO0-NEXT:    mov x1, xzr
+; CHECKO0-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECKO0-NEXT:    fmov w0, s0
+; CHECKO0-NEXT:    mov w8, wzr
+; CHECKO0-NEXT:    // kill: def $x0 killed $w0
+; CHECKO0-NEXT:    // kill: def $x8 killed $w8
+; CHECKO0-NEXT:    bfi x0, x8, #32, #32
+; CHECKO0-NEXT:    ret
 ;
-; DOT-LABEL: popcount1x128:
-; DOT:       // %bb.0: // %Entry
-; DOT-NEXT:    fmov d1, x0
-; DOT-NEXT:    movi v0.2d, #0000000000000000
-; DOT-NEXT:    mov v1.d[1], x1
-; DOT-NEXT:    cnt v1.16b, v1.16b
-; DOT-NEXT:    uaddlv h1, v1.16b
-; DOT-NEXT:    mov v0.s[0], v1.s[0]
-; DOT-NEXT:    mov x1, v0.d[1]
-; DOT-NEXT:    fmov x0, d0
-; DOT-NEXT:    ret
-;
-; SVE-LABEL: popcount1x128:
-; SVE:       // %bb.0: // %Entry
-; SVE-NEXT:    fmov d1, x0
-; SVE-NEXT:    movi v0.2d, #0000000000000000
-; SVE-NEXT:    mov v1.d[1], x1
-; SVE-NEXT:    cnt v1.16b, v1.16b
-; SVE-NEXT:    uaddlv h1, v1.16b
-; SVE-NEXT:    mov v0.s[0], v1.s[0]
-; SVE-NEXT:    mov x1, v0.d[1]
-; SVE-NEXT:    fmov x0, d0
-; SVE-NEXT:    ret
+; CHECK-LABEL: popcount1x128:
+; CHECK:       // %bb.0: // %Entry
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v1.d[1], x1
+; CHECK-NEXT:    cnt v1.16b, v1.16b
+; CHECK-NEXT:    uaddlv h1, v1.16b
+; CHECK-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-NEXT:    mov x1, v0.d[1]
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
 Entry:
   %1 = tail call <1 x i128> @llvm.ctpop.v1i128(<1 x i128> %0)
   ret <1 x i128> %1
@@ -151,6 +133,14 @@ Entry:
 declare <1 x i128> @llvm.ctpop.v1i128(<1 x i128>)
 
 define <2 x i64> @popcount2x64(<2 x i64> %0) {
+; CHECKO0-LABEL: popcount2x64:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    cnt v0.16b, v0.16b
+; CHECKO0-NEXT:    uaddlp v0.8h, v0.16b
+; CHECKO0-NEXT:    uaddlp v0.4s, v0.8h
+; CHECKO0-NEXT:    uaddlp v0.2d, v0.4s
+; CHECKO0-NEXT:    ret
+;
 ; NEON-LABEL: popcount2x64:
 ; NEON:       // %bb.0: // %Entry
 ; NEON-NEXT:    cnt v0.16b, v0.16b
@@ -183,6 +173,13 @@ Entry:
 declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 
 define <4 x i32> @popcount4x32(<4 x i32> %0) {
+; CHECKO0-LABEL: popcount4x32:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    cnt v0.16b, v0.16b
+; CHECKO0-NEXT:    uaddlp v0.8h, v0.16b
+; CHECKO0-NEXT:    uaddlp v0.4s, v0.8h
+; CHECKO0-NEXT:    ret
+;
 ; NEON-LABEL: popcount4x32:
 ; NEON:       // %bb.0: // %Entry
 ; NEON-NEXT:    cnt v0.16b, v0.16b
@@ -212,6 +209,13 @@ Entry:
 declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)
 
 define <2 x i32> @popcount2x32(<2 x i32> %0) {
+; CHECKO0-LABEL: popcount2x32:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    cnt v0.8b, v0.8b
+; CHECKO0-NEXT:    uaddlp v0.4h, v0.8b
+; CHECKO0-NEXT:    uaddlp v0.2s, v0.4h
+; CHECKO0-NEXT:    ret
+;
 ; NEON-LABEL: popcount2x32:
 ; NEON:       // %bb.0: // %Entry
 ; NEON-NEXT:    cnt v0.8b, v0.8b
@@ -242,6 +246,12 @@ Entry:
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 
 define <8 x i16> @popcount8x16(<8 x i16> %0) {
+; CHECKO0-LABEL: popcount8x16:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    cnt v0.16b, v0.16b
+; CHECKO0-NEXT:    uaddlp v0.8h, v0.16b
+; CHECKO0-NEXT:    ret
+;
 ; CHECK-LABEL: popcount8x16:
 ; CHECK:       // %bb.0: // %Entry
 ; CHECK-NEXT:    cnt v0.16b, v0.16b
@@ -255,6 +265,12 @@ Entry:
 declare <8 x i16> @llvm.ctpop.v8i16(<8 x i16>)
 
 define <4 x i16> @popcount4x16(<4 x i16> %0) {
+; CHECKO0-LABEL: popcount4x16:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    cnt v0.8b, v0.8b
+; CHECKO0-NEXT:    uaddlp v0.4h, v0.8b
+; CHECKO0-NEXT:    ret
+;
 ; CHECK-LABEL: popcount4x16:
 ; CHECK:       // %bb.0: // %Entry
 ; CHECK-NEXT:    cnt v0.8b, v0.8b
