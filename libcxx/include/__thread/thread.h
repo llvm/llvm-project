@@ -65,7 +65,7 @@ class __thread_specific_ptr {
 
   // Only __thread_local_data() may construct a __thread_specific_ptr
   // and only with _Tp == __thread_struct.
-  static_assert((is_same<_Tp, __thread_struct>::value), "");
+  static_assert(is_same<_Tp, __thread_struct>::value, "");
   __thread_specific_ptr();
   friend _LIBCPP_EXPORTED_FROM_ABI __thread_specific_ptr<__thread_struct>& __thread_local_data();
 

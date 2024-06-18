@@ -407,7 +407,7 @@ public:
 
 template <class _NodeConstPtr>
 class _LIBCPP_TEMPLATE_VIS __forward_list_const_iterator {
-  static_assert((!is_const<typename pointer_traits<_NodeConstPtr>::element_type>::value), "");
+  static_assert(!is_const<typename pointer_traits<_NodeConstPtr>::element_type>::value, "");
   typedef _NodeConstPtr _NodePtr;
 
   typedef __forward_node_traits<_NodePtr> __traits;
@@ -657,9 +657,8 @@ public:
                 "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
                 "original allocator");
 
-  static_assert((!is_same<allocator_type, __node_allocator>::value),
-                "internal allocator type must differ from user-specified "
-                "type; otherwise overload resolution breaks");
+  static_assert(!is_same<allocator_type, __node_allocator>::value,
+                "internal allocator type must differ from user-specified type; otherwise overload resolution breaks");
 
   typedef value_type& reference;
   typedef const value_type& const_reference;

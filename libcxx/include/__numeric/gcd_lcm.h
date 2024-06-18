@@ -53,7 +53,7 @@ struct __ct_abs<_Result, _Source, false> {
 
 template <class _Tp>
 _LIBCPP_CONSTEXPR _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
-  static_assert((!is_signed<_Tp>::value), "");
+  static_assert(!is_signed<_Tp>::value, "");
 
   // From: https://lemire.me/blog/2013/12/26/fastest-way-to-compute-the-greatest-common-divisor
   //
@@ -97,9 +97,9 @@ _LIBCPP_CONSTEXPR _LIBCPP_HIDDEN _Tp __gcd(_Tp __a, _Tp __b) {
 
 template <class _Tp, class _Up>
 _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
-  static_assert((is_integral<_Tp>::value && is_integral<_Up>::value), "Arguments to gcd must be integer types");
-  static_assert((!is_same<__remove_cv_t<_Tp>, bool>::value), "First argument to gcd cannot be bool");
-  static_assert((!is_same<__remove_cv_t<_Up>, bool>::value), "Second argument to gcd cannot be bool");
+  static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to gcd must be integer types");
+  static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to gcd cannot be bool");
+  static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to gcd cannot be bool");
   using _Rp = common_type_t<_Tp, _Up>;
   using _Wp = make_unsigned_t<_Rp>;
   return static_cast<_Rp>(
@@ -108,9 +108,9 @@ _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up
 
 template <class _Tp, class _Up>
 _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
-  static_assert((is_integral<_Tp>::value && is_integral<_Up>::value), "Arguments to lcm must be integer types");
-  static_assert((!is_same<__remove_cv_t<_Tp>, bool>::value), "First argument to lcm cannot be bool");
-  static_assert((!is_same<__remove_cv_t<_Up>, bool>::value), "Second argument to lcm cannot be bool");
+  static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to lcm must be integer types");
+  static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to lcm cannot be bool");
+  static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to lcm cannot be bool");
   if (__m == 0 || __n == 0)
     return 0;
 
