@@ -14,6 +14,7 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
+#include "RISCVMachineScheduler.h"
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
@@ -340,12 +341,11 @@ public:
 
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = nullptr;
-    if (EnableMISchedLoadClustering) {
-      DAG = createGenericSchedLive(C);
+    ScheduleDAGMILive *DAG =
+        createGenericSchedLive<RISCVPreRAMachineSchedStrategy>(C);
+    if (EnableMISchedLoadClustering)
       DAG->addMutation(createLoadClusterDAGMutation(
           DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
-    }
     return DAG;
   }
 
