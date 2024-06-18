@@ -254,14 +254,9 @@ public:
   ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
                                  ArrayRef<ConstantRange> Val)
       : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
-    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
     assert(Size > 0);
-    unsigned BitWidth = Val.front().getLower().getBitWidth();
-    for (unsigned I = 0; I != Size; ++I) {
-      assert(BitWidth == Val[I].getLower().getBitWidth());
-      new (&TrailingCR[I]) ConstantRange(BitWidth, false);
-    }
-    llvm::copy(Val, TrailingCR);
+    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
+    std::uninitialized_copy(Val.begin(), Val.end(), TrailingCR);
   }
 
   ~ConstantRangeListAttributeImpl() {
