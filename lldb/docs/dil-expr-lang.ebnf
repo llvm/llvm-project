@@ -67,8 +67,8 @@ postfix_expression = primary_expression
                    | postfix_expression "->" id_expression
                    | postfix_expression "++"
                    | postfix_expression "--"
-                   | static_cast "<" type_id ">" "(" expression ")" ;
-                   | dynamic_cast "<" type_id ">" "(" expression ")" ;
+                   | static_cast "<" type_id ">" "(" expression ")"
+                   | dynamic_cast "<" type_id ">" "(" expression ")"
                    | reinterpret_cast "<" type_id ">" "(" expression ")" ;
 
 primary_expression = numeric_literal
@@ -104,7 +104,7 @@ simple_type_specifier = ["::"] [nested_name_specifier] type_name
 nested_name_specifier = type_name "::"
                       | namespace_name '::'
                       | nested_name_specifier identifier "::"
-                      | nested_name_specifier simple_template_id "::"
+                      | nested_name_specifier simple_template_id "::";
 
 type_name = class_name
           | enum_name
@@ -160,6 +160,6 @@ builtin_func = builtin_func_name "(" [builtin_func_argument_list] ")" ;
 builtin_func_name = "__log2" ;
 
 builtin_func_argument_list = builtin_func_argument
-                           | builtin_func_argument_list "," builtin_func_argument
+                           | builtin_func_argument_list "," builtin_func_argument;
 
 builtin_func_argument = expression ;
