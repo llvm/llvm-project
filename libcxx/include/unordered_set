@@ -928,13 +928,13 @@ template <ranges::input_range _Range,
           class            = enable_if_t<!is_integral<_Hash>::value>,
           class            = enable_if_t<!__is_allocator<_Pred>::value>,
           class            = enable_if_t<__is_allocator<_Allocator>::value>>
-unordered_set(from_range_t,
-              _Range&&,
-              typename allocator_traits<_Allocator>::size_type = 0,
-              _Hash                                            = _Hash(),
-              _Pred                                            = _Pred(),
-              _Allocator                                       = _Allocator())
-    -> unordered_set<ranges::range_value_t<_Range>, _Hash, _Pred, _Allocator>; // C++23
+unordered_set(
+    from_range_t,
+    _Range&&,
+    typename allocator_traits<_Allocator>::size_type = 0,
+    _Hash                                            = _Hash(),
+    _Pred                                            = _Pred(),
+    _Allocator = _Allocator()) -> unordered_set<ranges::range_value_t<_Range>, _Hash, _Pred, _Allocator>; // C++23
 #  endif
 
 template <class _Tp,

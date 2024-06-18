@@ -750,28 +750,27 @@ public:
       void>;
 #endif
 #if !defined(_LIBCPP_HAS_NO_ASAN) && defined(_LIBCPP_INSTRUMENTED_WITH_ASAN)
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-  pointer __asan_volatile_wrapper(pointer const &__ptr) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __asan_volatile_wrapper(pointer const& __ptr) const {
     if (__libcpp_is_constant_evaluated())
       return __ptr;
 
     pointer volatile __copy_ptr = __ptr;
 
-    return const_cast<pointer &>(__copy_ptr);
+    return const_cast<pointer&>(__copy_ptr);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-  const_pointer __asan_volatile_wrapper(const_pointer const &__ptr) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer
+  __asan_volatile_wrapper(const_pointer const& __ptr) const {
     if (__libcpp_is_constant_evaluated())
       return __ptr;
 
     const_pointer volatile __copy_ptr = __ptr;
 
-    return const_cast<const_pointer &>(__copy_ptr);
+    return const_cast<const_pointer&>(__copy_ptr);
   }
-#define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) __asan_volatile_wrapper(PTR)
+#  define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) __asan_volatile_wrapper(PTR)
 #else
-#define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) PTR
+#  define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) PTR
 #endif
 
   static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
@@ -1094,8 +1093,8 @@ public:
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
                               !__is_same_uncvref<_Tp, basic_string>::value,
                           int> = 0>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(
-      const _Tp& __t, const allocator_type& __a)
+  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const _Tp& __t, const allocator_type& __a)
       : __r_(__default_init_tag(), __a) {
     __self_view __sv = __t;
     __init(__sv.data(), __sv.size());
@@ -1327,8 +1326,8 @@ public:
                           int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20
 
-      basic_string&
-      append(const _Tp& __t, size_type __pos, size_type __n = npos);
+  basic_string&
+  append(const _Tp& __t, size_type __pos, size_type __n = npos);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const value_type* __s, size_type __n);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const value_type* __s);
@@ -1910,10 +1909,12 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __get_long_pointer() const _NOEXCEPT {
     return _LIBCPP_ASAN_VOLATILE_WRAPPER(__r_.first().__l.__data_);
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS pointer __get_short_pointer() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS pointer
+  __get_short_pointer() _NOEXCEPT {
     return _LIBCPP_ASAN_VOLATILE_WRAPPER(pointer_traits<pointer>::pointer_to(__r_.first().__s.__data_[0]));
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS const_pointer __get_short_pointer() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS const_pointer
+  __get_short_pointer() const _NOEXCEPT {
     return _LIBCPP_ASAN_VOLATILE_WRAPPER(pointer_traits<const_pointer>::pointer_to(__r_.first().__s.__data_[0]));
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __get_pointer() _NOEXCEPT {
@@ -2009,15 +2010,15 @@ private:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20
 #if _LIBCPP_ABI_VERSION >= 2 //  We want to use the function in the dylib in ABIv1
-      _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI
 #endif
-          _LIBCPP_DEPRECATED_("use __grow_by_without_replace") void __grow_by(
-              size_type __old_cap,
-              size_type __delta_cap,
-              size_type __old_sz,
-              size_type __n_copy,
-              size_type __n_del,
-              size_type __n_add = 0);
+  _LIBCPP_DEPRECATED_("use __grow_by_without_replace") void __grow_by(
+      size_type __old_cap,
+      size_type __delta_cap,
+      size_type __old_sz,
+      size_type __n_copy,
+      size_type __n_del,
+      size_type __n_add = 0);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __grow_by_without_replace(
       size_type __old_cap,
       size_type __delta_cap,
@@ -2183,8 +2184,8 @@ template <class _CharT,
           class _Traits,
           class _Allocator = allocator<_CharT>,
           class            = enable_if_t<__is_allocator<_Allocator>::value> >
-explicit basic_string(basic_string_view<_CharT, _Traits>, const _Allocator& = _Allocator())
-    -> basic_string<_CharT, _Traits, _Allocator>;
+explicit basic_string(basic_string_view<_CharT, _Traits>,
+                      const _Allocator& = _Allocator()) -> basic_string<_CharT, _Traits, _Allocator>;
 
 template <class _CharT,
           class _Traits,
@@ -2419,15 +2420,15 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
 template <class _CharT, class _Traits, class _Allocator>
 void _LIBCPP_CONSTEXPR_SINCE_CXX20
 #if _LIBCPP_ABI_VERSION >= 2 // We want to use the function in the dylib in ABIv1
-    _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_HIDE_FROM_ABI
 #endif
-    _LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Traits, _Allocator>::__grow_by(
-        size_type __old_cap,
-        size_type __delta_cap,
-        size_type __old_sz,
-        size_type __n_copy,
-        size_type __n_del,
-        size_type __n_add) {
+_LIBCPP_DEPRECATED_("use __grow_by_without_replace") basic_string<_CharT, _Traits, _Allocator>::__grow_by(
+    size_type __old_cap,
+    size_type __delta_cap,
+    size_type __old_sz,
+    size_type __n_copy,
+    size_type __n_del,
+    size_type __n_add) {
   size_type __ms = max_size();
   if (__delta_cap > __ms - __old_cap)
     __throw_length_error();
