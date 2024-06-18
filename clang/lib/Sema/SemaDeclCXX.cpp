@@ -16111,7 +16111,7 @@ ExprResult Sema::BuildCXXConstructExpr(
     CXXConstructionKind ConstructKind, SourceRange ParenRange) {
   if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl)) {
     Constructor = findInheritingConstructor(ConstructLoc, Constructor, Shadow);
-    // The only way to get here is if we did overlaod resolution to find the
+    // The only way to get here is if we did overload resolution to find the
     // shadow decl, so we don't need to worry about re-checking the trailing
     // requires clause.
     if (DiagnoseUseOfOverloadedDecl(Constructor, ConstructLoc))
