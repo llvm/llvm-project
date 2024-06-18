@@ -342,7 +342,8 @@ bool GlobalObject::canIncreaseAlignment() const {
       (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatXCOFF());
   if (isXCOFF)
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
-      return !GV->hasAttribute("toc-data");
+      if (GV->hasAttribute("toc-data"))
+        return false;
 
   return true;
 }
