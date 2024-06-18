@@ -299,7 +299,7 @@ Example usage for a project using a compile commands database:
   llvm::outs() << "Generating assets for docs...\n";
   Err = G->get()->createResources(CDCtx);
   if (Err) {
-    llvm::outs() << "Warning: " << toString(std::move(Err)) << "\n";
+    llvm::outs() << "warning: " << toString(std::move(Err)) << "\n";
   }
 
   return 0;
