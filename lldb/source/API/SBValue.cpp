@@ -379,7 +379,10 @@ const char *SBValue::GetObjectDescription() {
   if (!value_sp)
     return nullptr;
 
-  return ConstString(value_sp->GetObjectDescription()).GetCString();
+  llvm::Expected<std::string> str = value_sp->GetObjectDescription();
+  if (!str)
+    return ConstString("error: " + toString(str.takeError())).AsCString();
+  return ConstString(*str).AsCString();
 }
 
 SBType SBValue::GetType() {

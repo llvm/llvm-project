@@ -537,7 +537,7 @@ public:
                            std::string &destination,
                            const TypeSummaryOptions &options);
 
-  const char *GetObjectDescription();
+  llvm::Expected<std::string> GetObjectDescription();
 
   bool HasSpecialPrintableRepresentation(
       ValueObjectRepresentationStyle val_obj_display,
