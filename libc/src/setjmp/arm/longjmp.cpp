@@ -18,23 +18,23 @@ namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(void, longjmp, (__jmp_buf * buf, int val)) {
   asm(R"(
       # Reload r4, r5, r6, r7.
-      ldmia r0!, {r4, r5, r6, r7}
+      ldmia r0!, {r4-r7}
 
       # Reload r8, r9. They cannot appear in register lists so load them
       # into the lower registers, then move them into place.
-      ldmia r0!, {r2, r3}
+      ldmia r0!, {r2-r3}
       mov r8, r2
       mov r9, r3
 
       # Reload r10, r11. They cannot appear in register lists so load them
       # into the lower registers, then move them into place.
-      ldmia r0!, {r2, r3}
+      ldmia r0!, {r2-r3}
       mov r10, r2
       mov r11, r3
 
       # Reload sp, lr. They cannot appear in register lists so load them
       # into the lower registers, then move them into place.
-      ldmia r0!, {r2, r3}
+      ldmia r0!, {r2-r3}
       mov sp, r2
       mov lr, r3
 
