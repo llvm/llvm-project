@@ -565,7 +565,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value);
+      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>);
 #endif
 
 protected:
@@ -616,7 +616,7 @@ inline void __forward_list_base<_Tp, _Alloc>::swap(__forward_list_base& __x)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value)
+    _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #endif
 {
   std::__swap_allocator(
@@ -818,7 +818,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT
 #else
-      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable<__node_allocator>::value)
+      _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #endif
   {
     base::swap(__x);
