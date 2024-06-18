@@ -2784,12 +2784,12 @@ defm S_SETREG_IMM32_B32 : SOPK_Real64_gfx6_gfx7_gfx10_gfx13<0x015>;
 // SOPP - GFX13.
 //===----------------------------------------------------------------------===//
 
-multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !tolower(NAME)> {
+multiclass SOPP_Real_32_gfx13<bits<7> op, string name = !tolower(NAME), bit compat_alias = 1> {
   defvar ps = !cast<SOPP_Pseudo>(NAME);
   def _gfx13 : SOPP_Real_32<op, ps, name>,
                Select_gfx13<ps.Mnemonic>,
                SOPPRelaxTable<0, ps.KeyName, "_gfx13">;
-  if !ne(ps.Mnemonic, name) then
+  if !and(compat_alias, !ne(ps.Mnemonic, name)) then
     def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX13Only]>;
 }
 
@@ -2804,6 +2804,12 @@ defm S_SEMA_SIGNAL            : SOPP_Real_32_gfx13<0x32>;
 defm S_SEMA_WAIT              : SOPP_Real_32_gfx13<0x33>;
 defm S_SEMA_SET_LIMIT         : SOPP_Real_32_gfx13<0x34>;
 defm S_SEMA_SIGNAL_AFTER_VALU : SOPP_Real_32_gfx13<0x35>;
+// TODO-GFX13: Rename the pseudo to S_WAIT_BVHRTSCNT to reduce the potential
+//             for confusion (probably best to do post-upstreaming to reduce
+//             conflicts)
+defm S_WAIT_BVHCNT            : SOPP_Real_32_gfx13<0x4c, "s_wait_rtscnt", 0>;
+// TODO-GFX13:
+//defm S_WAIT_SWCCNT            : SOPP_Real_32_gfx13<0x4d>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX12 only.
@@ -2827,7 +2833,7 @@ defm S_BARRIER_LEAVE        : SOPP_Real_32_gfx12<0x015>;
 defm S_WAIT_LOADCNT         : SOPP_Real_32_gfx12_gfx13<0x040>;
 defm S_WAIT_STORECNT        : SOPP_Real_32_gfx12_gfx13<0x041>;
 defm S_WAIT_SAMPLECNT       : SOPP_Real_32_gfx12_gfx13<0x042>;
-defm S_WAIT_BVHCNT          : SOPP_Real_32_gfx12_gfx13<0x043>;
+defm S_WAIT_BVHCNT          : SOPP_Real_32_gfx12<0x043>;
 defm S_WAIT_EXPCNT          : SOPP_Real_32_gfx12_gfx13<0x044>;
 defm S_WAIT_DSCNT           : SOPP_Real_32_gfx12_gfx13<0x046>;
 defm S_WAIT_KMCNT           : SOPP_Real_32_gfx12_gfx13<0x047>;

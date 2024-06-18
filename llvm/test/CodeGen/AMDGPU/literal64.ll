@@ -111,7 +111,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    global_load_b64 v[4:5], v[0:1], off
 ; GFX1300-NEXT:    s_mov_b32 s0, 0
@@ -152,7 +152,7 @@ define void @v_mov_b64_int(ptr addrspace(1) %ptr) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b64_e32 v[2:3], 0xf12345678
 ; GFX1300-NEXT:    global_atomic_add_u64 v[0:1], v[2:3], off
@@ -178,7 +178,7 @@ define void @store_double(ptr addrspace(1) %ptr) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b64_e32 v[2:3], 0x4063233333333333
 ; GFX1300-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -223,7 +223,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX1300-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-SDAG-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_mov_b32 s2, 1
 ; GFX1300-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
@@ -236,7 +236,7 @@ define i1 @class_f64() noinline optnone {
 ; GFX1300-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-GISEL-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-GISEL-NEXT:    s_mov_b32 s2, 1
 ; GFX1300-GISEL-NEXT:    s_mov_b64 s[0:1], 0x4063233333333333
@@ -266,7 +266,7 @@ define double @rsq_f64() {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_rsq_f64_e32 v[0:1], 0x4063233333333333
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]

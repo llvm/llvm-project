@@ -71,9 +71,11 @@ enum InstCounterType {
   STORE_CNT,    // VScnt in gfx10/gfx11.
   NUM_NORMAL_INST_CNTS,
   SAMPLE_CNT = NUM_NORMAL_INST_CNTS, // gfx12+ only.
-  BVH_CNT,                           // gfx12+ only.
-  KM_CNT,                            // gfx12+ only.
-  X_CNT,                             // gfx1210.
+  // TODO-GFX13: Intended to cover rtscnt; rename to BVH_RTS_CNT to avoid
+  //             confusion (after upstreaming, to reduce textual conflicts)
+  BVH_CNT, // gfx12+ only.
+  KM_CNT,  // gfx12+ only.
+  X_CNT,   // gfx1210.
   NUM_EXTENDED_INST_CNTS,
   VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
   VM_VSRC,                          // gfx12+ expert mode only.

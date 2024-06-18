@@ -53,7 +53,7 @@ define i32 @v_mul_add_1_i32(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -103,7 +103,7 @@ define i32 @v_mul_add_1_i32_commute(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -153,7 +153,7 @@ define i32 @v_mul_add_x_i32(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -207,7 +207,7 @@ define i32 @v_mul_sub_1_i32(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, -1, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -263,7 +263,7 @@ define i32 @v_mul_sub_1_i32_commute(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, -1, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -319,7 +319,7 @@ define i32 @v_mul_sub_x_i32(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mul_lo_u32 v1, v0, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -375,7 +375,7 @@ define i32 @v_mul_add_2_i32(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 2, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -431,7 +431,7 @@ define i32 @v_mul_sub_2_i32(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, -2, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -487,7 +487,7 @@ define i32 @v_mul_add_65_i32(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 0x41, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -543,7 +543,7 @@ define i32 @v_mul_sub_65_i32(i32 %x, i32 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 0xffffffbf, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -599,7 +599,7 @@ define i24 @v_mul_add_1_i24_zext(i24 zeroext %x, i24 zeroext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -655,7 +655,7 @@ define i24 @v_mul_sub_1_i24_zext(i24 zeroext %x, i24 zeroext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, -1, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -705,7 +705,7 @@ define i24 @v_add_mul_i24_zext_1(i24 zeroext %x, i24 zeroext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -759,7 +759,7 @@ define i24 @v_mul_add_1_i24_sext(i24 signext %x, i24 signext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -809,7 +809,7 @@ define i24 @v_add_mul_i24_sext_1(i24 signext %x, i24 signext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32_u24 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -863,7 +863,7 @@ define i24 @v_mul_sub_1_i24_sext(i24 signext %x, i24 signext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, -1, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -915,7 +915,7 @@ define i25 @v_mul_add_1_i25_zext(i25 zeroext %x, i25 zeroext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -969,7 +969,7 @@ define i25 @v_mul_sub_1_i25_zext(i25 zeroext %x, i25 zeroext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 0x1ffffff, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1021,7 +1021,7 @@ define i25 @v_mul_add_1_i25_sext(i25 signext %x, i25 signext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -1075,7 +1075,7 @@ define i25 @v_mul_sub_1_i25_sext(i25 signext %x, i25 signext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 0x1ffffff, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1128,7 +1128,7 @@ define i16 @v_mul_add_1_i16(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -1183,7 +1183,7 @@ define i32 @v_mul_add_1_i16_zext_result(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1237,7 +1237,7 @@ define i16 @v_mul_add_1_i16_commute(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -1287,7 +1287,7 @@ define i16 @v_mul_add_x_i16(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -1343,7 +1343,7 @@ define i16 @v_mul_sub_1_i16(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u16 v1, v1, -1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1401,7 +1401,7 @@ define i16 @v_mul_sub_1_i16_commute(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u16 v1, v1, -1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1459,7 +1459,7 @@ define i16 @v_mul_sub_x_i16(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mul_lo_u16 v1, v0, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1517,7 +1517,7 @@ define i16 @v_mul_add_2_i16(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u16 v1, v1, 2
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1575,7 +1575,7 @@ define i16 @v_mul_sub_2_i16(i16 %x, i16 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u16 v1, v1, -2
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1661,7 +1661,7 @@ define i64 @v_mul_add_1_i64(i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[4:5], v0, v2, v[0:1]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1750,7 +1750,7 @@ define i64 @v_mul_add_1_i64_commute(i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[4:5], v0, v2, v[0:1]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1839,7 +1839,7 @@ define i64 @v_mul_add_x_i64(i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[4:5], v0, v2, v[0:1]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1931,7 +1931,7 @@ define i64 @v_mul_sub_1_i64(i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u64_e32 v[2:3], -1, v[2:3]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2020,7 +2020,7 @@ define i64 @v_mul_sub_1_i64_commute(i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u64_e32 v[2:3], -1, v[2:3]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2107,7 +2107,7 @@ define i64 @v_mul_sub_x_i64(i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mul_u64_e32 v[2:3], v[0:1], v[2:3]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2196,7 +2196,7 @@ define i64 @v_mul_add_2_i64(i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u64_e32 v[2:3], 2, v[2:3]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2285,7 +2285,7 @@ define i64 @v_mul_sub_2_i64(i64 %x, i64 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u64_e32 v[2:3], -2, v[2:3]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2355,7 +2355,7 @@ define <2 x i32> @v_mul_add_1_i32_multiple(i32 %x, i32 %y, i32 %z) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v1, v0
 ; GFX1300-NEXT:    v_mad_u32 v1, v2, v1, v2
@@ -2413,7 +2413,7 @@ define <2 x i32> @v_mul_add_1_i32_other_use(i32 %x, i32 %y, i32 %z) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v1, 1, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2490,7 +2490,7 @@ define i32 @v_mul_add_1_i32_chain(i32 %arg0, i32 %arg1, i32 %arg2) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_add_nc_u32_e32 v2, 1, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -2563,7 +2563,7 @@ define <2 x i16> @v_mul_add_1_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_add_u16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2629,7 +2629,7 @@ define <2 x i16> @v_mul_add_1_v2i16_commute(<2 x i16> %x, <2 x i16> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_add_u16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2693,7 +2693,7 @@ define <2 x i16> @v_mul_add_x_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -2757,7 +2757,7 @@ define <2 x i16> @v_mul_sub_1_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_sub_i16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2823,7 +2823,7 @@ define <2 x i16> @v_mul_sub_1_v2i16_commute(<2 x i16> %x, <2 x i16> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_sub_i16 v1, v1, 1 op_sel_hi:[1,0]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2892,7 +2892,7 @@ define <2 x i16> @v_mul_sub_x_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_mul_lo_u16 v1, v0, v1
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2958,7 +2958,7 @@ define <2 x i16> @v_mul_add_2_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_add_u16 v1, v1, 2 op_sel_hi:[1,0]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -3024,7 +3024,7 @@ define <2 x i16> @v_mul_sub_2_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_sub_i16 v1, v1, 2 op_sel_hi:[1,0]
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -3094,7 +3094,7 @@ define <2 x i32> @v_mul_add_1_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v2, v0
 ; GFX1300-NEXT:    v_mad_u32 v1, v1, v3, v1
@@ -3163,7 +3163,7 @@ define <2 x i32> @v_mul_add_1_v2i32_commute(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v2, v0
 ; GFX1300-NEXT:    v_mad_u32 v1, v1, v3, v1
@@ -3232,7 +3232,7 @@ define <2 x i32> @v_mul_add_x_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, v2, v0
 ; GFX1300-NEXT:    v_mad_u32 v1, v1, v3, v1
@@ -3296,7 +3296,7 @@ define <2 x i32> @v_mul_sub_1_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, -1, v2 :: v_dual_add_nc_u32 v3, -1, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -3362,7 +3362,7 @@ define <2 x i32> @v_mul_sub_1_v2i32_commute(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, -1, v2 :: v_dual_add_nc_u32 v3, -1, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -3437,7 +3437,7 @@ define <2 x i32> @v_mul_sub_x_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mul_lo_u32 v2, v0, v2
 ; GFX1300-NEXT:    v_mul_lo_u32 v3, v1, v3
@@ -3503,7 +3503,7 @@ define <2 x i32> @v_mul_add_2_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, 2, v2 :: v_dual_add_nc_u32 v3, 2, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -3569,7 +3569,7 @@ define <2 x i32> @v_mul_sub_2_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, -2, v2 :: v_dual_add_nc_u32 v3, -2, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -3635,7 +3635,7 @@ define <2 x i24> @v_mul_add_1_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, 1, v2 :: v_dual_add_nc_u32 v3, 1, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -3701,7 +3701,7 @@ define <2 x i24> @v_mul_add_1_v2i24_commute(<2 x i24> %x, <2 x i24> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, 1, v2 :: v_dual_add_nc_u32 v3, 1, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -3757,7 +3757,7 @@ define <2 x i24> @v_mul_add_x_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32_u24 v0, v0, v2, v0
 ; GFX1300-NEXT:    v_mad_u32_u24 v1, v1, v3, v1
@@ -3821,7 +3821,7 @@ define <2 x i24> @v_mul_sub_1_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, -1, v2 :: v_dual_add_nc_u32 v3, -1, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -3887,7 +3887,7 @@ define <2 x i24> @v_mul_sub_1_v2i24_commute(<2 x i24> %x, <2 x i24> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, -1, v2 :: v_dual_add_nc_u32 v3, -1, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -3953,7 +3953,7 @@ define <2 x i24> @v_mul_sub_x_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mul_u32_u24_e32 v2, v0, v2
 ; GFX1300-NEXT:    v_mul_u32_u24_e32 v3, v1, v3
@@ -4019,7 +4019,7 @@ define <2 x i24> @v_mul_add_2_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, 2, v2 :: v_dual_add_nc_u32 v3, 2, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -4085,7 +4085,7 @@ define <2 x i24> @v_mul_sub_2_v2i24(<2 x i24> %x, <2 x i24> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_dual_add_nc_u32 v2, -2, v2 :: v_dual_add_nc_u32 v3, -2, v3
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -4138,7 +4138,7 @@ define i32 @v_mul_9_add_52_i32(i32 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, 9, 52
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -4187,7 +4187,7 @@ define i16 @v_mul_9_add_52_i16(i16 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, 9, 52
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -4246,7 +4246,7 @@ define <2 x i16> @v_mul_9_add_52_v2i16(<2 x i16> %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_mad_u16 v0, v0, 9, 52 op_sel_hi:[1,0,0]
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -4326,7 +4326,7 @@ define i64 @v_mul_9_add_52_i64(i64 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v0, 9, 52
@@ -4379,7 +4379,7 @@ define i32 @v_mul_5_add_1_i32(i32 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u32 v0, v0, 5, 1
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -4436,7 +4436,7 @@ define i32 @v_mul_284_add_82_i32(i32 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_movk_i32 s0, 0x11c
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4487,7 +4487,7 @@ define i16 @v_mul_5_add_1_i16(i16 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, 5, 1
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -4545,7 +4545,7 @@ define i16 @v_mul_284_add_82_i16(i16 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_movk_i32 s0, 0x11c
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4606,7 +4606,7 @@ define <2 x i16> @v_mul_5_add_1_v2i16(<2 x i16> %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_pk_mad_u16 v0, v0, 5, 1 op_sel_hi:[1,0,0]
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -4674,7 +4674,7 @@ define <2 x i16> @v_mul_284_add_82_v2i16(<2 x i16> %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_movk_i32 s0, 0x11c
 ; GFX1300-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -4756,7 +4756,7 @@ define i64 @v_mul_5_add_1_i64(i64 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1300-NEXT:    v_mad_nc_u64_u32 v[0:1], v0, 5, 1
@@ -4855,7 +4855,7 @@ define i64 @v_mul_284_add_82_i64(i64 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_movk_i32 s0, 0x11c
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v1
@@ -4955,7 +4955,7 @@ define i64 @v_mul_934584645_add_8234599_i64(i64 %arg) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_mov_b32 s0, 0x37b4a145
 ; GFX1300-NEXT:    v_mov_b32_e32 v2, v1
@@ -5386,7 +5386,7 @@ define i8 @v_mul_add_1_i8(i8 %x, i8 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -5437,7 +5437,7 @@ define i8 @v_mul_add_1_i8_commute(i8 %x, i8 %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -5487,7 +5487,7 @@ define i8 @v_mul_add_1_i8_zext(i8 zeroext %x, i8 zeroext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -5537,7 +5537,7 @@ define i8 @v_mul_add_1_i8_zext_commute(i8 zeroext %x, i8 zeroext %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v1, v0
 ; GFX1300-NEXT:    s_set_pc_i64 s[30:31]
@@ -5612,7 +5612,7 @@ define <2 x i8> @v_mul_add_1_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v1, v1, v3, v1
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v2, v0
@@ -5692,7 +5692,7 @@ define <2 x i8> @v_mul_add_1_v2i8_commute(<2 x i8> %x, <2 x i8> %y) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_mad_u16 v1, v1, v3, v1
 ; GFX1300-NEXT:    v_mad_u16 v0, v0, v2, v0
@@ -5762,7 +5762,7 @@ define i64 @mul_u24_with_uneven_operands(i32 %z) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -5832,7 +5832,7 @@ define i64 @mul_u24_with_uneven_operands_swapped(i32 %z) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -5903,7 +5903,7 @@ define i64 @mul_i24_with_uneven_operands(i32 %z) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_and_b32_e32 v1, 1, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -5973,7 +5973,7 @@ define i64 @mul_i24_with_uneven_operands_swapped(i32 %z) {
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
-; GFX1300-NEXT:    s_wait_bvhcnt 0x0
+; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    v_and_b32_e32 v1, 1, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
