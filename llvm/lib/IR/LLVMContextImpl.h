@@ -1535,6 +1535,13 @@ public:
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
 
+  // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
+  // ConstantRange. Since ConstantRange is a dynamically sized class, it's not
+  // possible to use SpecificBumpPtrAllocator. Instead, we use normal Alloc
+  // for allocation and record all allocated pointers in this vector. In the
+  // LLVMContext destructor, call the destuctors of everything in the vector.
+  std::vector<ConstantRangeListAttributeImpl *> ConstantRangeListAttributes;
+
   DenseMap<Type *, std::unique_ptr<ConstantAggregateZero>> CAZConstants;
 
   using ArrayConstantsTy = ConstantUniqueMap<ConstantArray>;
@@ -1584,8 +1591,6 @@ public:
   UniqueStringSaver Saver{Alloc};
   SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
       ConstantRangeAttributeAlloc;
-  SpecificBumpPtrAllocator<ConstantRangeListAttributeImpl>
-      ConstantRangeListAttributeAlloc;
 
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 

@@ -45,6 +45,7 @@ public:
   static std::optional<ConstantRangeList>
   getConstantRangeList(ArrayRef<ConstantRange> RangesRef);
 
+  ArrayRef<ConstantRange> rangesRef() const { return Ranges; }
   SmallVectorImpl<ConstantRange>::iterator begin() { return Ranges.begin(); }
   SmallVectorImpl<ConstantRange>::iterator end() { return Ranges.end(); }
   SmallVectorImpl<ConstantRange>::const_iterator begin() const {

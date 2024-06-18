@@ -193,15 +193,15 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
 }
 
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
-                         const ConstantRangeList &CRL) {
+                         ArrayRef<ConstantRange> Val) {
   assert(Attribute::isConstantRangeListAttrKind(Kind) &&
          "Not a ConstantRangeList attribute");
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  ID.AddInteger(CRL.size());
-  ID.AddInteger(CRL.getBitWidth());
-  for (auto &CR : CRL) {
+  ID.AddInteger(Val.size());
+  ID.AddInteger(Val[0].getBitWidth());
+  for (auto &CR : Val) {
     CR.getLower().Profile(ID);
     CR.getUpper().Profile(ID);
   }
@@ -212,9 +212,18 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    PA = new (pImpl->ConstantRangeListAttributeAlloc.Allocate())
-        ConstantRangeListAttributeImpl(Kind, CRL);
+    // ConstantRange is a dynamically sized class and cannot use
+    // SpecificBumpPtrAllocator. Instead, we use normal Alloc for allocation
+    // for allocation and record the allocated pointer in
+    // `ConstantRangeListAttributes`. LLVMContext destructor will call the
+    // destuctor of the allocated pointer explicitly.
+    void *Mem = pImpl->Alloc.Allocate(
+        ConstantRangeListAttributeImpl::totalSizeToAlloc(Val),
+        alignof(ConstantRangeListAttributeImpl));
+    PA = new (Mem) ConstantRangeListAttributeImpl(Kind, Val);
     pImpl->AttrsSet.InsertNode(PA, InsertPoint);
+    pImpl->ConstantRangeListAttributes.push_back(
+        reinterpret_cast<ConstantRangeListAttributeImpl *>(PA));
   }
 
   // Return the Attribute that we found or created.
@@ -400,7 +409,7 @@ const ConstantRange &Attribute::getValueAsConstantRange() const {
   return pImpl->getValueAsConstantRange();
 }
 
-ConstantRangeList Attribute::getValueAsConstantRangeList() const {
+ArrayRef<ConstantRange> Attribute::getValueAsConstantRangeList() const {
   assert(isConstantRangeListAttribute() &&
          "Invalid attribute type to get the value as a ConstantRangeList!");
   return pImpl->getValueAsConstantRangeList();
@@ -490,7 +499,7 @@ const ConstantRange &Attribute::getRange() const {
   return pImpl->getValueAsConstantRange();
 }
 
-ConstantRangeList Attribute::getInitializes() const {
+ArrayRef<ConstantRange> Attribute::getInitializes() const {
   assert(hasAttribute(Attribute::Initializes) &&
          "Trying to get initializes attr from non-ConstantRangeList attribute");
   return pImpl->getValueAsConstantRangeList();
@@ -793,7 +802,7 @@ const ConstantRange &AttributeImpl::getValueAsConstantRange() const {
       ->getConstantRangeValue();
 }
 
-ConstantRangeList AttributeImpl::getValueAsConstantRangeList() const {
+ArrayRef<ConstantRange> AttributeImpl::getValueAsConstantRangeList() const {
   assert(isConstantRangeListAttribute());
   return static_cast<const ConstantRangeListAttributeImpl *>(this)
       ->getConstantRangeListValue();
@@ -2021,12 +2030,12 @@ AttrBuilder &AttrBuilder::addRangeAttr(const ConstantRange &CR) {
 
 AttrBuilder &
 AttrBuilder::addConstantRangeListAttr(Attribute::AttrKind Kind,
-                                      const ConstantRangeList &CRL) {
-  return addAttribute(Attribute::get(Ctx, Kind, CRL));
+                                      ArrayRef<ConstantRange> Val) {
+  return addAttribute(Attribute::get(Ctx, Kind, Val));
 }
 
 AttrBuilder &AttrBuilder::addInitializesAttr(const ConstantRangeList &CRL) {
-  return addConstantRangeListAttr(Attribute::Initializes, CRL);
+  return addConstantRangeListAttr(Attribute::Initializes, CRL.rangesRef());
 }
 
 AttrBuilder &AttrBuilder::merge(const AttrBuilder &B) {

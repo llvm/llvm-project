@@ -2391,10 +2391,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           }
           i--;
 
-          auto CRLOrNull = ConstantRangeList::getConstantRangeList(Val);
-          if (!CRLOrNull.has_value())
+          if (!ConstantRangeList::isOrderedRanges(Val))
             return error("Invalid (unordered or overlapping) range list");
-          B.addConstantRangeListAttr(Kind, *CRLOrNull);
+          B.addConstantRangeListAttr(Kind, Val);
         } else {
           return error("Invalid attribute group entry");
         }

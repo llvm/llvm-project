@@ -84,7 +84,7 @@ public:
 
   const ConstantRange &getValueAsConstantRange() const;
 
-  ConstantRangeList getValueAsConstantRangeList() const;
+  ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
 
   /// Used when sorting the attributes.
   bool operator<(const AttributeImpl &AI) const;
@@ -135,11 +135,11 @@ public:
   }
 
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
-                      const ConstantRangeList &CRL) {
+                      ArrayRef<ConstantRange> Val) {
     ID.AddInteger(Kind);
-    ID.AddInteger(CRL.size());
-    ID.AddInteger(CRL.getBitWidth());
-    for (auto &CR : CRL) {
+    ID.AddInteger(Val.size());
+    ID.AddInteger(Val[0].getBitWidth());
+    for (auto &CR : Val) {
       CR.getLower().Profile(ID);
       CR.getUpper().Profile(ID);
     }
@@ -242,14 +242,41 @@ public:
   const ConstantRange &getConstantRangeValue() const { return CR; }
 };
 
-class ConstantRangeListAttributeImpl : public EnumAttributeImpl {
-  ConstantRangeList CRL;
+class ConstantRangeListAttributeImpl final
+    : public EnumAttributeImpl,
+      private TrailingObjects<ConstantRangeListAttributeImpl, ConstantRange> {
+  friend TrailingObjects;
+
+  unsigned Size;
+  size_t numTrailingObjects(OverloadToken<ConstantRange>) const { return Size; }
 
 public:
   ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
-                                 const ConstantRangeList &CRL)
-      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), CRL(CRL) {}
-  ConstantRangeList getConstantRangeListValue() const { return CRL; }
+                                 ArrayRef<ConstantRange> Val)
+      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
+    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
+    assert(Size > 0);
+    unsigned BitWidth = Val.front().getLower().getBitWidth();
+    for (unsigned I = 0; I != Size; ++I) {
+      assert(BitWidth == Val[I].getLower().getBitWidth());
+      new (&TrailingCR[I]) ConstantRange(BitWidth, false);
+    }
+    llvm::copy(Val, TrailingCR);
+  }
+
+  ~ConstantRangeListAttributeImpl() {
+    ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
+    for (unsigned I = 0; I != Size; ++I)
+      TrailingCR[I].~ConstantRange();
+  }
+
+  ArrayRef<ConstantRange> getConstantRangeListValue() const {
+    return ArrayRef(getTrailingObjects<ConstantRange>(), Size);
+  }
+
+  static size_t totalSizeToAlloc(ArrayRef<ConstantRange> Val) {
+    return TrailingObjects::totalSizeToAlloc<ConstantRange>(Val.size());
+  }
 };
 
 class AttributeBitSet {
