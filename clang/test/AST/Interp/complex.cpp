@@ -40,6 +40,21 @@ constexpr _Complex int IIMC = IIMA * IIMB;
 static_assert(__real(IIMC) == -30, "");
 static_assert(__imag(IIMC) == 40, "");
 
+static_assert(1.0j / 0.0 == 1); // both-error {{static assertion}} \
+                                // both-note {{division by zero}}
+static_assert(__builtin_isinf_sign(__real__((1.0 + 1.0j) / (0.0 + 0.0j))) == 1);
+static_assert(__builtin_isinf_sign(__real__((1.0 + 1.0j) / 0.0)) == 1); // both-error {{static assertion}} \
+                                                                        // both-note {{division by zero}}
+static_assert(__builtin_isinf_sign(__real__((__builtin_inf() + 1.0j) / (0.0 + 0.0j))) == 1);
+static_assert(__builtin_isinf_sign(__imag__((1.0 + InfC) / (0.0 + 0.0j))) == 1);
+static_assert(__builtin_isinf_sign(__imag__((InfInf) / (0.0 + 0.0j))) == 1);
+
+constexpr _Complex int IIDA = {10,20};
+constexpr _Complex int IIDB = {1,2};
+constexpr _Complex int IIDC = IIDA / IIDB;
+static_assert(__real(IIDC) == 10, "");
+static_assert(__imag(IIDC) == 0, "");
+
 constexpr _Complex int Comma1 = {1, 2};
 constexpr _Complex int Comma2 = (0, Comma1);
 static_assert(Comma1 == Comma1, "");

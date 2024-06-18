@@ -258,7 +258,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
-  return Name == "generic" || llvm::AArch64::parseCpu(Name);
+  return llvm::AArch64::parseCpu(Name).has_value();
 }
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {

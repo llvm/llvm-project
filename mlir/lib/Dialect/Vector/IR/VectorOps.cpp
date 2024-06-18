@@ -1883,7 +1883,10 @@ static Value foldExtractStridedOpFromInsertChain(ExtractOp extractOp) {
 }
 
 OpFoldResult ExtractOp::fold(FoldAdaptor) {
-  if (getNumIndices() == 0)
+  // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
+  // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
+  // mismatch).
+  if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
     return getVector();
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
