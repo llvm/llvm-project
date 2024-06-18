@@ -1631,11 +1631,6 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
     return Value();
 
-  // 0-D vectors not supported.
-  assert(!hasZeroDimVectors(extractOp) && "0-D vectors not supported");
-  if (hasZeroDimVectors(defOp))
-    return Value();
-
   Value source = defOp->getOperand(0);
   if (extractOp.getType() == source.getType())
     return source;
