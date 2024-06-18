@@ -15,6 +15,13 @@
 #include "Shared/Requirements.h"
 #include "device.h"
 
+extern "C" {
+[[gnu::weak]] void ompx_free_allocation_host(void *P) {}
+[[gnu::weak]] void *ompx_new_allocation_host(void *P, uint64_t) {
+  return nullptr;
+}
+}
+
 /// Dump a table of all the host-target pointer pairs on failure
 void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
                                bool toStdOut) {
@@ -68,6 +75,9 @@ int MappingInfoTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin,
     return OFFLOAD_FAIL;
   }
 
+  void *FakeTgtPtrBegin = ompx_new_allocation_host(TgtPtrBegin, Size);
+  printf("FP %p -> %p \n", (void *)TgtPtrBegin, FakeTgtPtrBegin);
+
   // Mapping does not exist, allocate it with refCount=INF
   const HostDataToTargetTy &NewEntry =
       *HDTTMap
@@ -78,7 +88,7 @@ int MappingInfoTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin,
                /*TgtAllocBegin=*/(uintptr_t)TgtPtrBegin,
                /*TgtPtrBegin=*/(uintptr_t)TgtPtrBegin,
                /*UseHoldRefCount=*/false, /*Name=*/nullptr,
-               /*IsRefCountINF=*/true))
+               /*IsRefCountINF=*/true, FakeTgtPtrBegin))
            .first->HDTT;
   DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD
      ", HstEnd=" DPxMOD ", TgtBegin=" DPxMOD ", DynRefCount=%s, "
@@ -292,14 +302,16 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     uintptr_t TgtAllocBegin =
         (uintptr_t)Device.allocData(TgtPadding + Size, HstPtrBegin);
     uintptr_t TgtPtrBegin = TgtAllocBegin + TgtPadding;
+    void *FakeTgtPtrBegin = ompx_new_allocation_host((void *)TgtPtrBegin, Size);
     // Release the mapping table lock only after the entry is locked by
     // attaching it to TPR.
-    LR.TPR.setEntry(HDTTMap
-                        ->emplace(new HostDataToTargetTy(
-                            (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-                            (uintptr_t)HstPtrBegin + Size, TgtAllocBegin,
-                            TgtPtrBegin, HasHoldModifier, HstPtrName))
-                        .first->HDTT);
+    LR.TPR.setEntry(
+        HDTTMap
+            ->emplace(new HostDataToTargetTy(
+                (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                (uintptr_t)HstPtrBegin + Size, TgtAllocBegin, TgtPtrBegin,
+                HasHoldModifier, HstPtrName, /*IsINF=*/false, FakeTgtPtrBegin))
+            .first->HDTT);
     INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
          "Creating new map entry with HstPtrBase=" DPxMOD
          ", HstPtrBegin=" DPxMOD ", TgtAllocBegin=" DPxMOD
@@ -491,6 +503,9 @@ int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
     REPORT("Failed to destroy event " DPxMOD "\n", DPxPTR(Event));
     return OFFLOAD_FAIL;
   }
+
+  if (Entry->FakeTgtPtrBegin)
+    ompx_free_allocation_host(Entry->FakeTgtPtrBegin);
 
   int Ret = Device.deleteData((void *)Entry->TgtAllocBegin);
 

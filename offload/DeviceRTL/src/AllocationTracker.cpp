@@ -9,6 +9,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibC.h"
+#include "Shared/Environment.h"
+#include "Synchronization.h"
 #include "Types.h"
 #include "Utils.h"
 
@@ -16,6 +18,9 @@ using namespace ompx;
 using namespace utils;
 
 #pragma omp begin declare target device_type(nohost)
+
+[[gnu::used, gnu::retain, gnu::weak,
+  gnu::visibility("protected")]] OMPXTrapIDTy *__ompx_trap_id;
 
 // #define USE_TAGS
 
@@ -25,15 +30,16 @@ static constexpr uint32_t TAG_BITS = 8;
 static constexpr uint32_t TAG_BITS = 0;
 #endif
 
-#define _OBJECT_TY unsigned short
+#define _OBJECT_TY uint16_t
 static constexpr uint32_t OBJECT_BITS = sizeof(_OBJECT_TY) * 8;
+static constexpr uint32_t SID_BITS = 16;
 
-static constexpr uint32_t LENGTH_BITS = 64 - TAG_BITS;
+static constexpr uint32_t LENGTH_BITS = 64 - TAG_BITS - SID_BITS;
 static constexpr uint32_t OFFSET_BITS = LENGTH_BITS - OBJECT_BITS;
 
-static_assert(LENGTH_BITS + TAG_BITS == 64,
+static_assert(LENGTH_BITS + TAG_BITS + SID_BITS == 64,
               "Length and tag bits should cover 64 bits");
-static_assert(OFFSET_BITS + TAG_BITS + OBJECT_BITS == 64,
+static_assert(OFFSET_BITS + TAG_BITS + SID_BITS + OBJECT_BITS == 64,
               "Length, tag, and object bits should cover 64 bits");
 
 struct AllocationTy {
@@ -42,6 +48,7 @@ struct AllocationTy {
 #ifdef USE_TAGS
   uint64_t Tag : TAG_BITS;
 #endif
+  uint64_t SID : SID_BITS;
 
   bool contains(void *Ptr, uint64_t Size) const {
     return Ptr >= Start && advance(Ptr, Size) <= advance(Start, Length);
@@ -74,8 +81,8 @@ static_assert(sizeof(AllocationPtrTy) == sizeof(void *),
 
 extern "C" {
 
-[[gnu::flatten, gnu::always_inline]] void *
-ompx_new_allocation(void *Start, uint64_t Length) {
+[[gnu::flatten, gnu::always_inline, gnu::used, gnu::retain]] void *
+ompx_new_allocation(void *Start, uint64_t Length, int64_t Id) {
   if constexpr (LENGTH_BITS < 64)
     if (Length >= (1UL << (LENGTH_BITS + 1)))
       __builtin_trap();
@@ -83,6 +90,12 @@ ompx_new_allocation(void *Start, uint64_t Length) {
   AllocationTy &A = Allocations[No];
   A.Start = Start;
   A.Length = Length;
+  A.SID = Id;
+  if (Id != A.SID) {
+    __ompx_trap_id->ID = -2UL;
+    __builtin_trap();
+  }
+
   AllocationPtrTy AP;
   AP.PtrOffset = 0;
   AP.AllocationId = No;
@@ -93,19 +106,21 @@ ompx_new_allocation(void *Start, uint64_t Length) {
   return AP;
 }
 
-[[gnu::flatten, gnu::always_inline]] void ompx_free_allocation(void *P) {
+[[gnu::flatten, gnu::always_inline, gnu::used, gnu::retain]] void
+ompx_free_allocation(void *P) {
   AllocationPtrTy AP = AllocationPtrTy::get(P);
   Allocations[AP.AllocationId] = AllocationTy();
 }
 
-[[gnu::flatten, gnu::always_inline]] void *ompx_gep(void *P, uint64_t Offset) {
+[[gnu::flatten, gnu::always_inline, gnu::used, gnu::retain]] void *
+ompx_gep(void *P, uint64_t Offset) {
   AllocationPtrTy AP = AllocationPtrTy::get(P);
   AP.PtrOffset += Offset;
   return AP;
 }
 
-[[gnu::flatten, gnu::always_inline]] void *ompx_check_access(void *P,
-                                                             uint64_t Size) {
+[[gnu::flatten, gnu::always_inline, gnu::used, gnu::retain]] void *
+ompx_check_access(void *P, uint64_t Size, uint64_t AccessNo) {
   AllocationPtrTy AP = AllocationPtrTy::get(P);
   AllocationTy &A = Allocations[AP.AllocationId];
 #ifdef USE_TAGS
@@ -115,19 +130,44 @@ ompx_new_allocation(void *Start, uint64_t Length) {
   uint64_t Offset = AP.PtrOffset;
   void *Ptr = advance(A.Start, Offset);
   if (!A.contains(Ptr, Size)) {
-    printf("Out of bounds, access: %lu inside of %lu allocation @ %p\n", Offset,
-           A.Length, A.Start);
+    //    printf("Out of bounds, access: %lu inside of %lu allocation @ %p\n",
+    //    Offset, A.Length, A.Start);
+    __ompx_trap_id->Start = A.Start;
+    __ompx_trap_id->Length = A.Length;
+    __ompx_trap_id->Offset = AP.PtrOffset;
+    __ompx_trap_id->ID = AP.AllocationId;
+    __ompx_trap_id->AccessID = AccessNo;
     __builtin_trap();
   }
   return Ptr;
 }
 
-[[gnu::flatten, gnu::always_inline]] void *ompx_unpack(void *P) {
+[[gnu::flatten, gnu::always_inline, gnu::used, gnu::retain]] void *
+ompx_unpack(void *P) {
   AllocationPtrTy AP = AllocationPtrTy::get(P);
   AllocationTy &A = Allocations[AP.AllocationId];
   uint64_t Offset = AP.PtrOffset;
   void *Ptr = advance(A.Start, Offset);
   return Ptr;
+}
+
+[[gnu::flatten, gnu::always_inline, gnu::used, gnu::retain]] void
+ompx_new_host_allocation(void *Start, uint64_t Length, uint16_t AllocationId) {
+  if constexpr (LENGTH_BITS < 64)
+    if (Length >= (1UL << (LENGTH_BITS + 1)))
+      __builtin_trap();
+  AllocationTy &A = Allocations[AllocationId];
+  A.Start = Start;
+  A.Length = Length;
+  A.SID = AllocationId;
+#ifdef USE_TAGS
+  A.Tag = 0;
+#endif
+}
+
+[[gnu::flatten, gnu::always_inline, gnu::used, gnu::retain]] void
+ompx_free_host_allocation(void *P) {
+  ompx_free_allocation(P);
 }
 }
 

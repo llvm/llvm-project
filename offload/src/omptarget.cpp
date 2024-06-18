@@ -670,6 +670,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
         HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry());
     void *TgtPtrBegin = TPR.TargetPointer;
+    if (auto *FakeTgtPtrBegin = TPR.getEntry()->FakeTgtPtrBegin)
+      TgtPtrBegin = FakeTgtPtrBegin;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
     // NULL, so getOrAlloc() returning NULL is not an error.
@@ -1523,11 +1525,15 @@ static int processDataBefore(ident_t *Loc, int64_t DeviceId, void *HostPtr,
           /*UpdateRefCount=*/false,
           /*UseHoldRefCount=*/false);
       TgtPtrBegin = TPR.TargetPointer;
+      if (auto *FakeTgtPtrBegin = TPR.getEntry()->FakeTgtPtrBegin)
+        TgtPtrBegin = FakeTgtPtrBegin;
       TgtBaseOffset = (intptr_t)HstPtrBase - (intptr_t)HstPtrBegin;
 #ifdef OMPTARGET_DEBUG
       void *TgtPtrBase = (void *)((intptr_t)TgtPtrBegin + TgtBaseOffset);
-      DP("Obtained target argument " DPxMOD " from host pointer " DPxMOD "\n",
-         DPxPTR(TgtPtrBase), DPxPTR(HstPtrBegin));
+      DP("Obtained target argument " DPxMOD " from host pointer " DPxMOD
+         " %s\n",
+         DPxPTR(TgtPtrBase), DPxPTR(HstPtrBegin),
+         TgtPtrBegin != TPR.TargetPointer ? "fake" : "");
 #endif
     }
     TgtArgsPositions[I] = TgtArgs.size();

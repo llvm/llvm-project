@@ -71,6 +71,7 @@ struct HostDataToTargetTy {
 
   const uintptr_t TgtAllocBegin; // allocated target memory
   const uintptr_t TgtPtrBegin; // mapped target memory = TgtAllocBegin + padding
+  void *FakeTgtPtrBegin = 0;   // mapped target memory = TgtAllocBegin + padding
 
 private:
   static const uint64_t INFRefCount = ~(uint64_t)0;
@@ -125,9 +126,10 @@ public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E,
                      uintptr_t TgtAllocBegin, uintptr_t TgtPtrBegin,
                      bool UseHoldRefCount, map_var_info_t Name = nullptr,
-                     bool IsINF = false)
+                     bool IsINF = false, void *FakeTgtPtrBegin = nullptr)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
         TgtAllocBegin(TgtAllocBegin), TgtPtrBegin(TgtPtrBegin),
+        FakeTgtPtrBegin(FakeTgtPtrBegin),
         States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
                                           : IsINF         ? INFRefCount
                                                           : 1,

@@ -13,6 +13,8 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
+#include <cstdio>
 #include <deque>
 #include <mutex>
 #include <string>
@@ -685,12 +687,12 @@ struct AMDGPUQueueTy {
   AMDGPUQueueTy() : Queue(nullptr), Mutex(), NumUsers(0) {}
 
   /// Lazily initialize a new queue belonging to a specific agent.
-  Error init(hsa_agent_t Agent, int32_t QueueSize) {
+  Error init(GenericDeviceTy &Device, hsa_agent_t Agent, int32_t QueueSize) {
     if (Queue)
       return Plugin::success();
     hsa_status_t Status =
         hsa_queue_create(Agent, QueueSize, HSA_QUEUE_TYPE_MULTI, callbackError,
-                         nullptr, UINT32_MAX, UINT32_MAX, &Queue);
+                         &Device, UINT32_MAX, UINT32_MAX, &Queue);
     return Plugin::check(Status, "Error in hsa_queue_create: %s");
   }
 
@@ -875,10 +877,8 @@ private:
   }
 
   /// Callack that will be called when an error is detected on the HSA queue.
-  static void callbackError(hsa_status_t Status, hsa_queue_t *Source, void *) {
-    auto Err = Plugin::check(Status, "Received error in queue %p: %s", Source);
-    FATAL_MESSAGE(1, "%s", toString(std::move(Err)).data());
-  }
+  static void callbackError(hsa_status_t Status, hsa_queue_t *Source,
+                            void *Data);
 
   /// The HSA queue.
   hsa_queue_t *Queue;
@@ -1593,8 +1593,9 @@ struct AMDGPUStreamManagerTy final
   using ResourceRef = AMDGPUResourceRef<AMDGPUStreamTy>;
   using ResourcePoolTy = GenericDeviceResourceManagerTy<ResourceRef>;
 
+  GenericDeviceTy &Device;
   AMDGPUStreamManagerTy(GenericDeviceTy &Device, hsa_agent_t HSAAgent)
-      : GenericDeviceResourceManagerTy(Device),
+      : GenericDeviceResourceManagerTy(Device), Device(Device),
         OMPX_QueueTracking("LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING", true),
         NextQueue(0), Agent(HSAAgent) {}
 
@@ -1603,7 +1604,7 @@ struct AMDGPUStreamManagerTy final
     QueueSize = HSAQueueSize;
     MaxNumQueues = NumHSAQueues;
     // Initialize one queue eagerly
-    if (auto Err = Queues.front().init(Agent, QueueSize))
+    if (auto Err = Queues.front().init(Device, Agent, QueueSize))
       return Err;
 
     return GenericDeviceResourceManagerTy::init(InitialSize);
@@ -1660,7 +1661,7 @@ private:
     }
 
     // Make sure the queue is initialized, then add user & assign.
-    if (auto Err = Queues[Index].init(Agent, QueueSize))
+    if (auto Err = Queues[Index].init(Device, Agent, QueueSize))
       return Err;
     Queues[Index].addUser();
     Stream->Queue = &Queues[Index];
@@ -3487,6 +3488,37 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   }
 
   return Alloc;
+}
+
+void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
+                                  void *Data) {
+
+  auto *Device = reinterpret_cast<AMDGPUDeviceTy *>(Data);
+  //
+  //  int64_t OmpxTrapId = -1;
+  //  GlobalTy TrapId("__ompx_trap_id", sizeof(int64_t), &OmpxTrapId);
+  //
+  //  printf("Check for trap id\n");
+  //  fflush(stdout);
+  //  // Write device environment values to the device.
+  //  GenericGlobalHandlerTy &GHandler = Device->Plugin.getGlobalHandler();
+  //  for (auto *Image : Device->images()) {
+  //    if (auto Err = GHandler.readGlobalFromDevice(*Device, *Image, TrapId)) {
+  //      REPORT("%s\n", toString(std::move(Err)).data());
+  //      continue;
+  //    }
+  //    if (OmpxTrapId != 0)
+  //      break;
+  //  }
+  //
+  //  printf("Trap ID: %li\n", OmpxTrapId);
+  printf("Trap ID[%zu:%p] Acc[%zu] : %p[:%lu] vs %lu\n",
+         (uint64_t)Device->OmpxTrapId->ID, (void *)Device->OmpxTrapId->ID,
+         Device->OmpxTrapId->AccessID, Device->OmpxTrapId->Start,
+         Device->OmpxTrapId->Length, Device->OmpxTrapId->Offset);
+  fflush(stdout);
+  auto Err = Plugin::check(Status, "Received error in queue %p: %s", Source);
+  FATAL_MESSAGE(1, "%s", toString(std::move(Err)).data());
 }
 
 } // namespace plugin

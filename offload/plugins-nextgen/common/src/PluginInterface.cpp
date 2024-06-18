@@ -1001,6 +1001,17 @@ Error GenericDeviceTy::setupDeviceMemoryPool(GenericPluginTy &Plugin,
   if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrackerGlobal))
     return Err;
 
+  OmpxTrapId = reinterpret_cast<OMPXTrapIDTy *>(
+      allocate(sizeof(*OmpxTrapId), &OmpxTrapId, TARGET_ALLOC_HOST));
+  OmpxTrapId->Start = 0;
+  OmpxTrapId->Length = -1;
+  OmpxTrapId->Offset = -1;
+  OmpxTrapId->ID = -1;
+
+  GlobalTy TrapId("__ompx_trap_id", sizeof(OmpxTrapId), &OmpxTrapId);
+  if (auto Err = GHandler.writeGlobalToDevice(*this, Image, TrapId))
+    return Err;
+
   // Create the metainfo of the device environment global.
   GlobalTy DevEnvGlobal("__omp_rtl_device_memory_pool",
                         sizeof(DeviceMemoryPoolTy), &DeviceMemoryPool);

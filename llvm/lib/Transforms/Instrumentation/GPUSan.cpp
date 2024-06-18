@@ -12,9 +12,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
@@ -64,11 +66,12 @@ private:
 
   FunctionCallee getNewAllocationFn() {
     getOrCreateFn(NewAllocationFn, "ompx_new_allocation", PtrTy,
-                  {PtrTy, Int64Ty});
+                  {PtrTy, Int64Ty, Int64Ty});
     return NewAllocationFn;
   }
   FunctionCallee getAccessFn() {
-    getOrCreateFn(AccessFn, "ompx_check_access", PtrTy, {PtrTy, Int64Ty});
+    getOrCreateFn(AccessFn, "ompx_check_access", PtrTy,
+                  {PtrTy, Int64Ty, Int64Ty});
     return AccessFn;
   }
   FunctionCallee getGEPFn() {
@@ -117,13 +120,16 @@ bool GPUSanImpl::instrumentGlobals() {
 
 void GPUSanImpl::instrumentAllocation(Instruction &I, Value &Size) {
   IRBuilder<> IRB(I.getNextNode());
+  Value *PlainI = IRB.CreatePointerBitCastOrAddrSpaceCast(&I, PtrTy);
+  static int X = 1;
   auto *CB = IRB.CreateCall(getNewAllocationFn(),
-                            {UndefValue::get(I.getType()), &Size},
+                            {PlainI, &Size, ConstantInt::get(Int64Ty, X++)},
                             I.getName() + ".san");
-  I.replaceUsesWithIf(
-      IRB.CreatePointerBitCastOrAddrSpaceCast(CB, I.getType()),
-      [](Use &U) { return !isa<LifetimeIntrinsic>(U.getUser()); });
-  CB->setArgOperand(0, &I);
+  I.replaceUsesWithIf(IRB.CreatePointerBitCastOrAddrSpaceCast(CB, I.getType()),
+                      [=](Use &U) {
+                        return U.getUser() != PlainI && U.getUser() != CB &&
+                               !isa<LifetimeIntrinsic>(U.getUser());
+                      });
 }
 
 void GPUSanImpl::instrumentAllocaInst(AllocaInst &AI) {
@@ -140,7 +146,14 @@ void GPUSanImpl::instrumentAccess(Instruction &I, int PtrIdx, Type &AccessTy) {
   Value *Size = ConstantInt::get(Int64Ty, TySize.getFixedValue());
   IRBuilder<> IRB(&I);
   Value *PtrOp = I.getOperand(PtrIdx);
-  auto *CB = IRB.CreateCall(getAccessFn(), {PtrOp, Size}, I.getName() + ".san");
+  auto *UO = getUnderlyingObject(PtrOp);
+  if (isa<GlobalObject>(UO))
+    return;
+  Value *PlainPtrOp = IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, PtrTy);
+  static int X = 1;
+  auto *CB = IRB.CreateCall(getAccessFn(),
+                            {PlainPtrOp, Size, ConstantInt::get(Int64Ty, X++)},
+                            I.getName() + ".san");
   I.setOperand(PtrIdx,
                IRB.CreatePointerBitCastOrAddrSpaceCast(CB, PtrOp->getType()));
 }
@@ -156,13 +169,18 @@ void GPUSanImpl::instrumentStoreInst(StoreInst &SI) {
 
 void GPUSanImpl::instrumentGEPInst(GetElementPtrInst &GEP) {
   Value *PtrOp = GEP.getPointerOperand();
+  auto *UO = getUnderlyingObject(PtrOp);
+  if (isa<GlobalObject>(UO))
+    return;
   GEP.setOperand(GetElementPtrInst::getPointerOperandIndex(),
                  Constant::getNullValue(PtrOp->getType()));
 
   IRBuilder<> IRB(GEP.getNextNode());
-  auto *CB = IRB.CreateCall(getGEPFn(), {PtrOp, UndefValue::get(Int64Ty)},
+  Value *PlainPtrOp = IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, PtrTy);
+  auto *CB = IRB.CreateCall(getGEPFn(), {PlainPtrOp, UndefValue::get(Int64Ty)},
                             GEP.getName() + ".san");
-  GEP.replaceAllUsesWith(CB);
+  GEP.replaceAllUsesWith(
+      IRB.CreatePointerBitCastOrAddrSpaceCast(CB, GEP.getType()));
   Value *Offset =
       new PtrToIntInst(&GEP, Int64Ty, GEP.getName() + ".san.offset", CB);
   CB->setArgOperand(1, Offset);
@@ -170,16 +188,24 @@ void GPUSanImpl::instrumentGEPInst(GetElementPtrInst &GEP) {
 
 bool GPUSanImpl::instrumentCallInst(CallInst &CI) {
   bool Changed = false;
+  if (isa<LifetimeIntrinsic>(CI))
+    return Changed;
   if (auto *Fn = CI.getCalledFunction()) {
-    if (Fn->isDeclaration() && !Fn->getName().starts_with("ompx")) {
+    if ((Fn->isDeclaration() || Fn->getName().starts_with("__kmpc")) &&
+        !Fn->getName().starts_with("ompx")) {
       IRBuilder<> IRB(&CI);
       for (int I = 0, E = CI.arg_size(); I != E; ++I) {
-        auto *Op = CI.getArgOperand(I);
+        Value *Op = CI.getArgOperand(I);
         if (!Op->getType()->isPointerTy())
           continue;
+        auto *UO = getUnderlyingObject(Op);
+        if (isa<GlobalObject>(UO))
+          continue;
+        Value *PlainOp = IRB.CreatePointerBitCastOrAddrSpaceCast(Op, PtrTy);
         auto *CB =
-            IRB.CreateCall(getUnpackFn(), {Op}, Op->getName() + ".unpack");
-        CI.setArgOperand(I, CB);
+            IRB.CreateCall(getUnpackFn(), {PlainOp}, Op->getName() + ".unpack");
+        CI.setArgOperand(
+            I, IRB.CreatePointerBitCastOrAddrSpaceCast(CB, Op->getType()));
         Changed = true;
       }
     }
@@ -222,7 +248,9 @@ bool GPUSanImpl::instrumentFunction(Function &Fn) {
 bool GPUSanImpl::instrument() {
   bool Changed = instrumentGlobals();
   for (Function &Fn : M)
-    Changed |= instrumentFunction(Fn);
+    if (!Fn.getName().contains("ompx") && !Fn.getName().contains("__kmpc"))
+      Changed |= instrumentFunction(Fn);
+  M.dump();
   return Changed;
 }
 

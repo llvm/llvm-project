@@ -105,4 +105,12 @@ struct KernelLaunchEnvironmentTy {
   void *ReductionBuffer = nullptr;
 };
 
+struct OMPXTrapIDTy {
+  void *Start;
+  uint64_t Length;
+  uint64_t Offset;
+  uint64_t ID;
+  uint64_t AccessID;
+};
+
 #endif // OMPTARGET_SHARED_ENVIRONMENT_H
