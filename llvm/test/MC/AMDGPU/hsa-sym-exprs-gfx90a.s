@@ -70,7 +70,7 @@ expr_defined:
 // ASM-NEXT: .amdhsa_group_segment_fixed_size 0
 // ASM-NEXT: .amdhsa_private_segment_fixed_size 0
 // ASM-NEXT: .amdhsa_kernarg_size 0
-// ASM-NEXT: .amdhsa_user_sgpr_count (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&62)>>1
+// ASM-NEXT: .amdhsa_user_sgpr_count 0
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_buffer 0
 // ASM-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
 // ASM-NEXT: .amdhsa_user_sgpr_queue_ptr 0
@@ -81,7 +81,7 @@ expr_defined:
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_offset 0
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 0
 // ASM-NEXT: .amdhsa_system_sgpr_private_segment_wavefront_offset (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&1)>>0
-// ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&128)>>7
+// ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_y (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&256)>>8
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_z (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&512)>>9
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&1024)>>10
