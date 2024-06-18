@@ -232,10 +232,10 @@ class _LIBCPP_TEMPLATE_VIS __base;
 
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
-  __base(const __base&);
-  __base& operator=(const __base&);
-
 public:
+  __base(const __base&)            = delete;
+  __base& operator=(const __base&) = delete;
+
   _LIBCPP_HIDE_FROM_ABI __base() {}
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__base() {}
   virtual __base* __clone() const             = 0;

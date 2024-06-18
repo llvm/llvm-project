@@ -792,11 +792,11 @@ public:
 private:
   allocator_type& __na_;
 
-  __hash_map_node_destructor& operator=(const __hash_map_node_destructor&);
-
 public:
   bool __first_constructed;
   bool __second_constructed;
+
+  __hash_map_node_destructor& operator=(const __hash_map_node_destructor&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI explicit __hash_map_node_destructor(allocator_type& __na) _NOEXCEPT
       : __na_(__na),
@@ -882,7 +882,6 @@ public:
     return *this;
   }
 
-private:
   __hash_value_type(const __hash_value_type& __v) = delete;
   __hash_value_type(__hash_value_type&& __v)      = delete;
   template <class... _Args>
@@ -906,8 +905,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI value_type& __get_value() { return __cc_; }
   _LIBCPP_HIDE_FROM_ABI const value_type& __get_value() const { return __cc_; }
 
-private:
-  ~__hash_value_type();
+  ~__hash_value_type() = delete;
 };
 
 #endif
