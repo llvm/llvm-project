@@ -62,7 +62,6 @@ set(LLVM_TEST_DEPENDS
           BugpointPasses
           CASPluginTest
           FileCheck
-          LLVMHello
           LLVMWindowsDriver
           UnitTests
           bugpoint
