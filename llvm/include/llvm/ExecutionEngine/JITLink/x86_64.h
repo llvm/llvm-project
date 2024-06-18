@@ -87,7 +87,7 @@ enum EdgeKind_x86_64 : Edge::Kind {
   /// Delta from the fixup to the target.
   ///
   /// Fixup expression:
-  ///   Fixup <- Target - Fixup + Addend : int64
+  ///   Fixup <- Target - Fixup + Addend : int32
   ///
   /// Errors:
   ///   - The result of the fixup expression must fit into an int32, otherwise
@@ -100,7 +100,7 @@ enum EdgeKind_x86_64 : Edge::Kind {
   /// Delta from the fixup to the target.
   ///
   /// Fixup expression:
-  ///   Fixup <- Target - Fixup + Addend : int64
+  ///   Fixup <- Target - Fixup + Addend : int8
   ///
   /// Errors:
   ///   - The result of the fixup expression must fit into an int8, otherwise
