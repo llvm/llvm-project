@@ -14,6 +14,10 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include <optional>
 
+/**
+ * @brief 所有 LLVM tools 中的库都是以初始化 InitLLVM 开始的
+ *
+ */
 // The main() functions in typical LLVM tools start with InitLLVM which does
 // the following one-time initializations:
 //

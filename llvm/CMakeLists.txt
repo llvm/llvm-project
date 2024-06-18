@@ -1087,7 +1087,7 @@ endforeach(t)
 # Provide an LLVM_ namespaced alias for use in #cmakedefine.
 set(LLVM_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
-# def.in文件为模板文件，里面的@XXX@字段会被变量 XXX 的值替换掉
+# // Cratels:def.in文件为模板文件，里面的@XXX@字段会被变量 XXX 的值替换掉
 # Produce the target definition files, which provide a way for clients to easily
 # include various classes of targets.
 configure_file(
