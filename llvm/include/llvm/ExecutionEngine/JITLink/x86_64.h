@@ -489,7 +489,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case Delta8: {
     int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
     if (LLVM_LIKELY(isInt<8>(Value)))
-      *(little32_t *)FixupPtr = Value;
+      *FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
     break;
