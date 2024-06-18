@@ -821,16 +821,20 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
       // to get the value to the caller and we break out of the loop.
       if (VA.getLocInfo() == CCValAssign::Indirect &&
           !Handler.isIncomingArgumentHandler()) {
-        Align StackAlign = DL.getPrefTypeAlign(Args[i].Ty);
+        Align AlignmentForStored = DL.getPrefTypeAlign(Args[i].Ty);
         MachineFrameInfo &MFI = MF.getFrameInfo();
+        // Get some space on the stack for the value, so later we can pass it
+        // as a reference.
         int FrameIdx = MFI.CreateStackObject(OrigTy.getScalarSizeInBits(),
-                                             StackAlign, false);
+                                             AlignmentForStored, false);
         Register PointerToStackReg =
             MIRBuilder.buildFrameIndex(PointerTy, FrameIdx).getReg(0);
-        MachinePointerInfo DstMPO =
+        MachinePointerInfo StackPointerMPO =
             MachinePointerInfo::getFixedStack(MF, FrameIdx);
-        MIRBuilder.buildStore(Args[i].OrigRegs[Part], PointerToStackReg, DstMPO,
-                              inferAlignFromPtrInfo(MF, DstMPO));
+        // Store the value in the previously created stack space.
+        MIRBuilder.buildStore(Args[i].OrigRegs[Part], PointerToStackReg,
+                              StackPointerMPO,
+                              inferAlignFromPtrInfo(MF, StackPointerMPO));
 
         ArgReg = PointerToStackReg;
         IndirectParameterPassingHandled = true;
