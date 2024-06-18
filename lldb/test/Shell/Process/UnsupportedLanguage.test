@@ -14,4 +14,4 @@ RUN:   | sed -e 's/DW_LANG_C99/DW_LANG_Cobol74/g' >%t.ll
 RUN: %clang_host %t.ll -g -o %t.exe
 RUN: %lldb -o "b main" -o r -o q -b %t.exe 2>&1 | FileCheck %s --check-prefix COBOL
 
-COBOL-NOT: This version of LLDB has no plugin for the language "cobol"
+COBOL: This version of LLDB has no plugin for the language "cobol74"
