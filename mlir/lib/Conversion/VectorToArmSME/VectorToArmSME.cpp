@@ -687,12 +687,17 @@ struct FoldTransferWriteOfExtractTileSlice
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const final {
     if (!isa<MemRefType>(writeOp.getSource().getType()))
-      return failure();
+      return rewriter.notifyMatchFailure(writeOp, "destination not a memref");
+
+    if (writeOp.hasOutOfBoundsDim())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "not inbounds transfer write");
 
     auto moveTileSlice =
         writeOp.getVector().getDefiningOp<arm_sme::MoveTileSliceToVectorOp>();
     if (!moveTileSlice)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          writeOp, "vector to store not from MoveTileSliceToVectorOp");
 
     AffineMap map = writeOp.getPermutationMap();
     if (!map.isMinorIdentity())
