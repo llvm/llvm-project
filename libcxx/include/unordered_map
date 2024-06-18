@@ -1415,13 +1415,11 @@ public:
     return __table_.__equal_range_unique(__k);
   }
 #if _LIBCPP_STD_VER >= 20
-  template <class _K2,
-            enable_if_t<__is_transparent_v<hasher, _K2> && __is_transparent_v<key_equal, _K2>>* = nullptr>
+  template <class _K2, enable_if_t<__is_transparent_v<hasher, _K2> && __is_transparent_v<key_equal, _K2>>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) {
     return __table_.__equal_range_unique(__k);
   }
-  template <class _K2,
-            enable_if_t<__is_transparent_v<hasher, _K2> && __is_transparent_v<key_equal, _K2>>* = nullptr>
+  template <class _K2, enable_if_t<__is_transparent_v<hasher, _K2> && __is_transparent_v<key_equal, _K2>>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
     return __table_.__equal_range_unique(__k);
   }
@@ -2162,13 +2160,11 @@ public:
     return __table_.__equal_range_multi(__k);
   }
 #if _LIBCPP_STD_VER >= 20
-  template <class _K2,
-            enable_if_t<__is_transparent_v<hasher, _K2> && __is_transparent_v<key_equal, _K2>>* = nullptr>
+  template <class _K2, enable_if_t<__is_transparent_v<hasher, _K2> && __is_transparent_v<key_equal, _K2>>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _K2& __k) {
     return __table_.__equal_range_multi(__k);
   }
-  template <class _K2,
-            enable_if_t<__is_transparent_v<hasher, _K2> && __is_transparent_v<key_equal, _K2>>* = nullptr>
+  template <class _K2, enable_if_t<__is_transparent_v<hasher, _K2> && __is_transparent_v<key_equal, _K2>>* = nullptr>
   _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _K2& __k) const {
     return __table_.__equal_range_multi(__k);
   }
@@ -2243,12 +2239,12 @@ template <class _Key,
           class            = enable_if_t<!is_integral<_Hash>::value>,
           class            = enable_if_t<!__is_allocator<_Pred>::value>,
           class            = enable_if_t<__is_allocator<_Allocator>::value>>
-unordered_multimap(initializer_list<pair<_Key, _Tp>>,
-                   typename allocator_traits<_Allocator>::size_type = 0,
-                   _Hash                                            = _Hash(),
-                   _Pred                                            = _Pred(),
-                   _Allocator                                       = _Allocator())
-    -> unordered_multimap<remove_const_t<_Key>, _Tp, _Hash, _Pred, _Allocator>;
+unordered_multimap(
+    initializer_list<pair<_Key, _Tp>>,
+    typename allocator_traits<_Allocator>::size_type = 0,
+    _Hash                                            = _Hash(),
+    _Pred                                            = _Pred(),
+    _Allocator = _Allocator()) -> unordered_multimap<remove_const_t<_Key>, _Tp, _Hash, _Pred, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,

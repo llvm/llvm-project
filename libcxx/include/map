@@ -1357,9 +1357,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(map& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) {
-    __tree_.swap(__m.__tree_);
-  }
+  _LIBCPP_HIDE_FROM_ABI void swap(map& __m) _NOEXCEPT_(__is_nothrow_swappable_v<__base>) { __tree_.swap(__m.__tree_); }
 
   _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __k) { return __tree_.find(__k); }
   _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __k) const { return __tree_.find(__k); }
@@ -1475,8 +1473,9 @@ template <class _Key,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
-map(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
-    -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
+map(initializer_list<pair<_Key, _Tp>>,
+    _Compare   = _Compare(),
+    _Allocator = _Allocator()) -> map<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -1495,8 +1494,8 @@ map(from_range_t, _Range&&, _Allocator)
 #  endif
 
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-map(initializer_list<pair<_Key, _Tp>>, _Allocator)
-    -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+map(initializer_list<pair<_Key, _Tp>>,
+    _Allocator) -> map<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
@@ -2061,8 +2060,9 @@ template <class _Key,
           class _Allocator = allocator<pair<const _Key, _Tp>>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multimap(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare(), _Allocator = _Allocator())
-    -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
+multimap(initializer_list<pair<_Key, _Tp>>,
+         _Compare   = _Compare(),
+         _Allocator = _Allocator()) -> multimap<remove_const_t<_Key>, _Tp, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -2081,8 +2081,8 @@ multimap(from_range_t, _Range&&, _Allocator)
 #  endif
 
 template <class _Key, class _Tp, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
-    -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
+multimap(initializer_list<pair<_Key, _Tp>>,
+         _Allocator) -> multimap<remove_const_t<_Key>, _Tp, less<remove_const_t<_Key>>, _Allocator>;
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG
