@@ -1743,7 +1743,7 @@ Constant *GetConstantFoldFPValue(double V, Type *Ty) {
   llvm_unreachable("Can only constant fold half/float/double");
 }
 
-#if defined(HAS_IEE754_FLOAT128)
+#if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
 Constant *GetConstantFoldFPValue128(float128 V, Type *Ty) {
   if (Ty->isFP128Ty())
     return ConstantFP::get(Ty, V);
