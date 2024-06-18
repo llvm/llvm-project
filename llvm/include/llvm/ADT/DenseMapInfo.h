@@ -26,17 +26,15 @@ namespace llvm {
 namespace detail {
 
 /// Simplistic combination of 32-bit hash values into 32-bit hash values.
+/// This uses a Murmur3-type mixer "Moremur" from Pelle Evensen.
 static inline unsigned combineHashValue(unsigned a, unsigned b) {
-  uint64_t key = (uint64_t)a << 32 | (uint64_t)b;
-  key += ~(key << 32);
-  key ^= (key >> 22);
-  key += ~(key << 13);
-  key ^= (key >> 8);
-  key += (key << 3);
-  key ^= (key >> 15);
-  key += ~(key << 27);
-  key ^= (key >> 31);
-  return (unsigned)key;
+  uint64_t x = (uint64_t)a << 32 | (uint64_t)b;
+  x ^= x >> 27;
+  x *= 0x3C79AC492BA7B653UL;
+  x ^= x >> 33;
+  x *= 0x1C69B3F74AC4AE35UL;
+  x ^= x >> 27;
+  return (unsigned)x;
 }
 
 } // end namespace detail
