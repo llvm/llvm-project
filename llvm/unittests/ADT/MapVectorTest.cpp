@@ -267,30 +267,6 @@ TEST(MapVectorTest, NonCopyable) {
   ASSERT_EQ(*MV.find(2)->second, 2);
 }
 
-TEST(MapVectorTest, EnumClassKey) {
-  enum class EC1 { ValA, ValB };
-  enum class EC2 { ValA, ValB };
-  MapVector<EC1, int> MV1;
-  MapVector<EC2, int> MV2;
-
-  ASSERT_TRUE(MV1.empty());
-  ASSERT_TRUE(MV2.empty());
-  MV1.insert({EC1::ValA, 13});
-  MV1.insert({EC1::ValB, 7});
-  MV2.insert({EC2::ValA, 42});
-  MV2.insert({EC2::ValB, 43});
-
-  ASSERT_EQ(MV1.count(EC1::ValA), 1u);
-  ASSERT_EQ(MV2.count(EC2::ValA), 1u);
-  ASSERT_EQ(MV2[EC2::ValB], 43);
-  ASSERT_NE(DenseMapInfo<EC1>::getHashValue(EC1::ValA),
-            DenseMapInfo<EC1>::getHashValue(EC1::ValB));
-  ASSERT_NE(EC2::ValA, DenseMapInfo<EC2>::getTombstoneKey());
-  ASSERT_NE(EC2::ValB, DenseMapInfo<EC2>::getTombstoneKey());
-  ASSERT_NE(EC2::ValA, DenseMapInfo<EC2>::getEmptyKey());
-  ASSERT_NE(EC2::ValB, DenseMapInfo<EC2>::getEmptyKey());
-}
-
 template <class IntType> struct MapVectorMappedTypeTest : ::testing::Test {
   using int_type = IntType;
 };

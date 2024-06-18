@@ -313,10 +313,7 @@ struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
     return Info::getHashValue(static_cast<UnderlyingType>(Val));
   }
 
-  static bool isEqual(const Enum &LHS, const Enum &RHS) {
-    return Info::isEqual(static_cast<UnderlyingType>(LHS),
-                         static_cast<UnderlyingType>(RHS));
-  }
+  static bool isEqual(const Enum &LHS, const Enum &RHS) { return LHS == RHS; }
 };
 } // end namespace llvm
 
