@@ -214,6 +214,7 @@ template <class T, class Allocator, class Predicate>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_swappable.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -804,7 +805,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value);
+      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
 #endif
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT;
 
@@ -2462,7 +2463,7 @@ inline void deque<_Tp, _Allocator>::swap(deque& __c)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value)
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #endif
 {
   __map_.swap(__c.__map_);
