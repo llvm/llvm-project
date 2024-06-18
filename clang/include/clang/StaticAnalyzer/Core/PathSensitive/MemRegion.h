@@ -174,16 +174,7 @@ public:
 
   Kind getKind() const { return kind; }
 
-  StringRef getKindStr() const {
-    switch (getKind()) {
-#define REGION(Id, Parent)                                                     \
-  case Id##Kind:                                                               \
-    return #Id;
-#include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
-#undef REGION
-    }
-    llvm_unreachable("Unkown kind!");
-  }
+  StringRef getKindStr() const;
 
   template<typename RegionTy> const RegionTy* getAs() const;
   template <typename RegionTy>

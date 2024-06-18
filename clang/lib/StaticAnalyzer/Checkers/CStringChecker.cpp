@@ -360,15 +360,15 @@ REGISTER_MAP_WITH_PROGRAMSTATE(CStringLength, const MemRegion *, SVal)
 //===----------------------------------------------------------------------===//
 
 std::pair<ProgramStateRef , ProgramStateRef >
-CStringChecker::assumeZero(CheckerContext &C, ProgramStateRef state, SVal V,
+CStringChecker::assumeZero(CheckerContext &C, ProgramStateRef State, SVal V,
                            QualType Ty) {
   std::optional<DefinedSVal> val = V.getAs<DefinedSVal>();
   if (!val)
-    return std::pair<ProgramStateRef , ProgramStateRef >(state, state);
+    return std::pair<ProgramStateRef , ProgramStateRef >(State, State);
 
   SValBuilder &svalBuilder = C.getSValBuilder();
   DefinedOrUnknownSVal zero = svalBuilder.makeZeroVal(Ty);
-  return state->assume(svalBuilder.evalEQ(state, *val, zero));
+  return State->assume(svalBuilder.evalEQ(State, *val, zero));
 }
 
 ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
@@ -403,8 +403,8 @@ ProgramStateRef CStringChecker::checkNonNull(CheckerContext &C,
 
 static std::optional<NonLoc> getIndex(ProgramStateRef State,
                                       const ElementRegion *ER, CharKind CK) {
-  SValBuilder &SValBuilder = State->getStateManager().getSValBuilder();
-  ASTContext &Ctx = SValBuilder.getContext();
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  ASTContext &Ctx = SVB.getContext();
 
   if (CK == CharKind::Regular) {
     if (ER->getValueType() != Ctx.CharTy)
@@ -417,18 +417,17 @@ static std::optional<NonLoc> getIndex(ProgramStateRef State,
 
   QualType SizeTy = Ctx.getSizeType();
   NonLoc WideSize =
-      SValBuilder
-          .makeIntVal(Ctx.getTypeSizeInChars(Ctx.WideCharTy).getQuantity(),
-                      SizeTy)
+      SVB.makeIntVal(Ctx.getTypeSizeInChars(Ctx.WideCharTy).getQuantity(),
+                     SizeTy)
           .castAs<NonLoc>();
   SVal Offset =
-      SValBuilder.evalBinOpNN(State, BO_Mul, ER->getIndex(), WideSize, SizeTy);
+      SVB.evalBinOpNN(State, BO_Mul, ER->getIndex(), WideSize, SizeTy);
   if (Offset.isUnknown())
     return {};
   return Offset.castAs<NonLoc>();
 }
 
-// Try to get hold of the origin regin (e.g. the actual array region from an
+// Try to get hold of the origin region (e.g. the actual array region from an
 // element region).
 static const TypedValueRegion *getOriginRegion(const ElementRegion *ER) {
   const MemRegion *MR = ER->getSuperRegion();
@@ -440,8 +439,8 @@ static const TypedValueRegion *getOriginRegion(const ElementRegion *ER) {
       return nullptr;
     Ret = sym2->getOriginRegion();
   }
-  if (const auto *element = MR->getAs<ElementRegion>()) {
-    Ret = element->getBaseRegion();
+  if (const auto *Elem = MR->getAs<ElementRegion>()) {
+    Ret = Elem->getBaseRegion();
   }
   return dyn_cast_or_null<TypedValueRegion>(Ret);
 }
@@ -472,21 +471,19 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!Orig)
     return State;
 
-  SValBuilder &SValBuilder = State->getStateManager().getSValBuilder();
-  ASTContext &Ctx = SValBuilder.getContext();
-
   // FIXME: We ought to able to check objects as well. Maybe
   // UninitializedObjectChecker could help?
   if (!Orig->getValueType()->isArrayType())
     return State;
 
-  const QualType ElemTy = Ctx.getBaseElementType(Orig->getValueType());
-  const NonLoc Zero = SValBuilder.makeZeroArrayIndex();
+  SValBuilder &SVB = C.getSValBuilder();
+  ASTContext &Ctx = SVB.getContext();
 
-  SVal FirstElementVal =
+  const QualType ElemTy = Ctx.getBaseElementType(Orig->getValueType());
+  const NonLoc Zero = SVB.makeZeroArrayIndex();
+
+  Loc FirstElementVal =
       State->getLValue(ElemTy, Zero, loc::MemRegionVal(Orig)).castAs<Loc>();
-  if (!isa<Loc>(FirstElementVal))
-    return State;
 
   // Ensure that we wouldn't read uninitialized value.
   if (Filter.CheckCStringUninitializedRead &&
@@ -503,11 +500,10 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   // We won't check whether the entire region is fully initialized -- lets just
   // check that the first and the last element is. So, onto checking the last
   // element:
-  const QualType IdxTy = SValBuilder.getArrayIndexType();
+  const QualType IdxTy = SVB.getArrayIndexType();
 
   NonLoc ElemSize =
-      SValBuilder
-          .makeIntVal(Ctx.getTypeSizeInChars(ElemTy).getQuantity(), IdxTy)
+      SVB.makeIntVal(Ctx.getTypeSizeInChars(ElemTy).getQuantity(), IdxTy)
           .castAs<NonLoc>();
 
   // FIXME: Check that the size arg to the cstring function is divisible by
@@ -529,14 +525,13 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   // type. This value will be size of the array, or the index to the
   // past-the-end element.
   std::optional<NonLoc> Offset =
-      SValBuilder
-          .evalBinOpNN(State, clang::BO_Div, Size.castAs<NonLoc>(), ElemSize,
-                       IdxTy)
+      SVB.evalBinOpNN(State, clang::BO_Div, Size.castAs<NonLoc>(), ElemSize,
+                      IdxTy)
           .getAs<NonLoc>();
 
   // Retrieve the index of the last element.
-  const NonLoc One = SValBuilder.makeIntVal(1, IdxTy).castAs<NonLoc>();
-  SVal LastIdx = SValBuilder.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
+  const NonLoc One = SVB.makeIntVal(1, IdxTy).castAs<NonLoc>();
+  SVal LastIdx = SVB.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
 
   if (!Offset)
     return State;
@@ -598,8 +593,7 @@ ProgramStateRef CStringChecker::CheckLocation(CheckerContext &C,
   DefinedOrUnknownSVal Size =
       getDynamicExtent(state, superReg, C.getSValBuilder());
 
-  ProgramStateRef StInBound, StOutBound;
-  std::tie(StInBound, StOutBound) = state->assumeInBoundDual(*Idx, Size);
+  auto [StInBound, StOutBound] = state->assumeInBoundDual(*Idx, Size);
   if (StOutBound && !StInBound) {
     // These checks are either enabled by the CString out-of-bounds checker
     // explicitly or implicitly by the Malloc checker.
