@@ -6,8 +6,8 @@ declare i64 @llvm.ptrauth.auth(i64, i32, i64)
 define void @f(i64 %arg, i64 %arg1) !dbg !8 {
 entry:
   %tmp = call i64 @llvm.ptrauth.auth(i64 %arg, i32 0, i64 %arg1)
-  ; CHECK: call void @llvm.dbg.value(metadata i64 %arg,
-  ; CHECK-SAME: !DIExpression())
+  ; CHECK: #dbg_value(i64 %arg,
+  ; CHECK-SAME: !DIExpression(),
   call void @llvm.dbg.value(metadata i64 %tmp, metadata !11, metadata !DIExpression()), !dbg !13
   ret void, !dbg !13
 }
