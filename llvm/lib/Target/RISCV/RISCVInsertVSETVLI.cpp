@@ -892,7 +892,6 @@ public:
 
     AU.addUsedIfAvailable<LiveIntervals>();
     AU.addPreserved<LiveIntervals>();
-    AU.addUsedIfAvailable<SlotIndexes>();
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveDebugVariables>();
     AU.addPreserved<LiveStacks>();
