@@ -198,6 +198,12 @@ bool WindowScheduler::initialize() {
     if (MI.isMetaInstruction() || MI.isTerminator())
       continue;
     if (MI.isPHI()) {
+      if (Register AntiReg = getAntiRegister(&MI))
+        // Register with Kernel in phi is not defined within the Kernel itself.
+        if (MRI->getVRegDef(AntiReg)->getParent() != MBB) {
+          LLVM_DEBUG(dbgs() << "Special phi structure is not supported!\n");
+          return false;
+        }
       for (auto Def : PhiDefs)
         if (MI.readsRegister(Def, TRI)) {
           LLVM_DEBUG(
@@ -683,7 +689,7 @@ Register WindowScheduler::getAntiRegister(MachineInstr *Phi) {
   for (auto MO : Phi->uses()) {
     if (MO.isReg())
       AntiReg = MO.getReg();
-    else if (MO.isMBB() && MO.getMBB()->getNumber() == MBB->getNumber())
+    else if (MO.isMBB() && MO.getMBB() == MBB)
       return AntiReg;
   }
   return 0;
