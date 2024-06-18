@@ -865,6 +865,7 @@ Bug Fixes to C++ Support
 - Fixed a failed assertion when attempting to convert an integer representing the difference
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
+- Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
 
 
 Bug Fixes to AST Handling
