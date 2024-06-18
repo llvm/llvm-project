@@ -138,26 +138,20 @@ X86FixupStackProtectorPass::CreateFailCheckSequence(MachineBasicBlock *CurMBB,
   GlobalVariable *GV = M.getGlobalVariable("__security_cookie");
   assert(GV && " Security Cookie was not installed!");
 
-  MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
   MachineInstr *GuardXor = SeqMI[0];
   MachineBasicBlock::iterator InsertPt(GuardXor);
   InsertPt++;
-  unsigned DestReg = MRI.createVirtualRegister(&X86::GR64RegClass);
-  // MOV security_cookie value into register
-  auto CMI =
-      BuildMI(*CurMBB, InsertPt, DebugLoc(), TII->get(X86::MOV64rm), DestReg)
-          .addReg(X86::RIP)
-          .addImm(1)
-          .addReg(X86::NoRegister)
-          .addGlobalAddress(GV)
-          .addReg(X86::NoRegister);
 
   // Compare security_Cookie with XOR_Val, if not same, we have violation
-  BuildMI(*CurMBB, InsertPt, DebugLoc(), TII->get(X86::CMP64rr))
-      .addReg(DestReg)
-      .addReg(GuardXor->getOperand(0).getReg());
+  auto CMI = BuildMI(*CurMBB, InsertPt, DebugLoc(), TII->get(X86::CMP64rm))
+                 .addReg(GuardXor->getOperand(0).getReg())
+                 .addReg(X86::RIP)
+                 .addImm(1)
+                 .addReg(X86::NoRegister)
+                 .addGlobalAddress(GV)
+                 .addReg(X86::NoRegister);
 
   BuildMI(*CurMBB, InsertPt, DebugLoc(), TII->get(X86::JCC_1))
       .addMBB(FailMBB)
