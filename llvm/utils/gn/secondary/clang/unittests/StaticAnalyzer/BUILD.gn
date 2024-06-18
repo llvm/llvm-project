@@ -29,6 +29,5 @@ unittest("StaticAnalysisTests") {
     "StoreTest.cpp",
     "SymbolReaperTest.cpp",
     "TestReturnValueUnderConstruction.cpp",
-    "Z3CrosscheckOracleTest.cpp",
   ]
 }
