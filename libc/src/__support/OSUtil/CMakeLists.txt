@@ -15,3 +15,12 @@ add_object_library(
   DEPENDS
     ${target_os_util}
 )
+
+if(TARGET libc.src.__support.OSUtil.${LIBC_TARGET_OS}.pid)
+  add_object_library(
+    pid
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.pid
+  )
+endif()

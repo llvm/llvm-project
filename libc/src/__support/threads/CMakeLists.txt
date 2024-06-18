@@ -45,6 +45,7 @@ add_header_library(
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.stringstream
+    libc.hdr.types.pid_t
 )
 
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
@@ -80,3 +81,21 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
     .${LIBC_TARGET_OS}.CndVar
   )
 endif()
+
+set(tid_dep)
+if (LLVM_LIBC_FULL_BUILD)
+  list(APPEND tid_dep libc.src.__support.thread)
+else()
+  list(APPEND tid_dep libc.src.__support.OSUtil.osutil)
+  list(APPEND tid_dep libc.include.sys_syscall)
+endif()
+
+add_header_library(
+  tid
+  HDRS
+    tid.h
+  DEPENDS
+    libc.src.__support.common
+    libc.hdr.types.pid_t
+    ${tid_dep}
+)

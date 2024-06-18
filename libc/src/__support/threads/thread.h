@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 
+#include "hdr/types/pid_t.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
@@ -102,7 +103,7 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   uintptr_t tls;                // Address to the thread TLS memory
   uintptr_t tls_size;           // The size of area pointed to by |tls|.
   unsigned char owned_stack; // Indicates if the thread owns this stack memory
-  int tid;
+  pid_t tid;
   ThreadStyle style;
   ThreadReturnValue retval;
   ThreadAtExitCallbackMgr *atexit_callback_mgr;
@@ -227,6 +228,16 @@ struct Thread {
 
   // Return the name of the thread in |name|. Return the error number of error.
   int get_name(cpp::StringStream &name) const;
+
+  static pid_t get_uncached_tid();
+
+  LIBC_INLINE void refresh_tid() { this->attrib->tid = get_uncached_tid(); }
+  LIBC_INLINE void invalidate_tid() { this->attrib->tid = -1; }
+  LIBC_INLINE pid_t get_tid() {
+    if (LIBC_UNLIKELY(this->attrib->tid < 0))
+      return get_uncached_tid();
+    return this->attrib->tid;
+  }
 };
 
 extern LIBC_THREAD_LOCAL Thread self;

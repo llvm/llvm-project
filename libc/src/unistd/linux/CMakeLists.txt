@@ -101,6 +101,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.threads.fork_callbacks
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.pid
     libc.src.__support.threads.thread
     libc.src.errno.errno
 )
@@ -190,8 +191,7 @@ add_entrypoint_object(
     ../getpid.h
   DEPENDS
     libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.pid
 )
 
 add_entrypoint_object(

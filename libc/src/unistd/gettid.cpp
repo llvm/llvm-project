@@ -1,4 +1,4 @@
-//===-- Linux implementation of getpid ------------------------------------===//
+//===-- Implementation file for gettid --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/unistd/getpid.h"
-#include "src/__support/OSUtil/pid.h"
+#include "src/unistd/gettid.h"
 #include "src/__support/common.h"
+#include "src/__support/threads/tid.h"
+
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(pid_t, getpid, (void)) { return ProcessIdentity::get(); }
+LLVM_LIBC_FUNCTION(pid_t, gettid, (void)) { return gettid_inline(); }
 
 } // namespace LIBC_NAMESPACE
