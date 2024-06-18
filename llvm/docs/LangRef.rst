@@ -19227,16 +19227,16 @@ Overview:
 """""""""
 
 The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics reduce the
-second operand vector down to the number of elements dictated by the result
-vector, and then adds the resulting vector to the first operand vector. The
-return type is a vector type that matches the type of the first operand vector.
+concatenation of the two vector operands down to the number of elements dictated
+by the result type. The result type is a vector type that matches the type of the
+first operand vector.
 
 Arguments:
 """"""""""
 
 Both arguments must be vectors of matching element types. The first argument type must
-match the return type, while the second argument type must have a vector length that is a
-positive integer multiple of the first vector/return type. The arguments must be either be
+match the result type, while the second argument type must have a vector length that is a
+positive integer multiple of the first vector/result type. The arguments must be either be
 both fixed or both scalable vectors.
 
 
