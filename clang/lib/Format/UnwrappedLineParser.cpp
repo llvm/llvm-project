@@ -112,6 +112,7 @@ public:
     Parser.Line->PPLevel = PreBlockLine->PPLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
+    Parser.Line->UnbracedBodyLevel = PreBlockLine->UnbracedBodyLevel;
   }
 
   ~ScopedLineState() {
@@ -367,6 +368,8 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
   do {
     if (FormatTok->isAttribute()) {
       nextToken();
+      if (FormatTok->is(tok::l_paren))
+        parseParens();
       continue;
     }
     tok::TokenKind Kind = FormatTok->Tok.getKind();
@@ -1181,10 +1184,10 @@ void UnwrappedLineParser::parsePPDefine() {
   Line->InMacroBody = true;
 
   if (Style.SkipMacroDefinitionBody) {
-    do {
+    while (!eof()) {
       FormatTok->Finalized = true;
-      nextToken();
-    } while (!eof());
+      FormatTok = Tokens->getNextToken();
+    }
     addUnwrappedLine();
     return;
   }
@@ -1410,13 +1413,6 @@ void UnwrappedLineParser::readTokenWithJavaScriptASI() {
   }
 }
 
-static bool isAltOperator(const FormatToken &Tok) {
-  return isalpha(Tok.TokenText[0]) &&
-         Tok.isOneOf(tok::ampamp, tok::ampequal, tok::amp, tok::pipe,
-                     tok::tilde, tok::exclaim, tok::exclaimequal, tok::pipepipe,
-                     tok::pipeequal, tok::caret, tok::caretequal);
-}
-
 void UnwrappedLineParser::parseStructuralElement(
     const FormatToken *OpeningBrace, IfStmtKind *IfKind,
     FormatToken **IfLeftBrace, bool *HasDoWhile, bool *HasLabel) {
@@ -1462,6 +1458,15 @@ void UnwrappedLineParser::parseStructuralElement(
   }
 
   // Tokens that only make sense at the beginning of a line.
+  if (FormatTok->isAccessSpecifierKeyword()) {
+    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
+        Style.isCSharp()) {
+      nextToken();
+    } else {
+      parseAccessSpecifier();
+    }
+    return;
+  }
   switch (FormatTok->Tok.getKind()) {
   case tok::kw_asm:
     nextToken();
@@ -1482,16 +1487,6 @@ void UnwrappedLineParser::parseStructuralElement(
     break;
   case tok::kw_namespace:
     parseNamespace();
-    return;
-  case tok::kw_public:
-  case tok::kw_protected:
-  case tok::kw_private:
-    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
-        Style.isCSharp()) {
-      nextToken();
-    } else {
-      parseAccessSpecifier();
-    }
     return;
   case tok::kw_if: {
     if (Style.isJavaScript() && Line->MustBeDeclaration) {
@@ -1699,7 +1694,7 @@ void UnwrappedLineParser::parseStructuralElement(
   for (const bool InRequiresExpression =
            OpeningBrace && OpeningBrace->is(TT_RequiresExpressionLBrace);
        !eof();) {
-    if (IsCpp && isAltOperator(*FormatTok)) {
+    if (IsCpp && FormatTok->isCppAlternativeOperatorKeyword()) {
       if (auto *Next = Tokens->peekNextToken(/*SkipComment=*/true);
           Next && Next->isBinaryOperator()) {
         FormatTok->Tok.setKind(tok::identifier);
@@ -2160,8 +2155,8 @@ bool UnwrappedLineParser::tryToParsePropertyAccessor() {
   bool HasSpecialAccessor = false;
   bool IsTrivialPropertyAccessor = true;
   while (!eof()) {
-    if (Tok->isOneOf(tok::semi, tok::kw_public, tok::kw_private,
-                     tok::kw_protected, Keywords.kw_internal, Keywords.kw_get,
+    if (Tok->isAccessSpecifierKeyword() ||
+        Tok->isOneOf(tok::semi, Keywords.kw_internal, Keywords.kw_get,
                      Keywords.kw_init, Keywords.kw_set)) {
       if (Tok->isOneOf(Keywords.kw_get, Keywords.kw_init, Keywords.kw_set))
         HasSpecialAccessor = true;
@@ -2243,7 +2238,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
   bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
-    if (FormatTok->isTypeName(LangOpts)) {
+    if (FormatTok->isTypeName(LangOpts) || FormatTok->isAttribute()) {
       nextToken();
       continue;
     }
@@ -2264,6 +2259,8 @@ bool UnwrappedLineParser::tryToParseLambda() {
       break;
     case tok::kw_auto:
     case tok::kw_class:
+    case tok::kw_struct:
+    case tok::kw_union:
     case tok::kw_template:
     case tok::kw_typename:
     case tok::amp:
@@ -2713,7 +2710,9 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
 
   addUnwrappedLine();
   ++Line->Level;
+  ++Line->UnbracedBodyLevel;
   parseStructuralElement();
+  --Line->UnbracedBodyLevel;
 
   if (Tok) {
     assert(!Line->InPPDirective);
@@ -4000,8 +3999,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     case tok::coloncolon:
       break;
     default:
-      if (!ClassName && Previous->is(tok::identifier))
+      if (!ClassName && Previous->is(tok::identifier) &&
+          Previous->isNot(TT_AttributeMacro)) {
         ClassName = Previous;
+      }
     }
   }
 
@@ -4026,6 +4027,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       if (AngleNestingLevel == 0) {
         if (FormatTok->is(tok::colon)) {
           IsDerived = true;
+        } else if (FormatTok->is(tok::identifier) &&
+                   FormatTok->Previous->is(tok::coloncolon)) {
+          ClassName = FormatTok;
         } else if (FormatTok->is(tok::l_paren) &&
                    IsNonMacroIdentifier(FormatTok->Previous)) {
           break;
@@ -4836,6 +4840,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
           PPBranchLevel > 0) {
         Line->Level += PPBranchLevel;
       }
+      assert(Line->Level >= Line->UnbracedBodyLevel);
+      Line->Level -= Line->UnbracedBodyLevel;
       flushComments(isOnNewLine(*FormatTok));
       parsePPDirective();
       PreviousWasComment = FormatTok->is(tok::comment);

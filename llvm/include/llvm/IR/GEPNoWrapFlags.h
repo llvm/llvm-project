@@ -13,6 +13,8 @@
 #ifndef LLVM_IR_GEPNOWRAPFLAGS_H
 #define LLVM_IR_GEPNOWRAPFLAGS_H
 
+#include <assert.h>
+
 namespace llvm {
 
 /// Represents flags for the getelementptr instruction/expression.

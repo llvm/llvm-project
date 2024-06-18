@@ -11,7 +11,7 @@
 
 # LINES: <main>:
 # LINES-NEXT: ; main():
-# LINES-NEXT: ; {{[ -\(\)_A-Za-z0-9.\\/:]+}}source-interleave-x86_64.c:6
+# LINES-NEXT: ; {{.+}}source-interleave-x86_64.c:6
 
 # SOURCE: <main>:
 # SOURCE-NEXT: ; int main() {

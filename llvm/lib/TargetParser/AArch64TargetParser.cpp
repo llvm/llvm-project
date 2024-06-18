@@ -30,9 +30,6 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
 }
 
 const AArch64::ArchInfo *AArch64::getArchForCpu(StringRef CPU) {
-  if (CPU == "generic")
-    return &ARMV8A;
-
   // Note: this now takes cpu aliases into account
   std::optional<CpuInfo> Cpu = parseCpu(CPU);
   if (!Cpu)
@@ -180,12 +177,6 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
     if (E == AEK_FP16 && BaseArch->is_superset(ARMV8_4A) &&
         !BaseArch->is_superset(ARMV9A))
       enable(AEK_FP16FML);
-
-    // For all architectures, +crypto enables +aes and +sha2.
-    if (E == AEK_CRYPTO) {
-      enable(AEK_AES);
-      enable(AEK_SHA2);
-    }
 
     // For v8.4A+ and v9.0A+, +crypto also enables +sha3 and +sm4.
     if (E == AEK_CRYPTO && BaseArch->is_superset(ARMV8_4A)) {

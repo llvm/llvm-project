@@ -1806,6 +1806,7 @@ static unsigned getRecordDiagFromTagKind(TagTypeKind Tag) {
 static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
                                        Stmt *Body,
                                        Sema::CheckConstexprKind Kind);
+static bool CheckConstexprMissingReturn(Sema &SemaRef, const FunctionDecl *Dcl);
 
 // Check whether a function declaration satisfies the requirements of a
 // constexpr function definition or a constexpr constructor definition. If so,
@@ -2411,20 +2412,9 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     }
   } else {
     if (ReturnStmts.empty()) {
-      // C++1y doesn't require constexpr functions to contain a 'return'
-      // statement. We still do, unless the return type might be void, because
-      // otherwise if there's no return statement, the function cannot
-      // be used in a core constant expression.
-      bool OK = SemaRef.getLangOpts().CPlusPlus14 &&
-                (Dcl->getReturnType()->isVoidType() ||
-                 Dcl->getReturnType()->isDependentType());
       switch (Kind) {
       case Sema::CheckConstexprKind::Diagnose:
-        SemaRef.Diag(Dcl->getLocation(),
-                     OK ? diag::warn_cxx11_compat_constexpr_body_no_return
-                        : diag::err_constexpr_body_no_return)
-            << Dcl->isConsteval();
-        if (!OK)
+        if (!CheckConstexprMissingReturn(SemaRef, Dcl))
           return false;
         break;
 
@@ -2469,11 +2459,18 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   //     base class sub-objects shall be a constexpr constructor.
   //
   // Note that this rule is distinct from the "requirements for a constexpr
-  // function", so is not checked in CheckValid mode.
+  // function", so is not checked in CheckValid mode. Because the check for
+  // constexpr potential is expensive, skip the check if the diagnostic is
+  // disabled, the function is declared in a system header, or we're in C++23
+  // or later mode (see https://wg21.link/P2448).
+  bool SkipCheck =
+      !SemaRef.getLangOpts().CheckConstexprFunctionBodies ||
+      SemaRef.getSourceManager().isInSystemHeader(Dcl->getLocation()) ||
+      SemaRef.getDiagnostics().isIgnored(
+          diag::ext_constexpr_function_never_constant_expr, Dcl->getLocation());
   SmallVector<PartialDiagnosticAt, 8> Diags;
-  if (Kind == Sema::CheckConstexprKind::Diagnose &&
-      !Expr::isPotentialConstantExpr(Dcl, Diags) &&
-      !SemaRef.getLangOpts().CPlusPlus23) {
+  if (Kind == Sema::CheckConstexprKind::Diagnose && !SkipCheck &&
+      !Expr::isPotentialConstantExpr(Dcl, Diags)) {
     SemaRef.Diag(Dcl->getLocation(),
                  diag::ext_constexpr_function_never_constant_expr)
         << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
@@ -2485,6 +2482,28 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   }
 
   return true;
+}
+
+static bool CheckConstexprMissingReturn(Sema &SemaRef,
+                                        const FunctionDecl *Dcl) {
+  bool IsVoidOrDependentType = Dcl->getReturnType()->isVoidType() ||
+                               Dcl->getReturnType()->isDependentType();
+  // Skip emitting a missing return error diagnostic for non-void functions
+  // since C++23 no longer mandates constexpr functions to yield constant
+  // expressions.
+  if (SemaRef.getLangOpts().CPlusPlus23 && !IsVoidOrDependentType)
+    return true;
+
+  // C++14 doesn't require constexpr functions to contain a 'return'
+  // statement. We still do, unless the return type might be void, because
+  // otherwise if there's no return statement, the function cannot
+  // be used in a core constant expression.
+  bool OK = SemaRef.getLangOpts().CPlusPlus14 && IsVoidOrDependentType;
+  SemaRef.Diag(Dcl->getLocation(),
+               OK ? diag::warn_cxx11_compat_constexpr_body_no_return
+                  : diag::err_constexpr_body_no_return)
+      << Dcl->isConsteval();
+  return OK;
 }
 
 bool Sema::CheckImmediateEscalatingFunctionDefinition(
@@ -11547,12 +11566,12 @@ bool Sema::CheckDeductionGuideDeclarator(Declarator &D, QualType &R,
       TemplateName SpecifiedName = RetTST.getTypePtr()->getTemplateName();
       bool TemplateMatches =
           Context.hasSameTemplateName(SpecifiedName, GuidedTemplate);
-      auto TKind = SpecifiedName.getKind();
-      // A Using TemplateName can't actually be valid (either it's qualified, or
-      // we're in the wrong scope). But we have diagnosed these problems
-      // already.
-      bool SimplyWritten = TKind == TemplateName::Template ||
-                           TKind == TemplateName::UsingTemplate;
+
+      const QualifiedTemplateName *Qualifiers =
+          SpecifiedName.getAsQualifiedTemplateName();
+      assert(Qualifiers && "expected QualifiedTemplate");
+      bool SimplyWritten = !Qualifiers->hasTemplateKeyword() &&
+                           Qualifiers->getQualifier() == nullptr;
       if (SimplyWritten && TemplateMatches)
         AcceptableReturnType = true;
       else {
@@ -13072,7 +13091,10 @@ NamedDecl *Sema::BuildUsingDeclaration(
   // A using-declaration shall not name a namespace.
   if (R.getAsSingle<NamespaceDecl>()) {
     Diag(IdentLoc, diag::err_using_decl_can_not_refer_to_namespace)
-      << SS.getRange();
+        << SS.getRange();
+    // Suggest using 'using namespace ...' instead.
+    Diag(SS.getBeginLoc(), diag::note_namespace_using_decl)
+        << FixItHint::CreateInsertion(SS.getBeginLoc(), "namespace ");
     return BuildInvalid();
   }
 
@@ -18684,11 +18706,15 @@ bool Sema::DefineUsedVTables() {
 
     bool DefineVTable = true;
 
-    // If this class has a key function, but that key function is
-    // defined in another translation unit, we don't need to emit the
-    // vtable even though we're using it.
     const CXXMethodDecl *KeyFunction = Context.getCurrentKeyFunction(Class);
-    if (KeyFunction && !KeyFunction->hasBody()) {
+    // V-tables for non-template classes with an owning module are always
+    // uniquely emitted in that module.
+    if (Class->isInCurrentModuleUnit())
+      DefineVTable = true;
+    else if (KeyFunction && !KeyFunction->hasBody()) {
+      // If this class has a key function, but that key function is
+      // defined in another translation unit, we don't need to emit the
+      // vtable even though we're using it.
       // The key function is in another translation unit.
       DefineVTable = false;
       TemplateSpecializationKind TSK =
@@ -18733,7 +18759,7 @@ bool Sema::DefineUsedVTables() {
     DefinedAnything = true;
     MarkVirtualMembersReferenced(Loc, Class);
     CXXRecordDecl *Canonical = Class->getCanonicalDecl();
-    if (VTablesUsed[Canonical])
+    if (VTablesUsed[Canonical] && !Class->shouldEmitInExternalSource())
       Consumer.HandleVTable(Class);
 
     // Warn if we're emitting a weak vtable. The vtable will be weak if there is

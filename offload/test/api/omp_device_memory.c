@@ -15,7 +15,7 @@ int main() {
   }
 
   int sum = 0;
-#pragma omp target reduction(+ : sum) is_device_ptr(device_ptr)
+#pragma omp target parallel for reduction(+ : sum) is_device_ptr(device_ptr)
   for (int i = 0; i < N; ++i)
     sum += device_ptr[i];
 

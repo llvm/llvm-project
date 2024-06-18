@@ -17,7 +17,10 @@
 #define LLVM_CLANG_AST_DECLID_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/iterator.h"
+
+#include <climits>
 
 namespace clang {
 
@@ -107,11 +110,15 @@ public:
   ///
   /// DeclID should only be used directly in serialization. All other users
   /// should use LocalDeclID or GlobalDeclID.
-  using DeclID = uint32_t;
+  using DeclID = uint64_t;
 
 protected:
   DeclIDBase() : ID(PREDEF_DECL_NULL_ID) {}
   explicit DeclIDBase(DeclID ID) : ID(ID) {}
+
+  explicit DeclIDBase(unsigned LocalID, unsigned ModuleFileIndex) {
+    ID = (DeclID)LocalID | ((DeclID)ModuleFileIndex << 32);
+  }
 
 public:
   DeclID get() const { return ID; }
@@ -123,6 +130,10 @@ public:
   bool isValid() const { return ID != PREDEF_DECL_NULL_ID; }
 
   bool isInvalid() const { return ID == PREDEF_DECL_NULL_ID; }
+
+  unsigned getModuleFileIndex() const { return ID >> 32; }
+
+  unsigned getLocalDeclIndex() const;
 
   friend bool operator==(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID == RHS.ID;
@@ -156,6 +167,9 @@ public:
   LocalDeclID(PredefinedDeclIDs ID) : Base(ID) {}
   explicit LocalDeclID(DeclID ID) : Base(ID) {}
 
+  explicit LocalDeclID(unsigned LocalID, unsigned ModuleFileIndex)
+      : Base(LocalID, ModuleFileIndex) {}
+
   LocalDeclID &operator++() {
     ++ID;
     return *this;
@@ -174,6 +188,9 @@ class GlobalDeclID : public DeclIDBase {
 public:
   GlobalDeclID() : Base() {}
   explicit GlobalDeclID(DeclID ID) : Base(ID) {}
+
+  explicit GlobalDeclID(unsigned LocalID, unsigned ModuleFileIndex)
+      : Base(LocalID, ModuleFileIndex) {}
 
   // For DeclIDIterator<GlobalDeclID> to be able to convert a GlobalDeclID
   // to a LocalDeclID.
@@ -214,7 +231,11 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static unsigned getHashValue(const GlobalDeclID &Key) {
-    return DenseMapInfo<DeclID>::getHashValue(Key.get());
+    // Our default hash algorithm for 64 bits integer may not be very good.
+    // In GlobalDeclID's case, it is pretty common that the lower 32 bits can
+    // be same.
+    // FIXME: Remove this when we fix the underlying issue.
+    return llvm::hash_value(Key.get());
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {

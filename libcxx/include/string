@@ -774,12 +774,12 @@ public:
 #define _LIBCPP_ASAN_VOLATILE_WRAPPER(PTR) PTR
 #endif
 
-  static_assert((!is_array<value_type>::value), "Character type of basic_string must not be an array");
-  static_assert((is_standard_layout<value_type>::value), "Character type of basic_string must be standard-layout");
-  static_assert((is_trivial<value_type>::value), "Character type of basic_string must be trivial");
-  static_assert((is_same<_CharT, typename traits_type::char_type>::value),
+  static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
+  static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");
+  static_assert(is_trivial<value_type>::value, "Character type of basic_string must be trivial");
+  static_assert(is_same<_CharT, typename traits_type::char_type>::value,
                 "traits_type::char_type must be the same type as CharT");
-  static_assert((is_same<typename allocator_type::value_type, value_type>::value),
+  static_assert(is_same<typename allocator_type::value_type, value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
   static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
@@ -868,23 +868,9 @@ private:
 
   static_assert(sizeof(__short) == (sizeof(value_type) * (__min_cap + 1)), "__short has an unexpected size.");
 
-  union __ulx {
-    __long __lx;
-    __short __lxx;
-  };
-
-  enum { __n_words = sizeof(__ulx) / sizeof(size_type) };
-
-  struct __raw {
-    size_type __words[__n_words];
-  };
-
-  struct __rep {
-    union {
-      __short __s;
-      __long __l;
-      __raw __r;
-    };
+  union __rep {
+    __short __s;
+    __long __l;
   };
 
   __compressed_pair<__rep, allocator_type> __r_;
@@ -1643,7 +1629,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value);
+      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
 #endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const value_type* c_str() const _NOEXCEPT { return data(); }
@@ -3350,7 +3336,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value)
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #endif
 {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
@@ -3746,17 +3732,10 @@ template <class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
 operator==(const basic_string<char, char_traits<char>, _Allocator>& __lhs,
            const basic_string<char, char_traits<char>, _Allocator>& __rhs) _NOEXCEPT {
-  size_t __lhs_sz = __lhs.size();
-  if (__lhs_sz != __rhs.size())
+  size_t __sz = __lhs.size();
+  if (__sz != __rhs.size())
     return false;
-  const char* __lp = __lhs.data();
-  const char* __rp = __rhs.data();
-  if (__lhs.__is_long())
-    return char_traits<char>::compare(__lp, __rp, __lhs_sz) == 0;
-  for (; __lhs_sz != 0; --__lhs_sz, ++__lp, ++__rp)
-    if (*__lp != *__rp)
-      return false;
-  return true;
+  return char_traits<char>::compare(__lhs.data(), __rhs.data(), __sz) == 0;
 }
 
 #if _LIBCPP_STD_VER <= 17

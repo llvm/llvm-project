@@ -21,7 +21,8 @@ define i1 @PR6486() nounwind {
 
 define i1 @PR16462_1() nounwind {
 ; CHECK-LABEL: @PR16462_1(
-  %constexpr = select i1 icmp eq (ptr @a, ptr @d), i32 0, i32 1
+  %cmp = icmp eq ptr @a, @d
+  %constexpr = select i1 %cmp, i32 0, i32 1
   %constexpr1 = trunc i32 %constexpr to i16
   %constexpr2 = sext i16 %constexpr1 to i32
   %constexpr3 = icmp sgt i32 %constexpr2, 65535
@@ -31,7 +32,8 @@ define i1 @PR16462_1() nounwind {
 
 define i1 @PR16462_2() nounwind {
 ; CHECK-LABEL: @PR16462_2(
-  %constexpr = select i1 icmp eq (ptr @a, ptr @d), i32 0, i32 1
+  %cmp = icmp eq ptr @a, @d
+  %constexpr = select i1 %cmp, i32 0, i32 1
   %constexpr1 = trunc i32 %constexpr to i16
   %constexpr2 = icmp sgt i16 %constexpr1, 42
   ret i1 %constexpr2

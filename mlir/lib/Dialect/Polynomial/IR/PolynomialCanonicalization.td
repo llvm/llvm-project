@@ -17,6 +17,8 @@ include "mlir/IR/PatternBase.td"
 
 defvar DefOverflow = ConstantEnumCase<Arith_IntegerOverflowAttr, "none">;
 
+def Equal : Constraint<CPred<"$0 == $1">>;
+
 // Get a -1 integer attribute of the same type as the polynomial SSA value's
 // ring coefficient type.
 def getMinusOne
@@ -31,15 +33,15 @@ def SubAsAdd : Pat<
       (Arith_ConstantOp (getMinusOne $g))))>;
 
 def INTTAfterNTT : Pat<
-  (Polynomial_INTTOp (Polynomial_NTTOp $poly)),
+  (Polynomial_INTTOp (Polynomial_NTTOp $poly, $r1), $r2),
   (replaceWithValue $poly),
-  []
+  [(Equal $r1, $r2)]
 >;
 
 def NTTAfterINTT : Pat<
-  (Polynomial_NTTOp (Polynomial_INTTOp $tensor)),
+  (Polynomial_NTTOp (Polynomial_INTTOp $tensor, $r1), $r2),
   (replaceWithValue $tensor),
-  []
+  [(Equal $r1, $r2)]
 >;
 
 // NTTs are expensive, and addition in coefficient or NTT domain should be
@@ -47,35 +49,35 @@ def NTTAfterINTT : Pat<
 // ntt(a) + ntt(b) -> ntt(a + b)
 def NTTOfAdd : Pat<
   (Arith_AddIOp
-    (Polynomial_NTTOp $p1),
-    (Polynomial_NTTOp $p2),
+    (Polynomial_NTTOp $p1, $r1),
+    (Polynomial_NTTOp $p2, $r2),
     $overflow),
-  (Polynomial_NTTOp (Polynomial_AddOp $p1, $p2)),
-  []
+  (Polynomial_NTTOp (Polynomial_AddOp $p1, $p2), $r1),
+  [(Equal $r1, $r2)]
 >;
 // intt(a) + intt(b) -> intt(a + b)
 def INTTOfAdd : Pat<
   (Polynomial_AddOp
-    (Polynomial_INTTOp $t1),
-    (Polynomial_INTTOp $t2)),
-  (Polynomial_INTTOp (Arith_AddIOp $t1, $t2, DefOverflow)),
-  []
+    (Polynomial_INTTOp $t1, $r1),
+    (Polynomial_INTTOp $t2, $r2)),
+  (Polynomial_INTTOp (Arith_AddIOp $t1, $t2, DefOverflow), $r1),
+  [(Equal $r1, $r2)]
 >;
 // repeated for sub
 def NTTOfSub : Pat<
   (Arith_SubIOp
-    (Polynomial_NTTOp $p1),
-    (Polynomial_NTTOp $p2),
+    (Polynomial_NTTOp $p1, $r1),
+    (Polynomial_NTTOp $p2, $r2),
     $overflow),
-  (Polynomial_NTTOp (Polynomial_SubOp $p1, $p2)),
-  []
+  (Polynomial_NTTOp (Polynomial_SubOp $p1, $p2), $r1),
+  [(Equal $r1, $r2)]
 >;
 def INTTOfSub : Pat<
   (Polynomial_SubOp
-    (Polynomial_INTTOp $t1),
-    (Polynomial_INTTOp $t2)),
-  (Polynomial_INTTOp (Arith_SubIOp $t1, $t2, DefOverflow)),
-  []
+    (Polynomial_INTTOp $t1, $r1),
+    (Polynomial_INTTOp $t2, $r2)),
+  (Polynomial_INTTOp (Arith_SubIOp $t1, $t2, DefOverflow), $r1),
+  [(Equal $r1, $r2)]
 >;
 
 #endif  // POLYNOMIAL_CANONICALIZATION

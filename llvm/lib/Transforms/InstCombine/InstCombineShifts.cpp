@@ -767,11 +767,20 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
   // (C2 >> X) >> C1 --> (C2 >> C1) >> X
   Constant *C2;
   Value *X;
-  if (match(Op0, m_BinOp(I.getOpcode(), m_ImmConstant(C2), m_Value(X))))
-    return BinaryOperator::Create(
-        I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), C2, C1), X);
-
   bool IsLeftShift = I.getOpcode() == Instruction::Shl;
+  if (match(Op0, m_BinOp(I.getOpcode(), m_ImmConstant(C2), m_Value(X)))) {
+    Instruction *R = BinaryOperator::Create(
+        I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), C2, C1), X);
+    BinaryOperator *BO0 = cast<BinaryOperator>(Op0);
+    if (IsLeftShift) {
+      R->setHasNoUnsignedWrap(I.hasNoUnsignedWrap() &&
+                              BO0->hasNoUnsignedWrap());
+      R->setHasNoSignedWrap(I.hasNoSignedWrap() && BO0->hasNoSignedWrap());
+    } else
+      R->setIsExact(I.isExact() && BO0->isExact());
+    return R;
+  }
+
   Type *Ty = I.getType();
   unsigned TypeBits = Ty->getScalarSizeInBits();
 
@@ -1275,6 +1284,23 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     return NewSub;
   }
 
+  // Fold (X + Y) / 2 --> (X & Y) iff (X u<= 1) && (Y u<= 1)
+  if (match(Op0, m_Add(m_Value(X), m_Value(Y))) && match(Op1, m_One()) &&
+      computeKnownBits(X, /*Depth=*/0, &I).countMaxActiveBits() <= 1 &&
+      computeKnownBits(Y, /*Depth=*/0, &I).countMaxActiveBits() <= 1)
+    return BinaryOperator::CreateAnd(X, Y);
+
+  // (sub nuw X, (Y << nuw Z)) >>u exact Z --> (X >>u exact Z) sub nuw Y
+  if (I.isExact() &&
+      match(Op0, m_OneUse(m_NUWSub(m_Value(X),
+                                   m_NUWShl(m_Value(Y), m_Specific(Op1)))))) {
+    Value *NewLshr = Builder.CreateLShr(X, Op1, "", /*isExact=*/true);
+    auto *NewSub = BinaryOperator::CreateNUWSub(NewLshr, Y);
+    NewSub->setHasNoSignedWrap(
+        cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap());
+    return NewSub;
+  }
+
   auto isSuitableBinOpcode = [](Instruction::BinaryOps BinOpcode) {
     switch (BinOpcode) {
     default:
@@ -1464,10 +1490,10 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       if (BitWidth > 2 && (*MulC - 1).isPowerOf2() &&
           MulC->logBase2() == ShAmtC) {
         // Look for a "splat" mul pattern - it replicates bits across each half
-        // of a value, so a right shift is just a mask of the low bits:
-        // lshr i[2N] (mul nuw X, (2^N)+1), N --> and iN X, (2^N)-1
+        // of a value, so a right shift simplifies back to just X:
+        // lshr i[2N] (mul nuw X, (2^N)+1), N --> X
         if (ShAmtC * 2 == BitWidth)
-          return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+          return replaceInstUsesWith(I, X);
 
         // lshr (mul nuw (X, 2^N + 1)), N -> add nuw (X, lshr(X, N))
         if (Op0->hasOneUse()) {

@@ -18,11 +18,14 @@ class ValueType<int size, int value> {
   int Value = value;
   int nElem = 1;
   ValueType ElementType = ?;
-  int isOverloaded = false;
-  int isInteger = false;
-  int isFP = false;
-  int isVector = false;
-  int isScalable = false;
+  bit isOverloaded = false;
+  bit isInteger = false;
+  bit isFP = false;
+  bit isVector = false;
+  bit isScalable = false;
+  // Indicates this VT should be included in the
+  // [FIRST_VALUETYPE,LAST_VALUETYPE] range.
+  bit isNormalValueType = true;
 }
 
 class VTAny<int value> : ValueType<0, value> {
@@ -271,9 +274,7 @@ def nxv4f64  : VTScalableVec<4,  f64, 188>;  // n x  4 x  f64 vector value
 def nxv8f64  : VTScalableVec<8,  f64, 189>;  // n x  8 x  f64 vector value
 
 def x86mmx    : ValueType<64,   190>;  // X86 MMX value
-def FlagVT    : ValueType<0,    191> { // Pre-RA sched glue
-  let LLVMName = "Glue";
-}
+def Glue      : ValueType<0,    191>;  // Pre-RA sched glue
 def isVoid    : ValueType<0,    192>;  // Produces no value
 def untyped   : ValueType<8,    193> { // Produces an untyped value
   let LLVMName = "Untyped";
@@ -287,6 +288,7 @@ def aarch64svcount
               : ValueType<16,  199>;  // AArch64 predicate-as-counter
 def spirvbuiltin : ValueType<0, 200>; // SPIR-V's builtin type
 
+let isNormalValueType = false in {
 def token      : ValueType<0, 248>;  // TokenTy
 def MetadataVT : ValueType<0, 249> { // Metadata
   let LLVMName = "Metadata";
@@ -315,6 +317,8 @@ def iPTR       : ValueType<0, 254>;
 // Pseudo valuetype to represent "any type of any size".
 // Should only be used in TableGen.
 def Any        : VTAny<255>;
+
+} // isNormalValueType = false
 
 } // end defset ValueTypes
 
