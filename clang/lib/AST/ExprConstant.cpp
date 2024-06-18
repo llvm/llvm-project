@@ -9151,7 +9151,7 @@ public:
   }
 
   bool VisitEmbedExpr(const EmbedExpr *E) {
-    llvm_unreachable("Not yet implemented for ExprConstant.cpp");
+    llvm::report_fatal_error("Not yet implemented for ExprConstant.cpp");
     return true;
   }
 
