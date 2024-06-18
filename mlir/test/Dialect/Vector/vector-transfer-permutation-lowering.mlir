@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 ///----------------------------------------------------------------------------------------
-/// vector.transfer_write -> vector.transpose + vector.transfer_read
+/// vector.transfer_write -> vector.transpose + vector.transfer_write
 /// [Pattern: TransferWritePermutationLowering]
 ///----------------------------------------------------------------------------------------
 /// Input:
@@ -54,9 +54,9 @@ func.func @xfer_write_transposing_permutation_map_with_mask_scalable(
 }
 
 // Masked version is not supported
-// CHECK-LABEL:   func.func @xfer_write_transposing_permutation_map_with_transpose_masked
+// CHECK-LABEL:   func.func @xfer_write_transposing_permutation_map_masked
 // CHECK-NOT: vector.transpose
-func.func @xfer_write_transposing_permutation_map_with_transpose_masked(
+func.func @xfer_write_transposing_permutation_map_masked(
     %arg0: vector<4x8xi16>,
     %mem: memref<2x2x8x4xi16>,
     %mask: vector<8x4xi1>) {
@@ -73,7 +73,8 @@ func.func @xfer_write_transposing_permutation_map_with_transpose_masked(
 }
 
 ///----------------------------------------------------------------------------------------
-/// vector.transfer_write -> vector.broadcast + vector.transpose + vector.transfer_read
+/// vector.transfer_write -> vector.broadcast + vector.transpose + vector.transfer_write
+/// [Patterns: TransferWriteNonPermutationLowering + TransferWritePermutationLowering]
 ///----------------------------------------------------------------------------------------
 /// Input:
 ///   * vector.transfer_write op with a map which _is not_ a permutation of a
