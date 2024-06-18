@@ -69,20 +69,20 @@ optimization works on `memref` instead of `tensor` ops, so it should be executed
 after bufferization pass, and before adding buffer deallocation ops.
 
 While merging the memory allocations, the transform should consider the lifetime
-of each allocated `memref`s. By lifetime, we mean the range of time when an
-memref allocated from `memref.alloc` is actively used. The references on `view`s
+of each allocated `memref`s. By lifetime, we mean the range of time when the
+memory allocated from `memref.alloc` is actively used. The references on `view`s
 of a "base" `memref` should contribute to the lifetime of the "base". A later
 `memref.alloc` should consider to reuse the memory of a previously allocated
 memref, if the lifetime of these two does not overlap. The transform will
 perform the "reusing" of memory by setting the `offset` of the later
 `memref.view` to a position within the memory range of a previous allocation's
-`memref.view` on the `single allocated buffer`.
+`memref.alloc` from the `single allocated buffer`.
 
 Below is the expected transformation result of the example IR in the above
 section:
 
 ```mlir
-func.func @mlp(%x: memref<128x128xf32>, %y: memref<128x128xf32>) -> memref<128x128xf32> {
+func.func @mlp(%x: memref<256x128xf32>, %y: memref<128x128xf32>) -> memref<128x128xf32> {
    %single_buffer = memref.alloc() : memref<131072xi8> // 128*128*sizeof(f32)*2
    %a0 = memref.view %single_buffer[0][] : memref<131072xi8> to memref<128x128xf32> // a0 takes the memory from byte offset 0
    linalg.matmul ins(%x, %y: memref<128x128xf32>, memref<128x128xf32>) outs(%a0: memref<128x128xf32>)
@@ -457,9 +457,9 @@ fragmentation.
 
 On an "alloc" event, the memory planner needs to choose one candidate from all
 "free" memory chunks. A memory chunk that is recently free'd is considered "hot"
-in cache. In the default configuration (when `no-consider-locality` option is
-not specified to the merge-alloc pass), static memory planner considers both
+in cache. In the default configuration (when `planner-options=size-first` option
+is not specified to the merge-alloc pass), static memory planner considers both
 cache-locality and the degree of matching of allocation size and the chunk size
 for each free memory chunks, with a simple cost-model. With
-`no-consider-locality` option is specified, static memory planner will choose
-the best matched free memory chunk in the chunk size.
+`planner-options=size-first` option is specified, static memory planner will
+choose the best matched free memory chunk in the chunk size.
