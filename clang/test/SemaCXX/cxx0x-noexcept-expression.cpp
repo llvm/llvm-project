@@ -102,6 +102,7 @@ void k() noexcept(1);
 void l() noexcept(2); // expected-error {{noexcept specifier argument evaluates to 2, which cannot be narrowed to type 'bool'}}
 } // namespace P1401
 
+namespace typeid_ {
 template<bool NoexceptConstructor, bool NoexceptDestructor>
 struct Polymorphic {
   Polymorphic() noexcept(NoexceptConstructor) {}
@@ -115,3 +116,39 @@ static_assert(!noexcept(typeid((Polymorphic<true, false>&&) Polymorphic<true, fa
 static_assert(!noexcept(typeid(*&(const Polymorphic<true, true>&) Polymorphic<true, true>{})));
 static_assert(!noexcept(typeid(*&(const Polymorphic<false, true>&) Polymorphic<false, true>{})));
 static_assert(!noexcept(typeid(*&(const Polymorphic<true, false>&) Polymorphic<true, false>{})));
+
+template<bool B>
+struct X {
+  template<typename T> void f();
+};
+template<typename T>
+void f1() {
+  X<noexcept(typeid(*T{}))> dependent;
+  dependent.f<void>();
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+}
+template<typename... T>
+void f2() {
+  X<noexcept(typeid(*((static_cast<Polymorphic<false, false>*>(nullptr) && ... && T{}))))> dependent;
+  dependent.f<void>();
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+}
+template<typename T>
+void f3() {
+  X<noexcept(typeid(*static_cast<T*>(nullptr)))> dependent;
+  dependent.f<void>();
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+}
+template<typename T>
+void f4() {
+  X<noexcept(typeid(T))> not_dependent;
+  not_dependent.non_existant();
+  // expected-error@-1 {{no member named 'non_existant' in 'typeid_::X<true>'}}
+}
+template<typename T>
+void f5() {
+  X<noexcept(typeid(sizeof(sizeof(T))))> not_dependent;
+  not_dependent.non_existant();
+  // expected-error@-1 {{no member named 'non_existant' in 'typeid_::X<true>'}}
+}
+} // namespace typeid_
