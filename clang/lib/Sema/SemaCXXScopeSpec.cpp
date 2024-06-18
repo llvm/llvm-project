@@ -564,19 +564,13 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   if (Found.isAmbiguous())
     return true;
 
-  DeclContext *LookupCtx = SS.isSet()
-      ? computeDeclContext(SS, EnteringContext)
-      : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
-
-
   if (Found.empty() && !ErrorRecoveryLookup) {
     // If identifier is not found as class-name-or-namespace-name, but is found
     // as other entity, don't look for typos.
     LookupResult R(*this, Found.getLookupNameInfo(), LookupOrdinaryName);
-    if (LookupCtx)
-      LookupQualifiedName(R, LookupCtx);
-    else if (S)
-      LookupName(R, S);
+    LookupParsedName(R, S, &SS, ObjectType,
+                     /*AllowBuiltinCreation=*/false, EnteringContext);
+
     if (!R.empty()) {
       // Don't diagnose problems with this speculative lookup.
       R.suppressDiagnostics();
@@ -602,6 +596,10 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
       return true;
     }
   }
+
+  DeclContext *LookupCtx = SS.isSet()
+      ? computeDeclContext(SS, EnteringContext)
+      : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
 
   if (Found.empty() && !ErrorRecoveryLookup && !getLangOpts().MSVCCompat) {
     // We haven't found anything, and we're not recovering from a
