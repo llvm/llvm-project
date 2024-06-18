@@ -273,7 +273,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
-  Error rewriteAltInstructions();
+  void processAltInstructionsPostCFG();
+  Error tryReadAltInstructions(uint32_t AltInstFeatureSize,
+                               bool AltInstHasPadLen, bool ParseOnly);
 
   /// Read .pci_fixup
   Error readPCIFixupTable();
@@ -324,6 +326,8 @@ public:
     if (Error E = processORCPostCFG())
       return E;
 
+    processAltInstructionsPostCFG();
+
     return Error::success();
   }
 
@@ -331,9 +335,6 @@ public:
     // Since rewriteExceptionTable() can mark functions as non-simple, run it
     // before other rewriters that depend on simple/emit status.
     if (Error E = rewriteExceptionTable())
-      return E;
-
-    if (Error E = rewriteAltInstructions())
       return E;
 
     if (Error E = rewriteParaInstructions())
@@ -1319,12 +1320,69 @@ Error LinuxKernelRewriter::rewriteBugTable() {
 ///	    u8  padlen;         // present in older kernels
 ///   } __packed;
 ///
-/// Note the structures is packed.
+/// Note that the structure is packed.
+///
+/// Since the size of the "feature" field could be either u16 or u32, and
+/// "padlen" presence is unknown, we attempt to parse .altinstructions section
+/// using all possible combinations (four at this time). Since we validate the
+/// contents of the section and its size, the detection works quite well.
+/// Still, we leave the user the opportunity to specify these features on the
+/// command line and skip the guesswork.
 Error LinuxKernelRewriter::readAltInstructions() {
   AltInstrSection = BC.getUniqueSectionByName(".altinstructions");
   if (!AltInstrSection)
     return Error::success();
 
+  // Presence of "padlen" field.
+  std::vector<bool> PadLenVariants;
+  if (opts::AltInstHasPadLen.getNumOccurrences())
+    PadLenVariants.push_back(opts::AltInstHasPadLen);
+  else
+    PadLenVariants = {false, true};
+
+  // Size (in bytes) variants of "feature" field.
+  std::vector<uint32_t> FeatureSizeVariants;
+  if (opts::AltInstFeatureSize.getNumOccurrences())
+    FeatureSizeVariants.push_back(opts::AltInstFeatureSize);
+  else
+    FeatureSizeVariants = {2, 4};
+
+  for (bool AltInstHasPadLen : PadLenVariants) {
+    for (uint32_t AltInstFeatureSize : FeatureSizeVariants) {
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: trying AltInstHasPadLen = " << AltInstHasPadLen
+               << "; AltInstFeatureSize = " << AltInstFeatureSize << ";\n";
+      });
+      if (Error E = tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
+                                           /*ParseOnly*/ true)) {
+        consumeError(std::move(E));
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "Matched .altinstructions format\n");
+
+      if (!opts::AltInstHasPadLen.getNumOccurrences())
+        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstHasPadLen.ArgStr
+                  << '=' << AltInstHasPadLen << '\n';
+
+      if (!opts::AltInstFeatureSize.getNumOccurrences())
+        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstFeatureSize.ArgStr
+                  << '=' << AltInstFeatureSize << '\n';
+
+      return tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
+                                    /*ParseOnly*/ false);
+    }
+  }
+
+  // We couldn't match the format. Read again to properly propagate the error
+  // to the user.
+  return tryReadAltInstructions(opts::AltInstFeatureSize,
+                                opts::AltInstHasPadLen, /*ParseOnly*/ false);
+}
+
+Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
+                                                  bool AltInstHasPadLen,
+                                                  bool ParseOnly) {
   const uint64_t Address = AltInstrSection->getAddress();
   DataExtractor DE = DataExtractor(AltInstrSection->getContents(),
                                    BC.AsmInfo->isLittleEndian(),
@@ -1336,12 +1394,12 @@ Error LinuxKernelRewriter::readAltInstructions() {
         Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
     const uint64_t AltInstAddress =
         Address + Cursor.tell() + (int32_t)DE.getU32(Cursor);
-    const uint64_t Feature = DE.getUnsigned(Cursor, opts::AltInstFeatureSize);
+    const uint64_t Feature = DE.getUnsigned(Cursor, AltInstFeatureSize);
     const uint8_t OrgSize = DE.getU8(Cursor);
     const uint8_t AltSize = DE.getU8(Cursor);
 
     // Older kernels may have the padlen field.
-    const uint8_t PadLen = opts::AltInstHasPadLen ? DE.getU8(Cursor) : 0;
+    const uint8_t PadLen = AltInstHasPadLen ? DE.getU8(Cursor) : 0;
 
     if (!Cursor)
       return createStringError(
@@ -1358,7 +1416,7 @@ Error LinuxKernelRewriter::readAltInstructions() {
                 << "\n\tFeature: 0x" << Twine::utohexstr(Feature)
                 << "\n\tOrgSize: " << (int)OrgSize
                 << "\n\tAltSize: " << (int)AltSize << '\n';
-      if (opts::AltInstHasPadLen)
+      if (AltInstHasPadLen)
         BC.outs() << "\tPadLen:  " << (int)PadLen << '\n';
     }
 
@@ -1375,7 +1433,7 @@ Error LinuxKernelRewriter::readAltInstructions() {
 
     BinaryFunction *AltBF =
         BC.getBinaryFunctionContainingAddress(AltInstAddress);
-    if (AltBF && BC.shouldEmit(*AltBF)) {
+    if (!ParseOnly && AltBF && BC.shouldEmit(*AltBF)) {
       BC.errs()
           << "BOLT-WARNING: alternative instruction sequence found in function "
           << *AltBF << '\n';
@@ -1397,6 +1455,9 @@ Error LinuxKernelRewriter::readAltInstructions() {
                                " referenced by .altinstructions entry %d",
                                OrgInstAddress, EntryID);
 
+    if (ParseOnly)
+      continue;
+
     // There could be more than one alternative instruction sequences for the
     // same original instruction. Annotate each alternative separately.
     std::string AnnotationName = "AltInst";
@@ -1417,18 +1478,18 @@ Error LinuxKernelRewriter::readAltInstructions() {
     }
   }
 
-  BC.outs() << "BOLT-INFO: parsed " << EntryID
-            << " alternative instruction entries\n";
+  if (!ParseOnly)
+    BC.outs() << "BOLT-INFO: parsed " << EntryID
+              << " alternative instruction entries\n";
 
   return Error::success();
 }
 
-Error LinuxKernelRewriter::rewriteAltInstructions() {
-  // Disable output of functions with alt instructions before the rewrite
-  // support is complete.
+void LinuxKernelRewriter::processAltInstructionsPostCFG() {
+  // Disable optimization and output of functions with alt instructions before
+  // the rewrite support is complete. Alt instructions can modify the control
+  // flow, hence we may end up deleting seemingly unreachable code.
   skipFunctionsWithAnnotation("AltInst");
-
-  return Error::success();
 }
 
 /// When the Linux kernel needs to handle an error associated with a given PCI

@@ -56,8 +56,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -82,7 +82,8 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
   MRI = &Fn.getRegInfo();
   TRI = Fn.getRegInfo().getTargetRegisterInfo();
 
-  MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree &MDT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   // Loop over all of the basic blocks
   for (MachineFunction::iterator MBBb = Fn.begin(), MBBe = Fn.end();

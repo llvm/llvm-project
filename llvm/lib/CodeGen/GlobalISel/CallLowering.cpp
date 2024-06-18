@@ -471,13 +471,15 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     // Deal with vector with 64-bit elements decomposed to 32-bit
     // registers. Need to create intermediate 64-bit elements.
     SmallVector<Register, 8> EltMerges;
-    int PartsPerElt = DstEltTy.getSizeInBits() / PartLLT.getSizeInBits();
-
-    assert(DstEltTy.getSizeInBits() % PartLLT.getSizeInBits() == 0);
+    int PartsPerElt =
+        divideCeil(DstEltTy.getSizeInBits(), PartLLT.getSizeInBits());
+    LLT ExtendedPartTy = LLT::scalar(PartLLT.getSizeInBits() * PartsPerElt);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
       auto Merge =
-          B.buildMergeLikeInstr(RealDstEltTy, Regs.take_front(PartsPerElt));
+          B.buildMergeLikeInstr(ExtendedPartTy, Regs.take_front(PartsPerElt));
+      if (ExtendedPartTy.getSizeInBits() > RealDstEltTy.getSizeInBits())
+        Merge = B.buildTrunc(RealDstEltTy, Merge);
       // Fix the type in case this is really a vector of pointers.
       MRI.setType(Merge.getReg(0), RealDstEltTy);
       EltMerges.push_back(Merge.getReg(0));
@@ -571,6 +573,17 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   if (GCDTy == PartTy) {
     // If this already evenly divisible, we can create a simple unmerge.
     B.buildUnmerge(DstRegs, SrcReg);
+    return;
+  }
+
+  if (SrcTy.isVector() && !PartTy.isVector() &&
+      SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
+    LLT ExtTy =
+        LLT::vector(SrcTy.getElementCount(),
+                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
+                                SrcTy.getNumElements()));
+    auto Ext = B.buildAnyExt(ExtTy, SrcReg);
+    B.buildUnmerge(DstRegs, Ext);
     return;
   }
 
