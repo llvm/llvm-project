@@ -38,6 +38,9 @@ public:
                                  bool ConvertResultToRValue = false);
   EvaluationResult interpretDecl(const VarDecl *VD, bool CheckFullyInitialized);
 
+  /// Clean up all resources.
+  void cleanup();
+
   InterpState &getState() { return S; }
 
 protected:

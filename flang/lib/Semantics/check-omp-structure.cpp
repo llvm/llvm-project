@@ -2321,9 +2321,15 @@ bool OmpStructureChecker::CheckReductionOperators(
   common::visit(
       common::visitors{
           [&](const parser::DefinedOperator &dOpr) {
-            const auto &intrinsicOp{
-                std::get<parser::DefinedOperator::IntrinsicOperator>(dOpr.u)};
-            ok = CheckIntrinsicOperator(intrinsicOp);
+            if (const auto *intrinsicOp{
+                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                        &dOpr.u)}) {
+              ok = CheckIntrinsicOperator(*intrinsicOp);
+            } else {
+              context_.Say(GetContext().clauseSource,
+                  "Invalid reduction operator in REDUCTION clause."_err_en_US,
+                  ContextDirectiveAsFortran());
+            }
           },
           [&](const parser::ProcedureDesignator &procD) {
             const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
@@ -2372,6 +2378,87 @@ bool OmpStructureChecker::CheckIntrinsicOperator(
   return false;
 }
 
+static bool IsReductionAllowedForType(
+    const parser::OmpClause::Reduction &x, const DeclTypeSpec &type) {
+  const auto &definedOp{std::get<parser::OmpReductionOperator>(x.v.t)};
+  // TODO: user defined reduction operators. Just allow everything for now.
+  bool ok{true};
+
+  auto IsLogical{[](const DeclTypeSpec &type) -> bool {
+    return type.category() == DeclTypeSpec::Logical;
+  }};
+  auto IsCharacter{[](const DeclTypeSpec &type) -> bool {
+    return type.category() == DeclTypeSpec::Character;
+  }};
+
+  common::visit(
+      common::visitors{
+          [&](const parser::DefinedOperator &dOpr) {
+            if (const auto *intrinsicOp{
+                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                        &dOpr.u)}) {
+              // OMP5.2: The type [...] of a list item that appears in a
+              // reduction clause must be valid for the combiner expression
+              // See F2023: Table 10.2
+              // .LT., .LE., .GT., .GE. are handled as procedure designators
+              // below.
+              switch (*intrinsicOp) {
+              case parser::DefinedOperator::IntrinsicOperator::Multiply:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::Add:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::Subtract:
+                ok = type.IsNumeric(TypeCategory::Integer) ||
+                    type.IsNumeric(TypeCategory::Real) ||
+                    type.IsNumeric(TypeCategory::Complex);
+                break;
+
+              case parser::DefinedOperator::IntrinsicOperator::AND:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::OR:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::EQV:
+                [[fallthrough]];
+              case parser::DefinedOperator::IntrinsicOperator::NEQV:
+                ok = IsLogical(type);
+                break;
+
+              // Reduction identifier is not in OMP5.2 Table 5.2
+              default:
+                DIE("This should have been caught in CheckIntrinsicOperator");
+                ok = false;
+                break;
+              }
+            }
+          },
+          [&](const parser::ProcedureDesignator &procD) {
+            const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+            if (name && name->symbol) {
+              const SourceName &realName{name->symbol->GetUltimate().name()};
+              // OMP5.2: The type [...] of a list item that appears in a
+              // reduction clause must be valid for the combiner expression
+              if (realName == "iand" || realName == "ior" ||
+                  realName == "ieor") {
+                // IAND: arguments must be integers: F2023 16.9.100
+                // IEOR: arguments must be integers: F2023 16.9.106
+                // IOR: arguments must be integers: F2023 16.9.111
+                ok = type.IsNumeric(TypeCategory::Integer);
+              } else if (realName == "max" || realName == "min") {
+                // MAX: arguments must be integer, real, or character:
+                // F2023 16.9.135
+                // MIN: arguments must be integer, real, or character:
+                // F2023 16.9.141
+                ok = type.IsNumeric(TypeCategory::Integer) ||
+                    type.IsNumeric(TypeCategory::Real) || IsCharacter(type);
+              }
+            }
+          },
+      },
+      definedOp.u);
+
+  return ok;
+}
+
 void OmpStructureChecker::CheckReductionTypeList(
     const parser::OmpClause::Reduction &x) {
   const auto &ompObjectList{std::get<parser::OmpObjectList>(x.v.t)};
@@ -2390,6 +2477,10 @@ void OmpStructureChecker::CheckReductionTypeList(
     if (IsProcedurePointer(*symbol)) {
       context_.Say(source,
           "A procedure pointer '%s' must not appear in a REDUCTION clause."_err_en_US,
+          symbol->name());
+    } else if (!IsReductionAllowedForType(x, DEREF(symbol->GetType()))) {
+      context_.Say(source,
+          "The type of '%s' is incompatible with the reduction operator."_err_en_US,
           symbol->name());
     }
   }
@@ -2690,7 +2781,7 @@ void OmpStructureChecker::CheckIsLoopIvPartOfClause(
     }
   }
 }
-// Following clauses have a seperate node in parse-tree.h.
+// Following clauses have a separate node in parse-tree.h.
 // Atomic-clause
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicRead, OMPC_read)
 CHECK_SIMPLE_PARSER_CLAUSE(OmpAtomicWrite, OMPC_write)
@@ -2796,18 +2887,18 @@ void OmpStructureChecker::CheckAllowedMapTypes(
     const parser::OmpMapType::Type &type,
     const std::list<parser::OmpMapType::Type> &allowedMapTypeList) {
   if (!llvm::is_contained(allowedMapTypeList, type)) {
-    std::string commaSeperatedMapTypes;
+    std::string commaSeparatedMapTypes;
     llvm::interleave(
         allowedMapTypeList.begin(), allowedMapTypeList.end(),
         [&](const parser::OmpMapType::Type &mapType) {
-          commaSeperatedMapTypes.append(parser::ToUpperCaseLetters(
+          commaSeparatedMapTypes.append(parser::ToUpperCaseLetters(
               parser::OmpMapType::EnumToString(mapType)));
         },
-        [&] { commaSeperatedMapTypes.append(", "); });
+        [&] { commaSeparatedMapTypes.append(", "); });
     context_.Say(GetContext().clauseSource,
         "Only the %s map types are permitted "
         "for MAP clauses on the %s directive"_err_en_US,
-        commaSeperatedMapTypes, ContextDirectiveAsFortran());
+        commaSeparatedMapTypes, ContextDirectiveAsFortran());
   }
 }
 

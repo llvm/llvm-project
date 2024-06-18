@@ -11,7 +11,6 @@
 #define _LIBCPP___FUNCTIONAL_FUNCTION_H
 
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__exception/exception.h>
 #include <__functional/binary_function.h>

@@ -61,20 +61,34 @@ class SparsificationAndBufferizationPass
     : public impl::SparsificationAndBufferizationBase<
           SparsificationAndBufferizationPass> {
 public:
+  // Private pass options only.
   SparsificationAndBufferizationPass(
       const bufferization::OneShotBufferizationOptions &bufferizationOptions,
       const SparsificationOptions &sparsificationOptions,
       bool createSparseDeallocs, bool enableRuntimeLibrary,
-      bool enableBufferInitialization, unsigned vectorLength,
-      bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen)
+      bool enableBufferInitialization)
       : bufferizationOptions(bufferizationOptions),
         sparsificationOptions(sparsificationOptions),
         createSparseDeallocs(createSparseDeallocs),
         enableRuntimeLibrary(enableRuntimeLibrary),
-        enableBufferInitialization(enableBufferInitialization),
-        vectorLength(vectorLength),
-        enableVLAVectorization(enableVLAVectorization),
-        enableSIMDIndex32(enableSIMDIndex32), enableGPULibgen(enableGPULibgen) {
+        enableBufferInitialization(enableBufferInitialization) {}
+  // Private pass options and visible pass options.
+  SparsificationAndBufferizationPass(
+      const bufferization::OneShotBufferizationOptions &bufferizationOptions,
+      const SparsificationOptions &sparsificationOptions,
+      bool createSparseDeallocs, bool enableRuntimeLibrary,
+      bool enableBufferInitialization, unsigned vl, bool vla, bool index32,
+      bool gpu)
+      : bufferizationOptions(bufferizationOptions),
+        sparsificationOptions(sparsificationOptions),
+        createSparseDeallocs(createSparseDeallocs),
+        enableRuntimeLibrary(enableRuntimeLibrary),
+        enableBufferInitialization(enableBufferInitialization) {
+    // Set the visible pass options explicitly.
+    vectorLength = vl;
+    enableVLAVectorization = vla;
+    enableSIMDIndex32 = index32;
+    enableGPULibgen = gpu;
   }
 
   /// Bufferize all dense ops. This assumes that no further analysis is needed
@@ -145,6 +159,12 @@ public:
         pm.addPass(createSparseGPUCodegenPass(0, enableRuntimeLibrary));
       pm.addPass(createSparseReinterpretMapPass(ReinterpretMapScope::kAll));
       pm.addPass(createSparsificationPass(sparsificationOptions));
+      if (sparsificationOptions.sparseEmitStrategy ==
+          SparseEmitStrategy::kSparseIterator) {
+        pm.addNestedPass<func::FuncOp>(createSparseSpaceCollapsePass());
+        pm.addNestedPass<func::FuncOp>(createLowerSparseIterationToSCFPass());
+      }
+
       pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
       pm.addPass(createLowerSparseOpsToForeachPass(enableRuntimeLibrary,
                                                    /*enableConvert=*/true));
@@ -178,10 +198,6 @@ private:
   bool createSparseDeallocs;
   bool enableRuntimeLibrary;
   bool enableBufferInitialization;
-  unsigned vectorLength;
-  bool enableVLAVectorization;
-  bool enableSIMDIndex32;
-  bool enableGPULibgen;
 };
 
 } // namespace sparse_tensor
@@ -213,16 +229,13 @@ mlir::getBufferizationOptionsForSparsification(bool analysisOnly) {
 
 std::unique_ptr<mlir::Pass> mlir::createSparsificationAndBufferizationPass() {
   SparsificationOptions sparseOptions;
-  return createSparsificationAndBufferizationPass(
+  return std::make_unique<
+      mlir::sparse_tensor::SparsificationAndBufferizationPass>(
       getBufferizationOptionsForSparsification(/*analysisOnly=*/false),
       sparseOptions,
       /*createSparseDeallocs=*/false,
       /*enableRuntimeLibrary=*/false,
-      /*enableBufferInitialization=*/false,
-      /*vectorLength=*/0,
-      /*enableVLAVectorization=*/false,
-      /*enableSIMDIndex32=*/false,
-      /*enableGPULibgen=*/false);
+      /*enableBufferInitialization=*/false);
 }
 
 std::unique_ptr<mlir::Pass> mlir::createSparsificationAndBufferizationPass(

@@ -137,9 +137,9 @@ private:
   // static mapping of indices to the position in the dynamic values array
   using _DynamicIdxMap = __static_partial_sums<static_cast<size_t>(_Values == _DynTag)...>;
 
-  template <size_t... Indices>
-  _LIBCPP_HIDE_FROM_ABI static constexpr _DynamicValues __zeros(index_sequence<Indices...>) noexcept {
-    return _DynamicValues{((void)Indices, 0)...};
+  template <size_t... _Indices>
+  _LIBCPP_HIDE_FROM_ABI static constexpr _DynamicValues __zeros(index_sequence<_Indices...>) noexcept {
+    return _DynamicValues{((void)_Indices, 0)...};
   }
 
 public:

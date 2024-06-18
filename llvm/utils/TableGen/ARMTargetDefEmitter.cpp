@@ -116,6 +116,24 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
      << "#endif // EMIT_EXTENSIONS\n"
      << "\n";
 
+  // Emit extension dependencies
+  OS << "#ifdef EMIT_EXTENSION_DEPENDENCIES\n"
+     << "inline constexpr ExtensionDependency ExtensionDependencies[] = {\n";
+  for (const Record *Rec : SortedExtensions) {
+    auto LaterAEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
+    for (const Record *I : Rec->getValueAsListOfDefs("Implies"))
+      if (auto EarlierAEK = I->getValueAsOptionalString("ArchExtKindSpelling"))
+        OS << "  {" << EarlierAEK->upper() << ", " << LaterAEK << "},\n";
+  }
+  // FIXME: Tablegen has the Subtarget Feature FeatureRCPC_IMMO which is implied
+  // by FeatureRCPC3 and in turn implies FeatureRCPC. The proper fix is to make
+  // FeatureRCPC_IMMO an Extension but that will expose it to the command line.
+  OS << "  {AEK_RCPC, AEK_RCPC3},\n";
+  OS << "};\n"
+     << "#undef EMIT_EXTENSION_DEPENDENCIES\n"
+     << "#endif // EMIT_EXTENSION_DEPENDENCIES\n"
+     << "\n";
+
   // Emit architecture information
   OS << "#ifdef EMIT_ARCHITECTURES\n";
 

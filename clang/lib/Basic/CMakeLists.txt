@@ -55,6 +55,7 @@ if(CLANG_VENDOR)
 endif()
 
 add_clang_library(clangBasic
+  ASTSourceDescriptor.cpp
   Attributes.cpp
   Builtins.cpp
   CLWarnings.cpp

@@ -87,4 +87,14 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.time_macros
 )
 
+add_proxy_header_library(
+  float_macros
+  HDRS
+    float_macros.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+  FULL_BUILD_DEPENDS
+    libc.include.float
+)
+
 add_subdirectory(types)

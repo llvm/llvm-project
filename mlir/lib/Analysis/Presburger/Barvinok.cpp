@@ -61,9 +61,9 @@ ConeH mlir::presburger::detail::getDual(ConeV cone) {
 }
 
 /// Find the index of a cone in V-representation.
-MPInt mlir::presburger::detail::getIndex(const ConeV &cone) {
+DynamicAPInt mlir::presburger::detail::getIndex(const ConeV &cone) {
   if (cone.getNumRows() > cone.getNumColumns())
-    return MPInt(0);
+    return DynamicAPInt(0);
 
   return cone.determinant();
 }
@@ -413,7 +413,7 @@ mlir::presburger::detail::computePolytopeGeneratingFunction(
     // constant terms zero.
     ConeH tangentCone = defineHRep(numVars);
     for (unsigned j = 0, e = subset.getNumRows(); j < e; ++j) {
-      SmallVector<MPInt> ineq(numVars + 1);
+      SmallVector<DynamicAPInt> ineq(numVars + 1);
       for (unsigned k = 0; k < numVars; ++k)
         ineq[k] = subset(j, k);
       tangentCone.addInequality(ineq);
