@@ -265,16 +265,29 @@ class Immediate : public details::FixedOrScalableQuantity<Immediate, int64_t> {
       : FixedOrScalableQuantity(V) {}
 
 public:
-  constexpr Immediate() : FixedOrScalableQuantity() {}
+  constexpr Immediate() = delete;
 
   static constexpr Immediate getFixed(ScalarTy MinVal) {
-    return Immediate(MinVal, false);
+    return {MinVal, false};
   }
   static constexpr Immediate getScalable(ScalarTy MinVal) {
-    return Immediate(MinVal, true);
+    return {MinVal, true};
   }
   static constexpr Immediate get(ScalarTy MinVal, bool Scalable) {
-    return Immediate(MinVal, Scalable);
+    return {MinVal, Scalable};
+  }
+  static constexpr Immediate getZero() { return {0, false}; }
+  static constexpr Immediate getFixedMin() {
+    return {std::numeric_limits<int64_t>::min(), false};
+  }
+  static constexpr Immediate getFixedMax() {
+    return {std::numeric_limits<int64_t>::max(), false};
+  }
+  static constexpr Immediate getScalableMin() {
+    return {std::numeric_limits<int64_t>::min(), true};
+  }
+  static constexpr Immediate getScalableMax() {
+    return {std::numeric_limits<int64_t>::max(), true};
   }
 
   constexpr bool isLessThanZero() const { return Quantity < 0; }
@@ -291,6 +304,47 @@ public:
 
   constexpr bool isMax() const {
     return Quantity == std::numeric_limits<ScalarTy>::max();
+  }
+
+  // Arithmetic 'operators' that cast to unsigned types first.
+  constexpr Immediate addUnsigned(const Immediate &RHS) const {
+    assert(isCompatibleImmediate(RHS) && "Incompatible Immediates");
+    ScalarTy Value = (uint64_t)Quantity + RHS.getKnownMinValue();
+    return {Value, Scalable || RHS.isScalable()};
+  }
+
+  constexpr Immediate subUnsigned(const Immediate &RHS) const {
+    assert(isCompatibleImmediate(RHS) && "Incompatible Immediates");
+    ScalarTy Value = (uint64_t)Quantity - RHS.getKnownMinValue();
+    return {Value, Scalable || RHS.isScalable()};
+  }
+
+  // Scale the quantity by a constant without caring about runtime scalability.
+  constexpr Immediate mulUnsigned(const ScalarTy RHS) const {
+    ScalarTy Value = (uint64_t)Quantity * RHS;
+    return {Value, Scalable};
+  }
+
+  // Helpers for generating SCEVs with vscale terms where needed.
+  const SCEV *getSCEV(ScalarEvolution &SE, Type *Ty) const {
+    const SCEV *S = SE.getConstant(Ty, Quantity);
+    if (Scalable)
+      S = SE.getMulExpr(S, SE.getVScale(S->getType()));
+    return S;
+  }
+
+  const SCEV *getNegativeSCEV(ScalarEvolution &SE, Type *Ty) const {
+    const SCEV *NegS = SE.getConstant(Ty, -(uint64_t)Quantity);
+    if (Scalable)
+      NegS = SE.getMulExpr(NegS, SE.getVScale(NegS->getType()));
+    return NegS;
+  }
+
+  const SCEV *getUnknownSCEV(ScalarEvolution &SE, Type *Ty) const {
+    const SCEV *SU = SE.getUnknown(ConstantInt::getSigned(Ty, Quantity));
+    if (Scalable)
+      SU = SE.getMulExpr(SU, SE.getVScale(SU->getType()));
+    return SU;
   }
 };
 
@@ -431,7 +485,7 @@ struct Formula {
   GlobalValue *BaseGV = nullptr;
 
   /// Base offset for complex addressing.
-  Immediate BaseOffset;
+  Immediate BaseOffset = Immediate::getZero();
 
   /// Whether any complex addressing has a base register.
   bool HasBaseReg = false;
@@ -462,7 +516,7 @@ struct Formula {
   /// An additional constant offset which added near the use. This requires a
   /// temporary register, but the offset itself can live in an add immediate
   /// field rather than a register.
-  Immediate UnfoldedOffset;
+  Immediate UnfoldedOffset = Immediate::getZero();
 
   Formula() = default;
 
@@ -899,7 +953,7 @@ static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
           S = SE.getConstant(M->getType(), 0);
           return Immediate::getScalable(C->getValue()->getSExtValue());
         }
-  return Immediate();
+  return Immediate::getZero();
 }
 
 /// If S involves the addition of a GlobalValue address, return that symbol, and
@@ -1214,7 +1268,7 @@ struct LSRFixup {
   /// A constant offset to be added to the LSRUse expression.  This allows
   /// multiple fixups to share the same LSRUse with different offsets, for
   /// example in an unrolled loop.
-  Immediate Offset;
+  Immediate Offset = Immediate::getZero();
 
   LSRFixup() = default;
 
@@ -1277,10 +1331,8 @@ public:
   SmallVector<LSRFixup, 8> Fixups;
 
   /// Keep track of the min and max offsets of the fixups.
-  Immediate MinOffset =
-      Immediate::getFixed(std::numeric_limits<int64_t>::max());
-  Immediate MaxOffset =
-      Immediate::getFixed(std::numeric_limits<int64_t>::min());
+  Immediate MinOffset = Immediate::getFixedMax();
+  Immediate MaxOffset = Immediate::getFixedMin();
 
   /// This records whether all of the fixups using this LSRUse are outside of
   /// the loop, in which case some special-case heuristics may be used.
@@ -1338,8 +1390,7 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
                                  GlobalValue *BaseGV, Immediate BaseOffset,
                                  bool HasBaseReg, int64_t Scale,
-                                 Instruction *Fixup = nullptr,
-                                 int64_t ScalableOffset = 0);
+                                 Instruction *Fixup = nullptr);
 
 static unsigned getSetupCost(const SCEV *Reg, unsigned Depth) {
   if (isa<SCEVUnknown>(Reg) || isa<SCEVConstant>(Reg))
@@ -1391,7 +1442,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
       // If the step size matches the base offset, we could use pre-indexed
       // addressing.
-      if (AMK == TTI::AMK_PreIndexed && !F.BaseOffset.isScalable()) {
+      if (AMK == TTI::AMK_PreIndexed && F.BaseOffset.isFixed()) {
         if (auto *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE)))
           if (Step->getAPInt() == F.BaseOffset.getFixedValue())
             LoopCost = 0;
@@ -1491,25 +1542,25 @@ void Cost::RateFormula(const Formula &F,
 
   // Tally up the non-zero immediates.
   for (const LSRFixup &Fixup : LU.Fixups) {
-    // FIXME: We probably want to noticeably increase the cost if the
-    // two offsets differ in scalability?
-    bool Scalable = Fixup.Offset.isScalable() || F.BaseOffset.isScalable();
-    int64_t O = Fixup.Offset.getKnownMinValue();
-    Immediate Offset = Immediate::get(
-        (uint64_t)(O) + F.BaseOffset.getKnownMinValue(), Scalable);
-    if (F.BaseGV)
-      C.ImmCost += 64; // Handle symbolic values conservatively.
-                     // TODO: This should probably be the pointer size.
-    else if (Offset.isNonZero())
-      C.ImmCost +=
-          APInt(64, Offset.getKnownMinValue(), true).getSignificantBits();
+    if (Fixup.Offset.isCompatibleImmediate(F.BaseOffset)) {
+      Immediate Offset = Fixup.Offset.addUnsigned(F.BaseOffset);
+      if (F.BaseGV)
+        C.ImmCost += 64; // Handle symbolic values conservatively.
+                         // TODO: This should probably be the pointer size.
+      else if (Offset.isNonZero())
+        C.ImmCost +=
+            APInt(64, Offset.getKnownMinValue(), true).getSignificantBits();
 
-    // Check with target if this offset with this instruction is
-    // specifically not supported.
-    if (LU.Kind == LSRUse::Address && Offset.isNonZero() &&
-        !isAMCompletelyFolded(*TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
-                              Offset, F.HasBaseReg, F.Scale, Fixup.UserInst))
-      C.NumBaseAdds++;
+      // Check with target if this offset with this instruction is
+      // specifically not supported.
+      if (LU.Kind == LSRUse::Address && Offset.isNonZero() &&
+          !isAMCompletelyFolded(*TTI, LSRUse::Address, LU.AccessTy, F.BaseGV,
+                                Offset, F.HasBaseReg, F.Scale, Fixup.UserInst))
+        C.NumBaseAdds++;
+    } else {
+      // Incompatible immediate type, increase cost to avoid using
+      C.ImmCost += 2048;
+    }
   }
 
   // If we don't count instruction cost exit here.
@@ -1763,8 +1814,7 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
                                  GlobalValue *BaseGV, Immediate BaseOffset,
                                  bool HasBaseReg, int64_t Scale,
-                                 Instruction *Fixup /* = nullptr */,
-                                 int64_t ScalableOffset) {
+                                 Instruction *Fixup /* = nullptr */) {
   switch (Kind) {
   case LSRUse::Address: {
     int64_t FixedOffset =
@@ -1778,7 +1828,7 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
   case LSRUse::ICmpZero:
     // There's not even a target hook for querying whether it would be legal to
     // fold a GV into an ICmp.
-    if (BaseGV || ScalableOffset != 0)
+    if (BaseGV)
       return false;
 
     // ICmp only has two operands; don't allow more than two non-trivial parts.
@@ -1961,7 +2011,7 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
                              LSRUse::KindType Kind, MemAccessTy AccessTy,
                              GlobalValue *BaseGV, Immediate BaseOffset,
-                             bool HasBaseReg, int64_t ScalableOffset = 0) {
+                             bool HasBaseReg) {
   // Fast-path: zero is always foldable.
   if (BaseOffset.isZero() && !BaseGV)
     return true;
@@ -1987,7 +2037,7 @@ static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
     Scale = 0;
 
   return isAMCompletelyFolded(TTI, Kind, AccessTy, BaseGV, BaseOffset,
-                              HasBaseReg, Scale, nullptr, ScalableOffset);
+                              HasBaseReg, Scale);
 }
 
 static bool isAlwaysFoldable(const TargetTransformInfo &TTI,
@@ -3304,14 +3354,13 @@ void LSRInstance::FinalizeChain(IVChain &Chain) {
 static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
                              Value *Operand, const TargetTransformInfo &TTI) {
   const SCEVConstant *IncConst = dyn_cast<SCEVConstant>(IncExpr);
-  int64_t IncOffset = 0;
-  int64_t ScalableOffset = 0;
+  Immediate IncOffset = Immediate::getZero();
   if (IncConst) {
     if (IncConst && IncConst->getAPInt().getSignificantBits() > 64)
       return false;
-    IncOffset = IncConst->getValue()->getSExtValue();
+    IncOffset = Immediate::getFixed(IncConst->getValue()->getSExtValue());
   } else {
-    // Look for mul(vscale, constant), to detect ScalableOffset.
+    // Look for mul(vscale, constant), to detect a scalable offset.
     auto *IncVScale = dyn_cast<SCEVMulExpr>(IncExpr);
     if (!IncVScale || IncVScale->getNumOperands() != 2 ||
         !isa<SCEVVScale>(IncVScale->getOperand(1)))
@@ -3319,7 +3368,7 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
     auto *Scale = dyn_cast<SCEVConstant>(IncVScale->getOperand(0));
     if (!Scale || Scale->getType()->getScalarSizeInBits() > 64)
       return false;
-    ScalableOffset = Scale->getValue()->getSExtValue();
+    IncOffset = Immediate::getScalable(Scale->getValue()->getSExtValue());
   }
 
   if (!isAddressUse(TTI, UserInst, Operand))
@@ -3327,8 +3376,7 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
 
   MemAccessTy AccessTy = getAccessType(TTI, UserInst, Operand);
   if (!isAlwaysFoldable(TTI, LSRUse::Address, AccessTy, /*BaseGV=*/nullptr,
-                        Immediate::getFixed(IncOffset), /*HasBaseReg=*/false,
-                        ScalableOffset))
+                        IncOffset, /*HasBaseReg=*/false))
     return false;
 
   return true;
@@ -3911,6 +3959,9 @@ void LSRInstance::GenerateReassociationsImpl(LSRUse &LU, unsigned LUIdx,
       continue;
     Formula F = Base;
 
+    if (F.UnfoldedOffset.isNonZero() && F.UnfoldedOffset.isScalable())
+      continue;
+
     // Add the remaining pieces of the add back into the new formula.
     const SCEVConstant *InnerSumSC = dyn_cast<SCEVConstant>(InnerSum);
     if (InnerSumSC && SE.getTypeSizeInBits(InnerSumSC->getType()) <= 64 &&
@@ -4026,7 +4077,7 @@ void LSRInstance::GenerateCombinations(LSRUse &LU, unsigned LUIdx,
 
   // If we have an unfolded offset, generate a formula combining it with the
   // registers collected.
-  if (NewBase.UnfoldedOffset) {
+  if (NewBase.UnfoldedOffset.isNonZero() && NewBase.UnfoldedOffset.isFixed()) {
     assert(CombinedIntegerType && "Missing a type for the unfolded offset");
     Ops.push_back(SE.getConstant(CombinedIntegerType,
                                  NewBase.UnfoldedOffset.getFixedValue(), true));
@@ -4074,21 +4125,13 @@ void LSRInstance::GenerateConstantOffsetsImpl(
 
   auto GenerateOffset = [&](const SCEV *G, Immediate Offset) {
     Formula F = Base;
-    if (Base.BaseOffset.isScalable() != Offset.isScalable() &&
-        Base.BaseOffset.isNonZero() && Offset.isNonZero())
+    if (!Base.BaseOffset.isCompatibleImmediate(Offset))
       return;
-    bool Scalable = Base.BaseOffset.isScalable() || Offset.isScalable();
-    F.BaseOffset = Immediate::get((uint64_t)Base.BaseOffset.getKnownMinValue() -
-                                      Offset.getKnownMinValue(),
-                                  Scalable);
+    F.BaseOffset = Base.BaseOffset.subUnsigned(Offset);
 
     if (isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F)) {
       // Add the offset to the base register.
-      const SCEV *NewOffset =
-          SE.getConstant(G->getType(), Offset.getKnownMinValue());
-      if (Scalable)
-        NewOffset =
-            SE.getMulExpr(NewOffset, SE.getVScale(NewOffset->getType()));
+      const SCEV *NewOffset = Offset.getSCEV(SE, G->getType());
       const SCEV *NewG = SE.getAddExpr(NewOffset, G);
       // If it cancelled out, drop the base register, otherwise update it.
       if (NewG->isZero()) {
@@ -4126,7 +4169,7 @@ void LSRInstance::GenerateConstantOffsetsImpl(
           StepInt.getSExtValue() : StepInt.getZExtValue();
 
         for (Immediate Offset : Worklist) {
-          if (!Offset.isScalable()) {
+          if (Offset.isFixed()) {
             Offset = Immediate::getFixed(Offset.getFixedValue() - Step);
             GenerateOffset(G, Offset);
           }
@@ -4139,12 +4182,10 @@ void LSRInstance::GenerateConstantOffsetsImpl(
 
   Immediate Imm = ExtractImmediate(G, SE);
   if (G->isZero() || Imm.isZero() ||
-      Base.BaseOffset.isScalable() != Imm.isScalable())
+      !Base.BaseOffset.isCompatibleImmediate(Imm))
     return;
   Formula F = Base;
-  F.BaseOffset = Immediate::get((uint64_t)F.BaseOffset.getKnownMinValue() +
-                                    Imm.getKnownMinValue(),
-                                Imm.isScalable());
+  F.BaseOffset = F.BaseOffset.addUnsigned(Imm);
   if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, LU.Kind, LU.AccessTy, F))
     return;
   if (IsScaledReg) {
@@ -4205,8 +4246,10 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
     // Check that the multiplication doesn't overflow.
     if (Base.BaseOffset.isMin() && Factor == -1)
       continue;
-    Immediate NewBaseOffset =
-        Immediate::getFixed((uint64_t)Base.BaseOffset.getFixedValue() * Factor);
+    // Not supporting scalable immediates.
+    if (Base.BaseOffset.isNonZero() && Base.BaseOffset.isScalable())
+      continue;
+    Immediate NewBaseOffset = Base.BaseOffset.mulUnsigned(Factor);
     assert(Factor != 0 && "Zero factor not expected!");
     if (NewBaseOffset.getFixedValue() / Factor !=
         Base.BaseOffset.getFixedValue())
@@ -4220,7 +4263,7 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
     Immediate Offset = LU.MinOffset;
     if (Offset.isMin() && Factor == -1)
       continue;
-    Offset = Immediate::getFixed((uint64_t)Offset.getFixedValue() * Factor);
+    Offset = Offset.mulUnsigned(Factor);
     if (Offset.getFixedValue() / Factor != LU.MinOffset.getFixedValue())
       continue;
     // If the offset will be truncated at this use, check that it is in bounds.
@@ -4236,9 +4279,7 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
       continue;
 
     // Compensate for the use having MinOffset built into it.
-    F.BaseOffset = Immediate::getFixed((uint64_t)F.BaseOffset.getFixedValue() +
-                                       Offset.getFixedValue() -
-                                       LU.MinOffset.getFixedValue());
+    F.BaseOffset = F.BaseOffset.addUnsigned(Offset).subUnsigned(LU.MinOffset);
 
     const SCEV *FactorS = SE.getConstant(IntTy, Factor);
 
@@ -4260,8 +4301,7 @@ void LSRInstance::GenerateICmpZeroScales(LSRUse &LU, unsigned LUIdx,
     if (F.UnfoldedOffset.isNonZero()) {
       if (F.UnfoldedOffset.isMin() && Factor == -1)
         continue;
-      F.UnfoldedOffset = Immediate::getFixed(
-          (uint64_t)F.UnfoldedOffset.getFixedValue() * Factor);
+      F.UnfoldedOffset = F.UnfoldedOffset.mulUnsigned(Factor);
       if (F.UnfoldedOffset.getFixedValue() / Factor !=
           Base.UnfoldedOffset.getFixedValue())
         continue;
@@ -4517,8 +4557,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
       // other orig regs.
       Immediate First = Imms.begin()->first;
       Immediate Last = std::prev(Imms.end())->first;
-      if (First.isScalable() != Last.isScalable() && First.isNonZero() &&
-          Last.isNonZero()) {
+      if (!First.isCompatibleImmediate(Last)) {
         LLVM_DEBUG(dbgs() << "Skipping cross-use reuse for " << *OrigReg
                           << "\n");
         continue;
@@ -4539,15 +4578,11 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           Imms.lower_bound(Immediate::get(Avg, Scalable))};
       for (const auto &M : OtherImms) {
         if (M == J || M == JE) continue;
-        if (JImm.isScalable() != M->first.isScalable() && JImm.isNonZero() &&
-            M->first.isNonZero())
+        if (!JImm.isCompatibleImmediate(M->first))
           continue;
 
         // Compute the difference between the two.
-        bool Scalable = JImm.isScalable() || M->first.isScalable();
-        Immediate Imm = Immediate::get((uint64_t)JImm.getKnownMinValue() -
-                                           M->first.getKnownMinValue(),
-                                       Scalable);
+        Immediate Imm = JImm.subUnsigned(M->first);
         for (unsigned LUIdx : UsedByIndices.set_bits())
           // Make a memo of this use, offset, and register tuple.
           if (UniqueItems.insert(std::make_pair(LUIdx, Imm)).second)
@@ -4569,10 +4604,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
     const SCEV *OrigReg = WI.OrigReg;
 
     Type *IntTy = SE.getEffectiveSCEVType(OrigReg->getType());
-    const SCEV *NegImmS =
-        SE.getSCEV(ConstantInt::get(IntTy, -(uint64_t)Imm.getKnownMinValue()));
-    if (Imm.isScalable())
-      NegImmS = SE.getMulExpr(NegImmS, SE.getVScale(NegImmS->getType()));
+    const SCEV *NegImmS = Imm.getNegativeSCEV(SE, IntTy);
     unsigned BitWidth = SE.getTypeSizeInBits(IntTy);
 
     // TODO: Use a more targeted data structure.
@@ -4585,19 +4617,11 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
       F.unscale();
       // Use the immediate in the scaled register.
       if (F.ScaledReg == OrigReg) {
-        if (F.BaseOffset.isScalable() != Imm.isScalable() &&
-            F.BaseOffset.isNonZero() && Imm.isNonZero())
+        if (!F.BaseOffset.isCompatibleImmediate(Imm))
           continue;
-        bool Scalable = F.BaseOffset.isScalable() || Imm.isScalable();
-        Immediate Offset =
-            Immediate::get((uint64_t)F.BaseOffset.getKnownMinValue() +
-                               Imm.getKnownMinValue() * (uint64_t)F.Scale,
-                           Scalable);
+        Immediate Offset = F.BaseOffset.addUnsigned(Imm.mulUnsigned(F.Scale));
         // Don't create 50 + reg(-50).
-        const SCEV *S = SE.getSCEV(
-            ConstantInt::get(IntTy, -(uint64_t)Offset.getKnownMinValue()));
-        if (Scalable)
-          S = SE.getMulExpr(S, SE.getVScale(S->getType()));
+        const SCEV *S = Offset.getNegativeSCEV(SE, IntTy);
         if (F.referencesReg(S))
           continue;
         Formula NewF = F;
@@ -4610,12 +4634,18 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
         // If the new scale is a constant in a register, and adding the constant
         // value to the immediate would produce a value closer to zero than the
         // immediate itself, then the formula isn't worthwhile.
-        if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewF.ScaledReg))
+        if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewF.ScaledReg)) {
+          // FIXME: Do we need to do something for scalable immediates here?
+          //        A scalable SCEV won't be constant, but we might still have
+          //        something in the offset? Bail out for now to be safe.
+          if (NewF.BaseOffset.isNonZero() && NewF.BaseOffset.isScalable())
+            continue;
           if (C->getValue()->isNegative() !=
                   (NewF.BaseOffset.isLessThanZero()) &&
               (C->getAPInt().abs() * APInt(BitWidth, F.Scale))
                   .ule(std::abs(NewF.BaseOffset.getFixedValue())))
             continue;
+        }
 
         // OK, looks good.
         NewF.canonicalize(*this->L);
@@ -4631,21 +4661,13 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
               !NewF.UnfoldedOffset.isCompatibleImmediate(Imm) ||
               !NewF.BaseOffset.isCompatibleImmediate(NewF.UnfoldedOffset))
             continue;
-          bool Scalable = NewF.BaseOffset.isScalable() || Imm.isScalable() ||
-                          NewF.UnfoldedOffset.isScalable();
-          NewF.BaseOffset =
-              Immediate::get((uint64_t)NewF.BaseOffset.getKnownMinValue() +
-                                 Imm.getKnownMinValue(),
-                             Scalable);
+          NewF.BaseOffset = NewF.BaseOffset.addUnsigned(Imm);
           if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset,
                           LU.Kind, LU.AccessTy, NewF)) {
             if (AMK == TTI::AMK_PostIndexed &&
                 mayUsePostIncMode(TTI, LU, OrigReg, this->L, SE))
               continue;
-            Immediate NewUnfoldedOffset = Immediate::get(
-                (uint64_t)NewF.UnfoldedOffset.getKnownMinValue() +
-                    Imm.getKnownMinValue(),
-                Scalable);
+            Immediate NewUnfoldedOffset = NewF.UnfoldedOffset.addUnsigned(Imm);
             if (!isLegalAddImmediate(TTI, NewUnfoldedOffset))
               continue;
             NewF = F;
@@ -4657,7 +4679,9 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           // constant value to the immediate would produce a value closer to
           // zero than the immediate itself, then the formula isn't worthwhile.
           for (const SCEV *NewReg : NewF.BaseRegs)
-            if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewReg))
+            if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewReg)) {
+              if (NewF.BaseOffset.isNonZero() && NewF.BaseOffset.isScalable())
+                goto skip_formula;
               if ((C->getAPInt() + NewF.BaseOffset.getFixedValue())
                       .abs()
                       .slt(std::abs(NewF.BaseOffset.getFixedValue())) &&
@@ -4666,6 +4690,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
                       (unsigned)llvm::countr_zero<uint64_t>(
                           NewF.BaseOffset.getFixedValue()))
                 goto skip_formula;
+            }
 
           // Ok, looks good.
           NewF.canonicalize(*this->L);
@@ -4849,6 +4874,8 @@ void LSRInstance::NarrowSearchSpaceByDetectingSupersets() {
       bool Any = false;
       for (size_t i = 0, e = LU.Formulae.size(); i != e; ++i) {
         Formula &F = LU.Formulae[i];
+        if (F.BaseOffset.isNonZero() && F.BaseOffset.isScalable())
+          continue;
         // Look for a formula with a constant or GV in a register. If the use
         // also has a formula with that same value in an immediate field,
         // delete the one that uses a register.
@@ -5754,14 +5781,10 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
   // FIXME: Are we sure we won't get a mismatch here? Is there a way to bail
   // out at this point, or should we generate a SCEV adding together mixed
   // offsets?
-  assert((F.BaseOffset.isScalable() == LF.Offset.isScalable() ||
-          F.BaseOffset.isZero() || LF.Offset.isZero()) &&
+  assert(F.BaseOffset.isCompatibleImmediate(LF.Offset) &&
          "Expanding mismatched offsets\n");
-  bool Scalable = F.BaseOffset.isScalable() || LF.Offset.isScalable();
   // Expand the immediate portion.
-  Immediate Offset = Immediate::get((uint64_t)F.BaseOffset.getKnownMinValue() +
-                                        LF.Offset.getKnownMinValue(),
-                                    Scalable);
+  Immediate Offset = F.BaseOffset.addUnsigned(LF.Offset);
   if (Offset.isNonZero()) {
     if (LU.Kind == LSRUse::ICmpZero) {
       // The other interesting way of "folding" with an ICmpZero is to use a
@@ -5776,23 +5799,15 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
     } else {
       // Just add the immediate values. These again are expected to be matched
       // as part of the address.
-      const SCEV *SU = SE.getUnknown(
-          ConstantInt::getSigned(IntTy, Offset.getKnownMinValue()));
-      if (Scalable)
-        SU = SE.getMulExpr(SU, SE.getVScale(SU->getType()));
-      Ops.push_back(SU);
+      Ops.push_back(Offset.getUnknownSCEV(SE, IntTy));
     }
   }
 
   // Expand the unfolded offset portion.
   Immediate UnfoldedOffset = F.UnfoldedOffset;
   if (UnfoldedOffset.isNonZero()) {
-    const SCEV *SU = SE.getUnknown(
-        ConstantInt::getSigned(IntTy, UnfoldedOffset.getKnownMinValue()));
-    if (UnfoldedOffset.isScalable())
-      SU = SE.getMulExpr(SU, SE.getVScale(SU->getType()));
     // Just add the immediate values.
-    Ops.push_back(SU);
+    Ops.push_back(UnfoldedOffset.getUnknownSCEV(SE, IntTy));
   }
 
   // Emit instructions summing all the operands.
