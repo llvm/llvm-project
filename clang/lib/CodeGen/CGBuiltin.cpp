@@ -18331,8 +18331,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("rsqrt operand must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), Intrinsic::dx_rsqrt,
-        ArrayRef<Value *>{Op0}, nullptr, "dx.rsqrt");
+        /*ReturnType=*/Op0->getType(), CGM.getHLSLRuntime().getRsqrtIntrinsic(),
+        ArrayRef<Value *>{Op0}, nullptr, "hlsl.rsqrt");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     return EmitRuntimeCall(CGM.CreateRuntimeFunction(
