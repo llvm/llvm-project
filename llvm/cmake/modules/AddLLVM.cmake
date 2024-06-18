@@ -220,8 +220,14 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     separate_arguments(flags UNIX_COMMAND "${CMAKE_EXE_LINKER_FLAGS}")
     set(command ${CMAKE_C_COMPILER} ${flags} ${version_flag} -o ${DEVNULL})
   endif()
+
+  # The LANG environment variable controls the way that tools use
+  # localization information, which allows to work with different
+  # national conventions.
+  # For this reason, it must be forced to a known value, otherwise
+  # the linker may reply with something different than expected.
   execute_process(
-    COMMAND ${command}
+    COMMAND ${CMAKE_COMMAND} -E env LANG=C ${command}
     OUTPUT_VARIABLE stdout
     ERROR_VARIABLE stderr
     )
