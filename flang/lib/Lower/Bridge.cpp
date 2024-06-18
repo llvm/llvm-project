@@ -4177,7 +4177,8 @@ private:
       if (const auto *details =
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-        if (details->cudaDataAttr()) {
+        if (details->cudaDataAttr() &&
+            *details->cudaDataAttr() != Fortran::common::CUDADataAttr::Pinned) {
           if (sym.owner().IsDerivedType() && IsAllocatable(sym.GetUltimate()))
             TODO(loc, "Device resident allocatable derived-type component");
           // TODO: This should probably being checked in semantic and give a
