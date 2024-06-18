@@ -6497,6 +6497,10 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   if (LoadNode->getMemoryVT() != MVT::v4i8)
     return SDValue();
 
+  // Avoid generating unaligned loads.
+  if (Subtarget->requiresStrictAlign() && LoadNode->getAlign() < Align(4))
+    return SDValue();
+
   unsigned ExtType;
   if (LoadNode->getExtensionType() == ISD::SEXTLOAD)
     ExtType = ISD::SIGN_EXTEND;
