@@ -986,7 +986,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
     Value *IncStep = Inc->getStep();
-    Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
+    Value *Load = Builder.CreateLoad(IncStep->getType(), Addr);
     auto *Count = Builder.CreateAdd(Load, Inc->getStep());
     auto *Store = Builder.CreateStore(Count, Addr);
     if (isCounterPromotionEnabled())
