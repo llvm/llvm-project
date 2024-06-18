@@ -715,8 +715,6 @@ public:
 private:
   allocator_type& __na_;
 
-  __map_node_destructor& operator=(const __map_node_destructor&);
-
 public:
   bool __first_constructed;
   bool __second_constructed;
@@ -734,6 +732,8 @@ public:
     __x.__value_constructed = false;
   }
 #endif // _LIBCPP_CXX03_LANG
+
+  __map_node_destructor& operator=(const __map_node_destructor&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) _NOEXCEPT {
     if (__second_constructed)
@@ -808,7 +808,6 @@ public:
     return *this;
   }
 
-private:
   __value_type()                    = delete;
   ~__value_type()                   = delete;
   __value_type(const __value_type&) = delete;
@@ -830,11 +829,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI value_type& __get_value() { return __cc_; }
   _LIBCPP_HIDE_FROM_ABI const value_type& __get_value() const { return __cc_; }
 
-private:
-  __value_type();
-  __value_type(__value_type const&);
-  __value_type& operator=(__value_type const&);
-  ~__value_type();
+  __value_type()                               = delete;
+  __value_type(__value_type const&)            = delete;
+  __value_type& operator=(__value_type const&) = delete;
+  ~__value_type()                              = delete;
 };
 
 #endif // _LIBCPP_CXX03_LANG
