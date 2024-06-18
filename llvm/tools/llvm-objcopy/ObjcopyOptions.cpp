@@ -552,31 +552,36 @@ static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
   return Error::success();
 }
 
-static Expected<int64_t> parseAdjustSectionLMA(StringRef ArgValue,
+static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
                                                StringRef OptionName) {
   StringRef StringValue;
   if (ArgValue.starts_with("*+")) {
     StringValue = ArgValue.slice(2, StringRef::npos);
   } else if (ArgValue.starts_with("*-")) {
     StringValue = ArgValue.slice(1, StringRef::npos);
-  } else {
+  } else if (ArgValue.contains("=")) {
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName +
-                                 ": it is required that all sections "
-                                 "are either incremented, or decremented at "
-                                 "the same time; use *+val, "
-                                 "or *-val");
+                                 ": changing LMA to a specific value is not "
+                                 "supported. Use *+val or *-val instead");
+  } else if (ArgValue.contains("+") || ArgValue.contains("-")) {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": changing a specific section LMA is not "
+                                 "supported. Use *+val or *-val instead");
   }
   if (StringValue.empty())
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName +
-                                 ": missing offset of LMA");
+                                 ": missing LMA offset");
 
-  auto SLMAV = getAsInteger<int64_t>(StringValue);
-  if (!SLMAV)
-    return createStringError(SLMAV.getError(),
-                             "Unable to parse adjustment value");
-  return *SLMAV;
+  auto LMAValue = getAsInteger<int64_t>(StringValue);
+  if (!LMAValue)
+    return createStringError(LMAValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 ArgValue.slice(0, 2) + " is " + StringValue +
+                                 " when it should be integer");
+  return *LMAValue;
 }
 
 // parseObjcopyOptions returns the config and sets the input arguments. If a
@@ -860,12 +865,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     Config.PadTo = *Addr;
   }
 
-  if (const auto *Arg = InputArgs.getLastArg(OBJCOPY_adjust_section_lma)) {
-    Expected<int64_t> SLMAV =
-        parseAdjustSectionLMA(Arg->getValue(), Arg->getSpelling());
-    if (!SLMAV)
-      return SLMAV.takeError();
-    Config.ChangeSectionLMAValAll = *SLMAV;
+  if (const auto *Arg = InputArgs.getLastArg(OBJCOPY_change_section_lma)) {
+    Expected<int64_t> LMAValue =
+        parseChangeSectionLMA(Arg->getValue(), Arg->getSpelling());
+    if (!LMAValue)
+      return LMAValue.takeError();
+    Config.ChangeSectionLMAValAll = *LMAValue;
   }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {

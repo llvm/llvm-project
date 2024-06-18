@@ -528,9 +528,9 @@ them.
 
  Mark all defined global symbols as weak in the output.
 
-.. option:: --change-section-lma \*{+-}<offset>
+.. option:: --change-section-lma \*{+-}<val>
 
- Currently only supports changing LMA for all sections by the same offset.
+ Shift LMA of non-zero-sized sections in the program header by ``<val>``
 
 MACH-O-SPECIFIC OPTIONS
 -----------------------

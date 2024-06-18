@@ -254,12 +254,8 @@ def adjust_start : JoinedOrSeparate<["--"], "adjust-start">,
                    Alias<change_start>,
                    HelpText<"Alias for --change-start">;
 
-defm adjust_section_lma
-    : Eq<"change-section-lma",
-         "Change LMA of all sections by <val>. LMA is the physical address where the section is "
-         "loaded in the memory; as opoosed to VMA, which is the virtual address at which the "
-         "section resides during program execution. Ussually LMA and VMA are the same, but some "
-         "platforms support these to be different resulting in runtime copying">,
+defm change_section_lma
+    : Eq<"change-section-lma", "Shift LMA of non-zero-sized sections in the program header by <val>">,
       MetaVarName<"*{+|-}val">;
 
 defm add_symbol

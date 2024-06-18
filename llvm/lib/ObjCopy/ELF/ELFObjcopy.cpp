@@ -671,7 +671,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   }
 
   if (Config.ChangeSectionLMAValAll != 0) {
-    for (auto &Seg : Obj.segments()) {
+    for (Segment &Seg : Obj.segments()) {
       if (Seg.FileSize > 0)
         Seg.PAddr += Config.ChangeSectionLMAValAll;
     }
