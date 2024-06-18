@@ -87,7 +87,7 @@ Status MinidumpFileBuilder::AddHeaderAndCalculateDirectories() {
   if (new_offset != m_saved_data_size)
     error.SetErrorStringWithFormat("Failed to fill in header and directory "
                                    "sections. Written / Expected (%" PRIx64
-                                   " / %zu)",
+                                   " / %" PRIx64 ")",
                                    new_offset, m_saved_data_size);
 
   return error;
@@ -858,19 +858,22 @@ Status MinidumpFileBuilder::AddMemoryList(SaveCoreStyle core_style) {
   // We apply a generous padding here so that the Directory, MemoryList and
   // Memory64List sections all begin in 32b addressable space.
   // Then anything overflow extends into 64b addressable space.
-  total_size +=
-      256 + (all_core_memory_ranges.size() - stack_start_addresses.size()) *
-                sizeof(llvm::minidump::MemoryDescriptor_64);
+  // All core memeroy ranges will either container nothing on stacks only
+  // or all the memory ranges including stacks
+  if (!all_core_memory_ranges.empty())
+    total_size +=
+        256 + (all_core_memory_ranges.size() - stack_start_addresses.size()) *
+                  sizeof(llvm::minidump::MemoryDescriptor_64);
 
   for (const auto &core_range : all_core_memory_ranges) {
-    addr_t range_size = core_range.range.size();
+    const addr_t range_size = core_range.range.size();
     if (stack_start_addresses.count(core_range.range.start()) > 0)
       // Don't double save stacks.
       continue;
 
     if (total_size + range_size < UINT32_MAX) {
       ranges_32.push_back(core_range);
-      total_size += core_range.range.size();
+      total_size += range_size;
     } else {
       ranges_64.push_back(core_range);
     }
