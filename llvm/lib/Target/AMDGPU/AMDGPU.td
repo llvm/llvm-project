@@ -1383,7 +1383,6 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureMaxHardClauseLength32,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
@@ -2210,7 +2209,9 @@ def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
 
 def HasBufferFlatGlobalAtomicsF64 :
   Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
-  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX12_10Insts)>;
+  // FIXME: This is too coarse, and working around using pseudo's predicates on real instruction.
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, (all_of FeatureGFX10Insts, (not FeatureGFX12Insts)), FeatureSouthernIslands, FeatureSeaIslands, FeatureGFX12_10Insts)>;
+
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
   AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX12_10Insts)>;
