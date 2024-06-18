@@ -23,9 +23,6 @@ class Instruction;
 // the indirect-call value profile metadata is available.
 class ICallPromotionAnalysis {
 private:
-  // Allocate space to read the profile annotation.
-  std::unique_ptr<InstrProfValueData[]> ValueDataArray;
-
   // Count is the call count for the direct-call target.
   // TotalCount is the total call count for the indirect-call callsite.
   // RemainingCount is the TotalCount minus promoted-direct-call count.
@@ -35,9 +32,10 @@ private:
 
   // Returns the number of profitable candidates to promote for the
   // current ValueDataArray and the given \p Inst.
-  uint32_t getProfitablePromotionCandidates(const Instruction *Inst,
-                                            uint32_t NumVals,
-                                            uint64_t TotalCount);
+  uint32_t
+  getProfitablePromotionCandidates(const Instruction *Inst,
+                                   ArrayRef<InstrProfValueData> ValueDataRef,
+                                   uint64_t TotalCount);
 
   // Noncopyable
   ICallPromotionAnalysis(const ICallPromotionAnalysis &other) = delete;
@@ -45,7 +43,7 @@ private:
   operator=(const ICallPromotionAnalysis &other) = delete;
 
 public:
-  ICallPromotionAnalysis();
+  ICallPromotionAnalysis() = default;
 
   /// Returns reference to array of InstrProfValueData for the given
   /// instruction \p I.
@@ -57,7 +55,7 @@ public:
   ///
   /// The returned array space is owned by this class, and overwritten on
   /// subsequent calls.
-  ArrayRef<InstrProfValueData> getPromotionCandidatesForInstruction(
+  SmallVector<InstrProfValueData, 4> getPromotionCandidatesForInstruction(
       const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates);
 };
 

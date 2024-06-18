@@ -49,10 +49,6 @@ cl::opt<unsigned> MaxNumVTableAnnotations(
     "icp-max-num-vtables", cl::init(6), cl::Hidden,
     cl::desc("Max number of vtables annotated for a vtable load instruction."));
 
-ICallPromotionAnalysis::ICallPromotionAnalysis() {
-  ValueDataArray = std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
-}
-
 bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,
                                                    uint64_t TotalCount,
                                                    uint64_t RemainingCount) {
@@ -64,15 +60,14 @@ bool ICallPromotionAnalysis::isPromotionProfitable(uint64_t Count,
 // the count. Stop at the first target that is not promoted. Returns the
 // number of candidates deemed profitable.
 uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
-    const Instruction *Inst, uint32_t NumVals, uint64_t TotalCount) {
-  ArrayRef<InstrProfValueData> ValueDataRef(ValueDataArray.get(), NumVals);
-
+    const Instruction *Inst, ArrayRef<InstrProfValueData> ValueDataRef,
+    uint64_t TotalCount) {
   LLVM_DEBUG(dbgs() << " \nWork on callsite " << *Inst
-                    << " Num_targets: " << NumVals << "\n");
+                    << " Num_targets: " << ValueDataRef.size() << "\n");
 
   uint32_t I = 0;
   uint64_t RemainingCount = TotalCount;
-  for (; I < MaxNumPromotions && I < NumVals; I++) {
+  for (; I < MaxNumPromotions && I < ValueDataRef.size(); I++) {
     uint64_t Count = ValueDataRef[I].Count;
     assert(Count <= RemainingCount);
     LLVM_DEBUG(dbgs() << " Candidate " << I << " Count=" << Count
@@ -87,17 +82,12 @@ uint32_t ICallPromotionAnalysis::getProfitablePromotionCandidates(
   return I;
 }
 
-ArrayRef<InstrProfValueData>
+SmallVector<InstrProfValueData, 4>
 ICallPromotionAnalysis::getPromotionCandidatesForInstruction(
     const Instruction *I, uint64_t &TotalCount, uint32_t &NumCandidates) {
-  uint32_t NumVals;
-  auto Res = getValueProfDataFromInst(*I, IPVK_IndirectCallTarget,
-                                      MaxNumPromotions, NumVals, TotalCount);
-  if (!Res) {
-    NumCandidates = 0;
-    return ArrayRef<InstrProfValueData>();
-  }
-  ValueDataArray = std::move(Res);
-  NumCandidates = getProfitablePromotionCandidates(I, NumVals, TotalCount);
-  return ArrayRef<InstrProfValueData>(ValueDataArray.get(), NumVals);
+  auto VDs = getValueProfDataFromInst(*I, IPVK_IndirectCallTarget,
+                                      MaxNumPromotions, TotalCount);
+  NumCandidates =
+      VDs.empty() ? 0 : getProfitablePromotionCandidates(I, VDs, TotalCount);
+  return VDs;
 }
