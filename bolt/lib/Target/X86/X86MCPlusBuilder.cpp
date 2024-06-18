@@ -1639,11 +1639,16 @@ public:
     return true;
   }
 
-  bool convertCallToIndirectCall(MCInst &Inst, const MCSymbol *TargetLocation,
-                                 MCContext *Ctx) override {
-    assert((Inst.getOpcode() == X86::CALL64pcrel32 ||
-            (Inst.getOpcode() == X86::JMP_4 && isTailCall(Inst))) &&
+  InstructionListType createIndirectPltCall(const MCInst &DirectCall,
+                                            const MCSymbol *TargetLocation,
+                                            MCContext *Ctx) override {
+    assert((DirectCall.getOpcode() == X86::CALL64pcrel32 ||
+            (DirectCall.getOpcode() == X86::JMP_4 && isTailCall(DirectCall))) &&
            "64-bit direct (tail) call instruction expected");
+
+    InstructionListType Code;
+    // Create a new indirect call by converting the previous direct call.
+    MCInst Inst = DirectCall;
     const auto NewOpcode =
         (Inst.getOpcode() == X86::CALL64pcrel32) ? X86::CALL64m : X86::JMP32m;
     Inst.setOpcode(NewOpcode);
@@ -1664,7 +1669,8 @@ public:
     Inst.insert(Inst.begin(),
                 MCOperand::createReg(X86::RIP));        // BaseReg
 
-    return true;
+    Code.emplace_back(Inst);
+    return Code;
   }
 
   void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {
@@ -2794,14 +2800,13 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
     Inst.getOperand(0) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB, MCContext *Ctx,
@@ -2844,13 +2849,12 @@ public:
     }
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
     Inst.getOperand(0) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   MCPhysReg getX86R11() const override { return X86::R11; }

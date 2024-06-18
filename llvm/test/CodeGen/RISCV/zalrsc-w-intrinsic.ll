@@ -41,7 +41,7 @@ define i32 @lr_w_aq_rl(ptr %src) {
 define i32 @sc_w_none(i32 %v, ptr %src) {
 ; CHECK-LABEL: sc_w_none:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sc.w a0, a1, (a0)
+; CHECK-NEXT:    sc.w a0, a0, (a1)
 ; CHECK-NEXT:    ret
   %ret = call i32 @llvm.riscv.sc.w(i32 %v, ptr %src, i32 0)
   ret i32 %ret
@@ -50,7 +50,7 @@ define i32 @sc_w_none(i32 %v, ptr %src) {
 define i32 @sc_w_aq(i32 %v, ptr %src) {
 ; CHECK-LABEL: sc_w_aq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sc.w.aq a0, a1, (a0)
+; CHECK-NEXT:    sc.w.aq a0, a0, (a1)
 ; CHECK-NEXT:    ret
   %ret = call i32 @llvm.riscv.sc.w(i32 %v, ptr %src, i32 1)
   ret i32 %ret
@@ -59,7 +59,7 @@ define i32 @sc_w_aq(i32 %v, ptr %src) {
 define i32 @sc_w_rl(i32 %v, ptr %src) {
 ; CHECK-LABEL: sc_w_rl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sc.w.rl a0, a1, (a0)
+; CHECK-NEXT:    sc.w.rl a0, a0, (a1)
 ; CHECK-NEXT:    ret
   %ret = call i32 @llvm.riscv.sc.w(i32 %v, ptr %src, i32 2)
   ret i32 %ret
@@ -68,7 +68,7 @@ define i32 @sc_w_rl(i32 %v, ptr %src) {
 define i32 @sc_w_aq_rl(i32 %v, ptr %src) {
 ; CHECK-LABEL: sc_w_aq_rl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sc.w.aqrl a0, a1, (a0)
+; CHECK-NEXT:    sc.w.aqrl a0, a0, (a1)
 ; CHECK-NEXT:    ret
   %ret = call i32 @llvm.riscv.sc.w(i32 %v, ptr %src, i32 3)
   ret i32 %ret

@@ -113,6 +113,15 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
       node->getOffsetInBits(), node->getDWARFAddressSpace(), extraData);
 }
 
+DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {
+  return DIStringTypeAttr::get(
+      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
+      node->getSizeInBits(), node->getAlignInBits(),
+      translate(node->getStringLength()),
+      translateExpression(node->getStringLengthExp()),
+      translateExpression(node->getStringLocationExp()), node->getEncoding());
+}
+
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
   return DIFileAttr::get(context, node->getFilename(), node->getDirectory());
 }
@@ -172,6 +181,10 @@ DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
       context, scope, getStringAttrOrNull(node->getRawName()),
       translate(node->getFile()), node->getLine(), node->getArg(),
       node->getAlignInBits(), translate(node->getType()));
+}
+
+DIVariableAttr DebugImporter::translateImpl(llvm::DIVariable *node) {
+  return cast<DIVariableAttr>(translate(static_cast<llvm::DINode *>(node)));
 }
 
 DIScopeAttr DebugImporter::translateImpl(llvm::DIScope *node) {
@@ -294,6 +307,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto *casted = dyn_cast<llvm::DICompositeType>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIDerivedType>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIStringType>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIFile>(node))
       return translateImpl(casted);

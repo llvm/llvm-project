@@ -40,7 +40,7 @@ define i64 @lr_d_aq_rl(ptr %src) {
 define i64 @sc_d_none(i64 %v, ptr %src) {
 ; CHECK-LABEL: sc_d_none:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sc.d a0, a1, (a0)
+; CHECK-NEXT:    sc.d a0, a0, (a1)
 ; CHECK-NEXT:    ret
   %ret = call i64 @llvm.riscv.sc.d(i64 %v, ptr %src, i32 0)
   ret i64 %ret
@@ -49,7 +49,7 @@ define i64 @sc_d_none(i64 %v, ptr %src) {
 define i64 @sc_d_aq(i64 %v, ptr %src) {
 ; CHECK-LABEL: sc_d_aq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sc.d.aq a0, a1, (a0)
+; CHECK-NEXT:    sc.d.aq a0, a0, (a1)
 ; CHECK-NEXT:    ret
   %ret = call i64 @llvm.riscv.sc.d(i64 %v, ptr %src, i32 1)
   ret i64 %ret
@@ -58,7 +58,7 @@ define i64 @sc_d_aq(i64 %v, ptr %src) {
 define i64 @sc_d_rl(i64 %v, ptr %src) {
 ; CHECK-LABEL: sc_d_rl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sc.d.rl a0, a1, (a0)
+; CHECK-NEXT:    sc.d.rl a0, a0, (a1)
 ; CHECK-NEXT:    ret
   %ret = call i64 @llvm.riscv.sc.d(i64 %v, ptr %src, i32 2)
   ret i64 %ret
@@ -67,7 +67,7 @@ define i64 @sc_d_rl(i64 %v, ptr %src) {
 define i64 @sc_d_aq_rl(i64 %v, ptr %src) {
 ; CHECK-LABEL: sc_d_aq_rl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sc.d.aqrl a0, a1, (a0)
+; CHECK-NEXT:    sc.d.aqrl a0, a0, (a1)
 ; CHECK-NEXT:    ret
   %ret = call i64 @llvm.riscv.sc.d(i64 %v, ptr %src, i32 3)
   ret i64 %ret

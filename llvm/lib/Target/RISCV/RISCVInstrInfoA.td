@@ -137,28 +137,47 @@ let Predicates = [HasAtomicLdSt, IsRV64] in {
 }
 
 /// LR/SC intrinsics patterns
-multiclass LRPat<Intrinsic intrinsic, string inst> {
-  def : Pat<(intrinsic GPR:$src, 0), (!cast<Instruction>(inst) GPR:$src)>;
-  def : Pat<(intrinsic GPR:$src, 1), (!cast<Instruction>(inst # "_AQ") GPR:$src)>;
-  def : Pat<(intrinsic GPR:$src, 2), (!cast<Instruction>(inst # "_RL") GPR:$src)>;
-  def : Pat<(intrinsic GPR:$src, 3), (!cast<Instruction>(inst # "_AQ_RL") GPR:$src)>;
+def riscv_lr_w  : SDNode<"RISCVISD::LR_W",
+                         SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
+                                              SDTCisInt<2>]>,
+                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def riscv_lr_d  : SDNode<"RISCVISD::LR_D",
+                         SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
+                                              SDTCisInt<2>]>,
+                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def riscv_sc_w : SDNode<"RISCVISD::SC_W",
+                         SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisInt<1>,
+                                              SDTCisInt<2>, SDTCisInt<3>]>,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def riscv_sc_d : SDNode<"RISCVISD::SC_D",
+                         SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisInt<1>,
+                                              SDTCisInt<2>, SDTCisInt<3>]>,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+multiclass LRPat<SDNode node, string inst> {
+  def : Pat<(XLenVT (node (XLenVT GPR:$src), (i32 0))), (!cast<Instruction>(inst) GPR:$src)>;
+  def : Pat<(XLenVT (node (XLenVT GPR:$src), (i32 1))), (!cast<Instruction>(inst # "_AQ") GPR:$src)>;
+  def : Pat<(XLenVT (node (XLenVT GPR:$src), (i32 2))), (!cast<Instruction>(inst # "_RL") GPR:$src)>;
+  def : Pat<(XLenVT (node (XLenVT GPR:$src), (i32 3))), (!cast<Instruction>(inst # "_AQ_RL") GPR:$src)>;
 }
 
-multiclass SCPat<Intrinsic intrinsic, string inst> {
-  def : Pat<(intrinsic GPR:$src, GPR:$dst, 0), (!cast<Instruction>(inst) GPR:$src, GPR:$dst)>;
-  def : Pat<(intrinsic GPR:$src, GPR:$dst, 1), (!cast<Instruction>(inst # "_AQ") GPR:$src, GPR:$dst)>;
-  def : Pat<(intrinsic GPR:$src, GPR:$dst, 2), (!cast<Instruction>(inst # "_RL") GPR:$src, GPR:$dst)>;
-  def : Pat<(intrinsic GPR:$src, GPR:$dst, 3), (!cast<Instruction>(inst # "_AQ_RL") GPR:$src, GPR:$dst)>;
+multiclass SCPat<SDNode node, string inst> {
+  def : Pat<(XLenVT (node (XLenVT GPR:$value), (XLenVT GPR:$dst), (i32 0))), (!cast<Instruction>(inst) GPR:$dst, GPR:$value)>;
+  def : Pat<(XLenVT (node (XLenVT GPR:$value), (XLenVT GPR:$dst), (i32 1))), (!cast<Instruction>(inst # "_AQ") GPR:$dst, GPR:$value)>;
+  def : Pat<(XLenVT (node (XLenVT GPR:$value), (XLenVT GPR:$dst), (i32 2))), (!cast<Instruction>(inst # "_RL") GPR:$dst, GPR:$value)>;
+  def : Pat<(XLenVT (node (XLenVT GPR:$value), (XLenVT GPR:$dst), (i32 3))), (!cast<Instruction>(inst # "_AQ_RL") GPR:$dst, GPR:$value)>;
 }
 
 let Predicates = [HasStdExtAOrZalrsc] in {
-  defm : LRPat<int_riscv_lr_w, "LR_W">;
-  defm : SCPat<int_riscv_sc_w, "SC_W">;
+  defm : LRPat<riscv_lr_w, "LR_W">;
+  defm : SCPat<riscv_sc_w, "SC_W">;
 } // Predicates = [HasStdExtAOrZalrsc]
 
 let Predicates = [HasStdExtAOrZalrsc, IsRV64] in {
-  defm : LRPat<int_riscv_lr_d, "LR_D">;
-  defm : SCPat<int_riscv_sc_d, "SC_D">;
+  defm : LRPat<riscv_lr_w, "LR_W">;
+  defm : SCPat<riscv_sc_w, "SC_W">;
+  defm : LRPat<riscv_lr_d, "LR_D">;
+  defm : SCPat<riscv_sc_d, "SC_D">;
 } // Predicates = [HasStdExtAOrZalrsc, IsRV64]
 
 /// AMOs
@@ -191,25 +210,25 @@ let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
 }
 }
 
-defm : AMOPat<"atomic_swap_32", "AMOSWAP_W">;
-defm : AMOPat<"atomic_load_add_32", "AMOADD_W">;
-defm : AMOPat<"atomic_load_and_32", "AMOAND_W">;
-defm : AMOPat<"atomic_load_or_32", "AMOOR_W">;
-defm : AMOPat<"atomic_load_xor_32", "AMOXOR_W">;
-defm : AMOPat<"atomic_load_max_32", "AMOMAX_W">;
-defm : AMOPat<"atomic_load_min_32", "AMOMIN_W">;
-defm : AMOPat<"atomic_load_umax_32", "AMOMAXU_W">;
-defm : AMOPat<"atomic_load_umin_32", "AMOMINU_W">;
+defm : AMOPat<"atomic_swap_i32", "AMOSWAP_W">;
+defm : AMOPat<"atomic_load_add_i32", "AMOADD_W">;
+defm : AMOPat<"atomic_load_and_i32", "AMOAND_W">;
+defm : AMOPat<"atomic_load_or_i32", "AMOOR_W">;
+defm : AMOPat<"atomic_load_xor_i32", "AMOXOR_W">;
+defm : AMOPat<"atomic_load_max_i32", "AMOMAX_W">;
+defm : AMOPat<"atomic_load_min_i32", "AMOMIN_W">;
+defm : AMOPat<"atomic_load_umax_i32", "AMOMAXU_W">;
+defm : AMOPat<"atomic_load_umin_i32", "AMOMINU_W">;
 
-defm : AMOPat<"atomic_swap_64", "AMOSWAP_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_add_64", "AMOADD_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_and_64", "AMOAND_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_or_64", "AMOOR_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_xor_64", "AMOXOR_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_max_64", "AMOMAX_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_min_64", "AMOMIN_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_umax_64", "AMOMAXU_D", i64, [IsRV64]>;
-defm : AMOPat<"atomic_load_umin_64", "AMOMINU_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_swap_i64", "AMOSWAP_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_add_i64", "AMOADD_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_and_i64", "AMOAND_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_or_i64", "AMOOR_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_xor_i64", "AMOXOR_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_max_i64", "AMOMAX_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_min_i64", "AMOMIN_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_umax_i64", "AMOMAXU_D", i64, [IsRV64]>;
+defm : AMOPat<"atomic_load_umin_i64", "AMOMINU_D", i64, [IsRV64]>;
 
 
 /// Pseudo AMOs
@@ -268,15 +287,15 @@ let Size = 20 in
 def PseudoAtomicLoadNand32 : PseudoAMO;
 // Ordering constants must be kept in sync with the AtomicOrdering enum in
 // AtomicOrdering.h.
-def : Pat<(XLenVT (atomic_load_nand_32_monotonic GPR:$addr, GPR:$incr)),
+def : Pat<(XLenVT (atomic_load_nand_i32_monotonic GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 2)>;
-def : Pat<(XLenVT (atomic_load_nand_32_acquire GPR:$addr, GPR:$incr)),
+def : Pat<(XLenVT (atomic_load_nand_i32_acquire GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 4)>;
-def : Pat<(XLenVT (atomic_load_nand_32_release GPR:$addr, GPR:$incr)),
+def : Pat<(XLenVT (atomic_load_nand_i32_release GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 5)>;
-def : Pat<(XLenVT (atomic_load_nand_32_acq_rel GPR:$addr, GPR:$incr)),
+def : Pat<(XLenVT (atomic_load_nand_i32_acq_rel GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 6)>;
-def : Pat<(XLenVT (atomic_load_nand_32_seq_cst GPR:$addr, GPR:$incr)),
+def : Pat<(XLenVT (atomic_load_nand_i32_seq_cst GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand32 GPR:$addr, GPR:$incr, 7)>;
 
 let Size = 28 in
@@ -319,15 +338,15 @@ let Size = 20 in
 def PseudoAtomicLoadNand64 : PseudoAMO;
 // Ordering constants must be kept in sync with the AtomicOrdering enum in
 // AtomicOrdering.h.
-def : Pat<(i64 (atomic_load_nand_64_monotonic GPR:$addr, GPR:$incr)),
+def : Pat<(i64 (atomic_load_nand_i64_monotonic GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 2)>;
-def : Pat<(i64 (atomic_load_nand_64_acquire GPR:$addr, GPR:$incr)),
+def : Pat<(i64 (atomic_load_nand_i64_acquire GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 4)>;
-def : Pat<(i64 (atomic_load_nand_64_release GPR:$addr, GPR:$incr)),
+def : Pat<(i64 (atomic_load_nand_i64_release GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 5)>;
-def : Pat<(i64 (atomic_load_nand_64_acq_rel GPR:$addr, GPR:$incr)),
+def : Pat<(i64 (atomic_load_nand_i64_acq_rel GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 6)>;
-def : Pat<(i64 (atomic_load_nand_64_seq_cst GPR:$addr, GPR:$incr)),
+def : Pat<(i64 (atomic_load_nand_i64_seq_cst GPR:$addr, GPR:$incr)),
           (PseudoAtomicLoadNand64 GPR:$addr, GPR:$incr, 7)>;
 
 def : PseudoMaskedAMOPat<int_riscv_masked_atomicrmw_xchg_i64,
@@ -379,12 +398,12 @@ multiclass PseudoCmpXchgPat<string Op, Pseudo CmpXchgInst,
 
 let Predicates = [HasStdExtA, NoStdExtZacas] in {
 def PseudoCmpXchg32 : PseudoCmpXchg;
-defm : PseudoCmpXchgPat<"atomic_cmp_swap_32", PseudoCmpXchg32>;
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_i32", PseudoCmpXchg32>;
 }
 
 let Predicates = [HasStdExtA, NoStdExtZacas, IsRV64] in {
 def PseudoCmpXchg64 : PseudoCmpXchg;
-defm : PseudoCmpXchgPat<"atomic_cmp_swap_64", PseudoCmpXchg64, i64>;
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_i64", PseudoCmpXchg64, i64>;
 }
 
 let Predicates = [HasStdExtA] in {
@@ -447,18 +466,18 @@ let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
 }
 }
 
-defm : AMOPat2<"atomic_swap_32", "AMOSWAP_W", i32>;
-defm : AMOPat2<"atomic_load_add_32", "AMOADD_W", i32>;
-defm : AMOPat2<"atomic_load_and_32", "AMOAND_W", i32>;
-defm : AMOPat2<"atomic_load_or_32", "AMOOR_W", i32>;
-defm : AMOPat2<"atomic_load_xor_32", "AMOXOR_W", i32>;
-defm : AMOPat2<"atomic_load_max_32", "AMOMAX_W", i32>;
-defm : AMOPat2<"atomic_load_min_32", "AMOMIN_W", i32>;
-defm : AMOPat2<"atomic_load_umax_32", "AMOMAXU_W", i32>;
-defm : AMOPat2<"atomic_load_umin_32", "AMOMINU_W", i32>;
+defm : AMOPat2<"atomic_swap_i32", "AMOSWAP_W", i32>;
+defm : AMOPat2<"atomic_load_add_i32", "AMOADD_W", i32>;
+defm : AMOPat2<"atomic_load_and_i32", "AMOAND_W", i32>;
+defm : AMOPat2<"atomic_load_or_i32", "AMOOR_W", i32>;
+defm : AMOPat2<"atomic_load_xor_i32", "AMOXOR_W", i32>;
+defm : AMOPat2<"atomic_load_max_i32", "AMOMAX_W", i32>;
+defm : AMOPat2<"atomic_load_min_i32", "AMOMIN_W", i32>;
+defm : AMOPat2<"atomic_load_umax_i32", "AMOMAXU_W", i32>;
+defm : AMOPat2<"atomic_load_umin_i32", "AMOMINU_W", i32>;
 
 let Predicates = [HasStdExtA, IsRV64] in
-defm : PseudoCmpXchgPat<"atomic_cmp_swap_32", PseudoCmpXchg32, i32>;
+defm : PseudoCmpXchgPat<"atomic_cmp_swap_i32", PseudoCmpXchg32, i32>;
 
 let Predicates = [HasAtomicLdSt] in {
   def : LdPat<atomic_load_8,  LB, i32>;

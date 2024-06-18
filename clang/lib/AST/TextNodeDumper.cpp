@@ -958,6 +958,9 @@ void TextNodeDumper::dumpTemplateArgument(const TemplateArgument &TA) {
   }
   OS << " '" << Str << "'";
 
+  if (!Context)
+    return;
+
   if (TemplateArgument CanonTA = Context->getCanonicalTemplateArgument(TA);
       !CanonTA.structurallyEquals(TA)) {
     llvm::SmallString<128> CanonStr;
@@ -1137,17 +1140,19 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN, StringRef Label) {
         llvm::raw_svector_ostream SS(Str);
         TN.print(SS, PrintPolicy);
       }
-      OS << " '" << Str << "'";
+      OS << "'" << Str << "'";
 
-      if (TemplateName CanonTN = Context->getCanonicalTemplateName(TN);
-          CanonTN != TN) {
-        llvm::SmallString<128> CanonStr;
-        {
-          llvm::raw_svector_ostream SS(CanonStr);
-          CanonTN.print(SS, PrintPolicy);
+      if (Context) {
+        if (TemplateName CanonTN = Context->getCanonicalTemplateName(TN);
+            CanonTN != TN) {
+          llvm::SmallString<128> CanonStr;
+          {
+            llvm::raw_svector_ostream SS(CanonStr);
+            CanonTN.print(SS, PrintPolicy);
+          }
+          if (CanonStr != Str)
+            OS << ":'" << CanonStr << "'";
         }
-        if (CanonStr != Str)
-          OS << ":'" << CanonStr << "'";
       }
     }
     dumpBareTemplateName(TN);

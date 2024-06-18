@@ -474,6 +474,10 @@ enum NodeType : unsigned {
   TH_LDD,
   TH_SWD,
   TH_SDD,
+  
+  // Atomic Operations
+  LR_W, SC_W,
+  LR_D, SC_D,
 };
 // clang-format on
 } // namespace RISCVISD

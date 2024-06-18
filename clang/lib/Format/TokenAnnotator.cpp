@@ -1358,6 +1358,8 @@ private:
           Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
           Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
         Tok->setType(TT_ModulePartitionColon);
+      } else if (Line.First->is(tok::kw_asm)) {
+        Tok->setType(TT_InlineASMColon);
       } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
         if (Style.Language == FormatStyle::LK_TextProto) {
@@ -1417,6 +1419,8 @@ private:
             Tok->setType(TT_CtorInitializerColon);
         } else {
           Tok->setType(TT_InheritanceColon);
+          if (Prev->isOneOf(tok::kw_public, tok::kw_private, tok::kw_protected))
+            Line.Type = LT_AccessModifier;
         }
       } else if (canBeObjCSelectorComponent(*Tok->Previous) && Tok->Next &&
                  (Tok->Next->isOneOf(tok::r_paren, tok::comma) ||
@@ -1425,13 +1429,6 @@ private:
         // This handles a special macro in ObjC code where selectors including
         // the colon are passed as macro arguments.
         Tok->setType(TT_ObjCMethodExpr);
-      } else if (Contexts.back().ContextKind == tok::l_paren &&
-                 !Line.InPragmaDirective) {
-        if (Style.isTableGen() && Contexts.back().IsTableGenDAGArg) {
-          Tok->setType(TT_TableGenDAGArgListColon);
-          break;
-        }
-        Tok->setType(TT_InlineASMColon);
       }
       break;
     case tok::pipe:
@@ -2003,6 +2000,8 @@ public:
       if (!consumeToken())
         return LT_Invalid;
     }
+    if (Line.Type == LT_AccessModifier)
+      return LT_AccessModifier;
     if (KeywordVirtualFound)
       return LT_VirtualFunctionDecl;
     if (ImportStatement)
@@ -3415,7 +3414,8 @@ private:
         } else {
           break;
         }
-      } else if (Tok->is(tok::hash)) {
+      } else if (Tok->is(Keywords.kw_verilogHash)) {
+        // Delay control.
         if (Next->is(tok::l_paren))
           Next = Next->MatchingParen;
         if (Next)

@@ -2441,9 +2441,10 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
       Type *TruncTy = ShType->getWithNewBitWidth(TypeBits - Amt);
       Constant *NewC =
           ConstantInt::get(TruncTy, RHSC.ashr(*ShiftAmt).trunc(TypeBits - Amt));
-      return new ICmpInst(
-          CmpPred, Builder.CreateTrunc(X, TruncTy, "", Shl->hasNoSignedWrap()),
-          NewC);
+      return new ICmpInst(CmpPred,
+                          Builder.CreateTrunc(X, TruncTy, "", /*IsNUW=*/false,
+                                              Shl->hasNoSignedWrap()),
+                          NewC);
     }
   }
 
@@ -3502,15 +3503,13 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
     break;
   }
   case Instruction::Xor:
-    if (BO->hasOneUse()) {
-      if (Constant *BOC = dyn_cast<Constant>(BOp1)) {
-        // For the xor case, we can xor two constants together, eliminating
-        // the explicit xor.
-        return new ICmpInst(Pred, BOp0, ConstantExpr::getXor(RHS, BOC));
-      } else if (C.isZero()) {
-        // Replace ((xor A, B) != 0) with (A != B)
-        return new ICmpInst(Pred, BOp0, BOp1);
-      }
+    if (Constant *BOC = dyn_cast<Constant>(BOp1)) {
+      // For the xor case, we can xor two constants together, eliminating
+      // the explicit xor.
+      return new ICmpInst(Pred, BOp0, ConstantExpr::getXor(RHS, BOC));
+    } else if (C.isZero()) {
+      // Replace ((xor A, B) != 0) with (A != B)
+      return new ICmpInst(Pred, BOp0, BOp1);
     }
     break;
   case Instruction::Or: {
@@ -4745,6 +4744,29 @@ static Instruction *foldICmpAndXX(ICmpInst &I, const SimplifyQuery &Q,
                           Constant::getNullValue(Op1->getType()));
   }
 
+  if (!ICmpInst::isSigned(Pred))
+    return nullptr;
+
+  KnownBits KnownY = IC.computeKnownBits(A, /*Depth=*/0, &I);
+  // (X & NegY) spred X --> (X & NegY) upred X
+  if (KnownY.isNegative())
+    return new ICmpInst(ICmpInst::getUnsignedPredicate(Pred), Op0, Op1);
+
+  if (Pred != ICmpInst::ICMP_SLE && Pred != ICmpInst::ICMP_SGT)
+    return nullptr;
+
+  if (KnownY.isNonNegative())
+    // (X & PosY) s<= X --> X s>= 0
+    // (X & PosY) s> X --> X s< 0
+    return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
+                        Constant::getNullValue(Op1->getType()));
+
+  if (isKnownNegative(Op1, IC.getSimplifyQuery().getWithInstruction(&I)))
+    // (NegX & Y) s<= NegX --> Y s< 0
+    // (NegX & Y) s> NegX --> Y s>= 0
+    return new ICmpInst(ICmpInst::getFlippedStrictnessPredicate(Pred), A,
+                        Constant::getNullValue(A->getType()));
+
   return nullptr;
 }
 
@@ -4772,7 +4794,7 @@ static Instruction *foldICmpOrXX(ICmpInst &I, const SimplifyQuery &Q,
   if (ICmpInst::isEquality(Pred) && Op0->hasOneUse()) {
     // icmp (X | Y) eq/ne Y --> (X & ~Y) eq/ne 0 if Y is freely invertible
     if (Value *NotOp1 =
-            IC.getFreelyInverted(Op1, Op1->hasOneUse(), &IC.Builder))
+            IC.getFreelyInverted(Op1, !Op1->hasNUsesOrMore(3), &IC.Builder))
       return new ICmpInst(Pred, IC.Builder.CreateAnd(A, NotOp1),
                           Constant::getNullValue(Op1->getType()));
     // icmp (X | Y) eq/ne Y --> (~X | Y) eq/ne -1 if X  is freely invertible.
@@ -5527,8 +5549,8 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   }
 
   // (X&Z) == (Y&Z) -> (X^Y) & Z == 0
-  if (match(Op0, m_OneUse(m_And(m_Value(A), m_Value(B)))) &&
-      match(Op1, m_OneUse(m_And(m_Value(C), m_Value(D))))) {
+  if (match(Op0, m_And(m_Value(A), m_Value(B))) &&
+      match(Op1, m_And(m_Value(C), m_Value(D)))) {
     Value *X = nullptr, *Y = nullptr, *Z = nullptr;
 
     if (A == C) {
@@ -5549,10 +5571,26 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
       Z = B;
     }
 
-    if (X) { // Build (X^Y) & Z
-      Op1 = Builder.CreateXor(X, Y);
-      Op1 = Builder.CreateAnd(Op1, Z);
-      return new ICmpInst(Pred, Op1, Constant::getNullValue(Op1->getType()));
+    if (X) {
+      // If X^Y is a negative power of two, then `icmp eq/ne (Z & NegP2), 0`
+      // will fold to `icmp ult/uge Z, -NegP2` incurringb no additional
+      // instructions.
+      const APInt *C0, *C1;
+      bool XorIsNegP2 = match(X, m_APInt(C0)) && match(Y, m_APInt(C1)) &&
+                        (*C0 ^ *C1).isNegatedPowerOf2();
+
+      // If either Op0/Op1 are both one use or X^Y will constant fold and one of
+      // Op0/Op1 are one use, proceed. In those cases we are instruction neutral
+      // but `icmp eq/ne A, 0` is easier to analyze than `icmp eq/ne A, B`.
+      int UseCnt =
+          int(Op0->hasOneUse()) + int(Op1->hasOneUse()) +
+          (int(match(X, m_ImmConstant()) && match(Y, m_ImmConstant())));
+      if (XorIsNegP2 || UseCnt >= 2) {
+        // Build (X^Y) & Z
+        Op1 = Builder.CreateXor(X, Y);
+        Op1 = Builder.CreateAnd(Op1, Z);
+        return new ICmpInst(Pred, Op1, Constant::getNullValue(Op1->getType()));
+      }
     }
   }
 
