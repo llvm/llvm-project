@@ -9814,7 +9814,8 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   Val = DAG.getBitcast(VT8Bit, Val);
   Val = DAG.getNode(ISD::CTPOP, DL, VT8Bit, Val);
 
-  if (Subtarget->hasDotProd() && VT.getScalarSizeInBits() != 16) {
+  if (Subtarget->hasDotProd() && VT.getScalarSizeInBits() != 16 &&
+      VT.getVectorNumElements() >= 2) {
     EVT DT = VT == MVT::v2i64 ? MVT::v4i32 : VT;
     SDValue Zeros = DAG.getSplatBuildVector(
         DT, DL, DAG.getConstant(0, DL, DT.getScalarType()));
@@ -9834,6 +9835,7 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
 
     return Val;
   }
+
   // Widen v8i8/v16i8 CTPOP result to VT by repeatedly widening pairwise adds.
   unsigned EltSize = 8;
   unsigned NumElts = VT.is64BitVector() ? 8 : 16;
