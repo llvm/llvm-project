@@ -278,6 +278,10 @@ private:
   /// using the index represented by the a temp value into a bitmap.
   void lowerMCDCTestVectorBitmapUpdate(InstrProfMCDCTVBitmapUpdate *Ins);
 
+  /// Get the Bias value for data to access mmap-ed area.
+  /// Create it if it hasn't been seen.
+  GlobalVariable *getOrCreateBiasVar(StringRef VarName);
+
   /// Compute the address of the counter value that this profiling instruction
   /// acts on.
   Value *getCounterAddress(InstrProfCntrInstBase *I);
@@ -885,6 +889,29 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   Ind->eraseFromParent();
 }
 
+GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
+  GlobalVariable *Bias = M.getGlobalVariable(VarName);
+  if (Bias)
+    return Bias;
+
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
+
+  // Compiler must define this variable when runtime counter relocation
+  // is being used. Runtime has a weak external reference that is used
+  // to check whether that's the case or not.
+  Bias = new GlobalVariable(M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
+                            Constant::getNullValue(Int64Ty), VarName);
+  Bias->setVisibility(GlobalVariable::HiddenVisibility);
+  // A definition that's weak (linkonce_odr) without being in a COMDAT
+  // section wouldn't lead to link errors, but it would lead to a dead
+  // data word from every TU but one. Putting it in COMDAT ensures there
+  // will be exactly one data slot in the link.
+  if (TT.supportsCOMDAT())
+    Bias->setComdat(M.getOrInsertComdat(VarName));
+
+  return Bias;
+}
+
 Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   auto *Counters = getOrCreateRegionCounters(I);
   IRBuilder<> Builder(I);
@@ -903,22 +930,7 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   LoadInst *&BiasLI = FunctionToProfileBiasMap[Fn];
   if (!BiasLI) {
     IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
-    auto *Bias = M.getGlobalVariable(getInstrProfCounterBiasVarName());
-    if (!Bias) {
-      // Compiler must define this variable when runtime counter relocation
-      // is being used. Runtime has a weak external reference that is used
-      // to check whether that's the case or not.
-      Bias = new GlobalVariable(
-          M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
-          Constant::getNullValue(Int64Ty), getInstrProfCounterBiasVarName());
-      Bias->setVisibility(GlobalVariable::HiddenVisibility);
-      // A definition that's weak (linkonce_odr) without being in a COMDAT
-      // section wouldn't lead to link errors, but it would lead to a dead
-      // data word from every TU but one. Putting it in COMDAT ensures there
-      // will be exactly one data slot in the link.
-      if (TT.supportsCOMDAT())
-        Bias->setComdat(M.getOrInsertComdat(Bias->getName()));
-    }
+    auto *Bias = getOrCreateBiasVar(getInstrProfCounterBiasVarName());
     BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias);
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
