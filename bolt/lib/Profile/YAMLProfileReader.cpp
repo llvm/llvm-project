@@ -363,9 +363,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     return Profile.Hash == static_cast<uint64_t>(BF.getHash());
   };
 
-  // We have to do 2 passes since LTO introduces an ambiguity in function
-  // names. The first pass assigns profiles that match 100% by name and
-  // by hash. The second pass allows name ambiguity for LTO private functions.
+  // This first pass assigns profiles that match 100% by name and by hash.
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
     if (!BF)
       continue;
@@ -383,6 +381,30 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       matchProfileToFunction(YamlBF, Function);
   }
 
+  // Uses the strict hash of profiled and binary functions to match functions
+  // that are not matched by name or common name.
+  std::unordered_map<size_t, BinaryFunction *> StrictBinaryFunctionHashes;
+  StrictBinaryFunctionHashes.reserve(BC.getBinaryFunctions().size());
+
+  for (auto &[_, BF] : BC.getBinaryFunctions()) {
+    if (ProfiledFunctions.count(&BF))
+      continue;
+    BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
+    StrictBinaryFunctionHashes[BF.getHash()] = &BF;
+  }
+
+  for (auto YamlBF : YamlBP.Functions) {
+    if (YamlBF.Used)
+      continue;
+    auto It = StrictBinaryFunctionHashes.find(YamlBF.Hash);
+    if (It != StrictBinaryFunctionHashes.end() &&
+        !ProfiledFunctions.count(It->second)) {
+      auto *BF = It->second;
+      matchProfileToFunction(YamlBF, *BF);
+    }
+  }
+
+  // This second pass allows name ambiguity for LTO private functions.
   for (const auto &[CommonName, LTOProfiles] : LTOCommonNameMap) {
     if (!LTOCommonNameFunctionMap.contains(CommonName))
       continue;
@@ -415,32 +437,11 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
       matchProfileToFunction(YamlBF, *BF);
 
-  // Uses the strict hash of profiled and binary functions to match functions
-  // that are not matched by name or common name.
-  std::unordered_map<size_t, BinaryFunction *> StrictBinaryFunctionHashes;
-  StrictBinaryFunctionHashes.reserve(BC.getBinaryFunctions().size());
-
-  for (auto &[_, BF] : BC.getBinaryFunctions()) {
-    if (ProfiledFunctions.count(&BF))
-      continue;
-    StrictBinaryFunctionHashes[BF.getHash()] = &BF;
-  }
-
-  for (auto YamlBF : YamlBP.Functions) {
-    if (YamlBF.Used)
-      continue;
-    auto It = StrictBinaryFunctionHashes.find(YamlBF.Hash);
-    if (It != StrictBinaryFunctionHashes.end() &&
-        !ProfiledFunctions.count(It->second)) {
-      auto *BF = It->second;
-      matchProfileToFunction(YamlBF, *BF);
-    }
-  }
-
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
+
 
   // Set for parseFunctionProfile().
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
