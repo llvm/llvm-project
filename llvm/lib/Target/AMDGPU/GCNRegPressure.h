@@ -210,7 +210,7 @@ public:
   /// Move to the state of RP just before the \p MI . If \p UseInternalIterator
   /// is set, also update the internal iterators. Setting \p UseInternalIterator
   /// to false allows for an externally managed iterator / program order.
-  void recede(const MachineInstr &MI, bool UseInternalIterator = true);
+  void recede(const MachineInstr &MI);
 
   /// \p returns whether the tracker's state after receding MI corresponds
   /// to reported by LIS.

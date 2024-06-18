@@ -354,12 +354,10 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
 
-void GCNUpwardRPTracker::recede(const MachineInstr &MI,
-                                bool UseInternalIterator) {
+void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   assert(MRI && "call reset first");
 
-  if (UseInternalIterator)
-    LastTrackedMI = &MI;
+  LastTrackedMI = &MI;
 
   if (MI.isDebugInstr())
     return;
