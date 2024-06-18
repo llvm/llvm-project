@@ -1381,6 +1381,43 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
   return ValueDataArray;
 }
 
+std::vector<InstrProfValueData>
+getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
+                         uint32_t MaxNumValueData, uint64_t &TotalC,
+                         bool GetNoICPValue) {
+  std::vector<InstrProfValueData> ValueData;
+  MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
+  if (!MD)
+    return ValueData;
+  const unsigned NOps = MD->getNumOperands();
+  // Get total count
+  ConstantInt *TotalCInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(2));
+  if (!TotalCInt)
+    return ValueData;
+  TotalC = TotalCInt->getZExtValue();
+
+  ValueData.reserve(MaxNumValueData);
+  for (unsigned I = 3; I < NOps; I += 2) {
+    if (ValueData.size() >= MaxNumValueData)
+      break;
+    ConstantInt *Value = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+    ConstantInt *Count =
+        mdconst::dyn_extract<ConstantInt>(MD->getOperand(I + 1));
+    if (!Value || !Count) {
+      ValueData.clear();
+      return ValueData;
+    }
+    uint64_t CntValue = Count->getZExtValue();
+    if (!GetNoICPValue && (CntValue == NOMORE_ICP_MAGICNUM))
+      continue;
+    InstrProfValueData V;
+    V.Value = Value->getZExtValue();
+    V.Count = CntValue;
+    ValueData.push_back(V);
+  }
+  return ValueData;
+}
+
 MDNode *getPGOFuncNameMetadata(const Function &F) {
   return F.getMetadata(getPGOFuncNameMetadataName());
 }
