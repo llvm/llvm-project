@@ -195,7 +195,7 @@ static void getAArch64MultilibFlags(const Driver &D,
                                        UnifiedFeatures.end());
   std::vector<std::string> MArch;
   for (const auto &Ext : AArch64::Extensions)
-    if (FeatureSet.contains(Ext.TargetFeature))
+    if (FeatureSet.contains(Ext.PosTargetFeature))
       MArch.push_back(Ext.UserVisibleName.str());
   for (const auto &Ext : AArch64::Extensions)
     if (FeatureSet.contains(Ext.NegTargetFeature))
