@@ -1111,12 +1111,16 @@ static CanThrowResult canDynamicCastThrow(const CXXDynamicCastExpr *DC) {
 }
 
 static CanThrowResult canTypeidThrow(Sema &S, const CXXTypeidExpr *DC) {
-  // Operand is not evaluated, cannot possibly throw.
-  if (!DC->isPotentiallyEvaluated())
+  // A typeid of a type is a constant and does not throw.
+  if (DC->isTypeOperand())
     return CT_Cannot;
 
   if (DC->isValueDependent())
     return CT_Dependent;
+
+  // If this operand is not evaluated it cannot possibly throw.
+  if (!DC->isPotentiallyEvaluated())
+    return CT_Cannot;
 
   // Can throw std::bad_typeid if a nullptr is dereferenced.
   if (DC->hasNullCheck())
