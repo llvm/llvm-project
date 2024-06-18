@@ -11,11 +11,7 @@ namespace std {
     initializer_list(const E *p, size_t n) : p(p), n(n) {}
   };
 
-  struct string {
-    string(const char *);
-  };
-
-  // Classes to use to reproduce the exact scenario present in 62925.
+// Classes to use to reproduce the exact scenario present in #62925.
 template<class T, class Y>
 class pair{
     public:
@@ -25,25 +21,11 @@ class pair{
 template<class T, class Y>
 class map {
     public:
-    map(std::initializer_list<pair<T, Y>>, int a = 4, int b = 5) {}
+    map(std::initializer_list<pair<T, Y>>) {}
+    map(std::initializer_list<pair<T, Y>>, int a) {}
 };
 
 } // namespace std
-
-
-// Classes to test different levels of nestings and conversions.
-template<class T, class Y>
-class Contained {
-  public:
-  Contained(T, Y) {}
-};
-
-template<class T, class Y>
-class A {
-  public:
-  A(std::initializer_list<Contained<T, Y> >, int) {}
-};
-
 
 // This is the almost the exact code that was in issue #62925.
 void testOneLevelNesting() {
@@ -54,12 +36,12 @@ void testOneLevelNesting() {
 }
 
 void testMultipleLevelNesting() {
-  A aOk = {{Contained{5, 'c'}, {5, 'c'}}, 5};
+  std::map aOk = {{std::pair{5, 'c'}, {5, 'c'}}, 5};
 
   // Verify that narrowing conversion is disabled when it is not in a nested
   // in another std::initializer_list, but it happens in the most outer one.
-  A aNarrowNested = {{Contained{5, 'c'}, {5.0f, 'c'}}, 5}; // expected-error {{type 'float' cannot be narrowed to 'int' in initializer list}} // expected-note {{insert an explicit cast to silence this issue}}
+  std::map aNarrowNested = {{std::pair{5, 'c'}, {5.0f, 'c'}}, 5}; // expected-error {{type 'float' cannot be narrowed to 'int' in initializer list}} // expected-note {{insert an explicit cast to silence this issue}}
 
   // Verify that narrowing conversion is disabled in the first level of nesting.
-  A aNarrow = {{Contained{5, 'c'}, {5, 'c'}}, 5.0f}; // expected-error {{type 'float' cannot be narrowed to 'int' in initializer list}} // expected-note {{insert an explicit cast to silence this issue}}
+  std::map aNarrow = {{std::pair{5, 'c'}, {5, 'c'}}, 5.0f}; // expected-error {{type 'float' cannot be narrowed to 'int' in initializer list}} // expected-note {{insert an explicit cast to silence this issue}}
 }
