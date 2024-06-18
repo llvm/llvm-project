@@ -13683,9 +13683,9 @@ static std::vector<std::string> getFMVBackendFeaturesFor(
     const llvm::SmallVectorImpl<StringRef> &FMVFeatStrings) {
   std::vector<std::string> BackendFeats;
   for (StringRef F : FMVFeatStrings) {
-    if (auto FMVExt = llvm::AArch64::parseArchExtension(F)) {
+    if (auto FMVExt = llvm::AArch64::parseFMVExtension(F)) {
       SmallVector<StringRef, 8> Feats;
-      FMVExt->DependentFeatures.split(Feats, ',', -1, false);
+      FMVExt->Features.split(Feats, ',', -1, false);
       for (StringRef F : Feats)
         BackendFeats.push_back(F.str());
     }
