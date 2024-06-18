@@ -49,7 +49,6 @@
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
-using DirIterator = llvm::sys::fs::directory_iterator;
 
 
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
@@ -140,12 +139,13 @@ std::string getExecutablePath(const char *Argv0, void *MainAddr) {
 }
 
 llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
+  using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code Code;
   llvm::SmallString<128> FilePath(UserAssetPath);
-  for (DirIterator DirIt = DirIterator(UserAssetPath, Code),
-                   DirEnd = DirIterator();
-       !Code && DirIt != DirEnd; DirIt.increment(Code)) {
-    FilePath = DirIt->path();
+  for (DirIt DirStart = DirIt(UserAssetPath, Code),
+                   DirEnd;
+       !Code && DirStart != DirEnd; DirStart.increment(Code)) {
+    FilePath = DirStart->path();
     if (llvm::sys::fs::is_regular_file(FilePath)) {
       if (llvm::sys::path::extension(FilePath) == ".css")
         CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
