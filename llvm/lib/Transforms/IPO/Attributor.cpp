@@ -1749,8 +1749,8 @@ bool Attributor::checkForAllCallees(
   return Pred(Callees.getArrayRef());
 }
 
-bool canMarkAsVisited(const User *user) {
-  return isa<PHINode>(user) || !isa<Instruction>(user);
+bool canMarkAsVisited(const User *Usr) {
+  return isa<PHINode>(Usr) || !isa<Instruction>(Usr);
 }
 
 bool Attributor::checkForAllUses(
