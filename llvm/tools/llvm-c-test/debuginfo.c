@@ -29,7 +29,7 @@ declare_objc_class(LLVMDIBuilderRef DIB, LLVMMetadataRef File) {
   return Decl;
 }
 
-int llvm_test_dibuilder() {
+int llvm_test_dibuilder(void) {
   const char *Filename = "debuginfo.c";
   LLVMModuleRef M = LLVMModuleCreateWithName(Filename);
 
