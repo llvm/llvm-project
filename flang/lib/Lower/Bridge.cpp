@@ -2609,9 +2609,6 @@ private:
 
     if (e->isA<Fortran::parser::NonLabelDoStmt>())
       e->dirs.push_back(&dir);
-    else
-      fir::emitFatalError(toLocation(),
-                          "loop directive must appear before a loop");
   }
 
   void genFIR(const Fortran::parser::CompilerDirective &dir) {
