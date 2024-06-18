@@ -1495,9 +1495,9 @@ mlir::LogicalResult hlfir::DestroyOp::verify() {
 
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
-                            mlir::Value var_is_present) {
+                            mlir::Value tempBox, mlir::Value var_is_present) {
   return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
-               var_is_present);
+               tempBox, var_is_present);
 }
 
 //===----------------------------------------------------------------------===//
