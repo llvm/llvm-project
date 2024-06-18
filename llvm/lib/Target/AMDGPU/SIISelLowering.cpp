@@ -2465,71 +2465,94 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
   // these from the dispatch pointer.
 }
 
+static bool allocPreloadKernArg(uint64_t &LastExplicitArgOffset,
+                                uint64_t ExplicitArgOffset, uint64_t ArgOffset,
+                                unsigned ArgSize, unsigned Idx,
+                                MachineFunction &MF, const SIRegisterInfo &TRI,
+                                SIMachineFunctionInfo &Info, CCState &CCInfo) {
+  if (ArgOffset >= ExplicitArgOffset)
+    return false;
+
+  const Align KernelArgBaseAlign = Align(16);
+  Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
+  unsigned NumAllocSGPRs = alignTo(ArgSize, 4) / 4;
+
+  // Arg is preloaded into the previous SGPR.
+  if (ArgSize < 4 && Alignment < 4) {
+    Info.getArgInfo().PreloadKernArgs[Idx].Regs.push_back(
+        Info.getArgInfo().PreloadKernArgs[Idx - 1].Regs[0]);
+    return true;
+  }
+
+  unsigned Padding = ArgOffset - LastExplicitArgOffset;
+  unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
+  // Check for free user SGPRs for preloading.
+  if (PaddingSGPRs + NumAllocSGPRs + 1 /*Synthetic SGPRs*/ >
+      Info.getUserSGPRInfo().getNumFreeUserSGPRs()) {
+    return false;
+  }
+
+  // Preload this argument.
+  const TargetRegisterClass *RC =
+      TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
+  SmallVectorImpl<MCRegister> *PreloadRegs =
+      Info.addPreloadedKernArg(TRI, RC, NumAllocSGPRs, Idx, PaddingSGPRs);
+
+  if (PreloadRegs->size() > 1)
+    RC = &AMDGPU::SGPR_32RegClass;
+
+  for (auto &Reg : *PreloadRegs) {
+    assert(Reg);
+    MF.addLiveIn(Reg, RC);
+    CCInfo.AllocateReg(Reg);
+  }
+
+  LastExplicitArgOffset = NumAllocSGPRs * 4 + ArgOffset;
+  return true;
+}
+
 // Allocate pre-loaded kernel arguemtns. Arguments to be preloading must be
 // sequential starting from the first argument.
 void SITargetLowering::allocatePreloadKernArgSGPRs(
-    CCState &CCInfo, SmallVectorImpl<CCValAssign> &ArgLocs,
-    const SmallVectorImpl<ISD::InputArg> &Ins, MachineFunction &MF,
+    CCState &CCInfo, SmallVectorImpl<CCValAssign> &ArgLocs, MachineFunction &MF,
     const SIRegisterInfo &TRI, SIMachineFunctionInfo &Info) const {
   Function &F = MF.getFunction();
-  unsigned LastExplicitArgOffset =
-      MF.getSubtarget<GCNSubtarget>().getExplicitKernelArgOffset();
-  GCNUserSGPRUsageInfo &SGPRInfo = Info.getUserSGPRInfo();
-  bool InPreloadSequence = true;
-  unsigned InIdx = 0;
+  const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset();
+  uint64_t ExplicitArgOffset = BaseOffset;
+  uint64_t LastExplicitArgOffset = ExplicitArgOffset;
+  unsigned LocIdx = 0;
   for (auto &Arg : F.args()) {
-    if (!InPreloadSequence || !Arg.hasInRegAttr())
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    const bool IsByRef = Arg.hasByRefAttr();
+    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
+    unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
+    if (AllocSize == 0)
       break;
 
-    int ArgIdx = Arg.getArgNo();
-    // Don't preload non-original args or parts not in the current preload
-    // sequence.
-    if (InIdx < Ins.size() && (!Ins[InIdx].isOrigArg() ||
-                               (int)Ins[InIdx].getOrigArgIndex() != ArgIdx))
+    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
+    Align ABIAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
+    uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
+    ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
+    if (!Arg.hasInRegAttr())
       break;
 
-    for (; InIdx < Ins.size() && Ins[InIdx].isOrigArg() &&
-           (int)Ins[InIdx].getOrigArgIndex() == ArgIdx;
-         InIdx++) {
-      assert(ArgLocs[ArgIdx].isMemLoc());
-      auto &ArgLoc = ArgLocs[InIdx];
-      const Align KernelArgBaseAlign = Align(16);
-      unsigned ArgOffset = ArgLoc.getLocMemOffset();
-      Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
-      unsigned NumAllocSGPRs =
-          alignTo(ArgLoc.getLocVT().getFixedSizeInBits(), 32) / 32;
-
-      // Arg is preloaded into the previous SGPR.
-      if (ArgLoc.getLocVT().getStoreSize() < 4 && Alignment < 4) {
-        Info.getArgInfo().PreloadKernArgs[InIdx].Regs.push_back(
-            Info.getArgInfo().PreloadKernArgs[InIdx - 1].Regs[0]);
-        continue;
+    if (!ArgLocs.size()) {
+      // global isel
+      allocPreloadKernArg(LastExplicitArgOffset, ExplicitArgOffset,
+                          ArgOffset, AllocSize, Arg.getArgNo(), MF,
+                          TRI, Info, CCInfo);
+    } else {
+      // DAG isel
+      for (; LocIdx < ArgLocs.size(); LocIdx++) {
+        CCValAssign &ArgLoc = ArgLocs[LocIdx];
+        assert(ArgLoc.isMemLoc());
+        uint64_t LocOffset = ArgLoc.getLocMemOffset();
+        unsigned LocSize = ArgLoc.getLocVT().getStoreSize();
+        if (!allocPreloadKernArg(LastExplicitArgOffset, ExplicitArgOffset,
+                                 LocOffset, LocSize, LocIdx, MF, TRI, Info,
+                                 CCInfo))
+          break;
       }
-
-      unsigned Padding = ArgOffset - LastExplicitArgOffset;
-      unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
-      // Check for free user SGPRs for preloading.
-      if (PaddingSGPRs + NumAllocSGPRs + 1 /*Synthetic SGPRs*/ >
-          SGPRInfo.getNumFreeUserSGPRs()) {
-        InPreloadSequence = false;
-        break;
-      }
-
-      // Preload this argument.
-      const TargetRegisterClass *RC =
-          TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
-      SmallVectorImpl<MCRegister> *PreloadRegs =
-          Info.addPreloadedKernArg(TRI, RC, NumAllocSGPRs, InIdx, PaddingSGPRs);
-
-      if (PreloadRegs->size() > 1)
-        RC = &AMDGPU::SGPR_32RegClass;
-      for (auto &Reg : *PreloadRegs) {
-        assert(Reg);
-        MF.addLiveIn(Reg, RC);
-        CCInfo.AllocateReg(Reg);
-      }
-
-      LastExplicitArgOffset = NumAllocSGPRs * 4 + ArgOffset;
     }
   }
 }
@@ -2854,7 +2877,7 @@ SDValue SITargetLowering::LowerFormalArguments(
     allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
     allocateHSAUserSGPRs(CCInfo, MF, *TRI, *Info);
     if (IsKernel && Subtarget->hasKernargPreload())
-      allocatePreloadKernArgSGPRs(CCInfo, ArgLocs, Ins, MF, *TRI, *Info);
+      allocatePreloadKernArgSGPRs(CCInfo, ArgLocs, MF, *TRI, *Info);
 
     allocateLDSKernelId(CCInfo, MF, *TRI, *Info);
   } else if (!IsGraphics) {
