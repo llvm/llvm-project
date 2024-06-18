@@ -30,8 +30,14 @@ void nargs_4() [[clang::allocating(1)]]; // expected-error {{'allocating' attrib
 void nl_true_false_1() [[clang::nonblocking(true)]] [[clang::blocking]]; // expected-error {{'blocking' and 'nonblocking' attributes are not compatible}}
 void nl_true_false_2() [[clang::blocking]] [[clang::nonblocking(true)]]; // expected-error {{'nonblocking' and 'blocking' attributes are not compatible}}
 
+void nl_true_false_3() [[clang::nonblocking, clang::blocking]]; // expected-error {{'blocking' and 'nonblocking' attributes are not compatible}}
+void nl_true_false_4() [[clang::blocking, clang::nonblocking]]; // expected-error {{'nonblocking' and 'blocking' attributes are not compatible}}
+
 void na_true_false_1() [[clang::nonallocating(true)]] [[clang::allocating]]; // expected-error {{'allocating' and 'nonallocating' attributes are not compatible}}
 void na_true_false_2() [[clang::allocating]] [[clang::nonallocating(true)]]; // expected-error {{'nonallocating' and 'allocating' attributes are not compatible}}
+
+void na_true_false_3() [[clang::nonallocating, clang::allocating]]; // expected-error {{'allocating' and 'nonallocating' attributes are not compatible}}
+void na_true_false_4() [[clang::allocating, clang::nonallocating]]; // expected-error {{'nonallocating' and 'allocating' attributes are not compatible}}
 
 void nl_true_na_true_1() [[clang::nonblocking]] [[clang::nonallocating]];
 void nl_true_na_true_2() [[clang::nonallocating]] [[clang::nonblocking]];
@@ -76,6 +82,34 @@ void type_conversions()
 }
 
 #ifdef __cplusplus
+struct PTMF {
+  void unannotated();
+  void nonblocking() [[clang::nonblocking]];
+  void nonallocating() [[clang::nonallocating]];
+};
+
+void type_conversions_ptmf()
+{
+  // It's fine to remove a performance constraint.
+  void (PTMF::*ptmf_plain)() = nullptr;
+
+  ptmf_plain = &PTMF::unannotated;
+  ptmf_plain = &PTMF::nonblocking;
+  ptmf_plain = &PTMF::nonallocating;
+
+  // Adding/spoofing nonblocking is unsafe.
+  void (PTMF::*fp_nonblocking)() [[clang::nonblocking]] = nullptr;
+  fp_nonblocking = &PTMF::nonblocking;
+  fp_nonblocking = &PTMF::unannotated; // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
+  fp_nonblocking = &PTMF::nonallocating; // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
+
+  // Adding/spoofing nonallocating is unsafe.
+  void (PTMF::*fp_nonallocating)() [[clang::nonallocating]] = nullptr;
+  fp_nonallocating = &PTMF::nonallocating;
+  fp_nonallocating = &PTMF::nonblocking; // no warning because nonblocking includes nonallocating fp_nonallocating = unannotated;
+  fp_nonallocating = &PTMF::unannotated; // expected-warning {{attribute 'nonallocating' should not be added via type conversion}}
+}
+
 // There was a bug: noexcept and nonblocking could be individually removed in conversion, but not both  
 void type_conversions_2()
 {
@@ -125,7 +159,7 @@ void f3() [[clang::nonblocking]]; // expected-warning {{effects conflict when me
 #ifdef __cplusplus
 struct S {
   void foo(); // expected-note {{previous declaration is here}}
-  void foo(); // expected-error {{class member cannot be redeclared}}
+  void foo() [[clang::nonblocking]]; // expected-error {{class member cannot be redeclared}}
 };
 #endif // __cplusplus
 
@@ -138,4 +172,11 @@ template <bool ...val>
 void f5() [[clang::nonblocking(val /* NO ... here */)]] {} // expected-error {{expression contains unexpanded parameter pack 'val'}}
 
 void f6() { f5<true, false>(); }
+
+template <bool B>
+void ambiguous() [[clang::nonblocking(B)]] [[clang::blocking]]; // expected-error {{'blocking' and 'nonblocking(expr)' attributes are not compatible}}
+
+void f7() {
+  ambiguous<true>(); // Conflicting attributes
+}
 #endif // __cplusplus
