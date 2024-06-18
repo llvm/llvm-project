@@ -435,7 +435,10 @@ define float @flat_atomic_fadd_f32_intrinsic_ret__negoffset(ptr %ptr, float %dat
 ; GFX940-LABEL: flat_atomic_fadd_f32_intrinsic_ret__negoffset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 offset:64512 sc0
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffc00, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -481,7 +484,10 @@ define void @flat_atomic_fadd_f32_intrinsic_noret__negoffset(ptr %ptr, float %da
 ; GFX940-LABEL: flat_atomic_fadd_f32_intrinsic_noret__negoffset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_add_f32 v[0:1], v2 offset:64512
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffc00, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_add_f32 v[0:1], v2
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -527,7 +533,10 @@ define <2 x half> @flat_atomic_fadd_v2f16_intrinsic_ret__negoffset(ptr %ptr, <2 
 ; GFX940-LABEL: flat_atomic_fadd_v2f16_intrinsic_ret__negoffset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 offset:64512 sc0
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffc00, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_pk_add_f16 v0, v[0:1], v2 sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -573,7 +582,10 @@ define void @flat_atomic_fadd_v2f16_intrinsic_noret__negoffset(ptr %ptr, <2 x ha
 ; GFX940-LABEL: flat_atomic_fadd_v2f16_intrinsic_noret__negoffset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2 offset:64512
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffc00, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_pk_add_f16 v[0:1], v2
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -619,7 +631,10 @@ define <2 x i16> @flat_atomic_fadd_v2bf16_intrinsic_ret__negoffset(ptr %ptr, <2 
 ; GFX940-LABEL: flat_atomic_fadd_v2bf16_intrinsic_ret__negoffset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 offset:64512 sc0
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffc00, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_pk_add_bf16 v0, v[0:1], v2 sc0
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -665,7 +680,10 @@ define void @flat_atomic_fadd_v2bf16_intrinsic_noret__negoffset(ptr %ptr, <2 x i
 ; GFX940-LABEL: flat_atomic_fadd_v2bf16_intrinsic_noret__negoffset:
 ; GFX940:       ; %bb.0:
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX940-NEXT:    flat_atomic_pk_add_bf16 v[0:1], v2 offset:64512
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffffc00, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_pk_add_bf16 v[0:1], v2
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;
