@@ -368,10 +368,14 @@ a non-attackable sequence.
 
 ``pointer`` must be a constant expression of pointer type which evaluates to
 a non-null pointer.  The result will have the same type as ``discriminator``.
+``pointer`` must be a constant expression of pointer type which evaluates to
+a non-null pointer.
+``key``  must be a constant expression of type ``ptrauth_key``.
+``discriminator`` must be a constant expression of pointer or integer type;
+if an integer, it will be coerced to ``ptrauth_extra_data_t``.
+The result will have the same type as ``pointer``.
 
-Calls to this are constant expressions if the discriminator is a null-pointer
-constant expression or an integer constant expression. Implementations may
-allow other pointer expressions as well.
+This can be used in constant expressions.
 
 ``ptrauth_sign_unauthenticated``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

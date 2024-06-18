@@ -78,17 +78,17 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define ptrauth_blend_discriminator(__pointer, __integer)                      \
   __builtin_ptrauth_blend_discriminator(__pointer, __integer)
 
-/* Add a signature to the given pointer value using a specific key,
-   using the given extra data as a salt to the signing process.
+/* Return a signed pointer for a constant address in a manner which guarantees
+   a non-attackable sequence.
 
-   The value must be a constant expression of pointer type.
+   The value must be a constant expression of pointer type which evaluates to
+   a non-null pointer.
    The key must be a constant expression of type ptrauth_key.
    The extra data must be a constant expression of pointer or integer type;
    if an integer, it will be coerced to ptrauth_extra_data_t.
    The result will have the same type as the original value.
 
-   This is a constant expression if the extra data is an integer or
-   null pointer constant. */
+   This can be used in constant expressions.  */
 #define ptrauth_sign_constant(__value, __key, __data)                          \
   __builtin_ptrauth_sign_constant(__value, __key, __data)
 

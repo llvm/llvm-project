@@ -1927,7 +1927,7 @@ private:
   ConstantLValue emitPointerAuthSignConstant(const CallExpr *E);
   llvm::Constant *emitPointerAuthPointer(const Expr *E);
   unsigned emitPointerAuthKey(const Expr *E);
-  std::pair<llvm::Constant*, llvm::Constant*>
+  std::pair<llvm::Constant *, llvm::ConstantInt *>
   emitPointerAuthDiscriminator(const Expr *E);
 
   bool hasNonZeroOffset() const {
@@ -2143,9 +2143,7 @@ ConstantLValue
 ConstantLValueEmitter::emitPointerAuthSignConstant(const CallExpr *E) {
   llvm::Constant *UnsignedPointer = emitPointerAuthPointer(E->getArg(0));
   unsigned Key = emitPointerAuthKey(E->getArg(1));
-  llvm::Constant *StorageAddress;
-  llvm::Constant *OtherDiscriminator;
-  std::tie(StorageAddress, OtherDiscriminator) =
+  auto [StorageAddress, OtherDiscriminator] =
       emitPointerAuthDiscriminator(E->getArg(2));
 
   llvm::Constant *SignedPointer = CGM.getConstantSignedPointer(
@@ -2169,17 +2167,17 @@ unsigned ConstantLValueEmitter::emitPointerAuthKey(const Expr *E) {
   return E->EvaluateKnownConstInt(CGM.getContext()).getZExtValue();
 }
 
-std::pair<llvm::Constant *, llvm::Constant *>
+std::pair<llvm::Constant *, llvm::ConstantInt *>
 ConstantLValueEmitter::emitPointerAuthDiscriminator(const Expr *E) {
   E = E->IgnoreParens();
 
-  if (auto *Call = dyn_cast<CallExpr>(E)) {
+  if (const auto *Call = dyn_cast<CallExpr>(E)) {
     if (Call->getBuiltinCallee() ==
         Builtin::BI__builtin_ptrauth_blend_discriminator) {
       llvm::Constant *Pointer = ConstantEmitter(CGM).emitAbstract(
           Call->getArg(0), Call->getArg(0)->getType());
-      llvm::Constant *Extra = ConstantEmitter(CGM).emitAbstract(
-          Call->getArg(1), Call->getArg(1)->getType());
+      auto *Extra = cast<llvm::ConstantInt>(ConstantEmitter(CGM).emitAbstract(
+          Call->getArg(1), Call->getArg(1)->getType()));
       return {Pointer, Extra};
     }
   }
@@ -2187,8 +2185,7 @@ ConstantLValueEmitter::emitPointerAuthDiscriminator(const Expr *E) {
   llvm::Constant *Result = ConstantEmitter(CGM).emitAbstract(E, E->getType());
   if (Result->getType()->isPointerTy())
     return {Result, nullptr};
-  else
-    return {nullptr, Result};
+  return {nullptr, cast<llvm::ConstantInt>(Result)};
 }
 
 ConstantLValue

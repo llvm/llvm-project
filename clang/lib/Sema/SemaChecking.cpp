@@ -2045,19 +2045,17 @@ findConstantBaseAndOffset(Sema &S, Expr *E) {
   // Must evaluate as a pointer.
   Expr::EvalResult Result;
   if (!E->EvaluateAsRValue(Result, S.Context) || !Result.Val.isLValue())
-    return std::make_pair(nullptr, CharUnits());
+    return {nullptr, CharUnits()};
 
-  // Base must be a declaration and can't be weakly imported.
   const auto *BaseDecl =
       Result.Val.getLValueBase().dyn_cast<const ValueDecl *>();
-  if (!BaseDecl || BaseDecl->hasAttr<WeakRefAttr>())
-    return std::make_pair(nullptr, CharUnits());
+  if (!BaseDecl)
+    return {nullptr, CharUnits()};
 
-  return std::make_pair(BaseDecl, Result.Val.getLValueOffset());
+  return {BaseDecl, Result.Val.getLValueOffset()};
 }
 
-static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
-                                  PointerAuthOpKind OpKind,
+static bool checkPointerAuthValue(Sema &S, Expr *&Arg, PointerAuthOpKind OpKind,
                                   bool RequireConstant = false) {
   if (Arg->hasPlaceholderType()) {
     ExprResult R = S.CheckPlaceholderExpr(Arg);
@@ -2119,25 +2117,23 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
   // The main argument.
   if (OpKind == PAO_Sign) {
     // Require the value we're signing to have a special form.
-    auto BaseOffsetPair = findConstantBaseAndOffset(S, Arg);
+    auto [BaseDecl, Offset] = findConstantBaseAndOffset(S, Arg);
     bool Invalid;
 
     // Must be rooted in a declaration reference.
-    if (!BaseOffsetPair.first) {
+    if (!BaseDecl)
       Invalid = true;
 
-      // If it's a function declaration, we can't have an offset.
-    } else if (isa<FunctionDecl>(BaseOffsetPair.first)) {
-      Invalid = !BaseOffsetPair.second.isZero();
+    // If it's a function declaration, we can't have an offset.
+    else if (isa<FunctionDecl>(BaseDecl))
+      Invalid = !Offset.isZero();
 
-      // Otherwise we're fine.
-    } else {
+    // Otherwise we're fine.
+    else
       Invalid = false;
-    }
 
-    if (Invalid) {
+    if (Invalid)
       S.Diag(Arg->getExprLoc(), diag::err_ptrauth_bad_constant_pointer);
-    }
     return Invalid;
   }
 
@@ -2169,10 +2165,9 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
     // TODO: if we're initializing a global, check that the address is
     // somehow related to what we're initializing.  This probably will
     // never really be feasible and we'll have to catch it at link-time.
-    auto BaseOffsetPair = findConstantBaseAndOffset(S, Pointer);
-    if (!BaseOffsetPair.first || !isa<VarDecl>(BaseOffsetPair.first)) {
+    auto [BaseDecl, Offset] = findConstantBaseAndOffset(S, Pointer);
+    if (!BaseDecl || !isa<VarDecl>(BaseDecl))
       Invalid = true;
-    }
   }
 
   // Check the integer.
@@ -2182,9 +2177,8 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
       Invalid = true;
   }
 
-  if (Invalid) {
+  if (Invalid)
     S.Diag(Arg->getExprLoc(), diag::err_ptrauth_bad_constant_discriminator);
-  }
   return Invalid;
 }
 
