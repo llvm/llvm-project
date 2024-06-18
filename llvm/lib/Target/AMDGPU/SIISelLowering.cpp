@@ -1114,29 +1114,33 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
 }
 
-static EVT memVTFromLoadIntrData(Type *Ty, unsigned MaxNumLanes) {
+static EVT memVTFromLoadIntrData(const SITargetLowering &TLI,
+                                 const DataLayout &DL, Type *Ty,
+                                 unsigned MaxNumLanes) {
   assert(MaxNumLanes != 0);
 
+  LLVMContext &Ctx = Ty->getContext();
   if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
     unsigned NumElts = std::min(MaxNumLanes, VT->getNumElements());
-    return EVT::getVectorVT(Ty->getContext(),
-                            EVT::getEVT(VT->getElementType()),
+    return EVT::getVectorVT(Ctx, TLI.getValueType(DL, VT->getElementType()),
                             NumElts);
   }
 
-  return EVT::getEVT(Ty);
+  return TLI.getValueType(DL, Ty);
 }
 
 // Peek through TFE struct returns to only use the data size.
-static EVT memVTFromLoadIntrReturn(Type *Ty, unsigned MaxNumLanes) {
+static EVT memVTFromLoadIntrReturn(const SITargetLowering &TLI,
+                                   const DataLayout &DL, Type *Ty,
+                                   unsigned MaxNumLanes) {
   auto *ST = dyn_cast<StructType>(Ty);
   if (!ST)
-    return memVTFromLoadIntrData(Ty, MaxNumLanes);
+    return memVTFromLoadIntrData(TLI, DL, Ty, MaxNumLanes);
 
   // TFE intrinsics return an aggregate type.
   assert(ST->getNumContainedTypes() == 2 &&
          ST->getContainedType(1)->isIntegerTy(32));
-  return memVTFromLoadIntrData(ST->getContainedType(0), MaxNumLanes);
+  return memVTFromLoadIntrData(TLI, DL, ST->getContainedType(0), MaxNumLanes);
 }
 
 /// Map address space 7 to MVT::v5i32 because that's its in-memory
@@ -1221,10 +1225,12 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
           MaxNumLanes = DMask == 0 ? 1 : llvm::popcount(DMask);
         }
 
-        Info.memVT = memVTFromLoadIntrReturn(CI.getType(), MaxNumLanes);
+        Info.memVT = memVTFromLoadIntrReturn(*this, MF.getDataLayout(),
+                                             CI.getType(), MaxNumLanes);
       } else {
-        Info.memVT = memVTFromLoadIntrReturn(
-            CI.getType(), std::numeric_limits<unsigned>::max());
+        Info.memVT =
+            memVTFromLoadIntrReturn(*this, MF.getDataLayout(), CI.getType(),
+                                    std::numeric_limits<unsigned>::max());
       }
 
       // FIXME: What does alignment mean for an image?
@@ -1237,9 +1243,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       if (RsrcIntr->IsImage) {
         unsigned DMask = cast<ConstantInt>(CI.getArgOperand(1))->getZExtValue();
         unsigned DMaskLanes = DMask == 0 ? 1 : llvm::popcount(DMask);
-        Info.memVT = memVTFromLoadIntrData(DataTy, DMaskLanes);
+        Info.memVT = memVTFromLoadIntrData(*this, MF.getDataLayout(), DataTy,
+                                           DMaskLanes);
       } else
-        Info.memVT = EVT::getEVT(DataTy);
+        Info.memVT = getValueType(MF.getDataLayout(), DataTy);
 
       Info.flags |= MachineMemOperand::MOStore;
     } else {
