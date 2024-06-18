@@ -15869,6 +15869,24 @@ static Value *createTblShuffleForZExt(IRBuilderBase &Builder, Value *Op,
   return Result;
 }
 
+static Value *createTblShuffleForSExt(IRBuilderBase &Builder, Value *Op,
+                                      FixedVectorType *DstTy,
+                                      bool IsLittleEndian) {
+  auto *SrcTy = cast<FixedVectorType>(Op->getType());
+  auto SrcWidth = cast<IntegerType>(SrcTy->getElementType())->getBitWidth();
+  auto DstWidth = cast<IntegerType>(DstTy->getElementType())->getBitWidth();
+
+  SmallVector<int> Mask;
+  if (!createTblShuffleMask(SrcWidth, DstWidth, SrcTy->getNumElements(),
+                            !IsLittleEndian, Mask))
+    return nullptr;
+
+  auto *FirstEltZero = Builder.CreateInsertElement(
+      PoisonValue::get(SrcTy), Builder.getInt8(0), uint64_t(0));
+
+  return Builder.CreateShuffleVector(Op, FirstEltZero, Mask);
+}
+
 static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
   IRBuilder<> Builder(TI);
   SmallVector<Value *> Parts;
@@ -16049,10 +16067,25 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     Value *ZExt = createTblShuffleForZExt(
         Builder, I->getOperand(0), FixedVectorType::getInteger(DstTy),
         FixedVectorType::getInteger(DstTy), Subtarget->isLittleEndian());
-    if (!ZExt)
-      return false;
+    assert(ZExt && "Cannot fail for the i8 to float conversion");
     auto *UI = Builder.CreateUIToFP(ZExt, DstTy);
     I->replaceAllUsesWith(UI);
+    I->eraseFromParent();
+    return true;
+  }
+
+  auto *SIToFP = dyn_cast<SIToFPInst>(I);
+  if (SIToFP && SrcTy->getElementType()->isIntegerTy(8) &&
+      DstTy->getElementType()->isFloatTy()) {
+    IRBuilder<> Builder(I);
+    auto *Shuffle = createTblShuffleForSExt(Builder, I->getOperand(0),
+                                            FixedVectorType::getInteger(DstTy),
+                                            Subtarget->isLittleEndian());
+    assert(Shuffle && "Cannot fail for the i8 to float conversion");
+    auto *Cast = Builder.CreateBitCast(Shuffle, VectorType::getInteger(DstTy));
+    auto *AShr = Builder.CreateAShr(Cast, 24, "", true);
+    auto *SI = Builder.CreateSIToFP(AShr, DstTy);
+    I->replaceAllUsesWith(SI);
     I->eraseFromParent();
     return true;
   }

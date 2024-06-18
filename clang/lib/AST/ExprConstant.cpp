@@ -9325,6 +9325,13 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       Result.IsNullPtr = false;
       return true;
     } else {
+      // In rare instances, the value isn't an lvalue.
+      // For example, when the value is the difference between the addresses of
+      // two labels. We reject that as a constant expression because we can't
+      // compute a valid offset to convert into a pointer.
+      if (!Value.isLValue())
+        return false;
+
       // Cast is of an lvalue, no need to change value.
       Result.setFrom(Info.Ctx, Value);
       return true;

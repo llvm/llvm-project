@@ -284,16 +284,6 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
                        InstrProfValueKind ValueKind, uint32_t MaxMDCount);
 
-/// Extract the value profile data from \p Inst which is annotated with
-/// value profile meta data. Return false if there is no value data annotated,
-/// otherwise return true.
-bool getValueProfDataFromInst(const Instruction &Inst,
-                              InstrProfValueKind ValueKind,
-                              uint32_t MaxNumValueData,
-                              InstrProfValueData ValueData[],
-                              uint32_t &ActualNumValueData, uint64_t &TotalC,
-                              bool GetNoICPValue = false);
-
 /// Extract the value profile data from \p Inst and returns them if \p Inst is
 /// annotated with value profile data. Returns nullptr otherwise. It's similar
 /// to `getValueProfDataFromInst` above except that an array is allocated only
