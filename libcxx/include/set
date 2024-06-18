@@ -924,13 +924,15 @@ template <class _InputIterator,
           class _Allocator,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value, void>,
           class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-set(_InputIterator, _InputIterator, _Allocator)
-    -> set<__iter_value_type<_InputIterator>, less<__iter_value_type<_InputIterator>>, _Allocator>;
+set(_InputIterator,
+    _InputIterator,
+    _Allocator) -> set<__iter_value_type<_InputIterator>, less<__iter_value_type<_InputIterator>>, _Allocator>;
 
 #  if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-set(from_range_t, _Range&&, _Allocator)
-    -> set<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
+set(from_range_t,
+    _Range&&,
+    _Allocator) -> set<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
 #  endif
 
 template <class _Key, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
@@ -1376,8 +1378,9 @@ template <class _Key,
           class _Allocator = allocator<_Key>,
           class            = enable_if_t<__is_allocator<_Allocator>::value, void>,
           class            = enable_if_t<!__is_allocator<_Compare>::value, void>>
-multiset(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator())
-    -> multiset<_Key, _Compare, _Allocator>;
+multiset(initializer_list<_Key>,
+         _Compare   = _Compare(),
+         _Allocator = _Allocator()) -> multiset<_Key, _Compare, _Allocator>;
 
 template <class _InputIterator,
           class _Allocator,
@@ -1388,8 +1391,9 @@ multiset(_InputIterator, _InputIterator, _Allocator)
 
 #  if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
-multiset(from_range_t, _Range&&, _Allocator)
-    -> multiset<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
+multiset(from_range_t,
+         _Range&&,
+         _Allocator) -> multiset<ranges::range_value_t<_Range>, less<ranges::range_value_t<_Range>>, _Allocator>;
 #  endif
 
 template <class _Key, class _Allocator, class = enable_if_t<__is_allocator<_Allocator>::value, void>>
