@@ -209,27 +209,36 @@ void AArch64Arm64ECCallLowering::getThunkRetType(
 #endif
   if (T->isVoidTy()) {
     if (FT->getNumParams()) {
-      auto SRetAttr = AttrList.getParamAttr(0, Attribute::StructRet);
-      auto InRegAttr = AttrList.getParamAttr(0, Attribute::InReg);
-      if (SRetAttr.isValid() && InRegAttr.isValid()) {
+      Attribute SRetAttr0 = AttrList.getParamAttr(0, Attribute::StructRet);
+      Attribute InRegAttr0 = AttrList.getParamAttr(0, Attribute::InReg);
+      Attribute SRetAttr1, InRegAttr1;
+      if (FT->getNumParams() > 1) {
+        // Also check the second parameter (for class methods, the first
+        // parameter is "this", and the second parameter is the sret pointer.)
+        // It doesn't matter which one is sret.
+        SRetAttr1 = AttrList.getParamAttr(1, Attribute::StructRet);
+        InRegAttr1 = AttrList.getParamAttr(1, Attribute::InReg);
+      }
+      if ((SRetAttr0.isValid() && InRegAttr0.isValid()) ||
+          (SRetAttr1.isValid() && InRegAttr1.isValid())) {
         // sret+inreg indicates a call that returns a C++ class value. This is
         // actually equivalent to just passing and returning a void* pointer
-        // as the first argument. Translate it that way, instead of trying
-        // to model "inreg" in the thunk's calling convention, to simplify
-        // the rest of the code.
+        // as the first or second argument. Translate it that way, instead of
+        // trying to model "inreg" in the thunk's calling convention; this
+        // simplfies the rest of the code, and matches MSVC mangling.
         Out << "i8";
         Arm64RetTy = I64Ty;
         X64RetTy = I64Ty;
         return;
       }
-      if (SRetAttr.isValid()) {
+      if (SRetAttr0.isValid()) {
         // FIXME: Sanity-check the sret type; if it's an integer or pointer,
         // we'll get screwy mangling/codegen.
         // FIXME: For large struct types, mangle as an integer argument and
         // integer return, so we can reuse more thunks, instead of "m" syntax.
         // (MSVC mangles this case as an integer return with no argument, but
         // that's a miscompile.)
-        Type *SRetType = SRetAttr.getValueAsType();
+        Type *SRetType = SRetAttr0.getValueAsType();
         Align SRetAlign = AttrList.getParamAlignment(0).valueOrOne();
         Type *Arm64Ty, *X64Ty;
         canonicalizeThunkType(SRetType, SRetAlign, /*Ret*/ true, ArgSizeBytes,
