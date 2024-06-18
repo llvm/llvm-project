@@ -17,4 +17,6 @@
 
 %%public_api()
 
+#define isnan(x) __builtin_isnan(x)
+
 #endif // LLVM_LIBC_MATH_H
