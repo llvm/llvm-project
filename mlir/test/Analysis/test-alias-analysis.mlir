@@ -256,3 +256,21 @@ func.func @constants(%arg: memref<2xf32>) attributes {test.ptr = "func"} {
 
   return
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "buffer_view"
+// CHECK-DAG: alloc_1#0 <-> select#0: NoAlias
+// CHECK-DAG: alloca_2#0 <-> select#0: MayAlias
+// CHECK-DAG: alloca_3#0 <-> select#0: MayAlias
+// CHECK-DAG: select#0 <-> func.region0#0: NoAlias
+// CHECK-DAG: select#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: select#0 <-> func.region0#2: NoAlias
+func.func @buffer_view(%arg: memref<2xf32>, %size: index, %cond : i1) attributes {test.ptr = "func"} {
+  %1 = memref.alloc() {test.ptr = "alloc_1"} : memref<8x64xf32>
+  %c0 = arith.constant 0 : index
+  %2 = memref.alloca (%size) {test.ptr = "alloca_2"} : memref<?xi8>
+  %3 = memref.alloca (%size) {test.ptr = "alloca_3"} : memref<?xi8>
+  %4 = arith.select %cond, %2, %3 {test.ptr = "select"}: memref<?xi8>
+  return
+}
