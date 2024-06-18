@@ -828,40 +828,45 @@ class DIBasicType : public DIType {
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               StringRef Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              DIFlags Flags, StorageType Storage,
-                              bool ShouldCreate = true) {
+                              DIFlags Flags, DINodeArray Annotations,
+                              StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
-                   SizeInBits, AlignInBits, Encoding, Flags, Storage,
-                   ShouldCreate);
+                   SizeInBits, AlignInBits, Encoding, Flags, Annotations.get(),
+                   Storage, ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              DIFlags Flags, StorageType Storage,
-                              bool ShouldCreate = true);
+                              DIFlags Flags, Metadata *Annotations,
+                              StorageType Storage, bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getSizeInBits(),
-                        getAlignInBits(), getEncoding(), getFlags());
+                        getAlignInBits(), getEncoding(), getFlags(),
+                        getAnnotations());
   }
 
 public:
   DEFINE_MDNODE_GET(DIBasicType, (unsigned Tag, StringRef Name),
-                    (Tag, Name, 0, 0, 0, FlagZero))
+                    (Tag, Name, 0, 0, 0, FlagZero, {}))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero, {}))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero, {}))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     DINodeArray Annotations = {}),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
+                     Annotations))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     Metadata *Annotations = nullptr),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
+                     Annotations))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 
@@ -872,6 +877,16 @@ public:
   /// Return the signedness of this type, or std::nullopt if this type is
   /// neither signed nor unsigned.
   std::optional<Signedness> getSignedness() const;
+
+  Metadata *getRawAnnotations() const { return getOperand(3); }
+
+  DINodeArray getAnnotations() const {
+    return cast_or_null<MDTuple>(getRawAnnotations());
+  }
+
+  void replaceAnnotations(DINodeArray Annotations) {
+    replaceOperandWith(3, Annotations.get());
+  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIBasicTypeKind;
@@ -1112,6 +1127,10 @@ public:
   }
   Metadata *getRawAnnotations() const { return getOperand(5); }
 
+  void replaceAnnotations(DINodeArray Annotations) {
+    replaceOperandWith(5, Annotations.get());
+  }
+
   /// Get casted version of extra data.
   /// @{
   DIType *getClassType() const;
@@ -1339,6 +1358,10 @@ public:
     return cast_or_null<MDTuple>(getRawAnnotations());
   }
 
+  void replaceAnnotations(DINodeArray Annotations) {
+    replaceOperandWith(13, Annotations.get());
+  }
+
   /// Replace operands.
   ///
   /// If this \a isUniqued() and not \a isResolved(), on a uniquing collision
@@ -1385,26 +1408,30 @@ class DISubroutineType : public DIType {
 
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
                                    uint8_t CC, DITypeRefArray TypeArray,
-                                   StorageType Storage,
+                                   DINodeArray Annotations, StorageType Storage,
                                    bool ShouldCreate = true) {
-    return getImpl(Context, Flags, CC, TypeArray.get(), Storage, ShouldCreate);
+    return getImpl(Context, Flags, CC, TypeArray.get(), Annotations.get(),
+                   Storage, ShouldCreate);
   }
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
                                    uint8_t CC, Metadata *TypeArray,
-                                   StorageType Storage,
+                                   Metadata *Annotations, StorageType Storage,
                                    bool ShouldCreate = true);
 
   TempDISubroutineType cloneImpl() const {
-    return getTemporary(getContext(), getFlags(), getCC(), getTypeArray());
+    return getTemporary(getContext(), getFlags(), getCC(), getTypeArray(),
+                        getAnnotations());
   }
 
 public:
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray),
-                    (Flags, CC, TypeArray))
+                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray,
+                     DINodeArray Annotations = nullptr),
+                    (Flags, CC, TypeArray, Annotations))
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (DIFlags Flags, uint8_t CC, Metadata *TypeArray),
-                    (Flags, CC, TypeArray))
+                    (DIFlags Flags, uint8_t CC, Metadata *TypeArray,
+                     Metadata *Annotations = nullptr),
+                    (Flags, CC, TypeArray, Annotations))
 
   TempDISubroutineType clone() const { return cloneImpl(); }
   // Returns a new temporary DISubroutineType with updated CC
@@ -1421,6 +1448,15 @@ public:
   }
 
   Metadata *getRawTypeArray() const { return getOperand(3); }
+
+  Metadata *getRawAnnotations() const { return getOperand(4); }
+  DINodeArray getAnnotations() const {
+    return cast_or_null<MDTuple>(getRawAnnotations());
+  }
+
+  void replaceAnnotations(DINodeArray Annotations) {
+    replaceOperandWith(4, Annotations.get());
+  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubroutineTypeKind;
