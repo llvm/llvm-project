@@ -2936,7 +2936,7 @@ static bool CheckForNonPositiveValues(FoldingContext &context,
   if (arg.Rank() > 0) {
     if (const Expr<SomeType> *expr{arg.UnwrapExpr()}) {
       if (const auto *intExpr{std::get_if<Expr<SomeInteger>>(&expr->u)}) {
-        std::visit(
+        Fortran::common::visit(
             [&](const auto &kindExpr) {
               using IntType = typename std::decay_t<decltype(kindExpr)>::Result;
               if (const auto *constArray{

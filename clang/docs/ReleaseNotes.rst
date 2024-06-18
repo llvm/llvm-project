@@ -268,6 +268,9 @@ Resolutions to C++ Defect Reports
 - Clang now requires a template argument list after a template keyword.
   (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
 
+- Clang now considers ``noexcept(typeid(expr))`` more carefully, instead of always assuming that ``std::bad_typeid`` can be thrown.
+  (`CWG2191: Incorrect result for noexcept(typeid(v)) <https://cplusplus.github.io/CWG/issues/2191.html>`_).
+
 C Language Changes
 ------------------
 
@@ -859,6 +862,8 @@ Bug Fixes to C++ Support
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
+- Fixed a failed assertion when attempting to convert an integer representing the difference
+  between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
