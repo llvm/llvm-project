@@ -32,3 +32,20 @@ void different_2() {
   int d = p2 - p1; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}} \
                    // expected-note{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
 }
+
+int different_3() {
+  struct {
+    int array[5];
+  } a, b;
+  return &a.array[3] - &b.array[2]; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}} \
+                                    // expected-note{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
+}
+
+int different_5() {
+  struct {
+    int array1[5]; // expected-note{{Array at the left-hand side of subtraction}}
+    int array2[5]; // expected-note{{Array at the right-hand side of subtraction}}
+  } a;
+  return &a.array1[3] - &a.array2[4]; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}} \
+                                      // expected-note{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
+}

@@ -154,12 +154,14 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
     auto R =
         std::make_unique<PathSensitiveBugReport>(BT, Msg_MemRegionDifferent, N);
     R->addRange(B->getSourceRange());
-    if (DiffDeclL)
-      R->addNote("Array at the left-hand side of subtraction",
-                 {DiffDeclL, C.getSourceManager()});
-    if (DiffDeclR)
-      R->addNote("Array at the right-hand side of subtraction",
-                 {DiffDeclR, C.getSourceManager()});
+    if (DiffDeclL != DiffDeclR) {
+      if (DiffDeclL)
+        R->addNote("Array at the left-hand side of subtraction",
+                   {DiffDeclL, C.getSourceManager()});
+      if (DiffDeclR)
+        R->addNote("Array at the right-hand side of subtraction",
+                   {DiffDeclR, C.getSourceManager()});
+    }
     C.emitReport(std::move(R));
   }
 }
