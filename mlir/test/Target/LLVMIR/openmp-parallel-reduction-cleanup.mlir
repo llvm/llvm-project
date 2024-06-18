@@ -27,7 +27,7 @@
     %0 = llvm.mlir.constant(-1 : i32) : i32
     %1 = llvm.mlir.addressof @i : !llvm.ptr
     %2 = llvm.mlir.addressof @j : !llvm.ptr
-    omp.parallel byref reduction(@add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) {
+    omp.parallel reduction(byref @add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, byref @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) {
       llvm.store %0, %arg0 : i32, !llvm.ptr
       llvm.store %0, %arg1 : i32, !llvm.ptr
       omp.terminator

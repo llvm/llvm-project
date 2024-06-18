@@ -23,7 +23,7 @@ contains
     call takes_char(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_seq_assocPtest_char_1(
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2:.*]](%[[VAL_5:.*]]) typeparams %[[VAL_1:.*]]#1 {uniq_name = "_QMbindc_seq_assocFtest_char_1Ex"} : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>, !fir.shape<2>, index) -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.ref<!fir.array<10x20x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2:.*]](%[[VAL_5:.*]]) typeparams %[[VAL_1:.*]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QMbindc_seq_assocFtest_char_1Ex"} : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.ref<!fir.array<10x20x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_9:.*]] = fir.shift %[[VAL_8]], %[[VAL_8]] : (index, index) -> !fir.shift<2>
@@ -46,7 +46,7 @@ contains
 ! CHECK:           %[[VAL_26:.*]] = fir.box_addr %[[VAL_10]] : (!fir.box<!fir.array<10x20x!fir.char<1,?>>>) -> !fir.ref<!fir.array<10x20x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_28:.*]] = fir.embox %[[VAL_27]](%[[VAL_24]]) typeparams %[[VAL_25]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CHECK:           fir.call @takes_char(%[[VAL_28]], %[[VAL_11]]#1) fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_char(%[[VAL_28]], %[[VAL_11]]#1) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_11]]#1, %[[VAL_11]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }
@@ -56,7 +56,7 @@ contains
     call takes_char(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_seq_assocPtest_char_copy_in_copy_out(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {uniq_name = "_QMbindc_seq_assocFtest_char_copy_in_copy_outEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMbindc_seq_assocFtest_char_copy_in_copy_outEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i1)
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
@@ -80,7 +80,7 @@ contains
 ! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_24:.*]] = fir.embox %[[VAL_23]](%[[VAL_20]]) typeparams %[[VAL_21]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shapeshift<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
-! CHECK:           fir.call @takes_char(%[[VAL_24]], %[[VAL_7]]#1) fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_char(%[[VAL_24]], %[[VAL_7]]#1) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.copy_out %[[VAL_3]]#0, %[[VAL_3]]#1 to %[[VAL_1]]#0 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i1, !fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_7]]#1, %[[VAL_7]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
@@ -91,7 +91,7 @@ contains
     call takes_char_assumed_size(x)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_seq_assocPtest_char_assumed_size(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {uniq_name = "_QMbindc_seq_assocFtest_char_assumed_sizeEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMbindc_seq_assocFtest_char_assumed_sizeEx"} : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i1)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = fir.shift %[[VAL_3]], %[[VAL_3]] : (index, index) -> !fir.shift<2>
@@ -113,7 +113,7 @@ contains
 ! CHECK:           %[[VAL_20:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<10x?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_22:.*]] = fir.embox %[[VAL_21]](%[[VAL_18]]) typeparams %[[VAL_19]] : (!fir.ref<!fir.array<10x?x!fir.char<1,?>>>, !fir.shapeshift<2>, index) -> !fir.box<!fir.array<10x?x!fir.char<1,?>>>
-! CHECK:           fir.call @takes_char_assumed_size(%[[VAL_22]]) fastmath<contract> : (!fir.box<!fir.array<10x?x!fir.char<1,?>>>) -> ()
+! CHECK:           fir.call @takes_char_assumed_size(%[[VAL_22]]) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<10x?x!fir.char<1,?>>>) -> ()
 ! CHECK:           hlfir.copy_out %[[VAL_2]]#0, %[[VAL_2]]#1 to %[[VAL_1]]#0 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, i1, !fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
@@ -123,7 +123,7 @@ contains
     call takes_optional_char(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMbindc_seq_assocPtest_optional_char(
-! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2:.*]](%[[VAL_5:.*]]) typeparams %[[VAL_1:.*]]#1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMbindc_seq_assocFtest_optional_charEx"} : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>, !fir.shape<2>, index) -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.ref<!fir.array<10x20x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_2:.*]](%[[VAL_5:.*]]) typeparams %[[VAL_1:.*]]#1 dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMbindc_seq_assocFtest_optional_charEx"} : (!fir.ref<!fir.array<10x20x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>, !fir.ref<!fir.array<10x20x!fir.char<1,?>>>)
 ! CHECK:           %[[VAL_7:.*]] = fir.is_present %[[VAL_6]]#0 : (!fir.box<!fir.array<10x20x!fir.char<1,?>>>) -> i1
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_9:.*]] = fir.if %[[VAL_7]] -> (!fir.box<!fir.array<10x20x!fir.char<1,?>>>) {
@@ -159,7 +159,7 @@ contains
 ! CHECK:             %[[VAL_33:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:             fir.result %[[VAL_33]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           }
-! CHECK:           fir.call @takes_optional_char(%[[VAL_15]], %[[VAL_14]]#1) fastmath<contract> : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
+! CHECK:           fir.call @takes_optional_char(%[[VAL_15]], %[[VAL_14]]#1) fastmath<contract> {is_bind_c} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<i32>) -> ()
 ! CHECK:           hlfir.end_associate %[[VAL_14]]#1, %[[VAL_14]]#2 : !fir.ref<i32>, i1
 ! CHECK:           return
 ! CHECK:         }
@@ -186,7 +186,7 @@ contains
   end subroutine
 ! CHECK-LABEL:   func.func @_QMpoly_seq_assocPtest_poly_1(
 ! CHECK-SAME:                                             %[[VAL_0:.*]]: !fir.class<!fir.array<10x20xnone>> {fir.bindc_name = "x"}) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {uniq_name = "_QMpoly_seq_assocFtest_poly_1Ex"} : (!fir.class<!fir.array<10x20xnone>>) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMpoly_seq_assocFtest_poly_1Ex"} : (!fir.class<!fir.array<10x20xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_3:.*]]:3 = hlfir.associate %[[VAL_2]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]]#1 {uniq_name = "_QMpoly_seq_assocFtakes_polyEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -214,7 +214,7 @@ contains
     call takes_poly(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMpoly_seq_assocPtest_poly_copy_in_copy_out(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {uniq_name = "_QMpoly_seq_assocFtest_poly_copy_in_copy_outEx"} : (!fir.class<!fir.array<?x?xnone>>) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMpoly_seq_assocFtest_poly_copy_in_copy_outEx"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.class<!fir.array<?x?xnone>>) -> (!fir.class<!fir.array<?x?xnone>>, i1)
 ! CHECK:           %[[VAL_4:.*]]:3 = hlfir.associate %[[VAL_2]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
@@ -244,7 +244,7 @@ contains
     call takes_poly_assumed_size(x)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMpoly_seq_assocPtest_poly_assumed_size(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {uniq_name = "_QMpoly_seq_assocFtest_poly_assumed_sizeEx"} : (!fir.class<!fir.array<?x?xnone>>) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMpoly_seq_assocFtest_poly_assumed_sizeEx"} : (!fir.class<!fir.array<?x?xnone>>, !fir.dscope) -> (!fir.class<!fir.array<?x?xnone>>, !fir.class<!fir.array<?x?xnone>>)
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.copy_in %[[VAL_1]]#0 : (!fir.class<!fir.array<?x?xnone>>) -> (!fir.class<!fir.array<?x?xnone>>, i1)
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 10 : i64
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i64
@@ -271,7 +271,7 @@ contains
     call takes_optional_poly(x, 100)
   end subroutine
 ! CHECK-LABEL:   func.func @_QMpoly_seq_assocPtest_optional_poly(
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMpoly_seq_assocFtest_optional_polyEx"} : (!fir.class<!fir.array<10x20xnone>>) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:.*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QMpoly_seq_assocFtest_optional_polyEx"} : (!fir.class<!fir.array<10x20xnone>>, !fir.dscope) -> (!fir.class<!fir.array<10x20xnone>>, !fir.class<!fir.array<10x20xnone>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.is_present %[[VAL_1]]#0 : (!fir.class<!fir.array<10x20xnone>>) -> i1
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 100 : i32
 ! CHECK:           %[[VAL_4:.*]] = fir.if %[[VAL_2]] -> (!fir.class<!fir.array<10x20xnone>>) {

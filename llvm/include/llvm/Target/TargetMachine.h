@@ -288,6 +288,10 @@ public:
     return Options.UniqueBasicBlockSectionNames;
   }
 
+  bool getSeparateNamedSections() const {
+    return Options.SeparateNamedSections;
+  }
+
   /// Return true if data objects should be emitted into their own section,
   /// corresponds to -fdata-sections.
   bool getDataSections() const {
@@ -427,7 +431,7 @@ public:
   /// and \p M has not been modified.
   virtual bool splitModule(
       Module &M, unsigned NumParts,
-      function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) const {
+      function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
     return false;
   }
 };

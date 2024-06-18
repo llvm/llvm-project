@@ -2083,6 +2083,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   assert(SPAdj == 0 && "unhandled SP adjustment in call sequence?");
 
+  assert(MF->getRegInfo().isReserved(MFI->getScratchRSrcReg()) &&
+         "unreserved scratch RSRC register");
+
   MachineOperand &FIOp = MI->getOperand(FIOperandNum);
   int Index = MI->getOperand(FIOperandNum).getIndex();
 
@@ -3154,7 +3157,7 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
                                               MachineInstr &Use,
                                               MachineRegisterInfo &MRI,
                                               LiveIntervals *LIS) const {
-  auto &MDT = LIS->getAnalysis<MachineDominatorTree>();
+  auto &MDT = LIS->getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   SlotIndex UseIdx = LIS->getInstructionIndex(Use);
   SlotIndex DefIdx;
 

@@ -178,7 +178,7 @@ public:
     return CatchTypeInfo{getAddrOfRTTIDescriptor(Ty), 0};
   }
 
-  bool shouldTypeidBeNullChecked(bool IsDeref, QualType SrcRecordTy) override;
+  bool shouldTypeidBeNullChecked(QualType SrcRecordTy) override;
   void EmitBadTypeidCall(CodeGenFunction &CGF) override;
   llvm::Value *EmitTypeid(CodeGenFunction &CGF, QualType SrcRecordTy,
                           Address ThisPtr,
@@ -1419,9 +1419,8 @@ static llvm::FunctionCallee getBadTypeidFn(CodeGenFunction &CGF) {
   return CGF.CGM.CreateRuntimeFunction(FTy, "__cxa_bad_typeid");
 }
 
-bool ItaniumCXXABI::shouldTypeidBeNullChecked(bool IsDeref,
-                                              QualType SrcRecordTy) {
-  return IsDeref;
+bool ItaniumCXXABI::shouldTypeidBeNullChecked(QualType SrcRecordTy) {
+  return true;
 }
 
 void ItaniumCXXABI::EmitBadTypeidCall(CodeGenFunction &CGF) {
@@ -1793,6 +1792,37 @@ void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
                             ThisTy, VTT, VTTTy, nullptr);
 }
 
+// Check if any non-inline method has the specified attribute.
+template <typename T>
+static bool CXXRecordNonInlineHasAttr(const CXXRecordDecl *RD) {
+  for (const auto *D : RD->noload_decls()) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+      if (FD->isInlined() || FD->doesThisDeclarationHaveABody() ||
+          FD->isPureVirtual())
+        continue;
+      if (D->hasAttr<T>())
+        return true;
+    }
+  }
+
+  return false;
+}
+
+static void setVTableSelectiveDLLImportExport(CodeGenModule &CGM,
+                                              llvm::GlobalVariable *VTable,
+                                              const CXXRecordDecl *RD) {
+  if (VTable->getDLLStorageClass() !=
+          llvm::GlobalVariable::DefaultStorageClass ||
+      RD->hasAttr<DLLImportAttr>() || RD->hasAttr<DLLExportAttr>())
+    return;
+
+  if (CGM.getVTables().isVTableExternal(RD)) {
+    if (CXXRecordNonInlineHasAttr<DLLImportAttr>(RD))
+      VTable->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+  } else if (CXXRecordNonInlineHasAttr<DLLExportAttr>(RD))
+    VTable->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+}
+
 void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
                                           const CXXRecordDecl *RD) {
   llvm::GlobalVariable *VTable = getAddrOfVTable(RD, CharUnits());
@@ -1817,6 +1847,9 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
 
   if (CGM.supportsCOMDAT() && VTable->isWeakForLinker())
     VTable->setComdat(CGM.getModule().getOrInsertComdat(VTable->getName()));
+
+  if (CGM.getTarget().hasPS4DLLImportExport())
+    setVTableSelectiveDLLImportExport(CGM, VTable, RD);
 
   // Set the right visibility.
   CGM.setGVProperties(VTable, RD);
@@ -1905,29 +1938,6 @@ ItaniumCXXABI::getVTableAddressPoint(BaseSubobject Base,
       VTable->getValueType(), VTable, Indices, /*InBounds=*/true, InRange);
 }
 
-// Check whether all the non-inline virtual methods for the class have the
-// specified attribute.
-template <typename T>
-static bool CXXRecordAllNonInlineVirtualsHaveAttr(const CXXRecordDecl *RD) {
-  bool FoundNonInlineVirtualMethodWithAttr = false;
-  for (const auto *D : RD->noload_decls()) {
-    if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-      if (!FD->isVirtualAsWritten() || FD->isInlineSpecified() ||
-          FD->doesThisDeclarationHaveABody())
-        continue;
-      if (!D->hasAttr<T>())
-        return false;
-      FoundNonInlineVirtualMethodWithAttr = true;
-    }
-  }
-
-  // We didn't find any non-inline virtual methods missing the attribute.  We
-  // will return true when we found at least one non-inline virtual with the
-  // attribute.  (This lets our caller know that the attribute needs to be
-  // propagated up to the vtable.)
-  return FoundNonInlineVirtualMethodWithAttr;
-}
-
 llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
     CodeGenFunction &CGF, const CXXRecordDecl *VTableClass, BaseSubobject Base,
     const CXXRecordDecl *NearestVBase) {
@@ -1981,26 +1991,10 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
       getContext().toCharUnitsFromBits(PAlign).getAsAlign());
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
-  // In MS C++ if you have a class with virtual functions in which you are using
-  // selective member import/export, then all virtual functions must be exported
-  // unless they are inline, otherwise a link error will result. To match this
-  // behavior, for such classes, we dllimport the vtable if it is defined
-  // externally and all the non-inline virtual methods are marked dllimport, and
-  // we dllexport the vtable if it is defined in this TU and all the non-inline
-  // virtual methods are marked dllexport.
-  if (CGM.getTarget().hasPS4DLLImportExport()) {
-    if ((!RD->hasAttr<DLLImportAttr>()) && (!RD->hasAttr<DLLExportAttr>())) {
-      if (CGM.getVTables().isVTableExternal(RD)) {
-        if (CXXRecordAllNonInlineVirtualsHaveAttr<DLLImportAttr>(RD))
-          VTable->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-      } else {
-        if (CXXRecordAllNonInlineVirtualsHaveAttr<DLLExportAttr>(RD))
-          VTable->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-      }
-    }
-  }
-  CGM.setGVProperties(VTable, RD);
+  if (CGM.getTarget().hasPS4DLLImportExport())
+    setVTableSelectiveDLLImportExport(CGM, VTable, RD);
 
+  CGM.setGVProperties(VTable, RD);
   return VTable;
 }
 
@@ -2133,6 +2127,9 @@ bool ItaniumCXXABI::canSpeculativelyEmitVTableAsBaseClass(
 
 bool ItaniumCXXABI::canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const {
   if (!canSpeculativelyEmitVTableAsBaseClass(RD))
+    return false;
+
+  if (RD->shouldEmitInExternalSource())
     return false;
 
   // For a complete-object vtable (or more specifically, for the VTT), we need
@@ -3285,7 +3282,7 @@ ItaniumRTTIBuilder::GetAddrOfExternalRTTIDescriptor(QualType Ty) {
     // Import the typeinfo symbol when all non-inline virtual methods are
     // imported.
     if (CGM.getTarget().hasPS4DLLImportExport()) {
-      if (RD && CXXRecordAllNonInlineVirtualsHaveAttr<DLLImportAttr>(RD)) {
+      if (RD && CXXRecordNonInlineHasAttr<DLLImportAttr>(RD)) {
         GV->setDLLStorageClass(llvm::GlobalVariable::DLLImportStorageClass);
         CGM.setDSOLocal(GV);
       }
@@ -3938,13 +3935,13 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
 
   // Export the typeinfo in the same circumstances as the vtable is exported.
   auto GVDLLStorageClass = DLLStorageClass;
-  if (CGM.getTarget().hasPS4DLLImportExport()) {
+  if (CGM.getTarget().hasPS4DLLImportExport() &&
+      GVDLLStorageClass != llvm::GlobalVariable::DLLExportStorageClass) {
     if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
       const CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getDecl());
       if (RD->hasAttr<DLLExportAttr>() ||
-          CXXRecordAllNonInlineVirtualsHaveAttr<DLLExportAttr>(RD)) {
+          CXXRecordNonInlineHasAttr<DLLExportAttr>(RD))
         GVDLLStorageClass = llvm::GlobalVariable::DLLExportStorageClass;
-      }
     }
   }
 
@@ -3984,9 +3981,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   CGM.setDSOLocal(GV);
 
   TypeName->setDLLStorageClass(DLLStorageClass);
-  GV->setDLLStorageClass(CGM.getTarget().hasPS4DLLImportExport()
-                             ? GVDLLStorageClass
-                             : DLLStorageClass);
+  GV->setDLLStorageClass(GVDLLStorageClass);
 
   TypeName->setPartition(CGM.getCodeGenOpts().SymbolPartition);
   GV->setPartition(CGM.getCodeGenOpts().SymbolPartition);

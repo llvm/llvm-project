@@ -137,6 +137,9 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::ExtractFromEnd:
+    case VPInstruction::FirstOrderRecurrenceSplice:
+    case VPInstruction::LogicalAnd:
     case VPInstruction::PtrAdd:
       return false;
     default:
@@ -292,13 +295,13 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return true;
-
+  if (isVectorToScalar())
+    return true;
   switch (Opcode) {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ComputeReductionResult:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
     return true;
@@ -322,9 +325,6 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
   if (Instruction::isBinaryOp(getOpcode())) {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    if (Part != 0 && vputils::onlyFirstPartUsed(this))
-      return State.get(this, 0, OnlyFirstLaneUsed);
-
     Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     auto *Res =
@@ -513,6 +513,8 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
     unsigned Op = RecurrenceDescriptor::getOpcode(RK);
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+      Op = Instruction::Or;
 
     if (PhiR->isOrdered()) {
       ReducedPartRdx = RdxParts[State.UF - 1];
@@ -525,19 +527,16 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
         if (Op != Instruction::ICmp && Op != Instruction::FCmp)
           ReducedPartRdx = Builder.CreateBinOp(
               (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
-        else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-          TrackingVH<Value> ReductionStartValue =
-              RdxDesc.getRecurrenceStartValue();
-          ReducedPartRdx = createAnyOfOp(Builder, ReductionStartValue, RK,
-                                         ReducedPartRdx, RdxPart);
-        } else
+        else
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
       }
     }
 
     // Create the reduction after the loop. Note that inloop reductions create
     // the target reduction in the loop using a Reduction recipe.
-    if (State.VF.isVector() && !PhiR->isInLoop()) {
+    if ((State.VF.isVector() ||
+         RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) &&
+        !PhiR->isInLoop()) {
       ReducedPartRdx =
           createTargetReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
       // If the reduction can be performed in a smaller type, we need to extend
@@ -558,6 +557,35 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
     return ReducedPartRdx;
   }
+  case VPInstruction::ExtractFromEnd: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    unsigned Offset = CI->getZExtValue();
+    assert(Offset > 0 && "Offset from end must be positive");
+    Value *Res;
+    if (State.VF.isVector()) {
+      assert(Offset <= State.VF.getKnownMinValue() &&
+             "invalid offset to extract from");
+      // Extract lane VF - Offset from the operand.
+      Res = State.get(
+          getOperand(0),
+          VPIteration(State.UF - 1, VPLane::getLaneFromEnd(State.VF, Offset)));
+    } else {
+      assert(Offset <= State.UF && "invalid offset to extract from");
+      // When loop is unrolled without vectorizing, retrieve UF - Offset.
+      Res = State.get(getOperand(0), State.UF - Offset);
+    }
+    if (isa<ExtractElementInst>(Res))
+      Res->setName(Name);
+    return Res;
+  }
+  case VPInstruction::LogicalAnd: {
+    Value *A = State.get(getOperand(0), Part);
+    Value *B = State.get(getOperand(1), Part);
+    return Builder.CreateLogicalAnd(A, B, Name);
+  }
   case VPInstruction::PtrAdd: {
     assert(vputils::onlyFirstLaneUsed(this) &&
            "can only generate first lane for PtrAdd");
@@ -568,6 +596,11 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
+}
+
+bool VPInstruction::isVectorToScalar() const {
+  return getOpcode() == VPInstruction::ExtractFromEnd ||
+         getOpcode() == VPInstruction::ComputeReductionResult;
 }
 
 #if !defined(NDEBUG)
@@ -592,9 +625,9 @@ void VPInstruction::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   bool GeneratesPerFirstLaneOnly =
       canGenerateScalarForFirstLane() &&
-      (vputils::onlyFirstLaneUsed(this) ||
-       getOpcode() == VPInstruction::ComputeReductionResult);
+      (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
+  bool OnlyFirstPartUsed = vputils::onlyFirstPartUsed(this);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     if (GeneratesPerAllLanes) {
       for (unsigned Lane = 0, NumLanes = State.VF.getKnownMinValue();
@@ -603,6 +636,13 @@ void VPInstruction::execute(VPTransformState &State) {
         assert(GeneratedValue && "generatePerLane must produce a value");
         State.set(this, GeneratedValue, VPIteration(Part, Lane));
       }
+      continue;
+    }
+
+    if (Part != 0 && OnlyFirstPartUsed && hasResult()) {
+      Value *Part0 = State.get(this, 0, /*IsScalar*/ GeneratesPerFirstLaneOnly);
+      State.set(this, Part0, Part,
+                /*IsScalar*/ GeneratesPerFirstLaneOnly);
       continue;
     }
 
@@ -636,6 +676,25 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
+    return true;
+  };
+  llvm_unreachable("switch should return");
+}
+
+bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (Instruction::isBinaryOp(getOpcode()))
+    return vputils::onlyFirstPartUsed(this);
+
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::ICmp:
+  case Instruction::Select:
+    return vputils::onlyFirstPartUsed(this);
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
   llvm_unreachable("switch should return");
@@ -687,8 +746,14 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::BranchOnCount:
     O << "branch-on-count";
     break;
+  case VPInstruction::ExtractFromEnd:
+    O << "extract-from-end";
+    break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
+    break;
+  case VPInstruction::LogicalAnd:
+    O << "logical-and";
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
@@ -1222,7 +1287,9 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
     return false;
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
-  return StartC && StartC->isZero() && StepC && StepC->isOne();
+  auto *CanIV = cast<VPCanonicalIVPHIRecipe>(&*getParent()->begin());
+  return StartC && StartC->isZero() && StepC && StepC->isOne() &&
+         getScalarType() == CanIV->getScalarType();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1496,24 +1563,25 @@ void VPBlendRecipe::execute(VPTransformState &State) {
   // Note that Mask0 is never used: lanes for which no path reaches this phi and
   // are essentially undef are taken from In0.
  VectorParts Entry(State.UF);
-  for (unsigned In = 0; In < NumIncoming; ++In) {
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      // We might have single edge PHIs (blocks) - use an identity
-      // 'select' for the first PHI operand.
-      Value *In0 = State.get(getIncomingValue(In), Part);
-      if (In == 0)
-        Entry[Part] = In0; // Initialize with the first incoming value.
-      else {
-        // Select between the current value and the previous incoming edge
-        // based on the incoming mask.
-        Value *Cond = State.get(getMask(In), Part);
-        Entry[Part] =
-            State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
-      }
-    }
-  }
+ bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+ for (unsigned In = 0; In < NumIncoming; ++In) {
+   for (unsigned Part = 0; Part < State.UF; ++Part) {
+     // We might have single edge PHIs (blocks) - use an identity
+     // 'select' for the first PHI operand.
+     Value *In0 = State.get(getIncomingValue(In), Part, OnlyFirstLaneUsed);
+     if (In == 0)
+       Entry[Part] = In0; // Initialize with the first incoming value.
+     else {
+       // Select between the current value and the previous incoming edge
+       // based on the incoming mask.
+       Value *Cond = State.get(getMask(In), Part, OnlyFirstLaneUsed);
+       Entry[Part] =
+           State.Builder.CreateSelect(Cond, In0, Entry[Part], "predphi");
+     }
+   }
+ }
   for (unsigned Part = 0; Part < State.UF; ++Part)
-    State.set(this, Entry[Part], Part);
+    State.set(this, Entry[Part], Part, OnlyFirstLaneUsed);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

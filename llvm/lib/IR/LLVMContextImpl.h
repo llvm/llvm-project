@@ -465,25 +465,29 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   uint32_t AlignInBits;
   unsigned Encoding;
   unsigned Flags;
+  Metadata *Annotations;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                uint32_t AlignInBits, unsigned Encoding, unsigned Flags)
+                uint32_t AlignInBits, unsigned Encoding, unsigned Flags,
+                Metadata *Annotations)
       : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        Encoding(Encoding), Flags(Flags) {}
+        Encoding(Encoding), Flags(Flags), Annotations(Annotations) {}
   MDNodeKeyImpl(const DIBasicType *N)
       : Tag(N->getTag()), Name(N->getRawName()), SizeInBits(N->getSizeInBits()),
         AlignInBits(N->getAlignInBits()), Encoding(N->getEncoding()),
-        Flags(N->getFlags()) {}
+        Flags(N->getFlags()), Annotations(N->getRawAnnotations()) {}
 
   bool isKeyOf(const DIBasicType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
-           Encoding == RHS->getEncoding() && Flags == RHS->getFlags();
+           Encoding == RHS->getEncoding() && Flags == RHS->getFlags() &&
+           Annotations == RHS->getRawAnnotations();
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Tag, Name, SizeInBits, AlignInBits, Encoding);
+    return hash_combine(Tag, Name, SizeInBits, AlignInBits, Encoding,
+                        Annotations);
   }
 };
 
@@ -712,18 +716,24 @@ template <> struct MDNodeKeyImpl<DISubroutineType> {
   unsigned Flags;
   uint8_t CC;
   Metadata *TypeArray;
+  Metadata *Annotations;
 
-  MDNodeKeyImpl(unsigned Flags, uint8_t CC, Metadata *TypeArray)
-      : Flags(Flags), CC(CC), TypeArray(TypeArray) {}
+  MDNodeKeyImpl(unsigned Flags, uint8_t CC, Metadata *TypeArray,
+                Metadata *Annotations)
+      : Flags(Flags), CC(CC), TypeArray(TypeArray), Annotations(Annotations) {}
   MDNodeKeyImpl(const DISubroutineType *N)
-      : Flags(N->getFlags()), CC(N->getCC()), TypeArray(N->getRawTypeArray()) {}
+      : Flags(N->getFlags()), CC(N->getCC()), TypeArray(N->getRawTypeArray()),
+        Annotations(N->getRawAnnotations()) {}
 
   bool isKeyOf(const DISubroutineType *RHS) const {
     return Flags == RHS->getFlags() && CC == RHS->getCC() &&
-           TypeArray == RHS->getRawTypeArray();
+           TypeArray == RHS->getRawTypeArray() &&
+           Annotations == RHS->getRawAnnotations();
   }
 
-  unsigned getHashValue() const { return hash_combine(Flags, CC, TypeArray); }
+  unsigned getHashValue() const {
+    return hash_combine(Flags, CC, TypeArray, Annotations);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DIFile> {
@@ -825,19 +835,26 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }
 
   unsigned getHashValue() const {
+    // Use the Scope's linkage name instead of using the scope directly, as the
+    // scope may be a temporary one which can replaced, which would produce a
+    // different hash for the same DISubprogram.
+    llvm::StringRef ScopeLinkageName;
+    if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+      if (auto *ID = CT->getRawIdentifier())
+        ScopeLinkageName = ID->getString();
+
     // If this is a declaration inside an ODR type, only hash the type and the
     // name.  Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
-    if (!isDefinition() && LinkageName)
-      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
-        if (CT->getRawIdentifier())
-          return hash_combine(LinkageName, Scope);
+    if (!isDefinition() && LinkageName &&
+        isa_and_nonnull<DICompositeType>(Scope))
+      return hash_combine(LinkageName, ScopeLinkageName);
 
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
-    return hash_combine(Name, Scope, File, Type, Line);
+    return hash_combine(Name, ScopeLinkageName, File, Type, Line);
   }
 };
 
@@ -1554,6 +1571,8 @@ public:
   DenseMap<const GlobalValue *, DSOLocalEquivalent *> DSOLocalEquivalents;
 
   DenseMap<const GlobalValue *, NoCFIValue *> NoCFIValues;
+
+  ConstantUniqueMap<ConstantPtrAuth> ConstantPtrAuths;
 
   ConstantUniqueMap<ConstantExpr> ExprConstants;
 

@@ -259,7 +259,8 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
       promoteCallWithIfThenElse(CB, DirectCallee, BranchWeights);
 
   if (AttachProfToDirectCall) {
-    setBranchWeights(NewInst, {static_cast<uint32_t>(Count)});
+    setBranchWeights(NewInst, {static_cast<uint32_t>(Count)},
+                     /*IsExpected=*/false);
   }
 
   using namespace ore;
@@ -314,10 +315,10 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
   bool Changed = false;
   ICallPromotionAnalysis ICallAnalysis;
   for (auto *CB : findIndirectCalls(F)) {
-    uint32_t NumVals, NumCandidates;
+    uint32_t NumCandidates;
     uint64_t TotalCount;
     auto ICallProfDataRef = ICallAnalysis.getPromotionCandidatesForInstruction(
-        CB, NumVals, TotalCount, NumCandidates);
+        CB, TotalCount, NumCandidates);
     if (!NumCandidates ||
         (PSI && PSI->hasProfileSummary() && !PSI->isHotCount(TotalCount)))
       continue;

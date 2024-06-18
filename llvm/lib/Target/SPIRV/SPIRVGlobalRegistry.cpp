@@ -90,10 +90,28 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
       .addDef(createTypeVReg(MIRBuilder));
 }
 
-SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(uint32_t Width,
+unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
+  if (Width > 64)
+    report_fatal_error("Unsupported integer width!");
+  const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
+  if (ST.canUseExtension(
+          SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers))
+    return Width;
+  if (Width <= 8)
+    Width = 8;
+  else if (Width <= 16)
+    Width = 16;
+  else if (Width <= 32)
+    Width = 32;
+  else
+    Width = 64;
+  return Width;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
                                              MachineIRBuilder &MIRBuilder,
                                              bool IsSigned) {
-  assert(Width <= 64 && "Unsupported integer width!");
+  Width = adjustOpTypeIntWidth(Width);
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   if (ST.canUseExtension(
@@ -102,15 +120,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(uint32_t Width,
         .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
     MIRBuilder.buildInstr(SPIRV::OpCapability)
         .addImm(SPIRV::Capability::ArbitraryPrecisionIntegersINTEL);
-  } else if (Width <= 8)
-    Width = 8;
-  else if (Width <= 16)
-    Width = 16;
-  else if (Width <= 32)
-    Width = 32;
-  else if (Width <= 64)
-    Width = 64;
-
+  }
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeInt)
                  .addDef(createTypeVReg(MIRBuilder))
                  .addImm(Width)
@@ -691,6 +701,13 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::BuiltIn,
                     {static_cast<uint32_t>(BuiltInId)});
 
+  // If it's a global variable with "spirv.Decorations" metadata node
+  // recognize it as a SPIR-V friendly LLVM IR and parse "spirv.Decorations"
+  // arguments.
+  MDNode *GVarMD = nullptr;
+  if (GVar && (GVarMD = GVar->getMetadata("spirv.Decorations")) != nullptr)
+    buildOpSpirvDecorations(Reg, MIRBuilder, GVarMD);
+
   return Reg;
 }
 
@@ -725,8 +742,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeStruct(const StructType *Ty,
                                                 bool EmitIR) {
   SmallVector<Register, 4> FieldTypes;
   for (const auto &Elem : Ty->elements()) {
-    SPIRVType *ElemTy =
-        findSPIRVType(toTypedPointer(Elem, Ty->getContext()), MIRBuilder);
+    SPIRVType *ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
@@ -793,6 +809,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeFunctionWithArgs(
 SPIRVType *SPIRVGlobalRegistry::findSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccQual, bool EmitIR) {
+  Ty = adjustIntTypeByWidth(Ty);
   Register Reg = DT.find(Ty, &MIRBuilder.getMF());
   if (Reg.isValid())
     return getSPIRVTypeForVReg(Reg);
@@ -806,6 +823,27 @@ Register SPIRVGlobalRegistry::getSPIRVTypeID(const SPIRVType *SpirvType) const {
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer)
     return SpirvType->uses().begin()->getReg();
   return SpirvType->defs().begin()->getReg();
+}
+
+// We need to use a new LLVM integer type if there is a mismatch between
+// number of bits in LLVM and SPIRV integer types to let DuplicateTracker
+// ensure uniqueness of a SPIRV type by the corresponding LLVM type. Without
+// such an adjustment SPIRVGlobalRegistry::getOpTypeInt() could create the
+// same "OpTypeInt 8" type for a series of LLVM integer types with number of
+// bits less than 8. This would lead to duplicate type definitions
+// eventually due to the method that DuplicateTracker utilizes to reason
+// about uniqueness of type records.
+const Type *SPIRVGlobalRegistry::adjustIntTypeByWidth(const Type *Ty) const {
+  if (auto IType = dyn_cast<IntegerType>(Ty)) {
+    unsigned SrcBitWidth = IType->getBitWidth();
+    if (SrcBitWidth > 1) {
+      unsigned BitWidth = adjustOpTypeIntWidth(SrcBitWidth);
+      // Maybe change source LLVM type to keep DuplicateTracker consistent.
+      if (SrcBitWidth != BitWidth)
+        Ty = IntegerType::get(Ty->getContext(), BitWidth);
+    }
+  }
+  return Ty;
 }
 
 SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
@@ -935,15 +973,17 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual, bool EmitIR) {
   Register Reg;
-  if (!isPointerTy(Ty))
+  if (!isPointerTy(Ty)) {
+    Ty = adjustIntTypeByWidth(Ty);
     Reg = DT.find(Ty, &MIRBuilder.getMF());
-  else if (isTypedPointerTy(Ty))
+  } else if (isTypedPointerTy(Ty)) {
     Reg = DT.find(cast<TypedPointerType>(Ty)->getElementType(),
                   getPointerAddressSpace(Ty), &MIRBuilder.getMF());
-  else
+  } else {
     Reg =
         DT.find(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
                 getPointerAddressSpace(Ty), &MIRBuilder.getMF());
+  }
 
   if (Reg.isValid() && !isSpecialOpaqueType(Ty))
     return getSPIRVTypeForVReg(Reg);
@@ -1251,9 +1291,15 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVType(unsigned BitWidth,
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVIntegerType(
     unsigned BitWidth, MachineInstr &I, const SPIRVInstrInfo &TII) {
+  // Maybe adjust bit width to keep DuplicateTracker consistent. Without
+  // such an adjustment SPIRVGlobalRegistry::getOpTypeInt() could create, for
+  // example, the same "OpTypeInt 8" type for a series of LLVM integer types
+  // with number of bits less than 8, causing duplicate type definitions.
+  BitWidth = adjustOpTypeIntWidth(BitWidth);
   Type *LLVMTy = IntegerType::get(CurMF->getFunction().getContext(), BitWidth);
   return getOrCreateSPIRVType(BitWidth, I, TII, SPIRV::OpTypeInt, LLVMTy);
 }
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVFloatType(
     unsigned BitWidth, MachineInstr &I, const SPIRVInstrInfo &TII) {
   LLVMContext &Ctx = CurMF->getFunction().getContext();

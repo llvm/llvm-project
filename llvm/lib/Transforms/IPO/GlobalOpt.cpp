@@ -2224,6 +2224,9 @@ static bool mayHaveOtherReferences(GlobalValue &GV, const LLVMUsed &U) {
 
 static bool hasUsesToReplace(GlobalAlias &GA, const LLVMUsed &U,
                              bool &RenameTarget) {
+  if (GA.isWeakForLinker())
+    return false;
+
   RenameTarget = false;
   bool Ret = false;
   if (hasUseOtherThanLLVMUsed(GA, U))

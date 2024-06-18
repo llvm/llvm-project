@@ -51,7 +51,7 @@ template<typename T> class Foo {};
         },
         {
           "kind": "text",
-          "spelling": "<"
+          "spelling": " <"
         },
         {
           "kind": "keyword",

@@ -30,9 +30,6 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
 }
 
 const AArch64::ArchInfo *AArch64::getArchForCpu(StringRef CPU) {
-  if (CPU == "generic")
-    return &ARMV8A;
-
   // Note: this now takes cpu aliases into account
   std::optional<CpuInfo> Cpu = parseCpu(CPU);
   if (!Cpu)
@@ -69,13 +66,6 @@ bool AArch64::getExtensionFeatures(
 
 StringRef AArch64::resolveCPUAlias(StringRef Name) {
   for (const auto &A : CpuAliases)
-    if (A.AltName == Name)
-      return A.Name;
-  return Name;
-}
-
-StringRef AArch64::resolveExtAlias(StringRef Name) {
-  for (const auto &A : ExtAliases)
     if (A.AltName == Name)
       return A.Name;
   return Name;
@@ -120,13 +110,10 @@ const AArch64::ArchInfo *AArch64::parseArch(StringRef Arch) {
   return {};
 }
 
-std::optional<AArch64::ExtensionInfo> AArch64::parseArchExtension(StringRef ArchExt) {
-  // Resolve aliases first.
-  ArchExt = resolveExtAlias(ArchExt);
-
-  // Then find the Extension name.
+std::optional<AArch64::ExtensionInfo>
+AArch64::parseArchExtension(StringRef ArchExt) {
   for (const auto &A : Extensions) {
-    if (ArchExt == A.Name)
+    if (ArchExt == A.Name || ArchExt == A.Alias)
       return A;
   }
   return {};
@@ -190,12 +177,6 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
     if (E == AEK_FP16 && BaseArch->is_superset(ARMV8_4A) &&
         !BaseArch->is_superset(ARMV9A))
       enable(AEK_FP16FML);
-
-    // For all architectures, +crypto enables +aes and +sha2.
-    if (E == AEK_CRYPTO) {
-      enable(AEK_AES);
-      enable(AEK_SHA2);
-    }
 
     // For v8.4A+ and v9.0A+, +crypto also enables +sha3 and +sm4.
     if (E == AEK_CRYPTO && BaseArch->is_superset(ARMV8_4A)) {
@@ -279,4 +260,9 @@ bool AArch64::ExtensionSet::parseModifier(StringRef Modifier) {
     return true;
   }
   return false;
+}
+
+const AArch64::ExtensionInfo &
+AArch64::getExtensionByID(AArch64::ArchExtKind ExtID) {
+  return lookupExtensionByID(ExtID);
 }

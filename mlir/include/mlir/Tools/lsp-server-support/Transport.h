@@ -109,9 +109,10 @@ using OutgoingRequest =
 
 /// An `OutgoingRequestCallback` is invoked when an outgoing request to the
 /// client receives a response in turn. It is passed the original request's ID,
-/// as well as the result JSON.
+/// as well as the response result.
+template <typename T>
 using OutgoingRequestCallback =
-    std::function<void(llvm::json::Value, llvm::Expected<llvm::json::Value>)>;
+    std::function<void(llvm::json::Value, llvm::Expected<T>)>;
 
 /// A handler used to process the incoming transport messages.
 class MessageHandler {
@@ -185,21 +186,37 @@ public:
 
   /// Create an OutgoingRequest function that, when called, sends a request with
   /// the given method via the transport. Should the outgoing request be
-  /// met with a response, the response callback is invoked to handle that
-  /// response.
-  template <typename T>
-  OutgoingRequest<T> outgoingRequest(llvm::StringLiteral method,
-                                     OutgoingRequestCallback callback) {
-    return [&, method, callback](const T &params, llvm::json::Value id) {
+  /// met with a response, the result JSON is parsed and the response callback
+  /// is invoked.
+  template <typename Param, typename Result>
+  OutgoingRequest<Param>
+  outgoingRequest(llvm::StringLiteral method,
+                  OutgoingRequestCallback<Result> callback) {
+    return [&, method, callback](const Param &param, llvm::json::Value id) {
+      auto callbackWrapper = [method, callback = std::move(callback)](
+                                 llvm::json::Value id,
+                                 llvm::Expected<llvm::json::Value> value) {
+        if (!value)
+          return callback(std::move(id), value.takeError());
+
+        std::string responseName = llvm::formatv("reply:{0}({1})", method, id);
+        llvm::Expected<Result> result =
+            parse<Result>(*value, responseName, "response");
+        if (!result)
+          return callback(std::move(id), result.takeError());
+
+        return callback(std::move(id), *result);
+      };
+
       {
         std::lock_guard<std::mutex> lock(responseHandlersMutex);
         responseHandlers.insert(
-            {debugString(id), std::make_pair(method.str(), callback)});
+            {debugString(id), std::make_pair(method.str(), callbackWrapper)});
       }
 
       std::lock_guard<std::mutex> transportLock(transportOutputMutex);
       Logger::info("--> {0}({1})", method, id);
-      transport.call(method, llvm::json::Value(params), id);
+      transport.call(method, llvm::json::Value(param), id);
     };
   }
 
@@ -213,7 +230,8 @@ private:
 
   /// A pair of (1) the original request's method name, and (2) the callback
   /// function to be invoked for responses.
-  using ResponseHandlerTy = std::pair<std::string, OutgoingRequestCallback>;
+  using ResponseHandlerTy =
+      std::pair<std::string, OutgoingRequestCallback<llvm::json::Value>>;
   /// A mapping from request/response ID to response handler.
   llvm::StringMap<ResponseHandlerTy> responseHandlers;
   /// Mutex to guard insertion into the response handler map.

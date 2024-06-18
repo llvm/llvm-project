@@ -254,7 +254,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonVectorCombineLegacyPass(PR);
   initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PR);
   initializeHexagonVExtractPass(PR);
-  initializeHexagonDAGToDAGISelPass(PR);
+  initializeHexagonDAGToDAGISelLegacyPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,

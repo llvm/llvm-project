@@ -202,10 +202,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "abs") { // incl. zabs & cdabs
     // Argument can be complex or real
-    if (auto *x{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
+    if (UnwrapExpr<Expr<SomeReal>>(args[0])) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), &Scalar<T>::ABS);
-    } else if (auto *z{UnwrapExpr<Expr<SomeComplex>>(args[0])}) {
+    } else if (UnwrapExpr<Expr<SomeComplex>>(args[0])) {
       return FoldElementalIntrinsic<T, ComplexT>(context, std::move(funcRef),
           ScalarFunc<T, ComplexT>([&name, &context](
                                       const Scalar<ComplexT> &z) -> Scalar<T> {
@@ -381,13 +381,14 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                 std::move(funcRef),
                 ScalarFunc<T, T, TBY>(
                     [&](const Scalar<T> &x, const Scalar<TBY> &y) -> Scalar<T> {
-                      ValueWithRealFlags<Scalar<T>> result{x.
+                      ValueWithRealFlags<Scalar<T>> result{
+                          x.
 // MSVC chokes on the keyword "template" here in a call to a
 // member function template.
 #ifndef _MSC_VER
-                                                           template
+                          template
 #endif
-                                                           SCALE(y)};
+                          SCALE<Scalar<TBY>>(y)};
                       if (result.flags.test(RealFlag::Overflow) &&
                           context.languageFeatures().ShouldWarn(
                               common::UsageWarning::FoldingException)) {

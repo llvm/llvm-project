@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
 
 ! OpenMP Atomic construct
 ! section 2.17.7

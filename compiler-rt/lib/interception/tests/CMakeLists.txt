@@ -81,7 +81,7 @@ macro(add_interceptor_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT Runtime tests")
+    FOLDER "Compiler-RT/Tests/Runtime")
 endmacro()
 
 function(get_interception_lib_for_arch arch lib)
@@ -96,7 +96,7 @@ endfunction()
 # Interception unit tests testsuite.
 add_custom_target(InterceptionUnitTests)
 set_target_properties(InterceptionUnitTests PROPERTIES
-  FOLDER "Compiler-RT Tests")
+  FOLDER "Compiler-RT/Tests")
 
 # Adds interception tests for architecture.
 macro(add_interception_tests_for_arch arch)

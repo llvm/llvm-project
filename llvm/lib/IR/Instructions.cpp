@@ -454,24 +454,14 @@ bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
 
   return false;
 }
 
 bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().hasFnAttr(Kind);
 
   return false;
@@ -485,12 +475,7 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
     assert(Kind != Attribute::Memory && "Use getMemoryEffects() instead");
   }
 
-  Value *V = getCalledOperand();
-  if (auto *CE = dyn_cast<ConstantExpr>(V))
-    if (CE->getOpcode() == BitCast)
-      V = CE->getOperand(0);
-
-  if (auto *F = dyn_cast<Function>(V))
+  if (auto *F = dyn_cast<Function>(getCalledOperand()))
     return F->getAttributes().getFnAttr(Kind);
 
   return Attribute();
@@ -499,6 +484,22 @@ Attribute CallBase::getFnAttrOnCalledFunction(AK Kind) const {
 template Attribute
 CallBase::getFnAttrOnCalledFunction(Attribute::AttrKind Kind) const;
 template Attribute CallBase::getFnAttrOnCalledFunction(StringRef Kind) const;
+
+template <typename AK>
+Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                                 AK Kind) const {
+  Value *V = getCalledOperand();
+
+  if (auto *F = dyn_cast<Function>(V))
+    return F->getAttributes().getParamAttr(ArgNo, Kind);
+
+  return Attribute();
+}
+template Attribute
+CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                       Attribute::AttrKind Kind) const;
+template Attribute CallBase::getParamAttrOnCalledFunction(unsigned ArgNo,
+                                                          StringRef Kind) const;
 
 void CallBase::getOperandBundlesAsDefs(
     SmallVectorImpl<OperandBundleDef> &Defs) const {
@@ -924,6 +925,18 @@ InvokeInst *InvokeInst::Create(InvokeInst *II, ArrayRef<OperandBundleDef> OpB,
 
 LandingPadInst *InvokeInst::getLandingPadInst() const {
   return cast<LandingPadInst>(getUnwindDest()->getFirstNonPHI());
+}
+
+void InvokeInst::updateProfWeight(uint64_t S, uint64_t T) {
+  if (T == 0) {
+    LLVM_DEBUG(dbgs() << "Attempting to update profile weights will result in "
+                         "div by 0. Ignoring. Likely the function "
+                      << getParent()->getParent()->getName()
+                      << " has 0 entry count, and contains call instructions "
+                         "with non-zero prof info.");
+    return;
+  }
+  scaleProfData(*this, S, T);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2030,12 +2043,33 @@ bool GetElementPtrInst::hasAllConstantIndices() const {
   return true;
 }
 
+void GetElementPtrInst::setNoWrapFlags(GEPNoWrapFlags NW) {
+  SubclassOptionalData = NW.getRaw();
+}
+
 void GetElementPtrInst::setIsInBounds(bool B) {
-  cast<GEPOperator>(this)->setIsInBounds(B);
+  GEPNoWrapFlags NW = cast<GEPOperator>(this)->getNoWrapFlags();
+  if (B)
+    NW |= GEPNoWrapFlags::inBounds();
+  else
+    NW = NW.withoutInBounds();
+  setNoWrapFlags(NW);
+}
+
+GEPNoWrapFlags GetElementPtrInst::getNoWrapFlags() const {
+  return cast<GEPOperator>(this)->getNoWrapFlags();
 }
 
 bool GetElementPtrInst::isInBounds() const {
   return cast<GEPOperator>(this)->isInBounds();
+}
+
+bool GetElementPtrInst::hasNoUnsignedSignedWrap() const {
+  return cast<GEPOperator>(this)->hasNoUnsignedSignedWrap();
+}
+
+bool GetElementPtrInst::hasNoUnsignedWrap() const {
+  return cast<GEPOperator>(this)->hasNoUnsignedWrap();
 }
 
 bool GetElementPtrInst::accumulateConstantOffset(const DataLayout &DL,
@@ -5165,7 +5199,11 @@ void SwitchInstProfUpdateWrapper::init() {
   if (!ProfileData)
     return;
 
-  if (ProfileData->getNumOperands() != SI.getNumSuccessors() + 1) {
+  // FIXME: This check belongs in ProfDataUtils. Its almost equivalent to
+  // getValidBranchWeightMDNode(), but the need to use llvm_unreachable
+  // makes them slightly different.
+  if (ProfileData->getNumOperands() !=
+      SI.getNumSuccessors() + getBranchWeightOffset(ProfileData)) {
     llvm_unreachable("number of prof branch_weights metadata operands does "
                      "not correspond to number of succesors");
   }

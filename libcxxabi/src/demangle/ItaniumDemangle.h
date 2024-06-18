@@ -5715,6 +5715,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseTemplateParam() {
 }
 
 // <template-param-decl> ::= Ty                          # type parameter
+//                       ::= Tk <concept name> [<template-args>] # constrained type parameter
 //                       ::= Tn <type>                   # non-type parameter
 //                       ::= Tt <template-param-decl>* E # template parameter
 //                       ::= Tp <template-param-decl>    # parameter pack
@@ -5846,7 +5847,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseTemplateArg() {
   }
 }
 
-// <template-args> ::= I <template-arg>* E
+// <template-args> ::= I <template-arg>* [Q <requires-clause expr>] E
 //     extension, the abi says <template-arg>+
 template <typename Derived, typename Alloc>
 Node *

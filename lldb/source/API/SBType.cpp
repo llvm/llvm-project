@@ -25,6 +25,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <memory>
 #include <optional>
@@ -130,6 +131,18 @@ uint64_t SBType::GetByteSize() {
             m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
       return *size;
   return 0;
+}
+
+uint64_t SBType::GetByteAlign() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!IsValid())
+    return 0;
+
+  std::optional<uint64_t> bit_align =
+      m_opaque_sp->GetCompilerType(/*prefer_dynamic=*/false)
+          .GetTypeBitAlign(nullptr);
+  return llvm::divideCeil(bit_align.value_or(0), 8);
 }
 
 bool SBType::IsPointerType() {

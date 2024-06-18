@@ -329,6 +329,25 @@ static __inline__ void __DEFAULT_FN_ATTRS __stosq(unsigned __int64 *__dst,
 static __inline__ void __DEFAULT_FN_ATTRS __halt(void) {
   __asm__ volatile("hlt");
 }
+
+static inline int _inp(unsigned short port) {
+  int ret;
+  __asm__ volatile("inb %w1, %b0" : "=a"(ret) : "Nd"(port));
+  return ret;
+}
+
+static inline unsigned short _inpw(unsigned short port) {
+  unsigned short ret;
+  __asm__ volatile("inw %w1, %w0" : "=a"(ret) : "Nd"(port));
+  return ret;
+}
+
+static inline unsigned long _inpd(unsigned short port) {
+  unsigned long ret;
+  __asm__ volatile("inl %w1, %k0" : "=a"(ret) : "Nd"(port));
+  return ret;
+}
+
 #endif
 
 #if defined(__i386__) || defined(__x86_64__) || defined(__aarch64__)
@@ -378,7 +397,7 @@ unsigned int _CountLeadingSigns64(__int64);
 unsigned int _CountOneBits(unsigned long);
 unsigned int _CountOneBits64(unsigned __int64);
 
-void __cdecl __prefetch(void *);
+void __cdecl __prefetch(const void *);
 #endif
 
 /*----------------------------------------------------------------------------*\
