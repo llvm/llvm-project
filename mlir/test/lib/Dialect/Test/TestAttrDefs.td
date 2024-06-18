@@ -356,7 +356,7 @@ def NestedPolynomialAttr : Test_Attr<"NestedPolynomialAttr"> {
   let mnemonic = "nested_polynomial";
   let parameters = (ins Polynomial_IntPolynomialAttr:$poly);
   let assemblyFormat = [{
-    `<` $poly `>`
+    `<` qualified($poly) `>`
   }];
 }
 

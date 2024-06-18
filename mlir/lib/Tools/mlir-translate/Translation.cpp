@@ -144,10 +144,6 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
         DialectRegistry registry;
         dialectRegistration(registry);
         context->appendDialectRegistry(registry);
-        // Ensure all registered dialects are loaded
-        for (const auto &dialectName : registry.getDialectNames()) {
-          context->getOrLoadDialect(dialectName);
-        }
         bool implicitModule =
             (!clOptions.isConstructed() || !clOptions->noImplicitModule);
         OwningOpRef<Operation *> op =
