@@ -27,8 +27,7 @@ using namespace llvm;
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          InstListType::iterator InsertBefore)
-    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
-
+    : User(ty, Value::InstructionVal + it, Ops, NumOps) {
   // When called with an iterator, there must be a block to insert into.
   BasicBlock *BB = InsertBefore->getParent();
   assert(BB && "Instruction to insert before is not in a basic block!");
@@ -37,7 +36,7 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          Instruction *InsertBefore)
-  : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
+    : User(ty, Value::InstructionVal + it, Ops, NumOps) {
 
   // If requested, insert this instruction into a basic block...
   if (InsertBefore) {
@@ -49,15 +48,14 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
 
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
                          BasicBlock *InsertAtEnd)
-    : User(ty, Value::InstructionVal + it, Ops, NumOps), Parent(nullptr) {
-
+    : User(ty, Value::InstructionVal + it, Ops, NumOps) {
   // If requested, append this instruction into the basic block.
   if (InsertAtEnd)
     insertInto(InsertAtEnd, InsertAtEnd->end());
 }
 
 Instruction::~Instruction() {
-  assert(!Parent && "Instruction still linked in the program!");
+  assert(!getParent() && "Instruction still linked in the program!");
 
   // Replace any extant metadata uses of this instruction with undef to
   // preserve debug info accuracy. Some alternatives include:
@@ -76,10 +74,6 @@ Instruction::~Instruction() {
   setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
 
-void Instruction::setParent(BasicBlock *P) {
-  Parent = P;
-}
-
 const Module *Instruction::getModule() const {
   return getParent()->getModule();
 }
@@ -96,7 +90,7 @@ void Instruction::removeFromParent() {
 }
 
 void Instruction::handleMarkerRemoval() {
-  if (!Parent->IsNewDbgInfoFormat || !DebugMarker)
+  if (!getParent()->IsNewDbgInfoFormat || !DebugMarker)
     return;
 
   DebugMarker->removeMarker();
@@ -329,11 +323,12 @@ void Instruction::dropOneDbgRecord(DbgRecord *DVR) {
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {
-  assert(Parent && Other->Parent &&
+  assert(getParent() && Other->getParent() &&
          "instructions without BB parents have no order");
-  assert(Parent == Other->Parent && "cross-BB instruction order comparison");
-  if (!Parent->isInstrOrderValid())
-    Parent->renumberInstructions();
+  assert(getParent() == Other->getParent() &&
+         "cross-BB instruction order comparison");
+  if (!getParent()->isInstrOrderValid())
+    const_cast<BasicBlock *>(getParent())->renumberInstructions();
   return Order < Other->Order;
 }
 
