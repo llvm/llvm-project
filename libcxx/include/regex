@@ -1956,7 +1956,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __match_char(_CharT __c, __node<_CharT>* __s) : base(__s), __c_(__c) {}
 
-  __match_char(const __match_char&) = delete;
+  __match_char(const __match_char&)            = delete;
   __match_char& operator=(const __match_char&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
@@ -1989,7 +1989,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI __match_char_icase(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
       : base(__s), __traits_(__traits), __c_(__traits.translate_nocase(__c)) {}
 
-  __match_char_icase(const __match_char_icase&) = delete;
+  __match_char_icase(const __match_char_icase&)            = delete;
   __match_char_icase& operator=(const __match_char_icase&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
@@ -2705,7 +2705,7 @@ public:
   __lookahead(const basic_regex<_CharT, _Traits>& __exp, bool __invert, __node<_CharT>* __s, unsigned __mexp)
       : base(__s), __exp_(__exp), __mexp_(__mexp), __invert_(__invert) {}
 
-  __lookahead(const __lookahead&) = delete;
+  __lookahead(const __lookahead&)            = delete;
   __lookahead& operator=(const __lookahead&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
@@ -5434,8 +5434,8 @@ regex_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++() {
     // equal to the previous value of `match[0].second`... It is unspecified how the implementation makes these
     // adjustments." The adjustment is necessary if we incremented `__start` above (the branch that deals with
     // zero-length matches).
-    auto& __prefix = __match_.__prefix_;
-    __prefix.first = __prefix_start;
+    auto& __prefix   = __match_.__prefix_;
+    __prefix.first   = __prefix_start;
     __prefix.matched = __prefix.first != __prefix.second;
   }
 
