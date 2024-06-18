@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundleIterator.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/GenericDomTree.h"
 #include <cassert>
 #include <memory>
@@ -106,6 +107,10 @@ public:
 
   MachineDominatorTree() = default;
   explicit MachineDominatorTree(MachineFunction &MF) { calculate(MF); }
+
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
 
   // FIXME: If there is an updater for MachineDominatorTree,
   // migrate to this updater and remove these wrappers.
@@ -260,6 +265,30 @@ public:
            "A basic block inserted via edge splitting cannot appear twice");
     CriticalEdgesToSplit.push_back({FromBB, ToBB, NewBB});
   }
+};
+
+/// \brief Analysis pass which computes a \c MachineDominatorTree.
+class MachineDominatorTreeAnalysis
+    : public AnalysisInfoMixin<MachineDominatorTreeAnalysis> {
+  friend AnalysisInfoMixin<MachineDominatorTreeAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineDominatorTree;
+
+  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+};
+
+/// \brief Machine function pass which print \c MachineDominatorTree.
+class MachineDominatorTreePrinterPass
+    : public PassInfoMixin<MachineDominatorTreePrinterPass> {
+  raw_ostream &OS;
+
+public:
+  MachineDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 /// \brief Analysis pass which computes a \c MachineDominatorTree.
