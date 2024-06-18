@@ -593,9 +593,9 @@ Improvements to Coverage Mapping
   mapping. Conditional expressions in system header macros are no
   longer taken into account for branch coverage. They can be included
   with ``-mllvm -system-headers-coverage``.
-  (`#78920 <https://github.com/llvm/llvm-project/issues/78920>`_)
+  (`#78920: <https://github.com/llvm/llvm-project/issues/78920>`_)
 - MC/DC Coverage has been improved.
-  (`#82448 <https://github.com/llvm/llvm-project/pull/82448>`_)
+  (`#82448: <https://github.com/llvm/llvm-project/pull/82448>`_)
   - The maximum number of conditions is no longer limited to 6. See
     `this <SourceBasedCodeCoverage.html#mc-dc-instrumentation>` for
     more details.
