@@ -155,7 +155,7 @@ namespace {
     }
 
     // Track 'estimated' register pressure.
-    SmallSet<Register, 32> RegSeen;
+    SmallDenseSet<Register> RegSeen;
     SmallVector<unsigned, 8> RegPressure;
 
     // Register pressure "limit" per register pressure set. If the pressure
@@ -224,7 +224,7 @@ namespace {
                      MachineBasicBlock *CurPreheader);
 
     void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
-                   SmallSet<int, 32> &StoredFIs,
+                   SmallDenseSet<int> &StoredFIs,
                    SmallVectorImpl<CandidateInfo> &Candidates,
                    MachineLoop *CurLoop);
 
@@ -426,45 +426,35 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
 static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
                                                 BitVector &RUs,
                                                 const uint32_t *Mask) {
-  // Iterate over the RegMask raw to avoid constructing a BitVector, which is
-  // expensive as it implies dynamically allocating memory.
-  //
-  // We also work backwards.
+  BitVector ClobberedRUs(TRI.getNumRegUnits(), true);
   const unsigned NumRegs = TRI.getNumRegs();
   const unsigned MaskWords = (NumRegs + 31) / 32;
   for (unsigned K = 0; K < MaskWords; ++K) {
-    // We want to set the bits that aren't in RegMask, so flip it.
-    uint32_t Word = ~Mask[K];
+    const uint32_t Word = Mask[K];
+    if (!Word)
+      continue;
 
-    // Iterate all set bits, starting from the right.
-    while (Word) {
-      const unsigned SetBitIdx = countr_zero(Word);
-
-      // The bits are numbered from the LSB in each word.
-      const unsigned PhysReg = (K * 32) + SetBitIdx;
-
-      // Clear the bit at SetBitIdx. Doing it this way appears to generate less
-      // instructions on x86. This works because negating a number will flip all
-      // the bits after SetBitIdx. So (Word & -Word) == (1 << SetBitIdx), but
-      // faster.
-      Word ^= Word & -Word;
-
+    for (unsigned Bit = 0; Bit < 32; ++Bit) {
+      const unsigned PhysReg = (K * 32) + Bit;
       if (PhysReg == NumRegs)
-        return;
+        break;
 
-      if (PhysReg) {
+      // Check if we have a valid PhysReg that is set in the mask.
+      if ((Word >> Bit) & 1) {
         for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
-          RUs.set(*RUI);
+          ClobberedRUs.reset(*RUI);
       }
     }
   }
+
+  RUs |= ClobberedRUs;
 }
 
 /// Examine the instruction for potentai LICM candidate. Also
 /// gather register def and frame object update information.
 void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
                                 BitVector &RUClobbers,
-                                SmallSet<int, 32> &StoredFIs,
+                                SmallDenseSet<int> &StoredFIs,
                                 SmallVectorImpl<CandidateInfo> &Candidates,
                                 MachineLoop *CurLoop) {
   bool RuledOut = false;
@@ -568,7 +558,7 @@ void MachineLICMBase::HoistRegionPostRA(MachineLoop *CurLoop,
   BitVector RUClobbers(NumRegUnits); // RUs defined more than once.
 
   SmallVector<CandidateInfo, 32> Candidates;
-  SmallSet<int, 32> StoredFIs;
+  SmallDenseSet<int> StoredFIs;
 
   // Walk the entire region, count number of defs for each register, and
   // collect potential LICM candidates.

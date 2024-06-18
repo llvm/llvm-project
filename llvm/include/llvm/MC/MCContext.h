@@ -44,6 +44,7 @@ namespace llvm {
 
 class CodeViewContext;
 class MCAsmInfo;
+class MCDataFragment;
 class MCInst;
 class MCLabel;
 class MCObjectFileInfo;
@@ -243,7 +244,7 @@ private:
   /// Honor temporary labels, this is useful for debugging semantic
   /// differences between temporary and non-temporary labels (primarily on
   /// Darwin).
-  bool AllowTemporaryLabels = true;
+  bool SaveTempLabels = false;
   bool UseNamesOnTempLabels = false;
 
   /// The Compile Unit ID that we are currently processing.
@@ -345,6 +346,8 @@ private:
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
+  MCDataFragment *allocInitialFragment(MCSection &Sec);
+
   MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
                              bool IsTemporary);
   MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
@@ -421,7 +424,6 @@ public:
 
   CodeViewContext &getCVContext();
 
-  void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }
   void setUseNamesOnTempLabels(bool Value) { UseNamesOnTempLabels = Value; }
 
   /// \name Module Lifetime Management
@@ -437,6 +439,10 @@ public:
 
   /// Create and return a new MC instruction.
   MCInst *createMCInst();
+
+  template <typename F, typename... Args> F *allocFragment(Args &&...args) {
+    return new F(std::forward<Args>(args)...);
+  }
 
   /// \name Symbol Management
   /// @{

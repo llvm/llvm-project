@@ -1009,12 +1009,16 @@ R"(All available -march extensions for RISC-V
     shvstvala            1.0
     shvstvecd            1.0
     smaia                1.0
+    smcdeleg             1.0
+    smcsrind             1.0
     smepmp               1.0
     smstateen            1.0
     ssaia                1.0
+    ssccfg               1.0
     ssccptr              1.0
     sscofpmf             1.0
     sscounterenw         1.0
+    sscsrind             1.0
     ssstateen            1.0
     ssstrict             1.0
     sstc                 1.0

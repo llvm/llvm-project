@@ -2519,12 +2519,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
     break;
   }
-  case AMDGPU::ENTER_PSEUDO_WM:
-  case AMDGPU::EXIT_PSEUDO_WM: {
-    // These do nothing.
-    MI.eraseFromParent();
-    break;
-  }
   case AMDGPU::SI_RETURN: {
     const MachineFunction *MF = MBB.getParent();
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -5657,24 +5651,9 @@ unsigned SIInstrInfo::buildExtractSubReg(
   DebugLoc DL = MI->getDebugLoc();
   Register SubReg = MRI.createVirtualRegister(SubRC);
 
-  if (SuperReg.getSubReg() == AMDGPU::NoSubRegister) {
-    BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-      .addReg(SuperReg.getReg(), 0, SubIdx);
-    return SubReg;
-  }
-
-  // Just in case the super register is itself a sub-register, copy it to a new
-  // value so we don't need to worry about merging its subreg index with the
-  // SubIdx passed to this function. The register coalescer should be able to
-  // eliminate this extra copy.
-  Register NewSuperReg = MRI.createVirtualRegister(SuperRC);
-
-  BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), NewSuperReg)
-    .addReg(SuperReg.getReg(), 0, SuperReg.getSubReg());
-
+  unsigned NewSubIdx = RI.composeSubRegIndices(SuperReg.getSubReg(), SubIdx);
   BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-    .addReg(NewSuperReg, 0, SubIdx);
-
+      .addReg(SuperReg.getReg(), 0, NewSubIdx);
   return SubReg;
 }
 
