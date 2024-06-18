@@ -178,13 +178,13 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
 
   if (!llvm::sys::fs::is_regular_file(IndexJS))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "error default index.js file missing at " +
+                                   "default index.js file missing at " +
                                        IndexJS + "\n");
 
   if (!llvm::sys::fs::is_regular_file(DefaultStylesheet))
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
-        "error default clang-doc-default-stylesheet.css file missing at " +
+        "default clang-doc-default-stylesheet.css file missing at " +
             DefaultStylesheet + "\n");
 
   CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
@@ -259,8 +259,7 @@ Example usage for a project using a compile commands database:
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
-      llvm::errs() << toString(std::move(Err)) << "\n";
-      return 1;
+      llvm::outs() << "warning: " <<  toString(std::move(Err)) << "\n";
     }
   }
 
