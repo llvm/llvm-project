@@ -55,8 +55,8 @@ subroutine integer1(a, id, d1, d2)
   fptr_value => red_int1_value
   res = reduce(a, fptr_value)
 
-  res = reduce(a, d1)
-  res = reduce(a, d2)
+  !res = reduce(a, d1)
+  !res = reduce(a, d2)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMreduce_modPinteger1(
@@ -90,8 +90,8 @@ end subroutine
 ! CHECK: fir.call @_FortranAReduceInteger1Value
 ! CHECK: fir.call @_FortranAReduceInteger1Ref
 ! CHECK: fir.call @_FortranAReduceInteger1Value
-! CHECK: fir.call @_FortranAReduceInteger1Ref
-! STILL NEED SOME WORK HERE fir.call @_FortranAReduceInteger1Value
+! TODO fir.call @_FortranAReduceInteger1Ref
+! TODO fir.call @_FortranAReduceInteger1Value
 
 pure function red_int2(a,b)
   integer(2), intent(in) :: a, b

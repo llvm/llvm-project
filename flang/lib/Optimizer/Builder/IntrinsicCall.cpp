@@ -5747,6 +5747,8 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
 
   // Arguements to the reduction operation are passed by reference or value?
   bool argByRef = true;
+  if (!operation.getDefiningOp())
+    TODO(loc, "Distinguigh dummy procedure arguments");
   if (auto embox =
           mlir::dyn_cast_or_null<fir::EmboxProcOp>(operation.getDefiningOp())) {
     auto fctTy = mlir::dyn_cast<mlir::FunctionType>(embox.getFunc().getType());
