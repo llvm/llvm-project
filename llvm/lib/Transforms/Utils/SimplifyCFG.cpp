@@ -5818,8 +5818,6 @@ static bool ForwardSwitchConditionToPHI(SwitchInst *SI) {
   for (auto &ForwardingNode : ForwardingNodes) {
     PHINode *Phi = ForwardingNode.first;
     SmallVectorImpl<int> &Indexes = ForwardingNode.second;
-    if (Indexes.size() < 2)
-      continue;
 
     for (int Index : Indexes)
       Phi->setIncomingValue(Index, SI->getCondition());
