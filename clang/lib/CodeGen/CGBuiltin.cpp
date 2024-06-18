@@ -18140,9 +18140,35 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
     break;
   }
 
+  // Some of the atomic builtins take the scope as a string name.
   StringRef scp;
-  llvm::getConstantStringInfo(Scope, scp);
-  SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
+  if (llvm::getConstantStringInfo(Scope, scp)) {
+    SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
+    return;
+  }
+
+  // Older builtins had an enum argument for the memory scope.
+  int scope = cast<llvm::ConstantInt>(Scope)->getZExtValue();
+  switch (scope) {
+  case 0: // __MEMORY_SCOPE_SYSTEM
+    SSID = llvm::SyncScope::System;
+    break;
+  case 1: // __MEMORY_SCOPE_DEVICE
+    SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+    break;
+  case 2: // __MEMORY_SCOPE_WRKGRP
+    SSID = getLLVMContext().getOrInsertSyncScopeID("workgroup");
+    break;
+  case 3: // __MEMORY_SCOPE_WVFRNT
+    SSID = getLLVMContext().getOrInsertSyncScopeID("wavefront");
+    break;
+  case 4: // __MEMORY_SCOPE_SINGLE
+    SSID = llvm::SyncScope::SingleThread;
+    break;
+  default:
+    SSID = llvm::SyncScope::System;
+    break;
+  }
 }
 
 llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
@@ -18558,14 +18584,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrin, { Src0->getType() });
     return Builder.CreateCall(F, { Src0, Builder.getFalse() });
   }
-  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
   case AMDGPU::BI__builtin_amdgcn_ds_fminf:
   case AMDGPU::BI__builtin_amdgcn_ds_fmaxf: {
     Intrinsic::ID Intrin;
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_ds_faddf:
-      Intrin = Intrinsic::amdgcn_ds_fadd;
-      break;
     case AMDGPU::BI__builtin_amdgcn_ds_fminf:
       Intrin = Intrinsic::amdgcn_ds_fmin;
       break;
@@ -18655,35 +18677,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Val = EmitScalarExpr(E->getArg(1));
     llvm::Function *F = CGM.getIntrinsic(IID, {Addr->getType()});
     return Builder.CreateCall(F, {Addr, Val});
-  }
-  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f64:
-  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
-  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16: {
-    Intrinsic::ID IID;
-    llvm::Type *ArgTy;
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
-      ArgTy = llvm::Type::getFloatTy(getLLVMContext());
-      IID = Intrinsic::amdgcn_ds_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f64:
-      ArgTy = llvm::Type::getDoubleTy(getLLVMContext());
-      IID = Intrinsic::amdgcn_ds_fadd;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
-      ArgTy = llvm::FixedVectorType::get(
-          llvm::Type::getHalfTy(getLLVMContext()), 2);
-      IID = Intrinsic::amdgcn_ds_fadd;
-      break;
-    }
-    llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *Val = EmitScalarExpr(E->getArg(1));
-    llvm::Constant *ZeroI32 = llvm::ConstantInt::getIntegerValue(
-        llvm::Type::getInt32Ty(getLLVMContext()), APInt(32, 0, true));
-    llvm::Constant *ZeroI1 = llvm::ConstantInt::getIntegerValue(
-        llvm::Type::getInt1Ty(getLLVMContext()), APInt(1, 0));
-    llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
-    return Builder.CreateCall(F, {Addr, Val, ZeroI32, ZeroI32, ZeroI1});
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
@@ -19044,7 +19037,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
   case AMDGPU::BI__builtin_amdgcn_atomic_dec32:
-  case AMDGPU::BI__builtin_amdgcn_atomic_dec64: {
+  case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
+  case AMDGPU::BI__builtin_amdgcn_ds_faddf:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16: {
     llvm::AtomicRMWInst::BinOp BinOp;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
@@ -19055,23 +19053,54 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_atomic_dec64:
       BinOp = llvm::AtomicRMWInst::UDecWrap;
       break;
+    case AMDGPU::BI__builtin_amdgcn_ds_faddf:
+    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f64:
+    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_f32:
+    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
+    case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
+      BinOp = llvm::AtomicRMWInst::FAdd;
+      break;
     }
 
     Address Ptr = CheckAtomicAlignment(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(1));
-
-    ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
-                            EmitScalarExpr(E->getArg(3)), AO, SSID);
-
+    llvm::Type *OrigTy = Val->getType();
     QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
-    bool Volatile =
-        PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
+
+    bool Volatile;
+
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_faddf) {
+      // __builtin_amdgcn_ds_faddf has an explicit volatile argument
+      Volatile =
+          cast<ConstantInt>(EmitScalarExpr(E->getArg(4)))->getZExtValue();
+    } else {
+      // Infer volatile from the passed type.
+      Volatile =
+          PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
+    }
+
+    if (E->getNumArgs() >= 4) {
+      // Some of the builtins have explicit ordering and scope arguments.
+      ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
+                              EmitScalarExpr(E->getArg(3)), AO, SSID);
+    } else {
+      // The ds_fadd_* builtins do not have syncscope/order arguments.
+      SSID = llvm::SyncScope::System;
+      AO = AtomicOrdering::SequentiallyConsistent;
+
+      // The v2bf16 builtin uses i16 instead of a natural bfloat type.
+      if (BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16) {
+        llvm::Type *V2BF16Ty = FixedVectorType::get(
+            llvm::Type::getBFloatTy(Builder.getContext()), 2);
+        Val = Builder.CreateBitCast(Val, V2BF16Ty);
+      }
+    }
 
     llvm::AtomicRMWInst *RMW =
         Builder.CreateAtomicRMW(BinOp, Ptr, Val, AO, SSID);
     if (Volatile)
       RMW->setVolatile(true);
-    return RMW;
+    return Builder.CreateBitCast(RMW, OrigTy);
   }
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtnl: {
