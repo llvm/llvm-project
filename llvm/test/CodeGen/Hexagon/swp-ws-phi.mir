@@ -2,7 +2,7 @@
 # RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -filetype=null 2>&1 | FileCheck %s
 
-# CHECK: Special phi structure is not supported!
+# CHECK: Window scheduling is not needed!
 # CHECK-LABEL: body:             |
 # CHECK: bb.0:
 # CHECK: [[REG:%[0-9]+]]:intregs = A2_tfrsi 0
@@ -39,6 +39,3 @@ body:             |
     J2_jump %bb.1, implicit-def $pc
 
 ...
-
-
-
