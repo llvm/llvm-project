@@ -493,9 +493,8 @@ protected:
 
   typedef __rebind_alloc<__alloc_traits, __node_base> __node_base_allocator;
   typedef typename allocator_traits<__node_base_allocator>::pointer __node_base_pointer;
-  static_assert((!is_same<allocator_type, __node_allocator>::value),
-                "internal allocator type must differ from user-specified "
-                "type; otherwise overload resolution breaks");
+  static_assert(!is_same<allocator_type, __node_allocator>::value,
+                "internal allocator type must differ from user-specified type; otherwise overload resolution breaks");
 
   __node_base __end_;
   __compressed_pair<size_type, __node_allocator> __size_alloc_;
@@ -674,7 +673,7 @@ class _LIBCPP_TEMPLATE_VIS list : private __list_imp<_Tp, _Alloc> {
 public:
   typedef _Tp value_type;
   typedef _Alloc allocator_type;
-  static_assert((is_same<value_type, typename allocator_type::value_type>::value),
+  static_assert(is_same<value_type, typename allocator_type::value_type>::value,
                 "Allocator::value_type must be same type as value_type");
   typedef value_type& reference;
   typedef const value_type& const_reference;
