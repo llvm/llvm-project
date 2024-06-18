@@ -63,8 +63,7 @@ struct SpecialTypeDescriptor {
     STK_Pointer,
     STK_Last = -1
   };
-  SpecialTypeKind Kind;
-
+  unsigned Kind;
   unsigned Hash;
 
   SpecialTypeDescriptor() = delete;
@@ -75,35 +74,41 @@ struct SpecialTypeDescriptor {
   virtual ~SpecialTypeDescriptor() {}
 };
 
+union ImageAttrs {
+  struct BitFlags {
+    unsigned Dim : 3;
+    unsigned Depth : 2;
+    unsigned Arrayed : 1;
+    unsigned MS : 1;
+    unsigned Sampled : 2;
+    unsigned ImageFormat : 6;
+    unsigned AQ : 2;
+  } Flags;
+  unsigned Val;
+
+  ImageAttrs(unsigned Dim, unsigned Depth, unsigned Arrayed, unsigned MS,
+             unsigned Sampled, unsigned ImageFormat, unsigned AQ = 0) {
+    Val = 0;
+    Flags.Dim = Dim;
+    Flags.Depth = Depth;
+    Flags.Arrayed = Arrayed;
+    Flags.MS = MS;
+    Flags.Sampled = Sampled;
+    Flags.ImageFormat = ImageFormat;
+    Flags.AQ = AQ;
+  }
+};
+
 struct ImageTypeDescriptor : public SpecialTypeDescriptor {
-  union ImageAttrs {
-    struct BitFlags {
-      unsigned Dim : 3;
-      unsigned Depth : 2;
-      unsigned Arrayed : 1;
-      unsigned MS : 1;
-      unsigned Sampled : 2;
-      unsigned ImageFormat : 6;
-      unsigned AQ : 2;
-    } Flags;
-    unsigned Val;
-  };
+  using Tuple = std::tuple<const Type *, unsigned, unsigned>;
 
   ImageTypeDescriptor(const Type *SampledTy, unsigned Dim, unsigned Depth,
                       unsigned Arrayed, unsigned MS, unsigned Sampled,
                       unsigned ImageFormat, unsigned AQ = 0)
       : SpecialTypeDescriptor(SpecialTypeKind::STK_Image) {
-    ImageAttrs Attrs;
-    Attrs.Val = 0;
-    Attrs.Flags.Dim = Dim;
-    Attrs.Flags.Depth = Depth;
-    Attrs.Flags.Arrayed = Arrayed;
-    Attrs.Flags.MS = MS;
-    Attrs.Flags.Sampled = Sampled;
-    Attrs.Flags.ImageFormat = ImageFormat;
-    Attrs.Flags.AQ = AQ;
-    Hash = (DenseMapInfo<Type *>().getHashValue(SampledTy) & 0xffff) ^
-           ((Attrs.Val << 8) | Kind);
+    ImageAttrs Attrs(Dim, Depth, Arrayed, MS, Sampled, ImageFormat, AQ);
+    Hash = DenseMapInfo<Tuple>::getHashValue(
+        std::make_tuple(SampledTy, Attrs.Val, Kind));
   }
 
   static bool classof(const SpecialTypeDescriptor *TD) {
@@ -112,15 +117,18 @@ struct ImageTypeDescriptor : public SpecialTypeDescriptor {
 };
 
 struct SampledImageTypeDescriptor : public SpecialTypeDescriptor {
+  using Tuple = std::tuple<const Type *, unsigned, unsigned>;
+
   SampledImageTypeDescriptor(const Type *SampledTy, const MachineInstr *ImageTy)
       : SpecialTypeDescriptor(SpecialTypeKind::STK_SampledImage) {
     assert(ImageTy->getOpcode() == SPIRV::OpTypeImage);
-    ImageTypeDescriptor TD(
-        SampledTy, ImageTy->getOperand(2).getImm(),
-        ImageTy->getOperand(3).getImm(), ImageTy->getOperand(4).getImm(),
-        ImageTy->getOperand(5).getImm(), ImageTy->getOperand(6).getImm(),
-        ImageTy->getOperand(7).getImm(), ImageTy->getOperand(8).getImm());
-    Hash = TD.getHash() ^ Kind;
+    ImageAttrs Attrs(
+        ImageTy->getOperand(2).getImm(), ImageTy->getOperand(3).getImm(),
+        ImageTy->getOperand(4).getImm(), ImageTy->getOperand(5).getImm(),
+        ImageTy->getOperand(6).getImm(), ImageTy->getOperand(7).getImm(),
+        ImageTy->getOperand(8).getImm());
+    Hash = DenseMapInfo<Tuple>::getHashValue(
+        std::make_tuple(SampledTy, Attrs.Val, Kind));
   }
 
   static bool classof(const SpecialTypeDescriptor *TD) {
@@ -164,6 +172,8 @@ struct DeviceEventTypeDescriptor : public SpecialTypeDescriptor {
 };
 
 struct PointerTypeDescriptor : public SpecialTypeDescriptor {
+  using Pair = std::pair<const Type *, unsigned>;
+
   const Type *ElementType;
   unsigned AddressSpace;
 
@@ -171,8 +181,8 @@ struct PointerTypeDescriptor : public SpecialTypeDescriptor {
   PointerTypeDescriptor(const Type *ElementType, unsigned AddressSpace)
       : SpecialTypeDescriptor(SpecialTypeKind::STK_Pointer),
         ElementType(ElementType), AddressSpace(AddressSpace) {
-    Hash = (DenseMapInfo<Type *>().getHashValue(ElementType) & 0xffff) ^
-           ((AddressSpace << 8) | Kind);
+    Hash = DenseMapInfo<Pair>::getHashValue(
+        std::make_pair(ElementType, (AddressSpace << 8) | Kind));
   }
 
   static bool classof(const SpecialTypeDescriptor *TD) {
@@ -283,16 +293,13 @@ public:
                       MachineModuleInfo *MMI);
 
   void add(const Type *Ty, const MachineFunction *MF, Register R) {
-    TT.add(Ty, MF, R);
+    TT.add(unifyPtrType(Ty), MF, R);
   }
 
   void add(const Type *PointeeTy, unsigned AddressSpace,
            const MachineFunction *MF, Register R) {
-    if (isUntypedPointerTy(PointeeTy))
-      PointeeTy =
-          TypedPointerType::get(IntegerType::getInt8Ty(PointeeTy->getContext()),
-                                getPointerAddressSpace(PointeeTy));
-    ST.add(SPIRV::PointerTypeDescriptor(PointeeTy, AddressSpace), MF, R);
+    ST.add(SPIRV::PointerTypeDescriptor(unifyPtrType(PointeeTy), AddressSpace),
+           MF, R);
   }
 
   void add(const Constant *C, const MachineFunction *MF, Register R) {
@@ -321,16 +328,14 @@ public:
   }
 
   Register find(const Type *Ty, const MachineFunction *MF) {
-    return TT.find(const_cast<Type *>(Ty), MF);
+    return TT.find(unifyPtrType(Ty), MF);
   }
 
   Register find(const Type *PointeeTy, unsigned AddressSpace,
                 const MachineFunction *MF) {
-    if (isUntypedPointerTy(PointeeTy))
-      PointeeTy =
-          TypedPointerType::get(IntegerType::getInt8Ty(PointeeTy->getContext()),
-                                getPointerAddressSpace(PointeeTy));
-    return ST.find(SPIRV::PointerTypeDescriptor(PointeeTy, AddressSpace), MF);
+    return ST.find(
+        SPIRV::PointerTypeDescriptor(unifyPtrType(PointeeTy), AddressSpace),
+        MF);
   }
 
   Register find(const Constant *C, const MachineFunction *MF) {
