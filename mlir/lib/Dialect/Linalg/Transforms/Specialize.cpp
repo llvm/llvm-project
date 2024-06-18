@@ -184,8 +184,9 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
     return failure();
 
   auto batchSize = dims.batch.size();
-  if (indexingMaps[0].getNumDims() != batchSize + 3) {
-  }
+  if (indexingMaps[0].getNumDims() != batchSize + 3)
+    return failure();
+
   if (batchSize) {
     // Each operand in a linalg generic contraction  could express different
     // permutations for its batch dimension. But for named op it must be
