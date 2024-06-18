@@ -63,13 +63,14 @@ def find_python_interpreter():
     if "DYLD_INSERT_LIBRARIES" not in config.environment:
         return None
 
-    # If we're running in a virtual environment, we already have a copy of the
-    # Python executable.
+    # If we're running in a virtual environment, we have to copy Python into
+    # the virtual environment for it to work.
     if sys.prefix != sys.base_prefix:
-        return None
+        copied_python = os.path.join(sys.prefix, "bin", "copied-python")
+    else:
+        copied_python = os.path.join(config.lldb_build_directory, "copied-python")
 
     # Avoid doing any work if we already copied the binary.
-    copied_python = os.path.join(config.lldb_build_directory, "copied-python")
     if os.path.isfile(copied_python):
         return copied_python
 
