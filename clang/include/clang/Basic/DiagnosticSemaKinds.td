@@ -8778,9 +8778,6 @@ def err_typecheck_incomplete_type_not_modifiable_lvalue : Error<
 def err_typecheck_lvalue_casts_not_supported : Error<
   "assignment to cast is illegal, lvalue casts are not supported">;
 
-def note_typecheck_add_deref_star_not_modifiable_lvalue : Note<
-  "add '*' to dereference it">; 
-
 def err_typecheck_duplicate_vector_components_not_mlvalue : Error<
   "vector is not assignable (contains duplicate components)">;
 def err_block_decl_ref_not_modifiable_lvalue : Error<
