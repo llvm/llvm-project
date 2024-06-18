@@ -1317,7 +1317,6 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureMaxHardClauseLength32,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
@@ -1743,6 +1742,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
+   FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
