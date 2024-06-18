@@ -201,11 +201,11 @@ class InputSectionDescription : public SectionCommand {
 
 public:
   InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
-                          uint64_t withoutFlags = 0, StringRef className = {})
+                          uint64_t withoutFlags = 0, StringRef classRef = {})
       : SectionCommand(InputSectionKind), filePat(filePattern),
-        withFlags(withFlags), withoutFlags(withoutFlags), className(className) {
-    assert((filePattern.empty() || className.empty()) &&
-           "file pattern and class name are mutually exclusive");
+        withFlags(withFlags), withoutFlags(withoutFlags), classRef(classRef) {
+    assert((filePattern.empty() || classRef.empty()) &&
+           "file pattern and class reference are mutually exclusive");
   }
 
   static bool classof(const SectionCommand *c) {
@@ -237,7 +237,7 @@ public:
 
   // If present, input section matching uses class membership instead of file
   // and section patterns (mutually exclusive).
-  StringRef className;
+  StringRef classRef;
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().

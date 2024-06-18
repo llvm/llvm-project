@@ -620,9 +620,9 @@ SectionClassDesc *ScriptParser::readSectionClassDescription() {
       setError("expected filename pattern");
     else if (peek() == "(") {
       InputSectionDescription *isd = readInputSectionDescription(tok);
-      if (!isd->className.empty())
+      if (!isd->classRef.empty())
         setError("section class '" + name + "' references class '" +
-                 isd->className + "'");
+                 isd->classRef + "'");
       desc->sc.commands.push_back(isd);
     }
   }

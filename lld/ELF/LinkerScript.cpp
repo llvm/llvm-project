@@ -499,13 +499,20 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
   SmallVector<InputSectionBase *, 0> ret;
   DenseSet<InputSectionBase *> spills;
 
+  // Returns whether an input section was already assigned to an earlier input
+  // section description in this output section or section class.
+  const auto alreadyAssignedToOutCmd =
+      [&outCmd](InputSectionBase *sec) { return sec->parent == &outCmd; };
+
+  // Returns whether an input section's flags match the input section
+  // description's specifiers.
   const auto flagsMatch = [cmd](InputSectionBase *sec) {
     return (sec->flags & cmd->withFlags) == cmd->withFlags &&
            (sec->flags & cmd->withoutFlags) == 0;
   };
 
   // Collects all sections that satisfy constraints of Cmd.
-  if (cmd->className.empty()) {
+  if (cmd->classRef.empty()) {
     DenseSet<size_t> seen;
     size_t sizeAfterPrevSort = 0;
     SmallVector<size_t, 0> indexes;
@@ -542,7 +549,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
 
         if (!cmd->matchesFile(sec->file) || pat.excludesFile(sec->file) ||
-            !flagsMatch(sec))
+            alreadyAssignedToOutCmd(sec) || !flagsMatch(sec))
           continue;
 
         if (sec->parent) {
@@ -550,22 +557,16 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           if (!config->enableNonContiguousRegions)
             continue;
 
-          // Disallow spilling out of or into section classes; that's already a
-          // mechanism for spilling.
-          if (isa<SectionClass>(sec->parent) || isa<SectionClass>(outCmd))
-            continue;
-
           // Disallow spilling into /DISCARD/; special handling would be needed
           // for this in address assignment, and the semantics are nebulous.
           if (outCmd.name == "/DISCARD/")
             continue;
 
-          // Skip if the section was already matched by a different input
-          // section description within this output section or class.
-          if (sec->parent == &outCmd)
-            continue;
-
-          spills.insert(sec);
+          // Class definitions cannot contain spills, nor can a class definition
+          // generate a spill in a subsequent match. Those behaviors belong to
+          // class references and additional matches.
+          if (!isa<SectionClass>(outCmd) && !isa<SectionClass>(sec->parent))
+            spills.insert(sec);
         }
 
         ret.push_back(sec);
@@ -596,20 +597,20 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
     // input order).
     sortByPositionThenCommandLine(sizeAfterPrevSort, ret.size());
   } else {
-    SectionClassDesc *scd = script->sectionClasses.lookup(cmd->className);
+    SectionClassDesc *scd = script->sectionClasses.lookup(cmd->classRef);
     if (!scd) {
-      error("undefined section class '" + cmd->className + "'");
+      error("undefined section class '" + cmd->classRef + "'");
       return ret;
     }
     if (!scd->sc.assigned) {
-      error("section class '" + cmd->className + "' referenced by '" +
+      error("section class '" + cmd->classRef + "' referenced by '" +
             outCmd.name + "' before class definition");
       return ret;
     }
 
     for (InputSectionDescription *isd : scd->sc.commands) {
       for (InputSectionBase *sec : isd->sectionBases) {
-        if (sec->parent == &outCmd || !flagsMatch(sec))
+        if (alreadyAssignedToOutCmd(sec) || !flagsMatch(sec))
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
         if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/"))
@@ -758,8 +759,12 @@ void LinkerScript::processSectionCommands() {
       for (InputSectionDescription *isd : sc->sc.commands) {
         isd->sectionBases =
             computeInputSections(isd, ctx.inputSections, sc->sc);
-        for (InputSectionBase *s : isd->sectionBases)
-          s->parent = &sc->sc;
+        for (InputSectionBase *s : isd->sectionBases) {
+          // Section classes with --enable-non-contiguous-regions may contain
+          // parented classes; spills for these are generated on reference.
+          if (!s->parent)
+            s->parent = &sc->sc;
+        }
       }
       sc->sc.assigned = true;
     }

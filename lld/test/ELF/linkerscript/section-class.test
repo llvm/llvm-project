@@ -12,7 +12,7 @@
 # RUN: llvm-readobj -x .rodata -x .rodata.d matching | FileCheck %s --check-prefix=MATCHING
 
 # MATCHING:      .rodata
-# MATCHING-NEXT: 020301
+# MATCHING-NEXT: 020301cc 0605
 # MATCHING:      .rodata.d
 # MATCHING-NEXT: 04
 
@@ -32,6 +32,14 @@
 # RUN:   FileCheck %s --check-prefix=MISSING-FILENAME-PATTERN --implicit-check-not=error:
 
 # MISSING-FILENAME-PATTERN: error: missing-filename-pattern.ld:2: expected filename pattern
+
+
+## An error is reported when more than one class is mentioned in a reference.
+
+# RUN: not ld.lld -T multiple-class-names.ld matching.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=MULTIPLE-CLASS-NAMES --implicit-check-not=error:
+
+# MULTIPLE-CLASS-NAMES: error: multiple-class-names.ld:4: ) expected, but got b
 
 
 ## An error is reported when the content of section classes is demanded before
@@ -113,6 +121,19 @@
 # SPILL-EARLIER-NEXT: .last_chance  PROGBITS 0000000000000002 001002 000001
 
 
+## Class definitions do not preclude additional matches when used with
+## --enable-non-contiguous-regions, and additional matches in class
+## definitions become spills at class references.
+
+# RUN: ld.lld -T enable-non-contiguous-regions.ld spill.o -o enable-non-contiguous-regions --enable-non-contiguous-regions
+# RUN: llvm-readelf -S enable-non-contiguous-regions | FileCheck %s --check-prefix=ENABLE-NON-CONTIGUOUS-REGIONS
+
+# ENABLE-NON-CONTIGUOUS-REGIONS:      Name          Type     Address          Off    Size
+# ENABLE-NON-CONTIGUOUS-REGIONS:      .first_chance     PROGBITS 0000000000000000 000190 000000
+# ENABLE-NON-CONTIGUOUS-REGIONS-NEXT: .last_chance      PROGBITS 0000000000000001 001001 000002
+# ENABLE-NON-CONTIGUOUS-REGIONS-NEXT: .one_byte_section PROGBITS 0000000000000003 001003 000001
+
+
 ## SHF_MERGEd sections are spilled according to the class refs of the first
 ## merged input section (the one giving the resulting section its name).
 
@@ -179,14 +200,23 @@
 .section .rodata.d,"a",@progbits
 .byte 4
 
+.section .rodata.e,"a",@progbits
+.byte 5
+
+.section .rodata.f,"a",@progbits
+.balign 2
+.byte 6
+
 #--- matching.ld
 SECTIONS {
   CLASS(a) { *(.rodata.a) }
   CLASS(cd) { *(.rodata.c) *(.rodata.d) }
+  CLASS(ef) { *(SORT_BY_ALIGNMENT(.rodata.e .rodata.f)) }
   .rodata : {
     *(.rodata.*)
     INPUT_SECTION_FLAGS(SHF_EXECINSTR) CLASS(cd)
     CLASS(a)
+    CLASS(ef)
   }
   OVERLAY : { .rodata.d { INPUT_SECTION_FLAGS(!SHF_EXECINSTR) CLASS(cd) } }
 }
@@ -200,6 +230,13 @@ SECTIONS {
 #--- missing-filename-pattern.ld
 SECTIONS {
   CLASS(a) { (.rodata.a) }
+}
+
+#--- multiple-class-names.ld
+SECTIONS {
+  CLASS(a) { *(.rodata.a) }
+  CLASS(b) { *(.rodata.b) }
+  .rodata : { CLASS(a b) }
 }
 
 #--- referenced-before-defined.ld
@@ -288,6 +325,25 @@ SECTIONS {
   CLASS(c) { *(.one_byte_section) }
   .first_chance : { CLASS(c) *(.two_byte_section) } >a
   .last_chance : { CLASS(c) } >b
+}
+
+#--- enable-non-contiguous-regions.ld
+MEMORY {
+  a : ORIGIN = 0, LENGTH = 1
+  b : ORIGIN = 1, LENGTH = 2
+  c : ORIGIN = 3, LENGTH = 1
+}
+
+SECTIONS {
+  .first_chance : { *(.two_byte_section) } >a
+  /* An additional match in a class defers a spill. */
+  CLASS(two) { *(.two_byte_section) }
+  /* A class references actualizes deferred spills. */
+  .last_chance : { CLASS(two) } >b
+
+  /* Section classes do not preclude other matches. */
+  CLASS(one) { *(.one_byte_section) }
+  .one_byte_section : { *(.one_byte_section) } >c
 }
 
 #--- merge.s
