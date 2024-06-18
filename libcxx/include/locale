@@ -3149,22 +3149,22 @@ private:
   size_t __cvtcount_;
 
 public:
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wstring_convert() : wstring_convert(new _Codecvt) {}
   _LIBCPP_HIDE_FROM_ABI explicit wstring_convert(_Codecvt* __pcvt);
-#else
+#  else
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXPLICIT_SINCE_CXX14 wstring_convert(_Codecvt* __pcvt = new _Codecvt);
-#endif
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt, state_type __state);
   _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wstring_convert(wstring_convert&& __wc);
-#endif
+#  endif
   _LIBCPP_HIDE_FROM_ABI ~wstring_convert();
 
-  wstring_convert(const wstring_convert& __wc) = delete;
+  wstring_convert(const wstring_convert& __wc)            = delete;
   wstring_convert& operator=(const wstring_convert& __wc) = delete;
 
   _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(char __byte) { return from_bytes(&__byte, &__byte + 1); }
@@ -3206,7 +3206,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert(
   __cvtptr_ = new _Codecvt;
 }
 
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
 
 template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 inline wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert(wstring_convert&& __wc)
@@ -3218,7 +3218,7 @@ inline wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert
   __wc.__cvtptr_ = nullptr;
 }
 
-#endif // _LIBCPP_CXX03_LANG
+#  endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
@@ -3372,14 +3372,14 @@ private:
   bool __always_noconv_;
 
 public:
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wbuffer_convert() : wbuffer_convert(nullptr) {}
   explicit _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
-#else
+#  else
   _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf = nullptr, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
-#endif
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI ~wbuffer_convert();
 

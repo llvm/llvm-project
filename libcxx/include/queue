@@ -398,13 +398,13 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI
 #  if _LIBCPP_STD_VER >= 17
-      decltype(auto)
-      emplace(_Args&&... __args) {
+  decltype(auto)
+  emplace(_Args&&... __args) {
     return c.emplace_back(std::forward<_Args>(__args)...);
   }
 #  else
-      void
-      emplace(_Args&&... __args) {
+  void
+  emplace(_Args&&... __args) {
     c.emplace_back(std::forward<_Args>(__args)...);
   }
 #  endif
