@@ -25,8 +25,11 @@ class Z3CrosscheckVisitor final : public BugReporterVisitor {
 public:
   struct Z3Result {
     std::optional<bool> IsSAT = std::nullopt;
+    unsigned Z3QueryTimeMilliseconds = 0;
+    unsigned UsedRLimit = 0;
   };
-  explicit Z3CrosscheckVisitor(Z3CrosscheckVisitor::Z3Result &Result);
+  Z3CrosscheckVisitor(Z3CrosscheckVisitor::Z3Result &Result,
+                      const AnalyzerOptions &Opts);
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -44,21 +47,44 @@ private:
   /// Holds the constraints in a given path.
   ConstraintMap Constraints;
   Z3Result &Result;
+  const AnalyzerOptions &Opts;
 };
 
 /// The oracle will decide if a report should be accepted or rejected based on
-/// the results of the Z3 solver.
+/// the results of the Z3 solver and the statistics of the queries of a report
+/// equivalenece class.
 class Z3CrosscheckOracle {
 public:
+  explicit Z3CrosscheckOracle(const AnalyzerOptions &Opts) : Opts(Opts) {}
+
   enum Z3Decision {
-    AcceptReport, // The report was SAT.
-    RejectReport, // The report was UNSAT or UNDEF.
+    AcceptReport,  // The report was SAT.
+    RejectReport,  // The report was UNSAT or UNDEF.
+    RejectEQClass, // The heuristic suggests to skip the current eqclass.
   };
 
-  /// Makes a decision for accepting or rejecting the report based on the
-  /// result of the corresponding Z3 query.
-  static Z3Decision
-  interpretQueryResult(const Z3CrosscheckVisitor::Z3Result &Query);
+  /// Updates the internal state with the new Z3Result and makes a decision how
+  /// to proceed:
+  /// - Accept the report if the Z3Result was SAT.
+  /// - Suggest dropping the report equvalence class based on the accumulated
+  ///   statistics.
+  /// - Otherwise, reject the report if the Z3Result was UNSAT or UNDEF.
+  ///
+  /// Conditions for dropping the equivalence class:
+  /// - Accumulative time spent in Z3 checks is more than 700ms in the eqclass.
+  /// - Hit the 300ms query timeout in the report eqclass.
+  /// - Hit the 400'000 rlimit in the report eqclass.
+  ///
+  /// All these thresholds are configurable via the analyzer options.
+  ///
+  /// Refer to
+  /// https://discourse.llvm.org/t/analyzer-rfc-taming-z3-query-times/79520 to
+  /// see why this heuristic was chosen.
+  Z3Decision interpretQueryResult(const Z3CrosscheckVisitor::Z3Result &Meta);
+
+private:
+  const AnalyzerOptions &Opts;
+  unsigned AccumulatedZ3QueryTimeInEqClass = 0; // ms
 };
 
 } // namespace clang::ento
