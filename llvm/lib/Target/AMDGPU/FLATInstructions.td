@@ -1155,21 +1155,6 @@ multiclass FlatSignedAtomicPat <string inst, string node, ValueType vt,
   def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), noRtnNode, vt, data_vt>;
 }
 
-multiclass FlatSignedAtomicIntrPat <string inst, string node, ValueType vt,
-                                    ValueType data_vt = vt> {
-  defm : FlatSignedAtomicPat<inst, node, vt, data_vt, /* complexity */ 0, /* isIntr */ 1>;
-}
-
-multiclass FlatSignedAtomicPatWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
-                                            ValueType vt, ValueType data_vt = vt> {
-  defvar noRtnNode = !cast<PatFrags>(intr # "_noret_" # addrSpaceSuffix);
-  defvar rtnNode = !cast<PatFrags>(intr # "_" # addrSpaceSuffix);
-
-  let AddedComplexity = 1 in
-  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst), noRtnNode, vt, data_vt>;
-  def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst#"_RTN"), rtnNode, vt, data_vt>;
-}
-
 class ScratchLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
   (vt (node (ScratchOffset (i32 VGPR_32:$vaddr), i32:$offset))),
   (inst $vaddr, $offset)
