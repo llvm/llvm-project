@@ -642,9 +642,11 @@ getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
   RHS = Op->getOperand(1);
   if (TopOpcode == Instruction::Add || TopOpcode == Instruction::Sub) {
     Constant *C;
-    if (match(Op, m_Shl(m_Value(), m_Constant(C)))) {
+    if (match(Op, m_Shl(m_Value(), m_ImmConstant(C)))) {
       // X << C --> X * (1 << C)
-      RHS = ConstantExpr::getShl(ConstantInt::get(Op->getType(), 1), C);
+      RHS = ConstantFoldBinaryInstruction(
+          Instruction::Shl, ConstantInt::get(Op->getType(), 1), C);
+      assert(RHS && "Constant folding of immediate constants failed");
       return Instruction::Mul;
     }
     // TODO: We can add other conversions e.g. shr => div etc.
