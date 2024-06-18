@@ -223,11 +223,13 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     Value *NewOp;
     Constant *C1, *C2;
     const APInt *IVal;
-    if (match(&I, m_Mul(m_Shl(m_Value(NewOp), m_Constant(C2)),
-                        m_Constant(C1))) &&
+    if (match(&I, m_Mul(m_Shl(m_Value(NewOp), m_ImmConstant(C2)),
+                        m_ImmConstant(C1))) &&
         match(C1, m_APInt(IVal))) {
       // ((X << C2)*C1) == (X * (C1 << C2))
-      Constant *Shl = ConstantExpr::getShl(C1, C2);
+      Constant *Shl =
+          ConstantFoldBinaryOpOperands(Instruction::Shl, C1, C2, DL);
+      assert(Shl && "Constant folding of immediate constants failed");
       BinaryOperator *Mul = cast<BinaryOperator>(I.getOperand(0));
       BinaryOperator *BO = BinaryOperator::CreateMul(NewOp, Shl);
       if (HasNUW && Mul->hasNoUnsignedWrap())
