@@ -458,8 +458,6 @@ public:
 
   void SetPlaygroundTransformEnabled(bool b) {
     m_playground = b;
-    if (b)
-      m_language = lldb::eLanguageTypeSwift;
   }
 
   lldb::BindGenericTypes GetBindGenericTypes() const {
