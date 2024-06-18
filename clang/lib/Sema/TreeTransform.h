@@ -14545,6 +14545,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       E->getCallOperator()->isConsteval() ?
       Sema::ExpressionEvaluationContext::ImmediateFunctionContext :
       Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+  getSema().currentEvaluationContext().InImmediateEscalatingFunctionContext =
+      getSema().getLangOpts().CPlusPlus20 &&
+      E->getCallOperator()->isImmediateEscalating();
 
   Sema::CodeSynthesisContext C;
   C.Kind = clang::Sema::CodeSynthesisContext::LambdaExpressionSubstitution;
