@@ -140,11 +140,11 @@ std::string getExecutablePath(const char *Argv0, void *MainAddr) {
 
 llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
-  std::error_code Err;
+  std::error_code FileErr;
   llvm::SmallString<128> FilePath(UserAssetPath);
-  for (DirIt DirStart = DirIt(UserAssetPath, Err),
+  for (DirIt DirStart = DirIt(UserAssetPath, FileErr),
                    DirEnd;
-       !Err && DirStart != DirEnd; DirStart.increment(Err)) {
+       !FileErr && DirStart != DirEnd; DirStart.increment(FileErr)) {
     FilePath = DirStart->path();
     if (llvm::sys::fs::is_regular_file(FilePath)) {
       if (llvm::sys::path::extension(FilePath) == ".css")
@@ -154,8 +154,8 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
         CDCtx.FilesToCopy.emplace_back(FilePath.str());
     }
   }
-  if (Err)
-    return llvm::createFileError(FilePath, Err);
+  if (FileErr)
+    return llvm::createFileError(FilePath, FileErr);
   return llvm::Error::success();
 }
 
