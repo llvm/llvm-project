@@ -439,9 +439,6 @@ static const TypedValueRegion *getOriginRegion(const ElementRegion *ER) {
       return nullptr;
     Ret = sym2->getOriginRegion();
   }
-  if (const auto *Elem = MR->getAs<ElementRegion>()) {
-    Ret = Elem->getBaseRegion();
-  }
   return dyn_cast_or_null<TypedValueRegion>(Ret);
 }
 
@@ -460,10 +457,7 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     return nullptr;
 
   const MemRegion *R = Element.getAsRegion();
-  if (!R)
-    return State;
-
-  const auto *ER = dyn_cast<ElementRegion>(R);
+  const auto *ER = dyn_cast_or_null<ElementRegion>(R);
   if (!ER)
     return State;
 
@@ -552,11 +546,11 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
     }
     llvm::SmallString<258> Buf;
     llvm::raw_svector_ostream OS(Buf);
-    OS << "The last element of the ";
-    printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
-    OS << " argument to access (the ";
+    OS << "The last (";
     printIdxWithOrdinalSuffix(OS, IdxInt->getExtValue() + 1);
-    OS << ") is undefined";
+    OS << ") element to access in the ";
+    printIdxWithOrdinalSuffix(OS, Buffer.ArgumentIndex + 1);
+    OS << " argument is undefined";
     emitUninitializedReadBug(C, State, Buffer.Expression, OS.str());
     return nullptr;
   }
