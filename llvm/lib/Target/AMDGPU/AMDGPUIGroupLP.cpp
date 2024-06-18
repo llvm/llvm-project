@@ -612,10 +612,9 @@ void PipelineSolver::populateReadyList(
   }
 
   if (UseCostHeur) {
-    std::sort(ReadyList.begin(), ReadyList.end(),
-              [](std::pair<int, int> A, std::pair<int, int> B) {
-                return A.second < B.second;
-              });
+    llvm::sort(ReadyList, [](std::pair<int, int> A, std::pair<int, int> B) {
+      return A.second < B.second;
+    });
   }
 
   assert(ReadyList.size() == CurrSU.second.size());
