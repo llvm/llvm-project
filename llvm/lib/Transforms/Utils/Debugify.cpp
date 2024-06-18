@@ -144,6 +144,17 @@ bool llvm::applyDebugifyMetadata(
       if (DebugifyDIOpDIExprs) {
         DIExprBuilder ExprBuilder(Ctx);
         ExprBuilder.append<DIOp::Arg>(0, V->getType());
+        std::optional<uint64_t> IRSize;
+        if (TypeSize IRTypeSize =
+                M.getDataLayout().getTypeSizeInBits(V->getType()))
+          if (!IRTypeSize.isScalable())
+            IRSize = IRTypeSize.getFixedValue();
+        std::optional<uint64_t> DISize = LocalVar->getSizeInBits();
+        if (IRSize && DISize) {
+          assert(DISize >= IRSize);
+          if (DISize > IRSize)
+            ExprBuilder.append<DIOp::ZExt>(IntegerType::get(Ctx, *DISize));
+        }
         DIB.insertDbgValueIntrinsic(V, LocalVar, ExprBuilder.intoExpression(),
                                     Loc, InsertBefore);
         return;

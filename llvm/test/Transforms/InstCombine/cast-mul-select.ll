@@ -310,11 +310,11 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DIOP-DBGINFO-NEXT:  entry:
 ; DIOP-DBGINFO-NEXT:    br label [[WHILE_BODY:%.*]], !dbg [[DBG94:![0-9]+]]
 ; DIOP-DBGINFO:       while.body:
-; DIOP-DBGINFO-NEXT:      #dbg_value(i1 poison, [[META89:![0-9]+]], !DIExpression(DIOpArg(0, i1)), [[META95:![0-9]+]])
+; DIOP-DBGINFO-NEXT:      #dbg_value(i1 poison, [[META89:![0-9]+]], !DIExpression(DIOpArg(0, i1), DIOpZExt(i8)), [[META95:![0-9]+]])
 ; DIOP-DBGINFO-NEXT:    br i1 [[C1:%.*]], label [[FOR_BODY3_US:%.*]], label [[FOR_BODY3:%.*]], !dbg [[DBG96:![0-9]+]]
 ; DIOP-DBGINFO:       for.body3.us:
 ; DIOP-DBGINFO-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[B:%.*]], 0, !dbg [[META95]]
-; DIOP-DBGINFO-NEXT:      #dbg_value(i1 [[TOBOOL]], [[META89]], !DIExpression(DIOpArg(0, i1)), [[META95]])
+; DIOP-DBGINFO-NEXT:      #dbg_value(i1 [[TOBOOL]], [[META89]], !DIExpression(DIOpArg(0, i1), DIOpZExt(i8)), [[META95]])
 ; DIOP-DBGINFO-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[TOBOOL]], i8 0, i8 4, !dbg [[DBG97:![0-9]+]]
 ; DIOP-DBGINFO-NEXT:      #dbg_value(i8 [[SPEC_SELECT]], [[META90:![0-9]+]], !DIExpression(DIOpArg(0, i8)), [[DBG97]])
 ; DIOP-DBGINFO-NEXT:    switch i3 [[V1:%.*]], label [[EXIT:%.*]] [
@@ -332,7 +332,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DIOP-DBGINFO-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32, !dbg [[DBG101:![0-9]+]]
 ; DIOP-DBGINFO-NEXT:      #dbg_value(i32 [[CONV]], [[META92:![0-9]+]], !DIExpression(DIOpArg(0, i32)), [[DBG101]])
 ; DIOP-DBGINFO-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], [[A:%.*]], !dbg [[DBG102:![0-9]+]]
-; DIOP-DBGINFO-NEXT:      #dbg_value(i1 [[CMP]], [[META93:![0-9]+]], !DIExpression(DIOpArg(0, i1)), [[DBG102]])
+; DIOP-DBGINFO-NEXT:      #dbg_value(i1 [[CMP]], [[META93:![0-9]+]], !DIExpression(DIOpArg(0, i1), DIOpZExt(i8)), [[DBG102]])
 ; DIOP-DBGINFO-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[EXIT2:%.*]], !dbg [[DBG103:![0-9]+]]
 ; DIOP-DBGINFO:       exit2:
 ; DIOP-DBGINFO-NEXT:    unreachable, !dbg [[DBG104:![0-9]+]]

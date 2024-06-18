@@ -1449,11 +1449,188 @@ unsigned DIExpression::ExprOperand::getSize() const {
   }
 }
 
-bool DIExpression::isValid() const {
-  if (auto NewElementsRef = getNewElementsRef()) {
-    if (NewElementsRef->empty())
-      return false;
+namespace {
+/// Extends validation to include Arguments and DataLayout when available,
+/// falling back to assuming the expression is valid when these are not
+/// supplied.
+class DIExprVerifier : public DIExprConstVisitor<DIExprVerifier> {
+  std::optional<DIExpressionEnv> Env;
+  std::string ErrorMsg;
+
+  std::optional<DIOp::Fragment> Fragment;
+
+public:
+  DIExprVerifier(LLVMContext &Context, ArrayRef<DIOp::Variant> Expr,
+                 std::optional<DIExpressionEnv> Env)
+      : DIExprConstVisitor(Context, Expr), Env(Env) {}
+
+  bool error(const Twine &Msg) {
+    ErrorMsg = Msg.str();
+    return false;
+  }
+
+  StringRef getErrorMsg() const {
+    assert(!ErrorMsg.empty() && "Expected error string to be present here");
+    return ErrorMsg;
+  }
+
+  std::optional<uint64_t> getSizeInBits(Type *T) {
+    TypeSize TS = TypeSize::getFixed(0);
+    if (Env)
+      TS = Env->DL.getTypeSizeInBits(T);
+    else
+      TS = T->getPrimitiveSizeInBits();
+    if (TS.isScalable() || !TS.getFixedValue())
+      return std::nullopt;
+    return TS.getFixedValue();
+  }
+
+  bool expectSameSize(Type *T, Type *U, const Twine &ErrorMsg) {
+    if (T == U)
+      return true;
+    std::optional<uint64_t> TS = getSizeInBits(T);
+    std::optional<uint64_t> US = getSizeInBits(U);
+    // If we cannot be certain the expression is invalid, just assume it is
+    // valid. For example, we may not have a DataLayout to determine pointer
+    // sizes, depending on the caller.
+    if (!TS || !US)
+      return true;
+    if (*TS != *US)
+      return error(ErrorMsg);
     return true;
+  }
+
+  using DIExprConstVisitor<DIExprVerifier>::visit;
+
+  bool visit(DIOp::Referrer Op, Type *ResultType, ArrayRef<StackEntry>) {
+    if (!Env)
+      return true;
+    if (Env->Arguments.empty())
+      return error("DIOpReferrer requires an argument");
+    return expectSameSize(
+        ResultType, Env->Arguments[0]->getType(),
+        "DIOpReferrer type must be same size in bits as argument");
+  }
+
+  bool visit(DIOp::Arg Op, Type *ResultType, ArrayRef<StackEntry>) {
+    if (!Env)
+      return true;
+    if (Op.getIndex() >= Env->Arguments.size())
+      return error("DIOpArg index out of range");
+    return expectSameSize(ResultType, Env->Arguments[Op.getIndex()]->getType(),
+                          "DIOpArg type must be same size in bits as argument");
+  }
+
+  bool visit(DIOp::Reinterpret Op, Type *ResultType,
+             ArrayRef<StackEntry> Ins) {
+    return expectSameSize(ResultType, Ins[0].ResultType,
+                          "DIOpReinterpret must not alter bitsize of child");
+  }
+
+  bool visit(DIOp::Composite Op, Type *ResultType,
+             ArrayRef<StackEntry> Ins) {
+    assert(Op.getCount() == Ins.size());
+
+    std::optional<uint64_t> ResultSizeInBits = getSizeInBits(Op.getResultType());
+    if (!ResultSizeInBits)
+      return true;
+
+    uint64_t TotalSizeInBits = 0u;
+    for (auto &In : Ins) {
+      std::optional<uint64_t> InSizeInBits = getSizeInBits(In.ResultType);
+      if (!InSizeInBits)
+        return true;
+      TotalSizeInBits += *InSizeInBits;
+    }
+
+    if (TotalSizeInBits != *ResultSizeInBits)
+      return error(
+          "DIOpComposite bitsize does not match sum of child bitsizes");
+
+    return true;
+  }
+
+  bool visit(DIOp::Convert Op, Type *ResultType, ArrayRef<StackEntry> Ins) {
+    // We only currently diagnose when DIOpConvert extends one integral
+    // type to a larger one, so only check when both types are integral.
+    if (!ResultType->isIntegerTy() || !Ins[0].ResultType->isIntegerTy())
+      return true;
+    std::optional<uint64_t> InSizeInBits = getSizeInBits(Ins[0].ResultType);
+    std::optional<uint64_t> ResultSizeInBits = getSizeInBits(ResultType);
+    if (!InSizeInBits || !ResultSizeInBits)
+      return true;
+    if (*ResultSizeInBits > *InSizeInBits)
+      return error(
+          Op.getAsmName() +
+          " on integers requires result type to be no wider than input type");
+    return true;
+  }
+
+  template <typename ExtOpT>
+  bool visitExt(ExtOpT Op, Type *ResultType, ArrayRef<StackEntry> Ins) {
+    std::optional<uint64_t> InSizeInBits = getSizeInBits(Ins[0].ResultType);
+    std::optional<uint64_t> ResultSizeInBits = getSizeInBits(ResultType);
+    if (!InSizeInBits || !ResultSizeInBits)
+      return true;
+    if (*ResultSizeInBits <= *InSizeInBits)
+      return error(Op.getAsmName() +
+                   " requires result type to be wider than input type");
+    return true;
+  }
+
+  bool visit(DIOp::ZExt Op, Type *ResultType, ArrayRef<StackEntry> Ins) {
+    return visitExt(Op, ResultType, Ins);
+  }
+
+  bool visit(DIOp::SExt Op, Type *ResultType, ArrayRef<StackEntry> Ins) {
+    return visitExt(Op, ResultType, Ins);
+  }
+
+  bool visit(DIOp::Fragment Op, Type *ResultType, ArrayRef<StackEntry> Ins) {
+    if (Env) {
+      std::optional<uint64_t> VariableSizeInBits =
+          Env->Variable->getSizeInBits();
+      if (VariableSizeInBits &&
+          Op.getBitOffset() + Op.getBitSize() > *VariableSizeInBits)
+        return error("DIOpFragment must be contained within variable");
+    }
+    Fragment = Op;
+    return true;
+  }
+
+  bool visitResult(StackEntry Result) {
+    if (!Env)
+      return true;
+    std::optional<uint64_t> ResultSizeInBits = getSizeInBits(Result.ResultType);
+    std::optional<uint64_t> VariableSizeInBits;
+    if (Fragment)
+      VariableSizeInBits = Fragment->getBitSize();
+    else
+      VariableSizeInBits = Env->Variable->getSizeInBits();
+    if (!ResultSizeInBits || !VariableSizeInBits)
+      return true;
+    if (*ResultSizeInBits < *VariableSizeInBits)
+      return error("DIExpression must yield a location at least as wide as the "
+                   "variable or fragment it describes");
+    return true;
+  }
+};
+} // namespace
+
+bool DIExpression::isValid(
+    std::optional<DIExpressionEnv> Env,
+    std::optional<std::reference_wrapper<llvm::raw_ostream>> ErrS) const {
+  if (auto NewElementsRef = getNewElementsRef()) {
+    if (NewElementsRef->empty()) {
+      if (ErrS)
+        *ErrS << "DIOp-based DIExpression cannot be empty\n";
+      return false;
+    }
+    DIExprVerifier Verifier{getContext(), *NewElementsRef, Env};
+    bool Result = Verifier.visitInOrder();
+    if (!Result && ErrS)
+      *ErrS << Verifier.getErrorMsg() << '\n';
+    return Result;
   }
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.

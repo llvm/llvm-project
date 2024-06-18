@@ -60,7 +60,7 @@ define void @t3() !dbg !19 {
 ; CHECK-NEXT:    ret void
 ;
   %local = alloca %struct.pair, align 4
-  tail call void @llvm.dbg.declare(metadata ptr %local, metadata !20, metadata !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(i32))), !dbg !25
+  tail call void @llvm.dbg.declare(metadata ptr %local, metadata !20, metadata !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(%struct.pair))), !dbg !25
   %first = getelementptr inbounds %struct.pair, ptr %local, i32 0, i32 0
   store i32 42, ptr %first, align 4
   %second = getelementptr inbounds %struct.pair, ptr %local, i32 0, i32 1

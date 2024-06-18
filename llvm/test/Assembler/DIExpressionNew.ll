@@ -1,5 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
-; RUN: verify-uselistorder %s
+; RUN: llvm-as -disable-verify < %s | llvm-dis | llvm-as -disable-verify | llvm-dis | FileCheck %s
 
 ; CHECK: %t = type { i32, i32 }
 %t = type { i32, i32 }
