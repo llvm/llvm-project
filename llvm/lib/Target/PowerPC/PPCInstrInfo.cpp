@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
@@ -1255,13 +1256,28 @@ MCInst PPCInstrInfo::getNop() const {
 }
 
 // Branch analysis.
-// Note: If the condition register is set to CTR or CTR8 then this is a
-// BDNZ (imm == 1) or BDZ (imm == 0) branch.
+bool PPCInstrInfo::isCondBranchPredictable(const MachineInstr &CondBr,
+                                           const MachineLoopInfo &MLI) const {
+  MachineLoop *Loop = MLI.getLoopFor(CondBr.getParent());
+  if (!Loop)
+    return false;
+  return Loop->isLoopInvariant(CondBr, /*ExcludeReg=*/0, /*RecursionDepth=*/2);
+}
+
 bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                  MachineBasicBlock *&TBB,
                                  MachineBasicBlock *&FBB,
                                  SmallVectorImpl<MachineOperand> &Cond,
                                  bool AllowModify) const {
+  return analyzeBranch(MBB, TBB, FBB, Cond, nullptr, nullptr, AllowModify);
+}
+
+// Note: If the condition register is set to CTR or CTR8 then this is a
+// BDNZ (imm == 1) or BDZ (imm == 0) branch.
+bool PPCInstrInfo::analyzeBranch(
+    MachineBasicBlock &MBB, MachineBasicBlock *&TBB, MachineBasicBlock *&FBB,
+    SmallVectorImpl<MachineOperand> &Cond, bool *IsPredictable,
+    const MachineLoopInfo *MLI, bool AllowModify) const {
   bool isPPC64 = Subtarget.isPPC64();
 
   // If the block has no terminators, it just falls into the block after it.
@@ -1303,6 +1319,8 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       TBB = LastInst.getOperand(2).getMBB();
       Cond.push_back(LastInst.getOperand(0));
       Cond.push_back(LastInst.getOperand(1));
+      if (IsPredictable && MLI)
+        *IsPredictable = isCondBranchPredictable(LastInst, *MLI);
       return false;
     } else if (LastInst.getOpcode() == PPC::BC) {
       if (!LastInst.getOperand(1).isMBB())
@@ -1311,6 +1329,8 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       TBB = LastInst.getOperand(1).getMBB();
       Cond.push_back(MachineOperand::CreateImm(PPC::PRED_BIT_SET));
       Cond.push_back(LastInst.getOperand(0));
+      if (IsPredictable && MLI)
+        *IsPredictable = isCondBranchPredictable(LastInst, *MLI);
       return false;
     } else if (LastInst.getOpcode() == PPC::BCn) {
       if (!LastInst.getOperand(1).isMBB())
@@ -1319,6 +1339,8 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       TBB = LastInst.getOperand(1).getMBB();
       Cond.push_back(MachineOperand::CreateImm(PPC::PRED_BIT_UNSET));
       Cond.push_back(LastInst.getOperand(0));
+      if (IsPredictable && MLI)
+        *IsPredictable = isCondBranchPredictable(LastInst, *MLI);
       return false;
     } else if (LastInst.getOpcode() == PPC::BDNZ8 ||
                LastInst.getOpcode() == PPC::BDNZ) {
@@ -1365,6 +1387,8 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     Cond.push_back(SecondLastInst.getOperand(0));
     Cond.push_back(SecondLastInst.getOperand(1));
     FBB = LastInst.getOperand(0).getMBB();
+    if (IsPredictable && MLI)
+      *IsPredictable = isCondBranchPredictable(SecondLastInst, *MLI);
     return false;
   } else if (SecondLastInst.getOpcode() == PPC::BC &&
              LastInst.getOpcode() == PPC::B) {
@@ -1375,6 +1399,8 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     Cond.push_back(MachineOperand::CreateImm(PPC::PRED_BIT_SET));
     Cond.push_back(SecondLastInst.getOperand(0));
     FBB = LastInst.getOperand(0).getMBB();
+    if (IsPredictable && MLI)
+      *IsPredictable = isCondBranchPredictable(SecondLastInst, *MLI);
     return false;
   } else if (SecondLastInst.getOpcode() == PPC::BCn &&
              LastInst.getOpcode() == PPC::B) {
@@ -1385,6 +1411,8 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     Cond.push_back(MachineOperand::CreateImm(PPC::PRED_BIT_UNSET));
     Cond.push_back(SecondLastInst.getOperand(0));
     FBB = LastInst.getOperand(0).getMBB();
+    if (IsPredictable && MLI)
+      *IsPredictable = isCondBranchPredictable(SecondLastInst, *MLI);
     return false;
   } else if ((SecondLastInst.getOpcode() == PPC::BDNZ8 ||
               SecondLastInst.getOpcode() == PPC::BDNZ) &&
