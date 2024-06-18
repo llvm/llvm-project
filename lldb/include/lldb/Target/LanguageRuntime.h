@@ -73,11 +73,12 @@ public:
     return nullptr;
   }
 
-  virtual bool GetObjectDescription(Stream &str, ValueObject &object) = 0;
+  virtual llvm::Error GetObjectDescription(Stream &str,
+                                           ValueObject &object) = 0;
 
-  virtual bool GetObjectDescription(Stream &str, Value &value,
-                                    ExecutionContextScope *exe_scope) = 0;
-
+  virtual llvm::Error
+  GetObjectDescription(Stream &str, Value &value,
+                       ExecutionContextScope *exe_scope) = 0;
 
   struct VTableInfo {
     Address addr; /// Address of the vtable's virtual function table
