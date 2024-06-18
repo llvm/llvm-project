@@ -157,7 +157,7 @@ static bool ShouldDiagnoseAvailabilityInContext(
     }
   }
 
-  // In HLSL, skip emitting diagnostic is the diagnostic mode is not set to
+  // In HLSL, skip emitting diagnostic if the diagnostic mode is not set to
   // strict (-fhlsl-strict-availability), or if the target is library and the
   // availability is restricted to a specific environment/shader stage.
   // For libraries the availability will be checked later in

@@ -543,7 +543,7 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
     // The availability attribute does not have environment -> it depends only
     // on shader model version and not on specific the shader stage.
 
-    // Skip emitting the diagnostics if the diagnostic mode is not set to
+    // Skip emitting the diagnostics if the diagnostic mode is set to
     // strict (-fhlsl-strict-availability) because all relevant diagnostics
     // were already emitted in the DiagnoseUnguardedAvailability scan
     // (SemaAvailability.cpp).
