@@ -70,6 +70,14 @@ Changes to the LLVM IR
   records by default. Details of the change and instructions on how to update
   any downstream tools and tests can be found in the `migration docs
   <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
+* Semantics of MC/DC intrinsics have been changed.
+
+  * ``llvm.instprof.mcdc.parameters``: 3rd argument has been changed
+    from bytes to bits.
+  * ``llvm.instprof.mcdc.condbitmap.update``: Removed.
+  * ``llvm.instprof.mcdc.tvbitmap.update``: 3rd argument has been
+    removed. The next argument has been changed from byte index to bit
+    index.
 
 Changes to LLVM infrastructure
 ------------------------------
