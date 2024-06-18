@@ -20,4 +20,6 @@ class TestObjCFromCppFramesWithoutDebugInfo(TestBase):
         self.expect("expr id", error=False)
 
         # Tests that we can lookup Objective-C decls in the ObjC runtime plugin.
-        self.expect_expr("NSString *c; c == nullptr", result_value="true", result_type="bool")
+        self.expect_expr(
+            "NSString *c; c == nullptr", result_value="true", result_type="bool"
+        )
