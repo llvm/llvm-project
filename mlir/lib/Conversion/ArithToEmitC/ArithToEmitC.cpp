@@ -299,10 +299,15 @@ public:
     auto adaptedOp = adaptor.getOperand();
     auto adaptedOpType = adaptedOp.getType();
 
+    if (isa<TensorType>(adaptedOpType) || isa<VectorType>(adaptedOpType)) {
+      return rewriter.notifyMatchFailure(
+          op.getLoc(),
+          "negf currently only supports scalar types, not vectors or tensors");
+    }
+
     if (!emitc::isSupportedFloatType(adaptedOpType)) {
-      return rewriter.notifyMatchFailure(op.getLoc(),
-                                         "negf currently only supported on "
-                                         "floats, not tensors/vectors thereof");
+      return rewriter.notifyMatchFailure(
+          op.getLoc(), "floating-point type is not supported by EmitC");
     }
 
     rewriter.replaceOpWithNewOp<emitc::UnaryMinusOp>(op, adaptedOpType,
