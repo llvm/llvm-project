@@ -29,7 +29,8 @@ struct OptionArgParser {
 
   static bool ToBoolean(llvm::StringRef s, bool fail_value, bool *success_ptr);
 
-  static llvm::Expected<bool> ToBoolean(llvm::StringRef option_name, llvm::StringRef option_arg);
+  static llvm::Expected<bool> ToBoolean(llvm::StringRef option_name,
+                                        llvm::StringRef option_arg);
 
   static char ToChar(llvm::StringRef s, char fail_value, bool *success_ptr);
 

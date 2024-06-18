@@ -35,13 +35,16 @@ bool OptionArgParser::ToBoolean(llvm::StringRef ref, bool fail_value,
   return fail_value;
 }
 
-llvm::Expected<bool> OptionArgParser::ToBoolean(llvm::StringRef option_name, llvm::StringRef option_arg) {
+llvm::Expected<bool> OptionArgParser::ToBoolean(llvm::StringRef option_name,
+                                                llvm::StringRef option_arg) {
   bool parse_success;
-  const bool option_value = ToBoolean(option_arg, false /* doesn't matter */, &parse_success);
+  const bool option_value =
+      ToBoolean(option_arg, false /* doesn't matter */, &parse_success);
   if (parse_success)
     return option_value;
   else
-    return llvm::createStringError("Invalid boolean value for option '%s': '%s'",
+    return llvm::createStringError(
+        "Invalid boolean value for option '%s': '%s'",
         option_name.str().c_str(),
         option_arg.empty() ? "<null>" : option_arg.str().c_str());
 }

@@ -66,9 +66,11 @@ TEST(OptionArgParserTest, toBoolean) {
   EXPECT_FALSE(success);
 }
 
-void TestToBooleanWithExpectedBool(llvm::StringRef option_arg, bool expected_parse_success, bool expected_result)
-{
-  llvm::Expected<bool> bool_or_error = OptionArgParser::ToBoolean(llvm::StringRef("test_option"), option_arg);
+void TestToBooleanWithExpectedBool(llvm::StringRef option_arg,
+                                   bool expected_parse_success,
+                                   bool expected_result) {
+  llvm::Expected<bool> bool_or_error =
+      OptionArgParser::ToBoolean(llvm::StringRef("test_option"), option_arg);
   EXPECT_EQ(expected_parse_success, (bool)bool_or_error);
   if (expected_parse_success)
     EXPECT_EQ(expected_result, *bool_or_error);
@@ -97,8 +99,10 @@ TEST(OptionArgParserTest, toBooleanWithExpectedBool) {
   TestToBooleanWithExpectedBool(llvm::StringRef("Off"), true, false);
   TestToBooleanWithExpectedBool(llvm::StringRef("No"), true, false);
 
-  TestToBooleanWithExpectedBool(llvm::StringRef("10"), false, false /* doesn't matter */);
-  TestToBooleanWithExpectedBool(llvm::StringRef(""), false, false /* doesn't matter */);
+  TestToBooleanWithExpectedBool(llvm::StringRef("10"), false,
+                                false /* doesn't matter */);
+  TestToBooleanWithExpectedBool(llvm::StringRef(""), false,
+                                false /* doesn't matter */);
 }
 
 TEST(OptionArgParserTest, toChar) {
