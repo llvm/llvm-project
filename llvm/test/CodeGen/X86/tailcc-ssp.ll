@@ -5,9 +5,20 @@ declare void @h(ptr, i64, ptr)
 
 define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-LABEL: tailcall_frame:
-; WINDOWS: callq __security_check_cookie
+; WINDOWS: movq	__security_cookie(%rip), %rax
+; WINDOWS: xorq	%rsp, %rax
+; WINDOWS: movq	%rax, {{[0-9]*}}(%rsp)
+; WINDOWS: movq	 {{[0-9]*}}(%rsp), %rcx
+; WINDOWS: xorq	%rsp, %rcx
+; WINDOWS: movq	__security_cookie(%rip), %rax
+; WINDOWS: cmpq	%rcx, %rax
+; WINDOWS: jne	.LBB0_1
 ; WINDOWS: xorl %ecx, %ecx
 ; WINDOWS: jmp h
+; WINDOWS: .LBB0_1
+; WINDOWS: callq __security_check_cookie
+; WINDOWS: int3
+
 
 ; LINUX-LABEL: tailcall_frame:
 ; LINUX: jne
@@ -22,10 +33,18 @@ declare void @bar()
 define void @tailcall_unrelated_frame() sspreq {
 ; WINDOWS-LABEL: tailcall_unrelated_frame:
 ; WINDOWS: subq [[STACK:\$.*]], %rsp
+; WINDOWS: movq	__security_cookie(%rip), %rax
+; WINDOWS: xorq	%rsp, %rax
 ; WINDOWS: callq bar
-; WINDOWS: callq __security_check_cookie
-; WINDOWS: addq [[STACK]], %rsp
-; WINDOWS: jmp bar
+; WINDOWS: movq	 {{[0-9]*}}(%rsp), %rcx
+; WINDOWS: xorq	%rsp, %rcx
+; WINDOWS: movq	__security_cookie(%rip), %rax
+; WINDOWS: cmpq	%rcx, %rax
+; WINDOWS: jne	.LBB1_1
+; WINDOWS: jmp	bar
+; WINDOWS: .LBB1_1
+; WINDOWS: callq	__security_check_cookie
+; WINDOWS: int3
 
 ; LINUX-LABEL: tailcall_unrelated_frame:
 ; LINUX: callq bar

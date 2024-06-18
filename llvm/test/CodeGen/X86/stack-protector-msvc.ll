@@ -38,8 +38,13 @@ return:    ; preds = %entry
 ; MSVC-X64: callq strcpy
 ; MSVC-X64: movq [[SLOT]](%rsp), %rcx
 ; MSVC-X64: xorq %rsp, %rcx
-; MSVC-X64: callq __security_check_cookie
+; MSVC-X64: movq	__security_cookie(%rip), %rax
+; MSVC-X64: cmpq	%rcx, %rax
+; MSVC-X64: jne	.LBB0_2
 ; MSVC-X64: retq
+; MSVC-X64: LBB0_2:
+; MSVC-X64: callq __security_check_cookie
+; MSVC-X64: int3
 
 ; MSVC-X86-O0-LABEL: _test:
 ; MSVC-X86-O0: movl ___security_cookie, %[[REG1:[^ ]*]]
@@ -97,9 +102,13 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64: callq escape
 ; MSVC-X64: movq [[SLOT]](%rbp), %rcx
 ; MSVC-X64: xorq %rbp, %rcx
-; MSVC-X64: callq __security_check_cookie
+; MSVC-X64:	movq	__security_cookie(%rip), %rax
+; MSVC-X64:	cmpq	%rcx, %rax
+; MSVC-X64:	jne	.LBB1_2
 ; MSVC-X64: retq
-
+; MSVC-X64: LBB1_2
+; MSVC-X64: callq __security_check_cookie
+; MSVC-X64: int3
 
 ; This case is interesting because we address local variables with RBX but XOR
 ; the guard value with RBP. That's fine, either value will do, as long as they
@@ -148,11 +157,14 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64: callq escape
 ; MSVC-X64: movq [[SLOT]](%rbx), %rcx
 ; MSVC-X64: xorq %rbp, %rcx
+; MSVC-X64: movq	__security_cookie(%rip), %rax
+; MSVC-X64: cmpq	%rcx, %rax
+; MSVC-X64: jne	.LBB2_2
+; MSVC-X64: retq 
 ; MSVC-X64: callq __security_check_cookie
-; MSVC-X64: retq
+; MSVC-X64: int3
 
 
 declare ptr @strcpy(ptr, ptr) nounwind
 
 declare i32 @printf(ptr, ...) nounwind
-
