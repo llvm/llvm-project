@@ -23,16 +23,17 @@ public:
   const SBStatisticsOptions &operator=(const lldb::SBStatisticsOptions &rhs);
 
   /// If true, dump only high-level summary statistics. Exclude details like
-  /// targets, modules, breakpoints, etc.
+  /// targets, modules, breakpoints, etc. This turns off `IncludeTargets`,
+  /// `IncludeModules` and `IncludeTranscript` by default.
   ///
-  /// Default is false.
+  /// Defaults to false.
   void SetSummaryOnly(bool b);
   bool GetSummaryOnly();
 
   /// If true, dump statistics for the targets, including breakpoints,
   /// expression evaluations, frame variables, etc.
   ///
-  /// Defaults to true, unless the "SummaryOnly" mode is enabled, in which case
+  /// Defaults to true, unless the `SummaryOnly` mode is enabled, in which case
   /// this is turned off unless specified.
   ///
   /// If both `IncludeTargets` and `IncludeModules` are true, a list of module
@@ -44,7 +45,7 @@ public:
   /// various aspects of the module and debug information, type system, path,
   /// etc.
   ///
-  /// Defaults to true, unless the "SummaryOnly" mode is enabled, in which case
+  /// Defaults to true, unless the `SummaryOnly` mode is enabled, in which case
   /// this is turned off unless specified.
   ///
   /// If both `IncludeTargets` and `IncludeModules` are true, a list of module
@@ -56,7 +57,7 @@ public:
   /// a JSON array with all commands the user and/or scripts executed during a
   /// debug session.
   ///
-  /// Defaults to true, unless the "SummaryOnly" mode is enabled, in which case
+  /// Defaults to true, unless the `SummaryOnly` mode is enabled, in which case
   /// this is turned off unless specified.
   void SetIncludeTranscript(bool b);
   bool GetIncludeTranscript() const;
