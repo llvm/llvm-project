@@ -172,6 +172,33 @@ Entry:
 
 declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 
+define <1 x i64> @popcount1x64(<1 x i64> %0) {
+; CHECKO0-LABEL: popcount1x64:
+; CHECKO0:       // %bb.0: // %Entry
+; CHECKO0-NEXT:    fmov x0, d0
+; CHECKO0-NEXT:    fmov d0, x0
+; CHECKO0-NEXT:    cnt v0.8b, v0.8b
+; CHECKO0-NEXT:    uaddlv h0, v0.8b
+; CHECKO0-NEXT:    // kill: def $q0 killed $h0
+; CHECKO0-NEXT:    mov w8, v0.s[0]
+; CHECKO0-NEXT:    // kill: def $x8 killed $w8
+; CHECKO0-NEXT:    fmov d0, x8
+; CHECKO0-NEXT:    ret
+;
+; CHECK-LABEL: popcount1x64:
+; CHECK:       // %bb.0: // %Entry
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    uaddlp v0.4h, v0.8b
+; CHECK-NEXT:    uaddlp v0.2s, v0.4h
+; CHECK-NEXT:    uaddlp v0.1d, v0.2s
+; CHECK-NEXT:    ret
+Entry:
+  %1 = tail call <1 x i64> @llvm.ctpop.v1i64(<1 x i64> %0)
+  ret <1 x i64> %1
+}
+
+declare <1 x i64> @llvm.ctpop.v1i64(<1 x i64>)
+
 define <4 x i32> @popcount4x32(<4 x i32> %0) {
 ; CHECKO0-LABEL: popcount4x32:
 ; CHECKO0:       // %bb.0: // %Entry
