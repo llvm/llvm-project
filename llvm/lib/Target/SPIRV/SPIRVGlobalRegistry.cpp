@@ -1122,9 +1122,9 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
     uint32_t Depth, uint32_t Arrayed, uint32_t Multisampled, uint32_t Sampled,
     SPIRV::ImageFormat::ImageFormat ImageFormat,
     SPIRV::AccessQualifier::AccessQualifier AccessQual) {
-  SPIRV::ImageTypeDescriptor TD(SPIRVToLLVMType.lookup(SampledType), Dim, Depth,
-                                Arrayed, Multisampled, Sampled, ImageFormat,
-                                AccessQual);
+  auto TD = SPIRV::make_descr_image(SPIRVToLLVMType.lookup(SampledType), Dim,
+                                    Depth, Arrayed, Multisampled, Sampled,
+                                    ImageFormat, AccessQual);
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1143,7 +1143,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
 
 SPIRVType *
 SPIRVGlobalRegistry::getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder) {
-  SPIRV::SamplerTypeDescriptor TD;
+  auto TD = SPIRV::make_descr_sampler();
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1154,7 +1154,7 @@ SPIRVGlobalRegistry::getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder) {
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypePipe(
     MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual) {
-  SPIRV::PipeTypeDescriptor TD(AccessQual);
+  auto TD = SPIRV::make_descr_pipe(AccessQual);
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1166,7 +1166,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypePipe(
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeDeviceEvent(
     MachineIRBuilder &MIRBuilder) {
-  SPIRV::DeviceEventTypeDescriptor TD;
+  auto TD = SPIRV::make_descr_event();
   if (auto *Res = checkSpecialInstr(TD, MIRBuilder))
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
@@ -1176,7 +1176,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeDeviceEvent(
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(
     SPIRVType *ImageType, MachineIRBuilder &MIRBuilder) {
-  SPIRV::SampledImageTypeDescriptor TD(
+  auto TD = SPIRV::make_descr_sampled_image(
       SPIRVToLLVMType.lookup(MIRBuilder.getMF().getRegInfo().getVRegDef(
           ImageType->getOperand(1).getReg())),
       ImageType);
