@@ -1837,6 +1837,7 @@ public:
   bool canReturnTwice() const { return hasFnAttr(Attribute::ReturnsTwice); }
   void setCanReturnTwice() { addFnAttr(Attribute::ReturnsTwice); }
 
+  /// Return true if the call is for a noreturn trap intrinsic.
   bool isNonContinuableTrap() const {
     switch (getIntrinsicID()) {
     case Intrinsic::trap:
