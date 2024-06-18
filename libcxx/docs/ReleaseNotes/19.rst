@@ -155,8 +155,12 @@ LLVM 20
 
 LLVM 21
 ~~~~~~~
-TODO
 
+- The status of the C++03 implementation will be frozen. This means that non-critical bug fixes will not be back-ported
+  to C++03, including LWG issues. C++03 is a legacy platform, where most projects are no longer actively maintained. To
+  reduce the amount of fixes required to keep such legacy projects compiling with up-to-date toolchains, libc++ freezes
+  the current status of the headers and avoids making any changes to these headers.
+  See https://discourse.llvm.org/t/rfc-freezing-c-03-headers-in-libc for more details.
 
 ABI Affecting Changes
 ---------------------
