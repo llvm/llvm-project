@@ -185,11 +185,9 @@ void Prescanner::Statement() {
       // a comment marker or directive sentinel.  If so, disable line
       // continuation, so that NextToken() won't consume anything from
       // following lines.
-      if (IsLegalIdentifierStart(*at_)) {
-        CHECK(NextToken(tokens));
-        CHECK(tokens.SizeInTokens() == 1);
-        CharBlock id{tokens.TokenAt(0)};
-        if (preprocessor_.IsNameDefined(id) &&
+      if (IsLegalIdentifierStart(*at_) && NextToken(tokens) &&
+          tokens.SizeInTokens() > 0) {
+        if (CharBlock id{tokens.TokenAt(0)}; preprocessor_.IsNameDefined(id) &&
             !preprocessor_.IsFunctionLikeDefinition(id)) {
           if (auto replaced{preprocessor_.MacroReplacement(tokens, *this)}) {
             auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
