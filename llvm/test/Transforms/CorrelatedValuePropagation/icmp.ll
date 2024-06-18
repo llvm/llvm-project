@@ -595,7 +595,7 @@ define i1 @test_assume_cmp_with_offset_or(i64 %idx, i1 %other) {
 ; CHECK:       T:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       F:
-; CHECK-NEXT:    ret i1 [[CMP2:%.*]]
+; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
 ;
   %idx.off1 = or disjoint i64 %idx, 5
   %cmp1 = icmp ugt i64 %idx.off1, 10
@@ -1474,4 +1474,40 @@ entry:
   %cmp2 = icmp slt i64 %arg, %arg1
   %select = select i1 %cmp1, i1 %cmp2, i1 false
   ret i1 %select
+}
+
+declare void @opaque()
+
+define void @test_icmp_ne_from_implied_range(i32 noundef %arg) {
+; CHECK-LABEL: @test_icmp_ne_from_implied_range(
+; CHECK-NEXT:    [[AND_MASK:%.*]] = and i32 [[ARG:%.*]], -8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND_MASK]], -16
+; CHECK-NEXT:    br i1 [[CMP]], label [[END:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       sw.case:
+; CHECK-NEXT:    call void @opaque()
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  %and.mask = and i32 %arg, -8
+  %cmp = icmp eq i32 %and.mask, -16
+  br i1 %cmp, label %end, label %else
+
+else:
+  ; %arg is within [-8, -16).
+  switch i32 %arg, label %end [
+  i32 -16, label %sw.case
+  i32 -12, label %sw.case
+  i32 -9, label %sw.case
+  ]
+
+sw.case:
+  call void @opaque()
+  br label %end
+
+end:
+  ; %arg is within [-16, -8).
+  ret void
 }

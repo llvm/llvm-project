@@ -221,6 +221,18 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   return true;
 }
 
+bool AArch64TargetInfo::validateGlobalRegisterVariable(
+    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
+  if ((RegName == "sp") || RegName.starts_with("x")) {
+    HasSizeMismatch = RegSize != 64;
+    return true;
+  } else if (RegName.starts_with("w")) {
+    HasSizeMismatch = RegSize != 32;
+    return true;
+  }
+  return false;
+}
+
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
@@ -246,7 +258,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
-  return Name == "generic" || llvm::AArch64::parseCpu(Name);
+  return llvm::AArch64::parseCpu(Name).has_value();
 }
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {

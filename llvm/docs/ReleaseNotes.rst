@@ -92,8 +92,8 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
-  Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
+* Added support for Cortex-R82AE, Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
+  Cortex-A725, Cortex-X925, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 * ``-mbranch-protection=standard`` now enables FEAT_PAuth_LR by
   default when the feature is enabled. The new behaviour results 
@@ -220,7 +220,40 @@ Changes to the C API
   * ``LLVMConstICmp``
   * ``LLVMConstFCmp``
 
-* Added ``LLVMPositionBuilderBeforeDbgRecords`` and ``LLVMPositionBuilderBeforeInstrAndDbgRecords``. Same as ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` except the insertion position is set to before the debug records that precede the target instruction. See the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_ for more info. ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` are unchanged; they insert before the indicated instruction but after any attached debug records.
+**Note:** The following changes are due to the removal of the debug info
+intrinsics from LLVM and to the introduction of debug records into LLVM.
+They are described in detail in the `debug info migration guide <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
+
+* Added the following functions to insert before the indicated instruction but
+  after any attached debug records.
+
+  * ``LLVMPositionBuilderBeforeDbgRecords``
+  * ``LLVMPositionBuilderBeforeInstrAndDbgRecords``
+
+  Same as ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` except the
+  insertion position is set to before the debug records that precede the target
+  instruction. ``LLVMPositionBuilder`` and ``LLVMPositionBuilderBefore`` are
+  unchanged.
+
+* Added the following functions to get/set the new non-instruction debug info format.
+  They will be deprecated in the future and they are just a transition aid.
+
+  * ``LLVMIsNewDbgInfoFormat``
+  * ``LLVMSetIsNewDbgInfoFormat``
+
+* Added the following functions to insert a debug record (new debug info format).
+
+  * ``LLVMDIBuilderInsertDeclareRecordBefore``
+  * ``LLVMDIBuilderInsertDeclareRecordAtEnd``
+  * ``LLVMDIBuilderInsertDbgValueRecordBefore``
+  * ``LLVMDIBuilderInsertDbgValueRecordAtEnd``
+
+* Deleted the following functions that inserted a debug intrinsic (old debug info format).
+
+  * ``LLVMDIBuilderInsertDeclareBefore``
+  * ``LLVMDIBuilderInsertDeclareAtEnd``
+  * ``LLVMDIBuilderInsertDbgValueBefore``
+  * ``LLVMDIBuilderInsertDbgValueAtEnd``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -230,6 +263,13 @@ Changes to the Metadata Info
 
 Changes to the Debug Info
 ---------------------------------
+
+* LLVM has switched from using debug intrinsics internally to using debug
+  records by default. This should happen transparently when using the DIBuilder
+  to construct debug variable information, but will require changes for any code
+  that interacts with debug intrinsics directly. Debug intrinsics will only be
+  supported on a best-effort basis from here onwards; for more information, see
+  the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
 Changes to the LLVM tools
 ---------------------------------
@@ -284,6 +324,12 @@ Changes to the LLVM tools
   Similarly, the JSON format has been fixed for this case. The NT_FILE note
   now has a map for the mapped files. (`#92835
   <https://github.com/llvm/llvm-project/pull/92835>`).
+
+* llvm-cov now generates HTML report with JavaScript code to allow simple
+  jumping between uncovered parts (lines/regions/branches) of code 
+  using buttons on top-right corner of the page or using keys (L/R/B or 
+  jumping in reverse direction with shift+L/R/B). (`#95662
+  <https://github.com/llvm/llvm-project/pull/95662>`).
 
 Changes to LLDB
 ---------------------------------
