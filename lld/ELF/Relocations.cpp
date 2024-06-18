@@ -209,8 +209,9 @@ static bool needsPlt(RelExpr expr) {
 }
 
 bool lld::elf::needsGot(RelExpr expr) {
-  return oneof<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
-               R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
+  return oneof<R_GOT, R_AARCH64_AUTH_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE,
+               R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC,
+               R_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
                R_AARCH64_GOT_PAGE, R_LOONGARCH_GOT, R_LOONGARCH_GOT_PAGE_PC>(
       expr);
 }
@@ -924,13 +925,25 @@ void elf::addGotEntry(Symbol &sym) {
 
   // If preemptible, emit a GLOB_DAT relocation.
   if (sym.isPreemptible) {
-    mainPart->relaDyn->addReloc({target->gotRel, in.got.get(), off,
+    RelType gotRel = target->gotRel;
+    if (sym.hasFlag(NEEDS_GOT_AUTH)) {
+      assert(config->emachine == EM_AARCH64);
+      gotRel = R_AARCH64_AUTH_GLOB_DAT;
+    }
+    mainPart->relaDyn->addReloc({gotRel, in.got.get(), off,
                                  DynamicReloc::AgainstSymbol, sym, 0, R_ABS});
     return;
   }
 
   // Otherwise, the value is either a link-time constant or the load base
-  // plus a constant.
+  // plus a constant. Signed GOT requires dynamic relocation.
+  if (sym.hasFlag(NEEDS_GOT_AUTH)) {
+    in.got->getPartition().relaDyn->addReloc(
+        {R_AARCH64_AUTH_RELATIVE, in.got.get(), off,
+         DynamicReloc::AddendOnlyWithTargetVA, sym, 0, R_ABS});
+    return;
+  }
+
   if (!config->isPic || isAbsolute(sym))
     in.got->addConstant({R_ABS, target->symbolicRel, off, 0, &sym});
   else
@@ -983,10 +996,11 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // These expressions always compute a constant
   if (oneof<R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, R_MIPS_GOT_LOCAL_PAGE,
             R_MIPS_GOTREL, R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
-            R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC, R_GOTPLTONLY_PC,
-            R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT, R_GOTPLT_GOTREL, R_GOTPLT_PC,
-            R_PPC32_PLTREL, R_PPC64_CALL_PLT, R_PPC64_RELAX_TOC, R_RISCV_ADD,
-            R_AARCH64_GOT_PAGE, R_LOONGARCH_PLT_PAGE_PC, R_LOONGARCH_GOT,
+            R_AARCH64_GOT_PAGE_PC, R_AARCH64_AUTH_GOT_PAGE_PC, R_GOT_PC,
+            R_GOTONLY_PC, R_GOTPLTONLY_PC, R_PLT_PC, R_PLT_GOTREL, R_PLT_GOTPLT,
+            R_GOTPLT_GOTREL, R_GOTPLT_PC, R_PPC32_PLTREL, R_PPC64_CALL_PLT,
+            R_PPC64_RELAX_TOC, R_RISCV_ADD, R_AARCH64_GOT_PAGE,
+            R_AARCH64_AUTH_GOT, R_LOONGARCH_PLT_PAGE_PC, R_LOONGARCH_GOT,
             R_LOONGARCH_GOT_PAGE_PC>(e))
     return true;
 
@@ -1099,7 +1113,17 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || config->emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the R_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      sym.setFlags(NEEDS_GOT);
+      bool needsGotAuth =
+          (expr == R_AARCH64_AUTH_GOT || expr == R_AARCH64_AUTH_GOT_PAGE_PC);
+      if (!sym.hasFlag(NEEDS_GOT)) {
+        sym.setFlags(NEEDS_GOT);
+        if (needsGotAuth)
+          sym.setFlags(NEEDS_GOT_AUTH);
+      } else if (needsGotAuth != sym.hasFlag(NEEDS_GOT_AUTH)) {
+        fatal("both AUTH and non-AUTH GOT entries for '" + sym.getName() +
+              "' requested, but only one type of GOT entry per symbol is "
+              "supported");
+      }
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);

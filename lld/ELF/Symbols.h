@@ -54,6 +54,7 @@ enum {
   NEEDS_TLSGD_TO_IE = 1 << 6,
   NEEDS_GOT_DTPREL = 1 << 7,
   NEEDS_TLSIE = 1 << 8,
+  NEEDS_GOT_AUTH = 1 << 9,
 };
 
 // Some index properties of a symbol are stored separately in this auxiliary

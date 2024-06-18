@@ -694,6 +694,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_ARM_SBREL:
     return sym.getVA(a) - getARMStaticBase(sym);
   case R_GOT:
+  case R_AARCH64_AUTH_GOT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return sym.getGotVA() + a;
   case R_LOONGARCH_GOT:
@@ -721,6 +722,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return sym.getGotOffset() + a;
   case R_AARCH64_GOT_PAGE_PC:
+  case R_AARCH64_AUTH_GOT_PAGE_PC:
   case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     return getAArch64Page(sym.getGotVA() + a) - getAArch64Page(p);
   case R_AARCH64_GOT_PAGE:
