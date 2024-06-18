@@ -617,7 +617,7 @@ bool ConstStructBuilder::AppendBitField(
   if (!isa<llvm::ConstantInt>(C)) {
     // Constants for long _BitInt types are split into individual bytes.
     // Try to fold these back into an integer constant. If that doesn't work
-    // out, we We are trying to initialize a bitfield with a non-trivial
+    // out, then we are trying to initialize a bitfield with a non-trivial
     // constant, this must require run-time code.
     llvm::Type *LoadType =
         CGM.getTypes().convertTypeForLoadStore(Field->getType(), C->getType());
@@ -1787,7 +1787,8 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   }
 
   if (destType->isBitIntType()) {
-    if (!CGM.getTypes().LLVMTypeLayoutMatchesAST(destType, C->getType())) {
+    if (!CGM.getTypes().typeRequiresSplitIntoByteArray(destType,
+                                                       C->getType())) {
       // Long _BitInt has array of bytes as in-memory type.
       // So, split constant into individual bytes.
       ConstantAggregateBuilder Builder(CGM);

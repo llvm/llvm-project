@@ -128,13 +128,13 @@ public:
   /// memory representation is usually i8 or i32, depending on the target.
   llvm::Type *ConvertTypeForMem(QualType T, bool ForBitField = false);
 
-  /// Check that size and abi alignment of given LLVM type matches size and
-  /// alignment of given AST type.
-  bool LLVMTypeLayoutMatchesAST(QualType ASTTy, llvm::Type *LLVMTy);
+  /// Check that size and ABI alignment of given LLVM type matches size and
+  /// alignment of given AST type. If they don't, values of the type need to be
+  /// emitted as byte array.
+  bool typeRequiresSplitIntoByteArray(QualType ASTTy, llvm::Type *LLVMTy);
 
-  /// For AST types with special memory representation and whose AST type
-  /// doesn't match LLVM type (see LLVMTypeLayoutMatchesAST) returns type that
-  /// ought to be used for load and store operations.
+  /// For AST types with special memory representation returns type
+  /// that ought to be used for load and store operations.
   llvm::Type *convertTypeForLoadStore(QualType T, llvm::Type *LLVMTy = nullptr);
 
   /// GetFunctionType - Get the LLVM function type for \arg Info.
