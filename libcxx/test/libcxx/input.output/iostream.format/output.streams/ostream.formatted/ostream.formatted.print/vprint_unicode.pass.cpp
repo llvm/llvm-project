@@ -11,6 +11,11 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
+// When std::print is unavailable, we don't rely on an implementation of
+// std::__is_terminal and we always assume a non-unicode and non-terminal
+// output.
+// XFAIL: availability-print-missing
+
 // Clang modules do not work with the definiton of _LIBCPP_TESTING_PRINT_IS_TERMINAL
 // XFAIL: clang-modules-build
 // <ostream>
