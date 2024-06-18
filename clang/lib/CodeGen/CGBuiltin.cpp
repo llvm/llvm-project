@@ -688,7 +688,34 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
                               const CallExpr *E, llvm::Constant *calleeValue) {
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
   CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
-  return CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
+  RValue Call =
+      CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
+
+  // Check the supported intrinsic.
+  if (unsigned BuiltinID = FD->getBuiltinID()) {
+    auto IntrinsicID = [&]() -> unsigned {
+      switch (BuiltinID) {
+      case Builtin::BIexpf:
+      case Builtin::BI__builtin_expf:
+      case Builtin::BI__builtin_expf128:
+        return true;
+      }
+      // TODO: support more FP math libcalls
+      return false;
+    }();
+
+    // Restrict to target with errno, for example, MacOS doesn't set errno.
+    if (IntrinsicID && CGF.CGM.getLangOpts().MathErrno &&
+        !CGF.Builder.getIsFPConstrained()) {
+      ASTContext &Context = CGF.getContext();
+      // Emit "int" TBAA metadata on FP math libcalls.
+      clang::QualType IntTy = Context.IntTy;
+      TBAAAccessInfo TBAAInfo = CGF.CGM.getTBAAAccessInfo(IntTy);
+      Instruction *Inst = cast<llvm::Instruction>(Call.getScalarVal());
+      CGF.CGM.DecorateInstructionWithTBAA(Inst, TBAAInfo);
+    }
+  }
+  return Call;
 }
 
 /// Emit a call to llvm.{sadd,uadd,ssub,usub,smul,umul}.with.overflow.*
