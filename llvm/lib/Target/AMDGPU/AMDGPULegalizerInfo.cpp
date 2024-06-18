@@ -283,7 +283,9 @@ static const LLT S1 = LLT::scalar(1);
 static const LLT S8 = LLT::scalar(8);
 static const LLT S16 = LLT::scalar(16);
 static const LLT S32 = LLT::scalar(32);
+static const LLT F32 = LLT::float32();
 static const LLT S64 = LLT::scalar(64);
+static const LLT F64 = LLT::float64();
 static const LLT S96 = LLT::scalar(96);
 static const LLT S128 = LLT::scalar(128);
 static const LLT S160 = LLT::scalar(160);
@@ -1647,6 +1649,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Atomic.legalFor({{S32, GlobalPtr}});
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
+
+  getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
 
   if (ST.hasGFX90AInsts()) {
     // These are legal with some caveats, and should have undergone expansion in
@@ -5401,9 +5406,9 @@ static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
   case Intrinsic::amdgcn_ds_fadd:
     return AMDGPU::G_ATOMICRMW_FADD;
   case Intrinsic::amdgcn_ds_fmin:
-    return AMDGPU::G_AMDGPU_ATOMIC_FMIN;
+    return AMDGPU::G_ATOMICRMW_FMIN;
   case Intrinsic::amdgcn_ds_fmax:
-    return AMDGPU::G_AMDGPU_ATOMIC_FMAX;
+    return AMDGPU::G_ATOMICRMW_FMAX;
   default:
     llvm_unreachable("not a DS FP intrinsic");
   }
