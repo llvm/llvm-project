@@ -647,8 +647,8 @@ private:
       return true;
 
     // Limit this to being an access modifier that follows.
-    if (AttrTok->isOneOf(tok::kw_public, tok::kw_private, tok::kw_protected,
-                         tok::comment, tok::kw_class, tok::kw_static,
+    if (AttrTok->isAccessSpecifierKeyword() ||
+        AttrTok->isOneOf(tok::comment, tok::kw_class, tok::kw_static,
                          tok::l_square, Keywords.kw_internal)) {
       return true;
     }
@@ -1419,7 +1419,7 @@ private:
             Tok->setType(TT_CtorInitializerColon);
         } else {
           Tok->setType(TT_InheritanceColon);
-          if (Prev->isOneOf(tok::kw_public, tok::kw_private, tok::kw_protected))
+          if (Prev->isAccessSpecifierKeyword())
             Line.Type = LT_AccessModifier;
         }
       } else if (canBeObjCSelectorComponent(*Tok->Previous) && Tok->Next &&
@@ -2333,7 +2333,7 @@ private:
       if (Current.Previous) {
         bool IsIdentifier =
             Style.isJavaScript()
-                ? Keywords.IsJavaScriptIdentifier(
+                ? Keywords.isJavaScriptIdentifier(
                       *Current.Previous, /* AcceptIdentifierName= */ true)
                 : Current.Previous->is(tok::identifier);
         if (IsIdentifier ||
@@ -4949,11 +4949,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
 
     // space between method modifier and opening parenthesis of a tuple return
     // type
-    if (Left.isOneOf(tok::kw_public, tok::kw_private, tok::kw_protected,
-                     tok::kw_virtual, tok::kw_extern, tok::kw_static,
-                     Keywords.kw_internal, Keywords.kw_abstract,
-                     Keywords.kw_sealed, Keywords.kw_override,
-                     Keywords.kw_async, Keywords.kw_unsafe) &&
+    if ((Left.isAccessSpecifierKeyword() ||
+         Left.isOneOf(tok::kw_virtual, tok::kw_extern, tok::kw_static,
+                      Keywords.kw_internal, Keywords.kw_abstract,
+                      Keywords.kw_sealed, Keywords.kw_override,
+                      Keywords.kw_async, Keywords.kw_unsafe)) &&
         Right.is(tok::l_paren)) {
       return true;
     }
@@ -4979,7 +4979,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     }
     // In tagged template literals ("html`bar baz`"), there is no space between
     // the tag identifier and the template string.
-    if (Keywords.IsJavaScriptIdentifier(Left,
+    if (Keywords.isJavaScriptIdentifier(Left,
                                         /* AcceptIdentifierName= */ false) &&
         Right.is(TT_TemplateString)) {
       return false;
@@ -5074,9 +5074,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       return Style.SpaceBeforeParensOptions.AfterControlStatements ||
              spaceRequiredBeforeParens(Right);
     }
-    if ((Left.isOneOf(tok::kw_static, tok::kw_public, tok::kw_private,
-                      tok::kw_protected) ||
-         Left.isOneOf(Keywords.kw_final, Keywords.kw_abstract,
+    if ((Left.isAccessSpecifierKeyword() ||
+         Left.isOneOf(tok::kw_static, Keywords.kw_final, Keywords.kw_abstract,
                       Keywords.kw_native)) &&
         Right.is(TT_TemplateOpener)) {
       return true;
@@ -5699,9 +5698,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (isAllmanBrace(Left) || isAllmanBrace(Right)) {
     auto *FirstNonComment = Line.getFirstNonComment();
     bool AccessSpecifier =
-        FirstNonComment &&
-        FirstNonComment->isOneOf(Keywords.kw_internal, tok::kw_public,
-                                 tok::kw_private, tok::kw_protected);
+        FirstNonComment && (FirstNonComment->is(Keywords.kw_internal) ||
+                            FirstNonComment->isAccessSpecifierKeyword());
 
     if (Style.BraceWrapping.AfterEnum) {
       if (Line.startsWith(tok::kw_enum) ||
@@ -5887,13 +5885,13 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   } else if (Style.isJavaScript()) {
     const FormatToken *NonComment = Right.getPreviousNonComment();
     if (NonComment &&
-        NonComment->isOneOf(
-            tok::kw_return, Keywords.kw_yield, tok::kw_continue, tok::kw_break,
-            tok::kw_throw, Keywords.kw_interface, Keywords.kw_type,
-            tok::kw_static, tok::kw_public, tok::kw_private, tok::kw_protected,
-            Keywords.kw_readonly, Keywords.kw_override, Keywords.kw_abstract,
-            Keywords.kw_get, Keywords.kw_set, Keywords.kw_async,
-            Keywords.kw_await)) {
+        (NonComment->isAccessSpecifierKeyword() ||
+         NonComment->isOneOf(
+             tok::kw_return, Keywords.kw_yield, tok::kw_continue, tok::kw_break,
+             tok::kw_throw, Keywords.kw_interface, Keywords.kw_type,
+             tok::kw_static, Keywords.kw_readonly, Keywords.kw_override,
+             Keywords.kw_abstract, Keywords.kw_get, Keywords.kw_set,
+             Keywords.kw_async, Keywords.kw_await))) {
       return false; // Otherwise automatic semicolon insertion would trigger.
     }
     if (Right.NestingLevel == 0 &&
