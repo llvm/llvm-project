@@ -31,6 +31,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
@@ -201,7 +202,7 @@ AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
       exe_ctx, &wrapper_struct_addr, options, diagnostics, ret);
   if (results != eExpressionCompleted)
     return llvm::createStringError(
-        "Error evaluating Print Object function: %d.\n", results);
+        "could not evaluate print object function: " + toString(results));
 
   addr_t result_ptr = ret.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
 
