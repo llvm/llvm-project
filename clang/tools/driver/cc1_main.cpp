@@ -63,7 +63,7 @@ using namespace llvm::opt;
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
-  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine*>(UserData);
+  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine *>(UserData);
 
   Diags.Report(diag::err_fe_error_backend) << Message;
 
@@ -139,7 +139,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getAllProcessorFeatures();
+      MCInfo->getAllProcessorFeatures();
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
@@ -164,6 +164,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
+  // Cratels: 编译器实例，类似 clang 编译器的上下文
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
@@ -189,9 +190,12 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     Diags.setSeverity(diag::remark_cc1_round_trip_generated,
                       diag::Severity::Remark, {});
 
+  // Cratels: 解析参数，将参数解析之后塞进 Clang
+  // 实例中，可见后续Clang->getFrontendOpts()，Clang->getHeaderSearchOpts()等操作
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
 
+  // Cratels: 解析完参数后直接使用
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0);
@@ -208,7 +212,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
@@ -217,8 +221,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
-  llvm::install_fatal_error_handler(LLVMErrorHandler,
-                                  static_cast<void*>(&Clang->getDiagnostics()));
+  llvm::install_fatal_error_handler(
+      LLVMErrorHandler, static_cast<void *>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success) {
@@ -227,6 +231,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   }
 
   // Execute the frontend actions.
+  // Cratels: 开始执行前端动作
   {
     llvm::TimeTraceScope TimeScope("ExecuteCompiler");
     Success = ExecuteCompilerInvocation(Clang.get());
