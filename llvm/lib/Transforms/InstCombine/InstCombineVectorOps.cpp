@@ -2063,8 +2063,10 @@ static BinopElts getAlternateBinop(BinaryOperator *BO, const DataLayout &DL) {
   case Instruction::Shl: {
     // shl X, C --> mul X, (1 << C)
     Constant *C;
-    if (match(BO1, m_Constant(C))) {
-      Constant *ShlOne = ConstantExpr::getShl(ConstantInt::get(Ty, 1), C);
+    if (match(BO1, m_ImmConstant(C))) {
+      Constant *ShlOne = ConstantFoldBinaryOpOperands(
+          Instruction::Shl, ConstantInt::get(Ty, 1), C, DL);
+      assert(ShlOne && "Constant folding of immediate constants failed");
       return {Instruction::Mul, BO0, ShlOne};
     }
     break;
