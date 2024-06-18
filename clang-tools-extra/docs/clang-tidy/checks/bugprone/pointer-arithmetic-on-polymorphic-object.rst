@@ -3,13 +3,16 @@
 bugprone-pointer-arithmetic-on-polymorphic-object
 =================================================
 
-Finds pointer arithmetic performed on classes that declare a virtual function.
+Finds pointer arithmetic performed on classes that contain a virtual function.
 
-Pointer arithmetic on polymorphic objects where the pointer's static type is 
-different from its dynamic type is undefined behavior, as the two types can
-have different sizes.
+Pointer arithmetic on polymorphic objects where the pointer's static type is
+different from its dynamic type is undefined behavior, as the two types could
+have different sizes, and thus the vtable pointer could point to an
+invalid address.
+
 Finding pointers where the static type contains a virtual member function is a
-good heuristic, as the pointer is likely to point to a different, derived class.
+good heuristic, as the pointer is likely to point to a different,
+derived object.
 
 Example:
 
@@ -32,18 +35,16 @@ Example:
     delete[] static_cast<Derived*>(b);
   }
 
-This check corresponds to the SEI Cert rule `CTR56-CPP: Do not use pointer arithmetic on polymorphic objects <https://wiki.sei.cmu.edu/confluence/display/cplusplus/CTR56-CPP.+Do+not+use+pointer+arithmetic+on+polymorphic+objects>`_.
-
 Options
 -------
 
-.. option:: MatchInheritedVirtualFunctions
+.. option:: IgnoreInheritedVirtualFunctions
 
-  When `true`, all classes with a virtual function are considered,
-  even if the function is inherited.
+  When `true`, objects that only inherit a virtual function are not checked.
   Classes that do not declare a new virtual function are excluded
   by default, as they make up the majority of false positives.
-  Default: `false`.
+  Default: `true`.
+  When using the alias `cert-ctr56-cpp`, default: `false`.
 
   .. code-block:: c++
   
@@ -55,7 +56,14 @@ Options
   
       Derived *d = new Derived[10]; // Derived overrides the destructor, and
                                     // declares no other virtual functions
-      d += 1; // warning only if MatchVirtualDeclarationsOnly is set to true
+      d += 1; // warning only if IgnoreVirtualDeclarationsOnly is set to false
   
       delete[] d;
     }
+
+References
+----------
+
+This check corresponds to the SEI Cert rule
+`CTR56-CPP. Do not use pointer arithmetic on polymorphic objects
+<https://wiki.sei.cmu.edu/confluence/display/cplusplus/CTR56-CPP.+Do+not+use+pointer+arithmetic+on+polymorphic+objects>`_.

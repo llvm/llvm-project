@@ -16,39 +16,42 @@ namespace clang::tidy::bugprone {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, isAbstract) { return Node.isAbstract(); }
+AST_MATCHER(CXXRecordDecl, isPolymorphic) { return Node.isPolymorphic(); }
 } // namespace
 
 PointerArithmeticOnPolymorphicObjectCheck::
     PointerArithmeticOnPolymorphicObjectCheck(StringRef Name,
                                               ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      MatchInheritedVirtualFunctions(
-          Options.get("MatchInheritedVirtualFunctions", false)) {}
+      IgnoreInheritedVirtualFunctions(
+          Options.get("IgnoreInheritedVirtualFunctions", true)) {}
 
 void PointerArithmeticOnPolymorphicObjectCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "MatchInheritedVirtualFunctions", true);
+  Options.store(Opts, "IgnoreInheritedVirtualFunctions",
+                IgnoreInheritedVirtualFunctions);
 }
 
 void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
     MatchFinder *Finder) {
   const auto PolymorphicPointerExpr =
-      expr(hasType(hasCanonicalType(
-               pointerType(pointee(hasCanonicalType(hasDeclaration(
-                   cxxRecordDecl(unless(isFinal()),
-                                 cxxRecordDecl(hasMethod(isVirtual()))))))))))
+      expr(hasType(hasCanonicalType(pointerType(pointee(hasCanonicalType(
+               hasDeclaration(cxxRecordDecl(unless(isFinal()), isPolymorphic())
+                                  .bind("pointee"))))))))
           .bind("pointer");
 
   const auto PointerExprWithVirtualMethod =
-      expr(hasType(hasCanonicalType(pointerType(
-               pointee(hasCanonicalType(hasDeclaration(cxxRecordDecl(
-                   unless(isFinal()),
-                   anyOf(hasMethod(isVirtualAsWritten()), isAbstract())))))))))
+      expr(hasType(hasCanonicalType(
+               pointerType(pointee(hasCanonicalType(hasDeclaration(
+                   cxxRecordDecl(
+                       unless(isFinal()),
+                       anyOf(hasMethod(isVirtualAsWritten()), isAbstract()))
+                       .bind("pointee"))))))))
           .bind("pointer");
 
-  const auto SelectedPointerExpr = MatchInheritedVirtualFunctions
-                                       ? PolymorphicPointerExpr
-                                       : PointerExprWithVirtualMethod;
+  const auto SelectedPointerExpr = IgnoreInheritedVirtualFunctions
+                                       ? PointerExprWithVirtualMethod
+                                       : PolymorphicPointerExpr;
 
   const auto ArraySubscript = arraySubscriptExpr(hasBase(SelectedPointerExpr));
 
@@ -59,20 +62,20 @@ void PointerArithmeticOnPolymorphicObjectCheck::registerMatchers(
   const auto UnaryOperators = unaryOperator(
       hasAnyOperatorName("++", "--"), hasUnaryOperand(SelectedPointerExpr));
 
-  Finder->addMatcher(
-      expr(anyOf(ArraySubscript, BinaryOperators, UnaryOperators)), this);
+  Finder->addMatcher(ArraySubscript, this);
+  Finder->addMatcher(BinaryOperators, this);
+  Finder->addMatcher(UnaryOperators, this);
 }
 
 void PointerArithmeticOnPolymorphicObjectCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *PointerExpr = Result.Nodes.getNodeAs<Expr>("pointer");
-  const CXXRecordDecl *PointeeType =
-      PointerExpr->getType()->getPointeeType()->getAsCXXRecordDecl();
+  const auto *PointeeDecl = Result.Nodes.getNodeAs<CXXRecordDecl>("pointee");
 
   diag(PointerExpr->getBeginLoc(),
-       "pointer arithmetic on polymorphic class '%0', which can result in "
-       "undefined behavior if the pointee is a different class")
-      << PointeeType->getName() << PointeeType->getSourceRange();
+       "pointer arithmetic on polymorphic object of type '%0', which can "
+       "result in undefined behavior if the pointee is a different object")
+      << PointeeDecl->getName() << PointeeDecl->getSourceRange();
 }
 
 } // namespace clang::tidy::bugprone

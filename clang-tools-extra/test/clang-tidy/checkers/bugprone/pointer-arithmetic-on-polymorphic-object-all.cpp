@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-pointer-arithmetic-on-polymorphic-object %t -- \
 // RUN: -config="{CheckOptions: \
-// RUN: {bugprone-pointer-arithmetic-on-polymorphic-object.MatchInheritedVirtualFunctions: true}}"
+// RUN: {bugprone-pointer-arithmetic-on-polymorphic-object.IgnoreInheritedVirtualFunctions: false}}"
 
 class Base {
 public:  
@@ -28,19 +28,19 @@ void operators() {
   Base *b = new Derived[10];
 
   b += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base', which can result in undefined behavior if the pointee is a different class [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   b = b + 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer arithmetic on polymorphic class 'Base', which can result in undefined behavior if the pointee is a different class [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   b++;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base', which can result in undefined behavior if the pointee is a different class [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   --b;
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pointer arithmetic on polymorphic class 'Base', which can result in undefined behavior if the pointee is a different class [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   b[1];
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base', which can result in undefined behavior if the pointee is a different class [bugprone-pointer-arithmetic-on-polymorphic-object]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base', which can result in undefined behavior if the pointee is a different object [bugprone-pointer-arithmetic-on-polymorphic-object]
 
   delete[] static_cast<Derived*>(b);
 }
@@ -51,7 +51,7 @@ void subclassWarnings() {
   // False positive that's impossible to distinguish without
   // path-sensitive analysis, but the code is bug-prone regardless.
   b += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base'
 
   delete[] b;
 
@@ -60,7 +60,7 @@ void subclassWarnings() {
   Derived *d = new Derived[10];
 
   d += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Derived'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Derived'
 
   delete[] d;
 
@@ -78,14 +78,14 @@ void abstractWarnings() {
   AbstractBase *ab = new AbstractOverride[10];
 
   ab += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'AbstractBase'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'AbstractBase'
 
   delete[] static_cast<AbstractOverride*>(ab);
 
   AbstractInherited *ai = new AbstractOverride[10];
 
   ai += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'AbstractInherited'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'AbstractInherited'
 
   delete[] static_cast<AbstractOverride*>(ai);
 
@@ -93,7 +93,7 @@ void abstractWarnings() {
   AbstractOverride *ao = new AbstractOverride[10];
 
   ao += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'AbstractOverride'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'AbstractOverride'
 
   delete[] ao;
 }
@@ -102,12 +102,12 @@ template <typename T>
 void templateWarning(T *t) {
   // FIXME: Show the location of the template instantiation in diagnostic.
   t += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base'
 }
 
 void functionArgument(Base *b) {
   b += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base'
 
   templateWarning(b);
 }
@@ -123,19 +123,19 @@ using FinalDerivedPtr = FinalDerived*;
 void typeAliases(BaseAlias *b, DerivedAlias *d, FinalDerivedAlias *fd,
                  BasePtr bp, DerivedPtr dp, FinalDerivedPtr fdp) {
   b += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base'
 
   d += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Derived'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Derived'
 
   fd += 1;
   // no-warning
 
   bp += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Base'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Base'
 
   dp += 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic class 'Derived'
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: pointer arithmetic on polymorphic object of type 'Derived'
 
   fdp += 1;
   // no-warning

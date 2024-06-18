@@ -30,7 +30,7 @@ public:
   }
 
 private:
-  const bool MatchInheritedVirtualFunctions;
+  const bool IgnoreInheritedVirtualFunctions;
 };
 
 } // namespace clang::tidy::bugprone
