@@ -1034,16 +1034,13 @@ static const char *ValueProfKindStr[] = {
 
 Error InstrProfWriter::validateRecord(const InstrProfRecord &Func) {
   for (uint32_t VK = 0; VK <= IPVK_Last; VK++) {
-    uint32_t NS = Func.getNumValueSites(VK);
-    if (!NS)
+    if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
       continue;
+    uint32_t NS = Func.getNumValueSites(VK);
     for (uint32_t S = 0; S < NS; S++) {
-      uint32_t ND = Func.getNumValueDataForSite(VK, S);
-      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       DenseSet<uint64_t> SeenValues;
-      for (uint32_t I = 0; I < ND; I++)
-        if ((VK != IPVK_IndirectCallTarget && VK != IPVK_VTableTarget) &&
-            !SeenValues.insert(VD[I].Value).second)
+      for (const auto &V : Func.getValueArrayForSite(VK, S))
+        if (!SeenValues.insert(V.Value).second)
           return make_error<InstrProfError>(instrprof_error::invalid_prof);
     }
   }

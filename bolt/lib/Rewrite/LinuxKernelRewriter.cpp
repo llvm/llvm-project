@@ -273,9 +273,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
+  void processAltInstructionsPostCFG();
   Error tryReadAltInstructions(uint32_t AltInstFeatureSize,
                                bool AltInstHasPadLen, bool ParseOnly);
-  Error rewriteAltInstructions();
 
   /// Read .pci_fixup
   Error readPCIFixupTable();
@@ -326,6 +326,8 @@ public:
     if (Error E = processORCPostCFG())
       return E;
 
+    processAltInstructionsPostCFG();
+
     return Error::success();
   }
 
@@ -333,9 +335,6 @@ public:
     // Since rewriteExceptionTable() can mark functions as non-simple, run it
     // before other rewriters that depend on simple/emit status.
     if (Error E = rewriteExceptionTable())
-      return E;
-
-    if (Error E = rewriteAltInstructions())
       return E;
 
     if (Error E = rewriteParaInstructions())
@@ -1486,12 +1485,11 @@ Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
   return Error::success();
 }
 
-Error LinuxKernelRewriter::rewriteAltInstructions() {
-  // Disable output of functions with alt instructions before the rewrite
-  // support is complete.
+void LinuxKernelRewriter::processAltInstructionsPostCFG() {
+  // Disable optimization and output of functions with alt instructions before
+  // the rewrite support is complete. Alt instructions can modify the control
+  // flow, hence we may end up deleting seemingly unreachable code.
   skipFunctionsWithAnnotation("AltInst");
-
-  return Error::success();
 }
 
 /// When the Linux kernel needs to handle an error associated with a given PCI
