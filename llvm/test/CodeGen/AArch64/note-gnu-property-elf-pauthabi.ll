@@ -27,7 +27,7 @@
 ; OBJ: Displaying notes found in: .note.gnu.property
 ; OBJ-NEXT:   Owner                 Data size	Description
 ; OBJ-NEXT:   GNU                   0x00000018	NT_GNU_PROPERTY_TYPE_0 (property note)
-; OBJ-NEXT:   AArch64 PAuth ABI core info: platform 0x10000002 (llvm_linux), version 0x55 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini)
+; OBJ-NEXT:   AArch64 PAuth ABI core info: platform 0x10000002 (llvm_linux), version 0x55 (PointerAuthIntrinsics, !PointerAuthCalls, PointerAuthReturns, !PointerAuthAuthTraps, PointerAuthVTPtrAddressDiscrimination, !PointerAuthVTPtrTypeDiscrimination, PointerAuthInitFini, !PointerAuthELFGOT)
 
 ; ERR: either both or no 'aarch64-elf-pauthabi-platform' and 'aarch64-elf-pauthabi-version' module flags must be present
 
