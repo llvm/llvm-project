@@ -1,5 +1,7 @@
+// RUN: printf "\0" > %S/Inputs/null_byte.bin
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify=expected,cxx -Wno-c23-extensions
 // RUN: %clang_cc1 -x c -std=c23 %s -fsyntax-only --embed-dir=%S/Inputs -verify=expected,c
+// RUN: rm %S/Inputs/null_byte.bin
 #embed <media/empty>
 ;
 
