@@ -574,7 +574,7 @@ struct __tree_node_base_types {
 #endif
 
 private:
-  static_assert((is_same<typename pointer_traits<_VoidPtr>::element_type, void>::value),
+  static_assert(is_same<typename pointer_traits<_VoidPtr>::element_type, void>::value,
                 "_VoidPtr does not point to unqualified void type");
 };
 
@@ -614,7 +614,7 @@ public:
 
 private:
   static_assert(!is_const<__node_type>::value, "_NodePtr should never be a pointer to const");
-  static_assert((is_same<__rebind_pointer_t<_VoidPtr, __node_type>, _NodePtr>::value),
+  static_assert(is_same<__rebind_pointer_t<_VoidPtr, __node_type>, _NodePtr>::value,
                 "_VoidPtr does not rebind to _NodePtr.");
 };
 
@@ -925,11 +925,11 @@ private:
   // check for sane allocator pointer rebinding semantics. Rebinding the
   // allocator for a new pointer type should be exactly the same as rebinding
   // the pointer using 'pointer_traits'.
-  static_assert((is_same<__node_pointer, typename __node_traits::pointer>::value),
+  static_assert(is_same<__node_pointer, typename __node_traits::pointer>::value,
                 "Allocator does not rebind pointers in a sane manner.");
   typedef __rebind_alloc<__node_traits, __node_base> __node_base_allocator;
   typedef allocator_traits<__node_base_allocator> __node_base_traits;
-  static_assert((is_same<__node_base_pointer, typename __node_base_traits::pointer>::value),
+  static_assert(is_same<__node_base_pointer, typename __node_base_traits::pointer>::value,
                 "Allocator does not rebind pointers in a sane manner.");
 
 private:
@@ -1401,7 +1401,7 @@ template <class _ForwardIterator>
 void __tree<_Tp, _Compare, _Allocator>::__assign_unique(_ForwardIterator __first, _ForwardIterator __last) {
   typedef iterator_traits<_ForwardIterator> _ITraits;
   typedef typename _ITraits::value_type _ItValueType;
-  static_assert((is_same<_ItValueType, __container_value_type>::value),
+  static_assert(is_same<_ItValueType, __container_value_type>::value,
                 "__assign_unique may only be called with the containers value type");
   static_assert(
       __has_forward_iterator_category<_ForwardIterator>::value, "__assign_unique requires a forward iterator");
@@ -1531,7 +1531,7 @@ __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::~__tree() {
-  static_assert((is_copy_constructible<value_compare>::value), "Comparator must be copy-constructible.");
+  static_assert(is_copy_constructible<value_compare>::value, "Comparator must be copy-constructible.");
   destroy(__root());
 }
 
