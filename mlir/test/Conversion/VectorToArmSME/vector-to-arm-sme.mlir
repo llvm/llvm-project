@@ -1320,3 +1320,35 @@ func.func @vector_extract_element_f64(%row: index, %col: index) -> f64 {
   %el = vector.extract %tile[%row, %col] : f64 from vector<[2]x[2]xf64>
   return %el : f64
 }
+
+// -----
+
+// CHECK-LABEL: @dynamic_vector_extract_mask_to_psel(
+// CHECK-SAME:                                       %[[A:[a-z0-9]+]]:  index,
+// CHECK-SAME:                                       %[[B:[a-z0-9]+]]: index,
+// CHECK-SAME:                                       %[[INDEX:[a-z0-9]+]]: index)
+func.func @dynamic_vector_extract_mask_to_psel(%a: index, %b: index, %index: index) -> vector<[8]xi1>
+{
+  // CHECK: %[[MASK_ROWS:.*]] = vector.create_mask %[[A]] : vector<[4]xi1>
+  // CHECK: %[[MASK_COLS:.*]] = vector.create_mask %[[B]] : vector<[8]xi1>
+  // CHECK: arm_sve.psel %[[MASK_COLS]], %[[MASK_ROWS]][%[[INDEX]]] : vector<[8]xi1>, vector<[4]xi1>
+  %mask = vector.create_mask %a, %b : vector<[4]x[8]xi1>
+  %slice = vector.extract %mask[%index] : vector<[8]xi1> from vector<[4]x[8]xi1>
+  return %slice : vector<[8]xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_extract_mask_to_psel(
+// CHECK-SAME:                               %[[A:[a-z0-9]+]]:  index,
+// CHECK-SAME:                               %[[B:[a-z0-9]+]]: index)
+func.func @vector_extract_mask_to_psel(%a: index, %b: index) -> vector<[2]xi1>
+{
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[MASK_ROWS:.*]] = vector.create_mask %[[A]] : vector<[16]xi1>
+  // CHECK: %[[MASK_COLS:.*]] = vector.create_mask %[[B]] : vector<[2]xi1>
+  // CHECK: arm_sve.psel %[[MASK_COLS]], %[[MASK_ROWS]][%[[C1]]] : vector<[2]xi1>, vector<[16]xi1>
+  %mask = vector.create_mask %a, %b : vector<[16]x[2]xi1>
+  %slice = vector.extract %mask[1] : vector<[2]xi1> from vector<[16]x[2]xi1>
+  return %slice : vector<[2]xi1>
+}
