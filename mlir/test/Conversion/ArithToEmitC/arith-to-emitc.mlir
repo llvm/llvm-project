@@ -422,6 +422,17 @@ func.func @arith_cmpi_predicates(%arg0: i32, %arg1: i32) {
 
 // -----
 
+func.func @arith_negf(%arg0: f32) -> f32 {
+  // CHECK-LABEL: arith_negf
+  // CHECK-SAME: %[[Arg0:[^ ]*]]: f32
+  // CHECK: %[[N:[^ ]*]] = emitc.unary_minus %[[Arg0]] : (f32) -> f32
+  %n = arith.negf %arg0 : f32
+  // CHECK: return %[[N]]
+  return %n: f32
+}
+
+// -----
+
 func.func @arith_float_to_int_cast_ops(%arg0: f32, %arg1: f64) {
   // CHECK: emitc.cast %arg0 : f32 to i32
   %0 = arith.fptosi %arg0 : f32 to i32
