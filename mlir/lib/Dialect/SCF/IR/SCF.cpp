@@ -625,13 +625,13 @@ FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
   // Create a new loop before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(getOperation());
-  auto inits = llvm::to_vector(getOutputs());
+  SmallVector<Value> inits(getOutputs());
   inits.append(newInitOperands.begin(), newInitOperands.end());
   scf::ForallOp newLoop = rewriter.create<scf::ForallOp>(
       getLoc(), getMixedLowerBound(), getMixedUpperBound(), getMixedStep(),
       inits, getMapping());
 
-  newLoop.getTerminator().erase();
+  rewriter.eraseOp(newLoop.getTerminator());
   // Move the loop body to the new op.
   rewriter.mergeBlocks(getBody(), newLoop.getBody(),
                        newLoop.getBody()->getArguments().take_front(

@@ -1110,8 +1110,8 @@ void fuseTerminator(RewriterBase &rewriter, scf::ForOp source,
   rewriter.replaceOp(fused.getBody()->getTerminator(), newTerm);
 }
 
-// TODO: We should maybe add this as a method to LoopLikeOpInterface.
-//       For now, this acts as a placeholder.
+// TODO: We should maybe add a method to LoopLikeOpInterface that will
+// facilitate this transformation. For now, this acts as a placeholder.
 template <>
 void fuseTerminator(RewriterBase &rewriter, LoopLikeOpInterface source,
                     LoopLikeOpInterface &fused, IRMapping &mapping) {
@@ -1162,7 +1162,7 @@ LoopLikeOpInterface createFused(LoopLikeOpInterface target,
   for (Operation &op : sourceRegion->front().without_terminator())
     rewriter.clone(op, mapping);
 
-  // TODO: Replace with interface method if added
+  // TODO: Replace with corresponding interface method if added
   fuseTerminator(rewriter, source, fusedLoop, mapping);
 
   return fusedLoop;
