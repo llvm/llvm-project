@@ -13,6 +13,7 @@
 #include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/edit_distance.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -22,6 +23,10 @@ namespace opts {
 extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
+
+cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
+    "name-similarity-function-matching-threshold", cl::desc("edit distance."),
+    cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
 static llvm::cl::opt<bool>
     IgnoreHash("profile-ignore-hash",
@@ -414,6 +419,30 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
       matchProfileToFunction(YamlBF, *BF);
+
+  // Uses name similarity to match functions that were not matched by name.
+  for (auto YamlBF : YamlBP.Functions) {
+    if (YamlBF.Used)
+      continue;
+
+    unsigned MinEditDistance = UINT_MAX;
+    BinaryFunction *ClosestNameBF = nullptr;
+
+    for (auto &[_, BF] : BC.getBinaryFunctions()) {
+      if (ProfiledFunctions.count(&BF))
+        continue;
+
+      unsigned BFEditDistance = BF.getOneName().edit_distance(YamlBF.Name);
+      if (BFEditDistance < MinEditDistance) {
+        MinEditDistance = BFEditDistance;
+        ClosestNameBF = &BF;
+      }
+    }
+
+    if (ClosestNameBF &&
+      MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold)
+      matchProfileToFunction(YamlBF, *ClosestNameBF);
+  }
 
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
