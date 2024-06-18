@@ -398,13 +398,43 @@ else()
       freelist.h
     DEPENDS
       libc.src.__support.fixedvector
-      libc.src.__support.CPP.cstddef
       libc.src.__support.CPP.array
+      libc.src.__support.CPP.cstddef
+      libc.src.__support.CPP.new
       libc.src.__support.CPP.span
   )
-  add_entrypoint_external(
-    malloc
+  add_header_library(
+    freelist_heap
+    HDRS
+      freelist_heap.h
+    DEPENDS
+      .block
+      .freelist
+      libc.src.__support.CPP.cstddef
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.optional
+      libc.src.__support.CPP.span
+      libc.src.__support.libc_assert
+      libc.src.string.memory_utils.inline_memcpy
+      libc.src.string.memory_utils.inline_memset
   )
+  # Only add malloc in full build mode.  Use the system malloc in overlay mode.
+  if(LLVM_LIBC_FULL_BUILD)
+    add_entrypoint_object(
+      malloc
+      SRCS
+        freelist_malloc.cpp
+      HDRS
+        malloc.h
+      DEPENDS
+        .freelist_heap
+    )
+  else()
+    add_entrypoint_external(
+      malloc
+    )
+  endif()
+
   add_entrypoint_external(
     free
   )

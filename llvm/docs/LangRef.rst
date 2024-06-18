@@ -812,6 +812,10 @@ doesn't). These kinds of structs (we may call them homogeneous scalable vector
 structs) are considered sized and can be used in loads, stores, allocas, but
 not GEPs.
 
+Globals with ``toc-data`` attribute set are stored in TOC of XCOFF. Their
+alignments are not larger than that of a TOC entry. Optimizations should not
+increase their alignments to mitigate TOC overflow.
+
 Syntax::
 
       @<GlobalVarName> = [Linkage] [PreemptionSpecifier] [Visibility]
@@ -5658,7 +5662,7 @@ it. For example:
 
     call void asm sideeffect "something bad", ""(), !srcloc !42
     ...
-    !42 = !{ i32 1234567 }
+    !42 = !{ i64 1234567 }
 
 It is up to the front-end to make sense of the magic numbers it places
 in the IR. If the MDNode contains multiple constants, the code generator
@@ -11390,10 +11394,10 @@ For ``nuw`` (no unsigned wrap):
 For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
 if the ``getelementptr`` has any non-zero indices, the following rules apply:
 
- * The base pointer has an *in bounds* address of an allocated object, which
-   means that it points into an allocated object, or to its end. Note that the
-   object does not have to be live anymore; being in-bounds of a deallocated
-   object is sufficient.
+ * The base pointer has an *in bounds* address of the allocated object that it
+   is :ref:`based <pointeraliasing>` on. This means that it points into that
+   allocated object, or to its end. Note that the object does not have to be
+   live anymore; being in-bounds of a deallocated object is sufficient.
  * During the successive addition of offsets to the address, the resulting
    pointer must remain *in bounds* of the allocated object at each step.
 
@@ -14411,7 +14415,7 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.parameters(ptr <name>, i64 <hash>,
-                                                   i32 <bitmap-bytes>)
+                                                   i32 <bitmap-bits>)
 
 Overview:
 """""""""
@@ -14429,7 +14433,7 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bytes required by the function to
+The third argument is the number of bitmap bits required by the function to
 record the number of test vectors executed for each boolean expression.
 
 Semantics:
@@ -14441,52 +14445,6 @@ to generate the appropriate data structures and the code to instrument MC/DC
 test vectors in a format that can be written out by a compiler runtime and
 consumed via the ``llvm-profdata`` tool.
 
-'``llvm.instrprof.mcdc.condbitmap.update``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-::
-
-      declare void @llvm.instrprof.mcdc.condbitmap.update(ptr <name>, i64 <hash>,
-                                                          i32 <condition-id>,
-                                                          ptr <mcdc-temp-addr>,
-                                                          i1 <bool-value>)
-
-Overview:
-"""""""""
-
-The '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic is used to track
-MC/DC condition evaluation for each condition in a boolean expression.
-
-Arguments:
-""""""""""
-
-The first argument is a pointer to a global variable containing the
-name of the entity being instrumented. This should generally be the
-(mangled) function name for a set of counters.
-
-The second argument is a hash value that can be used by the consumer
-of the profile data to detect changes to the instrumented source.
-
-The third argument is an ID of a condition to track. This value is used as a
-bit index into the condition bitmap.
-
-The fourth argument is the address of the condition bitmap.
-
-The fifth argument is the boolean value representing the evaluation of the
-condition (true or false)
-
-Semantics:
-""""""""""
-
-This intrinsic represents the update of a condition bitmap that is local to a
-function and will cause the ``-instrprof`` pass to generate the code to
-instrument the control flow around each condition in a boolean expression. The
-ID of each condition corresponds to a bit index in the condition bitmap which
-is set based on the evaluation of the condition.
-
 '``llvm.instrprof.mcdc.tvbitmap.update``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14496,7 +14454,6 @@ Syntax:
 ::
 
       declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr <name>, i64 <hash>,
-                                                        i32 <bitmap-bytes>)
                                                         i32 <bitmap-index>,
                                                         ptr <mcdc-temp-addr>)
 
@@ -14506,10 +14463,9 @@ Overview:
 The '``llvm.instrprof.mcdc.tvbitmap.update``' intrinsic is used to track MC/DC
 test vector execution after each boolean expression has been fully executed.
 The overall value of the condition bitmap, after it has been successively
-updated using the '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic with
-the true or false evaluation of each condition, uniquely identifies an executed
-MC/DC test vector and is used as a bit index into the global test vector
-bitmap.
+updated with the true or false evaluation of each condition, uniquely identifies
+an executed MC/DC test vector and is used as a bit index into the global test
+vector bitmap.
 
 Arguments:
 """"""""""
@@ -14521,13 +14477,10 @@ name of the entity being instrumented. This should generally be the
 The second argument is a hash value that can be used by the consumer
 of the profile data to detect changes to the instrumented source.
 
-The third argument is the number of bitmap bytes required by the function to
-record the number of test vectors executed for each boolean expression.
-
-The fourth argument is the byte index into the global test vector bitmap
+The third argument is the bit index into the global test vector bitmap
 corresponding to the function.
 
-The fifth argument is the address of the condition bitmap, which contains a
+The fourth argument is the address of the condition bitmap, which contains a
 value representing an executed MC/DC test vector. It is loaded and used as the
 bit index of the test vector bitmap.
 

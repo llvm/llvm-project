@@ -32,7 +32,10 @@ class Z3Config {
 
 public:
   Z3Config() = default;
-
+  Z3Config(const Z3Config &) = delete;
+  Z3Config(Z3Config &&) = default;
+  Z3Config &operator=(Z3Config &) = delete;
+  Z3Config &operator=(Z3Config &&) = default;
   ~Z3Config() { Z3_del_config(Config); }
 }; // end class Z3Config
 
@@ -54,6 +57,11 @@ public:
     // created by the backend
     Z3_set_error_handler(Context, Z3ErrorHandler);
   }
+
+  Z3Context(const Z3Context &) = delete;
+  Z3Context(Z3Context &&) = default;
+  Z3Context &operator=(Z3Context &) = delete;
+  Z3Context &operator=(Z3Context &&) = default;
 
   ~Z3Context() {
     Z3_del_context(Context);
