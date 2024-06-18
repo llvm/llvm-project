@@ -532,7 +532,7 @@ protected:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT;
 #else
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value);
+      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
 #endif
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __list_imp& __c) {
@@ -638,7 +638,7 @@ void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
 #if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #else
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable<allocator_type>::value)
+    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #endif
 {
   _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
@@ -860,8 +860,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
       _NOEXCEPT
 #else
-      _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_swap::value ||
-                 __is_nothrow_swappable<__node_allocator>::value)
+      _NOEXCEPT_(!__node_alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #endif
   {
     base::swap(__c);

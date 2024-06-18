@@ -280,14 +280,14 @@ class __tuple_leaf;
 template <size_t _Ip, class _Hp, bool _Ep>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 swap(__tuple_leaf<_Ip, _Hp, _Ep>& __x, __tuple_leaf<_Ip, _Hp, _Ep>& __y)
-    _NOEXCEPT_(__is_nothrow_swappable<_Hp>::value) {
+    _NOEXCEPT_(__is_nothrow_swappable_v<_Hp>) {
   swap(__x.get(), __y.get());
 }
 
 template <size_t _Ip, class _Hp, bool _Ep>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 swap(const __tuple_leaf<_Ip, _Hp, _Ep>& __x, const __tuple_leaf<_Ip, _Hp, _Ep>& __y)
-    _NOEXCEPT_(__is_nothrow_swappable<const _Hp>::value) {
+    _NOEXCEPT_(__is_nothrow_swappable_v<const _Hp>) {
   swap(__x.get(), __y.get());
 }
 
@@ -363,13 +363,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI __tuple_leaf(__tuple_leaf&& __t)      = default;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int swap(__tuple_leaf& __t)
-      _NOEXCEPT_(__is_nothrow_swappable<__tuple_leaf>::value) {
+      _NOEXCEPT_(__is_nothrow_swappable_v<__tuple_leaf>) {
     std::swap(*this, __t);
     return 0;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int swap(const __tuple_leaf& __t) const
-      _NOEXCEPT_(__is_nothrow_swappable<const __tuple_leaf>::value) {
+      _NOEXCEPT_(__is_nothrow_swappable_v<const __tuple_leaf>) {
     std::swap(*this, __t);
     return 0;
   }
@@ -418,13 +418,13 @@ public:
   __tuple_leaf(__tuple_leaf&&)      = default;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int swap(__tuple_leaf& __t)
-      _NOEXCEPT_(__is_nothrow_swappable<__tuple_leaf>::value) {
+      _NOEXCEPT_(__is_nothrow_swappable_v<__tuple_leaf>) {
     std::swap(*this, __t);
     return 0;
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 int swap(const __tuple_leaf& __rhs) const
-      _NOEXCEPT_(__is_nothrow_swappable<const __tuple_leaf>::value) {
+      _NOEXCEPT_(__is_nothrow_swappable_v<const __tuple_leaf>) {
     std::swap(*this, __rhs);
     return 0;
   }
@@ -497,12 +497,12 @@ struct _LIBCPP_DECLSPEC_EMPTY_BASES __tuple_impl<__tuple_indices<_Indx...>, _Tp.
   __tuple_impl(__tuple_impl&&)      = default;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void swap(__tuple_impl& __t)
-      _NOEXCEPT_(__all<__is_nothrow_swappable<_Tp>::value...>::value) {
+      _NOEXCEPT_(__all<__is_nothrow_swappable_v<_Tp>...>::value) {
     std::__swallow(__tuple_leaf<_Indx, _Tp>::swap(static_cast<__tuple_leaf<_Indx, _Tp>&>(__t))...);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void swap(const __tuple_impl& __t) const
-      _NOEXCEPT_(__all<__is_nothrow_swappable<const _Tp>::value...>::value) {
+      _NOEXCEPT_(__all<__is_nothrow_swappable_v<const _Tp>...>::value) {
     std::__swallow(__tuple_leaf<_Indx, _Tp>::swap(static_cast<const __tuple_leaf<_Indx, _Tp>&>(__t))...);
   }
 };
@@ -977,7 +977,7 @@ public:
 
   // [tuple.swap]
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(tuple& __t)
-      _NOEXCEPT_(__all<__is_nothrow_swappable<_Tp>::value...>::value) {
+      _NOEXCEPT_(__all<__is_nothrow_swappable_v<_Tp>...>::value) {
     __base_.swap(__t.__base_);
   }
 
@@ -1034,9 +1034,9 @@ template <class _Alloc, class... _Tp>
 tuple(allocator_arg_t, _Alloc, tuple<_Tp...>) -> tuple<_Tp...>;
 #  endif
 
-template <class... _Tp, __enable_if_t<__all<__is_swappable<_Tp>::value...>::value, int> = 0>
+template <class... _Tp, __enable_if_t<__all<__is_swappable_v<_Tp>...>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(tuple<_Tp...>& __t, tuple<_Tp...>& __u)
-    _NOEXCEPT_(__all<__is_nothrow_swappable<_Tp>::value...>::value) {
+    _NOEXCEPT_(__all<__is_nothrow_swappable_v<_Tp>...>::value) {
   __t.swap(__u);
 }
 
