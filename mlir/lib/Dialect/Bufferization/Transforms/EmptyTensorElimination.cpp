@@ -137,13 +137,18 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
     for (Value v : emptyTensors) {
       Operation *emptyTensorOp = v.getDefiningOp();
 
+      // The empty tensor op is the operation that we are trying to replace.
+      // If it is one of the values needed as input to the new operation, then
+      // it cannot be eliminated.
+      if (llvm::is_contained(neededValues, emptyTensorOp->getResult(0)))
+        continue;
+
       // Find a suitable insertion point. If no suitable insertion point for
       // the replacement can be found, skip this replacement.
       Operation *insertionPoint =
           findValidInsertionPoint(emptyTensorOp, neededValues);
       if (!insertionPoint)
         continue;
-
       rewriter.setInsertionPoint(insertionPoint);
       Value replacement =
           op.buildSubsetExtraction(rewriter, emptyTensorOp->getLoc());

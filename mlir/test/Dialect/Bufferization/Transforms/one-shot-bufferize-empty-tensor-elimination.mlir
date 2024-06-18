@@ -365,3 +365,24 @@ func.func @multiple_materialize_in_destination_buffer(%m: memref<5xf32>, %f: f32
   bufferization.materialize_in_destination %selected in restrict writable %m : (tensor<5xf32>, memref<5xf32>) -> ()
   return
 }
+
+// -----
+
+// This is a regression test to ensure tensor.extract_slice operations
+// which consume their own results are not created.
+// This would occur in the following example when trying to replace the
+
+// CHECK-ELIM-LABEL: func @multiple_uses_of_empty_by_same_op
+//       CHECK-ELIM: tensor.empty
+//       CHECK-ELIM: linalg.fill
+//       CHECK-ELIM: tensor.insert_slice
+func.func @multiple_uses_of_empty_by_same_op() -> tensor<1x7x1xf32> {
+  // Single empty tensor which is the root of both inputs to tensor.insert_slice
+  %0 = tensor.empty() : tensor<1x7x1xf32>
+
+  %zero = arith.constant 0.0 : f32
+  %filled = linalg.fill ins(%zero : f32) outs(%0 : tensor<1x7x1xf32>) -> tensor<1x7x1xf32>
+
+  %inserted_slice = tensor.insert_slice %filled into %0[0, 0, 0] [1, 7, 1] [1, 1, 1] : tensor<1x7x1xf32> into tensor<1x7x1xf32>
+  return %inserted_slice : tensor<1x7x1xf32>
+}
