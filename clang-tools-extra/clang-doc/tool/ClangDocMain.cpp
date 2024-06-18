@@ -50,7 +50,6 @@ using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
 
-
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
 
