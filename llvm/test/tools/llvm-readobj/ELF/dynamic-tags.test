@@ -8,6 +8,8 @@
 # RUN: llvm-readelf --dynamic-table %t1 \
 # RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=GNU64
 # RUN: llvm-readelf -d %t1 | FileCheck %s --check-prefix=GNU64
+# RUN: llvm-readelf --dynamic-table --pretty-print --elf-output-style=JSON %t1 \
+# RUN:   | FileCheck %s --strict-whitespace --check-prefix=JSON64
 
 #      LLVM64:DynamicSection [ (61 entries)
 # LLVM64-NEXT:  Tag                Type                 Name/Value
@@ -137,6 +139,314 @@
 # GNU64-NEXT:  0x000000006abcdef0 (<unknown:>0x6abcdef0) 0x9988776655443322
 # GNU64-NEXT:  0x0000000076543210 (<unknown:>0x76543210) 0x5555666677778888
 # GNU64-NEXT:  0x0000000000000000 (NULL)                 0x0
+
+# JSON64:   "DynamicSection": [
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1,
+# JSON64-NEXT:      "Value": "Shared library: [D]",
+# JSON64-NEXT:      "Type": "NEEDED"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:		"Tag": 2,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "PLTRELSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 3,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "PLTGOT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 4,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "HASH"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 5,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "STRTAB"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 6,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "SYMTAB"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 7,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "RELA"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 8,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "RELASZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 9,
+# JSON64-NEXT:      "Value": "1929 (bytes)",
+# JSON64-NEXT:      "Type": "RELAENT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 10,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "STRSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 11,
+# JSON64-NEXT:      "Value": "2439 (bytes)",
+# JSON64-NEXT:      "Type": "SYMENT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 12,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "INIT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 13,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "FINI"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 14,
+# JSON64-NEXT:      "Value": "Library soname: [U]",
+# JSON64-NEXT:      "Type": "SONAME"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 15,
+# JSON64-NEXT:      "Value": "Library rpath: [f]",
+# JSON64-NEXT:      "Type": "RPATH"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 16,
+# JSON64-NEXT:      "Value": "0x1234567890ABCDEF",
+# JSON64-NEXT:      "Type": "SYMBOLIC"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 17,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "REL"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 18,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "RELSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 19,
+# JSON64-NEXT:      "Value": "291 (bytes)",
+# JSON64-NEXT:      "Type": "RELENT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 20,
+# JSON64-NEXT:      "Value": "RELA",
+# JSON64-NEXT:      "Type": "PLTREL"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 21,
+# JSON64-NEXT:      "Value": "0xFEDCBA0987654321",
+# JSON64-NEXT:      "Type": "DEBUG"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 22,
+# JSON64-NEXT:      "Value": "0x1122334455667788",
+# JSON64-NEXT:      "Type": "TEXTREL"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 23,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "JMPREL"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 24,
+# JSON64-NEXT:      "Value": "0x8877665544332211",
+# JSON64-NEXT:      "Type": "BIND_NOW"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 25,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "INIT_ARRAY"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 26,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "FINI_ARRAY"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 27,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "INIT_ARRAYSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 28,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "FINI_ARRAYSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 29,
+# JSON64-NEXT:      "Value": "Library runpath: [w]",
+# JSON64-NEXT:      "Type": "RUNPATH"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 30,
+# JSON64-NEXT:      "Value": "ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS ",
+# JSON64-NEXT:      "Type": "FLAGS"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 32,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "PREINIT_ARRAY"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 33,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "PREINIT_ARRAYSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 34,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "SYMTAB_SHNDX"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 35,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "RELRSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 36,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "RELR"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 37,
+# JSON64-NEXT:      "Value": "17185 (bytes)",
+# JSON64-NEXT:      "Type": "RELRENT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1610612751,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "ANDROID_REL"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1610612752,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "ANDROID_RELSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1610612753,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "ANDROID_RELA"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1610612754,
+# JSON64-NEXT:      "Value": "16 (bytes)",
+# JSON64-NEXT:      "Type": "ANDROID_RELASZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879040000,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "ANDROID_RELR"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879040001,
+# JSON64-NEXT:      "Value": "0x10",
+# JSON64-NEXT:      "Type": "ANDROID_RELRSZ"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879040003,
+# JSON64-NEXT:      "Value": "0x1234",
+# JSON64-NEXT:      "Type": "ANDROID_RELRENT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879047925,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "GNU_HASH"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879047926,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "TLSDESC_PLT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879047927,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "TLSDESC_GOT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048185,
+# JSON64-NEXT:      "Value": "0",
+# JSON64-NEXT:      "Type": "RELACOUNT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048186,
+# JSON64-NEXT:      "Value": "0",
+# JSON64-NEXT:      "Type": "RELCOUNT"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048187,
+# JSON64-NEXT:      "Value": "NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON PIE ",
+# JSON64-NEXT:      "Type": "FLAGS_1"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048176,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "VERSYM"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048188,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "VERDEF"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048189,
+# JSON64-NEXT:      "Value": "0",
+# JSON64-NEXT:      "Type": "VERDEFNUM"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048190,
+# JSON64-NEXT:      "Value": "0x1000",
+# JSON64-NEXT:      "Type": "VERNEED"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1879048191,
+# JSON64-NEXT:      "Value": "0",
+# JSON64-NEXT:      "Type": "VERNEEDNUM"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 2147483645,
+# JSON64-NEXT:      "Value": "Auxiliary library: [D]",
+# JSON64-NEXT:      "Type": "AUXILIARY"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 2147483646,
+# JSON64-NEXT:      "Value": "Not needed object: [U]",
+# JSON64-NEXT:      "Type": "USED"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 2147483647,
+# JSON64-NEXT:      "Value": "Filter library: [U]",
+# JSON64-NEXT:      "Type": "FILTER"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 305419896,
+# JSON64-NEXT:      "Value": "0x8765432187654321",
+# JSON64-NEXT:      "Type": "<unknown:>0x12345678"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1790762736,
+# JSON64-NEXT:      "Value": "0x9988776655443322",
+# JSON64-NEXT:      "Type": "<unknown:>0x6abcdef0"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 1985229328,
+# JSON64-NEXT:      "Value": "0x5555666677778888",
+# JSON64-NEXT:      "Type": "<unknown:>0x76543210"
+# JSON64-NEXT:  },
+# JSON64-NEXT:  {
+# JSON64-NEXT:      "Tag": 0,
+# JSON64-NEXT:      "Value": "0x0",
+# JSON64-NEXT:      "Type": "NULL"
+# JSON64-NEXT:  }
+# JSON64-NEXT:]
 
 --- !ELF
 FileHeader:

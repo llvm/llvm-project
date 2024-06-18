@@ -793,6 +793,8 @@ public:
 
   void printEmptyGroupMessage() const override;
 
+  void printDynamicTable() override;
+
 private:
   std::unique_ptr<DictScope> FileScope;
 };
@@ -7363,6 +7365,19 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printDynamicTable() {
                   << Value << "\n";
   }
   W.startLine() << "]\n";
+}
+
+template <class ELFT> void JSONELFDumper<ELFT>::printDynamicTable() {
+  Elf_Dyn_Range Table = this->dynamic_table();
+  ListScope L(this->W, "DynamicSection");
+  for (const auto &Entry : Table) {
+    DictScope D(this->W);
+    uintX_t Tag = Entry.getTag();
+    std::string Value = this->getDynamicEntry(Tag, Entry.getVal());
+    this->W.printHex("Tag", Tag);
+    this->W.printString("Value", Value);
+    this->W.printString("Type", this->Obj.getDynamicTagAsString(Tag));
+  }
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printDynamicRelocations() {
