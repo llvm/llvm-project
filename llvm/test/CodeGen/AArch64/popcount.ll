@@ -144,11 +144,11 @@ define <1 x i128> @popcount1x128(<1 x i128> %0) {
 ; SVE-NEXT:    fmov x0, d0
 ; SVE-NEXT:    ret
 Entry:
-  %1 = tail call <1 x i128> @llvm.ctpop.v1.i128(<1 x i128> %0)
+  %1 = tail call <1 x i128> @llvm.ctpop.v1i128(<1 x i128> %0)
   ret <1 x i128> %1
 }
 
-declare <1 x i128> @llvm.ctpop.v1.i128(<1 x i128>)
+declare <1 x i128> @llvm.ctpop.v1i128(<1 x i128>)
 
 define <2 x i64> @popcount2x64(<2 x i64> %0) {
 ; NEON-LABEL: popcount2x64:
@@ -176,11 +176,11 @@ define <2 x i64> @popcount2x64(<2 x i64> %0) {
 ; SVE-NEXT:    uaddlp v0.2d, v0.4s
 ; SVE-NEXT:    ret
 Entry:
-  %1 = tail call <2 x i64> @llvm.ctpop.v2.i64(<2 x i64> %0)
+  %1 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
   ret <2 x i64> %1
 }
 
-declare <2 x i64> @llvm.ctpop.v2.i64(<2 x i64>)
+declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 
 define <4 x i32> @popcount4x32(<4 x i32> %0) {
 ; NEON-LABEL: popcount4x32:
@@ -205,11 +205,11 @@ define <4 x i32> @popcount4x32(<4 x i32> %0) {
 ; SVE-NEXT:    uaddlp v0.4s, v0.8h
 ; SVE-NEXT:    ret
 Entry:
-  %1 = tail call <4 x i32> @llvm.ctpop.v4.i32(<4 x i32> %0)
+  %1 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
   ret <4 x i32> %1
 }
 
-declare <4 x i32> @llvm.ctpop.v4.i32(<4 x i32>)
+declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)
 
 define <2 x i32> @popcount2x32(<2 x i32> %0) {
 ; NEON-LABEL: popcount2x32:
@@ -235,11 +235,11 @@ define <2 x i32> @popcount2x32(<2 x i32> %0) {
 ; SVE-NEXT:    uaddlp v0.2s, v0.4h
 ; SVE-NEXT:    ret
 Entry:
-  %1 = tail call <2 x i32> @llvm.ctpop.v2.i32(<2 x i32> %0)
+  %1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %0)
   ret <2 x i32> %1
 }
 
-declare <2 x i32> @llvm.ctpop.v2.i32(<2 x i32>)
+declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
 
 define <8 x i16> @popcount8x16(<8 x i16> %0) {
 ; CHECK-LABEL: popcount8x16:
@@ -248,11 +248,11 @@ define <8 x i16> @popcount8x16(<8 x i16> %0) {
 ; CHECK-NEXT:    uaddlp v0.8h, v0.16b
 ; CHECK-NEXT:    ret
 Entry:
-  %1 = tail call <8 x i16> @llvm.ctpop.v8.i16(<8 x i16> %0)
+  %1 = tail call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %0)
   ret <8 x i16> %1
 }
 
-declare <8 x i16> @llvm.ctpop.v8.i16(<8 x i16>)
+declare <8 x i16> @llvm.ctpop.v8i16(<8 x i16>)
 
 define <4 x i16> @popcount4x16(<4 x i16> %0) {
 ; CHECK-LABEL: popcount4x16:
@@ -261,8 +261,8 @@ define <4 x i16> @popcount4x16(<4 x i16> %0) {
 ; CHECK-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-NEXT:    ret
 Entry:
-  %1 = tail call <4 x i16> @llvm.ctpop.v4.i16(<4 x i16> %0)
+  %1 = tail call <4 x i16> @llvm.ctpop.v4i16(<4 x i16> %0)
   ret <4 x i16> %1
 }
 
-declare <4 x i16> @llvm.ctpop.v4.i16(<4 x i16>)
+declare <4 x i16> @llvm.ctpop.v4i16(<4 x i16>)
