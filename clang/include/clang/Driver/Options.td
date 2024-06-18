@@ -196,6 +196,10 @@ def m_Group : OptionGroup<"<m group>">, Group<CompileOnly_Group>,
               DocName<"Target-dependent compilation options">,
               Visibility<[ClangOption, CLOption]>;
 
+def hlsl_Group : OptionGroup<"<HLSL group>">, Group<f_Group>,
+                   DocName<"HLSL options">,
+                   Visibility<[ClangOption]>;
+
 // Feature groups - these take command line options that correspond directly to
 // target specific features and can be translated directly from command line
 // options.
@@ -7895,6 +7899,11 @@ def finclude_default_header : Flag<["-"], "finclude-default-header">,
   HelpText<"Include default header file for OpenCL and HLSL">;
 def fdeclare_opencl_builtins : Flag<["-"], "fdeclare-opencl-builtins">,
   HelpText<"Add OpenCL builtin function declarations (experimental)">;
+
+def fhlsl_strict_availability : Flag<["-"], "fhlsl-strict-availability">,
+  HelpText<"Enables strict availability diagnostic mode for HLSL built-in functions.">,
+  Group<hlsl_Group>,
+  MarshallingInfoFlag<LangOpts<"HLSLStrictAvailability">>;
 
 def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
   HelpText<"Preserve 3-component vector type">,
