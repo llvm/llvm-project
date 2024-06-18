@@ -10055,7 +10055,7 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       return LHSC.ult(OpSizeInBits) && RHSC.ult(OpSizeInBits) &&
              LHSC.getZExtValue() <= RHSC.getZExtValue();
     };
-    
+
     // fold (shl (sr[la] exact X,  C1), C2) -> (shl    X, (C2-C1)) if C1 <= C2
     // fold (shl (sr[la] exact X,  C1), C2) -> (sr[la] X, (C2-C1)) if C1 >= C2
     if (N0->getFlags().hasExact()) {
@@ -12103,10 +12103,21 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
   bool HasPassthru = !Passthru.isUndef();
 
   APInt SplatVal;
-  if (ISD::isConstantSplatVector(Mask.getNode(), SplatVal))
-    return SplatVal.isAllOnes()
-               ? Vec
-               : (HasPassthru ? Passthru : DAG.getUNDEF(VecVT));
+  if (ISD::isConstantSplatVector(Mask.getNode(), SplatVal)) {
+    bool HasTrueBoolContent = [&] {
+      switch (TLI.getBooleanContents(Mask.getValueType())) {
+      case TargetLoweringBase::UndefinedBooleanContent:
+        return SplatVal.isOne();
+      case TargetLoweringBase::ZeroOrOneBooleanContent:
+        return SplatVal.isOneBitSet(0);
+      case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
+        return SplatVal.isAllOnes();
+      }
+    }();
+
+    return HasTrueBoolContent ? Vec
+                              : (HasPassthru ? Passthru : DAG.getUNDEF(VecVT));
+  }
 
   if (Vec.isUndef() || Mask.isUndef())
     return DAG.getUNDEF(VecVT);
@@ -12134,7 +12145,7 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
       SDValue Val =
           HasPassthru
               ? DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Passthru,
-                            DAG.getVectorIdxConstant(Rest - NumSelected, DL))
+                            DAG.getVectorIdxConstant(Rest, DL))
               : DAG.getUNDEF(ScalarVT);
       Ops.push_back(Val);
     }

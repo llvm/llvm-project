@@ -11358,8 +11358,9 @@ SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
 
+  MVT PositionVT = getVectorIdxTy(DAG.getDataLayout());
   SDValue Chain = DAG.getEntryNode();
-  SDValue OutPos = DAG.getConstant(0, DL, MVT::i32);
+  SDValue OutPos = DAG.getConstant(0, DL, PositionVT);
 
   bool HasPassthru = !Passthru.isUndef();
 
@@ -11386,8 +11387,8 @@ SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
     SDValue Popcount = DAG.getNode(
         ISD::TRUNCATE, DL, MaskVT.changeVectorElementType(MVT::i1), Mask);
     Popcount = DAG.getNode(ISD::ZERO_EXTEND, DL,
-                           MaskVT.changeVectorElementType(MVT::i32), Popcount);
-    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, Popcount);
+                           MaskVT.changeVectorElementType(ScalarVT), Popcount);
+    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, ScalarVT, Popcount);
     SDValue LastElmtPtr =
         getVectorElementPointer(DAG, StackPtr, VecVT, Popcount);
     LastWriteVal = DAG.getLoad(
@@ -11411,15 +11412,15 @@ SDValue TargetLowering::expandMASKED_COMPRESS(SDNode *Node,
     SDValue MaskI =
         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MaskScalarVT, Mask, Idx);
     MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
-    MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, MaskI);
-    OutPos = DAG.getNode(ISD::ADD, DL, MVT::i32, OutPos, MaskI);
+    MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, PositionVT, MaskI);
+    OutPos = DAG.getNode(ISD::ADD, DL, PositionVT, OutPos, MaskI);
 
     if (HasPassthru && I == NumElms - 1) {
       SDValue EndOfVector =
-          DAG.getConstant(VecVT.getVectorNumElements() - 1, DL, MVT::i32);
+          DAG.getConstant(VecVT.getVectorNumElements() - 1, DL, PositionVT);
       SDValue AllLanesSelected =
           DAG.getSetCC(DL, MVT::i1, OutPos, EndOfVector, ISD::CondCode::SETUGT);
-      OutPos = DAG.getNode(ISD::UMIN, DL, MVT::i32, OutPos, EndOfVector);
+      OutPos = DAG.getNode(ISD::UMIN, DL, PositionVT, OutPos, EndOfVector);
       OutPtr = getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
 
       // Re-write the last ValI if all lanes were selected. Otherwise,
