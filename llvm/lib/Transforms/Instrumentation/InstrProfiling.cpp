@@ -890,7 +890,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
 }
 
 GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
-  auto *Bias = M.getGlobalVariable(VarName);
+  GlobalVariable *Bias = M.getGlobalVariable(VarName);
   if (Bias)
     return Bias;
 
