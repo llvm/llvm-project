@@ -53,7 +53,6 @@
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zifencei"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zihintpause"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zihpm"
-// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zmmul"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+za64rs"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zfh"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+zfhmin"
