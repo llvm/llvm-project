@@ -657,10 +657,14 @@ static Error verifyNoteSection(StringRef Name, endianness Endianness,
     NameSizeValue = byteswap(NameSizeValue);
     DescSizeValue = byteswap(DescSizeValue);
   }
+
+  // NameSizeValue and DescSizeValue need to be padded to 4.
+  auto iceil4 = [](auto v) { return (v + 3) / 4 * 4; };
+
   uint64_t ExpectedDataSize =
       /*NameSize=*/4 + /*DescSize=*/4 + /*Type=*/4 +
-      /*Name=*/(NameSizeValue + 3) / 4 * 4 +
-      /*Desc=*/(DescSizeValue + 3) / 4 * 4;
+      /*Name=*/iceil4(NameSizeValue) +
+      /*Desc=*/iceil4(DescSizeValue);
   uint64_t ActualDataSize = Data.size();
   if (ActualDataSize != ExpectedDataSize) {
     std::string msg;

@@ -37,6 +37,7 @@
 
 ## Test that last argument has precedence.
 # RUN: llvm-objcopy --add-section=.note.short=%t-short-note.bin --verify-note-sections --no-verify-note-sections %t.o %t-with-note.o
+# RUN: not llvm-objcopy --add-section=.note.short=%t-short-note.bin --no-verify-note-sections --verify-note-sections %t.o %t-with-note.o 2>&1 | FileCheck --check-prefix=CHECK-SHORT %s
 
 !ELF
 FileHeader:
