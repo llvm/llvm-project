@@ -149,6 +149,7 @@ public:
   using __container = typename _Cp::__self;
 
   _LIBCPP_HIDE_FROM_ABI __bit_const_reference(const __bit_const_reference&) = default;
+  __bit_const_reference& operator=(const __bit_const_reference&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_const_reference(const __bit_reference<_Cp>& __x) _NOEXCEPT
       : __seg_(__x.__seg_),
@@ -167,8 +168,6 @@ private:
       __storage_pointer __s, __storage_type __m) _NOEXCEPT
       : __seg_(__s),
         __mask_(__m) {}
-
-  __bit_const_reference& operator=(const __bit_const_reference&) = delete;
 };
 
 // copy
