@@ -284,7 +284,9 @@ class CrashLog(symbolication.Symbolicator):
         """Class that represents a binary images in a darwin crash log"""
 
         dsymForUUIDBinary = "/usr/local/bin/dsymForUUID"
-        if not os.path.exists(dsymForUUIDBinary):
+        if "LLDB_APPLE_DSYMFORUUID_EXECUTABLE" in os.environ:
+            dsymForUUIDBinary = os.environ["LLDB_APPLE_DSYMFORUUID_EXECUTABLE"]
+        elif not os.path.exists(dsymForUUIDBinary):
             try:
                 dsymForUUIDBinary = (
                     subprocess.check_output("which dsymForUUID", shell=True)
@@ -545,9 +547,9 @@ class CrashLog(symbolication.Symbolicator):
             for image in self.images:
                 image.resolve = True
         elif options.crashed_only:
+            images_to_load = []
             for thread in self.threads:
-                if thread.did_crash():
-                    images_to_load = []
+                if thread.did_crash() or thread.app_specific_backtrace:
                     for ident in thread.idents:
                         for image in self.find_images_with_identifier(ident):
                             image.resolve = True
@@ -555,11 +557,15 @@ class CrashLog(symbolication.Symbolicator):
 
         futures = []
         with tempfile.TemporaryDirectory() as obj_dir:
-            with concurrent.futures.ThreadPoolExecutor() as executor:
 
-                def add_module(image, target, obj_dir):
-                    return image, image.add_module(target, obj_dir)
+            def add_module(image, target, obj_dir):
+                return image, image.add_module(target, obj_dir)
 
+            max_worker = None
+            if options.no_parallel_image_loading:
+                max_worker = 1
+
+            with concurrent.futures.ThreadPoolExecutor(max_worker) as executor:
                 for image in images_to_load:
                     if image not in loaded_images:
                         if image.uuid == uuid.UUID(int=0):
@@ -858,7 +864,7 @@ class JSONCrashLogParser(CrashLogParser):
         thread = self.crashlog.Thread(
             len(self.crashlog.threads), True, self.crashlog.process_arch
         )
-        thread.queue = "Application Specific Backtrace"
+        thread.name = "Application Specific Backtrace"
         if self.parse_asi_backtrace(thread, json_app_specific_bts[0]):
             self.crashlog.threads.append(thread)
         else:
@@ -868,7 +874,7 @@ class JSONCrashLogParser(CrashLogParser):
         thread = self.crashlog.Thread(
             len(self.crashlog.threads), True, self.crashlog.process_arch
         )
-        thread.queue = "Last Exception Backtrace"
+        thread.name = "Last Exception Backtrace"
         self.parse_frames(thread, json_last_exc_bts)
         self.crashlog.threads.append(thread)
 
@@ -1168,11 +1174,13 @@ class TextCrashLogParser(CrashLogParser):
                 self.thread = self.crashlog.Thread(
                     idx, True, self.crashlog.process_arch
                 )
+                self.thread.name = "Application Specific Backtrace"
         elif line.startswith("Last Exception Backtrace:"):  # iOS
             self.parse_mode = self.CrashLogParseMode.THREAD
             self.app_specific_backtrace = True
             idx = 1
             self.thread = self.crashlog.Thread(idx, True, self.crashlog.process_arch)
+            self.thread.name = "Last Exception Backtrace"
         self.crashlog.info_lines.append(line.strip())
 
     def parse_thread(self, line):
@@ -1528,6 +1536,7 @@ def load_crashlog_in_scripted_process(debugger, crashlog_path, options, result):
                 "file_path": crashlog_path,
                 "load_all_images": options.load_all_images,
                 "crashed_only": options.crashed_only,
+                "no_parallel_image_loading": options.no_parallel_image_loading,
             }
         )
     )
@@ -1720,6 +1729,13 @@ def CreateSymbolicateCrashLogOptions(
         help="show source for all threads, not just the crashed thread",
         default=False,
     )
+    arg_parser.add_argument(
+        "--no-parallel-image-loading",
+        dest="no_parallel_image_loading",
+        action="store_true",
+        help=argparse.SUPPRESS,
+        default=False,
+    )
     if add_interactive_options:
         arg_parser.add_argument(
             "-i",
@@ -1797,6 +1813,9 @@ def SymbolicateCrashLogs(debugger, command_args, result, is_command):
                 ],
             )
         )
+
+    if "NO_PARALLEL_IMG_LOADING" in os.environ:
+        options.no_parallel_image_loading = True
 
     if options.version:
         print(debugger.GetVersionString())

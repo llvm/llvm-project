@@ -91,14 +91,14 @@ inline RT_API_ATTRS CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
 #ifdef _MSC_VER // work around MSVC spurious error
     accumulator.GetResult();
 #else
-    accumulator.template GetResult();
+    accumulator.template GetResult<CppType>();
 #endif
   } else {
     CppType result;
 #ifdef _MSC_VER // work around MSVC spurious error
     accumulator.GetResult(&result);
 #else
-    accumulator.template GetResult(&result);
+    accumulator.template GetResult<CppType>(&result);
 #endif
     return result;
   }
@@ -141,7 +141,7 @@ inline RT_API_ATTRS void ReduceDimToScalar(const Descriptor &x,
 #ifdef _MSC_VER // work around MSVC spurious error
   accumulator.GetResult(result, zeroBasedDim);
 #else
-  accumulator.template GetResult(result, zeroBasedDim);
+  accumulator.template GetResult<TYPE>(result, zeroBasedDim);
 #endif
 }
 
@@ -169,7 +169,7 @@ inline RT_API_ATTRS void ReduceDimMaskToScalar(const Descriptor &x,
 #ifdef _MSC_VER // work around MSVC spurious error
   accumulator.GetResult(result, zeroBasedDim);
 #else
-  accumulator.template GetResult(result, zeroBasedDim);
+  accumulator.template GetResult<TYPE>(result, zeroBasedDim);
 #endif
 }
 

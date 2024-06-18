@@ -2,7 +2,7 @@
 ; DICompileUnit and DISuprogram.
 ;
 ; RUN: llvm-reduce --delta-passes=di-metadata --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: FileCheck <%t --enable-var-scope %s
+; RUN: FileCheck <%t --enable-var-scope %s --implicit-check-not=DIGlobalVariableExpression
 
 ; CHECK-INTERESTINGNESS: define void @test() !dbg [[SUBPROG:![0-9]+]]
 ; CHECK-INTERESTINGNESS: !llvm.module.flags = !{
@@ -21,12 +21,10 @@
 
 ; CHECK: !llvm.dbg.cu = !{[[CU:.+]]}
 
-; CHECK-DAG: [[CU]] = distinct !DICompileUnit(language: DW_LANG_C99,{{.*}}, retainedTypes: [[TYPES:![0-9]+]], globals: [[GLOBALS:![0-9]+]]
-; CHECK-DAG: [[EMPTY:![0-9]+]] = !{}
+; CHECK-DAG: [[CU]] = distinct !DICompileUnit(language: DW_LANG_C99,{{.*}}, retainedTypes: [[TYPES:![0-9]+]], globals: [[EMPTY:![0-9]+]]
+; CHECK-DAG: [[EMPTY]] = !{}
 ; CHECK-DAG: [[TYPES]] = !{[[T0:![0-9]+]]
 ; CHECK-DAG: [[T0]] = !DIBasicType(name: "unsigned int",
-; CHECK-DAG: [[GLOBALS]] = !{{{![0-9]+}}
-
 ; CHECK-DAG: [[SUBPROG]] = distinct !DISubprogram(name: "test", {{.*}}retainedNodes: [[EMPTY]])
 
 define void @test() !dbg !17 {

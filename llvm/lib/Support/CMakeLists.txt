@@ -37,10 +37,11 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
-if( MSVC OR MINGW )
+if( WIN32 )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
-  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32)
+  # ntdll required for RtlGetLastNtStatus in lib/Support/ErrorHandling.cpp.
+  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32 ntdll)
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)
@@ -71,7 +72,7 @@ elseif( CMAKE_HOST_UNIX )
     add_compile_definitions(_BSD_SOURCE)
     set(system_libs ${system_libs} bsd network)
   endif()
-endif( MSVC OR MINGW )
+endif( WIN32 )
 
 # Delay load shell32.dll if possible to speed up process startup.
 set (delayload_flags)
@@ -169,6 +170,7 @@ add_llvm_component_library(LLVMSupport
   DivisionByConstantInfo.cpp
   DAGDeltaAlgorithm.cpp
   DJB.cpp
+  DynamicAPInt.cpp
   ELFAttributeParser.cpp
   ELFAttributes.cpp
   Error.cpp
@@ -222,6 +224,8 @@ add_llvm_component_library(LLVMSupport
   SHA1.cpp
   SHA256.cpp
   Signposts.cpp
+  SipHash.cpp
+  SlowDynamicAPInt.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp

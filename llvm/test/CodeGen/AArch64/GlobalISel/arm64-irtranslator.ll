@@ -2313,6 +2313,14 @@ define float @test_sin_f32(float %x) {
   ret float %y
 }
 
+declare float @llvm.tan.f32(float)
+define float @test_tan_f32(float %x) {
+  ; CHECK-LABEL: name:            test_tan_f32
+  ; CHECK: %{{[0-9]+}}:_(s32) = G_FTAN %{{[0-9]+}}
+  %y = call float @llvm.tan.f32(float %x)
+  ret float %y
+}
+
 declare float @llvm.sqrt.f32(float)
 define float @test_sqrt_f32(float %x) {
   ; CHECK-LABEL: name:            test_sqrt_f32

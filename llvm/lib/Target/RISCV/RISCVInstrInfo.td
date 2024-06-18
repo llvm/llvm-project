@@ -943,6 +943,9 @@ def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 4>;
 def : InstAlias<"jr $rs, $offset",        (JALR      X0, GPR:$rs, simm12:$offset), 0>;
 def : InstAlias<"jalr $rs, $offset",      (JALR      X1, GPR:$rs, simm12:$offset), 0>;
 def : InstAlias<"jalr $rd, $rs, $offset", (JALR GPR:$rd, GPR:$rs, simm12:$offset), 0>;
+def : InstAlias<"jr (${rs})",             (JALR      X0, GPR:$rs, 0), 0>;
+def : InstAlias<"jalr (${rs})",           (JALR      X1, GPR:$rs, 0), 0>;
+def : InstAlias<"jalr $rd, (${rs})",      (JALR GPR:$rd, GPR:$rs, 0), 0>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
@@ -1140,6 +1143,9 @@ def : InstAlias<".insn_i $opcode, $funct3, $rd, $rs1, $imm12",
 def : InstAlias<".insn_i $opcode, $funct3, $rd, ${imm12}(${rs1})",
                 (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
                            AnyReg:$rs1, simm12:$imm12)>;
+def : InstAlias<".insn_i $opcode, $funct3, $rd, (${rs1})",
+                (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
+                           AnyReg:$rs1, 0)>;
 def : InstAlias<".insn_b $opcode, $funct3, $rs1, $rs2, $imm12",
                 (InsnB uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
                        AnyReg:$rs2, simm13_lsb0:$imm12)>;
@@ -1157,6 +1163,9 @@ def : InstAlias<".insn_uj $opcode, $rd, $imm20",
 def : InstAlias<".insn_s $opcode, $funct3, $rs2, ${imm12}(${rs1})",
                 (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
                        AnyReg:$rs1, simm12:$imm12)>;
+def : InstAlias<".insn_s $opcode, $funct3, $rs2, (${rs1})",
+                (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
+                       AnyReg:$rs1, 0)>;
 }
 
 //===----------------------------------------------------------------------===//

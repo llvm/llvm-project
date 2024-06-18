@@ -65,7 +65,7 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   auto getModifier = [&]() -> const char * {
     if (itype == PTXRegisterMod::ReadWrite) {
       assert(false && "Read-Write modifier is not supported. Try setting the "
-                      "same value as Write and Read seperately.");
+                      "same value as Write and Read separately.");
       return "+";
     }
     if (itype == PTXRegisterMod::Write) {
