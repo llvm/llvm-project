@@ -176,6 +176,10 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingCast: {
+    // HLSL uses CK_FloatingCast to cast between vectors.
+    if (!SubExpr->getType()->isFloatingType() ||
+        !CE->getType()->isFloatingType())
+      return false;
     if (DiscardResult)
       return this->discard(SubExpr);
     if (!this->visit(SubExpr))
