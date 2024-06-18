@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_FSYNC_H
-#define LLVM_LIBC_SRC_UNISTD_FSYNC_H
+#ifndef LLVM_LIBC_SRC_UNISTD_FPATHCONF_H
+#define LLVM_LIBC_SRC_UNISTD_FPATHCONF_H
 
 namespace LIBC_NAMESPACE {
 

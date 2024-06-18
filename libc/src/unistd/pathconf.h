@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_PREAD_H
-#define LLVM_LIBC_SRC_UNISTD_PREAD_H
+#ifndef LLVM_LIBC_SRC_UNISTD_PATHCONF_H
+#define LLVM_LIBC_SRC_UNISTD_PATHCONF_H
 
 #include <unistd.h>
 
