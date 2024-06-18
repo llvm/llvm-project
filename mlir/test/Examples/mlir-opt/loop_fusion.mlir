@@ -1,3 +1,8 @@
+// This file is left in-tree despite having no assertions so it can be
+// referenced by the tutorial text.
+
+// RUN: mlir-opt %s
+
 func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
   %0 = memref.alloc() : memref<10xf32>
   %1 = memref.alloc() : memref<10xf32>

@@ -296,7 +296,7 @@ being loop counters and iteration bounds.
 Recall our second program, the poorly-tuned loops.
 
 ```mlir
-// mlir/test/Examples/mlir-opt/loop-fusion.mlir
+// mlir/test/Examples/mlir-opt/loop_fusion.mlir
 func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
   %0 = memref.alloc() : memref<10xf32>
   %1 = memref.alloc() : memref<10xf32>
@@ -323,7 +323,7 @@ Running this with the [`affine-loop-fusion`](https://mlir.llvm.org/docs/Passes/#
 produces a fused loop.
 
 ```bash
-build/bin/mlir-opt --affine-loop-fusion mlir/test/Examples/mlir-opt/loop-fusion.mlir
+build/bin/mlir-opt --affine-loop-fusion mlir/test/Examples/mlir-opt/loop_fusion.mlir
 ```
 
 ```mlir
@@ -354,7 +354,7 @@ If this value is set to zero on the command line,
 the pass will not fuse the loops.
 
 ```bash
-build/bin/mlir-opt --affine-loop-fusion='fusion-compute-tolerance=0' mlir/test/Examples/mlir-opt/loop-fusion.mlir
+build/bin/mlir-opt --affine-loop-fusion='fusion-compute-tolerance=0' mlir/test/Examples/mlir-opt/loop_fusion.mlir
 ```
 
 ```mlir
