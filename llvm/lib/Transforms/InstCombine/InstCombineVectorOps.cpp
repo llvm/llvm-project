@@ -2072,9 +2072,8 @@ static BinopElts getAlternateBinop(BinaryOperator *BO, const DataLayout &DL) {
     break;
   }
   case Instruction::Or: {
-    // or X, C --> add X, C (when X and C have no common bits set)
-    const APInt *C;
-    if (match(BO1, m_APInt(C)) && MaskedValueIsZero(BO0, *C, DL))
+    // or disjoin X, C --> add X, C
+    if (cast<PossiblyDisjointInst>(BO)->isDisjoint())
       return {Instruction::Add, BO0, BO1};
     break;
   }
