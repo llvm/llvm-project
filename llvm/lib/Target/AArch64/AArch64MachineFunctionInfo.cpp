@@ -16,6 +16,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -82,6 +83,25 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   return Key == "b_key";
 }
 
+static bool hasELFSignedGOTHelper(const Function &F,
+                                  const AArch64Subtarget *STI) {
+  if (!Triple(STI->getTargetTriple()).isOSBinFormatELF())
+    return false;
+  const Module *M = F.getParent();
+  uint64_t PAuthABIPlatform = -1;
+  if (const auto *PAP = mdconst::extract_or_null<ConstantInt>(
+          M->getModuleFlag("aarch64-elf-pauthabi-platform")))
+    PAuthABIPlatform = PAP->getZExtValue();
+  if (PAuthABIPlatform != ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX)
+    return false;
+  uint64_t PAuthABIVersion = -1;
+  if (const auto *PAV = mdconst::extract_or_null<ConstantInt>(
+          M->getModuleFlag("aarch64-elf-pauthabi-version")))
+    PAuthABIVersion = PAV->getZExtValue();
+  return (PAuthABIVersion &
+          (1 << ELF::AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT)) != 0;
+}
+
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
                                          const AArch64Subtarget *STI) {
   // If we already know that the function doesn't have a redzone, set
@@ -90,6 +110,7 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     HasRedZone = false;
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F, *STI);
+  HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
