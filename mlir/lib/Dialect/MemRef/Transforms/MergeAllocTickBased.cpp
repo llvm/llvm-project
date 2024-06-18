@@ -261,10 +261,9 @@ TickCollecter::operator()(Operation *root,
                           const MergeAllocationOptions &option) const {
   TickCollecterStates s{aliasAnaly, option};
   TickCollecter collecter;
-  LogicalResult result = success();
-  root->walk<WalkOrder::PreOrder>([&](Operation *op) {
+  auto result = root->walk<WalkOrder::PreOrder>([&](Operation *op) {
     if (failed(collecter.popScopeIfNecessary(&s, op))) {
-      result = failure();
+      return WalkResult::interrupt();
     }
     collecter.forwardTick(&s);
     if (auto viewop = dyn_cast<ViewLikeOpInterface>(op)) {
@@ -281,9 +280,10 @@ TickCollecter::operator()(Operation *root,
       // finally, if op is complex scope, push one ComplexScope
       collecter.pushComplexScope(&s, op);
     }
+    return WalkResult::advance();
   });
-  if (failed(result)) {
-    return result;
+  if (result.wasInterrupted()) {
+    return failure();
   }
   if (failed(collecter.popScopeIfNecessary(&s, nullptr))) {
     return failure();
