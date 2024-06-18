@@ -37,7 +37,7 @@ all threads in a workgroup/thread block access the same values in `worgroup` mem
 but cannot access the `workgroup` memory of other workgroups. Finally, `private`
 memory is used to represent `alloca`-like buffers that are private to a sigle thread.
 
-These address spaces may be used as the `memorySpace` attribute on `memref` values,.
+These address spaces may be used as the `memorySpace` attribute on `memref` values.
 The `gpu.module`/`gpu.func` compilation pipeline will lower such memory space
 usages to the correct address spaces on target platforms. Memory attributions should be
 created with the correct memory space on the memref.
