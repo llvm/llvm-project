@@ -1542,7 +1542,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 7)
+    if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1550,10 +1550,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
 
+    Metadata *Annotations = nullptr;
+    if (Record.size() > 7 && Record[7])
+      Annotations = getMDOrNull(Record[7]);
+
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
                         (Context, Record[1], getMDString(Record[2]), Record[3],
-                         Record[4], Record[5], Flags)),
+                         Record[4], Record[5], Flags, Annotations)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1722,7 +1726,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_SUBROUTINE_TYPE: {
-    if (Record.size() < 3 || Record.size() > 4)
+    if (Record.size() < 3 || Record.size() > 5)
       return error("Invalid record");
     bool IsOldTypeRefArray = Record[0] < 2;
     unsigned CC = (Record.size() > 3) ? Record[3] : 0;
@@ -1732,9 +1736,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Types = getMDOrNull(Record[2]);
     if (LLVM_UNLIKELY(IsOldTypeRefArray))
       Types = MetadataList.upgradeTypeRefArray(Types);
+    Metadata *Annotations = nullptr;
+    if (Record.size() > 4 && Record[4])
+      Annotations = getMDOrNull(Record[4]);
 
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DISubroutineType, (Context, Flags, CC, Types)),
+        GET_OR_DISTINCT(DISubroutineType,
+                        (Context, Flags, CC, Types, Annotations)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

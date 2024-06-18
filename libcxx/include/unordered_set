@@ -588,7 +588,7 @@ public:
   typedef __type_identity_t<_Alloc> allocator_type;
   typedef value_type& reference;
   typedef const value_type& const_reference;
-  static_assert((is_same<value_type, typename allocator_type::value_type>::value),
+  static_assert(is_same<value_type, typename allocator_type::value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
   static_assert(is_same<allocator_type, __rebind_alloc<allocator_traits<allocator_type>, value_type> >::value,
@@ -828,7 +828,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_set& __u) _NOEXCEPT_(__is_nothrow_swappable<__table>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_set& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
     __table_.swap(__u.__table_);
   }
 
@@ -1186,7 +1186,7 @@ public:
   typedef __type_identity_t<_Alloc> allocator_type;
   typedef value_type& reference;
   typedef const value_type& const_reference;
-  static_assert((is_same<value_type, typename allocator_type::value_type>::value),
+  static_assert(is_same<value_type, typename allocator_type::value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
 private:
@@ -1425,7 +1425,7 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __table_.clear(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multiset& __u) _NOEXCEPT_(__is_nothrow_swappable<__table>::value) {
+  _LIBCPP_HIDE_FROM_ABI void swap(unordered_multiset& __u) _NOEXCEPT_(__is_nothrow_swappable_v<__table>) {
     __table_.swap(__u.__table_);
   }
 
