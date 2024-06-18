@@ -309,8 +309,24 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Default([](Type) { llvm_unreachable("unexpected 'gpu' type kind"); });
 }
 
+static LogicalResult verifyKnownLaunchSizeAttr(Operation *op,
+                                               NamedAttribute attr) {
+  auto array = dyn_cast<DenseI32ArrayAttr>(attr.getValue());
+  if (!array)
+    return op->emitOpError(Twine(attr.getName()) +
+                           " must be a dense i32 array");
+  if (array.size() != 3)
+    return op->emitOpError(Twine(attr.getName()) +
+                           " must contain exactly 3 elements");
+  return success();
+}
+
 LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
                                                    NamedAttribute attr) {
+  if (attr.getName() == getKnownBlockSizeAttrHelper().getName())
+    return verifyKnownLaunchSizeAttr(op, attr);
+  if (attr.getName() == getKnownGridSizeAttrHelper().getName())
+    return verifyKnownLaunchSizeAttr(op, attr);
   if (!llvm::isa<UnitAttr>(attr.getValue()) ||
       attr.getName() != getContainerModuleAttrName())
     return success();
@@ -1686,27 +1702,6 @@ LogicalResult GPUFuncOp::verifyBody() {
                                 GPUDialect::getPrivateAddressSpace())))
     return failure();
 
-  return success();
-}
-
-static LogicalResult verifyKnownLaunchSizeAttr(gpu::GPUFuncOp op,
-                                               StringRef attrName) {
-  auto maybeAttr = op->getAttr(attrName);
-  if (!maybeAttr)
-    return success();
-  auto array = llvm::dyn_cast<DenseI32ArrayAttr>(maybeAttr);
-  if (!array)
-    return op.emitOpError(attrName + " must be a dense i32 array");
-  if (array.size() != 3)
-    return op.emitOpError(attrName + " must contain exactly 3 elements");
-  return success();
-}
-
-LogicalResult GPUFuncOp::verify() {
-  if (failed(verifyKnownLaunchSizeAttr(*this, getKnownBlockSizeAttrName())))
-    return failure();
-  if (failed(verifyKnownLaunchSizeAttr(*this, getKnownGridSizeAttrName())))
-    return failure();
   return success();
 }
 
