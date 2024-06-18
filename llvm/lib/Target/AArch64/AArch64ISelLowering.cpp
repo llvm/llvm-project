@@ -9817,10 +9817,8 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   if (Subtarget->hasDotProd() && VT.getScalarSizeInBits() != 16 &&
       VT.getVectorNumElements() >= 2) {
     EVT DT = VT == MVT::v2i64 ? MVT::v4i32 : VT;
-    SDValue Zeros = DAG.getSplatBuildVector(
-        DT, DL, DAG.getConstant(0, DL, DT.getScalarType()));
-    SDValue Ones =
-        DAG.getSplatBuildVector(VT8Bit, DL, DAG.getConstant(1, DL, MVT::i8));
+    SDValue Zeros = DAG.getConstant(0, DL, DT);
+    SDValue Ones = DAG.getConstant(1, DL, VT8Bit);
 
     if (VT == MVT::v2i64) {
       Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
