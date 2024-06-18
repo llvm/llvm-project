@@ -488,14 +488,25 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (DiscardResult)
       return this->discard(SubExpr);
 
-    assert(Initializing); // FIXME: Not always correct.
+    if (!Initializing) {
+      std::optional<unsigned> LocalIndex = allocateLocal(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
+
     const auto *VT = CE->getType()->getAs<VectorType>();
-    PrimType ElemT = classifyPrim(SubExpr);
+    PrimType ElemT = classifyPrim(SubExpr->getType());
     unsigned ElemOffset = allocateLocalPrimitive(
         SubExpr, ElemT, /*IsConst=*/true, /*IsExtended=*/false);
 
+    // Prepare a local variable for the scalar value.
     if (!this->visit(SubExpr))
       return false;
+    if (classifyPrim(SubExpr) == PT_Ptr && !this->emitLoadPop(ElemT, CE))
+      return false;
+
     if (!this->emitSetLocal(ElemT, ElemOffset, CE))
       return false;
 
@@ -2778,6 +2789,7 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitExtVectorElementExpr(
     const ExtVectorElementExpr *E) {
   const Expr *Base = E->getBase();
+  assert(Base->getType()->isVectorType());
 
   SmallVector<uint32_t, 4> Indices;
   E->getEncodedElementAccess(Indices);
