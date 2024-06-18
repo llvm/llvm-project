@@ -22,9 +22,9 @@ inline uint64_t getRISCVCpuCyclesCount() {
 #ifdef __riscv
 #if __riscv_xlen == 32
   uint32_t cycles_lo, cycles_hi0, cycles_hi1;
-  asm volatile("rdtimeh %0\n"
-               "rdtime %1\n"
-               "rdtimeh %2\n"
+  asm volatile("rdcycleh %0\n"
+               "rdcycle %1\n"
+               "rdcycleh %2\n"
                "sub %0, %0, %2\n"
                "seqz %0, %0\n"
                "sub %0, zero, %0\n"
@@ -34,7 +34,7 @@ inline uint64_t getRISCVCpuCyclesCount() {
                                cycles_lo);
 #else
   uint64_t cycles;
-  asm volatile("rdtime %0" : "=r"(cycles));
+  asm volatile("rdcycle %0" : "=r"(cycles));
   return static_cast<uint64_t>(cycles);
 #endif
 #else
