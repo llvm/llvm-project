@@ -79,7 +79,7 @@ main:                                   # @main
 .Lskel_string0:
         .asciz  "xxx/xxx/xxx" # string offset=0
 .Lskel_string1:
-        .asciz  "split_invalid.dwoo"                      # string offset=64
+        .asciz  "split_invalid.dwo"                      # string offset=64
         .section        .debug_str.dwo,"eMS",@progbits,1
 .Linfo_string0:
         .asciz  "main"                          # string offset=0
