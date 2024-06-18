@@ -311,7 +311,7 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
 
 static LogicalResult verifyKnownLaunchSizeAttr(Operation *op,
                                                NamedAttribute attr) {
-  auto array = llvm::dyn_cast<DenseI32ArrayAttr>(attr.getValue());
+  auto array = dyn_cast<DenseI32ArrayAttr>(attr.getValue());
   if (!array)
     return op->emitOpError(Twine(attr.getName()) +
                            " must be a dense i32 array");
