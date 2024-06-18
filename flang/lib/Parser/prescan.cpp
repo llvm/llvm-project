@@ -185,11 +185,9 @@ void Prescanner::Statement() {
       // a comment marker or directive sentinel.  If so, disable line
       // continuation, so that NextToken() won't consume anything from
       // following lines.
-      if (IsLegalIdentifierStart(*at_)) {
-        CHECK(NextToken(tokens));
-        CHECK(tokens.SizeInTokens() == 1);
-        CharBlock id{tokens.TokenAt(0)};
-        if (preprocessor_.IsNameDefined(id) &&
+      if (IsLegalIdentifierStart(*at_) && NextToken(tokens) &&
+          tokens.SizeInTokens() > 0) {
+        if (CharBlock id{tokens.TokenAt(0)}; preprocessor_.IsNameDefined(id) &&
             !preprocessor_.IsFunctionLikeDefinition(id)) {
           if (auto replaced{preprocessor_.MacroReplacement(tokens, *this)}) {
             auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
@@ -295,8 +293,13 @@ void Prescanner::CheckAndEmitLine(
   // Applications play shenanigans with line continuation before and
   // after #include'd subprogram argument lists.
   if (!isNestedInIncludeDirective_ && !omitNewline_ &&
-      !afterIncludeDirective_) {
-    tokens.CheckBadParentheses(messages_);
+      !afterIncludeDirective_ && tokens.BadlyNestedParentheses()) {
+    if (inFixedForm_ && nextLine_ < limit_ &&
+        IsPreprocessorDirectiveLine(nextLine_)) {
+      // don't complain
+    } else {
+      tokens.CheckBadParentheses(messages_);
+    }
   }
   tokens.Emit(cooked_);
   if (omitNewline_) {
@@ -350,7 +353,16 @@ void Prescanner::LabelField(TokenSequence &token) {
     ++column_;
   }
   if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-    if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
+    if (prescannerNesting_ > 0 && *badColumn == 6 &&
+        cooked_.BufferedBytes() == firstCookedCharacterOffset_) {
+      // This is the first source line in #included text or conditional
+      // code under #if.
+      // If it turns out that the preprocessed text begins with a
+      // fixed form continuation line, the newline at the end
+      // of the latest source line beforehand will be deleted in
+      // CookedSource::Marshal().
+      cooked_.MarkPossibleFixedFormContinuation();
+    } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
       Say(GetProvenance(start + *badColumn - 1),
           *badColumn == 6
               ? "Statement should not begin with a continuation line"_warn_en_US

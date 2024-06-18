@@ -75,8 +75,9 @@ def EmitC_ArrayType : EmitC_Type<"Array", "array", [ShapedTypeInterface]> {
                         Type elementType) const;
 
     static bool isValidElementType(Type type) {
-      return type.isIntOrIndexOrFloat() ||
-         llvm::isa<PointerType, OpaqueType>(type);
+      return emitc::isSupportedFloatType(type) ||
+         emitc::isIntegerIndexOrOpaqueType(type) ||
+         llvm::isa<PointerType>(type);
     }
   }];
   let genVerifyDecl = 1;
@@ -128,6 +129,33 @@ def EmitC_PointerType : EmitC_Type<"Pointer", "ptr"> {
     }]>
   ];
   let assemblyFormat = "`<` qualified($pointee) `>`";
+}
+
+def EmitC_SignedSizeT : EmitC_Type<"SignedSizeT", "ssize_t"> {
+  let summary = "EmitC signed size type";
+  let description = [{
+    Data type representing all values of `emitc.size_t`, plus -1.
+    It corresponds to `ssize_t` found in `<sys/types.h>`.
+    
+    Use of this type causes the code to be non-C99 compliant.
+  }];
+}
+
+def EmitC_PtrDiffT : EmitC_Type<"PtrDiffT", "ptrdiff_t"> {
+  let summary = "EmitC signed pointer diff type";
+  let description = [{
+    Signed data type as wide as platform-specific pointer types.
+    In particular, it is as wide as `emitc.size_t`.
+    It corresponds to `ptrdiff_t` found in `<stddef.h>`.
+  }];
+}
+
+def EmitC_SizeT : EmitC_Type<"SizeT", "size_t"> {
+  let summary = "EmitC unsigned size type";
+  let description = [{
+    Unsigned data type as wide as platform-specific pointer types.
+    It corresponds to `size_t` found in `<stddef.h>`.
+  }];
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITCTYPES

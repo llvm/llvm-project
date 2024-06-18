@@ -67,8 +67,8 @@ func.func @constant_ops() {
 // CHECK-LABEL: @ceildivs
 // CHECK-SAME: %[[NI:.*]]: index, %[[MI:.*]]: index
 func.func @ceildivs(%n: index, %m: index) -> index {
-  // CHECK: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
-  // CHECK: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
+  // CHECK-DAG: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
+  // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = spirv.Constant 0
   // CHECK: %[[POS_ONE:.*]] = spirv.Constant 1
   // CHECK: %[[NEG_ONE:.*]] = spirv.Constant -1
@@ -99,8 +99,8 @@ func.func @ceildivs(%n: index, %m: index) -> index {
 // CHECK-LABEL: @ceildivu
 // CHECK-SAME: %[[NI:.*]]: index, %[[MI:.*]]: index
 func.func @ceildivu(%n: index, %m: index) -> index {
-  // CHECK: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
-  // CHECK: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
+  // CHECK-DAG: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
+  // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = spirv.Constant 0
   // CHECK: %[[ONE:.*]] = spirv.Constant 1
 
@@ -120,8 +120,8 @@ func.func @ceildivu(%n: index, %m: index) -> index {
 // CHECK-LABEL: @floordivs
 // CHECK-SAME: %[[NI:.*]]: index, %[[MI:.*]]: index
 func.func @floordivs(%n: index, %m: index) -> index {
-  // CHECK: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
-  // CHECK: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
+  // CHECK-DAG: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
+  // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = spirv.Constant 0
   // CHECK: %[[POS_ONE:.*]] = spirv.Constant 1
   // CHECK: %[[NEG_ONE:.*]] = spirv.Constant -1

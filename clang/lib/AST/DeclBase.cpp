@@ -691,7 +691,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
     IdentifierInfo *IIEnv = A->getEnvironment();
     StringRef TargetEnv =
         Context.getTargetInfo().getTriple().getEnvironmentName();
-    StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(
+    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
         Context.getTargetInfo().getTriple().getEnvironment());
     // Matching environment or no environment on attribute
     if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
@@ -1126,6 +1126,15 @@ bool Decl::isInAnotherModuleUnit() const {
     return false;
 
   return M != getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::isInCurrentModuleUnit() const {
+  auto *M = getOwningModule();
+
+  if (!M || !M->isNamedModule())
+    return false;
+
+  return M == getASTContext().getCurrentNamedModule();
 }
 
 bool Decl::shouldEmitInExternalSource() const {
