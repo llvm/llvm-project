@@ -34,10 +34,7 @@ class SMTConstraintManager : public clang::ento::SimpleConstraintManager {
 public:
   SMTConstraintManager(clang::ento::ExprEngine *EE,
                        clang::ento::SValBuilder &SB)
-      : SimpleConstraintManager(EE, SB) {
-    Solver->setBoolParam("model", true); // Enable model finding
-    Solver->setUnsignedParam("timeout", 15000 /*milliseconds*/);
-  }
+      : SimpleConstraintManager(EE, SB) {}
   virtual ~SMTConstraintManager() = default;
 
   //===------------------------------------------------------------------===//
