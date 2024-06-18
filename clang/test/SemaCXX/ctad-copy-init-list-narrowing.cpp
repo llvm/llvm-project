@@ -1,19 +1,18 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-unused-value -std=c++20 %s
 
 namespace std {
-  typedef decltype(sizeof(int)) size_t;
+typedef decltype(sizeof(int)) size_t;
 
-  template <typename E>
-  struct initializer_list
-  {
-    const E *p;
-    size_t n;
-    initializer_list(const E *p, size_t n) : p(p), n(n) {}
-  };
+template <typename E>
+struct initializer_list {
+  const E *p;
+  size_t n;
+  initializer_list(const E *p, size_t n) : p(p), n(n) {}
+};
 
 // Classes to use to reproduce the exact scenario present in #62925.
 template<class T, class Y>
-class pair{
+class pair {
     public:
     pair(T f, Y s) {}
 };
