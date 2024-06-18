@@ -115,9 +115,8 @@ struct StreamState {
       return "Closed";
     case OpenFailed:
       return "OpenFailed";
-    default:
-      llvm_unreachable("Unknown StreamState!");
     }
+    llvm_unreachable("Unknown StreamState!");
   }
 
   /// State of the error flags.
@@ -333,7 +332,7 @@ public:
   /// If true, generate failure branches for cases that are often not checked.
   bool PedanticMode = false;
 
-  CallDescription FCloseDesc = {CDM::CLibrary, {"fclose"}, 1};
+  const CallDescription FCloseDesc = {CDM::CLibrary, {"fclose"}, 1};
 
 private:
   CallDescriptionMap<FnDescription> FnDescriptions = {
@@ -737,21 +736,18 @@ struct StreamOperationEvaluator {
 namespace {
 class NoStreamStateChangeVisitor final : public NoOwnershipChangeVisitor {
 protected:
-  /// Syntactically checks whether the callee is a freeing function. Since
+  /// Syntactically checks whether the callee is a closing function. Since
   /// we have no path-sensitive information on this call (we would need a
   /// CallEvent instead of a CallExpr for that), its possible that a
-  /// freeing function was called indirectly through a function pointer,
+  /// closing function was called indirectly through a function pointer,
   /// but we are not able to tell, so this is a best effort analysis.
-  bool isFreeingCallAsWritten(const CallExpr &Call) const {
+  bool isClosingCallAsWritten(const CallExpr &Call) const {
     const auto *StreamChk = static_cast<const StreamChecker *>(&Checker);
-    if (StreamChk->FCloseDesc.matchesAsWritten(Call))
-      return true;
-
-    return false;
+    return StreamChk->FCloseDesc.matchesAsWritten(Call);
   }
 
   bool doesFnIntendToHandleOwnership(const Decl *Callee,
-                                     ASTContext &ACtx) override {
+                                     ASTContext &ACtx) final {
     using namespace clang::ast_matchers;
     const FunctionDecl *FD = dyn_cast<FunctionDecl>(Callee);
 
@@ -759,16 +755,16 @@ protected:
         match(findAll(callExpr().bind("call")), *FD->getBody(), ACtx);
     for (BoundNodes Match : Matches) {
       if (const auto *Call = Match.getNodeAs<CallExpr>("call"))
-        if (isFreeingCallAsWritten(*Call))
+        if (isClosingCallAsWritten(*Call))
           return true;
     }
     // TODO: Ownership might change with an attempt to store stream object, not
-    // only through freeing it. Check for attempted stores as well.
+    // only through closing it. Check for attempted stores as well.
     return false;
   }
 
-  virtual bool hasResourceStateChanged(ProgramStateRef CallEnterState,
-                                       ProgramStateRef CallExitEndState) final {
+  bool hasResourceStateChanged(ProgramStateRef CallEnterState,
+                               ProgramStateRef CallExitEndState) final {
     return CallEnterState->get<StreamMap>(Sym) !=
            CallExitEndState->get<StreamMap>(Sym);
   }
@@ -778,7 +774,7 @@ protected:
         N->getLocation(),
         N->getState()->getStateManager().getContext().getSourceManager());
     return std::make_shared<PathDiagnosticEventPiece>(
-        L, "Returning without freeing stream object or storing it for later "
+        L, "Returning without closing stream object or storing it for later "
            "release");
   }
 
@@ -788,10 +784,6 @@ public:
 };
 
 } // end anonymous namespace
-
-inline void assertStreamStateOpened(const StreamState *SS) {
-  assert(SS->isOpened() && "Stream is expected to be opened");
-}
 
 const ExplodedNode *StreamChecker::getAcquisitionSite(const ExplodedNode *N,
                                                       SymbolRef StreamSym,
