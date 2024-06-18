@@ -10023,9 +10023,12 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         break;
       }
 
-      assert((OpInfo.ConstraintType == TargetLowering::C_RegisterClass ||
-              OpInfo.ConstraintType == TargetLowering::C_Register) &&
-             "Unknown constraint type!");
+      if (OpInfo.ConstraintType != TargetLowering::C_RegisterClass &&
+          OpInfo.ConstraintType != TargetLowering::C_Register) {
+        emitInlineAsmError(Call, "unknown asm constraint '" +
+                                     Twine(OpInfo.ConstraintCode) + "'");
+        return;
+      }
 
       // TODO: Support this.
       if (OpInfo.isIndirect) {
