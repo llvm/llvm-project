@@ -5239,6 +5239,12 @@ public:
     return ExprEvalContexts.back();
   };
 
+  ExpressionEvaluationContextRecord &currentEvaluationContext() {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    return ExprEvalContexts.back();
+  };
+
   ExpressionEvaluationContextRecord &parentEvaluationContext() {
     assert(ExprEvalContexts.size() >= 2 &&
            "Must be in an expression evaluation context");
