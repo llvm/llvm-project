@@ -22,7 +22,7 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-#define DEBUG_TYPE "flang-constang-argument-globalisation-opt"
+#define DEBUG_TYPE "flang-constant-argument-globalisation-opt"
 
 namespace {
 unsigned uniqueLitId = 1;
@@ -45,7 +45,7 @@ public:
     bool needUpdate = false;
     fir::FirOpBuilder builder(rewriter, module);
     llvm::SmallVector<mlir::Value> newOperands;
-    llvm::SmallVector<mlir::Operation *> toErase;
+    llvm::SmallVector<std::pair<mlir::Operation *, mlir::Operation *>> allocas;
     for (const mlir::Value &a : callOp.getArgs()) {
       auto alloca = mlir::dyn_cast_or_null<fir::AllocaOp>(a.getDefiningOp());
       // We can convert arguments that are alloca, and that has
@@ -74,7 +74,8 @@ public:
         }
       }
 
-      // If we didn't find one signle store, add argument as is, and move on.
+      // If we didn't find any store, or multiple stores, add argument as is
+      // and move on.
       if (!store) {
         newOperands.push_back(a);
         continue;
@@ -82,45 +83,36 @@ public:
 
       LLVM_DEBUG(llvm::dbgs() << " found store " << *store << "\n");
 
-      mlir::Operation *constant_def = store->getOperand(0).getDefiningOp();
-      // Expect constant definition operation or force legalisation of the
-      // callOp and continue with its next argument
-      if (!mlir::isa<mlir::arith::ConstantOp>(constant_def)) {
+      mlir::Operation *definingOp = store->getOperand(0).getDefiningOp();
+      // If not a constant, add to operands and move on.
+      if (!mlir::isa<mlir::arith::ConstantOp>(definingOp)) {
         // Unable to remove alloca arg
         newOperands.push_back(a);
         continue;
       }
 
-      LLVM_DEBUG(llvm::dbgs() << " found define " << *constant_def << "\n");
+      LLVM_DEBUG(llvm::dbgs() << " found define " << *definingOp << "\n");
 
       std::string globalName =
           "_global_const_." + std::to_string(uniqueLitId++);
       assert(!builder.getNamedGlobal(globalName) &&
              "We should have a unique name here");
 
-      unsigned count = 0;
-      for (mlir::Operation *s : alloca->getUsers())
-        if (di.dominates(store, s))
-          ++count;
-
-      // Delete if dominates itself and one more operation (which should
-      // be callOp)
-      if (count == 2)
-        toErase.push_back(store);
+      allocas.push_back(std::make_pair(alloca, store));
 
       auto loc = callOp.getLoc();
       fir::GlobalOp global = builder.createGlobalConstant(
           loc, varTy, globalName,
           [&](fir::FirOpBuilder &builder) {
-            mlir::Operation *cln = constant_def->clone();
+            mlir::Operation *cln = definingOp->clone();
             builder.insert(cln);
             mlir::Value val =
                 builder.createConvert(loc, varTy, cln->getResult(0));
             builder.create<fir::HasValueOp>(loc, val);
           },
           builder.createInternalLinkage());
-      mlir::Value addr = {builder.create<fir::AddrOfOp>(
-          loc, global.resultType(), global.getSymbol())};
+      mlir::Value addr = builder.create<fir::AddrOfOp>(
+          loc, global.resultType(), global.getSymbol());
       newOperands.push_back(addr);
       needUpdate = true;
     }
@@ -139,8 +131,19 @@ public:
       newOp->setAttrs(callOp->getAttrs());
       rewriter.replaceOp(callOp, newOp);
 
-      for (auto e : toErase)
-        rewriter.eraseOp(e);
+      for (auto a : allocas) {
+	unsigned count = 0;
+      
+	for (auto i : a.first->getUsers())
+	  ++count;
+
+	// If the alloca is only used for a store and the call operand, the
+	// store is no longer required.
+	if (count == 1) {
+	  rewriter.eraseOp(a.second);
+	  rewriter.eraseOp(a.first);
+	}
+      }
       LLVM_DEBUG(llvm::dbgs() << "global constant for " << callOp << " as "
                               << newOp << '\n');
       return mlir::success();

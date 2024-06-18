@@ -78,3 +78,21 @@ module {
 // CHECK: }
 
 }
+
+// -----
+// Check that same argument used twice is converted.
+module {
+  func.func @func(%arg0: !fir.ref<i32>, %arg1: i1) {
+    %c2_i32 = arith.constant 2 : i32
+    %addr1 = fir.alloca i32 {adapt.valuebyref}
+    fir.store %c2_i32 to %addr1 : !fir.ref<i32>
+    fir.call @sub1(%addr1, %addr1) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+    return
+  }
+}
+
+// CHECK-LABEL: func.func @func
+// CHECK-NEXT: %[[ARG1:.*]] = fir.address_of([[CONST1:@.*]]) : !fir.ref<i32>
+// CHECK-NEXT: %[[ARG2:.*]] = fir.address_of([[CONST2:@.*]]) : !fir.ref<i32>
+// CHECK-NEXT: fir.call @sub1(%[[ARG1]], %[[ARG2]])
+// CHECK-NEXT: return
