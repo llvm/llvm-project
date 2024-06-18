@@ -176,6 +176,8 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   llvm::sys::path::native(AssetsPath, IndexJS);
   llvm::sys::path::append(IndexJS, "index.js");
 
+  llvm::outs() << "Using default asset: " << AssetsPath << "\n";
+
   if (!llvm::sys::fs::is_regular_file(IndexJS))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "default index.js file missing at " +
@@ -190,8 +192,6 @@ llvm::Error getDefaultAssetFiles(const char *Argv0,
   CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
                                std::string(DefaultStylesheet));
   CDCtx.FilesToCopy.emplace_back(IndexJS.str());
-
-  llvm::outs() << "Using default asset: " << AssetsPath << "\n";
 
   return llvm::Error::success();
 }
