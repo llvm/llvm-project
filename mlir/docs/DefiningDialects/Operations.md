@@ -946,7 +946,7 @@ optional-group: `(` then-elements `)` (`:` `(` else-elements `)`)? `?`
 The elements of an optional group have the following requirements:
 
 *   The first element of `then-elements` must either be a attribute, literal,
-    operand,property, or region.
+    operand, property, or region.
     -   This is because the first element must be optionally parsable.
     -   If a property is used, it must have an `optionalParser` defined and have a
         default value.
