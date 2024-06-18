@@ -353,6 +353,21 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
   return nullptr;
 }
 
+void CGHLSLRuntime::emitFunctionProlog(const FunctionDecl *FD,
+                                       llvm::Function *Fn) {
+  if (!FD || !Fn)
+    return;
+
+  if (FD->hasAttr<HLSLShaderAttr>()) {
+    emitEntryFunction(FD, Fn);
+  } else {
+    // HLSL functions defined in the current translation unit that are not
+    // shader entry points or exported have internal linkage by default.
+    if (FD->isDefined())
+      Fn->setLinkage(GlobalValue::InternalLinkage);
+  }
+}
+
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                                       llvm::Function *Fn) {
   llvm::Module &M = CGM.getModule();
