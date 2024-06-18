@@ -812,6 +812,10 @@ doesn't). These kinds of structs (we may call them homogeneous scalable vector
 structs) are considered sized and can be used in loads, stores, allocas, but
 not GEPs.
 
+Globals with ``toc-data`` attribute set are stored in TOC of XCOFF. Their
+alignments are not larger than that of a TOC entry. Optimizations should not
+increase their alignments to mitigate TOC overflow.
+
 Syntax::
 
       @<GlobalVarName> = [Linkage] [PreemptionSpecifier] [Visibility]
