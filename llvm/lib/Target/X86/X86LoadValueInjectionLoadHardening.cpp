@@ -439,9 +439,8 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
 
           // Remove duplicate transmitters
           llvm::sort(DefTransmitters);
-          DefTransmitters.erase(
-              std::unique(DefTransmitters.begin(), DefTransmitters.end()),
-              DefTransmitters.end());
+          DefTransmitters.erase(llvm::unique(DefTransmitters),
+                                DefTransmitters.end());
         };
 
     // Find all of the transmitters

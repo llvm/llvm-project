@@ -46,3 +46,19 @@ constexpr int preInc(int x) { // both-error {{never produces a constant expressi
 constexpr int postInc(int x) { // both-error {{never produces a constant expression}}
   return x++;                  // both-note {{subexpression}}
 }
+
+
+namespace ReferenceToConst {
+  template<int n> struct S; // both-note 1{{here}}
+  struct LiteralType {
+    constexpr LiteralType(int n) : n(n) {}
+    int n;
+  };
+  template<int n> struct T {
+    T() {
+      static const int ki = 42;
+      const int &i2 = ki;
+      typename S<i2>::T check5; // both-error {{undefined template}}
+    }
+  };
+}

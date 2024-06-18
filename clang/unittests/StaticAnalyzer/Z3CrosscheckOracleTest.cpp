@@ -128,13 +128,13 @@ TEST_F(Z3CrosscheckOracleTest, SATWhenIfAttemptsManySmallQueries) {
   ASSERT_EQ(AcceptReport, interpretQueryResult({SAT, 200_ms, 1000_step}));
 }
 
-TEST_F(Z3CrosscheckOracleTest, RejectEQClassIfHitsRLimitTooManyTimes) {
+TEST_F(Z3CrosscheckOracleTest, RejectEQClassIfExhaustsRLimit) {
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 25_ms, 1000_step}));
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 25_ms, 1000_step}));
   ASSERT_EQ(RejectEQClass, interpretQueryResult({UNDEF, 25_ms, 405'000_step}));
 }
 
-TEST_F(Z3CrosscheckOracleTest, SATWhenItHitsRLimitTooManyTimes) {
+TEST_F(Z3CrosscheckOracleTest, SATWhenItExhaustsRLimit) {
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 25_ms, 1000_step}));
   ASSERT_EQ(RejectReport, interpretQueryResult({UNSAT, 25_ms, 1000_step}));
   ASSERT_EQ(AcceptReport, interpretQueryResult({SAT, 25_ms, 405'000_step}));

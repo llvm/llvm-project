@@ -185,6 +185,13 @@ ANALYZER_OPTION(bool, ShouldCrosscheckWithZ3, "crosscheck-with-z3",
                 false)
 
 ANALYZER_OPTION(
+    unsigned, Z3CrosscheckEQClassTimeoutThreshold,
+    "crosscheck-with-z3-eqclass-timeout-threshold",
+    "Set a timeout for bug report equivalence classes in milliseconds. "
+    "If we exhaust this threshold, we will drop the bug report eqclass "
+    "instead of doing more Z3 queries. Set 0 for no timeout.", 700)
+
+ANALYZER_OPTION(
     unsigned, Z3CrosscheckTimeoutThreshold,
     "crosscheck-with-z3-timeout-threshold",
     "Set a timeout for individual Z3 queries in milliseconds. "

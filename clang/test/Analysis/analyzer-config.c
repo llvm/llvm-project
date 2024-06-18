@@ -43,6 +43,7 @@
 // CHECK-NEXT: cplusplus.Move:WarnOn = KnownsAndLocals
 // CHECK-NEXT: cplusplus.SmartPtrModeling:ModelSmartPtrDereference = false
 // CHECK-NEXT: crosscheck-with-z3 = false
+// CHECK-NEXT: crosscheck-with-z3-eqclass-timeout-threshold = 700
 // CHECK-NEXT: crosscheck-with-z3-rlimit-threshold = 400000
 // CHECK-NEXT: crosscheck-with-z3-timeout-threshold = 300
 // CHECK-NEXT: ctu-dir = ""

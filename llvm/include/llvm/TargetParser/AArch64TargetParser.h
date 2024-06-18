@@ -364,6 +364,12 @@ inline constexpr CpuInfo CpuInfos[] = {
                                AArch64::AEK_PAUTH, AArch64::AEK_SVE2BITPERM,
                                AArch64::AEK_FLAGM, AArch64::AEK_PERFMON,
                                AArch64::AEK_PREDRES, AArch64::AEK_PROFILE})},
+    {"cortex-a725", ARMV9_2A,
+     AArch64::ExtensionBitset(
+         {AArch64::AEK_MTE, AArch64::AEK_SSBS, AArch64::AEK_SB,
+          AArch64::AEK_PREDRES, AArch64::AEK_FP16FML, AArch64::AEK_PAUTH,
+          AArch64::AEK_FLAGM, AArch64::AEK_PERFMON, AArch64::AEK_SVE2BITPERM,
+          AArch64::AEK_PROFILE})},
     {"cortex-r82", ARMV8R,
      AArch64::ExtensionBitset({AArch64::AEK_LSE, AArch64::AEK_FLAGM,
                                AArch64::AEK_PERFMON, AArch64::AEK_PREDRES})},
@@ -398,6 +404,12 @@ inline constexpr CpuInfo CpuInfos[] = {
                                AArch64::AEK_MTE, AArch64::AEK_FP16FML,
                                AArch64::AEK_PAUTH, AArch64::AEK_SVE2BITPERM,
                                AArch64::AEK_FLAGM, AArch64::AEK_PERFMON,
+                               AArch64::AEK_PREDRES, AArch64::AEK_PROFILE})},
+    {"cortex-x925", ARMV9_2A,
+     AArch64::ExtensionBitset({AArch64::AEK_SB, AArch64::AEK_SSBS,
+                               AArch64::AEK_MTE, AArch64::AEK_FP16FML,
+                               AArch64::AEK_PAUTH, AArch64::AEK_FLAGM,
+                               AArch64::AEK_SVE2BITPERM, AArch64::AEK_PERFMON,
                                AArch64::AEK_PREDRES, AArch64::AEK_PROFILE})},
     {"neoverse-e1", ARMV8_2A,
      AArch64::ExtensionBitset({AArch64::AEK_AES, AArch64::AEK_SHA2,
@@ -509,7 +521,14 @@ inline constexpr CpuInfo CpuInfos[] = {
      AArch64::ExtensionBitset({AArch64::AEK_AES, AArch64::AEK_SHA2,
                                AArch64::AEK_SHA3, AArch64::AEK_FP16,
                                AArch64::AEK_FP16FML})},
-
+    // Technically apple-m4 is ARMv9.2a, but a quirk of LLVM defines v9.0 as
+    // requiring SVE, which is optional according to the Arm ARM and not
+    // supported by the core. ARMv8.7a is the next closest choice.
+    {"apple-m4", ARMV8_7A,
+     AArch64::ExtensionBitset(
+         {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_SHA3,
+          AArch64::AEK_FP16, AArch64::AEK_FP16FML, AArch64::AEK_SME,
+          AArch64::AEK_SME2, AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64})},
     {"apple-s4", ARMV8_3A,
      AArch64::ExtensionBitset(
          {AArch64::AEK_AES, AArch64::AEK_SHA2, AArch64::AEK_FP16})},

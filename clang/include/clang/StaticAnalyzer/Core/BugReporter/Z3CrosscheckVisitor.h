@@ -75,6 +75,8 @@ public:
   /// - Hit the 300ms query timeout in the report eqclass.
   /// - Hit the 400'000 rlimit in the report eqclass.
   ///
+  /// All these thresholds are configurable via the analyzer options.
+  ///
   /// Refer to
   /// https://discourse.llvm.org/t/analyzer-rfc-taming-z3-query-times/79520 to
   /// see why this heuristic was chosen.
@@ -82,7 +84,6 @@ public:
 
 private:
   const AnalyzerOptions &Opts;
-  unsigned NumZ3QueriesDoneInEqClass = 0;
   unsigned AccumulatedZ3QueryTimeInEqClass = 0; // ms
 };
 

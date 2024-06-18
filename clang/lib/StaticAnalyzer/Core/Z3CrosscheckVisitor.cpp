@@ -123,12 +123,11 @@ void Z3CrosscheckVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
 Z3CrosscheckOracle::Z3Decision Z3CrosscheckOracle::interpretQueryResult(
     const Z3CrosscheckVisitor::Z3Result &Query) {
   ++NumZ3QueriesDone;
-  ++NumZ3QueriesDoneInEqClass;
   AccumulatedZ3QueryTimeInEqClass += Query.Z3QueryTimeMilliseconds;
 
   if (Query.IsSAT && Query.IsSAT.value()) {
     ++NumTimesZ3QueryAcceptsReport;
-    return AcceptReport; // sat
+    return AcceptReport;
   }
 
   // Suggest cutting the EQClass if certain heuristics trigger.
@@ -146,7 +145,9 @@ Z3CrosscheckOracle::Z3Decision Z3CrosscheckOracle::interpretQueryResult(
     return RejectEQClass;
   }
 
-  if (AccumulatedZ3QueryTimeInEqClass > 700 /*ms*/) {
+  if (Opts.Z3CrosscheckEQClassTimeoutThreshold &&
+      AccumulatedZ3QueryTimeInEqClass >
+          Opts.Z3CrosscheckEQClassTimeoutThreshold) {
     ++NumTimesZ3SpendsTooMuchTimeOnASingleEQClass;
     ++NumTimesZ3QueryRejectEQClass;
     return RejectEQClass;
@@ -155,5 +156,5 @@ Z3CrosscheckOracle::Z3Decision Z3CrosscheckOracle::interpretQueryResult(
   // If no cutoff heuristics trigger, and the report is "unsat" or "undef",
   // then reject the report.
   ++NumTimesZ3QueryRejectReport;
-  return RejectReport; // unsat
+  return RejectReport;
 }
