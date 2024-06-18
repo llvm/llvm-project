@@ -2604,6 +2604,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
 
+  ctx.symtab.initializeEntryThunks();
+
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {
     if (config->mingw) {
