@@ -1986,7 +1986,7 @@ example:
       writing it, as this is not observable. Reading the location prior to
       writing it results in a poison value.
     - ``none``: No reads or writes to the location are observed outside the
-      function. It is always valid read and write allocas, and read global
+      function. It is always valid to read and write allocas, and to read global
       constants, even if ``memory(none)`` is used, as these effects are not
       externally observable.
 
