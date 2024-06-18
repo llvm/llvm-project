@@ -3507,7 +3507,7 @@ bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
     PrimType T = classifyPrim(RF->Decl->getType());
     if (!this->visitAPValue(F, T, E))
       return false;
-    return this->emitInitElem(T, 0, E);
+    return this->emitInitField(T, RF->Offset, E);
   }
   // TODO: Other types.
 
