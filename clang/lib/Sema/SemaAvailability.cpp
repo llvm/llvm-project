@@ -157,10 +157,12 @@ static bool ShouldDiagnoseAvailabilityInContext(
     }
   }
 
-  // In HLSL, emit diagnostic during parsing only if the diagnostic
-  // mode is set to strict (-fhlsl-strict-availability), and either the decl
-  // availability is not restricted to a specific environment/shader stage,
-  // or the target stage is known (= it is not shader library).
+  // In HLSL, skip emitting diagnostic is the diagnostic mode is not set to
+  // strict (-fhlsl-strict-availability), or if the target is library and the
+  // availability is restricted to a specific environment/shader stage.
+  // For libraries the availability will be checked later in
+  // DiagnoseHLSLAvailability class once where the specific environment/shader
+  // stage of the caller is known.
   if (S.getLangOpts().HLSL) {
     if (!S.getLangOpts().HLSLStrictAvailability ||
         (DeclEnv != nullptr &&
