@@ -140,7 +140,9 @@ class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
   let PrintMethod = printer;
 }
 
-def s16imm : ImmOperand<i16, "S16Imm", 0, "printU16ImmOperand">;
+class S16ImmOperand : ImmOperand<i16, "S16Imm", 0, "printU16ImmOperand">;
+
+def s16imm : S16ImmOperand;
 def u16imm : ImmOperand<i16, "U16Imm", 0, "printU16ImmOperand">;
 
 class ValuePredicatedOperand<CustomOperand op, string valuePredicate,
