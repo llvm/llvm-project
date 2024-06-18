@@ -22,6 +22,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/WindowsDriver/MSVCPaths.h"
+#include <future>
 #include <memory>
 #include <optional>
 #include <set>
@@ -91,13 +92,18 @@ public:
 
   // Used by ArchiveFile to enqueue members.
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
-                            StringRef parentName);
+                            StringRef parentName,
+                            ArchiveFile *parent = nullptr);
 
   void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
+  void enqueuePath(
+      StringRef path, bool wholeArchive, bool lazy,
+      std::optional<std::shared_future<ArchiveFile *>> parent = std::nullopt);
+
+  void enqueueLazyFile(InputFile *file);
 
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
@@ -182,15 +188,24 @@ private:
   StringRef findDefaultEntry();
   WindowsSubsystem inferSubsystem();
 
-  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
-                 bool lazy);
+  void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive, bool lazy,
+                 ArchiveFile *parent = nullptr);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
-                        StringRef parentName, uint64_t offsetInArchive);
+                        StringRef parentName, uint64_t offsetInArchive,
+                        ArchiveFile *parent = nullptr);
 
   void enqueueTask(std::function<void()> task);
+  void enqueueSecondaryTask(std::function<void()> task);
   bool run();
 
-  std::list<std::function<void()>> taskQueue;
+  // The first queue contains all direct command-line inputs, all /defaultlib
+  // LIBs, provided on the command-line or in a directives section. The second
+  // queue is meant for lower-priority dependent OBJs pulled by a symbol from an
+  // archive. If there are items in both queues, the first one must be fully
+  // executed first before the second queue. This is important to ensure we pull
+  // on archives symbols in the order specified by the MSVC spec.
+  std::list<std::function<void()>> firstTaskQueue;
+  std::list<std::function<void()>> secondaryTaskQueue;
   std::vector<StringRef> filePaths;
   std::vector<MemoryBufferRef> resources;
 

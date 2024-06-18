@@ -42,6 +42,7 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -175,7 +176,8 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
 }
 
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
-                             bool wholeArchive, bool lazy) {
+                             bool wholeArchive, bool lazy,
+                             ArchiveFile *parent) {
   StringRef filename = mb->getBufferIdentifier();
 
   MemoryBufferRef mbref = takeBuffer(std::move(mb));
@@ -201,11 +203,11 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     ctx.symtab.addFile(make<ArchiveFile>(ctx, mbref));
     break;
   case file_magic::bitcode:
-    ctx.symtab.addFile(make<BitcodeFile>(ctx, mbref, "", 0, lazy));
+    ctx.symtab.addFile(make<BitcodeFile>(ctx, mbref, "", 0, lazy, parent));
     break;
   case file_magic::coff_object:
   case file_magic::coff_import_library:
-    ctx.symtab.addFile(make<ObjFile>(ctx, mbref, lazy));
+    ctx.symtab.addFile(make<ObjFile>(ctx, mbref, lazy, parent));
     break;
   case file_magic::pdb:
     ctx.symtab.addFile(make<PDBInputFile>(ctx, mbref));
@@ -230,7 +232,9 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   }
 }
 
-void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
+void LinkerDriver::enqueuePath(
+    StringRef path, bool wholeArchive, bool lazy,
+    std::optional<std::shared_future<ArchiveFile *>> parent) {
   auto future = std::make_shared<std::future<MBErrPair>>(
       createFutureForFile(std::string(path)));
   std::string pathStr = std::string(path);
@@ -269,13 +273,15 @@ void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
       else
         error(msg + "; did you mean '" + nearest + "'");
     } else
-      ctx.driver.addBuffer(std::move(mb), wholeArchive, lazy);
+      ctx.driver.addBuffer(std::move(mb), wholeArchive, lazy,
+                           parent ? parent->get() : nullptr);
   });
 }
 
 void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
                                     StringRef parentName,
-                                    uint64_t offsetInArchive) {
+                                    uint64_t offsetInArchive,
+                                    ArchiveFile *parent) {
   file_magic magic = identify_magic(mb.getBuffer());
   if (magic == file_magic::coff_import_library) {
     InputFile *imp = make<ImportFile>(ctx, mb);
@@ -286,10 +292,10 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = make<ObjFile>(ctx, mb);
+    obj = make<ObjFile>(ctx, mb, /*lazy=*/false, parent);
   } else if (magic == file_magic::bitcode) {
-    obj =
-        make<BitcodeFile>(ctx, mb, parentName, offsetInArchive, /*lazy=*/false);
+    obj = make<BitcodeFile>(ctx, mb, parentName, offsetInArchive,
+                            /*lazy=*/false, parent);
   } else if (magic == file_magic::coff_cl_gl_object) {
     error(mb.getBufferIdentifier() +
           ": is not a native COFF file. Recompile without /GL?");
@@ -306,7 +312,8 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                                         const Archive::Symbol &sym,
-                                        StringRef parentName) {
+                                        StringRef parentName,
+                                        ArchiveFile *parent) {
 
   auto reportBufferError = [=](Error &&e, StringRef childName) {
     fatal("could not get the buffer for the member defining symbol " +
@@ -320,10 +327,10 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     if (!mbOrErr)
       reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
     MemoryBufferRef mb = mbOrErr.get();
-    enqueueTask([=]() {
+    enqueueSecondaryTask([=]() {
       llvm::TimeTraceScope timeScope("Archive: ", mb.getBufferIdentifier());
       ctx.driver.addArchiveBuffer(mb, toCOFFString(ctx, sym), parentName,
-                                  offsetInArchive);
+                                  offsetInArchive, parent);
     });
     return;
   }
@@ -334,7 +341,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
                 toCOFFString(ctx, sym));
   auto future =
       std::make_shared<std::future<MBErrPair>>(createFutureForFile(childName));
-  enqueueTask([=]() {
+  enqueueSecondaryTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
       reportBufferError(errorCodeToError(mbOrErr.second), childName);
@@ -344,13 +351,39 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
     // used as the buffer identifier.
     ctx.driver.addArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
                                 toCOFFString(ctx, sym), "",
-                                /*OffsetInArchive=*/0);
+                                /*OffsetInArchive=*/0, parent);
+  });
+}
+
+void LinkerDriver::enqueueLazyFile(InputFile *file) {
+  enqueueSecondaryTask([=]() {
+    // Once it has been enqueued, it cannot be lazy anymore.
+    file->lazy = false;
+    ctx.symtab.addFile(file);
   });
 }
 
 bool LinkerDriver::isDecorated(StringRef sym) {
   return sym.starts_with("@") || sym.contains("@@") || sym.starts_with("?") ||
          (!ctx.config.mingw && sym.contains('@'));
+}
+
+static LLVM_THREAD_LOCAL bool executingFirstQueue;
+
+static bool executeQueue(std::list<std::function<void()>> &queue) {
+  bool didWork = !queue.empty();
+  while (!queue.empty()) {
+    queue.front()();
+    queue.pop_front();
+  }
+  return didWork;
+}
+
+static bool executeFirstQueue(std::list<std::function<void()>> &queue) {
+  if (executingFirstQueue)
+    return false;
+  SaveAndRestore s(executingFirstQueue, true);
+  return executeQueue(queue);
 }
 
 // Parses .drectve section contents and returns a list of files
@@ -463,6 +496,11 @@ void LinkerDriver::parseDirectives(InputFile *file) {
             toString(file) + ")");
     }
   }
+
+  // If we are running off the low-priority task list, execute and drain the
+  // high priority task list before going any further. This is to ensure symbols
+  // provided by /DEFAULTLIB archives are linked properly in the symbol table.
+  executeFirstQueue(firstTaskQueue);
 }
 
 // Find file from search paths. You can omit ".obj", this function takes
@@ -1046,18 +1084,19 @@ void LinkerDriver::parseModuleDefs(StringRef path) {
 }
 
 void LinkerDriver::enqueueTask(std::function<void()> task) {
-  taskQueue.push_back(std::move(task));
+  firstTaskQueue.push_back(std::move(task));
+}
+
+void LinkerDriver::enqueueSecondaryTask(std::function<void()> task) {
+  secondaryTaskQueue.push_back(std::move(task));
 }
 
 bool LinkerDriver::run() {
   llvm::TimeTraceScope timeScope("Read input files");
   ScopedTimer t(ctx.inputFileTimer);
 
-  bool didWork = !taskQueue.empty();
-  while (!taskQueue.empty()) {
-    taskQueue.front()();
-    taskQueue.pop_front();
-  }
+  bool didWork = executeFirstQueue(firstTaskQueue);
+  didWork |= executeQueue(secondaryTaskQueue);
   return didWork;
 }
 
@@ -2101,17 +2140,30 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope2("Parse & queue inputs");
     bool inLib = false;
+    std::optional<std::shared_future<ArchiveFile *>> inLibArchive;
     for (auto *arg : args) {
       switch (arg->getOption().getID()) {
       case OPT_end_lib:
         if (!inLib)
           error("stray " + arg->getSpelling());
         inLib = false;
+        inLibArchive = std::nullopt;
         break;
       case OPT_start_lib:
         if (inLib)
           error("nested " + arg->getSpelling());
         inLib = true;
+        // In is important to create a fake archive here so that we remember its
+        // placement on the command-line. This will be later needed to resolve
+        // symbols in the archive order required by the MSVC specification.
+        {
+          auto a = std::make_shared<std::promise<ArchiveFile *>>();
+          inLibArchive = a->get_future().share();
+          enqueueTask([=] {
+            a->set_value(
+                make<ArchiveFile>(ctx, MemoryBufferRef({}, "<cmdline-lib>")));
+          });
+        }
         break;
       case OPT_wholearchive_file:
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
@@ -2119,7 +2171,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         break;
       case OPT_INPUT:
         if (std::optional<StringRef> path = findFileIfNew(arg->getValue()))
-          enqueuePath(*path, isWholeArchive(*path), inLib);
+          enqueuePath(*path, isWholeArchive(*path), inLib, inLibArchive);
         break;
       default:
         // Ignore other options.
@@ -2128,8 +2180,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
-  // Read all input files given via the command line.
-  run();
+  // Read all input files given via the command line. Do not process the
+  // dependent OBJs pulled from archives just yet, since we need to push the
+  // default libs first.
+  executeFirstQueue(firstTaskQueue);
   if (errorCount())
     return;
 
@@ -2433,9 +2487,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
       if (args.hasArg(OPT_include_optional)) {
         // Handle /includeoptional
-        for (auto *arg : args.filtered(OPT_include_optional))
-          if (isa_and_nonnull<LazyArchive>(ctx.symtab.find(arg->getValue())))
+        for (auto *arg : args.filtered(OPT_include_optional)) {
+          Symbol *sym = ctx.symtab.find(arg->getValue());
+          if (sym && (isa<LazyArchive>(sym) || isa<LazyObject>(sym)))
             addUndefined(arg->getValue());
+        }
       }
     } while (run());
   }
