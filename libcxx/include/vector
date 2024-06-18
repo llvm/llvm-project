@@ -905,6 +905,7 @@ private:
       __v_.__annotate_increase(__n);
 #endif
     }
+
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
       __v_.__end_ = __pos_;
 #ifndef _LIBCPP_HAS_NO_ASAN
@@ -918,7 +919,6 @@ private:
     pointer __pos_;
     const_pointer const __new_end_;
 
-  private:
     _ConstructTransaction(_ConstructTransaction const&)            = delete;
     _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
   };

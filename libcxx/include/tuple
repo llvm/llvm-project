@@ -304,9 +304,9 @@ class __tuple_leaf {
 #  endif
   }
 
+public:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
-public:
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() _NOEXCEPT_(is_nothrow_default_constructible<_Hp>::value) : __value_() {
     static_assert(!is_reference<_Hp>::value, "Attempted to default construct a reference element in a tuple");
   }
@@ -380,9 +380,9 @@ public:
 
 template <size_t _Ip, class _Hp>
 class __tuple_leaf<_Ip, _Hp, true> : private _Hp {
+public:
   _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_leaf& operator=(const __tuple_leaf&) = delete;
 
-public:
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_leaf() _NOEXCEPT_(is_nothrow_default_constructible<_Hp>::value) {}
 
   template <class _Alloc>

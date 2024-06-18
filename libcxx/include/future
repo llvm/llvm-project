@@ -1384,11 +1384,10 @@ class __packaged_task_base;
 
 template <class _Rp, class... _ArgTypes>
 class __packaged_task_base<_Rp(_ArgTypes...)> {
-  __packaged_task_base(const __packaged_task_base&);
-  __packaged_task_base& operator=(const __packaged_task_base&);
-
 public:
   _LIBCPP_HIDE_FROM_ABI __packaged_task_base() {}
+  __packaged_task_base(const __packaged_task_base&) = delete;
+  __packaged_task_base& operator=(const __packaged_task_base&) = delete;
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL
   virtual ~__packaged_task_base() {}
   virtual void __move_to(__packaged_task_base*) _NOEXCEPT = 0;
