@@ -893,15 +893,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     computeKnownBits(I, Known, Depth, CxtI);
     break;
   }
-  case Instruction::URem: {
-    APInt AllOnes = APInt::getAllOnes(BitWidth);
-    if (SimplifyDemandedBits(I, 0, AllOnes, LHSKnown, Depth + 1) ||
-        SimplifyDemandedBits(I, 1, AllOnes, RHSKnown, Depth + 1))
-      return I;
-
-    Known = KnownBits::urem(LHSKnown, RHSKnown);
-    break;
-  }
   case Instruction::Call: {
     bool KnownBitsComputed = false;
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
