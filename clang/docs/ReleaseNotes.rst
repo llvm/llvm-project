@@ -864,6 +864,7 @@ Bug Fixes to C++ Support
 - Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 - Fixed a failed assertion when attempting to convert an integer representing the difference
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
+- Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
 - Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
   forward-declared class. (#GH93512).
 
