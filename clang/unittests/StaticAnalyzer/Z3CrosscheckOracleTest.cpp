@@ -39,7 +39,7 @@ static const AnalyzerOptions DefaultOpts = [] {
   // Remember to update the tests in this file when these values change.
   // Also update the doc comment of `interpretQueryResult`.
   assert(Config.Z3CrosscheckRLimitThreshold == 400'000);
-  assert(Config.Z3CrosscheckTimeoutThreshold == 300 /*ms*/);
+  assert(Config.Z3CrosscheckTimeoutThreshold == 300_ms);
   // Usually, when the timeout/rlimit threshold is reached, Z3 only slightly
   // overshoots until it realizes that it overshoot and needs to back off.
   // Consequently, the measured timeout should be fairly close to the threshold.
