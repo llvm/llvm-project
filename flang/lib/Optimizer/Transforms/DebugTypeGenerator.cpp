@@ -60,8 +60,10 @@ DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m)
   // The debug information requires the offset of certain fields in the
   // descriptors like lower_bound and extent for each dimension.
   mlir::Type llvmDimsType = getDescFieldTypeModel<kDimsPosInBox>()(context);
+  mlir::Type llvmPtrType = getDescFieldTypeModel<kAddrPosInBox>()(context);
   dimsOffset = getComponentOffset<kDimsPosInBox>(*dl, context, llvmDimsType);
   dimsSize = dl->getTypeSize(llvmDimsType);
+  ptrSize = dl->getTypeSize(llvmPtrType);
 }
 
 static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
@@ -73,8 +75,8 @@ static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
 }
 
 static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
-  return genBasicType(context, mlir::StringAttr::get(context, "integer"), 32,
-                      llvm::dwarf::DW_ATE_signed);
+  return genBasicType(context, mlir::StringAttr::get(context, "integer"),
+                      /*bitSize=*/32, llvm::dwarf::DW_ATE_signed);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
@@ -104,8 +106,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
   // allocated = associated = (*base_addr != 0)
   mlir::LLVM::DIExpressionAttr valid =
       mlir::LLVM::DIExpressionAttr::get(context, ops);
-  mlir::LLVM::DIExpressionAttr associated = genAllocated ? valid : nullptr;
-  mlir::LLVM::DIExpressionAttr allocated = genAssociated ? valid : nullptr;
+  mlir::LLVM::DIExpressionAttr allocated = genAllocated ? valid : nullptr;
+  mlir::LLVM::DIExpressionAttr associated = genAssociated ? valid : nullptr;
   ops.clear();
 
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
@@ -143,11 +145,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     elements.push_back(subrangeTy);
   }
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*recursive id*/ {},
-      /* name */ nullptr, /* file */ nullptr, /* line */ 0,
-      /* scope */ nullptr, elemTy, mlir::LLVM::DIFlags::Zero,
-      /* sizeInBits */ 0, /*alignInBits*/ 0, elements, dataLocation,
-      /* rank */ nullptr, allocated, associated);
+      context, llvm::dwarf::DW_TAG_array_type, /*recursive_id=*/{},
+      /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
+      dataLocation, /*rank=*/nullptr, allocated, associated);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
@@ -182,12 +183,60 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
   // have been set to some valid default values.
 
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*recursive id*/ {},
-      /* name */ nullptr, /* file */ nullptr, /* line */ 0, /* scope */ nullptr,
-      elemTy, mlir::LLVM::DIFlags::Zero, /* sizeInBits */ 0,
-      /*alignInBits*/ 0, elements, /* dataLocation */ nullptr,
-      /* rank */ nullptr, /* allocated */ nullptr,
-      /* associated */ nullptr);
+      context, llvm::dwarf::DW_TAG_array_type, /*recursive_id=*/{},
+      /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
+      /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
+      /*associated=*/nullptr);
+}
+
+mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
+    fir::CharacterType charTy, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, mlir::Location loc) {
+  mlir::MLIRContext *context = module.getContext();
+  if (!charTy.hasConstantLen())
+    return genPlaceholderType(context);
+
+  // DWARF 5 says the following about the character encoding in 5.1.1.2.
+  // "DW_ATE_ASCII and DW_ATE_UCS specify encodings for the Fortran 2003
+  // string kinds ASCII (ISO/IEC 646:1991) and ISO_10646 (UCS-4 in ISO/IEC
+  // 10646:2000)."
+  unsigned encoding = llvm::dwarf::DW_ATE_ASCII;
+  if (charTy.getFKind() != 1)
+    encoding = llvm::dwarf::DW_ATE_UCS;
+
+  // FIXME: Currently the DIStringType in llvm does not have the option to set
+  // type of the underlying character. This restricts out ability to represent
+  // string with non-default characters. Please see issue #95440 for more
+  // details.
+  return mlir::LLVM::DIStringTypeAttr::get(
+      context, llvm::dwarf::DW_TAG_string_type,
+      mlir::StringAttr::get(context, ""),
+      charTy.getLen() * kindMapping.getCharacterBitsize(charTy.getFKind()),
+      /*alignInBits=*/0, /*stringLength=*/nullptr,
+      /*stringLengthExp=*/nullptr, /*stringLocationExp=*/nullptr, encoding);
+}
+
+mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
+    mlir::Type elTy, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::LLVM::DIScopeAttr scope, mlir::Location loc, bool genAllocated,
+    bool genAssociated) {
+  mlir::MLIRContext *context = module.getContext();
+
+  // Arrays and character need different treatment because DWARF have special
+  // constructs for them to get the location from the descriptor. Rest of
+  // types are handled like pointer to underlying type.
+  if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
+    return convertBoxedSequenceType(seqTy, fileAttr, scope, loc, genAllocated,
+                                    genAssociated);
+
+  mlir::LLVM::DITypeAttr elTyAttr = convertType(elTy, fileAttr, scope, loc);
+
+  return mlir::LLVM::DIDerivedTypeAttr::get(
+      context, llvm::dwarf::DW_TAG_pointer_type,
+      mlir::StringAttr::get(context, ""), elTyAttr, ptrSize,
+      /*alignInBits=*/0, /*offset=*/0,
+      /*optional<address space>=*/std::nullopt, /*extra data=*/nullptr);
 }
 
 mlir::LLVM::DITypeAttr
@@ -224,11 +273,17 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(Ty)) {
     return convertSequenceType(seqTy, fileAttr, scope, loc);
+  } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(Ty)) {
+    return convertCharacterType(charTy, fileAttr, scope, loc);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
       return convertBoxedSequenceType(seqTy, fileAttr, scope, loc, false,
                                       false);
+    if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(elTy))
+      return convertPointerLikeType(heapTy.getElementType(), fileAttr, scope,
+                                    loc, /*genAllocated=*/true,
+                                    /*genAssociated=*/false);
     return genPlaceholderType(context);
   } else {
     // FIXME: These types are currently unhandled. We are generating a

@@ -2324,11 +2324,11 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::Or:
   case Instruction::LShr:
   case Instruction::AShr:
+  case Instruction::Shl:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
-  case Instruction::Shl:
   case Instruction::Xor:
     return true;
   default:
@@ -2438,8 +2438,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   assert(Ty && "Must specify element type");
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
 
-  if (Constant *FC =
-          ConstantFoldGetElementPtr(Ty, C, NW.isInBounds(), InRange, Idxs))
+  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InRange, Idxs))
     return FC; // Fold a few common cases.
 
   assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");

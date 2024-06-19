@@ -1313,11 +1313,18 @@ OptionalFileEntryRef HeaderSearch::LookupSubframeworkHeader(
 // File Info Management.
 //===----------------------------------------------------------------------===//
 
+static bool moduleMembershipNeedsMerge(const HeaderFileInfo *HFI,
+                                       ModuleMap::ModuleHeaderRole Role) {
+  if (ModuleMap::isModular(Role))
+    return !HFI->isModuleHeader || HFI->isTextualModuleHeader;
+  if (!HFI->isModuleHeader && (Role & ModuleMap::TextualHeader))
+    return !HFI->isTextualModuleHeader;
+  return false;
+}
+
 static void mergeHeaderFileInfoModuleBits(HeaderFileInfo &HFI,
                                           bool isModuleHeader,
                                           bool isTextualModuleHeader) {
-  assert((!isModuleHeader || !isTextualModuleHeader) &&
-         "A header can't build with a module and be textual at the same time");
   HFI.isModuleHeader |= isModuleHeader;
   if (HFI.isModuleHeader)
     HFI.isTextualModuleHeader = false;
@@ -1432,7 +1439,7 @@ void HeaderSearch::MarkFileModuleHeader(FileEntryRef FE,
     if ((Role & ModuleMap::ExcludedHeader))
       return;
     auto *HFI = getExistingFileInfo(FE);
-    if (HFI && HFI->isModuleHeader)
+    if (HFI && !moduleMembershipNeedsMerge(HFI, Role))
       return;
   }
 
@@ -2039,6 +2046,8 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   using namespace llvm::sys;
 
   llvm::SmallString<32> FilePath = File;
+  if (!WorkingDir.empty() && !path::is_absolute(FilePath))
+    fs::make_absolute(WorkingDir, FilePath);
   // remove_dots switches to backslashes on windows as a side-effect!
   // We always want to suggest forward slashes for includes.
   // (not remove_dots(..., posix) as that misparses windows paths).

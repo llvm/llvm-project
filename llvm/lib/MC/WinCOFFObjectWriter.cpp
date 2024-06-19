@@ -1097,8 +1097,9 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
 
   // Create the contents of the .llvm_addrsig section.
   if (Mode != DwoOnly && OWriter.EmitAddrsigSection) {
-    auto Frag = new MCDataFragment(AddrsigSection);
-    Frag->setLayoutOrder(0);
+    auto *Frag = Asm.getContext().allocFragment<MCDataFragment>();
+    Frag->setParent(AddrsigSection);
+    AddrsigSection->addFragment(*Frag);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
@@ -1118,8 +1119,9 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
 
   // Create the contents of the .llvm.call-graph-profile section.
   if (Mode != DwoOnly && CGProfileSection) {
-    auto *Frag = new MCDataFragment(CGProfileSection);
-    Frag->setLayoutOrder(0);
+    auto *Frag = Asm.getContext().allocFragment<MCDataFragment>();
+    Frag->setParent(CGProfileSection);
+    CGProfileSection->addFragment(*Frag);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();

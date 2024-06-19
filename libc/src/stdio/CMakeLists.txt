@@ -22,7 +22,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
-if(NOT LIBC_TARGET_OS_IS_GPU)
+if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 endif()
 
@@ -228,6 +228,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.rename
+)
+
+add_entrypoint_object(
+  fdopen
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fdopen
 )
 
 # These entrypoints have multiple potential implementations.
