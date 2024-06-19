@@ -1212,7 +1212,7 @@
 # CHECK: encoding: [0x62,0x54,0xc4,0x04,0x39,0xcf]
          ccmpeq {dfv=of} %r9, %r15
 
-## Case Sensitive
+## Case sensitive
 
 # CHECK: ccmpoq {dfv=of,sf,zf,cf} %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xfc,0x00,0x39,0xc3]
