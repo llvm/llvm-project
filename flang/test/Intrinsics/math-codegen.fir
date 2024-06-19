@@ -862,7 +862,6 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 func.func private @erff(f32) -> f32
 func.func private @erf(f64) -> f64
 
-
 //--- exp_fast.fir
 // RUN: fir-opt %t/exp_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/exp_fast.fir
 // CHECK: @_QPtest_real4
