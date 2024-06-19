@@ -128,10 +128,10 @@ struct ExtensionInfo {
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 struct FMVInfo {
-  StringRef Name;                 // The target_version/target_clones spelling.
-  CPUFeatures Bit;                // Index of the bit in the FMV feature bitset.
-  StringRef Features;             // List of SubtargetFeatures to enable.
-  unsigned Priority;              // FMV priority.
+  StringRef Name;     // The target_version/target_clones spelling.
+  CPUFeatures Bit;    // Index of the bit in the FMV feature bitset.
+  StringRef Features; // List of SubtargetFeatures to enable.
+  unsigned Priority;  // FMV priority.
   FMVInfo(StringRef Name, CPUFeatures Bit, StringRef Features,
           unsigned Priority)
       : Name(Name), Bit(Bit), Features(Features), Priority(Priority){};
@@ -143,7 +143,7 @@ struct FMVInfo {
   }
 };
 
-const std::vector<FMVInfo>& getFMVInfo();
+const std::vector<FMVInfo> &getFMVInfo();
 
 // Represents a dependency between two architecture extensions. Later is the
 // feature which was added to the architecture after Earlier, and expands the

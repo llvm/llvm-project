@@ -122,8 +122,7 @@ AArch64::parseArchExtension(StringRef ArchExt) {
   return {};
 }
 
-std::optional<AArch64::FMVInfo>
-AArch64::parseFMVExtension(StringRef FMVExt) {
+std::optional<AArch64::FMVInfo> AArch64::parseFMVExtension(StringRef FMVExt) {
   // FIXME introduce general alias functionality, or remove this exception.
   if (FMVExt == "rdma")
     FMVExt = "rdm";

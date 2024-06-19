@@ -114,7 +114,8 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   // Emit FMV information
   auto FMVExts = RK.getAllDerivedDefinitionsIfDefined("FMVExtension");
   OS << "#ifdef EMIT_FMV_INFO\n"
-     << "const std::vector<llvm::AArch64::FMVInfo>& llvm::AArch64::getFMVInfo() {\n"
+     << "const std::vector<llvm::AArch64::FMVInfo>& "
+        "llvm::AArch64::getFMVInfo() {\n"
      << "  static std::vector<FMVInfo> I;\n"
      << "  if(I.size()) return I;\n"
      << "  I.reserve(" << FMVExts.size() << ");\n";
