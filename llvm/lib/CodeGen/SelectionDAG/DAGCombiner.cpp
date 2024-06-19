@@ -12091,19 +12091,9 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
 
   APInt SplatVal;
   if (ISD::isConstantSplatVector(Mask.getNode(), SplatVal)) {
-    bool HasTrueBoolContent = [&] {
-      switch (TLI.getBooleanContents(Mask.getValueType())) {
-      case TargetLoweringBase::UndefinedBooleanContent:
-        return SplatVal.isOne();
-      case TargetLoweringBase::ZeroOrOneBooleanContent:
-        return SplatVal.isOneBitSet(0);
-      case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
-        return SplatVal.isAllOnes();
-      }
-    }();
-
-    return HasTrueBoolContent ? Vec
-                              : (HasPassthru ? Passthru : DAG.getUNDEF(VecVT));
+    return TLI.isConstTrueVal(Mask)
+               ? Vec
+               : (HasPassthru ? Passthru : DAG.getUNDEF(VecVT));
   }
 
   if (Vec.isUndef() || Mask.isUndef())
@@ -12120,8 +12110,7 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
       if (MaskI.isUndef())
         continue;
 
-      ConstantSDNode *CMaskI = cast<ConstantSDNode>(MaskI);
-      if (CMaskI->isAllOnes()) {
+      if (TLI.isConstTrueVal(MaskI)) {
         SDValue VecI = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec,
                                    DAG.getVectorIdxConstant(I, DL));
         Ops.push_back(VecI);
