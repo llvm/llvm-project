@@ -25,6 +25,8 @@
 ; CHECK: OpCooperativeMatrixMulAddKHR %[[#MatTy1]]
 ; CHECK: OpCooperativeMatrixStoreKHR
 
+target triple = "spir64-unknown-unknown"
+
 %"class.sycl::_V1::range" = type { %"class.sycl::_V1::detail::array" }
 %"class.sycl::_V1::detail::array" = type { [2 x i64] }
 %"class.sycl::_V1::id" = type { %"class.sycl::_V1::detail::array" }
