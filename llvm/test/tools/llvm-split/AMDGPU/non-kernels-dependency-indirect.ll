@@ -1,7 +1,7 @@
 ; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa
-; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
-; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
+; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=DEFINE %s
+; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=DEFINE %s
+; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 --implicit-check-not=DEFINE %s
 
 ; We have 4 function:
 ;   - Each function has an internal helper
@@ -11,26 +11,19 @@
 ; @CallCandidate doesn't have to be in A/B's partition, unlike
 ; in the corresponding tests for kernels where it has to.
 
-; CHECK0-NOT: define
 ; CHECK0: define hidden void @HelperA
 ; CHECK0: define hidden void @HelperB
-; CHECK0: declare hidden void @CallCandidate
 ; CHECK0: define internal void @HelperC
 ; CHECK0: define internal void @HelperD
 ; CHECK0: define void @A
 ; CHECK0: define void @B
-; CHECK0-NOT: define
 
-; CHECK1-NOT: define
 ; CHECK1: define internal void @HelperD
 ; CHECK1: define void @D
-; CHECK1-NOT: define
 
-; CHECK2-NOT: define
 ; CHECK2: define hidden void @CallCandidate
 ; CHECK2: define internal void @HelperC
 ; CHECK2: define void @C
-; CHECK2-NOT: define
 
 @addrthief = global [3 x ptr] [ptr @HelperA, ptr @HelperB, ptr @CallCandidate]
 

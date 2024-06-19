@@ -608,8 +608,8 @@ static void externalize(GlobalValue &GV) {
 }
 
 static bool hasDirectCaller(const Function &Fn) {
-  for (auto *U : Fn.users()) {
-    if (isa<CallBase>(U))
+  for (auto &U : Fn.uses()) {
+    if (auto *CB = dyn_cast<CallBase>(U.getUser()); CB && CB->isCallee(&U))
       return true;
   }
   return false;
@@ -709,7 +709,7 @@ static void splitAMDGPUModule(
         SortedDepNames.push_back(getName(*Dep));
       sort(SortedDepNames);
 
-      for (const auto& Name: SortedDepNames)
+      for (const auto &Name : SortedDepNames)
         SML << "  [dependency] " << Name << '\n';
     }
   }
