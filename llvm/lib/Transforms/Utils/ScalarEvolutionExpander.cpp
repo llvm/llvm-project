@@ -491,7 +491,6 @@ public:
 }
 
 Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
-
   // Recognize the canonical representation of an unsimplifed urem.
   const SCEV *URemLHS = nullptr;
   const SCEV *URemRHS = nullptr;

@@ -14972,7 +14972,6 @@ void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
 // 4, A / B becomes X / 8).
 bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
                                 const SCEV *&RHS) {
-
   if (Expr->getType()->isPointerTy())
     return false;
 
