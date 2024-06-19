@@ -316,6 +316,61 @@ struct TransposeOpLowering : public ConversionPattern {
   }
 };
 
+//===----------------------------------------------------------------------===//
+// ToyToAffine RewritePatterns: Matmul operations
+//===----------------------------------------------------------------------===//
+
+struct MatmulOpLowering : public ConversionPattern {
+  MatmulOpLowering(MLIRContext *ctx)
+      : ConversionPattern(toy::MatmulOp::getOperationName(), 1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto loc = op->getLoc();
+    toy::MatmulOpAdaptor matmulAdaptor(operands);
+    Value lhs = matmulAdaptor.getLhs();
+    Value rhs = matmulAdaptor.getRhs();
+    auto resultType = dyn_cast<MemRefType>(lhs.getType());
+    Value result = rewriter.create<memref::AllocOp>(loc, resultType);
+    auto lhsType = dyn_cast<MemRefType>(lhs.getType());
+    auto rhsType = dyn_cast<MemRefType>(rhs.getType());
+    int64_t M = lhsType.getShape()[0];
+    int64_t N = rhsType.getShape()[1];
+    int64_t K = lhsType.getShape()[1];
+     for (int64_t i = 0; i < M; ++i) {
+      for (int64_t j = 0; j < N; ++j) {
+        // Initialize the sum to zero.
+        Value sum = rewriter.create<arith::ConstantOp>(loc, rewriter.getF64Type(), rewriter.getF64FloatAttr(0.0));
+
+        for (int64_t k = 0; k < K; ++k) {
+          // Load lhs[i, k] and rhs[k, j].
+          Value lhsVal = rewriter.create<affine::AffineLoadOp>(loc, lhs, ValueRange{
+            rewriter.create<arith::ConstantIndexOp>(loc, i),
+            rewriter.create<arith::ConstantIndexOp>(loc, k)
+          });
+          Value rhsVal = rewriter.create<affine::AffineLoadOp>(loc, rhs, ValueRange{
+            rewriter.create<arith::ConstantIndexOp>(loc, k),
+            rewriter.create<arith::ConstantIndexOp>(loc, j)
+          });
+
+          // Perform the multiplication and accumulate the result.
+          Value product = rewriter.create<arith::MulFOp>(loc, lhsVal, rhsVal);
+          sum = rewriter.create<arith::AddFOp>(loc, sum, product);
+        }
+
+        // Store the computed value into the result matrix.
+        rewriter.create<affine::AffineStoreOp>(loc, sum, result, ValueRange{
+          rewriter.create<arith::ConstantIndexOp>(loc, i),
+          rewriter.create<arith::ConstantIndexOp>(loc, j)
+        });
+      }
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -366,7 +421,7 @@ void ToyToAffineLoweringPass::runOnOperation() {
   // the set of patterns that will lower the Toy operations.
   RewritePatternSet patterns(&getContext());
   patterns.add<AddOpLowering, ConstantOpLowering, FuncOpLowering, MulOpLowering,
-               PrintOpLowering, ReturnOpLowering, TransposeOpLowering>(
+               PrintOpLowering, ReturnOpLowering, TransposeOpLowering, MatmulOpLowering>(
       &getContext());
 
   // With the target and rewrite patterns defined, we can now attempt the

@@ -450,4 +450,22 @@ def TransposeOp : Toy_Op<"transpose",
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// MatmulOp
+//===----------------------------------------------------------------------===//
+
+def MatmulOp : Toy_Op<"matmul",
+    [Pure, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]>
+{
+  let summary = "matrix multiplication operation";
+  let arguments = (ins F64Tensor:$lhs, F64Tensor:$rhs);
+  let results = (outs F64Tensor:$results);
+  let builders = [
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs)>
+  ];
+  let assemblyFormat = "attr-dict $lhs `,` $rhs `:` type($lhs) `,` type($rhs) `->` type($results)";
+  let hasVerifier = 1;
+}
+
+
 #endif // TOY_OPS
