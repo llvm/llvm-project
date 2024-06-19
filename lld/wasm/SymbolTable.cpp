@@ -617,6 +617,15 @@ updateExistingUndefined(Symbol *existing, uint32_t flags, InputFile *file,
   existing->flags |= flags & WASM_SYMBOL_NO_STRIP;
 }
 
+static void traceImport(std::optional<StringRef> importName, InputFile *file) {
+  if (importName.has_value()) {
+    auto name = importName.value();
+    if (symtab->isTraced(name)) {
+      printTraceSymbolUndefined(name, file);
+    }
+  }
+}
+
 Symbol *SymbolTable::addUndefinedFunction(StringRef name,
                                           std::optional<StringRef> importName,
                                           std::optional<StringRef> importModule,
@@ -636,6 +645,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
     printTraceSymbolUndefined(name, file);
 
   auto replaceSym = [&]() {
+    traceImport(importName, file);
     replaceSymbol<UndefinedFunction>(s, name, importName, importModule, flags,
                                      file, sig, isCalledDirectly);
   };
@@ -678,6 +688,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
         replaceSym();
     }
     if (existingUndefined) {
+      traceImport(importName, file);
       updateExistingUndefined(existingUndefined, flags, file, importName,
                               importModule);
       if (isCalledDirectly)
@@ -728,10 +739,11 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
   if (s->traced)
     printTraceSymbolUndefined(name, file);
 
-  if (wasInserted)
+  if (wasInserted) {
+    traceImport(importName, file);
     replaceSymbol<UndefinedGlobal>(s, name, importName, importModule, flags,
                                    file, type);
-  else if (auto *lazy = dyn_cast<LazySymbol>(s))
+  } else if (auto *lazy = dyn_cast<LazySymbol>(s))
     lazy->extract();
   else if (s->isDefined())
     checkGlobalType(s, file, type);
@@ -754,10 +766,11 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
   if (s->traced)
     printTraceSymbolUndefined(name, file);
 
-  if (wasInserted)
+  if (wasInserted) {
+    traceImport(importName, file);
     replaceSymbol<UndefinedTable>(s, name, importName, importModule, flags,
                                   file, type);
-  else if (auto *lazy = dyn_cast<LazySymbol>(s))
+  } else if (auto *lazy = dyn_cast<LazySymbol>(s))
     lazy->extract();
   else if (s->isDefined())
     checkTableType(s, file, type);
@@ -780,10 +793,11 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
   if (s->traced)
     printTraceSymbolUndefined(name, file);
 
-  if (wasInserted)
+  if (wasInserted) {
+    traceImport(importName, file);
     replaceSymbol<UndefinedTag>(s, name, importName, importModule, flags, file,
                                 sig);
-  else if (auto *lazy = dyn_cast<LazySymbol>(s))
+  } else if (auto *lazy = dyn_cast<LazySymbol>(s))
     lazy->extract();
   else if (s->isDefined())
     checkTagType(s, file, sig);
@@ -949,7 +963,18 @@ bool SymbolTable::getFunctionVariant(Symbol* sym, const WasmSignature *sig,
 // Set a flag for --trace-symbol so that we can print out a log message
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef name) {
+  tracingEnabled = true;
   symMap.insert({CachedHashStringRef(name), -1});
+}
+
+bool SymbolTable::isTraced(StringRef name) {
+  // Early exit in the default case to avoid symbol hashmap lookup.
+  if (!tracingEnabled)
+    return false;
+  auto it = symMap.find(CachedHashStringRef(name));
+  if (it == symMap.end())
+    return false;
+  return it->second == -1 || symVector[it->second]->traced;
 }
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
