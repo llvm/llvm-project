@@ -511,6 +511,7 @@ private:
     DK_CFI_LLVM_REGISTER_PAIR,
     DK_CFI_LLVM_VECTOR_REGISTERS,
     DK_CFI_LLVM_VECTOR_OFFSET,
+    DK_CFI_LLVM_VECTOR_REGISTER_MASK,
     DK_CFI_PERSONALITY,
     DK_CFI_LSDA,
     DK_CFI_REMEMBER_STATE,
@@ -629,6 +630,7 @@ private:
   bool parseDirectiveCFILLVMRegisterPair(SMLoc DirectiveLoc);
   bool parseDirectiveCFILLVMVectorRegisters(SMLoc DirectiveLoc);
   bool parseDirectiveCFILLVMVectorOffset(SMLoc DirectiveLoc);
+  bool parseDirectiveCFILLVMVectorRegisterMask(SMLoc DirectiveLoc);
   bool parseDirectiveCFILabel(SMLoc DirectiveLoc);
 
   // macro directives
@@ -2214,6 +2216,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCFILLVMVectorRegisters(IDLoc);
     case DK_CFI_LLVM_VECTOR_OFFSET:
       return parseDirectiveCFILLVMVectorOffset(IDLoc);
+    case DK_CFI_LLVM_VECTOR_REGISTER_MASK:
+      return parseDirectiveCFILLVMVectorRegisterMask(IDLoc);
     case DK_CFI_PERSONALITY:
       return parseDirectiveCFIPersonalityOrLsda(true);
     case DK_CFI_LSDA:
@@ -4551,6 +4555,25 @@ bool AsmParser::parseDirectiveCFILLVMVectorOffset(SMLoc DirectiveLoc) {
   return false;
 }
 
+/// parseDirectiveCFILLVMVectorOffset
+/// ::= .cfi_llvm_vector_register_mask register, spill-reg, spill-reg-lane-size,
+///                                              mask-reg, mask-reg-size
+bool AsmParser::parseDirectiveCFILLVMVectorRegisterMask(SMLoc DirectiveLoc) {
+  int64_t Register = 0, SpillReg = 0, MaskReg = 0;
+  int64_t SpillRegLaneSize = 0, MaskRegSize = 0;
+
+  if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseComma() ||
+      parseRegisterOrRegisterNumber(SpillReg, DirectiveLoc) || parseComma() ||
+      parseAbsoluteExpression(SpillRegLaneSize) || parseComma() ||
+      parseRegisterOrRegisterNumber(MaskReg, DirectiveLoc) || parseComma() ||
+      parseAbsoluteExpression(MaskRegSize) || parseEOL())
+    return true;
+
+  getStreamer().emitCFILLVMVectorRegisterMask(
+      Register, SpillReg, SpillRegLaneSize, MaskReg, MaskRegSize, DirectiveLoc);
+  return false;
+}
+
 /// parseDirectiveCFILabel
 /// ::= .cfi_label label
 bool AsmParser::parseDirectiveCFILabel(SMLoc Loc) {
@@ -5627,6 +5650,8 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_llvm_register_pair"] = DK_CFI_LLVM_REGISTER_PAIR;
   DirectiveKindMap[".cfi_llvm_vector_registers"] = DK_CFI_LLVM_VECTOR_REGISTERS;
   DirectiveKindMap[".cfi_llvm_vector_offset"] = DK_CFI_LLVM_VECTOR_OFFSET;
+  DirectiveKindMap[".cfi_llvm_vector_register_mask"] =
+      DK_CFI_LLVM_VECTOR_REGISTER_MASK;
   DirectiveKindMap[".cfi_personality"] = DK_CFI_PERSONALITY;
   DirectiveKindMap[".cfi_lsda"] = DK_CFI_LSDA;
   DirectiveKindMap[".cfi_remember_state"] = DK_CFI_REMEMBER_STATE;

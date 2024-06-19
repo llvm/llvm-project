@@ -674,6 +674,21 @@ void MCStreamer::emitCFILLVMVectorOffset(int64_t Register,
   CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
+void MCStreamer::emitCFILLVMVectorRegisterMask(
+    int64_t Register, int64_t SpillRegister,
+    int64_t SpillRegisterLaneSizeInBits, int64_t MaskRegister,
+    int64_t MaskRegisterSizeInBits, SMLoc Loc) {
+
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction = MCCFIInstruction::createLLVMVectorRegisterMask(
+      Label, Register, SpillRegister, SpillRegisterLaneSizeInBits, MaskRegister,
+      MaskRegisterSizeInBits, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
 void MCStreamer::emitCFISignalFrame() {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)

@@ -113,12 +113,14 @@ public:
   buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
            const DebugLoc &DL, const MCCFIInstruction &CFIInst,
            MachineInstr::MIFlag flag = MachineInstr::FrameSetup) const;
-  /// Create a CFI index describing a spill of the register \p Reg to another
-  /// register \p RegCopy and build a MachineInstr around it.
-  MachineInstr *buildCFIForRegToRegSpill(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator MBBI,
-                                         const DebugLoc &DL, const Register Reg,
-                                         const Register RegCopy) const;
+
+  /// Create a CFI index describing a spill of the VGPR/AGPR \p Reg to another
+  /// VGPR/AGPR \p RegCopy and build a MachineInstr around it.
+  MachineInstr *buildCFIForVRegToVRegSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL,
+                                           const Register Reg,
+                                           const Register RegCopy) const;
   /// Create a CFI index describing a spill of an SGPR to a single lane of
   /// a VGPR and build a MachineInstr around it.
   MachineInstr *buildCFIForSGPRToVGPRSpill(MachineBasicBlock &MBB,

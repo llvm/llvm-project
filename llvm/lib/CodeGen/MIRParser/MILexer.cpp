@@ -241,6 +241,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("llvm_register_pair", MIToken::kw_cfi_llvm_register_pair)
       .Case("llvm_vector_registers", MIToken::kw_cfi_llvm_vector_registers)
       .Case("llvm_vector_offset", MIToken::kw_cfi_llvm_vector_offset)
+      .Case("llvm_vector_register_mask",
+            MIToken::kw_cfi_llvm_vector_register_mask)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)

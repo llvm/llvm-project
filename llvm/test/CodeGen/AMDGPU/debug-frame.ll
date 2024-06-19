@@ -595,7 +595,7 @@ entry:
 
 ; GFX900-NEXT: .cfi_llvm_vector_offset 2600, 32, 17, 64, 256
 ; GFX90A-V2A-DIS-NEXT: .cfi_llvm_vector_offset 2600, 32, 17, 64, 768
-; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR1+2560]], [[#TMP_AGPR1+3072]]
+; GFX90A-V2A-EN-NEXT: .cfi_llvm_vector_register_mask [[#VGPR1+2560]], [[#TMP_AGPR1+3072]], 32, 17, 64
 
 ; WAVE32-NEXT: .cfi_llvm_vector_offset 1576, 32, 1, 32, 128
 
@@ -608,7 +608,7 @@ entry:
 
 ; GFX900-NEXT: .cfi_llvm_vector_offset 2601, 32, 17, 64, 0
 ; GFX90A-V2A-DIS-NEXT: .cfi_llvm_vector_offset 2601, 32, 17, 64, 512
-; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR2+2560]], [[#TMP_AGPR2+3072]]
+; GFX90A-V2A-EN-NEXT: .cfi_llvm_vector_register_mask [[#VGPR2+2560]], [[#TMP_AGPR2+3072]], 32, 17, 64
 
 ; WAVE32: .cfi_llvm_vector_offset 1577, 32, 1, 32, 0
 
@@ -616,7 +616,7 @@ entry:
 ; GFX90A-V2A-EN: v_accvgpr_read_b32 v[[#TMP_VGPR1:]], a[[#AGPR1:]]
 
 ; GFX90A-V2A-DIS-NEXT: .cfi_llvm_vector_offset 3104, 32, 17, 64, 256
-; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR1+3072]], [[#TMP_VGPR1+2560]]
+; GFX90A-V2A-EN-NEXT: .cfi_llvm_vector_register_mask [[#AGPR1+3072]], [[#TMP_VGPR1+2560]], 32, 17, 64
 
 ; CHECK-NOT: .cfi_{{.*}}
 
@@ -624,7 +624,7 @@ entry:
 ; GFX90A-V2A-EN: v_accvgpr_read_b32 v[[#TMP_VGPR2:]], a[[#AGPR2:]]
 
 ; GFX90A-V2A-DIS-NEXT: .cfi_llvm_vector_offset 3105, 32, 17, 64, 0
-; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR2+3072]], [[#TMP_VGPR2+2560]]
+; GFX90A-V2A-EN-NEXT: .cfi_llvm_vector_register_mask [[#AGPR2+3072]], [[#TMP_VGPR2+2560]], 32, 17, 64
 
 ; CHECK-NOT: .cfi_{{.*}}
 
@@ -655,13 +655,13 @@ entry:
 
 ; CHECK-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-EN-NEXT: v_accvgpr_write_b32 a[[#TMP_AGPR1:]], v[[#VGPR1:]]
-; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR1+2560]], [[#TMP_AGPR1+3072]]
+; GFX90A-V2A-EN-NEXT: .cfi_llvm_vector_register_mask [[#VGPR1+2560]], [[#TMP_AGPR1+3072]], 32, 17, 64
 ; GFX90A-V2A-EN-NEXT: v_accvgpr_write_b32 a[[#TMP_AGPR2]], v[[#VGPR2]]
-; GFX90A-V2A-EN-NEXT: .cfi_register [[#VGPR2+2560]], [[#TMP_AGPR2+3072]]
+; GFX90A-V2A-EN-NEXT: .cfi_llvm_vector_register_mask [[#VGPR2+2560]], [[#TMP_AGPR2+3072]], 32, 17, 64
 ; GFX90A-V2A-EN-NEXT: v_accvgpr_read_b32 v[[#TMP_VGPR1:]], a[[#AGPR1:]]
-; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR1+3072]], [[#TMP_VGPR1+2560]]
+; GFX90A-V2A-EN-NEXT: .cfi_llvm_vector_register_mask [[#AGPR1+3072]], [[#TMP_VGPR1+2560]], 32, 17, 64
 ; GFX90A-V2A-EN-NEXT: v_accvgpr_read_b32 v[[#TMP_VGPR2:]], a[[#AGPR2:]]
-; GFX90A-V2A-EN-NEXT: .cfi_register [[#AGPR2+3072]], [[#TMP_VGPR2+2560]]
+; GFX90A-V2A-EN-NEXT: .cfi_llvm_vector_register_mask [[#AGPR2+3072]], [[#TMP_VGPR2+2560]], 32, 17, 64
 ; GFX90A-V2A-EN: v_accvgpr_write_b32 a33, v1
 ; GFX90A-V2A-EN-NEXT: v_accvgpr_write_b32 a32, v0
 ; GFX90A-V2A-EN-NEXT: v_accvgpr_read_b32 v41, a1

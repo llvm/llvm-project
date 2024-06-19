@@ -281,6 +281,15 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
         Fields.MaskRegisterSizeInBits, Inst.getOffset(), Loc);
     break;
   }
+  case MCCFIInstruction::OpLLVMVectorRegisterMask: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::VectorRegisterMaskExtraFields>();
+    OutStreamer->emitCFILLVMVectorRegisterMask(
+        Inst.getRegister(), Fields.SpillRegister,
+        Fields.SpillRegisterLaneSizeInBits, Fields.MaskRegister,
+        Fields.MaskRegisterSizeInBits);
+    break;
+  }
   }
 }
 

@@ -45,3 +45,13 @@ vector_offsets:
   .cfi_endproc
 
 ; CHECK-NOT: DW_CFA_expression
+
+vector_register_mask:
+  .cfi_startproc
+  s_nop 0
+  ; CHECK: DW_CFA_expression: VGPR40_LO16 DW_OP_regx VGPR40_LO16, DW_OP_regx AGPR0_LO16, DW_OP_LLVM_user DW_OP_LLVM_call_frame_entry_reg EXEC, DW_OP_deref_size 0x8, DW_OP_LLVM_user DW_OP_LLVM_select_bit_piece 0x20 0x40
+  .cfi_llvm_vector_register_mask 2600, 3072, 32, 17, 64
+  s_nop 0
+  .cfi_endproc
+
+; CHECK-NOT: DW_CFA_expression

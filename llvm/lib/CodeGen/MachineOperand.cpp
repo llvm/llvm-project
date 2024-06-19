@@ -812,6 +812,21 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     OS << ", " << Fields.MaskRegisterSizeInBits << ", " << CFI.getOffset();
     break;
   }
+  case MCCFIInstruction::OpLLVMVectorRegisterMask: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorRegisterMaskExtraFields>();
+
+    OS << "llvm_vector_register_mask ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(CFI.getRegister(), OS, TRI);
+    OS << ", ";
+    printCFIRegister(Fields.SpillRegister, OS, TRI);
+    OS << ", " << Fields.SpillRegisterLaneSizeInBits << ", ";
+    printCFIRegister(Fields.MaskRegister, OS, TRI);
+    OS << ", " << Fields.MaskRegisterSizeInBits;
+    break;
+  }
   default:
     // TODO: Print the other CFI Operations.
     OS << "<unserializable cfi directive>";

@@ -446,101 +446,101 @@ body:             |
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr80, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 700, 0, 0, implicit $exec :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr81, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 696, 0, 0, implicit $exec :: (store (s32) into %stack.51, addrspace 5)
@@ -1565,101 +1565,101 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr80, $sgpr32, 700, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr81, $sgpr32, 696, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.51, addrspace 5)
@@ -2714,101 +2714,101 @@ body:             |
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr80, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 700, 0, 0, implicit $exec :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr81, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 696, 0, 0, implicit $exec :: (store (s32) into %stack.51, addrspace 5)
@@ -3836,101 +3836,101 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr80, $sgpr32, 700, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr81, $sgpr32, 696, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.51, addrspace 5)
@@ -4987,101 +4987,101 @@ body:             |
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr80, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 700, 0, 0, implicit $exec :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr81, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 696, 0, 0, implicit $exec :: (store (s32) into %stack.51, addrspace 5)
@@ -6112,101 +6112,101 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr80, $sgpr32, 700, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr81, $sgpr32, 696, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.51, addrspace 5)
@@ -7259,101 +7259,101 @@ body:             |
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr80, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 700, 0, 0, implicit $exec :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr81, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 696, 0, 0, implicit $exec :: (store (s32) into %stack.51, addrspace 5)
@@ -8378,101 +8378,101 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr80, $sgpr32, 700, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr81, $sgpr32, 696, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.51, addrspace 5)
@@ -9526,101 +9526,101 @@ body:             |
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr80, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 700, 0, 0, implicit $exec :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr81, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 696, 0, 0, implicit $exec :: (store (s32) into %stack.51, addrspace 5)
@@ -10648,101 +10648,101 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr80, $sgpr32, 700, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr81, $sgpr32, 696, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.51, addrspace 5)
@@ -11797,101 +11797,101 @@ body:             |
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr80, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 700, 0, 0, implicit $exec :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $agpr81, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 696, 0, 0, implicit $exec :: (store (s32) into %stack.51, addrspace 5)
@@ -12922,101 +12922,101 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
   ; GFX90A-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr32, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr32_lo16, $vgpr0_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr32_lo16, $vgpr0_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr33, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr33_lo16, $vgpr1_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr33_lo16, $vgpr1_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr34, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr34_lo16, $vgpr2_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr34_lo16, $vgpr2_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr35, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr35_lo16, $vgpr3_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr35_lo16, $vgpr3_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr36, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr36_lo16, $vgpr4_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr36_lo16, $vgpr4_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr37, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr37_lo16, $vgpr5_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr37_lo16, $vgpr5_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr38, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr38_lo16, $vgpr6_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr38_lo16, $vgpr6_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr39, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr39_lo16, $vgpr7_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr39_lo16, $vgpr7_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr40_lo16, $vgpr8_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr40_lo16, $vgpr8_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr41, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr41_lo16, $vgpr9_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr41_lo16, $vgpr9_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr42, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr42_lo16, $vgpr10_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr42_lo16, $vgpr10_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr11 = V_ACCVGPR_READ_B32_e64 killed $agpr43, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr43_lo16, $vgpr11_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr43_lo16, $vgpr11_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr44, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr44_lo16, $vgpr12_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr44_lo16, $vgpr12_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr45, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr45_lo16, $vgpr13_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr45_lo16, $vgpr13_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr46, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr46_lo16, $vgpr14_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr46_lo16, $vgpr14_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr47, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr47_lo16, $vgpr15_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr47_lo16, $vgpr15_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr16 = V_ACCVGPR_READ_B32_e64 killed $agpr48, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr48_lo16, $vgpr16_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr48_lo16, $vgpr16_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr17 = V_ACCVGPR_READ_B32_e64 killed $agpr49, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr49_lo16, $vgpr17_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr49_lo16, $vgpr17_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr18 = V_ACCVGPR_READ_B32_e64 killed $agpr50, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr50_lo16, $vgpr18_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr50_lo16, $vgpr18_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr19 = V_ACCVGPR_READ_B32_e64 killed $agpr51, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr51_lo16, $vgpr19_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr51_lo16, $vgpr19_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr20 = V_ACCVGPR_READ_B32_e64 killed $agpr52, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr52_lo16, $vgpr20_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr52_lo16, $vgpr20_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr21 = V_ACCVGPR_READ_B32_e64 killed $agpr53, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr53_lo16, $vgpr21_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr53_lo16, $vgpr21_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr22 = V_ACCVGPR_READ_B32_e64 killed $agpr54, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr54_lo16, $vgpr22_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr54_lo16, $vgpr22_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr23 = V_ACCVGPR_READ_B32_e64 killed $agpr55, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr55_lo16, $vgpr23_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr55_lo16, $vgpr23_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr56, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr56_lo16, $vgpr24_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr56_lo16, $vgpr24_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr57, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr57_lo16, $vgpr25_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr57_lo16, $vgpr25_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr58, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr58_lo16, $vgpr26_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr58_lo16, $vgpr26_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr27 = V_ACCVGPR_READ_B32_e64 killed $agpr59, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr59_lo16, $vgpr27_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr59_lo16, $vgpr27_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr60, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr60_lo16, $vgpr28_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr60_lo16, $vgpr28_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr61, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr61_lo16, $vgpr29_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr61_lo16, $vgpr29_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr62, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr62_lo16, $vgpr30_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr62_lo16, $vgpr30_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr63, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr63_lo16, $vgpr31_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr63_lo16, $vgpr31_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr32 = V_ACCVGPR_READ_B32_e64 killed $agpr64, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr64_lo16, $vgpr32_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr64_lo16, $vgpr32_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr33 = V_ACCVGPR_READ_B32_e64 killed $agpr65, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr65_lo16, $vgpr33_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr65_lo16, $vgpr33_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr34 = V_ACCVGPR_READ_B32_e64 killed $agpr66, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr66_lo16, $vgpr34_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr66_lo16, $vgpr34_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr35 = V_ACCVGPR_READ_B32_e64 killed $agpr67, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr67_lo16, $vgpr35_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr67_lo16, $vgpr35_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr36 = V_ACCVGPR_READ_B32_e64 killed $agpr68, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr68_lo16, $vgpr36_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr68_lo16, $vgpr36_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr37 = V_ACCVGPR_READ_B32_e64 killed $agpr69, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr69_lo16, $vgpr37_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr69_lo16, $vgpr37_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr38 = V_ACCVGPR_READ_B32_e64 killed $agpr70, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr70_lo16, $vgpr38_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr70_lo16, $vgpr38_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr39 = V_ACCVGPR_READ_B32_e64 killed $agpr71, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr71_lo16, $vgpr39_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr71_lo16, $vgpr39_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr48 = V_ACCVGPR_READ_B32_e64 killed $agpr72, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr72_lo16, $vgpr48_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr72_lo16, $vgpr48_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr49 = V_ACCVGPR_READ_B32_e64 killed $agpr73, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr73_lo16, $vgpr49_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr73_lo16, $vgpr49_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr50 = V_ACCVGPR_READ_B32_e64 killed $agpr74, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr74_lo16, $vgpr50_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr74_lo16, $vgpr50_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr51 = V_ACCVGPR_READ_B32_e64 killed $agpr75, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr75_lo16, $vgpr51_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr75_lo16, $vgpr51_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr52 = V_ACCVGPR_READ_B32_e64 killed $agpr76, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr76_lo16, $vgpr52_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr76_lo16, $vgpr52_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr77, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr77_lo16, $vgpr53_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr77_lo16, $vgpr53_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr78, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr78_lo16, $vgpr54_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr78_lo16, $vgpr54_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr79, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION register $agpr79_lo16, $vgpr55_lo16
+  ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_register_mask $agpr79_lo16, $vgpr55_lo16, 32, $exec, 64
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr80, $sgpr32, 700, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.50, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_offset $agpr80_lo16, 32, $exec, 64, 44800
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $agpr81, $sgpr32, 696, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.51, addrspace 5)

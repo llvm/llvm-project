@@ -99,6 +99,7 @@ struct MIToken {
     kw_cfi_llvm_register_pair,
     kw_cfi_llvm_vector_registers,
     kw_cfi_llvm_vector_offset,
+    kw_cfi_llvm_vector_register_mask,
     kw_blockaddress,
     kw_intrinsic,
     kw_target_index,
