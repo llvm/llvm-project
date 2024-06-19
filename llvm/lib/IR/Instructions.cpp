@@ -1185,9 +1185,9 @@ static Value *getAISize(LLVMContext &Context, Value *Amt) {
 }
 
 static Align computeAllocaDefaultAlign(Type *Ty, InsertPosition Pos) {
-  assert(Pos.IsValid() &&
+  assert(Pos.isValid() &&
          "Insertion position cannot be null when alignment not provided!");
-  BasicBlock *BB = ((BasicBlock::iterator)Pos).getNodeParent();
+  BasicBlock *BB = Pos.getBasicBlock();
   assert(BB->getParent() &&
          "BB must be in a Function when alignment not provided!");
   const DataLayout &DL = BB->getModule()->getDataLayout();
@@ -1243,7 +1243,7 @@ void LoadInst::AssertOK() {
 }
 
 static Align computeLoadStoreDefaultAlign(Type *Ty, InsertPosition Pos) {
-  assert(Pos.IsValid() &&
+  assert(Pos.isValid() &&
          "Insertion position cannot be null when alignment not provided!");
   BasicBlock *BB = ((BasicBlock::iterator)Pos).getNodeParent();
   assert(BB->getParent() &&
@@ -3435,7 +3435,7 @@ CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
 CmpInst *CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
                          const Twine &Name, InsertPosition InsertBefore) {
   if (Op == Instruction::ICmp) {
-    if (InsertBefore.IsValid())
+    if (InsertBefore.isValid())
       return new ICmpInst(InsertBefore, CmpInst::Predicate(predicate),
                           S1, S2, Name);
     else
@@ -3443,7 +3443,7 @@ CmpInst *CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
                           S1, S2, Name);
   }
 
-  if (InsertBefore.IsValid())
+  if (InsertBefore.isValid())
     return new FCmpInst(InsertBefore, CmpInst::Predicate(predicate),
                         S1, S2, Name);
   else

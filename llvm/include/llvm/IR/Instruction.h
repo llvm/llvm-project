@@ -50,7 +50,6 @@ class InsertPosition {
   InstListType::iterator InsertAt;
 
 public:
-  InsertPosition(std::nullopt_t) : InsertAt() {}
   InsertPosition(std::nullptr_t) : InsertAt() {}
   // LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
   // "BasicBlock::iterator")
@@ -58,7 +57,8 @@ public:
   InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
   operator InstListType::iterator() const { return InsertAt; }
-  bool IsValid() const { return InsertAt.getNodePtr(); }
+  bool isValid() const { return InsertAt.isValid(); }
+  BasicBlock *getBasicBlock() { return InsertAt.getNodeParent(); }
 };
 
 class Instruction : public User,

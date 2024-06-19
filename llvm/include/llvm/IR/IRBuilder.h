@@ -64,9 +64,8 @@ public:
 
   virtual void InsertHelper(Instruction *I, const Twine &Name,
                             BasicBlock::iterator InsertPt) const {
-    if (InsertPt.isValid()) {
+    if (InsertPt.isValid())
       I->insertInto(InsertPt.getNodeParent(), InsertPt);
-    }
     I->setName(Name);
   }
 };

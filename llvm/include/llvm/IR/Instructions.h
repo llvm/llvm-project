@@ -1333,7 +1333,7 @@ public:
            const Twine &NameStr = "", ///< Name of the instruction
            Instruction *FlagsSource = nullptr)
       : CmpInst(makeCmpResultType(LHS->getType()), Instruction::FCmp, Pred, LHS,
-                RHS, NameStr, std::nullopt, FlagsSource) {
+                RHS, NameStr, nullptr, FlagsSource) {
     AssertOK();
   }
 
