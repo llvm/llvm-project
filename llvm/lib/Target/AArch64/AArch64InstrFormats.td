@@ -7616,11 +7616,13 @@ multiclass SIMDFPTwoScalar<bit U, bit S, bits<5> opc, string asm,
 let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDFPTwoScalarCVT<bit U, bit S, bits<5> opc, string asm,
                               SDPatternOperator OpNode> {
+  let Predicates = [HasNEONandIsStreamingSafe] in {
   def v1i64 : BaseSIMDTwoScalar<U, {S,1}, 0b00, opc, FPR64, FPR64, asm,
                                 [(set FPR64:$Rd, (OpNode (f64 FPR64:$Rn)))]>;
   def v1i32 : BaseSIMDTwoScalar<U, {S,0}, 0b00, opc, FPR32, FPR32, asm,
                                 [(set FPR32:$Rd, (OpNode (f32 FPR32:$Rn)))]>;
-  let Predicates = [HasNEON, HasFullFP16] in {
+  }
+  let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
   def v1i16 : BaseSIMDTwoScalar<U, {S,1}, 0b11, opc, FPR16, FPR16, asm,
                                 [(set (f16 FPR16:$Rd), (OpNode (f16 FPR16:$Rn)))]>;
   }

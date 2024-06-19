@@ -6023,7 +6023,7 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-let Predicates = [HasFullFP16] in {
+let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
@@ -6115,7 +6115,7 @@ def : Pat <(f64 (uint_to_fp (i32
                           (LDURSi GPR64sp:$Rn, simm9:$offset), ssub))>;
 // 64-bits -> double are handled in target specific dag combine:
 // performIntToFpCombine.
-} // let Predicates = [HasNEON]
+} // let Predicates = [HasNEONandIsStreamingSafe]
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three different-sized vector instructions.
