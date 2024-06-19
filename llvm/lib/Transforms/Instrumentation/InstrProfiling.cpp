@@ -931,7 +931,7 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   if (!BiasLI) {
     IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
     auto *Bias = getOrCreateBiasVar(getInstrProfCounterBiasVarName());
-    BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias);
+    BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profc_bias");
   }
   auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), BiasLI);
   return Builder.CreateIntToPtr(Add, Addr->getType());
