@@ -56,6 +56,7 @@ enum OpCode {
   OpCodePHI,
   OpCodeIndirectCall,
   OpCodeSelect,
+  OpCodeLoadArg,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -184,6 +185,8 @@ class FuncLowerCtxt {
 public:
   // Create an empty function lowering context.
   FuncLowerCtxt() : VLMap(ValueLoweringMap()), InstIdxPatchUps({}){};
+  // Maps argument operands to LoadArg instructions.
+  map<Argument *, InstIdx> ArgumentMap;
 
   // Defer (patch up later) the use-site of the (as-yet unknown) instruction
   // index of the instruction  `I`, which has the symbol `Sym`.
@@ -349,15 +352,19 @@ private:
     OutStreamer.emitSizeT(getIndex(BB->getParent(), BB));
   }
 
-  void serialiseArgOperand(Argument *A) {
-    // This assumes that the argument indices match in both IRs.
-
-    // opcode:
-    serialiseOperandKind(OperandKindArg);
-    // parent function index:
+  void serialiseArgOperand(Argument *A, FuncLowerCtxt &FLCtxt) {
+    // operand kind:
+    serialiseOperandKind(OperandKindLocal);
+    // func_idx:
     OutStreamer.emitSizeT(getIndex(&M, A->getParent()));
-    // arg index
-    OutStreamer.emitSizeT(A->getArgNo());
+    // bb_idx:
+    OutStreamer.emitSizeT(0);
+
+    // inst_idx:
+    if (FLCtxt.ArgumentMap.count(A) > 0) {
+      InstIdx InstIdx = FLCtxt.ArgumentMap[A];
+      OutStreamer.emitSizeT(InstIdx);
+    }
   }
 
   void serialiseGlobalOperand(GlobalVariable *G) {
@@ -373,7 +380,7 @@ private:
     } else if (llvm::Constant *C = dyn_cast<llvm::Constant>(V)) {
       serialiseConstantOperand(Parent, C);
     } else if (llvm::Argument *A = dyn_cast<llvm::Argument>(V)) {
-      serialiseArgOperand(A);
+      serialiseArgOperand(A, FLCtxt);
     } else if (Instruction *I = dyn_cast<Instruction>(V)) {
       serialiseLocalVariableOperand(I, FLCtxt);
     } else {
@@ -1180,7 +1187,17 @@ private:
     InstIdx++;
   }
 
-  void serialiseBlock(BasicBlock &BB, FuncLowerCtxt &FLCtxt, unsigned &BBIdx) {
+  void serialiseLoadArg(Argument *Arg) {
+    // opcode:
+    serialiseOpcode(OpCodeLoadArg);
+    // arg index:
+    OutStreamer.emitSizeT(Arg->getArgNo());
+    // type_idx:
+    OutStreamer.emitSizeT(typeIndex(Arg->getType()));
+  }
+
+  void serialiseBlock(BasicBlock &BB, FuncLowerCtxt &FLCtxt, unsigned &BBIdx,
+                      Function &F) {
     auto ShouldSkipInstr = [](Instruction *I) {
       // Skip non-semantic instrucitons for now.
       //
@@ -1211,6 +1228,19 @@ private:
 
     // instrs:
     unsigned InstIdx = 0;
+
+    // Insert LoadArg instructions for each argument of this function and
+    // replace all Argument operands with their respective LoadArg instruction.
+    // This ensures we won't have to deal with argument operands in the yk
+    // pipeline (e.g. trace_builder, deopt).
+    if (BBIdx == 0) {
+      for (Argument *Arg = F.arg_begin(); Arg != F.arg_end(); Arg++) {
+        serialiseLoadArg(Arg);
+        FLCtxt.ArgumentMap[Arg] = InstIdx;
+        InstIdx++;
+      }
+    }
+
     for (Instruction &I : BB) {
       if (ShouldSkipInstr(&I)) {
         continue;
@@ -1243,8 +1273,9 @@ private:
     // blocks:
     unsigned BBIdx = 0;
     FuncLowerCtxt FLCtxt;
+    std::vector<Argument> V;
     for (BasicBlock &BB : F) {
-      serialiseBlock(BB, FLCtxt, BBIdx);
+      serialiseBlock(BB, FLCtxt, BBIdx, F);
     }
     FLCtxt.patchUpInstIdxs(OutStreamer);
   }
