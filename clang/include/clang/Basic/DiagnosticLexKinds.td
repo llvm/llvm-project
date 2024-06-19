@@ -85,6 +85,10 @@ def warn_c99_keyword : Warning<"'%0' is a keyword in C99">,
 def warn_c23_keyword : Warning<"'%0' is a keyword in C23">,
   InGroup<C23Compat>, DefaultIgnore;
 
+def warn_deprecated_builtin_replacement : Warning<
+  "using the name of the builtin '%0' outside of "
+  "a builtin invocation is deprecated">, InGroup<KeywordCompat>;
+
 def ext_unterminated_char_or_string : ExtWarn<
   "missing terminating %select{'|'\"'}0 character">, InGroup<InvalidPPToken>;
 def ext_empty_character : ExtWarn<"empty character constant">,

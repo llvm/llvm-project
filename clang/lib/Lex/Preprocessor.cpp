@@ -837,6 +837,11 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     II.setIsFutureCompatKeyword(false);
   }
 
+  if (II.isReusableBuiltinName() && !isNextPPTokenLParen()) {
+    Identifier.setKind(tok::identifier);
+    Diag(Identifier, diag::warn_deprecated_builtin_replacement) << II.getName();
+  }
+
   // If this is an extension token, diagnose its use.
   // We avoid diagnosing tokens that originate from macro definitions.
   // FIXME: This warning is disabled in cases where it shouldn't be,

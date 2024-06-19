@@ -7,27 +7,27 @@
 // a keyword *unless* it is introduced following the struct keyword.
 
 template<typename T>
-struct __is_pod { // expected-warning {{keyword '__is_pod' will be made available as an identifier}}
-  __is_pod() {}
+struct __is_pod { // expected-warning {{using the name of the builtin '__is_pod' outside of a builtin invocation is deprecated}}
+  __is_pod() {} // expected-error {{expected member name or ';' after declaration specifier}}
 };
 
-__is_pod<int> ipi;
+__is_pod<int> ipi; // expected-warning {{using the name of the builtin '__is_pod' outside of a builtin invocation is deprecated}}
 
 // Ditto for __is_same.
 template<typename T>
-struct __is_same { // expected-warning {{keyword '__is_same' will be made available as an identifier}}
+struct __is_same { // expected-warning {{using the name of the builtin '__is_same' outside of a builtin invocation is deprecated}}
 };
 
-__is_same<int> isi;
+__is_same<int> isi; // expected-warning {{using the name of the builtin '__is_same' outside of a builtin invocation is deprecated}}
 
 // Another, similar egregious hack for __is_signed, which is a type
 // trait in Embarcadero's compiler but is used as an identifier in
 // libstdc++.
 struct test_is_signed {
-  static const bool __is_signed = true; // expected-warning {{keyword '__is_signed' will be made available as an identifier}}
+  static const bool __is_signed = true; // expected-warning {{using the name of the builtin '__is_signed' outside of a builtin invocation is deprecated}}
 };
 
-bool check_signed = test_is_signed::__is_signed;
+bool check_signed = test_is_signed::__is_signed; // expected-warning {{using the name of the builtin '__is_signed' outside of a builtin invocation is deprecated}}
 
 template<bool B> struct must_be_true {};
 template<> struct must_be_true<false>;
