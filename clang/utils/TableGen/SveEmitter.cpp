@@ -1784,8 +1784,8 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
 
   for (auto &Def : Defs) {
     if (!Def->isFlagSet(VerifyRuntimeMode) &&
-        (Def->getGuard().contains("sve") + Def->getGuard().contains("sme")) <=
-            1)
+        (Def->getGuard().contains("sve") + Def->getGuard().contains("sme")) ==
+            2)
       llvm_unreachable("Missing VerifyRuntimeMode flag");
 
     if (Def->isFlagSet(IsStreamingFlag))
