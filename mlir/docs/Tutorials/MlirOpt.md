@@ -157,7 +157,7 @@ as well as emitting debug and diagnostic data.
 
 Running `mlir-opt` with no flags will consume MLIR input
 from standard in, parse and run verifiers on it,
-and write the MLIR back to standard out.
+and write the textual format back to standard out.
 This is a good way to test if an input MLIR is well-formed.
 
 `mlir-opt --help` shows a complete list of flags
