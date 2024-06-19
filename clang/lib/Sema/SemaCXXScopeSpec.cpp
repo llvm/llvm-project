@@ -483,7 +483,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon,
                                        bool OnlyNamespace) {
- #if 0
+#if 0
   if (IdInfo.Identifier->isEditorPlaceholder())
     return true;
   LookupResult Found(*this, IdInfo.Identifier, IdInfo.IdentifierLoc,
@@ -579,7 +579,6 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
 #endif
 #endif
 
-
   if (IdInfo.Identifier->isEditorPlaceholder())
     return true;
   if (IsCorrectedToColon)
@@ -609,8 +608,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   }
 
   bool ObjectTypeSearchedInScope = false;
-  bool LookupFirstQualifierInScope =
-      Found.empty() && !ObjectType.isNull();
+  bool LookupFirstQualifierInScope = Found.empty() && !ObjectType.isNull();
 
   if (LookupFirstQualifierInScope) {
     if (S) {
@@ -658,9 +656,10 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     }
   }
 
-  DeclContext *LookupCtx = SS.isSet()
-      ? computeDeclContext(SS, EnteringContext)
-      : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
+  DeclContext *LookupCtx =
+      SS.isSet()
+          ? computeDeclContext(SS, EnteringContext)
+          : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
 
   if (Found.empty() && !ErrorRecoveryLookup && !getLangOpts().MSVCCompat) {
     // We haven't found anything, and we're not recovering from a
