@@ -1288,7 +1288,11 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
           // region. The privatizer is processed in-place (see below) before it
           // gets inlined in the parallel region and therefore processing the
           // original op is dangerous.
-          return {privVar, privatizer.clone()};
+
+          mlir::IRRewriter opCloner(&moduleTranslation.getContext());
+          opCloner.setInsertionPoint(privatizer);
+          return {privVar, llvm::cast<mlir::omp::PrivateClauseOp>(
+                               opCloner.clone(*privatizer))};
         }
       }
 
