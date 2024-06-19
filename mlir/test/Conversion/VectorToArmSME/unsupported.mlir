@@ -145,6 +145,18 @@ func.func @transfer_write_2d__out_of_bounds(%vector : vector<[4]x[4]xf32>, %dest
   return
 }
 
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_slice_unsupported_permutation
+// CHECK-NOT: arm_sme.store_tile_slice
+func.func @transfer_write_slice_unsupported_permutation(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
+
 //===----------------------------------------------------------------------===//
 // vector.outerproduct
 //===----------------------------------------------------------------------===//
