@@ -3166,17 +3166,18 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
 
 TEST_F(TokenAnnotatorTest, FunctionTryBlock) {
   auto Tokens =
-      annotate("Ctor::Ctor(int x, int y) try\n"
-               "    : foo{[]() -> std::string { return {}; }(), x}, bar{y} {\n"
+      annotate("Foo::Foo(int x, int y) try\n"
+               "    : foo{[] -> std::string { return {}; }(), x}, bar{y} {\n"
                "} catch (...) {\n"
                "}");
-  ASSERT_EQ(Tokens.size(), 47u);
+  ASSERT_EQ(Tokens.size(), 45u);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_CtorDtorDeclName);
   EXPECT_TOKEN(Tokens[11], tok::colon, TT_CtorInitializerColon);
   EXPECT_TOKEN(Tokens[14], tok::l_square, TT_LambdaLSquare);
-  EXPECT_TOKEN(Tokens[18], tok::arrow, TT_TrailingReturnArrow);
-  EXPECT_TOKEN(Tokens[22], tok::l_brace, TT_LambdaLBrace);
-  EXPECT_TOKEN(Tokens[33], tok::comma, TT_CtorInitializerComma);
-  EXPECT_TOKEN(Tokens[38], tok::l_brace, TT_FunctionLBrace);
+  EXPECT_TOKEN(Tokens[16], tok::arrow, TT_TrailingReturnArrow);
+  EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_LambdaLBrace);
+  EXPECT_TOKEN(Tokens[31], tok::comma, TT_CtorInitializerComma);
+  EXPECT_TOKEN(Tokens[36], tok::l_brace, TT_FunctionLBrace);
 }
 
 } // namespace
