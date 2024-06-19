@@ -162,7 +162,7 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // If set, the default value the storage of the property should be initilized to.
   // This is only needed when the storage and interface types of the property
   // are distinct (ex. SmallVector for storage vs. ArrayRef for interfacing), as it
-  // will fall back to defaultValue when unspecified.
+  // will fall back to `defaultValue` when unspecified.
   string storageTypeValueOverride = "";
 }
 
