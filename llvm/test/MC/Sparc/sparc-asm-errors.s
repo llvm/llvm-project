@@ -11,7 +11,7 @@
         ! V9: unknown membar tag
         membar #BadTag
 
-        ! V8: instruction requires a CPU feature not currently enabled
+        ! V8: unexpected token
         ! V9: invalid membar mask number
         membar -127
 

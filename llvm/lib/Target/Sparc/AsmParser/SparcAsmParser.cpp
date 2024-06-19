@@ -1189,7 +1189,8 @@ ParseStatus SparcAsmParser::parseCallTarget(OperandVector &Operands) {
 ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
                                          StringRef Mnemonic) {
 
-  ParseStatus Res = MatchOperandParserImpl(Operands, Mnemonic);
+  ParseStatus Res =
+      MatchOperandParserImpl(Operands, Mnemonic, /*ParseForAllFeatures=*/true);
 
   // If there wasn't a custom match, try the generic matcher below. Otherwise,
   // there was a match, but an error occurred, in which case, just return that
