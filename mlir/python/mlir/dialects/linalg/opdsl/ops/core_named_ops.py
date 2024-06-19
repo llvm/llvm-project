@@ -518,7 +518,6 @@ def batch_matmul(
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
     """
-    defines(Canonicalizer)
     domain(D.b, D.m, D.n, D.k)
     implements(ContractionOpInterface)
     C[D.b, D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
@@ -538,7 +537,6 @@ def batch_matmul_transpose_a(
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
     """
-    defines(Canonicalizer)
     domain(D.b, D.m, D.n, D.k)
     implements(ContractionOpInterface)
     C[D.b, D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.k, D.m]) * TypeFn.cast_signed(
@@ -558,7 +556,6 @@ def batch_matmul_transpose_b(
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
     """
-    defines(Canonicalizer)
     domain(D.b, D.m, D.n, D.k)
     implements(ContractionOpInterface)
     C[D.b, D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
@@ -645,7 +642,6 @@ def batch_matvec(
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
     """
-    defines(Canonicalizer)
     domain(D.b, D.m, D.k)
     implements(ContractionOpInterface)
     C[D.b, D.m] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
@@ -664,7 +660,6 @@ def batch_vecmat(
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
     """
-    defines(Canonicalizer)
     domain(D.b, D.n, D.k)
     implements(ContractionOpInterface)
     C[D.b, D.n] += TypeFn.cast_signed(U, A[D.b, D.k]) * TypeFn.cast_signed(

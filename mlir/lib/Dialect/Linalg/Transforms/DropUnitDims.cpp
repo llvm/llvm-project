@@ -813,6 +813,103 @@ void mlir::linalg::populateMoveInitOperandsToInputPattern(
 }
 
 namespace {
+
+template <typename BatchOpTy, typename OpTy>
+struct BatchMatmulToMatmul : OpRewritePattern<BatchOpTy> {
+  using OpRewritePattern<BatchOpTy>::OpRewritePattern;
+  LogicalResult matchAndRewrite(BatchOpTy batchMatmulOp,
+                                PatternRewriter &rewriter) const override {
+
+    auto loc = batchMatmulOp.getLoc();
+    auto inputs = batchMatmulOp.getDpsInputs();
+    auto inits = batchMatmulOp.getDpsInits();
+    if (inputs.size() != 2 || inits.size() != 1)
+      return rewriter.notifyMatchFailure(batchMatmulOp,
+                                         "expected 2 inputs and 1 init");
+    auto lhs = inputs[0];
+    auto rhs = inputs[1];
+    auto init = inits[0];
+
+    auto lhsType = cast<ShapedType>(lhs.getType());
+    auto rhsType = cast<ShapedType>(rhs.getType());
+    auto initType = cast<ShapedType>(init.getType());
+    if (lhsType.getShape()[0] != 1 || rhsType.getShape()[0] != 1 ||
+        initType.getShape()[0] != 1)
+      return rewriter.notifyMatchFailure(batchMatmulOp, "batch size is not 1");
+
+    auto results = batchMatmulOp.getResults();
+    assert(results.size() < 2 && "expected at most one result");
+
+    SmallVector<Type, 1> resultType;
+    if (results.size() == 1) {
+      auto oldResultType = cast<RankedTensorType>(results[0].getType());
+      resultType.push_back(
+          RankedTensorType::get(oldResultType.getShape().drop_front(1),
+                                oldResultType.getElementType()));
+    }
+
+    auto collapseSingletonDim = [&](Value val) -> Value {
+      SmallVector<ReassociationIndices> reassociation({{0, 1}});
+      auto valType = cast<ShapedType>(val.getType());
+      for (auto i = 2; i < valType.getRank(); i++)
+        reassociation.push_back({i});
+      if (isa<RankedTensorType>(valType)) {
+        RankedTensorType collapsedType = RankedTensorType::get(
+            valType.getShape().drop_front(1), valType.getElementType());
+        return rewriter.create<tensor::CollapseShapeOp>(loc, collapsedType, val,
+                                                        reassociation);
+      }
+      MemRefType collapsedType = MemRefType::get(
+          valType.getShape().drop_front(1), valType.getElementType());
+      return rewriter.create<memref::CollapseShapeOp>(loc, collapsedType, val,
+                                                      reassociation);
+    };
+
+    auto collapsedLhs = collapseSingletonDim(lhs);
+    auto collapsedRhs = collapseSingletonDim(rhs);
+    auto collapsedInit = collapseSingletonDim(init);
+
+    auto collapsedOp = rewriter.create<OpTy>(
+        loc, resultType, ValueRange{collapsedLhs, collapsedRhs},
+        ValueRange{collapsedInit});
+    for (auto attr : batchMatmulOp->getAttrs()) {
+      if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
+        continue;
+      collapsedOp->setAttr(attr.getName(), attr.getValue());
+    }
+
+    if (results.size() < 1) {
+      rewriter.replaceOp(batchMatmulOp, collapsedOp);
+    } else {
+      SmallVector<ReassociationIndices> reassociation({{0, 1}});
+      auto resultType = cast<ShapedType>(results[0].getType());
+      for (auto i = 2; i < resultType.getRank(); i++)
+        reassociation.push_back({i});
+      Value expandedResult = rewriter.create<tensor::ExpandShapeOp>(
+          loc, resultType, collapsedOp.getResultTensors()[0], reassociation);
+      rewriter.replaceOp(batchMatmulOp, expandedResult);
+    }
+
+    return success();
+  }
+};
+} // namespace
+
+void mlir::linalg::populateContractionOpRankReducingPatterns(
+    RewritePatternSet &patterns) {
+  MLIRContext *context = patterns.getContext();
+  patterns.add<BatchMatmulToMatmul<BatchMatmulOp, MatmulOp>>(context);
+  patterns
+      .add<BatchMatmulToMatmul<BatchMatmulTransposeAOp, MatmulTransposeAOp>>(
+          context);
+  patterns
+      .add<BatchMatmulToMatmul<BatchMatmulTransposeBOp, MatmulTransposeBOp>>(
+          context);
+  patterns.add<BatchMatmulToMatmul<BatchMatvecOp, MatvecOp>>(context);
+  patterns.add<BatchMatmulToMatmul<BatchVecmatOp, VecmatOp>>(context);
+}
+
+namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgFoldUnitExtentDimsPass
     : public impl::LinalgFoldUnitExtentDimsPassBase<
@@ -833,4 +930,5 @@ struct LinalgFoldUnitExtentDimsPass
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
+
 } // namespace

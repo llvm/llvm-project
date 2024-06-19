@@ -516,7 +516,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: erf
-  cpp_class_name: ErfOp
+  cpp_class_name: erfOp
   doc: |-
     Applies erf(x) elementwise.
 
@@ -959,7 +959,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: powf
-  cpp_class_name: PowfOp
+  cpp_class_name: PowFOp
   doc: |-
     Takes the powf(lhs, rhs) between two inputs, elementwise. For powf(arg, 2) use `linalg.square`.
 
@@ -1622,8 +1622,6 @@ metadata: !LinalgOpMetadata
     them to the same data type as the accumulator/output.
   implements:
   - LinalgContractionOpInterface
-  defines:
-  - hasCanonicalizer
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
@@ -1694,8 +1692,6 @@ metadata: !LinalgOpMetadata
     them to the same data type as the accumulator/output.
   implements:
   - LinalgContractionOpInterface
-  defines:
-  - hasCanonicalizer
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
@@ -1766,8 +1762,6 @@ metadata: !LinalgOpMetadata
     them to the same data type as the accumulator/output.
   implements:
   - LinalgContractionOpInterface
-  defines:
-  - hasCanonicalizer
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
@@ -2146,8 +2140,6 @@ metadata: !LinalgOpMetadata
     them to the same data type as the accumulator/output.
   implements:
   - LinalgContractionOpInterface
-  defines:
-  - hasCanonicalizer
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
@@ -2216,8 +2208,6 @@ metadata: !LinalgOpMetadata
     them to the same data type as the accumulator/output.
   implements:
   - LinalgContractionOpInterface
-  defines:
-  - hasCanonicalizer
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
