@@ -150,6 +150,15 @@ here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
 
+- The ``\par`` documentation comment command now supports an optional
+  argument, which denotes the header of the paragraph started by
+  an instance of the ``\par`` command comment. The implementation
+  of the argument handling matches its semantics
+  `in Doxygen <https://www.doxygen.nl/manual/commands.html#cmdpar>`.
+  Namely, any text on the same line as the ``\par`` command will become
+  a header for the paragaph, and if there is no text then the command
+  will start a new paragraph.
+
 C++ Language Changes
 --------------------
 - C++17 support is now completed, with the enablement of the
