@@ -94,6 +94,7 @@ struct IfClauseOps {
 
 struct InReductionClauseOps {
   llvm::SmallVector<Value> inReductionVars;
+  llvm::SmallVector<bool> inReduceVarByRef;
   llvm::SmallVector<Attribute> inReductionDeclSymbols;
 };
 
@@ -198,6 +199,7 @@ struct SimdlenClauseOps {
 
 struct TaskReductionClauseOps {
   llvm::SmallVector<Value> taskReductionVars;
+  llvm::SmallVector<bool> taskReductionVarsByRef;
   llvm::SmallVector<Attribute> taskReductionDeclSymbols;
 };
 
