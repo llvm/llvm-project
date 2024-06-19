@@ -207,6 +207,12 @@ C++20 Feature Support
   to update the ``__cpp_concepts`` macro to `202002L`. This enables
   ``<expected>`` from libstdc++ to work correctly with Clang.
 
+- User defined constructors are allowed for copy-list-initialization with CTAD.
+  The example code for deduction guides for std::map in
+  (`cppreference <https://en.cppreference.com/w/cpp/container/map/deduction_guides>`_)
+  will now work.
+  (#GH62925).
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -589,6 +595,21 @@ Improvements to Clang's time-trace
 - Clang now specifies that using ``auto`` in a lambda parameter is a C++14 extension when
   appropriate. (`#46059: <https://github.com/llvm/llvm-project/issues/46059>`_).
 
+Improvements to Coverage Mapping
+--------------------------------
+
+- Macros defined in system headers are not expanded in coverage
+  mapping. Conditional expressions in system header macros are no
+  longer taken into account for branch coverage. They can be included
+  with ``-mllvm -system-headers-coverage``.
+  (`#78920: <https://github.com/llvm/llvm-project/issues/78920>`_)
+- MC/DC Coverage has been improved.
+  (`#82448: <https://github.com/llvm/llvm-project/pull/82448>`_)
+
+  - The maximum number of conditions is no longer limited to 6. See
+    `this <SourceBasedCodeCoverage.html#mc-dc-instrumentation>` for
+    more details.
+
 Bug Fixes in This Version
 -------------------------
 - Clang's ``-Wundefined-func-template`` no longer warns on pure virtual
@@ -865,6 +886,7 @@ Bug Fixes to C++ Support
 - Fixed a failed assertion when attempting to convert an integer representing the difference
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
+- Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
 
 
 Bug Fixes to AST Handling

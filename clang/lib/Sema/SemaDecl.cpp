@@ -7609,80 +7609,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
                             NTCUC_AutoVar, NTCUK_Destruct);
   } else {
     bool Invalid = false;
-
-    if (DC->isRecord() && !CurContext->isRecord()) {
-      // This is an out-of-line definition of a static data member.
-      switch (SC) {
-      case SC_None:
-        break;
-      case SC_Static:
-        Diag(D.getDeclSpec().getStorageClassSpecLoc(),
-             diag::err_static_out_of_line)
-          << FixItHint::CreateRemoval(D.getDeclSpec().getStorageClassSpecLoc());
-        break;
-      case SC_Auto:
-      case SC_Register:
-      case SC_Extern:
-        // [dcl.stc] p2: The auto or register specifiers shall be applied only
-        // to names of variables declared in a block or to function parameters.
-        // [dcl.stc] p6: The extern specifier cannot be used in the declaration
-        // of class members
-
-        Diag(D.getDeclSpec().getStorageClassSpecLoc(),
-             diag::err_storage_class_for_static_member)
-          << FixItHint::CreateRemoval(D.getDeclSpec().getStorageClassSpecLoc());
-        break;
-      case SC_PrivateExtern:
-        llvm_unreachable("C storage class in c++!");
-      }
-    }
-
-    if (SC == SC_Static && CurContext->isRecord()) {
-      if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
-        // Walk up the enclosing DeclContexts to check for any that are
-        // incompatible with static data members.
-        const DeclContext *FunctionOrMethod = nullptr;
-        const CXXRecordDecl *AnonStruct = nullptr;
-        for (DeclContext *Ctxt = DC; Ctxt; Ctxt = Ctxt->getParent()) {
-          if (Ctxt->isFunctionOrMethod()) {
-            FunctionOrMethod = Ctxt;
-            break;
-          }
-          const CXXRecordDecl *ParentDecl = dyn_cast<CXXRecordDecl>(Ctxt);
-          if (ParentDecl && !ParentDecl->getDeclName()) {
-            AnonStruct = ParentDecl;
-            break;
-          }
-        }
-        if (FunctionOrMethod) {
-          // C++ [class.static.data]p5: A local class shall not have static data
-          // members.
-          Diag(D.getIdentifierLoc(),
-               diag::err_static_data_member_not_allowed_in_local_class)
-              << Name << RD->getDeclName()
-              << llvm::to_underlying(RD->getTagKind());
-        } else if (AnonStruct) {
-          // C++ [class.static.data]p4: Unnamed classes and classes contained
-          // directly or indirectly within unnamed classes shall not contain
-          // static data members.
-          Diag(D.getIdentifierLoc(),
-               diag::err_static_data_member_not_allowed_in_anon_struct)
-              << Name << llvm::to_underlying(AnonStruct->getTagKind());
-          Invalid = true;
-        } else if (RD->isUnion()) {
-          // C++98 [class.union]p1: If a union contains a static data member,
-          // the program is ill-formed. C++11 drops this restriction.
-          Diag(D.getIdentifierLoc(),
-               getLangOpts().CPlusPlus11
-                 ? diag::warn_cxx98_compat_static_data_member_in_union
-                 : diag::ext_static_data_member_in_union) << Name;
-        }
-      }
-    }
-
     // Match up the template parameter lists with the scope specifier, then
     // determine whether we have a template or a template specialization.
-    bool InvalidScope = false;
     TemplateParams = MatchTemplateParametersToScopeSpecifier(
         D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
         D.getCXXScopeSpec(),
@@ -7690,8 +7618,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             ? D.getName().TemplateId
             : nullptr,
         TemplateParamLists,
-        /*never a friend*/ false, IsMemberSpecialization, InvalidScope);
-    Invalid |= InvalidScope;
+        /*never a friend*/ false, IsMemberSpecialization, Invalid);
 
     if (TemplateParams) {
       if (!TemplateParams->size() &&
@@ -7732,6 +7659,102 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       assert((Invalid ||
               D.getName().getKind() != UnqualifiedIdKind::IK_TemplateId) &&
              "should have a 'template<>' for this decl");
+    }
+
+    bool IsExplicitSpecialization =
+        IsVariableTemplateSpecialization && !IsPartialSpecialization;
+
+    // C++ [temp.expl.spec]p2:
+    //   The declaration in an explicit-specialization shall not be an
+    //   export-declaration. An explicit specialization shall not use a
+    //   storage-class-specifier other than thread_local.
+    //
+    // We use the storage-class-specifier from DeclSpec because we may have
+    // added implicit 'extern' for declarations with __declspec(dllimport)!
+    if (SCSpec != DeclSpec::SCS_unspecified &&
+        (IsExplicitSpecialization || IsMemberSpecialization)) {
+      Diag(D.getDeclSpec().getStorageClassSpecLoc(),
+           diag::ext_explicit_specialization_storage_class)
+          << FixItHint::CreateRemoval(D.getDeclSpec().getStorageClassSpecLoc());
+    }
+
+    if (CurContext->isRecord()) {
+      if (SC == SC_Static) {
+        if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(DC)) {
+          // Walk up the enclosing DeclContexts to check for any that are
+          // incompatible with static data members.
+          const DeclContext *FunctionOrMethod = nullptr;
+          const CXXRecordDecl *AnonStruct = nullptr;
+          for (DeclContext *Ctxt = DC; Ctxt; Ctxt = Ctxt->getParent()) {
+            if (Ctxt->isFunctionOrMethod()) {
+              FunctionOrMethod = Ctxt;
+              break;
+            }
+            const CXXRecordDecl *ParentDecl = dyn_cast<CXXRecordDecl>(Ctxt);
+            if (ParentDecl && !ParentDecl->getDeclName()) {
+              AnonStruct = ParentDecl;
+              break;
+            }
+          }
+          if (FunctionOrMethod) {
+            // C++ [class.static.data]p5: A local class shall not have static
+            // data members.
+            Diag(D.getIdentifierLoc(),
+                 diag::err_static_data_member_not_allowed_in_local_class)
+                << Name << RD->getDeclName()
+                << llvm::to_underlying(RD->getTagKind());
+          } else if (AnonStruct) {
+            // C++ [class.static.data]p4: Unnamed classes and classes contained
+            // directly or indirectly within unnamed classes shall not contain
+            // static data members.
+            Diag(D.getIdentifierLoc(),
+                 diag::err_static_data_member_not_allowed_in_anon_struct)
+                << Name << llvm::to_underlying(AnonStruct->getTagKind());
+            Invalid = true;
+          } else if (RD->isUnion()) {
+            // C++98 [class.union]p1: If a union contains a static data member,
+            // the program is ill-formed. C++11 drops this restriction.
+            Diag(D.getIdentifierLoc(),
+                 getLangOpts().CPlusPlus11
+                     ? diag::warn_cxx98_compat_static_data_member_in_union
+                     : diag::ext_static_data_member_in_union)
+                << Name;
+          }
+        }
+      } else if (IsVariableTemplate || IsPartialSpecialization) {
+        // There is no such thing as a member field template.
+        Diag(D.getIdentifierLoc(), diag::err_template_member)
+            << II << TemplateParams->getSourceRange();
+        // Recover by pretending this is a static data member template.
+        SC = SC_Static;
+      }
+    } else if (DC->isRecord()) {
+      // This is an out-of-line definition of a static data member.
+      switch (SC) {
+      case SC_None:
+        break;
+      case SC_Static:
+        Diag(D.getDeclSpec().getStorageClassSpecLoc(),
+             diag::err_static_out_of_line)
+            << FixItHint::CreateRemoval(
+                   D.getDeclSpec().getStorageClassSpecLoc());
+        break;
+      case SC_Auto:
+      case SC_Register:
+      case SC_Extern:
+        // [dcl.stc] p2: The auto or register specifiers shall be applied only
+        // to names of variables declared in a block or to function parameters.
+        // [dcl.stc] p6: The extern specifier cannot be used in the declaration
+        // of class members
+
+        Diag(D.getDeclSpec().getStorageClassSpecLoc(),
+             diag::err_storage_class_for_static_member)
+            << FixItHint::CreateRemoval(
+                   D.getDeclSpec().getStorageClassSpecLoc());
+        break;
+      case SC_PrivateExtern:
+        llvm_unreachable("C storage class in c++!");
+      }
     }
 
     if (IsVariableTemplateSpecialization) {
@@ -7779,8 +7802,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     // the variable (matching the scope specifier), store them.
     // An explicit variable template specialization does not own any template
     // parameter lists.
-    bool IsExplicitSpecialization =
-        IsVariableTemplateSpecialization && !IsPartialSpecialization;
     unsigned VDTemplateParamLists =
         (TemplateParams && !IsExplicitSpecialization) ? 1 : 0;
     if (TemplateParamLists.size() > VDTemplateParamLists)
@@ -10210,25 +10231,45 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       NewFD->setImplicitlyInline(ImplicitInlineCXX20);
     }
 
-    if (SC == SC_Static && isa<CXXMethodDecl>(NewFD) &&
-        !CurContext->isRecord()) {
-      // C++ [class.static]p1:
-      //   A data or function member of a class may be declared static
-      //   in a class definition, in which case it is a static member of
-      //   the class.
+    if (!isFriend && SC != SC_None) {
+      // C++ [temp.expl.spec]p2:
+      //   The declaration in an explicit-specialization shall not be an
+      //   export-declaration. An explicit specialization shall not use a
+      //   storage-class-specifier other than thread_local.
+      //
+      // We diagnose friend declarations with storage-class-specifiers
+      // elsewhere.
+      if (isFunctionTemplateSpecialization || isMemberSpecialization) {
+        Diag(D.getDeclSpec().getStorageClassSpecLoc(),
+             diag::ext_explicit_specialization_storage_class)
+            << FixItHint::CreateRemoval(
+                   D.getDeclSpec().getStorageClassSpecLoc());
+      }
 
-      // Complain about the 'static' specifier if it's on an out-of-line
-      // member function definition.
+      if (SC == SC_Static && !CurContext->isRecord() && DC->isRecord()) {
+        assert(isa<CXXMethodDecl>(NewFD) &&
+               "Out-of-line member function should be a CXXMethodDecl");
+        // C++ [class.static]p1:
+        //   A data or function member of a class may be declared static
+        //   in a class definition, in which case it is a static member of
+        //   the class.
 
-      // MSVC permits the use of a 'static' storage specifier on an out-of-line
-      // member function template declaration and class member template
-      // declaration (MSVC versions before 2015), warn about this.
-      Diag(D.getDeclSpec().getStorageClassSpecLoc(),
-           ((!getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015) &&
-             cast<CXXRecordDecl>(DC)->getDescribedClassTemplate()) ||
-           (getLangOpts().MSVCCompat && NewFD->getDescribedFunctionTemplate()))
-           ? diag::ext_static_out_of_line : diag::err_static_out_of_line)
-        << FixItHint::CreateRemoval(D.getDeclSpec().getStorageClassSpecLoc());
+        // Complain about the 'static' specifier if it's on an out-of-line
+        // member function definition.
+
+        // MSVC permits the use of a 'static' storage specifier on an
+        // out-of-line member function template declaration and class member
+        // template declaration (MSVC versions before 2015), warn about this.
+        Diag(D.getDeclSpec().getStorageClassSpecLoc(),
+             ((!getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2015) &&
+               cast<CXXRecordDecl>(DC)->getDescribedClassTemplate()) ||
+              (getLangOpts().MSVCCompat &&
+               NewFD->getDescribedFunctionTemplate()))
+                 ? diag::ext_static_out_of_line
+                 : diag::err_static_out_of_line)
+            << FixItHint::CreateRemoval(
+                   D.getDeclSpec().getStorageClassSpecLoc());
+      }
     }
 
     // C++11 [except.spec]p15:
@@ -10595,27 +10636,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         if (CheckFunctionTemplateSpecialization(NewFD, ExplicitTemplateArgs,
                                                 Previous))
           NewFD->setInvalidDecl();
-      }
-
-      // C++ [dcl.stc]p1:
-      //   A storage-class-specifier shall not be specified in an explicit
-      //   specialization (14.7.3)
-      // FIXME: We should be checking this for dependent specializations.
-      FunctionTemplateSpecializationInfo *Info =
-          NewFD->getTemplateSpecializationInfo();
-      if (Info && SC != SC_None) {
-        if (SC != Info->getTemplate()->getTemplatedDecl()->getStorageClass())
-          Diag(NewFD->getLocation(),
-               diag::err_explicit_specialization_inconsistent_storage_class)
-            << SC
-            << FixItHint::CreateRemoval(
-                                      D.getDeclSpec().getStorageClassSpecLoc());
-
-        else
-          Diag(NewFD->getLocation(),
-               diag::ext_explicit_specialization_storage_class)
-            << FixItHint::CreateRemoval(
-                                      D.getDeclSpec().getStorageClassSpecLoc());
       }
     } else if (isMemberSpecialization && isa<CXXMethodDecl>(NewFD)) {
       if (CheckMemberSpecialization(NewFD, Previous))
