@@ -40,6 +40,24 @@ end subroutine
 ! CHECK:           return
 ! CHECK:         }
 
+subroutine test_target_to_pointer(x)
+  real, target ::  x(..)
+  interface
+    subroutine takes_target_as_pointer(x)
+      real, pointer, intent(in) :: x(..)
+    end subroutine
+  end interface
+  call takes_target_as_pointer(x)
+end subroutine
+! CHECK-LABEL:   func.func @_QPtest_target_to_pointer(
+! CHECK-SAME:                                         %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x", fir.target}) {
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<*:f32>>>
+! CHECK:           %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtest_target_to_pointerEx"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
+! CHECK:           %[[VAL_4:.*]] = fir.rebox_assumed_rank %[[VAL_3]]#0 lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.ptr<!fir.array<*:f32>>>
+! CHECK:           fir.store %[[VAL_4]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>
+! CHECK:           fir.call @_QPtakes_target_as_pointer(%[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<*:f32>>>>) -> ()
+
 subroutine test_poly_to_nonepoly(x)
   type t
     integer :: i
