@@ -13,8 +13,7 @@
 //
 // Tests the ill-formed instantiations.
 
-#include <type_traits>
-
+#include <__type_traits/is_specialization.h>
 #include <array>
 #include <utility>
 
