@@ -66,7 +66,7 @@ and produces non-MLIR program representations as output.
 
 ## Two example programs
 
-Here are two MLIR programs.
+Here are the textual representation of two MLIR programs.
 The first defines a function that counts the leading zeroes of a 32-bit integer (`i32`)
 using the [`math` dialect's](/docs/Dialects/MathOps/) `ctlz` operation.
 
