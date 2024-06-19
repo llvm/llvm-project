@@ -272,8 +272,6 @@ mlir::LogicalResult fir::AllocaOp::verify() {
   mlir::Type outType = getType();
   if (!mlir::isa<fir::ReferenceType>(outType))
     return emitOpError("must be a !fir.ref type");
-  if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
-    return emitOpError("cannot allocate !fir.box of unknown rank or type");
   return mlir::success();
 }
 
