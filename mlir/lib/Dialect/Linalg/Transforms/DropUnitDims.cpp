@@ -814,10 +814,66 @@ void mlir::linalg::populateMoveInitOperandsToInputPattern(
 
 namespace {
 
-template <typename BatchOpTy, typename OpTy>
-struct BatchMatmulToMatmul : OpRewritePattern<BatchOpTy> {
-  using OpRewritePattern<BatchOpTy>::OpRewritePattern;
-  LogicalResult matchAndRewrite(BatchOpTy batchMatmulOp,
+static SmallVector<ReassociationIndices>
+getReassociationsForTrailingDims(int64_t rank) {
+  SmallVector<ReassociationIndices> reassociation(rank - 1, {});
+  if (rank > 1) {
+    reassociation[rank - 2] =
+        (rank == 1) ? ReassociationIndices{0} : ReassociationIndices{0, 1};
+    for (int64_t i = 0; i < rank - 2; i++)
+      reassociation[i] = {i};
+  }
+  return reassociation;
+}
+
+static SmallVector<ReassociationIndices>
+getReassociationsForLeadingDims(int64_t rank) {
+  SmallVector<ReassociationIndices> reassociation(rank - 1, {});
+  if (rank > 1) {
+    reassociation[0] =
+        (rank == 1) ? ReassociationIndices{0} : ReassociationIndices{0, 1};
+    for (int64_t i = 1; i < rank - 1; i++)
+      reassociation[i] = {i + rank - 2};
+  }
+  return reassociation;
+}
+
+static Value collapseLeadingSingletonDim(PatternRewriter &rewriter, Value val) {
+  auto valType = cast<ShapedType>(val.getType());
+  return collapseValue(
+      rewriter, val.getLoc(), val, valType.getShape().drop_front(1),
+      getReassociationsForLeadingDims(valType.getRank()),
+      ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape);
+}
+
+static Value collapseTrailingSingletonDim(PatternRewriter &rewriter,
+                                          Value val) {
+  auto valType = cast<ShapedType>(val.getType());
+  return collapseValue(
+      rewriter, val.getLoc(), val, valType.getShape().drop_back(1),
+      getReassociationsForTrailingDims(valType.getRank()),
+      ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape);
+}
+
+static Value expandLeadingSingletonDim(PatternRewriter &rewriter, Value val,
+                                       RankedTensorType expandedType) {
+  return rewriter.create<tensor::ExpandShapeOp>(
+      val.getLoc(), expandedType, val,
+      getReassociationsForLeadingDims(expandedType.getRank()));
+}
+
+static Value expandTrailingSingletonDim(PatternRewriter &rewriter, Value val,
+                                        RankedTensorType expandedType) {
+  return rewriter.create<tensor::ExpandShapeOp>(
+      val.getLoc(), expandedType, val,
+      getReassociationsForTrailingDims(expandedType.getRank()));
+}
+
+template <typename FromOpTy, typename ToOpTy>
+struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
+  using OpRewritePattern<FromOpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FromOpTy batchMatmulOp,
                                 PatternRewriter &rewriter) const override {
 
     auto loc = batchMatmulOp.getLoc();
@@ -830,47 +886,19 @@ struct BatchMatmulToMatmul : OpRewritePattern<BatchOpTy> {
     auto rhs = inputs[1];
     auto init = inits[0];
 
-    auto lhsType = cast<ShapedType>(lhs.getType());
-    auto rhsType = cast<ShapedType>(rhs.getType());
-    auto initType = cast<ShapedType>(init.getType());
-    if (lhsType.getShape()[0] != 1 || rhsType.getShape()[0] != 1 ||
-        initType.getShape()[0] != 1)
-      return rewriter.notifyMatchFailure(batchMatmulOp, "batch size is not 1");
+    if (!checkTypes(lhs, rhs, init))
+      return rewriter.notifyMatchFailure(batchMatmulOp,
+                                         "no reducable dims found");
 
-    auto results = batchMatmulOp.getResults();
-    assert(results.size() < 2 && "expected at most one result");
-
-    SmallVector<Type, 1> resultType;
-    if (results.size() == 1) {
-      auto oldResultType = cast<RankedTensorType>(results[0].getType());
-      resultType.push_back(
-          RankedTensorType::get(oldResultType.getShape().drop_front(1),
-                                oldResultType.getElementType()));
-    }
-
-    auto collapseSingletonDim = [&](Value val) -> Value {
-      SmallVector<ReassociationIndices> reassociation({{0, 1}});
-      auto valType = cast<ShapedType>(val.getType());
-      for (auto i = 2; i < valType.getRank(); i++)
-        reassociation.push_back({i});
-      if (isa<RankedTensorType>(valType)) {
-        RankedTensorType collapsedType = RankedTensorType::get(
-            valType.getShape().drop_front(1), valType.getElementType());
-        return rewriter.create<tensor::CollapseShapeOp>(loc, collapsedType, val,
-                                                        reassociation);
-      }
-      MemRefType collapsedType = MemRefType::get(
-          valType.getShape().drop_front(1), valType.getElementType());
-      return rewriter.create<memref::CollapseShapeOp>(loc, collapsedType, val,
-                                                      reassociation);
-    };
-
-    auto collapsedLhs = collapseSingletonDim(lhs);
-    auto collapsedRhs = collapseSingletonDim(rhs);
-    auto collapsedInit = collapseSingletonDim(init);
-
-    auto collapsedOp = rewriter.create<OpTy>(
-        loc, resultType, ValueRange{collapsedLhs, collapsedRhs},
+    auto collapsedOperands = collapseOperands(rewriter, lhs, rhs, init);
+    auto collapsedLhs = collapsedOperands[0];
+    auto collapsedRhs = collapsedOperands[1];
+    auto collapsedInit = collapsedOperands[2];
+    SmallVector<Type, 1> collapsedResultTy;
+    if (isa<RankedTensorType>(collapsedInit.getType()))
+      collapsedResultTy.push_back(collapsedInit.getType());
+    auto collapsedOp = rewriter.create<ToOpTy>(
+        loc, collapsedResultTy, ValueRange{collapsedLhs, collapsedRhs},
         ValueRange{collapsedInit});
     for (auto attr : batchMatmulOp->getAttrs()) {
       if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
@@ -878,35 +906,109 @@ struct BatchMatmulToMatmul : OpRewritePattern<BatchOpTy> {
       collapsedOp->setAttr(attr.getName(), attr.getValue());
     }
 
-    if (results.size() < 1) {
+    auto results = batchMatmulOp.getResults();
+    assert(results.size() < 2 && "expected at most one result");
+    if (results.size() < 1)
       rewriter.replaceOp(batchMatmulOp, collapsedOp);
-    } else {
-      SmallVector<ReassociationIndices> reassociation({{0, 1}});
-      auto resultType = cast<ShapedType>(results[0].getType());
-      for (auto i = 2; i < resultType.getRank(); i++)
-        reassociation.push_back({i});
-      Value expandedResult = rewriter.create<tensor::ExpandShapeOp>(
-          loc, resultType, collapsedOp.getResultTensors()[0], reassociation);
-      rewriter.replaceOp(batchMatmulOp, expandedResult);
-    }
+    else
+      rewriter.replaceOp(
+          batchMatmulOp,
+          expandResult(rewriter, collapsedOp.getResultTensors()[0],
+                       cast<RankedTensorType>(results[0].getType())));
 
     return success();
   }
+
+  virtual bool checkTypes(Value lhs, Value rhs, Value init) const = 0;
+  virtual SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter,
+                                                 Value lhs, Value rhs,
+                                                 Value init) const = 0;
+  virtual Value expandResult(PatternRewriter &rewriter, Value result,
+                             RankedTensorType expandedType) const = 0;
 };
+
+template <typename FromOpTy, typename ToOpTy>
+struct RankReduceBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
+  using RankReduceContractionOps<FromOpTy, ToOpTy>::RankReduceContractionOps;
+
+  bool checkTypes(Value lhs, Value rhs, Value init) const override {
+    auto lhsType = cast<ShapedType>(lhs.getType());
+    auto rhsType = cast<ShapedType>(rhs.getType());
+    auto initType = cast<ShapedType>(init.getType());
+    return lhsType.getShape()[0] == 1 && rhsType.getShape()[0] == 1 &&
+           initType.getShape()[0] == 1;
+  }
+
+  SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter, Value lhs,
+                                         Value rhs, Value init) const override {
+    auto collapsedLhs = collapseLeadingSingletonDim(rewriter, lhs);
+    auto collapsedRhs = collapseLeadingSingletonDim(rewriter, rhs);
+    auto collapsedInit = collapseLeadingSingletonDim(rewriter, init);
+    return SmallVector<Value, 3>{collapsedLhs, collapsedRhs, collapsedInit};
+  }
+  Value expandResult(PatternRewriter &rewriter, Value result,
+                     RankedTensorType expandedType) const override {
+    return expandLeadingSingletonDim(rewriter, result, expandedType);
+  }
+};
+
+template <typename FromOpTy, typename ToOpTy>
+struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
+  using RankReduceContractionOps<FromOpTy, ToOpTy>::RankReduceContractionOps;
+
+  static bool constexpr reduceLeading =
+      (std::is_same<FromOpTy, MatmulOp>::value &&
+       std::is_same<ToOpTy, VecmatOp>::value) ||
+      (std::is_same<FromOpTy, MatvecOp>::value &&
+       std::is_same<ToOpTy, DotOp>::value);
+
+  bool checkTypes(Value lhs, Value rhs, Value init) const override {
+    auto lhsType = cast<ShapedType>(lhs.getType());
+    auto rhsType = cast<ShapedType>(rhs.getType());
+    auto initType = cast<ShapedType>(init.getType());
+    if (reduceLeading)
+      return lhsType.getShape()[0] == 1 && initType.getShape()[0] == 1;
+    else
+      return rhsType.getShape().back() == 1 && initType.getShape().back() == 1;
+  }
+
+  SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter, Value lhs,
+                                         Value rhs, Value init) const override {
+    if (reduceLeading) {
+      auto collapsedLhs = collapseLeadingSingletonDim(rewriter, lhs);
+      auto collapsedInit = collapseLeadingSingletonDim(rewriter, init);
+      return SmallVector<Value, 3>{collapsedLhs, rhs, collapsedInit};
+    } else {
+      auto collapsedRhs = collapseTrailingSingletonDim(rewriter, rhs);
+      auto collapsedInit = collapseTrailingSingletonDim(rewriter, init);
+      return SmallVector<Value, 3>{lhs, collapsedRhs, collapsedInit};
+    }
+  }
+  Value expandResult(PatternRewriter &rewriter, Value result,
+                     RankedTensorType expandedType) const override {
+    if (reduceLeading)
+      return expandLeadingSingletonDim(rewriter, result, expandedType);
+    else
+      return expandTrailingSingletonDim(rewriter, result, expandedType);
+  }
+};
+
 } // namespace
 
 void mlir::linalg::populateContractionOpRankReducingPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
-  patterns.add<BatchMatmulToMatmul<BatchMatmulOp, MatmulOp>>(context);
-  patterns
-      .add<BatchMatmulToMatmul<BatchMatmulTransposeAOp, MatmulTransposeAOp>>(
-          context);
-  patterns
-      .add<BatchMatmulToMatmul<BatchMatmulTransposeBOp, MatmulTransposeBOp>>(
-          context);
-  patterns.add<BatchMatmulToMatmul<BatchMatvecOp, MatvecOp>>(context);
-  patterns.add<BatchMatmulToMatmul<BatchVecmatOp, VecmatOp>>(context);
+  patterns.add<RankReduceBatched<BatchMatmulOp, MatmulOp>>(context);
+  patterns.add<RankReduceBatched<BatchMatmulTransposeAOp, MatmulTransposeAOp>>(
+      context);
+  patterns.add<RankReduceBatched<BatchMatmulTransposeBOp, MatmulTransposeBOp>>(
+      context);
+  patterns.add<RankReduceBatched<BatchMatvecOp, MatvecOp>>(context);
+  patterns.add<RankReduceBatched<BatchVecmatOp, VecmatOp>>(context);
+  patterns.add<RankReduceMatmul<MatmulOp, VecmatOp>>(context);
+  patterns.add<RankReduceMatmul<MatmulOp, MatvecOp>>(context);
+  patterns.add<RankReduceMatmul<MatvecOp, DotOp>>(context);
+  patterns.add<RankReduceMatmul<VecmatOp, DotOp>>(context);
 }
 
 namespace {
