@@ -679,6 +679,9 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #  endif
 
+// _LIBCPP_HAS_NO_C11_ALIGNED_ALLOC should be defined on platforms
+// where you would expect C11 aligned_alloc() to exist but it doesn't.
+
 // It is not yet possible to use aligned_alloc() on all Apple platforms since
 // 10.15 was the first version to ship an implementation of aligned_alloc().
 #  if defined(__APPLE__)
@@ -689,6 +692,16 @@ typedef __char32_t char32_t;
 #  elif defined(__ANDROID__) && __ANDROID_API__ < 28
 // Android only provides aligned_alloc when targeting API 28 or higher.
 #    define _LIBCPP_HAS_NO_C11_ALIGNED_ALLOC
+#  endif
+
+// _LIBCPP_HAS_C11_ALIGNED_ALLOC may be defined on platforms where C11
+// aligned_alloc() is known to exist even if you might not expect it.
+
+// picolibc has two memory allocators, one of which doesn't provide
+// posix_memalign(). But they both reliably provide C11
+// aligned_alloc(), at least since 1.4.4.
+#  if defined(__PICOLIBC__) && (__PICOLIBC__ > 1 || (__PICOLIBC__ == 1 && (__PICOLIBC_MINOR__ > 4 || (__PICOLIBC_MINOR__ == 4 && __PICOLIBC_PATCHLEVEL__ >= 4))))
+#    define _LIBCPP_HAS_C11_ALIGNED_ALLOC
 #  endif
 
 #  if defined(__APPLE__) || defined(__FreeBSD__)
