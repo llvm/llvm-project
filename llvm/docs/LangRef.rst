@@ -1602,8 +1602,10 @@ Currently, only the following parameter attributes are defined:
     through this pointer argument (even though it may read from the memory that
     the pointer points to).
 
-    If a function reads from a writeonly pointer argument, the behavior is
-    undefined.
+    This attribute is understood in the same way as the ``memory(write)``
+    attribute. That is, the pointer may still be read as long as the read is
+    not observable outside the function. See the ``memory`` documentation for
+    precise semantics.
 
 ``writable``
     This attribute is only meaningful in conjunction with ``dereferenceable(N)``
@@ -1976,6 +1978,21 @@ example:
       and additionally write argument memory.
     - ``memory(readwrite, argmem: none)``: May access any memory apart from
       argument memory.
+
+    The supported access kinds are:
+
+    - ``readwrite``: Any kind of access to the location is allowed.
+    - ``read``: The location is only read. Writing to the location is immediate
+      undefined behavior. This includes the case where the location is read from
+      and then the same value is written back.
+    - ``write``: Only writes to the location are observable outside the function
+      call. However, the function may still internally read the location after
+      writing it, as this is not observable. Reading the location prior to
+      writing it results in a poison value.
+    - ``none``: No reads or writes to the location are observed outside the
+      function. It is always valid to read and write allocas, and to read global
+      constants, even if ``memory(none)`` is used, as these effects are not
+      externally observable.
 
     The supported memory location kinds are:
 
