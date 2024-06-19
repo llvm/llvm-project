@@ -486,9 +486,8 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   if (auto *TGEP = dyn_cast<GetElementPtrInst>(TI)) {
     auto *FGEP = cast<GetElementPtrInst>(FI);
     Type *ElementType = TGEP->getSourceElementType();
-    return TGEP->isInBounds() && FGEP->isInBounds()
-               ? GetElementPtrInst::CreateInBounds(ElementType, Op0, {Op1})
-               : GetElementPtrInst::Create(ElementType, Op0, {Op1});
+    return GetElementPtrInst::Create(
+        ElementType, Op0, Op1, TGEP->getNoWrapFlags() & FGEP->getNoWrapFlags());
   }
   llvm_unreachable("Expected BinaryOperator or GEP");
   return nullptr;
