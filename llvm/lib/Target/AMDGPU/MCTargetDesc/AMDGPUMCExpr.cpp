@@ -318,9 +318,10 @@ AMDGPUVariadicMCExpr::createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
 
 static KnownBits AMDGPUMCExprKnownBits(const MCExpr *Expr, raw_ostream &OS,
                                        const MCAsmInfo *MAI, unsigned depth) {
+  const unsigned BitWidth = 64;
 
   if (depth == 0)
-    return KnownBits(/*BitWidth=*/64);
+    return KnownBits(BitWidth);
 
   depth--;
 
@@ -335,7 +336,7 @@ static KnownBits AMDGPUMCExprKnownBits(const MCExpr *Expr, raw_ostream &OS,
 
     switch (BExpr->getOpcode()) {
     default:
-      return KnownBits(/*BitWidth=*/64);
+      return KnownBits(BitWidth);
     case MCBinaryExpr::Opcode::Add:
       return KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/false,
                                          /*NUW=*/false, LHSKnown, RHSKnown);
@@ -364,14 +365,14 @@ static KnownBits AMDGPUMCExprKnownBits(const MCExpr *Expr, raw_ostream &OS,
   }
   case MCExpr::ExprKind::Constant: {
     const MCConstantExpr *CE = cast<MCConstantExpr>(Expr);
-    APInt APValue(/*BitWidth=*/64, CE->getValue(), /*isSigned=*/true);
+    APInt APValue(BitWidth, CE->getValue(), /*isSigned=*/true);
     return KnownBits::makeConstant(APValue);
   }
   case MCExpr::ExprKind::SymbolRef: {
     const MCSymbolRefExpr *RExpr = cast<MCSymbolRefExpr>(Expr);
     const MCSymbol &Sym = RExpr->getSymbol();
     if (!Sym.isVariable())
-      return KnownBits(/*BitWidth=*/64);
+      return KnownBits(BitWidth);
 
     // Variable value retrieval is not for actual use but only for knownbits
     // analysis.
@@ -384,13 +385,13 @@ static KnownBits AMDGPUMCExprKnownBits(const MCExpr *Expr, raw_ostream &OS,
 
     switch (UExpr->getOpcode()) {
     default:
-      return KnownBits(/*BitWidth=*/64);
+      return KnownBits(BitWidth);
     case MCUnaryExpr::Opcode::Minus: {
       KB.makeNegative();
       return KB;
     }
     case MCUnaryExpr::Opcode::Not: {
-      KnownBits AllOnes(/*BitWidth=*/64);
+      KnownBits AllOnes(BitWidth);
       AllOnes.setAllOnes();
       return KB ^ AllOnes;
     }
@@ -405,7 +406,7 @@ static KnownBits AMDGPUMCExprKnownBits(const MCExpr *Expr, raw_ostream &OS,
 
     switch (AGVK->getKind()) {
     default:
-      return KnownBits(/*BitWidth=*/64);
+      return KnownBits(BitWidth);
     case AMDGPUVariadicMCExpr::VariadicKind::AGVK_Or: {
       KnownBits KB = AMDGPUMCExprKnownBits(AGVK->getSubExpr(0), OS, MAI, depth);
       for (const MCExpr *Arg : AGVK->getArgs()) {
@@ -426,16 +427,15 @@ static KnownBits AMDGPUMCExprKnownBits(const MCExpr *Expr, raw_ostream &OS,
     case AMDGPUVariadicMCExpr::VariadicKind::AGVK_Occupancy: {
       int64_t Val;
       if (AGVK->evaluateAsAbsolute(Val)) {
-        APInt APValue(/*BitWidth=*/64, Val, /*isSigned=*/false);
+        APInt APValue(BitWidth, Val, /*isSigned=*/false);
         return KnownBits::makeConstant(APValue);
-      } else {
-        return KnownBits(/*BitWidth=*/64);
       }
+      return KnownBits(BitWidth);
     }
     }
   }
   }
-  return KnownBits(/*BitWidth=*/64);
+  return KnownBits(BitWidth);
 }
 
 void llvm::AMDGPUMCExprPrint(const MCExpr *Expr, raw_ostream &OS,
