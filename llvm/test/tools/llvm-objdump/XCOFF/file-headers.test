@@ -16,41 +16,6 @@
 FileHeader:
   MagicNumber: [[MAGIC=0x1DF]]
 AuxiliaryHeader:
-  Magic:                 0x10B
-  Version:               0x1
-  TextSectionSize:       0x8
-  DataSectionSize:       0x9
-  BssSectionSize:        0x10
   EntryPointAddr:        0x1111
-  TextStartAddr:         0x2222
-  DataStartAddr:         0x3333
-  TOCAnchorAddr:         0x4444
-  SecNumOfEntryPoint:    1
-  SecNumOfText:          2
-  SecNumOfData:          3
-  SecNumOfTOC:           4
-  SecNumOfLoader:        5
-  SecNumOfBSS:           6
-  MaxAlignOfText:        0x7
-  MaxAlignOfData:        0x3
-  ModuleType:            0x1
-  TextPageSize:          0x1
-  DataPageSize:          0x1
-  StackPageSize:         0x1
-  SecNumOfTData:         7
-  SecNumOfTBSS:          8
   FlagAndTDataAlignment: 0x1
   Flag:                  [[FLAG64=<none>]]
-Sections:
-  - Flags:       [ STYP_TEXT ]
-    SectionData: "1232"
-  - Flags:       [ STYP_DATA ]
-    SectionData: "5678"
-  - Flags:       [ STYP_BSS ]
-    SectionData: "9101"
-  - Flags:       [ STYP_TDATA ]
-    SectionData: "1112"
-  - Flags:       [ STYP_TBSS ]
-    SectionData: "1314"
-  - Flags:       [ STYP_LOADER ]
-    SectionData: "1516"
