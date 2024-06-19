@@ -47,6 +47,16 @@
 # COMBINE-NEXT: .rela.text
 # COMBINE-NEXT: .rela.text
 
+## If --force-group-allocation is specified, discard .group and combine .rela.* if their relocated sections are combined.
+# RUN: ld.lld -r -T combine.lds a.o a.o --force-group-allocation -o combine-a.ro
+# RUN: llvm-readelf -g -S combine-a.ro | FileCheck %s --check-prefix=COMBINE-A
+
+# COMBINE-A:      Name            Type     Address          Off    Size   ES Flg Lk    Inf   Al
+# COMBINE-A:      .rodata         PROGBITS 0000000000000000 {{.*}} 000002 00   A  0      0    1
+# COMBINE-A-NEXT: .text           PROGBITS 0000000000000000 {{.*}} 000010 00  AX  0      0    4
+# COMBINE-A-NEXT: .rela.text      RELA     0000000000000000 {{.*}} 000030 18   I [[#]] [[#]]  8
+# COMBINE-A-NEXT: .note.GNU-stack
+
 # RUN: echo 'SECTIONS { /DISCARD/ : {*(.rodata.*)} }' > discard-rodata.lds
 # RUN: ld.lld -r -T discard-rodata.lds a.o a.o -o discard-rodata.ro
 # RUN: llvm-readelf -g -S discard-rodata.ro | FileCheck %s --check-prefix=NO-RODATA

@@ -6,12 +6,12 @@
 ; CHECK-LABEL: define void @f(
 ; CHECK:       coro.init:
 ; CHECK:        %[[begin:.*]] = call noalias nonnull ptr @llvm.coro.begin(
-; CHECK:        call void @llvm.dbg.declare(metadata ptr %[[begin]], metadata ![[CORO_FRAME:[0-9]+]], metadata !DIExpression())
+; CHECK:        #dbg_declare(ptr %[[begin]], ![[CORO_FRAME:[0-9]+]], !DIExpression(),
 ;
 ; CHECK:       define internal fastcc void @f.resume(
 ; CHECK:       entry.resume:
 ; CHECK:            %[[FramePtr_RESUME:.*]] = alloca ptr
-; CHECK:            call void @llvm.dbg.declare(metadata ptr %[[FramePtr_RESUME]], metadata ![[CORO_FRAME_IN_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref)
+; CHECK:            #dbg_declare(ptr %[[FramePtr_RESUME]], ![[CORO_FRAME_IN_RESUME:[0-9]+]], !DIExpression(DW_OP_deref)
 ;
 ; CHECK-DAG: ![[FILE:[0-9]+]] = !DIFile(filename: "coro-debug.cpp"
 ; CHECK-DAG: ![[RAMP:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov",

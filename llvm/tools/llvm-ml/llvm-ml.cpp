@@ -263,6 +263,7 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
   MCTargetOptions MCOptions;
   MCOptions.AssemblyLanguage = "masm";
   MCOptions.MCFatalWarnings = InputArgs.hasArg(OPT_fatal_warnings);
+  MCOptions.MCSaveTempLabels = InputArgs.hasArg(OPT_save_temp_labels);
 
   Triple TheTriple = GetTriple(ProgName, InputArgs);
   std::string Error;
@@ -329,9 +330,6 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
   std::unique_ptr<MCObjectFileInfo> MOFI(TheTarget->createMCObjectFileInfo(
       Ctx, /*PIC=*/false, /*LargeCodeModel=*/true));
   Ctx.setObjectFileInfo(MOFI.get());
-
-  if (InputArgs.hasArg(OPT_save_temp_labels))
-    Ctx.setAllowTemporaryLabels(false);
 
   // Set compilation information.
   SmallString<128> CWD;

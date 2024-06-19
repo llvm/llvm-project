@@ -2005,6 +2005,18 @@ value llvm_builder(value C) {
 }
 
 /* (llbasicblock, llvalue) llpos -> llbuilder -> unit */
+value llvm_position_builder_before_dbg_records(value Pos, value B) {
+  if (Tag_val(Pos) == 0) {
+    LLVMBasicBlockRef BB = BasicBlock_val(Field(Pos, 0));
+    LLVMPositionBuilderAtEnd(Builder_val(B), BB);
+  } else {
+    LLVMValueRef I = Value_val(Field(Pos, 0));
+    LLVMPositionBuilderBeforeInstrAndDbgRecords(Builder_val(B), I);
+  }
+  return Val_unit;
+}
+
+/* (llbasicblock, llvalue) llpos -> llbuilder -> unit */
 value llvm_position_builder(value Pos, value B) {
   if (Tag_val(Pos) == 0) {
     LLVMBasicBlockRef BB = BasicBlock_val(Field(Pos, 0));

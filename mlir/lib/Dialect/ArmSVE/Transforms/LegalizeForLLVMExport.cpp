@@ -140,6 +140,40 @@ using ConvertFromSvboolOpLowering =
 using ZipX2OpLowering = OneToOneConvertToLLVMPattern<ZipX2Op, ZipX2IntrOp>;
 using ZipX4OpLowering = OneToOneConvertToLLVMPattern<ZipX4Op, ZipX4IntrOp>;
 
+/// Converts `vector.create_mask` ops that match the size of an SVE predicate
+/// to the `whilelt` intrinsic. This produces more canonical codegen than the
+/// generic LLVM lowering, see https://github.com/llvm/llvm-project/issues/81840
+/// for more details. Note that we can't use (the more general) active.lane.mask
+/// as its semantics don't neatly map on to `vector.create_mask`, as it does an
+/// unsigned comparison (whereas `create_mask` is signed), and is UB/posion if
+/// `n` is zero (whereas `create_mask` just returns an all-false mask).
+struct CreateMaskOpLowering
+    : public ConvertOpToLLVMPattern<vector::CreateMaskOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::CreateMaskOp createMaskOp,
+                  vector::CreateMaskOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto maskType = createMaskOp.getVectorType();
+    if (maskType.getRank() != 1 || !maskType.isScalable())
+      return rewriter.notifyMatchFailure(createMaskOp, "not 1-D and scalable");
+
+    // TODO: Support masks which are multiples of SVE predicates.
+    auto maskBaseSize = maskType.getDimSize(0);
+    if (maskBaseSize < 2 || maskBaseSize > 16 ||
+        !llvm::isPowerOf2_32(uint32_t(maskBaseSize)))
+      return rewriter.notifyMatchFailure(createMaskOp,
+                                         "not SVE predicate-sized");
+
+    auto loc = createMaskOp.getLoc();
+    auto zero = rewriter.create<LLVM::ZeroOp>(loc, rewriter.getI64Type());
+    rewriter.replaceOpWithNewOp<WhileLTIntrOp>(createMaskOp, maskType, zero,
+                                               adaptor.getOperands()[0]);
+    return success();
+  }
+};
+
 } // namespace
 
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
@@ -169,6 +203,9 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                ConvertFromSvboolOpLowering,
                ZipX2OpLowering,
                ZipX4OpLowering>(converter);
+  // Add vector.create_mask conversion with a high benefit as it produces much
+  // nicer code than the generic lowering.
+  patterns.add<CreateMaskOpLowering>(converter, /*benefit=*/4096);
   // clang-format on
 }
 
@@ -191,7 +228,8 @@ void mlir::configureArmSVELegalizeForExportTarget(
                     ConvertToSvboolIntrOp,
                     ConvertFromSvboolIntrOp,
                     ZipX2IntrOp,
-                    ZipX4IntrOp>();
+                    ZipX4IntrOp,
+                    WhileLTIntrOp>();
   target.addIllegalOp<SdotOp,
                       SmmlaOp,
                       UdotOp,

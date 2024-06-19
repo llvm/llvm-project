@@ -377,6 +377,14 @@ define <4 x float> @cos_v4f32(<4 x float> %x) {
   ret <4 x float> %v
 }
 
+; CHECK-LABEL: tan_v4f32:
+; CHECK: call $push[[L:[0-9]+]]=, tanf
+declare <4 x float> @llvm.tan.v4f32(<4 x float>)
+define <4 x float> @tan_v4f32(<4 x float> %x) {
+  %v = call <4 x float> @llvm.tan.v4f32(<4 x float> %x)
+  ret <4 x float> %v
+}
+
 ; CHECK-LABEL: powi_v4f32:
 ; CHECK: call $push[[L:[0-9]+]]=, __powisf2
 declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32)
@@ -466,6 +474,14 @@ define <2 x double> @sin_v2f64(<2 x double> %x) {
 declare <2 x double> @llvm.cos.v2f64(<2 x double>)
 define <2 x double> @cos_v2f64(<2 x double> %x) {
   %v = call <2 x double> @llvm.cos.v2f64(<2 x double> %x)
+  ret <2 x double> %v
+}
+
+; CHECK-LABEL: tan_v2f64:
+; CHECK: call $push[[L:[0-9]+]]=, tan
+declare <2 x double> @llvm.tan.v2f64(<2 x double>)
+define <2 x double> @tan_v2f64(<2 x double> %x) {
+  %v = call <2 x double> @llvm.tan.v2f64(<2 x double> %x)
   ret <2 x double> %v
 }
 

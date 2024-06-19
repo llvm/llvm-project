@@ -677,6 +677,25 @@ def LLVM_DILabelAttr : LLVM_Attr<"DILabel", "di_label",
 }
 
 //===----------------------------------------------------------------------===//
+// DIStringTypeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
+                                     /*traits=*/[], "DITypeAttr"> {
+  let parameters = (ins
+    LLVM_DITagParameter:$tag,
+    "StringAttr":$name,
+    OptionalParameter<"uint64_t">:$sizeInBits,
+    OptionalParameter<"uint32_t">:$alignInBits,
+    OptionalParameter<"DIVariableAttr">:$stringLength,
+    OptionalParameter<"DIExpressionAttr">:$stringLengthExp,
+    OptionalParameter<"DIExpressionAttr">:$stringLocationExp,
+    LLVM_DIEncodingParameter:$encoding
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // MemoryEffectsAttr
 //===----------------------------------------------------------------------===//
 

@@ -228,7 +228,24 @@ int llvm_test_dibuilder(bool NewDebugInfoFormat) {
   LLVMPositionBuilderAtEnd(Builder, FooVarBlock);
   LLVMTypeRef I64 = LLVMInt64TypeInContext(Ctx);
   LLVMValueRef Zero = LLVMConstInt(I64, 0, false);
-  LLVMBuildRet(Builder, Zero);
+  LLVMValueRef Ret = LLVMBuildRet(Builder, Zero);
+
+  // Insert a `phi` before the `ret`. In the new debug info mode we need to
+  // be careful to insert before debug records too, else the debug records
+  // will come before the `phi` (and be absorbed onto it) which is an invalid
+  // state.
+  LLVMValueRef InsertPos = LLVMGetFirstInstruction(FooVarBlock);
+  LLVMPositionBuilderBeforeInstrAndDbgRecords(Builder, InsertPos);
+  LLVMValueRef Phi1 = LLVMBuildPhi(Builder, I64, "p1");
+  LLVMAddIncoming(Phi1, &Zero, &FooEntryBlock, 1);
+  // Do the same again using the other position-setting function.
+  LLVMPositionBuilderBeforeDbgRecords(Builder, FooVarBlock, InsertPos);
+  LLVMValueRef Phi2 = LLVMBuildPhi(Builder, I64, "p2");
+  LLVMAddIncoming(Phi2, &Zero, &FooEntryBlock, 1);
+  // Insert a non-phi before the `ret` but not before the debug records to
+  // test that works as expected.
+  LLVMPositionBuilder(Builder, FooVarBlock, Ret);
+  LLVMBuildAdd(Builder, Phi1, Phi2, "a");
 
   char *MStr = LLVMPrintModuleToString(M);
   puts(MStr);

@@ -146,7 +146,7 @@ HLSLNumThreadsAttr *SemaHLSL::mergeNumThreadsAttr(Decl *D,
 
 HLSLShaderAttr *
 SemaHLSL::mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
-                          HLSLShaderAttr::ShaderType ShaderType) {
+                          llvm::Triple::EnvironmentType ShaderType) {
   if (HLSLShaderAttr *NT = D->getAttr<HLSLShaderAttr>()) {
     if (NT->getType() != ShaderType) {
       Diag(NT->getLocation(), diag::err_hlsl_attribute_param_mismatch) << AL;
@@ -184,13 +184,12 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   if (FD->getName() != TargetInfo.getTargetOpts().HLSLEntry)
     return;
 
-  StringRef Env = TargetInfo.getTriple().getEnvironmentName();
-  HLSLShaderAttr::ShaderType ShaderType;
-  if (HLSLShaderAttr::ConvertStrToShaderType(Env, ShaderType)) {
+  llvm::Triple::EnvironmentType Env = TargetInfo.getTriple().getEnvironment();
+  if (HLSLShaderAttr::isValidShaderType(Env) && Env != llvm::Triple::Library) {
     if (const auto *Shader = FD->getAttr<HLSLShaderAttr>()) {
       // The entry point is already annotated - check that it matches the
       // triple.
-      if (Shader->getType() != ShaderType) {
+      if (Shader->getType() != Env) {
         Diag(Shader->getLocation(), diag::err_hlsl_entry_shader_attr_mismatch)
             << Shader;
         FD->setInvalidDecl();
@@ -198,11 +197,11 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
     } else {
       // Implicitly add the shader attribute if the entry function isn't
       // explicitly annotated.
-      FD->addAttr(HLSLShaderAttr::CreateImplicit(getASTContext(), ShaderType,
+      FD->addAttr(HLSLShaderAttr::CreateImplicit(getASTContext(), Env,
                                                  FD->getBeginLoc()));
     }
   } else {
-    switch (TargetInfo.getTriple().getEnvironment()) {
+    switch (Env) {
     case llvm::Triple::UnknownEnvironment:
     case llvm::Triple::Library:
       break;
@@ -215,38 +214,40 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
 void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
-  HLSLShaderAttr::ShaderType ST = ShaderAttr->getType();
+  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
 
   switch (ST) {
-  case HLSLShaderAttr::Pixel:
-  case HLSLShaderAttr::Vertex:
-  case HLSLShaderAttr::Geometry:
-  case HLSLShaderAttr::Hull:
-  case HLSLShaderAttr::Domain:
-  case HLSLShaderAttr::RayGeneration:
-  case HLSLShaderAttr::Intersection:
-  case HLSLShaderAttr::AnyHit:
-  case HLSLShaderAttr::ClosestHit:
-  case HLSLShaderAttr::Miss:
-  case HLSLShaderAttr::Callable:
+  case llvm::Triple::Pixel:
+  case llvm::Triple::Vertex:
+  case llvm::Triple::Geometry:
+  case llvm::Triple::Hull:
+  case llvm::Triple::Domain:
+  case llvm::Triple::RayGeneration:
+  case llvm::Triple::Intersection:
+  case llvm::Triple::AnyHit:
+  case llvm::Triple::ClosestHit:
+  case llvm::Triple::Miss:
+  case llvm::Triple::Callable:
     if (const auto *NT = FD->getAttr<HLSLNumThreadsAttr>()) {
       DiagnoseAttrStageMismatch(NT, ST,
-                                {HLSLShaderAttr::Compute,
-                                 HLSLShaderAttr::Amplification,
-                                 HLSLShaderAttr::Mesh});
+                                {llvm::Triple::Compute,
+                                 llvm::Triple::Amplification,
+                                 llvm::Triple::Mesh});
       FD->setInvalidDecl();
     }
     break;
 
-  case HLSLShaderAttr::Compute:
-  case HLSLShaderAttr::Amplification:
-  case HLSLShaderAttr::Mesh:
+  case llvm::Triple::Compute:
+  case llvm::Triple::Amplification:
+  case llvm::Triple::Mesh:
     if (!FD->hasAttr<HLSLNumThreadsAttr>()) {
       Diag(FD->getLocation(), diag::err_hlsl_missing_numthreads)
-          << HLSLShaderAttr::ConvertShaderTypeToStr(ST);
+          << llvm::Triple::getEnvironmentTypeName(ST);
       FD->setInvalidDecl();
     }
     break;
+  default:
+    llvm_unreachable("Unhandled environment in triple");
   }
 
   for (ParmVarDecl *Param : FD->parameters()) {
@@ -268,14 +269,14 @@ void SemaHLSL::CheckSemanticAnnotation(
     const HLSLAnnotationAttr *AnnotationAttr) {
   auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
-  HLSLShaderAttr::ShaderType ST = ShaderAttr->getType();
+  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
 
   switch (AnnotationAttr->getKind()) {
   case attr::HLSLSV_DispatchThreadID:
   case attr::HLSLSV_GroupIndex:
-    if (ST == HLSLShaderAttr::Compute)
+    if (ST == llvm::Triple::Compute)
       return;
-    DiagnoseAttrStageMismatch(AnnotationAttr, ST, {HLSLShaderAttr::Compute});
+    DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Compute});
     break;
   default:
     llvm_unreachable("Unknown HLSLAnnotationAttr");
@@ -283,16 +284,16 @@ void SemaHLSL::CheckSemanticAnnotation(
 }
 
 void SemaHLSL::DiagnoseAttrStageMismatch(
-    const Attr *A, HLSLShaderAttr::ShaderType Stage,
-    std::initializer_list<HLSLShaderAttr::ShaderType> AllowedStages) {
+    const Attr *A, llvm::Triple::EnvironmentType Stage,
+    std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages) {
   SmallVector<StringRef, 8> StageStrings;
   llvm::transform(AllowedStages, std::back_inserter(StageStrings),
-                  [](HLSLShaderAttr::ShaderType ST) {
+                  [](llvm::Triple::EnvironmentType ST) {
                     return StringRef(
-                        HLSLShaderAttr::ConvertShaderTypeToStr(ST));
+                        HLSLShaderAttr::ConvertEnvironmentTypeToStr(ST));
                   });
   Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-      << A << HLSLShaderAttr::ConvertShaderTypeToStr(Stage)
+      << A << llvm::Triple::getEnvironmentTypeName(Stage)
       << (AllowedStages.size() != 1) << join(StageStrings, ", ");
 }
 
@@ -430,8 +431,8 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
   if (!SemaRef.checkStringLiteralArgumentAttr(AL, 0, Str, &ArgLoc))
     return;
 
-  HLSLShaderAttr::ShaderType ShaderType;
-  if (!HLSLShaderAttr::ConvertStrToShaderType(Str, ShaderType)) {
+  llvm::Triple::EnvironmentType ShaderType;
+  if (!HLSLShaderAttr::ConvertStrToEnvironmentType(Str, ShaderType)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported)
         << AL << Str << ArgLoc;
     return;
@@ -549,16 +550,22 @@ class DiagnoseHLSLAvailability
   //
   // Maps FunctionDecl to an unsigned number that represents the set of shader
   // environments the function has been scanned for.
-  // Since HLSLShaderAttr::ShaderType enum is generated from Attr.td and is
-  // defined without any assigned values, it is guaranteed to be numbered
-  // sequentially from 0 up and we can use it to 'index' individual bits
-  // in the set.
+  // The llvm::Triple::EnvironmentType enum values for shader stages guaranteed
+  // to be numbered from llvm::Triple::Pixel to llvm::Triple::Amplification
+  // (verified by static_asserts in Triple.cpp), we can use it to index
+  // individual bits in the set, as long as we shift the values to start with 0
+  // by subtracting the value of llvm::Triple::Pixel first.
+  //
   // The N'th bit in the set will be set if the function has been scanned
-  // in shader environment whose ShaderType integer value equals N.
+  // in shader environment whose llvm::Triple::EnvironmentType integer value
+  // equals (llvm::Triple::Pixel + N).
+  //
   // For example, if a function has been scanned in compute and pixel stage
-  // environment, the value will be 0x21 (100001 binary) because
-  // (int)HLSLShaderAttr::ShaderType::Pixel == 1 and
-  // (int)HLSLShaderAttr::ShaderType::Compute == 5.
+  // environment, the value will be 0x21 (100001 binary) because:
+  //
+  //   (int)(llvm::Triple::Pixel - llvm::Triple::Pixel) == 0
+  //   (int)(llvm::Triple::Compute - llvm::Triple::Pixel) == 5
+  //
   // A FunctionDecl is mapped to 0 (or not included in the map) if it has not
   // been scanned in any environment.
   llvm::DenseMap<const FunctionDecl *, unsigned> ScannedDecls;
@@ -574,12 +581,16 @@ class DiagnoseHLSLAvailability
   bool ReportOnlyShaderStageIssues;
 
   // Helper methods for dealing with current stage context / environment
-  void SetShaderStageContext(HLSLShaderAttr::ShaderType ShaderType) {
+  void SetShaderStageContext(llvm::Triple::EnvironmentType ShaderType) {
     static_assert(sizeof(unsigned) >= 4);
-    assert((unsigned)ShaderType < 31); // 31 is reserved for "unknown"
+    assert(HLSLShaderAttr::isValidShaderType(ShaderType));
+    assert((unsigned)(ShaderType - llvm::Triple::Pixel) < 31 &&
+           "ShaderType is too big for this bitmap"); // 31 is reserved for
+                                                     // "unknown"
 
-    CurrentShaderEnvironment = HLSLShaderAttr::getTypeAsEnvironment(ShaderType);
-    CurrentShaderStageBit = (1 << ShaderType);
+    unsigned bitmapIndex = ShaderType - llvm::Triple::Pixel;
+    CurrentShaderEnvironment = ShaderType;
+    CurrentShaderStageBit = (1 << bitmapIndex);
   }
 
   void SetUnknownShaderStageContext() {

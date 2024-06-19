@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -216,6 +217,10 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
   unsigned PredicateRegForFillSpill = 0;
 
+  // The stack slots where VG values are stored to.
+  int64_t VGIdx = std::numeric_limits<int>::max();
+  int64_t StreamingVGIdx = std::numeric_limits<int>::max();
+
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -233,6 +238,12 @@ public:
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
+
+  int64_t getVGIdx() const { return VGIdx; };
+  void setVGIdx(unsigned Idx) { VGIdx = Idx; };
+
+  int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
+  void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };

@@ -23,7 +23,8 @@ frameInfo:
 stack:
   - { id: 0, size: 1024, alignment: 16 }
   - { id: 1, size: 64, alignment: 4 }
-machineFunctionInfo: {}
+machineFunctionInfo:
+  amxProgModel: ManagedRA
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: main
@@ -79,6 +80,8 @@ registers:
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
   - { reg: '$rsi', virtual-reg: '' }
+machineFunctionInfo:
+  amxProgModel: ManagedRA
 body:             |
   bb.1.entry:
     liveins: $rdi, $rsi

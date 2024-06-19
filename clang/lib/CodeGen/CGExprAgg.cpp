@@ -78,15 +78,11 @@ public:
   /// then loads the result into DestPtr.
   void EmitAggLoadOfLValue(const Expr *E);
 
-  enum ExprValueKind {
-    EVK_RValue,
-    EVK_NonRValue
-  };
-
   /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
   /// SrcIsRValue is true if source comes from an RValue.
   void EmitFinalDestCopy(QualType type, const LValue &src,
-                         ExprValueKind SrcValueKind = EVK_NonRValue);
+                         CodeGenFunction::ExprValueKind SrcValueKind =
+                             CodeGenFunction::EVK_NonRValue);
   void EmitFinalDestCopy(QualType type, RValue src);
   void EmitCopy(QualType type, const AggValueSlot &dest,
                 const AggValueSlot &src);
@@ -348,12 +344,13 @@ void AggExprEmitter::withReturnValueSlot(
 void AggExprEmitter::EmitFinalDestCopy(QualType type, RValue src) {
   assert(src.isAggregate() && "value must be aggregate value!");
   LValue srcLV = CGF.MakeAddrLValue(src.getAggregateAddress(), type);
-  EmitFinalDestCopy(type, srcLV, EVK_RValue);
+  EmitFinalDestCopy(type, srcLV, CodeGenFunction::EVK_RValue);
 }
 
 /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
-void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
-                                       ExprValueKind SrcValueKind) {
+void AggExprEmitter::EmitFinalDestCopy(
+    QualType type, const LValue &src,
+    CodeGenFunction::ExprValueKind SrcValueKind) {
   // If Dest is ignored, then we're evaluating an aggregate expression
   // in a context that doesn't care about the result.  Note that loads
   // from volatile l-values force the existence of a non-ignored
@@ -365,7 +362,7 @@ void AggExprEmitter::EmitFinalDestCopy(QualType type, const LValue &src,
   LValue DstLV = CGF.MakeAddrLValue(
       Dest.getAddress(), Dest.isVolatile() ? type.withVolatile() : type);
 
-  if (SrcValueKind == EVK_RValue) {
+  if (SrcValueKind == CodeGenFunction::EVK_RValue) {
     if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct) {
       if (Dest.isPotentiallyAliased())
         CGF.callCStructMoveAssignmentOperator(DstLV, src);
@@ -513,15 +510,6 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 
   QualType elementType =
       CGF.getContext().getAsArrayType(ArrayQTy)->getElementType();
-
-  // DestPtr is an array*.  Construct an elementType* by drilling
-  // down a level.
-  llvm::Value *zero = llvm::ConstantInt::get(CGF.SizeTy, 0);
-  llvm::Value *indices[] = { zero, zero };
-  llvm::Value *begin = Builder.CreateInBoundsGEP(DestPtr.getElementType(),
-                                                 DestPtr.emitRawPointer(CGF),
-                                                 indices, "arrayinit.begin");
-
   CharUnits elementSize = CGF.getContext().getTypeSizeInChars(elementType);
   CharUnits elementAlign =
     DestPtr.getAlignment().alignmentOfArrayElement(elementSize);
@@ -562,6 +550,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   Address endOfInit = Address::invalid();
   CodeGenFunction::CleanupDeactivationScope deactivation(CGF);
 
+  llvm::Value *begin = DestPtr.emitRawPointer(CGF);
   if (dtorKind) {
     CodeGenFunction::AllocaTrackerRAII allocaTracker(CGF);
     // In principle we could tell the cleanup where we are more
@@ -585,19 +574,13 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 
   llvm::Value *one = llvm::ConstantInt::get(CGF.SizeTy, 1);
 
-  // The 'current element to initialize'.  The invariants on this
-  // variable are complicated.  Essentially, after each iteration of
-  // the loop, it points to the last initialized element, except
-  // that it points to the beginning of the array before any
-  // elements have been initialized.
-  llvm::Value *element = begin;
-
   // Emit the explicit initializers.
   for (uint64_t i = 0; i != NumInitElements; ++i) {
-    // Advance to the next element.
+    llvm::Value *element = begin;
     if (i > 0) {
-      element = Builder.CreateInBoundsGEP(
-          llvmElementType, element, one, "arrayinit.element");
+      element = Builder.CreateInBoundsGEP(llvmElementType, begin,
+                                          llvm::ConstantInt::get(CGF.SizeTy, i),
+                                          "arrayinit.element");
 
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
@@ -624,9 +607,12 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     //   do { *array++ = filler; } while (array != end);
 
     // Advance to the start of the rest of the array.
+    llvm::Value *element = begin;
     if (NumInitElements) {
       element = Builder.CreateInBoundsGEP(
-          llvmElementType, element, one, "arrayinit.start");
+          llvmElementType, element,
+          llvm::ConstantInt::get(CGF.SizeTy, NumInitElements),
+          "arrayinit.start");
       if (endOfInit.isValid()) Builder.CreateStore(element, endOfInit);
     }
 
@@ -1328,15 +1314,13 @@ void AggExprEmitter::VisitChooseExpr(const ChooseExpr *CE) {
 
 void AggExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
   Address ArgValue = Address::invalid();
-  Address ArgPtr = CGF.EmitVAArg(VE, ArgValue);
+  CGF.EmitVAArg(VE, ArgValue, Dest);
 
   // If EmitVAArg fails, emit an error.
-  if (!ArgPtr.isValid()) {
+  if (!ArgValue.isValid()) {
     CGF.ErrorUnsupported(VE, "aggregate va_arg expression");
     return;
   }
-
-  EmitFinalDestCopy(VE->getType(), CGF.MakeAddrLValue(ArgPtr, VE->getType()));
 }
 
 void AggExprEmitter::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {
@@ -2036,6 +2020,13 @@ LValue CodeGenFunction::EmitAggExprToLValue(const Expr *E) {
                                          AggValueSlot::IsNotAliased,
                                          AggValueSlot::DoesNotOverlap));
   return LV;
+}
+
+void CodeGenFunction::EmitAggFinalDestCopy(QualType Type, AggValueSlot Dest,
+                                           const LValue &Src,
+                                           ExprValueKind SrcKind) {
+  return AggExprEmitter(*this, Dest, Dest.isIgnored())
+      .EmitFinalDestCopy(Type, Src, SrcKind);
 }
 
 AggValueSlot::Overlap_t

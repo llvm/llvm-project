@@ -2492,6 +2492,13 @@ LogicalResult LLVMFuncOp::verify() {
     return success();
   }
 
+  // In LLVM IR, these attributes are composed by convention, not by design.
+  if (isNoInline() && isAlwaysInline())
+    return emitError("no_inline and always_inline attributes are incompatible");
+
+  if (isOptimizeNone() && !isNoInline())
+    return emitOpError("with optimize_none must also be no_inline");
+
   Type landingpadResultTy;
   StringRef diagnosticMessage;
   bool isLandingpadTypeConsistent =
@@ -3031,12 +3038,12 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
               DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
               DIGlobalVariableExpressionAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-              DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
-              DISubroutineTypeAttr, LoopAnnotationAttr, LoopVectorizeAttr,
-              LoopInterleaveAttr, LoopUnrollAttr, LoopUnrollAndJamAttr,
-              LoopLICMAttr, LoopDistributeAttr, LoopPipelineAttr,
-              LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr, TBAATagAttr,
-              TBAATypeDescriptorAttr>([&](auto attr) {
+              DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+              DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
+              LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
+              LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
+              LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr,
+              TBAATagAttr, TBAATypeDescriptorAttr>([&](auto attr) {
           os << decltype(attr)::getMnemonic();
           return AliasResult::OverridableAlias;
         })

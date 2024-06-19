@@ -36,6 +36,12 @@ llvm::cl::opt<bool> enableDelayedPrivatization(
         "Emit `[first]private` variables as clauses on the MLIR ops."),
     llvm::cl::init(false));
 
+llvm::cl::opt<bool> enableDelayedPrivatizationStaging(
+    "openmp-enable-delayed-privatization-staging",
+    llvm::cl::desc("For partially supported constructs, emit `[first]private` "
+                   "variables as clauses on the MLIR ops."),
+    llvm::cl::init(false));
+
 namespace Fortran {
 namespace lower {
 namespace omp {

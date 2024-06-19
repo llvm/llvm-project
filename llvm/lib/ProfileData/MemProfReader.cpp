@@ -67,7 +67,7 @@ Error checkBuffer(const MemoryBuffer &Buffer) {
   uint64_t TotalSize = 0;
   const char *Next = Buffer.getBufferStart();
   while (Next < Buffer.getBufferEnd()) {
-    auto *H = reinterpret_cast<const Header *>(Next);
+    const auto *H = reinterpret_cast<const Header *>(Next);
     if (H->Version != MEMPROF_RAW_VERSION) {
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
@@ -597,7 +597,7 @@ RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
                   llvm::SmallSet<std::string, 10>>
       BuildIds;
   while (Next < DataBuffer->getBufferEnd()) {
-    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+    const auto *Header = reinterpret_cast<const memprof::Header *>(Next);
 
     const llvm::SmallVector<SegmentEntry> Entries =
         readSegmentEntries(Next + Header->SegmentOffset);
@@ -615,7 +615,7 @@ Error RawMemProfReader::readRawProfile(
   const char *Next = DataBuffer->getBufferStart();
 
   while (Next < DataBuffer->getBufferEnd()) {
-    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+    const auto *Header = reinterpret_cast<const memprof::Header *>(Next);
 
     // Read in the segment information, check whether its the same across all
     // profiles in this binary file.

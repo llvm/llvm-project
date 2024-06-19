@@ -246,6 +246,7 @@ static_library("CodeGen") {
     "VirtRegMap.cpp",
     "WasmEHPrepare.cpp",
     "WinEHPrepare.cpp",
+    "WindowScheduler.cpp",
     "XRayInstrumentation.cpp",
   ]
 }

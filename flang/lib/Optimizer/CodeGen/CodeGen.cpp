@@ -218,7 +218,7 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
             chrTy.getContext(), chrTy.getFKind());
         llvmObjectType = convertType(rawCharTy);
         assert(end == 1);
-        size = integerCast(loc, rewriter, ity, lenParams[0]);
+        size = integerCast(loc, rewriter, ity, lenParams[0], /*fold=*/true);
       } else if (auto recTy = mlir::dyn_cast<fir::RecordType>(scalarType)) {
         mlir::LLVM::LLVMFuncOp memSizeFn =
             getDependentTypeMemSizeFn(recTy, alloc, rewriter);
@@ -236,16 +236,28 @@ struct AllocaOpConversion : public fir::FIROpConversion<fir::AllocaOp> {
       }
     }
     if (auto scaleSize = genAllocationScaleSize(alloc, ity, rewriter))
-      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+      size =
+          rewriter.createOrFold<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
     if (alloc.hasShapeOperands()) {
       unsigned end = operands.size();
       for (; i < end; ++i)
-        size = rewriter.create<mlir::LLVM::MulOp>(
-            loc, ity, size, integerCast(loc, rewriter, ity, operands[i]));
+        size = rewriter.createOrFold<mlir::LLVM::MulOp>(
+            loc, ity, size,
+            integerCast(loc, rewriter, ity, operands[i], /*fold=*/true));
     }
 
     unsigned allocaAs = getAllocaAddressSpace(rewriter);
     unsigned programAs = getProgramAddressSpace(rewriter);
+
+    if (mlir::isa<mlir::LLVM::ConstantOp>(size.getDefiningOp())) {
+      // Set the Block in which the llvm alloca should be inserted.
+      mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+      mlir::Region *parentRegion = rewriter.getInsertionBlock()->getParent();
+      mlir::Block *insertBlock =
+          getBlockForAllocaInsert(parentOp, parentRegion);
+      size.getDefiningOp()->moveAfter(insertBlock, insertBlock->begin());
+      rewriter.setInsertionPointAfter(size.getDefiningOp());
+    }
 
     // NOTE: we used to pass alloc->getAttrs() in the builder for non opaque
     // pointers! Only propagate pinned and bindc_name to help debugging, but

@@ -244,6 +244,7 @@ add_llvm_component_library(LLVMCodeGen
   VLIWMachineScheduler.cpp
   VirtRegMap.cpp
   WasmEHPrepare.cpp
+  WindowScheduler.cpp
   WinEHPrepare.cpp
   XRayInstrumentation.cpp
   ${GeneratedMLSources}

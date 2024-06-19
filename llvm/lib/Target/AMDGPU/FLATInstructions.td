@@ -1105,7 +1105,7 @@ multiclass FlatAtomicNoRtnPatWithAddrSpace<string inst, string node, string addr
 
 multiclass FlatAtomicNoRtnPat <string inst, string node, ValueType vt,
                           ValueType data_vt = vt, bit isIntr = 0> :
-  FlatAtomicNoRtnPatBase<inst, node # "_noret" # !if(isIntr, "", "_"#vt.Size), vt, data_vt>;
+  FlatAtomicNoRtnPatBase<inst, node # "_noret" # !if(isIntr, "", "_"#vt), vt, data_vt>;
 
 
 multiclass FlatAtomicRtnPatBase <string inst, string node, ValueType vt,
@@ -1123,7 +1123,7 @@ multiclass FlatAtomicRtnPatWithAddrSpace<string inst, string intr, string addrSp
 
 multiclass FlatAtomicRtnPat <string inst, string node, ValueType vt,
                              ValueType data_vt = vt, bit isIntr = 0> :
-  FlatAtomicRtnPatBase<inst, node # !if(isIntr, "", "_"#vt.Size), vt, data_vt>;
+  FlatAtomicRtnPatBase<inst, node # !if(isIntr, "", "_"#vt), vt, data_vt>;
 
 
 multiclass FlatAtomicPat <string inst, string node, ValueType vt,
@@ -1155,8 +1155,8 @@ class FlatSignedAtomicPatBase <FLAT_Pseudo inst, SDPatternOperator node,
 multiclass FlatSignedAtomicPat <string inst, string node, ValueType vt,
                                 ValueType data_vt = vt, int complexity = 0,
                                 bit isIntr = 0> {
-  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_" # vt.Size));
-  defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_" # vt.Size));
+  defvar rtnNode = !cast<SDPatternOperator>(node # !if(isIntr, "", "_" # vt));
+  defvar noRtnNode = !cast<PatFrags>(node # "_noret" # !if(isIntr, "", "_" # vt));
 
   let AddedComplexity = complexity in
   def : FlatSignedAtomicPatBase<!cast<FLAT_Pseudo>(inst#"_RTN"), rtnNode, vt, data_vt>;
@@ -1280,11 +1280,11 @@ multiclass GlobalFLATAtomicPatsRtnBase<string inst, string node, ValueType vt,
 
 multiclass GlobalFLATAtomicPatsNoRtn<string inst, string node, ValueType vt,
                                      ValueType data_vt = vt, bit isIntr = 0> :
-  GlobalFLATAtomicPatsNoRtnBase<inst, node # "_noret" # !if(isIntr, "", "_" # vt.Size), vt, data_vt>;
+  GlobalFLATAtomicPatsNoRtnBase<inst, node # "_noret" # !if(isIntr, "", "_" # vt), vt, data_vt>;
 
 multiclass GlobalFLATAtomicPatsRtn<string inst, string node, ValueType vt,
                                    ValueType data_vt = vt, bit isIntr = 0> :
-  GlobalFLATAtomicPatsRtnBase<inst, node # !if(isIntr, "", "_" # vt.Size), vt, data_vt>;
+  GlobalFLATAtomicPatsRtnBase<inst, node # !if(isIntr, "", "_" # vt), vt, data_vt>;
 
 multiclass GlobalFLATAtomicPats<string inst, string node, ValueType vt,
                                 ValueType data_vt = vt, bit isIntr = 0> :
@@ -1645,6 +1645,7 @@ defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_ADD_F32", "int_amdgc
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16Insts] in {
 defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_flat_atomic_fadd", "global_addrspace", v2f16>;
 defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_global_atomic_fadd", "global_addrspace", v2f16>;
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_F16", "atomic_load_fadd_global", v2f16>;
 }
 
 let OtherPredicates = [HasBufferFlatGlobalAtomicsF64] in {
@@ -1669,13 +1670,16 @@ defm : FlatSignedAtomicPatWithAddrSpace <"FLAT_ATOMIC_ADD_F32", "int_amdgcn_flat
 }
 
 let OtherPredicates = [HasAtomicFlatPkAdd16Insts] in {
+// FIXME: These do not have signed offsets
 defm : FlatSignedAtomicPatWithAddrSpace <"FLAT_ATOMIC_PK_ADD_F16", "int_amdgcn_flat_atomic_fadd", "flat_addrspace", v2f16>;
 defm : FlatSignedAtomicIntrPat <"FLAT_ATOMIC_PK_ADD_BF16", "int_amdgcn_flat_atomic_fadd_v2bf16", v2i16>;
+defm : FlatSignedAtomicPat <"FLAT_ATOMIC_PK_ADD_F16", "atomic_load_fadd_flat", v2f16>;
+defm : FlatSignedAtomicPat <"FLAT_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_flat", v2bf16>;
 }
 
 let OtherPredicates = [HasAtomicGlobalPkAddBF16Inst] in
 defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "int_amdgcn_global_atomic_fadd_v2bf16", v2i16>;
-
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_global", v2bf16>;
 } // End OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10
 
 let OtherPredicates = [HasFlatScratchInsts, EnableFlatScratch] in {

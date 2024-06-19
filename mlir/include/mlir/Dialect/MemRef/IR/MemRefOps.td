@@ -892,7 +892,7 @@ def MemRef_ExtractAlignedPointerAsIndexOp :
   }];
 
   let arguments = (ins
-    AnyStridedMemRef:$source
+    AnyRankedOrUnrankedMemRef:$source
   );
   let results = (outs Index:$aligned_pointer);
 

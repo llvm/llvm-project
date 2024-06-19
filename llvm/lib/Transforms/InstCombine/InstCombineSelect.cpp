@@ -485,7 +485,7 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   }
   if (auto *TGEP = dyn_cast<GetElementPtrInst>(TI)) {
     auto *FGEP = cast<GetElementPtrInst>(FI);
-    Type *ElementType = TGEP->getResultElementType();
+    Type *ElementType = TGEP->getSourceElementType();
     return TGEP->isInBounds() && FGEP->isInBounds()
                ? GetElementPtrInst::CreateInBounds(ElementType, Op0, {Op1})
                : GetElementPtrInst::Create(ElementType, Op0, {Op1});
@@ -2359,20 +2359,20 @@ static Instruction *foldSelectCmpBitcasts(SelectInst &Sel,
 /// operand, the result of the select will always be equal to its false value.
 /// For example:
 ///
-///   %0 = cmpxchg i64* %ptr, i64 %compare, i64 %new_value seq_cst seq_cst
-///   %1 = extractvalue { i64, i1 } %0, 1
-///   %2 = extractvalue { i64, i1 } %0, 0
-///   %3 = select i1 %1, i64 %compare, i64 %2
-///   ret i64 %3
+///   %cmpxchg = cmpxchg ptr %ptr, i64 %compare, i64 %new_value seq_cst seq_cst
+///   %val = extractvalue { i64, i1 } %cmpxchg, 0
+///   %success = extractvalue { i64, i1 } %cmpxchg, 1
+///   %sel = select i1 %success, i64 %compare, i64 %val
+///   ret i64 %sel
 ///
-/// The returned value of the cmpxchg instruction (%2) is the original value
-/// located at %ptr prior to any update. If the cmpxchg operation succeeds, %2
+/// The returned value of the cmpxchg instruction (%val) is the original value
+/// located at %ptr prior to any update. If the cmpxchg operation succeeds, %val
 /// must have been equal to %compare. Thus, the result of the select is always
-/// equal to %2, and the code can be simplified to:
+/// equal to %val, and the code can be simplified to:
 ///
-///   %0 = cmpxchg i64* %ptr, i64 %compare, i64 %new_value seq_cst seq_cst
-///   %1 = extractvalue { i64, i1 } %0, 0
-///   ret i64 %1
+///   %cmpxchg = cmpxchg ptr %ptr, i64 %compare, i64 %new_value seq_cst seq_cst
+///   %val = extractvalue { i64, i1 } %cmpxchg, 0
+///   ret i64 %val
 ///
 static Value *foldSelectCmpXchg(SelectInst &SI) {
   // A helper that determines if V is an extractvalue instruction whose
@@ -3520,33 +3520,6 @@ static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
   return false;
 }
 
-/// Return true iff:
-/// 1. X is poison implies Y is poison.
-/// 2. X is true implies Y is false.
-/// 3. X is false implies Y is true.
-/// Otherwise, return false.
-static bool isKnownInversion(Value *X, Value *Y) {
-  // Handle X = icmp pred A, B, Y = icmp pred A, C.
-  Value *A, *B, *C;
-  ICmpInst::Predicate Pred1, Pred2;
-  if (!match(X, m_ICmp(Pred1, m_Value(A), m_Value(B))) ||
-      !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
-    return false;
-
-  if (B == C)
-    return Pred1 == ICmpInst::getInversePredicate(Pred2);
-
-  // Try to infer the relationship from constant ranges.
-  const APInt *RHSC1, *RHSC2;
-  if (!match(B, m_APInt(RHSC1)) || !match(C, m_APInt(RHSC2)))
-    return false;
-
-  const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
-  const auto CR2 = ConstantRange::makeExactICmpRegion(Pred2, *RHSC2);
-
-  return CR1.inverse() == CR2;
-}
-
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -3733,7 +3706,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     Value *Idx = Gep->getOperand(1);
     if (isa<VectorType>(CondVal->getType()) && !isa<VectorType>(Idx->getType()))
       return nullptr;
-    Type *ElementType = Gep->getResultElementType();
+    Type *ElementType = Gep->getSourceElementType();
     Value *NewT = Idx;
     Value *NewF = Constant::getNullValue(Idx->getType());
     if (Swap)
