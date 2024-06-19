@@ -54,7 +54,7 @@
 
 // GCN-LABEL: warning: test_amdhsa_group_segment_fixed_size_repeated
 // AMDHSA: error: .amdhsa_ directives cannot be repeated
-// NONAMDHSA-: error: unknown directive
+// NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_group_segment_fixed_size_repeated"
 .amdhsa_kernel test_amdhsa_group_segment_fixed_size_repeated
   .amdhsa_group_segment_fixed_size 1

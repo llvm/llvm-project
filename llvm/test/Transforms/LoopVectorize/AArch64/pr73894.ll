@@ -54,7 +54,6 @@ define i32 @pr70988() {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = icmp ult i64 [[INDEX_NEXT]], [[UMAX]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT7]] = icmp ult i64 [[TMP19]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = xor i1 [[ACTIVE_LANE_MASK_NEXT]], true
-; CHECK-NEXT:    [[TMP21:%.*]] = xor i1 [[ACTIVE_LANE_MASK_NEXT7]], true
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP17]], i32 [[TMP18]])

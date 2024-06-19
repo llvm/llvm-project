@@ -86,10 +86,15 @@ TYPE_CONTEXT_PARSER("specification part"_en_US,
 // are in contexts that impose constraints on the kinds of statements that
 // are allowed, and so we have a variant production for declaration-construct
 // that implements those constraints.
-constexpr auto execPartLookAhead{first(actionStmt >> ok, openaccConstruct >> ok,
-    openmpConstruct >> ok, "ASSOCIATE ("_tok, "BLOCK"_tok, "SELECT"_tok,
-    "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok, "IF ("_tok, "WHERE ("_tok,
-    "FORALL ("_tok, "!$CUF"_tok)};
+constexpr auto actionStmtLookAhead{first(actionStmt >> ok,
+    // Also accept apparent action statements with errors if they might be
+    // first in the execution part
+    "ALLOCATE ("_tok, "CALL" >> name >> "("_tok, "GO TO"_tok, "OPEN ("_tok,
+    "PRINT"_tok / space / !"("_tok, "READ ("_tok, "WRITE ("_tok)};
+constexpr auto execPartLookAhead{first(actionStmtLookAhead >> ok,
+    openaccConstruct >> ok, openmpConstruct >> ok, "ASSOCIATE ("_tok,
+    "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok,
+    "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok, "!$CUF"_tok)};
 constexpr auto declErrorRecovery{
     stmtErrorRecoveryStart >> !execPartLookAhead >> skipStmtErrorRecovery};
 constexpr auto misplacedSpecificationStmt{Parser<UseStmt>{} >>
@@ -247,7 +252,8 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 //         separate-module-subprogram
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
-    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})))
+    construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -445,10 +451,13 @@ TYPE_PARSER(extension<LanguageFeature::CUDA>(
     "<<<" >> construct<CallStmt::Chevrons>(scalarExpr, "," >> scalarExpr,
                  maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
         ">>>"))
-TYPE_PARSER(construct<CallStmt>(
-    sourced(construct<CallStmt>("CALL" >> Parser<ProcedureDesignator>{},
-        maybe(Parser<CallStmt::Chevrons>{}),
-        defaulted(parenthesized(optionalList(actualArgSpec)))))))
+constexpr auto actualArgSpecList{optionalList(actualArgSpec)};
+TYPE_CONTEXT_PARSER("CALL statement"_en_US,
+    construct<CallStmt>(
+        sourced(construct<CallStmt>("CALL" >> Parser<ProcedureDesignator>{},
+            maybe(Parser<CallStmt::Chevrons>{}) / space,
+            "(" >> actualArgSpecList / ")" ||
+                lookAhead(endOfStmt) >> defaulted(actualArgSpecList)))))
 
 // R1522 procedure-designator ->
 //         procedure-name | proc-component-ref | data-ref % binding-name
@@ -471,8 +480,8 @@ TYPE_PARSER(construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %REF"_port_en_US,
-        construct<ActualArg>(construct<ActualArg::PercentRef>(
-            "%REF" >> parenthesized(variable)))) ||
+        construct<ActualArg>(
+            construct<ActualArg::PercentRef>("%REF" >> parenthesized(expr)))) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %VAL"_port_en_US,
         construct<ActualArg>(

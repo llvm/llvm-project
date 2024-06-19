@@ -177,8 +177,8 @@ static uint8_t readOpcode(WasmObjectFile::ReadContext &Ctx) {
 
 static wasm::ValType parseValType(WasmObjectFile::ReadContext &Ctx,
                                   uint32_t Code) {
-  // only directly encoded FUNCREF/EXTERNREF are supported
-  // (not ref null func or ref null extern)
+  // only directly encoded FUNCREF/EXTERNREF/EXNREF are supported
+  // (not ref null func, ref null extern, or ref null exn)
   switch (Code) {
   case wasm::WASM_TYPE_I32:
   case wasm::WASM_TYPE_I64:
@@ -187,6 +187,7 @@ static wasm::ValType parseValType(WasmObjectFile::ReadContext &Ctx,
   case wasm::WASM_TYPE_V128:
   case wasm::WASM_TYPE_FUNCREF:
   case wasm::WASM_TYPE_EXTERNREF:
+  case wasm::WASM_TYPE_EXNREF:
     return wasm::ValType(Code);
   }
   if (Code == wasm::WASM_TYPE_NULLABLE || Code == wasm::WASM_TYPE_NONNULLABLE) {
@@ -1288,6 +1289,7 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
       auto ElemType = Im.Table.ElemType;
       if (ElemType != wasm::ValType::FUNCREF &&
           ElemType != wasm::ValType::EXTERNREF &&
+          ElemType != wasm::ValType::EXNREF &&
           ElemType != wasm::ValType::OTHERREF)
         return make_error<GenericBinaryError>("invalid table element type",
                                               object_error::parse_failed);
@@ -1346,6 +1348,7 @@ Error WasmObjectFile::parseTableSection(ReadContext &Ctx) {
     auto ElemType = Tables.back().Type.ElemType;
     if (ElemType != wasm::ValType::FUNCREF &&
         ElemType != wasm::ValType::EXTERNREF &&
+        ElemType != wasm::ValType::EXNREF &&
         ElemType != wasm::ValType::OTHERREF) {
       return make_error<GenericBinaryError>("invalid table element type",
                                             object_error::parse_failed);
@@ -1680,6 +1683,7 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
         Segment.ElemKind = parseValType(Ctx, ElemKind);
         if (Segment.ElemKind != wasm::ValType::FUNCREF &&
             Segment.ElemKind != wasm::ValType::EXTERNREF &&
+            Segment.ElemKind != wasm::ValType::EXNREF &&
             Segment.ElemKind != wasm::ValType::OTHERREF) {
           return make_error<GenericBinaryError>("invalid elem type",
                                                 object_error::parse_failed);

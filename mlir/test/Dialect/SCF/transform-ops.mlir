@@ -6,11 +6,11 @@
 // CHECK:   scf.for
 // CHECK:     arith.addi
 //
-// CHECK: func @foo[[SUFFIX:.+]](%{{.+}}, %{{.+}}, %{{.+}})
+// CHECK: func @foo[[$SUFFIX:.+]](%{{.+}}, %{{.+}}, %{{.+}})
 // CHECK:   scf.for
 // CHECK:     arith.addi
 //
-// CHECK-LABEL @loop_outline_op
+// CHECK-LABEL: @loop_outline_op
 func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
   // CHECK: scf.for
   // CHECK-NOT: scf.for
@@ -23,7 +23,7 @@ func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
   }
   // CHECK: scf.execute_region
   // CHECK-NOT: scf.for
-  // CHECK:   func.call @foo[[SUFFIX]]
+  // CHECK:   func.call @foo[[$SUFFIX]]
   scf.for %j = %arg0 to %arg1 step %arg2 {
     arith.addi %j, %j : index
   }
@@ -277,13 +277,22 @@ module attributes {transform.with_named_sequence} {
 
 // This test checks for loop coalescing success for non-index loop boundaries and step type
 func.func @coalesce_i32_loops() {
+  // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i32
+  // CHECK:           %[[VAL_1:.*]] = arith.constant 128 : i32
+  // CHECK:           %[[VAL_2:.*]] = arith.constant 2 : i32
+  // CHECK:           %[[VAL_3:.*]] = arith.constant 64 : i32
   %0 = arith.constant 0 : i32
   %1 = arith.constant 128 : i32
   %2 = arith.constant 2 : i32
   %3 = arith.constant 64 : i32
-  // CHECK-DAG: %[[C0_I32:.*]] = arith.constant 0 : i32
-  // CHECK-DAG: %[[C1_I32:.*]] = arith.constant 1 : i32
-  // CHECK: scf.for %[[ARG0:.*]] = %[[C0_I32]] to {{.*}} step %[[C1_I32]]  : i32
+  // CHECK:           %[[VAL_4:.*]] = arith.constant 64 : i32
+  // CHECK:           %[[ZERO:.*]] = arith.constant 0 : i32
+  // CHECK:           %[[ONE:.*]] = arith.constant 1 : i32
+  // CHECK:           %[[VAL_7:.*]] = arith.constant 32 : i32
+  // CHECK:           %[[VAL_8:.*]] = arith.constant 0 : i32
+  // CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i32
+  // CHECK:           %[[UB:.*]] = arith.muli %[[VAL_4]], %[[VAL_7]] : i32
+  // CHECK:           scf.for %[[VAL_11:.*]] = %[[ZERO]] to %[[UB]] step %[[ONE]]  : i32 {
   scf.for %i = %0 to %1 step %2 : i32 {
     scf.for %j = %0 to %3 step %2 : i32 {
       arith.addi %i, %j : i32
@@ -299,4 +308,61 @@ module attributes {transform.with_named_sequence} {
     %2 = transform.loop.coalesce %1: (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
     transform.yield
   }
+}
+
+
+// -----
+ 
+// CHECK-LABEL: func.func @loop_pipeline
+func.func @loop_pipeline(%arg0: memref<4x16xf32>, %arg1: vector<16xf32>) -> vector<16xf32> {
+   %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c3 = arith.constant 3 : index
+  // CHECK: vector.transfer_read
+  // CHECK: vector.transfer_read
+  // CHECK: vector.transfer_read
+  // CHECK: arith.addf
+  // CHECK: arith.addf
+  // CHECK: arith.addf
+  %0 = scf.for %arg2 = %c0 to %c3 step %c1 iter_args(%arg3 = %arg1) -> (vector<16xf32>) {
+    %1 = vector.transfer_read %arg0[%arg2, %c0], %cst {in_bounds = [true]} : memref<4x16xf32>, vector<16xf32>
+    %2 = arith.addf %1, %arg3 : vector<16xf32>
+    scf.yield %2 : vector<16xf32>
+  }
+  return %0 : vector<16xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.for">
+    %1 = transform.loop.pipeline %0 {iteration_interval = 1 : i64, read_latency = 5 : i64,  scheduling_type = "full-loops"} : (!transform.op<"scf.for">) -> !transform.any_op
+     transform.yield
+ }
+}
+ 
+ 
+// -----
+ 
+// CHECK-LABEL: func.func @loop_pipeline_lb_gt_0
+func.func @loop_pipeline_lb_gt_0(%arg0: memref<4x16xf32>, %arg1: vector<16xf32>) -> vector<16xf32> {
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %c3 = arith.constant 3 : index
+  // CHECK: vector.transfer_read
+  // CHECK: vector.transfer_read
+  // CHECK: arith.addf
+  // CHECK: arith.addf
+  %0 = scf.for %arg2 = %c1 to %c3 step %c1 iter_args(%arg3 = %arg1) -> (vector<16xf32>) {
+    %1 = vector.transfer_read %arg0[%arg2, %c1], %cst {in_bounds = [true]} : memref<4x16xf32>, vector<16xf32>
+    %2 = arith.addf %1, %arg3 : vector<16xf32>
+    scf.yield %2 : vector<16xf32>
+  }
+  return %0 : vector<16xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.op<"scf.for">
+    %1 = transform.loop.pipeline %0 {iteration_interval = 1 : i64, read_latency = 5 : i64,  scheduling_type = "full-loops"} : (!transform.op<"scf.for">) -> !transform.any_op
+     transform.yield
+ }
 }

@@ -117,6 +117,8 @@ public:
     NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
     NonNeg = 1 << 18,        // The operand is non-negative.
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
+    NoUSWrap = 1 << 20,      // Instruction supports geps
+                             // no unsigned signed wrap.
   };
 
 private:
@@ -414,6 +416,12 @@ public:
     assert(isUInt<LLVM_MI_FLAGS_BITS>(unsigned(Flag)) &&
            "Flag to clear is out of range for the Flags field");
     Flags &= ~((uint32_t)Flag);
+  }
+
+  void clearFlags(unsigned flags) {
+    assert(isUInt<LLVM_MI_FLAGS_BITS>(flags) &&
+           "flags to be cleared are out of range for the Flags field");
+    Flags &= ~flags;
   }
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).

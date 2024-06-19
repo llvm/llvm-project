@@ -944,3 +944,29 @@ define i1 @pr53831(i32 %x) {
   %tmp5 = icmp eq i32 %tmp4, %tmp2
   ret i1 %tmp5
 }
+
+define i64 @sh2add_uw(i64 signext %0, i32 signext %1) {
+; RV32IMB-LABEL: sh2add_uw:
+; RV32IMB:       # %bb.0: # %entry
+; RV32IMB-NEXT:    srli a3, a2, 27
+; RV32IMB-NEXT:    slli a2, a2, 5
+; RV32IMB-NEXT:    srli a4, a0, 29
+; RV32IMB-NEXT:    sh3add a1, a1, a4
+; RV32IMB-NEXT:    sh3add a0, a0, a2
+; RV32IMB-NEXT:    sltu a2, a0, a2
+; RV32IMB-NEXT:    add a1, a3, a1
+; RV32IMB-NEXT:    add a1, a1, a2
+; RV32IMB-NEXT:    ret
+;
+; RV64IMB-LABEL: sh2add_uw:
+; RV64IMB:       # %bb.0: # %entry
+; RV64IMB-NEXT:    sh2add.uw a0, a1, a0
+; RV64IMB-NEXT:    slli a0, a0, 3
+; RV64IMB-NEXT:    ret
+entry:
+  %2 = zext i32 %1 to i64
+  %3 = shl i64 %2, 5
+  %4 = shl i64 %0, 3
+  %5 = add i64 %3, %4
+  ret i64 %5
+}

@@ -773,6 +773,10 @@ def IntPositive : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getValue().isStrictlyPositive()">,
     "whose value is positive">;
 
+class ArrayMaxCount<int n> : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() <= " # n>,
+    "with at most " # n # " elements">;
+
 class ArrayMinCount<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() >= " # n>,
     "with at least " # n # " elements">;

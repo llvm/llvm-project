@@ -194,6 +194,18 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
   if (arch >= ARMBuildAttrs::CPUArch::v8_M_Base &&
       profile == ARMBuildAttrs::MicroControllerProfile)
     config->armCMSESupport = true;
+
+  // The thumb PLT entries require Thumb2 which can be used on multiple archs.
+  // For now, let's limit it to ones where ARM isn't available and we know have
+  // Thumb2.
+  std::optional<unsigned> armISA =
+      attributes.getAttributeValue(ARMBuildAttrs::ARM_ISA_use);
+  std::optional<unsigned> thumb =
+      attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
+  bool noArmISA = !armISA || *armISA == ARMBuildAttrs::Not_Allowed;
+  bool hasThumb2 = thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
+  if (noArmISA && hasThumb2)
+    config->armThumbPLTs = true;
 }
 
 InputFile::InputFile(Kind k, MemoryBufferRef m)
@@ -664,7 +676,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         symtab.comdatGroups.try_emplace(CachedHashStringRef(signature), this)
             .second;
     if (keepGroup) {
-      if (config->relocatable)
+      if (!config->resolveGroups)
         this->sections[i] = createInputSection(
             i, sec, check(obj.getSectionName(sec, shstrtab)));
       continue;
@@ -832,6 +844,16 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
       break;
+    case SHT_LLVM_LTO:
+      // Discard .llvm.lto in a relocatable link that does not use the bitcode.
+      // The concatenated output does not properly reflect the linking
+      // semantics. In addition, since we do not use the bitcode wrapper format,
+      // the concatenated raw bitcode would be invalid.
+      if (config->relocatable && !config->fatLTOObjects) {
+        sections[i] = &InputSection::discarded;
+        break;
+      }
+      [[fallthrough]];
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));

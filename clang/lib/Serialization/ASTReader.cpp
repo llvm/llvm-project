@@ -40,9 +40,11 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticError.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
@@ -78,6 +80,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaCUDA.h"
+#include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -905,6 +908,40 @@ unsigned ASTSelectorLookupTrait::ComputeHash(Selector Sel) {
   return serialization::ComputeHash(Sel);
 }
 
+LocalDeclID LocalDeclID::get(ASTReader &Reader, ModuleFile &MF, DeclID Value) {
+  LocalDeclID ID(Value);
+#ifndef NDEBUG
+  if (!MF.ModuleOffsetMap.empty())
+    Reader.ReadModuleOffsetMap(MF);
+
+  unsigned ModuleFileIndex = ID.getModuleFileIndex();
+  unsigned LocalDeclID = ID.getLocalDeclIndex();
+
+  assert(ModuleFileIndex <= MF.TransitiveImports.size());
+
+  ModuleFile *OwningModuleFile =
+      ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
+  assert(OwningModuleFile);
+
+  unsigned LocalNumDecls = OwningModuleFile->LocalNumDecls;
+
+  if (!ModuleFileIndex)
+    LocalNumDecls += NUM_PREDEF_DECL_IDS;
+
+  assert(LocalDeclID < LocalNumDecls);
+#endif
+  (void)Reader;
+  (void)MF;
+  return ID;
+}
+
+static LocalDeclID getLocalDeclID(ASTReader &Reader, ModuleFile &MF,
+                                  unsigned ModuleFileIndex,
+                                  unsigned LocalDeclID) {
+  DeclID Value = (DeclID)ModuleFileIndex << 32 | (DeclID)LocalDeclID;
+  return LocalDeclID::get(Reader, MF, Value);
+}
+
 std::pair<unsigned, unsigned>
 ASTSelectorLookupTrait::ReadKeyDataLength(const unsigned char*& d) {
   return readULEBKeyDataLength(d);
@@ -955,16 +992,18 @@ ASTSelectorLookupTrait::ReadData(Selector, const unsigned char* d,
   // Load instance methods
   for (unsigned I = 0; I != NumInstanceMethods; ++I) {
     if (ObjCMethodDecl *Method = Reader.GetLocalDeclAs<ObjCMethodDecl>(
-            F,
-            LocalDeclID(endian::readNext<DeclID, llvm::endianness::little>(d))))
+            F, LocalDeclID::get(
+                   Reader, F,
+                   endian::readNext<DeclID, llvm::endianness::little>(d))))
       Result.Instance.push_back(Method);
   }
 
   // Load factory methods
   for (unsigned I = 0; I != NumFactoryMethods; ++I) {
     if (ObjCMethodDecl *Method = Reader.GetLocalDeclAs<ObjCMethodDecl>(
-            F,
-            LocalDeclID(endian::readNext<DeclID, llvm::endianness::little>(d))))
+            F, LocalDeclID::get(
+                   Reader, F,
+                   endian::readNext<DeclID, llvm::endianness::little>(d))))
       Result.Factory.push_back(Method);
   }
 
@@ -1005,7 +1044,7 @@ static bool readBit(unsigned &Bits) {
   return Value;
 }
 
-IdentID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) {
+IdentifierID ASTIdentifierLookupTrait::ReadIdentifierID(const unsigned char *d) {
   using namespace llvm::support;
 
   unsigned RawID = endian::readNext<uint32_t, llvm::endianness::little>(d);
@@ -1041,7 +1080,7 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
   markIdentifierFromAST(Reader, *II);
   Reader.markIdentifierUpToDate(II);
 
-  IdentID ID = Reader.getGlobalIdentifierID(F, RawID);
+  IdentifierID ID = Reader.getGlobalIdentifierID(F, RawID);
   if (!IsInteresting) {
     // For uninteresting identifiers, there's nothing else to do. Just notify
     // the reader that we've finished loading this identifier.
@@ -1094,8 +1133,9 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
     SmallVector<GlobalDeclID, 4> DeclIDs;
     for (; DataLen > 0; DataLen -= sizeof(DeclID))
       DeclIDs.push_back(Reader.getGlobalDeclID(
-          F,
-          LocalDeclID(endian::readNext<DeclID, llvm::endianness::little>(d))));
+          F, LocalDeclID::get(
+                 Reader, F,
+                 endian::readNext<DeclID, llvm::endianness::little>(d))));
     Reader.SetGloballyVisibleDecls(II, DeclIDs);
   }
 
@@ -1216,8 +1256,9 @@ void ASTDeclContextNameLookupTrait::ReadDataInto(internal_key_type,
   using namespace llvm::support;
 
   for (unsigned NumDecls = DataLen / sizeof(DeclID); NumDecls; --NumDecls) {
-    LocalDeclID LocalID(endian::readNext<DeclID, llvm::endianness::little>(d));
-    Val.insert(Reader.getGlobalDeclID(F, LocalID));
+    LocalDeclID ID = LocalDeclID::get(
+        Reader, F, endian::readNext<DeclID, llvm::endianness::little>(d));
+    Val.insert(Reader.getGlobalDeclID(F, ID));
   }
 }
 
@@ -1263,7 +1304,7 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   if (!Lex.first) {
     Lex = std::make_pair(
         &M, llvm::ArrayRef(
-                reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+                reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
                 Blob.size() / sizeof(DeclID)));
   }
   DC->setHasExternalLexicalStorage(true);
@@ -1648,15 +1689,14 @@ bool ASTReader::ReadSLocEntry(int ID) {
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
     FileID FID = SourceMgr.createFileID(*File, IncludeLoc, FileCharacter, ID,
                                         BaseOffset + Record[0]);
-    SrcMgr::FileInfo &FileInfo =
-          const_cast<SrcMgr::FileInfo&>(SourceMgr.getSLocEntry(FID).getFile());
+    SrcMgr::FileInfo &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
     FileInfo.NumCreatedFIDs = Record[5];
     if (Record[3])
       FileInfo.setHasLineDirectives();
 
     unsigned NumFileDecls = Record[7];
     if (NumFileDecls && ContextObj) {
-      const LocalDeclID *FirstDecl = F->FileSortedDecls + Record[6];
+      const unaligned_decl_id_t *FirstDecl = F->FileSortedDecls + Record[6];
       assert(F->FileSortedDecls && "FILE_SORTED_DECLS not encountered yet ?");
       FileDeclIDs[FID] =
           FileDeclsInfo(F, llvm::ArrayRef(FirstDecl, NumFileDecls));
@@ -1692,8 +1732,7 @@ bool ASTReader::ReadSLocEntry(int ID) {
     FileID FID = SourceMgr.createFileID(std::move(Buffer), FileCharacter, ID,
                                         BaseOffset + Offset, IncludeLoc);
     if (Record[3]) {
-      auto &FileInfo =
-          const_cast<SrcMgr::FileInfo &>(SourceMgr.getSLocEntry(FID).getFile());
+      auto &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
       FileInfo.setHasLineDirectives();
     }
     break;
@@ -3376,33 +3415,18 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             "duplicate DECL_OFFSET record in AST file");
       F.DeclOffsets = (const DeclOffset *)Blob.data();
       F.LocalNumDecls = Record[0];
-      unsigned LocalBaseDeclID = Record[1];
-      F.BaseDeclID = getTotalNumDecls();
+      F.BaseDeclIndex = getTotalNumDecls();
 
-      if (F.LocalNumDecls > 0) {
-        // Introduce the global -> local mapping for declarations within this
-        // module.
-        GlobalDeclMap.insert(std::make_pair(
-            GlobalDeclID(getTotalNumDecls() + NUM_PREDEF_DECL_IDS), &F));
-
-        // Introduce the local -> global mapping for declarations within this
-        // module.
-        F.DeclRemap.insertOrReplace(
-          std::make_pair(LocalBaseDeclID, F.BaseDeclID - LocalBaseDeclID));
-
-        // Introduce the global -> local mapping for declarations within this
-        // module.
-        F.GlobalToLocalDeclIDs[&F] = LocalBaseDeclID;
-
+      if (F.LocalNumDecls > 0)
         DeclsLoaded.resize(DeclsLoaded.size() + F.LocalNumDecls);
-      }
+
       break;
     }
 
     case TU_UPDATE_LEXICAL: {
       DeclContext *TU = ContextObj->getTranslationUnitDecl();
       LexicalContents Contents(
-          reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+          reinterpret_cast<const unaligned_decl_id_t *>(Blob.data()),
           static_cast<unsigned int>(Blob.size() / sizeof(DeclID)));
       TULexicalDecls.push_back(std::make_pair(&F, Contents));
       TU->setHasExternalLexicalStorage(true);
@@ -3471,9 +3495,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case EAGERLY_DESERIALIZED_DECLS:
       // FIXME: Skip reading this record if our ASTConsumer doesn't care
       // about "interesting" decls (for instance, if we're building a module).
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        EagerlyDeserializedDecls.push_back(
-            getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        EagerlyDeserializedDecls.push_back(ReadDeclID(F, Record, I));
       break;
 
     case MODULAR_CODEGEN_DECLS:
@@ -3481,9 +3504,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       // them (ie: if we're not codegenerating this module).
       if (F.Kind == MK_MainFile ||
           getContext().getLangOpts().BuildingPCHWithObjectFile)
-        for (unsigned I = 0, N = Record.size(); I != N; ++I)
-          EagerlyDeserializedDecls.push_back(
-              getGlobalDeclID(F, LocalDeclID(Record[I])));
+        for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+          EagerlyDeserializedDecls.push_back(ReadDeclID(F, Record, I));
       break;
 
     case SPECIAL_TYPES:
@@ -3514,15 +3536,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case UNUSED_FILESCOPED_DECLS:
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        UnusedFileScopedDecls.push_back(
-            getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        UnusedFileScopedDecls.push_back(ReadDeclID(F, Record, I));
       break;
 
     case DELEGATING_CTORS:
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        DelegatingCtorDecls.push_back(
-            getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        DelegatingCtorDecls.push_back(ReadDeclID(F, Record, I));
       break;
 
     case WEAK_UNDECLARED_IDENTIFIERS:
@@ -3597,6 +3617,17 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
+    case PP_UNSAFE_BUFFER_USAGE: {
+      if (!Record.empty()) {
+        SmallVector<SourceLocation, 64> SrcLocs;
+        unsigned Idx = 0;
+        while (Idx < Record.size())
+          SrcLocs.push_back(ReadSourceLocation(F, Record, Idx));
+        PP.setDeserializedSafeBufferOptOutMap(SrcLocs);
+      }
+      break;
+    }
+
     case PP_CONDITIONAL_STACK:
       if (!Record.empty()) {
         unsigned Idx = 0, End = Record.size() - 1;
@@ -3630,7 +3661,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case FILE_SORTED_DECLS:
-      F.FileSortedDecls = (const LocalDeclID *)Blob.data();
+      F.FileSortedDecls = (const unaligned_decl_id_t *)Blob.data();
       F.NumFileSortedDecls = Record[0];
       break;
 
@@ -3677,8 +3708,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case EXT_VECTOR_DECLS:
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        ExtVectorDecls.push_back(getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        ExtVectorDecls.push_back(ReadDeclID(F, Record, I));
       break;
 
     case VTABLE_USES:
@@ -3693,7 +3724,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
 
       for (unsigned Idx = 0, N = Record.size(); Idx != N; /* In loop */) {
         VTableUses.push_back(
-            {getGlobalDeclID(F, LocalDeclID(Record[Idx++])),
+            {ReadDeclID(F, Record, Idx),
              ReadSourceLocation(F, Record, Idx).getRawEncoding(),
              (bool)Record[Idx++]});
       }
@@ -3708,7 +3739,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
 
       for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
         PendingInstantiations.push_back(
-            {getGlobalDeclID(F, LocalDeclID(Record[I++])),
+            {ReadDeclID(F, Record, I),
              ReadSourceLocation(F, Record, I).getRawEncoding()});
       }
       break;
@@ -3717,8 +3748,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       if (Record.size() != 3)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "Invalid SEMA_DECL_REFS block");
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        SemaDeclRefs.push_back(getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        SemaDeclRefs.push_back(ReadDeclID(F, Record, I));
       break;
 
     case PPD_ENTITIES_OFFSETS: {
@@ -3776,9 +3807,9 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         return llvm::createStringError(
             std::errc::illegal_byte_sequence,
             "invalid DECL_UPDATE_OFFSETS block in AST file");
-      for (unsigned I = 0, N = Record.size(); I != N; I += 2) {
-        GlobalDeclID ID = getGlobalDeclID(F, LocalDeclID(Record[I]));
-        DeclUpdateOffsets[ID].push_back(std::make_pair(&F, Record[I + 1]));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/) {
+        GlobalDeclID ID = ReadDeclID(F, Record, I);
+        DeclUpdateOffsets[ID].push_back(std::make_pair(&F, Record[I++]));
 
         // If we've already loaded the decl, perform the updates when we finish
         // loading this block.
@@ -3794,13 +3825,17 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             std::errc::illegal_byte_sequence,
             "invalid DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD block in AST "
             "file");
-      for (unsigned I = 0, N = Record.size(); I != N; I += 3) {
-        GlobalDeclID ID = getGlobalDeclID(F, LocalDeclID(Record[I]));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/) {
+        GlobalDeclID ID = ReadDeclID(F, Record, I);
 
         uint64_t BaseOffset = F.DeclsBlockStartOffset;
         assert(BaseOffset && "Invalid DeclsBlockStartOffset for module file!");
-        uint64_t LexicalOffset = Record[I + 1] ? BaseOffset + Record[I + 1] : 0;
-        uint64_t VisibleOffset = Record[I + 2] ? BaseOffset + Record[I + 2] : 0;
+        uint64_t LocalLexicalOffset = Record[I++];
+        uint64_t LexicalOffset =
+            LocalLexicalOffset ? BaseOffset + LocalLexicalOffset : 0;
+        uint64_t LocalVisibleOffset = Record[I++];
+        uint64_t VisibleOffset =
+            LocalVisibleOffset ? BaseOffset + LocalVisibleOffset : 0;
 
         DelayedNamespaceOffsetMap[ID] = {LexicalOffset, VisibleOffset};
 
@@ -3829,9 +3864,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       // Later tables overwrite earlier ones.
       // FIXME: Modules will have trouble with this.
       CUDASpecialDeclRefs.clear();
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        CUDASpecialDeclRefs.push_back(
-            getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        CUDASpecialDeclRefs.push_back(ReadDeclID(F, Record, I));
       break;
 
     case HEADER_SEARCH_TABLE:
@@ -3871,14 +3905,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case TENTATIVE_DEFINITIONS:
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        TentativeDefinitions.push_back(
-            getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        TentativeDefinitions.push_back(ReadDeclID(F, Record, I));
       break;
 
     case KNOWN_NAMESPACES:
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        KnownNamespaces.push_back(getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        KnownNamespaces.push_back(ReadDeclID(F, Record, I));
       break;
 
     case UNDEFINED_BUT_USED:
@@ -3887,15 +3920,14 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                                        "invalid undefined-but-used record");
       for (unsigned I = 0, N = Record.size(); I != N; /* in loop */) {
         UndefinedButUsed.push_back(
-            {getGlobalDeclID(F, LocalDeclID(Record[I++])),
+            {ReadDeclID(F, Record, I),
              ReadSourceLocation(F, Record, I).getRawEncoding()});
       }
       break;
 
     case DELETE_EXPRS_TO_ANALYZE:
       for (unsigned I = 0, N = Record.size(); I != N;) {
-        DelayedDeleteExprs.push_back(
-            getGlobalDeclID(F, LocalDeclID(Record[I++])).get());
+        DelayedDeleteExprs.push_back(ReadDeclID(F, Record, I).getRawValue());
         const uint64_t Count = Record[I++];
         DelayedDeleteExprs.push_back(Count);
         for (uint64_t C = 0; C < Count; ++C) {
@@ -3904,6 +3936,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           DelayedDeleteExprs.push_back(IsArrayForm);
         }
       }
+      break;
+
+    case VTABLES_TO_EMIT:
+      if (F.Kind == MK_MainFile ||
+          getContext().getLangOpts().BuildingPCHWithObjectFile)
+        for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+          VTablesToEmit.push_back(ReadDeclID(F, Record, I));
       break;
 
     case IMPORTED_MODULES:
@@ -3978,9 +4017,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES:
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        UnusedLocalTypedefNameCandidates.push_back(
-            getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        UnusedLocalTypedefNameCandidates.push_back(ReadDeclID(F, Record, I));
       break;
 
     case CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH:
@@ -4035,9 +4073,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     }
 
     case DECLS_TO_CHECK_FOR_DEFERRED_DIAGS:
-      for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        DeclsToCheckForDeferredDiags.insert(
-            getGlobalDeclID(F, LocalDeclID(Record[I])));
+      for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
+        DeclsToCheckForDeferredDiags.insert(ReadDeclID(F, Record, I));
       break;
     }
   }
@@ -4057,10 +4094,9 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   RemapBuilder PreprocessedEntityRemap(F.PreprocessedEntityRemap);
   RemapBuilder SubmoduleRemap(F.SubmoduleRemap);
   RemapBuilder SelectorRemap(F.SelectorRemap);
-  RemapBuilder DeclRemap(F.DeclRemap);
   RemapBuilder TypeRemap(F.TypeRemap);
 
-  auto &ImportedModuleVector = F.DependentModules;
+  auto &ImportedModuleVector = F.TransitiveImports;
   assert(ImportedModuleVector.empty());
 
   while (Data < DataEnd) {
@@ -4096,8 +4132,6 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
         endian::readNext<uint32_t, llvm::endianness::little>(Data);
     uint32_t SelectorIDOffset =
         endian::readNext<uint32_t, llvm::endianness::little>(Data);
-    uint32_t DeclIDOffset =
-        endian::readNext<uint32_t, llvm::endianness::little>(Data);
     uint32_t TypeIndexOffset =
         endian::readNext<uint32_t, llvm::endianness::little>(Data);
 
@@ -4115,11 +4149,7 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
               PreprocessedEntityRemap);
     mapOffset(SubmoduleIDOffset, OM->BaseSubmoduleID, SubmoduleRemap);
     mapOffset(SelectorIDOffset, OM->BaseSelectorID, SelectorRemap);
-    mapOffset(DeclIDOffset, OM->BaseDeclID, DeclRemap);
     mapOffset(TypeIndexOffset, OM->BaseTypeIndex, TypeRemap);
-
-    // Global -> local mappings.
-    F.GlobalToLocalDeclIDs[OM] = DeclIDOffset;
   }
 }
 
@@ -4233,9 +4263,9 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
 /// Move the given method to the back of the global list of methods.
 static void moveMethodToBackOfGlobalList(Sema &S, ObjCMethodDecl *Method) {
   // Find the entry for this selector in the method pool.
-  Sema::GlobalMethodPool::iterator Known
-    = S.MethodPool.find(Method->getSelector());
-  if (Known == S.MethodPool.end())
+  SemaObjC::GlobalMethodPool::iterator Known =
+      S.ObjC().MethodPool.find(Method->getSelector());
+  if (Known == S.ObjC().MethodPool.end())
     return;
 
   // Retrieve the appropriate method list.
@@ -4644,7 +4674,7 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
   // that we load any additional categories.
   if (ContextObj) {
     for (unsigned I = 0, N = ObjCClassesLoaded.size(); I != N; ++I) {
-      loadObjCCategories(GlobalDeclID(ObjCClassesLoaded[I]->getGlobalID()),
+      loadObjCCategories(ObjCClassesLoaded[I]->getGlobalID(),
                          ObjCClassesLoaded[I], PreviousGeneration);
     }
   }
@@ -6000,8 +6030,8 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       if (!ContextObj)
         break;
       SmallVector<GlobalDeclID, 16> Inits;
-      for (auto &ID : Record)
-        Inits.push_back(getGlobalDeclID(F, LocalDeclID(ID)));
+      for (unsigned I = 0; I < Record.size(); /*in loop*/)
+        Inits.push_back(ReadDeclID(F, Record, I));
       ContextObj->addLazyModuleInitializers(CurrentModule, Inits);
       break;
     }
@@ -7404,6 +7434,11 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/AMDGPUTypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");
@@ -7643,50 +7678,59 @@ CXXBaseSpecifier *ASTReader::GetExternalCXXBaseSpecifiers(uint64_t Offset) {
 
 GlobalDeclID ASTReader::getGlobalDeclID(ModuleFile &F,
                                         LocalDeclID LocalID) const {
-  DeclID ID = LocalID.get();
-  if (ID < NUM_PREDEF_DECL_IDS)
-    return GlobalDeclID(ID);
+  if (LocalID < NUM_PREDEF_DECL_IDS)
+    return GlobalDeclID(LocalID.getRawValue());
+
+  unsigned OwningModuleFileIndex = LocalID.getModuleFileIndex();
+  DeclID ID = LocalID.getLocalDeclIndex();
 
   if (!F.ModuleOffsetMap.empty())
     ReadModuleOffsetMap(F);
 
-  ContinuousRangeMap<DeclID, int, 2>::iterator I =
-      F.DeclRemap.find(ID - NUM_PREDEF_DECL_IDS);
-  assert(I != F.DeclRemap.end() && "Invalid index into decl index remap");
+  ModuleFile *OwningModuleFile =
+      OwningModuleFileIndex == 0
+          ? &F
+          : F.TransitiveImports[OwningModuleFileIndex - 1];
 
-  return GlobalDeclID(ID + I->second);
+  if (OwningModuleFileIndex == 0)
+    ID -= NUM_PREDEF_DECL_IDS;
+
+  uint64_t NewModuleFileIndex = OwningModuleFile->Index + 1;
+  return GlobalDeclID(NewModuleFileIndex, ID);
 }
 
 bool ASTReader::isDeclIDFromModule(GlobalDeclID ID, ModuleFile &M) const {
   // Predefined decls aren't from any module.
-  if (ID.get() < NUM_PREDEF_DECL_IDS)
+  if (ID < NUM_PREDEF_DECL_IDS)
     return false;
 
-  return ID.get() - NUM_PREDEF_DECL_IDS >= M.BaseDeclID &&
-         ID.get() - NUM_PREDEF_DECL_IDS < M.BaseDeclID + M.LocalNumDecls;
+  unsigned ModuleFileIndex = ID.getModuleFileIndex();
+  return M.Index == ModuleFileIndex - 1;
 }
 
-ModuleFile *ASTReader::getOwningModuleFile(const Decl *D) {
+ModuleFile *ASTReader::getOwningModuleFile(GlobalDeclID ID) const {
+  // Predefined decls aren't from any module.
+  if (ID < NUM_PREDEF_DECL_IDS)
+    return nullptr;
+
+  uint64_t ModuleFileIndex = ID.getModuleFileIndex();
+  assert(ModuleFileIndex && "Untranslated Local Decl?");
+
+  return &getModuleManager()[ModuleFileIndex - 1];
+}
+
+ModuleFile *ASTReader::getOwningModuleFile(const Decl *D) const {
   if (!D->isFromASTFile())
     return nullptr;
-  GlobalDeclMapType::const_iterator I =
-      GlobalDeclMap.find(GlobalDeclID(D->getGlobalID()));
-  assert(I != GlobalDeclMap.end() && "Corrupted global declaration map");
-  return I->second;
+
+  return getOwningModuleFile(D->getGlobalID());
 }
 
 SourceLocation ASTReader::getSourceLocationForDeclID(GlobalDeclID ID) {
-  if (ID.get() < NUM_PREDEF_DECL_IDS)
+  if (ID < NUM_PREDEF_DECL_IDS)
     return SourceLocation();
 
-  unsigned Index = ID.get() - NUM_PREDEF_DECL_IDS;
-
-  if (Index > DeclsLoaded.size()) {
-    Error("declaration ID out-of-range for AST file");
-    return SourceLocation();
-  }
-
-  if (Decl *D = DeclsLoaded[Index])
+  if (Decl *D = GetExistingDecl(ID))
     return D->getLocation();
 
   SourceLocation Loc;
@@ -7753,9 +7797,20 @@ static Decl *getPredefinedDecl(ASTContext &Context, PredefinedDeclIDs ID) {
   llvm_unreachable("PredefinedDeclIDs unknown enum value");
 }
 
+unsigned ASTReader::translateGlobalDeclIDToIndex(GlobalDeclID GlobalID) const {
+  ModuleFile *OwningModuleFile = getOwningModuleFile(GlobalID);
+  if (!OwningModuleFile) {
+    assert(GlobalID < NUM_PREDEF_DECL_IDS && "Untransalted Global ID?");
+    return GlobalID.getRawValue();
+  }
+
+  return OwningModuleFile->BaseDeclIndex + GlobalID.getLocalDeclIndex();
+}
+
 Decl *ASTReader::GetExistingDecl(GlobalDeclID ID) {
   assert(ContextObj && "reading decl with no AST context");
-  if (ID.get() < NUM_PREDEF_DECL_IDS) {
+
+  if (ID < NUM_PREDEF_DECL_IDS) {
     Decl *D = getPredefinedDecl(*ContextObj, (PredefinedDeclIDs)ID);
     if (D) {
       // Track that we have merged the declaration with ID \p ID into the
@@ -7767,7 +7822,7 @@ Decl *ASTReader::GetExistingDecl(GlobalDeclID ID) {
     return D;
   }
 
-  unsigned Index = ID.get() - NUM_PREDEF_DECL_IDS;
+  unsigned Index = translateGlobalDeclIDToIndex(ID);
 
   if (Index >= DeclsLoaded.size()) {
     assert(0 && "declaration ID out-of-range for AST file");
@@ -7779,10 +7834,10 @@ Decl *ASTReader::GetExistingDecl(GlobalDeclID ID) {
 }
 
 Decl *ASTReader::GetDecl(GlobalDeclID ID) {
-  if (ID.get() < NUM_PREDEF_DECL_IDS)
+  if (ID < NUM_PREDEF_DECL_IDS)
     return GetExistingDecl(ID);
 
-  unsigned Index = ID.get() - NUM_PREDEF_DECL_IDS;
+  unsigned Index = translateGlobalDeclIDToIndex(ID);
 
   if (Index >= DeclsLoaded.size()) {
     assert(0 && "declaration ID out-of-range for AST file");
@@ -7801,30 +7856,41 @@ Decl *ASTReader::GetDecl(GlobalDeclID ID) {
 
 LocalDeclID ASTReader::mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
                                                        GlobalDeclID GlobalID) {
-  DeclID ID = GlobalID.get();
-  if (ID < NUM_PREDEF_DECL_IDS)
-    return LocalDeclID(ID);
+  if (GlobalID < NUM_PREDEF_DECL_IDS)
+    return LocalDeclID::get(*this, M, GlobalID.getRawValue());
 
-  GlobalDeclMapType::const_iterator I = GlobalDeclMap.find(GlobalID);
-  assert(I != GlobalDeclMap.end() && "Corrupted global declaration map");
-  ModuleFile *Owner = I->second;
+  if (!M.ModuleOffsetMap.empty())
+    ReadModuleOffsetMap(M);
 
-  llvm::DenseMap<ModuleFile *, DeclID>::iterator Pos =
-      M.GlobalToLocalDeclIDs.find(Owner);
-  if (Pos == M.GlobalToLocalDeclIDs.end())
+  ModuleFile *Owner = getOwningModuleFile(GlobalID);
+  DeclID ID = GlobalID.getLocalDeclIndex();
+
+  if (Owner == &M) {
+    ID += NUM_PREDEF_DECL_IDS;
+    return LocalDeclID::get(*this, M, ID);
+  }
+
+  uint64_t OrignalModuleFileIndex = 0;
+  for (unsigned I = 0; I < M.TransitiveImports.size(); I++)
+    if (M.TransitiveImports[I] == Owner) {
+      OrignalModuleFileIndex = I + 1;
+      break;
+    }
+
+  if (!OrignalModuleFileIndex)
     return LocalDeclID();
 
-  return LocalDeclID(ID - Owner->BaseDeclID + Pos->second);
+  return getLocalDeclID(*this, M, OrignalModuleFileIndex, ID);
 }
 
-GlobalDeclID ASTReader::ReadDeclID(ModuleFile &F, const RecordData &Record,
+GlobalDeclID ASTReader::ReadDeclID(ModuleFile &F, const RecordDataImpl &Record,
                                    unsigned &Idx) {
   if (Idx >= Record.size()) {
     Error("Corrupted AST file");
     return GlobalDeclID(0);
   }
 
-  return getGlobalDeclID(F, LocalDeclID(Record[Idx++]));
+  return getGlobalDeclID(F, LocalDeclID::get(*this, F, Record[Idx++]));
 }
 
 /// Resolve the offset of a statement into a statement.
@@ -7871,7 +7937,7 @@ void ASTReader::FindExternalLexicalDecls(
         PredefsVisited[ID] = true;
       }
 
-      if (Decl *D = GetLocalDecl(*M, LocalDeclID(ID))) {
+      if (Decl *D = GetLocalDecl(*M, LocalDeclID::get(*this, *M, ID))) {
         assert(D->getKind() == K && "wrong kind for lexical decl");
         if (!DC->isDeclInLexicalTraversal(D))
           Decls.push_back(D);
@@ -7893,32 +7959,34 @@ void ASTReader::FindExternalLexicalDecls(
 
 namespace {
 
-class DeclIDComp {
+class UnalignedDeclIDComp {
   ASTReader &Reader;
   ModuleFile &Mod;
 
 public:
-  DeclIDComp(ASTReader &Reader, ModuleFile &M) : Reader(Reader), Mod(M) {}
+  UnalignedDeclIDComp(ASTReader &Reader, ModuleFile &M)
+      : Reader(Reader), Mod(M) {}
 
-  bool operator()(LocalDeclID L, LocalDeclID R) const {
+  bool operator()(unaligned_decl_id_t L, unaligned_decl_id_t R) const {
     SourceLocation LHS = getLocation(L);
     SourceLocation RHS = getLocation(R);
     return Reader.getSourceManager().isBeforeInTranslationUnit(LHS, RHS);
   }
 
-  bool operator()(SourceLocation LHS, LocalDeclID R) const {
+  bool operator()(SourceLocation LHS, unaligned_decl_id_t R) const {
     SourceLocation RHS = getLocation(R);
     return Reader.getSourceManager().isBeforeInTranslationUnit(LHS, RHS);
   }
 
-  bool operator()(LocalDeclID L, SourceLocation RHS) const {
+  bool operator()(unaligned_decl_id_t L, SourceLocation RHS) const {
     SourceLocation LHS = getLocation(L);
     return Reader.getSourceManager().isBeforeInTranslationUnit(LHS, RHS);
   }
 
-  SourceLocation getLocation(LocalDeclID ID) const {
+  SourceLocation getLocation(unaligned_decl_id_t ID) const {
     return Reader.getSourceManager().getFileLoc(
-            Reader.getSourceLocationForDeclID(Reader.getGlobalDeclID(Mod, ID)));
+        Reader.getSourceLocationForDeclID(
+            Reader.getGlobalDeclID(Mod, LocalDeclID::get(Reader, Mod, ID))));
   }
 };
 
@@ -7941,8 +8009,8 @@ void ASTReader::FindFileRegionDecls(FileID File,
     BeginLoc = SM.getLocForStartOfFile(File).getLocWithOffset(Offset);
   SourceLocation EndLoc = BeginLoc.getLocWithOffset(Length);
 
-  DeclIDComp DIDComp(*this, *DInfo.Mod);
-  ArrayRef<LocalDeclID>::iterator BeginIt =
+  UnalignedDeclIDComp DIDComp(*this, *DInfo.Mod);
+  ArrayRef<unaligned_decl_id_t>::iterator BeginIt =
       llvm::lower_bound(DInfo.Decls, BeginLoc, DIDComp);
   if (BeginIt != DInfo.Decls.begin())
     --BeginIt;
@@ -7951,17 +8019,20 @@ void ASTReader::FindFileRegionDecls(FileID File,
   // to backtrack until we find it otherwise we will fail to report that the
   // region overlaps with an objc container.
   while (BeginIt != DInfo.Decls.begin() &&
-         GetDecl(getGlobalDeclID(*DInfo.Mod, *BeginIt))
+         GetDecl(getGlobalDeclID(*DInfo.Mod,
+                                 LocalDeclID::get(*this, *DInfo.Mod, *BeginIt)))
              ->isTopLevelDeclInObjCContainer())
     --BeginIt;
 
-  ArrayRef<LocalDeclID>::iterator EndIt =
+  ArrayRef<unaligned_decl_id_t>::iterator EndIt =
       llvm::upper_bound(DInfo.Decls, EndLoc, DIDComp);
   if (EndIt != DInfo.Decls.end())
     ++EndIt;
 
-  for (ArrayRef<LocalDeclID>::iterator DIt = BeginIt; DIt != EndIt; ++DIt)
-    Decls.push_back(GetDecl(getGlobalDeclID(*DInfo.Mod, *DIt)));
+  for (ArrayRef<unaligned_decl_id_t>::iterator DIt = BeginIt; DIt != EndIt;
+       ++DIt)
+    Decls.push_back(GetDecl(getGlobalDeclID(
+        *DInfo.Mod, LocalDeclID::get(*this, *DInfo.Mod, *DIt))));
 }
 
 bool
@@ -8041,6 +8112,10 @@ void ASTReader::PassInterestingDeclToConsumer(Decl *D) {
     PassObjCImplDeclToConsumer(ImplD, Consumer);
   else
     Consumer->HandleInterestingDecl(DeclGroupRef(D));
+}
+
+void ASTReader::PassVTableToConsumer(CXXRecordDecl *RD) {
+  Consumer->HandleVTable(RD);
 }
 
 void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
@@ -8153,14 +8228,9 @@ dumpModuleIDMap(StringRef Name,
 
   llvm::errs() << Name << ":\n";
   for (typename MapType::const_iterator I = Map.begin(), IEnd = Map.end();
-       I != IEnd; ++I) {
-    uint64_t ID = 0;
-    if constexpr (std::is_integral_v<Key>)
-      ID = I->first;
-    else /*GlobalDeclID*/
-      ID = I->first.get();
-    llvm::errs() << "  " << ID << " -> " << I->second->FileName << "\n";
-  }
+       I != IEnd; ++I)
+    llvm::errs() << "  " << (DeclID)I->first << " -> " << I->second->FileName
+                 << "\n";
 }
 
 LLVM_DUMP_METHOD void ASTReader::dump() {
@@ -8168,7 +8238,6 @@ LLVM_DUMP_METHOD void ASTReader::dump() {
   dumpModuleIDMap("Global bit offset map", GlobalBitOffsetsMap);
   dumpModuleIDMap("Global source location entry map", GlobalSLocEntryMap);
   dumpModuleIDMap("Global type map", GlobalTypeMap);
-  dumpModuleIDMap("Global declaration map", GlobalDeclMap);
   dumpModuleIDMap("Global identifier map", GlobalIdentifierMap);
   dumpModuleIDMap("Global macro map", GlobalMacroMap);
   dumpModuleIDMap("Global submodule map", GlobalSubmoduleMap);
@@ -8234,11 +8303,11 @@ void ASTReader::UpdateSema() {
     assert(SemaDeclRefs.size() % 3 == 0);
     for (unsigned I = 0; I != SemaDeclRefs.size(); I += 3) {
       if (!SemaObj->StdNamespace)
-        SemaObj->StdNamespace = SemaDeclRefs[I].get();
+        SemaObj->StdNamespace = SemaDeclRefs[I].getRawValue();
       if (!SemaObj->StdBadAlloc)
-        SemaObj->StdBadAlloc = SemaDeclRefs[I + 1].get();
+        SemaObj->StdBadAlloc = SemaDeclRefs[I + 1].getRawValue();
       if (!SemaObj->StdAlignValT)
-        SemaObj->StdAlignValT = SemaDeclRefs[I + 2].get();
+        SemaObj->StdAlignValT = SemaDeclRefs[I + 2].getRawValue();
     }
     SemaDeclRefs.clear();
   }
@@ -8551,7 +8620,7 @@ namespace serialization {
 static void addMethodsToPool(Sema &S, ArrayRef<ObjCMethodDecl *> Methods,
                              ObjCMethodList &List) {
   for (ObjCMethodDecl *M : llvm::reverse(Methods))
-    S.addMethodToGlobalList(&List, M);
+    S.ObjC().addMethodToGlobalList(&List, M);
 }
 
 void ASTReader::ReadMethodPool(Selector Sel) {
@@ -8576,8 +8645,10 @@ void ASTReader::ReadMethodPool(Selector Sel) {
     return;
 
   Sema &S = *getSema();
-  Sema::GlobalMethodPool::iterator Pos =
-      S.MethodPool.insert(std::make_pair(Sel, Sema::GlobalMethodPool::Lists()))
+  SemaObjC::GlobalMethodPool::iterator Pos =
+      S.ObjC()
+          .MethodPool
+          .insert(std::make_pair(Sel, SemaObjC::GlobalMethodPool::Lists()))
           .first;
 
   Pos->second.first.setBits(Visitor.getInstanceBits());
@@ -8768,11 +8839,10 @@ void ASTReader::ReadLateParsedTemplates(
     RecordDataImpl &LateParsed = LPT.second;
     for (unsigned Idx = 0, N = LateParsed.size(); Idx < N;
          /* In loop */) {
-      FunctionDecl *FD = cast<FunctionDecl>(
-          GetLocalDecl(*FMod, LocalDeclID(LateParsed[Idx++])));
+      FunctionDecl *FD = ReadDeclAs<FunctionDecl>(*FMod, LateParsed, Idx);
 
       auto LT = std::make_unique<LateParsedTemplate>();
-      LT->D = GetLocalDecl(*FMod, LocalDeclID(LateParsed[Idx++]));
+      LT->D = ReadDecl(*FMod, LateParsed, Idx);
       LT->FPO = FPOptions::getFromOpaqueInt(LateParsed[Idx++]);
 
       ModuleFile *F = getOwningModuleFile(LT->D);
@@ -9182,7 +9252,7 @@ void ASTRecordReader::readUnresolvedSet(LazyASTUnresolvedSet &Set) {
   while (NumDecls--) {
     GlobalDeclID ID = readDeclID();
     AccessSpecifier AS = (AccessSpecifier) readInt();
-    Set.addLazyDecl(getContext(), ID.get(), AS);
+    Set.addLazyDecl(getContext(), ID, AS);
   }
 }
 
@@ -9400,6 +9470,20 @@ DiagnosticBuilder ASTReader::Diag(unsigned DiagID) const {
 
 DiagnosticBuilder ASTReader::Diag(SourceLocation Loc, unsigned DiagID) const {
   return Diags.Report(Loc, DiagID);
+}
+
+void ASTReader::warnStackExhausted(SourceLocation Loc) {
+  // When Sema is available, avoid duplicate errors.
+  if (SemaObj) {
+    SemaObj->warnStackExhausted(Loc);
+    return;
+  }
+
+  if (WarnedStackExhausted)
+    return;
+  WarnedStackExhausted = true;
+
+  Diag(Loc, diag::warn_stack_exhausted);
 }
 
 /// Retrieve the identifier table associated with the
@@ -11905,12 +11989,37 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
                                      DevNumExpr, QueuesLoc, QueueIdExprs,
                                      EndLoc);
   }
+  case OpenACCClauseKind::DeviceType:
+  case OpenACCClauseKind::DType: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<DeviceTypeArgument> Archs;
+    unsigned NumArchs = readInt();
+
+    for (unsigned I = 0; I < NumArchs; ++I) {
+      IdentifierInfo *Ident = readBool() ? readIdentifier() : nullptr;
+      SourceLocation Loc = readSourceLocation();
+      Archs.emplace_back(Ident, Loc);
+    }
+
+    return OpenACCDeviceTypeClause::Create(getContext(), ClauseKind, BeginLoc,
+                                           LParenLoc, Archs, EndLoc);
+  }
+  case OpenACCClauseKind::Reduction: {
+    SourceLocation LParenLoc = readSourceLocation();
+    OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCReductionClause::Create(getContext(), BeginLoc, LParenLoc, Op,
+                                          VarList, EndLoc);
+  }
+  case OpenACCClauseKind::Seq:
+    return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::Independent:
+    return OpenACCIndependentClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::Auto:
+    return OpenACCAutoClause::Create(getContext(), BeginLoc, EndLoc);
 
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
-  case OpenACCClauseKind::Seq:
-  case OpenACCClauseKind::Independent:
-  case OpenACCClauseKind::Auto:
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
@@ -11921,13 +12030,10 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::DeviceResident:
   case OpenACCClauseKind::Host:
   case OpenACCClauseKind::Link:
-  case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
-  case OpenACCClauseKind::DeviceType:
-  case OpenACCClauseKind::DType:
   case OpenACCClauseKind::Tile:
   case OpenACCClauseKind::Gang:
   case OpenACCClauseKind::Invalid:

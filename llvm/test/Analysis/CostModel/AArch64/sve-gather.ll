@@ -107,15 +107,15 @@ define void @masked_gathers_no_vscale_range() #2 {
 
 define <2 x i128> @masked_gather_v1i128(<2 x ptr> %ld, <2 x i1> %masks, <2 x i128> %passthru) #3 {
 ; CHECK-LABEL: 'masked_gather_v1i128'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i128> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
+; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
 ; CHECK-VSCALE-2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i128> %res
 ;
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i128> %res
 ;
   %res = call <2 x i128> @llvm.masked.gather.v2i128.v2p0(<2 x ptr> %ld, i32 0, <2 x i1> %masks, <2 x i128> %passthru)

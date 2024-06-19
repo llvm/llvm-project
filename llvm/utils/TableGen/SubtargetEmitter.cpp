@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -255,6 +256,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
   llvm::sort(FeatureList, LessRecordFieldName());
 
+  // Check that there are no duplicate keys
+  std::set<StringRef> UniqueKeys;
+
   // Begin feature table
   OS << "// Sorted (by key) array of values for CPU features.\n"
      << "extern const llvm::SubtargetFeatureKV " << Target
@@ -283,6 +287,10 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
     OS << " },\n";
     ++NumFeatures;
+
+    if (!UniqueKeys.insert(CommandLineName).second)
+      PrintFatalError("Duplicate key in SubtargetFeatureKV: " +
+                      CommandLineName);
   }
 
   // End feature table
@@ -902,14 +910,19 @@ SubtargetEmitter::FindWriteResources(const CodeGenSchedRW &SchedWrite,
   for (Record *WR : ProcModel.WriteResDefs) {
     if (!WR->isSubClassOf("WriteRes"))
       continue;
-    if (AliasDef == WR->getValueAsDef("WriteType") ||
-        SchedWrite.TheDef == WR->getValueAsDef("WriteType")) {
+    Record *WRDef = WR->getValueAsDef("WriteType");
+    if (AliasDef == WRDef || SchedWrite.TheDef == WRDef) {
       if (ResDef) {
         PrintFatalError(WR->getLoc(), "Resources are defined for both "
                                       "SchedWrite and its alias on processor " +
                                           ProcModel.ModelName);
       }
       ResDef = WR;
+      // If there is no AliasDef and we find a match, we can early exit since
+      // there is no need to verify whether there are resources defined for both
+      // SchedWrite and its alias.
+      if (!AliasDef)
+        break;
     }
   }
   // TODO: If ProcModel has a base model (previous generation processor),
@@ -956,14 +969,19 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
   for (Record *RA : ProcModel.ReadAdvanceDefs) {
     if (!RA->isSubClassOf("ReadAdvance"))
       continue;
-    if (AliasDef == RA->getValueAsDef("ReadType") ||
-        SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
+    Record *RADef = RA->getValueAsDef("ReadType");
+    if (AliasDef == RADef || SchedRead.TheDef == RADef) {
       if (ResDef) {
         PrintFatalError(RA->getLoc(), "Resources are defined for both "
                                       "SchedRead and its alias on processor " +
                                           ProcModel.ModelName);
       }
       ResDef = RA;
+      // If there is no AliasDef and we find a match, we can early exit since
+      // there is no need to verify whether there are resources defined for both
+      // SchedRead and its alias.
+      if (!AliasDef)
+        break;
     }
   }
   // TODO: If ProcModel has a base model (previous generation processor),
@@ -1122,10 +1140,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       WriterNames.push_back(SchedModels.getSchedWrite(WriteID).Name);
       // If this Write is not referenced by a ReadAdvance, don't distinguish it
       // from other WriteLatency entries.
-      if (!SchedModels.hasReadOfWrite(
-              SchedModels.getSchedWrite(WriteID).TheDef)) {
+      if (!ProcModel.hasReadOfWrite(SchedModels.getSchedWrite(WriteID).TheDef))
         WriteID = 0;
-      }
       WLEntry.WriteResourceID = WriteID;
 
       for (unsigned WS : WriteSeq) {

@@ -57,7 +57,7 @@ def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 
 def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
-def : F<"build-id">, Alias<build_id>, AliasArgs<["fast"]>, HelpText<"Alias for --build-id=fast">;
+def : F<"build-id">, Alias<build_id>, AliasArgs<["sha1"]>, HelpText<"Alias for --build-id=sha1">;
 
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
@@ -69,6 +69,7 @@ defm compress_debug_sections:
 
 defm compress_sections: EEq<"compress-sections",
   "Compress output sections that match the glob and do not have the SHF_ALLOC flag. "
+  "The sections remain uncompressed if compressed content would be larger. "
   "The compression level is <level> (if specified) or a default speed-focused level">,
   MetaVarName<"<section-glob>={none,zlib,zstd}[:level]">;
 
@@ -197,6 +198,9 @@ def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
 def enable_new_dtags: F<"enable-new-dtags">,
   HelpText<"Enable new dynamic tags (default)">;
 
+def enable_non_contiguous_regions : FF<"enable-non-contiguous-regions">,
+  HelpText<"Spill input sections to later matching output sections to avoid memory region overflow">;
+
 def end_group: F<"end-group">,
   HelpText<"Ignored for compatibility with GNU unless you pass --warn-backrefs">;
 
@@ -249,6 +253,9 @@ def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
 
 def fix_cortex_a8: F<"fix-cortex-a8">,
   HelpText<"Apply fixes for ARM Cortex-A8 erratum 657417">;
+
+def force_group_allocation: FF<"force-group-allocation">,
+  HelpText<"Only meaningful for -r. Section groups are discarded. If two section group members are placed to the same output section, combine their relocations as well">;
 
 defm format: Eq<"format", "Change the input format of the inputs following this option">,
   MetaVarName<"[default,elf,binary]">;

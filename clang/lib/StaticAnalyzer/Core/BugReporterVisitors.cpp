@@ -113,6 +113,9 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       // Pointer arithmetic: '*(x + 2)' -> 'x') etc.
       if (const Expr *Inner = peelOffPointerArithmetic(B)) {
         E = Inner;
+      } else if (B->isAssignmentOp()) {
+        // Follow LHS of assignments: '*p = 404' -> 'p'.
+        E = B->getLHS();
       } else {
         // Probably more arithmetic can be pattern-matched here,
         // but for now give up.

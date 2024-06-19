@@ -55,10 +55,6 @@ public:
 
   bool Remove(const lldb::TypeSP &type_sp);
 
-  void RemoveMismatchedTypes(llvm::StringRef type_scope,
-                             llvm::StringRef type_basename,
-                             lldb::TypeClass type_class, bool exact_match);
-
 private:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;

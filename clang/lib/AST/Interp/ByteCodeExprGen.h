@@ -90,6 +90,9 @@ public:
   bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
   bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
   bool VisitStringLiteral(const StringLiteral *E);
+  bool VisitObjCStringLiteral(const ObjCStringLiteral *E);
+  bool VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
+  bool VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E);
   bool VisitCharacterLiteral(const CharacterLiteral *E);
   bool VisitCompoundAssignOperator(const CompoundAssignOperator *E);
   bool VisitFloatCompoundAssignOperator(const CompoundAssignOperator *E);
@@ -122,10 +125,15 @@ public:
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E);
   bool VisitPackIndexingExpr(const PackIndexingExpr *E);
   bool VisitRecoveryExpr(const RecoveryExpr *E);
+  bool VisitAddrLabelExpr(const AddrLabelExpr *E);
+  bool VisitConvertVectorExpr(const ConvertVectorExpr *E);
+  bool VisitShuffleVectorExpr(const ShuffleVectorExpr *E);
+  bool VisitExtVectorElementExpr(const ExtVectorElementExpr *E);
+  bool VisitObjCBoxedExpr(const ObjCBoxedExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
-  bool visitDecl(const VarDecl *VD) override;
+  bool visitDecl(const VarDecl *VD, bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -183,6 +191,8 @@ protected:
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E);
+  /// Visit the given decl as if we have a reference to it.
+  bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -312,6 +322,7 @@ protected:
   /// Flag inidicating if we're initializing an already created
   /// variable. This is set in visitInitializer().
   bool Initializing = false;
+  const ValueDecl *InitializingDecl = nullptr;
 
   /// Flag indicating if we're initializing a global variable.
   bool GlobalDecl = false;

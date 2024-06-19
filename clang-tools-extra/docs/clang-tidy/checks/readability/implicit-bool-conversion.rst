@@ -96,8 +96,8 @@ The rules for generating fix-it hints are:
   - ``if (!pointer)`` is changed to ``if (pointer == nullptr)``,
 
 - in case of conversions from bool to other built-in types, an explicit
-  ``static_cast`` is proposed to make it clear that a conversion is taking
-  place:
+  ``static_cast`` (or a C-style cast since C23) is proposed to make it clear
+  that a conversion is taking place:
 
   - ``int integer = boolean;`` is changed to
     ``int integer = static_cast<int>(boolean);``,

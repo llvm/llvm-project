@@ -43,6 +43,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  quick_exit
+  SRCS
+    quick_exit.cpp
+  HDRS
+    quick_exit.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    .exit_handler
+)
+
+add_entrypoint_object(
   getenv
   SRCS
     getenv.cpp
@@ -369,9 +380,61 @@ elseif(LIBC_TARGET_OS_IS_GPU)
     aligned_alloc
   )
 else()
-  add_entrypoint_external(
-    malloc
+  add_header_library(
+    block
+    HDRS
+      block.h
+    DEPENDS
+      libc.src.__support.CPP.algorithm
+      libc.src.__support.CPP.limits
+      libc.src.__support.CPP.new
+      libc.src.__support.CPP.optional
+      libc.src.__support.CPP.span
+      libc.src.__support.CPP.type_traits
   )
+  add_header_library(
+    freelist
+    HDRS
+      freelist.h
+    DEPENDS
+      libc.src.__support.fixedvector
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.cstddef
+      libc.src.__support.CPP.new
+      libc.src.__support.CPP.span
+  )
+  add_header_library(
+    freelist_heap
+    HDRS
+      freelist_heap.h
+    DEPENDS
+      .block
+      .freelist
+      libc.src.__support.CPP.cstddef
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.optional
+      libc.src.__support.CPP.span
+      libc.src.__support.libc_assert
+      libc.src.string.memory_utils.inline_memcpy
+      libc.src.string.memory_utils.inline_memset
+  )
+  # Only add malloc in full build mode.  Use the system malloc in overlay mode.
+  if(LLVM_LIBC_FULL_BUILD)
+    add_entrypoint_object(
+      malloc
+      SRCS
+        freelist_malloc.cpp
+      HDRS
+        malloc.h
+      DEPENDS
+        .freelist_heap
+    )
+  else()
+    add_entrypoint_external(
+      malloc
+    )
+  endif()
+
   add_entrypoint_external(
     free
   )
@@ -405,14 +468,17 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
-add_entrypoint_object(
-  atexit
+# TODO: Move all exit functions to linux specific 
+
+if (TARGET libc.src.__support.threads.mutex)
+add_object_library(
+  exit_handler
   SRCS
-    atexit.cpp
+    exit_handler.cpp
   HDRS
-    atexit.h
+    exit_handler.h
   CXX_STANDARD
-    20 # For constinit of the atexit callback list.
+    20 # For constinit 
   DEPENDS
     libc.src.__support.CPP.mutex
     libc.src.__support.CPP.new
@@ -420,6 +486,27 @@ add_entrypoint_object(
     libc.src.__support.blockstore
     libc.src.__support.fixedvector
     libc.src.__support.threads.mutex
+)
+endif()
+
+add_entrypoint_object(
+  atexit
+  SRCS
+    atexit.cpp
+  HDRS
+    atexit.h
+  DEPENDS
+    .exit_handler
+)
+
+add_entrypoint_object(
+  at_quick_exit
+  SRCS
+    at_quick_exit.cpp
+  HDRS
+    at_quick_exit.h
+  DEPENDS
+    .exit_handler
 )
 
 add_entrypoint_object(
@@ -432,6 +519,7 @@ add_entrypoint_object(
     ._Exit
     .atexit
     libc.src.__support.OSUtil.osutil
+    .exit_handler
 )
 
 add_entrypoint_object(

@@ -375,6 +375,7 @@ public:
   friend class serialization::reader::ASTIdentifierLookupTrait;
   friend class serialization::ReadMethodPoolVisitor;
   friend class TypeLocReader;
+  friend class LocalDeclID;
 
   using RecordData = SmallVector<uint64_t, 64>;
   using RecordDataImpl = SmallVectorImpl<uint64_t>;
@@ -429,6 +430,9 @@ private:
   FileManager &FileMgr;
   const PCHContainerReader &PCHContainerRdr;
   DiagnosticsEngine &Diags;
+  // Sema has duplicate logic, but SemaObj can sometimes be null so ASTReader
+  // has its own version.
+  bool WarnedStackExhausted = false;
 
   /// The semantic analysis object that will be processing the
   /// AST files and the translation unit that uses it.
@@ -500,12 +504,6 @@ private:
   /// When the pointer at index I is non-NULL, the declaration with ID
   /// = I + 1 has already been loaded.
   llvm::PagedVector<Decl *> DeclsLoaded;
-
-  using GlobalDeclMapType = ContinuousRangeMap<GlobalDeclID, ModuleFile *, 4>;
-
-  /// Mapping from global declaration IDs to the module in which the
-  /// declaration resides.
-  GlobalDeclMapType GlobalDeclMap;
 
   using FileOffset = std::pair<ModuleFile *, uint64_t>;
   using FileOffsetsTy = SmallVector<FileOffset, 2>;
@@ -589,10 +587,11 @@ private:
 
   struct FileDeclsInfo {
     ModuleFile *Mod = nullptr;
-    ArrayRef<LocalDeclID> Decls;
+    ArrayRef<serialization::unaligned_decl_id_t> Decls;
 
     FileDeclsInfo() = default;
-    FileDeclsInfo(ModuleFile *Mod, ArrayRef<LocalDeclID> Decls)
+    FileDeclsInfo(ModuleFile *Mod,
+                  ArrayRef<serialization::unaligned_decl_id_t> Decls)
         : Mod(Mod), Decls(Decls) {}
   };
 
@@ -601,11 +600,7 @@ private:
 
   /// An array of lexical contents of a declaration context, as a sequence of
   /// Decl::Kind, DeclID pairs.
-  using unalighed_decl_id_t =
-      llvm::support::detail::packed_endian_specific_integral<
-          serialization::DeclID, llvm::endianness::native,
-          llvm::support::unaligned>;
-  using LexicalContents = ArrayRef<unalighed_decl_id_t>;
+  using LexicalContents = ArrayRef<serialization::unaligned_decl_id_t>;
 
   /// Map from a DeclContext to its lexical contents.
   llvm::DenseMap<const DeclContext*, std::pair<ModuleFile*, LexicalContents>>
@@ -667,7 +662,7 @@ private:
   std::vector<IdentifierInfo *> IdentifiersLoaded;
 
   using GlobalIdentifierMapType =
-      ContinuousRangeMap<serialization::IdentID, ModuleFile *, 4>;
+      ContinuousRangeMap<serialization::IdentifierID, ModuleFile *, 4>;
 
   /// Mapping from global identifier IDs to the module in which the
   /// identifier resides along with the offset that should be added to the
@@ -810,6 +805,11 @@ private:
   /// in the chain. The referenced declarations are deserialized and passed to
   /// the consumer eagerly.
   SmallVector<GlobalDeclID, 16> EagerlyDeserializedDecls;
+
+  /// The IDs of all vtables to emit. The referenced declarations are passed
+  /// to the consumers's HandleVTable eagerly after passing
+  /// EagerlyDeserializedDecls.
+  SmallVector<GlobalDeclID, 16> VTablesToEmit;
 
   /// The IDs of all tentative definitions stored in the chain.
   ///
@@ -1486,10 +1486,11 @@ private:
                                unsigned ClientLoadCapabilities);
 
 public:
-  class ModuleDeclIterator : public llvm::iterator_adaptor_base<
-                                 ModuleDeclIterator, const LocalDeclID *,
-                                 std::random_access_iterator_tag, const Decl *,
-                                 ptrdiff_t, const Decl *, const Decl *> {
+  class ModuleDeclIterator
+      : public llvm::iterator_adaptor_base<
+            ModuleDeclIterator, const serialization::unaligned_decl_id_t *,
+            std::random_access_iterator_tag, const Decl *, ptrdiff_t,
+            const Decl *, const Decl *> {
     ASTReader *Reader = nullptr;
     ModuleFile *Mod = nullptr;
 
@@ -1497,11 +1498,12 @@ public:
     ModuleDeclIterator() : iterator_adaptor_base(nullptr) {}
 
     ModuleDeclIterator(ASTReader *Reader, ModuleFile *Mod,
-                       const LocalDeclID *Pos)
+                       const serialization::unaligned_decl_id_t *Pos)
         : iterator_adaptor_base(Pos), Reader(Reader), Mod(Mod) {}
 
     value_type operator*() const {
-      return Reader->GetDecl(Reader->getGlobalDeclID(*Mod, *I));
+      LocalDeclID ID = LocalDeclID::get(*Reader, *Mod, *I);
+      return Reader->GetDecl(Reader->getGlobalDeclID(*Mod, ID));
     }
 
     value_type operator->() const { return **this; }
@@ -1519,6 +1521,7 @@ private:
   bool isConsumerInterestedIn(Decl *D);
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
+  void PassVTableToConsumer(CXXRecordDecl *RD);
 
   void finishPendingActions();
   void diagnoseOdrViolations();
@@ -1540,6 +1543,9 @@ private:
   void Error(unsigned DiagID, StringRef Arg1 = StringRef(),
              StringRef Arg2 = StringRef(), StringRef Arg3 = StringRef()) const;
   void Error(llvm::Error &&Err) const;
+
+  /// Translate a \param GlobalDeclID to the index of DeclsLoaded array.
+  unsigned translateGlobalDeclIDToIndex(GlobalDeclID ID) const;
 
 public:
   /// Load the AST file and validate its contents against the given
@@ -1912,7 +1918,8 @@ public:
 
   /// Retrieve the module file that owns the given declaration, or NULL
   /// if the declaration is not from a module file.
-  ModuleFile *getOwningModuleFile(const Decl *D);
+  ModuleFile *getOwningModuleFile(const Decl *D) const;
+  ModuleFile *getOwningModuleFile(GlobalDeclID ID) const;
 
   /// Returns the source location for the decl \p ID.
   SourceLocation getSourceLocationForDeclID(GlobalDeclID ID);
@@ -1950,12 +1957,12 @@ public:
   /// given module.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  GlobalDeclID ReadDeclID(ModuleFile &F, const RecordData &Record,
+  GlobalDeclID ReadDeclID(ModuleFile &F, const RecordDataImpl &Record,
                           unsigned &Idx);
 
   /// Reads a declaration from the given position in a record in the
   /// given module.
-  Decl *ReadDecl(ModuleFile &F, const RecordData &R, unsigned &I) {
+  Decl *ReadDecl(ModuleFile &F, const RecordDataImpl &R, unsigned &I) {
     return GetDecl(ReadDeclID(F, R, I));
   }
 
@@ -1964,8 +1971,8 @@ public:
   ///
   /// \returns The declaration read from this location, casted to the given
   /// result type.
-  template<typename T>
-  T *ReadDeclAs(ModuleFile &F, const RecordData &R, unsigned &I) {
+  template <typename T>
+  T *ReadDeclAs(ModuleFile &F, const RecordDataImpl &R, unsigned &I) {
     return cast_or_null<T>(GetDecl(ReadDeclID(F, R, I)));
   }
 
@@ -2135,6 +2142,8 @@ public:
   /// Report a diagnostic.
   DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID) const;
 
+  void warnStackExhausted(SourceLocation Loc);
+
   IdentifierInfo *DecodeIdentifierInfo(serialization::IdentifierID ID);
 
   IdentifierInfo *readIdentifier(ModuleFile &M, const RecordData &Record,
@@ -2246,7 +2255,7 @@ public:
 
     auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
     ModuleFile *OwningModuleFile =
-        ModuleFileIndex == 0 ? &MF : MF.DependentModules[ModuleFileIndex - 1];
+        ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
 
     assert(!SourceMgr.isLoadedSourceLocation(Loc) &&
            "Run out source location space");

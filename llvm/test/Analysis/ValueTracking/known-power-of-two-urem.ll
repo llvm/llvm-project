@@ -428,9 +428,9 @@ define i8 @known_power_of_two_lshr_add_one_allow_zero(i8 %x, i8 %y) {
 define i1 @known_power_of_two_lshr_add_one_nuw_deny_zero(i8 %x, i8 %y) {
 ; CHECK-LABEL: @known_power_of_two_lshr_add_one_nuw_deny_zero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[X:%.*]]
-; CHECK-NEXT:    [[P:%.*]] = add nuw i8 [[TMP1]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[P]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 -2, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP3]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %4 = lshr i8 -1, %x
@@ -445,9 +445,9 @@ define i1 @known_power_of_two_lshr_add_one_nuw_deny_zero(i8 %x, i8 %y) {
 define i1 @negative_known_power_of_two_lshr_add_one_deny_zero(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negative_known_power_of_two_lshr_add_one_deny_zero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[X:%.*]]
-; CHECK-NEXT:    [[P:%.*]] = add i8 [[TMP1]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[P]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[P]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 -2, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP3]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %4 = lshr i8 -1, %x
@@ -462,9 +462,9 @@ define i1 @negative_known_power_of_two_lshr_add_one_deny_zero(i8 %x, i8 %y) {
 define i1 @negative_known_power_of_two_lshr_add_one_nsw_deny_zero(i8 %x, i8 %y) {
 ; CHECK-LABEL: @negative_known_power_of_two_lshr_add_one_nsw_deny_zero(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -1, [[X:%.*]]
-; CHECK-NEXT:    [[P:%.*]] = add nsw i8 [[TMP1]], 1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[P]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[AND]], [[P]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 -2, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or i8 [[TMP2]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP3]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %4 = lshr i8 -1, %x

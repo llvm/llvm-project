@@ -828,40 +828,45 @@ class DIBasicType : public DIType {
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               StringRef Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              DIFlags Flags, StorageType Storage,
-                              bool ShouldCreate = true) {
+                              DIFlags Flags, DINodeArray Annotations,
+                              StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
-                   SizeInBits, AlignInBits, Encoding, Flags, Storage,
-                   ShouldCreate);
+                   SizeInBits, AlignInBits, Encoding, Flags, Annotations.get(),
+                   Storage, ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              DIFlags Flags, StorageType Storage,
-                              bool ShouldCreate = true);
+                              DIFlags Flags, Metadata *Annotations,
+                              StorageType Storage, bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getSizeInBits(),
-                        getAlignInBits(), getEncoding(), getFlags());
+                        getAlignInBits(), getEncoding(), getFlags(),
+                        getAnnotations());
   }
 
 public:
   DEFINE_MDNODE_GET(DIBasicType, (unsigned Tag, StringRef Name),
-                    (Tag, Name, 0, 0, 0, FlagZero))
+                    (Tag, Name, 0, 0, 0, FlagZero, {}))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero, {}))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero, {}))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     DINodeArray Annotations = {}),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
+                     Annotations))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     Metadata *Annotations = nullptr),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
+                     Annotations))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 
@@ -872,6 +877,16 @@ public:
   /// Return the signedness of this type, or std::nullopt if this type is
   /// neither signed nor unsigned.
   std::optional<Signedness> getSignedness() const;
+
+  Metadata *getRawAnnotations() const { return getOperand(3); }
+
+  DINodeArray getAnnotations() const {
+    return cast_or_null<MDTuple>(getRawAnnotations());
+  }
+
+  void replaceAnnotations(DINodeArray Annotations) {
+    replaceOperandWith(3, Annotations.get());
+  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIBasicTypeKind;
@@ -1112,6 +1127,10 @@ public:
   }
   Metadata *getRawAnnotations() const { return getOperand(5); }
 
+  void replaceAnnotations(DINodeArray Annotations) {
+    replaceOperandWith(5, Annotations.get());
+  }
+
   /// Get casted version of extra data.
   /// @{
   DIType *getClassType() const;
@@ -1339,6 +1358,10 @@ public:
     return cast_or_null<MDTuple>(getRawAnnotations());
   }
 
+  void replaceAnnotations(DINodeArray Annotations) {
+    replaceOperandWith(13, Annotations.get());
+  }
+
   /// Replace operands.
   ///
   /// If this \a isUniqued() and not \a isResolved(), on a uniquing collision
@@ -1385,26 +1408,30 @@ class DISubroutineType : public DIType {
 
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
                                    uint8_t CC, DITypeRefArray TypeArray,
-                                   StorageType Storage,
+                                   DINodeArray Annotations, StorageType Storage,
                                    bool ShouldCreate = true) {
-    return getImpl(Context, Flags, CC, TypeArray.get(), Storage, ShouldCreate);
+    return getImpl(Context, Flags, CC, TypeArray.get(), Annotations.get(),
+                   Storage, ShouldCreate);
   }
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
                                    uint8_t CC, Metadata *TypeArray,
-                                   StorageType Storage,
+                                   Metadata *Annotations, StorageType Storage,
                                    bool ShouldCreate = true);
 
   TempDISubroutineType cloneImpl() const {
-    return getTemporary(getContext(), getFlags(), getCC(), getTypeArray());
+    return getTemporary(getContext(), getFlags(), getCC(), getTypeArray(),
+                        getAnnotations());
   }
 
 public:
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray),
-                    (Flags, CC, TypeArray))
+                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray,
+                     DINodeArray Annotations = nullptr),
+                    (Flags, CC, TypeArray, Annotations))
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (DIFlags Flags, uint8_t CC, Metadata *TypeArray),
-                    (Flags, CC, TypeArray))
+                    (DIFlags Flags, uint8_t CC, Metadata *TypeArray,
+                     Metadata *Annotations = nullptr),
+                    (Flags, CC, TypeArray, Annotations))
 
   TempDISubroutineType clone() const { return cloneImpl(); }
   // Returns a new temporary DISubroutineType with updated CC
@@ -1421,6 +1448,15 @@ public:
   }
 
   Metadata *getRawTypeArray() const { return getOperand(3); }
+
+  Metadata *getRawAnnotations() const { return getOperand(4); }
+  DINodeArray getAnnotations() const {
+    return cast_or_null<MDTuple>(getRawAnnotations());
+  }
+
+  void replaceAnnotations(DINodeArray Annotations) {
+    replaceOperandWith(4, Annotations.get());
+  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubroutineTypeKind;
@@ -2147,13 +2183,20 @@ public:
   static unsigned
   getBaseDiscriminatorFromDiscriminator(unsigned D,
                                         bool IsFSDiscriminator = false) {
-    // Return the probe id instead of zero for a pseudo probe discriminator.
-    // This should help differenciate callsites with same line numbers to
-    // achieve a decent AutoFDO profile under -fpseudo-probe-for-profiling,
-    // where the original callsite dwarf discriminator is overwritten by
-    // callsite probe information.
-    if (isPseudoProbeDiscriminator(D))
+    // Extract the dwarf base discriminator if it's encoded in the pseudo probe
+    // discriminator.
+    if (isPseudoProbeDiscriminator(D)) {
+      auto DwarfBaseDiscriminator =
+          PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(D);
+      if (DwarfBaseDiscriminator)
+        return *DwarfBaseDiscriminator;
+      // Return the probe id instead of zero for a pseudo probe discriminator.
+      // This should help differenciate callsites with same line numbers to
+      // achieve a decent AutoFDO profile under -fpseudo-probe-for-profiling,
+      // where the original callsite dwarf discriminator is overwritten by
+      // callsite probe information.
       return PseudoProbeDwarfDiscriminator::extractProbeIndex(D);
+    }
 
     if (IsFSDiscriminator)
       return getMaskedDiscriminator(D, getBaseDiscriminatorBits());
@@ -2903,6 +2946,12 @@ public:
     }
   };
 
+  /// Return the number of bits that have an active value, i.e. those that
+  /// aren't known to be zero/sign (depending on the type of Var) and which
+  /// are within the size of this fragment (if it is one). If we can't deduce
+  /// anything from the expression this will return the size of Var.
+  std::optional<uint64_t> getActiveBits(DIVariable *Var);
+
   /// Retrieve the details of this fragment expression.
   static std::optional<FragmentInfo> getFragmentInfo(expr_op_iterator Start,
                                                      expr_op_iterator End);
@@ -3121,6 +3170,11 @@ public:
   /// expression and constant on failure.
   std::pair<DIExpression *, const ConstantInt *>
   constantFold(const ConstantInt *CI);
+
+  /// Try to shorten an expression with constant math operations that can be
+  /// evaluated at compile time. Returns a new expression on success, or the old
+  /// expression if there is nothing to be reduced.
+  DIExpression *foldConstantMath();
 };
 
 inline bool operator==(const DIExpression::FragmentInfo &A,
@@ -3148,6 +3202,84 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
   }
 
   static bool isEqual(const FragInfo &A, const FragInfo &B) { return A == B; }
+};
+
+/// Holds a DIExpression and keeps track of how many operands have been consumed
+/// so far.
+class DIExpressionCursor {
+  DIExpression::expr_op_iterator Start, End;
+
+public:
+  DIExpressionCursor(const DIExpression *Expr) {
+    if (!Expr) {
+      assert(Start == End);
+      return;
+    }
+    Start = Expr->expr_op_begin();
+    End = Expr->expr_op_end();
+  }
+
+  DIExpressionCursor(ArrayRef<uint64_t> Expr)
+      : Start(Expr.begin()), End(Expr.end()) {}
+
+  DIExpressionCursor(const DIExpressionCursor &) = default;
+
+  /// Consume one operation.
+  std::optional<DIExpression::ExprOperand> take() {
+    if (Start == End)
+      return std::nullopt;
+    return *(Start++);
+  }
+
+  /// Consume N operations.
+  void consume(unsigned N) { std::advance(Start, N); }
+
+  /// Return the current operation.
+  std::optional<DIExpression::ExprOperand> peek() const {
+    if (Start == End)
+      return std::nullopt;
+    return *(Start);
+  }
+
+  /// Return the next operation.
+  std::optional<DIExpression::ExprOperand> peekNext() const {
+    if (Start == End)
+      return std::nullopt;
+
+    auto Next = Start.getNext();
+    if (Next == End)
+      return std::nullopt;
+
+    return *Next;
+  }
+
+  std::optional<DIExpression::ExprOperand> peekNextN(unsigned N) const {
+    if (Start == End)
+      return std::nullopt;
+    DIExpression::expr_op_iterator Nth = Start;
+    for (unsigned I = 0; I < N; I++) {
+      Nth = Nth.getNext();
+      if (Nth == End)
+        return std::nullopt;
+    }
+    return *Nth;
+  }
+
+  void assignNewExpr(ArrayRef<uint64_t> Expr) {
+    this->Start = DIExpression::expr_op_iterator(Expr.begin());
+    this->End = DIExpression::expr_op_iterator(Expr.end());
+  }
+
+  /// Determine whether there are any operations left in this expression.
+  operator bool() const { return Start != End; }
+
+  DIExpression::expr_op_iterator begin() const { return Start; }
+  DIExpression::expr_op_iterator end() const { return End; }
+
+  /// Retrieve the fragment information, if any.
+  std::optional<DIExpression::FragmentInfo> getFragmentInfo() const {
+    return DIExpression::getFragmentInfo(Start, End);
+  }
 };
 
 /// Global variables.

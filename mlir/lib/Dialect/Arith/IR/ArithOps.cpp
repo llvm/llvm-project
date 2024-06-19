@@ -64,6 +64,14 @@ static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
 }
 
+// Merge overflow flags from 2 ops, selecting the most conservative combination.
+static IntegerOverflowFlagsAttr
+mergeOverflowFlags(IntegerOverflowFlagsAttr val1,
+                   IntegerOverflowFlagsAttr val2) {
+  return IntegerOverflowFlagsAttr::get(val1.getContext(),
+                                       val1.getValue() & val2.getValue());
+}
+
 /// Invert an integer comparison predicate.
 arith::CmpIPredicate arith::invertPredicate(arith::CmpIPredicate pred) {
   switch (pred) {
@@ -1382,6 +1390,22 @@ LogicalResult arith::ExtSIOp::verify() {
 /// Fold extension of float constants when there is no information loss due the
 /// difference in fp semantics.
 OpFoldResult arith::ExtFOp::fold(FoldAdaptor adaptor) {
+  if (auto truncFOp = getOperand().getDefiningOp<TruncFOp>()) {
+    if (truncFOp.getOperand().getType() == getType()) {
+      arith::FastMathFlags truncFMF =
+          truncFOp.getFastmath().value_or(arith::FastMathFlags::none);
+      bool isTruncContract =
+          bitEnumContainsAll(truncFMF, arith::FastMathFlags::contract);
+      arith::FastMathFlags extFMF =
+          getFastmath().value_or(arith::FastMathFlags::none);
+      bool isExtContract =
+          bitEnumContainsAll(extFMF, arith::FastMathFlags::contract);
+      if (isTruncContract && isExtContract) {
+        return truncFOp.getOperand();
+      }
+    }
+  }
+
   auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(
@@ -2459,6 +2483,12 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
                            : APFloat::getInf(semantic, /*Negative=*/true);
     return builder.getFloatAttr(resultType, identity);
   }
+  case AtomicRMWKind::maxnumf: {
+    const llvm::fltSemantics &semantic =
+        llvm::cast<FloatType>(resultType).getFloatSemantics();
+    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/true);
+    return builder.getFloatAttr(resultType, identity);
+  }
   case AtomicRMWKind::addf:
   case AtomicRMWKind::addi:
   case AtomicRMWKind::maxu:
@@ -2479,6 +2509,12 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
                            ? APFloat::getLargest(semantic, /*Negative=*/false)
                            : APFloat::getInf(semantic, /*Negative=*/false);
 
+    return builder.getFloatAttr(resultType, identity);
+  }
+  case AtomicRMWKind::minnumf: {
+    const llvm::fltSemantics &semantic =
+        llvm::cast<FloatType>(resultType).getFloatSemantics();
+    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/false);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::mins:
@@ -2510,6 +2546,8 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           .Case([](arith::MulFOp op) { return AtomicRMWKind::mulf; })
           .Case([](arith::MaximumFOp op) { return AtomicRMWKind::maximumf; })
           .Case([](arith::MinimumFOp op) { return AtomicRMWKind::minimumf; })
+          .Case([](arith::MaxNumFOp op) { return AtomicRMWKind::maxnumf; })
+          .Case([](arith::MinNumFOp op) { return AtomicRMWKind::minnumf; })
           // Integer operations.
           .Case([](arith::AddIOp op) { return AtomicRMWKind::addi; })
           .Case([](arith::OrIOp op) { return AtomicRMWKind::ori; })
@@ -2522,7 +2560,6 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           .Case([](arith::MulIOp op) { return AtomicRMWKind::muli; })
           .Default([](Operation *op) { return std::nullopt; });
   if (!maybeKind) {
-    op->emitError() << "Unknown neutral element for: " << *op;
     return std::nullopt;
   }
 

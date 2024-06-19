@@ -448,20 +448,20 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
         DynamicRegisterInfo::Register reg_info;
 
         while (response.GetNameColonValue(name, value)) {
-          if (name.equals("name")) {
+          if (name == "name") {
             reg_info.name.SetString(value);
-          } else if (name.equals("alt-name")) {
+          } else if (name == "alt-name") {
             reg_info.alt_name.SetString(value);
-          } else if (name.equals("bitsize")) {
+          } else if (name == "bitsize") {
             if (!value.getAsInteger(0, reg_info.byte_size))
               reg_info.byte_size /= CHAR_BIT;
-          } else if (name.equals("offset")) {
+          } else if (name == "offset") {
             value.getAsInteger(0, reg_info.byte_offset);
-          } else if (name.equals("encoding")) {
+          } else if (name == "encoding") {
             const Encoding encoding = Args::StringToEncoding(value);
             if (encoding != eEncodingInvalid)
               reg_info.encoding = encoding;
-          } else if (name.equals("format")) {
+          } else if (name == "format") {
             if (!OptionArgParser::ToFormat(value.str().c_str(), reg_info.format, nullptr)
                     .Success())
               reg_info.format =
@@ -480,17 +480,17 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
                       .Case("vector-uint64", eFormatVectorOfUInt64)
                       .Case("vector-uint128", eFormatVectorOfUInt128)
                       .Default(eFormatInvalid);
-          } else if (name.equals("set")) {
+          } else if (name == "set") {
             reg_info.set_name.SetString(value);
-          } else if (name.equals("gcc") || name.equals("ehframe")) {
+          } else if (name == "gcc" || name == "ehframe") {
             value.getAsInteger(0, reg_info.regnum_ehframe);
-          } else if (name.equals("dwarf")) {
+          } else if (name == "dwarf") {
             value.getAsInteger(0, reg_info.regnum_dwarf);
-          } else if (name.equals("generic")) {
+          } else if (name == "generic") {
             reg_info.regnum_generic = Args::StringToGenericRegister(value);
-          } else if (name.equals("container-regs")) {
+          } else if (name == "container-regs") {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.value_regs, 16);
-          } else if (name.equals("invalidate-regs")) {
+          } else if (name == "invalidate-regs") {
             SplitCommaSeparatedRegisterNumberString(value, reg_info.invalidate_regs, 16);
           }
         }
@@ -5082,7 +5082,7 @@ std::string ProcessGDBRemote::HarmonizeThreadIdsForProfileData(
       llvm::StringRef usec_name, usec_value;
       uint32_t input_file_pos = profileDataExtractor.GetFilePos();
       if (profileDataExtractor.GetNameColonValue(usec_name, usec_value)) {
-        if (usec_name.equals("thread_used_usec")) {
+        if (usec_name == "thread_used_usec") {
           has_used_usec = true;
           usec_value.getAsInteger(0, curr_used_usec);
         } else {

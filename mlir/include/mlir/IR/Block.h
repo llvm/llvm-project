@@ -18,6 +18,7 @@
 
 namespace llvm {
 class BitVector;
+class raw_ostream;
 } // namespace llvm
 
 namespace mlir {
@@ -401,6 +402,8 @@ private:
 
   friend struct llvm::ilist_traits<Block>;
 };
+
+raw_ostream &operator<<(raw_ostream &, Block &);
 } // namespace mlir
 
 #endif // MLIR_IR_BLOCK_H

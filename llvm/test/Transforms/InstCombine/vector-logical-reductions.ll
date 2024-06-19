@@ -21,5 +21,77 @@ define i1 @reduction_logical_and(<4 x i1> %x) {
   ret i1 %r
 }
 
+define i1 @reduction_logical_or_reverse_nxv2i1(<vscale x 2 x i1> %p) {
+; CHECK-LABEL: @reduction_logical_or_reverse_nxv2i1(
+; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[P:%.*]])
+; CHECK-NEXT:    ret i1 [[RED]]
+;
+  %rev = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> %p)
+  %red = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> %rev)
+  ret i1 %red
+}
+
+define i1 @reduction_logical_or_reverse_v2i1(<2 x i1> %p) {
+; CHECK-LABEL: @reduction_logical_or_reverse_v2i1(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[P:%.*]] to i2
+; CHECK-NEXT:    [[RED:%.*]] = icmp ne i2 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[RED]]
+;
+  %rev = call <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1> %p)
+  %red = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> %rev)
+  ret i1 %red
+}
+
+define i1 @reduction_logical_and_reverse_nxv2i1(<vscale x 2 x i1> %p) {
+; CHECK-LABEL: @reduction_logical_and_reverse_nxv2i1(
+; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1> [[P:%.*]])
+; CHECK-NEXT:    ret i1 [[RED]]
+;
+  %rev = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> %p)
+  %red = call i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1> %rev)
+  ret i1 %red
+}
+
+define i1 @reduction_logical_and_reverse_v2i1(<2 x i1> %p) {
+; CHECK-LABEL: @reduction_logical_and_reverse_v2i1(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[P:%.*]] to i2
+; CHECK-NEXT:    [[RED:%.*]] = icmp eq i2 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[RED]]
+;
+  %rev = call <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1> %p)
+  %red = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %rev)
+  ret i1 %red
+}
+
+define i1 @reduction_logical_xor_reverse_nxv2i1(<vscale x 2 x i1> %p) {
+; CHECK-LABEL: @reduction_logical_xor_reverse_nxv2i1(
+; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> [[P:%.*]])
+; CHECK-NEXT:    ret i1 [[RED]]
+;
+  %rev = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> %p)
+  %red = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> %rev)
+  ret i1 %red
+}
+
+define i1 @reduction_logical_xor_reverse_v2i1(<2 x i1> %p) {
+; CHECK-LABEL: @reduction_logical_xor_reverse_v2i1(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i1> [[P:%.*]] to i2
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i2 0, -1) i2 @llvm.ctpop.i2(i2 [[TMP1]])
+; CHECK-NEXT:    [[RED:%.*]] = trunc i2 [[TMP2]] to i1
+; CHECK-NEXT:    ret i1 [[RED]]
+;
+  %rev = call <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1> %p)
+  %red = call i1 @llvm.vector.reduce.xor.v2i1(<2 x i1> %rev)
+  ret i1 %red
+}
+
 declare i1 @llvm.vector.reduce.or.v4i1(<4 x i1>)
+declare i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1>)
+declare i1 @llvm.vector.reduce.or.v2i1(<2 x i1>)
 declare i1 @llvm.vector.reduce.and.v4i1(<4 x i1>)
+declare i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1>)
+declare i1 @llvm.vector.reduce.and.v2i1(<2 x i1>)
+declare i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1>)
+declare i1 @llvm.vector.reduce.xor.v2i1(<2 x i1>)
+declare <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1>)
+declare <2 x i1> @llvm.vector.reverse.v2i1(<2 x i1>)

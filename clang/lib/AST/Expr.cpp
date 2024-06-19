@@ -837,7 +837,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     typedef SmallVector<const ClassTemplateSpecializationDecl *, 8> SpecsTy;
     SpecsTy Specs;
     const DeclContext *Ctx = FD->getDeclContext();
-    while (Ctx && isa<NamedDecl>(Ctx)) {
+    while (isa_and_nonnull<NamedDecl>(Ctx)) {
       const ClassTemplateSpecializationDecl *Spec
                                = dyn_cast<ClassTemplateSpecializationDecl>(Ctx);
       if (Spec && !Spec->isExplicitSpecialization())
@@ -3067,7 +3067,7 @@ Expr *Expr::IgnoreParenCasts() {
 
 Expr *Expr::IgnoreConversionOperatorSingleStep() {
   if (auto *MCE = dyn_cast<CXXMemberCallExpr>(this)) {
-    if (MCE->getMethodDecl() && isa<CXXConversionDecl>(MCE->getMethodDecl()))
+    if (isa_and_nonnull<CXXConversionDecl>(MCE->getMethodDecl()))
       return MCE->getImplicitObjectArgument();
   }
   return this;
@@ -3618,12 +3618,10 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ConceptSpecializationExprClass:
   case RequiresExprClass:
   case SYCLUniqueStableNameExprClass:
+  case PackIndexingExprClass:
     // These never have a side-effect.
     return false;
 
-  case PackIndexingExprClass:
-    return cast<PackIndexingExpr>(this)->getSelectedExpr()->HasSideEffects(
-        Ctx, IncludePossibleEffects);
   case ConstantExprClass:
     // FIXME: Move this into the "return false;" block above.
     return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(
@@ -3771,10 +3769,18 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
   }
 
-  case CXXTypeidExprClass:
-    // typeid might throw if its subexpression is potentially-evaluated, so has
-    // side-effects in that case whether or not its subexpression does.
-    return cast<CXXTypeidExpr>(this)->isPotentiallyEvaluated();
+  case CXXTypeidExprClass: {
+    const auto *TE = cast<CXXTypeidExpr>(this);
+    if (!TE->isPotentiallyEvaluated())
+      return false;
+
+    // If this type id expression can throw because of a null pointer, that is a
+    // side-effect independent of if the operand has a side-effect
+    if (IncludePossibleEffects && TE->hasNullCheck())
+      return true;
+
+    break;
+  }
 
   case CXXConstructExprClass:
   case CXXTemporaryObjectExprClass: {

@@ -266,6 +266,8 @@ TYPE_PARSER(
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
     "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
                    parenthesized(Parser<OmpObjectList>{}))) ||
+    "FILTER" >> construct<OmpClause>(construct<OmpClause::Filter>(
+                    parenthesized(scalarIntExpr))) ||
     "FINAL" >> construct<OmpClause>(construct<OmpClause::Final>(
                    parenthesized(scalarLogicalExpr))) ||
     "FULL" >> construct<OmpClause>(construct<OmpClause::Full>()) ||
@@ -376,8 +378,15 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
     "DISTRIBUTE" >> pure(llvm::omp::Directive::OMPD_distribute),
     "DO SIMD" >> pure(llvm::omp::Directive::OMPD_do_simd),
     "DO" >> pure(llvm::omp::Directive::OMPD_do),
+    "MASKED TASKLOOP SIMD" >>
+        pure(llvm::omp::Directive::OMPD_masked_taskloop_simd),
+    "MASKED TASKLOOP" >> pure(llvm::omp::Directive::OMPD_masked_taskloop),
     "PARALLEL DO SIMD" >> pure(llvm::omp::Directive::OMPD_parallel_do_simd),
     "PARALLEL DO" >> pure(llvm::omp::Directive::OMPD_parallel_do),
+    "PARALLEL MASKED TASKLOOP SIMD" >>
+        pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop_simd),
+    "PARALLEL MASKED TASKLOOP" >>
+        pure(llvm::omp::Directive::OMPD_parallel_masked_taskloop),
     "SIMD" >> pure(llvm::omp::Directive::OMPD_simd),
     "TARGET PARALLEL DO SIMD" >>
         pure(llvm::omp::Directive::OMPD_target_parallel_do_simd),
@@ -487,8 +496,10 @@ TYPE_PARSER(
 
 // Directives enclosing structured-block
 TYPE_PARSER(construct<OmpBlockDirective>(first(
+    "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
     "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
     "ORDERED" >> pure(llvm::omp::Directive::OMPD_ordered),
+    "PARALLEL MASKED" >> pure(llvm::omp::Directive::OMPD_parallel_masked),
     "PARALLEL WORKSHARE" >> pure(llvm::omp::Directive::OMPD_parallel_workshare),
     "PARALLEL" >> pure(llvm::omp::Directive::OMPD_parallel),
     "SINGLE" >> pure(llvm::omp::Directive::OMPD_single),

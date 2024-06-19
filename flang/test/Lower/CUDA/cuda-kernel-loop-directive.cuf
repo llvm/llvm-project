@@ -20,7 +20,7 @@ subroutine sub1()
 ! CHECK: %[[LB:.*]] = fir.convert %c1{{.*}} : (i32) -> index
 ! CHECK: %[[UB:.*]] = fir.convert %c100{{.*}} : (i32) -> index
 ! CHECK: %[[STEP:.*]] = arith.constant 1 : index
-! CHECK: fir.cuda_kernel<<<%c1_i32, %c2_i32>>> (%[[ARG0:.*]] : index) = (%[[LB]] : index) to (%[[UB]] : index)  step (%[[STEP]] : index)
+! CHECK: cuf.kernel<<<%c1_i32, %c2_i32>>> (%[[ARG0:.*]] : index) = (%[[LB]] : index) to (%[[UB]] : index)  step (%[[STEP]] : index)
 ! CHECK-NOT: fir.do_loop
 ! CHECK: %[[ARG0_I32:.*]] = fir.convert %[[ARG0]] : (index) -> i32
 ! CHECK: fir.store %[[ARG0_I32]] to %[[IV]]#1 : !fir.ref<i32>
@@ -32,7 +32,7 @@ subroutine sub1()
     a(i) = a(i) * b(i)
   end do
 
-! CHECK: fir.cuda_kernel<<<*, *>>> (%{{.*}} : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index)
+! CHECK: cuf.kernel<<<*, *>>> (%{{.*}} : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index)
 
   !$cuf kernel do(2) <<< 1, (256,1) >>>
   do i = 1, n
@@ -41,7 +41,7 @@ subroutine sub1()
     end do
   end do
 
-! CHECK: fir.cuda_kernel<<<%c1{{.*}}, (%c256{{.*}}, %c1{{.*}})>>> (%[[ARG0:.*]] : index, %[[ARG1:.*]] : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index) step (%{{.*}}, %{{.*}} : index, index)
+! CHECK: cuf.kernel<<<%c1{{.*}}, (%c256{{.*}}, %c1{{.*}})>>> (%[[ARG0:.*]] : index, %[[ARG1:.*]] : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index) step (%{{.*}}, %{{.*}} : index, index)
 ! CHECK: %[[ARG0_I32:.*]] = fir.convert %[[ARG0]] : (index) -> i32
 ! CHECK: fir.store %[[ARG0_I32]] to %[[IV]]#1 : !fir.ref<i32>
 ! CHECK: %[[ARG1_I32:.*]] = fir.convert %[[ARG1]] : (index) -> i32
@@ -54,7 +54,7 @@ subroutine sub1()
       c(i,j) = c(i,j) * d(i,j)
     end do
   end do
-! CHECK: fir.cuda_kernel<<<(%c1{{.*}}, %c0{{.*}}), (%c256{{.*}}, %c1{{.*}})>>> (%{{.*}} : index, %{{.*}} : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index)  step (%{{.*}}, %{{.*}} : index, index)
+! CHECK: cuf.kernel<<<(%c1{{.*}}, %c0{{.*}}), (%c256{{.*}}, %c1{{.*}})>>> (%{{.*}} : index, %{{.*}} : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index)  step (%{{.*}}, %{{.*}} : index, index)
 
 !$cuf kernel do(2) <<< (*,*), (32,4) >>>
   do i = 1, n
@@ -63,5 +63,5 @@ subroutine sub1()
     end do
   end do
 
-! CHECK: fir.cuda_kernel<<<*, (%c32{{.*}}, %c4{{.*}})>>> (%{{.*}} : index, %{{.*}} : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index)  step (%{{.*}}, %{{.*}} : index, index)
+! CHECK: cuf.kernel<<<*, (%c32{{.*}}, %c4{{.*}})>>> (%{{.*}} : index, %{{.*}} : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index)  step (%{{.*}}, %{{.*}} : index, index)
 end

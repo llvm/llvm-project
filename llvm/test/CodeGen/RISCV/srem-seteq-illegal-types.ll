@@ -647,9 +647,9 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    mv a1, s4
 ; RV32MV-NEXT:    li a3, 0
 ; RV32MV-NEXT:    call __moddi3
-; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    addi a2, sp, 16
 ; RV32MV-NEXT:    vl2r.v v8, (a2) # Unknown-size Folded Reload
+; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32MV-NEXT:    addi a0, sp, 16
@@ -659,9 +659,9 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    mv a0, s1
 ; RV32MV-NEXT:    mv a1, s3
 ; RV32MV-NEXT:    call __moddi3
-; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    addi a2, sp, 16
 ; RV32MV-NEXT:    vl2r.v v8, (a2) # Unknown-size Folded Reload
+; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a0
 ; RV32MV-NEXT:    vslide1down.vx v8, v8, a1
 ; RV32MV-NEXT:    vslidedown.vi v8, v8, 2
@@ -759,13 +759,13 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    slli a5, a4, 3
 ; RV64MV-NEXT:    slli a4, a4, 1
 ; RV64MV-NEXT:    sub a4, a4, a5
+; RV64MV-NEXT:    lui a5, %hi(.LCPI3_2)
+; RV64MV-NEXT:    ld a5, %lo(.LCPI3_2)(a5)
 ; RV64MV-NEXT:    add a3, a3, a4
-; RV64MV-NEXT:    lui a4, %hi(.LCPI3_2)
-; RV64MV-NEXT:    ld a4, %lo(.LCPI3_2)(a4)
 ; RV64MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64MV-NEXT:    vmv.v.x v8, a3
 ; RV64MV-NEXT:    vslide1down.vx v8, v8, a2
-; RV64MV-NEXT:    mulh a2, a1, a4
+; RV64MV-NEXT:    mulh a2, a1, a5
 ; RV64MV-NEXT:    srli a3, a2, 63
 ; RV64MV-NEXT:    srai a2, a2, 1
 ; RV64MV-NEXT:    add a2, a2, a3
@@ -784,7 +784,6 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    vmsne.vv v0, v8, v12
 ; RV64MV-NEXT:    vmv.v.i v8, 0
 ; RV64MV-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV64MV-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64MV-NEXT:    vslidedown.vi v10, v8, 2
 ; RV64MV-NEXT:    vmv.x.s a2, v10
 ; RV64MV-NEXT:    slli a3, a2, 31

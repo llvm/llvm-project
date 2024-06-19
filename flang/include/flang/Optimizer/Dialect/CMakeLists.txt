@@ -1,3 +1,5 @@
+add_subdirectory(CUF)
+
 # This replicates part of the add_mlir_dialect cmake function from MLIR that
 # cannot be used her because it expects to be run inside MLIR directory which
 # is not the case for FIR.
@@ -31,6 +33,7 @@ mlir_tablegen(CanonicalizationPatterns.inc -gen-rewriters)
 add_public_tablegen_target(CanonicalizationPatternsIncGen)
 
 add_custom_target(flang-doc)
+set_target_properties(flang-doc PROPERTIES FOLDER "Flang/Docs")
 set(dialect_doc_filename "FIRLangRef")
 
 set(LLVM_TARGET_DEFINITIONS FIROps.td)
@@ -43,4 +46,5 @@ add_custom_command(
                 ${GEN_DOC_FILE}
         DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${dialect_doc_filename}.md)
 add_custom_target(${dialect_doc_filename}DocGen DEPENDS ${GEN_DOC_FILE})
+set_target_properties(${dialect_doc_filename}DocGen PROPERTIES FOLDER "Flang/Tablegenning/Docs")
 add_dependencies(flang-doc ${dialect_doc_filename}DocGen)

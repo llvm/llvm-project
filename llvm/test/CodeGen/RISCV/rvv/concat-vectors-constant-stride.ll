@@ -149,8 +149,8 @@ define void @constant_zero_stride(ptr %s, ptr %d) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 2
 ; CHECK-NEXT:    vse8.v v9, (a1)
 ; CHECK-NEXT:    ret

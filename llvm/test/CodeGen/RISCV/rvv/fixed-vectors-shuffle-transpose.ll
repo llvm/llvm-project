@@ -19,8 +19,8 @@ define <8 x i8> @trn1.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 define <8 x i8> @trn2.v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 ; CHECK-LABEL: trn2.v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a0, 170
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
@@ -46,13 +46,12 @@ define <16 x i8> @trn1.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 define <16 x i8> @trn2.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; CHECK-LABEL: trn2.v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    lui a0, 11
 ; CHECK-NEXT:    addi a0, a0, -1366
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
   %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
@@ -62,9 +61,8 @@ define <16 x i8> @trn2.v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 define <4 x i16> @trn1.v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 ; CHECK-LABEL: trn1.v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
   %tmp0 = shufflevector <4 x i16> %v0, <4 x i16> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -98,8 +96,8 @@ define <8 x i16> @trn1.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 define <8 x i16> @trn2.v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-LABEL: trn2.v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    li a0, 170
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
@@ -133,9 +131,8 @@ define <2 x i32> @trn2.v2i32(<2 x i32> %v0, <2 x i32> %v1) {
 define <4 x i32> @trn1.v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: trn1.v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
   %tmp0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -201,9 +198,8 @@ define <2 x float> @trn2.v2f32(<2 x float> %v0, <2 x float> %v1) {
 define <4 x float> @trn1.v4f32(<4 x float> %v0, <4 x float> %v1) {
 ; CHECK-LABEL: trn1.v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
   %tmp0 = shufflevector <4 x float> %v0, <4 x float> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -247,9 +243,8 @@ define <2 x double> @trn2.v2f64(<2 x double> %v0, <2 x double> %v1) {
 define <4 x half> @trn1.v4f16(<4 x half> %v0, <4 x half> %v1) {
 ; CHECK-LABEL: trn1.v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vmv.v.i v0, 10
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1, v0.t
 ; CHECK-NEXT:    ret
   %tmp0 = shufflevector <4 x half> %v0, <4 x half> %v1, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
@@ -283,8 +278,8 @@ define <8 x half> @trn1.v8f16(<8 x half> %v0, <8 x half> %v1) {
 define <8 x half> @trn2.v8f16(<8 x half> %v0, <8 x half> %v1) {
 ; CHECK-LABEL: trn2.v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    li a0, 170
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a0
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0

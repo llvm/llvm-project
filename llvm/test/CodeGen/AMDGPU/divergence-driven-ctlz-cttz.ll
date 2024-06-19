@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: name:            s_ctlz_i32
 ; GCN: S_FLBIT_I32_B32
