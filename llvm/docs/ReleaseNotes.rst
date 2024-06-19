@@ -66,6 +66,7 @@ Changes to the LLVM IR
 
   * ``icmp``
   * ``fcmp``
+  * ``shl``
 * LLVM has switched from using debug intrinsics in textual IR to using debug
   records by default. Details of the change and instructions on how to update
   any downstream tools and tests can be found in the `migration docs
@@ -227,6 +228,7 @@ Changes to the C API
 
   * ``LLVMConstICmp``
   * ``LLVMConstFCmp``
+  * ``LLVMConstShl``
 
 **Note:** The following changes are due to the removal of the debug info
 intrinsics from LLVM and to the introduction of debug records into LLVM.
