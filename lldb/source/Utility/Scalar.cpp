@@ -747,25 +747,17 @@ bool Scalar::SignExtend(uint32_t sign_bit_pos) {
   const uint32_t max_bit_pos = GetByteSize() * 8;
   assert(sign_bit_pos < max_bit_pos);
 
-  switch (m_type) {
-  case Scalar::e_void:
-  case Scalar::e_float:
+  if (m_type != Scalar::e_int || sign_bit_pos >= (max_bit_pos - 1)) {
     return false;
-
-  case Scalar::e_int:
-    if (sign_bit_pos < (max_bit_pos - 1)) {
-      llvm::APInt sign_bit = llvm::APInt::getSignMask(sign_bit_pos + 1);
-      llvm::APInt bitwize_and = m_integer & sign_bit;
-      if (bitwize_and.getBoolValue()) {
-        llvm::APInt mask =
-            ~(sign_bit) + llvm::APInt(m_integer.getBitWidth(), 1);
-        m_integer |= APSInt(std::move(mask), m_integer.isUnsigned());
-      }
-      return true;
-    }
-    break;
   }
-  return false;
+
+  llvm::APInt sign_bit = llvm::APInt::getSignMask(sign_bit_pos + 1);
+  llvm::APInt bitwize_and = m_integer & sign_bit;
+  if (bitwize_and.getBoolValue()) {
+    llvm::APInt mask = ~(sign_bit) + llvm::APInt(m_integer.getBitWidth(), 1);
+    m_integer |= APSInt(std::move(mask), m_integer.isUnsigned());
+  }
+  return true;
 }
 
 size_t Scalar::GetAsMemoryData(void *dst, size_t dst_len,
