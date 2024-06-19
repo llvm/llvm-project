@@ -9,6 +9,8 @@
 #include "llvm/ADT/ilist_node_base.h"
 #include "gtest/gtest.h"
 
+#include <type_traits>
+
 using namespace llvm;
 
 namespace {
@@ -177,9 +179,10 @@ TEST(IListNodeBaseTest, isKnownSentinel) {
   EXPECT_EQ(&PTB, PTA.getNext());
 }
 
-TEST(IListNodeBaseTest, setNodeBaseParent) {
+TEST(IListNodeBaseTest, nodeBaseParent) {
   Parent Par;
   ParentNode PA;
+  const ParentNode CPA;
   EXPECT_EQ(nullptr, PA.getNodeBaseParent());
   PA.setNodeBaseParent(&Par);
   EXPECT_EQ(&Par, PA.getNodeBaseParent());
@@ -188,6 +191,14 @@ TEST(IListNodeBaseTest, setNodeBaseParent) {
   EXPECT_EQ(nullptr, PTA.getNodeBaseParent());
   PTA.setNodeBaseParent(&Par);
   EXPECT_EQ(&Par, PTA.getNodeBaseParent());
+
+  using VarParentTy = std::remove_pointer_t<decltype(PA.getNodeBaseParent())>;
+  using ConstParentTy =
+      std::remove_pointer_t<decltype(CPA.getNodeBaseParent())>;
+  static_assert(
+      std::is_const_v<ConstParentTy> &&
+          std::is_same_v<VarParentTy, std::remove_const_t<ConstParentTy>>,
+      "`getNodeBaseParent() const` adds const to parent type");
 }
 
 } // end namespace
