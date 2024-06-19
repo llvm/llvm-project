@@ -4508,10 +4508,11 @@ bool SymbolFileWasm::ParseVendorDWARFOpcode(
   uint32_t reg_num = (((wasm_op + 1) & 0x03) << 30) | (index & 0x3fffffff);
 
   Value tmp;
-  if (DWARFExpression::ReadRegisterValueAsScalar(reg_ctx, reg_kind, reg_num,
-                                                 error_ptr, tmp)) {
-    stack.push_back(tmp);
-    return true;
-  } else
+  llvm::Error error = DWARFExpression::ReadRegisterValueAsScalar(
+      reg_ctx, reg_kind, reg_num, tmp);
+  if (error)
     return false;
+
+  stack.push_back(tmp);
+  return true;
 }
