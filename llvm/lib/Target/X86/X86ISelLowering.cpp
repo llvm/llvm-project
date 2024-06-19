@@ -50874,6 +50874,10 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
   if (!(RegVT.is128BitVector() || RegVT.is256BitVector()))
     return SDValue();
 
+  const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
+  if (!LdC)
+    return SDValue();
+
   auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
                          ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
     for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
@@ -50898,12 +50902,11 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
             RegVT.getFixedSizeInBits()) {
       EVT UserVT = User->getValueType(0);
       SDValue UserPtr = UserLd->getBasePtr();
-      const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
       const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
 
       // See if we are loading a constant that matches in the lower
       // bits of a longer constant (but from a different constant pool ptr).
-      if (LdC && UserC && UserPtr != Ptr) {
+      if (UserC && UserPtr != Ptr) {
         unsigned LdSize = LdC->getType()->getPrimitiveSizeInBits();
         unsigned UserSize = UserC->getType()->getPrimitiveSizeInBits();
         if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
