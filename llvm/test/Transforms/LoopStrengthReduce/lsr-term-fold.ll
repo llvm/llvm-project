@@ -744,18 +744,23 @@ define ptr @no_binary_operator(ptr %start, ptr %end, i8 %value) {
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp sgt i32 [[DELTA]], 0
 ; CHECK-NEXT:    br i1 [[COND1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[END_I]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[START_I]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP4]], 1
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP5]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TRIP_COUNT:%.*]] = phi i32 [ [[NEW_TRIP_COUNT:%.*]], [[FOR_LATCH:%.*]] ], [ [[DELTA]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[NEW_ADDR:%.*]], [[FOR_LATCH]] ], [ [[START]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[NEW_ADDR:%.*]], [[FOR_LATCH:%.*]] ], [ [[START]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[DATA:%.*]] = load i8, ptr [[ADDR]], align 1
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i8 [[DATA]], [[VALUE:%.*]]
 ; CHECK-NEXT:    br i1 [[COND2]], label [[FOR_BODY_FOR_END_LOOPEXIT_CRIT_EDGE:%.*]], label [[FOR_LATCH]]
 ; CHECK:       for.latch:
-; CHECK-NEXT:    [[NEW_ADDR]] = getelementptr inbounds i8, ptr [[ADDR]], i64 1
-; CHECK-NEXT:    [[NEW_TRIP_COUNT]] = add nsw i32 [[TRIP_COUNT]], -1
-; CHECK-NEXT:    [[COND3:%.*]] = icmp sgt i32 [[TRIP_COUNT]], 1
-; CHECK-NEXT:    br i1 [[COND3]], label [[FOR_BODY]], label [[FOR_END_LOOPEXITSPLIT:%.*]]
+; CHECK-NEXT:    [[NEW_ADDR]] = getelementptr i8, ptr [[ADDR]], i64 1
+; CHECK-NEXT:    [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND:%.*]] = icmp eq ptr [[NEW_ADDR]], [[SCEVGEP]]
+; CHECK-NEXT:    br i1 [[LSR_FOLD_TERM_COND_REPLACED_TERM_COND]], label [[FOR_END_LOOPEXITSPLIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexitsplit:
 ; CHECK-NEXT:    [[NEW_ADDR_LCSSA:%.*]] = phi ptr [ [[NEW_ADDR]], [[FOR_LATCH]] ]
 ; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]

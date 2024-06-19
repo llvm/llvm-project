@@ -6830,15 +6830,18 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return std::nullopt;
   }
 
-  if (!SE.hasLoopInvariantBackedgeTakenCount(L)) {
-    LLVM_DEBUG(dbgs() << "Cannot fold on backedge that is loop variant\n");
-    return std::nullopt;
-  }
-
   BasicBlock *LoopLatch = L->getLoopLatch();
   BranchInst *BI = dyn_cast<BranchInst>(LoopLatch->getTerminator());
   if (!BI || BI->isUnconditional())
     return std::nullopt;
+
+  if (!SE.hasLoopInvariantBackedgeTakenCount(L)) {
+    if (isa<SCEVCouldNotCompute>(SE.getExitCount(L, BI->getParent()))) {
+      LLVM_DEBUG(dbgs() << "Cannot fold on backedge that is loop variant\n");
+      return std::nullopt;
+    }
+  }
+
   auto *TermCond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!TermCond) {
     LLVM_DEBUG(
@@ -6852,9 +6855,8 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     return std::nullopt;
   }
 
-  BinaryOperator *LHS = dyn_cast<BinaryOperator>(TermCond->getOperand(0));
   Value *RHS = TermCond->getOperand(1);
-  if (!LHS || !L->isLoopInvariant(RHS))
+  if (!L->isLoopInvariant(RHS))
     // We could pattern match the inverse form of the icmp, but that is
     // non-canonical, and this pass is running *very* late in the pipeline.
     return std::nullopt;
@@ -6862,7 +6864,15 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   // Find the IV used by the current exit condition.
   PHINode *ToFold;
   Value *ToFoldStart, *ToFoldStep;
-  if (!matchSimpleRecurrence(LHS, ToFold, ToFoldStart, ToFoldStep))
+  if (BinaryOperator *LHS = dyn_cast<BinaryOperator>(TermCond->getOperand(0))) {
+    if (!matchSimpleRecurrence(LHS, ToFold, ToFoldStart, ToFoldStep))
+      return std::nullopt;
+  } else if (PHINode *LHS = dyn_cast<PHINode>(TermCond->getOperand(0))) {
+    BinaryOperator *BO = nullptr;
+    if (!matchSimpleRecurrence(LHS, BO, ToFoldStart, ToFoldStep))
+      return std::nullopt;
+    ToFold = LHS;
+  } else
     return std::nullopt;
 
   // Ensure the simple recurrence is a part of the current loop.
@@ -6887,6 +6897,9 @@ canFoldTermCondOfLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   }();
 
   const SCEV *BECount = SE.getBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BECount))
+    BECount = SE.getExitCount(L, BI->getParent());
+
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
   SCEVExpander Expander(SE, DL, "lsr_fold_term_cond");
 
