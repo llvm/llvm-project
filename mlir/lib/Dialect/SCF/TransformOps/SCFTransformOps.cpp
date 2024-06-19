@@ -330,7 +330,7 @@ DiagnosedSilenceableFailure transform::LoopPromoteIfOneIterationOp::applyToOne(
 
 void transform::LoopPromoteIfOneIterationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  consumesHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -415,7 +415,7 @@ DiagnosedSilenceableFailure transform::TakeAssumedBranchOp::applyToOne(
 
 void transform::TakeAssumedBranchOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
