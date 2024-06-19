@@ -163,18 +163,14 @@ define i16 @pr57336(i16 %end, i16 %m) mustprogress {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INC8:%.*]] = phi i16 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[INC]] = add nuw nsw i16 [[INC8]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[INC8]], [[M:%.*]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i16 [[MUL]], [[END:%.*]]
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[CRIT_EDGE:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 true, label [[CRIT_EDGE:%.*]], label [[FOR_BODY]]
 ; CHECK:       crit_edge:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[END]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP0]], i16 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i16 [[END]], 32767
-; CHECK-NEXT:    [[UMIN:%.*]] = zext i1 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i16 [[END:%.*]], 32767
+; CHECK-NEXT:    [[UMIN:%.*]] = zext i1 [[TMP0]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[END]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP1]], i16 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i16 [[SMAX]], [[UMIN]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[M]], i16 1)
+; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[M:%.*]], i16 1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i16 [[TMP2]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[TMP3]], [[UMIN]]
 ; CHECK-NEXT:    ret i16 [[TMP4]]

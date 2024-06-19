@@ -1470,12 +1470,11 @@ Value *SCEVExpander::expand(const SCEV *S) {
 
   // We can move insertion point only if there is no div or rem operations
   // otherwise we are risky to move it over the check for zero denominator.
-  auto SafeToHoist = [](const SCEV *S) {
-    return !SCEVExprContains(S, [](const SCEV *S) {
+  auto SafeToHoist = [&](const SCEV *S) {
+    return !SCEVExprContains(S, [&](const SCEV *S) {
               if (const auto *D = dyn_cast<SCEVUDivExpr>(S)) {
-                if (const auto *SC = dyn_cast<SCEVConstant>(D->getRHS()))
-                  // Division by non-zero constants can be hoisted.
-                  return SC->getValue()->isZero();
+                if (SE.isKnownNonZero(D->getRHS()))
+                  return false;
                 // All other divisions should not be moved as they may be
                 // divisions by zero and should be kept within the
                 // conditions of the surrounding loops that guard their

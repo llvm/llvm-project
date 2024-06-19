@@ -113,13 +113,12 @@ exit:                                             ; preds = %loop1.inc, %entry
 ; guaranted that 'counter1' is always non-zero.  So it is safe to hoist the
 ; division from the inner loop to the preheader.
 ;
-; Verify that the 'udiv' is hoisted to the preheader, and is not in the loop body.
+; Verify that the 'udiv' is hoisted to the outer loop's preheader, and is
+; not in the inner loop body.
 define i32 @NonZeroDivHoist(ptr nocapture readonly %ptr, i32 %start1, i32 %start2) {
 ; INDVARCHECK-LABEL: @NonZeroDivHoist(
 ; INDVARCHECK-NEXT:  entry:
-; INDVARCHECK:       for.body3.lr.ph:
-; INDVARCHECK-NEXT:    [[TMP0:%.*]] = udiv i64 16, [[INDVARS_IV:%.*]]
-; INDVARCHECK-NEXT:    br label [[FOR_BODY3:%.*]]
+; INDVARCHECK:         udiv
 ; INDVARCHECK:       for.body3:
 ; INDVARCHECK-NOT:     udiv
 ; INDVARCHECK:       for.end10:

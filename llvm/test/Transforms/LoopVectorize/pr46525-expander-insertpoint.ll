@@ -11,26 +11,29 @@ define void @test(i16 %x, i64 %y, ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV19:%.*]] = sext i16 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[CONV19]], 492802768830814067
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 [[Y:%.*]], [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[Y:%.*]], [[ADD]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[Y]], [[ADD]]
 ; CHECK-NEXT:    [[INC:%.*]] = add i64 [[DIV]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[DIV]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], [[INC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP2]], 1
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], [[INC]]
+; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], [[TMP5]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
