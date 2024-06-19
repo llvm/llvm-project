@@ -2838,7 +2838,9 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitExtVectorElementExpr(
     const ExtVectorElementExpr *E) {
   const Expr *Base = E->getBase();
-  assert(Base->getType()->isVectorType());
+  assert(
+      Base->getType()->isVectorType() ||
+      Base->getType()->getAs<PointerType>()->getPointeeType()->isVectorType());
 
   SmallVector<uint32_t, 4> Indices;
   E->getEncodedElementAccess(Indices);
