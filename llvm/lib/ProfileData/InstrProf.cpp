@@ -1385,8 +1385,8 @@ SmallVector<InstrProfValueData, 4>
 getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint64_t &TotalC,
                          bool GetNoICPValue) {
-  // Running a large application, namely clang, results in at most 4 elements
-  // here.  Make all of them inline as 4 is reasonably small.
+  // Four inline elements seem to work well in practice.  With MaxNumValueData,
+  // this array won't grow very big anyway.
   SmallVector<InstrProfValueData, 4> ValueData;
   MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
   if (!MD)
