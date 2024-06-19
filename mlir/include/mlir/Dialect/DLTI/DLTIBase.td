@@ -55,13 +55,6 @@ def DLTI_Dialect : Dialect {
 
     constexpr const static ::llvm::StringLiteral
     kDataLayoutStackAlignmentKey = "dlti.stack_alignment";
-
-    // Constants used in target description part of DLTI.
-    constexpr const static ::llvm::StringLiteral
-    kTargetDeviceMaxVectorOpWidthKey = "dlti.max_vector_op_width";
-
-    constexpr const static ::llvm::StringLiteral
-    kTargetDeviceL1CacheSizeInBytesKey = "dlti.L1_cache_size_in_bytes";
   }];
 
   let useDefaultAttributePrinterParser = 1;

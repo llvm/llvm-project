@@ -293,21 +293,8 @@ mlir::detail::getDefaultStackAlignment(DataLayoutEntryInterface entry) {
   return value.getValue().getZExtValue();
 }
 
-// Returns the max vector op width if specified in the given entry. If the entry
-// is empty (meaning the spec is missing), returns std::nullopt.
 std::optional<int64_t>
-mlir::detail::getMaxVectorOpWidth(DataLayoutEntryInterface entry) {
-  if (entry == DataLayoutEntryInterface())
-    return std::nullopt;
-
-  auto value = cast<IntegerAttr>(entry.getValue());
-  return value.getValue().getZExtValue();
-}
-
-// Returns the L1 cache size if specified in the given entry. If the entry
-// is empty (meaning the spec is missing), returns std::nullopt.
-std::optional<int64_t>
-mlir::detail::getL1CacheSizeInBytes(DataLayoutEntryInterface entry) {
+mlir::detail::getDevicePropertyValueAsInt(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
     return std::nullopt;
 
@@ -348,15 +335,12 @@ static DataLayoutSpecInterface getSpec(Operation *operation) {
 
 static TargetSystemSpecInterface getTargetSystemSpec(Operation *operation) {
   if (operation) {
-    ModuleOp moduleOp;
-    if (isa<ModuleOp>(operation)) {
-      moduleOp = llvm::dyn_cast<ModuleOp>(operation);
-    } else {
+    ModuleOp moduleOp = dyn_cast<ModuleOp>(operation);
+    if (!moduleOp)
       moduleOp = operation->getParentOfType<ModuleOp>();
-    }
     return moduleOp.getTargetSystemSpec();
-  } else
-    return TargetSystemSpecInterface();
+  }
+  return TargetSystemSpecInterface();
 }
 
 /// Populates `opsWithLayout` with the list of proper ancestors of `leaf` that
@@ -677,44 +661,24 @@ uint64_t mlir::DataLayout::getStackAlignment() const {
   return *stackAlignment;
 }
 
-std::optional<int64_t> mlir::DataLayout::getMaxVectorOpWidth(
-    TargetSystemSpecInterface::DeviceID deviceID) const {
+std::optional<int64_t> mlir::DataLayout::getDevicePropertyValueAsInt(
+    TargetSystemSpecInterface::DeviceID deviceID,
+    StringAttr propertyName) const {
   checkValid();
   DataLayoutEntryInterface entry;
   if (originalTargetSystemDesc) {
-    if (auto device =
+    if (std::optional<TargetDeviceSpecInterface> device =
             originalTargetSystemDesc.getDeviceSpecForDeviceID(deviceID))
-      entry =
-          device->getSpecForIdentifier(device->getMaxVectorOpWidthIdentifier());
+      entry = device->getSpecForIdentifier(propertyName);
   }
   // Currently I am not caching the results because we do not return
   // default values of these properties. Instead if the property is
   // missing, we return std::nullopt so that the users can resort to
   // the default value however they want.
   if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
-    return iface.getMaxVectorOpWidth(entry);
+    return iface.getDevicePropertyValueAsInt(entry);
   else
-    return detail::getMaxVectorOpWidth(entry);
-}
-
-std::optional<int64_t> mlir::DataLayout::getL1CacheSizeInBytes(
-    TargetSystemSpecInterface::DeviceID deviceID) const {
-  checkValid();
-  DataLayoutEntryInterface entry;
-  if (originalTargetSystemDesc) {
-    if (auto device =
-            originalTargetSystemDesc.getDeviceSpecForDeviceID(deviceID))
-      entry = device->getSpecForIdentifier(
-          device->getL1CacheSizeInBytesIdentifier());
-  }
-  // Currently I am not caching the results because we do not return
-  // default values of these properties. Instead if the property is
-  // missing, we return std::nullopt so that the users can resort to
-  // the default value however they want.
-  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
-    return iface.getL1CacheSizeInBytes(entry);
-  else
-    return detail::getL1CacheSizeInBytes(entry);
+    return detail::getDevicePropertyValueAsInt(entry);
 }
 
 //===----------------------------------------------------------------------===//
@@ -824,39 +788,38 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 LogicalResult
 mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
                                      Location loc) {
-  DenseMap<StringAttr, DataLayoutEntryInterface> device_desc_keys;
-  DenseSet<TargetSystemSpecInterface::DeviceID> device_ids;
+  DenseMap<StringAttr, DataLayoutEntryInterface> deviceDescKeys;
+  DenseSet<TargetSystemSpecInterface::DeviceID> deviceIDs;
   for (const auto &entry : spec.getEntries()) {
-    TargetDeviceSpecInterface tdd_spec = entry.second;
+    TargetDeviceSpecInterface targetDeviceSpec = entry.second;
     // First, verify individual target device desc specs.
-    if (failed(tdd_spec.verifyEntry(loc)))
+    if (failed(targetDeviceSpec.verifyEntry(loc)))
       return failure();
 
     // Check that device IDs are unique across all entries.
-    TargetSystemSpecInterface::DeviceID device_id = entry.first;
-    if (!device_ids.insert(device_id).second) {
+    TargetSystemSpecInterface::DeviceID deviceID = entry.first;
+    if (!deviceIDs.insert(deviceID).second) {
       return failure();
     }
 
-    // collect all the keys used by all the tdd_specs.
-    for (DataLayoutEntryInterface entry : tdd_spec.getEntries()) {
+    // collect all the keys used by all the target device specs.
+    for (DataLayoutEntryInterface entry : targetDeviceSpec.getEntries()) {
       if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
-        // tdd_spec does not support Type as a key.
+        // targetDeviceSpec does not support Type as a key.
         return failure();
       } else {
-        device_desc_keys[entry.getKey().get<StringAttr>()] = entry;
+        deviceDescKeys[entry.getKey().get<StringAttr>()] = entry;
       }
     }
   }
 
-  for (const auto &kvp : device_desc_keys) {
-    StringAttr identifier = kvp.second.getKey().get<StringAttr>();
-    Dialect *dialect = identifier.getReferencedDialect();
+  for (const auto &[keyName, keyVal] : deviceDescKeys) {
+    Dialect *dialect = keyName.getReferencedDialect();
 
     // Ignore attributes that belong to an unknown dialect, the dialect may
     // actually implement the relevant interface but we don't know about that.
     if (!dialect)
-      continue;
+      return failure();
 
     const auto *iface = dyn_cast<DataLayoutDialectInterface>(dialect);
     if (!iface) {
@@ -864,7 +827,7 @@ mlir::detail::verifyTargetSystemSpec(TargetSystemSpecInterface spec,
              << "the '" << dialect->getNamespace()
              << "' dialect does not support identifier data layout entries";
     }
-    if (failed(iface->verifyEntry(kvp.second, loc)))
+    if (failed(iface->verifyEntry(keyVal, loc)))
       return failure();
   }
 

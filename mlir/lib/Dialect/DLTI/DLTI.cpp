@@ -356,40 +356,9 @@ TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
       if (!ids.insert(id).second)
         return emitError() << "repeated layout entry key: " << id.getValue();
     }
-
-    // Check that required keys are of right type.
-    StringRef entryName = entry.getKey().get<StringAttr>().strref();
-    if (entryName == DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey) {
-      IntegerAttr value =
-          llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
-      if (!value || !value.getType().isInteger())
-        return emitError() << "target_device_spec requires value of key: "
-                           << DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey
-                           << " to be of integer type";
-    } else if (entryName == DLTIDialect::kTargetDeviceMaxVectorOpWidthKey) {
-      IntegerAttr value =
-          llvm::dyn_cast_if_present<IntegerAttr>(entry.getValue());
-      if (!value || !value.getType().isInteger())
-        return emitError() << "target_device_spec requires value of key: "
-                           << DLTIDialect::kTargetDeviceMaxVectorOpWidthKey
-                           << " to be of integer type";
-    } else {
-      return emitError() << "unknown target device spec key name: "
-                         << entryName;
-    }
   }
 
   return success();
-}
-
-StringAttr TargetDeviceSpecAttr::getMaxVectorOpWidthIdentifier() {
-  return Builder(getContext())
-      .getStringAttr(DLTIDialect::kTargetDeviceMaxVectorOpWidthKey);
-}
-
-StringAttr TargetDeviceSpecAttr::getL1CacheSizeInBytesIdentifier() {
-  return Builder(getContext())
-      .getStringAttr(DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey);
 }
 
 //===----------------------------------------------------------------------===//
@@ -457,34 +426,12 @@ public:
 };
 } // namespace
 
-namespace {
-/// An interface to check entries of a target device spec.
-class SystemDescSpecInterface : public DataLayoutDialectInterface {
-public:
-  using DataLayoutDialectInterface::DataLayoutDialectInterface;
-
-  LogicalResult verifyEntry(TargetDeviceSpecInterface entry,
-                            Location loc) const final {
-
-    for (DataLayoutEntryInterface dl_entry : entry.getEntries()) {
-      StringRef entryName = dl_entry.getKey().get<StringAttr>().strref();
-      // Check that the key name is known to us. Although, we may allow keys
-      // unknown to us.
-      if (entryName != DLTIDialect::kTargetDeviceMaxVectorOpWidthKey &&
-          entryName != DLTIDialect::kTargetDeviceL1CacheSizeInBytesKey)
-        return emitError(loc) << "unknown target desc key name: " << entryName;
-    }
-    return success();
-  }
-};
-} // namespace
-
 void DLTIDialect::initialize() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
       >();
-  addInterfaces<TargetDataLayoutInterface, SystemDescSpecInterface>();
+  addInterfaces<TargetDataLayoutInterface>();
 }
 
 LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,

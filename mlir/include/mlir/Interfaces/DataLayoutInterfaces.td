@@ -237,21 +237,7 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
       /*args=*/(ins "::mlir::Location":$loc),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{ return ::mlir::success(); }]
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns max vector op width identifier. ",
-      /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getMaxVectorOpWidthIdentifier",
-      /*args=*/(ins),
-      /*methodBody=*/""
-    >,
-    InterfaceMethod<
-      /*description=*/"Returns L1 cache size identifier identifier. ",
-      /*retTy=*/"::mlir::StringAttr",
-      /*methodName=*/"getL1CacheSizeInBytesIdentifier",
-      /*args=*/(ins),
-      /*methodBody=*/""
-    >,
+    >
   ];
 }
 
@@ -480,25 +466,14 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
-      /*description=*/"Returns the max vector op width, if the property is "
+      /*description=*/"Returns the value of the property, if the property is "
                       "defined. Otherwise, it returns std::nullopt.",
       /*retTy=*/"std::optional<int64_t>",
-      /*methodName=*/"getMaxVectorOpWidth",
+      /*methodName=*/"getDevicePropertyValueAsInt",
       /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::detail::getMaxVectorOpWidth(entry);
-      }]
-    >,
-    StaticInterfaceMethod<
-      /*description=*/"Returns the L1 cache size in bytes, if the property is "
-                      "defined. Otherwise, it returns std::nullopt.",
-      /*retTy=*/"std::optional<int64_t>",
-      /*methodName=*/"getL1CacheSizeInBytes",
-      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return ::mlir::detail::getL1CacheSizeInBytes(entry);
+        return ::mlir::detail::getDevicePropertyValueAsInt(entry);
       }]
     >
   ];

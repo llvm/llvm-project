@@ -183,13 +183,6 @@ def DLTI_TargetDeviceSpecAttr :
   let mnemonic = "target_device_spec";
   let genVerifyDecl = 1;
   let assemblyFormat = "`<` $entries `>`";
-  let extraClassDeclaration = [{
-    /// Returns max vector op width identifier.
-    StringAttr getMaxVectorOpWidthIdentifier();
-
-    /// Returns L1 cache size identifier
-    StringAttr getL1CacheSizeInBytesIdentifier();
-  }];
 }
 
 #endif  // MLIR_DIALECT_DLTI_DLTIATTRS_TD

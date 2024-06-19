@@ -91,13 +91,10 @@ Attribute getDefaultGlobalMemorySpace(DataLayoutEntryInterface entry);
 /// DataLayoutInterface if specified, otherwise returns the default.
 uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
-/// Return max vector op width from the specified DataLayoutEntry. If the
-/// property is missing from the entry, then return std::nullopt.
-std::optional<int64_t> getMaxVectorOpWidth(DataLayoutEntryInterface entry);
-
-/// Return L1 cache size in bytes from the specified DataLayoutEntry. If the
-/// property is missing from the entry, then return std::nullopt.
-std::optional<int64_t> getL1CacheSizeInBytes(DataLayoutEntryInterface entry);
+/// Returns the value of the property from the specified DataLayoutEntry. If the
+/// property is missing from the entry, returns std::nullopt.
+std::optional<int64_t>
+getDevicePropertyValueAsInt(DataLayoutEntryInterface entry);
 
 /// Given a list of data layout entries, returns a new list containing the
 /// entries with keys having the given type ID, i.e. belonging to the same type
@@ -247,15 +244,11 @@ public:
   /// unspecified.
   uint64_t getStackAlignment() const;
 
-  /// Returns for max vector op width if the property is defined for the given
-  /// device ID, otherwise return std::nullopt.
+  /// Returns the value of the specified property if the property is defined for
+  /// the given device ID, otherwise returns std::nullopt.
   std::optional<int64_t>
-      getMaxVectorOpWidth(TargetSystemSpecInterface::DeviceID) const;
-
-  /// Returns for L1 cache size if the property is defined for the given
-  /// device ID, otherwise return std::nullopt.
-  std::optional<int64_t>
-      getL1CacheSizeInBytes(TargetSystemSpecInterface::DeviceID) const;
+  getDevicePropertyValueAsInt(TargetSystemSpecInterface::DeviceID,
+                              StringAttr propertyName) const;
 
 private:
   /// Combined layout spec at the given scope.

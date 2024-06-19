@@ -409,23 +409,23 @@ struct DLTargetSystemDescTestDialect : public Dialect {
         return failure();
       }
 
-      TargetDeviceSpecInterface target_device_spec;
-      if (failed(parser.parseAttribute(target_device_spec))) {
+      TargetDeviceSpecInterface targetDeviceSpec;
+      if (failed(parser.parseAttribute(targetDeviceSpec))) {
         parser.emitError(parser.getCurrentLocation())
             << "Error in parsing target device spec";
         return failure();
       }
       return std::make_pair(parser.getBuilder().getStringAttr(deviceID),
-                            target_device_spec);
+                            targetDeviceSpec);
     };
 
     SmallVector<DeviceIDTargetDeviceSpecPair> entries;
     ok = succeeded(parser.parseCommaSeparatedList([&]() {
-      auto deviceID_target_device_spec =
+      auto deviceIDAndTargetDeviceSpecPair =
           parseDeviceIDTargetDeviceSpecPair(parser);
-      ok = succeeded(deviceID_target_device_spec);
+      ok = succeeded(deviceIDAndTargetDeviceSpecPair);
       assert(ok);
-      entries.push_back(*deviceID_target_device_spec);
+      entries.push_back(*deviceIDAndTargetDeviceSpecPair);
       return success();
     }));
     assert(ok);
@@ -495,11 +495,13 @@ TEST(DataLayout, NullSpec) {
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
 
-  EXPECT_EQ(layout.getL1CacheSizeInBytes(
-                Builder(&ctx).getStringAttr("CPU" /* device ID*/)),
+  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+                Builder(&ctx).getStringAttr("CPU" /* device ID*/),
+                Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
             std::nullopt);
-  EXPECT_EQ(layout.getMaxVectorOpWidth(
-                Builder(&ctx).getStringAttr("CPU" /* device ID*/)),
+  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+                Builder(&ctx).getStringAttr("CPU" /* device ID*/),
+                Builder(&ctx).getStringAttr("max_vector_width")),
             std::nullopt);
 }
 
@@ -533,11 +535,13 @@ TEST(DataLayout, EmptySpec) {
   EXPECT_EQ(layout.getGlobalMemorySpace(), Attribute());
   EXPECT_EQ(layout.getStackAlignment(), 0u);
 
-  EXPECT_EQ(layout.getL1CacheSizeInBytes(
-                Builder(&ctx).getStringAttr("CPU" /* device ID*/)),
+  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+                Builder(&ctx).getStringAttr("CPU" /* device ID*/),
+                Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
             std::nullopt);
-  EXPECT_EQ(layout.getMaxVectorOpWidth(
-                Builder(&ctx).getStringAttr("CPU" /* device ID*/)),
+  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+                Builder(&ctx).getStringAttr("CPU" /* device ID*/),
+                Builder(&ctx).getStringAttr("max_vector_width")),
             std::nullopt);
 }
 
@@ -595,8 +599,8 @@ TEST(DataLayout, SpecWithTargetSystemDescEntries) {
   module attributes { dl_target_sys_desc_test.target_system_spec =
     #dl_target_sys_desc_test.target_system_spec<
       "CPU": #dlti.target_device_spec<
-              #dlti.dl_entry<"dlti.L1_cache_size_in_bytes", 4096 : ui32>,
-              #dlti.dl_entry<"dlti.max_vector_op_width", 128 : ui32>>
+              #dlti.dl_entry<"L1_cache_size_in_bytes", 4096 : ui32>,
+              #dlti.dl_entry<"max_vector_op_width", 128 : ui32>>
     > } {}
   )MLIR";
 
@@ -606,11 +610,13 @@ TEST(DataLayout, SpecWithTargetSystemDescEntries) {
 
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   DataLayout layout(*module);
-  EXPECT_EQ(layout.getL1CacheSizeInBytes(
-                Builder(&ctx).getStringAttr("CPU") /* device ID*/),
+  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+                Builder(&ctx).getStringAttr("CPU") /* device ID*/,
+                Builder(&ctx).getStringAttr("L1_cache_size_in_bytes")),
             std::optional<int64_t>(4096));
-  EXPECT_EQ(layout.getMaxVectorOpWidth(
-                Builder(&ctx).getStringAttr("CPU") /* device ID*/),
+  EXPECT_EQ(layout.getDevicePropertyValueAsInt(
+                Builder(&ctx).getStringAttr("CPU") /* device ID*/,
+                Builder(&ctx).getStringAttr("max_vector_op_width")),
             std::optional<int64_t>(128));
 }
 
