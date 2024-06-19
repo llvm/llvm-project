@@ -62,14 +62,12 @@ static std::pair<bool, bool> runImpl(MachineFunction &MF) {
       // If MI is a pseudo, expand it.
       if (MI.usesCustomInsertionHook()) {
         Changed = true;
+        auto Prev = std::prev(MI.getIterator());
         MachineBasicBlock *NewMBB = TLI->EmitInstrWithCustomInserter(MI, MBB);
         // The expansion may involve new basic blocks.
         if (NewMBB != MBB) {
           PreserveCFG = false;
-          MBB = NewMBB;
-          I = NewMBB->getIterator();
-          MBBI = NewMBB->begin();
-          MBBE = NewMBB->end();
+          MBBI = std::next(Prev);
         }
       }
     }
