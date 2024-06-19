@@ -1346,11 +1346,11 @@ static void analyzeReturnValues(const SmallVectorImpl<ArgT> &Args,
   ArrayRef<MCPhysReg> RegList8;
   ArrayRef<MCPhysReg> RegList16;
   if (Tiny) {
-    RegList8 = ArrayRef(RegList8Tiny, std::size(RegList8Tiny));
-    RegList16 = ArrayRef(RegList16Tiny, std::size(RegList16Tiny));
+    RegList8 = ArrayRef(RegList8Tiny);
+    RegList16 = ArrayRef(RegList16Tiny);
   } else {
-    RegList8 = ArrayRef(RegList8AVR, std::size(RegList8AVR));
-    RegList16 = ArrayRef(RegList16AVR, std::size(RegList16AVR));
+    RegList8 = ArrayRef(RegList8AVR);
+    RegList16 = ArrayRef(RegList16AVR);
   }
 
   // GCC-ABI says that the size is rounded up to the next even number,
