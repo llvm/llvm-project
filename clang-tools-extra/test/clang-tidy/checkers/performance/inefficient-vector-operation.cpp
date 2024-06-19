@@ -5,8 +5,7 @@
 
 namespace std {
 
-// FIXME: This doesn't work if size_t is not a signed type
-typedef int size_t;
+typedef decltype(sizeof 0) size_t;
 
 template<class E> class initializer_list {
 public:
@@ -16,7 +15,8 @@ public:
   using size_type = size_t;
   using iterator = const E*;
   using const_iterator = const E*;
-  iterator first, last;
+  iterator p;
+  size_t sz;
   initializer_list();
   size_t size() const; // number of elements
   const E* begin() const; // first element
