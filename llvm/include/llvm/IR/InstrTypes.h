@@ -108,7 +108,7 @@ class UnaryOperator : public UnaryInstruction {
 
 protected:
   UnaryOperator(UnaryOps iType, Value *S, Type *Ty, const Twine &Name,
-                InsertPosition InsertBefore = nullptr);
+                InsertPosition InsertBefore);
 
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -190,7 +190,7 @@ class BinaryOperator : public Instruction {
 
 protected:
   BinaryOperator(BinaryOps iType, Value *S1, Value *S2, Type *Ty,
-                 const Twine &Name, InsertPosition InsertBefore = nullptr);
+                 const Twine &Name, InsertPosition InsertBefore);
 
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -2420,8 +2420,7 @@ private:
 
   explicit FuncletPadInst(Instruction::FuncletPadOps Op, Value *ParentPad,
                           ArrayRef<Value *> Args, unsigned Values,
-                          const Twine &NameStr,
-                          InsertPosition InsertBefore = nullptr);
+                          const Twine &NameStr, InsertPosition InsertBefore);
 
   void init(Value *ParentPad, ArrayRef<Value *> Args, const Twine &NameStr);
 

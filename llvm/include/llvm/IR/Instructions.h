@@ -75,10 +75,10 @@ protected:
 
 public:
   explicit AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize,
-                      const Twine &Name, InsertPosition InsertBefore = nullptr);
+                      const Twine &Name, InsertPosition InsertBefore);
 
   AllocaInst(Type *Ty, unsigned AddrSpace, const Twine &Name,
-             InsertPosition InsertBefore = nullptr);
+             InsertPosition InsertBefore);
 
   AllocaInst(Type *Ty, unsigned AddrSpace, Value *ArraySize, Align Align,
              const Twine &Name = "", InsertPosition InsertBefore = nullptr);
@@ -188,7 +188,7 @@ protected:
 
 public:
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr,
-           InsertPosition InsertBefore = nullptr);
+           InsertPosition InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
            InsertPosition InsertBefore);
   LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
@@ -923,8 +923,7 @@ class GetElementPtrInst : public Instruction {
   /// specified BasicBlock.
   inline GetElementPtrInst(Type *PointeeType, Value *Ptr,
                            ArrayRef<Value *> IdxList, unsigned Values,
-                           const Twine &NameStr,
-                           InsertPosition InsertBefore = nullptr);
+                           const Twine &NameStr, InsertPosition InsertBefore);
 
   void init(Value *Ptr, ArrayRef<Value *> IdxList, const Twine &NameStr);
 
@@ -1401,14 +1400,14 @@ class CallInst : public CallBase {
   /// Construct a CallInst from a range of arguments
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
                   ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr,
-                  InsertPosition InsertBefore = nullptr);
+                  InsertPosition InsertBefore);
 
   inline CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
-                  const Twine &NameStr, InsertPosition InsertBefore = nullptr)
+                  const Twine &NameStr, InsertPosition InsertBefore)
       : CallInst(Ty, Func, Args, std::nullopt, NameStr, InsertBefore) {}
 
   explicit CallInst(FunctionType *Ty, Value *F, const Twine &NameStr,
-                    InsertPosition InsertBefore = nullptr);
+                    InsertPosition InsertBefore);
 
   void init(FunctionType *FTy, Value *Func, ArrayRef<Value *> Args,
             ArrayRef<OperandBundleDef> Bundles, const Twine &NameStr);
@@ -1561,7 +1560,7 @@ CallInst::CallInst(FunctionType *Ty, Value *Func, ArrayRef<Value *> Args,
 class SelectInst : public Instruction {
 
   SelectInst(Value *C, Value *S1, Value *S2, const Twine &NameStr,
-             InsertPosition InsertBefore = nullptr)
+             InsertPosition InsertBefore)
       : Instruction(S1->getType(), Instruction::Select, &Op<0>(), 3,
                     InsertBefore) {
     init(C, S1, S2);
@@ -2298,8 +2297,7 @@ class ExtractValueInst : public UnaryInstruction {
   /// insert before an existing instruction, the third appends the new
   /// instruction to the specified BasicBlock.
   inline ExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
-                          const Twine &NameStr,
-                          InsertPosition InsertBefore = nullptr);
+                          const Twine &NameStr, InsertPosition InsertBefore);
 
   void init(ArrayRef<unsigned> Idxs, const Twine &NameStr);
 
@@ -2387,8 +2385,7 @@ class InsertValueInst : public Instruction {
   /// can optionally insert before an existing instruction, the third appends
   /// the new instruction to the specified BasicBlock.
   inline InsertValueInst(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
-                         const Twine &NameStr,
-                         InsertPosition InsertBefore = nullptr);
+                         const Twine &NameStr, InsertPosition InsertBefore);
 
   /// Constructors - These three constructors are convenience methods because
   /// one and two index insertvalue instructions are so common.
@@ -2746,8 +2743,7 @@ public:
 
 private:
   explicit LandingPadInst(Type *RetTy, unsigned NumReservedValues,
-                          const Twine &NameStr,
-                          InsertPosition InsertBefore = nullptr);
+                          const Twine &NameStr, InsertPosition InsertBefore);
 
   // Allocate space for exactly zero operands.
   void *operator new(size_t S) { return User::operator new(S); }
@@ -3057,7 +3053,7 @@ class SwitchInst : public Instruction {
   /// to make memory allocation more efficient. This constructor can also
   /// auto-insert before another instruction.
   SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
-             InsertPosition InsertBefore = nullptr);
+             InsertPosition InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S); }
@@ -3445,7 +3441,7 @@ class IndirectBrInst : public Instruction {
   /// here to make memory allocation more efficient.  This constructor can also
   /// autoinsert before another instruction.
   IndirectBrInst(Value *Address, unsigned NumDests,
-                 InsertPosition InsertBefore = nullptr);
+                 InsertPosition InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S); }
@@ -3577,8 +3573,7 @@ class InvokeInst : public CallBase {
   inline InvokeInst(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
                     BasicBlock *IfException, ArrayRef<Value *> Args,
                     ArrayRef<OperandBundleDef> Bundles, int NumOperands,
-                    const Twine &NameStr,
-                    InsertPosition InsertBefore = nullptr);
+                    const Twine &NameStr, InsertPosition InsertBefore);
 
   void init(FunctionType *Ty, Value *Func, BasicBlock *IfNormal,
             BasicBlock *IfException, ArrayRef<Value *> Args,
@@ -3732,7 +3727,7 @@ class CallBrInst : public CallBase {
                     ArrayRef<BasicBlock *> IndirectDests,
                     ArrayRef<Value *> Args, ArrayRef<OperandBundleDef> Bundles,
                     int NumOperands, const Twine &NameStr,
-                    InsertPosition InsertBefore = nullptr);
+                    InsertPosition InsertBefore);
 
   void init(FunctionType *FTy, Value *Func, BasicBlock *DefaultDest,
             ArrayRef<BasicBlock *> IndirectDests, ArrayRef<Value *> Args,
@@ -3960,7 +3955,7 @@ class CatchSwitchInst : public Instruction {
   /// This constructor can also autoinsert before another instruction.
   CatchSwitchInst(Value *ParentPad, BasicBlock *UnwindDest,
                   unsigned NumHandlers, const Twine &NameStr,
-                  InsertPosition InsertBefore = nullptr);
+                  InsertPosition InsertBefore);
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S); }
@@ -4109,7 +4104,7 @@ class CleanupPadInst : public FuncletPadInst {
 private:
   explicit CleanupPadInst(Value *ParentPad, ArrayRef<Value *> Args,
                           unsigned Values, const Twine &NameStr,
-                          InsertPosition InsertBefore = nullptr)
+                          InsertPosition InsertBefore)
       : FuncletPadInst(Instruction::CleanupPad, ParentPad, Args, Values,
                        NameStr, InsertBefore) {}
 
@@ -4139,7 +4134,7 @@ class CatchPadInst : public FuncletPadInst {
 private:
   explicit CatchPadInst(Value *CatchSwitch, ArrayRef<Value *> Args,
                         unsigned Values, const Twine &NameStr,
-                        InsertPosition InsertBefore = nullptr)
+                        InsertPosition InsertBefore)
       : FuncletPadInst(Instruction::CatchPad, CatchSwitch, Args, Values,
                        NameStr, InsertBefore) {}
 
@@ -4176,8 +4171,7 @@ public:
 
 class CatchReturnInst : public Instruction {
   CatchReturnInst(const CatchReturnInst &RI);
-  CatchReturnInst(Value *CatchPad, BasicBlock *BB,
-                  InsertPosition InsertBefore = nullptr);
+  CatchReturnInst(Value *CatchPad, BasicBlock *BB, InsertPosition InsertBefore);
 
   void init(Value *CatchPad, BasicBlock *BB);
 
