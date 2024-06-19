@@ -17,8 +17,8 @@ class Parent {};
 
 typedef ilist_node_base<false, void> RawNode;
 typedef ilist_node_base<true, void> TrackingNode;
-typedef ilist_node_base<false, Parent*> ParentNode;
-typedef ilist_node_base<true, Parent*> ParentTrackingNode;
+typedef ilist_node_base<false, Parent> ParentNode;
+typedef ilist_node_base<true, Parent> ParentTrackingNode;
 
 TEST(IListNodeBaseTest, DefaultConstructor) {
   RawNode A;

@@ -15,8 +15,8 @@
 
 namespace llvm {
 
-template <bool EnableSentinelTracking, class ParentPtrTy> class ilist_node_base;
-template <bool EnableSentinelTracking, class ParentPtrTy> class ilist_base;
+template <bool EnableSentinelTracking, class ParentTy> class ilist_node_base;
+template <bool EnableSentinelTracking, class ParentTy> class ilist_base;
 
 /// Option to choose whether to track sentinels.
 ///
@@ -134,7 +134,7 @@ struct is_valid_option<ilist_iterator_bits<IteratorBits>> : std::true_type {};
 template <class... Options> struct extract_parent;
 template <class ParentTy, class... Options>
 struct extract_parent<ilist_parent<ParentTy>, Options...> {
-  typedef ParentTy *type;
+  typedef ParentTy type;
 };
 template <class Option1, class... Options>
 struct extract_parent<Option1, Options...> : extract_parent<Options...> {};
@@ -156,7 +156,7 @@ struct check_options<Option1, Options...>
 ///
 /// This is usually computed via \a compute_node_options.
 template <class T, bool EnableSentinelTracking, bool IsSentinelTrackingExplicit,
-          class TagT, bool HasIteratorBits, class ParentPtrTy>
+          class TagT, bool HasIteratorBits, class ParentTy>
 struct node_options {
   typedef T value_type;
   typedef T *pointer;
@@ -168,10 +168,9 @@ struct node_options {
   static const bool is_sentinel_tracking_explicit = IsSentinelTrackingExplicit;
   static const bool has_iterator_bits = HasIteratorBits;
   typedef TagT tag;
-  typedef ParentPtrTy parent_ptr_ty;
-  typedef ilist_node_base<enable_sentinel_tracking, parent_ptr_ty>
-      node_base_type;
-  typedef ilist_base<enable_sentinel_tracking, parent_ptr_ty> list_base_type;
+  typedef ParentTy parent_ty;
+  typedef ilist_node_base<enable_sentinel_tracking, parent_ty> node_base_type;
+  typedef ilist_base<enable_sentinel_tracking, parent_ty> list_base_type;
 };
 
 template <class T, class... Options> struct compute_node_options {
