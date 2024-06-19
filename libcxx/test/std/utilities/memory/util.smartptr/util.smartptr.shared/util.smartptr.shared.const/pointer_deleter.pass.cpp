@@ -130,6 +130,6 @@ int main(int, char**)
     }
 #endif
 
-    test_function_type();
-    return 0;
+  test_function_type();
+  return 0;
 }
