@@ -71,6 +71,7 @@ The first defines a function that counts the leading zeroes of a 32-bit integer 
 using the [`math` dialect's](/docs/Dialects/MathOps/) `ctlz` operation.
 
 ```mlir
+// mlir/test/Examples/mlir-opt/ctlz.mlir
 func.func @main(%arg0: i32) -> i32 {
   %0 = math.ctlz %arg0 : i32
   func.return %0 : i32
@@ -110,6 +111,7 @@ The second program is a sequence of loops
 that exhibits poor cache locality.
 
 ```mlir
+// mlir/test/Examples/mlir-opt/loop_fusion.mlir
 func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
   %0 = memref.alloc() : memref<10xf32>
   %1 = memref.alloc() : memref<10xf32>
@@ -175,7 +177,7 @@ to generate LLVM-IR.
 Recall our ctlz program:
 
 ```mlir
-# mlir/test/Examples/mlir-opt/ctlz.mlir
+// mlir/test/Examples/mlir-opt/ctlz.mlir
 func.func @main(%arg0: i32) -> i32 {
   %0 = math.ctlz %arg0 : i32
   func.return %0 : i32
