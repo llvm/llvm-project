@@ -206,7 +206,7 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
       !GEP->getSourceElementType()->isIntegerTy(8)) {
     replaceInstUsesWith(
         *Inst, Builder.CreateGEP(Builder.getInt8Ty(), GEP->getPointerOperand(),
-                                 Offset, "", GEP->isInBounds()));
+                                 Offset, "", GEP->getNoWrapFlags()));
     eraseInstFromFunction(*Inst);
   }
   return Offset;
