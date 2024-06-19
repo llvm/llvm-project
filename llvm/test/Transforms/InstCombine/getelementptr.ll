@@ -1760,4 +1760,24 @@ define ptr @gep_to_i8_nusw_nuw(ptr %p) {
   ret ptr %gep
 }
 
+define ptr @gep_sel_const(i1 %c) {
+; CHECK-LABEL: @gep_sel_const(
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[C:%.*]], ptr getelementptr (i8, ptr @A, i64 5), ptr getelementptr (i8, ptr @B, i64 5)
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sel = select i1 %c, ptr @A, ptr @B
+  %gep = getelementptr i8, ptr %sel, i64 5
+  ret ptr %gep
+}
+
+define ptr @gep_sel_const_nuw(i1 %c) {
+; CHECK-LABEL: @gep_sel_const_nuw(
+; CHECK-NEXT:    [[GEP:%.*]] = select i1 [[C:%.*]], ptr getelementptr nuw (i8, ptr @A, i64 5), ptr getelementptr nuw (i8, ptr @B, i64 5)
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %sel = select i1 %c, ptr @A, ptr @B
+  %gep = getelementptr nuw i8, ptr %sel, i64 5
+  ret ptr %gep
+}
+
 !0 = !{!"branch_weights", i32 2, i32 10}
