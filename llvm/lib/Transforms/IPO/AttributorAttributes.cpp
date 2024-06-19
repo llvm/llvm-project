@@ -11739,11 +11739,14 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
       return ChangeStatus::UNCHANGED;
 
     const IRPosition &IRP = getIRPosition();
-    return A.manifestAttrs(
-        IRP,
-        Attribute::get(IRP.getAnchorValue().getContext(), AssumptionAttrKey,
-                       llvm::join(getAssumed().getSet(), ",")),
-        /* ForceReplace */ true);
+    SmallVector<StringRef, 0> Set(getAssumed().getSet().begin(),
+                                  getAssumed().getSet().end());
+    llvm::sort(Set);
+    return A.manifestAttrs(IRP,
+                           Attribute::get(IRP.getAnchorValue().getContext(),
+                                          AssumptionAttrKey,
+                                          llvm::join(Set, ",")),
+                           /*ForceReplace=*/true);
   }
 
   bool hasAssumption(const StringRef Assumption) const override {
@@ -11755,13 +11758,15 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
     const SetContents &Known = getKnown();
     const SetContents &Assumed = getAssumed();
 
-    const std::string KnownStr =
-        llvm::join(Known.getSet().begin(), Known.getSet().end(), ",");
-    const std::string AssumedStr =
-        (Assumed.isUniversal())
-            ? "Universal"
-            : llvm::join(Assumed.getSet().begin(), Assumed.getSet().end(), ",");
+    SmallVector<StringRef, 0> Set(Known.getSet().begin(), Known.getSet().end());
+    llvm::sort(Set);
+    const std::string KnownStr = llvm::join(Set, ",");
 
+    std::string AssumedStr = "Universal";
+    if (!Assumed.isUniversal()) {
+      Set.assign(Assumed.getSet().begin(), Assumed.getSet().end());
+      AssumedStr = llvm::join(Set, ",");
+    }
     return "Known [" + KnownStr + "]," + " Assumed [" + AssumedStr + "]";
   }
 };
