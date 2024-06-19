@@ -25,7 +25,5 @@
 // RUN: %clang -target aarch64 -march=armv8-a --print-enabled-extensions 2>&1 | FileCheck -check-prefix=ARCH-EXTENSION --implicit-check-not FEAT_ %s
 // ARCH-EXTENSION: FEAT_ETE
 // ARCH-EXTENSION: FEAT_TRBE
-// FIXME: FEAT_FP is optional from v8.0a
 // ARCH-EXTENSION: FEAT_FP
-// FIXME: FEAT_AdvSIMD is optional from v8.0a
 // ARCH-EXTENSION: FEAT_AdvSIMD
