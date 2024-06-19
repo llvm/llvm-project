@@ -1,10 +1,4 @@
-// RUN: mlir-opt --pass-pipeline='
-// RUN:    builtin.module(
-// RUN:        convert-math-to-funcs{convert-ctlz=1},
-// RUN:        func.func(cse,canonicalize),
-// RUN:        convert-scf-to-cf,
-// RUN:        convert-to-llvm
-// RUN:    )' %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline=' builtin.module( convert-math-to-funcs{convert-ctlz=1}, func.func(cse,canonicalize), convert-scf-to-cf, convert-to-llvm)' %s | FileCheck %s
 
 // CHECK-LABEL: @main
 // CHECK: llvm
