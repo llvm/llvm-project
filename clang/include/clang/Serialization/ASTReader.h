@@ -399,6 +399,7 @@ public:
   friend class serialization::reader::ASTIdentifierLookupTrait;
   friend class serialization::ReadMethodPoolVisitor;
   friend class TypeLocReader;
+  friend class LocalDeclID;
 
   using RecordData = SmallVector<uint64_t, 64>;
   using RecordDataImpl = SmallVectorImpl<uint64_t>;
@@ -1518,7 +1519,8 @@ public:
         : iterator_adaptor_base(Pos), Reader(Reader), Mod(Mod) {}
 
     value_type operator*() const {
-      return Reader->GetDecl(Reader->getGlobalDeclID(*Mod, (LocalDeclID)*I));
+      LocalDeclID ID = LocalDeclID::get(*Reader, *Mod, *I);
+      return Reader->GetDecl(Reader->getGlobalDeclID(*Mod, ID));
     }
 
     value_type operator->() const { return **this; }
@@ -1969,12 +1971,12 @@ public:
   /// given module.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  GlobalDeclID ReadDeclID(ModuleFile &F, const RecordData &Record,
+  GlobalDeclID ReadDeclID(ModuleFile &F, const RecordDataImpl &Record,
                           unsigned &Idx);
 
   /// Reads a declaration from the given position in a record in the
   /// given module.
-  Decl *ReadDecl(ModuleFile &F, const RecordData &R, unsigned &I) {
+  Decl *ReadDecl(ModuleFile &F, const RecordDataImpl &R, unsigned &I) {
     return GetDecl(ReadDeclID(F, R, I));
   }
 
@@ -1983,8 +1985,8 @@ public:
   ///
   /// \returns The declaration read from this location, casted to the given
   /// result type.
-  template<typename T>
-  T *ReadDeclAs(ModuleFile &F, const RecordData &R, unsigned &I) {
+  template <typename T>
+  T *ReadDeclAs(ModuleFile &F, const RecordDataImpl &R, unsigned &I) {
     return cast_or_null<T>(GetDecl(ReadDeclID(F, R, I)));
   }
 
