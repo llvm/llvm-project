@@ -3636,7 +3636,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Leak;
-  Res |= SanitizerKind::NumericalStability;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::ObjCCast;
@@ -3656,6 +3655,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
        isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
   }
+
+  if (IsX86_64)
+    Res |= SanitizerKind::NumericalStability;
+
   return Res;
 }
 
