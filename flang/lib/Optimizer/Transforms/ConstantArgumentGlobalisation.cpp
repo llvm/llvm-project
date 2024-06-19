@@ -134,7 +134,7 @@ public:
       for (auto a : allocas) {
 	unsigned count = 0;
       
-	for (auto i : a.first->getUsers())
+	for ([[maybe_unused]]auto i : a.first->getUsers())
 	  ++count;
 
 	// If the alloca is only used for a store and the call operand, the

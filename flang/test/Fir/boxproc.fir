@@ -16,7 +16,7 @@
 
 // CHECK-LABEL: define void @_QPtest_proc_dummy_other(ptr
 // CHECK-SAME:              %[[VAL_0:.*]])
-// CHECK:         call void %[[VAL_0]](ptr @{{.*}})
+// CHECK:         call void %[[VAL_0]](ptr %{{.*}})
 
 func.func @_QPtest_proc_dummy() {
   %c0_i32 = arith.constant 0 : i32
