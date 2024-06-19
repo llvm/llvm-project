@@ -206,7 +206,7 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
       !GEP->getSourceElementType()->isIntegerTy(8)) {
     replaceInstUsesWith(
         *Inst, Builder.CreateGEP(Builder.getInt8Ty(), GEP->getPointerOperand(),
-                                 Offset, "", GEP->isInBounds()));
+                                 Offset, "", GEP->getNoWrapFlags()));
     eraseInstFromFunction(*Inst);
   }
   return Offset;
@@ -2332,10 +2332,10 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   // Propagate 'inbounds' and metadata from existing instructions.
   // Note: using IRBuilder to create the constants for efficiency.
   SmallVector<Value *, 4> IndexC(GEP.indices());
-  bool IsInBounds = GEP.isInBounds();
+  GEPNoWrapFlags NW = GEP.getNoWrapFlags();
   Type *Ty = GEP.getSourceElementType();
-  Value *NewTrueC = Builder.CreateGEP(Ty, TrueC, IndexC, "", IsInBounds);
-  Value *NewFalseC = Builder.CreateGEP(Ty, FalseC, IndexC, "", IsInBounds);
+  Value *NewTrueC = Builder.CreateGEP(Ty, TrueC, IndexC, "", NW);
+  Value *NewFalseC = Builder.CreateGEP(Ty, FalseC, IndexC, "", NW);
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 
@@ -2941,10 +2941,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
                   m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
-          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
-              Builder.getInt8Ty(), GEP.getPointerOperand(), V);
-          NewGEP->setIsInBounds(GEP.isInBounds());
-          return NewGEP;
+          return GetElementPtrInst::Create(Builder.getInt8Ty(),
+                                           GEP.getPointerOperand(), V,
+                                           GEP.getNoWrapFlags());
         }
       }
     }

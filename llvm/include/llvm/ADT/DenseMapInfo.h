@@ -23,15 +23,22 @@
 
 namespace llvm {
 
+namespace densemap::detail {
+// A bit mixer with very low latency using one multiplications and one
+// xor-shift. The constant is from splitmix64.
+inline uint64_t mix(uint64_t x) {
+  x *= 0xbf58476d1ce4e5b9u;
+  x ^= x >> 31;
+  return x;
+}
+} // namespace densemap::detail
+
 namespace detail {
 
 /// Simplistic combination of 32-bit hash values into 32-bit hash values.
-/// This uses a mx-style hash using a constant from splitmix64.
-static inline unsigned combineHashValue(unsigned a, unsigned b) {
+inline unsigned combineHashValue(unsigned a, unsigned b) {
   uint64_t x = (uint64_t)a << 32 | (uint64_t)b;
-  x *= 0xbf58476d1ce4e5b9u;
-  x ^= x >> 31;
-  return (unsigned)x;
+  return (unsigned)densemap::detail::mix(x);
 }
 
 } // end namespace detail
@@ -292,6 +299,24 @@ template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   }
 };
 
+// Provide DenseMapInfo for enum classes.
+template <typename Enum>
+struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
+  using UnderlyingType = std::underlying_type_t<Enum>;
+  using Info = DenseMapInfo<UnderlyingType>;
+
+  static Enum getEmptyKey() { return static_cast<Enum>(Info::getEmptyKey()); }
+
+  static Enum getTombstoneKey() {
+    return static_cast<Enum>(Info::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const Enum &Val) {
+    return Info::getHashValue(static_cast<UnderlyingType>(Val));
+  }
+
+  static bool isEqual(const Enum &LHS, const Enum &RHS) { return LHS == RHS; }
+};
 } // end namespace llvm
 
 #endif // LLVM_ADT_DENSEMAPINFO_H
