@@ -49,3 +49,18 @@ int different_5() {
   return &a.array1[3] - &a.array2[4]; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}} \
                                       // expected-note{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
 }
+
+void different_6() {
+  int d;
+  static int x[10][10]; // expected-note2{{Array at the left-hand side of subtraction}}
+  int *y1 = &(x[3][5]);
+  char *z = ((char *) y1) + 2;
+  int *y2 = (int *)(z - 2);
+  int *y3 = ((int *)x) + 35; // This is offset for [3][5].
+
+  d = y2 - y1; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}} \
+               // expected-note{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
+  d = y3 - y1; // expected-warning{{Subtraction of two pointers that do not point into the same array is undefined behavior}} \
+               // expected-note{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
+  d = y3 - y2;
+}
