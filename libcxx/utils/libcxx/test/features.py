@@ -335,10 +335,10 @@ DEFAULT_FEATURES = [
 ]
 
 # Deduce and add the test features that that are implied by the #defines in
-# the <__config_site> header.
+# the <__config> header.
 #
 # For each macro of the form `_LIBCPP_XXX_YYY_ZZZ` defined below that
-# is defined after including <__config_site>, add a Lit feature called
+# is defined after including <__config>, add a Lit feature called
 # `libcpp-xxx-yyy-zzz`. When a macro is defined to a specific value
 # (e.g. `_LIBCPP_ABI_VERSION=2`), the feature is `libcpp-xxx-yyy-zzz=<value>`.
 #
@@ -352,6 +352,7 @@ macros = {
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
     "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
+    "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
     "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
     "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
