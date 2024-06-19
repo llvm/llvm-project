@@ -18151,8 +18151,7 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   if (VT.isFixedLengthVector() &&
-      (!Subtarget.isNeonAvailable() ||
-       TLI.useSVEForFixedLengthVectorVT(VT, !Subtarget.isNeonAvailable())))
+      (!Subtarget.isNeonAvailable() || TLI.useSVEForFixedLengthVectorVT(VT)))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
