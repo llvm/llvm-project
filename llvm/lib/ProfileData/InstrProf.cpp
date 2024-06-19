@@ -1381,11 +1381,13 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
   return ValueDataArray;
 }
 
-std::vector<InstrProfValueData>
+SmallVector<InstrProfValueData, 4>
 getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint64_t &TotalC,
                          bool GetNoICPValue) {
-  std::vector<InstrProfValueData> ValueData;
+  // Running a large application, namely clang, results in at most 4 elements
+  // here.  Make all of them inline as 4 is reasonably small.
+  SmallVector<InstrProfValueData, 4> ValueData;
   MDNode *MD = mayHaveValueProfileOfKind(Inst, ValueKind);
   if (!MD)
     return ValueData;
@@ -1396,7 +1398,7 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
     return ValueData;
   TotalC = TotalCInt->getZExtValue();
 
-  ValueData.reserve(MaxNumValueData);
+  ValueData.reserve((NOps - 3) / 2);
   for (unsigned I = 3; I < NOps; I += 2) {
     if (ValueData.size() >= MaxNumValueData)
       break;

@@ -296,7 +296,7 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
 
 /// Extract the value profile data from \p Inst and returns them if \p Inst is
 /// annotated with value profile data. Returns an empty vector otherwise.
-std::vector<InstrProfValueData>
+SmallVector<InstrProfValueData, 4>
 getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
                          uint32_t MaxNumValueData, uint64_t &TotalC,
                          bool GetNoICPValue = false);
