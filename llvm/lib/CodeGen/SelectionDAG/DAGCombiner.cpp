@@ -12090,11 +12090,8 @@ SDValue DAGCombiner::visitMASKED_COMPRESS(SDNode *N) {
   bool HasPassthru = !Passthru.isUndef();
 
   APInt SplatVal;
-  if (ISD::isConstantSplatVector(Mask.getNode(), SplatVal)) {
-    return TLI.isConstTrueVal(Mask)
-               ? Vec
-               : (HasPassthru ? Passthru : DAG.getUNDEF(VecVT));
-  }
+  if (ISD::isConstantSplatVector(Mask.getNode(), SplatVal))
+    return TLI.isConstTrueVal(Mask) ? Vec : Passthru;
 
   if (Vec.isUndef() || Mask.isUndef())
     return DAG.getUNDEF(VecVT);
