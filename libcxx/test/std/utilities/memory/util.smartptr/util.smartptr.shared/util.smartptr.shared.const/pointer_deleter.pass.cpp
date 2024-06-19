@@ -121,6 +121,10 @@ int main(int, char**)
       auto deleter = [](auto pointer) { delete pointer; };
       std::shared_ptr<int> p(new int, deleter);
     }
+
+    {
+      std::shared_ptr<int> p(NULL, [](auto){});
+    }
 #endif
 
 #if TEST_STD_VER >= 17
