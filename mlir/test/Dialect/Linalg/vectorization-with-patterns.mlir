@@ -950,7 +950,7 @@ module attributes {transform.with_named_sequence} {
 //   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C5:.*]] = arith.constant 5.0
-//       CHECK:   %[[RESULT:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] : tensor<5x6xf32>, vector<7x9xf32>
+//       CHECK:   %[[RESULT:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] {in_bounds = [false, false]} : tensor<5x6xf32>, vector<7x9xf32>
 //       CHECK:   return %[[RESULT]]
 func.func @pad_and_transfer_read(%arg0: tensor<5x6xf32>) -> vector<7x9xf32> {
   %c0 = arith.constant 0 : index
@@ -984,7 +984,7 @@ func.func private @make_vector() -> vector<7x9xf32>
 //   CHECK-NOT:   tensor.pad
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> vector<7x9xf32>
-//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[ARG0]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<5x6xf32>
+//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[ARG0]][%[[C0]], %[[C0]]] {in_bounds = [false, false]} : vector<7x9xf32>, tensor<5x6xf32>
 //       CHECK:   return %[[RESULT]]
 func.func @pad_and_transfer_write_static(
     %arg0: tensor<5x6xf32>) -> tensor<5x6xf32> {
@@ -1021,7 +1021,7 @@ func.func private @make_vector() -> vector<7x9xf32>
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[SUB:.*]] = tensor.extract_slice %[[ARG0]][0, 0] [%[[SIZE]], 6] [1, 1] : tensor<?x?xf32> to tensor<?x6xf32>
 //       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> vector<7x9xf32>
-//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[SUB]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<?x6xf32>
+//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[SUB]][%[[C0]], %[[C0]]] {in_bounds = [false, false]} : vector<7x9xf32>, tensor<?x6xf32>
 //       CHECK:   return %[[RESULT]]
 func.func @pad_and_transfer_write_dynamic_static(
     %arg0: tensor<?x?xf32>, %size: index, %padding: index) -> tensor<?x6xf32> {

@@ -3859,9 +3859,6 @@ static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
   if (op.getPermutationMap().isMinorIdentity())
     elidedAttrs.push_back(op.getPermutationMapAttrName());
-  // Elide in_bounds attribute if all dims are out-of-bounds.
-  if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
-    elidedAttrs.push_back(op.getInBoundsAttrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
