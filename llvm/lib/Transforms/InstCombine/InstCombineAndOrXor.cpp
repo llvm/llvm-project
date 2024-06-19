@@ -3427,20 +3427,33 @@ Value *foldAorBZero(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   if (!Op0->hasOneUse() || !Op1->hasOneUse())
     return nullptr;
 
-  // match each operand of I with and
-  Value *A, *B;
-  CmpInst::Predicate Pred = CmpInst::ICMP_EQ;
-  CmpInst::Predicate InPred = CmpInst::ICMP_EQ;
-  bool IsOp0 = match(Op0, m_c_And(m_Cmp(Pred, m_Value(A), m_ZeroInt()),
-                                  m_Cmp(InPred, m_Value(B), m_ZeroInt())));
-  bool IsOp1 = match(Op1, m_c_And(m_Cmp(InPred, m_Specific(A), m_ZeroInt()),
-                                  m_Cmp(Pred, m_Specific(B), m_ZeroInt())));
+  Value *Cmp1, *Cmp2, *Cmp3, *Cmp4;
+  bool IsOp0 = match(Op0, m_And(m_Value(Cmp1), m_Value(Cmp2)));
+  bool IsOp1 = match(Op1, m_And(m_Value(Cmp3), m_Value(Cmp4)));
   if (!IsOp0 || !IsOp1)
     return nullptr;
 
-  Constant *Zero = ConstantInt::getNullValue(A->getType());
-  auto *LHS = Builder.CreateICmpEQ(A, Zero);
-  auto *RHS = Builder.CreateICmpEQ(B, Zero);
+  Value *A;
+  Value *B;
+  Value *CmpInvariant;
+  // check if any two pairs of the and operations are invertions of each other.
+  bool CheckInvertion =
+      (isKnownInversion(Cmp1, Cmp3) && isKnownInversion(Cmp2, Cmp4)) ||
+      (isKnownInversion(Cmp1, Cmp4) && isKnownInversion(Cmp2, Cmp3));
+  if (!CheckInvertion)
+    return nullptr;
+
+  // given both compares are invertions we need to check if the second operand
+  // is the same for both invertion pairs
+  auto *AInst = cast<Instruction>(Cmp1);
+  auto *BInst = cast<Instruction>(Cmp2);
+  if (AInst->getOperand(1) != BInst->getOperand(1))
+    return nullptr;
+  A = AInst->getOperand(0);
+  B = BInst->getOperand(0);
+  CmpInvariant = AInst->getOperand(1);
+  auto *LHS = Builder.CreateICmpEQ(A, CmpInvariant);
+  auto *RHS = Builder.CreateICmpEQ(B, CmpInvariant);
   return Builder.CreateICmpNE(LHS, RHS);
 }
 
