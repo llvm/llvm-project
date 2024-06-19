@@ -58,7 +58,7 @@ A. Attributes consumed in DXIL backend passes
 Motivation
 ==========
 
-DXIL backend passes depend on various attributes of DXIL Operations. For example, ``DXIOpLLowering``
+DXIL backend passes depend on various attributes of DXIL Operations. For example, ``DXILOpLowering``
 pass will need information such as the DXIL operation an LLVM intrinsic is to be lowered to,
 along with valid overload and parameter types etc. The TableGen file -
 ``llvm/lib/Target/DirectX/DXIL.td`` - is used to represent DXIL Operations
@@ -201,8 +201,8 @@ model version is defined as
 The ``dag overload_types`` and ``dag shader_kinds`` use a special markers ``overloads``
 and ``stages``, respectively.
 
-Examples
----------
+Examples of Constraints
+-----------------------
 
 Consider a DXIL Operation that is valid in Shader Model 6.2 and later,
 
@@ -257,6 +257,26 @@ Following example records represent memory attributes
 
   def ReadOnly : DXILOpAttributes;
   def ReadNone : DXILOpAttributes;
+
+DXIL Operation Specification Example
+====================================
+Following illustrates the specification of the DXIL Op ``Sin``
+
+.. code-block::
+
+  def Sin  : DXILOp {
+    let Doc ="Returns sine(theta) for theta in radians.";
+    let OpCode = 13;
+    let OpClass = unary;
+    let LLVMIntrinsic = int_sin;
+    let arguments = (ins LLVMMatchType<0>);
+    let result = (out dxil_overload_ty);
+    let sm_constraints = [SMVersionConstraints<SMVersion<SM6_0>,
+                          (overloads llvm_half_ty, llvm_float_ty),
+                          (stages allKinds)>];
+    let attributes = (attrs ReadNone);
+    let DXILVersion = DX1_0;
+  }
 
 Summary
 =======
