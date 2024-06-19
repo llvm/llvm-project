@@ -7,24 +7,23 @@
 ; CHECK: OpCapability CooperativeMatrixKHR
 ; CHECK: OpExtension "SPV_KHR_cooperative_matrix"
 
-; CHECK-SPIRV-DAG: TypeInt [[#Int8Ty:]] 8 0
-; CHECK-SPIRV-DAG: TypeInt [[#Int32Ty:]] 32 0
-; CHECK-SPIRV-DAG: Constant [[#Int32Ty]] [[#Const12:]] 12
-; CHECK-SPIRV-DAG: Constant [[#Int32Ty]] [[#Const48:]] 48
-; CHECK-SPIRV-DAG: Constant [[#Int32Ty]] [[#Const0:]] 0
-; CHECK-SPIRV-DAG: Constant [[#Int32Ty]] [[#Const3:]] 3
-; CHECK-SPIRV-DAG: Constant [[#Int32Ty]] [[#Const2:]] 2
-; CHECK-SPIRV-DAG: Constant [[#Int32Ty]] [[#Const1:]] 1
-; CHECK-SPIRV-DAG: TypeCooperativeMatrixKHR [[#MatTy1:]] [[#Int32Ty]] [[#Const3]] [[#Const12]] [[#Const12]] [[#Const2]]
-; CHECK-SPIRV-DAG: TypeCooperativeMatrixKHR [[#MatTy2:]] [[#Int8Ty]] [[#Const0]] [[#Const12]] [[#Const48]] [[#Const0]]
-; CHECK-SPIRV-DAG: TypeCooperativeMatrixKHR [[#MatTy3:]] [[#Int8Ty]] [[#Const2]] [[#Const48]] [[#Const12]] [[#Const1]]
-; CHECK-SPIRV: CompositeConstruct [[#MatTy1]]
-; CHECK-SPIRV: CooperativeMatrixLoadKHR [[#MatTy2]] [[#Load1:]]
-; TODO: Pass Matrix Type Id instead of Matrix Id to CooperativeMatrixLengthKHR.
-; CHECK-SPIRV: CooperativeMatrixLengthKHR [[#Int32Ty]] [[#]] [[#Load1]]
-; CHECK-SPIRV: CooperativeMatrixLoadKHR [[#MatTy3]]
-; CHECK-SPIRV: CooperativeMatrixMulAddKHR [[#MatTy1]]
-; CHECK-SPIRV: CooperativeMatrixStoreKHR
+; CHECK-DAG: %[[#Int8Ty:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#Int32Ty:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#Const12:]] = OpConstant %[[#Int32Ty]] 12
+; CHECK-DAG: %[[#Const48:]] = OpConstant %[[#Int32Ty]] 48
+; CHECK-DAG: %[[#Const0:]] = OpConstant %[[#Int32Ty]] 0
+; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Int32Ty]] 3
+; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#Int32Ty]] 2
+; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#Int32Ty]] 1
+; CHECK-DAG: %[[#MatTy1:]] = OpTypeCooperativeMatrixKHR %[[#Int32Ty]] %[[#Const3]] %[[#Const12]] %[[#Const12]] %[[#Const2]]
+; CHECK-DAG: %[[#MatTy2:]] = OpTypeCooperativeMatrixKHR %[[#Int8Ty]] %[[#Const0]] %[[#Const12]] %[[#Const48]] %[[#Const0]]
+; CHECK-DAG: %[[#MatTy3:]] = OpTypeCooperativeMatrixKHR %[[#Int8Ty]] %[[#Const2]] %[[#Const48]] %[[#Const12]] %[[#Const1]]
+; CHECK: OpCompositeConstruct %[[#MatTy1]]
+; CHECK: %[[#Load1:]] = OpCooperativeMatrixLoadKHR %[[#MatTy2]]
+; CHECK: OpCooperativeMatrixLengthKHR %[[#Int32Ty]] %[[#]] %[[#Load1]]
+; CHECK: OpCooperativeMatrixLoadKHR %[[#MatTy3]]
+; CHECK: OpCooperativeMatrixMulAddKHR %[[#MatTy1]]
+; CHECK: OpCooperativeMatrixStoreKHR
 
 %"class.sycl::_V1::range" = type { %"class.sycl::_V1::detail::array" }
 %"class.sycl::_V1::detail::array" = type { [2 x i64] }
