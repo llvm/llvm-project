@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
+// TODO: Replace %arg0 with %vec
+
 ///----------------------------------------------------------------------------------------
 /// vector.transfer_write -> vector.transpose + vector.transfer_write
 /// [Pattern: TransferWritePermutationLowering]
@@ -27,6 +29,27 @@ func.func @xfer_write_transposing_permutation_map(
     in_bounds = [true, true],
     permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
   } : vector<4x8xi16>, memref<2x2x8x4xi16>
+
+  return
+}
+
+// Even with out-of-bounds, it is safe to apply this pattern
+// CHECK-LABEL:   func.func @xfer_write_transposing_permutation_map_out_of_bounds
+// CHECK-SAME:       %[[ARG_0:.*]]: vector<4x8xi16>,
+// CHECK-SAME:       %[[MEM:.*]]: memref<2x2x?x?xi16>) {
+// CHECK:           %[[TR:.*]] = vector.transpose %[[ARG_0]], [1, 0] : vector<4x8xi16> to vector<8x4xi16>
+// CHECK:           vector.transfer_write
+// CHECK-NOT:       permutation_map
+// CHECK-SAME:      %[[TR]], %[[MEM]]{{.*}} {in_bounds = [false, false]} : vector<8x4xi16>, memref<2x2x?x?xi16>
+func.func @xfer_write_transposing_permutation_map_out_of_bounds(
+    %arg0: vector<4x8xi16>,
+    %mem: memref<2x2x?x?xi16>) {
+
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg0, %mem[%c0, %c0, %c0, %c0] {
+    in_bounds = [false, false],
+    permutation_map = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+  } : vector<4x8xi16>, memref<2x2x?x?xi16>
 
   return
 }
@@ -83,19 +106,44 @@ func.func @xfer_write_transposing_permutation_map_masked(
 ///   * vector.broadcast + vector.transpose + vector.transfer_write with a map
 ///     which _is_ a permutation of a minor identity
 
-// CHECK-LABEL: func @permutation_with_mask_xfer_write_fixed_width(
-//       CHECK:   %[[vec:.*]] = arith.constant dense<-2.000000e+00> : vector<7x1xf32>
-//       CHECK:   %[[mask:.*]] = arith.constant dense<[true, false, true, false, true, true, true]> : vector<7xi1>
-//       CHECK:   %[[b:.*]] = vector.broadcast %[[mask]] : vector<7xi1> to vector<1x7xi1>
-//       CHECK:   %[[tp:.*]] = vector.transpose %[[b]], [1, 0] : vector<1x7xi1> to vector<7x1xi1>
-//       CHECK:   vector.transfer_write %[[vec]], %{{.*}}[%{{.*}}, %{{.*}}], %[[tp]] {in_bounds = [false, true]} : vector<7x1xf32>, memref<?x?xf32>
-func.func @permutation_with_mask_xfer_write_fixed_width(%mem : memref<?x?xf32>, %base1 : index,
-                                                   %base2 : index) {
+// CHECK-LABEL:   func.func @xfer_write_non_transposing_permutation_map(
+// CHECK-SAME:      %[[MEM:.*]]: memref<?x?xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<7xf32>,
+// CHECK-SAME:      %[[BASE_1:.*]]: index, %[[BASE_2:.*]]: index) {
+// CHECK:           %[[BC:.*]] = vector.broadcast %[[VEC]] : vector<7xf32> to vector<1x7xf32>
+// CHECK:           %[[TR:.*]] = vector.transpose %[[BC]], [1, 0] : vector<1x7xf32> to vector<7x1xf32>
+// CHECK:           vector.transfer_write %[[TR]], %[[MEM]]{{\[}}%[[BASE_1]], %[[BASE_2]]] {in_bounds = [false, true]} : vector<7x1xf32>, memref<?x?xf32>
+func.func @xfer_write_non_transposing_permutation_map(
+    %mem : memref<?x?xf32>,
+    %arg0 : vector<7xf32>,
+    %base1 : index,
+    %base2 : index) {
 
-  %fn1 = arith.constant -2.0 : f32
-  %vf0 = vector.splat %fn1 : vector<7xf32>
-  %mask = arith.constant dense<[1, 0, 1, 0, 1, 1, 1]> : vector<7xi1>
-  vector.transfer_write %vf0, %mem[%base1, %base2], %mask
+  vector.transfer_write %arg0, %mem[%base1, %base2]
+    {permutation_map = affine_map<(d0, d1) -> (d0)>}
+    : vector<7xf32>, memref<?x?xf32>
+  return
+}
+
+// The broadcast dimension is in bounds, so the transformation is safe
+// CHECK-LABEL:   func.func @xfer_write_non_transposing_permutation_map_with_mask_out_of_bounds(
+// CHECK-SAME:      %[[MEM:.*]]: memref<?x?xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<7xf32>,
+// CHECK-SAME:      %[[BASE_1:.*]]: index, %[[BASE_2:.*]]: index,
+// CHECK-SAME:      %[[MASK:.*]]: vector<7xi1>) {
+// CHECK:           %[[BC_VEC:.*]] = vector.broadcast %[[VEC]] : vector<7xf32> to vector<1x7xf32>
+// CHECK:           %[[BC_MASK:.*]] = vector.broadcast %[[MASK]] : vector<7xi1> to vector<1x7xi1>
+// CHECK:           %[[TR_MASK:.*]] = vector.transpose %[[BC_MASK]], [1, 0] : vector<1x7xi1> to vector<7x1xi1>
+// CHECK:           %[[TR_VEC:.*]] = vector.transpose %[[BC_VEC]], [1, 0] : vector<1x7xf32> to vector<7x1xf32>
+// CHECK:           vector.transfer_write %[[TR_VEC]], %[[MEM]]{{\[}}%[[BASE_1]], %[[BASE_2]]], %[[TR_MASK]] {in_bounds = [false, true]} : vector<7x1xf32>, memref<?x?xf32>
+func.func @xfer_write_non_transposing_permutation_map_with_mask_out_of_bounds(
+    %mem : memref<?x?xf32>,
+    %arg0 : vector<7xf32>,
+    %base1 : index,
+    %base2 : index, 
+    %mask : vector<7xi1>) {
+
+  vector.transfer_write %arg0, %mem[%base1, %base2], %mask
     {permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [false]}
     : vector<7xf32>, memref<?x?xf32>
   return
