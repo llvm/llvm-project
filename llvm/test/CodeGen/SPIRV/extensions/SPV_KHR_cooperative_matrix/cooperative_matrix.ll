@@ -20,7 +20,7 @@
 ; CHECK-DAG: %[[#MatTy3:]] = OpTypeCooperativeMatrixKHR %[[#Int8Ty]] %[[#Const2]] %[[#Const48]] %[[#Const12]] %[[#Const1]]
 ; CHECK: OpCompositeConstruct %[[#MatTy1]]
 ; CHECK: %[[#Load1:]] = OpCooperativeMatrixLoadKHR %[[#MatTy2]]
-; CHECK: OpCooperativeMatrixLengthKHR %[[#Int32Ty]] %[[#]] %[[#Load1]]
+; CHECK: OpCooperativeMatrixLengthKHR %[[#Int32Ty]] %[[#Load1]]
 ; CHECK: OpCooperativeMatrixLoadKHR %[[#MatTy3]]
 ; CHECK: OpCooperativeMatrixMulAddKHR %[[#MatTy1]]
 ; CHECK: OpCooperativeMatrixStoreKHR

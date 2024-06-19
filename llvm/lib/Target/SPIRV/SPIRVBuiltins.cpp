@@ -2556,9 +2556,9 @@ static SPIRVType *getCoopMatrType(const TargetExtType *ExtensionType,
       GR->getOrCreateSPIRVType(ExtensionType->getTypeParameter(0), MIRBuilder);
   // Create or get an existing type from GlobalRegistry.
   return GR->getOrCreateOpTypeCoopMatr(
-      MIRBuilder, ExtensionType, ElemType, ExtensionType->getIntParameter(1),
-      ExtensionType->getIntParameter(2), ExtensionType->getIntParameter(3),
-      ExtensionType->getIntParameter(4));
+      MIRBuilder, ExtensionType, ElemType, ExtensionType->getIntParameter(0),
+      ExtensionType->getIntParameter(1), ExtensionType->getIntParameter(2),
+      ExtensionType->getIntParameter(3));
 }
 
 static SPIRVType *

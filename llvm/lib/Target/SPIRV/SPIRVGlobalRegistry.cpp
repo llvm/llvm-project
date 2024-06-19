@@ -1197,13 +1197,14 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeCoopMatr(
   if (ResVReg.isValid())
     return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
   ResVReg = createTypeVReg(MIRBuilder);
-  SPIRVType *SpirvTy = MIRBuilder.buildInstr(SPIRV::OpTypeCooperativeMatrixKHR)
-                           .addDef(ResVReg)
-                           .addUse(getSPIRVTypeID(ElemType))
-                           .addImm(Scope)
-                           .addImm(Rows)
-                           .addImm(Columns)
-                           .addImm(Use);
+  SPIRVType *SpirvTy =
+      MIRBuilder.buildInstr(SPIRV::OpTypeCooperativeMatrixKHR)
+          .addDef(ResVReg)
+          .addUse(getSPIRVTypeID(ElemType))
+          .addUse(buildConstantInt(Scope, MIRBuilder, nullptr, true))
+          .addUse(buildConstantInt(Rows, MIRBuilder, nullptr, true))
+          .addUse(buildConstantInt(Columns, MIRBuilder, nullptr, true))
+          .addUse(buildConstantInt(Use, MIRBuilder, nullptr, true));
   DT.add(ExtensionType, &MIRBuilder.getMF(), ResVReg);
   return SpirvTy;
 }
