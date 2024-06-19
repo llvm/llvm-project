@@ -169,15 +169,10 @@ public:
   void writeSymbol(const MCAssembler &Asm, SymbolTableWriter &Writer,
                    uint32_t StringIndex, ELFSymbolData &MSD);
 
-  // Map from a signature symbol to the group section index
-  using RevGroupMapTy = DenseMap<const MCSymbol *, unsigned>;
-
   /// Compute the symbol table data
   ///
   /// \param Asm - The assembler.
-  /// \param RevGroupMap - Maps a signature symbol to the group section.
-  void computeSymbolTable(MCAssembler &Asm,
-                          const RevGroupMapTy &RevGroupMap);
+  void computeSymbolTable(MCAssembler &Asm);
 
   void writeAddrsigSection();
 
@@ -599,8 +594,7 @@ bool ELFWriter::isInSymtab(const MCAssembler &Asm, const MCSymbolELF &Symbol,
   return true;
 }
 
-void ELFWriter::computeSymbolTable(MCAssembler &Asm,
-                                   const RevGroupMapTy &RevGroupMap) {
+void ELFWriter::computeSymbolTable(MCAssembler &Asm) {
   MCContext &Ctx = Asm.getContext();
   SymbolTableWriter Writer(*this, is64Bit());
 
@@ -658,7 +652,7 @@ void ELFWriter::computeSymbolTable(MCAssembler &Asm,
       }
     } else if (Symbol.isUndefined()) {
       if (isSignature && !Used) {
-        MSD.SectionIndex = RevGroupMap.lookup(&Symbol);
+        MSD.SectionIndex = Symbol.getGroupIndex();
         if (MSD.SectionIndex >= ELF::SHN_LORESERVE)
           HasLargeSectionIndex = true;
       } else {
@@ -1104,8 +1098,6 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
       Ctx.getELFSection(".strtab", ELF::SHT_STRTAB, 0);
   StringTableIndex = addToSectionTable(StrtabSection);
 
-  RevGroupMapTy RevGroupMap;
-
   DenseMap<const MCSymbol *, SmallVector<const MCSectionELF *, 0>> GroupMembers;
 
   // Write out the ELF header ...
@@ -1133,11 +1125,12 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
     MCSectionELF *RelSection = createRelocationSection(Ctx, Section);
 
     if (SignatureSymbol) {
-      unsigned &GroupIdx = RevGroupMap[SignatureSymbol];
+      unsigned GroupIdx = SignatureSymbol->getGroupIndex();
       if (!GroupIdx) {
         MCSectionELF *Group =
             Ctx.createELFGroupSection(SignatureSymbol, Section.isComdat());
         GroupIdx = addToSectionTable(Group);
+        SignatureSymbol->setGroupIndex(GroupIdx);
         Group->setAlignment(Align(4));
         Groups.push_back(Group);
       }
@@ -1184,7 +1177,7 @@ uint64_t ELFWriter::writeObject(MCAssembler &Asm) {
     }
 
     // Compute symbol table information.
-    computeSymbolTable(Asm, RevGroupMap);
+    computeSymbolTable(Asm);
 
     for (MCSectionELF *RelSection : Relocations) {
       // Remember the offset into the file for this section.
