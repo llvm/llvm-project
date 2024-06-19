@@ -3665,6 +3665,10 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
     return VPI->isVectorToScalar();
   return false;
 }
+
+/// Return true if \p V is a header mask in \p Plan.
+bool isHeaderMask(VPValue *V, VPlan &Plan);
+
 } // end namespace vputils
 
 } // end namespace llvm
