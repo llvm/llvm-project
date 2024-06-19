@@ -2955,9 +2955,15 @@ void UnwrappedLineParser::parseTryCatch() {
   assert(FormatTok->isOneOf(tok::kw_try, tok::kw___try) && "'try' expected");
   nextToken();
   bool NeedsUnwrappedLine = false;
+  bool HasCtorInitializer = false;
   if (FormatTok->is(tok::colon)) {
+    auto *Colon = FormatTok;
     // We are in a function try block, what comes is an initializer list.
     nextToken();
+    if (FormatTok->is(tok::identifier)) {
+      HasCtorInitializer = true;
+      Colon->setFinalizedType(TT_CtorInitializerColon);
+    }
 
     // In case identifiers were removed by clang-tidy, what might follow is
     // multiple commas in sequence - before the first identifier.
@@ -2966,14 +2972,11 @@ void UnwrappedLineParser::parseTryCatch() {
 
     while (FormatTok->is(tok::identifier)) {
       nextToken();
-      if (FormatTok->is(tok::l_paren))
+      if (FormatTok->is(tok::l_paren)) {
         parseParens();
-      if (FormatTok->Previous && FormatTok->Previous->is(tok::identifier) &&
-          FormatTok->is(tok::l_brace)) {
-        do {
-          nextToken();
-        } while (FormatTok->isNot(tok::r_brace));
+      } else if (FormatTok->is(tok::l_brace)) {
         nextToken();
+        parseBracedList();
       }
 
       // In case identifiers were removed by clang-tidy, what might follow is
@@ -2989,6 +2992,8 @@ void UnwrappedLineParser::parseTryCatch() {
   keepAncestorBraces();
 
   if (FormatTok->is(tok::l_brace)) {
+    if (HasCtorInitializer)
+      FormatTok->setFinalizedType(TT_FunctionLBrace);
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock();
     if (Style.BraceWrapping.BeforeCatch)
