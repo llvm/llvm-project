@@ -32,11 +32,22 @@ module real_tests
   !WARN: warning: invalid argument on evaluation of intrinsic function or operation
   real(4), parameter :: nan_r4_acos5 = acos(r4_pinf)
   TEST_ISNAN(nan_r4_acos5)
-  !WARN: warning: second argument to MOD must not be zero
+  !WARN: warning: MOD: P argument is zero
   real(4), parameter :: nan_r4_mod = mod(3.5, 0.)
   TEST_ISNAN(nan_r4_mod)
   !WARN: warning: overflow on evaluation of intrinsic function or operation
   logical, parameter :: test_exp_overflow = exp(256._4).EQ.r4_pinf
+ contains
+  subroutine s1(a,j)
+    !WARN: warning: MOD: P argument is zero
+    print *, mod(a, 0.)
+    !WARN: warning: MODULO: P argument is zero
+    print *, modulo(a, 0.)
+    !WARN: warning: MOD: P argument is zero
+    print *, mod(j, 0.)
+    !WARN: warning: MODULO: P argument is zero
+    print *, modulo(j, 0.)
+  end
 end module
 
 module parentheses
