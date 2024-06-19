@@ -20,7 +20,7 @@ see [the MLIR paper](https://arxiv.org/abs/2002.11054).
 Two of the central concepts in MLIR are *dialects* and *lowerings*.
 In traditional compilers, there is typically one "dialect,"
 called an *intermediate representation*, or IR,
-that is the textual or data-structural description of a program
+that is the textual or data-structural representation of a program
 within the scope of the compiler's execution.
 For example, in GCC the IR is called GIMPLE,
 and in LLVM it's called LLVM-IR.
