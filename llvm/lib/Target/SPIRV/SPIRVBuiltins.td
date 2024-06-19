@@ -60,6 +60,8 @@ def AtomicFloating : BuiltinGroup;
 def GroupUniform : BuiltinGroup;
 def KernelClock : BuiltinGroup;
 def CastToPtr : BuiltinGroup;
+def Construct : BuiltinGroup;
+def CoopMatr : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -113,6 +115,12 @@ def : DemangledBuiltin<"__spirv_ImageSampleExplicitLod", OpenCL_std, SampleImage
 
 // Select builtin record:
 def : DemangledBuiltin<"__spirv_Select", OpenCL_std, Select, 3, 3>;
+
+// Composite Construct builtin record:
+def : DemangledBuiltin<"__spirv_CompositeConstruct", OpenCL_std, Construct, 1, 0>;
+
+// Dot builtin record:
+def : DemangledBuiltin<"dot", OpenCL_std, Dot, 2, 2>;
 
 //===----------------------------------------------------------------------===//
 // Class defining an extended builtin record used for lowering into an
@@ -607,6 +615,12 @@ defm : DemangledNativeBuiltin<"__spirv_GenericCastToPtr_ToPrivate", OpenCL_std, 
 defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToGlobal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToLocal", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
 defm : DemangledNativeBuiltin<"__spirv_OpGenericCastToPtrExplicit_ToPrivate", OpenCL_std, CastToPtr, 2, 2, OpGenericCastToPtr>;
+
+// Cooperative Matrix builtin records:
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLoadKHR", OpenCL_std, CoopMatr, 2, 0, OpCooperativeMatrixLoadKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreKHR", OpenCL_std, CoopMatr, 3, 0, OpCooperativeMatrixStoreKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixMulAddKHR", OpenCL_std, CoopMatr, 3, 0, OpCooperativeMatrixMulAddKHR>;
+defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixLengthKHR", OpenCL_std, CoopMatr, 1, 1, OpCooperativeMatrixLengthKHR>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
@@ -1436,7 +1450,7 @@ def : BuiltinType<"spirv.DeviceEvent", OpTypeDeviceEvent>;
 def : BuiltinType<"spirv.Image", OpTypeImage>;
 def : BuiltinType<"spirv.SampledImage", OpTypeSampledImage>;
 def : BuiltinType<"spirv.Pipe", OpTypePipe>;
-
+def : BuiltinType<"spirv.CooperativeMatrixKHR", OpTypeCooperativeMatrixKHR>;
 
 //===----------------------------------------------------------------------===//
 // Class matching an OpenCL builtin type name to an equivalent SPIR-V

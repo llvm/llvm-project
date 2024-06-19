@@ -1824,6 +1824,23 @@ static bool generateSelectInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+static bool generateConstructInst(const SPIRV::IncomingCall *Call,
+                                  MachineIRBuilder &MIRBuilder,
+                                  SPIRVGlobalRegistry *GR) {
+  return buildOpFromWrapper(MIRBuilder, SPIRV::OpCompositeConstruct, Call,
+                            GR->getSPIRVTypeID(Call->ReturnType));
+}
+
+static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
+                                 MachineIRBuilder &MIRBuilder,
+                                 SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+  return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                            GR->getSPIRVTypeID(Call->ReturnType));
+}
+
 static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
                                      MachineIRBuilder &MIRBuilder,
                                      SPIRVGlobalRegistry *GR) {
@@ -2382,6 +2399,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateSampleImageInst(DemangledCall, Call.get(), MIRBuilder, GR);
   case SPIRV::Select:
     return generateSelectInst(Call.get(), MIRBuilder);
+  case SPIRV::Construct:
+    return generateConstructInst(Call.get(), MIRBuilder, GR);
   case SPIRV::SpecConstant:
     return generateSpecConstantInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Enqueue:
@@ -2400,6 +2419,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateGroupUniformInst(Call.get(), MIRBuilder, GR);
   case SPIRV::KernelClock:
     return generateKernelClockInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::CoopMatr:
+    return generateCoopMatrInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
@@ -2522,6 +2543,22 @@ static SPIRVType *getPipeType(const TargetExtType *ExtensionType,
   return GR->getOrCreateOpTypePipe(MIRBuilder,
                                    SPIRV::AccessQualifier::AccessQualifier(
                                        ExtensionType->getIntParameter(0)));
+}
+
+static SPIRVType *getCoopMatrType(const TargetExtType *ExtensionType,
+                                  MachineIRBuilder &MIRBuilder,
+                                  SPIRVGlobalRegistry *GR) {
+  assert(ExtensionType->getNumIntParameters() == 4 &&
+         "Invalid number of parameters for SPIR-V coop matrices builtin!");
+  assert(ExtensionType->getNumTypeParameters() == 1 &&
+         "SPIR-V coop matrices builtin type must have a type parameter!");
+  const SPIRVType *ElemType =
+      GR->getOrCreateSPIRVType(ExtensionType->getTypeParameter(0), MIRBuilder);
+  // Create or get an existing type from GlobalRegistry.
+  return GR->getOrCreateOpTypeCoopMatr(
+      MIRBuilder, ExtensionType, ElemType, ExtensionType->getIntParameter(1),
+      ExtensionType->getIntParameter(2), ExtensionType->getIntParameter(3),
+      ExtensionType->getIntParameter(4));
 }
 
 static SPIRVType *
@@ -2653,6 +2690,9 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
     break;
   case SPIRV::OpTypeSampledImage:
     TargetType = getSampledImageType(BuiltinType, MIRBuilder, GR);
+    break;
+  case SPIRV::OpTypeCooperativeMatrixKHR:
+    TargetType = getCoopMatrType(BuiltinType, MIRBuilder, GR);
     break;
   default:
     TargetType =

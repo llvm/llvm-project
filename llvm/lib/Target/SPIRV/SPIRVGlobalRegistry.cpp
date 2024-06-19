@@ -1189,6 +1189,25 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeSampledImage(
       .addUse(getSPIRVTypeID(ImageType));
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeCoopMatr(
+    MachineIRBuilder &MIRBuilder, const TargetExtType *ExtensionType,
+    const SPIRVType *ElemType, uint32_t Scope, uint32_t Rows, uint32_t Columns,
+    uint32_t Use) {
+  Register ResVReg = DT.find(ExtensionType, &MIRBuilder.getMF());
+  if (ResVReg.isValid())
+    return MIRBuilder.getMF().getRegInfo().getUniqueVRegDef(ResVReg);
+  ResVReg = createTypeVReg(MIRBuilder);
+  SPIRVType *SpirvTy = MIRBuilder.buildInstr(SPIRV::OpTypeCooperativeMatrixKHR)
+                           .addDef(ResVReg)
+                           .addUse(getSPIRVTypeID(ElemType))
+                           .addImm(Scope)
+                           .addImm(Rows)
+                           .addImm(Columns)
+                           .addImm(Use);
+  DT.add(ExtensionType, &MIRBuilder.getMF(), ResVReg);
+  return SpirvTy;
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeByOpcode(
     const Type *Ty, MachineIRBuilder &MIRBuilder, unsigned Opcode) {
   Register ResVReg = DT.find(Ty, &MIRBuilder.getMF());
