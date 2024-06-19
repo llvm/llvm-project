@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ilist_node_base.h"
 #include "llvm/ADT/ilist_node_options.h"
+#include <type_traits>
 
 namespace llvm {
 
@@ -29,7 +30,9 @@ struct NodeAccess;
 /// has been set in the list options.
 template <class NodeTy, class ParentPtrTy> class node_parent_access {
 public:
-  inline const ParentPtrTy getParent() const {
+  using ConstParentPtrTy =
+      std::add_pointer_t<std::add_const_t<std::remove_pointer_t<ParentPtrTy>>>;
+  inline ConstParentPtrTy getParent() const {
     return static_cast<const NodeTy *>(this)->getNodeBaseParent();
   }
   inline ParentPtrTy getParent() {

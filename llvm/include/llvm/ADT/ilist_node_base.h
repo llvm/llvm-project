@@ -10,6 +10,7 @@
 #define LLVM_ADT_ILIST_NODE_BASE_H
 
 #include "llvm/ADT/PointerIntPair.h"
+#include <type_traits>
 
 namespace llvm {
 
@@ -48,10 +49,12 @@ public:
 
 template <class ParentPtrTy> class node_base_parent {
   ParentPtrTy Parent = nullptr;
+  using ConstParentPtrTy =
+      std::add_pointer_t<std::add_const_t<std::remove_pointer_t<ParentPtrTy>>>;
 
 public:
   void setNodeBaseParent(ParentPtrTy Parent) { this->Parent = Parent; }
-  inline const ParentPtrTy getNodeBaseParent() const { return Parent; }
+  inline ConstParentPtrTy getNodeBaseParent() const { return Parent; }
   inline ParentPtrTy getNodeBaseParent() { return Parent; }
 };
 template <> class node_base_parent<void> {};
