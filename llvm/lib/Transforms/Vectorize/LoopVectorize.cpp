@@ -7048,6 +7048,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // Ignore ephemeral values.
   CodeMetrics::collectEphemeralValues(TheLoop, AC, ValuesToIgnore);
 
+  SmallSetVector<Value *, 4> DeadInterleavePointerOps;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       // Find all stores to invariant variables. Since they are going to sink
@@ -7058,24 +7059,31 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         ValuesToIgnore.insert(&I);
 
       // For interleave groups, we only create a pointer for the start of the
-      // interleave group. Mark single-use ops feeding interleave group mem ops
-      // as free when vectorizing, expect the insert-pos memory op.
+      // interleave group. Queue up addresses of group members except the insert
+      // position for further processing.
       if (isAccessInterleaved(&I)) {
         auto *Group = getInterleavedAccessGroup(&I);
         if (Group->getInsertPos() == &I)
           continue;
         Value *PointerOp = getLoadStorePointerOperand(&I);
-        SmallSetVector<Value *, 4> Worklist;
-        Worklist.insert(PointerOp);
-        for (unsigned I = 0; I != Worklist.size(); ++I) {
-          auto *Op = dyn_cast<Instruction>(Worklist[I]);
-          if (!Op || !TheLoop->contains(Op) || !Op->hasOneUse())
-            continue;
-          VecValuesToIgnore.insert(Op);
-          Worklist.insert(Op->op_begin(), Op->op_end());
-        }
+        DeadInterleavePointerOps.insert(PointerOp);
       }
     }
+
+  // Mark ops feeding interleave group members as free, if they are only used
+  // by other dead computations.
+  for (unsigned I = 0; I != DeadInterleavePointerOps.size(); ++I) {
+    auto *Op = dyn_cast<Instruction>(DeadInterleavePointerOps[I]);
+    if (!Op || !TheLoop->contains(Op) || any_of(Op->users(), [this](User *U) {
+          Instruction *UI = cast<Instruction>(U);
+          return !VecValuesToIgnore.contains(U) &&
+                 (!isAccessInterleaved(UI) ||
+                  getInterleavedAccessGroup(UI)->getInsertPos() == UI);
+        }))
+      continue;
+    VecValuesToIgnore.insert(Op);
+    DeadInterleavePointerOps.insert(Op->op_begin(), Op->op_end());
+  }
 
   // Ignore type-promoting instructions we identified during reduction
   // detection.
