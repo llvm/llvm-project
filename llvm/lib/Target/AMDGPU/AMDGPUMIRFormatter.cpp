@@ -59,20 +59,19 @@ void AMDGPUMIRFormatter::printSDelayAluImm(int64_t Imm,
   uint64_t Id0 = (Imm & 0xF);
   uint64_t Skip = ((Imm >> 4) & 0x7);
   uint64_t Id1 = ((Imm >> 7) & 0xF);
-  auto outdep = [&](uint64_t Id) {
-    if (Id == None) {
+  auto Outdep = [&](uint64_t Id) {
+    if (Id == None)
       OS << "NONE";
-    } else if (Id < 5) {
+    else if (Id < 5)
       OS << "VALU_DEP_" << Id;
-    } else if (Id < 8) {
+    else if (Id < 8)
       OS << "TRANS32_DEP_" << Id - 4;
-    } else {
+    else
       OS << "SALU_CYCLE_" << Id - 8;
-    }
   };
 
   OS << ".id0_";
-  outdep(Id0);
+  Outdep(Id0);
 
   // If the second inst is "same" and "none", no need to print the rest of the
   // string.
@@ -81,15 +80,15 @@ void AMDGPUMIRFormatter::printSDelayAluImm(int64_t Imm,
 
   // Encode the second delay specification.
   OS << "_skip_";
-  if (Skip == 0) {
+  if (Skip == 0)
     OS << "SAME";
-  } else if (Skip == 1) {
+  else if (Skip == 1)
     OS << "NEXT";
-  } else {
+  else
     OS << "SKIP_" << Skip - 1;
-  }
+
   OS << "_id1_";
-  outdep(Id1);
+  Outdep(Id1);
 }
 
 bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
@@ -99,39 +98,37 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
   assert(OpIdx == 0);
 
   Imm = 0;
-  bool expected = Src.consume_front(".id0_");
-  if (!expected) {
+  bool Expected = Src.consume_front(".id0_");
+  if (!Expected)
     return ErrorCallback(Src.begin(), "Expected .id0_");
-  }
 
-  auto expect_int = [&](StringRef &Src, int64_t Offset) -> int64_t {
+  auto ExpectInt = [&](StringRef &Src, int64_t Offset) -> int64_t {
     int64_t Dep;
-    if (!Src.consumeInteger(10, Dep)) {
+    if (!Src.consumeInteger(10, Dep))
       return Dep + Offset;
-    } else {
+    else
       return -1;
-    }
   };
 
-  auto decode_delay = [&](StringRef &Src) -> int64_t {
-    if (Src.consume_front("NONE")) {
+  auto DecodeDelay = [&](StringRef &Src) -> int64_t {
+    if (Src.consume_front("NONE"))
       return 0;
-    } else if (Src.consume_front("VALU_DEP_")) {
-      return expect_int(Src, 0);
-    } else if (Src.consume_front("TRANS32_DEP_")) {
-      return expect_int(Src, 4);
-    } else if (Src.consume_front("SALU_CYCLE_")) {
-      return expect_int(Src, 8);
-    }
+    else if (Src.consume_front("VALU_DEP_"))
+      return ExpectInt(Src, 0);
+    else if (Src.consume_front("TRANS32_DEP_"))
+      return ExpectInt(Src, 4);
+    else if (Src.consume_front("SALU_CYCLE_"))
+      return ExpectInt(Src, 8);
+
     return -1;
   };
 
-  int64_t Delay0 = decode_delay(Src);
+  int64_t Delay0 = DecodeDelay(Src);
   int64_t Skip = 0;
   int64_t Delay1 = 0;
-  if (Delay0 == -1) {
+  if (Delay0 == -1)
     return ErrorCallback(Src.begin(), "Could not decode delay0");
-  }
+
 
   // Set the Imm so far, to that early return has the correct value.
   Imm = Delay0;
@@ -141,10 +138,10 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
   if (Src.begin() == Src.end())
     return false;
 
-  expected = Src.consume_front("_skip_");
-  if (!expected) {
+  Expected = Src.consume_front("_skip_");
+  if (!Expected)
     return ErrorCallback(Src.begin(), "Expected _skip_");
-  }
+
 
   if (Src.consume_front("SAME")) {
     Skip = 0;
@@ -158,15 +155,14 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
     ErrorCallback(Src.begin(), "Unexpected Skip Value");
   }
 
-  expected = Src.consume_front("_id1_");
-  if (!expected) {
+  Expected = Src.consume_front("_id1_");
+  if (!Expected)
     return ErrorCallback(Src.begin(), "Expected _id1_");
-  }
 
-  Delay1 = decode_delay(Src);
-  if (Delay1 == -1) {
+  Delay1 = DecodeDelay(Src);
+  if (Delay1 == -1)
     return ErrorCallback(Src.begin(), "Could not decode delay1");
-  }
+
   Imm = Imm | (Skip << 4) | (Delay1 << 7);
   return false;
 }
