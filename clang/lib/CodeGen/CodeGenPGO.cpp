@@ -1207,8 +1207,7 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                          ArrayRef(Args, 4));
     else
       Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step),
-          ArrayRef(Args));
+          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
   }
 }
 
