@@ -182,7 +182,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  unsigned getFlatPtrAddressSpace() const override {
+  std::optional<unsigned> getFlatPtrAddressSpace() const override {
     return 4u; // 4 is generic i.e. flat for SPIR & SPIR-V.
   }
 

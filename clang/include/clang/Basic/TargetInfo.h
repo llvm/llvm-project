@@ -1764,10 +1764,16 @@ public:
     return 0;
   }
 
-  /// \returns Target specific flat ptr address space; a flat ptr is a ptr that
-  /// can be casted to / from all other target address spaces. If the target
-  /// exposes no such address space / does not care, we return 0.
-  virtual unsigned getFlatPtrAddressSpace() const { return 0; }
+  /// \returns If a target exposes a flat ptr address space (a flat ptr is a ptr
+  /// that can be casted to / from all other target address spaces), then return
+  /// it. Otherwise, return std::nullopt and leave it up to the FE to correctly
+  /// insert specific address spaces. Note that this is target specific and
+  /// might not have a corresponding LangAS equivalent, thus it is not safe to
+  /// unconditionally invoke getLangASFromTargetAS on the value returned by this
+  /// interface.
+  virtual std::optional<unsigned> getFlatPtrAddressSpace() const {
+    return std::nullopt;
+  }
 
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the

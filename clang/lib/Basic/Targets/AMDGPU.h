@@ -381,7 +381,7 @@ public:
 
   /// \returns Target specific flat ptr address space; a flat ptr is a ptr that
   /// can be casted to / from all other target address spaces.
-  unsigned getFlatPtrAddressSpace() const override {
+  std::optional<unsigned> getFlatPtrAddressSpace() const override {
     return static_cast<unsigned>(llvm::AMDGPUAS::FLAT_ADDRESS);
   }
 
