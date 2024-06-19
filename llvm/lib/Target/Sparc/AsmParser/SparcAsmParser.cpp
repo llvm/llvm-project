@@ -1085,13 +1085,24 @@ ParseStatus SparcAsmParser::parseASITag(OperandVector &Operands) {
   SMLoc E = Parser.getTok().getEndLoc();
   int64_t ASIVal = 0;
 
-  if (is64Bit() && (getLexer().getKind() == AsmToken::Hash)) {
+  switch (getLexer().getKind()) {
+  case AsmToken::LParen:
+  case AsmToken::Integer:
+  case AsmToken::Identifier:
+  case AsmToken::Plus:
+  case AsmToken::Minus:
+  case AsmToken::Tilde:
+    if (getParser().parseAbsoluteExpression(ASIVal) || !isUInt<8>(ASIVal))
+      return Error(S, "invalid ASI number, must be between 0 and 255");
+    break;
+  case AsmToken::Hash: {
     // For now we only support named tags for 64-bit/V9 systems.
     // TODO: add support for 32-bit/V8 systems.
     SMLoc TagStart = getLexer().peekTok(false).getLoc();
     Parser.Lex(); // Eat the '#'.
-    auto ASIName = Parser.getTok().getString();
-    auto ASITag = SparcASITag::lookupASITagByName(ASIName);
+    const StringRef ASIName = Parser.getTok().getString();
+    const SparcASITag::ASITag *ASITag =
+        SparcASITag::lookupASITagByName(ASIName);
     if (!ASITag)
       ASITag = SparcASITag::lookupASITagByAltName(ASIName);
     Parser.Lex(); // Eat the identifier token.
@@ -1100,15 +1111,10 @@ ParseStatus SparcAsmParser::parseASITag(OperandVector &Operands) {
       return Error(TagStart, "unknown ASI tag");
 
     ASIVal = ASITag->Encoding;
-  } else if (!getParser().parseAbsoluteExpression(ASIVal)) {
-    if (!isUInt<8>(ASIVal))
-      return Error(S, "invalid ASI number, must be between 0 and 255");
-  } else {
-    return Error(
-        S, is64Bit()
-               ? "malformed ASI tag, must be %asi, a constant integer "
-                 "expression, or a named tag"
-               : "malformed ASI tag, must be a constant integer expression");
+    break;
+  }
+  default:
+    return ParseStatus::NoMatch;
   }
 
   Operands.push_back(SparcOperand::CreateASITag(ASIVal, S, E));
@@ -1230,8 +1236,12 @@ ParseStatus SparcAsmParser::parseOperand(OperandVector &Operands,
     // Parse an optional address-space identifier after the address.
     // This will be either an immediate constant expression, or, on 64-bit
     // processors, the %asi register.
-    if (is64Bit() && getLexer().is(AsmToken::Percent)) {
+    if (getLexer().is(AsmToken::Percent)) {
       SMLoc S = Parser.getTok().getLoc();
+      if (!is64Bit())
+        return Error(
+            S, "malformed ASI tag, must be a constant integer expression");
+
       Parser.Lex(); // Eat the %.
       const AsmToken Tok = Parser.getTok();
       if (Tok.is(AsmToken::Identifier) && Tok.getString() == "asi") {
