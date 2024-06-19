@@ -400,8 +400,8 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   // vector component name, and look up a template name if not. And similarly
   // for lookups into Objective-C class and object types, where the same
   // problem can arise.
-  if (!ObjectType.isNull() &&
-      (ObjectType->isVectorType() || ObjectType->isObjCObjectOrInterfaceType())) {
+  if (!ObjectType.isNull() && (ObjectType->isVectorType() ||
+                               ObjectType->isObjCObjectOrInterfaceType())) {
     Found.clear();
     return false;
   }
@@ -412,7 +412,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
   if (Found.wasNotFoundInCurrentInstantiation())
     return false;
 
-  #if 0
+#if 0
   // Determine where to perform name lookup
   DeclContext *LookupCtx = nullptr;
   bool IsDependent = false;
@@ -475,10 +475,9 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     // unknown specialization when we come to instantiate the template.
     IsDependent |= Found.wasNotFoundInCurrentInstantiation();
   }
-  #endif
+#endif
 
-
-  #if 0
+#if 0
   bool ObjectTypeSearchedInScope = false;
   bool LookupFirstQualifierInScope =
       MayBeNNS && Found.empty() && !ObjectType.isNull() && !IsDependent;
@@ -508,7 +507,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
 
     IsDependent |= Found.wasNotFoundInCurrentInstantiation();
   }
-  #endif
+#endif
 
   bool ObjectTypeSearchedInScope = false;
   bool LookupFirstQualifierInScope =
@@ -558,9 +557,10 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    DeclContext *LookupCtx = SS.isSet()
-        ? computeDeclContext(SS, EnteringContext)
-        : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
+    DeclContext *LookupCtx =
+        SS.isSet()
+            ? computeDeclContext(SS, EnteringContext)
+            : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
     // Simple filter callback that, for keywords, only accepts the C++ *_cast
     DefaultFilterCCC FilterCCC{};
     FilterCCC.WantTypeSpecifiers = false;
