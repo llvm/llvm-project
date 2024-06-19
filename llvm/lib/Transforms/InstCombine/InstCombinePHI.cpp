@@ -1421,7 +1421,7 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   if (!BO) {
     auto *GEP = cast<GEPOperator>(IvNext);
     return Builder.CreateGEP(GEP->getSourceElementType(), Start, Iv2, "",
-                             cast<GEPOperator>(IvNext)->isInBounds());
+                             cast<GEPOperator>(IvNext)->getNoWrapFlags());
   }
 
   assert(BO->isCommutative() && "Must be commutative");
