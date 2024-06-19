@@ -30,12 +30,11 @@ is being used.
 The GPU dialect exposes the `gpu.address_space` attribute, which currently has
 three values: `global`, `workgroup`, and `private`.
 
-These address spaces represent the types of buffer commonly seen in GPU compilation:.
-`global` memory is memory that resides in the GPU's global memory and is commonly
-used for function arguments. `workgroup` memory is a limited, per-workgroup resource:
-all threads in a workgroup/thread block access the same values in `worgroup` memory,
-but cannot access the `workgroup` memory of other workgroups. Finally, `private`
-memory is used to represent `alloca`-like buffers that are private to a sigle thread.
+These address spaces represent the types of buffer commonly seen in GPU compilation.
+`global` memory is memory that resides in the GPU's global memory. `workgroup`
+memory is a limited, per-workgroup resource: all threads in a workgroup/thread
+block access the same values in `worgroup` memory. Finally, `private` memory is
+used to represent `alloca`-like buffers that are private to a single thread/workitem.
 
 These address spaces may be used as the `memorySpace` attribute on `memref` values.
 The `gpu.module`/`gpu.func` compilation pipeline will lower such memory space
@@ -92,7 +91,11 @@ mlir-translate example-nvvm.mlir        \
 This compilation process expects all GPU code to live in a `gpu.module` and
 expects all kernels to be `gpu.func` operations. Non-kernel functions, like
 device library calls, may be defined using `func.func` or other non-GPU dialect
-operations.
+operations. This permits downstream systems to use these wrappers witout
+requiring them to use the GPU dialect's function operations, which might not include
+information those systems want to have as intrinsic values on their functions.
+Additionally, this allows for using `func.func` for device-side library functions
+in `gpu.module`s.
 
 ### Default NVVM Compilation Pipeline: gpu-lower-to-nvvm-pipeline
 
