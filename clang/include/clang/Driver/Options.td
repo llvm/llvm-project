@@ -196,6 +196,10 @@ def m_Group : OptionGroup<"<m group>">, Group<CompileOnly_Group>,
               DocName<"Target-dependent compilation options">,
               Visibility<[ClangOption, CLOption]>;
 
+def hlsl_Group : OptionGroup<"<HLSL group>">, Group<f_Group>,
+                   DocName<"HLSL options">,
+                   Visibility<[ClangOption]>;
+
 // Feature groups - these take command line options that correspond directly to
 // target specific features and can be translated directly from command line
 // options.
@@ -2122,7 +2126,7 @@ def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
     MarshallingInfoNegativeFlag<DiagnosticOpts<"ElideType">>;
 def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbols">, Group<f_Group>;
 defm eliminate_unused_debug_types : OptOutCC1FFlag<"eliminate-unused-debug-types",
-  "Do not emit ", "Emit ", " debug info for defined but unused types">;
+  "Do not emit ", "Emit ", " debug info for defined but unused types", [ClangOption, CLOption]>;
 def femit_all_decls : Flag<["-"], "femit-all-decls">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Emit all declarations, even if unused">,
@@ -7036,6 +7040,12 @@ def as_secure_log_file : Separate<["-"], "as-secure-log-file">,
 
 } // let Visibility = [CC1Option, CC1AsOption]
 
+let Visibility = [CC1Option, FC1Option] in {
+def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
+  HelpText<"Link and internalize needed symbols from the given bitcode file "
+           "before performing optimizations.">;
+} // let Visibility = [CC1Option, FC1Option]
+
 let Visibility = [CC1Option] in {
 
 def llvm_verify_each : Flag<["-"], "llvm-verify-each">,
@@ -7138,9 +7148,6 @@ defm constructor_aliases : BoolMOption<"constructor-aliases",
           " emitting complete constructors and destructors as aliases when possible">>;
 def mlink_bitcode_file : Separate<["-"], "mlink-bitcode-file">,
   HelpText<"Link the given bitcode file before performing optimizations.">;
-def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
-  HelpText<"Link and internalize needed symbols from the given bitcode file "
-           "before performing optimizations.">;
 defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   CodeGenOpts<"LinkBitcodePostopt">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
@@ -7892,6 +7899,11 @@ def finclude_default_header : Flag<["-"], "finclude-default-header">,
   HelpText<"Include default header file for OpenCL and HLSL">;
 def fdeclare_opencl_builtins : Flag<["-"], "fdeclare-opencl-builtins">,
   HelpText<"Add OpenCL builtin function declarations (experimental)">;
+
+def fhlsl_strict_availability : Flag<["-"], "fhlsl-strict-availability">,
+  HelpText<"Enables strict availability diagnostic mode for HLSL built-in functions.">,
+  Group<hlsl_Group>,
+  MarshallingInfoFlag<LangOpts<"HLSLStrictAvailability">>;
 
 def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
   HelpText<"Preserve 3-component vector type">,

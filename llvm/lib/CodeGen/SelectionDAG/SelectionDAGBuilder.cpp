@@ -3355,7 +3355,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       // special because it can be invoked, so we manually lower it to a DAG
       // node here.
       SmallVector<SDValue, 8> Ops;
-      Ops.push_back(getRoot()); // inchain
+      Ops.push_back(getControlRoot()); // inchain for the terminator node
       const TargetLowering &TLI = DAG.getTargetLoweringInfo();
       Ops.push_back(
           DAG.getTargetConstant(Intrinsic::wasm_rethrow, getCurSDLoc(),
@@ -7220,6 +7220,20 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::ABS, sdl, Op1.getValueType(), Op1));
     return;
   }
+  case Intrinsic::scmp: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::SCMP, sdl, DestVT, Op1, Op2));
+    break;
+  }
+  case Intrinsic::ucmp: {
+    SDValue Op1 = getValue(I.getArgOperand(0));
+    SDValue Op2 = getValue(I.getArgOperand(1));
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::UCMP, sdl, DestVT, Op1, Op2));
+    break;
+  }
   case Intrinsic::stacksave: {
     SDValue Op = getRoot();
     EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
@@ -7576,8 +7590,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     llvm_unreachable("instrprof failed to lower mcdc parameters");
   case Intrinsic::instrprof_mcdc_tvbitmap_update:
     llvm_unreachable("instrprof failed to lower an mcdc tvbitmap update");
-  case Intrinsic::instrprof_mcdc_condbitmap_update:
-    llvm_unreachable("instrprof failed to lower an mcdc condbitmap update");
   case Intrinsic::localescape: {
     MachineFunction &MF = DAG.getMachineFunction();
     const TargetInstrInfo *TII = DAG.getSubtarget().getInstrInfo();
@@ -10011,9 +10023,12 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         break;
       }
 
-      assert((OpInfo.ConstraintType == TargetLowering::C_RegisterClass ||
-              OpInfo.ConstraintType == TargetLowering::C_Register) &&
-             "Unknown constraint type!");
+      if (OpInfo.ConstraintType != TargetLowering::C_RegisterClass &&
+          OpInfo.ConstraintType != TargetLowering::C_Register) {
+        emitInlineAsmError(Call, "unknown asm constraint '" +
+                                     Twine(OpInfo.ConstraintCode) + "'");
+        return;
+      }
 
       // TODO: Support this.
       if (OpInfo.isIndirect) {
