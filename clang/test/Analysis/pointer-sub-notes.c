@@ -41,7 +41,7 @@ int different_3() {
                                     // expected-note{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
 }
 
-int different_5() {
+int different_4() {
   struct {
     int array1[5]; // expected-note{{Array at the left-hand side of subtraction}}
     int array2[5]; // expected-note{{Array at the right-hand side of subtraction}}
@@ -50,7 +50,7 @@ int different_5() {
                                       // expected-note{{Subtraction of two pointers that do not point into the same array is undefined behavior}}
 }
 
-void different_6() {
+void different_5() {
   int d;
   static int x[10][10]; // expected-note2{{Array at the left-hand side of subtraction}}
   int *y1 = &(x[3][5]);

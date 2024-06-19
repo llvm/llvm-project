@@ -154,6 +154,10 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
     auto R =
         std::make_unique<PathSensitiveBugReport>(BT, Msg_MemRegionDifferent, N);
     R->addRange(B->getSourceRange());
+    // The declarations may be identical even if the regions are different:
+    //   struct { int array[10]; } a, b;
+    //   do_something(&a.array[5] - &b.array[5]);
+    // In this case don't emit notes.
     if (DiffDeclL != DiffDeclR) {
       if (DiffDeclL)
         R->addNote("Array at the left-hand side of subtraction",
