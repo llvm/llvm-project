@@ -102,8 +102,16 @@ void adjustColumnWidths(ArrayRef<StringRef> Files,
 
 /// Prints a horizontal divider long enough to cover the given column
 /// widths.
-void renderDivider(ArrayRef<size_t> ColumnWidths, raw_ostream &OS) {
+void renderDivider(ArrayRef<size_t> ColumnWidths, raw_ostream &OS, const CoverageViewOptions &Options) {
   size_t Length = std::accumulate(ColumnWidths.begin(), ColumnWidths.end(), 0);
+  if (!Options.ShowRegionSummary)
+    Length -= (FileReportColumns[1] + FileReportColumns[2] + FileReportColumns[3]);
+  if (!Options.ShowInstantiationSummary)
+    Length -= (FileReportColumns[7] + FileReportColumns[8] + FileReportColumns[9]);
+  if (!Options.ShowBranchSummary)
+    Length -= (FileReportColumns[13] + FileReportColumns[14] + FileReportColumns[15]);
+  if (!Options.ShowMCDCSummary)
+    Length -= (FileReportColumns[16] + FileReportColumns[17] + FileReportColumns[18]);
   for (size_t I = 0; I < Length; ++I)
     OS << '-';
 }
@@ -405,7 +413,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
          << column("Miss", FunctionReportColumns[11], Column::RightAlignment)
          << column("Cover", FunctionReportColumns[12], Column::RightAlignment);
     OS << "\n";
-    renderDivider(FunctionReportColumns, OS);
+    renderDivider(FunctionReportColumns, OS, Options);
     OS << "\n";
     FunctionCoverageSummary Totals("TOTAL");
     for (const auto &F : Functions) {
@@ -418,7 +426,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
       render(Function, DC, OS);
     }
     if (Totals.ExecutionCount) {
-      renderDivider(FunctionReportColumns, OS);
+      renderDivider(FunctionReportColumns, OS, Options);
       OS << "\n";
       render(Totals, DC, OS);
     }
@@ -544,7 +552,7 @@ void CoverageReport::renderFileReports(
                  Column::RightAlignment)
        << column("Cover", FileReportColumns[18], Column::RightAlignment);
   OS << "\n";
-  renderDivider(FileReportColumns, OS);
+  renderDivider(FileReportColumns, OS, Options);
   OS << "\n";
 
   std::vector<const FileCoverageSummary *> EmptyFiles;
@@ -563,7 +571,7 @@ void CoverageReport::renderFileReports(
       render(*FCS, OS);
   }
 
-  renderDivider(FileReportColumns, OS);
+  renderDivider(FileReportColumns, OS, Options);
   OS << "\n";
   render(Totals, OS);
 }
