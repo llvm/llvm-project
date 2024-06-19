@@ -955,6 +955,11 @@ Arm and AArch64 Support
     * Arm Neoverse-N3 (neoverse-n3).
     * Arm Neoverse-V3 (neoverse-v3).
     * Arm Neoverse-V3AE (neoverse-v3ae).
+- SVE and SVE2 have been moved to the default extensions list for ARMv9.0,
+  making them optional per the Arm ARM.  Existing v9.0+ CPUs in the backend that
+  support these extensions continue to have these features enabled by default
+  when specified via ``-mcpu=``. The ``-cc1`` flag ``-target-feature +v9.0`` no
+  longer implies ``-target-feature +sve`` and ``-target-feature +sve2``.
 
 Android Support
 ^^^^^^^^^^^^^^^
