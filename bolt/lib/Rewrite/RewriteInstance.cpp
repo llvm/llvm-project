@@ -17,6 +17,7 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Core/Relocation.h"
+#include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
@@ -54,7 +55,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
@@ -86,6 +86,7 @@ extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
 extern cl::opt<bool> TimeBuild;
+extern cl::opt<bool> TimeRewrite;
 
 cl::opt<bool> AllowStripped("allow-stripped",
                             cl::desc("allow processing of stripped binaries"),
@@ -234,11 +235,6 @@ UseGnuStack("use-gnu-stack",
            "issues with strip/objcopy)"),
   cl::ZeroOrMore,
   cl::cat(BoltCategory));
-
-static cl::opt<bool>
-    TimeRewrite("time-rewrite",
-                cl::desc("print time spent in rewriting passes"), cl::Hidden,
-                cl::cat(BoltCategory));
 
 static cl::opt<bool>
 SequentialDisassembly("sequential-disassembly",
@@ -647,82 +643,6 @@ Error RewriteInstance::discoverStorage() {
   return Error::success();
 }
 
-void RewriteInstance::parseBuildID() {
-  if (!BuildIDSection)
-    return;
-
-  StringRef Buf = BuildIDSection->getContents();
-
-  // Reading notes section (see Portable Formats Specification, Version 1.1,
-  // pg 2-5, section "Note Section").
-  DataExtractor DE =
-      DataExtractor(Buf,
-                    /*IsLittleEndian=*/true, InputFile->getBytesInAddress());
-  uint64_t Offset = 0;
-  if (!DE.isValidOffset(Offset))
-    return;
-  uint32_t NameSz = DE.getU32(&Offset);
-  if (!DE.isValidOffset(Offset))
-    return;
-  uint32_t DescSz = DE.getU32(&Offset);
-  if (!DE.isValidOffset(Offset))
-    return;
-  uint32_t Type = DE.getU32(&Offset);
-
-  LLVM_DEBUG(dbgs() << "NameSz = " << NameSz << "; DescSz = " << DescSz
-                    << "; Type = " << Type << "\n");
-
-  // Type 3 is a GNU build-id note section
-  if (Type != 3)
-    return;
-
-  StringRef Name = Buf.slice(Offset, Offset + NameSz);
-  Offset = alignTo(Offset + NameSz, 4);
-  if (Name.substr(0, 3) != "GNU")
-    return;
-
-  BuildID = Buf.slice(Offset, Offset + DescSz);
-}
-
-std::optional<std::string> RewriteInstance::getPrintableBuildID() const {
-  if (BuildID.empty())
-    return std::nullopt;
-
-  std::string Str;
-  raw_string_ostream OS(Str);
-  const unsigned char *CharIter = BuildID.bytes_begin();
-  while (CharIter != BuildID.bytes_end()) {
-    if (*CharIter < 0x10)
-      OS << "0";
-    OS << Twine::utohexstr(*CharIter);
-    ++CharIter;
-  }
-  return OS.str();
-}
-
-void RewriteInstance::patchBuildID() {
-  raw_fd_ostream &OS = Out->os();
-
-  if (BuildID.empty())
-    return;
-
-  size_t IDOffset = BuildIDSection->getContents().rfind(BuildID);
-  assert(IDOffset != StringRef::npos && "failed to patch build-id");
-
-  uint64_t FileOffset = getFileOffsetForAddress(BuildIDSection->getAddress());
-  if (!FileOffset) {
-    BC->errs()
-        << "BOLT-WARNING: Non-allocatable build-id will not be updated.\n";
-    return;
-  }
-
-  char LastIDByte = BuildID[BuildID.size() - 1];
-  LastIDByte ^= 1;
-  OS.pwrite(&LastIDByte, 1, FileOffset + IDOffset + BuildID.size() - 1);
-
-  BC->outs() << "BOLT-INFO: patched build-id (flipped last bit)\n";
-}
-
 Error RewriteInstance::run() {
   assert(BC && "failed to create a binary context");
 
@@ -947,9 +867,6 @@ void RewriteInstance::discoverFileObjects() {
 
   BinaryFunction *PreviousFunction = nullptr;
   unsigned AnonymousId = 0;
-
-  // Regex object for matching cold fragments.
-  const Regex ColdFragment(".*\\.cold(\\.[0-9]+)?");
 
   const auto SortedSymbolsEnd =
       LastSymbol == SortedSymbols.end() ? LastSymbol : std::next(LastSymbol);
@@ -1232,7 +1149,7 @@ void RewriteInstance::discoverFileObjects() {
     }
 
     // Check if it's a cold function fragment.
-    if (ColdFragment.match(SymName)) {
+    if (FunctionFragmentTemplate.match(SymName)) {
       static bool PrintedWarning = false;
       if (!PrintedWarning) {
         PrintedWarning = true;
@@ -1463,10 +1380,10 @@ void RewriteInstance::registerFragments() {
     for (StringRef Name : Function.getNames()) {
       StringRef BaseName = NR.restore(Name);
       const bool IsGlobal = BaseName == Name;
-      const size_t ColdSuffixPos = BaseName.find(".cold");
-      if (ColdSuffixPos == StringRef::npos)
+      SmallVector<StringRef> Matches;
+      if (!FunctionFragmentTemplate.match(BaseName, &Matches))
         continue;
-      StringRef ParentName = BaseName.substr(0, ColdSuffixPos);
+      StringRef ParentName = Matches[1];
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
       const uint64_t NumPossibleLocalParents =
           NR.getUniquifiedNameCount(ParentName);
@@ -1500,7 +1417,7 @@ void RewriteInstance::registerFragments() {
   if (!BC->hasSymbolsWithFileName()) {
     BC->errs() << "BOLT-ERROR: input file has split functions but does not "
                   "have FILE symbols. If the binary was stripped, preserve "
-                  "FILE symbols with --keep-file-symbols strip option";
+                  "FILE symbols with --keep-file-symbols strip option\n";
     exit(1);
   }
 
@@ -1984,10 +1901,10 @@ Error RewriteInstance::readSpecialSections() {
       ".rela" + std::string(BC->getMainCodeSectionName()));
   HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
-  BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
 
   if (ErrorOr<BinarySection &> BATSec =
           BC->getUniqueSectionByName(BoltAddressTranslation::SECTION_NAME)) {
+    BC->HasBATSection = true;
     // Do not read BAT when plotting a heatmap
     if (!opts::HeatmapMode) {
       if (std::error_code EC = BAT->parse(BC->outs(), BATSec->getContents())) {
@@ -2041,10 +1958,7 @@ Error RewriteInstance::readSpecialSections() {
     report_error("expected valid eh_frame section", EHFrameOrError.takeError());
   CFIRdWrt.reset(new CFIReaderWriter(*BC, *EHFrameOrError.get()));
 
-  // Parse build-id
-  parseBuildID();
-  if (std::optional<std::string> FileBuildID = getPrintableBuildID())
-    BC->setFileBuildID(*FileBuildID);
+  processSectionMetadata();
 
   // Read .dynamic/PT_DYNAMIC.
   return readELFDynamic();
@@ -3208,12 +3122,14 @@ void RewriteInstance::preprocessProfileData() {
   if (Error E = ProfileReader->preprocessProfile(*BC.get()))
     report_error("cannot pre-process profile", std::move(E));
 
-  if (!BC->hasSymbolsWithFileName() && ProfileReader->hasLocalsWithFileName()) {
+  if (!BC->hasSymbolsWithFileName() && ProfileReader->hasLocalsWithFileName() &&
+      !opts::AllowStripped) {
     BC->errs()
         << "BOLT-ERROR: input binary does not have local file symbols "
            "but profile data includes function names with embedded file "
            "names. It appears that the input binary was stripped while a "
-           "profiled binary was not\n";
+           "profiled binary was not. If you know what you are doing and "
+           "wish to proceed, use -allow-stripped option.\n";
     exit(1);
   }
 }
@@ -3222,14 +3138,20 @@ void RewriteInstance::initializeMetadataManager() {
   if (BC->IsLinuxKernel)
     MetadataManager.registerRewriter(createLinuxKernelRewriter(*BC));
 
+  MetadataManager.registerRewriter(createBuildIDRewriter(*BC));
+
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
 }
 
-void RewriteInstance::processMetadataPreCFG() {
+void RewriteInstance::processSectionMetadata() {
   initializeMetadataManager();
 
+  MetadataManager.runSectionInitializers();
+}
+
+void RewriteInstance::processMetadataPreCFG() {
   MetadataManager.runInitializersPreCFG();
 
   processProfileDataPreCFG();
@@ -3284,8 +3206,11 @@ void RewriteInstance::processProfileData() {
   // Release memory used by profile reader.
   ProfileReader.reset();
 
-  if (opts::AggregateOnly)
+  if (opts::AggregateOnly) {
+    PrintProgramStats PPS(&*BAT);
+    BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*BC));
     exit(0);
+  }
 }
 
 void RewriteInstance::disassembleFunctions() {
@@ -4808,6 +4733,40 @@ void RewriteInstance::updateELFSymbolTable(
     // Create a new symbol based on the existing symbol.
     ELFSymTy NewSymbol = Symbol;
 
+    // Handle special symbols based on their name.
+    Expected<StringRef> SymbolName = Symbol.getName(StringSection);
+    assert(SymbolName && "cannot get symbol name");
+
+    auto updateSymbolValue = [&](const StringRef Name,
+                                 std::optional<uint64_t> Value = std::nullopt) {
+      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
+      NewSymbol.st_shndx = ELF::SHN_ABS;
+      BC->outs() << "BOLT-INFO: setting " << Name << " to 0x"
+                 << Twine::utohexstr(NewSymbol.st_value) << '\n';
+    };
+
+    if (*SymbolName == "__hot_start" || *SymbolName == "__hot_end") {
+      if (opts::HotText) {
+        updateSymbolValue(*SymbolName);
+        ++NumHotTextSymsUpdated;
+      }
+      goto registerSymbol;
+    }
+
+    if (*SymbolName == "__hot_data_start" || *SymbolName == "__hot_data_end") {
+      if (opts::HotData) {
+        updateSymbolValue(*SymbolName);
+        ++NumHotDataSymsUpdated;
+      }
+      goto registerSymbol;
+    }
+
+    if (*SymbolName == "_end") {
+      if (NextAvailableAddress > Symbol.st_value)
+        updateSymbolValue(*SymbolName, NextAvailableAddress);
+      goto registerSymbol;
+    }
+
     if (Function) {
       // If the symbol matched a function that was not emitted, update the
       // corresponding section index but otherwise leave it unchanged.
@@ -4904,33 +4863,7 @@ void RewriteInstance::updateELFSymbolTable(
       }
     }
 
-    // Handle special symbols based on their name.
-    Expected<StringRef> SymbolName = Symbol.getName(StringSection);
-    assert(SymbolName && "cannot get symbol name");
-
-    auto updateSymbolValue = [&](const StringRef Name,
-                                 std::optional<uint64_t> Value = std::nullopt) {
-      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
-      NewSymbol.st_shndx = ELF::SHN_ABS;
-      BC->outs() << "BOLT-INFO: setting " << Name << " to 0x"
-                 << Twine::utohexstr(NewSymbol.st_value) << '\n';
-    };
-
-    if (opts::HotText &&
-        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end")) {
-      updateSymbolValue(*SymbolName);
-      ++NumHotTextSymsUpdated;
-    }
-
-    if (opts::HotData && (*SymbolName == "__hot_data_start" ||
-                          *SymbolName == "__hot_data_end")) {
-      updateSymbolValue(*SymbolName);
-      ++NumHotDataSymsUpdated;
-    }
-
-    if (*SymbolName == "_end" && NextAvailableAddress > Symbol.st_value)
-      updateSymbolValue(*SymbolName, NextAvailableAddress);
-
+  registerSymbol:
     if (IsDynSym)
       Write((&Symbol - cantFail(Obj.symbols(&SymTabSection)).begin()) *
                 sizeof(ELFSymTy),
@@ -5764,8 +5697,6 @@ void RewriteInstance::rewriteFile() {
 
   // Update symbol tables.
   patchELFSymTabs();
-
-  patchBuildID();
 
   if (opts::EnableBAT)
     encodeBATSection();

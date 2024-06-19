@@ -31,6 +31,27 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 
+def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
+                           [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+
+def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
+                              [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+
+def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
+                              [SDTCisInt<0>, SDTCisInt<1>]>,
+                              [SDNPHasChain, SDNPSideEffect]>;
+let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
+  def AllocateZABuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
+}
+def : Pat<(i64 (AArch64AllocateZABuffer GPR64:$size)),
+          (AllocateZABuffer $size)>;
+
+def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 1,
+                              [SDTCisInt<0>]>, [SDNPHasChain, SDNPMayStore]>;
+let usesCustomInserter = 1 in {
+  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer), [(AArch64InitTPIDR2Obj GPR64:$buffer)]>, Sched<[WriteI]> {}
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction naming conventions.
 //===----------------------------------------------------------------------===//
@@ -220,6 +241,15 @@ def : Pat<(AArch64_smstart (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0))
 def : Pat<(AArch64_smstop (i32 svcr_op:$pstate), (i64 /*AArch64SME::Always*/0)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
 
+
+// Pseudo to insert cfi_offset/cfi_restore instructions. Used to save or restore
+// the streaming value of VG around streaming-mode changes in locally-streaming
+// functions.
+def VGSavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+def : Pat<(AArch64VGSave), (VGSavePseudo)>;
+
+def VGRestorePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+def : Pat<(AArch64VGRestore), (VGRestorePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions
@@ -793,10 +823,10 @@ defm LUTI4_S_4ZTZI : sme2p1_luti4_vector_vg4_index<"luti4">;
 }
 
 let Predicates = [HasSMEF16F16orSMEF8F16] in {
-defm FADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"fadd", 0b0100, MatrixOp16, ZZ_h_mul_r, nxv8f16, null_frag>;
-defm FADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"fadd", 0b0100, MatrixOp16, ZZZZ_h_mul_r, nxv8f16, null_frag>;
-defm FSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"fsub", 0b0101, MatrixOp16, ZZ_h_mul_r, nxv8f16, null_frag>;
-defm FSUB_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"fsub", 0b0101, MatrixOp16, ZZZZ_h_mul_r, nxv8f16, null_frag>;
+defm FADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"fadd", 0b0100, MatrixOp16, ZZ_h_mul_r, nxv8f16, int_aarch64_sme_add_za16_vg1x2>;
+defm FADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"fadd", 0b0100, MatrixOp16, ZZZZ_h_mul_r, nxv8f16,  int_aarch64_sme_add_za16_vg1x4>;
+defm FSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"fsub", 0b0101, MatrixOp16, ZZ_h_mul_r, nxv8f16,  int_aarch64_sme_sub_za16_vg1x2>;
+defm FSUB_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"fsub", 0b0101, MatrixOp16, ZZZZ_h_mul_r, nxv8f16,  int_aarch64_sme_sub_za16_vg1x4>;
 
 defm FMLA_VG2_M2ZZI_H : sme2p1_multi_vec_array_vg2_index_16b<"fmla", 0b00, 0b100, ZZ_h_mul_r, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_lane_vg1x2>;
 defm FMLA_VG4_M4ZZI_H : sme2p1_multi_vec_array_vg4_index_16b<"fmla", 0b000, ZZZZ_h_mul_r, ZPR4b16, nxv8f16, int_aarch64_sme_fmla_lane_vg1x4>;
@@ -820,10 +850,10 @@ defm FMOPS_MPPZZ_H : sme2p1_fmop_tile_fp16<"fmops", 0b0, 0b1, nxv8f16, int_aarch
 }
 
 let Predicates = [HasSME2, HasB16B16] in {
-defm BFADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfadd", 0b1100, MatrixOp16, ZZ_h_mul_r, nxv8bf16, null_frag>;
-defm BFADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"bfadd", 0b1100, MatrixOp16, ZZZZ_h_mul_r, nxv8bf16, null_frag>;
-defm BFSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfsub", 0b1101, MatrixOp16, ZZ_h_mul_r,  nxv8bf16, null_frag>;
-defm BFSUB_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"bfsub", 0b1101, MatrixOp16, ZZZZ_h_mul_r,  nxv8bf16, null_frag>;
+defm BFADD_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfadd", 0b1100, MatrixOp16, ZZ_h_mul_r, nxv8bf16,    int_aarch64_sme_add_za16_vg1x2>;
+defm BFADD_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"bfadd", 0b1100, MatrixOp16, ZZZZ_h_mul_r, nxv8bf16,  int_aarch64_sme_add_za16_vg1x4>;
+defm BFSUB_VG2_M2Z_H : sme2_multivec_accum_add_sub_vg2<"bfsub", 0b1101, MatrixOp16, ZZ_h_mul_r,  nxv8bf16,   int_aarch64_sme_sub_za16_vg1x2>;
+defm BFSUB_VG4_M4Z_H : sme2_multivec_accum_add_sub_vg4<"bfsub", 0b1101, MatrixOp16, ZZZZ_h_mul_r,  nxv8bf16, int_aarch64_sme_sub_za16_vg1x4>;
 
 defm BFMLA_VG2_M2ZZI : sme2p1_multi_vec_array_vg2_index_16b<"bfmla", 0b00, 0b110, ZZ_h_mul_r, ZPR4b16, nxv8bf16, int_aarch64_sme_fmla_lane_vg1x2>;
 defm BFMLA_VG4_M4ZZI : sme2p1_multi_vec_array_vg4_index_16b<"bfmla", 0b010, ZZZZ_h_mul_r, ZPR4b16, nxv8bf16, int_aarch64_sme_fmla_lane_vg1x4>;

@@ -102,6 +102,11 @@ private:
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
   unsigned CodeObjectVersion;
+  const MCExpr *UCVersionW64Expr;
+  const MCExpr *UCVersionW32Expr;
+  const MCExpr *UCVersionMDPExpr;
+
+  const MCExpr *createConstantSymbolExpr(StringRef Id, int64_t Val);
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
@@ -263,6 +268,8 @@ public:
   MCOperand decodeBoolReg(unsigned Val) const;
   MCOperand decodeSplitBarrier(unsigned Val) const;
   MCOperand decodeDpp8FI(unsigned Val) const;
+
+  MCOperand decodeVersionImm(unsigned Imm) const;
 
   int getTTmpIdx(unsigned Val) const;
 

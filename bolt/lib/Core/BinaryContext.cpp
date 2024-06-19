@@ -142,7 +142,7 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
       AsmInfo(std::move(AsmInfo)), MII(std::move(MII)), STI(std::move(STI)),
       InstPrinter(std::move(InstPrinter)), MIA(std::move(MIA)),
       MIB(std::move(MIB)), MRI(std::move(MRI)), DisAsm(std::move(DisAsm)),
-      Logger(Logger) {
+      Logger(Logger), InitialDynoStats(isAArch64()) {
   Relocation::Arch = this->TheTriple->getArch();
   RegularPageSize = isAArch64() ? RegularPageSizeAArch64 : RegularPageSizeX86;
   PageAlign = opts::NoHugePages ? RegularPageSize : HugePageSize;
@@ -934,10 +934,13 @@ std::string BinaryContext::generateJumpTableName(const BinaryFunction &BF,
   uint64_t Offset = 0;
   if (const JumpTable *JT = BF.getJumpTableContainingAddress(Address)) {
     Offset = Address - JT->getAddress();
-    auto Itr = JT->Labels.find(Offset);
-    if (Itr != JT->Labels.end())
-      return std::string(Itr->second->getName());
-    Id = JumpTableIds.at(JT->getAddress());
+    auto JTLabelsIt = JT->Labels.find(Offset);
+    if (JTLabelsIt != JT->Labels.end())
+      return std::string(JTLabelsIt->second->getName());
+
+    auto JTIdsIt = JumpTableIds.find(JT->getAddress());
+    assert(JTIdsIt != JumpTableIds.end());
+    Id = JTIdsIt->second;
   } else {
     Id = JumpTableIds[Address] = BF.JumpTables.size();
   }
@@ -1322,7 +1325,9 @@ void BinaryContext::processInterproceduralReferences() {
        InterproceduralReferences) {
     BinaryFunction &Function = *It.first;
     uint64_t Address = It.second;
-    if (!Address || Function.isIgnored())
+    // Process interprocedural references from ignored functions in BAT mode
+    // (non-simple in non-relocation mode) to properly register entry points
+    if (!Address || (Function.isIgnored() && !HasBATSection))
       continue;
 
     BinaryFunction *TargetFunction =
@@ -2212,8 +2217,8 @@ ErrorOr<uint64_t> BinaryContext::getUnsignedValueAtAddress(uint64_t Address,
   return DE.getUnsigned(&ValueOffset, Size);
 }
 
-ErrorOr<uint64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
-                                                         size_t Size) const {
+ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
+                                                        size_t Size) const {
   const ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
   if (!Section)
     return std::make_error_code(std::errc::bad_address);

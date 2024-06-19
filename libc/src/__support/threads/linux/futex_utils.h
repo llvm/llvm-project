@@ -9,23 +9,20 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_UTILS_H
 
-#include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/threads/linux/futex_word.h"
+#include "src/__support/time/linux/abs_timeout.h"
 #include <linux/errno.h>
 #include <linux/futex.h>
 
 namespace LIBC_NAMESPACE {
 class Futex : public cpp::Atomic<FutexWordType> {
 public:
-  struct Timeout {
-    timespec abs_time;
-    bool is_realtime;
-  };
+  using Timeout = internal::AbsTimeout;
   LIBC_INLINE constexpr Futex(FutexWordType value)
       : cpp::Atomic<FutexWordType>(value) {}
   LIBC_INLINE Futex &operator=(FutexWordType value) {
@@ -37,7 +34,7 @@ public:
                         bool is_shared = false) {
     // use bitset variants to enforce abs_time
     uint32_t op = is_shared ? FUTEX_WAIT_BITSET : FUTEX_WAIT_BITSET_PRIVATE;
-    if (timeout && timeout->is_realtime) {
+    if (timeout && timeout->is_realtime()) {
       op |= FUTEX_CLOCK_REALTIME;
     }
     for (;;) {
@@ -49,7 +46,7 @@ public:
           /* futex address */ this,
           /* futex operation  */ op,
           /* expected value */ expected,
-          /* timeout */ timeout ? &timeout->abs_time : nullptr,
+          /* timeout */ timeout ? &timeout->get_timespec() : nullptr,
           /* ignored */ nullptr,
           /* bitset */ FUTEX_BITSET_MATCH_ANY);
 

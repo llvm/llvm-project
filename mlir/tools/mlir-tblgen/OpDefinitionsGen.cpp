@@ -1311,22 +1311,24 @@ void OpEmitter::genPropertiesSupport() {
     return ::mlir::failure();
   }
     )decl";
-  // TODO: properties might be optional as well.
-  const char *propFromAttrFmt = R"decl(;
-    {{
+  const char *propFromAttrFmt = R"decl(
       auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
                ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {{
-        {0};
+        {0}
       };
       {2};
-      if (!attr) {{
-        emitError() << "expected key entry for {1} in DictionaryAttr to set "
-                   "Properties.";
+)decl";
+  const char *attrGetNoDefaultFmt = R"decl(;
+      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
         return ::mlir::failure();
+)decl";
+  const char *attrGetDefaultFmt = R"decl(;
+      if (attr) {{
+        if (::mlir::failed(setFromAttr(prop.{0}, attr, emitError)))
+          return ::mlir::failure();
+      } else {{
+        prop.{0} = {1};
       }
-      if (::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
-        return ::mlir::failure();
-    }
 )decl";
 
   for (const auto &attrOrProp : attrOrProperties) {
@@ -1349,13 +1351,20 @@ void OpEmitter::genPropertiesSupport() {
       }
       os.flush();
 
-      setPropMethod << formatv(propFromAttrFmt,
+      setPropMethod << "{\n"
+                    << formatv(propFromAttrFmt,
                                tgfmt(prop.getConvertFromAttributeCall(),
                                      &fctx.addSubst("_attr", propertyAttr)
                                           .addSubst("_storage", propertyStorage)
                                           .addSubst("_diag", propertyDiag)),
                                name, getAttr);
-
+      if (prop.hasDefaultValue()) {
+        setPropMethod << formatv(attrGetDefaultFmt, name,
+                                 prop.getDefaultValue());
+      } else {
+        setPropMethod << formatv(attrGetNoDefaultFmt, name);
+      }
+      setPropMethod << "  }\n";
     } else {
       const auto *namedAttr =
           llvm::dyn_cast_if_present<const AttributeMetadata *>(attrOrProp);
@@ -1376,13 +1385,8 @@ void OpEmitter::genPropertiesSupport() {
       setPropMethod << formatv(R"decl(
   {{
     auto &propStorage = prop.{0};
-    {2}
-    if (attr || /*isRequired=*/{1}) {{
-      if (!attr) {{
-        emitError() << "expected key entry for {0} in DictionaryAttr to set "
-                   "Properties.";
-        return ::mlir::failure();
-      }
+    {1}
+    if (attr) {{
       auto convertedAttr = ::llvm::dyn_cast<std::remove_reference_t<decltype(propStorage)>>(attr);
       if (convertedAttr) {{
         propStorage = convertedAttr;
@@ -1393,7 +1397,7 @@ void OpEmitter::genPropertiesSupport() {
     }
   }
 )decl",
-                               name, namedAttr->isRequired, getAttr);
+                               name, getAttr);
     }
   }
   setPropMethod << "  return ::mlir::success();\n";
@@ -2650,6 +2654,21 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder() {
   }
 
   // Result types
+  if (emitHelper.hasProperties()) {
+    // Initialize the properties from Attributes before invoking the infer
+    // function.
+    body << formatv(R"(
+  if (!attributes.empty()) {
+    ::mlir::OpaqueProperties properties =
+      &{1}.getOrAddProperties<{0}::Properties>();
+    std::optional<::mlir::RegisteredOperationName> info =
+      {1}.name.getRegisteredInfo();
+    if (failed(info->setOpPropertiesFromAttribute({1}.name, properties,
+        {1}.attributes.getDictionary({1}.getContext()), nullptr)))
+      ::llvm::report_fatal_error("Property conversion failed.");
+  })",
+                    opClass.getClassName(), builderOpState);
+  }
   body << formatv(R"(
   ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
   if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
@@ -2878,6 +2897,22 @@ void OpEmitter::genCollectiveParamBuilder() {
          << (numVariadicResults != 0 ? " >= " : " == ") << numNonVariadicResults
          << "u && \"mismatched number of return types\");\n";
   body << "  " << builderOpState << ".addTypes(resultTypes);\n";
+
+  if (emitHelper.hasProperties()) {
+    // Initialize the properties from Attributes before invoking the infer
+    // function.
+    body << formatv(R"(
+  if (!attributes.empty()) {
+    ::mlir::OpaqueProperties properties =
+      &{1}.getOrAddProperties<{0}::Properties>();
+    std::optional<::mlir::RegisteredOperationName> info =
+      {1}.name.getRegisteredInfo();
+    if (failed(info->setOpPropertiesFromAttribute({1}.name, properties,
+        {1}.attributes.getDictionary({1}.getContext()), nullptr)))
+      ::llvm::report_fatal_error("Property conversion failed.");
+  })",
+                    opClass.getClassName(), builderOpState);
+  }
 
   // Generate builder that infers type too.
   // TODO: Expand to handle successors.
@@ -4054,15 +4089,20 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
   {
     SmallVector<MethodParameter> paramList;
-    paramList.emplace_back("::mlir::DictionaryAttr", "attrs",
-                           attrSizedOperands ? "" : "nullptr");
-    if (useProperties)
-      paramList.emplace_back("const Properties &", "properties", "{}");
-    else
+    if (useProperties) {
+      // Properties can't be given a default constructor here due to Properties
+      // struct being defined in the enclosing class which isn't complete by
+      // here.
+      paramList.emplace_back("::mlir::DictionaryAttr", "attrs");
+      paramList.emplace_back("const Properties &", "properties");
+    } else {
+      paramList.emplace_back("::mlir::DictionaryAttr", "attrs", "{}");
       paramList.emplace_back("const ::mlir::EmptyProperties &", "properties",
                              "{}");
+    }
     paramList.emplace_back("::mlir::RegionRange", "regions", "{}");
-    auto *baseConstructor = genericAdaptorBase.addConstructor(paramList);
+    auto *baseConstructor =
+        genericAdaptorBase.addConstructor<Method::Inline>(paramList);
     baseConstructor->addMemberInitializer("odsAttrs", "attrs");
     if (useProperties)
       baseConstructor->addMemberInitializer("properties", "properties");
@@ -4102,6 +4142,21 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
           "::mlir::EmptyProperties{}), "
           "regions");
     }
+
+    // Add forwarding constructor that constructs Properties.
+    if (useProperties) {
+      SmallVector<MethodParameter> paramList;
+      paramList.emplace_back("RangeT", "values");
+      paramList.emplace_back("::mlir::DictionaryAttr", "attrs",
+                             attrSizedOperands ? "" : "nullptr");
+      auto *noPropertiesConstructor =
+          genericAdaptor.addConstructor(std::move(paramList));
+      noPropertiesConstructor->addMemberInitializer(
+          genericAdaptor.getClassName(), "values, "
+                                         "attrs, "
+                                         "Properties{}, "
+                                         "{}");
+    }
   }
 
   // Create constructors constructing the adaptor from an instance of the op.
@@ -4109,14 +4164,24 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
   // and the value range from the parameter.
   {
     // Base class is in the cpp file and can simply access the members of the op
-    // class to initialize the template independent fields.
-    auto *constructor = genericAdaptorBase.addConstructor(
-        MethodParameter(op.getCppClassName(), "op"));
-    constructor->addMemberInitializer(
-        genericAdaptorBase.getClassName(),
-        llvm::Twine(!useProperties ? "op->getAttrDictionary()"
-                                   : "op->getDiscardableAttrDictionary()") +
-            ", op.getProperties(), op->getRegions()");
+    // class to initialize the template independent fields. If the op doesn't
+    // have properties, we can emit a generic constructor inline. Otherwise,
+    // emit it out-of-line because we need the op to be defined.
+    Constructor *constructor;
+    if (useProperties) {
+      constructor = genericAdaptorBase.addConstructor(
+          MethodParameter(op.getCppClassName(), "op"));
+    } else {
+      constructor = genericAdaptorBase.addConstructor<Method::Inline>(
+          MethodParameter("::mlir::Operation *", "op"));
+    }
+    constructor->addMemberInitializer("odsAttrs",
+                                      "op->getRawDictionaryAttrs()");
+    // Retrieve the operation name from the op directly.
+    constructor->addMemberInitializer("odsOpName", "op->getName()");
+    if (useProperties)
+      constructor->addMemberInitializer("properties", "op.getProperties()");
+    constructor->addMemberInitializer("odsRegions", "op->getRegions()");
 
     // Generic adaptor is templated and therefore defined inline in the header.
     // We cannot use the Op class here as it is an incomplete type (we have a

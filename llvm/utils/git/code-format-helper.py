@@ -216,6 +216,17 @@ class ClangFormatHelper(FormatHelper):
             cf_cmd.append(args.start_rev)
             cf_cmd.append(args.end_rev)
 
+        # Gather the extension of all modified files and pass them explicitly to git-clang-format.
+        # This prevents git-clang-format from applying its own filtering rules on top of ours.
+        extensions = set()
+        for file in cpp_files:
+            _, ext = os.path.splitext(file)
+            extensions.add(
+                ext.strip(".")
+            )  # Exclude periods since git-clang-format takes extensions without them
+        cf_cmd.append("--extensions")
+        cf_cmd.append("'{}'".format(",".join(extensions)))
+
         cf_cmd.append("--")
         cf_cmd += cpp_files
 

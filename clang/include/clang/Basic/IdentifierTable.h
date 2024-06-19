@@ -754,7 +754,7 @@ public:
     II->Entry = &Entry;
 
     // If this is the 'import' contextual keyword, mark it as such.
-    if (Name.equals("import"))
+    if (Name == "import")
       II->setModulesImport(true);
 
     if (Name.equals("module"))

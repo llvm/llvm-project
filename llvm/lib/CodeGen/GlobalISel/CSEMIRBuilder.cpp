@@ -51,6 +51,11 @@ CSEMIRBuilder::getDominatingInstrForID(FoldingSetNodeID &ID,
       // this builder will have the def ready.
       setInsertPt(*CurMBB, std::next(MII));
     } else if (!dominates(MI, CurrPos)) {
+      // Update the spliced machineinstr's debug location by merging it with the
+      // debug location of the instruction at the insertion point.
+      auto *Loc = DILocation::getMergedLocation(getDebugLoc().get(),
+                                                MI->getDebugLoc().get());
+      MI->setDebugLoc(Loc);
       CurMBB->splice(CurrPos, CurMBB, MI);
     }
     return MachineInstrBuilder(getMF(), MI);

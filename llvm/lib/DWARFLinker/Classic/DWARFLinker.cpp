@@ -201,8 +201,10 @@ static void analyzeImportedModule(
     return;
   // Don't track interfaces that are part of the toolchain.
   // For example: Swift, _Concurrency, ...
-  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
-  if (!Toolchain.empty() && Path.starts_with(Toolchain))
+  StringRef DeveloperDir = guessDeveloperDir(SysRoot);
+  if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
+    return;
+  if (isInToolchainDir(Path))
     return;
   std::optional<const char *> Name =
       dwarf::toString(DIE.find(dwarf::DW_AT_name));
@@ -2245,17 +2247,20 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
         DebugNames.addName(
             Namespace.Name, Namespace.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Namespace.Die),
-            Namespace.Die->getTag(), Unit.getUniqueID());
+            Namespace.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
       for (const auto &Pubname : Unit.getPubnames())
         DebugNames.addName(
             Pubname.Name, Pubname.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Pubname.Die),
-            Pubname.Die->getTag(), Unit.getUniqueID());
+            Pubname.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
       for (const auto &Pubtype : Unit.getPubtypes())
         DebugNames.addName(
             Pubtype.Name, Pubtype.Die->getOffset(),
             DWARF5AccelTableData::getDefiningParentDieOffset(*Pubtype.Die),
-            Pubtype.Die->getTag(), Unit.getUniqueID());
+            Pubtype.Die->getTag(), Unit.getUniqueID(),
+            Unit.getTag() == dwarf::DW_TAG_type_unit);
     } break;
     }
   }

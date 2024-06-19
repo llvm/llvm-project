@@ -1,5 +1,5 @@
-# Check that llvm-bolt is able to read a file with DWARF Exception CFI
-# information and fix CFI information after reordering.
+## Check that llvm-bolt is able to read a file with DWARF Exception CFI
+## information and fix CFI information after reordering.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: llvm-strip --strip-unneeded %t.o

@@ -1904,7 +1904,7 @@ template <typename Op_t> struct ElementWiseBitCast_match {
   ElementWiseBitCast_match(const Op_t &OpMatch) : Op(OpMatch) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    BitCastInst *I = dyn_cast<BitCastInst>(V);
+    auto *I = dyn_cast<BitCastInst>(V);
     if (!I)
       return false;
     Type *SrcType = I->getSrcTy();
@@ -1948,8 +1948,8 @@ m_IntToPtr(const OpTy &Op) {
 
 /// Matches Trunc.
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::Trunc>(Op);
+inline CastInst_match<OpTy, TruncInst> m_Trunc(const OpTy &Op) {
+  return CastInst_match<OpTy, TruncInst>(Op);
 }
 
 /// Matches trunc nuw.
@@ -1967,7 +1967,7 @@ m_NSWTrunc(const OpTy &Op) {
 }
 
 template <typename OpTy>
-inline match_combine_or<CastOperator_match<OpTy, Instruction::Trunc>, OpTy>
+inline match_combine_or<CastInst_match<OpTy, TruncInst>, OpTy>
 m_TruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_Trunc(Op), Op);
 }

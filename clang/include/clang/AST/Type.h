@@ -1120,6 +1120,20 @@ public:
   /// Return true if this is a trivially copyable type (C++0x [basic.types]p9)
   bool isTriviallyCopyableType(const ASTContext &Context) const;
 
+  /// Return true if the type is safe to bitwise copy using memcpy/memmove.
+  ///
+  /// This is an extension in clang: bitwise cloneable types act as trivially
+  /// copyable types, meaning their underlying bytes can be safely copied by
+  /// memcpy or memmove. After the copy, the destination object has the same
+  /// object representation.
+  ///
+  /// However, there are cases where it is not safe to copy:
+  ///  - When sanitizers, such as AddressSanitizer, add padding with poison,
+  ///    which can cause issues if those poisoned padding bits are accessed.
+  ///  - Types with Objective-C lifetimes, where specific runtime
+  ///    semantics may not be preserved during a bitwise copy.
+  bool isBitwiseCloneableType(const ASTContext &Context) const;
+
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
@@ -2515,6 +2529,7 @@ public:
   bool isRecordType() const;
   bool isClassType() const;
   bool isStructureType() const;
+  bool isStructureTypeWithFlexibleArrayMember() const;
   bool isObjCBoxableRecordType() const;
   bool isInterfaceType() const;
   bool isStructureOrClassType() const;
@@ -2523,6 +2538,7 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
@@ -2999,6 +3015,9 @@ public:
 // WebAssembly reference types
 #define WASM_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+// AMDGPU types
+#define AMDGPU_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/AMDGPUTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -6034,30 +6053,27 @@ class DeducedTemplateSpecializationType : public DeducedType,
 
   DeducedTemplateSpecializationType(TemplateName Template,
                                     QualType DeducedAsType,
-                                    bool IsDeducedAsDependent)
+                                    bool IsDeducedAsDependent, QualType Canon)
       : DeducedType(DeducedTemplateSpecialization, DeducedAsType,
                     toTypeDependence(Template.getDependence()) |
                         (IsDeducedAsDependent
                              ? TypeDependence::DependentInstantiation
                              : TypeDependence::None),
-                    DeducedAsType.isNull() ? QualType(this, 0)
-                                           : DeducedAsType.getCanonicalType()),
+                    Canon),
         Template(Template) {}
 
 public:
   /// Retrieve the name of the template that we are deducing.
   TemplateName getTemplateName() const { return Template;}
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
+  void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, getTemplateName(), getDeducedType(), isDependentType());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Template,
                       QualType Deduced, bool IsDependent) {
     Template.Profile(ID);
-    QualType CanonicalType =
-        Deduced.isNull() ? Deduced : Deduced.getCanonicalType();
-    ID.AddPointer(CanonicalType.getAsOpaquePtr());
+    Deduced.Profile(ID);
     ID.AddBoolean(IsDependent || Template.isDependent());
   }
 
@@ -7729,6 +7745,10 @@ inline bool Type::isExtVectorBoolType() const {
   return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
 }
 
+inline bool Type::isSubscriptableVectorType() const {
+  return isVectorType() || isSveVLSBuiltinType();
+}
+
 inline bool Type::isMatrixType() const {
   return isa<MatrixType>(CanonicalType);
 }
@@ -8044,7 +8064,10 @@ inline bool Type::isUndeducedType() const {
 /// Determines whether this is a type for which one can define
 /// an overloaded operator.
 inline bool Type::isOverloadableType() const {
-  return isDependentType() || isRecordType() || isEnumeralType();
+  if (!CanonicalType->isDependentType())
+    return isRecordType() || isEnumeralType();
+  return !isArrayType() && !isFunctionType() && !isAnyPointerType() &&
+         !isMemberPointerType();
 }
 
 /// Determines whether this type is written as a typedef-name.

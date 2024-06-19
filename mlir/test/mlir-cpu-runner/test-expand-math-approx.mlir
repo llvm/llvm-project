@@ -833,6 +833,46 @@ func.func @atanh() {
   return
 }
 
+// -------------------------------------------------------------------------- //
+// Rsqrt.
+// -------------------------------------------------------------------------- //
+
+func.func @rsqrt_f32(%a : f32) {
+  %r = math.rsqrt %a : f32
+  vector.print %r : f32
+  return
+}
+
+func.func @rsqrt_3xf32(%a : vector<3xf32>) {
+  %r = math.rsqrt %a : vector<3xf32>
+  vector.print %r : vector<3xf32>
+  return
+}
+
+func.func @rsqrt() {
+  // CHECK: 1
+  %zero = arith.constant 1.0 : f32
+  call @rsqrt_f32(%zero) : (f32) -> ()
+
+  // CHECK: 0.707107
+  %cst1 = arith.constant 2.0 : f32
+  call @rsqrt_f32(%cst1) : (f32) -> ()
+
+  // CHECK: inf
+  %cst2 = arith.constant 0.0 : f32
+  call @rsqrt_f32(%cst2) : (f32) -> ()
+
+  // CHECK: nan
+  %cst3 = arith.constant -1.0 : f32
+  call @rsqrt_f32(%cst3) : (f32) -> ()
+
+  // CHECK: 0.5, 1.41421, 0.57735
+  %vec_x = arith.constant dense<[4.0, 0.5, 3.0]> : vector<3xf32>
+  call @rsqrt_3xf32(%vec_x) : (vector<3xf32>) -> ()
+
+  return
+}
+
 func.func @main() {
   call @exp2f() : () -> ()
   call @roundf() : () -> ()
@@ -844,5 +884,6 @@ func.func @main() {
   call @asinh() : () -> ()
   call @acosh() : () -> ()
   call @atanh() : () -> ()
+  call @rsqrt() : () -> ()
   return
 }

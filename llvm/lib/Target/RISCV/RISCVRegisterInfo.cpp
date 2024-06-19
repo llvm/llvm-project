@@ -72,7 +72,8 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 
   bool HasVectorCSR =
-      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall;
+      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall &&
+      Subtarget.hasVInstructions();
 
   switch (Subtarget.getTargetABI()) {
   default:
@@ -607,17 +608,24 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  Offset += getFrameIndexInstrOffset(MI, FIOperandNum);
 
   if (TFI->hasFP(MF) && !shouldRealignStack(MF)) {
+    auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
     // Estimate the stack size used to store callee saved registers(
     // excludes reserved registers).
     unsigned CalleeSavedSize = 0;
-    BitVector ReservedRegs = getReservedRegs(MF);
     for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R;
          ++R) {
-      if (!ReservedRegs.test(Reg))
-        CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
+      if (Subtarget.isRegisterReservedByUser(Reg))
+        continue;
+
+      if (RISCV::GPRRegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::GPRRegClass);
+      else if (RISCV::FPR64RegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::FPR64RegClass);
+      else if (RISCV::FPR32RegClass.contains(Reg))
+        CalleeSavedSize += getSpillSize(RISCV::FPR32RegClass);
+      // Ignore vector registers.
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;

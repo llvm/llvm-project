@@ -387,11 +387,8 @@ define <2 x i64> @llrint_v2i64_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: llrint_v2i64_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    frintx v0.2s, v0.2s
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    fcvtzs x9, s1
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %a = call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> %x)
   ret <2 x i64> %a
@@ -404,16 +401,10 @@ define <4 x i64> @llrint_v4i64_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    frintx v0.2s, v0.2s
 ; CHECK-NEXT:    frintx v1.2s, v1.2s
-; CHECK-NEXT:    mov s2, v0.s[1]
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    mov s3, v1.s[1]
-; CHECK-NEXT:    fcvtzs x9, s1
-; CHECK-NEXT:    fcvtzs x10, s2
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fcvtzs x11, s3
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    mov v0.d[1], x10
-; CHECK-NEXT:    mov v1.d[1], x11
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtl v1.2d, v1.2s
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
 ; CHECK-NEXT:    ret
   %a = call <4 x i64> @llvm.llrint.v4i64.v4f32(<4 x float> %x)
   ret <4 x i64> %a
@@ -429,26 +420,14 @@ define <8 x i64> @llrint_v8i64_v8f32(<8 x float> %x) {
 ; CHECK-NEXT:    frintx v1.2s, v1.2s
 ; CHECK-NEXT:    frintx v2.2s, v2.2s
 ; CHECK-NEXT:    frintx v3.2s, v3.2s
-; CHECK-NEXT:    mov s4, v0.s[1]
-; CHECK-NEXT:    mov s5, v1.s[1]
-; CHECK-NEXT:    fcvtzs x8, s0
-; CHECK-NEXT:    fcvtzs x10, s1
-; CHECK-NEXT:    mov s6, v2.s[1]
-; CHECK-NEXT:    mov s7, v3.s[1]
-; CHECK-NEXT:    fcvtzs x11, s2
-; CHECK-NEXT:    fcvtzs x12, s3
-; CHECK-NEXT:    fcvtzs x9, s4
-; CHECK-NEXT:    fcvtzs x13, s5
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d2, x10
-; CHECK-NEXT:    fcvtzs x14, s6
-; CHECK-NEXT:    fcvtzs x15, s7
-; CHECK-NEXT:    fmov d1, x11
-; CHECK-NEXT:    fmov d3, x12
-; CHECK-NEXT:    mov v0.d[1], x9
-; CHECK-NEXT:    mov v2.d[1], x13
-; CHECK-NEXT:    mov v1.d[1], x14
-; CHECK-NEXT:    mov v3.d[1], x15
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtl v1.2d, v1.2s
+; CHECK-NEXT:    fcvtl v4.2d, v2.2s
+; CHECK-NEXT:    fcvtl v3.2d, v3.2s
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzs v2.2d, v1.2d
+; CHECK-NEXT:    fcvtzs v1.2d, v4.2d
+; CHECK-NEXT:    fcvtzs v3.2d, v3.2d
 ; CHECK-NEXT:    ret
   %a = call <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float> %x)
   ret <8 x i64> %a
@@ -458,58 +437,34 @@ declare <8 x i64> @llvm.llrint.v8i64.v8f32(<8 x float>)
 define <16 x i64> @llrint_v16i64_v16f32(<16 x float> %x) {
 ; CHECK-LABEL: llrint_v16i64_v16f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    frintx v4.2s, v0.2s
-; CHECK-NEXT:    frintx v5.2s, v1.2s
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    ext v5.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    ext v6.16b, v2.16b, v2.16b, #8
 ; CHECK-NEXT:    ext v7.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    frintx v2.2s, v2.2s
-; CHECK-NEXT:    frintx v3.2s, v3.2s
-; CHECK-NEXT:    mov s16, v4.s[1]
-; CHECK-NEXT:    mov s17, v5.s[1]
-; CHECK-NEXT:    fcvtzs x8, s4
 ; CHECK-NEXT:    frintx v0.2s, v0.2s
 ; CHECK-NEXT:    frintx v1.2s, v1.2s
-; CHECK-NEXT:    fcvtzs x9, s5
-; CHECK-NEXT:    frintx v4.2s, v6.2s
-; CHECK-NEXT:    frintx v5.2s, v7.2s
-; CHECK-NEXT:    fcvtzs x10, s2
-; CHECK-NEXT:    mov s6, v2.s[1]
-; CHECK-NEXT:    fcvtzs x13, s3
-; CHECK-NEXT:    mov s3, v3.s[1]
-; CHECK-NEXT:    fcvtzs x11, s16
-; CHECK-NEXT:    fcvtzs x12, s17
-; CHECK-NEXT:    mov s7, v0.s[1]
-; CHECK-NEXT:    mov s16, v1.s[1]
-; CHECK-NEXT:    fcvtzs x15, s1
-; CHECK-NEXT:    mov s1, v4.s[1]
-; CHECK-NEXT:    mov s17, v5.s[1]
-; CHECK-NEXT:    fcvtzs x14, s0
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fcvtzs x8, s4
-; CHECK-NEXT:    fmov d4, x10
-; CHECK-NEXT:    fcvtzs x10, s5
-; CHECK-NEXT:    fmov d2, x9
-; CHECK-NEXT:    fcvtzs x9, s6
-; CHECK-NEXT:    fmov d6, x13
-; CHECK-NEXT:    fcvtzs x13, s7
-; CHECK-NEXT:    fcvtzs x16, s16
-; CHECK-NEXT:    fcvtzs x17, s3
-; CHECK-NEXT:    fcvtzs x18, s1
-; CHECK-NEXT:    fcvtzs x0, s17
-; CHECK-NEXT:    fmov d1, x14
-; CHECK-NEXT:    fmov d3, x15
-; CHECK-NEXT:    fmov d5, x8
-; CHECK-NEXT:    fmov d7, x10
-; CHECK-NEXT:    mov v0.d[1], x11
-; CHECK-NEXT:    mov v2.d[1], x12
-; CHECK-NEXT:    mov v4.d[1], x9
-; CHECK-NEXT:    mov v1.d[1], x13
-; CHECK-NEXT:    mov v3.d[1], x16
-; CHECK-NEXT:    mov v6.d[1], x17
-; CHECK-NEXT:    mov v5.d[1], x18
-; CHECK-NEXT:    mov v7.d[1], x0
+; CHECK-NEXT:    frintx v2.2s, v2.2s
+; CHECK-NEXT:    frintx v3.2s, v3.2s
+; CHECK-NEXT:    frintx v5.2s, v5.2s
+; CHECK-NEXT:    frintx v4.2s, v4.2s
+; CHECK-NEXT:    frintx v6.2s, v6.2s
+; CHECK-NEXT:    frintx v7.2s, v7.2s
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtl v1.2d, v1.2s
+; CHECK-NEXT:    fcvtl v16.2d, v2.2s
+; CHECK-NEXT:    fcvtl v18.2d, v3.2s
+; CHECK-NEXT:    fcvtl v5.2d, v5.2s
+; CHECK-NEXT:    fcvtl v17.2d, v4.2s
+; CHECK-NEXT:    fcvtl v19.2d, v6.2s
+; CHECK-NEXT:    fcvtl v7.2d, v7.2s
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzs v2.2d, v1.2d
+; CHECK-NEXT:    fcvtzs v4.2d, v16.2d
+; CHECK-NEXT:    fcvtzs v6.2d, v18.2d
+; CHECK-NEXT:    fcvtzs v1.2d, v5.2d
+; CHECK-NEXT:    fcvtzs v3.2d, v17.2d
+; CHECK-NEXT:    fcvtzs v5.2d, v19.2d
+; CHECK-NEXT:    fcvtzs v7.2d, v7.2d
 ; CHECK-NEXT:    ret
   %a = call <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float> %x)
   ret <16 x i64> %a
@@ -519,118 +474,70 @@ declare <16 x i64> @llvm.llrint.v16i64.v16f32(<16 x float>)
 define <32 x i64> @llrint_v32i64_v32f32(<32 x float> %x) {
 ; CHECK-LABEL: llrint_v32i64_v32f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v17.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v18.16b, v4.16b, v4.16b, #8
-; CHECK-NEXT:    ext v19.16b, v5.16b, v5.16b, #8
-; CHECK-NEXT:    ext v21.16b, v7.16b, v7.16b, #8
-; CHECK-NEXT:    ext v16.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v20.16b, v6.16b, v6.16b, #8
+; CHECK-NEXT:    ext v16.16b, v7.16b, v7.16b, #8
+; CHECK-NEXT:    ext v17.16b, v6.16b, v6.16b, #8
 ; CHECK-NEXT:    frintx v7.2s, v7.2s
-; CHECK-NEXT:    frintx v24.2s, v6.2s
-; CHECK-NEXT:    frintx v23.2s, v5.2s
+; CHECK-NEXT:    frintx v6.2s, v6.2s
+; CHECK-NEXT:    ext v18.16b, v5.16b, v5.16b, #8
+; CHECK-NEXT:    ext v21.16b, v4.16b, v4.16b, #8
+; CHECK-NEXT:    ext v22.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    frintx v5.2s, v5.2s
+; CHECK-NEXT:    ext v23.16b, v3.16b, v3.16b, #8
 ; CHECK-NEXT:    frintx v4.2s, v4.2s
-; CHECK-NEXT:    frintx v3.2s, v3.2s
-; CHECK-NEXT:    frintx v17.2s, v17.2s
-; CHECK-NEXT:    frintx v18.2s, v18.2s
-; CHECK-NEXT:    frintx v22.2s, v19.2s
-; CHECK-NEXT:    frintx v21.2s, v21.2s
+; CHECK-NEXT:    ext v19.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ext v20.16b, v1.16b, v1.16b, #8
 ; CHECK-NEXT:    frintx v16.2s, v16.2s
-; CHECK-NEXT:    frintx v20.2s, v20.2s
-; CHECK-NEXT:    mov s25, v7.s[1]
-; CHECK-NEXT:    fcvtzs x15, s7
-; CHECK-NEXT:    frintx v19.2s, v1.2s
-; CHECK-NEXT:    fcvtzs x16, s24
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    fcvtzs x10, s17
-; CHECK-NEXT:    fcvtzs x11, s18
-; CHECK-NEXT:    mov s26, v22.s[1]
-; CHECK-NEXT:    fcvtzs x12, s22
-; CHECK-NEXT:    mov s22, v21.s[1]
-; CHECK-NEXT:    fcvtzs x14, s21
-; CHECK-NEXT:    mov s21, v24.s[1]
-; CHECK-NEXT:    fcvtzs x9, s16
-; CHECK-NEXT:    fcvtzs x13, s20
-; CHECK-NEXT:    mov s20, v20.s[1]
-; CHECK-NEXT:    fmov d24, x15
-; CHECK-NEXT:    mov s18, v18.s[1]
-; CHECK-NEXT:    fmov d6, x10
-; CHECK-NEXT:    fmov d7, x11
-; CHECK-NEXT:    fcvtzs x10, s25
-; CHECK-NEXT:    fcvtzs x11, s22
-; CHECK-NEXT:    fmov d25, x12
-; CHECK-NEXT:    frintx v22.2s, v2.2s
-; CHECK-NEXT:    fcvtzs x15, s21
-; CHECK-NEXT:    fmov d21, x14
-; CHECK-NEXT:    fmov d5, x9
-; CHECK-NEXT:    fcvtzs x9, s26
-; CHECK-NEXT:    fmov d26, x13
-; CHECK-NEXT:    fcvtzs x12, s20
-; CHECK-NEXT:    fcvtzs x13, s19
-; CHECK-NEXT:    mov s20, v23.s[1]
-; CHECK-NEXT:    mov v24.d[1], x10
-; CHECK-NEXT:    mov v21.d[1], x11
-; CHECK-NEXT:    fcvtzs x11, s23
-; CHECK-NEXT:    fcvtzs x10, s22
-; CHECK-NEXT:    mov s17, v17.s[1]
-; CHECK-NEXT:    frintx v1.2s, v1.2s
-; CHECK-NEXT:    mov s22, v22.s[1]
-; CHECK-NEXT:    mov v26.d[1], x12
-; CHECK-NEXT:    fcvtzs x12, s18
-; CHECK-NEXT:    mov v25.d[1], x9
-; CHECK-NEXT:    fmov d2, x13
-; CHECK-NEXT:    fcvtzs x13, s20
-; CHECK-NEXT:    fmov d20, x16
-; CHECK-NEXT:    stp q24, q21, [x8, #224]
-; CHECK-NEXT:    ext v21.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fmov d18, x11
-; CHECK-NEXT:    fcvtzs x11, s4
-; CHECK-NEXT:    mov s4, v4.s[1]
-; CHECK-NEXT:    fmov d23, x10
-; CHECK-NEXT:    mov v20.d[1], x15
-; CHECK-NEXT:    fcvtzs x10, s3
-; CHECK-NEXT:    mov s3, v3.s[1]
-; CHECK-NEXT:    mov v18.d[1], x13
-; CHECK-NEXT:    frintx v0.2s, v0.2s
-; CHECK-NEXT:    mov s16, v16.s[1]
+; CHECK-NEXT:    frintx v17.2s, v17.2s
+; CHECK-NEXT:    fcvtl v7.2d, v7.2s
+; CHECK-NEXT:    fcvtl v6.2d, v6.2s
+; CHECK-NEXT:    frintx v18.2s, v18.2s
 ; CHECK-NEXT:    frintx v21.2s, v21.2s
-; CHECK-NEXT:    fcvtzs x13, s17
-; CHECK-NEXT:    fcvtzs x14, s22
-; CHECK-NEXT:    fcvtzs x9, s4
-; CHECK-NEXT:    fmov d4, x11
-; CHECK-NEXT:    mov v7.d[1], x12
-; CHECK-NEXT:    stp q20, q26, [x8, #192]
-; CHECK-NEXT:    fmov d20, x10
-; CHECK-NEXT:    fcvtzs x10, s3
-; CHECK-NEXT:    stp q18, q25, [x8, #160]
-; CHECK-NEXT:    mov s18, v19.s[1]
-; CHECK-NEXT:    mov s3, v1.s[1]
-; CHECK-NEXT:    mov s17, v0.s[1]
-; CHECK-NEXT:    mov s19, v21.s[1]
-; CHECK-NEXT:    fcvtzs x11, s21
-; CHECK-NEXT:    mov v4.d[1], x9
-; CHECK-NEXT:    fcvtzs x9, s16
-; CHECK-NEXT:    fcvtzs x12, s1
-; CHECK-NEXT:    mov v6.d[1], x13
-; CHECK-NEXT:    fcvtzs x13, s0
-; CHECK-NEXT:    mov v20.d[1], x10
-; CHECK-NEXT:    fcvtzs x15, s18
-; CHECK-NEXT:    fcvtzs x10, s3
-; CHECK-NEXT:    mov v23.d[1], x14
-; CHECK-NEXT:    fcvtzs x14, s17
-; CHECK-NEXT:    fmov d3, x11
-; CHECK-NEXT:    stp q4, q7, [x8, #128]
-; CHECK-NEXT:    mov v5.d[1], x9
-; CHECK-NEXT:    fcvtzs x9, s19
-; CHECK-NEXT:    stp q20, q6, [x8, #96]
-; CHECK-NEXT:    fmov d0, x12
-; CHECK-NEXT:    fmov d1, x13
-; CHECK-NEXT:    mov v2.d[1], x15
-; CHECK-NEXT:    stp q23, q5, [x8, #64]
-; CHECK-NEXT:    mov v0.d[1], x10
-; CHECK-NEXT:    mov v1.d[1], x14
-; CHECK-NEXT:    mov v3.d[1], x9
-; CHECK-NEXT:    stp q2, q0, [x8, #32]
-; CHECK-NEXT:    stp q1, q3, [x8]
+; CHECK-NEXT:    frintx v2.2s, v2.2s
+; CHECK-NEXT:    frintx v3.2s, v3.2s
+; CHECK-NEXT:    fcvtl v5.2d, v5.2s
+; CHECK-NEXT:    frintx v23.2s, v23.2s
+; CHECK-NEXT:    fcvtl v4.2d, v4.2s
+; CHECK-NEXT:    frintx v1.2s, v1.2s
+; CHECK-NEXT:    fcvtl v16.2d, v16.2s
+; CHECK-NEXT:    fcvtl v17.2d, v17.2s
+; CHECK-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-NEXT:    fcvtl v18.2d, v18.2s
+; CHECK-NEXT:    fcvtl v21.2d, v21.2s
+; CHECK-NEXT:    frintx v20.2s, v20.2s
+; CHECK-NEXT:    fcvtl v3.2d, v3.2s
+; CHECK-NEXT:    fcvtzs v5.2d, v5.2d
+; CHECK-NEXT:    frintx v0.2s, v0.2s
+; CHECK-NEXT:    fcvtl v2.2d, v2.2s
+; CHECK-NEXT:    fcvtzs v4.2d, v4.2d
+; CHECK-NEXT:    fcvtzs v16.2d, v16.2d
+; CHECK-NEXT:    fcvtzs v17.2d, v17.2d
+; CHECK-NEXT:    fcvtl v1.2d, v1.2s
+; CHECK-NEXT:    fcvtzs v3.2d, v3.2d
+; CHECK-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-NEXT:    fcvtzs v2.2d, v2.2d
+; CHECK-NEXT:    stp q6, q17, [x8, #192]
+; CHECK-NEXT:    fcvtl v6.2d, v23.2s
+; CHECK-NEXT:    frintx v17.2s, v19.2s
+; CHECK-NEXT:    stp q7, q16, [x8, #224]
+; CHECK-NEXT:    frintx v7.2s, v22.2s
+; CHECK-NEXT:    fcvtzs v16.2d, v18.2d
+; CHECK-NEXT:    fcvtzs v18.2d, v21.2d
+; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-NEXT:    stp q5, q16, [x8, #160]
+; CHECK-NEXT:    fcvtl v7.2d, v7.2s
+; CHECK-NEXT:    fcvtl v5.2d, v20.2s
+; CHECK-NEXT:    stp q4, q18, [x8, #128]
+; CHECK-NEXT:    fcvtl v4.2d, v17.2s
+; CHECK-NEXT:    stp q3, q6, [x8, #96]
+; CHECK-NEXT:    fcvtzs v7.2d, v7.2d
+; CHECK-NEXT:    fcvtzs v3.2d, v5.2d
+; CHECK-NEXT:    stp q1, q3, [x8, #32]
+; CHECK-NEXT:    stp q2, q7, [x8, #64]
+; CHECK-NEXT:    fcvtzs v2.2d, v4.2d
+; CHECK-NEXT:    stp q0, q2, [x8]
 ; CHECK-NEXT:    ret
   %a = call <32 x i64> @llvm.llrint.v32i64.v32f32(<32 x float> %x)
   ret <32 x i64> %a

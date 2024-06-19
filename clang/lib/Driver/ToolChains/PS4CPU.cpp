@@ -358,6 +358,12 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
 
   CC1Args.push_back("-fno-use-init-array");
 
+  // Default to `hidden` visibility for PS5.
+  if (getTriple().isPS5() &&
+      !DriverArgs.hasArg(options::OPT_fvisibility_EQ,
+                         options::OPT_fvisibility_ms_compat))
+    CC1Args.push_back("-fvisibility=hidden");
+
   // Default to -fvisibility-global-new-delete=source for PS5.
   if (getTriple().isPS5() &&
       !DriverArgs.hasArg(options::OPT_fvisibility_global_new_delete_EQ,
@@ -376,11 +382,15 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
     else
       CC1Args.push_back("-fvisibility-dllexport=protected");
 
+    // For PS4 we override the visibilty of globals definitions without
+    // dllimport or  dllexport annotations.
     if (DriverArgs.hasArg(options::OPT_fvisibility_nodllstorageclass_EQ))
       DriverArgs.AddLastArg(CC1Args,
                             options::OPT_fvisibility_nodllstorageclass_EQ);
-    else
+    else if (getTriple().isPS4())
       CC1Args.push_back("-fvisibility-nodllstorageclass=hidden");
+    else
+      CC1Args.push_back("-fvisibility-nodllstorageclass=keep");
 
     if (DriverArgs.hasArg(options::OPT_fvisibility_externs_dllimport_EQ))
       DriverArgs.AddLastArg(CC1Args,
@@ -388,12 +398,16 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
     else
       CC1Args.push_back("-fvisibility-externs-dllimport=default");
 
+    // For PS4 we override the visibilty of external globals without
+    // dllimport or  dllexport annotations.
     if (DriverArgs.hasArg(
             options::OPT_fvisibility_externs_nodllstorageclass_EQ))
       DriverArgs.AddLastArg(
           CC1Args, options::OPT_fvisibility_externs_nodllstorageclass_EQ);
-    else
+    else if (getTriple().isPS4())
       CC1Args.push_back("-fvisibility-externs-nodllstorageclass=default");
+    else
+      CC1Args.push_back("-fvisibility-externs-nodllstorageclass=keep");
   }
 }
 

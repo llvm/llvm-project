@@ -1,3 +1,5 @@
+set(LLVM_SUBPROJECT_TITLE "BOLT")
+
 include(ExternalProject)
 
 set(BOLT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
@@ -121,7 +123,7 @@ option(BOLT_BUILD_TOOLS
   "Build the BOLT tools. If OFF, just generate build targets." ON)
 
 add_custom_target(bolt)
-set_target_properties(bolt PROPERTIES FOLDER "BOLT")
+set_target_properties(bolt PROPERTIES FOLDER "BOLT/Metatargets")
 add_llvm_install_targets(install-bolt DEPENDS bolt COMPONENT bolt)
 
 include_directories(

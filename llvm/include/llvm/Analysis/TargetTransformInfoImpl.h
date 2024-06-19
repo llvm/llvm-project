@@ -241,6 +241,8 @@ public:
 
   bool shouldFoldTerminatingConditionAfterLSR() const { return false; }
 
+  bool shouldDropLSRSolutionIfLessProfitable() const { return false; }
+
   bool isProfitableLSRChainElement(Instruction *I) const { return false; }
 
   bool canMacroFuseCmp() const { return false; }
@@ -313,6 +315,10 @@ public:
   }
 
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
+  bool isLegalMaskedVectorHistogram(Type *AddrType, Type *DataType) const {
     return false;
   }
 

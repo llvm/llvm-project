@@ -584,12 +584,10 @@ void ElemSection::writeBody() {
   initExpr.Extended = false;
   if (ctx.isPic) {
     initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
-    initExpr.Inst.Value.Global =
-        (config->is64.value_or(false) ? WasmSym::tableBase32
-                                      : WasmSym::tableBase)
-            ->getGlobalIndex();
+    initExpr.Inst.Value.Global = WasmSym::tableBase->getGlobalIndex();
   } else {
-    initExpr.Inst.Opcode = WASM_OPCODE_I32_CONST;
+    bool is64 = config->is64.value_or(false);
+    initExpr.Inst.Opcode = is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
     initExpr.Inst.Value.Int32 = config->tableBase;
   }
   writeInitExpr(os, initExpr);

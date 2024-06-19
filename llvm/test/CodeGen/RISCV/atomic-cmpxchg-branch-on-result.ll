@@ -7,7 +7,7 @@
 ; RUN:   | FileCheck -check-prefixes=NOZACAS,RV64IA %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=ZACAS,RV64IA-ZACAS %s
-; RUN: llc -mtriple=riscv64 -mattr=+a,+zacas,+experimental-zabha -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+a,+zacas,+zabha -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=ZACAS,RV64IA-ZABHA %s
 
 ; Test cmpxchg followed by a branch on the cmpxchg success value to see if the

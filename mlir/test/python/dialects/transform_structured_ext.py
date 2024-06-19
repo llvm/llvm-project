@@ -443,7 +443,7 @@ def testTileExplicitLoopTypeAll(target):
     structured.TileUsingForOp(types, target, sizes=[2, 3, 4])
     # CHECK-LABEL: TEST: testTileExplicitLoopTypeAll
     # CHECK: = transform.structured.tile
-    # CHECK-SAME : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
     # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.forall">
 
 
