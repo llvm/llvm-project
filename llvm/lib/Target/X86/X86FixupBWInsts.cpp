@@ -53,7 +53,6 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/Passes.h"
@@ -113,8 +112,6 @@ public:
   FixupBWInstPass() : MachineFunctionPass(ID) { }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>(); // Machine loop info is used to
-                                       // guide some heuristics.
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -141,9 +138,6 @@ private:
   /// Local member for function's OptForSize attribute.
   bool OptForSize = false;
 
-  /// Machine loop info used for guiding some heruistics.
-  MachineLoopInfo *MLI = nullptr;
-
   /// Register Liveness information after the current instruction.
   LiveRegUnits LiveUnits;
 
@@ -164,7 +158,6 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
-  MLI = &getAnalysis<MachineLoopInfo>();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   MBFI = (PSI && PSI->hasProfileSummary()) ?
          &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :

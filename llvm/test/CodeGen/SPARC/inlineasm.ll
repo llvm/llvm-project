@@ -144,7 +144,7 @@ entry:
   ret void
 }
 
-; CHECK-label:test_twinword
+; CHECK-LABEL: test_twinword:
 ; CHECK: rd  %asr5, %i1
 ; CHECK: srlx %i1, 32, %i0
 

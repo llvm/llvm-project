@@ -105,9 +105,9 @@ GetFlattenedSpellings(const Record &Attr) {
 
 static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
-      .EndsWith("Decl *", "Record.GetLocalDeclAs<" +
+      .EndsWith("Decl *", "Record.readDeclAs<" +
                               std::string(type.data(), 0, type.size() - 1) +
-                              ">(LocalDeclID(Record.readInt()))")
+                              ">()")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
       .Case("IdentifierInfo *", "Record.readIdentifier()")
@@ -1845,7 +1845,7 @@ static LateAttrParseKind getLateAttrParseKind(const Record *Attr) {
     PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) +
                               "`should only have one super class");
 
-  if (SuperClasses[0]->getName().compare(LateAttrParseKindStr) != 0)
+  if (SuperClasses[0]->getName() != LateAttrParseKindStr)
     PrintFatalError(Attr, "Field `" + llvm::Twine(LateParsedStr) +
                               "`should only have type `" +
                               llvm::Twine(LateAttrParseKindStr) +

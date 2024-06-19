@@ -424,8 +424,6 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
     log->PutString(strm.GetString());
   }
 
-  const bool cant_replace = false;
-
   switch (context.type) {
   default:
   case EmulateInstruction::eContextInvalid:
@@ -467,7 +465,7 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
         m_pushed_regs[reg_num] = addr;
         const int32_t offset = addr - m_initial_sp;
         m_curr_row->SetRegisterLocationToAtCFAPlusOffset(reg_num, offset,
-                                                         cant_replace);
+                                                         /*can_replace=*/true);
         m_curr_row_modified = true;
       }
     }

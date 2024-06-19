@@ -28,22 +28,6 @@ extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 extern bool WriteNewDbgInfoFormatToBitcode;
 extern cl::opt<bool> WriteNewDbgInfoFormat;
 
-// Backup all of the existing settings that may be modified when
-// PreserveInputDbgFormat=true, so that when the test is finished we return them
-// (and the "preserve" setting) to their original values.
-static auto SaveDbgInfoFormat() {
-  return make_scope_exit(
-      [OldPreserveInputDbgFormat = PreserveInputDbgFormat.getValue(),
-       OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue(),
-       OldWriteNewDbgInfoFormatToBitcode = WriteNewDbgInfoFormatToBitcode,
-       OldWriteNewDbgInfoFormat = WriteNewDbgInfoFormat.getValue()] {
-        PreserveInputDbgFormat = OldPreserveInputDbgFormat;
-        UseNewDbgInfoFormat = OldUseNewDbgInfoFormat;
-        WriteNewDbgInfoFormatToBitcode = OldWriteNewDbgInfoFormatToBitcode;
-        WriteNewDbgInfoFormat = OldWriteNewDbgInfoFormat;
-      });
-}
-
 static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
                                               StringRef ModuleStr) {
   SMDiagnostic Err;
@@ -1328,25 +1312,19 @@ TEST(IRInstructionMapper, CallBrInstIllegal) {
   ASSERT_GT(UnsignedVec[0], Mapper.IllegalInstrNumber);
 }
 
-// Checks that an debuginfo intrinsics are mapped to be invisible.  Since they
+// Checks that an debuginfo records are mapped to be invisible. Since they
 // do not semantically change the program, they can be recognized as similar.
-// FIXME: PreserveInputDbgFormat is set to true because this test contains
-// malformed debug info that cannot be converted to the new debug info format;
-// this test should be updated later to use valid debug info.
 TEST(IRInstructionMapper, DebugInfoInvisible) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
                           then:
-                            %0 = add i32 %a, %b                    
-                            call void @llvm.dbg.value(metadata !0)
-                            %1 = add i32 %a, %b     
+                            %0 = add i32 %a, %b
+                              #dbg_value(i32 0, !0, !0, !0)
+                            %1 = add i32 %a, %b
                             ret i32 0
                           }
 
-                          declare void @llvm.dbg.value(metadata)
                           !0 = distinct !{!"test\00", i32 10})";
-  auto SettingGuard = SaveDbgInfoFormat();
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 
@@ -1941,22 +1919,19 @@ TEST(IRSimilarityCandidate, CheckRegionsDifferentTypes) {
   ASSERT_FALSE(longSimCandCompare(InstrList));
 }
 
-// Check that debug instructions do not impact similarity. They are marked as
+// Check that debug records do not impact similarity. They are marked as
 // invisible.
-// FIXME: PreserveInputDbgFormat is set to true because this test contains
-// malformed debug info that cannot be converted to the new debug info format;
-// this test should be updated later to use valid debug info.
 TEST(IRSimilarityCandidate, IdenticalWithDebug) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
                           bb0:
                              %0 = add i32 %a, %b
-                             call void @llvm.dbg.value(metadata !0)
+                               #dbg_value(i32 0, !0, !0, !0)
                              %1 = add i32 %b, %a
                              ret i32 0
                           bb1:
                              %2 = add i32 %a, %b
-                             call void @llvm.dbg.value(metadata !1)
+                               #dbg_value(i32 1, !1, !1, !1)
                              %3 = add i32 %b, %a
                              ret i32 0
                           bb2:
@@ -1965,11 +1940,8 @@ TEST(IRSimilarityCandidate, IdenticalWithDebug) {
                              ret i32 0       
                           }
 
-                          declare void @llvm.dbg.value(metadata)
                           !0 = distinct !{!"test\00", i32 10}
                           !1 = distinct !{!"test\00", i32 11})";
-  auto SettingGuard = SaveDbgInfoFormat();
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 

@@ -183,7 +183,7 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
     return isFeatureTestMacro(Text) ? MD_NoWarn : MD_ReservedMacro;
   if (II->isKeyword(Lang))
     return MD_KeywordDef;
-  if (Lang.CPlusPlus11 && (Text.equals("override") || Text.equals("final")))
+  if (Lang.CPlusPlus11 && (Text == "override" || Text == "final"))
     return MD_KeywordDef;
   return MD_NoWarn;
 }
@@ -2807,7 +2807,7 @@ static bool isConfigurationPattern(Token &MacroName, MacroInfo *MI,
         if (TrimmedValue.ends_with("__"))
           TrimmedValue = TrimmedValue.drop_back(2);
       }
-      return TrimmedValue.equals(MacroText);
+      return TrimmedValue == MacroText;
     } else {
       return false;
     }

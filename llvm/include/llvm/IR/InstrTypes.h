@@ -1588,6 +1588,14 @@ public:
   static CallBase *removeOperandBundle(CallBase *CB, uint32_t ID,
                                        BasicBlock::iterator InsertPt);
 
+  /// Return the convergence control token for this call, if it exists.
+  Value *getConvergenceControlToken() const {
+    if (auto Bundle = getOperandBundle(llvm::LLVMContext::OB_convergencectrl)) {
+      return Bundle->Inputs[0].get();
+    }
+    return nullptr;
+  }
+
   static bool classof(const Instruction *I) {
     return I->getOpcode() == Instruction::Call ||
            I->getOpcode() == Instruction::Invoke ||
@@ -1997,13 +2005,19 @@ public:
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
     assert(ArgNo < arg_size() && "Out of bounds");
-    return getAttributes().getParamAttr(ArgNo, Kind);
+    Attribute A = getAttributes().getParamAttr(ArgNo, Kind);
+    if (A.isValid())
+      return A;
+    return getParamAttrOnCalledFunction(ArgNo, Kind);
   }
 
   /// Get the attribute of a given kind from a given arg
   Attribute getParamAttr(unsigned ArgNo, StringRef Kind) const {
     assert(ArgNo < arg_size() && "Out of bounds");
-    return getAttributes().getParamAttr(ArgNo, Kind);
+    Attribute A = getAttributes().getParamAttr(ArgNo, Kind);
+    if (A.isValid())
+      return A;
+    return getParamAttrOnCalledFunction(ArgNo, Kind);
   }
 
   /// Return true if the data operand at index \p i has the attribute \p
@@ -2112,6 +2126,15 @@ public:
 
   MaybeAlign getParamStackAlign(unsigned ArgNo) const {
     return Attrs.getParamStackAlignment(ArgNo);
+  }
+
+  /// Extract the byref type for a call or parameter.
+  Type *getParamByRefType(unsigned ArgNo) const {
+    if (auto *Ty = Attrs.getParamByRefType(ArgNo))
+      return Ty;
+    if (const Function *F = getCalledFunction())
+      return F->getAttributes().getParamByRefType(ArgNo);
+    return nullptr;
   }
 
   /// Extract the byval type for a call or parameter.
@@ -2614,6 +2637,11 @@ public:
   op_iterator populateBundleOperandInfos(ArrayRef<OperandBundleDef> Bundles,
                                          const unsigned BeginIndex);
 
+  /// Return true if the call has deopt state bundle.
+  bool hasDeoptState() const {
+    return getOperandBundle(LLVMContext::OB_deopt).has_value();
+  }
+
 public:
   /// Return the BundleOpInfo for the operand at index OpIdx.
   ///
@@ -2647,6 +2675,8 @@ private:
     return hasFnAttrOnCalledFunction(Kind);
   }
   template <typename AK> Attribute getFnAttrOnCalledFunction(AK Kind) const;
+  template <typename AK>
+  Attribute getParamAttrOnCalledFunction(unsigned ArgNo, AK Kind) const;
 
   /// Determine whether the return value has the given attribute. Supports
   /// Attribute::AttrKind and StringRef as \p AttrKind types.

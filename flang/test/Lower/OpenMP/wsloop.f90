@@ -7,7 +7,7 @@ subroutine simple_loop
   integer :: i
   ! CHECK:  omp.parallel
   !$OMP PARALLEL
-  ! CHECK:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned}
+  ! CHECK:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
   ! CHECK:      %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loopEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! CHECK:      %[[WS_UB:.*]] = arith.constant 9 : i32
@@ -33,7 +33,7 @@ subroutine simple_loop_with_step
   integer :: i
   ! CHECK:  omp.parallel
   !$OMP PARALLEL
-  ! CHECK:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned}
+  ! CHECK:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
   ! CHECK:      %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFsimple_loop_with_stepEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! CHECK:      %[[WS_UB:.*]] = arith.constant 9 : i32
@@ -59,7 +59,7 @@ subroutine loop_with_schedule_nowait
   integer :: i
   ! CHECK:  omp.parallel
   !$OMP PARALLEL
-  ! CHECK:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned}
+  ! CHECK:      %[[ALLOCA_IV:.*]] = fir.alloca i32 {{{.*}}, pinned, {{.*}}}
   ! CHECK:      %[[IV_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_IV]] {uniq_name = "_QFloop_with_schedule_nowaitEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[WS_LB:.*]] = arith.constant 1 : i32
   ! CHECK:      %[[WS_UB:.*]] = arith.constant 9 : i32

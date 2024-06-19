@@ -102,9 +102,14 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
-    // If we're passing an f32 value into an i64, anyextend before copying.
-    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
-      ValVReg = MIRBuilder.buildAnyExt(LLT::scalar(64), ValVReg).getReg(0);
+    // If we're passing a smaller fp value into a larger integer register,
+    // anyextend before copying.
+    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
+        ((VA.getLocVT() == MVT::i32 || VA.getLocVT() == MVT::i64) &&
+         VA.getValVT() == MVT::f16)) {
+      LLT DstTy = LLT::scalar(VA.getLocVT().getSizeInBits());
+      ValVReg = MIRBuilder.buildAnyExt(DstTy, ValVReg).getReg(0);
+    }
 
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -336,11 +341,9 @@ static bool isLegalElementTypeForRVV(Type *EltTy,
 // TODO: Remove IsLowerArgs argument by adding support for vectors in lowerCall.
 static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
                                     bool IsLowerArgs = false) {
-  // TODO: Integers larger than 2*XLen are passed indirectly which is not
-  // supported yet.
   if (T->isIntegerTy())
-    return T->getIntegerBitWidth() <= Subtarget.getXLen() * 2;
-  if (T->isFloatTy() || T->isDoubleTy())
+    return true;
+  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy())
     return true;
   if (T->isPointerTy())
     return true;
@@ -361,7 +364,7 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget,
   // supported yet.
   if (T->isIntegerTy())
     return T->getIntegerBitWidth() <= Subtarget.getXLen() * 2;
-  if (T->isFloatTy() || T->isDoubleTy())
+  if (T->isHalfTy() || T->isFloatTy() || T->isDoubleTy())
     return true;
   if (T->isPointerTy())
     return true;

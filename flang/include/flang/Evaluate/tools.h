@@ -152,9 +152,11 @@ std::optional<Expr<SomeType>> AsGenericExpr(const Symbol &);
 // Propagate std::optional from input to output.
 template <typename A>
 std::optional<Expr<SomeType>> AsGenericExpr(std::optional<A> &&x) {
-  if (!x)
+  if (x) {
+    return AsGenericExpr(std::move(*x));
+  } else {
     return std::nullopt;
-  return AsGenericExpr(std::move(*x));
+  }
 }
 
 template <typename A>
@@ -448,12 +450,12 @@ struct ExtractSubstringHelper {
 
   template <typename T>
   static std::optional<Substring> visit(const Designator<T> &e) {
-    return std::visit([](auto &&s) { return visit(s); }, e.u);
+    return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
   template <typename T>
   static std::optional<Substring> visit(const Expr<T> &e) {
-    return std::visit([](auto &&s) { return visit(s); }, e.u);
+    return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 };
 
@@ -1015,10 +1017,11 @@ bool IsAllocatableOrPointerObject(const Expr<SomeType> &);
 bool IsAllocatableDesignator(const Expr<SomeType> &);
 
 // Procedure and pointer detection predicates
-bool IsProcedure(const Expr<SomeType> &);
-bool IsFunction(const Expr<SomeType> &);
+bool IsProcedureDesignator(const Expr<SomeType> &);
+bool IsFunctionDesignator(const Expr<SomeType> &);
 bool IsPointer(const Expr<SomeType> &);
 bool IsProcedurePointer(const Expr<SomeType> &);
+bool IsProcedure(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
 bool IsNullObjectPointer(const Expr<SomeType> &);
@@ -1317,6 +1320,10 @@ bool IsBuiltinCPtr(const Symbol &);
 bool IsEventType(const DerivedTypeSpec *);
 bool IsLockType(const DerivedTypeSpec *);
 bool IsNotifyType(const DerivedTypeSpec *);
+// Is this derived type IEEE_FLAG_TYPE from module ISO_IEEE_EXCEPTIONS?
+bool IsIeeeFlagType(const DerivedTypeSpec *);
+// Is this derived type IEEE_ROUND_TYPE from module ISO_IEEE_ARITHMETIC?
+bool IsIeeeRoundType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE from module ISO_FORTRAN_ENV?
 bool IsTeamType(const DerivedTypeSpec *);
 // Is this derived type TEAM_TYPE, C_PTR, or C_FUNPTR?

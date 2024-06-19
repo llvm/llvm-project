@@ -1385,17 +1385,14 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         SVEType ToV(To.BaseType, N);
         for (const ReinterpretTypeInfo &From : Reinterprets) {
           SVEType FromV(From.BaseType, N);
-          if (ShortForm) {
-            OS << "__aio __attribute__((target(\"sve\"))) " << ToV.str()
-               << " svreinterpret_" << To.Suffix;
-            OS << "(" << FromV.str() << " op) __arm_streaming_compatible {\n";
-            OS << "  return __builtin_sve_reinterpret_" << To.Suffix << "_"
-               << From.Suffix << Suffix << "(op);\n";
-            OS << "}\n\n";
-          } else
-            OS << "#define svreinterpret_" << To.Suffix << "_" << From.Suffix
-               << Suffix << "(...) __builtin_sve_reinterpret_" << To.Suffix
-               << "_" << From.Suffix << Suffix << "(__VA_ARGS__)\n";
+          OS << "__aio "
+                "__attribute__((__clang_arm_builtin_alias(__builtin_sve_"
+                "reinterpret_"
+             << To.Suffix << "_" << From.Suffix << Suffix << ")))\n"
+             << ToV.str() << " svreinterpret_" << To.Suffix;
+          if (!ShortForm)
+            OS << "_" << From.Suffix << Suffix;
+          OS << "(" << FromV.str() << " op);\n";
         }
       }
   }
@@ -1453,7 +1450,7 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
         SVEType FromV(From.BaseType, N);
         OS << "TARGET_BUILTIN(__builtin_sve_reinterpret_" << To.Suffix << "_"
            << From.Suffix << Suffix << +", \"" << ToV.builtin_str()
-           << FromV.builtin_str() << "\", \"n\", \"sve\")\n";
+           << FromV.builtin_str() << "\", \"n\", \"sme|sve\")\n";
       }
     }
   }
@@ -1781,14 +1778,14 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
   llvm::StringMap<std::set<std::string>> StreamingMap;
 
   uint64_t IsStreamingFlag = getEnumValueForFlag("IsStreaming");
-  uint64_t IsStreamingOrSVE2p1Flag = getEnumValueForFlag("IsStreamingOrSVE2p1");
+  uint64_t VerifyRuntimeMode = getEnumValueForFlag("VerifyRuntimeMode");
   uint64_t IsStreamingCompatibleFlag =
       getEnumValueForFlag("IsStreamingCompatible");
   for (auto &Def : Defs) {
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());
-    else if (Def->isFlagSet(IsStreamingOrSVE2p1Flag))
-      StreamingMap["ArmStreamingOrSVE2p1"].insert(Def->getMangledName());
+    else if (Def->isFlagSet(VerifyRuntimeMode))
+      StreamingMap["VerifyRuntimeMode"].insert(Def->getMangledName());
     else if (Def->isFlagSet(IsStreamingCompatibleFlag))
       StreamingMap["ArmStreamingCompatible"].insert(Def->getMangledName());
     else

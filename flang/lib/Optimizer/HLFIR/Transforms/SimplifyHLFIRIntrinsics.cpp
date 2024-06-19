@@ -94,7 +94,6 @@ class SimplifyHLFIRIntrinsics
     : public hlfir::impl::SimplifyHLFIRIntrinsicsBase<SimplifyHLFIRIntrinsics> {
 public:
   void runOnOperation() override {
-    mlir::func::FuncOp func = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
     patterns.insert<TransposeAsElementalConversion>(context);
@@ -108,16 +107,12 @@ public:
         });
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
-    if (mlir::failed(
-            mlir::applyFullConversion(func, target, std::move(patterns)))) {
-      mlir::emitError(func->getLoc(),
+    if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
+                                               std::move(patterns)))) {
+      mlir::emitError(getOperation()->getLoc(),
                       "failure in HLFIR intrinsic simplification");
       signalPassFailure();
     }
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createSimplifyHLFIRIntrinsicsPass() {
-  return std::make_unique<SimplifyHLFIRIntrinsics>();
-}

@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___OSTREAM_PRINT_H
 #define _LIBCPP___OSTREAM_PRINT_H
 
-#include <__availability>
 #include <__config>
 #include <__fwd/ostream.h>
 #include <__iterator/ostreambuf_iterator.h>

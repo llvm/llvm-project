@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <stdio.h>
 
+#include <atomic>
 #include <cassert>
 #include <condition_variable>
 #include <mutex>
@@ -13,9 +14,10 @@ std::mutex sampler_mutex; //dummy mutex to lock in the thread we spawn.
 std::mutex done_mutex;    // guards the cv and done variables.
 std::condition_variable cv;
 bool done = false;
+std::atomic<bool> spin = true;
 
 void *ThreadFunc(void *x) {
-  while (true) {
+  while (spin) {
     // Lock the mutex
     std::lock_guard<std::mutex> guard(sampler_mutex);
     // Mutex is released at the end
@@ -51,20 +53,26 @@ int main() {
   pthread_t thread;
   pthread_create(&thread, NULL, ThreadFunc, NULL);
 
-  // Lock the mutex before sending the signal
-  std::lock_guard<std::mutex> guard(sampler_mutex);
-  // From now on thread 1 will be waiting for the lock
+  {
+    // Lock the mutex before sending the signal
+    std::lock_guard<std::mutex> guard(sampler_mutex);
+    // From now on thread 1 will be waiting for the lock
 
-  // Send the SIGPROF signal to thread.
-  int r = pthread_kill(thread, SIGPROF);
-  assert(r == 0);
+    // Send the SIGPROF signal to thread.
+    int r = pthread_kill(thread, SIGPROF);
+    assert(r == 0);
 
-  // Wait until signal handler sends the data.
-  std::unique_lock lk(done_mutex);
-  cv.wait(lk, [] { return done; });
+    // Wait until signal handler sends the data.
+    std::unique_lock lk(done_mutex);
+    cv.wait(lk, [] { return done; });
 
-  // We got the done variable from the signal handler. Exiting successfully.
-  fprintf(stderr, "PASS\n");
+    // We got the done variable from the signal handler. Exiting successfully.
+    fprintf(stderr, "PASS\n");
+  }
+
+  // Wait for thread to prevent it from spinning on a released mutex.
+  spin = false;
+  pthread_join(thread, nullptr);
 }
 
 // CHECK-NOT: WARNING: ThreadSanitizer:

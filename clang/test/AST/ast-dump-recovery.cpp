@@ -419,6 +419,11 @@ void InitializerOfInvalidDecl() {
   // CHECK:      VarDecl {{.*}} invalid InvalidDecl
   // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
   // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'int' lvalue Var {{.*}} 'ValidDecl'
+
+  Unknown InvalidDeclWithInvalidInit = Invalid;
+  // CHECK:      VarDecl {{.*}} invalid InvalidDeclWithInvalidInit
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NOT:    `-TypoExpr
 }
 
 void RecoverToAnInvalidDecl() {

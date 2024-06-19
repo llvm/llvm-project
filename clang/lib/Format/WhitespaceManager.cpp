@@ -107,7 +107,8 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   llvm::sort(Changes, Change::IsBeforeInFile(SourceMgr));
   calculateLineBreakInformation();
   alignConsecutiveMacros();
-  alignConsecutiveShortCaseStatements();
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/true);
+  alignConsecutiveShortCaseStatements(/*IsExpr=*/false);
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
@@ -878,22 +879,27 @@ void WhitespaceManager::alignConsecutiveColons(
       Changes, /*StartAt=*/0, AlignStyle);
 }
 
-void WhitespaceManager::alignConsecutiveShortCaseStatements() {
+void WhitespaceManager::alignConsecutiveShortCaseStatements(bool IsExpr) {
   if (!Style.AlignConsecutiveShortCaseStatements.Enabled ||
-      !Style.AllowShortCaseLabelsOnASingleLine) {
+      !(IsExpr ? Style.AllowShortCaseExpressionOnASingleLine
+               : Style.AllowShortCaseLabelsOnASingleLine)) {
     return;
   }
 
+  const auto Type = IsExpr ? TT_CaseLabelArrow : TT_CaseLabelColon;
+  const auto &Option = Style.AlignConsecutiveShortCaseStatements;
+  const bool AlignArrowOrColon =
+      IsExpr ? Option.AlignCaseArrows : Option.AlignCaseColons;
+
   auto Matches = [&](const Change &C) {
-    if (Style.AlignConsecutiveShortCaseStatements.AlignCaseColons)
-      return C.Tok->is(TT_CaseLabelColon);
+    if (AlignArrowOrColon)
+      return C.Tok->is(Type);
 
     // Ignore 'IsInsideToken' to allow matching trailing comments which
     // need to be reflowed as that causes the token to appear in two
     // different changes, which will cause incorrect alignment as we'll
     // reflow early due to detecting multiple aligning tokens per line.
-    return !C.IsInsideToken && C.Tok->Previous &&
-           C.Tok->Previous->is(TT_CaseLabelColon);
+    return !C.IsInsideToken && C.Tok->Previous && C.Tok->Previous->is(Type);
   };
 
   unsigned MinColumn = 0;
@@ -944,7 +950,7 @@ void WhitespaceManager::alignConsecutiveShortCaseStatements() {
     if (Changes[I].Tok->isNot(tok::comment))
       LineIsComment = false;
 
-    if (Changes[I].Tok->is(TT_CaseLabelColon)) {
+    if (Changes[I].Tok->is(Type)) {
       LineIsEmptyCase =
           !Changes[I].Tok->Next || Changes[I].Tok->Next->isTrailingComment();
 
@@ -1239,22 +1245,29 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
 }
 
 void WhitespaceManager::alignEscapedNewlines() {
-  if (Style.AlignEscapedNewlines == FormatStyle::ENAS_DontAlign)
+  const auto Align = Style.AlignEscapedNewlines;
+  if (Align == FormatStyle::ENAS_DontAlign)
     return;
 
-  bool AlignLeft = Style.AlignEscapedNewlines == FormatStyle::ENAS_Left;
-  unsigned MaxEndOfLine = AlignLeft ? 0 : Style.ColumnLimit;
+  const bool WithLastLine = Align == FormatStyle::ENAS_LeftWithLastLine;
+  const bool AlignLeft = Align == FormatStyle::ENAS_Left || WithLastLine;
+  const auto MaxColumn = Style.ColumnLimit;
+  unsigned MaxEndOfLine = AlignLeft ? 0 : MaxColumn;
   unsigned StartOfMacro = 0;
   for (unsigned i = 1, e = Changes.size(); i < e; ++i) {
     Change &C = Changes[i];
-    if (C.NewlinesBefore > 0) {
-      if (C.ContinuesPPDirective) {
-        MaxEndOfLine = std::max(C.PreviousEndOfTokenColumn + 2, MaxEndOfLine);
-      } else {
-        alignEscapedNewlines(StartOfMacro + 1, i, MaxEndOfLine);
-        MaxEndOfLine = AlignLeft ? 0 : Style.ColumnLimit;
-        StartOfMacro = i;
-      }
+    if (C.NewlinesBefore == 0 && (!WithLastLine || C.Tok->isNot(tok::eof)))
+      continue;
+    const bool InPPDirective = C.ContinuesPPDirective;
+    const auto BackslashColumn = C.PreviousEndOfTokenColumn + 2;
+    if (InPPDirective ||
+        (WithLastLine && (MaxColumn == 0 || BackslashColumn <= MaxColumn))) {
+      MaxEndOfLine = std::max(BackslashColumn, MaxEndOfLine);
+    }
+    if (!InPPDirective) {
+      alignEscapedNewlines(StartOfMacro + 1, i, MaxEndOfLine);
+      MaxEndOfLine = AlignLeft ? 0 : MaxColumn;
+      StartOfMacro = i;
     }
   }
   alignEscapedNewlines(StartOfMacro + 1, Changes.size(), MaxEndOfLine);

@@ -434,7 +434,7 @@ ComplexPairTy ComplexExprEmitter::EmitLoadOfLValue(LValue lvalue,
   if (lvalue.getType()->isAtomicType())
     return CGF.EmitAtomicLoad(lvalue, loc).getComplexVal();
 
-  Address SrcPtr = lvalue.getAddress(CGF);
+  Address SrcPtr = lvalue.getAddress();
   bool isVolatile = lvalue.isVolatileQualified();
 
   llvm::Value *Real = nullptr, *Imag = nullptr;
@@ -460,7 +460,7 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
       (!isInit && CGF.LValueIsSuitableForInlineAtomic(lvalue)))
     return CGF.EmitAtomicStore(RValue::getComplex(Val), lvalue, isInit);
 
-  Address Ptr = lvalue.getAddress(CGF);
+  Address Ptr = lvalue.getAddress();
   Address RealPtr = CGF.emitAddrOfRealComponent(Ptr, lvalue.getType());
   Address ImagPtr = CGF.emitAddrOfImagComponent(Ptr, lvalue.getType());
 
@@ -551,14 +551,14 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
 
   case CK_LValueBitCast: {
     LValue origLV = CGF.EmitLValue(Op);
-    Address V = origLV.getAddress(CGF).withElementType(CGF.ConvertType(DestTy));
+    Address V = origLV.getAddress().withElementType(CGF.ConvertType(DestTy));
     return EmitLoadOfLValue(CGF.MakeAddrLValue(V, DestTy), Op->getExprLoc());
   }
 
   case CK_LValueToRValueBitCast: {
     LValue SourceLVal = CGF.EmitLValue(Op);
-    Address Addr = SourceLVal.getAddress(CGF).withElementType(
-        CGF.ConvertTypeForMem(DestTy));
+    Address Addr =
+        SourceLVal.getAddress().withElementType(CGF.ConvertTypeForMem(DestTy));
     LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
     DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
     return EmitLoadOfLValue(DestLV, Op->getExprLoc());
@@ -856,8 +856,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       llvm::BasicBlock *OrigBB = Branch->getParent();
 
       // Give hint that we very much don't expect to see NaNs.
-      // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
-      llvm::MDNode *BrWeight = MDHelper.createBranchWeights(1, (1U << 20) - 1);
+      llvm::MDNode *BrWeight = MDHelper.createUnlikelyBranchWeights();
       Branch->setMetadata(llvm::LLVMContext::MD_prof, BrWeight);
 
       // Now test the imaginary part and create its branch.
@@ -1449,9 +1448,9 @@ ComplexPairTy ComplexExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
 ComplexPairTy ComplexExprEmitter::VisitVAArgExpr(VAArgExpr *E) {
   Address ArgValue = Address::invalid();
-  Address ArgPtr = CGF.EmitVAArg(E, ArgValue);
+  RValue RV = CGF.EmitVAArg(E, ArgValue);
 
-  if (!ArgPtr.isValid()) {
+  if (!ArgValue.isValid()) {
     CGF.ErrorUnsupported(E, "complex va_arg expression");
     llvm::Type *EltTy =
       CGF.ConvertType(E->getType()->castAs<ComplexType>()->getElementType());
@@ -1459,8 +1458,7 @@ ComplexPairTy ComplexExprEmitter::VisitVAArgExpr(VAArgExpr *E) {
     return ComplexPairTy(U, U);
   }
 
-  return EmitLoadOfLValue(CGF.MakeAddrLValue(ArgPtr, E->getType()),
-                          E->getExprLoc());
+  return RV.getComplexVal();
 }
 
 //===----------------------------------------------------------------------===//

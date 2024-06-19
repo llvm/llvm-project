@@ -11,8 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/remove_all_extents.h>
-#include <__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,10 +22,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
-    : public integral_constant<bool, __has_unique_object_representations(remove_cv_t<remove_all_extents_t<_Tp>>)> {};
+    : public integral_constant<bool, __has_unique_object_representations(_Tp)> {};
 
 template <class _Tp>
-inline constexpr bool has_unique_object_representations_v = has_unique_object_representations<_Tp>::value;
+inline constexpr bool has_unique_object_representations_v = __has_unique_object_representations(_Tp);
 
 #endif
 

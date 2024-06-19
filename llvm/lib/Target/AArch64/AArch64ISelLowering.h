@@ -58,7 +58,20 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
+  // Function call, authenticating the callee value first:
+  // AUTH_CALL chain, callee, auth key #, int disc, addr disc, operands.
+  AUTH_CALL,
+  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, int disc, addr disc,
+  // operands.
+  AUTH_TC_RETURN,
+
+  // Authenticated variant of CALL_RVMARKER.
+  AUTH_CALL_RVMARKER,
+
   COALESCER_BARRIER,
+
+  VG_SAVE,
+  VG_RESTORE,
 
   SMSTART,
   SMSTOP,
@@ -444,6 +457,8 @@ enum NodeType : unsigned {
   // SME
   RDSVL,
   REVD_MERGE_PASSTHRU,
+  ALLOCATE_ZA_BUFFER,
+  INIT_TPIDR2OBJ,
 
   // Asserts that a function argument (i32) is zero-extended to i8 by
   // the caller
@@ -645,6 +660,10 @@ public:
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -911,6 +930,8 @@ public:
     return true;
   }
 
+  bool supportPtrAuthBundles() const override { return true; }
+
   bool supportKCFIBundles() const override { return true; }
 
   MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
@@ -1017,11 +1038,10 @@ private:
 
   void addTypeForNEON(MVT VT);
   void addTypeForFixedLengthSVE(MVT VT);
-  void addDRTypeForNEON(MVT VT);
-  void addQRTypeForNEON(MVT VT);
+  void addDRType(MVT VT);
+  void addQRType(MVT VT);
 
-  unsigned allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
-                                  SelectionDAG &DAG) const;
+  bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
@@ -1149,6 +1169,7 @@ private:
   SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
@@ -1165,6 +1186,7 @@ private:
   SDValue LowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVectorXRINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;
