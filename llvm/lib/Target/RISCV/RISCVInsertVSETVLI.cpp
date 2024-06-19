@@ -1813,11 +1813,6 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     emitVSETVLIs(MBB);
 
-  // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
-  // of VLEFF/VLSEGFF.
-  for (MachineBasicBlock &MBB : MF)
-    insertReadVL(MBB);
-
   // Now that all vsetvlis are explicit, go through and do block local
   // DSE and peephole based demanded fields based transforms.  Note that
   // this *must* be done outside the main dataflow so long as we allow
@@ -1826,6 +1821,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // dataflow at the same time without introducing inconsistencies.
   for (MachineBasicBlock &MBB : MF)
     coalesceVSETVLIs(MBB);
+
+  // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
+  // of VLEFF/VLSEGFF.
+  for (MachineBasicBlock &MBB : MF)
+    insertReadVL(MBB);
 
   BlockInfo.clear();
   return HaveVectorOp;
