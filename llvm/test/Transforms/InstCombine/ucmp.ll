@@ -4,8 +4,7 @@
 define i1 @ucmp_eq_0(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_eq_0(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -16,8 +15,7 @@ define i1 @ucmp_eq_0(i32 %x, i32 %y) {
 define i1 @ucmp_ne_0(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_ne_0(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -28,8 +26,7 @@ define i1 @ucmp_ne_0(i32 %x, i32 %y) {
 define i1 @ucmp_eq_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_eq_1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -40,8 +37,7 @@ define i1 @ucmp_eq_1(i32 %x, i32 %y) {
 define i1 @ucmp_ne_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_ne_1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -52,8 +48,7 @@ define i1 @ucmp_ne_1(i32 %x, i32 %y) {
 define i1 @ucmp_eq_negative_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_eq_negative_1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -64,8 +59,7 @@ define i1 @ucmp_eq_negative_1(i32 %x, i32 %y) {
 define i1 @ucmp_ne_negative_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_ne_negative_1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -76,8 +70,7 @@ define i1 @ucmp_ne_negative_1(i32 %x, i32 %y) {
 define i1 @ucmp_sgt_0(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_sgt_0(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -88,8 +81,7 @@ define i1 @ucmp_sgt_0(i32 %x, i32 %y) {
 define i1 @ucmp_sgt_neg_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_sgt_neg_1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -100,8 +92,7 @@ define i1 @ucmp_sgt_neg_1(i32 %x, i32 %y) {
 define i1 @ucmp_sge_0(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_sge_0(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i8 [[TMP1]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -112,8 +103,7 @@ define i1 @ucmp_sge_0(i32 %x, i32 %y) {
 define i1 @ucmp_sge_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_sge_1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -124,8 +114,7 @@ define i1 @ucmp_sge_1(i32 %x, i32 %y) {
 define i1 @ucmp_slt_0(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_slt_0(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -136,8 +125,7 @@ define i1 @ucmp_slt_0(i32 %x, i32 %y) {
 define i1 @ucmp_slt_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_slt_1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -148,8 +136,7 @@ define i1 @ucmp_slt_1(i32 %x, i32 %y) {
 define i1 @ucmp_sle_0(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_sle_0(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
@@ -160,8 +147,7 @@ define i1 @ucmp_sle_0(i32 %x, i32 %y) {
 define i1 @ucmp_sle_neg_1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @ucmp_sle_neg_1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)

@@ -3926,6 +3926,92 @@ foldICmpUSubSatOrUAddSatWithConstant(ICmpInst::Predicate Pred,
       ConstantInt::get(Op1->getType(), EquivInt));
 }
 
+static Instruction *
+foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
+                                   const APInt &C,
+                                   InstCombiner::BuilderTy &Builder) {
+  Intrinsic::ID IID = I->getIntrinsicID();
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+    if (C.isZero())
+      return new ICmpInst(Pred, LHS, RHS);
+    if (C.isOne())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGT
+                                                 : ICmpInst::ICMP_UGT,
+                          LHS, RHS);
+    if (C.isAllOnes())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLT
+                                                 : ICmpInst::ICMP_ULT,
+                          LHS, RHS);
+    break;
+
+  case ICmpInst::ICMP_NE:
+    if (C.isZero())
+      return new ICmpInst(Pred, LHS, RHS);
+    if (C.isOne())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLE
+                                                 : ICmpInst::ICMP_ULE,
+                          LHS, RHS);
+    if (C.isAllOnes())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGE
+                                                 : ICmpInst::ICMP_UGE,
+                          LHS, RHS);
+    break;
+
+  case ICmpInst::ICMP_SGT:
+    if (C.isAllOnes())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGE
+                                                 : ICmpInst::ICMP_UGE,
+                          LHS, RHS);
+    if (C.isZero())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGT
+                                                 : ICmpInst::ICMP_UGT,
+                          LHS, RHS);
+    break;
+
+  case ICmpInst::ICMP_SGE:
+    if (C.isZero())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGE
+                                                 : ICmpInst::ICMP_UGE,
+                          LHS, RHS);
+    if (C.isOne())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGT
+                                                 : ICmpInst::ICMP_UGT,
+                          LHS, RHS);
+    break;
+
+  case ICmpInst::ICMP_SLT:
+    if (C.isZero())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLT
+                                                 : ICmpInst::ICMP_ULT,
+                          LHS, RHS);
+    if (C.isOne())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLE
+                                                 : ICmpInst::ICMP_ULE,
+                          LHS, RHS);
+    break;
+
+  case llvm::ICmpInst::ICMP_SLE:
+    if (C.isZero())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLE
+                                                 : ICmpInst::ICMP_ULE,
+                          LHS, RHS);
+    if (C.isAllOnes())
+      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLT
+                                                 : ICmpInst::ICMP_ULT,
+                          LHS, RHS);
+    break;
+
+  default:
+    return nullptr;
+  }
+
+  return nullptr;
+}
+
 /// Fold an icmp with LLVM intrinsic and constant operand: icmp Pred II, C.
 Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                                                              IntrinsicInst *II,
@@ -3947,6 +4033,11 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
     if (Instruction *R = foldCtpopPow2Test(Cmp, II, C, Builder, Q))
       return R;
   } break;
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
+    if (auto *Folded = foldICmpOfCmpIntrinsicWithConstant(Pred, II, C, Builder))
+      return Folded;
+    break;
   }
 
   if (Cmp.isEquality())
