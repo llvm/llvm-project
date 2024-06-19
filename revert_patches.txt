@@ -84,4 +84,8 @@ Revert: breaks MIOpen
 18ec885a2604 [RFC][AMDGPU] Remove old llvm.amdgcn.buffer.* and tbuffer intrinsics (#93801)     
 contact: Ron and Jay
 ---
+Reverts: break componsableKernels
+9a88aa0e2b6d [Clang][Sema] Diagnose variable template explicit specializati
+contact: RonL
 
+---
