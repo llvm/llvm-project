@@ -125,6 +125,9 @@ Improvements to clang-tidy
 - Added argument `--exclude-header-filter` and config option `ExcludeHeaderFilterRegex`
   to exclude headers from analysis via a RegEx.
 
+- Added argument `--allow-empty-checks` and config option `AllowEmptyCheckList`
+  to suppress "no checks enabled" error when disabling all of the checks.
+
 New checks
 ^^^^^^^^^^
 
