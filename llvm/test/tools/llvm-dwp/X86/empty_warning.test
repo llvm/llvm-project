@@ -1,5 +1,5 @@
 ; RUN: rm -rf %t && split-file %s %t && cd %t
-; RUN: clang -g -gdwarf-4 non_split.c -o non_split.o
+; RUN: clang -g -gdwarf-4 %t/non_split.c -o %t/non_split.o
 ; RUN: llvm-dwp -e %t/non_split.o -o %t/non_split.dwp 2>&1 | FileCheck %s --check-prefix=CHECK-WARNING
 ; CHECK-WARNING: warning: executable file does not contain any references to dwo files
 
