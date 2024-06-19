@@ -310,4 +310,48 @@ NestedTemplateTemplateParamPack<Bar, Bar> var;
 // VAR-NEXT:   }
 // VAR-NEXT: ]
 
+template <typename T>
+class TypeContainer {
+  public:
+    // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix TYPE
+    typedef Foo<T> Type;
+// TYPE-LABEL: "!testLabel": "c:non_type_template.cpp@ST>1#T@TypeContainer@T@Type",
+// TYPE:      "declarationFragments": [
+// TYPE-NEXT:   {
+// TYPE-NEXT:     "kind": "keyword",
+// TYPE-NEXT:     "spelling": "typedef"
+// TYPE-NEXT:   },
+// TYPE-NEXT:   {
+// TYPE-NEXT:     "kind": "text",
+// TYPE-NEXT:     "spelling": " "
+// TYPE-NEXT:   },
+// TYPE-NEXT:   {
+// TYPE-NEXT:     "kind": "typeIdentifier",
+// TYPE-NEXT:     "preciseIdentifier": "c:@ST>2#T#NI@Foo",
+// TYPE-NEXT:     "spelling": "Foo"
+// TYPE-NEXT:   },
+// TYPE-NEXT:   {
+// TYPE-NEXT:     "kind": "text",
+// TYPE-NEXT:     "spelling": "<"
+// TYPE-NEXT:   },
+// TYPE-NEXT:   {
+// TYPE-NEXT:     "kind": "typeIdentifier",
+// TYPE-NEXT:     "preciseIdentifier": "c:t0.0",
+// TYPE-NEXT:     "spelling": "T"
+// TYPE-NEXT:   },
+// TYPE-NEXT:   {
+// TYPE-NEXT:     "kind": "text",
+// TYPE-NEXT:     "spelling": "> "
+// TYPE-NEXT:   },
+// TYPE-NEXT:   {
+// TYPE-NEXT:     "kind": "identifier",
+// TYPE-NEXT:     "spelling": "Type"
+// TYPE-NEXT:   },
+// TYPE-NEXT:   {
+// TYPE-NEXT:     "kind": "text",
+// TYPE-NEXT:     "spelling": ";"
+// TYPE-NEXT:   }
+// TYPE-NEXT: ]
+};
+
 // expected-no-diagnostics

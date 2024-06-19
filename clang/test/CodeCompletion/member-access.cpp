@@ -367,4 +367,20 @@ class A {
 // CHECK-DEREF-THIS: [#void#]function()
   }
 };
+
+template <typename Element>
+struct RepeatedField {
+  void Add();
+};
+
+template <typename T>
+RepeatedField<T>* MutableRepeatedField() {}
+
+template <class T>
+void Foo() {
+  auto& C = *MutableRepeatedField<T>();
+  C.
+}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:382:5 %s -o - | FileCheck -check-prefix=CHECK-DEREF-DEPENDENT %s
+// CHECK-DEREF-DEPENDENT: [#void#]Add()
 }

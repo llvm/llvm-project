@@ -68,6 +68,8 @@ BENIGN_DEBUGOPT(NoInlineLineTables, 1, 0) ///< Whether debug info should contain
                                           ///< inline line tables.
 
 DEBUGOPT(DebugStrictDwarf, 1, 1) ///< Whether or not to use strict DWARF info.
+DEBUGOPT(DebugOmitUnreferencedMethods, 1, 0) ///< Omit unreferenced member
+					     ///< functions in type debug info.
 
 /// Control the Assignment Tracking debug info feature.
 BENIGN_ENUM_DEBUGOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2,

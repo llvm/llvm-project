@@ -417,7 +417,8 @@ unsigned X86TargetLowering::getJumpTableEncoding() const {
   if (isPositionIndependent() && Subtarget.isPICStyleGOT())
     return MachineJumpTableInfo::EK_Custom32;
   if (isPositionIndependent() &&
-      getTargetMachine().getCodeModel() == CodeModel::Large)
+      getTargetMachine().getCodeModel() == CodeModel::Large &&
+      !Subtarget.isTargetCOFF())
     return MachineJumpTableInfo::EK_LabelDifference64;
 
   // Otherwise, use the normal jump table encoding heuristics.

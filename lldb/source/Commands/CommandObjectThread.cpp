@@ -114,8 +114,8 @@ public:
   CommandObjectThreadBacktrace(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread backtrace",
-            "Show thread call stacks.  Defaults to the current thread, thread "
-            "indexes can be specified as arguments.\n"
+            "Show backtraces of thread call stacks.  Defaults to the current "
+            "thread, thread indexes can be specified as arguments.\n"
             "Use the thread-index \"all\" to see all threads.\n"
             "Use the thread-index \"unique\" to see threads grouped by unique "
             "call stacks.\n"
@@ -383,7 +383,7 @@ public:
                                 eCommandProcessMustBePaused),
         m_step_type(step_type), m_step_scope(step_scope),
         m_class_options("scripted step") {
-    AddSimpleArgumentList(eArgTypeThreadID, eArgRepeatOptional);
+    AddSimpleArgumentList(eArgTypeThreadIndex, eArgRepeatOptional);
 
     if (step_type == eStepTypeScripted) {
       m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,

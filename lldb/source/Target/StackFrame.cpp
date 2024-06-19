@@ -1091,24 +1091,19 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
 
       m_flags.Set(GOT_FRAME_BASE);
       ExecutionContext exe_ctx(shared_from_this());
-      Value expr_value;
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
       if (!m_sc.function->GetFrameBaseExpression().IsAlwaysValidSingleExpr())
         loclist_base_addr =
             m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
                 exe_ctx.GetTargetPtr());
 
-      if (!m_sc.function->GetFrameBaseExpression().Evaluate(
-              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr,
-              expr_value, &m_frame_base_error)) {
-        // We should really have an error if evaluate returns, but in case we
-        // don't, lets set the error to something at least.
-        if (m_frame_base_error.Success())
-          m_frame_base_error.SetErrorString(
-              "Evaluation of the frame base expression failed.");
-      } else {
-        m_frame_base = expr_value.ResolveValue(&exe_ctx);
-      }
+      llvm::Expected<Value> expr_value =
+          m_sc.function->GetFrameBaseExpression().Evaluate(
+              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr);
+      if (!expr_value)
+        m_frame_base_error = expr_value.takeError();
+      else
+        m_frame_base = expr_value->ResolveValue(&exe_ctx);
     } else {
       m_frame_base_error.SetErrorString("No function in symbol context.");
     }

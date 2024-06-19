@@ -560,10 +560,16 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   else
     ++MaxSize;
 
-  MDBuilder MDB(I->getContext());
-  MDNode *MaxWorkGroupSizeRange = MDB.createRange(APInt(32, MinSize),
-                                                  APInt(32, MaxSize));
-  I->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  APInt Lower{32, MinSize};
+  APInt Upper{32, MaxSize};
+  if (auto *CI = dyn_cast<CallBase>(I)) {
+    ConstantRange Range(Lower, Upper);
+    CI->addRangeRetAttr(Range);
+  } else {
+    MDBuilder MDB(I->getContext());
+    MDNode *MaxWorkGroupSizeRange = MDB.createRange(Lower, Upper);
+    I->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  }
   return true;
 }
 

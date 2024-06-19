@@ -324,6 +324,7 @@ public:
     FPMode = getDefaultFPMode();
     bool OddSpregGiven = false;
     bool StrictAlign = false;
+    bool FpGiven = false;
 
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
@@ -348,13 +349,16 @@ public:
         HasMSA = true;
       else if (Feature == "+nomadd4")
         DisableMadd4 = true;
-      else if (Feature == "+fp64")
+      else if (Feature == "+fp64") {
         FPMode = FP64;
-      else if (Feature == "-fp64")
+        FpGiven = true;
+      } else if (Feature == "-fp64") {
         FPMode = FP32;
-      else if (Feature == "+fpxx")
+        FpGiven = true;
+      } else if (Feature == "+fpxx") {
         FPMode = FPXX;
-      else if (Feature == "+nan2008")
+        FpGiven = true;
+      } else if (Feature == "+nan2008")
         IsNan2008 = true;
       else if (Feature == "-nan2008")
         IsNan2008 = false;
@@ -380,6 +384,11 @@ public:
 
     if (StrictAlign)
       HasUnalignedAccess = false;
+
+    if (HasMSA && !FpGiven) {
+      FPMode = FP64;
+      Features.push_back("+fp64");
+    }
 
     setDataLayout();
 

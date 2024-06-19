@@ -12,9 +12,9 @@ define void @test1(i32 %N) nounwind uwtable {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[IF_ELSE8:%.*]] [
-; CHECK-NEXT:    i32 2, label [[IF_THEN:%.*]]
-; CHECK-NEXT:    i32 4, label [[IF_THEN7:%.*]]
-; CHECK-NEXT:    ], !prof !0
+; CHECK-NEXT:      i32 2, label [[IF_THEN:%.*]]
+; CHECK-NEXT:      i32 4, label [[IF_THEN7:%.*]]
+; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @func2(i32 [[N]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END9:%.*]]
@@ -62,10 +62,10 @@ define void @test2(i32 %M, i32 %N) nounwind uwtable {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[SW1:%.*]], label [[SW2:%.*]]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 2, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 3, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 4, label [[SW_BB5:%.*]]
-; CHECK-NEXT:    ], !prof !1
+; CHECK-NEXT:      i32 2, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 3, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 4, label [[SW_BB5:%.*]]
+; CHECK-NEXT:    ], !prof [[PROF1:![0-9]+]]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    call void @func2(i32 [[N]]) #[[ATTR1]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
@@ -74,9 +74,9 @@ define void @test2(i32 %M, i32 %N) nounwind uwtable {
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw2:
 ; CHECK-NEXT:    switch i32 [[N]], label [[SW_EPILOG]] [
-; CHECK-NEXT:    i32 2, label [[SW_BB4:%.*]]
-; CHECK-NEXT:    i32 4, label [[SW_BB5]]
-; CHECK-NEXT:    ], !prof !2
+; CHECK-NEXT:      i32 2, label [[SW_BB4:%.*]]
+; CHECK-NEXT:      i32 4, label [[SW_BB5]]
+; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
 ; CHECK:       sw.bb4:
 ; CHECK-NEXT:    call void @func6(i32 [[N]]) #[[ATTR1]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
@@ -132,10 +132,10 @@ define void @test3(i32 %M, i32 %N) nounwind uwtable {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[SW1:%.*]], label [[SW2:%.*]]
 ; CHECK:       sw1:
 ; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW_BB:%.*]] [
-; CHECK-NEXT:    i32 1, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 3, label [[SW_BB4:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_EPILOG:%.*]]
-; CHECK-NEXT:    ], !prof !3
+; CHECK-NEXT:      i32 1, label [[SW_BB1:%.*]]
+; CHECK-NEXT:      i32 3, label [[SW_BB4:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_EPILOG:%.*]]
+; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    call void @func2(i32 [[N]]) #[[ATTR1]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
@@ -144,9 +144,9 @@ define void @test3(i32 %M, i32 %N) nounwind uwtable {
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw2:
 ; CHECK-NEXT:    switch i32 [[N]], label [[SW_EPILOG]] [
-; CHECK-NEXT:    i32 3, label [[SW_BB4]]
-; CHECK-NEXT:    i32 4, label [[SW_BB5:%.*]]
-; CHECK-NEXT:    ], !prof !4
+; CHECK-NEXT:      i32 3, label [[SW_BB4]]
+; CHECK-NEXT:      i32 4, label [[SW_BB5:%.*]]
+; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
 ; CHECK:       sw.bb4:
 ; CHECK-NEXT:    call void @func6(i32 [[N]]) #[[ATTR1]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]

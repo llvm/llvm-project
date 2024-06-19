@@ -68,6 +68,10 @@ enum class fltNonfiniteBehavior {
   // `fltNanEncoding` enum. We treat all NaNs as quiet, as the available
   // encodings do not distinguish between signalling and quiet NaN.
   NanOnly,
+
+  // This behavior is present in Float6E3M2FN, Float6E2M3FN, and
+  // Float4E2M1FN types, which do not support Inf or NaN values.
+  FiniteOnly,
 };
 
 // How NaN values are represented. This is curently only used in combination
@@ -139,6 +143,12 @@ static constexpr fltSemantics semFloat8E4M3FNUZ = {
 static constexpr fltSemantics semFloat8E4M3B11FNUZ = {
     4, -10, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
 static constexpr fltSemantics semFloatTF32 = {127, -126, 11, 19};
+static constexpr fltSemantics semFloat6E3M2FN = {
+    4, -2, 3, 6, fltNonfiniteBehavior::FiniteOnly};
+static constexpr fltSemantics semFloat6E2M3FN = {
+    2, 0, 4, 6, fltNonfiniteBehavior::FiniteOnly};
+static constexpr fltSemantics semFloat4E2M1FN = {
+    2, 0, 2, 4, fltNonfiniteBehavior::FiniteOnly};
 static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
 static constexpr fltSemantics semBogus = {0, 0, 0, 0};
 
@@ -206,6 +216,12 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return Float8E4M3B11FNUZ();
   case S_FloatTF32:
     return FloatTF32();
+  case S_Float6E3M2FN:
+    return Float6E3M2FN();
+  case S_Float6E2M3FN:
+    return Float6E2M3FN();
+  case S_Float4E2M1FN:
+    return Float4E2M1FN();
   case S_x87DoubleExtended:
     return x87DoubleExtended();
   }
@@ -238,6 +254,12 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_Float8E4M3B11FNUZ;
   else if (&Sem == &llvm::APFloat::FloatTF32())
     return S_FloatTF32;
+  else if (&Sem == &llvm::APFloat::Float6E3M2FN())
+    return S_Float6E3M2FN;
+  else if (&Sem == &llvm::APFloat::Float6E2M3FN())
+    return S_Float6E2M3FN;
+  else if (&Sem == &llvm::APFloat::Float4E2M1FN())
+    return S_Float4E2M1FN;
   else if (&Sem == &llvm::APFloat::x87DoubleExtended())
     return S_x87DoubleExtended;
   else
@@ -260,6 +282,9 @@ const fltSemantics &APFloatBase::Float8E4M3B11FNUZ() {
   return semFloat8E4M3B11FNUZ;
 }
 const fltSemantics &APFloatBase::FloatTF32() { return semFloatTF32; }
+const fltSemantics &APFloatBase::Float6E3M2FN() { return semFloat6E3M2FN; }
+const fltSemantics &APFloatBase::Float6E2M3FN() { return semFloat6E2M3FN; }
+const fltSemantics &APFloatBase::Float4E2M1FN() { return semFloat4E2M1FN; }
 const fltSemantics &APFloatBase::x87DoubleExtended() {
   return semX87DoubleExtended;
 }
@@ -878,6 +903,9 @@ void IEEEFloat::copySignificand(const IEEEFloat &rhs) {
    for the significand.  If double or longer, this is a signalling NaN,
    which may not be ideal.  If float, this is QNaN(0).  */
 void IEEEFloat::makeNaN(bool SNaN, bool Negative, const APInt *fill) {
+  if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
+    llvm_unreachable("This floating point format does not support NaN");
+
   category = fcNaN;
   sign = Negative;
   exponent = exponentNaN();
@@ -1499,16 +1527,18 @@ static void tcSetLeastSignificantBits(APInt::WordType *dst, unsigned parts,
 /* Handle overflow.  Sign is preserved.  We either become infinity or
    the largest finite number.  */
 IEEEFloat::opStatus IEEEFloat::handleOverflow(roundingMode rounding_mode) {
-  /* Infinity?  */
-  if (rounding_mode == rmNearestTiesToEven ||
-      rounding_mode == rmNearestTiesToAway ||
-      (rounding_mode == rmTowardPositive && !sign) ||
-      (rounding_mode == rmTowardNegative && sign)) {
-    if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::NanOnly)
-      makeNaN(false, sign);
-    else
-      category = fcInfinity;
-    return (opStatus) (opOverflow | opInexact);
+  if (semantics->nonFiniteBehavior != fltNonfiniteBehavior::FiniteOnly) {
+    /* Infinity?  */
+    if (rounding_mode == rmNearestTiesToEven ||
+        rounding_mode == rmNearestTiesToAway ||
+        (rounding_mode == rmTowardPositive && !sign) ||
+        (rounding_mode == rmTowardNegative && sign)) {
+      if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::NanOnly)
+        makeNaN(false, sign);
+      else
+        category = fcInfinity;
+      return static_cast<opStatus>(opOverflow | opInexact);
+    }
   }
 
   /* Otherwise we become the largest finite number.  */
@@ -3518,13 +3548,15 @@ APInt IEEEFloat::convertIEEEFloatToAPInt() const {
     myexponent = ::exponentZero(S) + bias;
     mysignificand.fill(0);
   } else if (category == fcInfinity) {
-    if (S.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly) {
+    if (S.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly ||
+        S.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
       llvm_unreachable("semantics don't support inf!");
-    }
     myexponent = ::exponentInf(S) + bias;
     mysignificand.fill(0);
   } else {
     assert(category == fcNaN && "Unknown category!");
+    if (S.nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
+      llvm_unreachable("semantics don't support NaN!");
     myexponent = ::exponentNaN(S) + bias;
     std::copy_n(significandParts(), mysignificand.size(),
                 mysignificand.begin());
@@ -3605,6 +3637,21 @@ APInt IEEEFloat::convertFloatTF32APFloatToAPInt() const {
   return convertIEEEFloatToAPInt<semFloatTF32>();
 }
 
+APInt IEEEFloat::convertFloat6E3M2FNAPFloatToAPInt() const {
+  assert(partCount() == 1);
+  return convertIEEEFloatToAPInt<semFloat6E3M2FN>();
+}
+
+APInt IEEEFloat::convertFloat6E2M3FNAPFloatToAPInt() const {
+  assert(partCount() == 1);
+  return convertIEEEFloatToAPInt<semFloat6E2M3FN>();
+}
+
+APInt IEEEFloat::convertFloat4E2M1FNAPFloatToAPInt() const {
+  assert(partCount() == 1);
+  return convertIEEEFloatToAPInt<semFloat4E2M1FN>();
+}
+
 // This function creates an APInt that is just a bit map of the floating
 // point constant as it would appear in memory.  It is not a conversion,
 // and treating the result as a normal integer is unlikely to be useful.
@@ -3646,6 +3693,15 @@ APInt IEEEFloat::bitcastToAPInt() const {
   if (semantics == (const llvm::fltSemantics *)&semFloatTF32)
     return convertFloatTF32APFloatToAPInt();
 
+  if (semantics == (const llvm::fltSemantics *)&semFloat6E3M2FN)
+    return convertFloat6E3M2FNAPFloatToAPInt();
+
+  if (semantics == (const llvm::fltSemantics *)&semFloat6E2M3FN)
+    return convertFloat6E2M3FNAPFloatToAPInt();
+
+  if (semantics == (const llvm::fltSemantics *)&semFloat4E2M1FN)
+    return convertFloat4E2M1FNAPFloatToAPInt();
+
   assert(semantics == (const llvm::fltSemantics*)&semX87DoubleExtended &&
          "unknown format!");
   return convertF80LongDoubleAPFloatToAPInt();
@@ -3664,6 +3720,15 @@ double IEEEFloat::convertToDouble() const {
   APInt api = bitcastToAPInt();
   return api.bitsToDouble();
 }
+
+#ifdef HAS_IEE754_FLOAT128
+float128 IEEEFloat::convertToQuad() const {
+  assert(semantics == (const llvm::fltSemantics *)&semIEEEquad &&
+         "Float semantics are not IEEEquads");
+  APInt api = bitcastToAPInt();
+  return api.bitsToQuad();
+}
+#endif
 
 /// Integer bit is explicit in this format.  Intel hardware (387 and later)
 /// does not support these bit patterns:
@@ -3853,6 +3918,18 @@ void IEEEFloat::initFromFloatTF32APInt(const APInt &api) {
   initFromIEEEAPInt<semFloatTF32>(api);
 }
 
+void IEEEFloat::initFromFloat6E3M2FNAPInt(const APInt &api) {
+  initFromIEEEAPInt<semFloat6E3M2FN>(api);
+}
+
+void IEEEFloat::initFromFloat6E2M3FNAPInt(const APInt &api) {
+  initFromIEEEAPInt<semFloat6E2M3FN>(api);
+}
+
+void IEEEFloat::initFromFloat4E2M1FNAPInt(const APInt &api) {
+  initFromIEEEAPInt<semFloat4E2M1FN>(api);
+}
+
 /// Treat api as containing the bits of a floating point number.
 void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
   assert(api.getBitWidth() == Sem->sizeInBits);
@@ -3882,6 +3959,12 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloat8E4M3B11FNUZAPInt(api);
   if (Sem == &semFloatTF32)
     return initFromFloatTF32APInt(api);
+  if (Sem == &semFloat6E3M2FN)
+    return initFromFloat6E3M2FNAPInt(api);
+  if (Sem == &semFloat6E2M3FN)
+    return initFromFloat6E2M3FNAPInt(api);
+  if (Sem == &semFloat4E2M1FN)
+    return initFromFloat4E2M1FNAPInt(api);
 
   llvm_unreachable(nullptr);
 }
@@ -4319,7 +4402,8 @@ int IEEEFloat::getExactLog2Abs() const {
 bool IEEEFloat::isSignaling() const {
   if (!isNaN())
     return false;
-  if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::NanOnly)
+  if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::NanOnly ||
+      semantics->nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
     return false;
 
   // IEEE-754R 2008 6.2.1: A signaling NaN bit string should be encoded with the
@@ -4377,6 +4461,10 @@ IEEEFloat::opStatus IEEEFloat::next(bool nextDown) {
       if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::NanOnly) {
         // nextUp(getLargest()) == NAN
         makeNaN();
+        break;
+      } else if (semantics->nonFiniteBehavior ==
+                 fltNonfiniteBehavior::FiniteOnly) {
+        // nextUp(getLargest()) == getLargest()
         break;
       } else {
         // nextUp(getLargest()) == INFINITY
@@ -4468,6 +4556,9 @@ APFloatBase::ExponentType IEEEFloat::exponentZero() const {
 }
 
 void IEEEFloat::makeInf(bool Negative) {
+  if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::FiniteOnly)
+    llvm_unreachable("This floating point format does not support Inf");
+
   if (semantics->nonFiniteBehavior == fltNonfiniteBehavior::NanOnly) {
     // There is no Inf, so make NaN instead.
     makeNaN(false, Negative);
@@ -5259,6 +5350,21 @@ double APFloat::convertToDouble() const {
   (void)St;
   return Temp.getIEEE().convertToDouble();
 }
+
+#ifdef HAS_IEE754_FLOAT128
+float128 APFloat::convertToQuad() const {
+  if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEquad)
+    return getIEEE().convertToQuad();
+  assert(getSemantics().isRepresentableBy(semIEEEquad) &&
+         "Float semantics is not representable by IEEEquad");
+  APFloat Temp = *this;
+  bool LosesInfo;
+  opStatus St = Temp.convert(semIEEEquad, rmNearestTiesToEven, &LosesInfo);
+  assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
+  (void)St;
+  return Temp.getIEEE().convertToQuad();
+}
+#endif
 
 float APFloat::convertToFloat() const {
   if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle)

@@ -37,7 +37,7 @@ namespace clang {
     unsigned AbbrevToUse;
 
     /// A helper that can help us to write a packed bit across function
-    /// calls. For example, we may write seperate bits in seperate functions:
+    /// calls. For example, we may write separate bits in separate functions:
     ///
     ///  void VisitA(A* a) {
     ///     Record.push_back(a->isSomething());
@@ -2157,11 +2157,11 @@ void ASTStmtWriter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   VisitExpr(E);
   Record.push_back(E->TransformedExpressions);
+  Record.push_back(E->ExpandedToEmptyPack);
   Record.AddSourceLocation(E->getEllipsisLoc());
   Record.AddSourceLocation(E->getRSquareLoc());
   Record.AddStmt(E->getPackIdExpression());
   Record.AddStmt(E->getIndexExpr());
-  Record.push_back(E->TransformedExpressions);
   for (Expr *Sub : E->getExpressions())
     Record.AddStmt(Sub);
   Code = serialization::EXPR_PACK_INDEXING;
@@ -2847,6 +2847,7 @@ void ASTStmtWriter::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
   Record.push_back(S->clauses().size());
   Record.writeEnum(S->Kind);
   Record.AddSourceRange(S->Range);
+  Record.AddSourceLocation(S->DirectiveLoc);
   Record.writeOpenACCClauseList(S->clauses());
 }
 
@@ -2860,6 +2861,12 @@ void ASTStmtWriter::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
   VisitStmt(S);
   VisitOpenACCAssociatedStmtConstruct(S);
   Code = serialization::STMT_OPENACC_COMPUTE_CONSTRUCT;
+}
+
+void ASTStmtWriter::VisitOpenACCLoopConstruct(OpenACCLoopConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
+  Code = serialization::STMT_OPENACC_LOOP_CONSTRUCT;
 }
 
 //===----------------------------------------------------------------------===//

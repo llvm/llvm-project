@@ -96,8 +96,8 @@ declare <32 x double> @llvm.vp.fpext.v32f64.v32f32(<32 x float>, <32 x i1>, i32)
 define <32 x double> @vfpext_v32f32_v32f64(<32 x float> %a, <32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfpext_v32f32_v32f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v16, v0, 2
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB7_2
@@ -112,8 +112,8 @@ define <32 x double> @vfpext_v32f32_v32f64(<32 x float> %a, <32 x i1> %m, i32 ze
 ; CHECK-NEXT:    and a0, a0, a1
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 16
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v16
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v8, v0.t
 ; CHECK-NEXT:    vmv8r.v v8, v24
 ; CHECK-NEXT:    ret
