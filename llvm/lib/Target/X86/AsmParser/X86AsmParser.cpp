@@ -2318,7 +2318,7 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
     return Error(Tok.getLoc(), "Expected { at this point");
   Parser.Lex(); // Eat "{"
   Tok = Parser.getTok();
-  if (Tok.getIdentifier() != "dfv")
+  if (Tok.getIdentifier().lower() != "dfv")
     return Error(Tok.getLoc(), "Expected dfv at this point");
   Parser.Lex(); // Eat "dfv"
   Tok = Parser.getTok();
@@ -2338,7 +2338,7 @@ bool X86AsmParser::parseCFlagsOp(OperandVector &Operands) {
   unsigned CFlags = 0;
   for (unsigned I = 0; I < 4; ++I) {
     Tok = Parser.getTok();
-    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier())
+    unsigned CFlag = StringSwitch<unsigned>(Tok.getIdentifier().lower())
                          .Case("of", 0x8)
                          .Case("sf", 0x4)
                          .Case("zf", 0x2)
