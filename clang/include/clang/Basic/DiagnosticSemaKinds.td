@@ -5360,9 +5360,6 @@ def err_not_class_template_specialization : Error<
   "parameter}0">;
 def ext_explicit_specialization_storage_class : ExtWarn<
   "explicit specialization cannot have a storage class">;
-def err_explicit_specialization_inconsistent_storage_class : Error<
-  "explicit specialization has extraneous, inconsistent storage class "
-  "'%select{none|extern|static|__private_extern__|auto|register}0'">;
 def err_dependent_function_template_spec_no_match : Error<
   "no candidate function template was found for dependent"
   " %select{member|friend}0 function template specialization">;
@@ -12445,5 +12442,5 @@ def err_acc_loop_spec_conflict
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
-def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be 1, 2, or 4">;
+def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 } // end of sema component.

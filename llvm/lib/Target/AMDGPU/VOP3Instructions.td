@@ -16,10 +16,12 @@ def VOP_F32_F32_F32_F32_VCC : VOPProfile<[f32, f32, f32, f32]> {
   let Outs64 = (outs DstRC.RegClass:$vdst);
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
+  let IsSingle = 1;
 }
 def VOP_F64_F64_F64_F64_VCC : VOPProfile<[f64, f64, f64, f64]> {
   let Outs64 = (outs DstRC.RegClass:$vdst);
   let HasExt64BitDPP = 1;
+  let IsSingle = 1;
 }
 }
 
@@ -143,7 +145,7 @@ class getInterp16Ins <bit HasSrc2, bit HasOMod,
 }
 
 class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
-
+  let IsSingle = 1;
   let HasOMod = !ne(DstVT.Value, f16.Value);
   let HasHigh = 1;
 

@@ -5421,9 +5421,9 @@ td_library(
         "include/mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td",
         "include/mlir/Dialect/GPU/IR/CompilationAttrs.td",
         "include/mlir/Dialect/GPU/IR/GPUBase.td",
+        "include/mlir/Dialect/GPU/IR/GPUDeviceMappingAttr.td",
         "include/mlir/Dialect/GPU/IR/GPUOps.td",
         "include/mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td",
-        "include/mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td",
     ],
     includes = ["include"],
     deps = [
@@ -5451,7 +5451,7 @@ gentbl_cc_library(
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td",
+    td_file = "include/mlir/Dialect/GPU/IR/GPUDeviceMappingAttr.td",
     deps = [
         ":GPUOpsTdFiles",
         ":OpBaseTdFiles",

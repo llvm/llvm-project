@@ -6491,6 +6491,10 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   if (LoadNode->getMemoryVT() != MVT::v4i8)
     return SDValue();
 
+  // Avoid generating unaligned loads.
+  if (Subtarget->requiresStrictAlign() && LoadNode->getAlign() < Align(4))
+    return SDValue();
+
   unsigned ExtType;
   if (LoadNode->getExtensionType() == ISD::SEXTLOAD)
     ExtType = ISD::SIGN_EXTEND;
@@ -18240,9 +18244,11 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (!VT.isVector())
     return SDValue();
 
-  // The combining code works for NEON, SVE2 and SME.
-  if (TLI.useSVEForFixedLengthVectorVT(VT, !Subtarget.isNeonAvailable()) ||
-      (VT.isScalableVector() && !Subtarget.hasSVE2()))
+  if (VT.isScalableVector() && !Subtarget.hasSVE2())
+    return SDValue();
+
+  if (VT.isFixedLengthVector() &&
+      (!Subtarget.isNeonAvailable() || TLI.useSVEForFixedLengthVectorVT(VT)))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -22364,7 +22370,8 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   ComparisonResult = DAG.getSExtOrTrunc(ComparisonResult, DL, VecVT);
 
   SmallVector<SDValue, 16> MaskConstants;
-  if (VecVT == MVT::v16i8) {
+  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
+      VecVT == MVT::v16i8) {
     // v16i8 is a special case, as we have 16 entries but only 8 positional bits
     // per entry. We split it into two halves, apply the mask, zip the halves to
     // create 8x 16-bit values, and the perform the vector reduce.

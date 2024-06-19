@@ -4877,10 +4877,10 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        - vgprs_used = align(arch_vgprs, 4)
                                                                       + acc_vgprs
                                                        - max(0, ceil(vgprs_used / 8) - 1)
-                                                     GFX10-GFX11 (wavefront size 64)
+                                                     GFX10-GFX12 (wavefront size 64)
                                                        - max_vgpr 1..256
                                                        - max(0, ceil(vgprs_used / 4) - 1)
-                                                     GFX10-GFX11 (wavefront size 32)
+                                                     GFX10-GFX12 (wavefront size 32)
                                                        - max_vgpr 1..256
                                                        - max(0, ceil(vgprs_used / 8) - 1)
 
@@ -4914,7 +4914,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX9
                                                        - sgprs_used 0..112
                                                        - 2 * max(0, ceil(sgprs_used / 16) - 1)
-                                                     GFX10-GFX11
+                                                     GFX10-GFX12
                                                        Reserved, must be 0.
                                                        (128 SGPRs always
                                                        allocated.)
@@ -5094,7 +5094,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      ``COMPUTE_PGM_RSRC1.CDBG_USER``.
      26      1 bit   FP16_OVFL                       GFX6-GFX8
                                                        Reserved, must be 0.
-                                                     GFX9-GFX11
+                                                     GFX9-GFX12
                                                        Wavefront starts execution
                                                        with specified fp16 overflow
                                                        mode.
@@ -5127,7 +5127,7 @@ The fields used by CP for code objects before V3 also match those specified in
      28      1 bit    RESERVED                       Reserved, must be 0.
      29      1 bit    WGP_MODE                       GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX10-GFX11
+                                                     GFX10-GFX12
                                                        - If 0 execute work-groups in
                                                          CU wavefront execution mode.
                                                        - If 1 execute work-groups on
@@ -5139,7 +5139,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC1.WGP_MODE``.
      30      1 bit    MEM_ORDERED                    GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX10-GFX11
+                                                     GFX10-GFX12
                                                        Controls the behavior of the
                                                        s_waitcnt's vmcnt and vscnt
                                                        counters.
@@ -5162,7 +5162,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC1.MEM_ORDERED``.
      31      1 bit    FWD_PROGRESS                   GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX10-GFX11
+                                                     GFX10-GFX12
                                                        - If 0 execute SIMD wavefronts
                                                          using oldest first policy.
                                                        - If 1 execute SIMD wavefronts to
