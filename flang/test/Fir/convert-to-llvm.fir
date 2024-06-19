@@ -1277,6 +1277,20 @@ func.func @alloca_array_with_holes(%0 : index, %1 : index) -> !fir.ref<!fir.arra
 
 // -----
 
+// Test alloca of assumed-rank box
+
+func.func @alloca_assumed_rank_box() -> !fir.ref<!fir.box<!fir.array<*:f32>>> {
+  %a = fir.alloca !fir.box<!fir.array<*:f32>>
+  return %a : !fir.ref<!fir.box<!fir.array<*:f32>>>
+}
+// CHECK-LABEL: llvm.func @alloca_assumed_rank_box
+// CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
+// GENERIC: llvm.alloca %[[ONE]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)> : (i64) -> !llvm.ptr
+// AMDGPU: %[[AA:.*]] = llvm.alloca %[[ONE]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)> : (i64) -> !llvm.ptr<5>
+// AMDGPU: llvm.addrspacecast %[[AA]] : !llvm.ptr<5> to !llvm.ptr
+
+// -----
+
 // Test `fir.select_case` operation conversion with INTEGER.
 
 func.func @select_case_integer(%arg0: !fir.ref<i32>) -> i32 {
