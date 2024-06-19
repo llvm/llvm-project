@@ -193,7 +193,7 @@ are compile-time known constant values, including two categories:
 Properties are similar to attributes, except that they are not stored within
 the MLIR context but are stored inline with the operation.
 
-Operands, attributes, and properties  are specified inside the `dag`-typed
+Operands, attributes, and properties are specified inside the `dag`-typed
 `arguments`, led by `ins`:
 
 ```tablegen
