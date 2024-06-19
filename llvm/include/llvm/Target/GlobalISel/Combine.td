@@ -1758,6 +1758,34 @@ def freeze_combines: GICombineGroup<[
   push_freeze_to_prevent_poison_from_propagating
 ]>;
 
+def ZextInteger: GICombineRule<
+   (defs root:$root, apint_matchinfo:$matchinfo),
+   (match (G_CONSTANT $int, $imm),
+          (G_ZEXT $root, $int):$mi,
+   [{ return Helper.matchZextInteger(*${mi}, ${matchinfo}); }]),
+   (apply [{ Helper.replaceInstWithConstant(*${mi}, ${matchinfo}); }])>;
+
+def SextInteger: GICombineRule<
+   (defs root:$root, apint_matchinfo:$matchinfo),
+   (match (G_CONSTANT $int, $imm),
+          (G_SEXT $root, $int):$mi,
+   [{ return Helper.matchSextInteger(*${mi}, ${matchinfo}); }]),
+   (apply [{ Helper.replaceInstWithConstant(*${mi}, ${matchinfo}); }])>;
+
+def TruncInteger: GICombineRule<
+   (defs root:$root, apint_matchinfo:$matchinfo),
+   (match (G_CONSTANT $int, $imm),
+          (G_TRUNC $root, $int):$mi,
+   [{ return Helper.matchTruncInteger(*${mi}, ${matchinfo}); }]),
+   (apply [{ Helper.replaceInstWithConstant(*${mi}, ${matchinfo}); }])>;
+
+def cast_const_combines: GICombineGroup<[
+  ZextInteger,
+  SextInteger,
+  TruncInteger,
+]>;
+
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -1820,7 +1848,7 @@ def prefer_sign_combines : GICombineGroup<[nneg_zext]>;
 def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     vector_ops_combines, freeze_combines,
     insert_vec_elt_combines, extract_vec_elt_combines, combines_for_extload,
-    combine_extracted_vector_load,
+    combine_extracted_vector_load, cast_const_combines,
     undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain,

@@ -7437,3 +7437,57 @@ bool CombinerHelper::matchNonNegZext(const MachineOperand &MO,
 
   return false;
 }
+
+bool CombinerHelper::matchZextInteger(const MachineInstr &MI,
+                                      APInt &MatchInfo) {
+  const GZext *Zext = cast<GZext>(&MI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Zext->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Zext->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  MatchInfo = Input->zext(DstTy.getScalarSizeInBits());
+
+  return true;
+}
+
+bool CombinerHelper::matchSextInteger(const MachineInstr &MI,
+                                      APInt &MatchInfo) {
+  const GSext *Sext = cast<GSext>(&MI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Sext->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Sext->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  MatchInfo = Input->sext(DstTy.getScalarSizeInBits());
+
+  return true;
+}
+
+bool CombinerHelper::matchTruncInteger(const MachineInstr &MI,
+                                       APInt &MatchInfo) {
+  const GTrunc *Trunc = cast<GTrunc>(&MI);
+
+  std::optional<APInt> Input = getIConstantVRegVal(Trunc->getSrcReg(), MRI);
+  if (!Input)
+    return false;
+
+  LLT DstTy = MRI.getType(Trunc->getReg(0));
+
+  if (!isConstantLegalOrBeforeLegalizer(DstTy))
+    return false;
+
+  MatchInfo = Input->trunc(DstTy.getScalarSizeInBits());
+
+  return true;
+}
