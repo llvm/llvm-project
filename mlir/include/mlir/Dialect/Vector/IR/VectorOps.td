@@ -680,6 +680,10 @@ def Vector_ExtractOp :
     Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
     the proper position. Degenerates to an element type if n-k is zero.
 
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
+
     Example:
 
     ```mlir
@@ -720,10 +724,9 @@ def Vector_ExtractOp :
       return getStaticPosition().size();
     }
 
+    /// Return "true" if the op has at least one dynamic position.
     bool hasDynamicPosition() {
-      auto dynPos = getDynamicPosition();
-      return std::any_of(dynPos.begin(), dynPos.end(),
-                         [](Value operand) { return operand != nullptr; });
+      return !getDynamicPosition().empty();
     }
   }];
 
@@ -767,6 +770,41 @@ def Vector_FMAOp :
   let extraClassDeclaration = [{
     VectorType getVectorType() { return ::llvm::cast<VectorType>(getLhs().getType()); }
   }];
+}
+
+def Vector_FromElementsOp : Vector_Op<"from_elements", [
+    Pure,
+    TypesMatchWith<"operand types match result element type",
+                   "result", "elements", "SmallVector<Type>("
+                   "::llvm::cast<VectorType>($_self).getNumElements(), "
+                   "::llvm::cast<VectorType>($_self).getElementType())">]> {
+  let summary = "operation that defines a vector from scalar elements";
+  let description = [{
+    This operation defines a vector from one or multiple scalar elements. The
+    number of elements must match the number of elements in the result type.
+    All elements must have the same type, which must match the element type of
+    the result vector type.
+
+    `elements` are a flattened version of the result vector in row-major order.
+
+    Example:
+
+    ```mlir
+    // %f1
+    %0 = vector.from_elements %f1 : vector<f32>
+    // [%f1, %f2]
+    %1 = vector.from_elements %f1, %f2 : vector<2xf32>
+    // [[%f1, %f2, %f3], [%f4, %f5, %f6]]
+    %2 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<2x3xf32>
+    // [[[%f1, %f2]], [[%f3, %f4]], [[%f5, %f6]]]
+    %3 = vector.from_elements %f1, %f2, %f3, %f4, %f5, %f6 : vector<3x1x2xf32>
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$elements);
+  let results = (outs AnyVectorOfAnyRank:$result);
+  let assemblyFormat = "$elements attr-dict `:` type($result)";
+  let hasCanonicalizer = 1;
 }
 
 def Vector_InsertElementOp :
@@ -827,6 +865,10 @@ def Vector_InsertOp :
     Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
     and inserts the n-D source into the (n+k)-D destination at the proper
     position. Degenerates to a scalar or a 0-d vector source type when n = 0.
+
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
 
     Example:
 

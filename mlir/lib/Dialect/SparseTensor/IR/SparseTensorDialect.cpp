@@ -2300,6 +2300,41 @@ void IterateOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
   results.add<RemoveUnusedLvlCrds>(context);
 }
 
+void IterateOp::build(OpBuilder &builder, OperationState &odsState,
+                      Value iterSpace, ValueRange initArgs) {
+  unsigned rank = llvm::cast<IterSpaceType>(iterSpace.getType()).getSpaceDim();
+  // All ones.
+  LevelSet set((1 << rank) - 1);
+  return build(builder, odsState, iterSpace, initArgs, set);
+}
+
+void IterateOp::build(OpBuilder &builder, OperationState &odsState,
+                      Value iterSpace, ValueRange initArgs,
+                      LevelSet crdUsedLvls) {
+  OpBuilder::InsertionGuard guard(builder);
+
+  odsState.addOperands(iterSpace);
+  odsState.addOperands(initArgs);
+  odsState.getOrAddProperties<Properties>().crdUsedLvls =
+      builder.getIntegerAttr(builder.getIntegerType(64), crdUsedLvls);
+  Region *bodyRegion = odsState.addRegion();
+  odsState.addTypes(initArgs.getTypes());
+  Block *bodyBlock = builder.createBlock(bodyRegion);
+
+  // First argument, sparse iterator
+  bodyBlock->addArgument(
+      llvm::cast<IterSpaceType>(iterSpace.getType()).getIteratorType(),
+      odsState.location);
+
+  // Followed by a list of used coordinates.
+  for (unsigned i = 0, e = crdUsedLvls.count(); i < e; i++)
+    bodyBlock->addArgument(builder.getIndexType(), odsState.location);
+
+  // Followed by a list of user-provided loop arguments.
+  for (Value v : initArgs)
+    bodyBlock->addArgument(v.getType(), v.getLoc());
+}
+
 ParseResult IterateOp::parse(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::Argument iterator;
   OpAsmParser::UnresolvedOperand iterSpace;
@@ -2384,6 +2419,9 @@ LogicalResult IterateOp::verify() {
     return emitOpError(
         "mismatch in number of loop-carried values and defined values");
   }
+  if (getCrdUsedLvls().max() > getSpaceDim())
+    return emitOpError("required out-of-bound coordinates");
+
   return success();
 }
 
