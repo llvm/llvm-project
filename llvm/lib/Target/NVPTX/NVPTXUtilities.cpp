@@ -19,11 +19,13 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Mutex.h"
 #include <algorithm>
 #include <cstring>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -124,6 +126,14 @@ bool findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
     return false;
   retval = AC.Cache[m][gv][prop][0];
   return true;
+}
+
+static std::optional<unsigned>
+findOneNVVMAnnotation(const GlobalValue &GV, const std::string &PropName) {
+  unsigned RetVal;
+  if (findOneNVVMAnnotation(&GV, PropName, RetVal))
+    return RetVal;
+  return std::nullopt;
 }
 
 bool findAllNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
@@ -250,32 +260,57 @@ std::string getSamplerName(const Value &val) {
   return std::string(val.getName());
 }
 
-bool getMaxNTIDx(const Function &F, unsigned &x) {
-  return findOneNVVMAnnotation(&F, "maxntidx", x);
+std::optional<unsigned> getMaxNTIDx(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidx");
 }
 
-bool getMaxNTIDy(const Function &F, unsigned &y) {
-  return findOneNVVMAnnotation(&F, "maxntidy", y);
+std::optional<unsigned> getMaxNTIDy(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidy");
 }
 
-bool getMaxNTIDz(const Function &F, unsigned &z) {
-  return findOneNVVMAnnotation(&F, "maxntidz", z);
+std::optional<unsigned> getMaxNTIDz(const Function &F) {
+  return findOneNVVMAnnotation(F, "maxntidz");
+}
+
+std::optional<unsigned> getMaxNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. The PTX ISA states the
+  // following (11.4.2. Performance-Tuning Directives: .maxntid):
+  //
+  //  Note that this directive guarantees that the total number of threads does
+  //  not exceed the maximum, but does not guarantee that the limit in any
+  //  particular dimension is not exceeded.
+  std::optional<unsigned> MaxNTIDx = getMaxNTIDx(F);
+  std::optional<unsigned> MaxNTIDy = getMaxNTIDy(F);
+  std::optional<unsigned> MaxNTIDz = getMaxNTIDz(F);
+  if (MaxNTIDx || MaxNTIDy || MaxNTIDz)
+    return MaxNTIDx.value_or(1) * MaxNTIDy.value_or(1) * MaxNTIDz.value_or(1);
+  return std::nullopt;
 }
 
 bool getMaxClusterRank(const Function &F, unsigned &x) {
   return findOneNVVMAnnotation(&F, "maxclusterrank", x);
 }
 
-bool getReqNTIDx(const Function &F, unsigned &x) {
-  return findOneNVVMAnnotation(&F, "reqntidx", x);
+std::optional<unsigned> getReqNTIDx(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidx");
 }
 
-bool getReqNTIDy(const Function &F, unsigned &y) {
-  return findOneNVVMAnnotation(&F, "reqntidy", y);
+std::optional<unsigned> getReqNTIDy(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidy");
 }
 
-bool getReqNTIDz(const Function &F, unsigned &z) {
-  return findOneNVVMAnnotation(&F, "reqntidz", z);
+std::optional<unsigned> getReqNTIDz(const Function &F) {
+  return findOneNVVMAnnotation(F, "reqntidz");
+}
+
+std::optional<unsigned> getReqNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  std::optional<unsigned> ReqNTIDx = getReqNTIDx(F);
+  std::optional<unsigned> ReqNTIDy = getReqNTIDy(F);
+  std::optional<unsigned> ReqNTIDz = getReqNTIDz(F);
+  if (ReqNTIDx || ReqNTIDy || ReqNTIDz)
+    return ReqNTIDx.value_or(1) * ReqNTIDy.value_or(1) * ReqNTIDz.value_or(1);
+  return std::nullopt;
 }
 
 bool getMinCTASm(const Function &F, unsigned &x) {
@@ -296,37 +331,44 @@ bool isKernelFunction(const Function &F) {
   return (x == 1);
 }
 
-bool getAlign(const Function &F, unsigned index, unsigned &align) {
+MaybeAlign getAlign(const Function &F, unsigned Index) {
+  // First check the alignstack metadata
+  if (MaybeAlign StackAlign =
+          F.getAttributes().getAttributes(Index).getStackAlignment())
+    return StackAlign;
+
+  // If that is missing, check the legacy nvvm metadata
   std::vector<unsigned> Vs;
   bool retval = findAllNVVMAnnotation(&F, "align", Vs);
   if (!retval)
-    return false;
-  for (unsigned v : Vs) {
-    if ((v >> 16) == index) {
-      align = v & 0xFFFF;
-      return true;
-    }
-  }
-  return false;
+    return std::nullopt;
+  for (unsigned V : Vs)
+    if ((V >> 16) == Index)
+      return Align(V & 0xFFFF);
+
+  return std::nullopt;
 }
 
-bool getAlign(const CallInst &I, unsigned index, unsigned &align) {
+MaybeAlign getAlign(const CallInst &I, unsigned Index) {
+  // First check the alignstack metadata
+  if (MaybeAlign StackAlign =
+          I.getAttributes().getAttributes(Index).getStackAlignment())
+    return StackAlign;
+
+  // If that is missing, check the legacy nvvm metadata
   if (MDNode *alignNode = I.getMetadata("callalign")) {
     for (int i = 0, n = alignNode->getNumOperands(); i < n; i++) {
       if (const ConstantInt *CI =
               mdconst::dyn_extract<ConstantInt>(alignNode->getOperand(i))) {
-        unsigned v = CI->getZExtValue();
-        if ((v >> 16) == index) {
-          align = v & 0xFFFF;
-          return true;
-        }
-        if ((v >> 16) > index) {
-          return false;
-        }
+        unsigned V = CI->getZExtValue();
+        if ((V >> 16) == Index)
+          return Align(V & 0xFFFF);
+        if ((V >> 16) > Index)
+          return std::nullopt;
       }
     }
   }
-  return false;
+  return std::nullopt;
 }
 
 Function *getMaybeBitcastedCallee(const CallBase *CB) {

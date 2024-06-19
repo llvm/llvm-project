@@ -41,8 +41,10 @@ static cl::opt<bool> EnableSubRegLiveness("enable-subreg-liveness", cl::Hidden,
 void MachineRegisterInfo::Delegate::anchor() {}
 
 MachineRegisterInfo::MachineRegisterInfo(MachineFunction *MF)
-    : MF(MF), TracksSubRegLiveness(MF->getSubtarget().enableSubRegLiveness() &&
-                                   EnableSubRegLiveness) {
+    : MF(MF),
+      TracksSubRegLiveness(EnableSubRegLiveness.getNumOccurrences()
+                               ? EnableSubRegLiveness
+                               : MF->getSubtarget().enableSubRegLiveness()) {
   unsigned NumRegs = getTargetRegisterInfo()->getNumRegs();
   VRegInfo.reserve(256);
   RegAllocHints.reserve(256);
@@ -517,8 +519,8 @@ LLVM_DUMP_METHOD void MachineRegisterInfo::dumpUses(Register Reg) const {
 }
 #endif
 
-void MachineRegisterInfo::freezeReservedRegs(const MachineFunction &MF) {
-  ReservedRegs = getTargetRegisterInfo()->getReservedRegs(MF);
+void MachineRegisterInfo::freezeReservedRegs() {
+  ReservedRegs = getTargetRegisterInfo()->getReservedRegs(*MF);
   assert(ReservedRegs.size() == getTargetRegisterInfo()->getNumRegs() &&
          "Invalid ReservedRegs vector from target");
 }
@@ -658,19 +660,4 @@ bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
       return true;
   }
   return false;
-}
-
-bool MachineRegisterInfo::isArgumentRegister(const MachineFunction &MF,
-                                             MCRegister Reg) const {
-  return getTargetRegisterInfo()->isArgumentRegister(MF, Reg);
-}
-
-bool MachineRegisterInfo::isFixedRegister(const MachineFunction &MF,
-                                          MCRegister Reg) const {
-  return getTargetRegisterInfo()->isFixedRegister(MF, Reg);
-}
-
-bool MachineRegisterInfo::isGeneralPurposeRegister(const MachineFunction &MF,
-                                                   MCRegister Reg) const {
-  return getTargetRegisterInfo()->isGeneralPurposeRegister(MF, Reg);
 }

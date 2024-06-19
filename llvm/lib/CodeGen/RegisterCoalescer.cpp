@@ -723,7 +723,8 @@ bool RegisterCoalescer::adjustCopiesBackFrom(const CoalescerPair &CP,
 
   // If the source instruction was killing the source register before the
   // merge, unset the isKill marker given the live range has been extended.
-  int UIdx = ValSEndInst->findRegisterUseOperandIdx(IntB.reg(), true);
+  int UIdx =
+      ValSEndInst->findRegisterUseOperandIdx(IntB.reg(), /*TRI=*/nullptr, true);
   if (UIdx != -1) {
     ValSEndInst->getOperand(UIdx).setIsKill(false);
   }
@@ -848,7 +849,7 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
     return { false, false };
   // If DefMI is a two-address instruction then commuting it will change the
   // destination register.
-  int DefIdx = DefMI->findRegisterDefOperandIdx(IntA.reg());
+  int DefIdx = DefMI->findRegisterDefOperandIdx(IntA.reg(), /*TRI=*/nullptr);
   assert(DefIdx != -1);
   unsigned UseOpIdx;
   if (!DefMI->isRegTiedToUseOperand(DefIdx, &UseOpIdx))
@@ -1338,14 +1339,13 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   if (SrcIdx && DstIdx)
     return false;
 
-  [[maybe_unused]] const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
+  const unsigned DefSubIdx = DefMI->getOperand(0).getSubReg();
   const TargetRegisterClass *DefRC = TII->getRegClass(MCID, 0, TRI, *MF);
   if (!DefMI->isImplicitDef()) {
     if (DstReg.isPhysical()) {
       Register NewDstReg = DstReg;
 
-      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(),
-                                              DefMI->getOperand(0).getSubReg());
+      unsigned NewDstIdx = TRI->composeSubRegIndices(CP.getSrcIdx(), DefSubIdx);
       if (NewDstIdx)
         NewDstReg = TRI->getSubReg(DstReg, NewDstIdx);
 
@@ -4248,8 +4248,7 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
   // Removing sub-register operands may allow GR32_ABCD -> GR32 and DPR_VFP2 ->
   // DPR inflation.
   array_pod_sort(InflateRegs.begin(), InflateRegs.end());
-  InflateRegs.erase(std::unique(InflateRegs.begin(), InflateRegs.end()),
-                    InflateRegs.end());
+  InflateRegs.erase(llvm::unique(InflateRegs), InflateRegs.end());
   LLVM_DEBUG(dbgs() << "Trying to inflate " << InflateRegs.size()
                     << " regs.\n");
   for (Register Reg : InflateRegs) {

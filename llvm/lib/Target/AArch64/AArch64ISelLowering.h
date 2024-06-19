@@ -58,7 +58,20 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
+  // Function call, authenticating the callee value first:
+  // AUTH_CALL chain, callee, auth key #, int disc, addr disc, operands.
+  AUTH_CALL,
+  // AUTH_TC_RETURN chain, callee, fpdiff, auth key #, int disc, addr disc,
+  // operands.
+  AUTH_TC_RETURN,
+
+  // Authenticated variant of CALL_RVMARKER.
+  AUTH_CALL_RVMARKER,
+
   COALESCER_BARRIER,
+
+  VG_SAVE,
+  VG_RESTORE,
 
   SMSTART,
   SMSTOP,
@@ -444,6 +457,8 @@ enum NodeType : unsigned {
   // SME
   RDSVL,
   REVD_MERGE_PASSTHRU,
+  ALLOCATE_ZA_BUFFER,
+  INIT_TPIDR2OBJ,
 
   // Asserts that a function argument (i32) is zero-extended to i8 by
   // the caller
@@ -522,6 +537,9 @@ enum Rounding {
 
 // Bit position of rounding mode bits in FPCR.
 const unsigned RoundingBitsPos = 22;
+
+// Reserved bits should be preserved when modifying FPCR.
+const uint64_t ReservedFPControlBits = 0xfffffffff80040f8;
 
 // Registers used to pass function arguments.
 ArrayRef<MCPhysReg> getGPRArgRegs();
@@ -642,6 +660,10 @@ public:
   MachineBasicBlock *EmitZTInstr(MachineInstr &MI, MachineBasicBlock *BB,
                                  unsigned Opcode, bool Op0IsDef) const;
   MachineBasicBlock *EmitZero(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitInitTPIDR2Object(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitAllocateZABuffer(MachineInstr &MI,
+                                          MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -689,6 +711,7 @@ public:
                                        StoreInst *SI) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
+  bool isLegalAddScalableImmediate(int64_t) const override;
   bool isLegalICmpImmediate(int64_t) const override;
 
   bool isMulAddWithConstProfitable(SDValue AddNode,
@@ -907,6 +930,8 @@ public:
     return true;
   }
 
+  bool supportPtrAuthBundles() const override { return true; }
+
   bool supportKCFIBundles() const override { return true; }
 
   MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
@@ -968,12 +993,12 @@ public:
   bool shouldExpandCttzElements(EVT VT) const override;
 
   /// If a change in streaming mode is required on entry to/return from a
-  /// function call it emits and returns the corresponding SMSTART or SMSTOP node.
-  /// \p Entry tells whether this is before/after the Call, which is necessary
-  /// because PSTATE.SM is only queried once.
+  /// function call it emits and returns the corresponding SMSTART or SMSTOP
+  /// node. \p Condition should be one of the enum values from
+  /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
-                              SDValue Chain, SDValue InGlue,
-                              SDValue PStateSM, bool Entry) const;
+                              SDValue Chain, SDValue InGlue, unsigned Condition,
+                              SDValue PStateSM = SDValue()) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
@@ -997,20 +1022,26 @@ public:
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
 
+#ifndef NDEBUG
+  void verifyTargetSDNode(const SDNode *N) const override;
+#endif
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
   const AArch64Subtarget *Subtarget;
 
+  llvm::BumpPtrAllocator BumpAlloc;
+  llvm::StringSaver Saver{BumpAlloc};
+
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
   void addTypeForNEON(MVT VT);
-  void addTypeForFixedLengthSVE(MVT VT, bool StreamingSVE);
-  void addDRTypeForNEON(MVT VT);
-  void addQRTypeForNEON(MVT VT);
+  void addTypeForFixedLengthSVE(MVT VT);
+  void addDRType(MVT VT);
+  void addQRType(MVT VT);
 
-  unsigned allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
-                                  SelectionDAG &DAG) const;
+  bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,
@@ -1120,6 +1151,9 @@ private:
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
@@ -1135,6 +1169,7 @@ private:
   SDValue LowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_DEINTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_INTERLEAVE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
@@ -1151,6 +1186,7 @@ private:
   SDValue LowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVectorXRINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorOR(SDValue Op, SelectionDAG &DAG) const;

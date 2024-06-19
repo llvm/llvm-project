@@ -123,12 +123,18 @@ static SmallVector<int64_t> getPositionFromIndices(ArrayRef<unsigned> indices) {
 /// access to the private module import methods.
 static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
                                             llvm::Instruction *inst,
-                                            ModuleImport &moduleImport) {
+                                            ModuleImport &moduleImport,
+                                            LLVMImportInterface &iface) {
   // Copy the operands to an LLVM operands array reference for conversion.
   SmallVector<llvm::Value *> operands(inst->operands());
   ArrayRef<llvm::Value *> llvmOperands(operands);
 
   // Convert all instructions that provide an MLIR builder.
+  if (iface.isConvertibleInstruction(inst->getOpcode()))
+    return iface.convertInstruction(odsBuilder, inst, llvmOperands,
+                                    moduleImport);
+    // TODO: Implement the `convertInstruction` hooks in the
+    // `LLVMDialectLLVMIRImportInterface` and move the following include there.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
   return failure();
 }
@@ -149,12 +155,14 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
 
 ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
-                           bool emitExpensiveWarnings)
+                           bool emitExpensiveWarnings,
+                           bool importEmptyDICompositeTypes)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
-      debugImporter(std::make_unique<DebugImporter>(mlirModule)),
+      debugImporter(std::make_unique<DebugImporter>(
+          mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
           std::make_unique<LoopAnnotationImporter>(*this, builder)),
       emitExpensiveWarnings(emitExpensiveWarnings) {
@@ -619,8 +627,8 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
-void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
-                                               Operation *op) const {
+void ModuleImport::setIntegerOverflowFlags(llvm::Instruction *inst,
+                                           Operation *op) const {
   auto iface = cast<IntegerOverflowFlagsInterface>(op);
 
   IntegerOverflowFlags value = {};
@@ -628,8 +636,7 @@ void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
   value =
       bitEnumSet(value, IntegerOverflowFlags::nuw, inst->hasNoUnsignedWrap());
 
-  auto attr = IntegerOverflowFlagsAttr::get(op->getContext(), value);
-  iface->setAttr(iface.getIntegerOverflowAttrName(), attr);
+  iface.setOverflowFlags(value);
 }
 
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
@@ -1290,6 +1297,27 @@ DILabelAttr ModuleImport::matchLabelAttr(llvm::Value *value) {
   return debugImporter->translate(node);
 }
 
+FPExceptionBehaviorAttr
+ModuleImport::matchFPExceptionBehaviorAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::fp::ExceptionBehavior> optLLVM =
+      llvm::convertStrToExceptionBehavior(mdstr->getString());
+  assert(optLLVM && "Expecting FP exception behavior");
+  return builder.getAttr<FPExceptionBehaviorAttr>(
+      convertFPExceptionBehaviorFromLLVM(*optLLVM));
+}
+
+RoundingModeAttr ModuleImport::matchRoundingModeAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::RoundingMode> optLLVM =
+      llvm::convertStrToRoundingMode(mdstr->getString());
+  assert(optLLVM && "Expecting rounding mode");
+  return builder.getAttr<RoundingModeAttr>(
+      convertRoundingModeFromLLVM(*optLLVM));
+}
+
 FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
@@ -1575,7 +1603,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   }
 
   // Convert all instructions that have an mlirBuilder.
-  if (succeeded(convertInstructionImpl(builder, inst, *this)))
+  if (succeeded(convertInstructionImpl(builder, inst, *this, iface)))
     return success();
 
   return emitError(loc) << "unhandled instruction: " << diag(*inst);
@@ -1636,23 +1664,26 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
 
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
 // LLVMFuncOp.
-static constexpr std::array ExplicitAttributes{
-    StringLiteral("aarch64_pstate_sm_enabled"),
+static constexpr std::array kExplicitAttributes{
+    StringLiteral("aarch64_in_za"),
+    StringLiteral("aarch64_inout_za"),
+    StringLiteral("aarch64_new_za"),
+    StringLiteral("aarch64_out_za"),
+    StringLiteral("aarch64_preserves_za"),
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
-    StringLiteral("aarch64_new_za"),
-    StringLiteral("aarch64_preserves_za"),
-    StringLiteral("aarch64_in_za"),
-    StringLiteral("aarch64_out_za"),
-    StringLiteral("aarch64_inout_za"),
-    StringLiteral("vscale_range"),
+    StringLiteral("aarch64_pstate_sm_enabled"),
+    StringLiteral("alwaysinline"),
+    StringLiteral("approx-func-fp-math"),
     StringLiteral("frame-pointer"),
-    StringLiteral("target-features"),
-    StringLiteral("unsafe-fp-math"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
-    StringLiteral("approx-func-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("noinline"),
+    StringLiteral("optnone"),
+    StringLiteral("target-features"),
+    StringLiteral("unsafe-fp-math"),
+    StringLiteral("vscale_range"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1681,7 +1712,7 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
     auto keyAttr = StringAttr::get(context, attrName);
 
     // Skip attributes that map to an explicit attribute on the LLVMFuncOp.
-    if (llvm::is_contained(ExplicitAttributes, attrName))
+    if (llvm::is_contained(kExplicitAttributes, attrName))
       continue;
 
     if (attr.isStringAttribute()) {
@@ -1716,6 +1747,13 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
   processMemoryEffects(func, funcOp);
   processPassthroughAttrs(func, funcOp);
+
+  if (func->hasFnAttribute(llvm::Attribute::NoInline))
+    funcOp.setNoInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::AlwaysInline))
+    funcOp.setAlwaysInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::OptimizeNone))
+    funcOp.setOptimizeNone(true);
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
@@ -2065,8 +2103,8 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
 
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                              MLIRContext *context,
-                              bool emitExpensiveWarnings) {
+                              MLIRContext *context, bool emitExpensiveWarnings,
+                              bool dropDICompositeTypeElements) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2082,7 +2120,7 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
       /*column=*/0)));
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
-                            emitExpensiveWarnings);
+                            emitExpensiveWarnings, dropDICompositeTypeElements);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

@@ -168,7 +168,8 @@ static bool isDebugHelpInitialized() {
 }
 
 static bool load64BitDebugHelp(void) {
-  HMODULE hLib = ::LoadLibraryW(L"Dbghelp.dll");
+  HMODULE hLib =
+      ::LoadLibraryExA("Dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
   if (hLib) {
     fMiniDumpWriteDump =
         (fpMiniDumpWriteDump)::GetProcAddress(hLib, "MiniDumpWriteDump");

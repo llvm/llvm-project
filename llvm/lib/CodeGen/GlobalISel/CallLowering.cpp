@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
@@ -91,6 +92,8 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              ArrayRef<Register> ResRegs,
                              ArrayRef<ArrayRef<Register>> ArgRegs,
                              Register SwiftErrorVReg,
+                             std::optional<PtrAuthInfo> PAI,
+                             Register ConvergenceCtrlToken,
                              std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
@@ -120,7 +123,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
     // argument points into the caller's stack frame.
     CanBeTailCalled = false;
   }
-
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
@@ -187,6 +189,8 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
   Info.CallConv = CallConv;
   Info.SwiftErrorVReg = SwiftErrorVReg;
+  Info.PAI = PAI;
+  Info.ConvergenceCtrlToken = ConvergenceCtrlToken;
   Info.IsMustTailCall = CB.isMustTailCall();
   Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = IsVarArg;
@@ -467,13 +471,15 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     // Deal with vector with 64-bit elements decomposed to 32-bit
     // registers. Need to create intermediate 64-bit elements.
     SmallVector<Register, 8> EltMerges;
-    int PartsPerElt = DstEltTy.getSizeInBits() / PartLLT.getSizeInBits();
-
-    assert(DstEltTy.getSizeInBits() % PartLLT.getSizeInBits() == 0);
+    int PartsPerElt =
+        divideCeil(DstEltTy.getSizeInBits(), PartLLT.getSizeInBits());
+    LLT ExtendedPartTy = LLT::scalar(PartLLT.getSizeInBits() * PartsPerElt);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
       auto Merge =
-          B.buildMergeLikeInstr(RealDstEltTy, Regs.take_front(PartsPerElt));
+          B.buildMergeLikeInstr(ExtendedPartTy, Regs.take_front(PartsPerElt));
+      if (ExtendedPartTy.getSizeInBits() > RealDstEltTy.getSizeInBits())
+        Merge = B.buildTrunc(RealDstEltTy, Merge);
       // Fix the type in case this is really a vector of pointers.
       MRI.setType(Merge.getReg(0), RealDstEltTy);
       EltMerges.push_back(Merge.getReg(0));
@@ -567,6 +573,17 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   if (GCDTy == PartTy) {
     // If this already evenly divisible, we can create a simple unmerge.
     B.buildUnmerge(DstRegs, SrcReg);
+    return;
+  }
+
+  if (SrcTy.isVector() && !PartTy.isVector() &&
+      SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
+    LLT ExtTy =
+        LLT::vector(SrcTy.getElementCount(),
+                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
+                                SrcTy.getNumElements()));
+    auto Ext = B.buildAnyExt(ExtTy, SrcReg);
+    B.buildUnmerge(DstRegs, Ext);
     return;
   }
 

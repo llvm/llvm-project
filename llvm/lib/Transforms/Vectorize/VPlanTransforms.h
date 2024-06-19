@@ -98,6 +98,14 @@ struct VPlanTransforms {
   ///       VPlan directly.
   static void dropPoisonGeneratingRecipes(
       VPlan &Plan, function_ref<bool(BasicBlock *)> BlockNeedsPredication);
+
+  /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+  /// replaces all uses except the canonical IV increment of
+  /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
+  /// VPCanonicalIVPHIRecipe is only used to control the loop after
+  /// this transformation.
+  /// \returns true if the transformation succeeds, or false if it doesn't.
+  static bool tryAddExplicitVectorLength(VPlan &Plan);
 };
 
 } // namespace llvm

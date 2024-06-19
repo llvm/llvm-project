@@ -8,14 +8,16 @@
 
 #include "MPFRUtils.h"
 
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/CPP/stringstream.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 
-#include <cmath>
-#include <fenv.h>
+#include "hdr/math_macros.h"
 #include <memory>
 #include <stdint.h>
 
@@ -30,6 +32,12 @@ namespace mpfr {
 // A precision value which allows sufficiently large additional
 // precision compared to the floating point precision.
 template <typename T> struct ExtraPrecision;
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template <> struct ExtraPrecision<float16> {
+  static constexpr unsigned int VALUE = 128;
+};
+#endif
 
 template <> struct ExtraPrecision<float> {
   static constexpr unsigned int VALUE = 128;
@@ -86,10 +94,18 @@ public:
 
   // We use explicit EnableIf specializations to disallow implicit
   // conversions. Implicit conversions can potentially lead to loss of
-  // precision.
+  // precision. We exceptionally allow implicit conversions from float16
+  // to float, as the MPFR API does not support float16, thus requiring
+  // conversion to a higher-precision format.
   template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<float, XType>, int> = 0>
-  explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
+            cpp::enable_if_t<cpp::is_same_v<float, XType>
+#ifdef LIBC_TYPES_HAS_FLOAT16
+                                 || cpp::is_same_v<float16, XType>
+#endif
+                             ,
+                             int> = 0>
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
@@ -99,7 +115,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<double, XType>, int> = 0>
-  explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
@@ -109,7 +126,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
-  explicit MPFRNumber(XType x, int precision = ExtraPrecision<XType>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
@@ -119,7 +137,8 @@ public:
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
-  explicit MPFRNumber(XType x, int precision = ExtraPrecision<float>::VALUE,
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<float>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
@@ -130,6 +149,12 @@ public:
   MPFRNumber(const MPFRNumber &other)
       : mpfr_precision(other.mpfr_precision),
         mpfr_rounding(other.mpfr_rounding) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set(value, other.value, mpfr_rounding);
+  }
+
+  MPFRNumber(const MPFRNumber &other, unsigned int precision)
+      : mpfr_precision(precision), mpfr_rounding(other.mpfr_rounding) {
     mpfr_init2(value, mpfr_precision);
     mpfr_set(value, other.value, mpfr_rounding);
   }
@@ -181,6 +206,12 @@ public:
     return result;
   }
 
+  MPFRNumber atan2(const MPFRNumber &b) {
+    MPFRNumber result(*this);
+    mpfr_atan2(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber atanh() const {
     MPFRNumber result(*this);
     mpfr_atanh(result.value, value, mpfr_rounding);
@@ -221,6 +252,36 @@ public:
     MPFRNumber result(*this);
     mpfr_exp2(result.value, value, mpfr_rounding);
     return result;
+  }
+
+  MPFRNumber exp2m1() const {
+    // TODO: Only use mpfr_exp2m1 once CI and buildbots get MPFR >= 4.2.0.
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+    MPFRNumber result(*this);
+    mpfr_exp2m1(result.value, value, mpfr_rounding);
+    return result;
+#else
+    unsigned int prec = mpfr_precision * 3;
+    MPFRNumber result(*this, prec);
+
+    float f = mpfr_get_flt(abs().value, mpfr_rounding);
+    if (f > 0.5f && f < 0x1.0p30f) {
+      mpfr_exp2(result.value, value, mpfr_rounding);
+      mpfr_sub_ui(result.value, result.value, 1, mpfr_rounding);
+      return result;
+    }
+
+    MPFRNumber ln2(2.0f, prec);
+    // log(2)
+    mpfr_log(ln2.value, ln2.value, mpfr_rounding);
+    // x * log(2)
+    mpfr_mul(result.value, value, ln2.value, mpfr_rounding);
+    // e^(x * log(2)) - 1
+    int ex = mpfr_expm1(result.value, result.value, mpfr_rounding);
+    mpfr_subnormalize(result.value, ex, mpfr_rounding);
+    return result;
+#endif
   }
 
   MPFRNumber exp10() const {
@@ -302,6 +363,16 @@ public:
   MPFRNumber round() const {
     MPFRNumber result(*this);
     mpfr_round(result.value, value);
+    return result;
+  }
+
+  MPFRNumber roundeven() const {
+    MPFRNumber result(*this);
+#if MPFR_VERSION_MAJOR >= 4
+    mpfr_roundeven(result.value, value);
+#else
+    mpfr_rint(result.value, value, MPFR_RNDN);
+#endif
     return result;
   }
 
@@ -474,8 +545,8 @@ public:
     // If the control reaches here, it means that this number and input are
     // of the same sign but different exponent. In such a case, ULP error is
     // calculated as sum of two parts.
-    thisAsT = std::abs(thisAsT);
-    input = std::abs(input);
+    thisAsT = FPBits<T>(thisAsT).abs().get_val();
+    input = FPBits<T>(input).abs().get_val();
     T min = thisAsT > input ? input : thisAsT;
     T max = thisAsT > input ? thisAsT : input;
     int minExponent = FPBits<T>(min).get_exponent();
@@ -530,6 +601,14 @@ template <> long double MPFRNumber::as<long double>() const {
   return mpfr_get_ld(value, mpfr_rounding);
 }
 
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template <> float16 MPFRNumber::as<float16>() const {
+  // TODO: Either prove that this cast won't cause double-rounding errors, or
+  // find a better way to get a float16.
+  return static_cast<float16>(mpfr_get_d(value, mpfr_rounding));
+}
+#endif
+
 namespace internal {
 
 template <typename InputType>
@@ -564,6 +643,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.exp();
   case Operation::Exp2:
     return mpfrInput.exp2();
+  case Operation::Exp2m1:
+    return mpfrInput.exp2m1();
   case Operation::Exp10:
     return mpfrInput.exp10();
   case Operation::Expm1:
@@ -586,6 +667,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.mod_pi_over_4();
   case Operation::Round:
     return mpfrInput.round();
+  case Operation::RoundEven:
+    return mpfrInput.roundeven();
   case Operation::Sin:
     return mpfrInput.sin();
   case Operation::Sinh:
@@ -623,6 +706,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
   MPFRNumber inputX(x, precision, rounding);
   MPFRNumber inputY(y, precision, rounding);
   switch (op) {
+  case Operation::Atan2:
+    return inputX.atan2(inputY);
   case Operation::Fmod:
     return inputX.fmod(inputY);
   case Operation::Hypot:
@@ -672,36 +757,52 @@ ternary_operation_one_output(Operation op, InputType x, InputType y,
 // to build the complete error messages before sending it to the outstream `OS`
 // once at the end.  This will stop the error messages from interleaving when
 // the tests are running concurrently.
-template <typename T>
-void explain_unary_operation_single_output_error(Operation op, T input,
-                                                 T matchValue,
+template <typename InputType, typename OutputType>
+void explain_unary_operation_single_output_error(Operation op, InputType input,
+                                                 OutputType matchValue,
                                                  double ulp_tolerance,
                                                  RoundingMode rounding) {
-  unsigned int precision = get_precision<T>(ulp_tolerance);
+  unsigned int precision = get_precision<InputType>(ulp_tolerance);
   MPFRNumber mpfrInput(input, precision);
   MPFRNumber mpfr_result;
   mpfr_result = unary_operation(op, input, precision, rounding);
   MPFRNumber mpfrMatchValue(matchValue);
-  tlog << "Match value not within tolerance value of MPFR result:\n"
-       << "  Input decimal: " << mpfrInput.str() << '\n';
-  tlog << "     Input bits: " << str(FPBits<T>(input)) << '\n';
-  tlog << '\n' << "  Match decimal: " << mpfrMatchValue.str() << '\n';
-  tlog << "     Match bits: " << str(FPBits<T>(matchValue)) << '\n';
-  tlog << '\n' << "    MPFR result: " << mpfr_result.str() << '\n';
-  tlog << "   MPFR rounded: " << str(FPBits<T>(mpfr_result.as<T>())) << '\n';
-  tlog << '\n';
-  tlog << "      ULP error: "
-       << mpfr_result.ulp_as_mpfr_number(matchValue).str() << '\n';
+  cpp::array<char, 1024> msg_buf;
+  cpp::StringStream msg(msg_buf);
+  msg << "Match value not within tolerance value of MPFR result:\n"
+      << "  Input decimal: " << mpfrInput.str() << '\n';
+  msg << "     Input bits: " << str(FPBits<InputType>(input)) << '\n';
+  msg << '\n' << "  Match decimal: " << mpfrMatchValue.str() << '\n';
+  msg << "     Match bits: " << str(FPBits<OutputType>(matchValue)) << '\n';
+  msg << '\n' << "    MPFR result: " << mpfr_result.str() << '\n';
+  msg << "   MPFR rounded: "
+      << str(FPBits<OutputType>(mpfr_result.as<OutputType>())) << '\n';
+  msg << '\n';
+  msg << "      ULP error: " << mpfr_result.ulp_as_mpfr_number(matchValue).str()
+      << '\n';
+  if (msg.overflow())
+    __builtin_unreachable();
+  tlog << msg.str();
 }
 
-template void explain_unary_operation_single_output_error<float>(Operation op,
-                                                                 float, float,
-                                                                 double,
-                                                                 RoundingMode);
-template void explain_unary_operation_single_output_error<double>(
-    Operation op, double, double, double, RoundingMode);
-template void explain_unary_operation_single_output_error<long double>(
-    Operation op, long double, long double, double, RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, float,
+                                                          float, double,
+                                                          RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, double,
+                                                          double, double,
+                                                          RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op,
+                                                          long double,
+                                                          long double, double,
+                                                          RoundingMode);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template void explain_unary_operation_single_output_error(Operation op, float16,
+                                                          float16, double,
+                                                          RoundingMode);
+template void explain_unary_operation_single_output_error(Operation op, float,
+                                                          float16, double,
+                                                          RoundingMode);
+#endif
 
 template <typename T>
 void explain_unary_operation_two_outputs_error(
@@ -821,66 +922,75 @@ template void explain_binary_operation_one_output_error<long double>(
     Operation, const BinaryInput<long double> &, long double, double,
     RoundingMode);
 
-template <typename T>
-void explain_ternary_operation_one_output_error(Operation op,
-                                                const TernaryInput<T> &input,
-                                                T libc_result,
-                                                double ulp_tolerance,
-                                                RoundingMode rounding) {
-  unsigned int precision = get_precision<T>(ulp_tolerance);
+template <typename InputType, typename OutputType>
+void explain_ternary_operation_one_output_error(
+    Operation op, const TernaryInput<InputType> &input, OutputType libc_result,
+    double ulp_tolerance, RoundingMode rounding) {
+  unsigned int precision = get_precision<InputType>(ulp_tolerance);
   MPFRNumber mpfrX(input.x, precision);
   MPFRNumber mpfrY(input.y, precision);
   MPFRNumber mpfrZ(input.z, precision);
-  FPBits<T> xbits(input.x);
-  FPBits<T> ybits(input.y);
-  FPBits<T> zbits(input.z);
+  FPBits<InputType> xbits(input.x);
+  FPBits<InputType> ybits(input.y);
+  FPBits<InputType> zbits(input.z);
   MPFRNumber mpfr_result = ternary_operation_one_output(
       op, input.x, input.y, input.z, precision, rounding);
   MPFRNumber mpfrMatchValue(libc_result);
 
   tlog << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str()
        << " z: " << mpfrZ.str() << '\n';
-  tlog << " First input bits: " << str(FPBits<T>(input.x)) << '\n';
-  tlog << "Second input bits: " << str(FPBits<T>(input.y)) << '\n';
-  tlog << " Third input bits: " << str(FPBits<T>(input.z)) << '\n';
+  tlog << " First input bits: " << str(FPBits<InputType>(input.x)) << '\n';
+  tlog << "Second input bits: " << str(FPBits<InputType>(input.y)) << '\n';
+  tlog << " Third input bits: " << str(FPBits<InputType>(input.z)) << '\n';
 
   tlog << "Libc result: " << mpfrMatchValue.str() << '\n'
        << "MPFR result: " << mpfr_result.str() << '\n';
-  tlog << "Libc floating point result bits: " << str(FPBits<T>(libc_result))
-       << '\n';
+  tlog << "Libc floating point result bits: "
+       << str(FPBits<OutputType>(libc_result)) << '\n';
   tlog << "              MPFR rounded bits: "
-       << str(FPBits<T>(mpfr_result.as<T>())) << '\n';
+       << str(FPBits<OutputType>(mpfr_result.as<OutputType>())) << '\n';
   tlog << "ULP error: " << mpfr_result.ulp_as_mpfr_number(libc_result).str()
        << '\n';
 }
 
-template void explain_ternary_operation_one_output_error<float>(
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, float, double, RoundingMode);
-template void explain_ternary_operation_one_output_error<double>(
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<double> &, double, double, RoundingMode);
-template void explain_ternary_operation_one_output_error<long double>(
-    Operation, const TernaryInput<long double> &, long double, double,
-    RoundingMode);
+template void
+explain_ternary_operation_one_output_error(Operation,
+                                           const TernaryInput<long double> &,
+                                           long double, double, RoundingMode);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<float> &, float16, double, RoundingMode);
+#endif
 
-template <typename T>
-bool compare_unary_operation_single_output(Operation op, T input, T libc_result,
+template <typename InputType, typename OutputType>
+bool compare_unary_operation_single_output(Operation op, InputType input,
+                                           OutputType libc_result,
                                            double ulp_tolerance,
                                            RoundingMode rounding) {
-  unsigned int precision = get_precision<T>(ulp_tolerance);
+  unsigned int precision = get_precision<InputType>(ulp_tolerance);
   MPFRNumber mpfr_result;
   mpfr_result = unary_operation(op, input, precision, rounding);
   double ulp = mpfr_result.ulp(libc_result);
   return (ulp <= ulp_tolerance);
 }
 
-template bool compare_unary_operation_single_output<float>(Operation, float,
-                                                           float, double,
-                                                           RoundingMode);
-template bool compare_unary_operation_single_output<double>(Operation, double,
-                                                            double, double,
-                                                            RoundingMode);
-template bool compare_unary_operation_single_output<long double>(
-    Operation, long double, long double, double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, float, float,
+                                                    double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, double, double,
+                                                    double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, long double,
+                                                    long double, double,
+                                                    RoundingMode);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template bool compare_unary_operation_single_output(Operation, float16, float16,
+                                                    double, RoundingMode);
+template bool compare_unary_operation_single_output(Operation, float, float16,
+                                                    double, RoundingMode);
+#endif
 
 template <typename T>
 bool compare_unary_operation_two_outputs(Operation op, T input,
@@ -962,12 +1072,13 @@ template bool compare_binary_operation_one_output<long double>(
     Operation, const BinaryInput<long double> &, long double, double,
     RoundingMode);
 
-template <typename T>
+template <typename InputType, typename OutputType>
 bool compare_ternary_operation_one_output(Operation op,
-                                          const TernaryInput<T> &input,
-                                          T libc_result, double ulp_tolerance,
+                                          const TernaryInput<InputType> &input,
+                                          OutputType libc_result,
+                                          double ulp_tolerance,
                                           RoundingMode rounding) {
-  unsigned int precision = get_precision<T>(ulp_tolerance);
+  unsigned int precision = get_precision<InputType>(ulp_tolerance);
   MPFRNumber mpfr_result = ternary_operation_one_output(
       op, input.x, input.y, input.z, precision, rounding);
   double ulp = mpfr_result.ulp(libc_result);
@@ -975,13 +1086,23 @@ bool compare_ternary_operation_one_output(Operation op,
   return (ulp <= ulp_tolerance);
 }
 
-template bool compare_ternary_operation_one_output<float>(
-    Operation, const TernaryInput<float> &, float, double, RoundingMode);
-template bool compare_ternary_operation_one_output<double>(
-    Operation, const TernaryInput<double> &, double, double, RoundingMode);
-template bool compare_ternary_operation_one_output<long double>(
-    Operation, const TernaryInput<long double> &, long double, double,
-    RoundingMode);
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<float> &,
+                                                   float, double, RoundingMode);
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<double> &,
+                                                   double, double,
+                                                   RoundingMode);
+template bool
+compare_ternary_operation_one_output(Operation,
+                                     const TernaryInput<long double> &,
+                                     long double, double, RoundingMode);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template bool compare_ternary_operation_one_output(Operation,
+                                                   const TernaryInput<float> &,
+                                                   float16, double,
+                                                   RoundingMode);
+#endif
 
 } // namespace internal
 
@@ -993,6 +1114,9 @@ template <typename T> bool round_to_long(T x, long &result) {
 template bool round_to_long<float>(float, long &);
 template bool round_to_long<double>(double, long &);
 template bool round_to_long<long double>(long double, long &);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template bool round_to_long<float16>(float16, long &);
+#endif
 
 template <typename T> bool round_to_long(T x, RoundingMode mode, long &result) {
   MPFRNumber mpfr(x);
@@ -1002,6 +1126,9 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result) {
 template bool round_to_long<float>(float, RoundingMode, long &);
 template bool round_to_long<double>(double, RoundingMode, long &);
 template bool round_to_long<long double>(long double, RoundingMode, long &);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template bool round_to_long<float16>(float16, RoundingMode, long &);
+#endif
 
 template <typename T> T round(T x, RoundingMode mode) {
   MPFRNumber mpfr(x);
@@ -1012,6 +1139,9 @@ template <typename T> T round(T x, RoundingMode mode) {
 template float round<float>(float, RoundingMode);
 template double round<double>(double, RoundingMode);
 template long double round<long double>(long double, RoundingMode);
+#ifdef LIBC_TYPES_HAS_FLOAT16
+template float16 round<float16>(float16, RoundingMode);
+#endif
 
 } // namespace mpfr
 } // namespace testing

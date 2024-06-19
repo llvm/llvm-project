@@ -72,6 +72,7 @@ mlir::tensor::computeTransposedType(RankedTensorType rankedTensorType,
       RTTBuilder(rankedTensorType).setShape(transposedShape);
   return transposedTensorType;
 }
+
 /// The permutation can be obtained from two permutations:
 ///   a) Compute the permutation vector to move the last `numPackedDims` into
 ///      the `innerPosDims` of a shape of rank `rank`.
@@ -100,10 +101,6 @@ computePackUnPackPerm(int64_t rank, ArrayRef<int64_t> &innerDimsPos,
   return packInverseDestPermutation;
 }
 
-/// Shell function to compute the Destination Permutation of PackOp
-/// This function uses the helper function `computePackUnPackPerm` to get
-/// the permutation vector. Only major difference between UnPack and Pack is
-/// that packOp uses destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> mlir::tensor::getPackInverseDestPerm(PackOp packOp) {
 
   PackingMetadata pMetadata;
@@ -115,19 +112,11 @@ SmallVector<int64_t> mlir::tensor::getPackInverseDestPerm(PackOp packOp) {
   return packInvDestPerm;
 }
 
-/// Shell function to compute the Source Permutation of unPackOp.
-/// This function, like the getPackInverseDestPerm uses the helper function
-/// computePackUnPackPerm` to get the permutation vector.
-/// Only major difference between UnPack and Pack is that packOp uses
-/// destination rank whereas unpack Uses source rank.
 SmallVector<int64_t> mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp) {
   PackingMetadata metadata;
   return mlir::tensor::getUnPackInverseSrcPerm(unpackOp, metadata);
 }
 
-/// Shell function to compute the Source rank permutation for unpackOp
-/// Unpack requires some packing metadata data information, so created
-/// another function where this value is passed by reference.
 SmallVector<int64_t>
 mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp,
                                       PackingMetadata &metadata) {
@@ -142,15 +131,19 @@ mlir::tensor::getUnPackInverseSrcPerm(UnPackOp unpackOp,
 bool mlir::tensor::isCastLikeInsertSliceOp(InsertSliceOp op) {
   llvm::SmallBitVector droppedDims = op.getDroppedDims();
   int64_t srcDim = 0;
+  RankedTensorType resultType = op.getDestType();
   // Source dims and destination dims (apart from dropped dims) must have the
   // same size.
-  for (int64_t resultDim = 0; resultDim < op.getDestType().getRank();
-       ++resultDim) {
+  for (int64_t resultDim = 0; resultDim < resultType.getRank(); ++resultDim) {
     if (droppedDims.test(resultDim)) {
+      // InsertSlice may expand unit dimensions that result from inserting a
+      // size-1 slice into a non-size-1 result dimension.
+      if (resultType.getDimSize(resultDim) != 1)
+        return false;
       continue;
     }
     FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(
-        op.getSource(), op.getResult(), srcDim, resultDim);
+        {op.getSource(), srcDim}, {op.getResult(), resultDim});
     if (failed(equalDimSize) || !*equalDimSize)
       return false;
     ++srcDim;
@@ -174,7 +167,7 @@ bool mlir::tensor::isCastLikeExtractSliceOp(ExtractSliceOp op) {
       continue;
     }
     FailureOr<bool> equalDimSize = ValueBoundsConstraintSet::areEqual(
-        op.getSource(), op.getResult(), dim, resultDim);
+        {op.getSource(), dim}, {op.getResult(), resultDim});
     if (failed(equalDimSize) || !*equalDimSize)
       return false;
     ++resultDim;

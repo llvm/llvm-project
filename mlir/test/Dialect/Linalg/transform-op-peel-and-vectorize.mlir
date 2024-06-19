@@ -67,7 +67,7 @@ module attributes {transform.with_named_sequence} {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %root : (!transform.any_op) -> !transform.any_op
     // 1. Scalable tiling
     %_, %loop_1, %loop_2, %loop_3 =
-      transform.structured.tile_using_for %matmul [8, [16], 1] : (!transform.any_op)
+      transform.structured.tile_using_for %matmul tile_sizes [8, [16], 1] : (!transform.any_op)
       -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">,!transform.op<"scf.for">)
 
     // 2. Loop peeling (only the middle dimension)

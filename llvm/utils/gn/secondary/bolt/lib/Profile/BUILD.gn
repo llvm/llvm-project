@@ -12,7 +12,6 @@ static_library("Profile") {
     "DataAggregator.cpp",
     "DataReader.cpp",
     "Heatmap.cpp",
-    "ProfileReaderBase.cpp",
     "StaleProfileMatching.cpp",
     "YAMLProfileReader.cpp",
     "YAMLProfileWriter.cpp",

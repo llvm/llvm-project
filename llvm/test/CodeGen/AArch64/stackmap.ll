@@ -9,11 +9,11 @@
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .hword 0
 ; Num Functions
-; CHECK-NEXT:   .word 14
+; CHECK-NEXT:   .word 15
 ; Num LargeConstants
 ; CHECK-NEXT:   .word 4
 ; Num Callsites
-; CHECK-NEXT:   .word 18
+; CHECK-NEXT:   .word 22
 
 ; Functions and stack size
 ; CHECK-NEXT:   .xword constantargs
@@ -47,6 +47,9 @@
 ; CHECK-NEXT:   .xword 64
 ; CHECK-NEXT:   .xword 2
 ; CHECK-NEXT:   .xword longid
+; CHECK-NEXT:   .xword 16
+; CHECK-NEXT:   .xword 4
+; CHECK-NEXT:   .xword statepoint_longid
 ; CHECK-NEXT:   .xword 16
 ; CHECK-NEXT:   .xword 4
 ; CHECK-NEXT:   .xword clobberLR
@@ -443,6 +446,26 @@ entry:
   ret void
 }
 
+; Test a 64-bit ID for statepoint.
+;
+; CHECK:        .xword 4294967295
+; CHECK-LABEL:  .word .L{{.*}}-statepoint_longid
+; CHECK:        .xword 4294967296
+; CHECK-LABEL:  .word .L{{.*}}-statepoint_longid
+; CHECK:        .xword 9223372036854775807
+; CHECK-LABEL:  .word .L{{.*}}-statepoint_longid
+; CHECK:        .xword -1
+; CHECK-LABEL:  .word .L{{.*}}-statepoint_longid
+define void @statepoint_longid() gc "statepoint-example" {
+entry:
+  %safepoint_token1 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 4294967295, i32 0, ptr elementtype(void ()) @return_void, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token2 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 4294967296, i32 0, ptr elementtype(void ()) @return_void, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token3 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 9223372036854775807, i32 0, ptr elementtype(void ()) @return_void, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token4 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 -1, i32 0, ptr elementtype(void ()) @return_void, i32 0, i32 0, i32 0, i32 0)
+  ret void
+}
+declare void @return_void()
+
 ; Map a value when R11 is the only free register.
 ; The scratch register should not be used for a live stackmap value.
 ;
@@ -463,8 +486,8 @@ define void @clobberLR(i32 %a) {
   ret void
 }
 
-; A stack frame which needs to be realigned at runtime (to meet alignment 
-; criteria for values on the stack) does not have a fixed frame size. 
+; A stack frame which needs to be realigned at runtime (to meet alignment
+; criteria for values on the stack) does not have a fixed frame size.
 ; CHECK-LABEL:  .word .L{{.*}}-needsStackRealignment
 ; CHECK-NEXT:   .hword 0
 ; 0 locations
@@ -537,3 +560,4 @@ define void @floats(float %f, double %g) {
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
 declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)

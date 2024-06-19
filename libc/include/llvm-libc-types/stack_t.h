@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_STACK_T_H
 #define LLVM_LIBC_TYPES_STACK_T_H
 
-#include <llvm-libc-types/size_t.h>
+#include "llvm-libc-types/size_t.h"
 
 typedef struct {
   // The order of the fields declared here should match the kernel definition

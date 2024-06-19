@@ -68,6 +68,7 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -192,6 +193,10 @@ static cl::opt<int>
                       cl::desc("Margin representing the unused percentage of "
                                "the register pressure limit"));
 
+static cl::opt<bool>
+    MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
+               cl::desc("Use the MVE code generator for software pipelining"));
+
 namespace llvm {
 
 // A command line option to enable the CopyToPhi DAG mutation.
@@ -206,6 +211,17 @@ cl::opt<int> SwpForceIssueWidth(
     cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
     cl::init(-1));
 
+/// A command line argument to set the window scheduling option.
+cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
+    "window-sched", cl::Hidden, cl::init(WindowSchedulingFlag::WS_On),
+    cl::desc("Set how to use window scheduling algorithm."),
+    cl::values(clEnumValN(WindowSchedulingFlag::WS_Off, "off",
+                          "Turn off window algorithm."),
+               clEnumValN(WindowSchedulingFlag::WS_On, "on",
+                          "Use window algorithm after SMS algorithm fails."),
+               clEnumValN(WindowSchedulingFlag::WS_Force, "force",
+                          "Use window algorithm instead of SMS algorithm.")));
+
 } // end namespace llvm
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
@@ -219,7 +235,7 @@ INITIALIZE_PASS_BEGIN(MachinePipeliner, DEBUG_TYPE,
                       "Modulo Software Pipelining", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
                     "Modulo Software Pipelining", false, false)
@@ -248,7 +264,7 @@ bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
 
   MF = &mf;
   MLI = &getAnalysis<MachineLoopInfo>();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   TII = MF->getSubtarget().getInstrInfo();
   RegClassInfo.runOnMachineFunction(*MF);
@@ -292,8 +308,11 @@ bool MachinePipeliner::scheduleLoop(MachineLoop &L) {
   }
 
   ++NumTrytoPipeline;
+  if (useSwingModuloScheduler())
+    Changed = swingModuloScheduler(L);
 
-  Changed = swingModuloScheduler(L);
+  if (useWindowScheduler(Changed))
+    Changed = runWindowScheduler(L);
 
   LI.LoopPipelinerInfo.reset();
   return Changed;
@@ -481,10 +500,36 @@ void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<LiveIntervals>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+  AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
+  MachineSchedContext Context;
+  Context.MF = MF;
+  Context.MLI = MLI;
+  Context.MDT = MDT;
+  Context.PassConfig = &getAnalysis<TargetPassConfig>();
+  Context.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  Context.LIS = &getAnalysis<LiveIntervals>();
+  Context.RegClassInfo->runOnMachineFunction(*MF);
+  WindowScheduler WS(&Context, L);
+  return WS.run();
+}
+
+bool MachinePipeliner::useSwingModuloScheduler() {
+  // SwingModuloScheduler does not work when WindowScheduler is forced.
+  return WindowSchedulingOption != WindowSchedulingFlag::WS_Force;
+}
+
+bool MachinePipeliner::useWindowScheduler(bool Changed) {
+  // WindowScheduler does not work when it is off or when SwingModuloScheduler
+  // is successfully scheduled.
+  return WindowSchedulingOption == WindowSchedulingFlag::WS_Force ||
+         (WindowSchedulingOption == WindowSchedulingFlag::WS_On && !Changed);
 }
 
 void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
@@ -676,6 +721,11 @@ void SwingSchedulerDAG::schedule() {
   // The experimental code generator can't work if there are InstChanges.
   if (ExperimentalCodeGen && NewInstrChanges.empty()) {
     PeelingModuloScheduleExpander MSE(MF, MS, &LIS);
+    MSE.expand();
+  } else if (MVECodeGen && NewInstrChanges.empty() &&
+             LoopPipelinerInfo->isMVEExpanderSupported() &&
+             ModuloScheduleExpanderMVE::canApply(Loop)) {
+    ModuloScheduleExpanderMVE MSE(MF, MS, LIS);
     MSE.expand();
   } else {
     ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
@@ -919,7 +969,8 @@ void SwingSchedulerDAG::updatePhiDependences() {
           if (!MI->isPHI()) {
             SDep Dep(SU, SDep::Data, Reg);
             Dep.setLatency(0);
-            ST.adjustSchedDependency(SU, 0, &I, MO.getOperandNo(), Dep);
+            ST.adjustSchedDependency(SU, 0, &I, MO.getOperandNo(), Dep,
+                                     &SchedModel);
             I.addPred(Dep);
           } else {
             HasPhiUse = Reg;
@@ -1247,7 +1298,7 @@ private:
     for (auto &MI : *OrigMBB) {
       if (MI.isDebugInstr())
         continue;
-      for (auto Use : ROMap[&MI].Uses) {
+      for (auto &Use : ROMap[&MI].Uses) {
         auto Reg = Use.RegUnit;
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
@@ -1268,7 +1319,7 @@ private:
   // Calculate the upper limit of each pressure set
   void computePressureSetLimit(const RegisterClassInfo &RCI) {
     for (unsigned PSet = 0; PSet < PSetNum; PSet++)
-      PressureSetLimit[PSet] = RCI.getRegPressureSetLimit(PSet);
+      PressureSetLimit[PSet] = TRI->getRegPressureSetLimit(MF, PSet);
 
     // We assume fixed registers, such as stack pointer, are already in use.
     // Therefore subtracting the weight of the fixed registers from the limit of
@@ -1345,7 +1396,7 @@ private:
 
     DenseMap<Register, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
-      for (auto Use : ROMap.find(MI)->getSecond().Uses) {
+      for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
         auto Reg = Use.RegUnit;
         if (!TargetRegs.contains(Reg))
           continue;
@@ -2732,19 +2783,20 @@ bool SwingSchedulerDAG::isLoopCarriedDep(SUnit *Source, const SDep &Dep,
   if (!LoopDefS || !TII->getIncrementValue(*LoopDefS, D))
     return true;
 
-  uint64_t AccessSizeS = (*SI->memoperands_begin())->getSize();
-  uint64_t AccessSizeD = (*DI->memoperands_begin())->getSize();
+  LocationSize AccessSizeS = (*SI->memoperands_begin())->getSize();
+  LocationSize AccessSizeD = (*DI->memoperands_begin())->getSize();
 
   // This is the main test, which checks the offset values and the loop
   // increment value to determine if the accesses may be loop carried.
-  if (AccessSizeS == MemoryLocation::UnknownSize ||
-      AccessSizeD == MemoryLocation::UnknownSize)
+  if (!AccessSizeS.hasValue() || !AccessSizeD.hasValue())
     return true;
 
-  if (DeltaS != DeltaD || DeltaS < AccessSizeS || DeltaD < AccessSizeD)
+  if (DeltaS != DeltaD || DeltaS < AccessSizeS.getValue() ||
+      DeltaD < AccessSizeD.getValue())
     return true;
 
-  return (OffsetS + (int64_t)AccessSizeS < OffsetD + (int64_t)AccessSizeD);
+  return (OffsetS + (int64_t)AccessSizeS.getValue() <
+          OffsetD + (int64_t)AccessSizeD.getValue());
 }
 
 void SwingSchedulerDAG::postProcessDAG() {

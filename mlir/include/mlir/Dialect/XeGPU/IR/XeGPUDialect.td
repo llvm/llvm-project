@@ -17,14 +17,16 @@ def XeGPU_Dialect : Dialect {
     let summary = "The XeGPU dialect that models Intel GPU's ISA";
     let description = [{
       The XeGPU dialect models Intel Xe ISA semantics but works at vector and
-      TensorDesc data type. It provides 1:1 mappings to match Xe instructions 
+      TensorDesc data type. It provides 1:1 mappings to match Xe instructions
       like DPAS and 2D block load. The matrix size being processed at this level
       exactly matches the hardware instructions or the intrinsic supported by
       the lower-level GPU compiler.
     }];
 
-    // let useDefaultTypePrinterParser = true;
-    // let useDefaultAttributePrinterParser = true;
+    let dependentDialects = ["arith::ArithDialect"];
+
+    let useDefaultTypePrinterParser = true;
+    let useDefaultAttributePrinterParser = true;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUDIALECT_TD

@@ -682,3 +682,24 @@ namespace nw{
   }
 }
 #endif
+
+#if __cplusplus >= 201703L
+namespace GH88329 {
+
+template <auto T> struct A {};
+template <auto T> A<*T> operator *() { return {}; }
+// expected-error@-1 {{overloaded 'operator*' must have at least one parameter of class or enumeration type}}
+}
+
+namespace GH92275 {
+
+template <auto v>
+struct constant{};
+
+template <auto x>
+auto operator *(constant<x>)
+{ return constant<(*x)>{}; }
+
+}
+
+#endif

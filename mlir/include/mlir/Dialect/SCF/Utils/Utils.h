@@ -100,11 +100,16 @@ getSCFMinMaxExpr(Value value, SmallVectorImpl<Value> &dims,
 /// `loops` contains a list of perfectly nested loops with bounds and steps
 /// independent of any loop induction variable involved in the nest.
 LogicalResult coalesceLoops(MutableArrayRef<scf::ForOp> loops);
+LogicalResult coalesceLoops(RewriterBase &rewriter,
+                            MutableArrayRef<scf::ForOp>);
+
+/// Walk an affine.for to find a band to coalesce.
+LogicalResult coalescePerfectlyNestedSCFForLoops(scf::ForOp op);
 
 /// Take the ParallelLoop and for each set of dimension indices, combine them
 /// into a single dimension. combinedDimensions must contain each index into
 /// loops exactly once.
-void collapseParallelLoops(scf::ParallelOp loops,
+void collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
                            ArrayRef<std::vector<unsigned>> combinedDimensions);
 
 /// Unrolls this for operation by the specified unroll factor. Returns failure
@@ -114,6 +119,24 @@ void collapseParallelLoops(scf::ParallelOp loops,
 LogicalResult loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+
+/// Transform a loop with a strictly positive step
+///   for %i = %lb to %ub step %s
+/// into a 0-based loop with step 1
+///   for %ii = 0 to ceildiv(%ub - %lb, %s) step 1 {
+///     %i = %ii * %s + %lb
+/// Insert the induction variable remapping in the body of `inner`, which is
+/// expected to be either `loop` or another loop perfectly nested under `loop`.
+/// Insert the definition of new bounds immediate before `outer`, which is
+/// expected to be either `loop` or its parent in the loop nest.
+Range emitNormalizedLoopBounds(RewriterBase &rewriter, Location loc,
+                               OpFoldResult lb, OpFoldResult ub,
+                               OpFoldResult step);
+
+/// Get back the original induction variable values after loop normalization.
+void denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
+                                  Value normalizedIv, OpFoldResult origLb,
+                                  OpFoldResult origStep);
 
 /// Tile a nest of standard for loops rooted at `rootForOp` by finding such
 /// parametric tile sizes that the outer loops have a fixed number of iterations
@@ -161,6 +184,16 @@ void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
 scf::ForallOp fuseIndependentSiblingForallLoops(scf::ForallOp target,
                                                 scf::ForallOp source,
                                                 RewriterBase &rewriter);
+
+/// Given two scf.for loops, `target` and `source`, fuses `target` into
+/// `source`. Assumes that the given loops are siblings and are independent of
+/// each other.
+///
+/// This function does not perform any legality checks and simply fuses the
+/// loops. The caller is responsible for ensuring that the loops are legal to
+/// fuse.
+scf::ForOp fuseIndependentSiblingForLoops(scf::ForOp target, scf::ForOp source,
+                                          RewriterBase &rewriter);
 
 } // namespace mlir
 

@@ -111,7 +111,7 @@ function(create_libc_unittest fq_target_name)
 
   cmake_parse_arguments(
     "LIBC_UNITTEST"
-    "NO_RUN_POSTBUILD" # Optional arguments
+    "NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS" # Multi-value arguments
     ${ARGN}
@@ -126,11 +126,14 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-                           libc.test.UnitTest.ErrnoSetterMatcher)
+  if(NOT LIBC_UNITTEST_C_TEST)
+    list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
+                             libc.test.UnitTest.ErrnoSetterMatcher)
+  endif()
   list(REMOVE_DUPLICATES fq_deps_list)
 
-  _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_FLAGS}")
+  _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
+                                   "${LIBC_UNITTEST_FLAGS}")
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -214,7 +217,9 @@ function(create_libc_unittest fq_target_name)
   )
 
   # LibcUnitTest should not depend on anything in LINK_LIBRARIES.
-  list(APPEND link_libraries LibcDeathTestExecutors.unit LibcTest.unit)
+  if(NOT LIBC_UNITTEST_C_TEST)
+    list(APPEND link_libraries LibcDeathTestExecutors.unit LibcTest.unit)
+  endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
@@ -681,6 +686,15 @@ function(add_libc_hermetic_test test_name)
                    LibcTest.hermetic
                    libc.test.UnitTest.ErrnoSetterMatcher
                    ${fq_deps_list})
+  # TODO: currently the dependency chain is broken such that getauxval cannot properly
+  # propagate to hermetic tests. This is a temporary workaround.
+  if (LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+    target_link_libraries(
+      ${fq_build_target_name}
+      PRIVATE
+        libc.src.sys.auxv.getauxval
+    )
+  endif()
 
   # Tests on the GPU require an external loader utility to launch the kernel.
   if(TARGET libc.utils.gpu.loader)

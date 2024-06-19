@@ -23,6 +23,13 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(LLVM, llvm);
 MLIR_CAPI_EXPORTED MlirType mlirLLVMPointerTypeGet(MlirContext ctx,
                                                    unsigned addressSpace);
 
+/// Returns `true` if the type is an LLVM dialect pointer type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsALLVMPointerType(MlirType type);
+
+/// Returns address space of llvm.ptr
+MLIR_CAPI_EXPORTED unsigned
+mlirLLVMPointerTypeGetAddressSpace(MlirType pointerType);
+
 /// Creates an llmv.void type.
 MLIR_CAPI_EXPORTED MlirType mlirLLVMVoidTypeGet(MlirContext ctx);
 
@@ -229,16 +236,29 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIBasicTypeAttrGet(
 
 /// Creates a LLVM DICompositeType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompositeTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute name, MlirAttribute file,
-    uint32_t line, MlirAttribute scope, MlirAttribute baseType, int64_t flags,
-    uint64_t sizeInBits, uint64_t alignInBits, intptr_t nElements,
-    MlirAttribute const *elements);
+    MlirContext ctx, unsigned int tag, MlirAttribute recId, MlirAttribute name,
+    MlirAttribute file, uint32_t line, MlirAttribute scope,
+    MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
+    uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
+    MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
+    MlirAttribute associated);
 
-/// Creates a LLVM DIDerivedType attribute.
+/// Creates a LLVM DIDerivedType attribute.  Note that `dwarfAddressSpace` is an
+/// optional field, where `MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL` indicates null
+/// and non-negative values indicate a value present.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
     MlirContext ctx, unsigned int tag, MlirAttribute name,
     MlirAttribute baseType, uint64_t sizeInBits, uint32_t alignInBits,
-    uint64_t offsetInBits);
+    uint64_t offsetInBits, int64_t dwarfAddressSpace, MlirAttribute extraData);
+
+MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIStringTypeAttrGet(
+    MlirContext ctx, unsigned int tag, MlirAttribute name, uint64_t sizeInBits,
+    uint32_t alignInBits, MlirAttribute stringLength,
+    MlirAttribute stringLengthExp, MlirAttribute stringLocationExp,
+    MlirLLVMTypeEncoding encoding);
+
+/// Constant to represent std::nullopt for dwarfAddressSpace to omit the field.
+#define MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL -1
 
 /// Gets the base type from a LLVM DIDerivedType attribute.
 MLIR_CAPI_EXPORTED MlirAttribute
@@ -257,11 +277,19 @@ enum MlirLLVMDIEmissionKind {
 };
 typedef enum MlirLLVMDIEmissionKind MlirLLVMDIEmissionKind;
 
+enum MlirLLVMDINameTableKind {
+  MlirLLVMDINameTableKindDefault = 0,
+  MlirLLVMDINameTableKindGNU = 1,
+  MlirLLVMDINameTableKindNone = 2,
+  MlirLLVMDINameTableKindApple = 3,
+};
+typedef enum MlirLLVMDINameTableKind MlirLLVMDINameTableKind;
+
 /// Creates a LLVM DICompileUnit attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
     MlirAttribute file, MlirAttribute producer, bool isOptimized,
-    MlirLLVMDIEmissionKind emissionKind);
+    MlirLLVMDIEmissionKind emissionKind, MlirLLVMDINameTableKind nameTableKind);
 
 /// Creates a LLVM DIFlags attribute.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx,

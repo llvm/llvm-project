@@ -18,6 +18,7 @@
 #include "clang-c/Index.h"
 #include "clang-c/Platform.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/ExtractAPI/API.h"
@@ -44,6 +45,9 @@ struct LibClangExtractAPIVisitor
       : ExtractAPIVisitor<LibClangExtractAPIVisitor>(Context, API) {}
 
   const RawComment *fetchRawCommentForDecl(const Decl *D) const {
+    if (const auto *Comment = Base::fetchRawCommentForDecl(D))
+      return Comment;
+
     return Context.getRawCommentForAnyRedecl(D);
   }
 
@@ -54,41 +58,20 @@ struct LibClangExtractAPIVisitor
     if (!shouldDeclBeIncluded(Decl))
       return true;
 
-    const ObjCInterfaceDecl *Interface = Decl->getClassInterface();
-    StringRef Name = Interface->getName();
-    StringRef USR = API.recordUSR(Decl);
-    PresumedLoc Loc =
-        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    LinkageInfo Linkage = Decl->getLinkageAndVisibility();
-    DocComment Comment;
-    if (auto *RawComment = fetchRawCommentForDecl(Interface))
-      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
-                                              Context.getDiagnostics());
+    auto *Interface = Decl->getClassInterface();
 
-    // Build declaration fragments and sub-heading by generating them for the
-    // interface.
-    DeclarationFragments Declaration =
-        DeclarationFragmentsBuilder::getFragmentsForObjCInterface(Interface);
-    DeclarationFragments SubHeading =
-        DeclarationFragmentsBuilder::getSubHeading(Decl);
+    if (!VisitObjCInterfaceDecl(Interface))
+      return false;
 
-    // Collect super class information.
-    SymbolReference SuperClass;
-    if (const auto *SuperClassDecl = Decl->getSuperClass()) {
-      SuperClass.Name = SuperClassDecl->getObjCRuntimeNameAsString();
-      SuperClass.USR = API.recordUSR(SuperClassDecl);
+    SmallString<128> USR;
+    index::generateUSRForDecl(Interface, USR);
+
+    if (auto *InterfaceRecord = dyn_cast_if_present<ObjCInterfaceRecord>(
+            API.findRecordForUSR(USR))) {
+      recordObjCMethods(InterfaceRecord, Decl->methods());
+      recordObjCProperties(InterfaceRecord, Decl->properties());
+      recordObjCInstanceVariables(InterfaceRecord, Decl->ivars());
     }
-
-    ObjCInterfaceRecord *ObjCInterfaceRecord = API.addObjCInterface(
-        Name, USR, Loc, AvailabilityInfo::createFromDecl(Decl), Linkage,
-        Comment, Declaration, SubHeading, SuperClass, isInSystemHeader(Decl));
-
-    // Record all methods (selectors). This doesn't include automatically
-    // synthesized property methods.
-    recordObjCMethods(ObjCInterfaceRecord, Decl->methods());
-    recordObjCProperties(ObjCInterfaceRecord, Decl->properties());
-    recordObjCInstanceVariables(ObjCInterfaceRecord, Decl->ivars());
-
     return true;
   }
 };
@@ -96,21 +79,14 @@ struct LibClangExtractAPIVisitor
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(APISet, CXAPISet)
 
-static void WalkupFromMostDerivedType(LibClangExtractAPIVisitor &Visitor,
-                                      Decl *D);
-
-template <typename DeclTy>
-static bool WalkupParentContext(DeclContext *Parent,
-                                LibClangExtractAPIVisitor &Visitor) {
-  if (auto *D = dyn_cast<DeclTy>(Parent)) {
-    WalkupFromMostDerivedType(Visitor, D);
-    return true;
-  }
-  return false;
-}
-
+// Visits the Decl D and it's transitive DeclContexts recursively, starting from
+// the outer-most context. This is guaranteed to visit every Decl we need in the
+// right order to generate symbol graph information for D.
 static void WalkupFromMostDerivedType(LibClangExtractAPIVisitor &Visitor,
                                       Decl *D) {
+  if (auto *Parent = D->getDeclContext())
+    WalkupFromMostDerivedType(Visitor, cast<Decl>(Parent));
+
   switch (D->getKind()) {
 #define ABSTRACT_DECL(DECL)
 #define DECL(CLASS, BASE)                                                      \
@@ -119,20 +95,12 @@ static void WalkupFromMostDerivedType(LibClangExtractAPIVisitor &Visitor,
     break;
 #include "clang/AST/DeclNodes.inc"
   }
-
-  for (auto *Parent = D->getDeclContext(); Parent != nullptr;
-       Parent = Parent->getParent()) {
-    if (WalkupParentContext<ObjCContainerDecl>(Parent, Visitor))
-      return;
-    if (WalkupParentContext<TagDecl>(Parent, Visitor))
-      return;
-  }
 }
 
 static CXString GenerateCXStringFromSymbolGraphData(llvm::json::Object Obj) {
   llvm::SmallString<0> BackingString;
   llvm::raw_svector_ostream OS(BackingString);
-  OS << Value(std::move(Obj));
+  OS << llvm::formatv("{0}", Value(std::move(Obj)));
   return cxstring::createDup(BackingString.str());
 }
 

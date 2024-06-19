@@ -313,7 +313,7 @@ int main() {
 // CHECK1:       omp.inner.for.end:
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
-// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK1-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK1-NEXT:    ret void
 //
 //
@@ -491,7 +491,7 @@ int main() {
 // CHECK3:       omp.inner.for.end:
 // CHECK3-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK3:       omp.loop.exit:
-// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP3]])
+// CHECK3-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
 // CHECK3-NEXT:    ret void
 //
 //
@@ -514,14 +514,13 @@ int main() {
 // CHECK9-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK9-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i64 8, i1 false)
-// CHECK9-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i64 0, i64 0
-// CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float noundef 1.000000e+00)
-// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], float noundef 1.000000e+00)
+// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i64 1
 // CHECK9-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK9-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 8
 // CHECK9-NEXT:    store ptr undef, ptr [[_TMP1]], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 2, ptr [[TMP0]], align 4
+// CHECK9-NEXT:    store i32 3, ptr [[TMP0]], align 4
 // CHECK9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 0, ptr [[TMP1]], align 4
 // CHECK9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -795,7 +794,7 @@ int main() {
 // CHECK9:       omp.loop.exit:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP16]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP16]])
 // CHECK9-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[ARRAY_BEGIN8:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN8]], i64 2
@@ -835,14 +834,13 @@ int main() {
 // CHECK9-NEXT:    call void @_ZN1SIiEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK9-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i64 8, i1 false)
-// CHECK9-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i64 0, i64 0
-// CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef signext 1)
-// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i64 1
+// CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef signext 1)
+// CHECK9-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i64 1
 // CHECK9-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef signext 2)
 // CHECK9-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 8
 // CHECK9-NEXT:    store ptr undef, ptr [[_TMP1]], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 2, ptr [[TMP0]], align 4
+// CHECK9-NEXT:    store i32 3, ptr [[TMP0]], align 4
 // CHECK9-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 0, ptr [[TMP1]], align 4
 // CHECK9-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1147,7 +1145,7 @@ int main() {
 // CHECK9:       omp.loop.exit:
 // CHECK9-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK9-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP16]])
+// CHECK9-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP16]])
 // CHECK9-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[ARRAY_BEGIN8:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN8]], i64 2
@@ -1225,14 +1223,13 @@ int main() {
 // CHECK11-NEXT:    call void @_ZN1SIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK11-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC]], ptr align 4 @__const.main.vec, i32 8, i1 false)
-// CHECK11-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
-// CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], float noundef 1.000000e+00)
-// CHECK11-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAYINIT_BEGIN]], i32 1
+// CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], float noundef 1.000000e+00)
+// CHECK11-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[S_ARR]], i32 1
 // CHECK11-NEXT:    call void @_ZN1SIfEC1Ef(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], float noundef 2.000000e+00)
 // CHECK11-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 4
 // CHECK11-NEXT:    store ptr undef, ptr [[_TMP1]], align 4
 // CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 2, ptr [[TMP0]], align 4
+// CHECK11-NEXT:    store i32 3, ptr [[TMP0]], align 4
 // CHECK11-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 0, ptr [[TMP1]], align 4
 // CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1500,7 +1497,7 @@ int main() {
 // CHECK11:       omp.loop.exit:
 // CHECK11-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK11-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP16]])
+// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP16]])
 // CHECK11-NEXT:    call void @_ZN1SIfED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[ARRAY_BEGIN6:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN6]], i32 2
@@ -1540,14 +1537,13 @@ int main() {
 // CHECK11-NEXT:    call void @_ZN1SIiEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[TEST]])
 // CHECK11-NEXT:    store i32 0, ptr [[T_VAR]], align 4
 // CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC]], ptr align 4 @__const._Z5tmainIiET_v.vec, i32 8, i1 false)
-// CHECK11-NEXT:    [[ARRAYINIT_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
-// CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_BEGIN]], i32 noundef 1)
-// CHECK11-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAYINIT_BEGIN]], i32 1
+// CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[S_ARR]], i32 noundef 1)
+// CHECK11-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[S_ARR]], i32 1
 // CHECK11-NEXT:    call void @_ZN1SIiEC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[ARRAYINIT_ELEMENT]], i32 noundef 2)
 // CHECK11-NEXT:    store ptr [[TEST]], ptr [[VAR]], align 4
 // CHECK11-NEXT:    store ptr undef, ptr [[_TMP1]], align 4
 // CHECK11-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 2, ptr [[TMP0]], align 4
+// CHECK11-NEXT:    store i32 3, ptr [[TMP0]], align 4
 // CHECK11-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 0, ptr [[TMP1]], align 4
 // CHECK11-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1846,7 +1842,7 @@ int main() {
 // CHECK11:       omp.loop.exit:
 // CHECK11-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK11-NEXT:    [[TMP16:%.*]] = load i32, ptr [[TMP15]], align 4
-// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP16]])
+// CHECK11-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP16]])
 // CHECK11-NEXT:    call void @_ZN1SIiED1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[VAR]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[ARRAY_BEGIN6:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN6]], i32 2

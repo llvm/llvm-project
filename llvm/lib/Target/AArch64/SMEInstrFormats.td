@@ -104,6 +104,13 @@ class sme2_move_to_tile_pseudo<string name, Operand tile_imm, Operand imm_ty, Re
   let usesCustomInserter = 1;
 }
 
+class sem2p1_zero_matrix_pseudo<string name, Operand index_ty, SMEMatrixTypeEnum za_flag>
+    : SMEPseudo2Instr<name, 0>,
+      Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rs, index_ty:$imm), []> {
+  let SMEMatrixType = za_flag;
+  let usesCustomInserter = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // SME pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -189,6 +196,9 @@ class SME2_Tile_VG4_Multi_Pat<string name, SDPatternOperator intrinsic, Operand 
     : Pat<(intrinsic tile_imm:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
           (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3))>;
 
+class SME2_Zero_Matrix_Pat<string name, SDPatternOperator intrinsic, Operand offset_ty, ComplexPattern tileslice>
+    : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, offset_ty:$offset))),
+    (!cast<Instruction>(name) $base, $offset)>; 
 //===----------------------------------------------------------------------===//
 // SME pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -223,8 +233,6 @@ def MSRpstatesvcrImm1
   let Inst{8} = imm;
   let Inst{7-5} = 0b011; // op2
   let hasPostISelHook = 1;
-  let Uses = [VG];
-  let Defs = [VG];
 }
 
 def : InstAlias<"smstart",    (MSRpstatesvcrImm1 0b011, 0b1)>;
@@ -288,12 +296,24 @@ multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> 
   def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, op, timm32_0_7, nxv2i1, nxv2f64>;
 }
 
-multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s, bits<2> op, ZPRRegOp zpr_ty>{
-  def NAME : sme_fp_outer_product_inst<s, {0,bf}, op, TileOp16, zpr_ty, mnemonic> {
+multiclass sme2p1_fmop_tile_f8f16<string mnemonic, bit bf, bit s, bits<2> op> {
+  def NAME : sme_fp_outer_product_inst<s, {0,bf}, op, TileOp16, ZPR8, mnemonic> {
     bits<1> ZAda;
     let Inst{2-1} = 0b00;
     let Inst{0}   = ZAda;
   }
+}
+
+multiclass sme2p1_fmop_tile_fp16<string mnemonic, bit bf, bit s, ValueType vt, SDPatternOperator intrinsic = null_frag> {
+  def NAME : sme_fp_outer_product_inst<s, {0,bf}, 0b11, TileOp16, ZPR16, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    bits<1> ZAda;
+    let Inst{2-1} = 0b00;
+    let Inst{0}   = ZAda;
+  }
+
+  def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0>;
+
+  def : SME_ZA_Tile_TwoPred_TwoVec_Pat<NAME, intrinsic, timm32_0_1, nxv8i1, vt>;
 }
 
 class sme_int_outer_product_inst<bits<3> opc, bit sz, bit sme2,
@@ -1303,7 +1323,7 @@ multiclass sve2_clamp<string asm, bit U, SDPatternOperator op> {
 }
 
 class sve2_int_perm_sel_p<string asm, PPRRegOp ppr_ty, Operand imm_ty>
-    : I<(outs PPRAny:$Pd), (ins PPRAny:$Pn, ppr_ty:$Pm,
+    : I<(outs PPRorPNRAny:$Pd), (ins PPRorPNRAny:$Pn, ppr_ty:$Pm,
                             MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm),
         asm, "\t$Pd, $Pn, $Pm[$Rv, $imm]", "", []>,
       Sched<[]> {
@@ -1346,19 +1366,6 @@ multiclass sve2_int_perm_sel_p<string asm, SDPatternOperator op> {
     let Inst{22}    = 0b1;
     let Inst{20-18} = 0b000;
   }
-
-  def : InstAlias<asm # "\t$Pd, $Pn, $Pm[$Rv, $imm]",
-                  (!cast<Instruction>(NAME # _B) PNRasPPRAny:$Pd,
-                      PNRasPPRAny:$Pn, PPR8:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_15:$imm), 0>;
-  def : InstAlias<asm # "\t$Pd, $Pn, $Pm[$Rv, $imm]",
-                  (!cast<Instruction>(NAME # _H) PNRasPPRAny:$Pd,
-                      PNRasPPRAny:$Pn, PPR16:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_7:$imm), 0>;
-  def : InstAlias<asm # "\t$Pd, $Pn, $Pm[$Rv, $imm]",
-                  (!cast<Instruction>(NAME # _S) PNRasPPRAny:$Pd,
-                      PNRasPPRAny:$Pn, PPR32:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_3:$imm), 0>;
-  def : InstAlias<asm # "\t$Pd, $Pn, $Pm[$Rv, $imm]",
-                  (!cast<Instruction>(NAME # _D) PNRasPPRAny:$Pd,
-                      PNRasPPRAny:$Pn, PPR64:$Pm, MatrixIndexGPR32Op12_15:$Rv, sme_elm_idx0_1:$imm), 0>;
 
   def : Pat<(nxv16i1 (op (nxv16i1 PPRAny:$Pn), (nxv16i1 PPR8:$Pm),
              MatrixIndexGPR32Op12_15:$idx)),
@@ -2463,9 +2470,29 @@ multiclass sme2_multi_vec_array_vg2_index_32b<string mnemonic, bits<2> sz, bits<
 }
 
 // SME2.1 multi-vec ternary indexed two registers 16-bit
-// SME2 multi-vec indexed FP8 two-way dot product to FP16 two registers
 multiclass sme2p1_multi_vec_array_vg2_index_16b<string mnemonic, bits<2> sz, bits<3> op,
-                                                RegisterOperand multi_vector_ty, ZPRRegOp zpr_ty> {
+                                                RegisterOperand multi_vector_ty, ZPRRegOp vector_ty,
+                                                ValueType vt, SDPatternOperator intrinsic> {
+  def NAME : sme2_multi_vec_array_vg2_index<sz, {op{2},?,?,op{1-0},?}, MatrixOp16,
+                                            multi_vector_ty, vector_ty,
+                                            VectorIndexH, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    bits<3> i;
+    let Inst{11-10} = i{2-1};
+    let Inst{3}     = i{0};
+  }
+
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, vector_ty, VectorIndexH32b, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG2_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, vector_ty, vt, VectorIndexH32b_timm, tileslice16>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
+        (!cast<Instruction>(NAME) MatrixOp16:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+        multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexH:$i), 0>;
+}
+
+// SME2 multi-vec indexed FP8 two-way dot product to FP16 two registers
+multiclass sme2p1_multi_vec_array_vg2_index_f8f16<string mnemonic, bits<2> sz, bits<3> op,
+                                                  RegisterOperand multi_vector_ty, ZPRRegOp zpr_ty> {
   def NAME : sme2_multi_vec_array_vg2_index<sz, {op{2},?,?,op{1-0},?}, MatrixOp16,
                                             multi_vector_ty, zpr_ty,
                                             VectorIndexH, mnemonic> {
@@ -2584,10 +2611,10 @@ multiclass sme2_multi_vec_array_vg4_index_32b<string mnemonic, bits<4> op,
         multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexS32b_timm:$i), 0>;
 }
 
-// SME2.1 multi-vec ternary indexed four registers 16-bit
-multiclass sme2p1_multi_vec_array_vg4_index_16b<string mnemonic, bits<3> op,
-                                                RegisterOperand multi_vector_ty,
-                                                ZPRRegOp zpr_ty> {
+// SME2.1 multi-vec ternary indexed four registers 16-bit (FP8)
+multiclass sme2p1_multi_vec_array_vg4_index_f8f16<string mnemonic, bits<3> op,
+                                                  RegisterOperand multi_vector_ty,
+                                                  ZPRRegOp zpr_ty> {
   def NAME : sme2_multi_vec_array_vg4_index<0b0,{0b1,?,?,op,?}, MatrixOp16,
                                             multi_vector_ty, zpr_ty,
                                             VectorIndexH, mnemonic>{
@@ -2599,6 +2626,28 @@ multiclass sme2p1_multi_vec_array_vg4_index_16b<string mnemonic, bits<3> op,
   def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
         (!cast<Instruction>(NAME) MatrixOp16:$ZAda,  MatrixIndexGPR32Op8_11:$Rv,
         sme_elm_idx0_7:$imm3, multi_vector_ty:$Zn, zpr_ty:$Zm, VectorIndexH:$i), 0>;
+}
+
+// SME2.1 multi-vec ternary indexed four registers 16-bit
+multiclass sme2p1_multi_vec_array_vg4_index_16b<string mnemonic, bits<3> op,
+                                                RegisterOperand multi_vector_ty,
+                                                ZPRRegOp vector_ty, ValueType vt,
+                                                SDPatternOperator intrinsic> {
+  def NAME : sme2_multi_vec_array_vg4_index<0b0,{0b1,?,?,op,?}, MatrixOp16,
+                                            multi_vector_ty, vector_ty,
+                                            VectorIndexH, mnemonic>, SMEPseudo2Instr<NAME, 1> {
+    bits<3> i;
+    let Inst{11-10} = i{2-1};
+    let Inst{3}     = i{0};
+  }
+
+  def _PSEUDO : sme2_za_array_2op_multi_index_pseudo<NAME, sme_elm_idx0_7, multi_vector_ty, vector_ty, VectorIndexH32b_timm, SMEMatrixArray>;
+
+  def : SME2_ZA_TwoOp_VG4_Multi_Index_Pat<NAME, intrinsic, sme_elm_idx0_7, vector_ty, vt, VectorIndexH32b_timm, tileslice16>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i",
+        (!cast<Instruction>(NAME) MatrixOp16:$ZAda,  MatrixIndexGPR32Op8_11:$Rv,
+        sme_elm_idx0_7:$imm3, multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexH:$i), 0>;
 }
 
 // SME2 multi-vec ternary indexed four registers 64-bit
@@ -4776,39 +4825,57 @@ class sme2p1_zero_matrix<bits<6> opc, Operand index_ty, string mnemonic,
 }
 
 multiclass sme2p1_zero_matrix<string mnemonic> {
-  def _VG2_Z : sme2p1_zero_matrix<{0b000,?,?,?}, sme_elm_idx0_7, mnemonic, "vgx2"> {
+  def _VG2_Z : sme2p1_zero_matrix<{0b000,?,?,?}, sme_elm_idx0_7, mnemonic, "vgx2">, SMEPseudo2Instr<NAME # _VG2_Z , 1> {
     bits<3> imm;
     let Inst{2-0} = imm;
   }
-  def _2Z : sme2p1_zero_matrix<{0b001,?,?,?}, uimm3s2range, mnemonic> {
+  def _2Z : sme2p1_zero_matrix<{0b001,?,?,?}, uimm3s2range, mnemonic>, SMEPseudo2Instr<NAME # _2Z, 1> {
     bits<3> imm;
     let Inst{2-0} = imm;
   }
-  def _VG2_2Z : sme2p1_zero_matrix<{0b0100,?,?}, uimm2s2range, mnemonic, "vgx2"> {
+  def _VG2_2Z : sme2p1_zero_matrix<{0b0100,?,?}, uimm2s2range, mnemonic, "vgx2">, SMEPseudo2Instr<NAME # _VG2_2Z, 1> {
     bits<2> imm;
     let Inst{1-0} = imm;
   }
-  def _VG4_2Z : sme2p1_zero_matrix<{0b0110,?,?}, uimm2s2range, mnemonic, "vgx4"> {
+  def _VG4_2Z : sme2p1_zero_matrix<{0b0110,?,?}, uimm2s2range, mnemonic, "vgx4">, SMEPseudo2Instr<NAME # _VG4_2Z, 1> {
     bits<2> imm;
     let Inst{1-0} = imm;
   }
-  def _VG4_Z : sme2p1_zero_matrix<{0b100,?,?,?}, sme_elm_idx0_7, mnemonic, "vgx4"> {
+  def _VG4_Z : sme2p1_zero_matrix<{0b100,?,?,?}, sme_elm_idx0_7, mnemonic, "vgx4">, SMEPseudo2Instr<NAME # _VG4_Z, 1> {
     bits<3> imm;
     let Inst{2-0} = imm;
   }
-  def _4Z : sme2p1_zero_matrix<{0b1010,?,?}, uimm2s4range, mnemonic> {
+  def _4Z : sme2p1_zero_matrix<{0b1010,?,?}, uimm2s4range, mnemonic>, SMEPseudo2Instr<NAME # _4Z, 1> {
     bits<2> imm;
     let Inst{1-0} = imm;
   }
-  def _VG2_4Z :sme2p1_zero_matrix<{0b11000,?}, uimm1s4range, mnemonic, "vgx2"> {
+  def _VG2_4Z : sme2p1_zero_matrix<{0b11000,?}, uimm1s4range, mnemonic, "vgx2">, SMEPseudo2Instr<NAME # _VG2_4Z, 1> {
     bits<1> imm;
     let Inst{0}   = imm;
   }
-  def _VG4_4Z :sme2p1_zero_matrix<{0b11100,?}, uimm1s4range, mnemonic, "vgx4"> {
+  def _VG4_4Z : sme2p1_zero_matrix<{0b11100,?}, uimm1s4range, mnemonic, "vgx4">, SMEPseudo2Instr<NAME # _VG4_4Z, 1> {
     bits<1> imm;
     let Inst{0}   = imm;
   }
-}
+
+  def NAME # _VG2_Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG2_Z, sme_elm_idx0_7, SMEMatrixArray>;
+  def NAME # _VG4_Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG4_Z, sme_elm_idx0_7, SMEMatrixArray>;
+  def NAME # _2Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _2Z, uimm2s2range, SMEMatrixArray>;
+  def NAME # _VG2_2Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG2_2Z, uimm1s2range, SMEMatrixArray>;
+  def NAME # _VG4_2Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG4_2Z, uimm1s2range, SMEMatrixArray>;
+  def NAME # _4Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _4Z, uimm1s4range, SMEMatrixArray>;
+  def NAME # _VG2_4Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG2_4Z, uimm0s4range, SMEMatrixArray>;
+  def NAME # _VG4_4Z_PSEUDO : sem2p1_zero_matrix_pseudo<NAME # _VG4_4Z, uimm0s4range, SMEMatrixArray>;
+
+  def : SME2_Zero_Matrix_Pat<NAME # _VG2_Z_PSEUDO, int_aarch64_sme_zero_za64_vg1x2, sme_elm_idx0_7, tileslice16>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG4_Z_PSEUDO, int_aarch64_sme_zero_za64_vg1x4, sme_elm_idx0_7, tileslice16>;
+  def : SME2_Zero_Matrix_Pat<NAME # _2Z_PSEUDO, int_aarch64_sme_zero_za64_vg2x1, uimm2s2range, tileslicerange2s2>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG2_2Z_PSEUDO, int_aarch64_sme_zero_za64_vg2x2, uimm1s2range, tileslicerange1s2>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG4_2Z_PSEUDO, int_aarch64_sme_zero_za64_vg2x4, uimm1s2range, tileslicerange1s2>;
+  def : SME2_Zero_Matrix_Pat<NAME # _4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x1, uimm1s4range, tileslicerange1s4>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG2_4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x2, uimm0s4range, tileslicerange0s4>;
+  def : SME2_Zero_Matrix_Pat<NAME # _VG4_4Z_PSEUDO, int_aarch64_sme_zero_za64_vg4x4, uimm0s4range, tileslicerange0s4>;
+} 
 
 //===----------------------------------------------------------------------===//
 // SME2.1 lookup table expand two non-contiguous registers

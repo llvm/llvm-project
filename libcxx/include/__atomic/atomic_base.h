@@ -14,11 +14,10 @@
 #include <__atomic/cxx_atomic_impl.h>
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
-#include <__availability>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <version>
 

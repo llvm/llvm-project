@@ -10,6 +10,7 @@ set(LIBCXX_SOURCES
   chrono.cpp
   error_category.cpp
   exception.cpp
+  expected.cpp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
@@ -301,7 +302,10 @@ if (LIBCXX_ENABLE_STATIC)
     # then its code shouldn't declare them with hidden visibility.  They might
     # actually be provided by a shared library at link time.
     if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-      append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+      append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete=force-hidden)
+      if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+        append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+      endif()
     endif()
     target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
     # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
@@ -318,12 +322,13 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
+add_dependencies(cxx-test-depends cxx)
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
   )
 
-if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
+if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     pstl/libdispatch.cpp
     )
@@ -331,11 +336,13 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
-    include/tzdb/time_zone_link_private.h
     include/tzdb/time_zone_private.h
     include/tzdb/types_private.h
     include/tzdb/tzdb_list_private.h
     include/tzdb/tzdb_private.h
+    # TODO TZDB The exception could be moved in chrono once the TZDB library
+    # is no longer experimental.
+    chrono_exception.cpp
     time_zone.cpp
     tzdb.cpp
     tzdb_list.cpp
@@ -363,6 +370,7 @@ set_target_properties(cxx_experimental
 )
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
+add_dependencies(cxx-test-depends cxx_experimental)
 
 if (LIBCXX_INSTALL_SHARED_LIBRARY)
   install(TARGETS cxx_shared

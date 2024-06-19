@@ -1,5 +1,7 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
+! REQUIRES: openmp_runtime
+
+!RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
+!RUN: bbc -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
 !===============================================================================
 ! Single construct
@@ -9,7 +11,7 @@
 !CHECK-SAME: (%[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x"})
 subroutine omp_single(x)
   integer, intent(inout) :: x
-  !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFomp_singleEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFomp_singleEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   !CHECK: omp.parallel
   !$omp parallel
   !CHECK: omp.single
@@ -32,7 +34,7 @@ end subroutine omp_single
 !CHECK-SAME: (%[[X:.*]]: !fir.ref<i32> {fir.bindc_name = "x"})
 subroutine omp_single_nowait(x)
   integer, intent(inout) :: x
-  !CHECK:   %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFomp_single_nowaitEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  !CHECK:   %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFomp_single_nowaitEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   !CHECK: omp.parallel
   !$omp parallel
   !CHECK: omp.single nowait
@@ -57,7 +59,7 @@ subroutine single_allocate()
   integer :: x
   !CHECK: omp.parallel {
   !$omp parallel
-  !CHECK: omp.single allocate(%{{.+}} : i32 -> %{{.+}} : !fir.ref<i32>) {
+  !CHECK: omp.single allocate(%{{.+}} : i64 -> %{{.+}} : !fir.ref<i32>) {
   !$omp single allocate(omp_high_bw_mem_alloc: x) private(x)
   !CHECK: arith.addi
   x = x + 12
@@ -74,8 +76,8 @@ end subroutine single_allocate
 ! CHECK-LABEL: func.func @_QPsingle_privatization(
 ! CHECK-SAME:                                     %[[X:.*]]: !fir.ref<f32> {fir.bindc_name = "x"}, 
 ! CHECK-SAME:                                     %[[Y:.*]]: !fir.ref<f64> {fir.bindc_name = "y"}) {
-! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFsingle_privatizationEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:           %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFsingle_privatizationEy"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:           %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFsingle_privatizationEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:           %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFsingle_privatizationEy"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:           omp.single   {
 ! CHECK:             %[[X_PVT:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFsingle_privatizationEx"}
 ! CHECK:             %[[X_PVT_DECL:.*]]:2 = hlfir.declare %[[X_PVT]] {uniq_name = "_QFsingle_privatizationEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
@@ -101,8 +103,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsingle_privatization2(
 ! CHECK-SAME:                                      %[[X:.*]]: !fir.ref<f32> {fir.bindc_name = "x"},
 ! CHECK-SAME:                                      %[[Y:.*]]: !fir.ref<f64> {fir.bindc_name = "y"}) {
-! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFsingle_privatization2Ex"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-! CHECK:         %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFsingle_privatization2Ey"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+! CHECK:         %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFsingle_privatization2Ex"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:         %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFsingle_privatization2Ey"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:         omp.parallel   {
 ! CHECK:           omp.single   {
 ! CHECK:             %[[X_PVT:.*]] = fir.alloca f32 {bindc_name = "x", pinned, uniq_name = "_QFsingle_privatization2Ex"}

@@ -11,7 +11,7 @@
 #ifndef FORTRAN_RUNTIME_TERMINATOR_H_
 #define FORTRAN_RUNTIME_TERMINATOR_H_
 
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
@@ -54,7 +54,7 @@ public:
   // to regular printf for the device compilation.
   // Try to keep the inline implementations as small as possible.
   template <typename... Args>
-  [[noreturn]] RT_API_ATTRS const char *Crash(
+  [[noreturn]] RT_DEVICE_NOINLINE RT_API_ATTRS const char *Crash(
       const char *message, Args... args) const {
 #if !defined(RT_DEVICE_COMPILATION)
     // Invoke handler set up by the test harness.
@@ -67,7 +67,7 @@ public:
 
   template <typename... Args>
   RT_API_ATTRS void PrintCrashArgs(const char *message, Args... args) const {
-#if RT_DEVICE_COMPILATION
+#if defined(RT_DEVICE_COMPILATION)
     std::printf(message, args...);
 #else
     std::fprintf(stderr, message, args...);

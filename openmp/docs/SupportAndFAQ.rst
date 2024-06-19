@@ -279,11 +279,12 @@ Q: How to build an OpenMP offload capable compiler with an outdated host compile
 
 Enabling the OpenMP runtime will perform a two-stage build for you.
 If your host compiler is different from your system-wide compiler, you may need
-to set the CMake variable `GCC_INSTALL_PREFIX` so clang will be able to find the
-correct GCC toolchain in the second stage of the build.
+to set ``CMAKE_{C,CXX}_FLAGS`` like
+``--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/12`` so that clang will be
+able to find the correct GCC toolchain in the second stage of the build.
 
 For example, if your system-wide GCC installation is too old to build LLVM and
-you would like to use a newer GCC, set the CMake variable `GCC_INSTALL_PREFIX`
+you would like to use a newer GCC, set ``--gcc-install-dir=``
 to inform clang of the GCC installation you would like to use in the second stage.
 
 Q: How can I include OpenMP offloading support in my CMake project?
@@ -452,6 +453,15 @@ Q: What command line options can I use for OpenMP?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 We recommend taking a look at the OpenMP 
 :doc:`command line argument reference <CommandLineArgumentReference>` page.
+
+Q: Can I build the offloading runtimes without CUDA or HSA?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+By default, the offloading runtime will load the associated vendor runtime 
+during initialization rather than directly linking against them. This allows the 
+program to be built and run on many machine. If you wish to directly link 
+against these libraries, use the ``LIBOMPTARGET_DLOPEN_PLUGINS=""`` option to 
+suppress it for each plugin. The default value is every plugin enabled with 
+``LIBOMPTARGET_PLUGINS_TO_BUILD``.
 
 Q: Why is my build taking a long time?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

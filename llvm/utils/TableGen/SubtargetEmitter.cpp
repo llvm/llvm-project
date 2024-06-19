@@ -10,10 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenHwModes.h"
-#include "CodeGenSchedule.h"
-#include "CodeGenTarget.h"
-#include "PredicateExpander.h"
+#include "Common/CodeGenHwModes.h"
+#include "Common/CodeGenSchedule.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/PredicateExpander.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -32,6 +32,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -255,6 +256,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
   llvm::sort(FeatureList, LessRecordFieldName());
 
+  // Check that there are no duplicate keys
+  std::set<StringRef> UniqueKeys;
+
   // Begin feature table
   OS << "// Sorted (by key) array of values for CPU features.\n"
      << "extern const llvm::SubtargetFeatureKV " << Target
@@ -283,6 +287,10 @@ unsigned SubtargetEmitter::FeatureKeyValues(
 
     OS << " },\n";
     ++NumFeatures;
+
+    if (!UniqueKeys.insert(CommandLineName).second)
+      PrintFatalError("Duplicate key in SubtargetFeatureKV: " +
+                      CommandLineName);
   }
 
   // End feature table
@@ -902,14 +910,19 @@ SubtargetEmitter::FindWriteResources(const CodeGenSchedRW &SchedWrite,
   for (Record *WR : ProcModel.WriteResDefs) {
     if (!WR->isSubClassOf("WriteRes"))
       continue;
-    if (AliasDef == WR->getValueAsDef("WriteType") ||
-        SchedWrite.TheDef == WR->getValueAsDef("WriteType")) {
+    Record *WRDef = WR->getValueAsDef("WriteType");
+    if (AliasDef == WRDef || SchedWrite.TheDef == WRDef) {
       if (ResDef) {
         PrintFatalError(WR->getLoc(), "Resources are defined for both "
                                       "SchedWrite and its alias on processor " +
                                           ProcModel.ModelName);
       }
       ResDef = WR;
+      // If there is no AliasDef and we find a match, we can early exit since
+      // there is no need to verify whether there are resources defined for both
+      // SchedWrite and its alias.
+      if (!AliasDef)
+        break;
     }
   }
   // TODO: If ProcModel has a base model (previous generation processor),
@@ -956,14 +969,19 @@ Record *SubtargetEmitter::FindReadAdvance(const CodeGenSchedRW &SchedRead,
   for (Record *RA : ProcModel.ReadAdvanceDefs) {
     if (!RA->isSubClassOf("ReadAdvance"))
       continue;
-    if (AliasDef == RA->getValueAsDef("ReadType") ||
-        SchedRead.TheDef == RA->getValueAsDef("ReadType")) {
+    Record *RADef = RA->getValueAsDef("ReadType");
+    if (AliasDef == RADef || SchedRead.TheDef == RADef) {
       if (ResDef) {
         PrintFatalError(RA->getLoc(), "Resources are defined for both "
                                       "SchedRead and its alias on processor " +
                                           ProcModel.ModelName);
       }
       ResDef = RA;
+      // If there is no AliasDef and we find a match, we can early exit since
+      // there is no need to verify whether there are resources defined for both
+      // SchedRead and its alias.
+      if (!AliasDef)
+        break;
     }
   }
   // TODO: If ProcModel has a base model (previous generation processor),
@@ -1122,10 +1140,8 @@ void SubtargetEmitter::GenSchedClassTables(const CodeGenProcModel &ProcModel,
       WriterNames.push_back(SchedModels.getSchedWrite(WriteID).Name);
       // If this Write is not referenced by a ReadAdvance, don't distinguish it
       // from other WriteLatency entries.
-      if (!SchedModels.hasReadOfWrite(
-              SchedModels.getSchedWrite(WriteID).TheDef)) {
+      if (!ProcModel.hasReadOfWrite(SchedModels.getSchedWrite(WriteID).TheDef))
         WriteID = 0;
-      }
       WLEntry.WriteResourceID = WriteID;
 
       for (unsigned WS : WriteSeq) {
@@ -1781,13 +1797,62 @@ void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
   if (CGH.getNumModeIds() == 1)
     return;
 
-  OS << "unsigned " << ClassName << "::getHwMode() const {\n";
+  // Collect all HwModes and related features defined in the TD files,
+  // and store them as a bit set.
+  unsigned ValueTypeModes = 0;
+  unsigned RegInfoModes = 0;
+  unsigned EncodingInfoModes = 0;
+  for (const auto &MS : CGH.getHwModeSelects()) {
+    for (const HwModeSelect::PairType &P : MS.second.Items) {
+      if (P.first == DefaultMode)
+        continue;
+      if (P.second->isSubClassOf("ValueType")) {
+        ValueTypeModes |= (1 << (P.first - 1));
+      } else if (P.second->isSubClassOf("RegInfo") ||
+                 P.second->isSubClassOf("SubRegRange")) {
+        RegInfoModes |= (1 << (P.first - 1));
+      } else if (P.second->isSubClassOf("InstructionEncoding")) {
+        EncodingInfoModes |= (1 << (P.first - 1));
+      }
+    }
+  }
+
+  // Start emitting for getHwModeSet().
+  OS << "unsigned " << ClassName << "::getHwModeSet() const {\n";
+  OS << "  // Collect HwModes and store them as a bit set.\n";
+  OS << "  unsigned Modes = 0;\n";
   for (unsigned M = 1, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
     const HwMode &HM = CGH.getMode(M);
-    OS << "  if (checkFeatures(\"" << HM.Features << "\")) return " << M
-       << ";\n";
+    OS << "  if (checkFeatures(\"" << HM.Features << "\")) Modes |= (1 << "
+       << (M - 1) << ");\n";
   }
-  OS << "  return 0;\n}\n";
+  OS << "  return Modes;\n}\n";
+  // End emitting for getHwModeSet().
+
+  auto handlePerMode = [&](std::string ModeType, unsigned ModeInBitSet) {
+    OS << "  case HwMode_" << ModeType << ":\n"
+       << "    Modes &= " << ModeInBitSet << ";\n"
+       << "    if (!Modes)\n      return Modes;\n"
+       << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
+       << "      llvm_unreachable(\"Two or more HwModes for " << ModeType
+       << " were found!\");\n"
+       << "    return llvm::countr_zero(Modes) + 1;\n";
+  };
+
+  // Start emitting for getHwMode().
+  OS << "unsigned " << ClassName
+     << "::getHwMode(enum HwModeType type) const {\n";
+  OS << "  unsigned Modes = getHwModeSet();\n\n";
+  OS << "  if (!Modes)\n    return Modes;\n\n";
+  OS << "  switch (type) {\n";
+  OS << "  case HwMode_Default:\n    return llvm::countr_zero(Modes) + 1;\n";
+  handlePerMode("ValueType", ValueTypeModes);
+  handlePerMode("RegInfo", RegInfoModes);
+  handlePerMode("EncodingInfo", EncodingInfoModes);
+  OS << "  }\n";
+  OS << "  llvm_unreachable(\"unexpected HwModeType\");\n"
+     << "  return 0; // should not get here\n}\n";
+  // End emitting for getHwMode().
 }
 
 void SubtargetEmitter::emitGetMacroFusions(const std::string &ClassName,
@@ -1876,8 +1941,11 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    return " << Target << "_MC"
      << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, CPUID);\n";
   OS << "  }\n";
-  if (TGT.getHwModes().getNumModeIds() > 1)
-    OS << "  unsigned getHwMode() const override;\n";
+  if (TGT.getHwModes().getNumModeIds() > 1) {
+    OS << "  unsigned getHwModeSet() const override;\n";
+    OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
+          "override;\n";
+  }
   OS << "};\n";
   EmitHwModeCheck(Target + "GenMCSubtargetInfo", OS);
 }
@@ -2004,8 +2072,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
      << " unsigned CPUID) const override;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n";
-  if (TGT.getHwModes().getNumModeIds() > 1)
-    OS << "  unsigned getHwMode() const override;\n";
+  if (TGT.getHwModes().getNumModeIds() > 1) {
+    OS << "  unsigned getHwModeSet() const override;\n";
+    OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
+          "override;\n";
+  }
   if (TGT.hasMacroFusion())
     OS << "  std::vector<MacroFusionPredTy> getMacroFusions() const "
           "override;\n";

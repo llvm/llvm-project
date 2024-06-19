@@ -40,6 +40,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -1391,7 +1392,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   // Change the location to the outer alloca insertion point to create and
   // initialize the allocas we pass into the parallel region.
-  Builder.restoreIP(OuterAllocaIP);
+  InsertPointTy NewOuter(OuterAllocaBlock, OuterAllocaBlock->begin());
+  Builder.restoreIP(NewOuter);
   AllocaInst *TIDAddrAlloca = Builder.CreateAlloca(Int32, nullptr, "tid.addr");
   AllocaInst *ZeroAddrAlloca =
       Builder.CreateAlloca(Int32, nullptr, "zero.addr");
@@ -1500,19 +1502,6 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     };
   }
 
-  // Adjust the finalization stack, verify the adjustment, and call the
-  // finalize function a last time to finalize values between the pre-fini
-  // block and the exit block if we left the parallel "the normal way".
-  auto FiniInfo = FinalizationStack.pop_back_val();
-  (void)FiniInfo;
-  assert(FiniInfo.DK == OMPD_parallel &&
-         "Unexpected finalization stack state!");
-
-  Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
-
-  InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
-  FiniCB(PreFiniIP);
-
   OI.OuterAllocaBB = OuterAllocaBlock;
   OI.EntryBB = PRegEntryBB;
   OI.ExitBB = PRegExitBB;
@@ -1596,6 +1585,10 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     } else {
       Builder.restoreIP(
           PrivCB(InnerAllocaIP, Builder.saveIP(), V, *Inner, ReplacementValue));
+      InnerAllocaIP = {
+          InnerAllocaIP.getBlock(),
+          InnerAllocaIP.getBlock()->getTerminator()->getIterator()};
+
       assert(ReplacementValue &&
              "Expected copy/create callback to set replacement value!");
       if (ReplacementValue == &V)
@@ -1636,6 +1629,19 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     for (auto *BB : Blocks)
       dbgs() << " PBR: " << BB->getName() << "\n";
   });
+
+  // Adjust the finalization stack, verify the adjustment, and call the
+  // finalize function a last time to finalize values between the pre-fini
+  // block and the exit block if we left the parallel "the normal way".
+  auto FiniInfo = FinalizationStack.pop_back_val();
+  (void)FiniInfo;
+  assert(FiniInfo.DK == OMPD_parallel &&
+         "Unexpected finalization stack state!");
+
+  Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
+
+  InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
+  FiniCB(PreFiniIP);
 
   // Register the outlined info.
   addOutlineInfo(std::move(OI));
@@ -1870,6 +1876,9 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     //    call @__kmpc_omp_task(...)
     //    br label %exit
     //  else:
+    //    ;; Wait for resolution of dependencies, if any, before
+    //    ;; beginning the task
+    //    call @__kmpc_omp_wait_deps(...)
     //    call @__kmpc_omp_task_begin_if0(...)
     //    call @outlined_fn(...)
     //    call @__kmpc_omp_task_complete_if0(...)
@@ -1887,6 +1896,16 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       SplitBlockAndInsertIfThenElse(IfCondition, IfTerminator, &ThenTI,
                                     &ElseTI);
       Builder.SetInsertPoint(ElseTI);
+
+      if (Dependencies.size()) {
+        Function *TaskWaitFn =
+            getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_wait_deps);
+        Builder.CreateCall(
+            TaskWaitFn,
+            {Ident, ThreadID, Builder.getInt32(Dependencies.size()), DepArray,
+             ConstantInt::get(Builder.getInt32Ty(), 0),
+             ConstantPointerNull::get(PointerType::getUnqual(M.getContext()))});
+      }
       Function *TaskBeginFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
       Function *TaskCompleteFn =
@@ -2108,9 +2127,12 @@ Function *getFreshReductionFunc(Module &M) {
                           ".omp.reduction.func", &M);
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
-    const LocationDescription &Loc, InsertPointTy AllocaIP,
-    ArrayRef<ReductionInfo> ReductionInfos, bool IsNoWait) {
+OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
+                                  InsertPointTy AllocaIP,
+                                  ArrayRef<ReductionInfo> ReductionInfos,
+                                  ArrayRef<bool> IsByRef, bool IsNoWait) {
+  assert(ReductionInfos.size() == IsByRef.size());
   for (const ReductionInfo &RI : ReductionInfos) {
     (void)RI;
     assert(RI.Variable && "expected non-null variable");
@@ -2135,7 +2157,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   // values.
   unsigned NumReductions = ReductionInfos.size();
   Type *RedArrayTy = ArrayType::get(Builder.getPtrTy(), NumReductions);
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getTerminator());
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
   Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
@@ -2197,17 +2219,29 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
     Type *ValueType = RI.ElementType;
-    Value *RedValue = Builder.CreateLoad(ValueType, RI.Variable,
-                                         "red.value." + Twine(En.index()));
+    // We have one less load for by-ref case because that load is now inside of
+    // the reduction region
+    Value *RedValue = nullptr;
+    if (!IsByRef[En.index()]) {
+      RedValue = Builder.CreateLoad(ValueType, RI.Variable,
+                                    "red.value." + Twine(En.index()));
+    }
     Value *PrivateRedValue =
         Builder.CreateLoad(ValueType, RI.PrivateVariable,
                            "red.private.value." + Twine(En.index()));
     Value *Reduced;
-    Builder.restoreIP(
-        RI.ReductionGen(Builder.saveIP(), RedValue, PrivateRedValue, Reduced));
+    if (IsByRef[En.index()]) {
+      Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), RI.Variable,
+                                        PrivateRedValue, Reduced));
+    } else {
+      Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), RedValue,
+                                        PrivateRedValue, Reduced));
+    }
     if (!Builder.GetInsertBlock())
       return InsertPointTy();
-    Builder.CreateStore(Reduced, RI.Variable);
+    // for by-ref case, the load is inside of the reduction region
+    if (!IsByRef[En.index()])
+      Builder.CreateStore(Reduced, RI.Variable);
   }
   Function *EndReduceFunc = getOrCreateRuntimeFunctionPtr(
       IsNoWait ? RuntimeFunction::OMPRTL___kmpc_end_reduce_nowait
@@ -2219,7 +2253,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   // function. There are no loads/stores here because they will be happening
   // inside the atomic elementwise reduction.
   Builder.SetInsertPoint(AtomicRedBlock);
-  if (CanGenerateAtomic) {
+  if (CanGenerateAtomic && llvm::none_of(IsByRef, [](bool P) { return P; })) {
     for (const ReductionInfo &RI : ReductionInfos) {
       Builder.restoreIP(RI.AtomicReductionGen(Builder.saveIP(), RI.ElementType,
                                               RI.Variable, RI.PrivateVariable));
@@ -2257,7 +2291,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
     Builder.restoreIP(RI.ReductionGen(Builder.saveIP(), LHS, RHS, Reduced));
     if (!Builder.GetInsertBlock())
       return InsertPointTy();
-    Builder.CreateStore(Reduced, LHSPtr);
+    // store is inside of the reduction region when using by-ref
+    if (!IsByRef[En.index()])
+      Builder.CreateStore(Reduced, LHSPtr);
   }
   Builder.CreateRetVoid();
 
@@ -2522,7 +2558,8 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
       getOrCreateRuntimeFunction(M, omp::OMPRTL___kmpc_for_static_fini);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca());
+
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
@@ -3084,7 +3121,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyDynamicWorkshareLoop(
   FunctionCallee DynamicNext = getKmpcForDynamicNextForType(IVTy, M, *this);
 
   // Allocate space for computed loop bounds as expected by the "init" function.
-  Builder.restoreIP(AllocaIP);
+  Builder.SetInsertPoint(AllocaIP.getBlock()->getFirstNonPHIOrDbgOrAlloca());
   Type *I32Type = Type::getInt32Ty(M.getContext());
   Value *PLastIter = Builder.CreateAlloca(I32Type, nullptr, "p.lastiter");
   Value *PLowerBound = Builder.CreateAlloca(IVTy, nullptr, "p.lowerbound");
@@ -3927,7 +3964,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
   UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
 
   // Loop is not unrollable if the loop contains certain instructions.
-  if (!UCE.canUnroll() || UCE.Convergent) {
+  if (!UCE.canUnroll()) {
     LLVM_DEBUG(dbgs() << "Loop not considered unrollable\n");
     return 1;
   }
@@ -4387,7 +4424,7 @@ CallInst *OpenMPIRBuilder::createOMPAlloc(const LocationDescription &Loc,
                                           Value *Size, Value *Allocator,
                                           std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -4404,7 +4441,7 @@ CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
                                          Value *Addr, Value *Allocator,
                                          std::string Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -4420,7 +4457,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropInit(
     omp::OMPInteropType InteropType, Value *Device, Value *NumDependences,
     Value *DependenceAddress, bool HaveNowaitClause) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -4448,7 +4485,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropDestroy(
     const LocationDescription &Loc, Value *InteropVar, Value *Device,
     Value *NumDependences, Value *DependenceAddress, bool HaveNowaitClause) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -4477,7 +4514,7 @@ CallInst *OpenMPIRBuilder::createOMPInteropUse(const LocationDescription &Loc,
                                                Value *DependenceAddress,
                                                bool HaveNowaitClause) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
@@ -4503,7 +4540,7 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
     const LocationDescription &Loc, llvm::Value *Pointer,
     llvm::ConstantInt *Size, const llvm::Twine &Name) {
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  Builder.restoreIP(Loc.IP);
+  updateToLocation(Loc);
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
@@ -4772,11 +4809,12 @@ OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
 
 void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
                                           int32_t LB, int32_t UB) {
-  if (T.isNVPTX()) {
+  if (T.isNVPTX())
     if (UB > 0)
       updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
-    updateNVPTXMetadata(Kernel, "minctasm", LB, false);
-  }
+  if (T.isAMDGPU())
+    Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(LB) + ",1,1");
+
   Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }
 
@@ -4869,8 +4907,11 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
     return InsertPointTy();
 
   // Disable TargetData CodeGen on Device pass.
-  if (Config.IsTargetDevice.value_or(false))
+  if (Config.IsTargetDevice.value_or(false)) {
+    if (BodyGenCB)
+      Builder.restoreIP(BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv));
     return Builder.saveIP();
+  }
 
   Builder.restoreIP(CodeGenIP);
   bool IsStandAlone = !BodyGenCB;
@@ -5054,22 +5095,6 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
   return getOrCreateRuntimeFunction(M, Name);
 }
 
-static void replaceConstatExprUsesInFuncWithInstr(ConstantExpr *ConstExpr,
-                                                  Function *Func) {
-  for (User *User : make_early_inc_range(ConstExpr->users()))
-    if (auto *Instr = dyn_cast<Instruction>(User))
-      if (Instr->getFunction() == Func)
-        Instr->replaceUsesOfWith(ConstExpr, ConstExpr->getAsInstruction(Instr));
-}
-
-static void replaceConstantValueUsesInFuncWithInstr(llvm::Value *Input,
-                                                    Function *Func) {
-  for (User *User : make_early_inc_range(Input->users()))
-    if (auto *Const = dyn_cast<Constant>(User))
-      if (auto *ConstExpr = dyn_cast<ConstantExpr>(Const))
-        replaceConstatExprUsesInFuncWithInstr(ConstExpr, Func);
-}
-
 static Function *createOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
     SmallVectorImpl<Value *> &Inputs,
@@ -5148,17 +5173,23 @@ static Function *createOutlinedFunction(
 
     // Things like GEP's can come in the form of Constants. Constants and
     // ConstantExpr's do not have access to the knowledge of what they're
-    // contained in, so we must dig a little to find an instruction so we can
-    // tell if they're used inside of the function we're outlining. We also
-    // replace the original constant expression with a new instruction
+    // contained in, so we must dig a little to find an instruction so we
+    // can tell if they're used inside of the function we're outlining. We
+    // also replace the original constant expression with a new instruction
     // equivalent; an instruction as it allows easy modification in the
-    // following loop, as we can now know the constant (instruction) is owned by
-    // our target function and replaceUsesOfWith can now be invoked on it
-    // (cannot do this with constants it seems). A brand new one also allows us
-    // to be cautious as it is perhaps possible the old expression was used
-    // inside of the function but exists and is used externally (unlikely by the
-    // nature of a Constant, but still).
-    replaceConstantValueUsesInFuncWithInstr(Input, Func);
+    // following loop, as we can now know the constant (instruction) is
+    // owned by our target function and replaceUsesOfWith can now be invoked
+    // on it (cannot do this with constants it seems). A brand new one also
+    // allows us to be cautious as it is perhaps possible the old expression
+    // was used inside of the function but exists and is used externally
+    // (unlikely by the nature of a Constant, but still).
+    // NOTE: We cannot remove dead constants that have been rewritten to
+    // instructions at this stage, we run the risk of breaking later lowering
+    // by doing so as we could still be in the process of lowering the module
+    // from MLIR to LLVM-IR and the MLIR lowering may still require the original
+    // constants we have created rewritten versions of.
+    if (auto *Const = dyn_cast<Constant>(Input))
+      convertUsersOfConstantsToInstructions(Const, Func, false);
 
     // Collect all the instructions
     for (User *User : make_early_inc_range(Input->users()))

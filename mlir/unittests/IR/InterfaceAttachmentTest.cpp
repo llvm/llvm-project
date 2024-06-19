@@ -19,6 +19,7 @@
 
 #include "../../test/lib/Dialect/Test/TestAttributes.h"
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 #include "../../test/lib/Dialect/Test/TestTypes.h"
 #include "mlir/IR/OwningOpRef.h"
 
@@ -431,8 +432,8 @@ TEST(InterfaceAttachmentTest, PromisedInterfaces) {
       attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
 
   // Add a promise `TestExternalAttrInterface`.
-  testDialect->declarePromisedInterface<test::SimpleAAttr,
-                                        TestExternalAttrInterface>();
+  testDialect->declarePromisedInterface<TestExternalAttrInterface,
+                                        test::SimpleAAttr>();
   EXPECT_TRUE(
       attr.hasPromiseOrImplementsInterface<TestExternalAttrInterface>());
 

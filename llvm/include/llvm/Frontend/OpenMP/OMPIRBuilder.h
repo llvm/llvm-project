@@ -198,7 +198,7 @@ struct TargetRegionEntryInfo {
                                          unsigned DeviceID, unsigned FileID,
                                          unsigned Line, unsigned Count);
 
-  bool operator<(const TargetRegionEntryInfo RHS) const {
+  bool operator<(const TargetRegionEntryInfo &RHS) const {
     return std::make_tuple(ParentName, DeviceID, FileID, Line, Count) <
            std::make_tuple(RHS.ParentName, RHS.DeviceID, RHS.FileID, RHS.Line,
                            RHS.Count);
@@ -1339,10 +1339,12 @@ public:
   ///                           in reductions.
   /// \param ReductionInfos     A list of info on each reduction variable.
   /// \param IsNoWait           A flag set if the reduction is marked as nowait.
+  /// \param IsByRef            A flag set if the reduction is using reference
+  /// or direct value.
   InsertPointTy createReductions(const LocationDescription &Loc,
                                  InsertPointTy AllocaIP,
                                  ArrayRef<ReductionInfo> ReductionInfos,
-                                 bool IsNoWait = false);
+                                 ArrayRef<bool> IsByRef, bool IsNoWait = false);
 
   ///}
 

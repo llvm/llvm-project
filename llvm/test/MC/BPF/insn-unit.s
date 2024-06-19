@@ -65,8 +65,10 @@
 // CHECK: 8d 02 00 00 00 00 00 00 	callx r2
 
 // ======== BPF_JMP Class ========
+  may_goto Llabel0 // BPF_JCOND | BPF_K
   if r1 & r2 goto Llabel0    // BPF_JSET  | BPF_X
   if r1 & 0xffff goto Llabel0    // BPF_JSET  | BPF_K
+// CHECK: e5 00 1e 00 00 00 00 00	may_goto +30
 // CHECK: 4d 21 1d 00 00 00 00 00 	if r1 & r2 goto +29
 // CHECK: 45 01 1c 00 ff ff 00 00 	if r1 & 65535 goto +28
 

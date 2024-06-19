@@ -9,6 +9,7 @@
 #ifndef LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 #define LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 
+#include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
@@ -91,7 +92,7 @@ public:
                      lldb::addr_t func_load_addr, lldb::addr_t file_addr,
                      ABI *abi) const;
 
-  /// Dump all locaitons with each seperated by new line.
+  /// Dump all locaitons with each separated by new line.
   void GetDescription(Stream *s, lldb::DescriptionLevel level, ABI *abi) const;
 
   /// Search for a load address in the dwarf location list
@@ -113,10 +114,11 @@ public:
 
   void SetModule(const lldb::ModuleSP &module) { m_module_wp = module; }
 
-  bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
-                lldb::addr_t func_load_addr, const Value *initial_value_ptr,
-                const Value *object_address_ptr, Value &result,
-                Status *error_ptr) const;
+  llvm::Expected<Value> Evaluate(ExecutionContext *exe_ctx,
+                                 RegisterContext *reg_ctx,
+                                 lldb::addr_t func_load_addr,
+                                 const Value *initial_value_ptr,
+                                 const Value *object_address_ptr) const;
 
 private:
   // RangeDataVector requires a comparator for DWARFExpression, but it doesn't

@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string.h>
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -137,8 +138,7 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 
 static bool IsClassStructOrUnionType(lldb::SBType t) {
   return (t.GetTypeClass() & (lldb::eTypeClassUnion | lldb::eTypeClassStruct |
-                              lldb::eTypeClassUnion | lldb::eTypeClassArray)) !=
-         0;
+                              lldb::eTypeClassArray)) != 0;
 }
 
 /// Create a short summary for a container that contains the summary of its
@@ -748,13 +748,13 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     auto line = line_entry.GetLine();
     if (line && line != LLDB_INVALID_LINE_NUMBER)
       object.try_emplace("line", line);
+    else
+      object.try_emplace("line", 0);
     auto column = line_entry.GetColumn();
-    if (column && column != LLDB_INVALID_COLUMN_NUMBER)
-      object.try_emplace("column", column);
+    object.try_emplace("column", column);
   } else {
     object.try_emplace("line", 0);
     object.try_emplace("column", 0);
-    object.try_emplace("presentationHint", "subtle");
   }
 
   const auto pc = frame.GetPC();
@@ -987,8 +987,14 @@ VariableDescription::VariableDescription(lldb::SBValue v, bool format_hex,
   display_type_name =
       !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
 
-  if (format_hex)
-    v.SetFormat(lldb::eFormatHex);
+  // Only format hex/default if there is no existing special format.
+  if (v.GetFormat() == lldb::eFormatDefault ||
+      v.GetFormat() == lldb::eFormatHex) {
+    if (format_hex)
+      v.SetFormat(lldb::eFormatHex);
+    else
+      v.SetFormat(lldb::eFormatDefault);
+  }
 
   llvm::raw_string_ostream os_display_value(display_value);
 
@@ -1060,9 +1066,9 @@ llvm::json::Object VariableDescription::GetVariableExtensionsJSON() {
 }
 
 std::string VariableDescription::GetResult(llvm::StringRef context) {
-  // In repl and hover context, the results can be displayed as multiple lines
-  // so more detailed descriptions can be returned.
-  if (context != "repl" && context != "hover")
+  // In repl context, the results can be displayed as multiple lines so more
+  // detailed descriptions can be returned.
+  if (context != "repl")
     return display_value;
 
   if (!v.IsValid())
@@ -1206,34 +1212,34 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   // give a hint to the IDE that the type has indexed children so that the
   // request can be broken up in grabbing only a few children at a time. We
   // want to be careful and only call "v.GetNumChildren()" if we have an array
-  // type or if we have a synthetic child provider. We don't want to call
-  // "v.GetNumChildren()" on all objects as class, struct and union types
-  // don't need to be completed if they are never expanded. So we want to
-  // avoid calling this to only cases where we it makes sense to keep
+  // type or if we have a synthetic child provider producing indexed children.
+  // We don't want to call "v.GetNumChildren()" on all objects as class, struct
+  // and union types don't need to be completed if they are never expanded. So
+  // we want to avoid calling this to only cases where we it makes sense to keep
   // performance high during normal debugging.
 
   // If we have an array type, say that it is indexed and provide the number
   // of children in case we have a huge array. If we don't do this, then we
   // might take a while to produce all children at onces which can delay your
   // debug session.
-  const bool is_array = desc.type_obj.IsArrayType();
-  const bool is_synthetic = v.IsSynthetic();
-  if (is_array || is_synthetic) {
-    const auto num_children = v.GetNumChildren();
-    // We create a "[raw]" fake child for each synthetic type, so we have to
-    // account for it when returning indexed variables. We don't need to do
-    // this for non-indexed ones.
-    bool has_raw_child = is_synthetic && g_dap.enable_synthetic_child_debugging;
-    int actual_num_children = num_children + (has_raw_child ? 1 : 0);
-    if (is_array) {
-      object.try_emplace("indexedVariables", actual_num_children);
-    } else if (num_children > 0) {
-      // If a type has a synthetic child provider, then the SBType of "v"
-      // won't tell us anything about what might be displayed. So we can check
-      // if the first child's name is "[0]" and then we can say it is indexed.
-      const char *first_child_name = v.GetChildAtIndex(0).GetName();
-      if (first_child_name && strcmp(first_child_name, "[0]") == 0)
-        object.try_emplace("indexedVariables", actual_num_children);
+  if (desc.type_obj.IsArrayType()) {
+    object.try_emplace("indexedVariables", v.GetNumChildren());
+  } else if (v.IsSynthetic()) {
+    // For a type with a synthetic child provider, the SBType of "v" won't tell
+    // us anything about what might be displayed. Instead, we check if the first
+    // child's name is "[0]" and then say it is indexed. We call
+    // GetNumChildren() only if the child name matches to avoid a potentially
+    // expensive operation.
+    if (lldb::SBValue first_child = v.GetChildAtIndex(0)) {
+      llvm::StringRef first_child_name = first_child.GetName();
+      if (first_child_name == "[0]") {
+        size_t num_children = v.GetNumChildren();
+        // If we are creating a "[raw]" fake child for each synthetic type, we
+        // have to account for it when returning indexed variables.
+        if (g_dap.enable_synthetic_child_debugging)
+          ++num_children;
+        object.try_emplace("indexedVariables", num_children);
+      }
     }
   }
   EmplaceSafeString(object, "type", desc.display_type_name);

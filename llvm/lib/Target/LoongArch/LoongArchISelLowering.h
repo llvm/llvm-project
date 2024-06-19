@@ -43,6 +43,10 @@ enum NodeType : unsigned {
   ROTL_W,
   ROTR_W,
 
+  // unsigned 32-bit integer division
+  DIV_WU,
+  MOD_WU,
+
   // FPR<->GPR transfer operations
   MOVGR2FR_W_LA64,
   MOVFR2GR_S_LA64,
@@ -225,6 +229,7 @@ public:
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
+  bool signExtendConstant(const ConstantInt *CI) const override;
 
   bool hasAndNotCompare(SDValue Y) const override;
 
@@ -238,6 +243,9 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
     return false;
   }
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
+  bool shouldSignExtendTypeInLibCall(EVT Type, bool IsSigned) const override;
+  bool shouldExtendTypeInLibCall(EVT Type) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -262,6 +270,8 @@ private:
                            unsigned Opc, bool Large = false) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                             unsigned Opc, bool Large = false) const;
+  SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
+                         unsigned Opc, bool Large = false) const;
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;

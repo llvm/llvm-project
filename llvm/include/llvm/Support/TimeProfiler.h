@@ -86,6 +86,8 @@ class raw_pwrite_stream;
 struct TimeTraceProfiler;
 TimeTraceProfiler *getTimeTraceProfilerInstance();
 
+struct TimeTraceProfilerEntry;
+
 /// Initialize the time trace profiler.
 /// This sets up the global \p TimeTraceProfilerInstance
 /// variable to be the profiler instance.
@@ -120,19 +122,30 @@ Error timeTraceProfilerWrite(StringRef PreferredFileName,
 /// Profiler copies the string data, so the pointers can be given into
 /// temporaries. Time sections can be hierarchical; every Begin must have a
 /// matching End pair but they can nest.
-void timeTraceProfilerBegin(StringRef Name, StringRef Detail);
-void timeTraceProfilerBegin(StringRef Name,
-                            llvm::function_ref<std::string()> Detail);
+TimeTraceProfilerEntry *timeTraceProfilerBegin(StringRef Name,
+                                               StringRef Detail);
+TimeTraceProfilerEntry *
+timeTraceProfilerBegin(StringRef Name,
+                       llvm::function_ref<std::string()> Detail);
+
+/// Manually begin a time section, with the given \p Name and \p Detail.
+/// This starts Async Events having \p Name as a category which is shown
+/// separately from other traces. See
+/// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.jh64i9l3vwa1
+/// for more details.
+TimeTraceProfilerEntry *timeTraceAsyncProfilerBegin(StringRef Name,
+                                                    StringRef Detail);
 
 /// Manually end the last time section.
 void timeTraceProfilerEnd();
+void timeTraceProfilerEnd(TimeTraceProfilerEntry *E);
 
 /// The TimeTraceScope is a helper class to call the begin and end functions
 /// of the time trace profiler.  When the object is constructed, it begins
 /// the section; and when it is destroyed, it stops it. If the time profiler
 /// is not initialized, the overhead is a single branch.
-struct TimeTraceScope {
-
+class TimeTraceScope {
+public:
   TimeTraceScope() = delete;
   TimeTraceScope(const TimeTraceScope &) = delete;
   TimeTraceScope &operator=(const TimeTraceScope &) = delete;
@@ -141,20 +154,23 @@ struct TimeTraceScope {
 
   TimeTraceScope(StringRef Name) {
     if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerBegin(Name, StringRef(""));
+      Entry = timeTraceProfilerBegin(Name, StringRef(""));
   }
   TimeTraceScope(StringRef Name, StringRef Detail) {
     if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerBegin(Name, Detail);
+      Entry = timeTraceProfilerBegin(Name, Detail);
   }
   TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail) {
     if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerBegin(Name, Detail);
+      Entry = timeTraceProfilerBegin(Name, Detail);
   }
   ~TimeTraceScope() {
     if (getTimeTraceProfilerInstance() != nullptr)
-      timeTraceProfilerEnd();
+      timeTraceProfilerEnd(Entry);
   }
+
+private:
+  TimeTraceProfilerEntry *Entry = nullptr;
 };
 
 } // end namespace llvm

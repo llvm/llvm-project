@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_MODULEDEPCOLLECTOR_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
@@ -137,6 +138,10 @@ struct ModuleDeps {
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
+
+  /// The set of libraries or frameworks to link against when
+  /// an entity from this module is used.
+  llvm::SmallVector<Module::LinkLibrary, 2> LinkLibraries;
 
   /// Get (or compute) the compiler invocation that can be used to build this
   /// module. Does not include argv[0].
@@ -307,6 +312,11 @@ private:
   void associateWithContextHash(const CowCompilerInvocation &CI,
                                 ModuleDeps &Deps);
 };
+
+/// Resets codegen options that don't affect modules/PCH.
+void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
+                               const LangOptions &LangOpts,
+                               CodeGenOptions &CGOpts);
 
 } // end namespace dependencies
 } // end namespace tooling

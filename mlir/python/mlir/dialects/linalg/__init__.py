@@ -55,7 +55,6 @@ from .._linalg_enum_gen import *
 #     TODO: guard against surprises and fail create Runtime Custom Ops with
 #     the same name as existing Core Named Ops.
 from .opdsl.ops.core_named_ops import *
-from .opdsl.lang.emitter import isa
 
 from ...ir import *
 from .._ods_common import get_op_result_or_value as _get_op_result_or_value
@@ -71,7 +70,7 @@ def transpose(
     if len(outs) > 1:
         raise ValueError(f"{outs=} must have length 1.")
     init = _get_op_result_or_value(outs[0])
-    result_types = [init.type] if isa(RankedTensorType, init.type) else []
+    result_types = [init.type] if isinstance(init.type, RankedTensorType) else []
 
     op = TransposeOp(
         result=result_types,
@@ -93,7 +92,7 @@ def broadcast(
     if len(outs) > 1:
         raise ValueError(f"{outs=} must have length 1.")
     init = _get_op_result_or_value(outs[0])
-    result_types = [init.type] if isa(RankedTensorType, init.type) else []
+    result_types = [init.type] if isinstance(init.type, RankedTensorType) else []
 
     op = BroadcastOp(
         result=result_types,

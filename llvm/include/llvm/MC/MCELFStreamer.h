@@ -39,7 +39,6 @@ public:
   /// state management
   void reset() override {
     SeenIdent = false;
-    BundleGroups.clear();
     MCObjectStreamer::reset();
   }
 
@@ -142,21 +141,14 @@ private:
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);
   void finalizeCGProfile();
 
-  /// Merge the content of the fragment \p EF into the fragment \p DF.
-  void mergeFragment(MCDataFragment *, MCDataFragment *);
-
   bool SeenIdent = false;
-
-  /// BundleGroups - The stack of fragments holding the bundle-locked
-  /// instructions.
-  SmallVector<MCDataFragment *, 4> BundleGroups;
 };
 
 MCELFStreamer *createARMELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> TAB,
                                     std::unique_ptr<MCObjectWriter> OW,
                                     std::unique_ptr<MCCodeEmitter> Emitter,
-                                    bool RelaxAll, bool IsThumb, bool IsAndroid);
+                                    bool IsThumb, bool IsAndroid);
 
 } // end namespace llvm
 

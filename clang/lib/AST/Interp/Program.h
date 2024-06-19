@@ -45,7 +45,8 @@ public:
     // but primitive arrays might have an InitMap* heap allocated and
     // that needs to be freed.
     for (Global *G : Globals)
-      G->block()->invokeDtor();
+      if (Block *B = G->block(); B->isInitialized())
+        B->invokeDtor();
 
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
@@ -208,7 +209,7 @@ private:
   llvm::DenseMap<const RecordDecl *, Record *> Records;
 
   /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const ValueDecl *, unsigned> DummyParams;
+  llvm::DenseMap<const ValueDecl *, unsigned> DummyVariables;
 
   /// Creates a new descriptor.
   template <typename... Ts>

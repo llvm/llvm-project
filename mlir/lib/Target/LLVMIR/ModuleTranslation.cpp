@@ -16,6 +16,7 @@
 #include "AttrKindDetail.h"
 #include "DebugTranslation.h"
 #include "LoopAnnotationTranslation.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
@@ -33,7 +34,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
-#include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -63,6 +63,8 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
+
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
@@ -274,16 +276,15 @@ translateDataLayout(DataLayoutSpecInterface attribute,
                 layoutStream << ":" << preferred;
               return success();
             })
-            .Case([&](LLVMPointerType ptrType) {
-              layoutStream << "p" << ptrType.getAddressSpace() << ":";
+            .Case([&](LLVMPointerType type) {
+              layoutStream << "p" << type.getAddressSpace() << ":";
               uint64_t size = dataLayout.getTypeSizeInBits(type);
               uint64_t abi = dataLayout.getTypeABIAlignment(type) * 8u;
               uint64_t preferred =
                   dataLayout.getTypePreferredAlignment(type) * 8u;
-              layoutStream << size << ":" << abi << ":" << preferred;
-              if (std::optional<uint64_t> index = extractPointerSpecValue(
-                      entry.getValue(), PtrDLEntryPos::Index))
-                layoutStream << ":" << *index;
+              uint64_t index = *dataLayout.getTypeIndexBitwidth(type);
+              layoutStream << size << ":" << abi << ":" << preferred << ":"
+                           << index;
               return success();
             })
             .Default([loc](Type type) {
@@ -633,8 +634,43 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           llvm::ElementCount::get(numElements, /*Scalable=*/isScalable), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
-      SmallVector<llvm::Constant *, 8> constants(numElements, child);
-      return llvm::ConstantArray::get(arrayType, constants);
+      if (child->isZeroValue()) {
+        return llvm::ConstantAggregateZero::get(arrayType);
+      } else {
+        if (llvm::ConstantDataSequential::isElementTypeCompatible(
+                elementType)) {
+          // TODO: Handle all compatible types. This code only handles integer.
+          if (llvm::IntegerType *iTy =
+                  dyn_cast<llvm::IntegerType>(elementType)) {
+            if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
+              if (ci->getBitWidth() == 8) {
+                SmallVector<int8_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              }
+              if (ci->getBitWidth() == 16) {
+                SmallVector<int16_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              }
+              if (ci->getBitWidth() == 32) {
+                SmallVector<int32_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              }
+              if (ci->getBitWidth() == 64) {
+                SmallVector<int64_t> constants(numElements, ci->getZExtValue());
+                return llvm::ConstantDataArray::get(elementType->getContext(),
+                                                    constants);
+              }
+            }
+          }
+        }
+        // std::vector is used here to accomodate large number of elements that
+        // exceed SmallVector capacity.
+        std::vector<llvm::Constant *> constants(numElements, child);
+        return llvm::ConstantArray::get(arrayType, constants);
+      }
     }
   }
 
@@ -716,6 +752,8 @@ void ModuleTranslation::forgetMapping(Region &region) {
           branchMapping.erase(&op);
         if (isa<LLVM::GlobalOp>(op))
           globalsMapping.erase(&op);
+        if (isa<LLVM::CallOp>(op))
+          callMapping.erase(&op);
         llvm::append_range(
             toProcess,
             llvm::map_range(op.getRegions(), [](Region &r) { return &r; }));
@@ -1029,10 +1067,21 @@ LogicalResult ModuleTranslation::convertGlobals() {
       llvm::DIGlobalVariable *diGlobalVar = diGlobalExpr->getVariable();
       var->addDebugInfo(diGlobalExpr);
 
+      // There is no `globals` field in DICompileUnitAttr which can be directly
+      // assigned to DICompileUnit. We have to build the list by looking at the
+      // dbgExpr of all the GlobalOps. The scope of the variable is used to get
+      // the DICompileUnit in which to add it. But for the languages that
+      // support modules, the scope hierarchy can be
+      // variable -> module -> compile unit
+      // If a variable scope points to the module then we use the scope of the
+      // module to get the compile unit.
+      llvm::DIScope *scope = diGlobalVar->getScope();
+      if (llvm::DIModule *mod = dyn_cast_if_present<llvm::DIModule>(scope))
+        scope = mod->getScope();
+
       // Get the compile unit (scope) of the the global variable.
       if (llvm::DICompileUnit *compileUnit =
-              dyn_cast_if_present<llvm::DICompileUnit>(
-                  diGlobalVar->getScope())) {
+              dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
         // Update the compile unit with this incoming global variable expression
         // during the finalizing step later.
         allGVars[compileUnit].push_back(diGlobalExpr);
@@ -1319,7 +1368,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   // Then, convert blocks one by one in topological order to ensure defs are
   // converted before uses.
-  auto blocks = getTopologicallySortedBlocks(func.getBody());
+  auto blocks = getBlocksSortedByDominance(func.getBody());
   for (Block *bb : blocks) {
     CapturingIRBuilder builder(llvmContext);
     if (failed(convertBlockImpl(*bb, bb->isEntryBlock(), builder,
@@ -1343,10 +1392,10 @@ LogicalResult ModuleTranslation::convertDialectAttributes(
   return success();
 }
 
-/// Converts the function attributes from LLVMFuncOp and attaches them to the
-/// llvm::Function.
-static void convertFunctionAttributes(LLVMFuncOp func,
-                                      llvm::Function *llvmFunc) {
+/// Converts memory effect attributes from `func` and attaches them to
+/// `llvmFunc`.
+static void convertFunctionMemoryAttributes(LLVMFuncOp func,
+                                            llvm::Function *llvmFunc) {
   if (!func.getMemory())
     return;
 
@@ -1363,6 +1412,18 @@ static void convertFunctionAttributes(LLVMFuncOp func,
       llvm::MemoryEffects(llvm::MemoryEffects::Location::Other,
                           convertModRefInfoToLLVM(memEffects.getOther()));
   llvmFunc->setMemoryEffects(newMemEffects);
+}
+
+/// Converts function attributes from `func` and attaches them to `llvmFunc`.
+static void convertFunctionAttributes(LLVMFuncOp func,
+                                      llvm::Function *llvmFunc) {
+  if (func.getNoInlineAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoInline);
+  if (func.getAlwaysInlineAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
+  if (func.getOptimizeNoneAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
 FailureOr<llvm::AttrBuilder>
@@ -1720,6 +1781,16 @@ llvm::Metadata *ModuleTranslation::translateDebugInfo(LLVM::DINodeAttr attr) {
   return debugTranslation->translate(attr);
 }
 
+llvm::RoundingMode
+ModuleTranslation::translateRoundingMode(LLVM::RoundingMode rounding) {
+  return convertRoundingModeToLLVM(rounding);
+}
+
+llvm::fp::ExceptionBehavior ModuleTranslation::translateFPExceptionBehavior(
+    LLVM::FPExceptionBehavior exceptionBehavior) {
+  return convertFPExceptionBehaviorToLLVM(exceptionBehavior);
+}
+
 llvm::NamedMDNode *
 ModuleTranslation::getOrInsertNamedModuleMetadata(StringRef name) {
   return llvmModule->getOrInsertNamedMetadata(name);
@@ -1732,6 +1803,9 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                   StringRef name) {
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
+  // ModuleTranslation can currently only construct modules in the old debug
+  // info format, so set the flag accordingly.
+  llvmModule->setNewDbgInfoFormatFlag(false);
   if (auto dataLayoutAttr =
           m->getDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvmModule->setDataLayout(cast<StringAttr>(dataLayoutAttr).getValue());
@@ -1761,7 +1835,7 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
 
 std::unique_ptr<llvm::Module>
 mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
-                              StringRef name) {
+                              StringRef name, bool disableVerification) {
   if (!satisfiesLLVMModule(module)) {
     module->emitOpError("can not be translated to an LLVMIR module");
     return nullptr;
@@ -1810,7 +1884,13 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertFunctions()))
     return nullptr;
 
-  if (llvm::verifyModule(*translator.llvmModule, &llvm::errs()))
+  // Once we've finished constructing elements in the module, we should convert
+  // it to use the debug info format desired by LLVM.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html
+  translator.llvmModule->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+
+  if (!disableVerification &&
+      llvm::verifyModule(*translator.llvmModule, &llvm::errs()))
     return nullptr;
 
   return std::move(translator.llvmModule);

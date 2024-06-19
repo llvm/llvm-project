@@ -96,6 +96,7 @@ CGOPT_EXP(bool, EmulatedTLS)
 CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
+CGOPT(bool, SeparateNamedSections)
 CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(bool, EnableStackSizeSection)
@@ -210,6 +211,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Disable frame pointer elimination"),
           clEnumValN(FramePointerKind::NonLeaf, "non-leaf",
                      "Disable frame pointer elimination for non-leaf frame"),
+          clEnumValN(FramePointerKind::Reserved, "reserved",
+                     "Enable frame pointer elimination, but reserve the frame "
+                     "pointer register"),
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
@@ -419,6 +423,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(UniqueBasicBlockSectionNames);
 
+  static cl::opt<bool> SeparateNamedSections(
+      "separate-named-sections",
+      cl::desc("Use separate unique sections for named sections"),
+      cl::init(false));
+  CGBINDOPT(SeparateNamedSections);
+
   static cl::opt<EABI> EABIVersion(
       "meabi", cl::desc("Set EABI type (default depends on triple):"),
       cl::init(EABI::Default),
@@ -569,6 +579,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.BBSections = getBBSectionsMode(Options);
   Options.UniqueSectionNames = getUniqueSectionNames();
   Options.UniqueBasicBlockSectionNames = getUniqueBasicBlockSectionNames();
+  Options.SeparateNamedSections = getSeparateNamedSections();
   Options.TLSSize = getTLSSize();
   Options.EmulatedTLS =
       getExplicitEmulatedTLS().value_or(TheTriple.hasDefaultEmulatedTLS());
@@ -685,6 +696,8 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
       NewAttrs.addAttribute("frame-pointer", "all");
     else if (getFramePointerUsage() == FramePointerKind::NonLeaf)
       NewAttrs.addAttribute("frame-pointer", "non-leaf");
+    else if (getFramePointerUsage() == FramePointerKind::Reserved)
+      NewAttrs.addAttribute("frame-pointer", "reserved");
     else if (getFramePointerUsage() == FramePointerKind::None)
       NewAttrs.addAttribute("frame-pointer", "none");
   }

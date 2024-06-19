@@ -104,7 +104,8 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-ToolChain::executeToolChainProgram(StringRef Executable) const {
+ToolChain::executeToolChainProgram(StringRef Executable,
+                                   unsigned SecondsToWait) const {
   llvm::SmallString<64> OutputFile;
   llvm::sys::fs::createTemporaryFile("toolchain-program", "txt", OutputFile);
   llvm::FileRemover OutputRemover(OutputFile.c_str());
@@ -115,9 +116,8 @@ ToolChain::executeToolChainProgram(StringRef Executable) const {
   };
 
   std::string ErrorMessage;
-  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects,
-                                /* SecondsToWait */ 0,
-                                /*MemoryLimit*/ 0, &ErrorMessage))
+  if (llvm::sys::ExecuteAndWait(Executable, {}, {}, Redirects, SecondsToWait,
+                                /*MemoryLimit=*/0, &ErrorMessage))
     return llvm::createStringError(std::error_code(),
                                    Executable + ": " + ErrorMessage);
 
@@ -451,12 +451,6 @@ std::string ToolChain::getInputFilename(const InputInfo &Input) const {
 ToolChain::UnwindTableLevel
 ToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   return UnwindTableLevel::None;
-}
-
-unsigned ToolChain::GetDefaultDwarfVersion() const {
-  // TODO: Remove the RISC-V special case when R_RISCV_SET_ULEB128 linker
-  // support becomes more widely available.
-  return getTriple().isRISCV() ? 4 : 5;
 }
 
 Tool *ToolChain::getClang() const {
@@ -802,7 +796,13 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
 std::optional<std::string> ToolChain::getRuntimePath() const {
   SmallString<128> P(D.ResourceDir);
   llvm::sys::path::append(P, "lib");
-  return getTargetSubDirPath(P);
+  if (auto Ret = getTargetSubDirPath(P))
+    return Ret;
+  // Darwin does not use per-target runtime directory.
+  if (Triple.isOSDarwin())
+    return {};
+  llvm::sys::path::append(P, Triple.str());
+  return std::string(P);
 }
 
 std::optional<std::string> ToolChain::getStdlibPath() const {
@@ -1307,19 +1307,35 @@ void ToolChain::AddCCKextLibArgs(const ArgList &Args,
 
 bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
                                            std::string &Path) const {
+  // Don't implicitly link in mode-changing libraries in a shared library, since
+  // this can have very deleterious effects. See the various links from
+  // https://github.com/llvm/llvm-project/issues/57589 for more information.
+  bool Default = !Args.hasArgNoClaim(options::OPT_shared);
+
   // Do not check for -fno-fast-math or -fno-unsafe-math when -Ofast passed
   // (to keep the linker options consistent with gcc and clang itself).
-  if (!isOptimizationLevelFast(Args)) {
+  if (Default && !isOptimizationLevelFast(Args)) {
     // Check if -ffast-math or -funsafe-math.
-    Arg *A =
-      Args.getLastArg(options::OPT_ffast_math, options::OPT_fno_fast_math,
-                      options::OPT_funsafe_math_optimizations,
-                      options::OPT_fno_unsafe_math_optimizations);
+    Arg *A = Args.getLastArg(
+        options::OPT_ffast_math, options::OPT_fno_fast_math,
+        options::OPT_funsafe_math_optimizations,
+        options::OPT_fno_unsafe_math_optimizations, options::OPT_ffp_model_EQ);
 
     if (!A || A->getOption().getID() == options::OPT_fno_fast_math ||
         A->getOption().getID() == options::OPT_fno_unsafe_math_optimizations)
-      return false;
+      Default = false;
+    if (A && A->getOption().getID() == options::OPT_ffp_model_EQ) {
+      StringRef Model = A->getValue();
+      if (Model != "fast")
+        Default = false;
+    }
   }
+
+  // Whatever decision came as a result of the above implicit settings, either
+  // -mdaz-ftz or -mno-daz-ftz is capable of overriding it.
+  if (!Args.hasFlag(options::OPT_mdaz_ftz, options::OPT_mno_daz_ftz, Default))
+    return false;
+
   // If crtfastmath.o exists add it to the arguments.
   Path = GetFilePath("crtfastmath.o");
   return (Path != "crtfastmath.o"); // Not found.

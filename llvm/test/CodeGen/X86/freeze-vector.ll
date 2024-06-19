@@ -173,16 +173,14 @@ define void @freeze_extractelement(ptr %origin0, ptr %origin1, ptr %dst) nounwin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovdqa (%edx), %xmm0
 ; X86-NEXT:    vpand (%ecx), %xmm0, %xmm0
-; X86-NEXT:    vpextrb $6, %xmm0, %ecx
-; X86-NEXT:    movb %cl, (%eax)
+; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_extractelement:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm0
 ; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
-; X64-NEXT:    vpextrb $6, %xmm0, %eax
-; X64-NEXT:    movb %al, (%rdx)
+; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
 ; X64-NEXT:    retq
   %i0 = load <16 x i8>, ptr %origin0
   %i1 = load <16 x i8>, ptr %origin1
@@ -674,3 +672,23 @@ define void @pr59677(i32 %x, ptr %out) nounwind {
   ret void
 }
 declare <4 x float> @llvm.sin.v4f32(<4 x float>)
+
+; Test that we can eliminate freeze by changing the BUILD_VECTOR to a splat
+; zero vector.
+define void @freeze_buildvector_not_simple_type(ptr %dst) nounwind {
+; X86-LABEL: freeze_buildvector_not_simple_type:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb $0, 4(%eax)
+; X86-NEXT:    movl $0, (%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_buildvector_not_simple_type:
+; X64:       # %bb.0:
+; X64-NEXT:    movb $0, 4(%rdi)
+; X64-NEXT:    movl $0, (%rdi)
+; X64-NEXT:    retq
+  %i0 = freeze <5 x i8> <i8 poison, i8 0, i8 0, i8 undef, i8 0>
+  store <5 x i8> %i0, ptr %dst
+  ret void
+}

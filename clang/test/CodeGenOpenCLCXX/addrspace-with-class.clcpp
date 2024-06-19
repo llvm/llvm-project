@@ -5,7 +5,7 @@
 // for constructors, member functions and destructors.
 // See also atexit.cl and global_init.cl for other specific tests.
 
-// CHECK: %struct.MyType = type { i32 }
+// CHECK: %struct.MyType = type { i32, [5 x i32] }
 struct MyType {
   MyType(int i) : i(i) {}
   MyType(int i) __constant : i(i) {}
@@ -14,6 +14,7 @@ struct MyType {
   int bar() { return i + 2; }
   int bar() __constant { return i + 1; }
   int i;
+  int a[5] = {42, 43, 44, 45, 46};
 };
 
 // CHECK: @const1 ={{.*}} addrspace(2) global %struct.MyType zeroinitializer
@@ -22,6 +23,8 @@ __constant MyType const1 = 1;
 __constant MyType const2(2);
 // CHECK: @glob ={{.*}} addrspace(1) global %struct.MyType zeroinitializer
 MyType glob(1);
+
+// CHECK: @constinit ={{.*}} addrspace(2) constant [5 x i32] [i32 42, i32 43, i32 44, i32 45, i32 46]
 
 // CHECK: call spir_func void @_ZNU3AS26MyTypeC1Ei(ptr addrspace(2) {{[^,]*}} @const1, i32 noundef 1)
 // CHECK: call spir_func void @_ZNU3AS26MyTypeC1Ei(ptr addrspace(2) {{[^,]*}} @const2, i32 noundef 2)

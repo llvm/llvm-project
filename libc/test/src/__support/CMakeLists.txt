@@ -78,15 +78,16 @@ add_libc_test(
   SRCS
     integer_to_string_test.cpp
   DEPENDS
+    libc.src.__support.big_int
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.string_view
     libc.src.__support.integer_literals
     libc.src.__support.integer_to_string
-    libc.src.__support.uint
     libc.src.__support.uint128
 )
 
-# The GPU does not support varargs currently.
-if(NOT LIBC_TARGET_OS_IS_GPU)
+# NVPTX does not support varargs currently.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
     arg_list_test
     SUITE
@@ -100,15 +101,15 @@ endif()
 
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
-    uint_test
+    big_int_test
     SUITE
       libc-support-tests
     SRCS
-      uint_test.cpp
+      big_int_test.cpp
     DEPENDS
+      libc.src.__support.big_int
       libc.src.__support.CPP.optional
       libc.src.__support.macros.properties.types
-      libc.src.__support.uint
   )
 endif()
 
@@ -131,6 +132,7 @@ add_libc_test(
   SRCS
     fixedvector_test.cpp
   DEPENDS
+    libc.src.__support.CPP.array
     libc.src.__support.fixedvector
 )
 
@@ -205,3 +207,5 @@ add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
 add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
+add_subdirectory(time)
+add_subdirectory(threads)

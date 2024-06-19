@@ -1644,8 +1644,9 @@ enum CXCursorKind {
   CXCursor_ObjCSelfExpr = 146,
 
   /** OpenMP 5.0 [2.1.5, Array Section].
+   * OpenACC 3.3 [2.7.1, Data Specification for Data Clauses (Sub Arrays)]
    */
-  CXCursor_OMPArraySectionExpr = 147,
+  CXCursor_ArraySectionExpr = 147,
 
   /** Represents an @available(...) check.
    */
@@ -1675,7 +1676,7 @@ enum CXCursorKind {
   CXCursor_ConceptSpecializationExpr = 153,
 
   /**
-   * Expression that references a C++20 concept.
+   * Expression that references a C++20 requires expression.
    */
   CXCursor_RequiresExpr = 154,
 
@@ -2149,7 +2150,11 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCComputeConstruct = 320,
 
-  CXCursor_LastStmt = CXCursor_OpenACCComputeConstruct,
+  /** OpenACC Loop Construct.
+   */
+  CXCursor_OpenACCLoopConstruct = 321,
+
+  CXCursor_LastStmt = CXCursor_OpenACCLoopConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -2991,6 +2996,7 @@ enum CXCallingConv {
   CXCallingConv_AArch64SVEPCS = 18,
   CXCallingConv_M68kRTD = 19,
   CXCallingConv_PreserveNone = 20,
+  CXCallingConv_RISCVVectorCall = 21,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200

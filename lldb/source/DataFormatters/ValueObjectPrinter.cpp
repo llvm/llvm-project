@@ -14,6 +14,8 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Stream.h"
+#include "llvm/Support/MathExtras.h"
+#include <cstdint>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -621,25 +623,28 @@ void ValueObjectPrinter::PrintChild(
   }
 }
 
-uint32_t ValueObjectPrinter::GetMaxNumChildrenToPrint(bool &print_dotdotdot) {
+llvm::Expected<uint32_t>
+ValueObjectPrinter::GetMaxNumChildrenToPrint(bool &print_dotdotdot) {
   ValueObject &synth_valobj = GetValueObjectForChildrenGeneration();
 
   if (m_options.m_pointer_as_array)
     return m_options.m_pointer_as_array.m_element_count;
 
-  uint32_t num_children = synth_valobj.GetNumChildrenIgnoringErrors();
-  print_dotdotdot = false;
-  if (num_children) {
-    const size_t max_num_children = GetMostSpecializedValue()
-                                        .GetTargetSP()
-                                        ->GetMaximumNumberOfChildrenToDisplay();
-
-    if (num_children > max_num_children && !m_options.m_ignore_cap) {
-      print_dotdotdot = true;
-      return max_num_children;
-    }
+  const uint32_t max_num_children =
+      m_options.m_ignore_cap ? UINT32_MAX
+                             : GetMostSpecializedValue()
+                                   .GetTargetSP()
+                                   ->GetMaximumNumberOfChildrenToDisplay();
+  // Ask for one more child than the maximum to see if we should print "...".
+  auto num_children_or_err = synth_valobj.GetNumChildren(
+      llvm::SaturatingAdd(max_num_children, uint32_t(1)));
+  if (!num_children_or_err)
+    return num_children_or_err;
+  if (*num_children_or_err > max_num_children) {
+    print_dotdotdot = true;
+    return max_num_children;
   }
-  return num_children;
+  return num_children_or_err;
 }
 
 void ValueObjectPrinter::PrintChildrenPostamble(bool print_dotdotdot) {
@@ -704,7 +709,12 @@ void ValueObjectPrinter::PrintChildren(
   ValueObject &synth_valobj = GetValueObjectForChildrenGeneration();
 
   bool print_dotdotdot = false;
-  size_t num_children = GetMaxNumChildrenToPrint(print_dotdotdot);
+  auto num_children_or_err = GetMaxNumChildrenToPrint(print_dotdotdot);
+  if (!num_children_or_err) {
+    *m_stream << " <" << llvm::toString(num_children_or_err.takeError()) << '>';
+    return;
+  }
+  uint32_t num_children = *num_children_or_err;
   if (num_children) {
     bool any_children_printed = false;
 
@@ -753,7 +763,12 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
   ValueObject &synth_valobj = GetValueObjectForChildrenGeneration();
 
   bool print_dotdotdot = false;
-  size_t num_children = GetMaxNumChildrenToPrint(print_dotdotdot);
+  auto num_children_or_err = GetMaxNumChildrenToPrint(print_dotdotdot);
+  if (!num_children_or_err) {
+    *m_stream << '<' << llvm::toString(num_children_or_err.takeError()) << '>';
+    return true;
+  }
+  uint32_t num_children = *num_children_or_err;
 
   if (num_children) {
     m_stream->PutChar('(');
