@@ -17,6 +17,7 @@
 #define LLVM_CLANG_AST_DECLID_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/iterator.h"
 
 #include <climits>
@@ -230,7 +231,11 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   }
 
   static unsigned getHashValue(const GlobalDeclID &Key) {
-    return DenseMapInfo<DeclID>::getHashValue(Key.get());
+    // Our default hash algorithm for 64 bits integer may not be very good.
+    // In GlobalDeclID's case, it is pretty common that the lower 32 bits can
+    // be same.
+    // FIXME: Remove this when we fix the underlying issue.
+    return llvm::hash_value(Key.get());
   }
 
   static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {

@@ -361,3 +361,34 @@ latch:
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+define void @test_store_of_final_reduction_value(i64 %x, ptr %dst) {
+; CHECK-LABEL: @test_store_of_final_reduction_value(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV4:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED_NEXT]] = mul i64 [[RED]], [[X:%.*]]
+; CHECK-NEXT:    store i64 [[RED_NEXT]], ptr [[DST:%.*]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV4]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV4]], 1
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv4 = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i64 [ 0, %entry ], [ %red.next, %loop ]
+  %red.next = mul i64 %red, %x
+  store i64 %red.next, ptr %dst, align 8
+  %iv.next = add i64 %iv4, 1
+  %ec = icmp eq i64 %iv4, 1
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
