@@ -13,141 +13,119 @@
 
 omp.declare_reduction @add_reduction_byref_box_heap_i32 : !llvm.ptr init {
 ^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %2 = llvm.mlir.constant(1 : i32) : i32
-  %3 = llvm.alloca %2 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %4 = llvm.mlir.constant(1 : i32) : i32
-  %5 = llvm.alloca %4 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %6 = llvm.mlir.constant(0 : i64) : i64
-  %7 = llvm.mlir.constant(0 : i32) : i32
-  %8 = llvm.load %arg0 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  llvm.store %8, %5 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
-  %9 = llvm.mlir.constant(1 : i64) : i64
-  %10 = llvm.alloca %9 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> : (i64) -> !llvm.ptr
-  %11 = llvm.getelementptr %5[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  %12 = llvm.load %11 : !llvm.ptr -> !llvm.ptr
-  %13 = llvm.ptrtoint %12 : !llvm.ptr to i64
-  %14 = llvm.icmp "eq" %13, %6 : i64
-  llvm.cond_br %14, ^bb1, ^bb2
+  %0 = llvm.mlir.constant(2 : i32) : i32
+  %1 = llvm.mlir.constant(20180515 : i32) : i32
+  %2 = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  %3 = llvm.mlir.zero : !llvm.ptr
+  %4 = llvm.mlir.constant(9 : i32) : i32
+  %5 = llvm.mlir.constant(1 : i64) : i64
+  %6 = llvm.mlir.constant(0 : i32) : i32
+  %7 = llvm.mlir.constant(0 : i64) : i64
+  %8 = llvm.mlir.constant(1 : i32) : i32
+  %9 = llvm.alloca %8 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %10 = llvm.alloca %8 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %11 = llvm.alloca %8 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %12 = llvm.load %arg0 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  llvm.store %12, %11 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+  %13 = llvm.alloca %5 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> : (i64) -> !llvm.ptr
+  %14 = llvm.getelementptr %11[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  %15 = llvm.load %14 : !llvm.ptr -> !llvm.ptr
+  %16 = llvm.ptrtoint %15 : !llvm.ptr to i64
+  %17 = llvm.icmp "eq" %16, %7 : i64
+  llvm.cond_br %17, ^bb1, ^bb2
 ^bb1:  // pred: ^bb0
-  %15 = llvm.mlir.constant(9 : i32) : i32
-  %16 = llvm.mlir.zero : !llvm.ptr
-  %17 = llvm.getelementptr %16[1] : (!llvm.ptr) -> !llvm.ptr, i32
-  %18 = llvm.ptrtoint %17 : !llvm.ptr to i64
-  %19 = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  %20 = llvm.insertvalue %18, %19[1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %21 = llvm.mlir.constant(20180515 : i32) : i32
-  %22 = llvm.insertvalue %21, %20[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %23 = llvm.mlir.constant(0 : i32) : i32
-  %24 = llvm.trunc %23 : i32 to i8
-  %25 = llvm.insertvalue %24, %22[3] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %26 = llvm.trunc %15 : i32 to i8
-  %27 = llvm.insertvalue %26, %25[4] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %28 = llvm.mlir.constant(2 : i32) : i32
-  %29 = llvm.trunc %28 : i32 to i8
-  %30 = llvm.insertvalue %29, %27[5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %31 = llvm.mlir.constant(0 : i32) : i32
-  %32 = llvm.trunc %31 : i32 to i8
-  %33 = llvm.insertvalue %32, %30[6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %34 = llvm.insertvalue %12, %33[0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  llvm.store %34, %3 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
-  %35 = llvm.load %3 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  llvm.store %35, %10 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+  %18 = llvm.getelementptr %3[1] : (!llvm.ptr) -> !llvm.ptr, i32
+  %19 = llvm.ptrtoint %18 : !llvm.ptr to i64
+  %20 = llvm.insertvalue %19, %2[1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %21 = llvm.insertvalue %1, %20[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %22 = llvm.trunc %6 : i32 to i8
+  %23 = llvm.insertvalue %22, %21[3] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %24 = llvm.trunc %4 : i32 to i8
+  %25 = llvm.insertvalue %24, %23[4] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %26 = llvm.trunc %0 : i32 to i8
+  %27 = llvm.insertvalue %26, %25[5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %28 = llvm.insertvalue %22, %27[6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %29 = llvm.insertvalue %15, %28[0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  llvm.store %29, %10 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+  %30 = llvm.load %10 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  llvm.store %30, %13 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
   llvm.br ^bb3
 ^bb2:  // pred: ^bb0
-  %36 = llvm.mlir.zero : !llvm.ptr
-  %37 = llvm.getelementptr %36[1] : (!llvm.ptr) -> !llvm.ptr, i32
-  %38 = llvm.ptrtoint %37 : !llvm.ptr to i64
-  //%39 = llvm.call @malloc(%38) {in_type = i32, operandSegmentSizes = array<i32: 0, 0>} : (i64) -> !llvm.ptr
-  %39 = llvm.mlir.zero : !llvm.ptr
-  llvm.store %7, %39 : i32, !llvm.ptr
-  %40 = llvm.mlir.constant(9 : i32) : i32
-  %41 = llvm.mlir.zero : !llvm.ptr
-  %42 = llvm.getelementptr %41[1] : (!llvm.ptr) -> !llvm.ptr, i32
-  %43 = llvm.ptrtoint %42 : !llvm.ptr to i64
-  %44 = llvm.mlir.undef : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  %45 = llvm.insertvalue %43, %44[1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %46 = llvm.mlir.constant(20180515 : i32) : i32
-  %47 = llvm.insertvalue %46, %45[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %48 = llvm.mlir.constant(0 : i32) : i32
-  %49 = llvm.trunc %48 : i32 to i8
-  %50 = llvm.insertvalue %49, %47[3] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %51 = llvm.trunc %40 : i32 to i8
-  %52 = llvm.insertvalue %51, %50[4] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %53 = llvm.mlir.constant(2 : i32) : i32
-  %54 = llvm.trunc %53 : i32 to i8
-  %55 = llvm.insertvalue %54, %52[5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %56 = llvm.mlir.constant(0 : i32) : i32
-  %57 = llvm.trunc %56 : i32 to i8
-  %58 = llvm.insertvalue %57, %55[6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  %59 = llvm.insertvalue %39, %58[0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
-  llvm.store %59, %1 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
-  %60 = llvm.load %1 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  llvm.store %60, %10 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+  %31 = llvm.getelementptr %3[1] : (!llvm.ptr) -> !llvm.ptr, i32
+  llvm.store %6, %3 : i32, !llvm.ptr
+  %32 = llvm.ptrtoint %31 : !llvm.ptr to i64
+  %33 = llvm.insertvalue %32, %2[1] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %34 = llvm.insertvalue %1, %33[2] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %35 = llvm.trunc %6 : i32 to i8
+  %36 = llvm.insertvalue %35, %34[3] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %37 = llvm.trunc %4 : i32 to i8
+  %38 = llvm.insertvalue %37, %36[4] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %39 = llvm.trunc %0 : i32 to i8
+  %40 = llvm.insertvalue %39, %38[5] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %41 = llvm.insertvalue %35, %40[6] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  %42 = llvm.insertvalue %3, %41[0] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> 
+  llvm.store %42, %9 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+  %43 = llvm.load %9 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  llvm.store %43, %13 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
   llvm.br ^bb3
 ^bb3:  // 2 preds: ^bb1, ^bb2
-  omp.yield(%10 : !llvm.ptr)
+  omp.yield(%13 : !llvm.ptr)
 } combiner {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %2 = llvm.mlir.constant(1 : i32) : i32
-  %3 = llvm.alloca %2 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %4 = llvm.load %arg0 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  llvm.store %4, %3 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
-  %5 = llvm.load %arg1 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  llvm.store %5, %1 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
-  %6 = llvm.getelementptr %3[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  %7 = llvm.load %6 : !llvm.ptr -> !llvm.ptr
-  %8 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  %9 = llvm.load %8 : !llvm.ptr -> !llvm.ptr
-  %10 = llvm.load %7 : !llvm.ptr -> i32
-  %11 = llvm.load %9 : !llvm.ptr -> i32
-  %12 = llvm.add %10, %11 : i32
-  llvm.store %12, %7 : i32, !llvm.ptr
+  %2 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  llvm.store %3, %2 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+  %4 = llvm.load %arg1 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  llvm.store %4, %1 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+  %5 = llvm.getelementptr %2[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  %6 = llvm.load %5 : !llvm.ptr -> !llvm.ptr
+  %7 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  %8 = llvm.load %7 : !llvm.ptr -> !llvm.ptr
+  %9 = llvm.load %6 : !llvm.ptr -> i32
+  %10 = llvm.load %8 : !llvm.ptr -> i32
+  %11 = llvm.add %9, %10 : i32
+  llvm.store %11, %6 : i32, !llvm.ptr
   omp.yield(%arg0 : !llvm.ptr)
 }  cleanup {
 ^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  %2 = llvm.mlir.constant(0 : i64) : i64
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i32) : i32
+  %2 = llvm.alloca %1 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
   %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-  llvm.store %3, %1 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
-  %4 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+  llvm.store %3, %2 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+  %4 = llvm.getelementptr %2[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
   %5 = llvm.load %4 : !llvm.ptr -> !llvm.ptr
   %6 = llvm.ptrtoint %5 : !llvm.ptr to i64
-  %7 = llvm.icmp "ne" %6, %2 : i64
+  %7 = llvm.icmp "ne" %6, %0 : i64
   llvm.cond_br %7, ^bb1, ^bb2
 ^bb1:  // pred: ^bb0
-  //llvm.call @free(%5) : (!llvm.ptr) -> ()
   llvm.br ^bb2
 ^bb2:  // 2 preds: ^bb0, ^bb1
   omp.yield
 }
 llvm.func @missordered_blocks_(%arg0: !llvm.ptr {fir.bindc_name = "x"}, %arg1: !llvm.ptr {fir.bindc_name = "y"}) attributes {fir.internal_name = "_QPmissordered_blocks", frame_pointer = #llvm.framePointerKind<"non-leaf">, target_cpu = "generic", target_features = #llvm.target_features<["+outline-atomics", "+v8a", "+fp-armv8", "+neon"]>} {
-  %0 = llvm.mlir.constant(24 : i32) : i32
-  %1 = llvm.mlir.constant(42 : i32) : i32
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(24 : i32) : i32
+  %2 = llvm.mlir.constant(42 : i32) : i32
   omp.parallel reduction(byref @add_reduction_byref_box_heap_i32 %arg0 -> %arg2 : !llvm.ptr, byref @add_reduction_byref_box_heap_i32 %arg1 -> %arg3 : !llvm.ptr) {
-    %2 = llvm.mlir.constant(1 : i32) : i32
-    %3 = llvm.alloca %2 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-    %4 = llvm.mlir.constant(1 : i32) : i32
-    %5 = llvm.alloca %4 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-    %6 = llvm.load %arg2 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-    llvm.store %6, %5 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
-    %7 = llvm.getelementptr %5[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-    %8 = llvm.load %7 : !llvm.ptr -> !llvm.ptr
-    llvm.store %1, %8 : i32, !llvm.ptr
-    %9 = llvm.load %arg3 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-    llvm.store %9, %3 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
-    %10 = llvm.getelementptr %3[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-    %11 = llvm.load %10 : !llvm.ptr -> !llvm.ptr
-    llvm.store %0, %11 : i32, !llvm.ptr
+    %3 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+    %4 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+    %5 = llvm.load %arg2 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    llvm.store %5, %4 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+    %6 = llvm.getelementptr %4[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    %7 = llvm.load %6 : !llvm.ptr -> !llvm.ptr
+    llvm.store %2, %7 : i32, !llvm.ptr
+    %8 = llvm.load %arg3 : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    llvm.store %8, %3 : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+    %9 = llvm.getelementptr %3[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
+    %10 = llvm.load %9 : !llvm.ptr -> !llvm.ptr
+    llvm.store %1, %10 : i32, !llvm.ptr
     omp.terminator
   }
   llvm.return
 }
-
 
 // CHECK:         %[[VAL_0:.*]] = alloca { ptr, ptr }, align 8
 // CHECK:         br label %[[VAL_1:.*]]
