@@ -1031,6 +1031,9 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   // HIP headers depend on hsa.h which is in ROCM_DIR/include.
   ROCMIncludePath = (Twine(env::getROCMPath()) + "/include").str();
 
+  // Default to O3 for all contexts
+  Args.push_back("-O3");
+
   Args.push_back("-x");
 
   switch (ActionInfo->Language) {
