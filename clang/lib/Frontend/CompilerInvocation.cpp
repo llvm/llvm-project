@@ -610,12 +610,14 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.NewAlignOverride = 0;
   }
 
-  // The -f[no-]raw-string-literals option is only valid in C and C++
+  // The -f[no-]raw-string-literals option is only valid in C and in C++
   // standards before C++11.
   if (LangOpts.CPlusPlus11) {
-    Args.claimAllArgs(OPT_fraw_string_literals, OPT_fno_raw_string_literals);
-    Diags.Report(diag::warn_drv_fraw_string_literals_in_cxx11)
-        << bool(LangOpts.RawStringLiterals);
+    if (Args.hasArg(OPT_fraw_string_literals, OPT_fno_raw_string_literals)) {
+      Args.claimAllArgs(OPT_fraw_string_literals, OPT_fno_raw_string_literals);
+      Diags.Report(diag::warn_drv_fraw_string_literals_in_cxx11)
+          << bool(LangOpts.RawStringLiterals);
+    }
 
     // Do not allow disabling raw string literals in C++11 or later.
     LangOpts.RawStringLiterals = true;
