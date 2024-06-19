@@ -394,6 +394,7 @@ using type = T;
 template<typename T1, typename T2, bool b>
 struct A {
   // expected-note@-1+ {{candidate function}}
+  // expected-note@-2+ {{implicit deduction guide}}
   explicit(false)
   A(typename nondeduced<T1>::type, typename nondeduced<T2>::type, typename nondeduced<B<b>>::type) {}
   // expected-note@-1+ {{candidate template ignored}}
@@ -678,6 +679,7 @@ namespace deduction_guide2 {
 template<typename T1 = int, typename T2 = int>
 struct A {
   // expected-note@-1+ {{candidate template ignored}}
+  // expected-note@-2+ {{implicit deduction guide}}
   explicit(!is_same<T1, T2>::value)
   A(T1 = 0, T2 = 0) {}
   // expected-note@-1 {{explicit constructor declared here}}

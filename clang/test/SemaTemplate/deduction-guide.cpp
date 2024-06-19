@@ -123,7 +123,8 @@ using CT = C<int>;
 // CHECK: |   `-TemplateArgument template
 // CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-2' dependent depth 0 index 2
 
-template<typename ...T> struct D { // expected-note {{candidate}}
+template<typename ...T> struct D { // expected-note {{candidate}} \
+                                      expected-note {{implicit deduction guide declared as 'template <typename ...T> D(D<T...>) -> D<T...>'}}
   template<typename... U> using B = int(int (*...p)(T, U));
   template<typename U1, typename U2> D(B<U1, U2>*); // expected-note {{candidate}}
 };
@@ -166,7 +167,8 @@ using DT = D<int, int>;
 // CHECK-NOT: Subst
 // CHECK:                     `-TemplateTypeParmType
 
-template<int ...N> struct E { // expected-note {{candidate}}
+template<int ...N> struct E { // expected-note {{candidate}} \
+                                 expected-note {{implicit deduction guide declared as 'template <int ...N> E(E<N...>) -> E<N...>'}}
   template<int ...M> using B = Z<X<N, M>...>;
   template<int M1, int M2> E(B<M1, M2>); // expected-note {{candidate}}
 };

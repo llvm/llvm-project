@@ -40,6 +40,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -12113,6 +12114,35 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     S.NoteOverloadCandidate(Cand->FoundDecl, Fn, Cand->getRewriteKind());
     return;
   }
+
+  // If this is an implicit deduction guide against a non-user-defined
+  // constructor, add a note for it. These deduction guides nor their
+  // corresponding constructors are not explicitly spelled in the source code,
+  // and simply producing a deduction failure note around the heading of the
+  // enclosing RecordDecl is confusing.
+  //
+  // We prefer adding such notes at the end of the last deduction failure
+  // reason because duplicate code snippets appearing in the diagnostic
+  // are likely becoming noisy.
+  auto _ = llvm::make_scope_exit([&] {
+    auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
+    if (!DG || !DG->isImplicit() || DG->getCorrespondingConstructor())
+      return;
+    std::string FunctionProto;
+    llvm::raw_string_ostream OS(FunctionProto);
+    FunctionTemplateDecl *Template = DG->getDescribedFunctionTemplate();
+    // This also could be an instantiation. Find out the primary template.
+    if (!Template) {
+      FunctionDecl *Pattern = DG->getTemplateInstantiationPattern();
+      assert(Pattern && Pattern->getDescribedFunctionTemplate() &&
+             "Cannot find the associated function template of "
+             "CXXDeductionGuideDecl?");
+      Template = Pattern->getDescribedFunctionTemplate();
+    }
+    Template->print(OS);
+    S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
+        << FunctionProto;
+  });
 
   switch (Cand->FailureKind) {
   case ovl_fail_too_many_arguments:

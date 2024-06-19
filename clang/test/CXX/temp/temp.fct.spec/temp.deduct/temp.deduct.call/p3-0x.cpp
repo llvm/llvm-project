@@ -6,7 +6,7 @@
 #if __cplusplus > 201402L
 namespace ClassTemplateParamNotForwardingRef {
   // This is not a forwarding reference.
-  template<typename T> struct A { // expected-note {{candidate}}
+  template<typename T> struct A { // expected-note {{candidate}} expected-note {{implicit deduction guide}}
     A(T&&); // expected-note {{expects an rvalue}}
   };
   int n;
@@ -75,7 +75,7 @@ namespace std_example {
   int n3 = g(i); // expected-error{{no matching function for call to 'g'}}
 
 #if __cplusplus > 201402L
-  template<class T> struct A { // expected-note {{candidate}}
+  template<class T> struct A { // expected-note {{candidate}} expected-note {{implicit deduction guide}}
     template<class U>
     A(T &&, U &&, int *); // expected-note {{[with T = int, U = int] not viable: expects an rvalue}}
     A(T &&, int *);       // expected-note {{requires 2}}

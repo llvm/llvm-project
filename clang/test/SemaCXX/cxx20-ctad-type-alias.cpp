@@ -108,8 +108,11 @@ struct Foo {
   Foo(T const (&)[N]);
 };
 
+// FIXME: Clarify that __is_deducible constraints are unsatisfied. For example, GCC currently prints the code snippet around constructors
+// FIXME: Prefer non-canonical template arguments in the deduction guide?
 template <typename X, int Y>
 using Bar = Foo<X, sizeof(X)>; // expected-note {{candidate template ignored: couldn't infer template argument 'X'}} \
+                               // expected-note {{implicit deduction guide declared as 'template <typename X> Bar(Foo<type-parameter-0-0, sizeof(type-parameter-0-0)>) -> Foo<type-parameter-0-0, sizeof(type-parameter-0-0)>'}} \
                                // expected-note {{candidate template ignored: constraints not satisfied [with X = int]}} \
                                // expected-note {{cannot deduce template arguments for 'Bar' from 'Foo<int, 4UL>'}}
 
@@ -137,9 +140,12 @@ struct A {};
 template<class T> struct Foo { T c; };
 template<class X, class Y=A>
 using AFoo = Foo<Y>; // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0>' against 'int'}} \
+                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> AFoo(Foo<type-parameter-0-0>) -> Foo<type-parameter-0-0>'}} \
                     // expected-note {{candidate template ignored: constraints not satisfied [with Y = int]}} \
                     // expected-note {{cannot deduce template arguments for 'AFoo' from 'Foo<int>'}} \
-                    // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}}
+                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> AFoo(type-parameter-0-0) -> Foo<type-parameter-0-0>'}} \
+                    // expected-note {{candidate function template not viable: requires 0 arguments, but 1 was provided}} \
+                    // expected-note {{implicit deduction guide declared as 'template <class Y = A> AFoo() -> Foo<type-parameter-0-0>'}}
 
 AFoo s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'AFoo'}}
 } // namespace test11
@@ -192,6 +198,7 @@ struct Foo {
 template <int K>
 using Bar = Foo<double, K>; // expected-note {{constraints not satisfied for class template 'Foo'}}
 // expected-note@-1 {{candidate template ignored: could not match}}
+// expected-note@-2 {{implicit deduction guide declared as 'template <int K> Bar(Foo<double, K>) -> Foo<double, K>'}}
 double abc[3];
 Bar s2 = {abc}; // expected-error {{no viable constructor or deduction guide for deduction }}
 } // namespace test14
@@ -204,6 +211,7 @@ template<typename> concept False = false;
 template<False W>
 using BFoo = AFoo<W>; // expected-note {{candidate template ignored: constraints not satisfied [with V = int]}} \
                       // expected-note {{cannot deduce template arguments for 'BFoo' from 'Foo<int *>'}} \
+                      // expected-note {{implicit deduction guide declared as 'template <class V> BFoo(Foo<type-parameter-0-0 *>) -> Foo<type-parameter-0-0 *>'}} \
                       // expected-note {{candidate template ignored: could not match 'Foo<type-parameter-0-0 *>' against 'int *'}}
 int i = 0;
 AFoo a1(&i); // OK, deduce Foo<int *>
@@ -256,7 +264,9 @@ Foo(T) -> Foo<int>;
 template <typename U>
 using Bar = Foo<U>; // expected-note {{could not match 'Foo<type-parameter-0-0>' against 'int'}} \
                     // expected-note {{candidate template ignored: constraints not satisfied}} \
-                    // expected-note {{candidate function template not viable}}
+                    // expected-note {{candidate function template not viable}} \
+                    // expected-note {{implicit deduction guide declared as 'template <typename U> Bar() -> Foo<type-parameter-0-0>'}} \
+                    // expected-note {{implicit deduction guide declared as 'template <typename U> Bar(Foo<type-parameter-0-0>) -> Foo<type-parameter-0-0>'}}
 
 Bar s = {1}; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
 } // namespace test18
@@ -284,7 +294,8 @@ class Foo {};
 // Verify that template template type parameter TTP is referenced/used in the
 // template arguments of the RHS.
 template <template<typename> typename TTP>
-using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<template-parameter-0-0>>' against 'int'}}
+using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<template-parameter-0-0>>' against 'int'}} \
+                        // expected-note {{implicit deduction guide declared as 'template <template <typename> typename TTP> Bar(Foo<K<template-parameter-0-0>>) -> Foo<K<template-parameter-0-0>>'}}
 
 template <class T>
 class Container {};

@@ -20,7 +20,8 @@ namespace Access {
   protected:
     struct type {};
   };
-  template<typename T> struct D : B { // expected-note {{not viable}}
+  template<typename T> struct D : B { // expected-note {{not viable}} \
+                                         expected-note {{implicit deduction guide declared as 'template <typename T> D(D<T>) -> D<T>'}}
     D(T, typename T::type); // expected-note {{private member}}
   };
   D b = {B(), {}};
@@ -64,7 +65,8 @@ class C : A<int> {
   using A::A;
 };
 template <typename>
-class D : C { // expected-note {{candidate function template not viable: requires 1 argument}}
+class D : C { // expected-note {{candidate function template not viable: requires 1 argument}} \
+                 expected-note {{implicit deduction guide declared as 'template <typename> D(D<type-parameter-0-0>) -> D<type-parameter-0-0>'}}
   using C::C;
 };
 D abc; // expected-error {{no viable constructor or deduction guide}}
