@@ -926,6 +926,8 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_CONDITIONAL_STACK);
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
   RECORD(PP_ASSUME_NONNULL_LOC);
+  RECORD(PP_UNSAFE_BUFFER_USAGE);
+  RECORD(VTABLES_TO_EMIT);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -2518,6 +2520,12 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
     Record.clear();
   }
 
+  // Write the safe buffer opt-out region map in PP
+  for (SourceLocation &S : PP.serializeSafeBufferOptOutMap())
+    AddSourceLocation(S, Record);
+  Stream.EmitRecord(PP_UNSAFE_BUFFER_USAGE, Record);
+  Record.clear();
+
   // Enter the preprocessor block.
   Stream.EnterSubblock(PREPROCESSOR_BLOCK_ID, 3);
 
@@ -3950,6 +3958,10 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     Stream.EmitRecord(INTERESTING_IDENTIFIERS, InterestingIdents);
 }
 
+void ASTWriter::handleVTable(CXXRecordDecl *RD) {
+  PendingEmittingVTables.push_back(RD);
+}
+
 //===----------------------------------------------------------------------===//
 // DeclContext's Name Lookup Table Serialization
 //===----------------------------------------------------------------------===//
@@ -5134,6 +5146,13 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   // Write all of the DeclsToCheckForDeferredDiags.
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     GetDeclRef(D);
+
+  // Write all classes need to emit the vtable definitions if required.
+  if (isWritingStdCXXNamedModules())
+    for (CXXRecordDecl *RD : PendingEmittingVTables)
+      GetDeclRef(RD);
+  else
+    PendingEmittingVTables.clear();
 }
 
 void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
@@ -5288,6 +5307,17 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   }
   if (!DeleteExprsToAnalyze.empty())
     Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
+
+  RecordData VTablesToEmit;
+  for (CXXRecordDecl *RD : PendingEmittingVTables) {
+    if (!wasDeclEmitted(RD))
+      continue;
+
+    AddDeclRef(RD, VTablesToEmit);
+  }
+
+  if (!VTablesToEmit.empty())
+    Stream.EmitRecord(VTABLES_TO_EMIT, VTablesToEmit);
 }
 
 ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,

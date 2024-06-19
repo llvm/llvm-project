@@ -444,6 +444,50 @@ define %T2 @simple_struct(%T1 %0, %T2 %1, %T3, %T4) nounwind {
   ret %T2 %1
 }
 
+define void @cxx_method(ptr noundef nonnull align 8 dereferenceable(8) %0, ptr dead_on_unwind inreg noalias writable sret(i64) align 8 %1) {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$i8$i8i8;
+; CHECK: .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$i8$i8i8
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     stp     q8, q9, [sp, #32]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     stp     q10, q11, [sp, #64]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     stp     q12, q13, [sp, #96]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     stp     x29, x30, [sp, #160]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     add     x29, sp, #160
+; CHECK-NEXT:     .seh_add_fp     160
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     blr     x9
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     ldr     x1, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     mov     x8, x0
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #160]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     ldp     q12, q13, [sp, #96]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     ldp     q10, q11, [sp, #64]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     ldp     q8, q9, [sp, #32]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     ldp     q6, q7, [sp], #176              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x1
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+  ret void
+}
+
+
 ; Verify the hybrid bitmap
 ; CHECK-LABEL:    .section        .hybmp$x,"yi"
 ; CHECK-NEXT:     .symidx "#no_op"
@@ -475,4 +519,7 @@ define %T2 @simple_struct(%T1 %0, %T2 %1, %T3, %T4) nounwind {
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#simple_struct"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$m8$i8m8m16m24
+; CHECK-NEXT:     .word   1
+; CHECK-NEXT:     .symidx "#cxx_method"
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$i8$i8i8
 ; CHECK-NEXT:     .word   1
