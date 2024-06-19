@@ -1982,7 +1982,8 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       // It may be that the Init expression uses other uninitialized memory,
       // but auto-var-init here would not help, as auto-init would get
       // overwritten by Init.
-      if (!D.getType()->isScalarType() || isAccessedBy(D, Init)) {
+      if (!D.getType()->isScalarType() || capturedByInit ||
+          isAccessedBy(D, Init)) {
         initializeWhatIsTechnicallyUninitialized(Loc);
       }
     }

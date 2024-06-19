@@ -46,6 +46,17 @@ void test_selfinit_lambda_call() {
   used(self);
 }
 
+// Scalar with a self-reference: does need auto-init.
+// UNINIT-LABEL:  test_selfinit_gnu_stmt_expression(
+// ZERO-LABEL:    test_selfinit_gnu_stmt_expression(
+// ZERO: store i32 0, ptr %self, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: test_selfinit_gnu_stmt_expression(
+// PATTERN: store i32 -1431655766, ptr %self, align 4, !annotation [[AUTO_INIT:!.+]]
+void test_selfinit_gnu_stmt_expression() {
+  int self = ({int x = self; x + 1; });
+  used(self);
+}
+
 // Not a scalar: auto-init just in case
 // UNINIT-LABEL:  test_nonscalar_call(
 // ZERO-LABEL:    test_nonscalar_call(
