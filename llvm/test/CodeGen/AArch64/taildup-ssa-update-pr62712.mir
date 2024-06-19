@@ -66,7 +66,7 @@ body:             |
 
 ...
 
-# In test2 there are two PHI:s already present, one with the wanted register
+# In test2 there are two PHIs already present, one with the wanted register
 # class. No idea if this is a common scenario in reality (hand written mir
 # test case).
 # FIXME: Can we pick the best PHI directly instead of getting a COPY from the
@@ -126,7 +126,7 @@ body:             |
     $x0 = COPY undef $x0, implicit %3:fpr32
 ...
 
-# In test3 we have multiple uses, and in multiple BB:s. This test is to show
+# In test3 we have multiple uses, and in multiple BBs. This test is to show
 # that we get one COPY instruction inserted for each BB where there is a use.
 ---
 name:            test3
