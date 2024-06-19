@@ -211,6 +211,11 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
 ///      static sizes in `shape`.
 LogicalResult isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                        ArrayRef<int64_t> inputVectorSizes);
+
+/// Returns true if the leading dim(s) of `type` are fixed and the trailing dim
+/// is scalable.
+bool isTrailingDimScalable(VectorType type);
+
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector

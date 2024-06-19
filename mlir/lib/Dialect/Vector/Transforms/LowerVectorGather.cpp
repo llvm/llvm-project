@@ -55,6 +55,8 @@ namespace {
 /// ```
 ///
 /// When applied exhaustively, this will produce a sequence of 1-d gather ops.
+///
+/// Supports vector types with trailing scalable dim.
 struct FlattenGather : OpRewritePattern<vector::GatherOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -63,6 +65,12 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
     VectorType resultTy = op.getType();
     if (resultTy.getRank() < 2)
       return rewriter.notifyMatchFailure(op, "already flat");
+
+    // Unrolling doesn't take vscale into account. Pattern is disabled for
+    // vectors with leading scalable dim(s).
+    if (resultTy.isScalable() && !isTrailingDimScalable(resultTy))
+      return rewriter.notifyMatchFailure(
+          op, "vector type must be fixed-width or scalable in trailing dim");
 
     Location loc = op.getLoc();
     Value indexVec = op.getIndexVec();
@@ -73,7 +81,8 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
         loc, resultTy, rewriter.getZeroAttr(resultTy));
 
     Type subTy = VectorType::get(resultTy.getShape().drop_front(),
-                                 resultTy.getElementType());
+                                 resultTy.getElementType(),
+                                 resultTy.getScalableDims().drop_front());
 
     for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
       int64_t thisIdx[1] = {i};

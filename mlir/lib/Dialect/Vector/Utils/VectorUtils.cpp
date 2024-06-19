@@ -396,3 +396,8 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
   }
   return success();
 }
+
+bool vector::isTrailingDimScalable(VectorType type) {
+  return type.getRank() >= 1 && type.getScalableDims().back() &&
+         !llvm::is_contained(type.getScalableDims().drop_back(), true);
+}
