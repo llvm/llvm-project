@@ -4,15 +4,11 @@
 declare void @use(i1)
 
 define void @a_or_b(i32 %a, i32 %b)  {
-; CHECK-LABEL: define void @src(
+; CHECK-LABEL: define void @a_or_b(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[A_EQ_ZERO:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[B_NE_ZERO:%.*]] = icmp ne i32 [[B]], 0
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[A_EQ_ZERO]], [[B_NE_ZERO]]
-; CHECK-NEXT:    [[A_NE_ZERO:%.*]] = icmp ne i32 [[A]], 0
-; CHECK-NEXT:    [[B_EQ_ZERO:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[A_NE_ZERO]], [[B_EQ_ZERO]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND_1]], [[AND_2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    [[OR:%.*]] = xor i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    call void @use(i1 [[OR]])
 ; CHECK-NEXT:    ret void
 ;
@@ -27,42 +23,53 @@ define void @a_or_b(i32 %a, i32 %b)  {
   ret void
 }
 
-
-define void @a_or_b_zero(i32 %a, i32 %b)  {
-; CHECK-LABEL: define void @src(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[A_EQ_ZERO:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[B_NE_ZERO:%.*]] = icmp ne i32 [[B]], 0
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[A_EQ_ZERO]], [[B_NE_ZERO]]
-; CHECK-NEXT:    [[A_NE_ZERO:%.*]] = icmp ne i32 [[A]], 0
-; CHECK-NEXT:    [[B_EQ_ZERO:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[A_NE_ZERO]], [[B_EQ_ZERO]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND_1]], [[AND_2]]
+define void @a_or_b_const(i32 %a, i32 %b, i32 %c)  {
+; CHECK-LABEL: define void @a_or_b_const(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A]], [[C]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[B]], [[C]]
+; CHECK-NEXT:    [[OR:%.*]] = xor i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    call void @use(i1 [[OR]])
 ; CHECK-NEXT:    ret void
 ;
-  %a_eq_zero = icmp eq i32 %a, 0
-  %b_ne_zero = icmp ne i32 %b, 0
-  %and.1 = and i1 %a_eq_zero, %b_ne_zero
-  %a_ne_zero = icmp ne i32 %a, 0
-  %b_eq_zero = icmp eq i32 %b, 0
-  %and.2 = and i1 %a_ne_zero, %b_eq_zero
+  %a_eq_c = icmp eq i32 %a, %c
+  %b_ne_c = icmp ne i32 %b, %c
+  %and.1 = and i1 %a_eq_c, %b_ne_c
+  %a_ne_c = icmp ne i32 %a, %c
+  %b_eq_c = icmp eq i32 %b, %c
+  %and.2 = and i1 %a_ne_c, %b_eq_c
+  %or = or i1 %and.1, %and.2
+  call void @use(i1 %or)
+  ret void
+}
+
+define void @a_or_b_nullptr(ptr %a, ptr %b) {
+; CHECK-LABEL: define void @a_or_b_nullptr(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[B]], null
+; CHECK-NEXT:    [[OR:%.*]] = xor i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    call void @use(i1 [[OR]])
+; CHECK-NEXT:    ret void
+;
+  %a_null = icmp eq ptr %a, null
+  %b_null = icmp eq ptr %b, null
+  %a_not_null = icmp ne ptr %a, null
+  %b_not_null = icmp ne ptr %b, null
+  %and.1 = and i1 %a_null, %b_not_null
+  %and.2 = and i1 %a_not_null, %b_null
   %or = or i1 %and.1, %and.2
   call void @use(i1 %or)
   ret void
 }
 
 define void @a_or_b_multiple_uses(i32 %a, i32 %b)  {
-; CHECK-LABEL: define void @src(
+; CHECK-LABEL: define void @a_or_b_multiple_uses(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[A_EQ_ZERO:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[B_NE_ZERO:%.*]] = icmp ne i32 [[B]], 0
-; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[A_EQ_ZERO]], [[B_NE_ZERO]]
 ; CHECK-NEXT:    [[A_NE_ZERO:%.*]] = icmp ne i32 [[A]], 0
 ; CHECK-NEXT:    [[B_EQ_ZERO:%.*]] = icmp eq i32 [[B]], 0
 ; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[A_NE_ZERO]], [[B_EQ_ZERO]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND_1]], [[AND_2]]
-; CHECK-NEXT:    call void @use(i1 [[OR]])
+; CHECK-NEXT:    call void @use(i1 [[AND_2]])
 ; CHECK-NEXT:    ret void
 ;
   %a_eq_zero = icmp eq i32 %a, 0
@@ -77,16 +84,13 @@ define void @a_or_b_multiple_uses(i32 %a, i32 %b)  {
 }
 
 define void @a_or_b_multiple_uses_2(i32 %a, i32 %b)  {
-; CHECK-LABEL: define void @src(
+; CHECK-LABEL: define void @a_or_b_multiple_uses_2(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:    [[A_EQ_ZERO:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    [[B_NE_ZERO:%.*]] = icmp ne i32 [[B]], 0
+; CHECK-NEXT:    call void @use(i1 [[B_NE_ZERO]])
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[A_EQ_ZERO]], [[B_NE_ZERO]]
-; CHECK-NEXT:    [[A_NE_ZERO:%.*]] = icmp ne i32 [[A]], 0
-; CHECK-NEXT:    [[B_EQ_ZERO:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[A_NE_ZERO]], [[B_EQ_ZERO]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND_1]], [[AND_2]]
-; CHECK-NEXT:    call void @use(i1 [[OR]])
+; CHECK-NEXT:    call void @use(i1 [[AND_1]])
 ; CHECK-NEXT:    ret void
 ;
   %a_eq_zero = icmp eq i32 %a, 0
