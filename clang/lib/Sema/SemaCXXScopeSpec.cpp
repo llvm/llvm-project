@@ -422,102 +422,6 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon,
                                        bool OnlyNamespace) {
-#if 0
-  if (IdInfo.Identifier->isEditorPlaceholder())
-    return true;
-  LookupResult Found(*this, IdInfo.Identifier, IdInfo.IdentifierLoc,
-                     OnlyNamespace ? LookupNamespaceName
-                                   : LookupNestedNameSpecifierName);
-  QualType ObjectType = GetTypeFromParser(IdInfo.ObjectType);
-
-  // Determine where to perform name lookup
-  DeclContext *LookupCtx = nullptr;
-  bool isDependent = false;
-  if (IsCorrectedToColon)
-    *IsCorrectedToColon = false;
-  if (!ObjectType.isNull()) {
-    // This nested-name-specifier occurs in a member access expression, e.g.,
-    // x->B::f, and we are looking into the type of the object.
-    assert(!SS.isSet() && "ObjectType and scope specifier cannot coexist");
-    LookupCtx = computeDeclContext(ObjectType);
-    isDependent = !LookupCtx && ObjectType->isDependentType();
-  } else if (SS.isNotEmpty()) {
-    // This nested-name-specifier occurs after another nested-name-specifier,
-    // so look into the context associated with the prior nested-name-specifier.
-    LookupCtx = computeDeclContext(SS, EnteringContext);
-    isDependent = !LookupCtx && isDependentScopeSpecifier(SS);
-    // The declaration context must be complete.
-    if (LookupCtx && RequireCompleteDeclContext(SS, LookupCtx))
-      return true;
-    Found.setContextRange(SS.getRange());
-  }
-
-  bool ObjectTypeSearchedInScope = false;
-  if (LookupCtx) {
-    // Perform "qualified" name lookup into the declaration context we
-    // computed, which is either the type of the base of a member access
-    // expression or the declaration context associated with a prior
-    // nested-name-specifier.
-
-    LookupQualifiedName(Found, LookupCtx);
-
-    isDependent |= Found.wasNotFoundInCurrentInstantiation();
-  }
-
-  bool LookupFirstQualifierInScope =
-      Found.empty() && !ObjectType.isNull() && !isDependent;
-
-  // FIXME: We should still do the lookup if the object expression is dependent,
-  // but instead of using them we should store them via
-  // setFirstQualifierFoundInScope and pretend we found nothing.
-  if (SS.isEmpty() && (ObjectType.isNull() || LookupFirstQualifierInScope)) {
-    if (S) {
-      LookupName(Found, S);
-    } else if (LookupFirstQualifierInScope &&
-               !SS.getUnqualifiedLookups().empty()) {
-      Found.addAllDecls(SS.getUnqualifiedLookups());
-      Found.resolveKind();
-    }
-
-    if (!ObjectType.isNull())
-      ObjectTypeSearchedInScope = true;
-  }
-#if 0
-    if (!ObjectType.isNull() && Found.empty() && !isDependent) {
-      // C++ [basic.lookup.classref]p4:
-      //   If the id-expression in a class member access is a qualified-id of
-      //   the form
-      //
-      //        class-name-or-namespace-name::...
-      //
-      //   the class-name-or-namespace-name following the . or -> operator is
-      //   looked up both in the context of the entire postfix-expression and in
-      //   the scope of the class of the object expression. If the name is found
-      //   only in the scope of the class of the object expression, the name
-      //   shall refer to a class-name. If the name is found only in the
-      //   context of the entire postfix-expression, the name shall refer to a
-      //   class-name or namespace-name. [...]
-      //
-      // Qualified name lookup into a class will not find a namespace-name,
-      // so we do not need to diagnose that case specifically. However,
-      // this qualified name lookup may find nothing. In that case, perform
-      // unqualified name lookup in the given scope (if available) or
-      // reconstruct the result from when name lookup was performed at template
-      // definition time.
-      if (S)
-        LookupName(Found, S);
-      else if (ScopeLookupResult)
-        Found.addDecl(ScopeLookupResult);
-
-      ObjectTypeSearchedInScope = true;
-    }
-  } else if (!isDependent) {
-    // Perform unqualified name lookup in the current scope.
-    LookupName(Found, S);
-  }
-#endif
-#endif
-
   if (IdInfo.Identifier->isEditorPlaceholder())
     return true;
   if (IsCorrectedToColon)
@@ -528,28 +432,50 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                      OnlyNamespace ? LookupNamespaceName
                                    : LookupNestedNameSpecifierName);
 
+  // C++ [basic.lookup.qual.general]p3:
+  //   Qualified name lookup in a class, namespace, or enumeration performs a
+  //   search of the scope associated with it except as specified below.
   LookupParsedName(Found, S, &SS, ObjectType,
                    /*AllowBuiltinCreation=*/false, EnteringContext);
 
-  // If we performed lookup into a dependent context and did not find anything,
-  // that's fine: just build a dependent nested-name-specifier.
+  // C++ [basic.lookup.qual.general]p3:
+  //   [...] Unless otherwise specified, a qualified name undergoes qualified
+  //   name lookup in its lookup context from the point where it appears unless
+  //   the lookup context either is dependent and is not the current
+  //   instantiation or is not a class or class template.
   if (Found.wasNotFoundInCurrentInstantiation()) {
     // Don't speculate if we're just trying to improve error recovery.
     if (ErrorRecoveryLookup)
       return true;
 
-    // We were not able to compute the declaration context for a dependent
-    // base object type or prior nested-name-specifier, so this
-    // nested-name-specifier refers to an unknown specialization. Just build
-    // a dependent nested-name-specifier.
+    // The lookup context is dependent and either:
+    // - it is not the current instantiation, or
+    // - it is the current instantiation, it has at least one dependent base
+    //   class, and qualified lookup found nothing.
+    // Build a dependent nested-name-specifier. We will lookup the name again
+    // during instantiation.
     SS.Extend(Context, IdInfo.Identifier, IdInfo.IdentifierLoc, IdInfo.CCLoc);
     return false;
   }
 
   bool ObjectTypeSearchedInScope = false;
-  bool LookupFirstQualifierInScope = Found.empty() && !ObjectType.isNull();
 
-  if (LookupFirstQualifierInScope) {
+  // C++ [basic.lookup.qual.general]p2:
+  //   A member-qualified name is the (unique) component name, if any, of
+  //   - an unqualified-id or
+  //   - a nested-name-specifier of the form type-name :: or namespace-name ::
+  //   in the id-expression of a class member access expression.
+  //
+  // C++ [basic.lookup.qual.general]p3:
+  //   [...] If nothing is found by qualified lookup for a member-qualified
+  //   name that is the terminal name of a nested-name-specifier and is not
+  //   dependent, it undergoes unqualified lookup.
+  //
+  // In 'x.A::B::y', 'A' will undergo unqualified lookup if qualified lookup
+  // in the type of 'x' finds nothing. If the lookup context is dependent,
+  // we perform the unqualified lookup in the template definition context
+  // and store the results so we can replicate the lookup during instantiation.
+  if (Found.empty() && !ObjectType.isNull()) {
     if (S) {
       LookupName(Found, S);
     } else if (!SS.getUnqualifiedLookups().empty()) {

@@ -2843,9 +2843,6 @@ public:
   /// \param EnteringContext If true, enter the context specified by the
   ///        nested-name-specifier.
   /// \param SS Optional nested name specifier preceding the identifier.
-  /// \param ScopeLookupResult Provides the result of name lookup within the
-  ///        scope of the nested-name-specifier that was computed at template
-  ///        definition time.
   /// \param ErrorRecoveryLookup Specifies if the method is called to improve
   ///        error recovery and what kind of recovery is performed.
   /// \param IsCorrectedToColon If not null, suggestion of replace '::' -> ':'
@@ -2853,11 +2850,6 @@ public:
   ///       'true' if the identifier is treated as if it was followed by ':',
   ///        not '::'.
   /// \param OnlyNamespace If true, only considers namespaces in lookup.
-  ///
-  /// This routine differs only slightly from ActOnCXXNestedNameSpecifier, in
-  /// that it contains an extra parameter \p ScopeLookupResult, which provides
-  /// the result of name lookup within the scope of the nested-name-specifier
-  /// that was computed at template definition time.
   ///
   /// If ErrorRecoveryLookup is true, then this call is used to improve error
   /// recovery.  This means that it should not emit diagnostics, it should
