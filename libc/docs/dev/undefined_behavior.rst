@@ -95,7 +95,9 @@ Cached ``getpid/gettid``
 Since version ``2.25``, glibc removes its cache mechanism for ``getpid/gettid`` 
 (See the history section in https://man7.org/linux/man-pages/man2/getpid.2.html).
 LLVM's libc still implements the cache as it is useful for fast deadlock detection.
-The cache mechanism is also implemented in MUSL and bionic.
+The cache mechanism is also implemented in MUSL and bionic. The tid/pid cache can 
+be disabled by setting ``LIBC_CONF_ENABLE_TID_CACHE`` and ``LIBC_CONF_ENABLE_PID_CACHE``
+to ``false`` respectively.
 
 Unwrapped ``SYS_clone/SYS_fork/SYS_vfork``
 ------------------------------------------

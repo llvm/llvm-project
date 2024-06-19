@@ -11,6 +11,11 @@
 #include "hdr/types/pid_t.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/optimization.h"
+
+#ifndef LIBC_COPT_ENABLE_PID_CACHE
+#define LIBC_COPT_ENABLE_PID_CACHE 1
+#endif
+
 namespace LIBC_NAMESPACE {
 
 class ProcessIdentity {
@@ -23,9 +28,13 @@ public:
   LIBC_INLINE static void end_fork() { fork_inflight = false; }
   LIBC_INLINE static void refresh_cache() { cache = get_uncached(); }
   LIBC_INLINE static pid_t get() {
+#if LIBC_COPT_ENABLE_PID_CACHE
     if (LIBC_UNLIKELY(fork_inflight))
       return get_uncached();
     return cache;
+#else
+    return get_uncached();
+#endif
   }
 };
 

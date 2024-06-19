@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 
+#ifndef LIBC_COPT_ENABLE_TID_CACHE
+#define LIBC_COPT_ENABLE_TID_CACHE 1
+#endif
+
 #include "hdr/types/pid_t.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
@@ -233,10 +237,15 @@ struct Thread {
 
   LIBC_INLINE void refresh_tid() { this->attrib->tid = get_uncached_tid(); }
   LIBC_INLINE void invalidate_tid() { this->attrib->tid = -1; }
+
   LIBC_INLINE pid_t get_tid() {
+#if LIBC_COPT_ENABLE_TID_CACHE
     if (LIBC_UNLIKELY(this->attrib->tid < 0))
       return get_uncached_tid();
     return this->attrib->tid;
+#else
+    return get_uncached_tid();
+#endif
   }
 };
 
