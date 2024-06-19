@@ -480,7 +480,7 @@ bool X86AsmBackend::canPadBranches(MCObjectStreamer &OS) const {
   assert(allowAutoPadding() && "incorrect initialization!");
 
   // We only pad in text section.
-  if (!OS.getCurrentSectionOnly()->getKind().isText())
+  if (!OS.getCurrentSectionOnly()->isText())
     return false;
 
   // To be Done: Currently don't deal with Bundle cases.
@@ -878,7 +878,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm,
     LabeledFragments.insert(S.getFragment(false));
 
   for (MCSection &Sec : Asm) {
-    if (!Sec.getKind().isText())
+    if (!Sec.isText())
       continue;
 
     SmallVector<MCRelaxableFragment *, 4> Relaxable;

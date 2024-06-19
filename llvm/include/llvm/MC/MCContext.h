@@ -357,8 +357,7 @@ private:
                                               unsigned Instance);
 
   MCSectionELF *createELFSectionImpl(StringRef Section, unsigned Type,
-                                     unsigned Flags, SectionKind K,
-                                     unsigned EntrySize,
+                                     unsigned Flags, unsigned EntrySize,
                                      const MCSymbolELF *Group, bool IsComdat,
                                      unsigned UniqueID,
                                      const MCSymbolELF *LinkedToSym);

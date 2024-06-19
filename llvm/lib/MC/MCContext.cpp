@@ -479,7 +479,7 @@ MCSectionMachO *MCContext::getMachOSection(StringRef Segment, StringRef Section,
 }
 
 MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
-                                              unsigned Flags, SectionKind K,
+                                              unsigned Flags,
                                               unsigned EntrySize,
                                               const MCSymbolELF *Group,
                                               bool Comdat, unsigned UniqueID,
@@ -502,9 +502,14 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
   R->setBinding(ELF::STB_LOCAL);
   R->setType(ELF::STT_SECTION);
 
+  // TODO: remove this hack.
+  SectionKind Kind = SectionKind::getReadOnly();
+  if (Flags & ELF::SHF_EXECINSTR)
+    Kind = SectionKind::getText();
+
   auto *Ret = new (ELFAllocator.Allocate())
-      MCSectionELF(Section, Type, Flags, K, EntrySize, Group, Comdat, UniqueID,
-                   R, LinkedToSym);
+      MCSectionELF(Section, Type, Flags, Kind, EntrySize, Group, Comdat,
+                   UniqueID, R, LinkedToSym);
 
   auto *F = allocInitialFragment(*Ret);
   R->setFragment(F);
@@ -591,47 +596,8 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
 
   StringRef CachedName = EntryNewPair.first->getKey().take_front(SectionLen);
 
-  SectionKind Kind;
-  if (Flags & ELF::SHF_ARM_PURECODE)
-    Kind = SectionKind::getExecuteOnly();
-  else if (Flags & ELF::SHF_EXECINSTR)
-    Kind = SectionKind::getText();
-  else if (~Flags & ELF::SHF_WRITE)
-    Kind = SectionKind::getReadOnly();
-  else if (Flags & ELF::SHF_TLS)
-    Kind = (Type & ELF::SHT_NOBITS) ? SectionKind::getThreadBSS()
-                                    : SectionKind::getThreadData();
-  else
-    // Default to `SectionKind::getText()`. This is the default for gas as
-    // well. The condition that falls into this case is where we do not have any
-    // section flags and must infer a classification rather than where we have
-    // section flags (i.e. this is not that SHF_EXECINSTR is unset bur rather it
-    // is unknown).
-    Kind = llvm::StringSwitch<SectionKind>(CachedName)
-               .Case(".bss", SectionKind::getBSS())
-               .StartsWith(".bss.", SectionKind::getBSS())
-               .StartsWith(".gnu.linkonce.b.", SectionKind::getBSS())
-               .StartsWith(".llvm.linkonce.b.", SectionKind::getBSS())
-               .Case(".data", SectionKind::getData())
-               .Case(".data1", SectionKind::getData())
-               .Case(".data.rel.ro", SectionKind::getReadOnlyWithRel())
-               .StartsWith(".data.", SectionKind::getData())
-               .Case(".rodata", SectionKind::getReadOnly())
-               .Case(".rodata1", SectionKind::getReadOnly())
-               .StartsWith(".rodata.", SectionKind::getReadOnly())
-               .Case(".tbss", SectionKind::getThreadBSS())
-               .StartsWith(".tbss.", SectionKind::getThreadData())
-               .StartsWith(".gnu.linkonce.tb.", SectionKind::getThreadData())
-               .StartsWith(".llvm.linkonce.tb.", SectionKind::getThreadData())
-               .Case(".tdata", SectionKind::getThreadData())
-               .StartsWith(".tdata.", SectionKind::getThreadData())
-               .StartsWith(".gnu.linkonce.td.", SectionKind::getThreadData())
-               .StartsWith(".llvm.linkonce.td.", SectionKind::getThreadData())
-               .StartsWith(".debug_", SectionKind::getMetadata())
-               .Default(SectionKind::getReadOnly());
-
   MCSectionELF *Result =
-      createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
+      createELFSectionImpl(CachedName, Type, Flags, EntrySize, GroupSym,
                            IsComdat, UniqueID, LinkedToSym);
   EntryNewPair.first->second = Result;
 
@@ -643,8 +609,7 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
 
 MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group,
                                                bool IsComdat) {
-  return createELFSectionImpl(".group", ELF::SHT_GROUP, 0,
-                              SectionKind::getReadOnly(), 4, Group, IsComdat,
+  return createELFSectionImpl(".group", ELF::SHT_GROUP, 0, 4, Group, IsComdat,
                               MCSection::NonUniqueID, nullptr);
 }
 
@@ -751,18 +716,22 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
   if (!KeySym && UniqueID == GenericSectionID)
     return Sec;
 
+  // Kind is only used to populate isText of MCSection.
+  // TODO: remove Kind parameter from MCSection constructor
+  SectionKind Kind =
+      Sec->isText() ? SectionKind::getText() : SectionKind::getReadOnly();
+
   // If we have a key symbol, make an associative section with the same name and
   // kind as the normal section.
   unsigned Characteristics = Sec->getCharacteristics();
   if (KeySym) {
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
-    return getCOFFSection(Sec->getName(), Characteristics, Sec->getKind(),
+    return getCOFFSection(Sec->getName(), Characteristics, Kind,
                           KeySym->getName(),
                           COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
   }
 
-  return getCOFFSection(Sec->getName(), Characteristics, Sec->getKind(), "", 0,
-                        UniqueID);
+  return getCOFFSection(Sec->getName(), Characteristics, Kind, "", 0, UniqueID);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,

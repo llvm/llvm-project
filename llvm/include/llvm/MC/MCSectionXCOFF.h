@@ -37,6 +37,7 @@ class MCSectionXCOFF final : public MCSection {
   StringRef SymbolTableName;
   std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSubtypeFlags;
   bool MultiSymbolsAllowed;
+  SectionKind Kind;
   static constexpr unsigned DefaultAlignVal = 4;
   static constexpr unsigned DefaultTextAlignVal = 32;
 
@@ -47,7 +48,7 @@ class MCSectionXCOFF final : public MCSection {
       : MCSection(SV_XCOFF, Name, K, Begin),
         CsectProp(XCOFF::CsectProperties(SMC, ST)), QualName(QualName),
         SymbolTableName(SymbolTableName), DwarfSubtypeFlags(std::nullopt),
-        MultiSymbolsAllowed(MultiSymbolsAllowed) {
+        MultiSymbolsAllowed(MultiSymbolsAllowed), Kind(K) {
     assert(
         (ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM || ST == XCOFF::XTY_ER) &&
         "Invalid or unhandled type for csect.");
@@ -74,7 +75,7 @@ class MCSectionXCOFF final : public MCSection {
                  bool MultiSymbolsAllowed)
       : MCSection(SV_XCOFF, Name, K, Begin), QualName(QualName),
         SymbolTableName(SymbolTableName), DwarfSubtypeFlags(DwarfSubtypeFlags),
-        MultiSymbolsAllowed(MultiSymbolsAllowed) {
+        MultiSymbolsAllowed(MultiSymbolsAllowed), Kind(K) {
     assert(QualName != nullptr && "QualName is needed.");
 
     // FIXME: use a more meaningful name for non csect sections.
@@ -125,6 +126,7 @@ public:
   std::optional<XCOFF::CsectProperties> getCsectProp() const {
     return CsectProp;
   }
+  SectionKind getKind() const { return Kind; }
 };
 
 } // end namespace llvm

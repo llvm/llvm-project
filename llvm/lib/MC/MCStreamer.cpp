@@ -844,7 +844,7 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
       return Context.getCOFFSection(
           SectionName,
           MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
-          MainCFISecCOFF->getKind(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
+          SectionKind::getData(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
     }
   }
 
