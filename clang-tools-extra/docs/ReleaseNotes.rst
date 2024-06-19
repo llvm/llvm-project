@@ -2,9 +2,13 @@
 Extra Clang Tools |release| |ReleaseNotesTitle|
 ====================================================
 
+This is a test!
+
 .. contents::
    :local:
    :depth: 3
+
+   I'm the best!
 
 Written by the `LLVM Team <https://llvm.org/>`_
 
