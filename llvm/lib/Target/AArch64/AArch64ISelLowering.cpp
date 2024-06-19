@@ -22368,7 +22368,8 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   ComparisonResult = DAG.getSExtOrTrunc(ComparisonResult, DL, VecVT);
 
   SmallVector<SDValue, 16> MaskConstants;
-  if (VecVT == MVT::v16i8) {
+  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
+      VecVT == MVT::v16i8) {
     // v16i8 is a special case, as we have 16 entries but only 8 positional bits
     // per entry. We split it into two halves, apply the mask, zip the halves to
     // create 8x 16-bit values, and the perform the vector reduce.
