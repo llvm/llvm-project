@@ -45,7 +45,7 @@ class MCSectionXCOFF final : public MCSection {
                  XCOFF::SymbolType ST, SectionKind K, MCSymbolXCOFF *QualName,
                  MCSymbol *Begin, StringRef SymbolTableName,
                  bool MultiSymbolsAllowed)
-      : MCSection(SV_XCOFF, Name, K, Begin),
+      : MCSection(SV_XCOFF, Name, K.isText(), Begin),
         CsectProp(XCOFF::CsectProperties(SMC, ST)), QualName(QualName),
         SymbolTableName(SymbolTableName), DwarfSubtypeFlags(std::nullopt),
         MultiSymbolsAllowed(MultiSymbolsAllowed), Kind(K) {
@@ -73,7 +73,7 @@ class MCSectionXCOFF final : public MCSection {
                  XCOFF::DwarfSectionSubtypeFlags DwarfSubtypeFlags,
                  MCSymbol *Begin, StringRef SymbolTableName,
                  bool MultiSymbolsAllowed)
-      : MCSection(SV_XCOFF, Name, K, Begin), QualName(QualName),
+      : MCSection(SV_XCOFF, Name, K.isText(), Begin), QualName(QualName),
         SymbolTableName(SymbolTableName), DwarfSubtypeFlags(DwarfSubtypeFlags),
         MultiSymbolsAllowed(MultiSymbolsAllowed), Kind(K) {
     assert(QualName != nullptr && "QualName is needed.");

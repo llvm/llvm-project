@@ -502,14 +502,8 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
   R->setBinding(ELF::STB_LOCAL);
   R->setType(ELF::STT_SECTION);
 
-  // TODO: remove this hack.
-  SectionKind Kind = SectionKind::getReadOnly();
-  if (Flags & ELF::SHF_EXECINSTR)
-    Kind = SectionKind::getText();
-
-  auto *Ret = new (ELFAllocator.Allocate())
-      MCSectionELF(Section, Type, Flags, Kind, EntrySize, Group, Comdat,
-                   UniqueID, R, LinkedToSym);
+  auto *Ret = new (ELFAllocator.Allocate()) MCSectionELF(
+      Section, Type, Flags, EntrySize, Group, Comdat, UniqueID, R, LinkedToSym);
 
   auto *F = allocInitialFragment(*Ret);
   R->setFragment(F);
@@ -525,8 +519,8 @@ MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
   std::tie(I, Inserted) = RelSecNames.insert(std::make_pair(Name.str(), true));
 
   return createELFSectionImpl(
-      I->getKey(), Type, Flags, SectionKind::getReadOnly(), EntrySize, Group,
-      true, true, cast<MCSymbolELF>(RelInfoSection->getBeginSymbol()));
+      I->getKey(), Type, Flags, EntrySize, Group, true, true,
+      cast<MCSymbolELF>(RelInfoSection->getBeginSymbol()));
 }
 
 MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
@@ -672,7 +666,6 @@ MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics,
-                                         SectionKind Kind,
                                          StringRef COMDATSymName, int Selection,
                                          unsigned UniqueID,
                                          const char *BeginSymName) {
@@ -695,7 +688,7 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
 
   StringRef CachedName = Iter->first.SectionName;
   MCSectionCOFF *Result = new (COFFAllocator.Allocate()) MCSectionCOFF(
-      CachedName, Characteristics, COMDATSymbol, Selection, Kind, Begin);
+      CachedName, Characteristics, COMDATSymbol, Selection, Begin);
 
   Iter->second = Result;
   return Result;
@@ -703,9 +696,8 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics,
-                                         SectionKind Kind,
                                          const char *BeginSymName) {
-  return getCOFFSection(Section, Characteristics, Kind, "", 0, GenericSectionID,
+  return getCOFFSection(Section, Characteristics, "", 0, GenericSectionID,
                         BeginSymName);
 }
 
@@ -716,22 +708,16 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
   if (!KeySym && UniqueID == GenericSectionID)
     return Sec;
 
-  // Kind is only used to populate isText of MCSection.
-  // TODO: remove Kind parameter from MCSection constructor
-  SectionKind Kind =
-      Sec->isText() ? SectionKind::getText() : SectionKind::getReadOnly();
-
   // If we have a key symbol, make an associative section with the same name and
   // kind as the normal section.
   unsigned Characteristics = Sec->getCharacteristics();
   if (KeySym) {
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
-    return getCOFFSection(Sec->getName(), Characteristics, Kind,
-                          KeySym->getName(),
+    return getCOFFSection(Sec->getName(), Characteristics, KeySym->getName(),
                           COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
   }
 
-  return getCOFFSection(Sec->getName(), Characteristics, Kind, "", 0, UniqueID);
+  return getCOFFSection(Sec->getName(), Characteristics, "", 0, UniqueID);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
@@ -851,9 +837,7 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
 }
 
 MCSectionSPIRV *MCContext::getSPIRVSection() {
-  MCSymbol *Begin = nullptr;
-  MCSectionSPIRV *Result = new (SPIRVAllocator.Allocate())
-      MCSectionSPIRV(SectionKind::getText(), Begin);
+  MCSectionSPIRV *Result = new (SPIRVAllocator.Allocate()) MCSectionSPIRV();
 
   allocInitialFragment(*Result);
   return Result;

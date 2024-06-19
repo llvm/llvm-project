@@ -601,13 +601,11 @@ public:
                                 MCSection *Parent, const MCExpr *SubsectionId);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
-                                SectionKind Kind, StringRef COMDATSymName,
-                                int Selection,
+                                StringRef COMDATSymName, int Selection,
                                 unsigned UniqueID = GenericSectionID,
                                 const char *BeginSymName = nullptr);
 
   MCSectionCOFF *getCOFFSection(StringRef Section, unsigned Characteristics,
-                                SectionKind Kind,
                                 const char *BeginSymName = nullptr);
 
   /// Gets or creates a section equivalent to Sec that is associated with the

@@ -127,7 +127,7 @@ protected:
   StringRef Name;
   SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, SectionKind K, MCSymbol *Begin);
+  MCSection(SectionVariant V, StringRef Name, bool IsText, MCSymbol *Begin);
   ~MCSection();
 
 public:

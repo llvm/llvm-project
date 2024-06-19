@@ -51,8 +51,8 @@ class MCSectionWasm final : public MCSection {
   friend class MCContext;
   MCSectionWasm(StringRef Name, SectionKind K, unsigned SegmentFlags,
                 const MCSymbolWasm *Group, unsigned UniqueID, MCSymbol *Begin)
-      : MCSection(SV_Wasm, Name, K, Begin), UniqueID(UniqueID), Group(Group),
-        IsWasmData(K.isReadOnly() || K.isWriteable()),
+      : MCSection(SV_Wasm, Name, K.isText(), Begin), UniqueID(UniqueID),
+        Group(Group), IsWasmData(K.isReadOnly() || K.isWriteable()),
         IsMetadata(K.isMetadata()), SegmentFlags(SegmentFlags) {}
 
 public:
