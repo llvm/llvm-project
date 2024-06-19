@@ -23,11 +23,17 @@ struct trivially_copyable {
   int arr[4];
 };
 
-struct trivially_copyable_no_assignment {
+struct trivially_copyable_no_copy_assignment {
   int arr[4];
-  trivially_copyable_no_assignment& operator=(const trivially_copyable_no_assignment&) = delete;
+  trivially_copyable_no_copy_assignment& operator=(const trivially_copyable_no_copy_assignment&) = delete;
 };
-static_assert(std::is_trivially_copyable<trivially_copyable_no_assignment>::value, "");
+static_assert(std::is_trivially_copyable<trivially_copyable_no_copy_assignment>::value, "");
+
+struct trivially_copyable_no_move_assignment {
+  int arr[4];
+  trivially_copyable_no_move_assignment& operator=(const trivially_copyable_no_move_assignment&) = delete;
+};
+static_assert(std::is_trivially_copyable<trivially_copyable_no_move_assignment>::value, "");
 
 struct trivially_copyable_no_construction {
   int arr[4];
@@ -47,9 +53,11 @@ static_assert(!std::is_trivially_copyable<std::pair<char, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<std::pair<char, char>, int> >::value, "");
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable, int> >::value, "");
 #if TEST_STD_VER == 03 // Known ABI difference
-static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_assignment, int> >::value, "");
+static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_copy_assignment, int> >::value, "");
+static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_move_assignment, int> >::value, "");
 #else
-static_assert(std::is_trivially_copyable<std::pair<trivially_copyable_no_assignment, int> >::value, "");
+static_assert(std::is_trivially_copyable<std::pair<trivially_copyable_no_copy_assignment, int> >::value, "");
+static_assert(std::is_trivially_copyable<std::pair<trivially_copyable_no_move_assignment, int> >::value, "");
 #endif
 static_assert(!std::is_trivially_copyable<std::pair<trivially_copyable_no_construction, int> >::value, "");
 
