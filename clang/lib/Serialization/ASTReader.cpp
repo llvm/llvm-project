@@ -7401,6 +7401,11 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/AMDGPUTypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");
