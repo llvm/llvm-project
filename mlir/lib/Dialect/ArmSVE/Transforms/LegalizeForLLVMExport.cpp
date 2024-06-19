@@ -140,6 +140,28 @@ using ConvertFromSvboolOpLowering =
 using ZipX2OpLowering = OneToOneConvertToLLVMPattern<ZipX2Op, ZipX2IntrOp>;
 using ZipX4OpLowering = OneToOneConvertToLLVMPattern<ZipX4Op, ZipX4IntrOp>;
 
+/// Lower `arm_sve.psel` to LLVM intrinsics. This is almost a 1-to-1 conversion
+/// but first input (P1) and result predicates need conversion to/from svbool.
+struct PselOpLowering : public ConvertOpToLLVMPattern<PselOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(PselOp pselOp, PselOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto svboolType = VectorType::get(16, rewriter.getI1Type(), true);
+    auto loc = pselOp.getLoc();
+    auto svboolP1 = rewriter.create<ConvertToSvboolIntrOp>(loc, svboolType,
+                                                           adaptor.getP1());
+    auto indexI32 = rewriter.create<arith::IndexCastOp>(
+        loc, rewriter.getI32Type(), pselOp.getIndex());
+    auto pselIntr = rewriter.create<PselIntrOp>(loc, svboolType, svboolP1,
+                                                pselOp.getP2(), indexI32);
+    rewriter.replaceOpWithNewOp<ConvertFromSvboolIntrOp>(
+        pselOp, adaptor.getP1().getType(), pselIntr);
+    return success();
+  }
+};
+
 /// Converts `vector.create_mask` ops that match the size of an SVE predicate
 /// to the `whilelt` intrinsic. This produces more canonical codegen than the
 /// generic LLVM lowering, see https://github.com/llvm/llvm-project/issues/81840
@@ -202,7 +224,8 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                ConvertToSvboolOpLowering,
                ConvertFromSvboolOpLowering,
                ZipX2OpLowering,
-               ZipX4OpLowering>(converter);
+               ZipX4OpLowering,
+               PselOpLowering>(converter);
   // Add vector.create_mask conversion with a high benefit as it produces much
   // nicer code than the generic lowering.
   patterns.add<CreateMaskOpLowering>(converter, /*benefit=*/4096);
@@ -229,6 +252,7 @@ void mlir::configureArmSVELegalizeForExportTarget(
                     ConvertFromSvboolIntrOp,
                     ZipX2IntrOp,
                     ZipX4IntrOp,
+                    PselIntrOp,
                     WhileLTIntrOp>();
   target.addIllegalOp<SdotOp,
                       SmmlaOp,
