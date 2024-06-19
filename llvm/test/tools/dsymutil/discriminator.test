@@ -1,4 +1,4 @@
-; The DWARF at Inputs/discriminator.arm64 this test was produced by compiling
+; The input at Inputs/discriminator.arm64 was produced by compiling
 ;
 ;   __attribute__((noinline))
 ;   int foo(int a, int b, int c) {
