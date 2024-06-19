@@ -1602,8 +1602,10 @@ Currently, only the following parameter attributes are defined:
     through this pointer argument (even though it may read from the memory that
     the pointer points to).
 
-    If a function reads from a writeonly pointer argument, the behavior is
-    undefined.
+    This attribute is understood in the same way as the ``memory(write)``
+    attribute. That is, the pointer may still be read as long as the read is
+    not observable outside the function. See the ``memory`` documentation for
+    precise semantics.
 
 ``writable``
     This attribute is only meaningful in conjunction with ``dereferenceable(N)``
@@ -1976,6 +1978,21 @@ example:
       and additionally write argument memory.
     - ``memory(readwrite, argmem: none)``: May access any memory apart from
       argument memory.
+
+    The supported access kinds are:
+
+    - ``readwrite``: Any kind of access to the location is allowed.
+    - ``read``: The location is only read. Writing to the location is immediate
+      undefined behavior. This includes the case where the location is read from
+      and then the same value is written back.
+    - ``write``: Only writes to the location are observable outside the function
+      call. However, the function may still internally read the location after
+      writing it, as this is not observable. Reading the location prior to
+      writing it results in a poison value.
+    - ``none``: No reads or writes to the location are observed outside the
+      function. It is always valid to read and write allocas, and to read global
+      constants, even if ``memory(none)`` is used, as these effects are not
+      externally observable.
 
     The supported memory location kinds are:
 
@@ -15379,6 +15396,228 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``tan``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.asin.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.asin`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.asin.f32(float  %Val)
+      declare double    @llvm.asin.f64(double %Val)
+      declare x86_fp80  @llvm.asin.f80(x86_fp80  %Val)
+      declare fp128     @llvm.asin.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.asin.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.asin.*``' intrinsics return the arcsine of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``asin``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.acos.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.acos`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.acos.f32(float  %Val)
+      declare double    @llvm.acos.f64(double %Val)
+      declare x86_fp80  @llvm.acos.f80(x86_fp80  %Val)
+      declare fp128     @llvm.acos.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.acos.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.acos.*``' intrinsics return the arccosine of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``acos``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.atan.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.atan`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.atan.f32(float  %Val)
+      declare double    @llvm.atan.f64(double %Val)
+      declare x86_fp80  @llvm.atan.f80(x86_fp80  %Val)
+      declare fp128     @llvm.atan.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.atan.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.atan.*``' intrinsics return the arctangent of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``atan``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.sinh.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sinh`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.sinh.f32(float  %Val)
+      declare double    @llvm.sinh.f64(double %Val)
+      declare x86_fp80  @llvm.sinh.f80(x86_fp80  %Val)
+      declare fp128     @llvm.sinh.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.sinh.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.sinh.*``' intrinsics return the hyperbolic sine of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``sinh``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.cosh.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.cosh`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.cosh.f32(float  %Val)
+      declare double    @llvm.cosh.f64(double %Val)
+      declare x86_fp80  @llvm.cosh.f80(x86_fp80  %Val)
+      declare fp128     @llvm.cosh.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.cosh.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.cosh.*``' intrinsics return the hyperbolic cosine of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``cosh``' function but without
+trapping or setting ``errno``.
+
+When specified with the fast-math-flag 'afn', the result may be approximated
+using a less accurate calculation.
+
+'``llvm.tanh.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.tanh`` on any
+floating-point or vector of floating-point type. Not all targets support
+all types however.
+
+::
+
+      declare float     @llvm.tanh.f32(float  %Val)
+      declare double    @llvm.tanh.f64(double %Val)
+      declare x86_fp80  @llvm.tanh.f80(x86_fp80  %Val)
+      declare fp128     @llvm.tanh.f128(fp128 %Val)
+      declare ppc_fp128 @llvm.tanh.ppcf128(ppc_fp128  %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.tanh.*``' intrinsics return the hyperbolic tangent of the operand.
+
+Arguments:
+""""""""""
+
+The argument and return value are floating-point numbers of the same type.
+
+Semantics:
+""""""""""
+
+Return the same value as a corresponding libm '``tanh``' function but without
 trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
