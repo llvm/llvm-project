@@ -740,6 +740,8 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
     Decl *UED = nullptr;
 
+    // FIXME: identifier and annot_template_id handling is very similar to
+    // ParseBaseTypeSpecifier. It should be factored out into a function.
     if (Tok.is(tok::identifier)) {
       IdentifierInfo *IdentInfo = Tok.getIdentifierInfo();
       SourceLocation IdentLoc = ConsumeToken();
@@ -1434,6 +1436,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   }
 
   // Check whether we have a template-id that names a type.
+  // FIXME: identifier and annot_template_id handling in ParseUsingDeclaration
+  // work very similarly. It should be refactored into a separate function.
   if (Tok.is(tok::annot_template_id)) {
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     if (TemplateId->mightBeType()) {
