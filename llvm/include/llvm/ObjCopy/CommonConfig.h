@@ -44,45 +44,6 @@ struct MachineInfo {
   bool IsLittleEndian;
 };
 
-// Flags set by --set-section-flags or --rename-section. Interpretation of these
-// is format-specific and not all flags are meaningful for all object file
-// formats. This is a bitmask; many section flags may be set.
-enum SectionFlag {
-  SecNone = 0,
-  SecAlloc = 1 << 0,
-  SecLoad = 1 << 1,
-  SecNoload = 1 << 2,
-  SecReadonly = 1 << 3,
-  SecDebug = 1 << 4,
-  SecCode = 1 << 5,
-  SecData = 1 << 6,
-  SecRom = 1 << 7,
-  SecMerge = 1 << 8,
-  SecStrings = 1 << 9,
-  SecContents = 1 << 10,
-  SecShare = 1 << 11,
-  SecExclude = 1 << 12,
-  SecLarge = 1 << 13,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/SecLarge)
-};
-
-struct SectionRename {
-  StringRef OriginalName;
-  StringRef NewName;
-  std::optional<SectionFlag> NewFlags;
-};
-
-struct SectionFlagsUpdate {
-  StringRef Name;
-  SectionFlag NewFlags;
-};
-
-enum class DiscardType {
-  None,   // Default
-  All,    // --discard-all (-x)
-  Locals, // --discard-locals (-X)
-};
-
 enum class MatchStyle {
   Literal,  // Default for symbols.
   Wildcard, // Default for sections, or enabled with --wildcard (-w).
@@ -191,6 +152,61 @@ struct NewSectionInfo {
   std::shared_ptr<MemoryBuffer> SectionData;
 };
 
+// Flags set by --set-section-flags or --rename-section. Interpretation of these
+// is format-specific and not all flags are meaningful for all object file
+// formats. This is a bitmask; many section flags may be set.
+enum SectionFlag {
+  SecNone = 0,
+  SecAlloc = 1 << 0,
+  SecLoad = 1 << 1,
+  SecNoload = 1 << 2,
+  SecReadonly = 1 << 3,
+  SecDebug = 1 << 4,
+  SecCode = 1 << 5,
+  SecData = 1 << 6,
+  SecRom = 1 << 7,
+  SecMerge = 1 << 8,
+  SecStrings = 1 << 9,
+  SecContents = 1 << 10,
+  SecShare = 1 << 11,
+  SecExclude = 1 << 12,
+  SecLarge = 1 << 13,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/SecLarge)
+};
+
+struct SectionRename {
+  StringRef OriginalName;
+  StringRef NewName;
+  std::optional<SectionFlag> NewFlags;
+};
+
+struct SectionFlagsUpdate {
+  StringRef Name;
+  SectionFlag NewFlags;
+};
+
+struct AddressUpdate {
+  uint64_t Value = 0;
+  bool Absolute = false;
+  bool Negative = false;
+};
+
+struct SectionPatternAddressUpdate {
+  NameMatcher SectionPattern;
+  AddressUpdate Update;
+};
+
+struct SectionNameAddressUpdate {
+  StringRef Name;
+  AddressUpdate Update;
+};
+
+enum class DiscardType {
+  None,   // Default
+  All,    // --discard-all (-x)
+  Locals, // --discard-locals (-X)
+};
+
 // Configuration for copying/stripping a single file.
 struct CommonConfig {
   // Main input/output options
@@ -219,6 +235,7 @@ struct CommonConfig {
   SmallVector<NewSectionInfo, 0> AddSection;
   SmallVector<StringRef, 0> DumpSection;
   SmallVector<NewSectionInfo, 0> UpdateSection;
+  SmallVector<SectionPatternAddressUpdate, 0> ChangeSectionAddress;
 
   // Section matchers
   NameMatcher KeepSection;
@@ -241,6 +258,7 @@ struct CommonConfig {
   StringMap<SectionFlagsUpdate> SetSectionFlags;
   StringMap<uint64_t> SetSectionType;
   StringMap<StringRef> SymbolsToRename;
+  StringMap<AddressUpdate> SectionsToUpdateAddress;
 
   // Symbol info specified by --add-symbol option.
   SmallVector<NewSymbolInfo, 0> SymbolsToAdd;

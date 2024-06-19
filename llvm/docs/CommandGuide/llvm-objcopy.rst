@@ -303,6 +303,15 @@ them.
 
  Shift LMA of non-zero-sized segments by ``<val>``.
 
+.. option:: --change-section-address <sectionpattern>{=+-}<val>, --adjust-section-vma
+
+ Change the address of ``<sectionpattern>`` to the specified value, or apply
+ offset to the current value. Can be specified multiple times to specify multiple
+ patterns. Each section is only modified by one --change-section-address
+ argument. Changes apply from the right of the command line. If a section name
+ matches multiple patterns, the rightmost change applies. Object file needs to be
+ relocatable.
+
 .. option:: --change-start <incr>, --adjust-start
 
  Add ``<incr>`` to the program's start address. Can be specified multiple

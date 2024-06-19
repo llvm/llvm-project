@@ -584,6 +584,65 @@ static Expected<int64_t> parseChangeSectionLMA(StringRef ArgValue,
   return *LMAValue;
 }
 
+static Expected<SectionPatternAddressUpdate>
+parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
+                       MatchStyle SectionMatchStyle,
+                       function_ref<Error(Error)> ErrorCallback) {
+
+  SectionPatternAddressUpdate PatternUpdate;
+  std::pair<StringRef, StringRef> UpdateParts;
+  std::string UpdateSymbol;
+
+  if (ArgValue.contains("+")) {
+    UpdateParts = ArgValue.split("+");
+    UpdateSymbol = '+';
+  } else if (ArgValue.contains("-")) {
+    UpdateParts = ArgValue.split("-");
+    UpdateSymbol = '-';
+    PatternUpdate.Update.Negative = true;
+  } else if (ArgValue.contains("=")) {
+    UpdateParts = ArgValue.split("=");
+    UpdateSymbol = '=';
+    PatternUpdate.Update.Absolute = true;
+  } else {
+    return createStringError(errc::invalid_argument,
+                             "bad format for " + OptionName +
+                                 ": argument value " + ArgValue +
+                                 " is invalid. See help");
+  }
+
+  if (UpdateParts.second.empty()) {
+    if (UpdateSymbol == "+" || UpdateSymbol == "-")
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing value of offset after '" +
+                                   UpdateSymbol + "'");
+    else if (UpdateSymbol == "=")
+      return createStringError(errc::invalid_argument,
+                               "bad format for " + OptionName +
+                                   ": missing address value after '='");
+  }
+  if (UpdateParts.first.empty())
+    return createStringError(
+        errc::invalid_argument,
+        "bad format for " + OptionName +
+            ": missing section pattern to apply address change to");
+
+  if (Error E = PatternUpdate.SectionPattern.addMatcher(NameOrPattern::create(
+          UpdateParts.first, SectionMatchStyle, ErrorCallback)))
+    return std::move(E);
+
+  auto AddrValue = getAsInteger<uint64_t>(UpdateParts.second);
+  if (!AddrValue)
+    return createStringError(AddrValue.getError(),
+                             "bad format for " + OptionName + ": value after " +
+                                 UpdateSymbol + " is " + UpdateParts.second +
+                                 " when it should be an integer");
+
+  PatternUpdate.Update.Value = *AddrValue;
+  return PatternUpdate;
+}
+
 // parseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
@@ -872,6 +931,16 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     if (!LMAValue)
       return LMAValue.takeError();
     Config.ChangeSectionLMAValAll = *LMAValue;
+  }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_change_section_address)) {
+    Expected<SectionPatternAddressUpdate> AddressUpdate =
+        parseChangeSectionAddr(Arg->getValue(), Arg->getSpelling(),
+                               SectionMatchStyle, ErrorCallback);
+    if (!AddressUpdate)
+      return AddressUpdate.takeError();
+    else
+      Config.ChangeSectionAddress.push_back(*AddressUpdate);
   }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {

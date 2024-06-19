@@ -1,0 +1,120 @@
+# RUN: yaml2obj --docnum=1 %s -o %ti
+
+# RUN: llvm-objcopy --adjust-section-vma *+0x20 %ti %to
+# RUN: llvm-readelf --section-headers %to | FileCheck %s --check-prefix=CHECK-ADD-ALL
+
+# RUN: llvm-objcopy --change-section-address *+0x20 %ti %to
+# RUN: llvm-readelf --section-headers %to | FileCheck %s --check-prefix=CHECK-ADD-ALL
+
+# RUN: llvm-objcopy --change-section-address .anotherone-0x30 %ti %to
+# RUN: llvm-readelf --section-headers %to | FileCheck %s --check-prefix=CHECK-SUB-SECTION
+
+# RUN: llvm-objcopy --change-section-address .text*+0x20 %ti %to
+# RUN: llvm-readelf --section-headers %to | FileCheck %s --check-prefix=CHECK-ADD-PATTERN
+
+# RUN: llvm-objcopy --change-section-address .text*=0x10 %ti %to
+# RUN: llvm-readelf --section-headers %to | FileCheck %s --check-prefix=CHECK-SET-PATTERN
+
+# RUN: llvm-objcopy --change-section-address .anotherone-0x30  --change-section-address .anotherone+0x20 %ti %to
+# RUN: llvm-readelf --section-headers %to | FileCheck %s --check-prefix=CHECK-USE-LAST
+
+# RUN: llvm-objcopy --change-section-address .anotherone=0x455 --change-section-address *+0x20 %ti %to
+# RUN: llvm-readelf --section-headers %to | FileCheck %s --check-prefix=CHECK-NOTSUPERSET-SET
+
+# RUN: llvm-objcopy --change-section-address *+0x20 --change-section-address .anotherone=0x455 %ti %to
+# RUN: llvm-readelf --section-headers %to | FileCheck %s --check-prefix=CHECK-SUPERSET-SET
+
+# CHECK-ADD-ALL:          [Nr] Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# CHECK-ADD-ALL:               .text1
+# CHECK-ADD-ALL-SAME:                                            0000000000000120
+# CHECK-ADD-ALL:               .text2
+# CHECK-ADD-ALL:               .anotherone
+# CHECK-ADD-ALL-SAME:                                            0000000000000320
+
+# CHECK-SUB-SECTION:           .text1
+# CHECK-SUB-SECTION-SAME:                                        0000000000000100
+# CHECK-SUB-SECTION:           .text2
+# CHECK-SUB-SECTION-SAME:                                        0000000000000200
+# CHECK-SUB-SECTION:           .anotherone
+# CHECK-SUB-SECTION-SAME:                                        00000000000002d0
+
+# CHECK-ADD-PATTERN:           .text1
+# CHECK-ADD-PATTERN-SAME:                                        0000000000000120
+# CHECK-ADD-PATTERN:           .text2
+# CHECK-ADD-PATTERN-SAME:                                        0000000000000220
+# CHECK-ADD-PATTERN:           .anotherone
+# CHECK-ADD-PATTERN-SAME:                                        0000000000000300
+
+# CHECK-SET-PATTERN:           .text1
+# CHECK-SET-PATTERN-SAME:                                        0000000000000010
+# CHECK-SET-PATTERN:           .text2
+# CHECK-SET-PATTERN-SAME:                                        0000000000000010
+# CHECK-SET-PATTERN:           .anotherone
+# CHECK-SET-PATTERN-SAME:                                        0000000000000300
+
+# CHECK-USE-LAST:              .anotherone
+# CHECK-USE-LAST-SAME:                                           0000000000000320
+
+# CHECK-NOTSUPERSET-SET:       .text1
+# CHECK-NOTSUPERSET-SET-SAME:                                    0000000000000120
+# CHECK-NOTSUPERSET-SET:       .text2
+# CHECK-NOTSUPERSET-SET-SAME:                                    0000000000000220
+# CHECK-NOTSUPERSET-SET:       .anotherone
+# CHECK-NOTSUPERSET-SET-SAME:                                    0000000000000320
+
+# CHECK-SUPERSET-SET:          .text1
+# CHECK-SUPERSET-SET-SAME:                                       0000000000000120
+# CHECK-SUPERSET-SET:          .text2
+# CHECK-SUPERSET-SET-SAME:                                       0000000000000220
+# CHECK-SUPERSET-SET:          .anotherone
+# CHECK-SUPERSET-SET-SAME:                                       0000000000000455
+
+# RUN: not llvm-objcopy --change-section-address .anotherone+0xffffffffffffff00 %ti 2>&1 | FileCheck %s --check-prefix=ERR-OVERFLOW
+# RUN: not llvm-objcopy --change-section-address *-0x2000 %ti 2>&1 | FileCheck %s --check-prefix=ERR-UNDERFLOW
+# RUN: not llvm-objcopy --change-section-address 0 %ti 2>&1 | FileCheck %s --check-prefix=ERR-IVALID-VAL
+# RUN: not llvm-objcopy --change-section-address .anotherone+0c50 %ti 2>&1 | FileCheck %s --check-prefix=ERR-NOT-INTEGER
+# RUN: not llvm-objcopy --change-section-address =0x10 %ti 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-SECTION
+# RUN: not llvm-objcopy --change-section-address =0x10 %ti 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-SECTION
+# RUN: not llvm-objcopy --change-section-address .text1- %ti 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-VALUE-MINUS
+# RUN: not llvm-objcopy --change-section-address .text1+ %ti 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-VALUE-PLUS
+# RUN: not llvm-objcopy --change-section-address .text1= %ti 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-VALUE-EQUAL
+
+# ERR-OVERFLOW: address 0x300 cannot be increased by 0xffffffffffffff00. The result would overflow
+# ERR-UNDERFLOW: address 0x100 cannot be decreased by 0x2000. The result would underflow
+# ERR-IVALID-VAL: error: bad format for --change-section-address: argument value 0 is invalid. See help
+# ERR-NOT-INTEGER: error: bad format for --change-section-address: value after + is 0c50 when it should be an integer
+# ERR-MISSING-SECTION: error: bad format for --change-section-address: missing section pattern to apply address change to
+# ERR-MISSING-VALUE-MINUS: error: bad format for --change-section-address: missing value of offset after '-'
+# ERR-MISSING-VALUE-PLUS: error: bad format for --change-section-address: missing value of offset after '+'
+# ERR-MISSING-VALUE-EQUAL: error: bad format for --change-section-address: missing address value after '='
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+Sections:
+  - Name:          .text1
+    Type:          SHT_PROGBITS
+    Size:          0x100
+    Address:       0x100
+  - Name:          .text2
+    Type:          SHT_PROGBITS
+    Size:          0x100
+    Address:       0x200
+  - Name:          .anotherone
+    Type:          SHT_PROGBITS
+    Size:          0x100
+    Address:       0x300
+
+# RUN: yaml2obj --docnum=2 %s -o %ti
+
+# RUN: not llvm-objcopy --change-section-address *+0x20 %ti  2>&1 | FileCheck %s --check-prefix=ERR-FILE-TYPE
+
+# ERR-FILE-TYPE: cannot change section address in a non-relocatable file
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
