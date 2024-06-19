@@ -80,7 +80,7 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // - `$_parser` is the OpAsmParser.
   // - `$_storage` is the location into which the value is to be placed if it is
   //  present.
-  // - `$_cxtx` is a `MLIRContext *`
+  // - `$_ctxt` is a `MLIRContext *`
   //
   // This defines the body of a function (typically a lambda) that returns a
   // ParseResult. There is an implicit `return success()` at the end of the parser
@@ -103,8 +103,6 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // This has the same context and substitutions as `parser` except that it is
   // required to return an OptionalParseResult.
   //
-  // Note that the printer for a property should always print a non-empty value.
-  //
   // If the optional parser doesn't parse anything, it should not set
   // $_storage, since the parser doesn't know if the default value has been
   // overwritten.
@@ -117,7 +115,10 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // - `$_ctxt` is a `MLIRContext *`
   //
   // This may be called in an expression context, so variable declarations must
-  // be praced within a new scope.
+  // be placed within a new scope.
+  //
+  // The printer for a property should always print a non-empty value - default value
+  // printing elision happens outside the context of this printing expression.
   code printer = "$_printer << $_storage";
 
   // The call expression to emit the storage type to bytecode.
@@ -344,6 +345,8 @@ class _makePropStorage<Property prop, string name> {
 /// The generic class for arrays of some other property, which is stored as a
 /// `SmallVector` of that property. This uses an `ArrayAttr` as its attribute form
 /// though subclasses can override this, as is the case with IntArrayAttr below.
+/// Those wishing to use a non-default number of SmallVector elements should
+/// subclass `ArrayProperty`.
 class ArrayProperty<Property elem = Property<>, string desc = ""> :
   Property<"::llvm::SmallVector<" # elem.storageType # ">", desc> {
   let summary = "array of " # elem.summary;
