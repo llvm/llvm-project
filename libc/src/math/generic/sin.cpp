@@ -19,6 +19,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+#include "src/math/generic/sincos_eval.h"
 
 #include "range_reduction_double_fma.h"
 
@@ -35,8 +36,6 @@ using LIBC_NAMESPACE::generic::range_reduction_small;
 using LIBC_NAMESPACE::fma::range_reduction_large;
 using LIBC_NAMESPACE::fma::range_reduction_large_f128;
 using LIBC_NAMESPACE::fma::range_reduction_small_f128;
-
-#include "sincos_eval.h"
 
 #if ((LIBC_MATH & LIBC_MATH_SKIP_ACCURATE_PASS) != 0)
 #define LIBC_MATH_SIN_SKIP_ACCURATE_PASS
@@ -388,8 +387,10 @@ LIBC_INLINE constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
 #ifdef LIBC_TARGET_CPU_HAS_FMA
 constexpr double ERR = 0x1.0p-70;
 #else
+// TODO: Improve non-FMA fast pass accuracy.
 constexpr double ERR = 0x1.0p-67;
 #endif // LIBC_TARGET_CPU_HAS_FMA
+
 #endif // !LIBC_MATH_SIN_SKIP_ACCURATE_PASS
 
 } // anonymous namespace
@@ -401,7 +402,7 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   uint16_t x_e = xbits.get_biased_exponent();
 
   DoubleDouble y;
-  int k;
+  unsigned k;
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
   constexpr int SMALL_EXPONENT = 32;
@@ -409,8 +410,9 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   constexpr int SMALL_EXPONENT = 23;
 #endif
 
+  // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + SMALL_EXPONENT)) {
-    // |x| < 2^32
+    // |x| < 2^-26
     if (LIBC_UNLIKELY(x_e < FPBits::EXP_BIAS - 26)) {
       // Signed zeros.
       if (LIBC_UNLIKELY(x == 0.0))
@@ -434,8 +436,9 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
     // // Small range reduction.
     k = range_reduction_small(x, y);
   } else {
+    // Inf or NaN
     if (LIBC_UNLIKELY(x_e > 2 * FPBits::EXP_BIAS)) {
-      // Inf or NaN
+      // sin(+-Inf) = NaN
       if (xbits.get_mantissa() == 0) {
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
@@ -443,7 +446,7 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
       return x + FPBits::quiet_nan().get_val();
     }
 
-    // // Large range reduction.
+    // Large range reduction.
     k = range_reduction_large(x, y);
   }
 
@@ -465,8 +468,8 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   // cos_k.lo = FPBits(FPBits(cos_k.hi).uintval() ^ cos_s).get_val();
 
   // Use 64-entry table instead:
-  // auto get_idx_dd = [](int kk) -> DoubleDouble {
-  //   int idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
+  // auto get_idx_dd = [](unsigned kk) -> DoubleDouble {
+  //   unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
   //   DoubleDouble ans = SIN_K_PI_OVER_128[idx];
   //   if (kk & 128) {
   //     ans.hi = -ans.hi;
@@ -546,8 +549,8 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
                                     COS_COEFFS[2], COS_COEFFS[3], COS_COEFFS[4],
                                     COS_COEFFS[5], COS_COEFFS[6]);
 
-  auto get_sin_k = [](int kk) -> Float128 {
-    int idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
+  auto get_sin_k = [](unsigned kk) -> Float128 {
+    unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
     Float128 ans = SIN_K_PI_OVER_128_F128[idx];
     if (kk & 128)
       ans.sign = Sign::NEG;
