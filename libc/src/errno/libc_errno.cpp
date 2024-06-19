@@ -36,13 +36,12 @@ void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_errno = a; }
 LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_errno; }
 
 #else
-// In overlay mode, we simply use the system errno.
-#include <errno.h>
-
 void LIBC_NAMESPACE::Errno::operator=(int a) { errno = a; }
 LIBC_NAMESPACE::Errno::operator int() { return errno; }
 
 #endif // LIBC_FULL_BUILD
 
+namespace LIBC_NAMESPACE {
 // Define the global `libc_errno` instance.
-LIBC_NAMESPACE::Errno libc_errno;
+Errno libc_errno;
+} // namespace LIBC_NAMESPACE

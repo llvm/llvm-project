@@ -106,11 +106,14 @@ def get_tidy_invocation(
     use_color,
     plugins,
     warnings_as_errors,
+    exclude_header_filter,
 ):
     """Gets a command line for clang-tidy."""
     start = [clang_tidy_binary]
     if allow_enabling_alpha_checkers:
         start.append("-allow-enabling-analyzer-alpha-checkers")
+    if exclude_header_filter is not None:
+        start.append("--exclude-header-filter=" + exclude_header_filter)
     if header_filter is not None:
         start.append("-header-filter=" + header_filter)
     if line_filter is not None:
@@ -228,6 +231,7 @@ def run_tidy(args, clang_tidy_binary, tmpdir, build_path, queue, lock, failed_fi
             args.use_color,
             args.plugins,
             args.warnings_as_errors,
+            args.exclude_header_filter,
         )
 
         proc = subprocess.Popen(
@@ -293,12 +297,27 @@ def main():
         "Use either -config-file or -config, not both.",
     )
     parser.add_argument(
+        "-exclude-header-filter",
+        default=None,
+        help="Regular expression matching the names of the "
+        "headers to exclude diagnostics from. Diagnostics from "
+        "the main file of each translation unit are always "
+        "displayed.",
+    )
+    parser.add_argument(
         "-header-filter",
         default=None,
         help="regular expression matching the names of the "
         "headers to output diagnostics from. Diagnostics from "
         "the main file of each translation unit are always "
         "displayed.",
+    )
+    parser.add_argument(
+        "-source-filter",
+        default=None,
+        help="Regular expression matching the names of the "
+        "source files from compilation database to output "
+        "diagnostics from.",
     )
     parser.add_argument(
         "-line-filter",
@@ -443,6 +462,7 @@ def main():
             args.use_color,
             args.plugins,
             args.warnings_as_errors,
+            args.exclude_header_filter,
         )
         invocation.append("-list-checks")
         invocation.append("-")
@@ -461,6 +481,19 @@ def main():
     files = set(
         [make_absolute(entry["file"], entry["directory"]) for entry in database]
     )
+
+    # Filter source files from compilation database.
+    if args.source_filter:
+        try:
+            source_filter_re = re.compile(args.source_filter)
+        except:
+            print(
+                "Error: unable to compile regex from arg -source-filter:",
+                file=sys.stderr,
+            )
+            traceback.print_exc()
+            sys.exit(1)
+        files = {f for f in files if source_filter_re.match(f)}
 
     max_task = args.j
     if max_task == 0:

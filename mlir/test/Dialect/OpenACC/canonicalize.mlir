@@ -114,10 +114,10 @@ func.func @testhostdataop(%a: memref<f32>, %ifCond: i1) -> () {
   %2 = arith.constant 10 : i32
   %false = arith.constant false
   acc.host_data dataOperands(%0 : memref<f32>) if(%false) {
-    acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+    acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
     } attributes { inclusiveUpperbound = array<i1: true> }
-    acc.loop (%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
+    acc.loop control(%iv : i32) = (%1 : i32) to (%2 : i32) step (%1 : i32) {
       acc.yield
     } attributes { inclusiveUpperbound = array<i1: true> }
     acc.terminator

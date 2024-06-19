@@ -46,7 +46,7 @@ static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
   return builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(value));
 }
 
-static bool isMemref(Value v) { return v.getType().isa<BaseMemRefType>(); }
+static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
 
 /// Return "true" if the given op is guaranteed to have neither "Allocate" nor
 /// "Free" side effects.
@@ -166,10 +166,8 @@ namespace {
 /// program have a corresponding de-allocation.
 class BufferDeallocation {
 public:
-  BufferDeallocation(Operation *op, bool privateFuncDynamicOwnership)
-      : state(op) {
-    options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
-  }
+  BufferDeallocation(Operation *op, DeallocationOptions options)
+      : state(op), options(options) {}
 
   /// Performs the actual placement/creation of all dealloc operations.
   LogicalResult deallocate(FunctionOpInterface op);
@@ -586,13 +584,9 @@ BufferDeallocation::updateFunctionSignature(FunctionOpInterface op) {
   if (!returnOperandTypes.empty())
     resultTypes = returnOperandTypes[0];
 
-  // TODO: it would be nice if the FunctionOpInterface had a method to not only
-  // get the function type but also set it.
-  op->setAttr(
-      "function_type",
-      TypeAttr::get(FunctionType::get(
-          op->getContext(), op.getFunctionBody().front().getArgumentTypes(),
-          resultTypes)));
+  op.setFunctionTypeAttr(TypeAttr::get(FunctionType::get(
+      op->getContext(), op.getFunctionBody().front().getArgumentTypes(),
+      resultTypes)));
 
   return success();
 }
@@ -828,10 +822,11 @@ FailureOr<Operation *> BufferDeallocation::handleInterface(CallOpInterface op) {
 
   // Lookup the function operation and check if it has private visibility. If
   // the function is referenced by SSA value instead of a Symbol, it's assumed
-  // to be always private.
+  // to be public. (And we cannot easily change the type of the SSA value
+  // anyway.)
   Operation *funcOp = op.resolveCallable(state.getSymbolTable());
-  bool isPrivate = true;
-  if (auto symbol = dyn_cast<SymbolOpInterface>(funcOp))
+  bool isPrivate = false;
+  if (auto symbol = dyn_cast_or_null<SymbolOpInterface>(funcOp))
     isPrivate = symbol.isPrivate() && !symbol.isDeclaration();
 
   // If the private-function-dynamic-ownership option is enabled and we are
@@ -962,13 +957,13 @@ BufferDeallocation::handleInterface(RegionBranchTerminatorOpInterface op) {
 
   SmallVector<Value> updatedOwnerships;
   auto result = deallocation_impl::insertDeallocOpForReturnLike(
-      state, op, OperandRange(operands), updatedOwnerships);
+      state, op, operands.getAsOperandRange(), updatedOwnerships);
   if (failed(result) || !*result)
     return result;
 
   // Add an additional operand for every MemRef for the ownership indicator.
   if (!funcWithoutDynamicOwnership) {
-    SmallVector<Value> newOperands{OperandRange(operands)};
+    SmallVector<Value> newOperands{operands.getAsOperandRange()};
     newOperands.append(updatedOwnerships.begin(), updatedOwnerships.end());
     operands.assign(newOperands);
   }
@@ -1027,17 +1022,20 @@ struct OwnershipBasedBufferDeallocationPass
     : public bufferization::impl::OwnershipBasedBufferDeallocationBase<
           OwnershipBasedBufferDeallocationPass> {
   OwnershipBasedBufferDeallocationPass() = default;
-  OwnershipBasedBufferDeallocationPass(bool privateFuncDynamicOwnership)
+  OwnershipBasedBufferDeallocationPass(DeallocationOptions options)
       : OwnershipBasedBufferDeallocationPass() {
-    this->privateFuncDynamicOwnership.setValue(privateFuncDynamicOwnership);
+    this->privateFuncDynamicOwnership.setValue(
+        options.privateFuncDynamicOwnership);
   }
   void runOnOperation() override {
+    DeallocationOptions options;
+    options.privateFuncDynamicOwnership = privateFuncDynamicOwnership;
+
     auto status = getOperation()->walk([&](func::FuncOp func) {
       if (func.isExternal())
         return WalkResult::skip();
 
-      if (failed(deallocateBuffersOwnershipBased(func,
-                                                 privateFuncDynamicOwnership)))
+      if (failed(deallocateBuffersOwnershipBased(func, options)))
         return WalkResult::interrupt();
 
       return WalkResult::advance();
@@ -1053,10 +1051,11 @@ struct OwnershipBasedBufferDeallocationPass
 // Implement bufferization API
 //===----------------------------------------------------------------------===//
 
-LogicalResult bufferization::deallocateBuffersOwnershipBased(
-    FunctionOpInterface op, bool privateFuncDynamicOwnership) {
+LogicalResult
+bufferization::deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                               DeallocationOptions options) {
   // Gather all required allocation nodes and prepare the deallocation phase.
-  BufferDeallocation deallocation(op, privateFuncDynamicOwnership);
+  BufferDeallocation deallocation(op, options);
 
   // Place all required temporary clone and dealloc nodes.
   return deallocation.deallocate(op);
@@ -1068,7 +1067,6 @@ LogicalResult bufferization::deallocateBuffersOwnershipBased(
 
 std::unique_ptr<Pass>
 mlir::bufferization::createOwnershipBasedBufferDeallocationPass(
-    bool privateFuncDynamicOwnership) {
-  return std::make_unique<OwnershipBasedBufferDeallocationPass>(
-      privateFuncDynamicOwnership);
+    DeallocationOptions options) {
+  return std::make_unique<OwnershipBasedBufferDeallocationPass>(options);
 }

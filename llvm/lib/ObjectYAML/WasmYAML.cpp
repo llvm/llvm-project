@@ -561,6 +561,7 @@ void ScalarBitSetTraits<WasmYAML::SegmentFlags>::bitset(
 #define BCase(X) IO.bitSetCase(Value, #X, wasm::WASM_SEG_FLAG_##X)
   BCase(STRINGS);
   BCase(TLS);
+  BCase(RETAIN);
 #undef BCase
 }
 
@@ -605,6 +606,7 @@ void ScalarEnumerationTraits<WasmYAML::ValueType>::enumeration(
   ECase(V128);
   ECase(FUNCREF);
   ECase(EXTERNREF);
+  ECase(EXNREF);
   ECase(OTHERREF);
 #undef ECase
 }
@@ -639,6 +641,7 @@ void ScalarEnumerationTraits<WasmYAML::TableType>::enumeration(
 #define ECase(X) IO.enumCase(Type, #X, CONCAT(X));
   ECase(FUNCREF);
   ECase(EXTERNREF);
+  ECase(EXNREF);
   ECase(OTHERREF);
 #undef ECase
 }

@@ -53,22 +53,16 @@ struct IncludeCleanerFindings {
   std::vector<MissingIncludeDiagInfo> MissingIncludes;
 };
 
-IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST);
+IncludeCleanerFindings
+computeIncludeCleanerFindings(ParsedAST &AST,
+                              bool AnalyzeAngledIncludes = false);
 
 using HeaderFilter = llvm::ArrayRef<std::function<bool(llvm::StringRef)>>;
 std::vector<Diag>
 issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
                                const IncludeCleanerFindings &Findings,
+                               const ThreadsafeFS &TFS,
                                HeaderFilter IgnoreHeader = {});
-
-/// Affects whether standard library includes should be considered for
-/// removal. This is off by default for now due to implementation limitations:
-/// - macros are not tracked
-/// - symbol names without a unique associated header are not tracked
-/// - references to std-namespaced C types are not properly tracked:
-///   instead of std::size_t -> <cstddef> we see ::size_t -> <stddef.h>
-/// FIXME: remove this hack once the implementation is good enough.
-void setIncludeCleanerAnalyzesStdlib(bool B);
 
 /// Converts the clangd include representation to include-cleaner
 /// include representation.

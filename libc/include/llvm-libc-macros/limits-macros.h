@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_LIMITS_MACROS_H
-#define __LLVM_LIBC_MACROS_LIMITS_MACROS_H
+#ifndef LLVM_LIBC_MACROS_LIMITS_MACROS_H
+#define LLVM_LIBC_MACROS_LIMITS_MACROS_H
 
 // Define all C23 macro constants of limits.h
 
@@ -148,7 +148,7 @@
 #endif // INT_MAX
 
 #ifndef UINT_MAX
-#define UINT_MAX (~0U)
+#define UINT_MAX (INT_MAX * 2U + 1U)
 #endif // UINT_MAX
 
 #ifndef LONG_MAX
@@ -160,7 +160,7 @@
 #endif // LONG_MAX
 
 #ifndef ULONG_MAX
-#define ULONG_MAX (~0UL)
+#define ULONG_MAX (LONG_MAX * 2UL + 1UL)
 #endif // ULONG_MAX
 
 #ifndef LLONG_MAX
@@ -172,7 +172,7 @@
 #endif // LLONG_MAX
 
 #ifndef ULLONG_MAX
-#define ULLONG_MAX (~0ULL)
+#define ULLONG_MAX (LLONG_MAX * 2ULL + 1ULL)
 #endif // ULLONG_MAX
 
 // *_MIN macros
@@ -225,4 +225,4 @@
 #define ULLONG_MIN 0ULL
 #endif // ULLONG_MIN
 
-#endif // __LLVM_LIBC_MACROS_LIMITS_MACROS_H
+#endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

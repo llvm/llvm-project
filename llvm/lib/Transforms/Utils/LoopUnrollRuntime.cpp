@@ -849,7 +849,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
      for (unsigned i = 0; i < oldNumOperands; i++){
        auto *PredBB =PN.getIncomingBlock(i);
        if (PredBB == Latch)
-         // The latch exit is handled seperately, see connectX
+         // The latch exit is handled separately, see connectX
          continue;
        if (!L->contains(PredBB))
          // Even if we had dedicated exits, the code above inserted an
@@ -917,8 +917,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
     for (Instruction &I : *BB) {
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      RemapDPValueRange(M, I.getDbgValueRange(), VMap,
-                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+      RemapDbgRecordRange(M, I.getDbgRecordRange(), VMap,
+                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
     }
   }
 
@@ -1016,12 +1016,17 @@ bool llvm::UnrollRuntimeLoopRemainder(
   auto UnrollResult = LoopUnrollResult::Unmodified;
   if (remainderLoop && UnrollRemainder) {
     LLVM_DEBUG(dbgs() << "Unrolling remainder loop\n");
-    UnrollResult =
-        UnrollLoop(remainderLoop,
-                   {/*Count*/ Count - 1, /*Force*/ false, /*Runtime*/ false,
-                    /*AllowExpensiveTripCount*/ false,
-                    /*UnrollRemainder*/ false, ForgetAllSCEV},
-                   LI, SE, DT, AC, TTI, /*ORE*/ nullptr, PreserveLCSSA);
+    UnrollLoopOptions ULO;
+    ULO.Count = Count - 1;
+    ULO.Force = false;
+    ULO.Runtime = false;
+    ULO.AllowExpensiveTripCount = false;
+    ULO.UnrollRemainder = false;
+    ULO.ForgetAllSCEV = ForgetAllSCEV;
+    assert(!getLoopConvergenceHeart(L) &&
+           "A loop with a convergence heart does not allow runtime unrolling.");
+    UnrollResult = UnrollLoop(remainderLoop, ULO, LI, SE, DT, AC, TTI,
+                              /*ORE*/ nullptr, PreserveLCSSA);
   }
 
   if (ResultLoop && UnrollResult != LoopUnrollResult::FullyUnrolled)

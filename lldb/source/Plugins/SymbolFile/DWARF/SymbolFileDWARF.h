@@ -186,7 +186,7 @@ public:
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names) override;
 
-  uint64_t GetDebugInfoSize() override;
+  uint64_t GetDebugInfoSize(bool load_all_debug_info = false) override;
 
   void FindTypes(const lldb_private::TypeQuery &match,
                  lldb_private::TypeResults &results) override;
@@ -296,8 +296,6 @@ public:
 
   static CompilerDeclContext GetContainingDeclContext(const DWARFDIE &die);
 
-  static DWARFDeclContext GetDWARFDeclContext(const DWARFDIE &die);
-
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
@@ -338,14 +336,6 @@ public:
 
   virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
 
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
-                         lldb::opaque_compiler_type_t>
-      DIEToCompilerType;
-
-  virtual DIEToCompilerType &GetForwardDeclDIEToCompilerType() {
-    return m_forward_decl_die_to_compiler_type;
-  }
-
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef>
       CompilerTypeToDIE;
 
@@ -375,6 +365,9 @@ public:
   Type *ResolveTypeUID(const DWARFDIE &die, bool assert_not_being_parsed);
 
   Type *ResolveTypeUID(const DIERef &die_ref);
+
+  /// Returns the DWARFIndex for this symbol, if it exists.
+  DWARFIndex *getIndex() { return m_index.get(); }
 
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
@@ -469,8 +462,6 @@ protected:
   FindBlockContainingSpecification(const DWARFDIE &die,
                                    dw_offset_t spec_block_die_offset);
 
-  bool DIEDeclContextsMatch(const DWARFDIE &die1, const DWARFDIE &die2);
-
   bool ClassContainsSelector(const DWARFDIE &class_die, ConstString selector);
 
   /// Parse call site entries (DW_TAG_call_site), including any nested call site
@@ -543,7 +534,6 @@ protected:
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;
-  DIEToCompilerType m_forward_decl_die_to_compiler_type;
   CompilerTypeToDIE m_forward_decl_compiler_type_to_die;
   llvm::DenseMap<dw_offset_t, std::unique_ptr<SupportFileList>>
       m_type_unit_support_files;

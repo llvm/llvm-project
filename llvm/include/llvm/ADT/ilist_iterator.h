@@ -50,14 +50,44 @@ template <> struct IteratorHelper<true> : ilist_detail::NodeAccess {
   template <class T> static void decrement(T *&I) { I = Access::getNext(*I); }
 };
 
+/// Mixin class used to add a \a getNodeParent() function to iterators iff the
+/// list uses \a ilist_parent, calling through to the node's \a getParent(). For
+/// more details see \a ilist_node.
+template <class IteratorTy, class ParentPtrTy, bool IsConst>
+class iterator_parent_access;
+template <class IteratorTy, class ParentPtrTy>
+class iterator_parent_access<IteratorTy, ParentPtrTy, true> {
+public:
+  inline const ParentPtrTy getNodeParent() const {
+    return static_cast<IteratorTy *>(this)->NodePtr->getParent();
+  }
+};
+template <class IteratorTy, class ParentPtrTy>
+class iterator_parent_access<IteratorTy, ParentPtrTy, false> {
+public:
+  inline ParentPtrTy getNodeParent() {
+    return static_cast<IteratorTy *>(this)->NodePtr->getParent();
+  }
+};
+template <class IteratorTy>
+class iterator_parent_access<IteratorTy, void, true> {};
+template <class IteratorTy>
+class iterator_parent_access<IteratorTy, void, false> {};
+
 } // end namespace ilist_detail
 
 /// Iterator for intrusive lists  based on ilist_node.
 template <class OptionsT, bool IsReverse, bool IsConst>
-class ilist_iterator : ilist_detail::SpecificNodeAccess<OptionsT> {
+class ilist_iterator : ilist_detail::SpecificNodeAccess<OptionsT>,
+                       public ilist_detail::iterator_parent_access<
+                           ilist_iterator<OptionsT, IsReverse, IsConst>,
+                           typename OptionsT::parent_ptr_ty, IsConst> {
   friend ilist_iterator<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
+  friend ilist_detail::iterator_parent_access<
+                           ilist_iterator<OptionsT, IsReverse, IsConst>,
+                           typename OptionsT::parent_ptr_ty, IsConst>;
 
   using Traits = ilist_detail::IteratorTraits<OptionsT, IsConst>;
   using Access = ilist_detail::SpecificNodeAccess<OptionsT>;
@@ -168,6 +198,8 @@ public:
     return tmp;
   }
 
+  bool isValid() const { return NodePtr; }
+
   /// Get the underlying ilist_node.
   node_pointer getNodePtr() const { return static_cast<node_pointer>(NodePtr); }
 
@@ -179,10 +211,17 @@ public:
 /// but with the addition of two bits recording whether this position (when in
 /// a range) is half or fully open.
 template <class OptionsT, bool IsReverse, bool IsConst>
-class ilist_iterator_w_bits : ilist_detail::SpecificNodeAccess<OptionsT> {
+class ilist_iterator_w_bits
+    : ilist_detail::SpecificNodeAccess<OptionsT>,
+      public ilist_detail::iterator_parent_access<
+          ilist_iterator_w_bits<OptionsT, IsReverse, IsConst>,
+          typename OptionsT::parent_ptr_ty, IsConst> {
   friend ilist_iterator_w_bits<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator_w_bits<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
+  friend ilist_detail::iterator_parent_access<
+                           ilist_iterator_w_bits<OptionsT, IsReverse, IsConst>,
+                           typename OptionsT::parent_ptr_ty, IsConst>;
 
   using Traits = ilist_detail::IteratorTraits<OptionsT, IsConst>;
   using Access = ilist_detail::SpecificNodeAccess<OptionsT>;
@@ -202,17 +241,12 @@ private:
 
   node_pointer NodePtr = nullptr;
 
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
-  // (Default: Off) Allow extra position-information flags to be stored
-  // in iterators, in aid of removing debug-info intrinsics from LLVM.
-
   /// Is this position intended to contain any debug-info immediately before
   /// the position?
   mutable bool HeadInclusiveBit = false;
   /// Is this position intended to contain any debug-info immediately after
   /// the position?
   mutable bool TailInclusiveBit = false;
-#endif
 
 public:
   /// Create from an ilist_node.
@@ -231,10 +265,8 @@ public:
       const ilist_iterator_w_bits<OptionsT, IsReverse, RHSIsConst> &RHS,
       std::enable_if_t<IsConst || !RHSIsConst, void *> = nullptr)
       : NodePtr(RHS.NodePtr) {
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
     HeadInclusiveBit = RHS.HeadInclusiveBit;
     TailInclusiveBit = RHS.TailInclusiveBit;
-#endif
   }
 
   // This is templated so that we can allow assigning to a const iterator from
@@ -243,10 +275,8 @@ public:
   std::enable_if_t<IsConst || !RHSIsConst, ilist_iterator_w_bits &>
   operator=(const ilist_iterator_w_bits<OptionsT, IsReverse, RHSIsConst> &RHS) {
     NodePtr = RHS.NodePtr;
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
     HeadInclusiveBit = RHS.HeadInclusiveBit;
     TailInclusiveBit = RHS.TailInclusiveBit;
-#endif
     return *this;
   }
 
@@ -280,10 +310,8 @@ public:
           const_cast<typename ilist_iterator_w_bits<OptionsT, IsReverse,
                                                     false>::node_reference>(
               *NodePtr));
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
       New.HeadInclusiveBit = HeadInclusiveBit;
       New.TailInclusiveBit = TailInclusiveBit;
-#endif
       return New;
     }
     return ilist_iterator_w_bits<OptionsT, IsReverse, false>();
@@ -309,18 +337,14 @@ public:
   // Increment and decrement operators...
   ilist_iterator_w_bits &operator--() {
     NodePtr = IsReverse ? NodePtr->getNext() : NodePtr->getPrev();
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
     HeadInclusiveBit = false;
     TailInclusiveBit = false;
-#endif
     return *this;
   }
   ilist_iterator_w_bits &operator++() {
     NodePtr = IsReverse ? NodePtr->getPrev() : NodePtr->getNext();
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
     HeadInclusiveBit = false;
     TailInclusiveBit = false;
-#endif
     return *this;
   }
   ilist_iterator_w_bits operator--(int) {
@@ -334,24 +358,18 @@ public:
     return tmp;
   }
 
+  bool isValid() const { return NodePtr; }
+
   /// Get the underlying ilist_node.
   node_pointer getNodePtr() const { return static_cast<node_pointer>(NodePtr); }
 
   /// Check for end.  Only valid if ilist_sentinel_tracking<true>.
   bool isEnd() const { return NodePtr ? NodePtr->isSentinel() : false; }
 
-#ifdef EXPERIMENTAL_DEBUGINFO_ITERATORS
   bool getHeadBit() const { return HeadInclusiveBit; }
   bool getTailBit() const { return TailInclusiveBit; }
   void setHeadBit(bool SetBit) const { HeadInclusiveBit = SetBit; }
   void setTailBit(bool SetBit) const { TailInclusiveBit = SetBit; }
-#else
-  // Store and return no information if we're not using this feature.
-  bool getHeadBit() const { return false; }
-  bool getTailBit() const { return false; }
-  void setHeadBit(bool SetBit) const { (void)SetBit; }
-  void setTailBit(bool SetBit) const { (void)SetBit; }
-#endif
 };
 
 template <typename From> struct simplify_type;

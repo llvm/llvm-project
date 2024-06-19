@@ -20,8 +20,6 @@ from lldbsuite.test import lldbtest_config
 class DarwinNSLogOutputTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
-    @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -56,8 +54,9 @@ class DarwinNSLogOutputTestCase(TestBase):
         # So that the child gets torn down after the test.
         import pexpect
 
-        self.child = pexpect.spawnu(
-            "%s %s %s" % (lldbtest_config.lldbExec, self.lldbOption, exe)
+        self.child = pexpect.spawn(
+            "%s %s %s" % (lldbtest_config.lldbExec, self.lldbOption, exe),
+            encoding="utf-8",
         )
         child = self.child
 
@@ -118,6 +117,10 @@ class DarwinNSLogOutputTestCase(TestBase):
         self.runCmd("process continue")
         self.expect(expect_regexes)
 
+    @skipIfAsan # avoid dealing with pexpect timeout flakyness on bots
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipUnlessDarwin
+    @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def test_nslog_output_is_displayed(self):
         """Test that NSLog() output shows up in the command-line debugger."""
         self.do_test(
@@ -130,6 +133,10 @@ class DarwinNSLogOutputTestCase(TestBase):
         self.assertGreater(len(self.child.match.groups()), 0)
         self.assertEqual("This is a message from NSLog", self.child.match.group(1))
 
+    @skipIfAsan # avoid dealing with pexpect timeout flakyness on bots
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipUnlessDarwin
+    @skipIfRemote  # this test is currently written using lldb commands & assumes running on local system
     def test_nslog_output_is_suppressed_with_env_var(self):
         """Test that NSLog() output does not show up with the ignore env var."""
         # This test will only work properly on macOS 10.12+.  Skip it on earlier versions.

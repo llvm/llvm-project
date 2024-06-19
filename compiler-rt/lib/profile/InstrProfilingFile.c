@@ -137,15 +137,18 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
              DataBegin, PageSize);
     return 1;
   }
+
   int Fileno = fileno(File);
   /* Determine how much padding is needed before/after the counters and
    * after the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes;
+      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes,
+      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NumBitmapBytes, NamesSize,
-      &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames);
+      DataSize, CountersSize, NumBitmapBytes, NamesSize, /*VTableSize=*/0,
+      /*VNameSize=*/0, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames,
+      &PaddingBytesAfterVTable, &PaddingBytesAfterVNames);
 
   uint64_t PageAlignedCountersLength = CountersSize + PaddingBytesAfterCounters;
   uint64_t FileOffsetToCounters = CurrentFileOffset +
@@ -174,8 +177,7 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   uint64_t PageAlignedBitmapLength =
       NumBitmapBytes + PaddingBytesAfterBitmapBytes;
   uint64_t FileOffsetToBitmap =
-      CurrentFileOffset + sizeof(__llvm_profile_header) + DataSize +
-      PaddingBytesBeforeCounters + CountersSize + PaddingBytesAfterCounters;
+      FileOffsetToCounters + CountersSize + PaddingBytesAfterCounters;
   void *BitmapMmap =
       mmap((void *)BitmapBegin, PageAlignedBitmapLength, PROT_READ | PROT_WRITE,
            MAP_FIXED | MAP_SHARED, Fileno, FileOffsetToBitmap);
@@ -208,9 +210,10 @@ COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR;
 #define WIN_SYM_PREFIX
 #endif
 #pragma comment(                                                               \
-    linker, "/alternatename:" WIN_SYM_PREFIX INSTR_PROF_QUOTE(                 \
-                INSTR_PROF_PROFILE_COUNTER_BIAS_VAR) "=" WIN_SYM_PREFIX        \
-                INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))
+        linker,                                                                \
+            "/alternatename:" WIN_SYM_PREFIX INSTR_PROF_QUOTE(                 \
+                    INSTR_PROF_PROFILE_COUNTER_BIAS_VAR) "=" WIN_SYM_PREFIX    \
+            INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_COUNTER_BIAS_DEFAULT_VAR))
 #else
 COMPILER_RT_VISIBILITY extern intptr_t INSTR_PROF_PROFILE_COUNTER_BIAS_VAR
     __attribute__((weak, alias(INSTR_PROF_QUOTE(
@@ -677,6 +680,7 @@ static void initializeProfileForContinuousMode(void) {
       PROF_ERR("Continuous counter sync mode is enabled, but raw profile is not"
                "page-aligned. CurrentFileOffset = %" PRIu64 ", pagesz = %u.\n",
                (uint64_t)CurrentFileOffset, PageSize);
+      fclose(File);
       return;
     }
     if (writeProfileWithFileObject(Filename, File) != 0) {
@@ -692,6 +696,8 @@ static void initializeProfileForContinuousMode(void) {
 
   if (doMerging()) {
     lprofUnlockFileHandle(File);
+  }
+  if (File != NULL) {
     fclose(File);
   }
 }

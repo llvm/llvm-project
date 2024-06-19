@@ -83,7 +83,7 @@ Error extractFromObject(const ObjectFile &Obj,
       if (!NameOrErr)
         return NameOrErr.takeError();
 
-      if (!NameOrErr->equals(".llvm.offloading"))
+      if (!NameOrErr->starts_with(".llvm.offloading"))
         continue;
     }
 
@@ -189,7 +189,10 @@ OffloadBinary::create(MemoryBufferRef Buf) {
     return errorCodeToError(object_error::parse_failed);
 
   if (TheHeader->Size > Buf.getBufferSize() ||
-      TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
+      TheHeader->Size < sizeof(Entry) || TheHeader->Size < sizeof(Header))
+    return errorCodeToError(object_error::unexpected_eof);
+
+  if (TheHeader->EntryOffset > TheHeader->Size - sizeof(Entry) ||
       TheHeader->EntrySize > TheHeader->Size - sizeof(Header))
     return errorCodeToError(object_error::unexpected_eof);
 
@@ -354,6 +357,10 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &LHS,
   // The triples must match at all times.
   if (LHS.first != RHS.first)
     return false;
+
+  // If the architecture is "all" we assume it is always compatible.
+  if (LHS.second == "generic" || RHS.second == "generic")
+    return true;
 
   // Only The AMDGPU target requires additional checks.
   llvm::Triple T(LHS.first);

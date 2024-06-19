@@ -360,9 +360,9 @@ public:
   ///
   /// \returns true if the .debug_line verifies successfully, false otherwise.
   bool handleDebugStrOffsets();
-  bool verifyDebugStrOffsets(
-      StringRef SectionName, const DWARFSection &Section, StringRef StrData,
-      void (DWARFObject::*)(function_ref<void(const DWARFSection &)>) const);
+  bool verifyDebugStrOffsets(std::optional<dwarf::DwarfFormat> LegacyFormat,
+                             StringRef SectionName, const DWARFSection &Section,
+                             StringRef StrData);
 
   /// Emits any aggregate information collected, depending on the dump options
   void summarize();

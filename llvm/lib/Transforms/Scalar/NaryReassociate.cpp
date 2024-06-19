@@ -511,14 +511,15 @@ Instruction *NaryReassociatePass::tryReassociatedBinaryOp(const SCEV *LHSExpr,
   Instruction *NewI = nullptr;
   switch (I->getOpcode()) {
   case Instruction::Add:
-    NewI = BinaryOperator::CreateAdd(LHS, RHS, "", I);
+    NewI = BinaryOperator::CreateAdd(LHS, RHS, "", I->getIterator());
     break;
   case Instruction::Mul:
-    NewI = BinaryOperator::CreateMul(LHS, RHS, "", I);
+    NewI = BinaryOperator::CreateMul(LHS, RHS, "", I->getIterator());
     break;
   default:
     llvm_unreachable("Unexpected instruction.");
   }
+  NewI->setDebugLoc(I->getDebugLoc());
   NewI->takeName(I);
   return NewI;
 }

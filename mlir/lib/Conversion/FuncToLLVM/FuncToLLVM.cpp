@@ -36,7 +36,6 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SmallVector.h"
@@ -135,7 +134,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   propagateArgResAttrs(rewriter, !!resultStructType, funcOp, wrapperFuncOp);
 
   OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
+  rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock(rewriter));
 
   SmallVector<Value, 8> args;
   size_t argOffset = resultStructType ? 1 : 0;
@@ -203,7 +202,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
 
   // The wrapper that we synthetize here should only be visible in this module.
   newFuncOp.setLinkage(LLVM::Linkage::Private);
-  builder.setInsertionPointToStart(newFuncOp.addEntryBlock());
+  builder.setInsertionPointToStart(newFuncOp.addEntryBlock(builder));
 
   // Get a ValueRange containing arguments.
   FunctionType type = cast<FunctionType>(funcOp.getFunctionType());
@@ -449,60 +448,46 @@ mlir::convertFuncOpToLLVMFuncOp(FunctionOpInterface funcOp,
                                        "region types conversion failed");
   }
 
+  if (!shouldUseBarePtrCallConv(funcOp, &converter)) {
+    if (funcOp->getAttrOfType<UnitAttr>(
+            LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
+      if (newFuncOp.isVarArg())
+        return funcOp.emitError("C interface for variadic functions is not "
+                                "supported yet.");
+
+      if (newFuncOp.isExternal())
+        wrapExternalFunction(rewriter, funcOp->getLoc(), converter, funcOp,
+                             newFuncOp);
+      else
+        wrapForExternalCallers(rewriter, funcOp->getLoc(), converter, funcOp,
+                               newFuncOp);
+    }
+  } else {
+    modifyFuncOpToUseBarePtrCallingConv(
+        rewriter, funcOp->getLoc(), converter, newFuncOp,
+        llvm::cast<FunctionType>(funcOp.getFunctionType()).getInputs());
+  }
+
   return newFuncOp;
 }
 
 namespace {
 
-struct FuncOpConversionBase : public ConvertOpToLLVMPattern<func::FuncOp> {
-protected:
-  using ConvertOpToLLVMPattern<func::FuncOp>::ConvertOpToLLVMPattern;
-
-  // Convert input FuncOp to LLVMFuncOp by using the LLVMTypeConverter provided
-  // to this legalization pattern.
-  FailureOr<LLVM::LLVMFuncOp>
-  convertFuncOpToLLVMFuncOp(func::FuncOp funcOp,
-                            ConversionPatternRewriter &rewriter) const {
-    return mlir::convertFuncOpToLLVMFuncOp(
-        cast<FunctionOpInterface>(funcOp.getOperation()), rewriter,
-        *getTypeConverter());
-  }
-};
-
 /// FuncOp legalization pattern that converts MemRef arguments to pointers to
 /// MemRef descriptors (LLVM struct data types) containing all the MemRef type
 /// information.
-struct FuncOpConversion : public FuncOpConversionBase {
+struct FuncOpConversion : public ConvertOpToLLVMPattern<func::FuncOp> {
   FuncOpConversion(const LLVMTypeConverter &converter)
-      : FuncOpConversionBase(converter) {}
+      : ConvertOpToLLVMPattern(converter) {}
 
   LogicalResult
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    FailureOr<LLVM::LLVMFuncOp> newFuncOp =
-        convertFuncOpToLLVMFuncOp(funcOp, rewriter);
+    FailureOr<LLVM::LLVMFuncOp> newFuncOp = mlir::convertFuncOpToLLVMFuncOp(
+        cast<FunctionOpInterface>(funcOp.getOperation()), rewriter,
+        *getTypeConverter());
     if (failed(newFuncOp))
       return rewriter.notifyMatchFailure(funcOp, "Could not convert funcop");
-
-    if (!shouldUseBarePtrCallConv(funcOp, this->getTypeConverter())) {
-      if (funcOp->getAttrOfType<UnitAttr>(
-              LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
-        if (newFuncOp->isVarArg())
-          return funcOp->emitError("C interface for variadic functions is not "
-                                   "supported yet.");
-
-        if (newFuncOp->isExternal())
-          wrapExternalFunction(rewriter, funcOp->getLoc(), *getTypeConverter(),
-                               funcOp, *newFuncOp);
-        else
-          wrapForExternalCallers(rewriter, funcOp->getLoc(),
-                                 *getTypeConverter(), funcOp, *newFuncOp);
-      }
-    } else {
-      modifyFuncOpToUseBarePtrCallingConv(rewriter, funcOp->getLoc(),
-                                          *getTypeConverter(), *newFuncOp,
-                                          funcOp.getFunctionType().getInputs());
-    }
 
     rewriter.eraseOp(funcOp);
     return success();

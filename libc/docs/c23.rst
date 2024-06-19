@@ -1,0 +1,164 @@
+.. _c23_support:
+
+===========
+C23 Support
+===========
+
+.. include:: check.rst
+.. contents:: Table of Contents
+  :depth: 4
+  :local:
+
+---------------------
+Implementation Status
+---------------------
+
+(It's helpful to review 'Annex B (Informative) Library Summary' for these.)
+
+
+Additions:
+
+* fenv.h
+
+  * fesetexcept |check|
+  * fetestexceptflag |check|
+  * fegetmode
+  * fesetmode
+* math.h
+
+  * acospi*
+  * asinpi*
+  * atanpi*
+  * atan2pi*
+  * cospi*
+  * sinpi*
+  * tanpi*
+  * exp10*
+  * exp10m1*
+  * exp2m1*
+  * log10p1*
+  * logp1
+  * log2p1*
+  * rsqrt*
+  * __STDC_IEC_60559_DFP__ functions (_Decimal32, _Decimal64, _Decimal128)
+  * compoundn*
+  * totalorder* |check|
+  * totalordermag* |check|
+  * getpayload*
+  * setpayload*
+  * iscannonical
+  * issignaling
+  * issubnormal
+  * iszero
+  * llogb* |check|
+  * pown*
+  * powr*
+  * rootn*
+  * roundeven* |check|
+  * fromfp* |check|
+  * ufromfp* |check|
+  * fromfpx* |check|
+  * ufromfpx* |check|
+  * nextup* |check|
+  * nextdown* |check|
+  * canonicalize* |check|
+  * fmaximum* |check|
+  * fminimum* |check|
+  * fmaximum_mag* |check|
+  * fminimum_mag* |check|
+  * fmaximum_num* |check|
+  * fminimum_num* |check|
+  * fmaximum_mag_num* |check|
+  * fminimum_mag_num* |check|
+  * fadd*
+  * fsub*
+  * fmul*
+  * fdiv*
+  * ffma*
+  * dfmal
+  * fsqrt*
+  * dsqrtl
+* stdbit.h (New header)    |check|
+* stdckdint.h (New header) |check|
+* stddef.h
+
+  * unreachable
+* stdlib.h
+
+  * strfromd
+  * strfromf
+  * strfroml
+  * free_sized
+  * free_aligned_sized
+  * memalignment
+* string.h
+
+  * memset_explicit |check|
+  * memccpy
+  * strdup
+  * strndup
+* tgmath.h
+
+  * acospi
+  * asinpi
+  * atan2pi
+  * atanpi
+  * compoundn
+  * cospi
+  * erf
+  * exp10m1
+  * exp10
+  * exp2m1
+  * fmaximum
+  * fmaximum_mag
+  * fmaximum_num
+  * fmaximum_mag_num
+  * fminimum
+  * fminimum_mag
+  * fminimum_num
+  * fminimum_mag_num
+  * fromfpx
+  * fromfp
+  * llogb
+  * log10p1
+  * log2p1
+  * logp1
+  * nextdown
+  * nextup
+  * pown
+  * powr
+  * rootn
+  * roundeven
+  * rsqrt
+  * scalbn
+  * sinpi
+  * tanpi
+  * ufromfpx
+  * ufromfp
+  * fadd
+  * dadd
+  * fsub
+  * dsub
+  * fmul
+  * dmul
+  * fdiv
+  * ddiv
+  * ffma
+  * dfma
+  * fsqrt
+  * dsqrt
+* time.h
+
+  * gmtime_r
+  * localtime_r
+  * timegm
+  * timespec_getres
+  * strftime conversion specifiers
+
+    * 0b
+    * 0B
+* uchar.h
+
+  * mbrtoc8
+  * c8rtomb
+  * char*_t |check|

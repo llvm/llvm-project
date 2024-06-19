@@ -133,6 +133,8 @@ private:
 
   /// List of declared file names
   std::vector<std::pair<std::string, size_t>> FileNames;
+  // Optional compiler version.
+  std::string CompilerVersion;
 
   MCDwarfLineTableParams LTParams;
 
@@ -200,10 +202,6 @@ private:
   /// Perform one layout iteration and return true if any offsets
   /// were adjusted.
   bool layoutOnce(MCAsmLayout &Layout);
-
-  /// Perform one layout iteration of the given section and return true
-  /// if any offsets were adjusted.
-  bool layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec);
 
   /// Perform relaxation on a single fragment - returns true if the fragment
   /// changes as a result of relaxation.
@@ -485,6 +483,12 @@ public:
   void addFileName(StringRef FileName) {
     FileNames.emplace_back(std::string(FileName), Symbols.size());
   }
+
+  void setCompilerVersion(std::string CompilerVers) {
+    if (CompilerVersion.empty())
+      CompilerVersion = std::move(CompilerVers);
+  }
+  StringRef getCompilerVersion() { return CompilerVersion; }
 
   /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.

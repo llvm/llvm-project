@@ -139,7 +139,7 @@ bool SourceCoverageView::shouldRenderRegionMarkers(
 
 bool SourceCoverageView::hasSubViews() const {
   return !ExpansionSubViews.empty() || !InstantiationSubViews.empty() ||
-         !BranchSubViews.empty();
+         !BranchSubViews.empty() || !MCDCSubViews.empty();
 }
 
 std::unique_ptr<SourceCoverageView>
@@ -203,8 +203,7 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
   if (ShowSourceName)
     renderSourceName(OS, WholeFile);
 
-  renderTableHeader(OS, (ViewDepth > 0) ? 0 : getFirstUncoveredLineNo(),
-                    ViewDepth);
+  renderTableHeader(OS, ViewDepth);
 
   // We need the expansions, instantiations, and branches sorted so we can go
   // through them while we iterate lines.

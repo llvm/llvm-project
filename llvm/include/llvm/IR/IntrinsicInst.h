@@ -33,6 +33,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 #include <optional>
@@ -311,7 +312,8 @@ public:
 
   Value *getVariableLocationOp(unsigned OpIdx) const;
 
-  void replaceVariableLocationOp(Value *OldValue, Value *NewValue);
+  void replaceVariableLocationOp(Value *OldValue, Value *NewValue,
+                                 bool AllowEmpty = false);
   void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
   /// Adding a new location operand will always result in this intrinsic using
   /// an ArgList, and must always be accompanied by a new expression that uses
@@ -531,6 +533,9 @@ public:
 class DbgLabelInst : public DbgInfoIntrinsic {
 public:
   DILabel *getLabel() const { return cast<DILabel>(getRawLabel()); }
+  void setLabel(DILabel *NewLabel) {
+    setArgOperand(0, MetadataAsValue::get(getContext(), NewLabel));
+  }
 
   Metadata *getRawLabel() const {
     return cast<MetadataAsValue>(getArgOperand(0))->getMetadata();
@@ -703,8 +708,7 @@ public:
 /// This is the common base class for constrained floating point intrinsics.
 class ConstrainedFPIntrinsic : public IntrinsicInst {
 public:
-  bool isUnaryOp() const;
-  bool isTernaryOp() const;
+  unsigned getNonMetadataArgCount() const;
   std::optional<RoundingMode> getRoundingMode() const;
   std::optional<fp::ExceptionBehavior> getExceptionBehavior() const;
   bool isDefaultFPEnvironment() const;
@@ -1426,7 +1430,34 @@ public:
 
 /// A base class for all instrprof intrinsics.
 class InstrProfInstBase : public IntrinsicInst {
+protected:
+  static bool isCounterBase(const IntrinsicInst &I) {
+    switch (I.getIntrinsicID()) {
+    case Intrinsic::instrprof_cover:
+    case Intrinsic::instrprof_increment:
+    case Intrinsic::instrprof_increment_step:
+    case Intrinsic::instrprof_callsite:
+    case Intrinsic::instrprof_timestamp:
+    case Intrinsic::instrprof_value_profile:
+      return true;
+    }
+    return false;
+  }
+  static bool isMCDCBitmapBase(const IntrinsicInst &I) {
+    switch (I.getIntrinsicID()) {
+    case Intrinsic::instrprof_mcdc_parameters:
+    case Intrinsic::instrprof_mcdc_tvbitmap_update:
+      return true;
+    }
+    return false;
+  }
+
 public:
+  static bool classof(const Value *V) {
+    if (const auto *Instr = dyn_cast<IntrinsicInst>(V))
+      return isCounterBase(*Instr) || isMCDCBitmapBase(*Instr);
+    return false;
+  }
   // The name of the instrumented function.
   GlobalVariable *getName() const {
     return cast<GlobalVariable>(
@@ -1441,6 +1472,12 @@ public:
 /// A base class for all instrprof counter intrinsics.
 class InstrProfCntrInstBase : public InstrProfInstBase {
 public:
+  static bool classof(const Value *V) {
+    if (const auto *Instr = dyn_cast<IntrinsicInst>(V))
+      return InstrProfInstBase::isCounterBase(*Instr);
+    return false;
+  }
+
   // The number of counters for the instrumented function.
   ConstantInt *getNumCounters() const;
   // The index of the counter that this instruction acts on.
@@ -1482,6 +1519,21 @@ public:
   }
 };
 
+/// This represents the llvm.instrprof.callsite intrinsic.
+/// It is structurally like the increment or step counters, hence the
+/// inheritance relationship, albeit somewhat tenuous (it's not 'counting' per
+/// se)
+class InstrProfCallsite : public InstrProfCntrInstBase {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::instrprof_callsite;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  Value *getCallee() const;
+};
+
 /// This represents the llvm.instrprof.timestamp intrinsic.
 class InstrProfTimestampInst : public InstrProfCntrInstBase {
 public:
@@ -1521,17 +1573,22 @@ public:
 class InstrProfMCDCBitmapInstBase : public InstrProfInstBase {
 public:
   static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::instrprof_mcdc_parameters ||
-           I->getIntrinsicID() == Intrinsic::instrprof_mcdc_tvbitmap_update;
+    return InstrProfInstBase::isMCDCBitmapBase(*I);
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
+  /// \return The number of bits used for the MCDC bitmaps for the instrumented
+  /// function.
+  ConstantInt *getNumBitmapBits() const {
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  }
+
   /// \return The number of bytes used for the MCDC bitmaps for the instrumented
   /// function.
-  ConstantInt *getNumBitmapBytes() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  auto getNumBitmapBytes() const {
+    return alignTo(getNumBitmapBits()->getZExtValue(), CHAR_BIT) / CHAR_BIT;
   }
 };
 
@@ -1559,42 +1616,13 @@ public:
   /// \return The index of the TestVector Bitmap upon which this intrinsic
   /// acts.
   ConstantInt *getBitmapIndex() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
   }
 
   /// \return The address of the corresponding condition bitmap containing
   /// the index of the TestVector to update within the TestVector Bitmap.
   Value *getMCDCCondBitmapAddr() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(4)));
-  }
-};
-
-/// This represents the llvm.instrprof.mcdc.condbitmap.update intrinsic.
-/// It does not pertain to global bitmap updates or parameters and so doesn't
-/// inherit from InstrProfMCDCBitmapInstBase.
-class InstrProfMCDCCondBitmapUpdate : public InstrProfInstBase {
-public:
-  static bool classof(const IntrinsicInst *I) {
-    return I->getIntrinsicID() == Intrinsic::instrprof_mcdc_condbitmap_update;
-  }
-  static bool classof(const Value *V) {
-    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
-  }
-
-  /// \return The ID of the condition to update.
-  ConstantInt *getCondID() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
-  }
-
-  /// \return The address of the corresponding condition bitmap.
-  Value *getMCDCCondBitmapAddr() const {
     return cast<Value>(const_cast<Value *>(getArgOperand(3)));
-  }
-
-  /// \return The boolean value to set in the condition bitmap for the
-  /// corresponding condition ID. This represents how the condition evaluated.
-  Value *getCondBool() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(4)));
   }
 };
 
@@ -1745,6 +1773,16 @@ public:
 
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  bool isAnchor() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_anchor;
+  }
+  bool isEntry() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_entry;
+  }
+  bool isLoop() {
+    return getIntrinsicID() == Intrinsic::experimental_convergence_loop;
   }
 };
 

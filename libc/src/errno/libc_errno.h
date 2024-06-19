@@ -12,11 +12,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 
-// TODO: https://github.com/llvm/llvm-project/issues/80172
-// Separate just the definition of errno numbers in
-// include/llvm-libc-macros/* and only include that instead of the system
-// <errno.h>.
-#include <errno.h>
+#include "hdr/errno_macros.h"
 
 // This header is to be consumed by internal implementations, in which all of
 // them should refer to `libc_errno` instead of using `errno` directly from
@@ -39,8 +35,9 @@ struct Errno {
   void operator=(int);
   operator int();
 };
-} // namespace LIBC_NAMESPACE
 
-extern LIBC_NAMESPACE::Errno libc_errno;
+extern Errno libc_errno;
+
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_ERRNO_LIBC_ERRNO_H

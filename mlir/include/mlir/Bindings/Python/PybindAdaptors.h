@@ -18,11 +18,13 @@
 #ifndef MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H
 #define MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H
 
+#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
 
 #include "mlir-c/Bindings/Python/Interop.h"
+#include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 
 #include "llvm/ADT/Twine.h"
@@ -191,6 +193,27 @@ struct type_caster<MlirModule> {
         py::reinterpret_steal<py::object>(mlirPythonModuleToCapsule(v));
     return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Module")
+        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+        .release();
+  };
+};
+
+/// Casts object <-> MlirFrozenRewritePatternSet.
+template <>
+struct type_caster<MlirFrozenRewritePatternSet> {
+  PYBIND11_TYPE_CASTER(MlirFrozenRewritePatternSet,
+                       _("MlirFrozenRewritePatternSet"));
+  bool load(handle src, bool) {
+    py::object capsule = mlirApiObjectToCapsule(src);
+    value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule.ptr());
+    return value.ptr != nullptr;
+  }
+  static handle cast(MlirFrozenRewritePatternSet v, return_value_policy,
+                     handle) {
+    py::object capsule = py::reinterpret_steal<py::object>(
+        mlirPythonFrozenRewritePatternSetToCapsule(v));
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("rewrite"))
+        .attr("FrozenRewritePatternSet")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
   };
@@ -569,6 +592,41 @@ public:
 };
 
 } // namespace adaptors
+
+/// RAII scope intercepting all diagnostics into a string. The message must be
+/// checked before this goes out of scope.
+class CollectDiagnosticsToStringScope {
+public:
+  explicit CollectDiagnosticsToStringScope(MlirContext ctx) : context(ctx) {
+    handlerID = mlirContextAttachDiagnosticHandler(ctx, &handler, &errorMessage,
+                                                   /*deleteUserData=*/nullptr);
+  }
+  ~CollectDiagnosticsToStringScope() {
+    assert(errorMessage.empty() && "unchecked error message");
+    mlirContextDetachDiagnosticHandler(context, handlerID);
+  }
+
+  [[nodiscard]] std::string takeMessage() { return std::move(errorMessage); }
+
+private:
+  static MlirLogicalResult handler(MlirDiagnostic diag, void *data) {
+    auto printer = +[](MlirStringRef message, void *data) {
+      *static_cast<std::string *>(data) +=
+          llvm::StringRef(message.data, message.length);
+    };
+    MlirLocation loc = mlirDiagnosticGetLocation(diag);
+    *static_cast<std::string *>(data) += "at ";
+    mlirLocationPrint(loc, printer, data);
+    *static_cast<std::string *>(data) += ": ";
+    mlirDiagnosticPrint(diag, printer, data);
+    return mlirLogicalResultSuccess();
+  }
+
+  MlirContext context;
+  MlirDiagnosticHandlerID handlerID;
+  std::string errorMessage = "";
+};
+
 } // namespace python
 } // namespace mlir
 

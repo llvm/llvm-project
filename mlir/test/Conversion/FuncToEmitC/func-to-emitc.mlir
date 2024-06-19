@@ -53,3 +53,24 @@ func.func @call(%arg0: i32) -> i32 {
   %0 = call @return_i32(%arg0) : (i32) -> (i32)
   return %0 : i32
 }
+
+// -----
+
+// CHECK-LABEL: emitc.func private @return_i32(i32) -> i32 attributes {specifiers = ["extern"]}
+func.func private @return_i32(%arg0: i32) -> i32
+
+// -----
+
+// CHECK-LABEL: emitc.func private @return_void() attributes {specifiers = ["static"]}
+// CHECK-NEXT: emitc.return
+func.func private @return_void() {
+  return
+}
+
+// CHECK-LABEL: emitc.func @call()
+// CHECK-NEXT: emitc.call @return_void() : () -> ()
+// CHECK-NEXT: emitc.return
+func.func @call() {
+  call @return_void() : () -> ()
+  return
+}

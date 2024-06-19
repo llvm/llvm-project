@@ -107,9 +107,8 @@
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__functional/operations.h>
-#include <__fwd/hash.h>
+#include <__fwd/functional.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
@@ -267,8 +266,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR element_type& operator*() { return *get(); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR void swap(propagate_const& __pt)
-      _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR void swap(propagate_const& __pt) _NOEXCEPT_(__is_nothrow_swappable_v<_Tp>) {
     using std::swap;
     swap(__t_, __pt.__t_);
   }
@@ -392,7 +390,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator>=(const _Tp& __t, const pr
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR void swap(propagate_const<_Tp>& __pc1, propagate_const<_Tp>& __pc2)
-    _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value) {
+    _NOEXCEPT_(__is_nothrow_swappable_v<_Tp>) {
   __pc1.swap(__pc2);
 }
 

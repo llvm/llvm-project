@@ -5,19 +5,19 @@
 @b = external global %struct.anon
 define void @tinkywinky(i1 %patatino) {
 ; CHECK-LABEL: @tinkywinky(
-; CHECK-NEXT:    store i32 8, ptr null
+; CHECK-NEXT:    store i32 8, ptr null, align 4
 ; CHECK-NEXT:    br i1 [[PATATINO:%.*]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[L:%.*]]
 ; CHECK:       L:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr null
-; CHECK-NEXT:    [[BF_LOAD1:%.*]] = load i32, ptr @b
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr null, align 4
+; CHECK-NEXT:    [[BF_LOAD1:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[BF_VALUE:%.*]] = and i32 [[TMP1]], 536870911
 ; CHECK-NEXT:    [[BF_CLEAR:%.*]] = and i32 [[BF_LOAD1]], -536870912
 ; CHECK-NEXT:    [[BF_SET:%.*]] = or i32 [[BF_CLEAR]], [[BF_VALUE]]
-; CHECK-NEXT:    store i32 [[BF_SET]], ptr @b
+; CHECK-NEXT:    store i32 [[BF_SET]], ptr @b, align 4
 ; CHECK-NEXT:    br label [[LOR_END:%.*]]
 ; CHECK:       lor.end:
 ; CHECK-NEXT:    br label [[L]]

@@ -108,7 +108,7 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %pt
 }
 
 ; no-op
-; HSA-LABEl: {{^}}use_constant_to_flat_addrspacecast:
+; HSA-LABEL: {{^}}use_constant_to_flat_addrspacecast:
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]]
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
@@ -119,7 +119,7 @@ define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %
   ret void
 }
 
-; HSA-LABEl: {{^}}use_constant_to_global_addrspacecast:
+; HSA-LABEL: {{^}}use_constant_to_global_addrspacecast:
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]]
 ; CI-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
 ; CI-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
@@ -424,4 +424,4 @@ attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind "amdgpu-32bit-address-high-bits"="0xffff8000" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

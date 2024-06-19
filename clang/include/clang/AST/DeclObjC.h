@@ -236,7 +236,7 @@ public:
          ObjCImplementationControl impControl = ObjCImplementationControl::None,
          bool HasRelatedResultType = false);
 
-  static ObjCMethodDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCMethodDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   ObjCMethodDecl *getCanonicalDecl() override;
   const ObjCMethodDecl *getCanonicalDecl() const {
@@ -614,7 +614,8 @@ public:
                                    IdentifierInfo *name,
                                    SourceLocation colonLoc,
                                    TypeSourceInfo *boundInfo);
-  static ObjCTypeParamDecl *CreateDeserialized(ASTContext &ctx, unsigned ID);
+  static ObjCTypeParamDecl *CreateDeserialized(ASTContext &ctx,
+                                               GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -772,7 +773,7 @@ private:
   // Synthesize ivar for this property
   ObjCIvarDecl *PropertyIvarDecl = nullptr;
 
-  ObjCPropertyDecl(DeclContext *DC, SourceLocation L, IdentifierInfo *Id,
+  ObjCPropertyDecl(DeclContext *DC, SourceLocation L, const IdentifierInfo *Id,
                    SourceLocation AtLocation, SourceLocation LParenLocation,
                    QualType T, TypeSourceInfo *TSI, PropertyControl propControl)
       : NamedDecl(ObjCProperty, DC, L, Id), AtLoc(AtLocation),
@@ -782,12 +783,14 @@ private:
         PropertyImplementation(propControl) {}
 
 public:
-  static ObjCPropertyDecl *
-  Create(ASTContext &C, DeclContext *DC, SourceLocation L, IdentifierInfo *Id,
-         SourceLocation AtLocation, SourceLocation LParenLocation, QualType T,
-         TypeSourceInfo *TSI, PropertyControl propControl = None);
+  static ObjCPropertyDecl *Create(ASTContext &C, DeclContext *DC,
+                                  SourceLocation L, const IdentifierInfo *Id,
+                                  SourceLocation AtLocation,
+                                  SourceLocation LParenLocation, QualType T,
+                                  TypeSourceInfo *TSI,
+                                  PropertyControl propControl = None);
 
-  static ObjCPropertyDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCPropertyDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceLocation getAtLoc() const { return AtLoc; }
   void setAtLoc(SourceLocation L) { AtLoc = L; }
@@ -952,7 +955,7 @@ class ObjCContainerDecl : public NamedDecl, public DeclContext {
   void anchor() override;
 
 public:
-  ObjCContainerDecl(Kind DK, DeclContext *DC, IdentifierInfo *Id,
+  ObjCContainerDecl(Kind DK, DeclContext *DC, const IdentifierInfo *Id,
                     SourceLocation nameLoc, SourceLocation atStartLoc);
 
   // Iterator access to instance/class properties.
@@ -1240,7 +1243,7 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
   llvm::PointerIntPair<DefinitionData *, 1, bool> Data;
 
   ObjCInterfaceDecl(const ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
-                    IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
+                    const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
                     SourceLocation CLoc, ObjCInterfaceDecl *PrevDecl,
                     bool IsInternal);
 
@@ -1271,15 +1274,14 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
   }
 
 public:
-  static ObjCInterfaceDecl *Create(const ASTContext &C, DeclContext *DC,
-                                   SourceLocation atLoc,
-                                   IdentifierInfo *Id,
-                                   ObjCTypeParamList *typeParamList,
-                                   ObjCInterfaceDecl *PrevDecl,
-                                   SourceLocation ClassLoc = SourceLocation(),
-                                   bool isInternal = false);
+  static ObjCInterfaceDecl *
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation atLoc,
+         const IdentifierInfo *Id, ObjCTypeParamList *typeParamList,
+         ObjCInterfaceDecl *PrevDecl,
+         SourceLocation ClassLoc = SourceLocation(), bool isInternal = false);
 
-  static ObjCInterfaceDecl *CreateDeserialized(const ASTContext &C, unsigned ID);
+  static ObjCInterfaceDecl *CreateDeserialized(const ASTContext &C,
+                                               GlobalDeclID ID);
 
   /// Retrieve the type parameters of this class.
   ///
@@ -1338,7 +1340,8 @@ public:
   ObjCImplementationDecl *getImplementation() const;
   void setImplementation(ObjCImplementationDecl *ImplD);
 
-  ObjCCategoryDecl *FindCategoryDeclaration(IdentifierInfo *CategoryId) const;
+  ObjCCategoryDecl *
+  FindCategoryDeclaration(const IdentifierInfo *CategoryId) const;
 
   // Get the local instance/class method declared in a category.
   ObjCMethodDecl *getCategoryInstanceMethod(Selector Sel) const;
@@ -1794,9 +1797,9 @@ public:
     data().CategoryList = category;
   }
 
-  ObjCPropertyDecl
-    *FindPropertyVisibleInPrimaryClass(IdentifierInfo *PropertyId,
-                                       ObjCPropertyQueryKind QueryKind) const;
+  ObjCPropertyDecl *
+  FindPropertyVisibleInPrimaryClass(const IdentifierInfo *PropertyId,
+                                    ObjCPropertyQueryKind QueryKind) const;
 
   void collectPropertiesToImplement(PropertyMap &PM) const override;
 
@@ -1954,8 +1957,8 @@ public:
 
 private:
   ObjCIvarDecl(ObjCContainerDecl *DC, SourceLocation StartLoc,
-               SourceLocation IdLoc, IdentifierInfo *Id,
-               QualType T, TypeSourceInfo *TInfo, AccessControl ac, Expr *BW,
+               SourceLocation IdLoc, const IdentifierInfo *Id, QualType T,
+               TypeSourceInfo *TInfo, AccessControl ac, Expr *BW,
                bool synthesized)
       : FieldDecl(ObjCIvar, DC, StartLoc, IdLoc, Id, T, TInfo, BW,
                   /*Mutable=*/false, /*HasInit=*/ICIS_NoInit),
@@ -1964,12 +1967,11 @@ private:
 public:
   static ObjCIvarDecl *Create(ASTContext &C, ObjCContainerDecl *DC,
                               SourceLocation StartLoc, SourceLocation IdLoc,
-                              IdentifierInfo *Id, QualType T,
-                              TypeSourceInfo *TInfo,
-                              AccessControl ac, Expr *BW = nullptr,
-                              bool synthesized=false);
+                              const IdentifierInfo *Id, QualType T,
+                              TypeSourceInfo *TInfo, AccessControl ac,
+                              Expr *BW = nullptr, bool synthesized = false);
 
-  static ObjCIvarDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCIvarDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   /// Return the class interface that this ivar is logically contained
   /// in; this is either the interface where the ivar was declared, or the
@@ -2039,7 +2041,8 @@ public:
                                      SourceLocation IdLoc, IdentifierInfo *Id,
                                      QualType T, Expr *BW);
 
-  static ObjCAtDefsFieldDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCAtDefsFieldDecl *CreateDeserialized(ASTContext &C,
+                                                 GlobalDeclID ID);
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2142,7 +2145,7 @@ public:
                                   SourceLocation atStartLoc,
                                   ObjCProtocolDecl *PrevDecl);
 
-  static ObjCProtocolDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCProtocolDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   const ObjCProtocolList &getReferencedProtocols() const {
     assert(hasDefinition() && "No definition available!");
@@ -2343,7 +2346,7 @@ class ObjCCategoryDecl : public ObjCContainerDecl {
 
   ObjCCategoryDecl(DeclContext *DC, SourceLocation AtLoc,
                    SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
-                   IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
+                   const IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
                    ObjCTypeParamList *typeParamList,
                    SourceLocation IvarLBraceLoc = SourceLocation(),
                    SourceLocation IvarRBraceLoc = SourceLocation());
@@ -2354,16 +2357,14 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  static ObjCCategoryDecl *Create(ASTContext &C, DeclContext *DC,
-                                  SourceLocation AtLoc,
-                                  SourceLocation ClassNameLoc,
-                                  SourceLocation CategoryNameLoc,
-                                  IdentifierInfo *Id,
-                                  ObjCInterfaceDecl *IDecl,
-                                  ObjCTypeParamList *typeParamList,
-                                  SourceLocation IvarLBraceLoc=SourceLocation(),
-                                  SourceLocation IvarRBraceLoc=SourceLocation());
-  static ObjCCategoryDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCCategoryDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation AtLoc,
+         SourceLocation ClassNameLoc, SourceLocation CategoryNameLoc,
+         const IdentifierInfo *Id, ObjCInterfaceDecl *IDecl,
+         ObjCTypeParamList *typeParamList,
+         SourceLocation IvarLBraceLoc = SourceLocation(),
+         SourceLocation IvarRBraceLoc = SourceLocation());
+  static ObjCCategoryDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   ObjCInterfaceDecl *getClassInterface() { return ClassInterface; }
   const ObjCInterfaceDecl *getClassInterface() const { return ClassInterface; }
@@ -2472,10 +2473,9 @@ class ObjCImplDecl : public ObjCContainerDecl {
   void anchor() override;
 
 protected:
-  ObjCImplDecl(Kind DK, DeclContext *DC,
-               ObjCInterfaceDecl *classInterface,
-               IdentifierInfo *Id,
-               SourceLocation nameLoc, SourceLocation atStartLoc)
+  ObjCImplDecl(Kind DK, DeclContext *DC, ObjCInterfaceDecl *classInterface,
+               const IdentifierInfo *Id, SourceLocation nameLoc,
+               SourceLocation atStartLoc)
       : ObjCContainerDecl(DK, DC, Id, nameLoc, atStartLoc),
         ClassInterface(classInterface) {}
 
@@ -2543,12 +2543,12 @@ class ObjCCategoryImplDecl : public ObjCImplDecl {
   // Category name location
   SourceLocation CategoryNameLoc;
 
-  ObjCCategoryImplDecl(DeclContext *DC, IdentifierInfo *Id,
+  ObjCCategoryImplDecl(DeclContext *DC, const IdentifierInfo *Id,
                        ObjCInterfaceDecl *classInterface,
                        SourceLocation nameLoc, SourceLocation atStartLoc,
                        SourceLocation CategoryNameLoc)
-      : ObjCImplDecl(ObjCCategoryImpl, DC, classInterface, Id,
-                     nameLoc, atStartLoc),
+      : ObjCImplDecl(ObjCCategoryImpl, DC, classInterface, Id, nameLoc,
+                     atStartLoc),
         CategoryNameLoc(CategoryNameLoc) {}
 
   void anchor() override;
@@ -2557,13 +2557,12 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  static ObjCCategoryImplDecl *Create(ASTContext &C, DeclContext *DC,
-                                      IdentifierInfo *Id,
-                                      ObjCInterfaceDecl *classInterface,
-                                      SourceLocation nameLoc,
-                                      SourceLocation atStartLoc,
-                                      SourceLocation CategoryNameLoc);
-  static ObjCCategoryImplDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCCategoryImplDecl *
+  Create(ASTContext &C, DeclContext *DC, const IdentifierInfo *Id,
+         ObjCInterfaceDecl *classInterface, SourceLocation nameLoc,
+         SourceLocation atStartLoc, SourceLocation CategoryNameLoc);
+  static ObjCCategoryImplDecl *CreateDeserialized(ASTContext &C,
+                                                  GlobalDeclID ID);
 
   ObjCCategoryDecl *getCategoryDecl() const;
 
@@ -2645,7 +2644,8 @@ public:
                                         SourceLocation IvarLBraceLoc=SourceLocation(),
                                         SourceLocation IvarRBraceLoc=SourceLocation());
 
-  static ObjCImplementationDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCImplementationDecl *CreateDeserialized(ASTContext &C,
+                                                    GlobalDeclID ID);
 
   /// init_iterator - Iterates through the ivar initializer list.
   using init_iterator = CXXCtorInitializer **;
@@ -2785,7 +2785,7 @@ public:
                                          ObjCInterfaceDecl* aliasedClass);
 
   static ObjCCompatibleAliasDecl *CreateDeserialized(ASTContext &C,
-                                                     unsigned ID);
+                                                     GlobalDeclID ID);
 
   const ObjCInterfaceDecl *getClassInterface() const { return AliasedClass; }
   ObjCInterfaceDecl *getClassInterface() { return AliasedClass; }
@@ -2856,7 +2856,8 @@ public:
                                       ObjCIvarDecl *ivarDecl,
                                       SourceLocation ivarLoc);
 
-  static ObjCPropertyImplDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ObjCPropertyImplDecl *CreateDeserialized(ASTContext &C,
+                                                  GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 

@@ -99,7 +99,7 @@ public:
   /// passes back decl sets as VisibleDeclaration objects.
   ///
   /// The default implementation of this method is a no-op.
-  virtual Decl *GetExternalDecl(uint32_t ID);
+  virtual Decl *GetExternalDecl(GlobalDeclID ID);
 
   /// Resolve a selector ID into a selector.
   ///
@@ -138,7 +138,7 @@ public:
   virtual CXXBaseSpecifier *GetExternalCXXBaseSpecifiers(uint64_t Offset);
 
   /// Update an out-of-date identifier.
-  virtual void updateOutOfDateIdentifier(IdentifierInfo &II) {}
+  virtual void updateOutOfDateIdentifier(const IdentifierInfo &II) {}
 
   /// Find all declarations with the given name in the given context,
   /// and add them to the context by calling SetExternalVisibleDeclsForName
@@ -375,7 +375,7 @@ public:
     if (isOffset()) {
       assert(Source &&
              "Cannot deserialize a lazy pointer without an AST source");
-      Ptr = reinterpret_cast<uint64_t>((Source->*Get)(Ptr >> 1));
+      Ptr = reinterpret_cast<uint64_t>((Source->*Get)(OffsT(Ptr >> 1)));
     }
     return reinterpret_cast<T*>(Ptr);
   }
@@ -579,7 +579,7 @@ using LazyDeclStmtPtr =
 
 /// A lazy pointer to a declaration.
 using LazyDeclPtr =
-    LazyOffsetPtr<Decl, uint32_t, &ExternalASTSource::GetExternalDecl>;
+    LazyOffsetPtr<Decl, GlobalDeclID, &ExternalASTSource::GetExternalDecl>;
 
 /// A lazy pointer to a set of CXXCtorInitializers.
 using LazyCXXCtorInitializersPtr =

@@ -168,6 +168,19 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                 .addImm(I->Op2));
       }
       break;
+    case AArch64::ORRWrs:
+    case AArch64::ORRXrs: {
+      Register DstReg = MI.getOperand(0).getReg();
+      bool DstIsDead = MI.getOperand(0).isDead();
+      MIBS.push_back(
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(I->Opcode))
+              .addReg(DstReg, RegState::Define |
+                                  getDeadRegState(DstIsDead && LastItem) |
+                                  RenamableState)
+              .addReg(DstReg)
+              .addReg(DstReg)
+              .addImm(I->Op2));
+    } break;
     case AArch64::ANDXri:
     case AArch64::EORXri:
       if (I->Op1 == 0) {
@@ -774,6 +787,51 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
   return true;
 }
 
+// Create a call with the passed opcode and explicit operands, copying over all
+// the implicit operands from *MBBI, starting at the regmask.
+static MachineInstr *createCallWithOps(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator MBBI,
+                                       const AArch64InstrInfo *TII,
+                                       unsigned Opcode,
+                                       ArrayRef<MachineOperand> ExplicitOps,
+                                       unsigned RegMaskStartIdx) {
+  // Build the MI, with explicit operands first (including the call target).
+  MachineInstr *Call = BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode))
+                           .add(ExplicitOps)
+                           .getInstr();
+
+  // Register arguments are added during ISel, but cannot be added as explicit
+  // operands of the branch as it expects to be B <target> which is only one
+  // operand. Instead they are implicit operands used by the branch.
+  while (!MBBI->getOperand(RegMaskStartIdx).isRegMask()) {
+    const MachineOperand &MOP = MBBI->getOperand(RegMaskStartIdx);
+    assert(MOP.isReg() && "can only add register operands");
+    Call->addOperand(MachineOperand::CreateReg(
+        MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
+        /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
+    RegMaskStartIdx++;
+  }
+  for (const MachineOperand &MO :
+       llvm::drop_begin(MBBI->operands(), RegMaskStartIdx))
+    Call->addOperand(MO);
+
+  return Call;
+}
+
+// Create a call to CallTarget, copying over all the operands from *MBBI,
+// starting at the regmask.
+static MachineInstr *createCall(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                const AArch64InstrInfo *TII,
+                                MachineOperand &CallTarget,
+                                unsigned RegMaskStartIdx) {
+  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
+
+  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+         "invalid operand for regular call");
+  return createCallWithOps(MBB, MBBI, TII, Opc, CallTarget, RegMaskStartIdx);
+}
+
 bool AArch64ExpandPseudo::expandCALL_RVMARKER(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   // Expand CALL_RVMARKER pseudo to:
@@ -782,31 +840,32 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
   // - another branch, to the runtime function
   // Mark the sequence as bundle, to avoid passes moving other code in between.
   MachineInstr &MI = *MBBI;
-
-  MachineInstr *OriginalCall;
   MachineOperand &RVTarget = MI.getOperand(0);
-  MachineOperand &CallTarget = MI.getOperand(1);
-  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
-         "invalid operand for regular call");
   assert(RVTarget.isGlobal() && "invalid operand for attached call");
-  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
-  OriginalCall = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
-  OriginalCall->addOperand(CallTarget);
 
-  unsigned RegMaskStartIdx = 2;
-  // Skip register arguments. Those are added during ISel, but are not
-  // needed for the concrete branch.
-  while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
-    auto MOP = MI.getOperand(RegMaskStartIdx);
-    assert(MOP.isReg() && "can only add register operands");
-    OriginalCall->addOperand(MachineOperand::CreateReg(
-        MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
-        /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
-    RegMaskStartIdx++;
+  MachineInstr *OriginalCall = nullptr;
+
+  if (MI.getOpcode() == AArch64::BLRA_RVMARKER) {
+    // ptrauth call.
+    const MachineOperand &CallTarget = MI.getOperand(1);
+    const MachineOperand &Key = MI.getOperand(2);
+    const MachineOperand &IntDisc = MI.getOperand(3);
+    const MachineOperand &AddrDisc = MI.getOperand(4);
+
+    assert((Key.getImm() == AArch64PACKey::IA ||
+            Key.getImm() == AArch64PACKey::IB) &&
+           "Invalid auth call key");
+
+    MachineOperand Ops[] = {CallTarget, Key, IntDisc, AddrDisc};
+
+    OriginalCall = createCallWithOps(MBB, MBBI, TII, AArch64::BLRA, Ops,
+                                     /*RegMaskStartIdx=*/5);
+  } else {
+    assert(MI.getOpcode() == AArch64::BLR_RVMARKER && "unknown rvmarker MI");
+    OriginalCall = createCall(MBB, MBBI, TII, MI.getOperand(1),
+                              // Regmask starts after the RV and call targets.
+                              /*RegMaskStartIdx=*/2);
   }
-  for (const MachineOperand &MO :
-       llvm::drop_begin(MI.operands(), RegMaskStartIdx))
-    OriginalCall->addOperand(MO);
 
   BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
                      .addReg(AArch64::FP, RegState::Define)
@@ -834,31 +893,10 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
   // - a BTI instruction
   // Mark the sequence as a bundle, to avoid passes moving other code in
   // between.
-
   MachineInstr &MI = *MBBI;
-  MachineOperand &CallTarget = MI.getOperand(0);
-  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
-         "invalid operand for regular call");
-  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
-  MachineInstr *Call =
-      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
-  Call->addOperand(CallTarget);
-
-  // 1 because we already added the branch target above.
-  unsigned RegMaskStartIdx = 1;
-  // The branch is BL <target>, so we cannot attach the arguments of the called
-  // function to it. Those must be added as implicitly used by the branch.
-  while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
-    auto MOP = MI.getOperand(RegMaskStartIdx);
-    assert(MOP.isReg() && "can only add register operands");
-    Call->addOperand(MachineOperand::CreateReg(
-        MOP.getReg(), /*Def=*/false, /*Implicit=*/true, /*isKill=*/false,
-        /*isDead=*/false, /*isUndef=*/MOP.isUndef()));
-    RegMaskStartIdx++;
-  }
-  for (const MachineOperand &MO :
-       llvm::drop_begin(MI.operands(), RegMaskStartIdx))
-    Call->addOperand(MO);
+  MachineInstr *Call = createCall(MBB, MBBI, TII, MI.getOperand(0),
+                                  // Regmask starts after the call target.
+                                  /*RegMaskStartIdx=*/1);
 
   Call->setCFIType(*MBB.getParent(), MI.getCFIType());
 
@@ -994,7 +1032,7 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // Expand the pseudo into smstart or smstop instruction. The pseudo has the
   // following operands:
   //
-  //   MSRpstatePseudo <za|sm|both>, <0|1>, pstate.sm, expectedval, <regmask>
+  //   MSRpstatePseudo <za|sm|both>, <0|1>, condition[, pstate.sm], <regmask>
   //
   // The pseudo is expanded into a conditional smstart/smstop, with a
   // check if pstate.sm (register) equals the expected value, and if not,
@@ -1004,9 +1042,9 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // streaming-compatible function:
   //
   // OrigBB:
-  //   MSRpstatePseudo 3, 0, %0, 0, <regmask>             <- Conditional SMSTOP
+  //   MSRpstatePseudo 3, 0, IfCallerIsStreaming, %0, <regmask>  <- Cond SMSTOP
   //   bl @normal_callee
-  //   MSRpstatePseudo 3, 1, %0, 0, <regmask>             <- Conditional SMSTART
+  //   MSRpstatePseudo 3, 1, IfCallerIsStreaming, %0, <regmask>  <- Cond SMSTART
   //
   // ...which will be transformed into:
   //
@@ -1029,11 +1067,20 @@ AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
   // We test the live value of pstate.sm and toggle pstate.sm if this is not the
   // expected value for the callee (0 for a normal callee and 1 for a streaming
   // callee).
-  auto PStateSM = MI.getOperand(2).getReg();
+  unsigned Opc;
+  switch (MI.getOperand(2).getImm()) {
+  case AArch64SME::Always:
+    llvm_unreachable("Should have matched to instruction directly");
+  case AArch64SME::IfCallerIsStreaming:
+    Opc = AArch64::TBNZW;
+    break;
+  case AArch64SME::IfCallerIsNonStreaming:
+    Opc = AArch64::TBZW;
+    break;
+  }
+  auto PStateSM = MI.getOperand(3).getReg();
   auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
   unsigned SMReg32 = TRI->getSubReg(PStateSM, AArch64::sub_32);
-  bool IsStreamingCallee = MI.getOperand(3).getImm();
-  unsigned Opc = IsStreamingCallee ? AArch64::TBZW : AArch64::TBNZW;
   MachineInstrBuilder Tbx =
       BuildMI(MBB, MBBI, DL, TII->get(Opc)).addReg(SMReg32).addImm(0);
 
@@ -1527,6 +1574,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::LDR_PPXI:
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_PXI, 2);
    case AArch64::BLR_RVMARKER:
+   case AArch64::BLRA_RVMARKER:
      return expandCALL_RVMARKER(MBB, MBBI);
    case AArch64::BLR_BTI:
      return expandCALL_BTI(MBB, MBBI);

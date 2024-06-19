@@ -396,6 +396,12 @@ public:
   }
 };
 
+static std::string DetailedErrorString(const DiagnosticsEngine &Diags) {
+  if (Diags.getDiagnosticOptions().VerifyPrefixes.empty())
+    return "expected";
+  return *Diags.getDiagnosticOptions().VerifyPrefixes.begin();
+}
+
 /// ParseDirective - Go through the comment and see if it indicates expected
 /// diagnostics. If so, then put them in the appropriate directive list.
 ///
@@ -478,14 +484,14 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     if (NoDiag) {
       if (Status == VerifyDiagnosticConsumer::HasOtherExpectedDirectives)
         Diags.Report(Pos, diag::err_verify_invalid_no_diags)
-          << /*IsExpectedNoDiagnostics=*/true;
+            << DetailedErrorString(Diags) << /*IsExpectedNoDiagnostics=*/true;
       else
         Status = VerifyDiagnosticConsumer::HasExpectedNoDiagnostics;
       continue;
     }
     if (Status == VerifyDiagnosticConsumer::HasExpectedNoDiagnostics) {
       Diags.Report(Pos, diag::err_verify_invalid_no_diags)
-        << /*IsExpectedNoDiagnostics=*/false;
+          << DetailedErrorString(Diags) << /*IsExpectedNoDiagnostics=*/false;
       continue;
     }
     Status = VerifyDiagnosticConsumer::HasOtherExpectedDirectives;
@@ -1104,7 +1110,8 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // Produce an error if no expected-* directives could be found in the
     // source file(s) processed.
     if (Status == HasNoDirectives) {
-      Diags.Report(diag::err_verify_no_directives).setForceEmit();
+      Diags.Report(diag::err_verify_no_directives).setForceEmit()
+          << DetailedErrorString(Diags);
       ++NumErrors;
       Status = HasNoDirectivesReported;
     }

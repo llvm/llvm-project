@@ -134,6 +134,12 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMergeOnExternal("global-merge-on-external", cl::Hidden,
      cl::desc("Enable global merge pass on external linkage"));
 
+static cl::opt<unsigned>
+    GlobalMergeMinDataSize("global-merge-min-data-size",
+                           cl::desc("The minimum size in bytes of each global "
+                                    "that should considered in merging."),
+                           cl::init(0), cl::Hidden);
+
 STATISTIC(NumMerged, "Number of globals merged");
 
 namespace {
@@ -198,6 +204,19 @@ public:
   }
 
   bool doInitialization(Module &M) override {
+    auto GetSmallDataLimit = [](Module &M) -> std::optional<uint64_t> {
+      Metadata *SDL = M.getModuleFlag("SmallDataLimit");
+      if (!SDL)
+        return std::nullopt;
+      return mdconst::extract<ConstantInt>(SDL)->getZExtValue();
+    };
+    if (GlobalMergeMinDataSize.getNumOccurrences())
+      Opt.MinSize = GlobalMergeMinDataSize;
+    else if (auto SDL = GetSmallDataLimit(M); SDL && *SDL > 0)
+      Opt.MinSize = *SDL + 1;
+    else
+      Opt.MinSize = 0;
+
     GlobalMergeImpl P(TM, Opt);
     return P.run(M);
   }
@@ -309,10 +328,9 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
   for (size_t GI = 0, GE = Globals.size(); GI != GE; ++GI) {
     GlobalVariable *GV = Globals[GI];
 
-    // Reset the encountered sets for this global...
-    std::fill(EncounteredUGS.begin(), EncounteredUGS.end(), 0);
-    // ...and grow it in case we created new sets for the previous global.
-    EncounteredUGS.resize(UsedGlobalSets.size());
+    // Reset the encountered sets for this global and grow it in case we created
+    // new sets for the previous global.
+    EncounteredUGS.assign(UsedGlobalSets.size(), 0);
 
     // We might need to create a set that only consists of the current global.
     // Keep track of its index into UsedGlobalSets.
@@ -641,7 +659,7 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
 
     // It's not safe to merge globals that may be preempted
-    if (TM && !TM->shouldAssumeDSOLocal(M, &GV))
+    if (TM && !TM->shouldAssumeDSOLocal(&GV))
       continue;
 
     if (!(Opt.MergeExternal && GV.hasExternalLinkage()) &&
@@ -671,7 +689,8 @@ bool GlobalMergeImpl::run(Module &M) {
       continue;
 
     Type *Ty = GV.getValueType();
-    if (DL.getTypeAllocSize(Ty) < Opt.MaxOffset) {
+    TypeSize AllocSize = DL.getTypeAllocSize(Ty);
+    if (AllocSize < Opt.MaxOffset && AllocSize >= Opt.MinSize) {
       if (TM &&
           TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSS())
         BSSGlobals[{AddressSpace, Section}].push_back(&GV);

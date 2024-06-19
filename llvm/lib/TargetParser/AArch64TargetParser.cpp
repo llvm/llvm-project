@@ -30,9 +30,6 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
 }
 
 const AArch64::ArchInfo *AArch64::getArchForCpu(StringRef CPU) {
-  if (CPU == "generic")
-    return &ARMV8A;
-
   // Note: this now takes cpu aliases into account
   std::optional<CpuInfo> Cpu = parseCpu(CPU);
   if (!Cpu)
@@ -69,7 +66,7 @@ bool AArch64::getExtensionFeatures(
 
 StringRef AArch64::resolveCPUAlias(StringRef Name) {
   for (const auto &A : CpuAliases)
-    if (A.Alias == Name)
+    if (A.AltName == Name)
       return A.Name;
   return Name;
 }
@@ -91,7 +88,7 @@ void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
       Values.push_back(C.Name);
 
   for (const auto &Alias : CpuAliases)
-    Values.push_back(Alias.Alias);
+    Values.push_back(Alias.AltName);
 }
 
 bool AArch64::isX18ReservedByDefault(const Triple &TT) {
@@ -113,11 +110,20 @@ const AArch64::ArchInfo *AArch64::parseArch(StringRef Arch) {
   return {};
 }
 
-std::optional<AArch64::ExtensionInfo> AArch64::parseArchExtension(StringRef ArchExt) {
+std::optional<AArch64::ExtensionInfo>
+AArch64::parseArchExtension(StringRef ArchExt) {
   for (const auto &A : Extensions) {
-    if (ArchExt == A.Name)
+    if (ArchExt == A.Name || ArchExt == A.Alias)
       return A;
   }
+  return {};
+}
+
+std::optional<AArch64::ExtensionInfo>
+AArch64::targetFeatureToExtension(StringRef TargetFeature) {
+  for (const auto &E : Extensions)
+    if (TargetFeature == E.Feature)
+      return E;
   return {};
 }
 
@@ -175,21 +181,10 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
   // Special cases for dependencies which vary depending on the base
   // architecture version.
   if (BaseArch) {
-    // +sve implies +f32mm if the base architecture is v8.6A+ or v9.1A+
-    // It isn't the case in general that sve implies both f64mm and f32mm
-    if (E == AEK_SVE && BaseArch->is_superset(ARMV8_6A))
-      enable(AEK_F32MM);
-
     // +fp16 implies +fp16fml for v8.4A+, but not v9.0-A+
     if (E == AEK_FP16 && BaseArch->is_superset(ARMV8_4A) &&
         !BaseArch->is_superset(ARMV9A))
       enable(AEK_FP16FML);
-
-    // For all architectures, +crypto enables +aes and +sha2.
-    if (E == AEK_CRYPTO) {
-      enable(AEK_AES);
-      enable(AEK_SHA2);
-    }
 
     // For v8.4A+ and v9.0A+, +crypto also enables +sha3 and +sm4.
     if (E == AEK_CRYPTO && BaseArch->is_superset(ARMV8_4A)) {
@@ -223,21 +218,6 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
       disable(Dep.Later);
 }
 
-void AArch64::ExtensionSet::toLLVMFeatureList(
-    std::vector<StringRef> &Features) const {
-  if (BaseArch && !BaseArch->ArchFeature.empty())
-    Features.push_back(BaseArch->ArchFeature);
-
-  for (const auto &E : Extensions) {
-    if (E.Feature.empty() || !Touched.test(E.ID))
-      continue;
-    if (Enabled.test(E.ID))
-      Features.push_back(E.Feature);
-    else
-      Features.push_back(E.NegFeature);
-  }
-}
-
 void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
   LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << CPU.Name << ")\n");
   BaseArch = &CPU.Arch;
@@ -257,11 +237,18 @@ void AArch64::ExtensionSet::addArchDefaults(const ArchInfo &Arch) {
       enable(E.ID);
 }
 
-bool AArch64::ExtensionSet::parseModifier(StringRef Modifier) {
+bool AArch64::ExtensionSet::parseModifier(StringRef Modifier,
+                                          const bool AllowNoDashForm) {
   LLVM_DEBUG(llvm::dbgs() << "parseModifier(" << Modifier << ")\n");
 
-  bool IsNegated = Modifier.starts_with("no");
-  StringRef ArchExt = IsNegated ? Modifier.drop_front(2) : Modifier;
+  size_t NChars = 0;
+  // The "no-feat" form is allowed in the target attribute but nowhere else.
+  if (AllowNoDashForm && Modifier.starts_with("no-"))
+    NChars = 3;
+  else if (Modifier.starts_with("no"))
+    NChars = 2;
+  bool IsNegated = NChars != 0;
+  StringRef ArchExt = Modifier.drop_front(NChars);
 
   if (auto AE = parseArchExtension(ArchExt)) {
     if (AE->Feature.empty() || AE->NegFeature.empty())
@@ -273,4 +260,27 @@ bool AArch64::ExtensionSet::parseModifier(StringRef Modifier) {
     return true;
   }
   return false;
+}
+
+void AArch64::ExtensionSet::reconstructFromParsedFeatures(
+    const std::vector<std::string> &Features,
+    std::vector<std::string> &NonExtensions) {
+  assert(Touched.none() && "Bitset already initialized");
+  for (auto &F : Features) {
+    bool IsNegated = F[0] == '-';
+    if (auto AE = targetFeatureToExtension(F)) {
+      Touched.set(AE->ID);
+      if (IsNegated)
+        Enabled.reset(AE->ID);
+      else
+        Enabled.set(AE->ID);
+      continue;
+    }
+    NonExtensions.push_back(F);
+  }
+}
+
+const AArch64::ExtensionInfo &
+AArch64::getExtensionByID(AArch64::ArchExtKind ExtID) {
+  return lookupExtensionByID(ExtID);
 }

@@ -22,25 +22,17 @@ entry:
   %0 = load i32, ptr %A.addr, align 4
   %tobool = icmp ne i32 %0, 0
 
-  call void @llvm.instrprof.mcdc.condbitmap.update(ptr @__profn_test, i64 99278, i32 0, ptr %mcdc.addr, i1 %tobool)
-  ; CHECK:      %mcdc.temp = load i32, ptr %mcdc.addr, align 4
-  ; CHECK-NEXT: %1 = zext i1 %tobool to i32
-  ; CHECK-NEXT: %2 = shl i32 %1, 0
-  ; CHECK-NEXT: %3 = or i32 %mcdc.temp, %2
-  ; CHECK-NEXT: store i32 %3, ptr %mcdc.addr, align 4
-
-  call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 99278, i32 1, i32 0, ptr %mcdc.addr)
-  ; CHECK:       %mcdc.temp1 = load i32, ptr %mcdc.addr, align 4
-  ; CHECK-NEXT: %4 = lshr i32 %mcdc.temp1, 3
-  ; CHECK-NEXT: %5 = zext i32 %4 to i64
-  ; CHECK-NEXT: %6 = add i64 ptrtoint (ptr @__profbm_test to i64), %5
-  ; CHECK-NEXT: %7 = inttoptr i64 %6 to ptr
-  ; CHECK-NEXT: %8 = and i32 %mcdc.temp1, 7
-  ; CHECK-NEXT: %9 = trunc i32 %8 to i8
-  ; CHECK-NEXT: %10 = shl i8 1, %9
-  ; CHECK-NEXT: %mcdc.bits = load i8, ptr %7, align 1
-  ; CHECK-NEXT: %11 = or i8 %mcdc.bits, %10
-  ; CHECK-NEXT: store i8 %11, ptr %7, align 1
+  call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 99278, i32 0, ptr %mcdc.addr)
+  ; CHECK:      %[[TEMP0:mcdc.*]] = load i32, ptr %mcdc.addr, align 4
+  ; CHECK-NEXT: %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
+  ; CHECK-NEXT: %[[LAB4:[0-9]+]] = lshr i32 %[[TEMP]], 3
+  ; CHECK-NEXT: %[[LAB7:[0-9]+]] = getelementptr inbounds i8, ptr @__profbm_test, i32 %[[LAB4]]
+  ; CHECK-NEXT: %[[LAB8:[0-9]+]] = and i32 %[[TEMP]], 7
+  ; CHECK-NEXT: %[[LAB9:[0-9]+]] = trunc i32 %[[LAB8]] to i8
+  ; CHECK-NEXT: %[[LAB10:[0-9]+]] = shl i8 1, %[[LAB9]]
+  ; CHECK-NEXT: %[[BITS:mcdc.*]] = load i8, ptr %[[LAB7]], align 1
+  ; CHECK-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[LAB10]]
+  ; CHECK-NEXT: store i8 %[[LAB11]], ptr %[[LAB7]], align 1
   ret void
 }
 
@@ -48,6 +40,4 @@ declare void @llvm.instrprof.cover(ptr, i64, i32, i32)
 
 declare void @llvm.instrprof.mcdc.parameters(ptr, i64, i32)
 
-declare void @llvm.instrprof.mcdc.condbitmap.update(ptr, i64, i32, ptr, i1)
-
-declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr, i64, i32, i32, ptr)
+declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr, i64, i32, ptr)

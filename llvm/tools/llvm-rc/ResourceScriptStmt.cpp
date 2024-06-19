@@ -309,5 +309,9 @@ raw_ostream &ExStyleStmt::log(raw_ostream &OS) const {
   return OS << "ExStyle: " << Value << "\n";
 }
 
+raw_ostream &MenuStmt::log(raw_ostream &OS) const {
+  return OS << "Menu: " << Value << "\n";
+}
+
 } // namespace rc
 } // namespace llvm

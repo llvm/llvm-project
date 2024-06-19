@@ -22,3 +22,43 @@ int array2[recurse2]; // both-warning {{variable length arrays in C++}} \
                       // both-note {{initializer of 'recurse2' is not a constant expression}} \
                       // expected-error {{variable length array declaration not allowed at file scope}} \
                       // ref-warning {{variable length array folded to constant array as an extension}}
+
+struct S {
+  int m;
+};
+constexpr S s = { 5 };
+constexpr const int *p = &s.m + 1;
+
+constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok
+
+constexpr int preDec(int x) { // both-error {{never produces a constant expression}}
+  return --x;                 // both-note {{subexpression}}
+}
+
+constexpr int postDec(int x) { // both-error {{never produces a constant expression}}
+  return x--;                  // both-note {{subexpression}}
+}
+
+constexpr int preInc(int x) { // both-error {{never produces a constant expression}}
+  return ++x;                  // both-note {{subexpression}}
+}
+
+constexpr int postInc(int x) { // both-error {{never produces a constant expression}}
+  return x++;                  // both-note {{subexpression}}
+}
+
+
+namespace ReferenceToConst {
+  template<int n> struct S; // both-note 1{{here}}
+  struct LiteralType {
+    constexpr LiteralType(int n) : n(n) {}
+    int n;
+  };
+  template<int n> struct T {
+    T() {
+      static const int ki = 42;
+      const int &i2 = ki;
+      typename S<i2>::T check5; // both-error {{undefined template}}
+    }
+  };
+}

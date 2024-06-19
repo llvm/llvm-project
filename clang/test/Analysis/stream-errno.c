@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.Errno,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,unix.Errno,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify %s
 
 #include "Inputs/system-header-simulator.h"
@@ -173,6 +174,8 @@ void check_no_errno_change(void) {
   if (errno) {} // no-warning
   ferror(F);
   if (errno) {} // no-warning
+  fileno(F);
+  if (errno) {} // no-warning
   clang_analyzer_eval(errno == 1); // expected-warning{{TRUE}}
   fclose(F);
 }
@@ -248,20 +251,6 @@ void check_rewind(void) {
   // expected-warning@-1{{FALSE}}
   // expected-warning@-2{{TRUE}}
   fclose(F);
-}
-
-void check_fileno(void) {
-  FILE *F = tmpfile();
-  if (!F)
-    return;
-  int N = fileno(F);
-  if (N == -1) {
-    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
-    if (errno) {} // no-warning
-    fclose(F);
-    return;
-  }
-  if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
 }
 
 void check_fflush_opened_file(void) {

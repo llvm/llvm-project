@@ -15,7 +15,7 @@ def SparseAssembler : Pass<"sparse-assembler", "ModuleOp"> {
   let summary = "Add [dis]assemble operations on external sparse tensors";
   let description = [{
     A pass that converts public entry methods that use sparse tensors as
-    input parameters and/or output return values into wrapper functions
+    input parameters and/or output return values into wrapper methods
     that [dis]assemble the individual tensors that constitute the actual
     storage used externally into MLIR sparse tensors. This pass can be used
     to prepare the public entry methods of a program that is compiled by the
@@ -23,11 +23,20 @@ def SparseAssembler : Pass<"sparse-assembler", "ModuleOp"> {
     sparse tensors as numpy arrays from and to Python. Note that eventual
     bufferization decisions (e.g. who [de]allocates the underlying memory)
     should be resolved in agreement with the external runtime.
+
+    By default, the pass uses the [dis]assemble operations to input and output
+    sparse tensors. When the direct-out option is set, however, the output
+    directly returns the MLIR allocated buffers to the external runtime.
   }];
   let constructor = "mlir::createSparseAssembler()";
   let dependentDialects = [
+    "bufferization::BufferizationDialect",
     "sparse_tensor::SparseTensorDialect",
     "tensor::TensorDialect",
+  ];
+  let options = [
+    Option<"directOut", "direct-out", "bool",
+      "false", "Directly returns buffers externally">,
   ];
 }
 
@@ -154,7 +163,9 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
            "mlir::SparseEmitStrategy::kFunctional",
            "Emit functional code or interfaces (to debug) for sparse loops", [{llvm::cl::values(
              clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
-                        "Emit functional code."),
+                        "Emit functional code (with scf.for/while)."),
+             clEnumValN(mlir::SparseEmitStrategy::kSparseIterator, "sparse-iterator",
+                        "Emit (experimental) loops (with sparse.iterate)."),
              clEnumValN(mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
                         "Emit non-functional but easy-to-read interfaces to debug."))}]>,
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
@@ -451,7 +462,51 @@ def SparsificationAndBufferization : Pass<"sparsification-and-bufferization", "M
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
+    "vector::VectorDialect"
+  ];
+  // Important optimization options are made visible to the mini-pipeline
+  // so that clients can set these (when not using the full pipeline).
+  let options = [
+    Option<"vectorLength", "vl", "int32_t", "0",
+           "Set the vector length (use 0 to disable vectorization)">,
+    Option<"enableVLAVectorization", "enable-vla-vectorization", "bool", "false",
+           "Enable vector length agnostic vectorization">,
+    Option<"enableSIMDIndex32", "enable-simd-index32", "bool", "false",
+           "Enable i32 indexing into vectors (for efficient gather/scatter)">,
+    Option<"enableGPULibgen", "enable-gpu-libgen", "bool", "false",
+           "Enable GPU acceleration by means of direct library calls">,
   ];
 }
+
+//===----------------------------------------------------------------------===//
+// Sparse Iteration Transform Passes
+//===----------------------------------------------------------------------===//
+
+def SparseSpaceCollapse : Pass<"sparse-space-collapse", "func::FuncOp"> {
+  let summary = "sparse space collapsing pass";
+  let description = [{
+     This pass collapses consecutive sparse spaces (extracted from the same tensor)
+     into one multi-dimensional space. The pass is not yet stabilized.
+  }];
+  let constructor = "mlir::createSparseSpaceCollapsePass()";
+  let dependentDialects = [
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
+def LowerSparseIterationToSCF : Pass<"lower-sparse-iteration-to-scf", "func::FuncOp"> {
+  let summary = "lower sparse_tensor.iterate/coiterate into scf loops";
+  let description = [{
+     This pass lowers `sparse_tensor.iterate` operations into `scf.for/while` operations.
+     The pass is not yet stabilized.
+  }];
+  let constructor = "mlir::createLowerSparseIterationToSCFPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
 
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES

@@ -58,14 +58,12 @@ define float @test_v1f32(<1 x float> %a) nounwind {
 ;
 ; CHECK-NOFP-GI-LABEL: test_v1f32:
 ; CHECK-NOFP-GI:       // %bb.0:
-; CHECK-NOFP-GI-NEXT:    fmov x8, d0
-; CHECK-NOFP-GI-NEXT:    fmov s0, w8
+; CHECK-NOFP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-NOFP-GI-NEXT:    ret
 ;
 ; CHECK-FP-GI-LABEL: test_v1f32:
 ; CHECK-FP-GI:       // %bb.0:
-; CHECK-FP-GI-NEXT:    fmov x8, d0
-; CHECK-FP-GI-NEXT:    fmov s0, w8
+; CHECK-FP-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
 ; CHECK-FP-GI-NEXT:    ret
   %b = call nnan float @llvm.vector.reduce.fmax.v1f32(<1 x float> %a)
   ret float %b
@@ -650,7 +648,19 @@ define float @test_v3f32_ninf(<3 x float> %a) nounwind {
 define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: test_v2f128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    b fmaxl
+; CHECK-NEXT:    sub sp, sp, #48
+; CHECK-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
+; CHECK-NEXT:    bl __gttf2
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    b.le .LBB18_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:  .LBB18_2:
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
+; CHECK-NEXT:    ret
   %b = call nnan fp128 @llvm.vector.reduce.fmax.v2f128(<2 x fp128> %a)
   ret fp128 %b
 }

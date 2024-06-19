@@ -9,8 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H
 
-#include "lldb/Utility/ConstString.h"
 #include "DWARFDefines.h"
+#include "lldb/Utility/ConstString.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <cassert>
 #include <string>
@@ -38,6 +39,10 @@ public:
       return false;
     }
 
+    /// Returns the name of this entry if it has one, or the appropriate
+    /// "anonymous {namespace, class, struct, union}".
+    const char *GetName() const;
+
     // Test operator
     explicit operator bool() const { return tag != 0; }
 
@@ -46,6 +51,10 @@ public:
   };
 
   DWARFDeclContext() : m_entries() {}
+
+  DWARFDeclContext(llvm::ArrayRef<Entry> entries) {
+    llvm::append_range(m_entries, entries);
+  }
 
   void AppendDeclContext(dw_tag_t tag, const char *name) {
     m_entries.push_back(Entry(tag, name));
@@ -77,6 +86,17 @@ public:
   void Clear() {
     m_entries.clear();
     m_qualified_name.clear();
+  }
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                       const DWARFDeclContext &ctx) {
+    OS << "DWARFDeclContext{";
+    llvm::ListSeparator LS;
+    for (const Entry &e : ctx.m_entries) {
+      OS << LS << "{" << DW_TAG_value_to_name(e.tag) << ", " << e.GetName()
+         << "}";
+    }
+    return OS << "}";
   }
 
 protected:

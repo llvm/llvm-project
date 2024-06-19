@@ -2333,7 +2333,8 @@ inline ProgramStateRef EquivalenceClass::merge(RangeSet::Factory &F,
   //
   //        The moment we introduce symbolic casts, this restriction can be
   //        lifted.
-  if (getType() != Other.getType())
+  if (getType()->getCanonicalTypeUnqualified() !=
+      Other.getType()->getCanonicalTypeUnqualified())
     return State;
 
   SymbolSet Members = getClassMembers(State);
@@ -3038,7 +3039,7 @@ ProgramStateRef RangeConstraintManager::setRange(ProgramStateRef State,
 
 //===------------------------------------------------------------------------===
 // assumeSymX methods: protected interface for RangeConstraintManager.
-//===------------------------------------------------------------------------===/
+//===------------------------------------------------------------------------===
 
 // The syntax for ranges below is mathematical, using [x, y] for closed ranges
 // and (x, y) for open ranges. These ranges are modular, corresponding with

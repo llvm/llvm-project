@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++03 -verify -ast-dump %s > %t-03
+// RUN: %clang_cc1 -std=c++03 -verify -ast-dump %s > %t-03
 // RUN: FileCheck --input-file=%t-03 %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify -ast-dump %s > %t-11
+// RUN: %clang_cc1 -std=c++11 -verify -ast-dump %s > %t-11
 // RUN: FileCheck --input-file=%t-11 %s
 // RUN: FileCheck --input-file=%t-11 %s --check-prefix=CHECK-CXX11
+// RUN: %clang_cc1 -verify -std=c++17 %s
 
 // http://llvm.org/PR7905
 namespace PR7905 {
@@ -108,3 +109,23 @@ int computed_with_lambda = [] {
   return result;
 }();
 #endif
+
+namespace DynamicFileScopeLiteral {
+// This covers the case where we have a file-scope compound literal with a
+// non-constant initializer in C++. Previously, we had a bug where Clang forgot
+// to consider initializer list elements for bases.
+struct Empty {};
+struct Foo : Empty { // expected-note 0+ {{candidate constructor}}
+  int x;
+  int y;
+};
+int f();
+#if __cplusplus < 201103L
+// expected-error@+6 {{non-aggregate type 'Foo' cannot be initialized with an initializer list}}
+#elif __cplusplus < 201703L
+// expected-error@+4 {{no matching constructor}}
+#else
+// expected-error@+2 {{initializer element is not a compile-time constant}}
+#endif
+Foo o = (Foo){ {}, 1, f() };
+}

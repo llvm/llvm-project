@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm[toml]", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "google_benchmark"
+description = "A library to benchmark code snippets."
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+keywords = ["benchmark"]
+
+authors = [
+    {name = "Google", email = "benchmark-discuss@googlegroups.com"},
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: System :: Benchmark",
+]
+
+dynamic = ["readme", "version"]
+
+dependencies = [
+    "absl-py>=0.7.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=3.3.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/google/benchmark"
+Documentation = "https://github.com/google/benchmark/tree/main/docs"
+Repository = "https://github.com/google/benchmark.git"
+Discord = "https://discord.gg/cz7UX7wKC2"
+
+[tool.setuptools]
+package-dir = {"" = "bindings/python"}
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["bindings/python"]
+
+[tool.setuptools.dynamic]
+readme = { file = "README.md", content-type = "text/markdown" }
+
+[tool.setuptools_scm]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_incomplete_defs = true
+pretty = true
+python_version = "3.11"
+strict_optional = false
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["yaml"]
+ignore_missing_imports = true
+
+[tool.ruff]
+# explicitly tell ruff the source directory to correctly identify first-party package.
+src = ["bindings/python"]
+
+line-length = 80
+target-version = "py311"
+
+# Enable pycodestyle (`E`, `W`), Pyflakes (`F`), and isort (`I`) codes by default.
+select = ["E", "F", "I", "W"]
+ignore = [
+    "E501", # line too long
+]
+
+[tool.ruff.isort]
+combine-as-imports = true

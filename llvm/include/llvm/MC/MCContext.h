@@ -26,6 +26,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -43,6 +44,7 @@ namespace llvm {
 
 class CodeViewContext;
 class MCAsmInfo;
+class MCDataFragment;
 class MCInst;
 class MCLabel;
 class MCObjectFileInfo;
@@ -69,6 +71,10 @@ class SMDiagnostic;
 class SMLoc;
 class SourceMgr;
 enum class EmitDwarfUnwindType;
+
+namespace wasm {
+struct WasmSignature;
+}
 
 /// Context object for machine code objects.  This class owns all of the
 /// sections that it creates.
@@ -138,6 +144,8 @@ private:
   SpecificBumpPtrAllocator<MCSectionWasm> WasmAllocator;
   SpecificBumpPtrAllocator<MCSectionXCOFF> XCOFFAllocator;
   SpecificBumpPtrAllocator<MCInst> MCInstAllocator;
+
+  SpecificBumpPtrAllocator<wasm::WasmSignature> WasmSignatureAllocator;
 
   /// Bindings of names to symbols.
   SymbolTable Symbols;
@@ -236,7 +244,7 @@ private:
   /// Honor temporary labels, this is useful for debugging semantic
   /// differences between temporary and non-temporary labels (primarily on
   /// Darwin).
-  bool AllowTemporaryLabels = true;
+  bool SaveTempLabels = false;
   bool UseNamesOnTempLabels = false;
 
   /// The Compile Unit ID that we are currently processing.
@@ -244,31 +252,6 @@ private:
 
   /// A collection of MCPseudoProbe in the current module
   MCPseudoProbeTable PseudoProbeTable;
-
-  // Sections are differentiated by the quadruple (section_name, group_name,
-  // unique_id, link_to_symbol_name). Sections sharing the same quadruple are
-  // combined into one section.
-  struct ELFSectionKey {
-    std::string SectionName;
-    StringRef GroupName;
-    StringRef LinkedToName;
-    unsigned UniqueID;
-
-    ELFSectionKey(StringRef SectionName, StringRef GroupName,
-                  StringRef LinkedToName, unsigned UniqueID)
-        : SectionName(SectionName), GroupName(GroupName),
-          LinkedToName(LinkedToName), UniqueID(UniqueID) {}
-
-    bool operator<(const ELFSectionKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (GroupName != Other.GroupName)
-        return GroupName < Other.GroupName;
-      if (int O = LinkedToName.compare(Other.LinkedToName))
-        return O < 0;
-      return UniqueID < Other.UniqueID;
-    }
-  };
 
   struct COFFSectionKey {
     std::string SectionName;
@@ -343,8 +326,8 @@ private:
   };
 
   StringMap<MCSectionMachO *> MachOUniquingMap;
-  std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
+  StringMap<MCSectionELF *> ELFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
@@ -363,8 +346,10 @@ private:
   void reportCommon(SMLoc Loc,
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
+  MCDataFragment *allocInitialFragment(MCSection &Sec);
+
   MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
-                             bool CanBeUnnamed);
+                             bool IsTemporary);
   MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
                          bool IsTemporary);
 
@@ -384,29 +369,13 @@ private:
   /// Map of currently defined macros.
   StringMap<MCAsmMacro> MacroMap;
 
-  struct ELFEntrySizeKey {
-    std::string SectionName;
-    unsigned Flags;
-    unsigned EntrySize;
-
-    ELFEntrySizeKey(StringRef SectionName, unsigned Flags, unsigned EntrySize)
-        : SectionName(SectionName), Flags(Flags), EntrySize(EntrySize) {}
-
-    bool operator<(const ELFEntrySizeKey &Other) const {
-      if (SectionName != Other.SectionName)
-        return SectionName < Other.SectionName;
-      if (Flags != Other.Flags)
-        return Flags < Other.Flags;
-      return EntrySize < Other.EntrySize;
-    }
-  };
-
   // Symbols must be assigned to a section with a compatible entry size and
   // flags. This map is used to assign unique IDs to sections to distinguish
   // between sections with identical names but incompatible entry sizes and/or
   // flags. This can occur when a symbol is explicitly assigned to a section,
-  // e.g. via __attribute__((section("myname"))).
-  std::map<ELFEntrySizeKey, unsigned> ELFEntrySizeMap;
+  // e.g. via __attribute__((section("myname"))). The map key is the tuple
+  // (section name, flags, entry size).
+  DenseMap<std::tuple<StringRef, unsigned, unsigned>, unsigned> ELFEntrySizeMap;
 
   // This set is used to record the generic mergeable section names seen.
   // These are sections that are created as mergeable e.g. .debug_str. We need
@@ -451,9 +420,10 @@ public:
 
   const MCSubtargetInfo *getSubtargetInfo() const { return MSTI; }
 
+  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
+
   CodeViewContext &getCVContext();
 
-  void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }
   void setUseNamesOnTempLabels(bool Value) { UseNamesOnTempLabels = Value; }
 
   /// \name Module Lifetime Management
@@ -469,6 +439,10 @@ public:
 
   /// Create and return a new MC instruction.
   MCInst *createMCInst();
+
+  template <typename F, typename... Args> F *allocFragment(Args &&...args) {
+    return new F(std::forward<Args>(args)...);
+  }
 
   /// \name Symbol Management
   /// @{
@@ -535,6 +509,10 @@ public:
   /// registerInlineAsmLabel - Records that the name is a label referenced in
   /// inline assembly.
   void registerInlineAsmLabel(MCSymbol *Sym);
+
+  /// Allocates and returns a new `WasmSignature` instance (with empty parameter
+  /// and return type lists).
+  wasm::WasmSignature *createWasmSignature();
 
   /// @}
 
@@ -848,12 +826,18 @@ public:
 
   void deallocate(void *Ptr) {}
 
+  /// Allocates a copy of the given string on the allocator managed by this
+  /// context and returns the result.
+  StringRef allocateString(StringRef s) {
+    return StringSaver(Allocator).save(s);
+  }
+
   bool hadError() { return HadError; }
   void diagnose(const SMDiagnostic &SMD);
   void reportError(SMLoc L, const Twine &Msg);
   void reportWarning(SMLoc L, const Twine &Msg);
 
-  const MCAsmMacro *lookupMacro(StringRef Name) {
+  MCAsmMacro *lookupMacro(StringRef Name) {
     StringMap<MCAsmMacro>::iterator I = MacroMap.find(Name);
     return (I == MacroMap.end()) ? nullptr : &I->getValue();
   }

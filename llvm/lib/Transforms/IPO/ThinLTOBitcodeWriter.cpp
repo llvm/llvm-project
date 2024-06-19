@@ -575,16 +575,23 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
 }
 
 } // anonymous namespace
-
+extern bool WriteNewDbgInfoFormatToBitcode;
 PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat &&
+                                                WriteNewDbgInfoFormatToBitcode);
+  if (M.IsNewDbgInfoFormat)
+    M.removeDebugIntrinsicDeclarations();
+
   bool Changed = writeThinLTOBitcode(
       OS, ThinLinkOS,
       [&FAM](Function &F) -> AAResults & {
         return FAM.getResult<AAManager>(F);
       },
       M, &AM.getResult<ModuleSummaryIndexAnalysis>(M));
+
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

@@ -32,23 +32,13 @@
 using namespace llvm;
 
 void AccelTableBase::computeBucketCount() {
-  // First get the number of unique hashes.
-  std::vector<uint32_t> Uniques;
+  SmallVector<uint32_t, 0> Uniques;
   Uniques.reserve(Entries.size());
   for (const auto &E : Entries)
     Uniques.push_back(E.second.HashValue);
-  array_pod_sort(Uniques.begin(), Uniques.end());
-  std::vector<uint32_t>::iterator P =
-      std::unique(Uniques.begin(), Uniques.end());
-
-  UniqueHashCount = std::distance(Uniques.begin(), P);
-
-  if (UniqueHashCount > 1024)
-    BucketCount = UniqueHashCount / 4;
-  else if (UniqueHashCount > 16)
-    BucketCount = UniqueHashCount / 2;
-  else
-    BucketCount = std::max<uint32_t>(UniqueHashCount, 1);
+  llvm::sort(Uniques);
+  UniqueHashCount = llvm::unique(Uniques) - Uniques.begin();
+  BucketCount = dwarf::getDebugNamesBucketCount(UniqueHashCount);
 }
 
 void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
@@ -59,9 +49,7 @@ void AccelTableBase::finalize(AsmPrinter *Asm, StringRef Prefix) {
                       [](const AccelTableData *A, const AccelTableData *B) {
                         return *A < *B;
                       });
-    E.second.Values.erase(
-        std::unique(E.second.Values.begin(), E.second.Values.end()),
-        E.second.Values.end());
+    E.second.Values.erase(llvm::unique(E.second.Values), E.second.Values.end());
   }
 
   // Figure out how many buckets we need, then compute the bucket contents and
@@ -208,8 +196,13 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   };
 
   Header Header;
-  DenseMap<uint32_t, SmallVector<DWARF5AccelTableData::AttributeEncoding, 3>>
-      Abbreviations;
+  /// FoldingSet that uniques the abbreviations.
+  FoldingSet<DebugNamesAbbrev> AbbreviationsSet;
+  /// Vector containing DebugNames abbreviations for iteration in order.
+  SmallVector<DebugNamesAbbrev *, 5> AbbreviationsVector;
+  /// The bump allocator to use when creating DIEAbbrev objects in the uniqued
+  /// storage container.
+  BumpPtrAllocator Alloc;
   ArrayRef<std::variant<MCSymbol *, uint64_t>> CompUnits;
   ArrayRef<std::variant<MCSymbol *, uint64_t>> TypeUnits;
   llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndexAndEncoding>(
@@ -234,7 +227,7 @@ class Dwarf5AccelTableWriter : public AccelTableWriter {
   void emitEntry(
       const DWARF5AccelTableData &Entry,
       const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
-      DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) const;
+      DenseSet<MCSymbol *> &EmittedAccelEntrySymbols);
   void emitData();
 
 public:
@@ -246,7 +239,10 @@ public:
           const DWARF5AccelTableData &)>
           getIndexForEntry,
       bool IsSplitDwarf);
-
+  ~Dwarf5AccelTableWriter() {
+    for (DebugNamesAbbrev *Abbrev : AbbreviationsVector)
+      Abbrev->~DebugNamesAbbrev();
+  }
   void emit();
 };
 } // namespace
@@ -370,7 +366,8 @@ void AppleAccelTableWriter::emit() const {
 DWARF5AccelTableData::DWARF5AccelTableData(const DIE &Die,
                                            const uint32_t UnitID,
                                            const bool IsTU)
-    : OffsetVal(&Die), DieTag(Die.getTag()), UnitID(UnitID), IsTU(IsTU) {}
+    : OffsetVal(&Die), DieTag(Die.getTag()), AbbrevNumber(0), IsTU(IsTU),
+      UnitID(UnitID) {}
 
 void Dwarf5AccelTableWriter::Header::emit(Dwarf5AccelTableWriter &Ctx) {
   assert(CompUnitCount > 0 && "Index must have at least one CU.");
@@ -409,51 +406,6 @@ DWARF5AccelTableData::getDefiningParentDieOffset(const DIE &Die) {
   return {};
 }
 
-enum IdxParentEncoding : uint8_t {
-  NoIndexedParent = 0, /// Parent information present but parent isn't indexed.
-  Ref4 = 1,            /// Parent information present and parent is indexed.
-  NoParent = 2,        /// Parent information missing.
-};
-
-static uint32_t constexpr NumBitsIdxParent = 2;
-
-uint8_t encodeIdxParent(const std::optional<dwarf::Form> MaybeParentForm) {
-  if (!MaybeParentForm)
-    return NoParent;
-  switch (*MaybeParentForm) {
-  case dwarf::Form::DW_FORM_flag_present:
-    return NoIndexedParent;
-  case dwarf::Form::DW_FORM_ref4:
-    return Ref4;
-  default:
-    // This is not crashing on bad input: we should only reach this if the
-    // internal compiler logic is faulty; see getFormForIdxParent.
-    llvm_unreachable("Bad form for IDX_parent");
-  }
-}
-
-static uint32_t constexpr ParentBitOffset = dwarf::DW_IDX_type_hash;
-static uint32_t constexpr TagBitOffset = ParentBitOffset + NumBitsIdxParent;
-static uint32_t getTagFromAbbreviationTag(const uint32_t AbbrvTag) {
-  return AbbrvTag >> TagBitOffset;
-}
-
-/// Constructs a unique AbbrevTag that captures what a DIE accesses.
-/// Using this tag we can emit a unique abbreviation for each DIE.
-static uint32_t constructAbbreviationTag(
-    const unsigned Tag,
-    const std::optional<DWARF5AccelTable::UnitIndexAndEncoding> &EntryRet,
-    std::optional<dwarf::Form> MaybeParentForm) {
-  uint32_t AbbrvTag = 0;
-  if (EntryRet)
-    AbbrvTag |= 1 << EntryRet->Encoding.Index;
-  AbbrvTag |= 1 << dwarf::DW_IDX_die_offset;
-  AbbrvTag |= 1 << dwarf::DW_IDX_parent;
-  AbbrvTag |= encodeIdxParent(MaybeParentForm) << ParentBitOffset;
-  AbbrvTag |= Tag << TagBitOffset;
-  return AbbrvTag;
-}
-
 static std::optional<dwarf::Form>
 getFormForIdxParent(const DenseSet<OffsetAndUnitID> &IndexedOffsets,
                     std::optional<OffsetAndUnitID> ParentOffset) {
@@ -467,26 +419,42 @@ getFormForIdxParent(const DenseSet<OffsetAndUnitID> &IndexedOffsets,
   return dwarf::Form::DW_FORM_flag_present;
 }
 
+void DebugNamesAbbrev::Profile(FoldingSetNodeID &ID) const {
+  ID.AddInteger(DieTag);
+  for (const DebugNamesAbbrev::AttributeEncoding &Enc : AttrVect) {
+    ID.AddInteger(Enc.Index);
+    ID.AddInteger(Enc.Form);
+  }
+}
+
 void Dwarf5AccelTableWriter::populateAbbrevsMap() {
   for (auto &Bucket : Contents.getBuckets()) {
     for (auto *Hash : Bucket) {
       for (auto *Value : Hash->getValues<DWARF5AccelTableData *>()) {
         std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
             getIndexForEntry(*Value);
-        unsigned Tag = Value->getDieTag();
         std::optional<dwarf::Form> MaybeParentForm = getFormForIdxParent(
             IndexedOffsets, Value->getParentDieOffsetAndUnitID());
-        uint32_t AbbrvTag =
-            constructAbbreviationTag(Tag, EntryRet, MaybeParentForm);
-        if (Abbreviations.count(AbbrvTag) == 0) {
-          SmallVector<DWARF5AccelTableData::AttributeEncoding, 3> UA;
-          if (EntryRet)
-            UA.push_back(EntryRet->Encoding);
-          UA.push_back({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
-          if (MaybeParentForm)
-            UA.push_back({dwarf::DW_IDX_parent, *MaybeParentForm});
-          Abbreviations.try_emplace(AbbrvTag, UA);
+        DebugNamesAbbrev Abbrev(Value->getDieTag());
+        if (EntryRet)
+          Abbrev.addAttribute(EntryRet->Encoding);
+        Abbrev.addAttribute({dwarf::DW_IDX_die_offset, dwarf::DW_FORM_ref4});
+        if (MaybeParentForm)
+          Abbrev.addAttribute({dwarf::DW_IDX_parent, *MaybeParentForm});
+        FoldingSetNodeID ID;
+        Abbrev.Profile(ID);
+        void *InsertPos;
+        if (DebugNamesAbbrev *Existing =
+                AbbreviationsSet.FindNodeOrInsertPos(ID, InsertPos)) {
+          Value->setAbbrevNumber(Existing->getNumber());
+          continue;
         }
+        DebugNamesAbbrev *NewAbbrev =
+            new (Alloc) DebugNamesAbbrev(std::move(Abbrev));
+        AbbreviationsVector.push_back(NewAbbrev);
+        NewAbbrev->setNumber(AbbreviationsVector.size());
+        AbbreviationsSet.InsertNode(NewAbbrev, InsertPos);
+        Value->setAbbrevNumber(NewAbbrev->getNumber());
       }
     }
   }
@@ -536,14 +504,13 @@ void Dwarf5AccelTableWriter::emitStringOffsets() const {
 
 void Dwarf5AccelTableWriter::emitAbbrevs() const {
   Asm->OutStreamer->emitLabel(AbbrevStart);
-  for (const auto &Abbrev : Abbreviations) {
+  for (const DebugNamesAbbrev *Abbrev : AbbreviationsVector) {
     Asm->OutStreamer->AddComment("Abbrev code");
-    uint32_t Tag = getTagFromAbbreviationTag(Abbrev.first);
-    assert(Tag != 0);
-    Asm->emitULEB128(Abbrev.first);
-    Asm->OutStreamer->AddComment(dwarf::TagString(Tag));
-    Asm->emitULEB128(Tag);
-    for (const auto &AttrEnc : Abbrev.second) {
+    Asm->emitULEB128(Abbrev->getNumber());
+    Asm->OutStreamer->AddComment(dwarf::TagString(Abbrev->getDieTag()));
+    Asm->emitULEB128(Abbrev->getDieTag());
+    for (const DebugNamesAbbrev::AttributeEncoding &AttrEnc :
+         Abbrev->getAttributes()) {
       Asm->emitULEB128(AttrEnc.Index, dwarf::IndexString(AttrEnc.Index).data());
       Asm->emitULEB128(AttrEnc.Form,
                        dwarf::FormEncodingString(AttrEnc.Form).data());
@@ -558,21 +525,15 @@ void Dwarf5AccelTableWriter::emitAbbrevs() const {
 void Dwarf5AccelTableWriter::emitEntry(
     const DWARF5AccelTableData &Entry,
     const DenseMap<OffsetAndUnitID, MCSymbol *> &DIEOffsetToAccelEntryLabel,
-    DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) const {
+    DenseSet<MCSymbol *> &EmittedAccelEntrySymbols) {
+  unsigned AbbrevIndex = Entry.getAbbrevNumber() - 1;
+  assert(AbbrevIndex < AbbreviationsVector.size() &&
+         "Entry abbrev index is outside of abbreviations vector range.");
+  DebugNamesAbbrev *Abbrev = AbbreviationsVector[AbbrevIndex];
   std::optional<DWARF5AccelTable::UnitIndexAndEncoding> EntryRet =
       getIndexForEntry(Entry);
   std::optional<OffsetAndUnitID> MaybeParentOffset =
       Entry.getParentDieOffsetAndUnitID();
-  std::optional<dwarf::Form> MaybeParentForm =
-      getFormForIdxParent(IndexedOffsets, MaybeParentOffset);
-  uint32_t AbbrvTag =
-      constructAbbreviationTag(Entry.getDieTag(), EntryRet, MaybeParentForm);
-  auto AbbrevIt = Abbreviations.find(AbbrvTag);
-  assert(AbbrevIt != Abbreviations.end() &&
-         "Why wasn't this abbrev generated?");
-  assert(getTagFromAbbreviationTag(AbbrevIt->first) == Entry.getDieTag() &&
-         "Invalid Tag");
-
   auto EntrySymbolIt =
       DIEOffsetToAccelEntryLabel.find(Entry.getDieOffsetAndUnitID());
   assert(EntrySymbolIt != DIEOffsetToAccelEntryLabel.end());
@@ -584,9 +545,10 @@ void Dwarf5AccelTableWriter::emitEntry(
   if (EmittedAccelEntrySymbols.insert(EntrySymbol).second)
     Asm->OutStreamer->emitLabel(EntrySymbol);
 
-  Asm->emitULEB128(AbbrevIt->first, "Abbreviation code");
+  Asm->emitULEB128(Entry.getAbbrevNumber(), "Abbreviation code");
 
-  for (const auto &AttrEnc : AbbrevIt->second) {
+  for (const DebugNamesAbbrev::AttributeEncoding &AttrEnc :
+       Abbrev->getAttributes()) {
     Asm->OutStreamer->AddComment(dwarf::IndexString(AttrEnc.Index));
     switch (AttrEnc.Index) {
     case dwarf::DW_IDX_compile_unit:

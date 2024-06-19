@@ -29,7 +29,7 @@ Type Name                    Available
 ============================ =========
 ACTION                       |check|
 ENTRY                        |check|
-VISIT                        
+VISIT
 ============================ =========
 
 POSIX Standard Functions
@@ -41,10 +41,10 @@ Function Name                Available
 hcreate                      |check|
 hdestroy                     |check|
 hsearch                      |check|
-insque                       
-lfind                        
-lsearch                      
-remque
+insque                       |check|
+lfind
+lsearch
+remque                       |check|
 tdelete
 tfind
 tsearch

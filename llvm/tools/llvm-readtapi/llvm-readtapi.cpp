@@ -133,9 +133,7 @@ getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
   std::unique_ptr<InterfaceFile> IF;
   switch (identify_magic(Buffer->getBuffer())) {
   case file_magic::macho_dynamically_linked_shared_lib:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_universal_binary:
     IF = ExitOnErr(DylibReader::get(Buffer->getMemBufferRef()));
     break;
@@ -199,6 +197,7 @@ static void stubifyImpl(std::unique_ptr<InterfaceFile> IF, Context &Ctx) {
   // TODO: Add inlining and magic merge support.
   if (Ctx.OutStream == nullptr) {
     std::error_code EC;
+    assert(!IF->getPath().empty() && "Unknown output location");
     SmallString<PATH_MAX> OutputLoc = IF->getPath();
     replace_extension(OutputLoc, ".tbd");
     Ctx.OutStream = std::make_unique<llvm::raw_fd_stream>(OutputLoc, EC);

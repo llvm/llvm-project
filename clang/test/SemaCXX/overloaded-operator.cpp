@@ -645,3 +645,61 @@ class b {
 
 
 }
+
+#if __cplusplus >= 202002L
+namespace nw{
+  template<class T>
+  concept AlwaysTrue=true;
+
+  struct S{
+    template<class T>
+    void operator+(const T&)const{}
+
+    template<AlwaysTrue T>
+    int operator-(const T&)const{return 0;}
+
+    template<AlwaysTrue T>
+    int operator*(const T&)const{ // expected-note {{candidate function}}
+      return 0;
+    }
+  };
+
+  template<AlwaysTrue T>
+  int operator+(const S&, const T&){return 0;}
+
+  template<class T>
+  void operator-(const S&, const T&){}
+
+  template<AlwaysTrue T>
+  int operator*(const S&, const T&){ // expected-note {{candidate function}}
+    return 0;
+  }
+
+  void foo(){
+    int a = S{} + 1;
+    int b = S{} - 1;
+    int c = S{} * 1; // expected-error {{use of overloaded operator '*' is ambiguous (with operand types 'S' and 'int')}}
+  }
+}
+#endif
+
+#if __cplusplus >= 201703L
+namespace GH88329 {
+
+template <auto T> struct A {};
+template <auto T> A<*T> operator *() { return {}; }
+// expected-error@-1 {{overloaded 'operator*' must have at least one parameter of class or enumeration type}}
+}
+
+namespace GH92275 {
+
+template <auto v>
+struct constant{};
+
+template <auto x>
+auto operator *(constant<x>)
+{ return constant<(*x)>{}; }
+
+}
+
+#endif

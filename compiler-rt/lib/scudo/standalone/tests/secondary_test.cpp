@@ -10,6 +10,7 @@
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
+#include "allocator_config_wrapper.h"
 #include "secondary.h"
 
 #include <algorithm>
@@ -22,7 +23,8 @@
 #include <vector>
 
 template <typename Config> static scudo::Options getOptionsForConfig() {
-  if (!Config::MaySupportMemoryTagging || !scudo::archSupportsMemoryTagging() ||
+  if (!Config::getMaySupportMemoryTagging() ||
+      !scudo::archSupportsMemoryTagging() ||
       !scudo::systemSupportsMemoryTagging())
     return {};
   scudo::AtomicOptions AO;
@@ -31,8 +33,9 @@ template <typename Config> static scudo::Options getOptionsForConfig() {
 }
 
 template <typename Config> static void testSecondaryBasic(void) {
-  using SecondaryT = scudo::MapAllocator<Config>;
-  scudo::Options Options = getOptionsForConfig<Config>();
+  using SecondaryT = scudo::MapAllocator<scudo::SecondaryConfig<Config>>;
+  scudo::Options Options =
+      getOptionsForConfig<scudo::SecondaryConfig<Config>>();
 
   scudo::GlobalStats S;
   S.init();
@@ -84,6 +87,10 @@ template <typename Config> static void testSecondaryBasic(void) {
 
 struct NoCacheConfig {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+
   struct Secondary {
     template <typename Config>
     using CacheT = scudo::MapAllocatorNoCache<Config>;
@@ -92,6 +99,10 @@ struct NoCacheConfig {
 
 struct TestConfig {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
   struct Secondary {
     struct Cache {
       static const scudo::u32 EntriesArraySize = 128U;
@@ -114,7 +125,7 @@ TEST(ScudoSecondaryTest, SecondaryBasic) {
 
 struct MapAllocatorTest : public Test {
   using Config = scudo::DefaultConfig;
-  using LargeAllocator = scudo::MapAllocator<Config>;
+  using LargeAllocator = scudo::MapAllocator<scudo::SecondaryConfig<Config>>;
 
   void SetUp() override { Allocator->init(nullptr); }
 
@@ -122,7 +133,8 @@ struct MapAllocatorTest : public Test {
 
   std::unique_ptr<LargeAllocator> Allocator =
       std::make_unique<LargeAllocator>();
-  scudo::Options Options = getOptionsForConfig<Config>();
+  scudo::Options Options =
+      getOptionsForConfig<scudo::SecondaryConfig<Config>>();
 };
 
 // This exercises a variety of combinations of size and alignment for the
@@ -179,12 +191,13 @@ TEST_F(MapAllocatorTest, SecondaryIterate) {
 }
 
 TEST_F(MapAllocatorTest, SecondaryOptions) {
-  // Attempt to set a maximum number of entries higher than the array size.
-  EXPECT_FALSE(
-      Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
-  // A negative number will be cast to a scudo::u32, and fail.
-  EXPECT_FALSE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, -1));
+  // Test options that are only meaningful if the secondary cache is enabled.
   if (Allocator->canCache(0U)) {
+    // Attempt to set a maximum number of entries higher than the array size.
+    EXPECT_TRUE(
+        Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
+    // Attempt to set an invalid (negative) number of entries
+    EXPECT_FALSE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, -1));
     // Various valid combinations.
     EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
     EXPECT_TRUE(

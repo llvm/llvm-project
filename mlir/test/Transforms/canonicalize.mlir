@@ -387,16 +387,21 @@ func.func @dead_dealloc_fold() {
 
 // CHECK-LABEL: func @dead_dealloc_fold_multi_use
 func.func @dead_dealloc_fold_multi_use(%cond : i1) {
-  // CHECK-NEXT: return
+  // CHECK-NOT: alloc
   %a = memref.alloc() : memref<4xf32>
+  // CHECK: cond_br
   cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
+  // CHECK-NOT: alloc
   memref.dealloc %a: memref<4xf32>
+  // CHECK: return
   return
 
 ^bb2:
+  // CHECK-NOT: alloc
   memref.dealloc %a: memref<4xf32>
+  // CHECK: return
   return
 }
 
@@ -424,15 +429,14 @@ func.func @write_only_alloca_fold(%v: f32) {
 // CHECK-LABEL: func @dead_block_elim
 func.func @dead_block_elim() {
   // CHECK-NOT: ^bb
-  func.func @nested() {
-    return
+  builtin.module {
+    func.func @nested() {
+      return
 
-  ^bb1:
-    return
+    ^bb1:
+      return
+    }
   }
-  return
-
-^bb1:
   return
 }
 
@@ -720,7 +724,7 @@ func.func @view(%arg0 : index) -> (f32, f32, f32, f32) {
   %r2 = memref.load %3[%c0, %c0] : memref<?x4xf32>
 
   // Test: folding static alloc and memref.cast into a view.
-  // CHECK memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<15x7xf32>
+  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<15x7xf32>
   %4 = memref.cast %0 : memref<2048xi8> to memref<?xi8>
   %5 = memref.view %4[%c15][%c15, %c7] : memref<?xi8> to memref<?x?xf32>
   %r3 = memref.load %5[%c0, %c0] : memref<?x?xf32>
@@ -988,6 +992,15 @@ func.func @tensor_arith.floordivsi_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5x
   %res = arith.floordivsi %arg0, %c1 : tensor<4x5xi32>
   // CHECK: return %[[ARG]]
   return %res : tensor<4x5xi32>
+}
+
+// CHECK-LABEL: func @arith.floordivsi_by_one_overflow
+func.func @arith.floordivsi_by_one_overflow() -> i64 {
+  %neg_one = arith.constant -1 : i64
+  %min_int = arith.constant -9223372036854775808 : i64
+  // CHECK: arith.floordivsi
+  %poision = arith.floordivsi %min_int, %neg_one : i64
+  return %poision : i64
 }
 
 // -----

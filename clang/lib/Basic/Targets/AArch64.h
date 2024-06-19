@@ -38,7 +38,6 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSHA2 = false;
   bool HasSHA3 = false;
   bool HasSM4 = false;
-  bool HasUnaligned = true;
   bool HasFullFP16 = false;
   bool HasDotProd = false;
   bool HasFP16FML = false;
@@ -108,10 +107,6 @@ public:
   unsigned multiVersionSortPriority(StringRef Name) const override;
   unsigned multiVersionFeatureCost() const override;
 
-  bool
-  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
-                 StringRef CPU,
-                 const std::vector<std::string> &FeaturesVec) const override;
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
@@ -165,7 +160,7 @@ public:
                             DiagnosticsEngine &Diags) override;
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
   bool supportsTargetAttributeTune() const override { return true; }
-
+  bool supportsCpuSupports() const override { return true; }
   bool checkArithmeticFenceSupported() const override { return true; }
 
   bool hasBFloat16Type() const override;
@@ -195,10 +190,17 @@ public:
 
   int getEHDataRegisterNumber(unsigned RegNo) const override;
 
+  bool validatePointerAuthKey(const llvm::APSInt &value) const override;
+
   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
   bool hasInt128Type() const override;
 
   bool hasBitIntType() const override { return true; }
+
+  bool validateTarget(DiagnosticsEngine &Diags) const override;
+
+  bool validateGlobalRegisterVariable(StringRef RegName, unsigned RegSize,
+                                      bool &HasSizeMismatch) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY AArch64leTargetInfo : public AArch64TargetInfo {

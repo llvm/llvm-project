@@ -390,6 +390,7 @@ public:
                           const FunctionDecl *D = nullptr,
                           bool ForceThisQuals = false,
                           bool MangleExceptionSpec = true);
+  void mangleSourceName(StringRef Name);
   void mangleNestedName(GlobalDecl GD);
 
 private:
@@ -408,7 +409,6 @@ private:
     mangleUnqualifiedName(GD, cast<NamedDecl>(GD.getDecl())->getDeclName());
   }
   void mangleUnqualifiedName(GlobalDecl GD, DeclarationName Name);
-  void mangleSourceName(StringRef Name);
   void mangleOperatorName(OverloadedOperatorKind OO, SourceLocation Loc);
   void mangleCXXDtorType(CXXDtorType T);
   void mangleQualifiers(Qualifiers Quals, bool IsMember);
@@ -899,6 +899,9 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E4M3FNUZ:
   case APFloat::S_Float8E4M3B11FNUZ:
   case APFloat::S_FloatTF32:
+  case APFloat::S_Float6E3M2FN:
+  case APFloat::S_Float6E2M3FN:
+  case APFloat::S_Float4E2M1FN:
     llvm_unreachable("Tried to mangle unexpected APFloat semantics");
   }
 
@@ -1933,7 +1936,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     for (const CXXBaseSpecifier &B : RD->bases())
       mangleTemplateArgValue(B.getType(), V.getStructBase(BaseIndex++), TAK);
     for (const FieldDecl *FD : RD->fields())
-      if (!FD->isUnnamedBitfield())
+      if (!FD->isUnnamedBitField())
         mangleTemplateArgValue(FD->getType(),
                                V.getStructField(FD->getFieldIndex()), TAK,
                                /*WithScalarType*/ true);
@@ -2609,6 +2612,8 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
 #include "clang/Basic/PPCTypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
   case BuiltinType::ShortAccum:
   case BuiltinType::Accum:
   case BuiltinType::LongAccum:
@@ -2748,7 +2753,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
       return;
     }
     Out << '@';
-  } else if (IsInLambda && D && isa<CXXConversionDecl>(D)) {
+  } else if (IsInLambda && isa_and_nonnull<CXXConversionDecl>(D)) {
     // The only lambda conversion operators are to function pointers, which
     // can differ by their calling convention and are typically deduced.  So
     // we make sure that this type gets mangled properly.
@@ -3077,6 +3082,11 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
   for (const llvm::APInt &Dimension : Dimensions)
     mangleNumber(Dimension.getLimitedValue());
   mangleType(ElementTy, SourceRange(), QMM_Escape);
+}
+
+void MicrosoftCXXNameMangler::mangleType(const ArrayParameterType *T,
+                                         Qualifiers, SourceRange) {
+  mangleArrayType(cast<ConstantArrayType>(T));
 }
 
 // <type>                   ::= <pointer-to-member-type>
@@ -3911,7 +3921,8 @@ void MicrosoftMangleContextImpl::mangleReferenceTemporary(
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
 
-  Mangler.getStream() << "?$RT" << ManglingNumber << '@';
+  Mangler.getStream() << "?";
+  Mangler.mangleSourceName("$RT" + llvm::utostr(ManglingNumber));
   Mangler.mangle(VD, "");
 }
 
@@ -3920,7 +3931,8 @@ void MicrosoftMangleContextImpl::mangleThreadSafeStaticGuardVariable(
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO);
 
-  Mangler.getStream() << "?$TSS" << GuardNum << '@';
+  Mangler.getStream() << "?";
+  Mangler.mangleSourceName("$TSS" + llvm::utostr(GuardNum));
   Mangler.mangleNestedName(VD);
   Mangler.getStream() << "@4HA";
 }
@@ -4021,10 +4033,8 @@ void MicrosoftMangleContextImpl::mangleStringLiteral(const StringLiteral *SL,
   // char bar[42] = "foobar";
   // Where it is truncated or zero-padded to fit the array. This is the length
   // used for mangling, and any trailing null-bytes also need to be mangled.
-  unsigned StringLength = getASTContext()
-                              .getAsConstantArrayType(SL->getType())
-                              ->getSize()
-                              .getZExtValue();
+  unsigned StringLength =
+      getASTContext().getAsConstantArrayType(SL->getType())->getZExtSize();
   unsigned StringByteLength = StringLength * SL->getCharByteWidth();
 
   // <char-type>: The "kind" of string literal is encoded into the mangled name.

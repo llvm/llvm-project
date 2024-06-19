@@ -152,6 +152,38 @@ void ObjFile::parseLazy() {
   }
 }
 
+struct ECMapEntry {
+  ulittle32_t src;
+  ulittle32_t dst;
+  ulittle32_t type;
+};
+
+void ObjFile::initializeECThunks() {
+  for (SectionChunk *chunk : hybmpChunks) {
+    if (chunk->getContents().size() % sizeof(ECMapEntry)) {
+      error("Invalid .hybmp chunk size " + Twine(chunk->getContents().size()));
+      continue;
+    }
+
+    const uint8_t *end =
+        chunk->getContents().data() + chunk->getContents().size();
+    for (const uint8_t *iter = chunk->getContents().data(); iter != end;
+         iter += sizeof(ECMapEntry)) {
+      auto entry = reinterpret_cast<const ECMapEntry *>(iter);
+      switch (entry->type) {
+      case Arm64ECThunkType::Entry:
+        ctx.symtab.addEntryThunk(getSymbol(entry->src), getSymbol(entry->dst));
+        break;
+      case Arm64ECThunkType::Exit:
+      case Arm64ECThunkType::GuestExit:
+        break;
+      default:
+        warn("Ignoring unknown EC thunk type " + Twine(entry->type));
+      }
+    }
+  }
+}
+
 void ObjFile::parse() {
   // Parse a memory buffer as a COFF file.
   std::unique_ptr<Binary> bin = CHECK(createBinary(mb), this);
@@ -168,6 +200,7 @@ void ObjFile::parse() {
   initializeSymbols();
   initializeFlags();
   initializeDependencies();
+  initializeECThunks();
 }
 
 const coff_section *ObjFile::getSection(uint32_t i) {
@@ -242,7 +275,11 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
 
   if (sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
     return nullptr;
-  auto *c = make<SectionChunk>(this, sec);
+  SectionChunk *c;
+  if (isArm64EC(getMachineType()))
+    c = make<SectionChunkEC>(this, sec);
+  else
+    c = make<SectionChunk>(this, sec);
   if (def)
     c->checksum = def->CheckSum;
 
@@ -260,6 +297,8 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     guardEHContChunks.push_back(c);
   else if (name == ".sxdata")
     sxDataChunks.push_back(c);
+  else if (isArm64EC(getMachineType()) && name == ".hybmp$x")
+    hybmpChunks.push_back(c);
   else if (ctx.config.tailMerge && sec->NumberOfRelocations == 0 &&
            name == ".rdata" && leaderName.starts_with("??_C@"))
     // COFF sections that look like string literal sections (i.e. no
@@ -818,19 +857,6 @@ void ObjFile::initializeDependencies() {
   debugTypesObj = makeTpiSource(ctx, this);
 }
 
-// Make a PDB path assuming the PDB is in the same folder as the OBJ
-static std::string getPdbBaseName(ObjFile *file, StringRef tSPath) {
-  StringRef localPath =
-      !file->parentName.empty() ? file->parentName : file->getName();
-  SmallString<128> path = sys::path::parent_path(localPath);
-
-  // Currently, type server PDBs are only created by MSVC cl, which only runs
-  // on Windows, so we can assume type server paths are Windows style.
-  sys::path::append(path,
-                    sys::path::filename(tSPath, sys::path::Style::windows));
-  return std::string(path);
-}
-
 // The casing of the PDB path stamped in the OBJ can differ from the actual path
 // on disk. With this, we ensure to always use lowercase as a key for the
 // pdbInputFileInstances map, at least on Windows.
@@ -843,17 +869,35 @@ static std::string normalizePdbPath(StringRef path) {
 }
 
 // If existing, return the actual PDB path on disk.
-static std::optional<std::string> findPdbPath(StringRef pdbPath,
-                                              ObjFile *dependentFile) {
+static std::optional<std::string>
+findPdbPath(StringRef pdbPath, ObjFile *dependentFile, StringRef outputPath) {
   // Ensure the file exists before anything else. In some cases, if the path
   // points to a removable device, Driver::enqueuePath() would fail with an
   // error (EAGAIN, "resource unavailable try again") which we want to skip
   // silently.
   if (llvm::sys::fs::exists(pdbPath))
     return normalizePdbPath(pdbPath);
-  std::string ret = getPdbBaseName(dependentFile, pdbPath);
-  if (llvm::sys::fs::exists(ret))
-    return normalizePdbPath(ret);
+
+  StringRef objPath = !dependentFile->parentName.empty()
+                          ? dependentFile->parentName
+                          : dependentFile->getName();
+
+  // Currently, type server PDBs are only created by MSVC cl, which only runs
+  // on Windows, so we can assume type server paths are Windows style.
+  StringRef pdbName = sys::path::filename(pdbPath, sys::path::Style::windows);
+
+  // Check if the PDB is in the same folder as the OBJ.
+  SmallString<128> path;
+  sys::path::append(path, sys::path::parent_path(objPath), pdbName);
+  if (llvm::sys::fs::exists(path))
+    return normalizePdbPath(path);
+
+  // Check if the PDB is in the output folder.
+  path.clear();
+  sys::path::append(path, sys::path::parent_path(outputPath), pdbName);
+  if (llvm::sys::fs::exists(path))
+    return normalizePdbPath(path);
+
   return std::nullopt;
 }
 
@@ -865,7 +909,7 @@ PDBInputFile::~PDBInputFile() = default;
 PDBInputFile *PDBInputFile::findFromRecordPath(const COFFLinkerContext &ctx,
                                                StringRef path,
                                                ObjFile *fromFile) {
-  auto p = findPdbPath(path.str(), fromFile);
+  auto p = findPdbPath(path.str(), fromFile, ctx.config.outputFile);
   if (!p)
     return nullptr;
   auto it = ctx.pdbInputFileInstances.find(*p);
@@ -931,7 +975,7 @@ std::optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
 }
 
 void ObjFile::enqueuePdbFile(StringRef path, ObjFile *fromFile) {
-  auto p = findPdbPath(path.str(), fromFile);
+  auto p = findPdbPath(path.str(), fromFile, ctx.config.outputFile);
   if (!p)
     return;
   auto it = ctx.pdbInputFileInstances.emplace(*p, nullptr);
@@ -944,18 +988,20 @@ ImportFile::ImportFile(COFFLinkerContext &ctx, MemoryBufferRef m)
     : InputFile(ctx, ImportKind, m), live(!ctx.config.doGC), thunkLive(live) {}
 
 void ImportFile::parse() {
-  const char *buf = mb.getBufferStart();
-  const auto *hdr = reinterpret_cast<const coff_import_header *>(buf);
+  const auto *hdr =
+      reinterpret_cast<const coff_import_header *>(mb.getBufferStart());
 
   // Check if the total size is valid.
-  if (mb.getBufferSize() != sizeof(*hdr) + hdr->SizeOfData)
+  if (mb.getBufferSize() < sizeof(*hdr) ||
+      mb.getBufferSize() != sizeof(*hdr) + hdr->SizeOfData)
     fatal("broken import library");
 
   // Read names and create an __imp_ symbol.
-  StringRef name = saver().save(StringRef(buf + sizeof(*hdr)));
+  StringRef buf = mb.getBuffer().substr(sizeof(*hdr));
+  StringRef name = saver().save(buf.split('\0').first);
   StringRef impName = saver().save("__imp_" + name);
-  const char *nameStart = buf + sizeof(coff_import_header) + name.size() + 1;
-  dllName = std::string(StringRef(nameStart));
+  buf = buf.substr(name.size() + 1);
+  dllName = buf.split('\0').first;
   StringRef extName;
   switch (hdr->getNameType()) {
   case IMPORT_ORDINAL:
@@ -970,6 +1016,9 @@ void ImportFile::parse() {
   case IMPORT_NAME_UNDECORATE:
     extName = ltrim1(name, "?@_");
     extName = extName.substr(0, extName.find('@'));
+    break;
+  case IMPORT_NAME_EXPORTAS:
+    extName = buf.substr(dllName.size() + 1).split('\0').first;
     break;
   }
 

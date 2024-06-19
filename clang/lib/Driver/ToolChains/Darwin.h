@@ -300,7 +300,7 @@ public:
     WatchOS,
     DriverKit,
     XROS,
-    LastDarwinPlatform = DriverKit
+    LastDarwinPlatform = XROS
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,
@@ -510,6 +510,10 @@ protected:
   /// implemented in the c++ standard library of the deployment target we are
   /// targeting.
   bool isAlignedAllocationUnavailable() const;
+
+  /// Return true if c++14 sized deallocation functions are not implemented in
+  /// the c++ standard library of the deployment target we are targeting.
+  bool isSizedDeallocationUnavailable() const;
 
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,

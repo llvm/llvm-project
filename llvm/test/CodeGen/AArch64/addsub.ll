@@ -629,14 +629,15 @@ define dso_local i32 @neigh_periodic_work_tbl_1() {
 ; CHECK-NEXT:    add x8, x8, :lo12:neigh_periodic_work_tbl_1
 ; CHECK-NEXT:    add x8, x8, #18, lsl #12 // =73728
 ; CHECK-NEXT:    cmn x8, #1272
-; CHECK-NEXT:    b.pl .LBB35_2
-; CHECK-NEXT:  .LBB35_1: // %for.cond
-; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    b .LBB35_1
-; CHECK-NEXT:  .LBB35_2: // %if.end
+; CHECK-NEXT:    b.mi .LBB35_2
+; CHECK-NEXT:  // %bb.1: // %if.end
 ; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB35_2: // %for.cond
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    b .LBB35_2
 entry:
-  br i1 icmp slt (i64 add (i64 ptrtoint (ptr @neigh_periodic_work_tbl_1 to i64), i64 75000), i64 0), label %for.cond, label %if.end
+  %cmp = icmp slt i64 add (i64 ptrtoint (ptr @neigh_periodic_work_tbl_1 to i64), i64 75000), 0
+  br i1 %cmp, label %for.cond, label %if.end
 for.cond:                                         ; preds = %entry, %for.cond
   br label %for.cond
 if.end:                                           ; preds = %entry
@@ -662,21 +663,18 @@ define dso_local i32 @_extract_crng_crng() {
 ; CHECK-NEXT:    cmn x8, #1272
 ; CHECK-NEXT:    b.pl .LBB36_3
 ; CHECK-NEXT:  .LBB36_2: // %if.then
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, primary_crng
 ; CHECK-NEXT:    ldr w8, [x8, :lo12:primary_crng]
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    adrp x8, input_pool
 ; CHECK-NEXT:    add x8, x8, :lo12:input_pool
 ; CHECK-NEXT:    csel x0, xzr, x8, eq
-; CHECK-NEXT:    bl crng_reseed
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    b crng_reseed
 ; CHECK-NEXT:  .LBB36_3: // %if.end
 ; CHECK-NEXT:    ret
 entry:
-  br i1 icmp slt (ptr @_extract_crng_crng, ptr null), label %if.then, label %lor.lhs.false
+  %cmp2 = icmp slt ptr @_extract_crng_crng, null
+  br i1 %cmp2, label %if.then, label %lor.lhs.false
 lor.lhs.false:                                    ; preds = %entry
   %0 = load i32, ptr @jiffies, align 4
   %idx.ext = sext i32 %0 to i64
