@@ -6,14 +6,14 @@ include(DetermineGCCCompatible)
 
 # get_subproject_title(titlevar)
 #   Set ${outvar} to the title of the current LLVM subproject (Clang, MLIR ...)
-# 
+#
 # The title is set in the subproject's top-level using the variable
 # LLVM_SUBPROJECT_TITLE. If it does not exist, it is assumed it is LLVM itself.
 # The title is not semantically significant, but use to create folders in
 # CMake-generated IDE projects (Visual Studio/XCode).
 function(get_subproject_title outvar)
   if (LLVM_SUBPROJECT_TITLE)
-    set(${outvar} "${LLVM_SUBPROJECT_TITLE}" PARENT_SCOPE) 
+    set(${outvar} "${LLVM_SUBPROJECT_TITLE}" PARENT_SCOPE)
   else ()
     set(${outvar} "LLVM" PARENT_SCOPE)
   endif ()
@@ -1551,12 +1551,18 @@ endfunction(canonicalize_tool_name)
 # Takes in a project name (i.e. LLVM), the subdirectory name, and an optional
 # path if it differs from the name.
 function(add_llvm_subdirectory project type name)
+  message(WARNING "将 LLVM 的子文件夹${project}加入到当前编译上下文中...")
   set(add_llvm_external_dir "${ARGN}")
   if("${add_llvm_external_dir}" STREQUAL "")
     set(add_llvm_external_dir ${name})
   endif()
   canonicalize_tool_name(${name} nameUPPER)
+
+  message(WARNING ${nameUPPER})
+
   set(canonical_full_name ${project}_${type}_${nameUPPER})
+
+  message(WARNING ${canonical_full_name})
   get_property(already_processed GLOBAL PROPERTY ${canonical_full_name}_PROCESSED)
   if(already_processed)
     return()
@@ -1570,6 +1576,7 @@ function(add_llvm_subdirectory project type name)
     mark_as_advanced(${project}_${type}_${name}_BUILD)
     if(${canonical_full_name}_BUILD)
       add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${add_llvm_external_dir} ${add_llvm_external_dir})
+      message(WARNING ${${CMAKE_CURRENT_SOURCE_DIR}/${add_llvm_external_dir}})
     endif()
   else()
     set(LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR
@@ -1586,7 +1593,9 @@ function(add_llvm_subdirectory project type name)
       "Whether to build ${name} as part of LLVM"
       ${${canonical_full_name}_BUILD_DEFAULT})
     if (${canonical_full_name}_BUILD)
+      message(WARNING ${${canonical_full_name}_BUILD}"============")
       if(EXISTS ${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR})
+        # Cratels: 从这里添加 clang 子文件夹到项目中
         add_subdirectory(${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR} ${add_llvm_external_dir})
       elseif(NOT "${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR}" STREQUAL "")
         message(WARNING "Nonexistent directory for ${name}: ${LLVM_EXTERNAL_${nameUPPER}_SOURCE_DIR}")
@@ -1601,6 +1610,7 @@ endfunction()
 # enable or disable building it with everything else.
 # Additional parameter can be specified as the name of directory.
 macro(add_llvm_external_project name)
+  message(WARNING "尝试将子项目${name}加入编译中...")
   add_llvm_subdirectory(LLVM TOOL ${name} ${ARGN})
 endmacro()
 

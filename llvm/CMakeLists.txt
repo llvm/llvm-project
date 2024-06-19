@@ -270,24 +270,30 @@ mark_as_advanced(LLVM_ENABLE_PROJECTS_USED)
 if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
   set(LLVM_ENABLE_PROJECTS_USED ON CACHE BOOL "" FORCE)
   foreach(proj ${LLVM_KNOWN_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
+    message(WARNING ${proj})
+  endforeach()
+  # 遍历所有支持的子项目而不是 enable 的子项目
+  foreach(proj ${LLVM_KNOWN_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
     # 将proj转为大写
     string(TOUPPER "${proj}" upper_proj)
     message(WARNING "子项目名大写===="${upper_proj})
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
     message(WARNING "大写子项目名替换-为_后===="${upper_proj})
+    # 判断 proj 是否在被打开的 projects 中
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
       message(STATUS "${proj} project is enabled")
+      # 如果 proj 在 enable 列表中，将变量SHOULD_ENABLE_PROJECT设置为 true，后面使用
       set(SHOULD_ENABLE_PROJECT TRUE)
 
-      # 设置子工程的路径
+      # 设置子工程的路径，通过相对路径找到 llvm 文件夹平级的子项目文件夹，比如这里可以找到 clang 文件夹
       set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
       message(WARNING "子工程路径===="${PROJ_DIR})
 
-      # 找不到路径指向的文件夹
+      # 如果根据路径找不到指向的文件夹，直接报错
       if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
         message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
       endif()
-
+      # 设置环境变量LLVM_EXTERNAL_CLANG_SOURCE_DIR 指向外面的 clang 文件夹
       if( LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR STREQUAL "" )
         set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}" CACHE PATH "" FORCE)
       else()
@@ -301,11 +307,14 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
       message(STATUS "${proj} project is disabled")
       set(SHOULD_ENABLE_PROJECT FALSE)
     endif()
+
+
     # Force `LLVM_TOOL_${upper_proj}_BUILD` variables to have values that
     # corresponds with `LLVM_ENABLE_PROJECTS`. This prevents the user setting
     # `LLVM_TOOL_${upper_proj}_BUILD` variables externally. At some point
     # we should deprecate allowing users to set these variables by turning them
     # into normal CMake variables rather than cache variables.
+    # 设置变量 LLVM_TOOL_CLANG_BUILD，类似变量被用来决定是否在编译的时候引入子项目
     set(LLVM_TOOL_${upper_proj}_BUILD
       ${SHOULD_ENABLE_PROJECT}
       CACHE
@@ -313,6 +322,14 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
     )
     message(WARNING "设置变量LLVM_TOOL_${upper_proj}_BUILD的值为===="${LLVM_TOOL_${upper_proj}_BUILD})
   endforeach()
+
+  #
+  #
+  # 上面的遍历与判断最后就是生成了对应的 bool 变量，比如针对 clang 就生成了LLVM_TOOL_CLANG_BUILD为 true。待后续使用。
+  #
+  #
+
+
 endif()
 unset(SHOULD_ENABLE_PROJECT)
 
@@ -1323,6 +1340,7 @@ endforeach()
 add_subdirectory(projects)
 
 if( LLVM_INCLUDE_TOOLS )
+  # 此处加载 tools 下面的 cmake 文件
   add_subdirectory(tools)
 endif()
 

@@ -41,6 +41,7 @@ add_llvm_external_project(lld)
 add_llvm_external_project(mlir)
 # ClangIR and Flang depend on mlir, lldb and Flang depend on clang, sort them
 # accordingly so place them afterwards
+# 尝试将 clang 加入编译列表中
 add_llvm_external_project(clang)
 add_llvm_external_project(flang)
 add_llvm_external_project(lldb)
