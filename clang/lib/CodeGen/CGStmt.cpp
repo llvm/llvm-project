@@ -493,18 +493,76 @@ void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
 bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   if (CGM.getCurrentXteamRedStmt() == nullptr)
     return false;
-  if (!isa<BinaryOperator>(S))
+  if (!isa<BinaryOperator>(S) && !isa<CallExpr>(S))
     return false;
 
-  const BinaryOperator *RedBO = cast<BinaryOperator>(S);
+  auto getLocalRedVarPointer =
+      [this](const Expr *E,
+             const CodeGenModule::XteamRedVarMap &RVM) -> llvm::Value * {
+    if (!isa<DeclRefExpr>(E))
+      return nullptr;
+    const ValueDecl *ValDecl = cast<DeclRefExpr>(E)->getDecl();
+    if (!isa<VarDecl>(ValDecl))
+      return nullptr;
+    const VarDecl *VD = cast<VarDecl>(ValDecl);
+    if (RVM.find(VD) == RVM.end())
+      return nullptr;
+    return RVM.find(VD)->second.RedVarAddr.emitRawPointer(*this);
+  };
+
   const CodeGenModule::XteamRedVarMap &RedVarMap =
       CGM.getXteamRedVarMap(CGM.getCurrentXteamRedStmt());
 
+  if (isa<CallExpr>(S)) {
+    const CallExpr *CE = cast<CallExpr>(S);
+    assert(CE && "Unexpected null call expression");
+
+    // First check if the call references any reduction variable. Otherwise,
+    // let the caller handle it.
+    bool FoundRedVar = false;
+    for (unsigned ArgIndex = 0; ArgIndex < CE->getNumArgs(); ++ArgIndex)
+      if (CGM.hasXteamRedVar(CE->getArg(ArgIndex), RedVarMap)) {
+        FoundRedVar = true;
+        break;
+      }
+    if (!FoundRedVar)
+      return false; // Let the caller handle the call expression.
+
+    // Generate the call with the reduction variable reference replaced by a
+    // reference to the corresponding local variable.
+    CallArgList CallArgs;
+    for (unsigned ArgIndex = 0; ArgIndex < CE->getNumArgs(); ++ArgIndex) {
+      const Expr *Arg = CE->getArg(ArgIndex);
+      llvm::Value *LocalRedVar = getLocalRedVarPointer(Arg, RedVarMap);
+      if (LocalRedVar != nullptr) {
+        // Add any required cast for the reduction variable.
+        llvm::Value *LRV = Builder.CreatePointerBitCastOrAddrSpaceCast(
+            LocalRedVar, CGM.getTypes().ConvertTypeForMem(
+                             getContext().getPointerType(Arg->getType())));
+        CallArgs.add(RValue::get(LRV),
+                     getContext().getPointerType(Arg->getType()));
+      } else {
+        assert(hasScalarEvaluationKind(Arg->getType()) &&
+               "Expected scalar type in call arg");
+        CallArgs.add(RValue::get(EmitScalarExpr(Arg)), Arg->getType());
+      }
+    }
+    const CGFunctionInfo &FI =
+        CGM.getTypes().arrangeBuiltinFunctionCall(CE->getType(), CallArgs);
+    // The earlier analysis ensures there is no use of return value.
+    EmitCall(FI, EmitCallee(CE->getCallee()), ReturnValueSlot(), CallArgs);
+    return true;
+  } // End of call expression handling.
+
+  const BinaryOperator *RedBO = cast<BinaryOperator>(S);
   // Is a reduction variable the lhs?
   const VarDecl *RedVarDecl =
       CGM.getXteamRedVarDecl(RedBO->getLHS()->IgnoreImpCasts(), RedVarMap);
-  if (RedVarDecl == nullptr)
+  if (RedVarDecl == nullptr) {
+    // The analysis made sure that the statement did not access the reduction
+    // variable, so there is nothing to do.
     return false;
+  }
 
   // For now, we handle only sum reduction
   assert(

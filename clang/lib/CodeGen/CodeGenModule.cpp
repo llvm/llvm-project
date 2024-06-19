@@ -7895,12 +7895,15 @@ private:
 /// The visitor will reject any assignment statement if it finds a reduction
 /// variable as the lhs of an assignment statement but not of the following
 /// form: red_var += <expr> red_var = red_var + <expr> red_var = <expr> +
-/// red_var
+/// red_var.
+/// If a reference to a reduction variable is passed to a function
+/// at a top statement level of the kernel, XteamReduction can handle it as
+/// well.
 class XteamRedExprChecker final : public ConstStmtVisitor<XteamRedExprChecker> {
 public:
   XteamRedExprChecker(CodeGenModule &CGM,
                       const CodeGenModule::XteamRedVarMap &RVM)
-      : CGM(CGM), RedMap(RVM), IsSupported(true) {}
+      : CGM(CGM), RedMap(RVM), IsAtTopLevel(true), IsSupported(true) {}
   XteamRedExprChecker() = delete;
 
   bool isSupported() const { return IsSupported; }
@@ -7910,19 +7913,21 @@ public:
       return;
 
     if (isa<BinaryOperator>(S)) {
-      const BinaryOperator *BinOpExpr = cast<BinaryOperator>(S);
-      // Even though we filtered out everything except the sum reduction
-      // operator, we need to make sure the reduction assignment uses
-      // either += or a pattern Codegen can handle. For + reduction op,
+      // Binary operator handling does not use IsAtTopLevel, so reset it
+      // right away.
+      if (IsAtTopLevel)
+        IsAtTopLevel = false;
+      // Ensure that the reduction assignment uses a pattern Codegen
+      // can handle. For sum-reduction,
       // Codegen currently handles red-var += <expr>,
       // red-var = red-var + <expr> and red-var = <expr> + red-var.
       // We punt on anything more complex.
-
+      const BinaryOperator *BinOpExpr = cast<BinaryOperator>(S);
       const Expr *LHS = BinOpExpr->getLHS()->IgnoreImpCasts();
       auto BinOpExprOp = BinOpExpr->getOpcode();
       // Get the reduction variable, if any, from the LHS.
       const VarDecl *RedVarDecl = CGM.getXteamRedVarDecl(LHS, RedMap);
-      if (RedVarDecl != nullptr) {
+      if (RedVarDecl != nullptr) { // LHS accesses a reduction variable.
         if (BinOpExprOp == BO_Assign || BinOpExprOp == BO_AddAssign) {
           const Expr *RHS = BinOpExpr->getRHS()->IgnoreImpCasts();
           // If operator +=, reject if RHS accesses any reduction variable.
@@ -7946,7 +7951,8 @@ public:
                   IsSupported = false;
                 if (!IsSupported)
                   return;
-              } else { // Not an add binary operator.
+              } else { // Not an add binary operator in the RHS for an
+                       // assignment statement.
                 IsSupported = false;
                 return;
               }
@@ -7960,19 +7966,54 @@ public:
           return;
         }
       } else { // LHS of binary operator does not access any reduction variable.
-        // Ensure that RHS does not access any reduction variable either.
+        // Ensure that RHS does not access any reduction variable either. Be
+        // paranoid, validate the LHS as well.
         ValidateChildren(S);
         if (!IsSupported)
           return;
       }
-    } else if (isa<DeclRefExpr>(S)) {
+    } // End of binary operator handling.
+    // Allow a call at the top level with a reduction variable passed by
+    // reference.
+    else if (IsAtTopLevel && isa<CallExpr>(S)) {
+      IsAtTopLevel = false;
+      for (auto Child : S->children())
+        if (Child) {
+          // If it is not a variable reference, recurse. If it is a
+          // variable reference, it will be appropriately handled
+          // during codegen, i.e. replaced with XteamReduction
+          // variable, if required.
+          if (!isa<DeclRefExpr>(Child))
+            Visit(Child);
+          if (!IsSupported)
+            return;
+        }
+      // Ensure every arg has scalar eval kind.
+      const CallExpr *CE = cast<CallExpr>(S);
+      if (CE == nullptr) {
+        IsSupported = false;
+        return;
+      }
+      CodeGenFunction CGF(CGM);
+      for (unsigned ArgIndex = 0; ArgIndex < CE->getNumArgs(); ++ArgIndex) {
+        const Expr *Arg = CE->getArg(ArgIndex);
+        if (!Arg || !CGF.hasScalarEvaluationKind(Arg->getType())) {
+          IsSupported = false;
+          return;
+        }
+      }
+    } // End of call expression handling.
+    else if (isa<DeclRefExpr>(S)) {
+      IsAtTopLevel = false;
       // Not a binary operator, so not supported at this point. So ensure no
       // reduction variable is accessed.
       if (CGM.hasXteamRedVar(cast<DeclRefExpr>(S), RedMap)) {
         IsSupported = false;
         return;
       }
-    } else {
+    } // End of DeclRefExpr handling.
+    else {
+      IsAtTopLevel = false;
       // Recursively check the children.
       ValidateChildren(S);
       if (!IsSupported)
@@ -7992,6 +8033,10 @@ private:
   CodeGenModule &CGM;
   /// Map of reduction variables for this directive.
   const CodeGenModule::XteamRedVarMap &RedMap;
+  /// Indicates whether the current analyzed statement is at the top level
+  /// statement list in the kernel. Set to true when the visitor is called first
+  /// and reset to false before visiting any children.
+  bool IsAtTopLevel;
   /// Set to false if codegen does not support the reduction expression.
   bool IsSupported;
 };
@@ -8475,10 +8520,13 @@ CodeGenModule::getXteamRedForStmtStatus(const OMPExecutableDirective &D,
   // the directive
   const ForStmt *FStmt = getSingleForStmt(OMPStmt);
   assert(FStmt != nullptr && "Unexpected missing For Stmt");
-  XteamRedExprChecker Chk(*this, RVM);
-  Chk.Visit(FStmt);
-  if (!Chk.isSupported())
-    return std::make_pair(NxUnsupportedRedExpr, HasNestedGenericCall);
+  for (auto Child : FStmt->children())
+    if (Child) {
+      XteamRedExprChecker Chk(*this, RVM);
+      Chk.Visit(Child);
+      if (!Chk.isSupported())
+        return std::make_pair(NxUnsupportedRedExpr, HasNestedGenericCall);
+    }
   return std::make_pair(NxSuccess, HasNestedGenericCall);
 }
 
