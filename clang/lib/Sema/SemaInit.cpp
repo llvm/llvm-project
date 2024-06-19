@@ -9393,16 +9393,16 @@ ExprResult InitializationSequence::Perform(Sema &S,
       CurInit = new (S.Context) CXXStdInitializerListExpr(Step->Type, MTE);
 
       if (!Step->Type->isDependentType()) {
-        assert(S.isCompleteType(CurInit.get()->getExprLoc(), Step->Type,
-                                Sema::CompleteTypeKind::Normal) &&
-               "std::initializer_list<E> incomplete when used during "
-               "initialization");
         QualType ElementType;
         [[maybe_unused]] bool IsStdInitializerList =
             S.isStdInitializerList(Step->Type, &ElementType);
         assert(IsStdInitializerList &&
                "StdInitializerList step to non-std::initializer_list");
-        RecordDecl *Record = Step->Type->castAs<RecordType>()->getDecl();
+        const CXXRecordDecl *Record =
+            Step->Type->getAsCXXRecordDecl()->getDefinition();
+        assert(Record && Record->isCompleteDefinition() &&
+               "std::initializer_list should have already be "
+               "complete/instantiated by this point");
 
         auto InvalidType = [&] {
           S.Diag(Record->getLocation(),
@@ -9411,8 +9411,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
           return ExprError();
         };
 
-        // FIXME: What if the initializer_list type has base classes, etc?
-        if (Record->isUnion())
+        if (Record->isUnion() || Record->getNumBases() != 0 ||
+            Record->isPolymorphic())
           return InvalidType();
 
         RecordDecl::field_iterator Field = Record->field_begin();
@@ -9429,12 +9429,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
           return InvalidType();
 
         // Size or end pointer
-        if (Field->getType()->isPointerType()) {
-          if (!S.Context.hasSameType(Field->getType()->getPointeeType(),
+        if (const auto *PT = Field->getType()->getAs<PointerType>()) {
+          if (!S.Context.hasSameType(PT->getPointeeType(),
                                      ElementType.withConst()))
             return InvalidType();
         } else {
-          if (Field->isUnnamedBitField() ||
+          if (Field->isBitField() ||
               !S.Context.hasSameType(Field->getType(), S.Context.getSizeType()))
             return InvalidType();
         }
