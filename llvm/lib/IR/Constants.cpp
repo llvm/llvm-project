@@ -2324,11 +2324,11 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::Or:
   case Instruction::LShr:
   case Instruction::AShr:
+  case Instruction::Shl:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
-  case Instruction::Shl:
   case Instruction::Xor:
     return true;
   default:

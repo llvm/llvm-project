@@ -304,8 +304,9 @@ define void @InitVectorSplit() sanitize_memtag {
 ; CHECK-NEXT:    [[TX:%.*]] = call ptr @llvm.aarch64.tagp.p0(ptr [[X]], ptr [[BASETAG]], i64 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[X]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[TX]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), 32
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), 32
-; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 shl (i64 bitcast (<2 x i32> <i32 1, i32 2> to i64), i64 32), i64 [[LSHR]])
+; CHECK-NEXT:    call void @llvm.aarch64.stgp(ptr [[TX]], i64 [[TMP1]], i64 [[LSHR]])
 ; CHECK-NEXT:    call void @use(ptr nonnull [[TX]])
 ; CHECK-NEXT:    call void @llvm.aarch64.settag(ptr [[X]], i64 16)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[X]])

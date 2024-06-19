@@ -4183,8 +4183,7 @@ static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG,
                                    const SDLoc &dl) {
   // Make sure we only try to split 256/512-bit types to avoid creating
   // narrow vectors.
-  EVT VT = Op.getValueType();
-  (void)VT;
+  [[maybe_unused]] EVT VT = Op.getValueType();
   assert((Op.getOperand(0).getValueType().is256BitVector() ||
           Op.getOperand(0).getValueType().is512BitVector()) &&
          (VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
@@ -4199,8 +4198,7 @@ static SDValue splitVectorIntUnary(SDValue Op, SelectionDAG &DAG,
 static SDValue splitVectorIntBinary(SDValue Op, SelectionDAG &DAG,
                                     const SDLoc &dl) {
   // Assert that all the types match.
-  EVT VT = Op.getValueType();
-  (void)VT;
+  [[maybe_unused]] EVT VT = Op.getValueType();
   assert(Op.getOperand(0).getValueType() == VT &&
          Op.getOperand(1).getValueType() == VT && "Unexpected VTs!");
   assert((VT.is256BitVector() || VT.is512BitVector()) && "Unsupported VT!");
@@ -23411,8 +23409,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
 
   assert(!IsStrict && "Strict SETCC only handles FP operands.");
 
-  MVT VTOp0 = Op0.getSimpleValueType();
-  (void)VTOp0;
+  [[maybe_unused]] MVT VTOp0 = Op0.getSimpleValueType();
   assert(VTOp0 == Op1.getSimpleValueType() &&
          "Expected operands with same type!");
   assert(VT.getVectorNumElements() == VTOp0.getVectorNumElements() &&
@@ -50877,6 +50874,10 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
   if (!(RegVT.is128BitVector() || RegVT.is256BitVector()))
     return SDValue();
 
+  const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
+  if (!LdC)
+    return SDValue();
+
   auto MatchingBits = [](const APInt &Undefs, const APInt &UserUndefs,
                          ArrayRef<APInt> Bits, ArrayRef<APInt> UserBits) {
     for (unsigned I = 0, E = Undefs.getBitWidth(); I != E; ++I) {
@@ -50901,12 +50902,11 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
             RegVT.getFixedSizeInBits()) {
       EVT UserVT = User->getValueType(0);
       SDValue UserPtr = UserLd->getBasePtr();
-      const Constant *LdC = getTargetConstantFromBasePtr(Ptr);
       const Constant *UserC = getTargetConstantFromBasePtr(UserPtr);
 
       // See if we are loading a constant that matches in the lower
       // bits of a longer constant (but from a different constant pool ptr).
-      if (LdC && UserC && UserPtr != Ptr) {
+      if (UserC && UserPtr != Ptr) {
         unsigned LdSize = LdC->getType()->getPrimitiveSizeInBits();
         unsigned UserSize = UserC->getType()->getPrimitiveSizeInBits();
         if (LdSize < UserSize || !ISD::isNormalLoad(User)) {
