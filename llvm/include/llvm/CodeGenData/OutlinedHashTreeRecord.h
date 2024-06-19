@@ -16,7 +16,6 @@
 #ifndef LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
 #define LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGenData/OutlinedHashTree.h"
 
 namespace llvm {

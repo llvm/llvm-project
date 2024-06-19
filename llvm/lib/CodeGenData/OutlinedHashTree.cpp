@@ -14,9 +14,6 @@
 
 #include "llvm/CodeGenData/OutlinedHashTree.h"
 
-#include <stack>
-#include <tuple>
-
 #define DEBUG_TYPE "outlined-hash-tree"
 
 using namespace llvm;
@@ -38,9 +35,10 @@ void OutlinedHashTree::walkGraph(NodeCallbackFn CallbackNode,
       Stack.emplace_back(Next);
     };
     if (SortedWalk) {
-      std::map<stable_hash, const HashNode *> SortedSuccessors;
-      for (const auto &P : Current->Successors)
-        SortedSuccessors[P.first] = P.second.get();
+      SmallVector<std::pair<stable_hash, const HashNode *>> SortedSuccessors;
+      for (const auto &[Hash, Successor] : Current->Successors)
+        SortedSuccessors.emplace_back(Hash, Successor.get());
+      llvm::sort(SortedSuccessors);
       for (const auto &P : SortedSuccessors)
         HandleNext(P.second);
     } else {
@@ -60,7 +58,7 @@ size_t OutlinedHashTree::size(bool GetTerminalCountOnly) const {
 
 size_t OutlinedHashTree::depth() const {
   size_t Size = 0;
-  std::unordered_map<const HashNode *, size_t> DepthMap;
+  DenseMap<const HashNode *, size_t> DepthMap;
   walkGraph([&Size, &DepthMap](
                 const HashNode *N) { Size = std::max(Size, DepthMap[N]); },
             [&DepthMap](const HashNode *Src, const HashNode *Dst) {

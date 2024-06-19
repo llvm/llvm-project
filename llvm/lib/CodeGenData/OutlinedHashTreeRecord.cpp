@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGenData/OutlinedHashTreeRecord.h"
-#include "llvm/CodeGenData/OutlinedHashTree.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
