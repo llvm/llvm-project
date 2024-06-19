@@ -2105,6 +2105,17 @@ def SideEffectOp : TEST_Op<"side_effect_op",
   let results = (outs AnyType:$result);
 }
 
+def SideEffectWithRegionOp : TEST_Op<"side_effect_with_region_op",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType:$result);
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = [{
+    `(` $operand`)` $region attr-dict `:`  type($operand)  `->` type($result)
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test CopyOpInterface
 //===----------------------------------------------------------------------===//
