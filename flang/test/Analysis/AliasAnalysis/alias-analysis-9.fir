@@ -293,3 +293,108 @@ func.func @_QMmPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = 
 
   return
 }
+
+// -----
+
+// Same as previous case but argp and arga are HostAssoc.
+
+// module m
+//   type t
+//     integer, pointer :: p
+//     integer i
+//   end type
+//   type(t) :: glob
+// contains
+//   subroutine parent(argp, arga)
+//     integer, pointer :: argp
+//     integer, allocatable :: arga
+//     type(t) :: arg
+//     call test(arg)
+//   contains
+//     subroutine test(arg)
+//       type(t) :: arg
+//       type(t) :: loc
+//     end subroutine
+//   end subroutine
+// end module
+
+// CHECK-LABEL: Testing : "_QMmFparentPtest"
+
+// Check when composite is a dummy arg.
+// CHECK-DAG: argp#0 <-> arg#0: MayAlias
+// CHECK-DAG: argp#0 <-> arg%p#0: MayAlias
+// CHECK-DAG: argp#0 <-> arg%i#0: NoAlias
+// TODO: Shouldn't these three be NoAlias?  However, argp.tgt is currently
+// handled as Indirect.
+// CHECK-DAG: argp.tgt#0 <-> arg#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> arg%p#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> arg%i#0: MayAlias
+// CHECK-DAG: arga#0 <-> arg#0: NoAlias
+// TODO: Shouldn't this be NoAlias?  However, arga is treated like a target
+// because it's HostAssoc and arg is Argument, and arg%p is treated like a
+// pointer.
+// CHECK-DAG: arga#0 <-> arg%p#0: MayAlias
+
+// Check when composite is a global.
+// CHECK-DAG: argp#0 <-> glob#0: MayAlias
+// CHECK-DAG: argp#0 <-> glob%p#0: MayAlias
+// CHECK-DAG: argp#0 <-> glob%i#0: NoAlias
+// TODO: Shouldn't these three be NoAlias?  However, argp.tgt is currently
+// handled as Indirect.
+// CHECK-DAG: argp.tgt#0 <-> glob#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> glob%p#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> glob%i#0: MayAlias
+// CHECK-DAG: arga#0 <-> glob#0: NoAlias
+// CHECK-DAG: arga#0 <-> glob%p#0: NoAlias
+
+// Check when composite is a local and thus cannot alias a dummy arg.
+//
+// TODO: The argp vs. loc%p case should be NoAlias.  However, AliasAnalysis
+// currently indiscriminately treats all pointers as aliasing.  That makes sense
+// for the addresses within the pointers but not necessarily for the addresses
+// of the pointers here.
+//
+// CHECK-DAG: argp#0 <-> loc#0: NoAlias
+// CHECK-DAG: argp#0 <-> loc%p#0: MayAlias
+// CHECK-DAG: argp#0 <-> loc%i#0: NoAlias
+// TODO: Shouldn't these three be NoAlias?  However, argp.tgt is currently
+// handled as Indirect.
+// CHECK-DAG: argp.tgt#0 <-> loc#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> loc%p#0: MayAlias
+// CHECK-DAG: argp.tgt#0 <-> loc%i#0: MayAlias
+// CHECK-DAG: arga#0 <-> loc#0: NoAlias
+// CHECK-DAG: arga#0 <-> loc%p#0: NoAlias
+
+fir.global @_QMmEglob : !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+
+func.func private @_QMmFparentPtest(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>> {fir.bindc_name = "arg"}, %arg1: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>>> {fir.host_assoc}) attributes {fir.host_symbol = @_QMmPparent, llvm.linkage = #llvm.linkage<internal>} {
+  %0 = fir.dummy_scope : !fir.dscope
+
+  %c0_i32 = arith.constant 0 : i32
+  %1 = fir.coordinate_of %arg1, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<i32>>>>
+  %2 = fir.load %1 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<i32>>>>
+  %3:2 = hlfir.declare %2 {test.ptr="argp", fortran_attrs = #fir.var_attrs<pointer, host_assoc>, uniq_name = "_QMmFparentEargp"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+  %4 = fir.load %3#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %5 = fir.box_addr %4 {test.ptr="argp.tgt"} : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+
+  %c1_i32 = arith.constant 1 : i32
+  %10 = fir.coordinate_of %arg1, %c1_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<i32>>>>
+  %11 = fir.load %10 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<i32>>>>
+  %12:2 = hlfir.declare %11 {test.ptr="arga", fortran_attrs = #fir.var_attrs<allocatable, host_assoc>, uniq_name = "_QMmFparentEarga"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+
+  %20 = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %21:2 = hlfir.declare %20 {test.ptr="glob", uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>)
+  %22 = hlfir.designate %21#0{"p"}   {test.ptr="glob%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %23 = hlfir.designate %21#0{"i"} {test.ptr="glob%i"}  : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
+
+  %30:2 = hlfir.declare %arg0 dummy_scope %0 {test.ptr="arg", uniq_name = "_QMmFparentFtestEarg"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>)
+  %31 = hlfir.designate %30#0{"p"}   {test.ptr="arg%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %32 = hlfir.designate %30#0{"i"} {test.ptr="arg%i"}  : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
+
+  %40 = fir.alloca !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "loc", uniq_name = "_QMmFparentFtestEloc"}
+  %41:2 = hlfir.declare %40 {test.ptr="loc", uniq_name = "_QMmFparentFtestEloc"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>)
+  %42 = hlfir.designate %41#0{"p"}   {test.ptr="loc%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %43 = hlfir.designate %41#0{"i"} {test.ptr="loc%i"}  : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
+
+  return
+}

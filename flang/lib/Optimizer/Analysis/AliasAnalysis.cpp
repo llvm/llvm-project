@@ -111,6 +111,7 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // it aliases with everything
   if (lhsSrc.kind >= SourceKind::Indirect ||
       rhsSrc.kind >= SourceKind::Indirect) {
+    LLVM_DEBUG(llvm::dbgs() << "  aliasing because of indirect access\n");
     return AliasResult::MayAlias;
   }
 
@@ -230,14 +231,28 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   //
   // The dummy argument p is an alias for a%p, even for the purposes of pointer
   // association during the assignment a = b.  Thus, the program should print 2.
+  //
+  // The same is true when p is HostAssoc.  For example, we might replace the
+  // test subroutine above with:
+  //
+  // subroutine test(p)
+  //   real, pointer :: p
+  //   call internal()
+  // contains
+  //   subroutine internal()
+  //     p = 42
+  //     a = b
+  //     print *, p
+  //   end subroutine
+  // end subroutine
   if ((isRecordWithPointerComponent(val1->getType()) &&
        src1->kind != SourceKind::Allocate &&
-       src2->kind == SourceKind::Argument &&
+       src2->kind != SourceKind::Allocate && src2->kind != SourceKind::Global &&
        src2->attributes.test(Attribute::Pointer) && !src2->isData() &&
        !isRecordWithPointerComponent(src2->valueType)) ||
       (isRecordWithPointerComponent(val2->getType()) &&
        src2->kind != SourceKind::Allocate &&
-       src1->kind == SourceKind::Argument &&
+       src1->kind != SourceKind::Allocate && src1->kind != SourceKind::Global &&
        src1->attributes.test(Attribute::Pointer) && !src1->isData() &&
        !isRecordWithPointerComponent(src1->valueType))) {
     LLVM_DEBUG(llvm::dbgs()
