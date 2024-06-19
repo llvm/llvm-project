@@ -3791,8 +3791,6 @@ void fir::StoreOp::print(mlir::OpAsmPrinter &p) {
 mlir::LogicalResult fir::StoreOp::verify() {
   if (getValue().getType() != fir::dyn_cast_ptrEleTy(getMemref().getType()))
     return emitOpError("store value type must match memory reference type");
-  if (fir::isa_unknown_size_box(getValue().getType()))
-    return emitOpError("cannot store !fir.box of unknown rank or type");
   return mlir::success();
 }
 

@@ -3143,23 +3143,32 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = store.getLoc();
     mlir::Type storeTy = store.getValue().getType();
-    mlir::LLVM::StoreOp newStoreOp;
+    mlir::Value llvmValue = adaptor.getValue();
+    mlir::Value llvmMemref = adaptor.getMemref();
+    mlir::LLVM::AliasAnalysisOpInterface newOp;
     if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(storeTy)) {
-      // fir.box value is actually in memory, load it first before storing it.
       mlir::Type llvmBoxTy = lowerTy().convertBoxTypeAsStruct(boxTy);
-      auto val = rewriter.create<mlir::LLVM::LoadOp>(loc, llvmBoxTy,
-                                                     adaptor.getOperands()[0]);
-      attachTBAATag(val, boxTy, boxTy, nullptr);
-      newStoreOp = rewriter.create<mlir::LLVM::StoreOp>(
-          loc, val, adaptor.getOperands()[1]);
+      // fir.box value is actually in memory, load it first before storing it,
+      // or do a memcopy for assumed-rank descriptors.
+      if (boxTy.isAssumedRank()) {
+        TypePair boxTypePair{boxTy, llvmBoxTy};
+        mlir::Value boxSize =
+            computeBoxSize(loc, boxTypePair, llvmValue, rewriter);
+        newOp = rewriter.create<mlir::LLVM::MemcpyOp>(
+            loc, llvmMemref, llvmValue, boxSize, /*isVolatile=*/false);
+      } else {
+        auto val =
+            rewriter.create<mlir::LLVM::LoadOp>(loc, llvmBoxTy, llvmValue);
+        attachTBAATag(val, boxTy, boxTy, nullptr);
+        newOp = rewriter.create<mlir::LLVM::StoreOp>(loc, val, llvmMemref);
+      }
     } else {
-      newStoreOp = rewriter.create<mlir::LLVM::StoreOp>(
-          loc, adaptor.getOperands()[0], adaptor.getOperands()[1]);
+      newOp = rewriter.create<mlir::LLVM::StoreOp>(loc, llvmValue, llvmMemref);
     }
     if (std::optional<mlir::ArrayAttr> optionalTag = store.getTbaa())
-      newStoreOp.setTBAATags(*optionalTag);
+      newOp.setTBAATags(*optionalTag);
     else
-      attachTBAATag(newStoreOp, storeTy, storeTy, nullptr);
+      attachTBAATag(newOp, storeTy, storeTy, nullptr);
     rewriter.eraseOp(store);
     return mlir::success();
   }

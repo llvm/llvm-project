@@ -895,6 +895,25 @@ func.func @store_unlimited_polymorphic_box(%arg0 : !fir.class<none>, %arg1 : !fi
 
 // -----
 
+func.func @store_assumed_rank_box(%box: !fir.box<!fir.array<*:f32>>, %ref: !fir.ref<!fir.box<!fir.array<*:f32>>>) {
+  fir.store %box to %ref : !fir.ref<!fir.box<!fir.array<*:f32>>>
+  return
+}
+
+// CHECK-LABEL:   llvm.func @store_assumed_rank_box(
+// CHECK-SAME:                                      %[[VAL_0:[^:]*]]: !llvm.ptr,
+// CHECK-SAME:                                      %[[VAL_1:.*]]: !llvm.ptr) {
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(24 : i32) : i32
+// CHECK:           %[[VAL_3:.*]] = llvm.getelementptr %[[VAL_0]][0, 3] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<15 x array<3 x i64>>)>
+// CHECK:           %[[VAL_4:.*]] = llvm.load %[[VAL_3]] : !llvm.ptr -> i8
+// CHECK:           %[[VAL_5:.*]] = llvm.sext %[[VAL_4]] : i8 to i32
+// CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(24 : i32) : i32
+// CHECK:           %[[VAL_7:.*]] = llvm.mul %[[VAL_6]], %[[VAL_5]] : i32
+// CHECK:           %[[VAL_8:.*]] = llvm.add %[[VAL_2]], %[[VAL_7]] : i32
+// CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[VAL_0]], %[[VAL_8]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+
+// -----
+
 // Test `fir.load` --> `llvm.load` conversion
 
 func.func @test_load_index(%addr : !fir.ref<index>) {
