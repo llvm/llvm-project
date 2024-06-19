@@ -13631,7 +13631,7 @@ Value *BoUpSLP::vectorizeTree(
   DenseMap<Value *,
            DenseMap<BasicBlock *, std::pair<Instruction *, Instruction *>>>
       ScalarToEEs;
-  SmallDenseSet<Value *, 4> UsedInserts;
+  SmallDenseSet<std::pair<Value *, Value *>, 4> UsedInserts;
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
   // Extract all of the elements with the external uses.
@@ -13775,7 +13775,7 @@ Value *BoUpSLP::vectorizeTree(
       // Skip if the scalar is another vector op or Vec is not an instruction.
       if (!Scalar->getType()->isVectorTy() && isa<Instruction>(Vec)) {
         if (auto *FTy = dyn_cast<FixedVectorType>(User->getType())) {
-          if (!UsedInserts.insert(VU).second)
+          if (!UsedInserts.insert({VU, Scalar}).second)
             continue;
           // Need to use original vector, if the root is truncated.
           auto BWIt = MinBWs.find(E);
