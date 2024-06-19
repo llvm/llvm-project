@@ -639,6 +639,30 @@ define ptr @select_of_gep(i1 %c, ptr %p) {
   ret ptr %s
 }
 
+define ptr @select_of_gep_flags_1(i1 %c, ptr %p) {
+; CHECK-LABEL: @select_of_gep_flags_1(
+; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 4, i64 8
+; CHECK-NEXT:    [[S:%.*]] = getelementptr nusw i8, ptr [[P:%.*]], i64 [[S_V]]
+; CHECK-NEXT:    ret ptr [[S]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %p, i64 1
+  %gep2 = getelementptr nusw nuw i32, ptr %p, i64 2
+  %s = select i1 %c, ptr %gep1, ptr %gep2
+  ret ptr %s
+}
+
+define ptr @select_of_gep_flags_2(i1 %c, ptr %p) {
+; CHECK-LABEL: @select_of_gep_flags_2(
+; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 4, i64 8
+; CHECK-NEXT:    [[S:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[S_V]]
+; CHECK-NEXT:    ret ptr [[S]]
+;
+  %gep1 = getelementptr nuw i32, ptr %p, i64 1
+  %gep2 = getelementptr nusw nuw i32, ptr %p, i64 2
+  %s = select i1 %c, ptr %gep1, ptr %gep2
+  ret ptr %s
+}
+
 define ptr @select_of_gep_different_type(i1 %c, ptr %p) {
 ; CHECK-LABEL: @select_of_gep_different_type(
 ; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[C:%.*]], i64 4, i64 16
