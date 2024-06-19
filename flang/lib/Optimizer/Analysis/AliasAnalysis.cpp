@@ -94,7 +94,7 @@ bool AliasAnalysis::Source::isBoxData() const {
          origin.isData;
 }
 
-AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
+AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
@@ -160,7 +160,7 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   }
 
   Source *src1, *src2;
-  Value *val1, *val2;
+  mlir::Value *val1, *val2;
   if (lhsSrc.kind < rhsSrc.kind) {
     src1 = &lhsSrc;
     src2 = &rhsSrc;
