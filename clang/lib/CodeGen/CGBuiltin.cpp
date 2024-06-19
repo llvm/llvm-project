@@ -734,17 +734,14 @@ static llvm::Value *EmitOverflowIntrinsic(CodeGenFunction &CGF,
   return CGF.Builder.CreateExtractValue(Tmp, 0);
 }
 
-static Value *emitRangedBuiltin(CodeGenFunction &CGF,
-                                unsigned IntrinsicID,
+static Value *emitRangedBuiltin(CodeGenFunction &CGF, unsigned IntrinsicID,
                                 int low, int high) {
-    llvm::MDBuilder MDHelper(CGF.getLLVMContext());
-    llvm::MDNode *RNode = MDHelper.createRange(APInt(32, low), APInt(32, high));
-    Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {});
-    llvm::Instruction *Call = CGF.Builder.CreateCall(F);
-    Call->setMetadata(llvm::LLVMContext::MD_range, RNode);
-    Call->setMetadata(llvm::LLVMContext::MD_noundef,
-                      llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
-    return Call;
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {});
+  llvm::CallInst *Call = CGF.Builder.CreateCall(F);
+  llvm::ConstantRange CR(APInt(32, low), APInt(32, high));
+  Call->addRangeRetAttr(CR);
+  Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
+  return Call;
 }
 
 namespace {
