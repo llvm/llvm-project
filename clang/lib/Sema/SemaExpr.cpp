@@ -67,7 +67,46 @@
 
 using namespace clang;
 using namespace sema;
+class EnumNameVisitor {
+private:
+  std::string EnumName;
 
+public:
+ Sema &S;
+
+  EnumNameVisitor(Sema &S) : S(S) {}
+  void VisitDeclRefExpr(DeclRefExpr *Node) {
+    const Decl *D = Node->getDecl();
+    // Check if the declaration referenced is an enum constant
+    if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
+      if (const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext())) {
+        // Construct the fully qualified name
+        EnumName = ED->getName().str() + "::" + ECD->getName().str();
+        return; // No error for valid enum constants
+      }
+    }
+  }
+  void VisitExpr(Expr *Ex) {
+     if (!Ex->children().empty()) {
+      // Recursively visit child expressions
+      for (auto *Child : Ex->children()) {
+        if (auto *ChildExpr = dyn_cast<Expr>(Child)) {
+
+          VisitExpr(ChildExpr);
+        }
+      }
+    }
+    // Now handle the current expression node
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Ex)) {
+      VisitDeclRefExpr(DRE); // If it's a DeclRefExpr, visit it
+      return;
+    }
+  }
+
+  // Method to retrieve the last fetched string
+  StringRef getEnumName() const { 
+    return StringRef(EnumName); }
+};
 /// Determine whether the use of this declaration is valid, without
 /// emitting diagnostics.
 bool Sema::CanUseDecl(NamedDecl *D, bool TreatUnavailableAsInvalid) {
@@ -4682,6 +4721,9 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
 ExprResult
 Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
                                      UnaryExprOrTypeTrait ExprKind) {
+  EnumNameVisitor obj(*this);
+  obj.VisitExpr(E);
+  StringRef EnumName = obj.getEnumName();
   ExprResult PE = CheckPlaceholderExpr(E);
   if (PE.isInvalid())
     return ExprError();
@@ -4716,7 +4758,17 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
     if (PE.isInvalid()) return ExprError();
     E = PE.get();
   }
-
+  QualType StrTy =
+      Context.getStringLiteralArrayType(Context.CharTy, EnumName.size());
+  if (ExprKind == UETT_nameof) {
+    StringLiteral *EnumStr =
+        StringLiteral::Create(Context, EnumName, StringLiteralKind::Ordinary,
+                              /*Pascal*/ false, StrTy, OpLoc);
+    if (EnumStr->getString() == "") {
+      Diag(E->getExprLoc(), diag::err_invalid_enum_decl);
+    }
+    return EnumStr;
+  }
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
   return new (Context) UnaryExprOrTypeTraitExpr(
       ExprKind, E, Context.getSizeType(), OpLoc, E->getSourceRange().getEnd());

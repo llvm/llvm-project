@@ -244,6 +244,7 @@ class PossiblyUnreachableDiag;
 class RISCVIntrinsicManager;
 class SemaPPCallbacks;
 class TemplateDeductionInfo;
+static std::vector<std::string> enumvector;
 } // namespace sema
 
 namespace threadSafety {
