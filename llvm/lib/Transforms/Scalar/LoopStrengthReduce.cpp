@@ -1414,8 +1414,12 @@ void Cost::RateFormula(const Formula &F,
     if (F.BaseGV)
       C.ImmCost += 64; // Handle symbolic values conservatively.
                      // TODO: This should probably be the pointer size.
-    else if (Offset != 0)
-      C.ImmCost += APInt(64, Offset, true).getSignificantBits();
+    else if (Offset != 0) {
+      InstructionCost Cost = TTI->getIntImmCost(
+          APInt(64, Offset, true), Type::getInt64Ty(F.getType()->getContext()),
+          TTI::TCK_CodeSize);
+      C.ImmCost += *Cost.getValue();
+    }
 
     // Check with target if this offset with this instruction is
     // specifically not supported.
@@ -3336,6 +3340,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
   // For calculating baseline cost
   SmallPtrSet<const SCEV *, 16> Regs;
   DenseSet<const SCEV *> VisitedRegs;
+  DenseSet<const SCEV *> RepeatedSCEV;
   DenseSet<size_t> VisitedLSRUse;
 
   for (const IVStrideUse &U : IU) {
@@ -3372,7 +3377,9 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
       // in PowerPC, no need to generate initial formulae for it.
       if (SaveCmp && CI == dyn_cast<ICmpInst>(ExitBranch->getCondition()))
         continue;
-      if (CI->isEquality()) {
+      // RepeatedSCEV.count - It's been calculated once, so could not reduce the
+      // register requirements.
+      if (CI->isEquality() && !RepeatedSCEV.count(S)) {
         // Swap the operands if needed to put the OperandValToReplace on the
         // left, for consistency.
         Value *NV = CI->getOperand(1);
@@ -3455,6 +3462,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
       InsertInitialFormula(S, LU, LUIdx);
       CountRegisters(LU.Formulae.back(), LUIdx);
     }
+    RepeatedSCEV.insert(S);
   }
 
   LLVM_DEBUG(print_fixups(dbgs()));
