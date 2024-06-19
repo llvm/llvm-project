@@ -237,7 +237,8 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.MSVCCompat && (Flags & KEYNOMS18) &&
       !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
     return KS_Disabled;
-  if (LangOpts.ZOSExt && (Flags & KEYNOZOS)) return KS_Disabled;
+  if (LangOpts.ZOSExt && (Flags & KEYNOZOS))
+    return KS_Disabled;
 
   KeywordStatus CurStatus = KS_Unknown;
 
