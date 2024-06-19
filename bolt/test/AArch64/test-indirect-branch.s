@@ -1,16 +1,19 @@
 // Test how BOLT handles indirect branch sequence of instructions in
 // AArch64MCPlus builder.
-// This test checks that case when we have no shift amount after add
-// instruction. This pattern comes from libc, so needs to build '-static'
-// binary to reproduce the issue easily.
+// This test checks the pattern where there is no shift amount after add
+// instruction. The pattern come from libc, it can be reproduced with
+// a 'static' built binary.
 //
 //   adr     x6, 0x219fb0 <sigall_set+0x88>
 //   add     x6, x6, x14, lsl #2
 //   ldr     w7, [x6]
 //   add     x6, x6, w7, sxtw => no shift amount
 //   br      x6
-// It also tests another case when we use '-fuse-ld=lld' along with '-static'
-// which produces the following sequence of intsructions:
+//
+// It also tests another case where there is no adrp/add pair.
+// The pattern also come from libc, and it only represents in the binary
+// if the lld linker is used to create the static binary.
+// It doesn't occur with GCC ld linker.
 //
 //  nop   => nop/adr instead of adrp/add
 //  adr     x13, 0x215a18 <_nl_value_type_LC_COLLATE+0x50>
