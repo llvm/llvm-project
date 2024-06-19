@@ -124,31 +124,36 @@ struct X {
 template<typename T>
 void f1() {
   X<noexcept(typeid(*T{}))> dependent;
-  dependent.f<void>();
+  // `dependent` should be type-dependent because the noexcept-expression should be value-dependent
+  // (it is true if T is int*, false if T is Polymorphic<false, false>* for example)
+  dependent.f<void>();  // This should need to be `.template f` to parse as a template
   // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
 }
 template<typename... T>
 void f2() {
   X<noexcept(typeid(*((static_cast<Polymorphic<false, false>*>(nullptr) && ... && T{}))))> dependent;
+  // X<true> when T...[0] is a type with some operator&& which returns int*
+  // X<false> when sizeof...(T) == 0
   dependent.f<void>();
   // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
 }
 template<typename T>
 void f3() {
   X<noexcept(typeid(*static_cast<T*>(nullptr)))> dependent;
+  // X<true> when T is int, X<false> when T is Polymorphic<false, false>
   dependent.f<void>();
   // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
 }
 template<typename T>
 void f4() {
   X<noexcept(typeid(T))> not_dependent;
-  not_dependent.non_existant();
-  // expected-error@-1 {{no member named 'non_existant' in 'typeid_::X<true>'}}
+  not_dependent.non_existent();
+  // expected-error@-1 {{no member named 'non_existent' in 'typeid_::X<true>'}}
 }
 template<typename T>
 void f5() {
   X<noexcept(typeid(sizeof(sizeof(T))))> not_dependent;
-  not_dependent.non_existant();
-  // expected-error@-1 {{no member named 'non_existant' in 'typeid_::X<true>'}}
+  not_dependent.non_existent();
+  // expected-error@-1 {{no member named 'non_existent' in 'typeid_::X<true>'}}
 }
 } // namespace typeid_
