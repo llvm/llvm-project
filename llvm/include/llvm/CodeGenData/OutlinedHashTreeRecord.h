@@ -16,7 +16,6 @@
 #ifndef LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
 #define LLVM_CODEGENDATA_OUTLINEDHASHTREERECORD_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGenData/OutlinedHashTree.h"
 
 namespace llvm {
@@ -38,7 +37,7 @@ struct OutlinedHashTreeRecord {
 
   OutlinedHashTreeRecord() { HashTree = std::make_unique<OutlinedHashTree>(); }
   OutlinedHashTreeRecord(std::unique_ptr<OutlinedHashTree> HashTree)
-      : HashTree(std::move(HashTree)){};
+      : HashTree(std::move(HashTree)) {};
 
   /// Serialize the outlined hash tree to a raw_ostream.
   void serialize(raw_ostream &OS) const;

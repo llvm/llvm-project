@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGENDATA_OUTLINEDHASHTREE_H
 #define LLVM_CODEGENDATA_OUTLINEDHASHTREE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/raw_ostream.h"
