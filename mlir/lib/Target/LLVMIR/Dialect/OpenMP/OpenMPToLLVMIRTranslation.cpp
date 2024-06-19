@@ -390,15 +390,16 @@ static LogicalResult inlineConvertOmpRegions(
 
     if (potentialTerminator && potentialTerminator->isTerminator()) {
       llvm::BasicBlock *block = builder.GetInsertBlock();
-      if (block->empty())
+      if (block->empty()) {
         // this can happen for really simple reduction init regions e.g.
         // %0 = llvm.mlir.constant(0 : i32) : i32
         // omp.yield(%0 : i32)
         // because the llvm.mlir.constant (MLIR op) isn't converted into any
         // llvm op
         potentialTerminator->insertInto(block, block->begin());
-      else
+      } else {
         potentialTerminator->insertAfter(&block->back());
+      }
     }
 
     return success();
