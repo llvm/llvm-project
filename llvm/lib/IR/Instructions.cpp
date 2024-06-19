@@ -1245,7 +1245,7 @@ void LoadInst::AssertOK() {
 static Align computeLoadStoreDefaultAlign(Type *Ty, InsertPosition Pos) {
   assert(Pos.isValid() &&
          "Insertion position cannot be null when alignment not provided!");
-  BasicBlock *BB = ((BasicBlock::iterator)Pos).getNodeParent();
+  BasicBlock *BB = Pos.getBasicBlock();
   assert(BB->getParent() &&
          "BB must be in a Function when alignment not provided!");
   const DataLayout &DL = BB->getModule()->getDataLayout();
