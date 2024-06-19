@@ -55,6 +55,7 @@ public:
   DIBasicType *LongInt;
   DIExpression *EmptyExpr;
   LiveDebugValues::OverlapMap Overlaps;
+  LiveDebugValues::DebugVariableMap DVMap;
 
   DebugLoc OutermostLoc, InBlockLoc, NotNestedBlockLoc, InlinedLoc;
 
@@ -176,7 +177,7 @@ public:
 
   void addVTracker() {
     ASSERT_TRUE(LDV);
-    VTracker = std::make_unique<VLocTracker>(Overlaps, EmptyExpr);
+    VTracker = std::make_unique<VLocTracker>(DVMap, Overlaps, EmptyExpr);
     LDV->VTracker = &*VTracker;
   }
 
