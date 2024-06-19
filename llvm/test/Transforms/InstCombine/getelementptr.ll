@@ -1566,6 +1566,16 @@ define ptr @gep_sdiv_inbounds(ptr %p, i64 %off) {
   ret ptr %ptr
 }
 
+define ptr @gep_sdiv_nuw(ptr %p, i64 %off) {
+; CHECK-LABEL: @gep_sdiv_nuw(
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %index = sdiv exact i64 %off, 7
+  %ptr = getelementptr nuw %struct.C, ptr %p, i64 %index
+  ret ptr %ptr
+}
+
 define ptr @gep_ashr(ptr %p, i64 %off) {
 ; CHECK-LABEL: @gep_ashr(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[OFF:%.*]]
