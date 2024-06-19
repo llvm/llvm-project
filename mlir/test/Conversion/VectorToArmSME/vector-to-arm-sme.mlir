@@ -334,6 +334,50 @@ func.func @transfer_write_2d_transpose_with_mask_bf16(%vector : vector<[8]x[8]xb
   return
 }
 
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_slice(
+// CHECK-SAME:                                  %[[VECTOR:.*]]: vector<[4]x[4]xf32>,
+// CHECK-SAME:                                  %[[DEST:.*]]: memref<?x?xf32>,
+// CHECK-SAME:                                  %[[INDEX:.*]]: index) {
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         %[[MASK:.*]] = arith.constant dense<true> : vector<[4]xi1>
+// CHECK:         arm_sme.store_tile_slice %[[VECTOR]], %[[INDEX]], %[[MASK]], %[[DEST]][%[[INDEX]], %[[C0]]] : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+func.func @transfer_write_slice(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_slice_with_mask(
+// CHECK-SAME:                                            %[[VECTOR:.*]]: vector<[4]x[4]xf32>,
+// CHECK-SAME:                                            %[[DEST:.*]]: memref<?x?xf32>,
+// CHECK-SAME:                                            %[[MASK:.*]]: vector<[4]xi1>,
+// CHECK-SAME:                                            %[[INDEX:.*]]: index) {
+// CHECK:         %[[C0:.*]] = arith.constant 0 : index
+// CHECK:         arm_sme.store_tile_slice %[[VECTOR]], %[[INDEX]], %[[MASK]], %[[DEST]][%[[INDEX]], %[[C0]]] : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+func.func @transfer_write_slice_with_mask(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %mask: vector<[4]xi1>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0], %mask { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_vertical_slice
+// CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical>
+func.func @transfer_write_vertical_slice(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index) {
+  %c0 = arith.constant 0 : index
+   %slice = arm_sme.move_tile_slice_to_vector %vector[%slice_index] layout<vertical>
+            : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // vector.broadcast
 //===----------------------------------------------------------------------===//

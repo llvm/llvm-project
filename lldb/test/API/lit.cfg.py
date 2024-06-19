@@ -99,10 +99,11 @@ def find_python_interpreter():
     except subprocess.CalledProcessError:
         # The copied Python didn't work. Assume we're dealing with the Python
         # interpreter in Xcode. Given that this is not a system binary SIP
-        # won't prevent us form injecting the interceptors so we get away with
-        # not copying the executable.
+        # won't prevent us form injecting the interceptors, but when running in
+        # a virtual environment, we can't use it directly. Create a symlink
+        # instead.
         os.remove(copied_python)
-        return real_python
+        os.symlink(real_python, copied_python)
 
     # The copied Python works.
     return copied_python

@@ -710,8 +710,8 @@ llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
 
 DWARFDebugInfo &SymbolFileDWARF::DebugInfo() {
   llvm::call_once(m_info_once_flag, [&] {
-    LLDB_SCOPED_TIMERF("%s this = %p", LLVM_PRETTY_FUNCTION,
-                       static_cast<void *>(this));
+    LLDB_SCOPED_TIMER();
+
     m_info = std::make_unique<DWARFDebugInfo>(*this, m_context);
   });
   return *m_info;
@@ -732,8 +732,7 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
 
 DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
   if (!m_ranges) {
-    LLDB_SCOPED_TIMERF("%s this = %p", LLVM_PRETTY_FUNCTION,
-                       static_cast<void *>(this));
+    LLDB_SCOPED_TIMER();
 
     if (m_context.getOrLoadRangesData().GetByteSize() > 0)
       m_ranges = std::make_unique<DWARFDebugRanges>();

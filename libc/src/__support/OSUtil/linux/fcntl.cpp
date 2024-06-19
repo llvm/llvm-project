@@ -60,8 +60,8 @@ int fcntl(int fd, int cmd, void *arg) {
     // Now copy back into flk, in case flk64 got modified
     flk->l_type = flk64.l_type;
     flk->l_whence = flk64.l_whence;
-    flk->l_start = flk64.l_start;
-    flk->l_len = flk64.l_len;
+    flk->l_start = static_cast<decltype(flk->l_start)>(flk64.l_start);
+    flk->l_len = static_cast<decltype(flk->l_len)>(flk64.l_len);
     flk->l_pid = flk64.l_pid;
     return retVal;
   }
