@@ -538,7 +538,7 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
 
       for (auto E : COrDtors)
         InitsOrDeInits.push_back(std::make_pair(E.Func, E.Priority));
-      llvm::sort(InitsOrDeInits, llvm::less_second());
+      llvm::stable_sort(InitsOrDeInits, llvm::less_second());
 
       auto *InitOrDeInitFuncEntryBlock =
           BasicBlock::Create(Ctx, "entry", InitOrDeInitFunc);

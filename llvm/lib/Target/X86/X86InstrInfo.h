@@ -80,6 +80,9 @@ int getCCMPCondFlagsFromCondCode(CondCode CC);
 // Get the opcode of corresponding NF variant.
 unsigned getNFVariant(unsigned Opc);
 
+// Get the opcode of corresponding NonND variant.
+unsigned getNonNDVariant(unsigned Opc);
+
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,
 /// e.g. turning COND_E to COND_NE.
 CondCode GetOppositeBranchCondition(CondCode CC);

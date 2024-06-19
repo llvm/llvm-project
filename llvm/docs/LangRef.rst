@@ -812,6 +812,10 @@ doesn't). These kinds of structs (we may call them homogeneous scalable vector
 structs) are considered sized and can be used in loads, stores, allocas, but
 not GEPs.
 
+Globals with ``toc-data`` attribute set are stored in TOC of XCOFF. Their
+alignments are not larger than that of a TOC entry. Optimizations should not
+increase their alignments to mitigate TOC overflow.
+
 Syntax::
 
       @<GlobalVarName> = [Linkage] [PreemptionSpecifier] [Visibility]
@@ -1598,8 +1602,10 @@ Currently, only the following parameter attributes are defined:
     through this pointer argument (even though it may read from the memory that
     the pointer points to).
 
-    If a function reads from a writeonly pointer argument, the behavior is
-    undefined.
+    This attribute is understood in the same way as the ``memory(write)``
+    attribute. That is, the pointer may still be read as long as the read is
+    not observable outside the function. See the ``memory`` documentation for
+    precise semantics.
 
 ``writable``
     This attribute is only meaningful in conjunction with ``dereferenceable(N)``
@@ -1972,6 +1978,21 @@ example:
       and additionally write argument memory.
     - ``memory(readwrite, argmem: none)``: May access any memory apart from
       argument memory.
+
+    The supported access kinds are:
+
+    - ``readwrite``: Any kind of access to the location is allowed.
+    - ``read``: The location is only read. Writing to the location is immediate
+      undefined behavior. This includes the case where the location is read from
+      and then the same value is written back.
+    - ``write``: Only writes to the location are observable outside the function
+      call. However, the function may still internally read the location after
+      writing it, as this is not observable. Reading the location prior to
+      writing it results in a poison value.
+    - ``none``: No reads or writes to the location are observed outside the
+      function. It is always valid to read and write allocas, and to read global
+      constants, even if ``memory(none)`` is used, as these effects are not
+      externally observable.
 
     The supported memory location kinds are:
 
@@ -11390,10 +11411,10 @@ For ``nuw`` (no unsigned wrap):
 For ``inbounds`` all rules of the ``nusw`` attribute apply. Additionally,
 if the ``getelementptr`` has any non-zero indices, the following rules apply:
 
- * The base pointer has an *in bounds* address of an allocated object, which
-   means that it points into an allocated object, or to its end. Note that the
-   object does not have to be live anymore; being in-bounds of a deallocated
-   object is sufficient.
+ * The base pointer has an *in bounds* address of the allocated object that it
+   is :ref:`based <pointeraliasing>` on. This means that it points into that
+   allocated object, or to its end. Note that the object does not have to be
+   live anymore; being in-bounds of a deallocated object is sufficient.
  * During the successive addition of offsets to the address, the resulting
    pointer must remain *in bounds* of the allocated object at each step.
 
