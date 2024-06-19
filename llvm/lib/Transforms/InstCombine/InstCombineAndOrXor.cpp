@@ -3426,13 +3426,13 @@ Value *foldAorBZero(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   Value *Op1 = I.getOperand(1);
 
   Value *Cmp1, *Cmp2, *Cmp3, *Cmp4;
-  if (match(Op0, m_OneUse(m_And(m_Value(Cmp1), m_Value(Cmp2)))) ||
-      match(Op1, m_OneUse(m_And(m_Value(Cmp3), m_Value(Cmp4)))))
+  if (!match(Op0, m_OneUse(m_And(m_Value(Cmp1), m_Value(Cmp2)))) ||
+      !match(Op1, m_OneUse(m_And(m_Value(Cmp3), m_Value(Cmp4)))))
     return nullptr;
 
   // check if any two pairs of the and operations are invertions of each other.
-  if ((isKnownInversion(Cmp1, Cmp3) && isKnownInversion(Cmp2, Cmp4)) ||
-      (isKnownInversion(Cmp1, Cmp4) && isKnownInversion(Cmp2, Cmp3)))
+  if (!(isKnownInversion(Cmp1, Cmp3) && isKnownInversion(Cmp2, Cmp4)) &&
+      !(isKnownInversion(Cmp1, Cmp4) && isKnownInversion(Cmp2, Cmp3)))
     return nullptr;
 
   return Builder.CreateICmpEQ(Cmp1, Cmp2);
