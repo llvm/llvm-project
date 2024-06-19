@@ -841,13 +841,13 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
 std::string
 DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
   if (llvm::StringRef(die.GetName()).contains("<"))
-    return "";
+    return {};
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   if (ParseTemplateParameterInfos(die, template_param_infos))
     return m_ast.PrintTemplateParams(template_param_infos);
 
-  return "";
+  return {};
 }
 
 TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
