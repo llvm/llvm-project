@@ -1200,15 +1200,14 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
 
   if (llvm::EnableSingleByteCoverage)
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_cover),
-                       ArrayRef(Args, 4));
+                       Args);
   else {
     if (!StepV)
       Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment),
-                         ArrayRef(Args, 4));
+                         Args);
     else
       Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step),
-          ArrayRef(Args));
+          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
   }
 }
 
