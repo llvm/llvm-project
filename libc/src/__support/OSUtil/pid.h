@@ -14,14 +14,16 @@
 namespace LIBC_NAMESPACE {
 
 class ProcessIdentity {
+  static thread_local bool fork_inflight;
   static pid_t cache;
   static pid_t get_uncached();
 
 public:
-  LIBC_INLINE static void invalidate_cache() { cache = -1; }
+  LIBC_INLINE static void start_fork() { fork_inflight = true; }
+  LIBC_INLINE static void end_fork() { fork_inflight = false; }
   LIBC_INLINE static void refresh_cache() { cache = get_uncached(); }
   LIBC_INLINE static pid_t get() {
-    if (LIBC_UNLIKELY(cache < 0))
+    if (LIBC_UNLIKELY(fork_inflight))
       return get_uncached();
     return cache;
   }
