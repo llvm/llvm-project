@@ -1,7 +1,7 @@
-// RUN: %clang -fraw-string-literals    -fsyntax-only -std=c++03   %s 2>&1 | FileCheck --check-prefix=CHECK-PRE-CXX11 %s
-// RUN: %clang -fraw-string-literals    -fsyntax-only -std=gnu++03 %s 2>&1 | FileCheck --check-prefix=CHECK-PRE-CXX11 %s
-// RUN: %clang -fno-raw-string-literals -fsyntax-only -std=c++03   %s 2>&1 | FileCheck --check-prefix=CHECK-PRE-CXX11 %s
-// RUN: %clang -fno-raw-string-literals -fsyntax-only -std=gnu++03 %s 2>&1 | FileCheck --check-prefix=CHECK-PRE-CXX11 %s
+// RUN: %clang -fraw-string-literals    -fsyntax-only -std=c++03   %s 2>&1 | FileCheck --check-prefix=CHECK-PRE-CXX11 --allow-empty %s
+// RUN: %clang -fraw-string-literals    -fsyntax-only -std=gnu++03 %s 2>&1 | FileCheck --check-prefix=CHECK-PRE-CXX11 --allow-empty %s
+// RUN: %clang -fno-raw-string-literals -fsyntax-only -std=c++03   %s 2>&1 | FileCheck --check-prefix=CHECK-PRE-CXX11 --allow-empty %s
+// RUN: %clang -fno-raw-string-literals -fsyntax-only -std=gnu++03 %s 2>&1 | FileCheck --check-prefix=CHECK-PRE-CXX11 --allow-empty %s
 // RUN: %clang -fraw-string-literals    -fsyntax-only -std=c++11   %s 2>&1 | FileCheck --check-prefix=CHECK-POS %s
 // RUN: %clang -fraw-string-literals    -fsyntax-only -std=gnu++11 %s 2>&1 | FileCheck --check-prefix=CHECK-POS %s
 // RUN: %clang -fno-raw-string-literals -fsyntax-only -std=c++11   %s 2>&1 | FileCheck --check-prefix=CHECK-NEG %s
