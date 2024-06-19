@@ -132,4 +132,11 @@ s_mov_b32 tba_lo, 0
 v_cvt_f32_f64 v0, v[255:256]
 // SICIVI9-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: register index is out of range
 // GFX10-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: register index is out of range
-// GFX1210: v_cvt_f32_f64_e32 v0, v[255:256] ; encoding
+// GFX1210-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+
+v_mqsad_u32_u8 v[254:257], v[0:1], -4.0, v[2:5]
+// SI-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// VI-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: register index is out of range
+// GFX9-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: register index is out of range
+// GFX10-ERR: :[[@LINE-4]]:{{[0-9]+}}: error: register index is out of range
+// GFX1210: v_mqsad_u32_u8 v[254:257], v[0:1], -4.0, v[2:5] ; encoding: [0xfe,0x00,0x3d,0xd6,0x00,0xef,0x09,0x04]

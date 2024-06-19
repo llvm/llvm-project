@@ -5088,7 +5088,7 @@ bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
 
 bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   auto FB = getFeatureBits();
-  if (!FB[AMDGPU::FeatureGFX90AInsts])
+  if (!FB[AMDGPU::FeatureGFX90AInsts] && !FB[AMDGPU::FeatureGFX12_10Insts])
     return true;
 
   const MCRegisterInfo *MRI = getMRI();
