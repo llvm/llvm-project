@@ -666,14 +666,69 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
   }
 };
 
+/// Folds a MoveTileSliceToVectorOp + TransferWriteOp to a StoreTileSliceOp.
+///
+///  BEFORE:
+///  ```mlir
+///  %slice = arm_sme.move_tile_slice_to_vector %tile[%index]
+///             : vector<[4]xf32> from vector<[4]x[4]xf32>
+///  vector.transfer_write %slice, %memref[%i, %j], %mask {in_bounds = [true]}
+///             : vector<[4]xf32>, memref<?x?xf32>
+///  ```
+///  AFTER:
+///  ```mlir
+///  arm_sme.store_tile_slice %tile, %index, %mask, %memref[%i, %j]
+///             : memref<?x?xf32>, vector<[4]xi1>, vector<[4]x[4]xf32>
+///  ```
+struct FoldTransferWriteOfExtractTileSlice
+    : public OpRewritePattern<vector::TransferWriteOp> {
+  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
+                                PatternRewriter &rewriter) const final {
+    if (!isa<MemRefType>(writeOp.getSource().getType()))
+      return rewriter.notifyMatchFailure(writeOp, "destination not a memref");
+
+    if (writeOp.hasOutOfBoundsDim())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "not inbounds transfer write");
+
+    auto moveTileSlice =
+        writeOp.getVector().getDefiningOp<arm_sme::MoveTileSliceToVectorOp>();
+    if (!moveTileSlice)
+      return rewriter.notifyMatchFailure(
+          writeOp, "vector to store not from MoveTileSliceToVectorOp");
+
+    AffineMap map = writeOp.getPermutationMap();
+    if (!map.isMinorIdentity())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "unsupported permutation map");
+
+    Value mask = writeOp.getMask();
+    if (!mask) {
+      auto maskType = writeOp.getVectorType().clone(rewriter.getI1Type());
+      mask = rewriter.create<arith::ConstantOp>(
+          writeOp.getLoc(), maskType, DenseElementsAttr::get(maskType, true));
+    }
+
+    rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
+        writeOp, moveTileSlice.getTile(), moveTileSlice.getTileSliceIndex(),
+        mask, writeOp.getSource(), writeOp.getIndices(),
+        moveTileSlice.getLayout());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
-               TransferReadToArmSMELowering, TransferWriteToArmSMELowering,
-               TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
-               VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
-               VectorExtractToArmSMELowering, VectorInsertToArmSMELowering,
-               VectorPrintToArmSMELowering>(&ctx);
+  patterns
+      .add<BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
+           TransferReadToArmSMELowering, TransferWriteToArmSMELowering,
+           TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
+           VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
+           VectorExtractToArmSMELowering, VectorInsertToArmSMELowering,
+           VectorPrintToArmSMELowering, FoldTransferWriteOfExtractTileSlice>(
+          &ctx);
 }
