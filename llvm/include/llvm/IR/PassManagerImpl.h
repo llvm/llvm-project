@@ -15,9 +15,10 @@
 #ifndef LLVM_IR_PASSMANAGERIMPL_H
 #define LLVM_IR_PASSMANAGERIMPL_H
 
-#include "llvm/Support/CommandLine.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/PrettyStackTrace.h"
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
@@ -26,6 +27,28 @@ namespace llvm {
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
 PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
     IRUnitT &IR, AnalysisManagerT &AM, ExtraArgTs... ExtraArgs) {
+  class StackTraceEntry : public PrettyStackTraceEntry {
+    const PassInstrumentation &PI;
+    PassConceptT &Pass;
+    IRUnitT &IR;
+
+  public:
+    explicit StackTraceEntry(const PassInstrumentation &PI, PassConceptT &Pass,
+                             IRUnitT &IR)
+        : PI(PI), Pass(Pass), IR(IR) {}
+
+    void print(raw_ostream &OS) const override {
+      OS << "Running pass \"";
+      Pass.printPipeline(OS, [this](StringRef ClassName) {
+        auto PassName = PI.getPassNameForClassName(ClassName);
+        return PassName.empty() ? ClassName : PassName;
+      });
+      OS << "\" on ";
+      printIRUnitNameForStackTrace(OS, IR);
+      OS << "\n";
+    }
+  };
+
   PreservedAnalyses PA = PreservedAnalyses::all();
 
   // Request PassInstrumentation from analysis manager, will use it to run
@@ -47,6 +70,7 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
     if (!PI.runBeforePass<IRUnitT>(*Pass, IR))
       continue;
 
+    StackTraceEntry Entry(PI, *Pass, IR);
     PreservedAnalyses PassPA = Pass->run(IR, AM, ExtraArgs...);
 
     // Update the analysis manager as each pass runs and potentially
