@@ -328,6 +328,15 @@ ABI Affecting Changes
   done to fix `#70494 <https://github.com/llvm/llvm-project/issues/70494>`_ and the vendor communication is handled
   in `#70820 <https://github.com/llvm/llvm-project/issues/70820>`_.
 
+- LLVM 18.1.8 Fixed an issue that caused ``std::string`` to pass an incorrect size to ``allocator_traits::deallocate``
+  when deallocating memory. The impact is different depending on a few factors:
+  - Users who don't use a custom allocator in ``std::string`` and don't enable sized deallocation (which is
+    off by default in Clang 18) will not be affected. This is expected to be the vast majority of users.
+  - Users who don't use a custom allocator in ``std::string`` but are enabling sized deallocation (e.g. with
+    ``-fsized-deallocation``) will notice that ``operator delete(void*, size_t)`` is now being passed the correct
+    size. This likely has no impact if they were not customizing ``operator delete``.
+  - Users who use a custom allocator in ``std::string`` will notice that they now get passed the correct allocation
+    size upon deallocation.
 
 Build System Changes
 --------------------
