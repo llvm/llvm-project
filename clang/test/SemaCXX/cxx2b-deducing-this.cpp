@@ -920,6 +920,14 @@ struct C {
 }
 
 namespace GH85992 {
+namespace N {
+struct A {
+  int f(this A);
+};
+
+int f(A);
+}
+
 struct S {
   int (S::*x)(this int); // expected-error {{an explicit object parameter is not allowed here}}
   int (*y)(this int); // expected-error {{an explicit object parameter is not allowed here}}
@@ -935,6 +943,9 @@ struct S {
   };
 
   friend int T::f(this T);
+  friend int N::A::f(this N::A);
+  friend int N::f(this N::A); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int friend func(this T); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 };
 
 using T = int (*)(this int); // expected-error {{an explicit object parameter is not allowed here}}

@@ -4845,7 +4845,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
       if (!D.isInvalidType()) {
-        auto isClassType = [&](CXXScopeSpec &SS) {
+        auto IsClassType = [&](CXXScopeSpec &SS) {
           // If there already was an problem with the scope, don’t issue another
           // error about the explicit object parameter.
           return SS.isInvalid() ||
@@ -4857,9 +4857,15 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // An explicit-object-parameter-declaration is a parameter-declaration
         // with a this specifier. An explicit-object-parameter-declaration shall
         // appear only as the first parameter-declaration of a
-        // parameter-declaration-list of either:
+        // parameter-declaration-list of one of:
         //
-        // - a member-declarator that declares a member function [class.mem], or
+        // - a declaration of a member function or member function template
+        //   ([class.mem]), or
+        //
+        // - an explicit instantiation ([temp.explicit]) or explicit
+        //   specialization ([temp.expl.spec]) of a templated member function,
+        //   or
+        //
         // - a lambda-declarator [expr.prim.lambda].
         DeclaratorContext C = D.getContext();
         ParmVarDecl *First =
@@ -4879,7 +4885,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             (C != DeclaratorContext::Member || !IsFunctionDecl) &&
 
             // Allow out-of-line definitions of member functions.
-            !isClassType(D.getCXXScopeSpec())) {
+            !IsClassType(D.getCXXScopeSpec())) {
           if (IsFunctionDecl)
             S.Diag(First->getBeginLoc(),
                    diag::err_explicit_object_parameter_nonmember)

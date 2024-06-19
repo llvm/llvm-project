@@ -11401,7 +11401,12 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     D.setInvalidType();
   }
 
-  // Handle the following case:
+  // Friend declarations require some care. Consider:
+  //
+  // namespace N {
+  // struct A{};
+  // int f(A);
+  // }
   //
   // struct S {
   //   struct T {
@@ -11410,8 +11415,14 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
   //
   //   friend int T::f(this T); // Allow this.
   //   friend int f(this S);    // But disallow this.
+  //   friend int N::f(this A); // And disallow this.
   // };
-  if (D.getDeclSpec().isFriendSpecified() && D.getCXXScopeSpec().isEmpty()) {
+  //
+  // Here, it seems to suffice to check whether the scope
+  // specifier designates a class type.
+  if (D.getDeclSpec().isFriendSpecified() &&
+      !isa_and_present<CXXRecordDecl>(
+          computeDeclContext(D.getCXXScopeSpec()))) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*non-member=*/2 << IsLambda;
