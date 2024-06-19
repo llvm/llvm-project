@@ -49,7 +49,7 @@ private:
                                               mlir::LLVM::DIFileAttr fileAttr,
                                               mlir::LLVM::DIScopeAttr scope,
                                               mlir::Location loc,
-                                              bool allocatable);
+                                              bool hasDescriptor);
 
   mlir::LLVM::DITypeAttr
   convertPointerLikeType(mlir::Type elTy, mlir::LLVM::DIFileAttr fileAttr,

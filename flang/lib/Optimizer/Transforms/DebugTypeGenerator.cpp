@@ -194,7 +194,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     fir::CharacterType charTy, mlir::LLVM::DIFileAttr fileAttr,
-    mlir::LLVM::DIScopeAttr scope, mlir::Location loc, bool allocatable) {
+    mlir::LLVM::DIScopeAttr scope, mlir::Location loc, bool hasDescriptor) {
   mlir::MLIRContext *context = module.getContext();
 
   // DWARF 5 says the following about the character encoding in 5.1.1.2.
@@ -209,7 +209,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
   mlir::LLVM::DIExpressionAttr lenExpr = nullptr;
   mlir::LLVM::DIExpressionAttr locExpr = nullptr;
 
-  if (allocatable) {
+  if (hasDescriptor) {
     llvm::SmallVector<mlir::LLVM::DIExpressionElemAttr> ops;
     auto addOp = [&](unsigned opc, llvm::ArrayRef<uint64_t> vals) {
       ops.push_back(mlir::LLVM::DIExpressionElemAttr::get(context, opc, vals));
@@ -253,7 +253,7 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
                                     genAssociated);
   if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(elTy))
     return convertCharacterType(charTy, fileAttr, scope, loc,
-                                /*allocatable=*/true);
+                                /*hasDescriptor=*/true);
 
   mlir::LLVM::DITypeAttr elTyAttr = convertType(elTy, fileAttr, scope, loc);
 
@@ -300,7 +300,7 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertSequenceType(seqTy, fileAttr, scope, loc);
   } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(Ty)) {
     return convertCharacterType(charTy, fileAttr, scope, loc,
-                                /*allocatable=*/false);
+                                /*hasDescriptor=*/false);
   } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(Ty)) {
     auto elTy = boxTy.getElementType();
     if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(elTy))
