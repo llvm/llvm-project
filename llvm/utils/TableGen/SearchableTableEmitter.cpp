@@ -190,9 +190,11 @@ private:
   void emitGenericTable(const GenericTable &Table, raw_ostream &OS);
   void emitGenericEnum(const GenericEnum &Enum, raw_ostream &OS);
   void emitLookupDeclaration(const GenericTable &Table,
-                             const SearchIndex &Index, raw_ostream &OS);
+                             const SearchIndex &Index, bool UseListArg,
+                             raw_ostream &OS);
   void emitLookupFunction(const GenericTable &Table, const SearchIndex &Index,
-                          bool IsPrimary, raw_ostream &OS);
+                          bool IsPrimary, bool UseListArg,
+                          raw_ostream &OS);
   void emitIfdef(StringRef Guard, raw_ostream &OS);
 
   bool parseFieldType(GenericField &Field, Init *II);
@@ -319,9 +321,10 @@ void SearchableTableEmitter::emitGenericEnum(const GenericEnum &Enum,
 void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
                                                 const SearchIndex &Index,
                                                 bool IsPrimary,
+                                                bool UseListArg,
                                                 raw_ostream &OS) {
   OS << "\n";
-  emitLookupDeclaration(Table, Index, OS);
+  emitLookupDeclaration(Table, Index, UseListArg, OS);
   OS << " {\n";
 
   std::vector<Record *> IndexRowsStorage;
@@ -423,7 +426,10 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
         Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
     OS << "  if ((" << Field.Name << " < " << FirstRepr << ") ||\n";
     OS << "      (" << Field.Name << " > " << LastRepr << "))\n";
-    OS << "    return nullptr;\n\n";
+    if (UseListArg)
+      OS << "    return;\n\n";
+    else
+      OS << "    return nullptr;\n\n";
   }
 
   OS << "  struct KeyType {\n";
@@ -452,55 +458,80 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   OS << "  auto Idx = std::lower_bound(Table.begin(), Table.end(), Key,\n";
   OS << "    [](const " << IndexTypeName << " &LHS, const KeyType &RHS) {\n";
 
-  for (const auto &Field : Index.Fields) {
-    if (isa<StringRecTy>(Field.RecType)) {
-      OS << "      int Cmp" << Field.Name << " = StringRef(LHS." << Field.Name
-         << ").compare(RHS." << Field.Name << ");\n";
-      OS << "      if (Cmp" << Field.Name << " < 0) return true;\n";
-      OS << "      if (Cmp" << Field.Name << " > 0) return false;\n";
-    } else if (Field.Enum) {
-      // Explicitly cast to unsigned, because the signedness of enums is
-      // compiler-dependent.
-      OS << "      if ((unsigned)LHS." << Field.Name << " < (unsigned)RHS."
-         << Field.Name << ")\n";
-      OS << "        return true;\n";
-      OS << "      if ((unsigned)LHS." << Field.Name << " > (unsigned)RHS."
-         << Field.Name << ")\n";
-      OS << "        return false;\n";
-    } else {
-      OS << "      if (LHS." << Field.Name << " < RHS." << Field.Name << ")\n";
-      OS << "        return true;\n";
-      OS << "      if (LHS." << Field.Name << " > RHS." << Field.Name << ")\n";
-      OS << "        return false;\n";
+  auto emitComparator = [&]() {
+    for (const auto &Field : Index.Fields) {
+      if (isa<StringRecTy>(Field.RecType)) {
+        OS << "      int Cmp" << Field.Name << " = StringRef(LHS." << Field.Name
+           << ").compare(RHS." << Field.Name << ");\n";
+        OS << "      if (Cmp" << Field.Name << " < 0) return true;\n";
+        OS << "      if (Cmp" << Field.Name << " > 0) return false;\n";
+      } else if (Field.Enum) {
+        // Explicitly cast to unsigned, because the signedness of enums is
+        // compiler-dependent.
+        OS << "      if ((unsigned)LHS." << Field.Name << " < (unsigned)RHS."
+           << Field.Name << ")\n";
+        OS << "        return true;\n";
+        OS << "      if ((unsigned)LHS." << Field.Name << " > (unsigned)RHS."
+           << Field.Name << ")\n";
+        OS << "        return false;\n";
+      } else {
+        OS << "      if (LHS." << Field.Name << " < RHS." << Field.Name
+           << ")\n";
+        OS << "        return true;\n";
+        OS << "      if (LHS." << Field.Name << " > RHS." << Field.Name
+           << ")\n";
+        OS << "        return false;\n";
+      }
     }
-  }
 
-  OS << "      return false;\n";
-  OS << "    });\n\n";
+    OS << "      return false;\n";
+    OS << "    });\n\n";
+  };
+  emitComparator();
 
   OS << "  if (Idx == Table.end()";
 
   for (const auto &Field : Index.Fields)
     OS << " ||\n      Key." << Field.Name << " != Idx->" << Field.Name;
-  OS << ")\n    return nullptr;\n";
 
-  if (IsPrimary)
+  if (UseListArg) {
+    OS << ")\n    return;\n\n";
+    OS << "  auto UpperBound = std::upper_bound(Table.begin(), Table.end(), "
+          "Key,\n";
+    OS << "    [](const KeyType &LHS, const " << IndexTypeName << " &RHS) {\n";
+    emitComparator();
+    OS << "  while(Idx != UpperBound){\n";
+    OS << "    List.push_back(&" << Table.Name << "[Idx - Table.begin()]);\n";
+    OS << "    Idx++;\n";
+    OS << "  }\n";
+  } else if (IsPrimary) {
+    OS << ")\n    return nullptr;\n\n";
     OS << "  return &*Idx;\n";
-  else
+  } else {
+    OS << ")\n    return nullptr;\n\n";
     OS << "  return &" << Table.Name << "[Idx->_index];\n";
+  }
 
   OS << "}\n";
 }
 
 void SearchableTableEmitter::emitLookupDeclaration(const GenericTable &Table,
                                                    const SearchIndex &Index,
+                                                   bool UseListArg,
                                                    raw_ostream &OS) {
-  OS << "const " << Table.CppTypeName << " *" << Index.Name << "(";
-
+  if (UseListArg)
+    OS << "void ";
+  else
+    OS << "const " << Table.CppTypeName << " *";
+  OS << Index.Name << "(";
   ListSeparator LS;
   for (const auto &Field : Index.Fields)
     OS << LS << searchableFieldType(Table, Index, Field, TypeInArgument) << " "
        << Field.Name;
+
+  if (UseListArg)
+    OS << ", std::vector<const " << Table.CppTypeName << "*> &List";
+
   OS << ")";
 }
 
@@ -510,11 +541,14 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
 
   // Emit the declarations for the functions that will perform lookup.
   if (Table.PrimaryKey) {
-    emitLookupDeclaration(Table, *Table.PrimaryKey, OS);
+    auto &Index = *Table.PrimaryKey;
+    emitLookupDeclaration(Table, Index, /*UseListArg=*/false, OS);
+    OS << ";\n";
+    emitLookupDeclaration(Table, Index, /*UseListArg=*/true, OS);
     OS << ";\n";
   }
   for (const auto &Index : Table.Indices) {
-    emitLookupDeclaration(Table, *Index, OS);
+    emitLookupDeclaration(Table, *Index, /*UseListArg=*/false, OS);
     OS << ";\n";
   }
 
@@ -540,10 +574,20 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
 
   // Indexes are sorted "{ Thing, PrimaryIdx }" arrays, so that a binary
   // search can be performed by "Thing".
-  if (Table.PrimaryKey)
-    emitLookupFunction(Table, *Table.PrimaryKey, true, OS);
+  if (Table.PrimaryKey) {
+    auto &Index = *Table.PrimaryKey;
+    // Two lookupfunction functions need to be generated to allow more than one
+    // lookup signature for the primary key lookup : first will return a SysReg
+    // that matches the primary key, second will populate a vector passed as
+    // argument with all the SysRegs that match the primary key.
+    emitLookupFunction(Table, Index, /*IsPrimary=*/true,
+                       /*UseListArg=*/false, OS);
+    emitLookupFunction(Table, Index, /*IsPrimary=*/true,
+                       /*UseListArg=*/true, OS);
+  }
   for (const auto &Index : Table.Indices)
-    emitLookupFunction(Table, *Index, false, OS);
+    emitLookupFunction(Table, *Index, /*IsPrimary=*/false,
+                       /*UseListArg=*/false, OS);
 
   OS << "#endif\n\n";
 }
