@@ -1,5 +1,5 @@
 ; Check that MC/DC intrinsics are properly lowered
-; RUN: opt < %s -passes=instrprof -S | FileCheck %s
+; RUN: opt < %s -passes=instrprof -S | FileCheck %s --check-prefixes=CHECK,BASIC
 ; RUN: opt < %s -passes=instrprof -runtime-counter-relocation -S 2>&1 | FileCheck %s --check-prefix RELOC
 
 ; RELOC: Runtime counter relocation is presently not supported for MC/DC bitmaps
@@ -30,11 +30,15 @@ entry:
   ; CHECK-NEXT: %[[LAB8:[0-9]+]] = and i32 %[[TEMP]], 7
   ; CHECK-NEXT: %[[LAB9:[0-9]+]] = trunc i32 %[[LAB8]] to i8
   ; CHECK-NEXT: %[[LAB10:[0-9]+]] = shl i8 1, %[[LAB9]]
-  ; CHECK-NEXT: %[[BITS:mcdc.*]] = load i8, ptr %[[LAB7]], align 1
-  ; CHECK-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[LAB10]]
-  ; CHECK-NEXT: store i8 %[[LAB11]], ptr %[[LAB7]], align 1
+  ; CHECK-NEXT: call void @[[RMW_OR:.+]](ptr %[[LAB7]], i8 %[[LAB10]])
   ret void
 }
+
+; CHECK: define private void @[[RMW_OR]](ptr %[[ARGPTR:.+]], i8 %[[ARGVAL:.+]])
+; CHECK:      %[[BITS:.+]] = load i8, ptr %[[ARGPTR]], align 1
+; BASIC-NEXT: %[[LAB11:[0-9]+]] = or i8 %[[BITS]], %[[ARGVAL]]
+; BASIC-NEXT: store i8 %[[LAB11]], ptr %[[ARGPTR]], align 1
+; CHECK-NEXT: ret void
 
 declare void @llvm.instrprof.cover(ptr, i64, i32, i32)
 
