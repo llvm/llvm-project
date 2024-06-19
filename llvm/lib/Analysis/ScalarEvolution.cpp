@@ -14972,6 +14972,9 @@ void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
 // 4, A / B becomes X / 8).
 bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
                                 const SCEV *&RHS) {
+  if (Expr->getType()->isPointerTy())
+    return false;
+
   // Try to match 'zext (trunc A to iB) to iY', which is used
   // for URem with constant power-of-2 second operands. Make sure the size of
   // the operand A matches the size of the whole expressions.
