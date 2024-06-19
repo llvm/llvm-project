@@ -16,3 +16,5 @@ free
 memcmp
 printf
 __assert_fail
+LocalAllocs
+LocalCnt

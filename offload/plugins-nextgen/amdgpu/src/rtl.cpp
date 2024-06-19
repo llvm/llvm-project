@@ -3512,8 +3512,8 @@ void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
   //  }
   //
   //  printf("Trap ID: %li\n", OmpxTrapId);
-  printf("Trap ID[%zu:%p] Acc[%zu] : %p[:%lu] vs %lu\n",
-         (uint64_t)Device->OmpxTrapId->ID, (void *)Device->OmpxTrapId->ID,
+  printf("Trap ID[%li:%p] Acc[%li] : %p[:%li] vs %li\n",
+         (int64_t)Device->OmpxTrapId->ID, (void *)Device->OmpxTrapId->ID,
          Device->OmpxTrapId->AccessID, Device->OmpxTrapId->Start,
          Device->OmpxTrapId->Length, Device->OmpxTrapId->Offset);
   fflush(stdout);

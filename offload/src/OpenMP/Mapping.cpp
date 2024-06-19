@@ -312,6 +312,8 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
                 (uintptr_t)HstPtrBegin + Size, TgtAllocBegin, TgtPtrBegin,
                 HasHoldModifier, HstPtrName, /*IsINF=*/false, FakeTgtPtrBegin))
             .first->HDTT);
+    printf("ENTRY %p -> %p\n", LR.TPR.getEntry(),
+           LR.TPR.getEntry()->FakeTgtPtrBegin);
     INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
          "Creating new map entry with HstPtrBase=" DPxMOD
          ", HstPtrBegin=" DPxMOD ", TgtAllocBegin=" DPxMOD
@@ -504,6 +506,7 @@ int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
     return OFFLOAD_FAIL;
   }
 
+  printf("DEL %p -> %p\n", Entry, Entry->FakeTgtPtrBegin);
   if (Entry->FakeTgtPtrBegin)
     ompx_free_allocation_host(Entry->FakeTgtPtrBegin);
 

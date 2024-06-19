@@ -81,6 +81,9 @@ template <typename Ty1, typename Ty2> inline Ty1 align_down(Ty1 V, Ty2 Align) {
 /// Return true iff \p Ptr is pointing into shared (local) memory (AS(3)).
 bool isSharedMemPtr(void *Ptr);
 
+/// Return true iff \p Ptr is pointing into (thread) local memory (AS(5)).
+bool isThreadLocalMemPtr(void *Ptr);
+
 /// Return \p V typed punned as \p DstTy.
 template <typename DstTy, typename SrcTy> inline DstTy convertViaPun(SrcTy V) {
   return *((DstTy *)(&V));

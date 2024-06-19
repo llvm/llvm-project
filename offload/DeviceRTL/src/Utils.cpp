@@ -22,6 +22,7 @@ using namespace ompx;
 namespace impl {
 
 bool isSharedMemPtr(const void *Ptr) { return false; }
+bool isThreadLocalMemPtr(const void *Ptr) { return false; }
 
 void Unpack(uint64_t Val, uint32_t *LowBits, uint32_t *HighBits) {
   static_assert(sizeof(unsigned long) == 8, "");
@@ -67,6 +68,10 @@ bool isSharedMemPtr(const void *Ptr) {
   return __builtin_amdgcn_is_shared(
       (const __attribute__((address_space(0))) void *)Ptr);
 }
+bool isThreadLocalMemPtr(const void *Ptr) {
+  return __builtin_amdgcn_is_private(
+      (const __attribute__((address_space(0))) void *)Ptr);
+}
 #pragma omp end declare variant
 ///}
 
@@ -91,6 +96,8 @@ uint64_t ballotSync(uint64_t Mask, int32_t Pred) {
 }
 
 bool isSharedMemPtr(const void *Ptr) { return __nvvm_isspacep_shared(Ptr); }
+
+bool isThreadLocalMemPtr(const void *Ptr) { return __nvvm_isspacep_local(Ptr); }
 
 #pragma omp end declare variant
 ///}
@@ -127,6 +134,9 @@ uint64_t utils::ballotSync(uint64_t Mask, int32_t Pred) {
 }
 
 bool utils::isSharedMemPtr(void *Ptr) { return impl::isSharedMemPtr(Ptr); }
+bool utils::isThreadLocalMemPtr(void *Ptr) {
+  return impl::isThreadLocalMemPtr(Ptr);
+}
 
 extern "C" {
 int32_t __kmpc_shuffle_int32(int32_t Val, int16_t Delta, int16_t SrcLane) {
