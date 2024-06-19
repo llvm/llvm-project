@@ -342,6 +342,11 @@ public:
     rewriter.replaceOp(op, result);
     return success();
   }
+
+  static bool isTrailingDimScalable(VectorType type) {
+    return type.getRank() >= 1 && type.getScalableDims().back() &&
+           !llvm::is_contained(type.getScalableDims().drop_back(), true);
+  }
 };
 
 } // namespace

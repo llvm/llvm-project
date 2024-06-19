@@ -68,9 +68,8 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
 
     // Unrolling doesn't take vscale into account. Pattern is disabled for
     // vectors with leading scalable dim(s).
-    if (resultTy.isScalable() && !isTrailingDimScalable(resultTy))
-      return rewriter.notifyMatchFailure(
-          op, "vector type must be fixed-width or scalable in trailing dim");
+    if (resultTy.getScalableDims().front())
+      return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
 
     Location loc = op.getLoc();
     Value indexVec = op.getIndexVec();
