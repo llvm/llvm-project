@@ -5891,9 +5891,9 @@ defm FCVTPU : SIMDFPTwoScalar<   1, 1, 0b11010, "fcvtpu">;
 def  FCVTXNv1i64 : SIMDInexactCvtTwoScalar<0b10110, "fcvtxn">;
 defm FCVTZS : SIMDFPTwoScalar<   0, 1, 0b11011, "fcvtzs">;
 defm FCVTZU : SIMDFPTwoScalar<   1, 1, 0b11011, "fcvtzu">;
-defm FRECPE : SIMDFPTwoScalar<   0, 1, 0b11101, "frecpe", HasNEONandIsStreamingSafe>;
-defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx", HasNEONandIsStreamingSafe>;
-defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte", HasNEONandIsStreamingSafe>;
+defm FRECPE : SIMDFPTwoScalar<   0, 1, 0b11101, "frecpe">;
+defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx">;
+defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte">;
 defm NEG    : SIMDTwoScalarD<    1, 0b01011, "neg",
                                  UnOpFrag<(sub immAllZerosV, node:$LHS)> >;
 defm SCVTF  : SIMDFPTwoScalarCVT<   0, 0, 0b11101, "scvtf", AArch64sitof>;
