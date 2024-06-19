@@ -67,11 +67,15 @@ behavior between Clang and DXC. Some examples include:
   void takesDoubles(double, double, double);
 
   cbuffer CB {
+    bool B;
     uint U;
     int I;
     float X, Y, Z;
     double3 A, B;
   }
+
+  void twoParams(int, int);
+  void twoParams(float, float);
 
   export void call() {
     halfOrInt16(U); // DXC: Fails with call ambiguous between int16_t and uint16_t overloads
@@ -98,6 +102,13 @@ behavior between Clang and DXC. Some examples include:
                           // FXC: Expands to compute double dot product with fmul/fadd
                           // Clang: Resolves to dot(float3, float3), emits conversion warnings.
 
+  #ifndef IGNORE_ERRORS
+    tan(B); // DXC: resolves to tan(float).
+            // Clang: Fails to resolve, ambiguous between integer types.
+
+    twoParams(I, X); // DXC: resolves twoParams(int, int).
+                     // Clang: Fails to resolve ambiguous conversions.
+  #endif
   }
 
 .. note::
