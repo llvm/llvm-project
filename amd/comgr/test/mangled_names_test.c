@@ -185,6 +185,11 @@ int main(int argc, char *argv[]) {
     Status = amd_comgr_get_mangled_name(DataBc, I, &Size, mName);
     checkError(Status, "amd_comgr_get_mangled_name");
 
+    if (!bcNames[I]) {
+      printf("Failed, bcNames[%ld] NULL\n", I);
+      return 1;
+    }
+
     if (strcmp(mName, bcNames[I])) {
       printf("amd_get_mangled_name from bc Failed: "
              "produced '%s' (expected '%s')\n",
@@ -260,6 +265,11 @@ int main(int argc, char *argv[]) {
     char *mName = calloc(Size, sizeof(char));
     Status = amd_comgr_get_mangled_name(DataExec, I, &Size, mName);
     checkError(Status, "amd_comgr_get_mangled_name");
+
+    if (!execNames[I]) {
+      printf("Failed, execNames[%ld] NULL\n", I);
+      return 1;
+    }
 
     if (strcmp(mName, execNames[I])) {
       printf("amd_get_mangled_name from executable Failed: "

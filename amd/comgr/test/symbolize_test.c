@@ -65,6 +65,11 @@ void test_symbolized_string(container_t *symbol_container) {
   size_t func_name_size = space_pos - symbol_str;
   char *func_name = (char*) malloc(sizeof(char) * (func_name_size + 1));
 
+  if (!symbol_str) {
+    printf("Failed, symbol_str NULL\n");
+    exit(0);
+  }
+
   strncpy(func_name, symbol_str, func_name_size);
   func_name[func_name_size] = '\0';
 
@@ -76,6 +81,8 @@ void test_symbolized_string(container_t *symbol_container) {
   }
 
   printf("symbolized string is %s", symbol_str);
+  free(func_name);
+  free(symbol_str);
 
   return;
 }

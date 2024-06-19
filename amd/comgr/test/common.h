@@ -126,11 +126,13 @@ void dumpData(amd_comgr_data_t Data, const char *OutFile) {
   if (ret != size)
     fail("fwrite");
 
+  free(bytes);
   fclose(fp);
 }
 
 amd_comgr_status_t printSymbol(amd_comgr_symbol_t symbol, void *userData) {
   amd_comgr_status_t status;
+  if (userData == NULL) return AMD_COMGR_STATUS_ERROR;
 
   size_t nlen;
   status = amd_comgr_symbol_get_info(symbol, AMD_COMGR_SYMBOL_INFO_NAME_LENGTH,

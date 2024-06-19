@@ -130,6 +130,10 @@ int main(int argc, char *argv[]) {
 
     printf("Output = \n");
     for (size_t I = 0; I < Count; I++) {
+      if (!Bytes[I]) {
+        printf("Failed, NULL Bytes[%ld]\n", I);
+        return 1;
+      }
       printf("%c", Bytes[I]);
     }
     free(Bytes);
@@ -146,6 +150,10 @@ int main(int argc, char *argv[]) {
 
     printf("Output = \n");
     for (size_t I = 0; I < Count; I++) {
+      if (!Bytes2[I]) {
+        printf("Failed, NULL Bytes[%ld]\n", I);
+        return 1;
+      }
       printf("%c", Bytes2[I]);
     }
     free(Bytes2);

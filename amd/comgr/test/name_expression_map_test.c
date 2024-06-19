@@ -141,6 +141,11 @@ int main(int argc, char *argv[]) {
       DataBc, &Size, nameExpressions[I], symbolName);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
 
+    if (!symbolNames[I]) {
+      printf("Failed, symbolNames[%ld] NULL\n", I);
+      return 1;
+    }
+
     if (strcmp(symbolName, symbolNames[I])) {
       printf("amd_comgr_map_name_expression_to_symbol_name from bc Failed: "
              "produced '%s' (expected '%s')\n",
@@ -263,6 +268,11 @@ int main(int argc, char *argv[]) {
         DataExec, &Size, nameExpressions[I], symbolName);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
 
+    if (!symbolNames[I]) {
+      printf("Failed, symbolNames[%ld] NULL\n", I);
+      return 1;
+    }
+
     if (strcmp(symbolName, symbolNames[I])) {
       printf("amd_comgr_map_name_expression_to_symbol_name from exec Failed: "
              "produced '%s' (expected '%s')\n",
@@ -363,6 +373,11 @@ int main(int argc, char *argv[]) {
     Status = amd_comgr_map_name_expression_to_symbol_name(
         DataExec2, &Size, nameExpressions[I], symbolName);
     checkError(Status, "amd_map_name_expression_to_symbol_name");
+
+    if (!symbolNames[I]) {
+      printf("Failed, symbolNames[%ld] NULL\n", I);
+      return 1;
+    }
 
     if (strcmp(symbolName, symbolNames[I])) {
       printf("amd_comgr_map_name_expression_to_symbol_name from exec Failed: "

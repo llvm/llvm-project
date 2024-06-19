@@ -151,6 +151,10 @@ int main(int argc, char *argv[]) {
   Bytes = (char *)calloc(Count, sizeof(char));
   Status = amd_comgr_get_data(DataOut, &Count, Bytes);
   checkError(Status, "amd_comgr_get_data");
+  if (!Bytes) {
+   printf("Failed, NULL Bytes\n");
+   return 1;
+  }
   expect(ExpectedOut, Bytes, Count);
   free(Bytes);
   Status = amd_comgr_release_data(DataOut);

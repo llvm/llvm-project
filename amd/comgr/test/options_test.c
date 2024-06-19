@@ -53,6 +53,11 @@ void testFlat(amd_comgr_action_info_t ActionInfo, const char *Options) {
   Status = amd_comgr_action_info_get_options(ActionInfo, &Size, RetOptions);
   checkError(Status, "amd_comgr_action_info_get_options");
 
+  if (!RetOptions) {
+    printf("Failed, RetOptions NULL\n");
+    exit(0);
+  }
+
   if (strcmp(Options, RetOptions)) {
     fail("incorrect options string: expected '%s', saw '%s'", Options,
          RetOptions);
@@ -105,6 +110,12 @@ void testList(amd_comgr_action_info_t ActionInfo, const char *Options[],
     Status = amd_comgr_action_info_get_option_list_item(ActionInfo, I, &Size,
                                                         Option);
     checkError(Status, "amd_comgr_action_info_get_option_list_item");
+
+    if (!Options[I]) {
+      printf("Failed, Options[%ld] NULL\n", I);
+      exit(0);
+    }
+
     if (strcmp(Options[I], Option)) {
       fail("incorrect option string: expected '%s', saw '%s'", Options[I],
            Option);
