@@ -58,15 +58,17 @@ A. Attributes consumed in DXIL backend passes
 Motivation
 ==========
 
-DXIL backend passes depend on various attributes of DXIL Operations. For example, ``DXILLowering``
+DXIL backend passes depend on various attributes of DXIL Operations. For example, ``DXIOpLLowering``
 pass will need information such as the DXIL operation an LLVM intrinsic is to be lowered to,
 along with valid overload and parameter types etc. The TableGen file -
 ``llvm/lib/Target/DirectX/DXIL.td`` - is used to represent DXIL Operations
 by specifying their attributes listed above. ``DXIL.td`` is designed to be the single source
-of reference of DXIL Operations for DXIL backend implementation in ``llvm-project`` repo -
-analogous to ``hctdb.py`` for ``DirectXShadeCompiler`` repo. It needs to have a rich
-representation capabilities that TableGen backends (such as ``DXILEmitter``) can rely on.
-Additionally, the DXIL Op specification should be easy to read and comprehend.
+of reference of DXIL Operations primarily for the implementation of passes in DXIL backend in 
+``llvm-project`` repo - analogous to ``hctdb.py`` for ``DirectXShadeCompiler`` repo. However, 
+the current design does not intend to encapsulate various validation rules, present in ``hctdb.py``, 
+but do not pertain to DXIL Operations. It needs to have a rich representation capabilities that 
+TableGen backends (such as ``DXILEmitter``) can rely on. Additionally, the DXIL Op specification 
+should be easy to read and comprehend.
 
 This note provides the design of the specification DXIL Ops as TableGen class ``DXILOp``
 by specifying its attributes identified above.
