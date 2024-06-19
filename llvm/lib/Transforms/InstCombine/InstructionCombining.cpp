@@ -2332,10 +2332,10 @@ static Instruction *foldSelectGEP(GetElementPtrInst &GEP,
   // Propagate 'inbounds' and metadata from existing instructions.
   // Note: using IRBuilder to create the constants for efficiency.
   SmallVector<Value *, 4> IndexC(GEP.indices());
-  bool IsInBounds = GEP.isInBounds();
+  GEPNoWrapFlags NW = GEP.getNoWrapFlags();
   Type *Ty = GEP.getSourceElementType();
-  Value *NewTrueC = Builder.CreateGEP(Ty, TrueC, IndexC, "", IsInBounds);
-  Value *NewFalseC = Builder.CreateGEP(Ty, FalseC, IndexC, "", IsInBounds);
+  Value *NewTrueC = Builder.CreateGEP(Ty, TrueC, IndexC, "", NW);
+  Value *NewFalseC = Builder.CreateGEP(Ty, FalseC, IndexC, "", NW);
   return SelectInst::Create(Cond, NewTrueC, NewFalseC, "", nullptr, Sel);
 }
 
