@@ -149,10 +149,17 @@ def : VOP3PSatPat<usubsat, V_PK_SUB_U16>;
 def : VOP3PSatPat<ssubsat, V_PK_SUB_I16>;
 } // End SubtargetPredicate = HasVOP3PInsts
 
-let SubtargetPredicate = HasMinimum3Maximum3PKF16, FPDPRounding = 1 in {
+let isCommutable = 1, FPDPRounding = 1 in {
+let SubtargetPredicate = HasMin3Max3PKF16 in {
+defm V_PK_MIN3_NUM_F16 : VOP3PInst<"v_pk_min3_num_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmin3>;
+defm V_PK_MAX3_NUM_F16 : VOP3PInst<"v_pk_max3_num_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmax3>;
+}
+
+let SubtargetPredicate = HasMinimum3Maximum3PKF16 in {
 defm V_PK_MINIMUM3_F16 : VOP3PInst<"v_pk_minimum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfminimum3>;
 defm V_PK_MAXIMUM3_F16 : VOP3PInst<"v_pk_maximum3_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, AMDGPUfmaximum3>;
 }
+} // End isCommutable = 1, FPDPRounding = 1
 
 // TODO: Make sure we're doing the right thing with denormals. Note
 // that FMA and MAD will differ.
@@ -377,11 +384,6 @@ def : ThreeOp_OpSelClampPats<smax, smax, V_PK_MAX3_I16>;
 def : ThreeOp_OpSelClampPats<umax, umax, V_PK_MAX3_U16>;
 def : ThreeOp_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
 def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
-}
-
-let SubtargetPredicate = HasPkMinimumMaximum3F16Insts in {
-def : ThreeOp_OpSelClampPats<fmaximum, fmaximum, V_PK_MAXIMUM3_F16>;
-def : ThreeOp_OpSelClampPats<fminimum, fminimum, V_PK_MINIMUM3_F16>;
 }
 
 // Defines patterns that extract signed 4bit from each Idx[0].
@@ -2136,6 +2138,8 @@ defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1210_gfx13<0x2b>;
 defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1210_gfx13<0x2c>;
 defm V_PK_MINIMUM3_F16 : VOP3P_Real_gfx1210_gfx13<0x36>;
 defm V_PK_MAXIMUM3_F16 : VOP3P_Real_gfx1210_gfx13<0x37>;
+defm V_PK_MIN3_NUM_F16 : VOP3P_Real_gfx1210<0x38>;
+defm V_PK_MAX3_NUM_F16 : VOP3P_Real_gfx1210<0x39>;
 
 defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX12_10Gen, 0x3d>;
 defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX12_10Gen, 0x3e>;

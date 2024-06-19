@@ -2362,10 +2362,9 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
 ; GFX1210-LABEL: flat_atomic_fadd_f64_noret_pat_agent:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], 4.0
+; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], 4.0 :: v_dual_mov_b32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_endpgm
@@ -2647,9 +2646,8 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret(ptr %ptr, double %data) {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64(ptr %ptr, double %data)
@@ -2773,9 +2771,8 @@ define amdgpu_kernel void @flat_atomic_fmin_f64_noret(ptr %ptr, double %data) {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
@@ -2835,9 +2832,8 @@ define amdgpu_kernel void @flat_atomic_fmax_f64_noret(ptr %ptr, double %data) {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
-; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], s[2:3] :: v_dual_mov_b32 v2, 0
+; GFX1210-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)

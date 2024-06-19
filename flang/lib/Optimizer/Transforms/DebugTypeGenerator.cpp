@@ -75,8 +75,8 @@ static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
 }
 
 static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
-  return genBasicType(context, mlir::StringAttr::get(context, "integer"), 32,
-                      llvm::dwarf::DW_ATE_signed);
+  return genBasicType(context, mlir::StringAttr::get(context, "integer"),
+                      /*bitSize=*/32, llvm::dwarf::DW_ATE_signed);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
@@ -145,11 +145,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
     elements.push_back(subrangeTy);
   }
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*recursive id*/ {},
-      /* name */ nullptr, /* file */ nullptr, /* line */ 0,
-      /* scope */ nullptr, elemTy, mlir::LLVM::DIFlags::Zero,
-      /* sizeInBits */ 0, /*alignInBits*/ 0, elements, dataLocation,
-      /* rank */ nullptr, allocated, associated);
+      context, llvm::dwarf::DW_TAG_array_type, /*recursive_id=*/{},
+      /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
+      dataLocation, /*rank=*/nullptr, allocated, associated);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
@@ -184,12 +183,11 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
   // have been set to some valid default values.
 
   return mlir::LLVM::DICompositeTypeAttr::get(
-      context, llvm::dwarf::DW_TAG_array_type, /*recursive id*/ {},
-      /* name */ nullptr, /* file */ nullptr, /* line */ 0, /* scope */ nullptr,
-      elemTy, mlir::LLVM::DIFlags::Zero, /* sizeInBits */ 0,
-      /*alignInBits*/ 0, elements, /* dataLocation */ nullptr,
-      /* rank */ nullptr, /* allocated */ nullptr,
-      /* associated */ nullptr);
+      context, llvm::dwarf::DW_TAG_array_type, /*recursive_id=*/{},
+      /*name=*/nullptr, /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
+      mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0, elements,
+      /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
+      /*associated=*/nullptr);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(

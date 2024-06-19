@@ -2361,10 +2361,9 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret_pat_agent(ptr %ptr) #1 {
 ; GFX1210-LABEL: flat_atomic_fadd_f64_noret_pat_agent:
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX1210-NEXT:    v_mov_b64_e32 v[0:1], 4.0
+; GFX1210-NEXT:    v_dual_mov_b64 v[0:1], 4.0 :: v_dual_mov_b32 v2, 0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX1210-NEXT:    flat_atomic_add_f64 v[2:3], v[0:1]
+; GFX1210-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_endpgm
@@ -2651,9 +2650,9 @@ define amdgpu_kernel void @flat_atomic_fadd_f64_noret(ptr %ptr, double %data) {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1210-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1210-NEXT:    flat_atomic_add_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64(ptr %ptr, double %data)
@@ -2782,9 +2781,9 @@ define amdgpu_kernel void @flat_atomic_fmin_f64_noret(ptr %ptr, double %data) {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1210-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1210-NEXT:    flat_atomic_min_num_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
@@ -2848,9 +2847,9 @@ define amdgpu_kernel void @flat_atomic_fmax_f64_noret(ptr %ptr, double %data) {
 ; GFX1210:       ; %bb.0: ; %main_body
 ; GFX1210-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1210-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
-; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s2
+; GFX1210-NEXT:    v_mov_b32_e32 v1, s3
+; GFX1210-NEXT:    flat_atomic_max_num_f64 v2, v[0:1], s[0:1]
 ; GFX1210-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
@@ -3328,6 +3327,396 @@ define double @local_atomic_fadd_f64_rtn_ieee_safe(ptr addrspace(3) %ptr, double
 main_body:
   %ret = call double @llvm.amdgcn.ds.fadd.f64(ptr addrspace(3) %ptr, double %data, i32 0, i32 0, i1 0)
   ret double %ret
+}
+
+define double @flat_atomic_fadd_f64_intrinsic_rtn__posoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fadd_f64_intrinsic_rtn__posoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fadd_f64_intrinsic_rtn__posoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] sc0
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fadd_f64_intrinsic_rtn__posoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 511
+  %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64(ptr %ptr, double %data)
+  ret double %ret
+}
+
+define double @flat_atomic_fadd_f64_intrinsic_rtn__negoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fadd_f64_intrinsic_rtn__negoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX90A-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fadd_f64_intrinsic_rtn__negoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] sc0
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fadd_f64_intrinsic_rtn__negoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[0:1], v[2:3] offset:-4088 th:TH_ATOMIC_RETURN
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 -511
+  %ret = call double @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64(ptr %gep, double %data)
+  ret double %ret
+}
+
+define void @flat_atomic_fadd_f64_intrinsic_noret__posoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fadd_f64_intrinsic_noret__posoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fadd_f64_intrinsic_noret__posoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fadd_f64_intrinsic_noret__posoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 511
+  %unused = call double @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64(ptr %ptr, double %data)
+  ret void
+}
+
+define void @flat_atomic_fadd_f64_intrinsic_noret__negoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fadd_f64_intrinsic_noret__negoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX90A-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fadd_f64_intrinsic_noret__negoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fadd_f64_intrinsic_noret__negoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3] offset:-4088
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 -511
+  %unused = call double @llvm.amdgcn.flat.atomic.fadd.f64.p0.f64(ptr %gep, double %data)
+  ret void
+}
+
+define double @flat_atomic_fmin_f64_intrinsic_rtn__posoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fmin_f64_intrinsic_rtn__posoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fmin_f64_intrinsic_rtn__posoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] sc0
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fmin_f64_intrinsic_rtn__posoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 511
+  %ret = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
+  ret double %ret
+}
+
+define double @flat_atomic_fmin_f64_intrinsic_rtn__negoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fmin_f64_intrinsic_rtn__negoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX90A-NEXT:    flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fmin_f64_intrinsic_rtn__negoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_min_f64 v[0:1], v[0:1], v[2:3] sc0
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fmin_f64_intrinsic_rtn__negoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[0:1], v[2:3] offset:-4088 th:TH_ATOMIC_RETURN
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 -511
+  %ret = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %gep, double %data)
+  ret double %ret
+}
+
+define void @flat_atomic_fmin_f64_intrinsic_noret__posoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fmin_f64_intrinsic_noret__posoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    flat_atomic_min_f64 v[0:1], v[2:3]
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fmin_f64_intrinsic_noret__posoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    flat_atomic_min_f64 v[0:1], v[2:3]
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fmin_f64_intrinsic_noret__posoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 511
+  %unused = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
+  ret void
+}
+
+define void @flat_atomic_fmin_f64_intrinsic_noret__negoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fmin_f64_intrinsic_noret__negoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX90A-NEXT:    flat_atomic_min_f64 v[0:1], v[2:3]
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fmin_f64_intrinsic_noret__negoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_min_f64 v[0:1], v[2:3]
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fmin_f64_intrinsic_noret__negoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_min_num_f64 v[0:1], v[2:3] offset:-4088
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 -511
+  %unused = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %gep, double %data)
+  ret void
+}
+
+define double @flat_atomic_fmax_f64_intrinsic_rtn__posoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fmax_f64_intrinsic_rtn__posoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    flat_atomic_max_f64 v[0:1], v[0:1], v[2:3] glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fmax_f64_intrinsic_rtn__posoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    flat_atomic_max_f64 v[0:1], v[0:1], v[2:3] sc0
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fmax_f64_intrinsic_rtn__posoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 511
+  %ret = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
+  ret double %ret
+}
+
+define double @flat_atomic_fmax_f64_intrinsic_rtn__negoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fmax_f64_intrinsic_rtn__negoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX90A-NEXT:    flat_atomic_max_f64 v[0:1], v[0:1], v[2:3] glc
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fmax_f64_intrinsic_rtn__negoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_max_f64 v[0:1], v[0:1], v[2:3] sc0
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fmax_f64_intrinsic_rtn__negoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[0:1], v[2:3] offset:-4088 th:TH_ATOMIC_RETURN
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 -511
+  %ret = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %gep, double %data)
+  ret double %ret
+}
+
+define void @flat_atomic_fmax_f64_intrinsic_noret__posoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fmax_f64_intrinsic_noret__posoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    flat_atomic_max_f64 v[0:1], v[2:3]
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fmax_f64_intrinsic_noret__posoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    flat_atomic_max_f64 v[0:1], v[2:3]
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fmax_f64_intrinsic_noret__posoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[2:3]
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 511
+  %unused = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
+  ret void
+}
+
+define void @flat_atomic_fmax_f64_intrinsic_noret__negoffset(ptr %ptr, double %data) #1 {
+; GFX90A-LABEL: flat_atomic_fmax_f64_intrinsic_noret__negoffset:
+; GFX90A:       ; %bb.0:
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX90A-NEXT:    flat_atomic_max_f64 v[0:1], v[2:3]
+; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX940-LABEL: flat_atomic_fmax_f64_intrinsic_noret__negoffset:
+; GFX940:       ; %bb.0:
+; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff008, v0
+; GFX940-NEXT:    s_nop 1
+; GFX940-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
+; GFX940-NEXT:    flat_atomic_max_f64 v[0:1], v[2:3]
+; GFX940-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX940-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: flat_atomic_fmax_f64_intrinsic_noret__negoffset:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    flat_atomic_max_num_f64 v[0:1], v[2:3] offset:-4088
+; GFX1210-NEXT:    s_wait_dscnt 0x0
+; GFX1210-NEXT:    s_wait_xcnt 0x0
+; GFX1210-NEXT:    s_wait_alu 0xfffe
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
+  %gep = getelementptr double, ptr %ptr, i64 -511
+  %unused = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %gep, double %data)
+  ret void
 }
 
 attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" "amdgpu-unsafe-fp-atomics"="true" }

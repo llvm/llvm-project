@@ -1533,6 +1533,9 @@ const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
   case AMDGPU::V_PK_MAX_F16:
   case AMDGPU::V_MAX_BF16_PSEUDO_e64:
   case AMDGPU::V_PK_MAX_NUM_BF16: {
+    if (MI.mayRaiseFPException())
+      return nullptr;
+
     if (!TII->getNamedOperand(MI, AMDGPU::OpName::clamp)->getImm())
       return nullptr;
 
@@ -1579,6 +1582,9 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
 
   // The type of clamp must be compatible.
   if (TII->getClampMask(*Def) != TII->getClampMask(MI))
+    return false;
+
+  if (Def->mayRaiseFPException())
     return false;
 
   MachineOperand *DefClamp = TII->getNamedOperand(*Def, AMDGPU::OpName::clamp);
@@ -1666,7 +1672,9 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
         ((Op == AMDGPU::V_MUL_F64_e64 || Op == AMDGPU::V_MUL_F64_pseudo_e64 ||
           Op == AMDGPU::V_MUL_F16_e64 || Op == AMDGPU::V_MUL_F16_t16_e64 ||
           Op == AMDGPU::V_MUL_F16_fake16_e64) &&
-         MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign))
+         MFI->getMode().FP64FP16Denormals.Output !=
+             DenormalMode::PreserveSign) ||
+        MI.mayRaiseFPException())
       return std::pair(nullptr, SIOutMods::NONE);
 
     const MachineOperand *RegOp = nullptr;
@@ -1739,6 +1747,9 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
   MachineInstr *Def = MRI->getVRegDef(RegOp->getReg());
   MachineOperand *DefOMod = TII->getNamedOperand(*Def, AMDGPU::OpName::omod);
   if (!DefOMod || DefOMod->getImm() != SIOutMods::NONE)
+    return false;
+
+  if (Def->mayRaiseFPException())
     return false;
 
   // Clamp is applied after omod. If the source already has clamp set, don't
