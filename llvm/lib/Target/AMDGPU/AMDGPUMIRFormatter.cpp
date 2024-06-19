@@ -151,6 +151,7 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
     if (Src.consumeInteger(10, Skip)) {
       return ErrorCallback(Src.begin(), "Expected integer Skip value");
     }
+    Skip += 1;
   } else {
     ErrorCallback(Src.begin(), "Unexpected Skip Value");
   }

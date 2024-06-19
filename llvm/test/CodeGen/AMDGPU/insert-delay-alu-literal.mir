@@ -173,3 +173,20 @@ body: |
     $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
 ...
 
+---
+name: valu_dep_2_skip_valu_dep_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: valu_dep_2_skip_valu_dep_2
+    ; CHECK: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    ; CHECK-NEXT: $vgpr2 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    ; CHECK-NEXT: S_DELAY_ALU .id0_VALU_DEP_2_skip_SKIP_1_id1_VALU_DEP_2
+    ; CHECK-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    ; CHECK-NEXT: $vgpr4 = V_ADD_U32_e32 $vgpr3, $vgpr3, implicit $exec
+    ; CHECK-NEXT: $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    $vgpr4 = V_ADD_U32_e32 $vgpr3, $vgpr3, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+...
