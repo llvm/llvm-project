@@ -729,8 +729,7 @@ public:
     if (D->isFromASTFile())
       return false;
     auto I = DeclIDs.find(D);
-    return (I == DeclIDs.end() ||
-            I->second.get() >= clang::NUM_PREDEF_DECL_IDS);
+    return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
 
   /// Emit a reference to a declaration.

@@ -3335,7 +3335,7 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
       continue;
 
     KindDeclPairs.push_back(D->getKind());
-    KindDeclPairs.push_back(GetDeclRef(D).get());
+    KindDeclPairs.push_back(GetDeclRef(D).getRawValue());
   }
 
   ++NumLexicalDeclContexts;
@@ -3389,7 +3389,7 @@ void ASTWriter::WriteFileDeclIDsMap() {
     Info.FirstDeclIndex = FileGroupedDeclIDs.size();
     llvm::stable_sort(Info.DeclIDs);
     for (auto &LocDeclEntry : Info.DeclIDs)
-      FileGroupedDeclIDs.push_back(LocDeclEntry.second.get());
+      FileGroupedDeclIDs.push_back(LocDeclEntry.second.getRawValue());
   }
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -4444,7 +4444,7 @@ void ASTWriter::WriteDeclContextVisibleUpdate(const DeclContext *DC) {
 
   // Write the lookup table
   RecordData::value_type Record[] = {UPDATE_VISIBLE,
-                                     getDeclID(cast<Decl>(DC)).get()};
+                                     getDeclID(cast<Decl>(DC)).getRawValue()};
   Stream.EmitRecordWithBlob(UpdateVisibleAbbrev, Record, LookupTable);
 }
 
@@ -5657,7 +5657,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
       continue;
 
     NewGlobalKindDeclPairs.push_back(D->getKind());
-    NewGlobalKindDeclPairs.push_back(GetDeclRef(D).get());
+    NewGlobalKindDeclPairs.push_back(GetDeclRef(D).getRawValue());
   }
 
   auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
@@ -6159,11 +6159,11 @@ void ASTWriter::AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record) {
   if (!wasDeclEmitted(D))
     return;
 
-  Record.push_back(GetDeclRef(D).get());
+  AddDeclRef(D, Record);
 }
 
 void ASTWriter::AddDeclRef(const Decl *D, RecordDataImpl &Record) {
-  Record.push_back(GetDeclRef(D).get());
+  Record.push_back(GetDeclRef(D).getRawValue());
 }
 
 LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
