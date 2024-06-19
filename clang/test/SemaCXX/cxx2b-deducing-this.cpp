@@ -894,6 +894,31 @@ void g() {
 }
 }
 
+namespace P2797 {
+struct C {
+  void c(this const C&);    // #first
+  void c() &;               // #second
+  static void c(int = 0);   // #third
+
+  void d() {
+    c();                // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#first {{candidate function}}
+                        // expected-note@#second {{candidate function}}
+                        // expected-note@#third {{candidate function}}
+
+    (C::c)();           // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#first {{candidate function}}
+                        // expected-note@#second {{candidate function}}
+                        // expected-note@#third {{candidate function}}
+
+    (&(C::c))();        // expected-error {{cannot create a non-constant pointer to member function}}
+    (&C::c)(C{});
+    (&C::c)(*this);     // expected-error {{call to non-static member function without an object argument}}
+    (&C::c)();
+  }
+};
+}
+
 namespace GH85992 {
 struct S {
   int (S::*x)(this int); // expected-error {{an explicit object parameter is not allowed here}}

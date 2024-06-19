@@ -1,5 +1,5 @@
-# This checks that shrink wrapping uses the red zone defined in the X86 ABI by
-# placing restores that access elements already deallocated by the stack.
+## This checks that shrink wrapping uses the red zone defined in the X86 ABI by
+## placing restores that access elements already deallocated by the stack.
 
 # REQUIRES: system-linux
 
@@ -16,10 +16,10 @@
 # RUN:   FileCheck --check-prefix CHECK-OBJDUMP %s
 
 
-# Here we create a CFG where the restore position matches the previous (deleted)
-# restore position. Shrink wrapping then will put a stack access to an element
-# that was deallocated at the previously deleted POP, which falls in the red
-# zone and should be safe for X86 Linux ABI.
+## Here we create a CFG where the restore position matches the previous (deleted)
+## restore position. Shrink wrapping then will put a stack access to an element
+## that was deallocated at the previously deleted POP, which falls in the red
+## zone and should be safe for X86 Linux ABI.
   .globl _start
   .type _start, %function
 _start:

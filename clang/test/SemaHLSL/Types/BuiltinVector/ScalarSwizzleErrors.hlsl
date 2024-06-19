@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library  -x hlsl -finclude-default-header -verify %s
 
 int2 ToTwoInts(int V) {
-  return V.xy; // expected-error{{vector component access exceeds type 'int __attribute__((ext_vector_type(1)))' (vector of 1 'int' value)}}
+  return V.xy; // expected-error{{vector component access exceeds type 'vector<int, 1>' (vector of 1 'int' value)}}
 }
 
 float2 ToTwoFloats(float V) {
-  return V.rg; // expected-error{{vector component access exceeds type 'float __attribute__((ext_vector_type(1)))' (vector of 1 'float' value)}}
+  return V.rg; // expected-error{{vector component access exceeds type 'vector<float, 1>' (vector of 1 'float' value)}}
 }
 
 int4 SomeNonsense(int V) {

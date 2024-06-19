@@ -2523,9 +2523,12 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
 
   if (failed(result))
     return emitDefaultSilenceableFailure(target);
-  results.push_back(result->initialOp);
-  results.push_back(result->parallelTiledOp);
-  results.push_back(result->mergeOp);
+  for (Value initValue : result->initialValues)
+    results.push_back(initValue.getDefiningOp());
+  for (auto parallelTiledOp : result->parallelTiledOps)
+    results.push_back(parallelTiledOp);
+  for (auto mergeOp : result->mergeOps)
+    results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
 }
@@ -2574,9 +2577,12 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
     diag.attachNote(target.getLoc()) << "target operation";
     return diag;
   }
-  results.push_back(result->initialOp);
-  results.push_back(result->parallelTiledOp);
-  results.push_back(result->mergeOp);
+  for (Value initValue : result->initialValues)
+    results.push_back(initValue.getDefiningOp());
+  for (auto parallelTiledOp : result->parallelTiledOps)
+    results.push_back(parallelTiledOp);
+  for (auto mergeOp : result->mergeOps)
+    results.push_back(mergeOp);
   results.push_back(result->loops);
   return DiagnosedSilenceableFailure::success();
 }

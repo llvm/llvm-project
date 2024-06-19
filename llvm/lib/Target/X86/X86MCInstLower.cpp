@@ -22,6 +22,7 @@
 #include "X86RegisterInfo.h"
 #include "X86ShuffleDecodeConstantPool.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -1362,6 +1363,35 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
                                              X86MCInstLower &MCIL) {
+  MCInst TC;
+  TC.setOpcode(convertTailJumpOpcode(MI.getOperand(0).getImm()));
+  // Drop the tail jump opcode.
+  auto TCOperands = drop_begin(MI.operands());
+  bool IsConditional = TC.getOpcode() == X86::JCC_1;
+  MCSymbol *FallthroughLabel;
+  if (IsConditional) {
+    // Rewrite:
+    //   je target
+    //
+    // To:
+    //   jne .fallthrough
+    //   .p2align 1, ...
+    // .Lxray_sled_N:
+    //   SLED_CODE
+    //   jmp target
+    // .fallthrough:
+    FallthroughLabel = OutContext.createTempSymbol();
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(X86::JCC_1)
+            .addExpr(MCSymbolRefExpr::create(FallthroughLabel, OutContext))
+            .addImm(X86::GetOppositeBranchCondition(
+                static_cast<X86::CondCode>(MI.getOperand(2).getImm()))));
+    TC.setOpcode(X86::JMP_1);
+    // Drop the condition code.
+    TCOperands = drop_end(TCOperands);
+  }
+
   NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   // Like PATCHABLE_RET, we have the actual instruction in the operands to this
@@ -1383,18 +1413,16 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, SledKind::TAIL_CALL, 2);
 
-  unsigned OpCode = MI.getOperand(0).getImm();
-  OpCode = convertTailJumpOpcode(OpCode);
-  MCInst TC;
-  TC.setOpcode(OpCode);
-
   // Before emitting the instruction, add a comment to indicate that this is
   // indeed a tail call.
   OutStreamer->AddComment("TAILCALL");
-  for (auto &MO : drop_begin(MI.operands()))
+  for (auto &MO : TCOperands)
     if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
       TC.addOperand(*MaybeOperand);
   OutStreamer->emitInstruction(TC, getSubtargetInfo());
+
+  if (IsConditional)
+    OutStreamer->emitLabel(FallthroughLabel);
 }
 
 // Returns instruction preceding MBBI in MachineFunction.
@@ -1869,6 +1897,62 @@ static void addConstantComments(const MachineInstr *MI,
     }
     break;
   }
+
+#define INSTR_CASE(Prefix, Instr, Suffix, Postfix)                             \
+  case X86::Prefix##Instr##Suffix##rm##Postfix:
+
+#define CASE_ARITH_RM(Instr)                                                   \
+  INSTR_CASE(, Instr, , )   /* SSE */                                          \
+  INSTR_CASE(V, Instr, , )  /* AVX-128 */                                      \
+  INSTR_CASE(V, Instr, Y, ) /* AVX-256 */                                      \
+  INSTR_CASE(V, Instr, Z128, )                                                 \
+  INSTR_CASE(V, Instr, Z128, k)                                                \
+  INSTR_CASE(V, Instr, Z128, kz)                                               \
+  INSTR_CASE(V, Instr, Z256, )                                                 \
+  INSTR_CASE(V, Instr, Z256, k)                                                \
+  INSTR_CASE(V, Instr, Z256, kz)                                               \
+  INSTR_CASE(V, Instr, Z, )                                                    \
+  INSTR_CASE(V, Instr, Z, k)                                                   \
+  INSTR_CASE(V, Instr, Z, kz)
+
+    // TODO: Add additional instructions when useful.
+    CASE_ARITH_RM(PMADDUBSW) {
+      unsigned SrcIdx = getSrcIdx(MI, 1);
+      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
+        if (C->getType()->getScalarSizeInBits() == 8) {
+          std::string Comment;
+          raw_string_ostream CS(Comment);
+          unsigned VectorWidth =
+              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+          CS << "[";
+          printConstant(C, VectorWidth, CS);
+          CS << "]";
+          OutStreamer.AddComment(CS.str());
+        }
+      }
+      break;
+    }
+
+    CASE_ARITH_RM(PMADDWD)
+    CASE_ARITH_RM(PMULLW)
+    CASE_ARITH_RM(PMULHW)
+    CASE_ARITH_RM(PMULHUW)
+    CASE_ARITH_RM(PMULHRSW) {
+      unsigned SrcIdx = getSrcIdx(MI, 1);
+      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
+        if (C->getType()->getScalarSizeInBits() == 16) {
+          std::string Comment;
+          raw_string_ostream CS(Comment);
+          unsigned VectorWidth =
+              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+          CS << "[";
+          printConstant(C, VectorWidth, CS);
+          CS << "]";
+          OutStreamer.AddComment(CS.str());
+        }
+      }
+      break;
+    }
 
 #define MASK_AVX512_CASE(Instr)                                                \
   case Instr:                                                                  \

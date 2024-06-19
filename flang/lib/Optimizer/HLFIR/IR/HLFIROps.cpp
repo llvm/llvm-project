@@ -1115,7 +1115,7 @@ mlir::LogicalResult
 hlfir::MatmulOp::canonicalize(MatmulOp matmulOp,
                               mlir::PatternRewriter &rewriter) {
   // the only two uses of the transposed matrix should be for the hlfir.matmul
-  // and hlfir.destory
+  // and hlfir.destroy
   auto isOtherwiseUnused = [&](hlfir::TransposeOp transposeOp) -> bool {
     std::size_t numUses = 0;
     for (mlir::Operation *user : transposeOp.getResult().getUsers()) {
@@ -1495,9 +1495,9 @@ mlir::LogicalResult hlfir::DestroyOp::verify() {
 
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
-                            mlir::Value var_is_present) {
+                            mlir::Value tempBox, mlir::Value var_is_present) {
   return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
-               var_is_present);
+               tempBox, var_is_present);
 }
 
 //===----------------------------------------------------------------------===//

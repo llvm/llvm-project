@@ -1697,6 +1697,12 @@ def : Pat<
                     ConstantStrAttr<StrAttr, "MatchVariadic">)>;
 
 def : Pat<
+  (MixedVOperandOp5 $input1a, $input1b, $input2, $attr1,
+                    ConstantStrAttr<StrAttr, "MatchInverseVariadic">),
+  (MixedVOperandOp3 $input2, (variadic $input1b), (variadic $input1a),
+                    ConstantAttr<I32Attr, "1">:$attr1)>;
+
+def : Pat<
   (MixedVOperandOp4 (variadic (MixedVOperandInOutI32Op $input1a),
                               (MixedVOperandInOutI32Op $input1b)),
                     $input2, ConstantAttr<I32Attr, "1">:$attr1),
@@ -2744,7 +2750,7 @@ def TestGraphLoopOp : TEST_Op<"graph_loop",
 def InferIntRangeType : AnyTypeOf<[AnyInteger, Index]>;
 
 def TestWithBoundsOp : TEST_Op<"with_bounds",
-                          [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
   let arguments = (ins APIntAttr:$umin,
                        APIntAttr:$umax,
@@ -2756,7 +2762,7 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
 }
 
 def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
-                          [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                          [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            SingleBlock, NoTerminator]> {
   let arguments = (ins APIntAttr:$umin,
                        APIntAttr:$umax,
@@ -2768,7 +2774,7 @@ def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
 }
 
 def TestIncrementOp : TEST_Op<"increment",
-                         [DeclareOpInterfaceMethods<InferIntRangeInterface>,
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                          NoMemoryEffect, AllTypesMatch<["value", "result"]>]> {
   let arguments = (ins InferIntRangeType:$value);
   let results = (outs InferIntRangeType:$result);
@@ -2777,7 +2783,8 @@ def TestIncrementOp : TEST_Op<"increment",
 }
 
 def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
-                         [DeclareOpInterfaceMethods<InferIntRangeInterface>, AllTypesMatch<["value", "result"]>]> {
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+                          AllTypesMatch<["value", "result"]>]> {
   let arguments = (ins InferIntRangeType:$value,
                        OptionalAttr<APIntAttr>:$umin,
                        OptionalAttr<APIntAttr>:$umax,
@@ -3105,6 +3112,11 @@ def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
 def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"> {
   let assemblyFormat = "prop-dict attr-dict";
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$a);
+}
+
+def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins OptionalAttr<I32Attr>:$a, OptionalAttr<I32Attr>:$b);
 }
 
 //===----------------------------------------------------------------------===//

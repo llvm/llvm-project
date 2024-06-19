@@ -32,7 +32,7 @@ static void set_tz(std::string zone) {
   // Unlike POSIX it does not mention the string of putenv becomes part
   // of the environment.
 
-  int status = _putenv_s("TZ", zone.c_str(), 1);
+  int status = _putenv_s("TZ", zone.c_str());
   assert(status == 0);
 }
 
