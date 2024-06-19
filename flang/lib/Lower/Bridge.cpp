@@ -4107,8 +4107,8 @@ private:
   void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                            const Fortran::evaluate::Assignment &assign,
                            hlfir::Entity &lhs, hlfir::Entity &rhs) {
-    bool lhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.lhs);
-    bool rhsIsDevice = Fortran::evaluate::HasCUDAAttrs(assign.rhs);
+    bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
+    bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
 
     auto getRefIfLoaded = [](mlir::Value val) -> mlir::Value {
       if (auto loadOp =
@@ -4177,7 +4177,8 @@ private:
       if (const auto *details =
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-        if (details->cudaDataAttr()) {
+        if (details->cudaDataAttr() &&
+            *details->cudaDataAttr() != Fortran::common::CUDADataAttr::Pinned) {
           if (sym.owner().IsDerivedType() && IsAllocatable(sym.GetUltimate()))
             TODO(loc, "Device resident allocatable derived-type component");
           // TODO: This should probably being checked in semantic and give a
@@ -4229,8 +4230,8 @@ private:
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
     bool isInDeviceContext = isDeviceContext(builder);
-    bool isCUDATransfer = (Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
-                           Fortran::evaluate::HasCUDAAttrs(assign.rhs)) &&
+    bool isCUDATransfer = (Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs) ||
+                           Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs)) &&
                           !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
