@@ -17,6 +17,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE::fputil::generic {
 
@@ -44,40 +45,43 @@ div(InType x, InType y) {
   InFPBits x_bits(x);
   InFPBits y_bits(y);
 
-  if (x_bits.is_nan() || y_bits.is_nan()) {
-    if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
-      raise_except_if_required(FE_INVALID);
-
-    // TODO: Handle NaN payloads.
-    return OutFPBits::quiet_nan().get_val();
-  }
-
   Sign result_sign = x_bits.sign() == y_bits.sign() ? Sign::POS : Sign::NEG;
 
-  if (x_bits.is_inf()) {
-    if (y_bits.is_inf()) {
-      raise_except_if_required(FE_INVALID);
+  if (LIBC_UNLIKELY(x_bits.is_inf_or_nan() || y_bits.is_inf_or_nan() ||
+                    x_bits.is_zero() || y_bits.is_zero())) {
+    if (x_bits.is_nan() || y_bits.is_nan()) {
+      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
+        raise_except_if_required(FE_INVALID);
+
+      // TODO: Handle NaN payloads.
       return OutFPBits::quiet_nan().get_val();
     }
 
-    return OutFPBits::inf(result_sign).get_val();
-  }
+    if (x_bits.is_inf()) {
+      if (y_bits.is_inf()) {
+        raise_except_if_required(FE_INVALID);
+        return OutFPBits::quiet_nan().get_val();
+      }
 
-  if (y_bits.is_inf())
-    return OutFPBits::inf(result_sign).get_val();
-
-  if (y_bits.is_zero()) {
-    if (x_bits.is_zero()) {
-      raise_except_if_required(FE_INVALID);
-      return OutFPBits::quiet_nan().get_val();
+      return OutFPBits::inf(result_sign).get_val();
     }
 
-    raise_except_if_required(FE_DIVBYZERO);
-    return OutFPBits::inf(result_sign).get_val();
-  }
+    if (y_bits.is_inf())
+      return OutFPBits::inf(result_sign).get_val();
 
-  if (x_bits.is_zero())
-    return OutFPBits::zero(result_sign).get_val();
+    if (y_bits.is_zero()) {
+      if (x_bits.is_zero()) {
+        raise_except_if_required(FE_INVALID);
+        return OutFPBits::quiet_nan().get_val();
+      }
+
+      raise_except_if_required(FE_DIVBYZERO);
+      return OutFPBits::inf(result_sign).get_val();
+    }
+
+    if (x_bits.is_zero())
+      return OutFPBits::zero(result_sign).get_val();
+  }
 
   DyadicFloat xd(x);
   DyadicFloat yd(y);
