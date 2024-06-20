@@ -22,6 +22,11 @@ void f() {
 
 using T = decltype(main);
 // expected-error@-1 {{expressions that refer to 'main' are an extension}}
+
+int main();
+
+using U = decltype(main);
+using U2 = decltype(&main);
 #endif
 } // namespace cwg2811
 
