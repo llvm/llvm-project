@@ -211,7 +211,7 @@ define i8 @adc8mr(i8 %a, ptr %ptr, i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: adc8mr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpb %dl, %cl # encoding: [0x38,0xd1]
-; CHECK-NEXT:    adcb %dil, (%rsi), %al # encoding: [0x62,0xf4,0x7c,0x18,0x10,0x3e]
+; CHECK-NEXT:    adcb (%rsi), %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x12,0x3e]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %b = load i8, ptr %ptr
   %s = add i8 %b, %a
@@ -225,7 +225,7 @@ define i16 @adc16mr(i16 %a, ptr %ptr, i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: adc16mr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw %dx, %cx # encoding: [0x66,0x39,0xd1]
-; CHECK-NEXT:    adcw %di, (%rsi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x11,0x3e]
+; CHECK-NEXT:    adcw (%rsi), %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x13,0x3e]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %b = load i16, ptr %ptr
   %s = add i16 %b, %a
@@ -239,7 +239,7 @@ define i32 @adc32mr(i32 %a, ptr %ptr, i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: adc32mr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl %edx, %ecx # encoding: [0x39,0xd1]
-; CHECK-NEXT:    adcl %edi, (%rsi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0x11,0x3e]
+; CHECK-NEXT:    adcl (%rsi), %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x13,0x3e]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %b = load i32, ptr %ptr
   %s = add i32 %b, %a
@@ -253,7 +253,7 @@ define i64 @adc64mr(i64 %a, ptr %ptr, i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: adc64mr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpq %rdx, %rcx # encoding: [0x48,0x39,0xd1]
-; CHECK-NEXT:    adcq %rdi, (%rsi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0x11,0x3e]
+; CHECK-NEXT:    adcq (%rsi), %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x13,0x3e]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %b = load i64, ptr %ptr
   %s = add i64 %b, %a
