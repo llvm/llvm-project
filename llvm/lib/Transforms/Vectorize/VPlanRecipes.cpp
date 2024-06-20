@@ -1315,7 +1315,6 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     // Need to create stuff in PH.
     SplatVF = State.get(getOperand(2), 0);
   } else {
-
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
     Type *StepType = Step->getType();

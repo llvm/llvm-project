@@ -3855,11 +3855,12 @@ bool isHeaderMask(const VPValue *V, VPlan &Plan);
 /// if it is either defined outside the vector region or its operand is known to
 /// be uniform across all VFs and UFs (e.g. VPDerivedIV or VPCanonicalIVPHI).
 inline bool isUniformAcrossVFsAndUFs(VPValue *V) {
-  if (auto *VPI = dyn_cast_or_null<VPInstruction>(V->getDefiningRecipe())) {
-    return VPI ==
-           VPI->getParent()->getPlan()->getCanonicalIV()->getBackedgeValue();
-  }
+  if (V->isLiveIn())
+    return true;
   if (isa<VPCanonicalIVPHIRecipe, VPDerivedIVRecipe, VPExpandSCEVRecipe>(V))
+    return true;
+  auto *R = cast<VPSingleDefRecipe>(V->getDefiningRecipe());
+  if (R == R->getParent()->getPlan()->getCanonicalIV()->getBackedgeValue())
     return true;
   if (isa<VPReplicateRecipe>(V) && cast<VPReplicateRecipe>(V)->isUniform() &&
       (isa<LoadInst, StoreInst>(V->getUnderlyingValue())) &&
@@ -3867,10 +3868,10 @@ inline bool isUniformAcrossVFsAndUFs(VPValue *V) {
              [](VPValue *Op) { return Op->isDefinedOutsideVectorRegions(); }))
     return true;
 
-  auto *C = dyn_cast_or_null<VPScalarCastRecipe>(V->getDefiningRecipe());
-  return C && (C->isDefinedOutsideVectorRegions() ||
-               isa<VPDerivedIVRecipe>(C->getOperand(0)) ||
-               isa<VPCanonicalIVPHIRecipe>(C->getOperand(0)));
+  return isa<VPScalarCastRecipe, VPWidenCastRecipe>(R) &&
+         (R->isDefinedOutsideVectorRegions() || R->getOperand(0)->isLiveIn() ||
+          isa<VPDerivedIVRecipe>(R->getOperand(0)) ||
+          isa<VPCanonicalIVPHIRecipe>(R->getOperand(0)));
 }
 
 } // end namespace vputils

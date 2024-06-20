@@ -185,10 +185,10 @@ define void @test_scalar_cost_single_store_loop_varying_cond(ptr %dst, ptr noali
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[WIDE_VEC4:%.*]] = load <16 x i32>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_VEC4:%.*]] = load <16 x i32>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x i32> [[WIDE_VEC4]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[STRIDED_VEC]], <i32 123, i32 123, i32 123, i32 123>
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i32> [[STRIDED_VEC5]], <i32 123, i32 123, i32 123, i32 123>
