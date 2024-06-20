@@ -140,7 +140,7 @@
 # GNU64-NEXT:  0x0000000076543210 (<unknown:>0x76543210) 0x5555666677778888
 # GNU64-NEXT:  0x0000000000000000 (NULL)                 0x0
 
-# JSON64:   "DynamicSection": [
+#      JSON64:"DynamicSection": [
 # JSON64-NEXT:  {
 # JSON64-NEXT:      "Tag": 1,
 # JSON64-NEXT:      "Value": "Shared library: [D]",
