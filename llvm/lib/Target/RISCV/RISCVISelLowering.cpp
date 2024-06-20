@@ -625,6 +625,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64,
                      Subtarget.is64Bit() ? Legal : Custom);
 
+  if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::INIT_TRAMPOLINE, MVT::Other, Custom);
+    setOperationAction(ISD::ADJUST_TRAMPOLINE, MVT::Other, Custom);
+  }
+
   setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   if (Subtarget.is64Bit())
@@ -7400,6 +7405,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return emitFlushICache(DAG, Op.getOperand(0), Op.getOperand(1),
                            Op.getOperand(2), Flags, DL);
   }
+  case ISD::INIT_TRAMPOLINE:
+    return lowerINIT_TRAMPOLINE(Op, DAG);
+  case ISD::ADJUST_TRAMPOLINE:
+    return lowerADJUST_TRAMPOLINE(Op, DAG);
   }
 }
 
@@ -7413,6 +7422,123 @@ SDValue RISCVTargetLowering::emitFlushICache(SelectionDAG &DAG, SDValue InChain,
 
   // This function returns void so only the out chain matters.
   return CallResult.second;
+}
+
+SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  if (!Subtarget.is64Bit())
+    llvm::report_fatal_error("Trampolines only implemented for RV64");
+
+  SDValue Root = Op.getOperand(0);
+  SDValue Trmp = Op.getOperand(1); // trampoline
+  SDLoc dl(Op);
+
+  const Value *TrmpAddr = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
+
+  // We store in the trampoline buffer the following instructions and data.
+  // Offset:
+  //      0: auipc   t2, 0
+  //      4: ld      t0, 24(t2)
+  //      8: ld      t2, 16(t2)
+  //     12: jalr    t0
+  //     16: <StaticChainOffset>
+  //     24: <FunctionAddressOffset>
+  //     32:
+
+  // Constants shamelessly taken from GCC.
+  constexpr unsigned Opcode_AUIPC = 0x17;
+  constexpr unsigned Opcode_LD = 0x3003;
+  constexpr unsigned Opcode_JALR = 0x67;
+  constexpr unsigned ShiftField_RD = 7;
+  constexpr unsigned ShiftField_RS1 = 15;
+  constexpr unsigned ShiftField_IMM = 20;
+  constexpr unsigned Reg_X5 = 0x5; // x5/t0 (holds the address to the function)
+  constexpr unsigned Reg_X7 = 0x7; // x7/t2 (holds the static chain)
+
+  constexpr unsigned StaticChainOffset = 16;
+  constexpr unsigned FunctionAddressOffset = 24;
+
+  SDValue OutChains[6];
+  SDValue Addr = Trmp;
+
+  // auipc t2, 0
+  // Loads the current PC into t2.
+  constexpr uint32_t AUIPC_X7_0 =
+      Opcode_AUIPC | (Reg_X7 << ShiftField_RD);
+  OutChains[0] =
+      DAG.getTruncStore(Root, dl, DAG.getConstant(AUIPC_X7_0, dl, MVT::i64),
+                        Addr, MachinePointerInfo(TrmpAddr), MVT::i32);
+
+  // ld t0, 24(t2)
+  // Loads the function address into t0. Note that we are using offsets
+  // pc-relative to the first instruction of the trampoline.
+  const uint32_t LD_X5_TargetFunctionOffset =
+      Opcode_LD | (Reg_X5 << ShiftField_RD) |
+      (Reg_X7 << ShiftField_RS1) | (FunctionAddressOffset << ShiftField_IMM);
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(4, dl, MVT::i64));
+  OutChains[1] = DAG.getTruncStore(
+      Root, dl,
+      DAG.getConstant(LD_X5_TargetFunctionOffset, dl, MVT::i64), Addr,
+      MachinePointerInfo(TrmpAddr, 4), MVT::i32);
+
+  // ld t2, 16(t2)
+  // Load the value of the static chain.
+  const uint32_t LD_X7_StaticChainOffset =
+      Opcode_LD | (Reg_X7 << ShiftField_RD) |
+      (Reg_X7 << ShiftField_RS1) | (StaticChainOffset << ShiftField_IMM);
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(8, dl, MVT::i64));
+  OutChains[2] = DAG.getTruncStore(
+      Root, dl, DAG.getConstant(LD_X7_StaticChainOffset, dl, MVT::i64),
+      Addr, MachinePointerInfo(TrmpAddr, 8), MVT::i32);
+
+  // jalr t0
+  // Jump to the function.
+  const uint32_t JALR_X5 =
+      Opcode_JALR | (Reg_X5 << ShiftField_RS1);
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(12, dl, MVT::i64));
+  OutChains[3] =
+      DAG.getTruncStore(Root, dl, DAG.getConstant(JALR_X5, dl, MVT::i64), Addr,
+                        MachinePointerInfo(TrmpAddr, 12), MVT::i32);
+
+  // Now store the variable part of the trampoline.
+  SDValue FunctionAddress = Op.getOperand(2);
+  SDValue StaticChain = Op.getOperand(3);
+
+  // Store the given static chain in the trampoline buffer.
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(StaticChainOffset, dl, MVT::i64));
+  OutChains[4] = DAG.getStore(Root, dl, StaticChain, Addr,
+                              MachinePointerInfo(TrmpAddr, StaticChainOffset));
+
+  // Store the given function address in the trampoline buffer.
+  Addr = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                     DAG.getConstant(FunctionAddressOffset, dl, MVT::i64));
+  OutChains[5] =
+      DAG.getStore(Root, dl, FunctionAddress, Addr,
+                   MachinePointerInfo(TrmpAddr, FunctionAddressOffset));
+
+  SDValue StoreToken = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+
+  // Compute end of trampoline.
+  SDValue EndOfTrmp = DAG.getNode(ISD::ADD, dl, MVT::i64, Trmp,
+                                  DAG.getConstant(32, dl, MVT::i64));
+
+  // Call clear cache on the trampoline buffer.
+  SDValue Chain = DAG.getNode(ISD::CLEAR_CACHE, dl, MVT::Other, StoreToken,
+                              Trmp, EndOfTrmp);
+
+  return Chain;
+}
+
+SDValue RISCVTargetLowering::lowerADJUST_TRAMPOLINE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  if (!Subtarget.is64Bit())
+    llvm::report_fatal_error("Trampolines only implemented for RV64");
+
+  return Op.getOperand(0);
 }
 
 static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,
