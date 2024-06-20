@@ -69,7 +69,7 @@ llvm::Constant *CodeGenModule::getFunctionPointer(llvm::Constant *Pointer,
   if (auto PointerAuth = getFunctionPointerAuthInfo(FunctionType))
     return getConstantSignedPointer(
         Pointer, PointerAuth.getKey(), /*StorageAddress=*/nullptr,
-        cast_or_null<llvm::Constant>(PointerAuth.getDiscriminator()));
+        cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
 
   return Pointer;
 }

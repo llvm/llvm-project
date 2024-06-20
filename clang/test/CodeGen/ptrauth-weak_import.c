@@ -4,7 +4,8 @@
 extern void foo() __attribute__((weak_import));
 
 // CHECK: define {{(dso_local )?}}void @bar()
-// CHECK: br i1 icmp ne (ptr ptrauth (ptr @foo, i32 0), ptr null), label
+// CHECK: [[TMP1:%.*]] =  icmp ne ptr ptrauth (ptr @foo, i32 0), null
+// CHECK: br i1 [[TMP1]], label
 void bar() {
   if (foo)
     foo();

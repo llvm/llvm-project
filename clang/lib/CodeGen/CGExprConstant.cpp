@@ -2034,7 +2034,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
         C = applyOffset(C);
         C = CGM.getConstantSignedPointer(
             C, AuthInfo.getKey(), nullptr,
-            cast_or_null<llvm::Constant>(AuthInfo.getDiscriminator()));
+            cast_or_null<llvm::ConstantInt>(AuthInfo.getDiscriminator()));
         return ConstantLValue(C, /*applied offset*/ true);
       }
 
