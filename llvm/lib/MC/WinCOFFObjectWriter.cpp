@@ -1211,15 +1211,13 @@ void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                    const MCAsmLayout &Layout) {
   if (EmitAddrsigSection) {
     ObjWriter->AddrsigSection = Asm.getContext().getCOFFSection(
-        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
+        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE);
     Asm.registerSection(*ObjWriter->AddrsigSection);
   }
 
   if (!Asm.CGProfile.empty()) {
     ObjWriter->CGProfileSection = Asm.getContext().getCOFFSection(
-        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
+        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
     Asm.registerSection(*ObjWriter->CGProfileSection);
   }
 

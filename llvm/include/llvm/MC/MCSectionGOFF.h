@@ -30,7 +30,8 @@ private:
 
   friend class MCContext;
   MCSectionGOFF(StringRef Name, SectionKind K, MCSection *P, const MCExpr *Sub)
-      : MCSection(SV_GOFF, Name, K, nullptr), Parent(P), SubsectionId(Sub) {}
+      : MCSection(SV_GOFF, Name, K.isText(), nullptr), Parent(P),
+        SubsectionId(Sub) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,

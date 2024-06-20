@@ -841,10 +841,10 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
       std::string SectionName = (MainCFISecCOFF->getName() + "$" +
                                  TextSecCOFF->getName().split('$').second)
                                     .str();
-      return Context.getCOFFSection(
-          SectionName,
-          MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
-          MainCFISecCOFF->getKind(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
+      return Context.getCOFFSection(SectionName,
+                                    MainCFISecCOFF->getCharacteristics() |
+                                        COFF::IMAGE_SCN_LNK_COMDAT,
+                                    "", COFF::IMAGE_COMDAT_SELECT_ANY);
     }
   }
 

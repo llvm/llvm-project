@@ -14,6 +14,7 @@
 #define LLVM_MC_MCSECTIONCOFF_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/SectionKind.h"
 #include <cassert>
@@ -50,10 +51,11 @@ private:
   friend class MCContext;
   // The storage of Name is owned by MCContext's COFFUniquingMap.
   MCSectionCOFF(StringRef Name, unsigned Characteristics,
-                MCSymbol *COMDATSymbol, int Selection, SectionKind K,
-                MCSymbol *Begin)
-      : MCSection(SV_COFF, Name, K, Begin), Characteristics(Characteristics),
-        COMDATSymbol(COMDATSymbol), Selection(Selection) {
+                MCSymbol *COMDATSymbol, int Selection, MCSymbol *Begin)
+      : MCSection(SV_COFF, Name, Characteristics & COFF::IMAGE_SCN_CNT_CODE,
+                  Begin),
+        Characteristics(Characteristics), COMDATSymbol(COMDATSymbol),
+        Selection(Selection) {
     assert((Characteristics & 0x00F00000) == 0 &&
            "alignment must not be set upon section creation");
   }

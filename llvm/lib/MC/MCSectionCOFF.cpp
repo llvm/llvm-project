@@ -106,7 +106,7 @@ void MCSectionCOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   OS << '\n';
 }
 
-bool MCSectionCOFF::useCodeAlign() const { return getKind().isText(); }
+bool MCSectionCOFF::useCodeAlign() const { return isText(); }
 
 bool MCSectionCOFF::isVirtualSection() const {
   return getCharacteristics() & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA;
