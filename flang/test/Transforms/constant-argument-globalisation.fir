@@ -51,10 +51,10 @@ module {
 // DISABLE:  define void @sub1(
 // DISABLE-SAME: ptr [[ARG0:%.*]],
 // DISABLE-SAME: ptr [[ARG1:%.*]])
-// DISABLE-SMAE: {
-// DISABLE: [[CONST_I:%.*]] = alloca i32
-// DISABLE: [[CONST_R1:%.*]] = alloca double
+// DISABLE-SAME: {
 // DISABLE: [[CONST_R0:%.*]] = alloca double
+// DISABLE: [[CONST_R1:%.*]] = alloca double
+// DISABLE: [[CONST_I:%.*]] = alloca i32
 // DISABLE: store double 0.0{{.*}}+00, ptr [[CONST_R0]]
 // DISABLE: store double 1.0{{.*}}+00, ptr [[CONST_R1]]
 // DISABLE: store i32 1, ptr [[CONST_I]]

@@ -170,7 +170,8 @@ public:
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification = false;
+    config.enableRegionSimplification =
+        mlir::GreedySimplifyRegionLevel::Disabled;
     config.strictMode = mlir::GreedyRewriteStrictness::ExistingOps;
 
     patterns.insert<CallOpRewriter>(context, *di);
