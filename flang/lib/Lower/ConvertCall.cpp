@@ -1265,8 +1265,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       preparedDummy.pushExprAssociateCleanUp(associate);
     } else if (mustDoCopyInOut) {
       // Copy-in non contiguous variables.
-      if (actualIsAssumedRank)
-        TODO(loc, "copy-in and copy-out of assumed-rank arguments");
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
       // we may avoid doing the copy and only allocate the temporary.
