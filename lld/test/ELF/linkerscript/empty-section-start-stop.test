@@ -1,0 +1,36 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/test.s -o %t.o
+
+## Check that __start/__stop symbols are not emitted for an empty section.
+# RUN: ld.lld -T %t/ldscript -o %t.out %t.o
+# RUN: llvm-readelf -s %t.out | FileCheck %s
+
+# CHECK-NOT: __start_empty
+# CHECK-NOT: __stop_empty
+
+#--- ldscript
+SECTIONS {
+  .text : { *(.text .text.*) }
+
+  # The following ".pad" sections are used to increase the section index which
+  # would have resulted in the emission of __start_empty & __stop_empty symbols
+  # with out of range section indices.
+  .pad0 : {}
+  .pad1 : {}
+  .pad2 : {}
+  .pad3 : {}
+  .pad4 : {}
+  .pad5 : {}
+
+  empty : { *(empty empty.*) }
+}
+
+#--- test.s
+.weak __start_empty,__stop_empty
+.hidden __start_empty,__stop_empty
+
+.globl _start
+_start:
+  movq __start_empty@GOTPCREL(%rip),%rax
+  movq __stop_empty@GOTPCREL(%rip),%rax
