@@ -111,8 +111,8 @@ public:
             builder.create<fir::HasValueOp>(loc, val);
           },
           builder.createInternalLinkage());
-      mlir::Value addr = builder.create<fir::AddrOfOp>(
-          loc, global.resultType(), global.getSymbol());
+      mlir::Value addr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                                       global.getSymbol());
       newOperands.push_back(addr);
       needUpdate = true;
     }
@@ -132,17 +132,17 @@ public:
       rewriter.replaceOp(callOp, newOp);
 
       for (auto a : allocas) {
-	unsigned count = 0;
-      
-	for ([[maybe_unused]]auto i : a.first->getUsers())
-	  ++count;
+        unsigned count = 0;
 
-	// If the alloca is only used for a store and the call operand, the
-	// store is no longer required.
-	if (count == 1) {
-	  rewriter.eraseOp(a.second);
-	  rewriter.eraseOp(a.first);
-	}
+        for ([[maybe_unused]] auto i : a.first->getUsers())
+          ++count;
+
+        // If the alloca is only used for a store and the call operand, the
+        // store is no longer required.
+        if (count == 1) {
+          rewriter.eraseOp(a.second);
+          rewriter.eraseOp(a.first);
+        }
       }
       LLVM_DEBUG(llvm::dbgs() << "global constant for " << callOp << " as "
                               << newOp << '\n');
