@@ -16,14 +16,15 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/attributes.h"
 
 namespace LIBC_NAMESPACE::fputil::generic {
 
 template <typename OutType, typename InType>
-cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                     cpp::is_floating_point_v<InType> &&
-                     sizeof(OutType) <= sizeof(InType),
-                 OutType>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                 cpp::is_floating_point_v<InType> &&
+                                 sizeof(OutType) <= sizeof(InType),
+                             OutType>
 div(InType x, InType y) {
   using OutFPBits = FPBits<OutType>;
   using OutStorageType = typename OutFPBits::StorageType;
