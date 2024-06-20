@@ -3097,7 +3097,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       if (any_template_params) {
         size_t pos = 0;
         for (DWARFDIE ctx_die = type_die;
-             type_die && !isUnitType(ctx_die.Tag()) &&
+             ctx_die && !isUnitType(ctx_die.Tag()) &&
              pos < template_params.size();
              ctx_die = ctx_die.GetParentDeclContextDIE(), ++pos) {
           if (template_params[pos].empty())
