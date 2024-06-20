@@ -568,8 +568,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           By default, an op region is considered parallel if the containing op
           has trait `HasParallelRegion`. While this default implementation is
           generally sufficient, a specific op may relax this condition by
-          marking a region as non-parallel when it is detected to execute
-          exactly once, and in spite of its parallel semantics.
+          marking a region as non-parallel when loop range analysis detects it
+          to execute zero or one iterations.
         }],
         /*retType=*/"bool",
         /*methodName=*/"isParallelRegion",
