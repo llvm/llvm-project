@@ -574,6 +574,8 @@ ObjcCategoryMerger::tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
     Defined *definedSym = cast<Defined>(sym);
     sym = tryFindDefinedOnIsec(definedSym->isec(),
                                definedSym->value + reloc->addend);
+
+    auto *defSym = dyn_cast<Defined>(sym);
   }
 
   return sym;
@@ -1307,8 +1309,12 @@ void ObjcCategoryMerger::eraseMergedCategories() {
         continue;
 
       eraseISec(catInfo.catBodyIsec);
-
-      tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
+      // We can't erase 'catLayout.nameOffset' for Swift categories because the
+      // name will be referenced for generating relative offsets
+      // See usages of 'l_.str.11.SimpleClass' in objc-category-merging-swift.s
+      // TODO: handle the above in a smarter way
+      if (catInfo.sourceLanguage != SourceLanguage::Swift)
+        tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
                                   catLayout.instanceMethodsOffset);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
