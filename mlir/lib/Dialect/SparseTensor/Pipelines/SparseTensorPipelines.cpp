@@ -44,7 +44,8 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
       options.vectorLength,
       /*enableVLAVectorization=*/options.armSVE,
       /*enableSIMDIndex32=*/options.force32BitVectorIndices,
-      options.enableGPULibgen));
+      options.enableGPULibgen,
+      options.sparsificationOptions().sparseEmitStrategy));
 
   // Bail-early for test setup.
   if (options.testBufferizationAnalysisOnly)
