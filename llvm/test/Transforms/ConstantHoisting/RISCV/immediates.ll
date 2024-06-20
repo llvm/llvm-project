@@ -208,3 +208,15 @@ exit:
   store i32 10, ptr inttoptr (i32 2044 to ptr)
   ret void
 }
+
+; Check that we use a common base for immediates needed by a store if the
+; constants require more than 1 instruction.
+; TODO: This doesn't trigger currently.
+define void @test20(ptr %p1, ptr %p2) {
+; CHECK-LABEL: test20
+; CHECK: store i32 15111111, ptr %p1
+; CHECK: store i32 15111112, ptr %p2
+  store i32 15111111, ptr %p1, align 4
+  store i32 15111112, ptr %p2, align 4
+  ret void
+}
