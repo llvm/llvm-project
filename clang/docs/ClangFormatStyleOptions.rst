@@ -246,6 +246,66 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _AlignAfterOpenBracketBreak:
+
+**AlignAfterOpenBracketBreak** (``AlignAfterOpenBracketCustom``) :versionbadge:`clang-format 20` :ref:`¶ <AlignAfterOpenBracketBreak>`
+  Control of when ``AlignAfterOpenBracket`` breaks an opening bracket.
+
+  If ``AlignAfterOpenBracket`` is set to ``AlwaysBreak`` or ``BlockIndent``,
+  use this to specify how different cases of breaking the opening brackets
+  should be handled. Otherwise, this is ignored. Setting any of these to
+  ``false`` will cause them to not break. At least one of these must be set
+  to ``true``, otherwise a default (backward compatible) breaking behavior
+  is used. This is ignored for ``Align`` and ``DontAlign``.
+
+  .. code-block:: c++
+
+    # Example of usage:
+    AlignAfterOpenBracket: AlwaysBreak
+    AlignAfterOpenBracketBreak:
+      InIfConditionalStatements: true
+      InOtherConditionalStatements: false
+      Other: true
+
+  Nested configuration flags:
+
+  Precise control over breaking the opening bracket of
+  ``AlignAfterOpenBracket``.
+
+  .. code-block:: c++
+
+    # Should be declared this way:
+    AlignAfterOpenBracketBreak:
+      InIfConditionalStatements: true
+      InOtherConditionalStatements: false
+      Other: true
+
+  * ``bool InIfConditionalStatements`` Break inside if/else if statements.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       if constexpr (                   vs.   if constexpr (a ||
+          a || b)                                           b)
+
+  * ``bool InOtherConditionalStatements`` Break inside conditional statements not covered by preceding options.
+    (``for/while/switch...``).
+
+    .. code-block:: c++
+
+       true:                                  false:
+       while (                          vs.   while (a &&
+          a && b ) {                                 b) {
+
+  * ``bool Other`` Break inside brackets not covered by preceding options.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       someLongFunction(                vs.   someLongFunction(argument1,
+          argument1, argument2);                               argument2);
+
+
 .. _AlignArrayOfStructures:
 
 **AlignArrayOfStructures** (``ArrayInitializerAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <AlignArrayOfStructures>`
