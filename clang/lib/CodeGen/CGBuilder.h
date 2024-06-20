@@ -35,7 +35,6 @@ public:
 
   /// This forwards to CodeGenFunction::InsertHelper.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
-                    llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const override;
 
 private:
