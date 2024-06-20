@@ -4,8 +4,11 @@ add_clang_tool(clang-reorder-fields
 
 clang_target_link_libraries(clang-reorder-fields
   PRIVATE
+  clangAST
+  clangASTMatchers
   clangBasic
   clangFrontend
+  clangLex
   clangRewrite
   clangSerialization
   clangTooling
