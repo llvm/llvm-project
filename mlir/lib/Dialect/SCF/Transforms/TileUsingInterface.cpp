@@ -1147,10 +1147,11 @@ mlir::scf::tileConsumerAndFuseProducersUsingSCF(
             fusableProducerOp, "failed to replacement value for this "
                                "operation from within the tiled loop");
       }
-      for (const auto &result : fusableProducerOp->getResults()) {
-        origValToResultNumber[result] =
-            loops.front()->getNumResults() -
-            (fusableProducerOp->getNumResults() - result.getResultNumber());
+      for (auto [index, result] :
+           llvm::enumerate(fusableProducerOp->getResults())) {
+        origValToResultNumber[result] = loops.front()->getNumResults() -
+                                        fusableProducerOp->getNumResults() +
+                                        index;
       }
     }
 
