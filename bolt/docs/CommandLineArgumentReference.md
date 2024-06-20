@@ -798,6 +798,10 @@
   bytes. Default value: 0, i.e. split iff the size is reduced. Note that on some
   architectures the size can increase after splitting.
 
+- `--stale-matching-matching-functions-with-hash`
+
+  Turns on matching functions with exact hash
+
 - `--stale-matching-max-func-size=<uint>`
 
   The maximum size of a function to consider for inference.
