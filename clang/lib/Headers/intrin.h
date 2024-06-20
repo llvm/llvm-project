@@ -332,32 +332,32 @@ static __inline__ void __DEFAULT_FN_ATTRS __halt(void) {
 
 static inline unsigned char __inbyte(unsigned short port) {
   unsigned char ret;
-  __asm__ volatile("inb %w1, %b0" : "=a"(ret) : "Nd"(port));
+  __asm__ __volatile__("inb %w1, %b0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
 static inline unsigned short __inword(unsigned short port) {
   unsigned short ret;
-  __asm__ volatile("inw %w1, %w0" : "=a"(ret) : "Nd"(port));
+  __asm__ __volatile__("inw %w1, %w0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
 static inline unsigned long __indword(unsigned short port) {
   unsigned long ret;
-  __asm__ volatile("inl %w1, %k0" : "=a"(ret) : "Nd"(port));
+  __asm__ __volatile__("inl %w1, %k0" : "=a"(ret) : "Nd"(port));
   return ret;
 }
 
 static inline void __outbyte(unsigned short port, unsigned char data) {
-  __asm__ volatile("outb %b0, %w1" : : "a"(data), "Nd"(port));
+  __asm__ __volatile__("outb %b0, %w1" : : "a"(data), "Nd"(port));
 }
 
 static inline void __outword(unsigned short port, unsigned short data) {
-  __asm__ volatile("outw %w0, %w1" : : "a"(data), "Nd"(port));
+  __asm__ __volatile__("outw %w0, %w1" : : "a"(data), "Nd"(port));
 }
 
 static inline void __outdword(unsigned short port, unsigned long data) {
-  __asm__ volatile("outl %k0, %w1" : : "a"(data), "Nd"(port));
+  __asm__ __volatile__("outl %k0, %w1" : : "a"(data), "Nd"(port));
 }
 #endif
 
