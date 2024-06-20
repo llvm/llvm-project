@@ -993,7 +993,7 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
   return Value;
 }
 
-void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
+void InstrProfRecord::addValueData(uint32_t ValueKind,
                                    InstrProfValueData *VData, uint32_t N,
                                    InstrProfSymtab *ValueMap) {
   for (uint32_t I = 0; I < N; I++) {
@@ -1138,7 +1138,7 @@ void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
   InstrProfValueData *ValueData = getValueProfRecordValueData(this);
   for (uint64_t VSite = 0; VSite < NumValueSites; ++VSite) {
     uint8_t ValueDataCount = this->SiteCountArray[VSite];
-    Record.addValueData(Kind, VSite, ValueData, ValueDataCount, SymTab);
+    Record.addValueData(Kind, ValueData, ValueDataCount, SymTab);
     ValueData += ValueDataCount;
   }
 }
