@@ -5882,15 +5882,17 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
               Flags = setFlags(Flags, SCEV::FlagNSW);
           }
         } else if (GEPOperator *GEP = dyn_cast<GEPOperator>(BEValueV)) {
-          // If the increment is an inbounds GEP, then we know the address
-          // space cannot be wrapped around. We cannot make any guarantee
-          // about signed or unsigned overflow because pointers are
-          // unsigned but we may have a negative index from the base
-          // pointer. We can guarantee that no unsigned wrap occurs if the
-          // indices form a positive value.
-          if (GEP->isInBounds() && GEP->getOperand(0) == PN) {
-            Flags = setFlags(Flags, SCEV::FlagNW);
-            if (isKnownPositive(Accum))
+          if (GEP->getOperand(0) == PN) {
+            GEPNoWrapFlags NW = GEP->getNoWrapFlags();
+            // If the increment has any nowrap flags, then we know the address
+            // space cannot be wrapped around.
+            if (NW != GEPNoWrapFlags::none())
+              Flags = setFlags(Flags, SCEV::FlagNW);
+            // If the GEP is nuw or nusw with non-negative offset, we know that
+            // no unsigned wrap occurs. We cannot set the nsw flag as only the
+            // offset is treated as signed, while the base is unsigned.
+            if (NW.hasNoUnsignedWrap() ||
+                (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Accum)))
               Flags = setFlags(Flags, SCEV::FlagNUW);
           }
 
