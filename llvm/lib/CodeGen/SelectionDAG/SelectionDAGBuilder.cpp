@@ -7920,20 +7920,38 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     auto OpNode = getValue(I.getOperand(1));
     auto FullTy = OpNode.getValueType();
 
-    auto Accumulator = getValue(I.getOperand(0));
-    unsigned ScaleFactor = FullTy.getVectorMinNumElements() / ReducedTy.getVectorMinNumElements();
+    unsigned Stride = ReducedTy.getVectorMinNumElements();
+    unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
 
+    // Collect all of the subvectors
+    SmallVector<SDValue> Subvectors;
+    Subvectors.push_back(getValue(I.getOperand(0)));
     for(unsigned i = 0; i < ScaleFactor; i++) {
-      auto SourceIndex = DAG.getVectorIdxConstant(i * ScaleFactor, DL);
-      auto TargetIndex = DAG.getVectorIdxConstant(i, DL);
-      auto ExistingValue = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ReducedTy.getScalarType(), {Accumulator, TargetIndex});
-      auto N = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {OpNode, SourceIndex});
-      N = DAG.getNode(ISD::VECREDUCE_ADD, DL, ReducedTy.getScalarType(), N);
-      N = DAG.getNode(ISD::ADD, DL, ReducedTy.getScalarType(), ExistingValue, N);
-      Accumulator = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ReducedTy, {Accumulator, N, TargetIndex});
+      auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, DL);
+      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ReducedTy, {OpNode, SourceIndex}));
     }
 
-    setValue(&I, Accumulator);
+    while(Subvectors.size() >= 2) {
+      SmallVector<SDValue> NewSubvectors;
+      for(unsigned i = 0; i < Subvectors.size(); i+=2) {
+        unsigned j = i + 1;
+        auto A = Subvectors[i];
+        if(j >= Subvectors.size()) {
+          unsigned OldLastIdx = NewSubvectors.size()-1;
+          auto OldLast = NewSubvectors[OldLastIdx];
+          NewSubvectors[OldLastIdx] = DAG.getNode(ISD::ADD, DL, ReducedTy, {OldLast, A});
+          break;
+        }
+        auto B = Subvectors[j];
+        auto Node = DAG.getNode(ISD::ADD, DL, ReducedTy, {A, B});
+        NewSubvectors.push_back(Node);
+      }
+      Subvectors = NewSubvectors;
+    }
+    
+    assert(Subvectors.size() == 1 && "There should only be one subvector after tree flattening");
+
+    setValue(&I, Subvectors[0]);
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
