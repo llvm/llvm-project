@@ -5251,7 +5251,7 @@ bool LLParser::parseDIEnumerator(MDNode *&Result, bool IsDistinct) {
 
 /// parseDIBasicType:
 ///   ::= !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32,
-///                    encoding: DW_ATE_encoding, flags: 0, annotations: !1)
+///                    encoding: DW_ATE_encoding, flags: 0)
 bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
@@ -5259,14 +5259,12 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
-  OPTIONAL(flags, DIFlagField, );                                              \
-  OPTIONAL(annotations, MDField, );
+  OPTIONAL(flags, DIFlagField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DIBasicType,
-                           (Context, tag.Val, name.Val, size.Val, align.Val,
-                            encoding.Val, flags.Val, annotations.Val));
+  Result = GET_OR_DISTINCT(DIBasicType, (Context, tag.Val, name.Val, size.Val,
+                                         align.Val, encoding.Val, flags.Val));
   return false;
 }
 
@@ -5403,13 +5401,12 @@ bool LLParser::parseDISubroutineType(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(cc, DwarfCCField, );                                                \
-  REQUIRED(types, MDField, );                                                  \
-  OPTIONAL(annotations, MDField, );
+  REQUIRED(types, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DISubroutineType, (Context, flags.Val, cc.Val,
-                                              types.Val, annotations.Val));
+  Result = GET_OR_DISTINCT(DISubroutineType,
+                           (Context, flags.Val, cc.Val, types.Val));
   return false;
 }
 
