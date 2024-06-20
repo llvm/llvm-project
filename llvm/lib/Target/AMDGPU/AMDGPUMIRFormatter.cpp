@@ -32,7 +32,7 @@ void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
 }
 
 /// Implement target specific parsing of immediate mnemonics. The mnemonic is
-/// dot seperated strings.
+/// a string with a leading dot.
 bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
                               const unsigned OpIdx,
                               StringRef Src, int64_t &Imm,
