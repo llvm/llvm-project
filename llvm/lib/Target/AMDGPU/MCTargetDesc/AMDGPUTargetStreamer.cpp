@@ -444,12 +444,7 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     accum_bits = MCBinaryExpr::createMul(
         accum_bits, MCConstantExpr::create(4, getContext()), getContext());
     OS << "\t\t.amdhsa_accum_offset ";
-    int64_t IVal;
-    if (accum_bits->evaluateAsAbsolute(IVal)) {
-      OS << static_cast<uint64_t>(IVal);
-    } else {
-      accum_bits->print(OS, MAI);
-    }
+    llvm::AMDGPUMCExprPrint(accum_bits, OS, MAI);
     OS << '\n';
   }
 
