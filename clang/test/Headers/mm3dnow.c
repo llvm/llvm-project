@@ -5,12 +5,9 @@
 #if defined(i386) || defined(__x86_64__)
 #include <mm3dnow.h>
 
-int __attribute__((__target__(("3dnow")))) foo(int a) {
-  _m_femms();
+int foo(void *x) {
+  _m_prefetch(x);
+  _m_prefetchw(x);
   return 4;
-}
-
-__m64 __attribute__((__target__(("3dnowa")))) bar(__m64 a) {
-  return _m_pf2iw(a);
 }
 #endif
