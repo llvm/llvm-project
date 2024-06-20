@@ -142,7 +142,7 @@ template<> struct DenseMapInfo<unsigned long> {
     if constexpr (sizeof(Val) == 4)
       return DenseMapInfo<unsigned>::getHashValue(Val);
     else
-      return detail::combineHashValue(Val >> (4 * sizeof(Val)), Val);
+      return densemap::detail::mix(Val);
   }
 
   static bool isEqual(const unsigned long& LHS, const unsigned long& RHS) {
