@@ -1276,7 +1276,7 @@ def ConvertVectorToArmSME : Pass<"convert-vector-to-arm-sme"> {
     Pass that converts vector dialect operations into equivalent ArmSME dialect
     operations.
   }];
-  let dependentDialects = ["arm_sme::ArmSMEDialect"];
+  let dependentDialects = ["arm_sme::ArmSMEDialect", "arm_sve::ArmSVEDialect"];
 }
 
 //===----------------------------------------------------------------------===//
