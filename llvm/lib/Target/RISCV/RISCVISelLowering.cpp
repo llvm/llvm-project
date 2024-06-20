@@ -80,6 +80,12 @@ static cl::opt<bool>
     RV64LegalI32("riscv-experimental-rv64-legal-i32", cl::ReallyHidden,
                  cl::desc("Make i32 a legal type for SelectionDAG on RV64."));
 
+static cl::opt<unsigned> MulExpansionDepth(
+    "riscv-mul-expansion-depth", cl::Hidden,
+    cl::desc("Maximum depth to search when expanding a mul by constant"),
+    cl::init(3));
+
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -13689,6 +13695,221 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false, Subtarget);
 }
 
+struct Step {
+  unsigned Opcode;
+  uint64_t A;
+  uint64_t B;
+  unsigned Shift = 0;
+};
+
+static bool findMulExpansionRecursive(uint64_t MulAmt, bool HasShlAdd,
+                                      SmallVector<Step> &Path) {
+  // Maximum sequence size is 3, avoid anything beyond that.
+  // In 0-199 inclusive, with max depth = X, all but:
+  // 3: 43 unique values
+  // 4: none, all covered
+
+  if (Path.size() > MulExpansionDepth)
+    return false;
+
+  // Base case
+  if (MulAmt == 1)
+    return true;
+
+  // Rework the recursion bit here...
+  SmallVector<Step> TmpPath = Path;
+  std::optional<SmallVector<Step>> BestPath;
+
+  auto recurseAndScore = [&](uint64_t MulAmt2, Step S) {
+    unsigned Len = TmpPath.size();
+    TmpPath.push_back(S);
+    if (findMulExpansionRecursive(MulAmt2, HasShlAdd, TmpPath))
+      if (!BestPath || BestPath->size() > TmpPath.size())
+        BestPath = TmpPath;
+    TmpPath.resize(Len);
+  };
+
+  // We only recurse on the first operand, so the second step must
+  // be a complete without further search.
+  auto recurseAndScore2 = [&](uint64_t MulAmt2, Step S1, Step S2) {
+    unsigned Len = TmpPath.size();
+    TmpPath.push_back(S1);
+    TmpPath.push_back(S2);
+    if (findMulExpansionRecursive(MulAmt2, HasShlAdd, TmpPath))
+      if (!BestPath || BestPath->size() > TmpPath.size())
+        BestPath = TmpPath;
+    TmpPath.resize(Len);
+  };
+
+
+  // Only the base case (MulAmt is a power of two) is required, but we prefer to
+  // expand the shl last, so add that to our solution set eagerly so the cost
+  // with be equal to exclude the inverse factoring.
+  if (unsigned TZ = llvm::countr_zero(MulAmt); TZ) {
+    uint64_t MulAmt2 = MulAmt >> TZ;
+    recurseAndScore(MulAmt2, {ISD::SHL, MulAmt2, TZ});
+  }
+
+  // TODO: Should we factor out the MUL note entirely in favor of
+  // the RISCVISD::SHL_ADD one?
+  if (HasShlAdd) {
+    // {3,5,9}*W -> shNadd W, W
+    for (uint64_t Divisor : {3, 5, 9}) {
+      if (MulAmt % Divisor != 0)
+        continue;
+      uint64_t MulAmt2 = MulAmt / Divisor;
+      recurseAndScore(MulAmt2, {ISD::MUL, MulAmt2, Divisor});
+    }
+
+    // 2^(1,2,3) * W + 1 -> (shNadd (W, x)
+    unsigned TZ = llvm::countr_zero(MulAmt - 1);
+    if (TZ == 1 || TZ == 2 || TZ == 3) {
+      uint64_t MulAmt2 = (MulAmt - 1) >> TZ;
+      recurseAndScore(MulAmt2, {RISCVISD::SHL_ADD, MulAmt2, 1, TZ});
+    }
+
+    // W + [2,4,8] -> shNadd x, W
+    for (uint64_t Offset : {2, 4, 8}) {
+      uint64_t MulAmt2 = MulAmt - Offset;
+      recurseAndScore(MulAmt2, {ISD::ADD, MulAmt2, Offset});
+    }
+  }
+
+  {
+    uint64_t MulAmt2 = MulAmt - 1;
+    recurseAndScore(MulAmt2, {ISD::ADD, MulAmt2, 1});
+  }
+
+  {
+    uint64_t MulAmt2 = MulAmt + 1;
+    recurseAndScore(MulAmt2, {ISD::SUB, MulAmt2, 1});
+  }
+
+
+  // Add +/- 3,5,9 cases, needs two instructions each even using
+  // shNadd
+  if (HasShlAdd) {
+    for (uint64_t Offset : {3, 5, 9}) {
+      uint64_t MulAmt2 = (MulAmt - Offset);
+      recurseAndScore2(MulAmt2,
+                   {ISD::ADD, MulAmt2, Offset},
+                   {ISD::MUL, 1, Offset});
+    }
+
+    for (uint64_t Offset : {3, 5, 9}) {
+      uint64_t MulAmt2 = (MulAmt + Offset);
+      recurseAndScore2(MulAmt2,
+                       {ISD::SUB, MulAmt2, Offset},
+                       {ISD::MUL, 1, Offset});
+    }
+  }
+
+  // Isolate the last set bit, and recurse on the remaining
+  {
+    uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+    uint64_t MulAmt2 = MulAmt - MulAmtLowBit;
+    recurseAndScore2(MulAmt2,
+                     {ISD::ADD, MulAmt2, MulAmtLowBit},
+                     {ISD::SHL, 1, Log2_64(MulAmtLowBit)});
+  }
+
+  // TODO: Add subtracting last zero bit..
+  
+
+  if (!BestPath)
+    return false;
+
+  Path = *BestPath;
+  return true;
+}
+
+static SDValue expandMulPath(SelectionDAG &DAG, SDNode *N,
+                             const bool HasShlAdd,
+                             SmallVector<Step> &Path, SDValue X) {
+  assert(!Path.empty());
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  uint64_t MulAmt = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  //dbgs() << "Found path for " << MulAmt << "\n";
+  
+  DenseMap<uint64_t, SDValue> Expansions;
+  Expansions[1] = X;
+  for (Step &S : llvm::reverse(Path)) {
+    switch (S.Opcode) {
+    default:
+      llvm_unreachable("");
+    case ISD::SHL: {
+      //dbgs() << "Expanding " << S.A << " << " << S.B << "\n";
+      assert(Expansions.contains(S.A));
+      SDValue A = Expansions[S.A];
+      SDValue Res = DAG.getNode(ISD::SHL, DL, VT, A,
+                                DAG.getConstant(S.B, DL, VT));
+      Expansions[S.A << S.B] = Res;
+      break;
+    }
+    case ISD::MUL: {
+      //dbgs() << "Expanding " << S.A << " * " << S.B << "\n";
+      assert(Expansions.contains(S.A));
+      SDValue A = Expansions[S.A];
+      assert(S.B == 3 || S.B == 5 || S.B == 9);
+      SDValue Res = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, A,
+                                DAG.getConstant(Log2_64(S.B - 1), DL, VT),
+                                A);
+      Expansions[S.A * S.B] = Res;
+      break;
+    }
+    case ISD::ADD: {
+      //dbgs() << "Expanding " << S.A << " + " << S.B << "\n";
+      assert(Expansions.contains(S.A));
+      SDValue A = Expansions[S.A];
+      SDValue Res;
+      if (HasShlAdd && (S.B == 2 || S.B == 4 || S.B == 8))
+        // TODO: Refactor this out
+        Res = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                          DAG.getConstant(Log2_64(S.B), DL, VT),
+                          A);
+      else {
+        assert(Expansions.contains(S.B));
+        SDValue B = Expansions[S.B];
+        Res =  DAG.getNode(ISD::ADD, DL, VT, A, B);
+      }
+      assert(Res);
+      Expansions[S.A + S.B] = Res;
+      break;
+    }
+    case ISD::SUB: {
+      //dbgs() << "Expanding " << S.A << " - " << S.B << "\n";
+      assert(Expansions.contains(S.A));
+      SDValue A = Expansions[S.A];
+      assert(Expansions.contains(S.B));
+      SDValue B = Expansions[S.B];
+      SDValue Res =  DAG.getNode(ISD::SUB, DL, VT, A, B);
+      Expansions[S.A - S.B] = Res;
+      break;
+    }
+    case RISCVISD::SHL_ADD: {
+      //dbgs() << "Expanding " << S.A << " << " << S.Shift << " + " << S.B << "\n";
+      assert(HasShlAdd);
+      assert(Expansions.contains(S.A));
+      assert(Expansions.contains(S.B));
+      SDValue A = Expansions[S.A];
+      SDValue B = Expansions[S.B];
+      SDValue Res = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, A,
+                                DAG.getConstant(S.Shift, DL, VT),
+                                B);
+      Expansions[(S.A << S.Shift) + S.B] = Res;
+      break;
+    }
+    };
+  }
+
+
+  assert(Expansions.contains(MulAmt));
+  return Expansions[MulAmt];
+}
+  
+
 // Try to expand a scalar multiply to a faster sequence.
 static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI,
@@ -13720,124 +13941,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   // other target properly freezes X in these cases either.
   SDValue X = N->getOperand(0);
 
-  if (HasShlAdd) {
-    for (uint64_t Divisor : {3, 5, 9}) {
-      if (MulAmt % Divisor != 0)
-        continue;
-      uint64_t MulAmt2 = MulAmt / Divisor;
-      // 3/5/9 * 2^N ->  shl (shXadd X, X), N
-      if (isPowerOf2_64(MulAmt2)) {
-        SDLoc DL(N);
-        SDValue X = N->getOperand(0);
-        // Put the shift first if we can fold a zext into the
-        // shift forming a slli.uw.
-        if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
-            X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
-          SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
-                                    DAG.getConstant(Log2_64(MulAmt2), DL, VT));
-          return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
-                             DAG.getConstant(Log2_64(Divisor - 1), DL, VT),
-                             Shl);
-        }
-        // Otherwise, put rhe shl second so that it can fold with following
-        // instructions (e.g. sext or add).
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-        return DAG.getNode(ISD::SHL, DL, VT, Mul359,
-                           DAG.getConstant(Log2_64(MulAmt2), DL, VT));
-      }
-
-      // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
-      if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
-        SDLoc DL(N);
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                           DAG.getConstant(Log2_64(MulAmt2 - 1), DL, VT),
-                           Mul359);
-      }
-    }
-
-    // If this is a power 2 + 2/4/8, we can use a shift followed by a single
-    // shXadd. First check if this a sum of two power of 2s because that's
-    // easy. Then count how many zeros are up to the first bit.
-    if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
-      unsigned ScaleShift = llvm::countr_zero(MulAmt);
-      if (ScaleShift >= 1 && ScaleShift < 4) {
-        unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
-        SDLoc DL(N);
-        SDValue Shift1 =
-            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                           DAG.getConstant(ScaleShift, DL, VT), Shift1);
-      }
-    }
-
-    // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
-    // This is the two instruction form, there are also three instruction
-    // variants we could implement.  e.g.
-    //   (2^(1,2,3) * 3,5,9 + 1) << C2
-    //   2^(C1>3) * 3,5,9 +/- 1
-    for (uint64_t Divisor : {3, 5, 9}) {
-      uint64_t C = MulAmt - 1;
-      if (C <= Divisor)
-        continue;
-      unsigned TZ = llvm::countr_zero(C);
-      if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
-        SDLoc DL(N);
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                           DAG.getConstant(TZ, DL, VT), X);
-      }
-    }
-
-    // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
-    if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
-      unsigned ScaleShift = llvm::countr_zero(MulAmt - 1);
-      if (ScaleShift >= 1 && ScaleShift < 4) {
-        unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
-        SDLoc DL(N);
-        SDValue Shift1 =
-            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-        return DAG.getNode(ISD::ADD, DL, VT, Shift1,
-                           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                       DAG.getConstant(ScaleShift, DL, VT), X));
-      }
-    }
-
-    // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
-    for (uint64_t Offset : {3, 5, 9}) {
-      if (isPowerOf2_64(MulAmt + Offset)) {
-        SDLoc DL(N);
-        SDValue Shift1 =
-            DAG.getNode(ISD::SHL, DL, VT, X,
-                        DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
-        SDValue Mul359 =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Offset - 1), DL, VT), X);
-        return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
-      }
-    }
-  }
-
-  // 2^N - 2^M -> (sub (shl X, C1), (shl X, C2))
-  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
-  if (isPowerOf2_64(MulAmt + MulAmtLowBit)) {
-    uint64_t ShiftAmt1 = MulAmt + MulAmtLowBit;
-    SDLoc DL(N);
-    SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                 DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
-    SDValue Shift2 =
-        DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                    DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
-    return DAG.getNode(ISD::SUB, DL, VT, Shift1, Shift2);
-  }
-
-  return SDValue();
+  SmallVector<Step> Path;
+  if (!findMulExpansionRecursive(MulAmt, HasShlAdd, Path))
+    return SDValue();
+  assert(!Path.empty());
+  return expandMulPath(DAG, N, HasShlAdd, Path, X);
 }
 
 // Combine vXi32 (mul (and (lshr X, 15), 0x10001), 0xffff) ->
