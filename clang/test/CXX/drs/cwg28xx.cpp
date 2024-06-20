@@ -6,6 +6,25 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
+
+int main() {} // required for cwg2811
+
+namespace cwg2811 { // cwg2811: 3.5
+#if __cplusplus >= 201103L
+void f() {
+  (void)[&] {
+    using T = decltype(main);
+    // expected-error@-1 {{expressions that refer to 'main' are an extension}}
+  };
+  using T2 = decltype(main);
+  // expected-error@-1 {{expressions that refer to 'main' are an extension}}
+}
+
+using T = decltype(main);
+// expected-error@-1 {{expressions that refer to 'main' are an extension}}
+#endif
+} // namespace cwg2811
+
 namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
 #if __cpp_constexpr >= 202306L
   constexpr void* p = nullptr;
