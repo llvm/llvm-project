@@ -420,9 +420,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   bool IsStreaming = ForceStreaming ||
                      F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
                      F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool IsStreamingCompatible =
-      F.hasFnAttribute("aarch64_pstate_sm_compatible") ||
-      ForceStreamingCompatible;
+  bool IsStreamingCompatible = ForceStreamingCompatible ||
+                               F.hasFnAttribute("aarch64_pstate_sm_compatible");
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;

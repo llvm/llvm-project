@@ -188,7 +188,7 @@ public:
   /// Returns true if the target has access to either the full range of SVE instructions,
   /// or the streaming-compatible subset of SVE instructions.
   bool isSVEorStreamingSVEAvailable() const {
-    return hasSVE() || hasSMEFA64() || (hasSME() && isStreaming());
+    return hasSVE() || (hasSME() && isStreaming());
   }
 
   unsigned getMinVectorRegisterBitWidth() const {
