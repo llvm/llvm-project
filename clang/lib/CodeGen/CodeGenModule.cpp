@@ -8927,8 +8927,7 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   NoLoopXteamErr NxStatus = NxSuccess;
-  if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
-      !getLangOpts().OpenMPTargetXteamReduction)
+  if (!getLangOpts().OpenMPTargetXteamReduction)
     return NxOptionDisabled;
 
   OptKernelNestDirectives NestDirs;
