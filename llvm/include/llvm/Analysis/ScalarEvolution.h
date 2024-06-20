@@ -1766,6 +1766,7 @@ private:
   /// this call will try to use a minimal set of SCEV predicates in order to
   /// return an exact answer.
   ExitLimit computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
+                             bool ControlsOnlyExit,
                              bool AllowPredicates = false);
 
   // Helper functions for computeExitLimitFromCond to avoid exponential time
