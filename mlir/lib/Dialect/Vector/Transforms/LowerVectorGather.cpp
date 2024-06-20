@@ -56,7 +56,7 @@ namespace {
 ///
 /// When applied exhaustively, this will produce a sequence of 1-d gather ops.
 ///
-/// Supports vector types with trailing scalable dim.
+/// Supports vector types with a fixed leading dimension.
 struct FlattenGather : OpRewritePattern<vector::GatherOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -79,9 +79,7 @@ struct FlattenGather : OpRewritePattern<vector::GatherOp> {
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resultTy, rewriter.getZeroAttr(resultTy));
 
-    Type subTy = VectorType::get(resultTy.getShape().drop_front(),
-                                 resultTy.getElementType(),
-                                 resultTy.getScalableDims().drop_front());
+    VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
 
     for (int64_t i = 0, e = resultTy.getShape().front(); i < e; ++i) {
       int64_t thisIdx[1] = {i};
