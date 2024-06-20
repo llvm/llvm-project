@@ -455,6 +455,12 @@ public:
   MCSymbol *createNamedTempSymbol();
   MCSymbol *createNamedTempSymbol(const Twine &Name);
 
+  /// Get or create a symbol for a basic block. For non-always-emit symbols,
+  /// this behaves like createTempSymbol, except that it uses the
+  /// PrivateLabelPrefix instead of the PrivateGlobalPrefix. When AlwaysEmit is
+  /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
+  MCSymbol *createBlockSymbol(const Twine &Name, bool AlwaysEmit = false);
+
   /// Create the definition of a directional local symbol for numbered label
   /// (used for "1:" definitions).
   MCSymbol *createDirectionalLocalSymbol(unsigned LocalLabelVal);
