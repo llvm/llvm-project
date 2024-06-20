@@ -552,6 +552,7 @@ namespace std {
 template <typename T>
 class initializer_list {
  public:
+  const T *a, *b;
   initializer_list() noexcept;
 };
 
