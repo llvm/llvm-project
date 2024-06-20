@@ -37092,16 +37092,12 @@ static void computeKnownBitsForPMADDWD(SDValue LHS, SDValue RHS,
       DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
   APInt DemandedHiElts =
       DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
-  KnownBits LHSLo =
-      DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1).sext(32);
-  KnownBits LHSHi =
-      DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1).sext(32);
-  KnownBits RHSLo =
-      DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1).sext(32);
-  KnownBits RHSHi =
-      DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1).sext(32);
-  KnownBits Lo = KnownBits::mul(LHSLo, RHSLo);
-  KnownBits Hi = KnownBits::mul(LHSHi, RHSHi);
+  KnownBits LHSLo = DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1);
+  KnownBits LHSHi = DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1);
+  KnownBits RHSLo = DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1);
+  KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
+  KnownBits Lo = KnownBits::mul(LHSLo.sext(32), RHSLo.sext(32));
+  KnownBits Hi = KnownBits::mul(LHSHi.sext(32), RHSHi.sext(32));
   Known = KnownBits::computeForAddSub(/*Add=*/true, /*NSW=*/true,
                                       /*NUW=*/false, Lo, Hi);
 }
@@ -37113,23 +37109,19 @@ static void computeKnownBitsForPMADDUBSW(SDValue LHS, SDValue RHS,
                                          unsigned Depth) {
   unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
 
-  // Multiply signed/unsigned i8 elements to create i16 values and add_sat Lo/Hi
+  // Multiply unsigned/signed i8 elements to create i16 values and add_sat Lo/Hi
   // pairs.
   APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
   APInt DemandedLoElts =
       DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b01));
   APInt DemandedHiElts =
       DemandedSrcElts & APInt::getSplat(NumSrcElts, APInt(2, 0b10));
-  KnownBits LHSLo =
-      DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1).zext(16);
-  KnownBits LHSHi =
-      DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1).zext(16);
-  KnownBits RHSLo =
-      DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1).sext(16);
-  KnownBits RHSHi =
-      DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1).sext(16);
-  KnownBits Lo = KnownBits::mul(LHSLo, RHSLo);
-  KnownBits Hi = KnownBits::mul(LHSHi, RHSHi);
+  KnownBits LHSLo = DAG.computeKnownBits(LHS, DemandedLoElts, Depth + 1);
+  KnownBits LHSHi = DAG.computeKnownBits(LHS, DemandedHiElts, Depth + 1);
+  KnownBits RHSLo = DAG.computeKnownBits(RHS, DemandedLoElts, Depth + 1);
+  KnownBits RHSHi = DAG.computeKnownBits(RHS, DemandedHiElts, Depth + 1);
+  KnownBits Lo = KnownBits::mul(LHSLo.zext(16), RHSLo.sext(16));
+  KnownBits Hi = KnownBits::mul(LHSHi.zext(16), RHSHi.sext(16));
   Known = KnownBits::sadd_sat(Lo, Hi);
 }
 

@@ -12,7 +12,7 @@
 // CHECK: (lldb) target variable
 // CHECK-NEXT: (ReferencesBoth<'A'>) both_a = {
 // CHECK-NEXT:   (Outer<'A'>::Inner *) a = 0x{{[0-9A-Fa-f]*}} {}
-// CHECK-NEXT:   (Outer<'A'>::Inner *) b = 0x{{[0-9A-Fa-f]*}} {}
+// CHECK-NEXT:   (Outer<'B'>::Inner *) b = 0x{{[0-9A-Fa-f]*}} {}
 // CHECK-NEXT: }
 // CHECK-NEXT: (ReferencesBoth<'B'>) both_b = {
 // CHECK-NEXT:   (Outer<'A'>::Inner *) a = 0x{{[0-9A-Fa-f]*}} {}

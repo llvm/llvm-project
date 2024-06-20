@@ -104,6 +104,8 @@ private:
 
   bool IsRegistered : 1;
 
+  bool IsText : 1;
+
   MCDummyFragment DummyFragment;
 
   // Mapping from subsection number to fragment list. At layout time, the
@@ -124,9 +126,8 @@ protected:
   // TODO Make Name private when possible.
   StringRef Name;
   SectionVariant Variant;
-  SectionKind Kind;
 
-  MCSection(SectionVariant V, StringRef Name, SectionKind K, MCSymbol *Begin);
+  MCSection(SectionVariant V, StringRef Name, bool IsText, MCSymbol *Begin);
   ~MCSection();
 
 public:
@@ -134,7 +135,7 @@ public:
   MCSection &operator=(const MCSection &) = delete;
 
   StringRef getName() const { return Name; }
-  SectionKind getKind() const { return Kind; }
+  bool isText() const { return IsText; }
 
   SectionVariant getVariant() const { return Variant; }
 
