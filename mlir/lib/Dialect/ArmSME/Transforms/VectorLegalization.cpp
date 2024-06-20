@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/OneToNFuncConversions.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
@@ -373,6 +374,130 @@ struct LegalizeTransferWriteOpsByDecomposition
   }
 };
 
+/// Legalize a multi-tile transfer_write as a single store loop. This is done as
+/// part of type decomposition as at this level we know each tile write is
+/// disjoint, but that information is lost after decomposition (without
+/// static analysis).
+///
+/// Example (in pseudo-MLIR):
+///
+/// ```
+/// vector.transfer_write vector, dest[x, y], mask
+///   : vector<[16]x[4]xf32>, memref<?x?xf32>
+/// ```
+/// Is rewritten to:
+/// ```
+/// for i in range (0, 4 * vscale) {
+///   let sliceRow = i + tile_n.row * vscale;              ─┐
+///   let sliceCol = tile_n.col * vscale;                   |
+///   slice = vector.extract tile_n[i]                      |
+///     : vector<[4]xf32> from vector<[16]x[4]xf32>         |
+///   slice_mask = vector.extract mask[sliceRow]            |- Repeated 4x for
+///     : vector<[4]xi1> from vector<[16]x[4]xi1>           |  all tiles in
+///   vector.transfer_write                                 |  [16]x[4]
+///     slice, dest[x + sliceRow, y + sliceCol], slice_mask |
+///     : vector<[4]xf32>, memref<?x?xf32>                  ┘
+/// }
+/// ```
+struct LegalizeMultiTileTransferWriteAsStoreLoop
+    : public OneToNOpConversionPattern<vector::TransferWriteOp> {
+  using OneToNOpConversionPattern::OneToNOpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransferWriteOp writeOp, OpAdaptor adaptor,
+                  OneToNPatternRewriter &rewriter) const override {
+    if (writeOp.hasPureTensorSemantics())
+      return rewriter.notifyMatchFailure(
+          writeOp, "TODO: tensor semantics are unsupported");
+
+    auto permutationMap = writeOp.getPermutationMap();
+    if (!permutationMap.isPermutation())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         kMatchFailureNonPermutationMap);
+
+    bool transposed = !permutationMap.isIdentity();
+    if (transposed)
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "TODO: transpose unsupported");
+
+    auto vectorType = writeOp.getVectorType();
+    if (!isMultipleOfSMETileVectorType(vectorType))
+      return rewriter.notifyMatchFailure(writeOp,
+                                         kMatchFailureNotSMETileTypeMultiple);
+
+    auto mask = writeOp.getMask();
+    if (!isSupportedMaskOp(mask) || (mask && (vectorType.getDimSize(0) > 16 ||
+                                              vectorType.getDimSize(1) > 16)))
+      return rewriter.notifyMatchFailure(writeOp,
+                                         kMatchFailureUnsupportedMaskOp);
+
+    auto loc = writeOp.getLoc();
+    auto vscale = rewriter.create<vector::VectorScaleOp>(loc);
+    auto createVscaleMultiple = [&](int64_t multiplier) {
+      return rewriter.create<arith::MulIOp>(
+          loc, vscale,
+          rewriter.create<arith::ConstantIndexOp>(loc, multiplier));
+    };
+
+    // Get SME tile and slice types.
+    auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
+    auto minTileSlices = smeTileType.getDimSize(0);
+    VectorType sliceMaskType =
+        VectorType::get(minTileSlices, rewriter.getI1Type(), true);
+
+    // Create loop over all tile slices.
+    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto upperBound = createVscaleMultiple(minTileSlices);
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto storeLoop =
+        rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+    rewriter.setInsertionPointToStart(storeLoop.getBody());
+
+    // For each tile sub-tile of the multi-tile `vectorType`.
+    auto inputSMETiles = adaptor.getVector();
+    auto inductionVar = storeLoop.getInductionVar();
+    for (auto [index, smeTile] : llvm::enumerate(
+             decomposeToSMETiles(rewriter, vectorType, smeTileType))) {
+      // The coordinates of the tile within `vectorType`.
+      auto tileRow = createVscaleMultiple(smeTile.row);
+      auto tileCol = createVscaleMultiple(smeTile.col);
+
+      // The current slice of `vectorType` we are processing.
+      auto sliceIndex =
+          rewriter.create<arith::AddIOp>(loc, tileRow, inductionVar);
+
+      // Where in the destination memref the current slice will be stored.
+      auto storeRow = rewriter.create<arith::AddIOp>(loc, sliceIndex,
+                                                     writeOp.getIndices()[0]);
+      auto storeCol =
+          rewriter.create<arith::AddIOp>(loc, tileCol, writeOp.getIndices()[1]);
+
+      // Extract the mask for the current slice.
+      Value sliceMask = nullptr;
+      if (mask) {
+        sliceMask = rewriter.create<vector::ExtractOp>(
+            loc, mask, OpFoldResult(sliceIndex));
+        if (sliceMaskType != sliceMask.getType())
+          sliceMask = rewriter.create<vector::ScalableExtractOp>(
+              loc, sliceMaskType, sliceMask, smeTile.col);
+      }
+
+      // Extract and store the current slice slice.
+      Value tile = inputSMETiles[index];
+      auto slice = rewriter.create<vector::ExtractOp>(loc, tile, inductionVar);
+      rewriter.create<vector::TransferWriteOp>(
+          loc, slice, writeOp.getSource(), ValueRange{storeRow, storeCol},
+          AffineMapAttr::get(writeOp.getPermutationMap().dropResult(0)),
+          sliceMask,
+          rewriter.getBoolArrayAttr(
+              ArrayRef<bool>(writeOp.getInBoundsValues()).drop_front()));
+    }
+
+    rewriter.eraseOp(writeOp);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // ArmSME-specific fixup canonicalizations/folds
 //===----------------------------------------------------------------------===//
@@ -663,9 +788,12 @@ struct VectorLegalizationPass
     patterns.add<FoldExtractFromVectorOfSMELikeCreateMasks,
                  LiftIllegalVectorTransposeToMemory,
                  ConvertIllegalShapeCastOpsToTransposes>(context);
-    // Note: High benefit to ensure masked outer products are lowered first.
-    patterns.add<LegalizeMaskedVectorOuterProductOpsByDecomposition>(
-        converter, context, 1024);
+    // Note: These two patterns are added with a high benefit to ensure:
+    //  - Masked outer products are handled before unmasked ones
+    //  - Multi-tile writes are lowered as a store loop (if possible)
+    patterns.add<LegalizeMaskedVectorOuterProductOpsByDecomposition,
+                 LegalizeMultiTileTransferWriteAsStoreLoop>(converter, context,
+                                                            /*benefit=*/1024);
     patterns.add<LegalizeArithConstantOpsByDecomposition,
                  LegalizeVectorOuterProductOpsByDecomposition,
                  LegalizeTransferReadOpsByDecomposition,
