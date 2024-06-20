@@ -246,7 +246,7 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
 
 void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
   OS << "\t.amd_kernel_code_t\n";
-  Header.EmitKernelCodeT(OS, getContext());
+  Header.EmitKernelCodeT(OS, getContext(), llvm::AMDGPUMCExprPrint);
   OS << "\t.end_amd_kernel_code_t\n";
 }
 
