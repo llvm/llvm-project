@@ -1740,13 +1740,14 @@ struct DropUnitDimFromBroadcastOp final
     auto broadcastedUnitDims = broadcastOp.computeBroadcastedUnitDims();
     // Reversing allows us to remove dims from the back without keeping track of
     // removed dimensions.
-    for (const auto &dim :
+    for (const auto [reversedIndex, dim] :
          llvm::enumerate(llvm::reverse(srcVecTy.getShape()))) {
-      if (dim.value() == 1 &&
-          !srcVecTy.getScalableDims()[srcVecTy.getRank() - dim.index() - 1] &&
-          !broadcastedUnitDims.contains(srcVecTy.getRank() - dim.index() - 1)) {
-        srcVecTyBuilder.dropDim(srcVecTy.getRank() - dim.index() - 1);
-        resVecTyBuilder.dropDim(resVecTy.getRank() - dim.index() - 1);
+      unsigned srcDimIndex = srcVecTy.getRank() - reversedIndex - 1;
+      unsigned resDimIndex = resVecTy.getRank() - reversedIndex - 1;
+      if (dim == 1 && !srcVecTy.getScalableDims()[srcDimIndex] &&
+            !broadcastedUnitDims.contains(srcDimIndex)) {
+        srcVecTyBuilder.dropDim(srcDimIndex);
+        resVecTyBuilder.dropDim(resDimIndex);
       }
     }
 
