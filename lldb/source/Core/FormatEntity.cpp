@@ -1413,6 +1413,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           }
           // END SWIFT
           if (return_valobj_sp) {
+            if (llvm::Error error = return_valobj_sp->Dump(s)) {
+              s << "error: " << toString(std::move(error));
+              return false;
+            }
             return true;
           }
         }
@@ -1429,7 +1433,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           ExpressionVariableSP expression_var_sp =
               StopInfo::GetExpressionVariable(stop_info_sp);
           if (expression_var_sp && expression_var_sp->GetValueObject()) {
-            expression_var_sp->GetValueObject()->Dump(s);
+            if (llvm::Error error =
+                    expression_var_sp->GetValueObject()->Dump(s)) {
+              s << "error: " << toString(std::move(error));
+              return false;
+            }
             return true;
           }
         }

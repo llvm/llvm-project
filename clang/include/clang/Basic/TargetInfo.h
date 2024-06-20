@@ -1402,11 +1402,6 @@ public:
     return true;
   }
 
-  /// For given feature return dependent ones.
-  virtual StringRef getFeatureDependencies(StringRef Feature) const {
-    return StringRef();
-  }
-
   struct BranchProtectionInfo {
     LangOptions::SignReturnAddressScopeKind SignReturnAddr;
     LangOptions::SignReturnAddressKeyKind SignKey;
