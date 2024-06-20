@@ -156,7 +156,7 @@ omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
 // CHECK:           call void @bar(ptr getelementptr (double, ptr @_QQfoo, i64 222))
 llvm.func @lower_region_with_addressof() {
   %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x !llvm.array<1 x array<1 x f64>> {bindc_name = "u1"} : (i64) -> !llvm.ptr
+  %1 = llvm.alloca %0 x f64 {bindc_name = "u1"} : (i64) -> !llvm.ptr
   %2 = llvm.mlir.constant(0 : index) : i64
   %3 = llvm.mlir.constant(4 : i32) : i32
   %4 = llvm.mlir.constant(1.000000e+00 : f64) : f64
@@ -179,7 +179,7 @@ llvm.func @lower_region_with_addressof() {
 omp.private {type = private} @_QFlower_region_with_addressof_privatizer : !llvm.ptr alloc {
 ^bb0(%arg0: !llvm.ptr):
   %0 = llvm.mlir.constant(1 : i64) : i64
-    %1 = llvm.alloca %0 x !llvm.array<1 x array<1 x f64>> {bindc_name = "u1", pinned} : (i64) -> !llvm.ptr
+    %1 = llvm.alloca %0 x f64 {bindc_name = "u1", pinned} : (i64) -> !llvm.ptr
   %2 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
   omp.yield(%2 : !llvm.ptr)
 }
