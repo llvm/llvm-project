@@ -804,6 +804,19 @@ bool mlir::cir::isAnyFloatingPointType(mlir::Type t) {
 }
 
 //===----------------------------------------------------------------------===//
+// Floating-point and Float-point Vecotr type helpers
+//===----------------------------------------------------------------------===//
+
+bool mlir::cir::isFPOrFPVectorTy(mlir::Type t) {
+
+  if (isa<mlir::cir::VectorType>(t)) {
+    return isAnyFloatingPointType(
+        t.dyn_cast<mlir::cir::VectorType>().getEltType());
+  }
+  return isAnyFloatingPointType(t);
+}
+
+//===----------------------------------------------------------------------===//
 // FuncType Definitions
 //===----------------------------------------------------------------------===//
 

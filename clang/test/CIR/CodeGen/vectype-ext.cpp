@@ -25,7 +25,7 @@ void vector_int_test(int x) {
   // CIR: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<!s32i x 4>
   // LLVM:      %[[#X1:]] = load i32, ptr %{{[0-9]+}}, align 4
   // LLVM-NEXT: %[[#X2:]] = load i32, ptr %{{[0-9]+}}, align 4
-  // LLVM-NEXT: %[[#SUM:]] = add i32 %[[#X2]], 1
+  // LLVM-NEXT: %[[#SUM:]] = add nsw i32 %[[#X2]], 1
   // LLVM-NEXT: %[[#VEC1:]] = insertelement <4 x i32> undef, i32 %[[#X1]], i64 0
   // LLVM-NEXT: %[[#VEC2:]] = insertelement <4 x i32> %[[#VEC1]], i32 5, i64 1
   // LLVM-NEXT: %[[#VEC3:]] = insertelement <4 x i32> %[[#VEC2]], i32 6, i64 2
@@ -38,7 +38,7 @@ void vector_int_test(int x) {
   // CIR: %{{[0-9]+}} = cir.vec.create(%{{[0-9]+}}, %{{[0-9]+}}, %[[#zero]], %[[#zero]] : !s32i, !s32i, !s32i, !s32i) : !cir.vector<!s32i x 4>
   // LLVM:      %[[#X1:]] = load i32, ptr %{{[0-9]+}}, align 4
   // LLVM-NEXT: %[[#X2:]] = load i32, ptr %{{[0-9]+}}, align 4
-  // LLVM-NEXT: %[[#SUM:]] = add i32 %[[#X2]], 1
+  // LLVM-NEXT: %[[#SUM:]] = add nsw i32 %[[#X2]], 1
   // LLVM-NEXT: %[[#VEC1:]] = insertelement <4 x i32> undef, i32 %[[#X1]], i64 0
   // LLVM-NEXT: %[[#VEC2:]] = insertelement <4 x i32> %[[#VEC1]], i32 %[[#SUM]], i64 1
   // LLVM-NEXT: %[[#VEC3:]] = insertelement <4 x i32> %[[#VEC2]], i32 0, i64 2
@@ -84,14 +84,14 @@ void vector_int_test(int x) {
   a[x] += a[0];
   // CIR: %[[#RHSCA:]] = cir.vec.extract %{{[0-9]+}}[%{{[0-9]+}} : !s32i] : !cir.vector<!s32i x 4>
   // CIR: %[[#LHSCA:]] = cir.vec.extract %{{[0-9]+}}[%{{[0-9]+}} : !s32i] : !cir.vector<!s32i x 4>
-  // CIR: %[[#SUMCA:]] = cir.binop(add, %[[#LHSCA]], %[[#RHSCA]]) : !s32i
+  // CIR: %[[#SUMCA:]] = cir.binop(add, %[[#LHSCA]], %[[#RHSCA]]) nsw : !s32i
   // CIR: cir.vec.insert %[[#SUMCA]], %{{[0-9]+}}[%{{[0-9]+}} : !s32i] : !cir.vector<!s32i x 4>
   // LLVM:      %[[#A1:]] = load <4 x i32>, ptr %{{[0-9]+}}, align 16
   // LLVM-NEXT: %[[#RHSCA:]] = extractelement <4 x i32> %[[#A1]], i32 0
   // LLVM-NEXT: %[[#X:]] = load i32, ptr %{{[0-9]+}}, align 4
   // LLVM-NEXT: %[[#A2:]] = load <4 x i32>, ptr %{{[0-9]+}}, align 16
   // LLVM-NEXT: %[[#LHSCA:]] = extractelement <4 x i32> %[[#A2]], i32 %[[#X]]
-  // LLVM-NEXT: %[[#SUMCA:]] = add i32 %[[#LHSCA]], %[[#RHSCA]]
+  // LLVM-NEXT: %[[#SUMCA:]] = add nsw i32 %[[#LHSCA]], %[[#RHSCA]]
   // LLVM-NEXT: %[[#A3:]] = load <4 x i32>, ptr %{{[0-9]+}}, align 16
   // LLVM-NEXT: %[[#RES:]] = insertelement <4 x i32> %[[#A3]], i32 %[[#SUMCA]], i32 %[[#X]]
   // LLVM-NEXT: store <4 x i32> %[[#RES]], ptr %{{[0-9]+}}, align 16

@@ -49,7 +49,7 @@ void vector_int_test(int x) {
   // CHECK: %[[#LOADCAIDX2:]] = cir.load %{{[0-9]+}} : !cir.ptr<!s32i>, !s32i
   // CHECK: %[[#LOADCAVEC3:]] = cir.load %{{[0-9]+}} : !cir.ptr<!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
   // CHECK: %[[#LHSCA:]] = cir.vec.extract %[[#LOADCAVEC3]][%[[#LOADCAIDX2]] : !s32i] : !cir.vector<!s32i x 4>
-  // CHECK: %[[#SUMCA:]] = cir.binop(add, %[[#LHSCA]], %[[#RHSCA]]) : !s32i
+  // CHECK: %[[#SUMCA:]] = cir.binop(add, %[[#LHSCA]], %[[#RHSCA]]) nsw : !s32i
   // CHECK: %[[#LOADCAVEC4:]] = cir.load %{{[0-9]+}} : !cir.ptr<!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
   // CHECK: %[[#RESULTCAVEC:]] = cir.vec.insert %[[#SUMCA]], %[[#LOADCAVEC4]][%[[#LOADCAIDX2]] : !s32i] : !cir.vector<!s32i x 4>
   // CHECK: cir.store %[[#RESULTCAVEC]], %{{[0-9]+}} : !cir.vector<!s32i x 4>, !cir.ptr<!cir.vector<!s32i x 4>>

@@ -34,7 +34,7 @@ void vector_int_test(int x) {
   // CHECK: %[[#T45:]] = llvm.mlir.constant(6 : i32) : i32
   // CHECK: %[[#T46:]] = llvm.load %[[#T1]] {alignment = 4 : i64} : !llvm.ptr -> i32
   // CHECK: %[[#T47:]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[#T48:]] = llvm.add %[[#T46]], %[[#T47]]  : i32
+  // CHECK: %[[#T48:]] = llvm.add %[[#T46]], %[[#T47]] overflow<nsw> : i32
   // CHECK: %[[#T49:]] = llvm.mlir.undef : vector<4xi32>
   // CHECK: %[[#T50:]] = llvm.mlir.constant(0 : i64) : i64
   // CHECK: %[[#T51:]] = llvm.insertelement %[[#T43]], %[[#T49]][%[[#T50]] : i64] : vector<4xi32>
@@ -81,7 +81,7 @@ void vector_int_test(int x) {
   // CHECK: %[[#LOADCAIDX2:]] = llvm.load %{{[0-9]+}} {alignment = 4 : i64} : !llvm.ptr -> i32
   // CHECK: %[[#LOADCAVEC3:]] = llvm.load %{{[0-9]+}} {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
   // CHECK: %[[#LHSCA:]] = llvm.extractelement %[[#LOADCAVEC3:]][%[[#LOADCAIDX2:]] : i32] : vector<4xi32>
-  // CHECK: %[[#SUMCA:]] = llvm.add %[[#LHSCA:]], %[[#RHSCA:]] : i32
+  // CHECK: %[[#SUMCA:]] = llvm.add %[[#LHSCA:]], %[[#RHSCA:]] overflow<nsw> : i32
   // CHECK: %[[#LOADCAVEC4:]] = llvm.load %{{[0-9]+}} {alignment = 16 : i64} : !llvm.ptr -> vector<4xi32>
   // CHECK: %[[#RESULTCAVEC:]] = llvm.insertelement %[[#SUMCA:]], %[[#LOADCAVEC4:]][%[[#LOADCAIDX2:]] : i32] : vector<4xi32>
   // CHECK: llvm.store %[[#RESULTCAVEC:]], %{{[0-9]+}} {alignment = 16 : i64} : vector<4xi32>, !llvm.ptr

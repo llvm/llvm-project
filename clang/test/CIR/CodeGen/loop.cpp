@@ -27,13 +27,13 @@ void l1() {
 // CHECK-NEXT: } body {
 // CHECK-NEXT:   %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:   %5 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
+// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) nsw : !s32i
 // CHECK-NEXT:   cir.store %6, %0 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT:   %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:   %5 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
+// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) nsw : !s32i
 // CHECK-NEXT:   cir.store %6, %2 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: }
@@ -59,7 +59,7 @@ void l2(bool cond) {
 // CHECK-NEXT:     } do {
 // CHECK-NEXT:       %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:       %4 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:       %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:       %5 = cir.binop(add, %3, %4) nsw : !s32i
 // CHECK-NEXT:       cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     }
@@ -71,7 +71,7 @@ void l2(bool cond) {
 // CHECK-NEXT:     } do {
 // CHECK-NEXT:       %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:       %4 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:       %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:       %5 = cir.binop(add, %3, %4) nsw : !s32i
 // CHECK-NEXT:       cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     }
@@ -84,7 +84,7 @@ void l2(bool cond) {
 // CHECK-NEXT:     } do {
 // CHECK-NEXT:       %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:       %4 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:       %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:       %5 = cir.binop(add, %3, %4) nsw : !s32i
 // CHECK-NEXT:       cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:       cir.yield
 // CHECK-NEXT:     }
@@ -108,7 +108,7 @@ void l3(bool cond) {
 // CHECK-NEXT:   cir.do {
 // CHECK-NEXT:     %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:     %4 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) nsw : !s32i
 // CHECK-NEXT:     cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   } while {
@@ -120,7 +120,7 @@ void l3(bool cond) {
 // CHECK-NEXT:   cir.do {
 // CHECK-NEXT:     %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:     %4 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) nsw : !s32i
 // CHECK-NEXT:     cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   } while {
@@ -132,7 +132,7 @@ void l3(bool cond) {
 // CHECK-NEXT:   cir.do {
 // CHECK-NEXT:     %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:     %4 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) : !s32i
+// CHECK-NEXT:     %5 = cir.binop(add, %3, %4) nsw : !s32i
 // CHECK-NEXT:     cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   } while {
@@ -159,7 +159,7 @@ void l4() {
 // CHECK-NEXT: } do {
 // CHECK-NEXT:   %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:   %5 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
+// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) nsw  : !s32i
 // CHECK-NEXT:   cir.store %6, %0 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     %10 = cir.load %0 : !cir.ptr<!s32i>, !s32i

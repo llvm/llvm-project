@@ -171,8 +171,21 @@ public:
     return createBinop(lhs, mlir::cir::BinOpKind::Or, rhs);
   }
 
-  mlir::Value createMul(mlir::Value lhs, mlir::Value rhs) {
-    return createBinop(lhs, mlir::cir::BinOpKind::Mul, rhs);
+  mlir::Value createMul(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
+                        bool hasNSW = false) {
+    auto op = create<mlir::cir::BinOp>(lhs.getLoc(), lhs.getType(),
+                                       mlir::cir::BinOpKind::Mul, lhs, rhs);
+    if (hasNUW)
+      op.setNoUnsignedWrap(true);
+    if (hasNSW)
+      op.setNoSignedWrap(true);
+    return op;
+  }
+  mlir::Value createNSWMul(mlir::Value lhs, mlir::Value rhs) {
+    return createMul(lhs, rhs, false, true);
+  }
+  mlir::Value createNUWAMul(mlir::Value lhs, mlir::Value rhs) {
+    return createMul(lhs, rhs, true, false);
   }
 
   mlir::Value createMul(mlir::Value lhs, llvm::APInt rhs) {
@@ -233,6 +246,28 @@ public:
 
   mlir::Value createNSWSub(mlir::Value lhs, mlir::Value rhs) {
     return createSub(lhs, rhs, false, true);
+  }
+
+  mlir::Value createNUWSub(mlir::Value lhs, mlir::Value rhs) {
+    return createSub(lhs, rhs, true, false);
+  }
+
+  mlir::Value createAdd(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
+                        bool hasNSW = false) {
+    auto op = create<mlir::cir::BinOp>(lhs.getLoc(), lhs.getType(),
+                                       mlir::cir::BinOpKind::Add, lhs, rhs);
+    if (hasNUW)
+      op.setNoUnsignedWrap(true);
+    if (hasNSW)
+      op.setNoSignedWrap(true);
+    return op;
+  }
+
+  mlir::Value createNSWAdd(mlir::Value lhs, mlir::Value rhs) {
+    return createAdd(lhs, rhs, false, true);
+  }
+  mlir::Value createNUWAdd(mlir::Value lhs, mlir::Value rhs) {
+    return createAdd(lhs, rhs, true, false);
   }
 
   struct BinOpOverflowResults {
