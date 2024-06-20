@@ -659,7 +659,11 @@ int clangTidyMain(int argc, const char **argv) {
     return 0;
   }
 
-  if (EnabledChecks.empty() && !AllowNoChecks) {
+  if (EnabledChecks.empty()) {
+    if (AllowNoChecks) {
+      llvm::outs() << "No checks enabled.\n";
+      return 0;
+    }
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
     return 1;
