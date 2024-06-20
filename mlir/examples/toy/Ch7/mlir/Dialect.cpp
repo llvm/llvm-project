@@ -498,6 +498,50 @@ mlir::LogicalResult TransposeOp::verify() {
   return mlir::success();
 }
 
+
+//===----------------------------------------------------------------------===//
+// MatmulOp
+//===----------------------------------------------------------------------===//
+void MatmulOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                        mlir::Value lhs, mlir::Value rhs) {
+  state.addTypes(UnrankedTensorType::get(builder.getF64Type()));
+  state.addOperands({lhs,rhs});
+}
+
+void MatmulOp::inferShapes() {
+  auto lhsType = llvm::dyn_cast<RankedTensorType>(getOperand(0).getType());
+  auto rhsType = llvm::dyn_cast<RankedTensorType>(getOperand(1).getType());
+
+  // Ensure that both operands are ranked tensor types
+  if (!lhsType || !rhsType) {
+    emitError("Both operands of MatmulOp must be ranked tensors.");
+    return;
+  }
+  // Get the shapes of the operands
+  ArrayRef<int64_t> lhsShape = lhsType.getShape();
+  ArrayRef<int64_t> rhsShape = rhsType.getShape();
+   // Check that the dimensions are compatible for matrix multiplication
+  if (lhsShape.size() != 2 || rhsShape.size() != 2 || lhsShape[1] != rhsShape[0]) {
+    emitError("MatmulOp requires lhs of shape (m, k) and rhs of shape (k, n).");
+    return;
+  }
+  
+  // Infer the shape of the result
+  SmallVector<int64_t, 2> resultShape = {lhsShape[0], rhsShape[1]};
+  getResult().setType(RankedTensorType::get(resultShape, lhsType.getElementType()));
+
+}
+
+mlir::LogicalResult MatmulOp::verify() {
+  auto inputType = llvm::dyn_cast<RankedTensorType>(getType());
+  auto resultType = llvm::dyn_cast<RankedTensorType>(getType());
+  if (!inputType || !resultType)
+    return mlir::success();
+
+  return mlir::success();
+}
+
+
 //===----------------------------------------------------------------------===//
 // Toy Types
 //===----------------------------------------------------------------------===//
