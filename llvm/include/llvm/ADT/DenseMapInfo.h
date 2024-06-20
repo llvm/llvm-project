@@ -142,7 +142,7 @@ template<> struct DenseMapInfo<unsigned long> {
     if constexpr (sizeof(Val) == 4)
       return DenseMapInfo<unsigned>::getHashValue(Val);
     else
-      return detail::combineHashValue(Val >> 32, Val);
+      return densemap::detail::mix(Val);
   }
 
   static bool isEqual(const unsigned long& LHS, const unsigned long& RHS) {
@@ -156,7 +156,7 @@ template<> struct DenseMapInfo<unsigned long long> {
   static inline unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
 
   static unsigned getHashValue(const unsigned long long& Val) {
-    return detail::combineHashValue(Val >> 32, Val);
+    return densemap::detail::mix(Val);
   }
 
   static bool isEqual(const unsigned long long& LHS,
