@@ -367,8 +367,6 @@ Return a signed pointer for a constant address in a manner which guarantees
 a non-attackable sequence.
 
 ``pointer`` must be a constant expression of pointer type which evaluates to
-a non-null pointer.  The result will have the same type as ``discriminator``.
-``pointer`` must be a constant expression of pointer type which evaluates to
 a non-null pointer.
 ``key``  must be a constant expression of type ``ptrauth_key``.
 ``discriminator`` must be a constant expression of pointer or integer type;
