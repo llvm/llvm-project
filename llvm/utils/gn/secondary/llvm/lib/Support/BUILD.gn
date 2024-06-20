@@ -129,6 +129,7 @@ static_library("Support") {
     "ScaledNumber.cpp",
     "ScopedPrinter.cpp",
     "Signposts.cpp",
+    "SipHash.cpp",
     "SlowDynamicAPInt.cpp",
     "SmallPtrSet.cpp",
     "SmallVector.cpp",

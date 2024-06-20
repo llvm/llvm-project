@@ -161,6 +161,12 @@ def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
   "Has v_minimum3_f16 and v_maximum3_f16 instructions"
 >;
 
+def FeatureMin3Max3PKF16 : SubtargetFeature<"min3-max3-pkf16",
+  "HasMin3Max3PKF16",
+  "true",
+  "Has v_pk_min3_num_f16 and v_pk_max3_num_f16 instructions"
+>;
+
 def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
   "HasMinimum3Maximum3PKF16",
   "true",
@@ -1407,7 +1413,6 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureMaxHardClauseLength32,
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
   ]
 >;
@@ -1902,6 +1907,8 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureBF16PackedInsts,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureFmaMixBF16Insts,
+   FeatureMin3Max3PKF16,
+   FeatureMinimum3Maximum3PKF16,
    FeaturePrngInst,
    FeaturePermlane16Swap,
    FeatureAshrPkInsts,
@@ -1909,7 +1916,6 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureSupportsSRAMECC,
    FeatureMaxHardClauseLength63,
    FeatureWaitXcnt,
-   FeatureMinimum3Maximum3PKF16,
 ]>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2310,6 +2316,10 @@ def HasMinimum3Maximum3F16 :
   Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
 
+def HasMin3Max3PKF16 :
+  Predicate<"Subtarget->hasMin3Max3PKF16()">,
+  AssemblerPredicate<(all_of FeatureMin3Max3PKF16)>;
+
 def HasMinimum3Maximum3PKF16 :
   Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
@@ -2320,7 +2330,9 @@ def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
 
 def HasBufferFlatGlobalAtomicsF64 :
   Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
-  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX12_10Insts)>;
+  // FIXME: This is too coarse, and working around using pseudo's predicates on real instruction.
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, (all_of FeatureGFX10Insts, (not FeatureGFX12Insts)), FeatureSouthernIslands, FeatureSeaIslands, FeatureGFX12_10Insts)>;
+
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
   AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX12_10Insts)>;
@@ -2471,10 +2483,6 @@ def HasPkAddMinMaxInsts :
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
-
-def HasPkMinimumMaximum3F16Insts :
-  Predicate<"Subtarget->hasPkMinimumMaximum3F16Insts()">,
   AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
 
 def HasSGetShaderCyclesInst :

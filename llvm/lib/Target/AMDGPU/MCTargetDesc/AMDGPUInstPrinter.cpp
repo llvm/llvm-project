@@ -56,9 +56,15 @@ void AMDGPUInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printU16ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  if (Op.isExpr()) {
+    Op.getExpr()->print(O, &MAI);
+    return;
+  }
+
   // It's possible to end up with a 32-bit literal used with a 16-bit operand
   // with ignored high bits. Print as 32-bit anyway in that case.
-  int64_t Imm = MI->getOperand(OpNo).getImm();
+  int64_t Imm = Op.getImm();
   if (isInt<16>(Imm) || isUInt<16>(Imm))
     O << formatHex(static_cast<uint64_t>(Imm & 0xffff));
   else
@@ -244,13 +250,12 @@ void AMDGPUInstPrinter::printTH(const MCInst *MI, int64_t TH, int64_t Scope,
 
   const unsigned Opcode = MI->getOpcode();
   const MCInstrDesc &TID = MII.get(Opcode);
-  bool IsStore = TID.mayStore() && !TID.mayLoad();
-  bool IsAtomic =
-      TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
+  unsigned THType = AMDGPU::getTemporalHintType(TID);
+  bool IsStore = (THType == AMDGPU::CPol::TH_TYPE_STORE);
 
   O << " th:";
 
-  if (IsAtomic) {
+  if (THType == AMDGPU::CPol::TH_TYPE_ATOMIC) {
     O << "TH_ATOMIC_";
     if (TH & AMDGPU::CPol::TH_ATOMIC_CASCADE) {
       if (Scope >= AMDGPU::CPol::SCOPE_DEV)
@@ -267,9 +272,6 @@ void AMDGPUInstPrinter::printTH(const MCInst *MI, int64_t TH, int64_t Scope,
     if (!IsStore && TH == AMDGPU::CPol::TH_RESERVED)
       O << formatHex(TH);
     else {
-      // This will default to printing load variants when neither MayStore nor
-      // MayLoad flag is present which is the case with instructions like
-      // image_get_resinfo.
       O << (IsStore ? "TH_STORE_" : "TH_LOAD_");
       switch (TH) {
       case AMDGPU::CPol::TH_NT:

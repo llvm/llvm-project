@@ -632,9 +632,7 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
 }
 
 bool isGenericAtomic(unsigned Opc) {
-  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
-         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
-         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+  return Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||
@@ -651,6 +649,45 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP ||
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
+}
+
+bool isAsyncStore(unsigned Opc) {
+  return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx13 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1210 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx13;
+}
+
+bool isTensorStore(unsigned Opc) {
+  return Opc == TENSOR_STORE_FROM_LDS_gfx1210 ||
+         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1210;
+}
+
+unsigned getTemporalHintType(const MCInstrDesc TID) {
+  if (TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet))
+    return CPol::TH_TYPE_ATOMIC;
+  unsigned Opc = TID.getOpcode();
+  // Async and Tensor store should have the temporal hint type of TH_TYPE_STORE
+  if (TID.mayStore() && (isAsyncStore(Opc) || isTensorStore(Opc) ||
+                         !TID.mayLoad()))
+    return CPol::TH_TYPE_STORE;
+
+  // This will default to returning TH_TYPE_LOAD when neither MayStore nor
+  // MayLoad flag is present which is the case with instructions like
+  // image_get_resinfo.
+  return CPol::TH_TYPE_LOAD;
 }
 
 bool isTrue16Inst(unsigned Opc) {
@@ -3386,13 +3423,13 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
   switch (OpDesc.getOpcode()) {
   case AMDGPU::V_MUL_LO_U32_e64:
   case AMDGPU::V_MUL_LO_U32_e64_dpp:
-  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx12:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx1210:
   case AMDGPU::V_MUL_HI_U32_e64:
   case AMDGPU::V_MUL_HI_U32_e64_dpp:
-  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx12:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx1210:
   case AMDGPU::V_MUL_HI_I32_e64:
   case AMDGPU::V_MUL_HI_I32_e64_dpp:
-  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx12:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx1210:
   case AMDGPU::V_MAD_U32_e64:
   case AMDGPU::V_MAD_U32_e64_dpp:
   case AMDGPU::V_MAD_U32_e64_dpp_gfx1210:
@@ -3403,8 +3440,7 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
-  // Currently this is 128 for all subtargets
-  return 128;
+  return ST.hasFeature(AMDGPU::FeatureLocalMemorySize393216) ? 256 : 128;
 }
 
 } // namespace AMDGPU

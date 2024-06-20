@@ -12,7 +12,7 @@ declare void @llvm.amdgcn.global.store.async.from.lds.b128(ptr addrspace(1) %gad
 define amdgpu_ps void @global_store_async_from_lds_b8_vaddr(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
 ; GFX1210-LABEL: global_store_async_from_lds_b8_vaddr:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_store_async_from_lds_b8 v[0:1], v2, off offset:32 th:TH_LOAD_NT
+; GFX1210-NEXT:    global_store_async_from_lds_b8 v[0:1], v2, off offset:32 th:TH_STORE_NT
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
@@ -35,7 +35,7 @@ entry:
 define amdgpu_ps void @global_store_async_from_lds_b32(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
 ; GFX1210-LABEL: global_store_async_from_lds_b32:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_store_async_from_lds_b32 v[0:1], v2, off offset:32 th:TH_LOAD_HT scope:SCOPE_SE
+; GFX1210-NEXT:    global_store_async_from_lds_b32 v[0:1], v2, off offset:32 th:TH_STORE_HT scope:SCOPE_SE
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
@@ -58,7 +58,7 @@ entry:
 define amdgpu_ps void @global_store_async_from_lds_b64_vaddr(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
 ; GFX1210-LABEL: global_store_async_from_lds_b64_vaddr:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_store_async_from_lds_b64 v[0:1], v2, off offset:32 th:TH_LOAD_NT_HT scope:SCOPE_DEV
+; GFX1210-NEXT:    global_store_async_from_lds_b64 v[0:1], v2, off offset:32 th:TH_STORE_NT_HT scope:SCOPE_DEV
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4
@@ -81,7 +81,7 @@ entry:
 define amdgpu_ps void @global_store_async_from_lds_b128_vaddr(ptr addrspace(1) %gaddr, ptr addrspace(3) %laddr) {
 ; GFX1210-LABEL: global_store_async_from_lds_b128_vaddr:
 ; GFX1210:       ; %bb.0: ; %entry
-; GFX1210-NEXT:    global_store_async_from_lds_b128 v[0:1], v2, off offset:32 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX1210-NEXT:    global_store_async_from_lds_b128 v[0:1], v2, off offset:32 th:TH_STORE_BYPASS scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %gaddr, i32 4

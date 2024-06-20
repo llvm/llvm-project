@@ -1192,7 +1192,7 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
   // operand 0).
   Value *Y;
   ICmpInst::Predicate Pred1;
-  if (!match(Cmp1, m_c_ICmp(Pred1, m_Value(Y), m_Deferred(X))))
+  if (!match(Cmp1, m_c_ICmp(Pred1, m_Value(Y), m_Specific(X))))
     return nullptr;
 
   // Replace variable with constant value equivalence to remove a variable use:
@@ -1550,7 +1550,7 @@ Instruction *InstCombinerImpl::canonicalizeConditionalNegationViaMathToSelect(
   if (!match(&I, m_c_BinOp(m_OneUse(m_Value()), m_Value())) ||
       !match(I.getOperand(1), m_SExt(m_Value(Cond))) ||
       !Cond->getType()->isIntOrIntVectorTy(1) ||
-      !match(I.getOperand(0), m_c_Add(m_SExt(m_Deferred(Cond)), m_Value(X))))
+      !match(I.getOperand(0), m_c_Add(m_SExt(m_Specific(Cond)), m_Value(X))))
     return nullptr;
   return SelectInst::Create(Cond, Builder.CreateNeg(X, X->getName() + ".neg"),
                             X);
@@ -3785,7 +3785,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     const auto TryXorOpt = [&](Value *Lhs, Value *Rhs) -> Instruction * {
       if (match(Lhs, m_c_Xor(m_And(m_Value(A), m_Value(B)), m_Deferred(A))) &&
           match(Rhs,
-                m_c_Xor(m_And(m_Specific(A), m_Specific(B)), m_Deferred(B)))) {
+                m_c_Xor(m_And(m_Specific(A), m_Specific(B)), m_Specific(B)))) {
         return BinaryOperator::CreateXor(A, B);
       }
       return nullptr;

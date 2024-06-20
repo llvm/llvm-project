@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO-GFX13: Add support for global-isel.
+
 //===----------------------------------------------------------------------===//
 // VOPM Encodings
 //===----------------------------------------------------------------------===//
 
-class VOPMProfile<list<ValueType> ArgTy, bit _HasAux = 0, bit _HasClamp = 0> : VOPProfile<ArgTy> {
+class VOPMProfile<list<ValueType> ArgTy, bit _HasAux = 0, bit _HasClamp = 0, bit _HasSSrc = 0> : VOPProfile<ArgTy> {
   bit HasAux = _HasAux;
   let HasClamp = _HasClamp;
+  bit HasSSrc = _HasSSrc;
 
   let HasModifiers = 0;
   let HasOMod = 0;
@@ -49,6 +52,7 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
   bits<11> src0;
   bits<11> src1;
   bits<11> src2;
+  bits<8> ssrc;
   bits<6> aux_data;
 
   bit clamp;
@@ -65,16 +69,18 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
   let Inst{40-32} = src0{8-0};
   let Inst{42-41} = ?;    // src0 cont
   let Inst{44-43} = ?;    // src0_idx
-  let Inst{53-45} = src1{8-0};
+  let Inst{53-45} = !if(pfl.HasSrc1, src1{8-0}, ?);
   let Inst{55-54} = ?;    // src1 cont
   let Inst{57-56} = ?;    // src1_idx
   let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
-  let Inst{72-64} = src2{8-0};
+  let Inst{72-64} = !if(pfl.HasSrc2, src2{8-0}, ?);
   let Inst{74-73} = ?;    // src2 cont
   let Inst{76-75} = ?;    // src2_idx
 
   let Inst{78-77} = ?;    // sparse_sel
-  let Inst{88-79} = ?;    // aux_data1
+  let Inst{87-79} = ?;    // aux_data1
+
+  let Inst{95-88} = !if(pfl.HasSSrc, ssrc, ?);
 }
 
 class VOP5Me <bits<8> op, VOPMProfile pfl> : Enc128 {
@@ -84,6 +90,7 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : Enc128 {
   bits<11> src2;
   bits<10> src3;
   bits<10> src4;
+  bits<8> ssrc;
   bits<6> aux_data;
 
   bit clamp;
@@ -100,16 +107,19 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : Enc128 {
   let Inst{40-32} = src0{8-0};
   let Inst{42-41} = ?;    // src0 cont
   let Inst{44-43} = ?;    // src0_idx
-  let Inst{53-45} = src1{8-0};
+  let Inst{53-45} = !if(pfl.HasSrc1, src1{8-0}, ?);
   let Inst{55-54} = ?;    // src1 cont
   let Inst{57-56} = ?;    // src1_idx
-  let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
+  let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?);
+
   let Inst{72-64} = src2{8-0};
   let Inst{74-73} = ?;    // src2 cont
   let Inst{76-75} = ?;    // src2_idx
 
   let Inst{78-77} = ?;    // sparse_sel
-  let Inst{88-79} = ?;    // aux_data1
+  let Inst{87-79} = ?;    // aux_data1
+
+  let Inst{95-88} = !if(pfl.HasSSrc, ssrc, ?);
 
   let Inst{104-96} = src3{8-0};
   let Inst{105} = ?;     // src3 cont
@@ -185,14 +195,13 @@ def VOPM_I32_I32_AUX : VOP2M_Profile<[i32, i32, untyped, untyped], 1>;
 def VOPM_I32_I32_I64 : VOP2M_Profile<[i32, i32, i64, untyped]>;
 
 class VOP3M_Permute_Profile<list<ValueType> ArgTy> : VOPMProfile<ArgTy, 1> {
-
   let Outs64 = (outs DstRC64:$vdst, Src2RC64:$src2);
   let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, AuxData:$aux_data);
 
   let Asm64 = "$vdst, $src2, $src0, $src1$aux_data";
 }
 
-def VOPM_PERMUTE_I32_I32_I32 : VOP3M_Permute_Profile<[i32, i32, i32, untyped]>;
+def VOPM_PERMUTE_I32_I32_I32_I32 : VOP3M_Permute_Profile<[i32, i32, i32, i32]>;
 
 class Conv_Profile<list<ValueType> ArgTy, int PixelShape, bit FilterType3x3> : VOPMProfile<ArgTy, 1, 1> {
   let Outs64 = (outs DstRC64:$vdst);
@@ -268,6 +277,24 @@ defm VOPM_CONV_I32_IU4 : Conv_Profile_Multi<"i32", "i32">;
 defm VOPM_CONV_F32I32_IU8 : Conv_Profile_Multi<"f32", "i32", "i32">;
 defm VOPM_CONV_F32I32_IU4 : Conv_Profile_Multi<"f32", "i32", "i32">;
 
+class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1, 1> {
+
+  let Outs64 = !cond(!eq(Scatter, 1) : (outs DstRC64:$vdst),
+                     !eq(Scatter, 2) : (outs DstRC64:$vdst, Src2RC64:$src2),
+                     !eq(Scatter, 4) : (outs DstRC64:$vdst, Src2RC64:$src2, Src2RC64:$src3, Src2RC64:$src4));
+
+  // Assuming ssrc supports float constants (SSrc_f32).
+  let Ins64 = !if(HasSrc1, (ins Src0RC64:$src0, SSrc_f32:$ssrc, Src1RC64:$src1, AuxData:$aux_data, Clamp0:$clamp),
+                           (ins Src0RC64:$src0, SSrc_f32:$ssrc, AuxData:$aux_data, Clamp0:$clamp));
+
+  string DestAsm = !cond(!eq(Scatter, 1) : "$vdst",
+                         !eq(Scatter, 2) : "$vdst, $src2",
+                         !eq(Scatter, 4) : "$vdst, $src2, $src3, $src4");
+  string SrcAsm = !if(HasSrc1, "$src0, $ssrc, $src1$aux_data$clamp",
+                               "$src0, $ssrc$aux_data$clamp");
+  let Asm64 = DestAsm#", "#SrcAsm;
+}
+
 class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolower(NAME)> :
   VOP_Pseudo<opName, "", P, P.Outs64, P.Ins64, "", pattern> {
   let mayRaiseFPException = 0;
@@ -287,9 +314,9 @@ def V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOPM_Pseudo<VOPM_I32_I32_I32_AUX,
                                                        [(set i32:$vdst, (int_amdgcn_permute_pair_2src_rotate_group_b32 i32:$src0, i32:$src1, timm:$aux_data))]>;
 
 let SchedRW = [Write32Bit, Write32Bit] in {
-  def V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32,
+  def V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32_I32,
                                                          [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pair_2src_interleave_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
-  def V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32,
+  def V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOPM_Pseudo<VOPM_PERMUTE_I32_I32_I32_I32,
                                                          [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pack_tensor_2src_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
 }
 
@@ -322,6 +349,46 @@ defm V_WCONV_I32_IU8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU8">;
 defm V_WCONV_I32_IU4 : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU4">;
 defm V_WCONV_F32I32_IU8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU8">;
 defm V_WCONV_F32I32_IU4 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU4">;
+
+def V_SCALE_BIAS_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  f32, untyped], 1>,
+                                            [(set v4f32:$vdst, (int_amdgcn_scale_bias_activate_f32 v4f32:$src0, f32:$ssrc, f32:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  v2f16, untyped], 1>,
+                                            [(set v8f16:$vdst, (int_amdgcn_scale_bias_activate_f16 v8f16:$src0, f32:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, v2bf16, untyped], 1>,
+                                            [(set v8bf16:$vdst, (int_amdgcn_scale_bias_activate_bf16 v8bf16:$src0, f32:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+
+let SchedRW = [Write32Bit, Write32Bit] in {
+def V_SCALE_BIAS_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  v2f16, v2f16], 2>,
+                                                     [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_scale_bias_activate_scatter2_f16 v4f16:$src0, f32:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  v2bf16, v2bf16], 2>,
+                                                      [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_scale_bias_activate_scatter2_bf16 v4bf16:$src0, f32:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+}
+let SchedRW = [Write32Bit, Write32Bit, Write32Bit, Write32Bit] in {
+def V_SCALE_BIAS_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  v2f16, v2f16], 4>,
+                                                     [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_scale_bias_activate_scatter4_f16 v8f16:$src0, f32:$ssrc, v2f16:$src1, timm:$aux_data, i1:$clamp))]>;
+def V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  v2bf16, v2bf16], 4>,
+                                                      [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_scale_bias_activate_scatter4_bf16 v8bf16:$src0, f32:$ssrc, v2bf16:$src1, timm:$aux_data, i1:$clamp))]>;
+}
+
+def V_UNIFORM_SCALE_ACTIVATE_F32 : VOPM_Pseudo<SBA_Profile<[v4f32, v4f32,  untyped, untyped], 1>,
+                                               [(set v4f32:$vdst, (int_amdgcn_uniform_scale_activate_f32 v4f32:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_F16 : VOPM_Pseudo<SBA_Profile<[v8f16, v8f16,  untyped, untyped], 1>,
+                                               [(set v8f16:$vdst, (int_amdgcn_uniform_scale_activate_f16 v8f16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_BF16 : VOPM_Pseudo<SBA_Profile<[v8bf16, v8bf16, untyped, untyped], 1>,
+                                                [(set v8bf16:$vdst, (int_amdgcn_uniform_scale_activate_bf16 v8bf16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+
+let SchedRW = [Write32Bit, Write32Bit] in {
+def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v4f16,  untyped, v2f16], 2>,
+                                                        [(set v2f16:$vdst, v2f16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_f16 v4f16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v4bf16,  untyped, v2bf16], 2>,
+                                                         [(set v2bf16:$vdst, v2bf16:$src2, (int_amdgcn_uniform_scale_activate_scatter2_bf16 v4bf16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+}
+let SchedRW = [Write32Bit, Write32Bit, Write32Bit, Write32Bit] in {
+def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16 : VOPM_Pseudo<SBA_Profile<[v2f16, v8f16,  untyped, v2f16], 4>,
+                                                        [(set v2f16:$vdst, v2f16:$src2, v2f16:$src3, v2f16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_f16 v8f16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+def V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16 : VOPM_Pseudo<SBA_Profile<[v2bf16, v8bf16,  untyped, v2bf16], 4>,
+                                                         [(set v2bf16:$vdst, v2bf16:$src2, v2bf16:$src3, v2bf16:$src4, (int_amdgcn_uniform_scale_activate_scatter4_bf16 v8bf16:$src0, f32:$ssrc, timm:$aux_data, i1:$clamp))]>;
+}
 
 //===----------------------------------------------------------------------===//
 // VOPM Reals
@@ -395,6 +462,18 @@ multiclass VOP3M_Real_Base<GFXGen Gen, bits<8> op,
 multiclass VOP3M_Real_gfx13 <bits<8> op> : VOP3M_Real_Base <GFX13Gen, op>;
 
 multiclass VOP5M_Real_Base<GFXGen Gen, bits<8> op,
+                           string backing_ps_name = NAME,
+                           string asmName = !cast<VOPM_Pseudo>(NAME).Mnemonic> {
+  defvar ps = !cast<VOPM_Pseudo>(backing_ps_name);
+
+  def Gen.Suffix :
+    VOPM_Real_Gen<ps, Gen, asmName>,
+    VOP5Me<op, !cast<VOPMProfile>(ps.Pfl)> {
+      let AsmString = asmName # ps.Pfl.Asm64;
+  }
+}
+
+multiclass VOP5M_Conv_Real_Base<GFXGen Gen, bits<8> op,
                                 string backing_ps_name = NAME,
                                 string asmName = !cast<VOPM_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOPM_Pseudo>(backing_ps_name);
@@ -412,10 +491,12 @@ multiclass VOP5M_Real_Base<GFXGen Gen, bits<8> op,
 }
 
 multiclass VOP5M_Conv_Real_gfx13<bits<8> op, string psName> {
-  defm _8x4 : VOP5M_Real_Base<GFX13Gen, op, psName#"_3x3_8x4", !tolower(psName)>;
-  defm _4x4 : VOP5M_Real_Base<GFX13Gen, op, psName#"_3x3_4x4", !tolower(psName)>;
-  defm _4x2 : VOP5M_Real_Base<GFX13Gen, op, psName#"_3x3_4x2", !tolower(psName)>;
+  defm _8x4 : VOP5M_Conv_Real_Base<GFX13Gen, op, psName#"_3x3_8x4", !tolower(psName)>;
+  defm _4x4 : VOP5M_Conv_Real_Base<GFX13Gen, op, psName#"_3x3_4x4", !tolower(psName)>;
+  defm _4x2 : VOP5M_Conv_Real_Base<GFX13Gen, op, psName#"_3x3_4x2", !tolower(psName)>;
 }
+
+multiclass VOP5M_Real_gfx13 <bits<8> op> : VOP5M_Real_Base <GFX13Gen, op>;
 
 multiclass VOP6M_Conv_Real_Base<GFXGen Gen, bits<8> op,
                                 string backing_ps_name = NAME,
@@ -475,6 +556,21 @@ defm V_WCONV_I32_IU8 : Conv_Real_gfx13 <0x3c>;
 defm V_WCONV_I32_IU4 : Conv_Real_gfx13 <0x3d>;
 defm V_WCONV_F32I32_IU8 : Conv_Real_gfx13 <0x3e>;
 defm V_WCONV_F32I32_IU4 : Conv_Real_gfx13 <0x3f>;
+
+defm V_SCALE_BIAS_ACTIVATE_F32 : VOP3M_Real_gfx13 <0x80>;
+defm V_SCALE_BIAS_ACTIVATE_F16 : VOP3M_Real_gfx13 <0x81>;
+defm V_SCALE_BIAS_ACTIVATE_BF16 : VOP3M_Real_gfx13 <0x82>;
+defm V_SCALE_BIAS_ACTIVATE_SCATTER2_F16 : VOP3M_Real_gfx13 <0x83>;
+defm V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16 : VOP3M_Real_gfx13 <0x84>;
+defm V_SCALE_BIAS_ACTIVATE_SCATTER4_F16 : VOP5M_Real_gfx13 <0x85>;
+defm V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16 : VOP5M_Real_gfx13 <0x86>;
+defm V_UNIFORM_SCALE_ACTIVATE_F32 : VOP3M_Real_gfx13 <0x87>;
+defm V_UNIFORM_SCALE_ACTIVATE_F16 : VOP3M_Real_gfx13 <0x88>;
+defm V_UNIFORM_SCALE_ACTIVATE_BF16 : VOP3M_Real_gfx13 <0x89>;
+defm V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16 : VOP3M_Real_gfx13 <0x8a>;
+defm V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16 : VOP3M_Real_gfx13 <0x8b>;
+defm V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16 : VOP5M_Real_gfx13 <0x8c>;
+defm V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16 : VOP5M_Real_gfx13 <0x8d>;
 
 //===----------------------------------------------------------------------===//
 // VOPM Patterns

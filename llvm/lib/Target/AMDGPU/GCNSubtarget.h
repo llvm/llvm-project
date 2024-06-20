@@ -254,6 +254,7 @@ protected:
   bool HasMLMathInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
+  bool HasMin3Max3PKF16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1370,6 +1371,10 @@ public:
     return HasMinimum3Maximum3F16;
   }
 
+  bool hasMin3Max3PKF16() const {
+    return HasMin3Max3PKF16;
+  }
+
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
@@ -1479,9 +1484,6 @@ public:
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
   bool hasPkMinMax3Insts() const { return GFX12_10Insts; }
-
-  // \returns true if the target has V_PK_{MINIMUM|MAXIMUM}3_F16 instructions.
-  bool hasPkMinimumMaximum3F16Insts() const { return GFX12_10Insts; }
 
   // \returns true if target has V_CVT_PK_F16_F32 instruction.
   bool hasCvtPkF16Inst() const { return GFX12_10Insts && !GFX13Insts; }

@@ -558,7 +558,7 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
 /// This returns true if there were any known values.
 bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
     Value *V, BasicBlock *BB, PredValueInfo &Result,
-    ConstantPreference Preference, DenseSet<Value *> &RecursionSet,
+    ConstantPreference Preference, SmallPtrSet<Value *, 4> &RecursionSet,
     Instruction *CxtI) {
   const DataLayout &DL = BB->getModule()->getDataLayout();
 

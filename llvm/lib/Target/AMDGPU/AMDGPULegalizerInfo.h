@@ -201,6 +201,8 @@ public:
   Register fixStoreSourceType(MachineIRBuilder &B, Register VData,
                               bool IsFormat) const;
 
+  bool legalizeBufferDiscard(MachineInstr &MI, MachineIRBuilder &B,
+                             Intrinsic::ID IID) const;
   bool legalizeBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, bool IsTyped,
                            bool IsFormat) const;

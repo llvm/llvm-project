@@ -366,6 +366,10 @@ struct EncodingField {
   static ValueType decode(uint64_t Encoded) { return Encoded; }
 };
 
+// Represents a single bit in an encoded value.
+template <unsigned Bit, unsigned D = 0>
+using EncodingBit = EncodingField<Bit, Bit, D>;
+
 // A helper for encoding and decoding multiple fields.
 template <typename... Fields> struct EncodingFields {
   static constexpr uint64_t encode(Fields... Values) {
@@ -945,6 +949,13 @@ LLVM_READONLY
 // Get properties of VOPD X and Y components.
 VOPD::InstInfo
 getVOPDInstInfo(unsigned VOPDOpcode, const MCInstrInfo *InstrInfo);
+
+LLVM_READONLY
+bool isAsyncStore(unsigned Opc);
+LLVM_READONLY
+bool isTensorStore(unsigned Opc);
+LLVM_READONLY
+unsigned getTemporalHintType(const MCInstrDesc TID);
 
 LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);

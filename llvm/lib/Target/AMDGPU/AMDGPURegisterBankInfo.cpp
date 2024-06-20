@@ -3063,6 +3063,13 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     executeInWaterfallLoop(B, MI, {1, 4});
     return;
   }
+  case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B32:
+  case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B128:
+  case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B1024: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(B, MI, {0, 3});
+    return;
+  }
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB:
@@ -3080,7 +3087,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   }
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
-  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {
     applyDefaultMapping(OpdMapper);
@@ -4423,6 +4429,23 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // initialized.
     break;
   }
+  case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B32:
+  case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B128:
+  case AMDGPU::G_AMDGPU_BUFFER_DISCARD_B1024: {
+    // rsrc
+    OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+
+    // vindex
+    OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+
+    // voffset
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+
+    // soffset
+    OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+
+    break;
+  }
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB:
@@ -4436,7 +4459,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:
-  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN:
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX: {
     // vdata_out
@@ -5363,6 +5385,29 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[5] = getSGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
       break;
     }
+    case Intrinsic::amdgcn_raw_buffer_discard_b32:
+    case Intrinsic::amdgcn_raw_buffer_discard_b128:
+    case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+    case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+    case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+    case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024: {
+      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+      break;
+    }
+    case Intrinsic::amdgcn_struct_buffer_discard_b32:
+    case Intrinsic::amdgcn_struct_buffer_discard_b128:
+    case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+    case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+    case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+    case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024: {
+      OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+      break;
+    }
     case Intrinsic::amdgcn_init_exec_from_input: {
       unsigned Size = getSizeInBits(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
@@ -5539,6 +5584,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_pops_exiting_wave_id:
+    case Intrinsic::amdgcn_tensor_load_to_lds_d2:
+    case Intrinsic::amdgcn_tensor_store_from_lds_d2:
+    case Intrinsic::amdgcn_tensor_load_to_lds:
+    case Intrinsic::amdgcn_tensor_store_from_lds:
       return getDefaultMappingSOP(MI);
     default:
       return getInvalidInstructionMapping();
@@ -5617,11 +5666,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_UMAX:
   case AMDGPU::G_ATOMICRMW_UMIN:
   case AMDGPU::G_ATOMICRMW_FADD:
+  case AMDGPU::G_ATOMICRMW_FMIN:
+  case AMDGPU::G_ATOMICRMW_FMAX:
   case AMDGPU::G_ATOMICRMW_UINC_WRAP:
   case AMDGPU::G_ATOMICRMW_UDEC_WRAP:
-  case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG:
-  case AMDGPU::G_AMDGPU_ATOMIC_FMIN:
-  case AMDGPU::G_AMDGPU_ATOMIC_FMAX: {
+  case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG: {
     OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
     OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);

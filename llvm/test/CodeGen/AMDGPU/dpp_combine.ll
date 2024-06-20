@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,PRE-GFX11
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,PRE-GFX11
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX11
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX11
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck %s -check-prefixes=GCN,GFX1210
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1210 -verify-machineinstrs < %s | FileCheck %s -check-prefix=GCN
 
 ; GCN-LABEL: {{^}}dpp_add:
 ; GCN: global_load_{{dword|b32}} [[V:v[0-9]+]],
@@ -48,16 +48,14 @@ define amdgpu_kernel void @dpp_fadd(ptr addrspace(1) %arg) {
   ret void
 }
 
-; Fails to combine because v_mul_lo_u32 has no e32 or dpp form.
+; Fails to combine prior to gfx1210 because v_mul_lo_u32 has no e32 or dpp form.
+; Fails to combine on gfx1210 because DPP control value is invalid for DP DPP and v_mul_lo_u32 is
+; classified as DP DPP.
 ; GCN-LABEL: {{^}}dpp_mul:
 ; GCN: global_load_{{dword|b32}} [[V:v[0-9]+]],
-; PRE-GFX11: v_mov_b32_e32 [[V2:v[0-9]+]], [[V]]
-; PRE-GFX11: v_mov_b32_dpp [[V2]], [[V2]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
-; PRE-GFX11: v_mul_lo_u32 [[V]], [[V2]], [[V]]{{$}}
-; GFX11: v_mul_lo_u32_e64_dpp [[V]], [[V]], [[V]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
-; GFX1210: v_mov_b32_e32 [[V2:v[0-9]+]], [[V]]
-; GFX1210: v_mov_b32_dpp [[V2]], [[V2]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
-; GFX1210: v_mul_lo_u32 [[V]], [[V2]], [[V]]{{$}}
+; GCN: v_mov_b32_e32 [[V2:v[0-9]+]], [[V]]
+; GCN: v_mov_b32_dpp [[V2]], [[V2]] quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1{{$}}
+; GCN: v_mul_lo_u32 [[V]], [[V2]], [[V]]{{$}}
 define amdgpu_kernel void @dpp_mul(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds i32, ptr addrspace(1) %arg, i32 %id

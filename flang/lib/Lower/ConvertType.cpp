@@ -212,7 +212,7 @@ struct TypeBuilderImpl {
   }
 
   mlir::Type genTypelessExprType(const Fortran::lower::SomeExpr &expr) {
-    return std::visit(
+    return Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::BOZLiteralConstant &) -> mlir::Type {
               return mlir::NoneType::get(context);

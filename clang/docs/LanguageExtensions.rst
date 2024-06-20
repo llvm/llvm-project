@@ -2063,7 +2063,7 @@ Objective-C @available
 ----------------------
 
 It is possible to use the newest SDK but still build a program that can run on
-older versions of macOS and iOS by passing ``-mmacosx-version-min=`` /
+older versions of macOS and iOS by passing ``-mmacos-version-min=`` /
 ``-miphoneos-version-min=``.
 
 Before LLVM 5.0, when calling a function that exists only in the OS that's
@@ -2084,7 +2084,7 @@ When a method that's introduced in the OS newer than the target OS is called, a
 
   void my_fun(NSSomeClass* var) {
     // If fancyNewMethod was added in e.g. macOS 10.12, but the code is
-    // built with -mmacosx-version-min=10.11, then this unconditional call
+    // built with -mmacos-version-min=10.11, then this unconditional call
     // will emit a -Wunguarded-availability warning:
     [var fancyNewMethod];
   }

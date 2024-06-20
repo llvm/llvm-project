@@ -1389,6 +1389,8 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
   /// }
 
 private:
+  void createConstantSymbol(StringRef Id, int64_t Val);
+
   bool ParseAsAbsoluteExpression(uint32_t &Ret);
   bool OutOfRangeError(SMRange Range);
   /// Calculate VGPR/SGPR blocks required for given target, reserved
@@ -1483,36 +1485,28 @@ public:
 
     setAvailableFeatures(ComputeAvailableFeatures(getFeatureBits()));
 
-    {
-      // TODO: make those pre-defined variables read-only.
-      // Currently there is none suitable machinery in the core llvm-mc for this.
-      // MCSymbol::isRedefinable is intended for another purpose, and
-      // AsmParser::parseDirectiveSet() cannot be specialized for specific target.
-      AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
-      MCContext &Ctx = getContext();
-      if (ISA.Major >= 6 && isHsaAbi(getSTI())) {
-        MCSymbol *Sym =
-            Ctx.getOrCreateSymbol(Twine(".amdgcn.gfx_generation_number"));
-        Sym->setVariableValue(MCConstantExpr::create(ISA.Major, Ctx));
-        Sym = Ctx.getOrCreateSymbol(Twine(".amdgcn.gfx_generation_minor"));
-        Sym->setVariableValue(MCConstantExpr::create(ISA.Minor, Ctx));
-        Sym = Ctx.getOrCreateSymbol(Twine(".amdgcn.gfx_generation_stepping"));
-        Sym->setVariableValue(MCConstantExpr::create(ISA.Stepping, Ctx));
-      } else {
-        MCSymbol *Sym =
-            Ctx.getOrCreateSymbol(Twine(".option.machine_version_major"));
-        Sym->setVariableValue(MCConstantExpr::create(ISA.Major, Ctx));
-        Sym = Ctx.getOrCreateSymbol(Twine(".option.machine_version_minor"));
-        Sym->setVariableValue(MCConstantExpr::create(ISA.Minor, Ctx));
-        Sym = Ctx.getOrCreateSymbol(Twine(".option.machine_version_stepping"));
-        Sym->setVariableValue(MCConstantExpr::create(ISA.Stepping, Ctx));
-      }
-      if (ISA.Major >= 6 && isHsaAbi(getSTI())) {
-        initializeGprCountSymbol(IS_VGPR);
-        initializeGprCountSymbol(IS_SGPR);
-      } else
-        KernelScope.initialize(getContext());
+    AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
+    if (ISA.Major >= 6 && isHsaAbi(getSTI())) {
+      createConstantSymbol(".amdgcn.gfx_generation_number", ISA.Major);
+      createConstantSymbol(".amdgcn.gfx_generation_minor", ISA.Minor);
+      createConstantSymbol(".amdgcn.gfx_generation_stepping", ISA.Stepping);
+    } else {
+      createConstantSymbol(".option.machine_version_major", ISA.Major);
+      createConstantSymbol(".option.machine_version_minor", ISA.Minor);
+      createConstantSymbol(".option.machine_version_stepping", ISA.Stepping);
     }
+    if (ISA.Major >= 6 && isHsaAbi(getSTI())) {
+      initializeGprCountSymbol(IS_VGPR);
+      initializeGprCountSymbol(IS_SGPR);
+    } else
+      KernelScope.initialize(getContext());
+
+    for (auto [Symbol, Code] : AMDGPU::UCVersion::getGFXVersions())
+      createConstantSymbol(Symbol, Code);
+
+    createConstantSymbol("UC_VERSION_W64_BIT", 0x2000);
+    createConstantSymbol("UC_VERSION_W32_BIT", 0x4000);
+    createConstantSymbol("UC_VERSION_MDP_BIT", 0x8000);
   }
 
   bool hasMIMG_R128() const {
@@ -1844,6 +1838,7 @@ private:
   bool validateMIMGDataSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGAddrSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGD16(const MCInst &Inst);
+  bool validateTensorR128(const MCInst &Inst);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
   bool validateNeg(const MCInst &Inst, int OpName);
@@ -2612,6 +2607,16 @@ bool AMDGPUOperand::isInlineValue() const {
 //===----------------------------------------------------------------------===//
 // AsmParser
 //===----------------------------------------------------------------------===//
+
+void AMDGPUAsmParser::createConstantSymbol(StringRef Id, int64_t Val) {
+  // TODO: make those pre-defined variables read-only.
+  // Currently there is none suitable machinery in the core llvm-mc for this.
+  // MCSymbol::isRedefinable is intended for another purpose, and
+  // AsmParser::parseDirectiveSet() cannot be specialized for specific target.
+  MCContext &Ctx = getContext();
+  MCSymbol *Sym = Ctx.getOrCreateSymbol(Id);
+  Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+}
 
 static int getRegClass(RegisterKind Is, unsigned RegWidth) {
   if (Is == IS_VGPR) {
@@ -4524,6 +4529,20 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
   return true;
 }
 
+bool AMDGPUAsmParser::validateTensorR128(const MCInst &Inst) {
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & SIInstrFlags::TENSOR_CNT) == 0)
+    return true;
+
+  int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
+  if (R128Idx >= 0 && !Inst.getOperand(R128Idx).getImm())
+    return false;
+
+  return true;
+}
+
 static bool IsRevOpcode(const unsigned Opcode)
 {
   switch (Opcode) {
@@ -5349,14 +5368,11 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
       return PrintError("scope and th combination is not valid");
   }
 
-  bool IsStore = TID.mayStore() && !TID.mayLoad();
-  bool IsAtomic =
-      TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
-
-  if (IsAtomic) {
+  unsigned THType = AMDGPU::getTemporalHintType(TID);
+  if (THType == AMDGPU::CPol::TH_TYPE_ATOMIC) {
     if (!(CPol & AMDGPU::CPol::TH_TYPE_ATOMIC))
       return PrintError("invalid th value for atomic instructions");
-  } else if (IsStore) {
+  } else if (THType == AMDGPU::CPol::TH_TYPE_STORE) {
     if (!(CPol & AMDGPU::CPol::TH_TYPE_STORE))
       return PrintError("invalid th value for store instructions");
   } else {
@@ -5468,6 +5484,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMIMGD16(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
       "d16 modifier is not supported on this GPU");
+    return false;
+  }
+  if (!validateTensorR128(Inst)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
+      "instruction must set modifier r128=1");
     return false;
   }
   if (!validateMIMGMSAA(Inst)) {

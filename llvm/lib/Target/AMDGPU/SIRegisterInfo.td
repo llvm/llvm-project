@@ -630,7 +630,9 @@ class RegisterTypes<list<ValueType> reg_types> {
 
 def Reg16Types : RegisterTypes<[i16, f16, bf16]>;
 def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16, p2, p3, p5, p6]>;
-def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0]>;
+def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0, v4i16, v4f16, v4bf16]>;
+def Reg96Types : RegisterTypes<[v3i32, v3f32]>;
+def Reg128Types : RegisterTypes<[v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16]>;
 
 let HasVGPR = 1 in {
 // VOP3 and VINTERP can access 1024 lo and 1024 hi registers.
@@ -803,7 +805,7 @@ def Pseudo_SReg_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16,
   let BaseClassOrder = 10000;
 }
 
-def Pseudo_SReg_128 : SIRegisterClass<"AMDGPU", [v4i32, v2i64, v2f64, v8i16, v8f16, v8bf16], 32,
+def Pseudo_SReg_128 : SIRegisterClass<"AMDGPU", Reg128Types.types, 32,
   (add PRIVATE_RSRC_REG)> {
   let isAllocatable = 0;
   let CopyCost = -1;
@@ -874,7 +876,7 @@ def SRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v
   let HasSGPR = 1;
 }
 
-def SGPR_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, v4i16, v4f16, v4bf16], 32,
+def SGPR_64 : SIRegisterClass<"AMDGPU", Reg64Types.types, 32,
                             (add SGPR_64Regs)> {
   let CopyCost = 1;
   let AllocationPriority = 1;
@@ -965,7 +967,7 @@ multiclass SRegClass<int numRegs,
 }
 
 defm "" : SRegClass<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], SGPR_96Regs, TTMP_96Regs>;
-defm "" : SRegClass<4, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16], SGPR_128Regs, TTMP_128Regs>;
+defm "" : SRegClass<4, Reg128Types.types, SGPR_128Regs, TTMP_128Regs>;
 defm "" : SRegClass<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], SGPR_160Regs, TTMP_160Regs>;
 defm "" : SRegClass<6, [v6i32, v6f32, v3i64, v3f64], SGPR_192Regs, TTMP_192Regs>;
 defm "" : SRegClass<7, [v7i32, v7f32], SGPR_224Regs, TTMP_224Regs>;
@@ -1023,7 +1025,7 @@ multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
 defm VReg_64 : VRegClass<2, [i64, f64, v2i32, v2f32, v4f16, v4bf16, v4i16, p0, p1, p4],
                                 (add VGPR_64)>;
 defm VReg_96 : VRegClass<3, [v3i32, v3f32, v6i16, v6f16, v6bf16], (add VGPR_96)>;
-defm VReg_128 : VRegClass<4, [v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16], (add VGPR_128)>;
+defm VReg_128 : VRegClass<4, Reg128Types.types, (add VGPR_128)>;
 defm VReg_160 : VRegClass<5, [v5i32, v5f32, v10i16, v10f16, v10bf16], (add VGPR_160)>;
 
 defm VReg_192 : VRegClass<6, [v6i32, v6f32, v3i64, v3f64], (add VGPR_192)>;

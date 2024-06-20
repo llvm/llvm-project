@@ -283,7 +283,9 @@ static const LLT S1 = LLT::scalar(1);
 static const LLT S8 = LLT::scalar(8);
 static const LLT S16 = LLT::scalar(16);
 static const LLT S32 = LLT::scalar(32);
+static const LLT F32 = LLT::float32();
 static const LLT S64 = LLT::scalar(64);
+static const LLT F64 = LLT::float64();
 static const LLT S96 = LLT::scalar(96);
 static const LLT S128 = LLT::scalar(128);
 static const LLT S160 = LLT::scalar(160);
@@ -300,6 +302,9 @@ static const LLT V8S16 = LLT::fixed_vector(8, 16);
 static const LLT V10S16 = LLT::fixed_vector(10, 16);
 static const LLT V12S16 = LLT::fixed_vector(12, 16);
 static const LLT V16S16 = LLT::fixed_vector(16, 16);
+
+static const LLT V2F16 = LLT::fixed_vector(2, LLT::float16());
+static const LLT V2BF16 = V2F16; // FIXME
 
 static const LLT V2S32 = LLT::fixed_vector(2, 32);
 static const LLT V3S32 = LLT::fixed_vector(3, 32);
@@ -1662,12 +1667,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     if (ST.hasLdsAtomicAddF64())
       Atomic.legalFor({{S64, LocalPtr}});
     if (ST.hasAtomicDsPkAdd16Insts())
-      Atomic.legalFor({{V2S16, LocalPtr}});
+      Atomic.legalFor({{V2F16, LocalPtr}, {V2BF16, LocalPtr}});
   }
   if (ST.hasAtomicFaddInsts())
     Atomic.legalFor({{S32, GlobalPtr}});
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
+
+  getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
 
   if (ST.hasGFX90AInsts() || ST.hasGFX12_10Insts()) {
     // These are legal with some caveats, and should have undergone expansion in
@@ -1679,6 +1687,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         {S64, FlatPtr}
       });
   }
+
+  if (ST.hasAtomicBufferGlobalPkAddF16Insts())
+    Atomic.legalFor({{V2F16, GlobalPtr}});
+  if (ST.hasAtomicGlobalPkAddBF16Inst())
+    Atomic.legalFor({{V2BF16, GlobalPtr}});
+  if (ST.hasAtomicFlatPkAdd16Insts())
+    Atomic.legalFor({{V2F16, FlatPtr}, {V2BF16, FlatPtr}});
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
@@ -5484,9 +5499,9 @@ static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
   case Intrinsic::amdgcn_ds_fadd:
     return AMDGPU::G_ATOMICRMW_FADD;
   case Intrinsic::amdgcn_ds_fmin:
-    return AMDGPU::G_AMDGPU_ATOMIC_FMIN;
+    return AMDGPU::G_ATOMICRMW_FMIN;
   case Intrinsic::amdgcn_ds_fmax:
-    return AMDGPU::G_AMDGPU_ATOMIC_FMAX;
+    return AMDGPU::G_ATOMICRMW_FMAX;
   default:
     llvm_unreachable("not a DS FP intrinsic");
   }
@@ -5773,6 +5788,68 @@ Register AMDGPULegalizerInfo::fixStoreSourceType(
   }
 
   return VData;
+}
+
+static unsigned getBufferDiscardPseudo(Intrinsic::ID IntrID) {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B32;
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B128;
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024:
+    return AMDGPU::G_AMDGPU_BUFFER_DISCARD_B1024;
+  default:
+    llvm_unreachable("unhandled discard opcode");
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeBufferDiscard(MachineInstr &MI,
+                                                MachineIRBuilder &B,
+                                                Intrinsic::ID IID) const {
+
+  castBufferRsrcArgToV4I32(MI, B, 1);
+  Register RSrc = MI.getOperand(1).getReg();
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+
+  unsigned ImmOffset;
+  const bool HasVIndex = MI.getNumOperands() == 6;
+  Register VIndex;
+  int OpOffset = 0;
+  if (HasVIndex) {
+    VIndex = MI.getOperand(2).getReg();
+    OpOffset = 1;
+  } else {
+    VIndex = B.buildConstant(S32, 0).getReg(0);
+  }
+
+  Register VOffset = MI.getOperand(2 + OpOffset).getReg();
+  Register SOffset = MI.getOperand(3 + OpOffset).getReg();
+
+  unsigned AuxiliaryData = MI.getOperand(4 + OpOffset).getImm();
+
+  std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
+
+  B.buildInstr(getBufferDiscardPseudo(IID))
+      .addUse(RSrc)
+      .addUse(VIndex)
+      .addUse(VOffset)
+      .addUse(SOffset)
+      .addImm(ImmOffset)
+      .addImm(AuxiliaryData)
+      .addImm(HasVIndex ? -1 : 0)
+      .addMemOperand(MMO);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
@@ -6101,9 +6178,6 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD;
-  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
-    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16;
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmin:
@@ -6723,9 +6797,9 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   MI.removeOperand(1); // Remove intrinsic ID
 
   // FIXME: When intrinsic definition is fixed, this should have an MMO already.
-  // TODO: Should this use datalayout alignment?
   const unsigned MemSize = (Size + 7) / 8;
-  const Align MemAlign(std::min(MemSize, 4u));
+  const Align MemAlign = B.getDataLayout().getABITypeAlign(
+      getTypeForLLT(Ty, MF.getFunction().getContext()));
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(),
       MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
@@ -7442,6 +7516,19 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::amdgcn_raw_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_buffer_discard_b1024:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_raw_ptr_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_buffer_discard_b1024:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b32:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b128:
+  case Intrinsic::amdgcn_struct_ptr_buffer_discard_b1024:
+    return legalizeBufferDiscard(MI, B, IntrID);
   case Intrinsic::amdgcn_s_buffer_load:
     return legalizeSBufferLoad(Helper, MI);
   case Intrinsic::amdgcn_raw_buffer_store:
@@ -7540,10 +7627,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
-  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16:
     return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);

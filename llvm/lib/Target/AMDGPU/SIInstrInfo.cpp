@@ -4035,7 +4035,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src0)
                   .add(*Src1)
-                  .addImm(Imm);
+                  .addImm(Imm)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -4055,7 +4056,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src0)
                   .addImm(Imm)
-                  .add(*Src2);
+                  .add(*Src2)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -4076,7 +4078,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Dst)
                   .add(*Src1)
                   .addImm(Imm)
-                  .add(*Src2);
+                  .add(*Src2)
+                  .setMIFlags(MI.getFlags());
         updateLiveVariables(LV, MI, *MIB);
         if (LIS)
           LIS->ReplaceMachineInstrInMaps(MI, *MIB);
@@ -4112,7 +4115,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
             .addImm(Src2Mods ? Src2Mods->getImm() : 0)
             .add(*Src2)
             .addImm(Clamp ? Clamp->getImm() : 0)
-            .addImm(Omod ? Omod->getImm() : 0);
+            .addImm(Omod ? Omod->getImm() : 0)
+            .setMIFlags(MI.getFlags());
   if (AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel))
     MIB.addImm(OpSel ? OpSel->getImm() : 0);
   updateLiveVariables(LV, MI, *MIB);
@@ -5749,24 +5753,9 @@ unsigned SIInstrInfo::buildExtractSubReg(
   DebugLoc DL = MI->getDebugLoc();
   Register SubReg = MRI.createVirtualRegister(SubRC);
 
-  if (SuperReg.getSubReg() == AMDGPU::NoSubRegister) {
-    BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-      .addReg(SuperReg.getReg(), 0, SubIdx);
-    return SubReg;
-  }
-
-  // Just in case the super register is itself a sub-register, copy it to a new
-  // value so we don't need to worry about merging its subreg index with the
-  // SubIdx passed to this function. The register coalescer should be able to
-  // eliminate this extra copy.
-  Register NewSuperReg = MRI.createVirtualRegister(SuperRC);
-
-  BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), NewSuperReg)
-    .addReg(SuperReg.getReg(), 0, SuperReg.getSubReg());
-
+  unsigned NewSubIdx = RI.composeSubRegIndices(SuperReg.getSubReg(), SubIdx);
   BuildMI(*MBB, MI, DL, get(TargetOpcode::COPY), SubReg)
-    .addReg(NewSuperReg, 0, SubIdx);
-
+      .addReg(SuperReg.getReg(), 0, NewSubIdx);
   return SubReg;
 }
 
@@ -6879,16 +6868,39 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     }
   }
 
-  // Legalize s_sleep_var.
-  if (MI.getOpcode() == AMDGPU::S_SLEEP_VAR) {
+  // Legalize single s32 operand.
+  int SrcIdx;
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_SLEEP_VAR:
+    SrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+    break;
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_F32:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_F16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_BF16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_F32:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_F16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_BF16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_SCATTER2_F16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_SCATTER4_F16:
+  case AMDGPU::V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16:
+  case AMDGPU::V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16:
+    SrcIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::ssrc);
+    break;
+  default:
+    SrcIdx = -1;
+    break;
+  }
+  if (SrcIdx != -1) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-    int Src0Idx =
-        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
-    MachineOperand &Src0 = MI.getOperand(Src0Idx);
+    MachineOperand &SrcMO = MI.getOperand(SrcIdx);
     BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
-        .add(Src0);
-    Src0.ChangeToRegister(Reg, false);
+        .add(SrcMO);
+    SrcMO.ChangeToRegister(Reg, false);
     return nullptr;
   }
 
