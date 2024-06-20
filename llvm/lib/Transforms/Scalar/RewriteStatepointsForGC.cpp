@@ -578,8 +578,15 @@ static Value *findBaseDefiningValue(Value *I, DefiningValueMapTy &Cache,
     return I;
   }
 
-  assert(!isa<AtomicRMWInst>(I) && "Xchg handled above, all others are "
-                                   "binary ops which don't apply to pointers");
+  if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
+    assert(RMWI->getOperation() == AtomicRMWInst::Xchg &&
+           "Only Xchg is allowed for pointer values");
+    // A RMW Xchg is a combined atomic load and store, so we can treat the
+    // loaded value as a base pointer.
+    Cache[I] = I;
+    setKnownBase(I, /* IsKnownBase */ true, KnownBases);
+    return I;
+  }
 
   // The aggregate ops.  Aggregates can either be in the heap or on the
   // stack, but in either case, this is simply a field load.  As a result,
