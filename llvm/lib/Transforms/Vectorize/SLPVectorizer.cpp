@@ -9060,17 +9060,15 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   if (!isValidElementType(ScalarTy))
     return InstructionCost::getInvalid();
-  auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   // If we have computed a smaller type for the expression, update VecTy so
   // that the costs will be accurate.
   auto It = MinBWs.find(E);
   Type *OrigScalarTy = ScalarTy;
-  if (It != MinBWs.end()) {
+  if (It != MinBWs.end())
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
-    VecTy = FixedVectorType::get(ScalarTy, VL.size());
-  }
+  auto *VecTy = FixedVectorType::get(ScalarTy, VL.size());
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = FixedVectorType::get(ScalarTy, EntryVF);
 
