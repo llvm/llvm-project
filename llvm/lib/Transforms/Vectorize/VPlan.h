@@ -2219,7 +2219,7 @@ public:
   /// The VPValue of the vector value to be reduced.
   VPValue *getVecOp() const { return getOperand(1); }
   /// The VPValue of the condition for the block.
-  VPValue *getCondOp() const {
+  virtual VPValue *getCondOp() const {
     return getNumOperands() > 2 ? getOperand(2) : nullptr;
   }
 };
@@ -2257,7 +2257,7 @@ public:
   /// The VPValue of the explicit vector length.
   VPValue *getEVL() const { return getOperand(2); }
   /// The VPValue of the condition for the block.
-  VPValue *getCondOp() const {
+  VPValue *getCondOp() const override {
     return getNumOperands() > 3 ? getOperand(3) : nullptr;
   }
 
