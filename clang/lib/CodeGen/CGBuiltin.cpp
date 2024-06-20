@@ -14201,7 +14201,7 @@ Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   ArgStr.split(Features, "+");
   for (auto &Feature : Features) {
     Feature = Feature.trim();
-    if (!llvm::AArch64::parseArchExtension(Feature))
+    if (!llvm::AArch64::parseFMVExtension(Feature))
       return Builder.getFalse();
     if (Feature != "default")
       Features.push_back(Feature);
@@ -19164,6 +19164,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_bitop3_b32:
   case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
     return emitQuaternaryBuiltin(*this, E, Intrinsic::amdgcn_bitop3);
+  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
+    return emitQuaternaryBuiltin(*this, E, Intrinsic::amdgcn_make_buffer_rsrc);
   default:
     return nullptr;
   }
