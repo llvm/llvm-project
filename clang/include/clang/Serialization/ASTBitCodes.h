@@ -81,9 +81,17 @@ using DeclID = DeclIDBase::DeclID;
 /// The type index values are partitioned into two
 /// sets. The values below NUM_PREDEF_TYPE_IDs are predefined type
 /// IDs (based on the PREDEF_TYPE_*_ID constants), with 0 as a
-/// placeholder for "no type". Values from NUM_PREDEF_TYPE_IDs are
-/// other types that have serialized representations.
+/// placeholder for "no type". The module file index for predefined
+/// types are always 0 since they don't belong to any modules.
+/// Values from NUM_PREDEF_TYPE_IDs are other types that have
+/// serialized representations.
 using TypeID = uint64_t;
+/// Same with TypeID except that the LocalTypeID is only meaningful
+/// with the corresponding ModuleFile.
+///
+/// FIXME: Make TypeID and LocalTypeID a class to improve the type
+/// safety.
+using LocalTypeID = TypeID;
 
 /// A type index; the type ID with the qualifier bits removed.
 /// Keep structure alignment 32-bit since the blob is assumed as 32-bit
@@ -118,6 +126,8 @@ public:
                                  Qualifiers::FastWidth);
   }
 };
+
+static_assert(alignof(TypeIdx) == 4);
 
 /// A structure for putting "fast"-unqualified QualTypes into a
 /// DenseMap.  This uses the standard pointer hash function.

@@ -7137,14 +7137,13 @@ TypeSourceInfo *ASTRecordReader::readTypeSourceInfo() {
 
 static unsigned getIndexForTypeID(serialization::TypeID ID) {
   return (ID & llvm::maskTrailingOnes<TypeID>(32)) >> Qualifiers::FastWidth;
-  ;
 }
 
 static unsigned getModuleFileIndexForTypeID(serialization::TypeID ID) {
   return ID >> 32;
 }
 
-static bool isPredefinedTypes(serialization::TypeID ID) {
+static bool isPredefinedType(serialization::TypeID ID) {
   // We don't need to erase the higher bits since if these bits are not 0,
   // it must be larger than NUM_PREDEF_TYPE_IDS.
   return (ID >> Qualifiers::FastWidth) < NUM_PREDEF_TYPE_IDS;
@@ -7152,7 +7151,7 @@ static bool isPredefinedTypes(serialization::TypeID ID) {
 
 std::pair<ModuleFile *, unsigned>
 ASTReader::translateTypeIDToIndex(serialization::TypeID ID) const {
-  assert(!isPredefinedTypes(ID) &&
+  assert(!isPredefinedType(ID) &&
          "Predefined type shouldn't be in TypesLoaded");
   unsigned ModuleFileIndex = getModuleFileIndexForTypeID(ID);
   assert(ModuleFileIndex && "Untranslated Local Decl?");
@@ -7171,7 +7170,7 @@ QualType ASTReader::GetType(TypeID ID) {
 
   unsigned FastQuals = ID & Qualifiers::FastMask;
 
-  if (isPredefinedTypes(ID)) {
+  if (isPredefinedType(ID)) {
     QualType T;
     unsigned Index = getIndexForTypeID(ID);
     switch ((PredefinedTypeIDs)Index) {
@@ -7463,13 +7462,13 @@ QualType ASTReader::GetType(TypeID ID) {
   return TypesLoaded[Index].withFastQualifiers(FastQuals);
 }
 
-QualType ASTReader::getLocalType(ModuleFile &F, TypeID LocalID) {
+QualType ASTReader::getLocalType(ModuleFile &F, LocalTypeID LocalID) {
   return GetType(getGlobalTypeID(F, LocalID));
 }
 
 serialization::TypeID ASTReader::getGlobalTypeID(ModuleFile &F,
-                                                 TypeID LocalID) const {
-  if (isPredefinedTypes(LocalID))
+                                                 LocalTypeID LocalID) const {
+  if (isPredefinedType(LocalID))
     return LocalID;
 
   if (!F.ModuleOffsetMap.empty())

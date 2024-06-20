@@ -22,12 +22,25 @@
 // Since useBOnly only uses partB from module M, the change in partA shouldn't affect
 // useBOnly.
 // RUN: diff %t/useBOnly.pcm %t/useBOnly.v1.pcm &> /dev/null
+//
+// RUN: %clang_cc1 -std=c++20 %t/useAOnly.cppm -emit-reduced-module-interface -o %t/useAOnly.pcm \
+// RUN:     -fmodule-file=m=%t/m.pcm -fmodule-file=m:partA=%t/m-partA.pcm \
+// RUN:     -fmodule-file=m:partB=%t/m-partB.pcm
+// RUN: %clang_cc1 -std=c++20 %t/useAOnly.cppm -emit-reduced-module-interface -o %t/useAOnly.v1.pcm \
+// RUN:     -fmodule-file=m=%t/m.v1.pcm -fmodule-file=m:partA=%t/m-partA.v1.pcm \
+// RUN:     -fmodule-file=m:partB=%t/m-partB.pcm
+// Since useAOnly uses partA from module M, the change in partA should affect useAOnly.
+// RUN: not diff %t/useAOnly.pcm %t/useAOnly.v1.pcm &> /dev/null
 
 //--- m-partA.cppm
 export module m:partA;
 
+export int getValueFromA() { return 43; }
+
 //--- m-partA.v1.cppm
 export module m:partA;
+
+export int getValueFromA() { return 43; }
 
 namespace NS {
     class A {
@@ -63,6 +76,5 @@ export module useAOnly;
 import m;
 
 export inline int get() {
-    A<int> a;
-    return a.getValue();
+    return getValueFromA();
 }
