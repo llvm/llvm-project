@@ -16100,7 +16100,7 @@ on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
      - fminimum_num/fmaximum_num
 
    * - ``IEEE754``
-     - nimNum/maxNum (2008)
+     - minNum/maxNum (2008)
      - minimum/maximum (2019)
      - minimumNumber/maximumNumber (2019)
 
