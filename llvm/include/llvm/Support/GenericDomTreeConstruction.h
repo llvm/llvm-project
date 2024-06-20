@@ -72,7 +72,7 @@ struct SemiNCAInfo {
 
   // Number to node mapping is 1-based. Initialize the mapping to start with
   // a dummy element.
-  std::vector<NodePtr> NumToNode = {nullptr};
+  SmallVector<NodePtr, 64> NumToNode = {nullptr};
   DenseMap<NodePtr, InfoRec> NodeToInfo;
 
   using UpdateT = typename DomTreeT::UpdateType;
