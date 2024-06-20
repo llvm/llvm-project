@@ -11547,6 +11547,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEDialect",
+        ":ArmSVEDialect",
         ":ConversionPassIncGen",
         ":IR",
         ":MemRefDialect",
