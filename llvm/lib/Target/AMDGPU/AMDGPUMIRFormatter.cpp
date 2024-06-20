@@ -20,7 +20,7 @@ using namespace llvm;
 void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
                       std::optional<unsigned int> OpIdx, int64_t Imm) const {
 
-  switch(MI.getOpcode()) {
+  switch (MI.getOpcode()) {
   case AMDGPU::S_DELAY_ALU:
     assert(OpIdx == 0);
     printSDelayAluImm(Imm, OS);
@@ -39,7 +39,7 @@ bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
                               ErrorCallbackType ErrorCallback) const
 {
 
-  switch(OpCode) {
+  switch (OpCode) {
   case AMDGPU::S_DELAY_ALU:
     return parseSDelayAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   default:
@@ -106,18 +106,18 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
     int64_t Dep;
     if (!Src.consumeInteger(10, Dep))
       return Dep + Offset;
-    else
-      return -1;
+
+    return -1;
   };
 
   auto DecodeDelay = [&](StringRef &Src) -> int64_t {
     if (Src.consume_front("NONE"))
       return 0;
-    else if (Src.consume_front("VALU_DEP_"))
+    if (Src.consume_front("VALU_DEP_"))
       return ExpectInt(Src, 0);
-    else if (Src.consume_front("TRANS32_DEP_"))
+    if (Src.consume_front("TRANS32_DEP_"))
       return ExpectInt(Src, 4);
-    else if (Src.consume_front("SALU_CYCLE_"))
+    if (Src.consume_front("SALU_CYCLE_"))
       return ExpectInt(Src, 8);
 
     return -1;
