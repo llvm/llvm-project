@@ -3930,79 +3930,47 @@ static Instruction *
 foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
                                    const APInt &C,
                                    InstCombiner::BuilderTy &Builder) {
-  Intrinsic::ID IID = I->getIntrinsicID();
+  bool IsScmp = I->getIntrinsicID() == Intrinsic::scmp;
   Value *LHS = I->getOperand(0);
   Value *RHS = I->getOperand(1);
 
   switch (Pred) {
   case ICmpInst::ICMP_EQ:
-    if (C.isZero())
-      return new ICmpInst(Pred, LHS, RHS);
-    if (C.isOne())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGT
-                                                 : ICmpInst::ICMP_UGT,
-                          LHS, RHS);
-    if (C.isAllOnes())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLT
-                                                 : ICmpInst::ICMP_ULT,
-                          LHS, RHS);
-    break;
-
   case ICmpInst::ICMP_NE:
     if (C.isZero())
       return new ICmpInst(Pred, LHS, RHS);
-    if (C.isOne())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLE
-                                                 : ICmpInst::ICMP_ULE,
-                          LHS, RHS);
-    if (C.isAllOnes())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGE
-                                                 : ICmpInst::ICMP_UGE,
-                          LHS, RHS);
+    if (C.isOne()) {
+      if (Pred == ICmpInst::ICMP_EQ)
+        return new ICmpInst(IsScmp ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT,
+                            LHS, RHS);
+      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE, LHS,
+                          RHS);
+    }
+    if (C.isAllOnes()) {
+      if (Pred == ICmpInst::ICMP_EQ)
+        return new ICmpInst(IsScmp ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT,
+                            LHS, RHS);
+      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, LHS,
+                          RHS);
+    }
     break;
 
   case ICmpInst::ICMP_SGT:
     if (C.isAllOnes())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGE
-                                                 : ICmpInst::ICMP_UGE,
-                          LHS, RHS);
+      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, LHS,
+                          RHS);
     if (C.isZero())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGT
-                                                 : ICmpInst::ICMP_UGT,
-                          LHS, RHS);
-    break;
-
-  case ICmpInst::ICMP_SGE:
-    if (C.isZero())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGE
-                                                 : ICmpInst::ICMP_UGE,
-                          LHS, RHS);
-    if (C.isOne())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SGT
-                                                 : ICmpInst::ICMP_UGT,
-                          LHS, RHS);
+      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, LHS,
+                          RHS);
     break;
 
   case ICmpInst::ICMP_SLT:
     if (C.isZero())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLT
-                                                 : ICmpInst::ICMP_ULT,
-                          LHS, RHS);
+      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, LHS,
+                          RHS);
     if (C.isOne())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLE
-                                                 : ICmpInst::ICMP_ULE,
-                          LHS, RHS);
-    break;
-
-  case llvm::ICmpInst::ICMP_SLE:
-    if (C.isZero())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLE
-                                                 : ICmpInst::ICMP_ULE,
-                          LHS, RHS);
-    if (C.isAllOnes())
-      return new ICmpInst(IID == Intrinsic::scmp ? ICmpInst::ICMP_SLT
-                                                 : ICmpInst::ICMP_ULT,
-                          LHS, RHS);
+      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE, LHS,
+                          RHS);
     break;
 
   default:
