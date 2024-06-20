@@ -3,6 +3,278 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffast-math -fclangir -emit-llvm -o %t.ll %s
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
+// lround
+
+long my_lroundf(float f) {
+  return __builtin_lroundf(f);
+  // CHECK: cir.func @my_lroundf
+  // CHECK: %{{.+}} = cir.lround %{{.+}} : !cir.float -> !s64i
+
+  // LLVM: define i64 @my_lroundf
+  // LLVM:   %{{.+}} = call i64 @llvm.lround.i64.f32(float %{{.+}})
+  // LLVM: }
+}
+
+long my_lround(double f) {
+  return __builtin_lround(f);
+  // CHECK: cir.func @my_lround
+  // CHECK: %{{.+}} = cir.lround %{{.+}} : !cir.double -> !s64i
+
+  // LLVM: define i64 @my_lround
+  // LLVM:   %{{.+}} = call i64 @llvm.lround.i64.f64(double %{{.+}})
+  // LLVM: }
+}
+
+long my_lroundl(long double f) {
+  return __builtin_lroundl(f);
+  // CHECK: cir.func @my_lroundl
+  // CHECK: %{{.+}} = cir.lround %{{.+}} : !cir.long_double<!cir.f80> -> !s64i
+  // AARCH64: %{{.+}} = cir.lround %{{.+}} : !cir.long_double<!cir.double> -> !s64i
+
+  // LLVM: define i64 @my_lroundl
+  // LLVM:   %{{.+}} = call i64 @llvm.lround.i64.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+}
+
+long lroundf(float);
+long lround(double);
+long lroundl(long double);
+
+long call_lroundf(float f) {
+  return lroundf(f);
+  // CHECK: cir.func @call_lroundf
+  // CHECK: %{{.+}} = cir.lround %{{.+}} : !cir.float -> !s64i
+
+  // LLVM: define i64 @call_lroundf
+  // LLVM:   %{{.+}} = call i64 @llvm.lround.i64.f32(float %{{.+}})
+  // LLVM: }
+}
+
+long call_lround(double f) {
+  return lround(f);
+  // CHECK: cir.func @call_lround
+  // CHECK: %{{.+}} = cir.lround %{{.+}} : !cir.double -> !s64i
+
+  // LLVM: define i64 @call_lround
+  // LLVM:   %{{.+}} = call i64 @llvm.lround.i64.f64(double %{{.+}})
+  // LLVM: }
+}
+
+long call_lroundl(long double f) {
+  return lroundl(f);
+  // CHECK: cir.func @call_lroundl
+  // CHECK: %{{.+}} = cir.lround %{{.+}} : !cir.long_double<!cir.f80> -> !s64i
+  // AARCH64: %{{.+}} = cir.lround %{{.+}} : !cir.long_double<!cir.double> -> !s64i
+
+  // LLVM: define i64 @call_lroundl
+  // LLVM:   %{{.+}} = call i64 @llvm.lround.i64.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+}
+
+// llround
+
+long long my_llroundf(float f) {
+  return __builtin_llroundf(f);
+  // CHECK: cir.func @my_llroundf
+  // CHECK: %{{.+}} = cir.llround %{{.+}} : !cir.float -> !s64i
+
+  // LLVM: define i64 @my_llroundf
+  // LLVM:   %{{.+}} = call i64 @llvm.llround.i64.f32(float %{{.+}})
+  // LLVM: }
+}
+
+long long my_llround(double f) {
+  return __builtin_llround(f);
+  // CHECK: cir.func @my_llround
+  // CHECK: %{{.+}} = cir.llround %{{.+}} : !cir.double -> !s64i
+
+  // LLVM: define i64 @my_llround
+  // LLVM:   %{{.+}} = call i64 @llvm.llround.i64.f64(double %{{.+}})
+  // LLVM: }
+}
+
+long long my_llroundl(long double f) {
+  return __builtin_llroundl(f);
+  // CHECK: cir.func @my_llroundl
+  // CHECK: %{{.+}} = cir.llround %{{.+}} : !cir.long_double<!cir.f80> -> !s64i
+  // AARCH64: %{{.+}} = cir.llround %{{.+}} : !cir.long_double<!cir.double> -> !s64i
+
+  // LLVM: define i64 @my_llroundl
+  // LLVM:   %{{.+}} = call i64 @llvm.llround.i64.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+}
+
+long long llroundf(float);
+long long llround(double);
+long long llroundl(long double);
+
+long long call_llroundf(float f) {
+  return llroundf(f);
+  // CHECK: cir.func @call_llroundf
+  // CHECK: %{{.+}} = cir.llround %{{.+}} : !cir.float -> !s64i
+
+  // LLVM: define i64 @call_llroundf
+  // LLVM:   %{{.+}} = call i64 @llvm.llround.i64.f32(float %{{.+}})
+  // LLVM: }
+}
+
+long long call_llround(double f) {
+  return llround(f);
+  // CHECK: cir.func @call_llround
+  // CHECK: %{{.+}} = cir.llround %{{.+}} : !cir.double -> !s64i
+
+  // LLVM: define i64 @call_llround
+  // LLVM:   %{{.+}} = call i64 @llvm.llround.i64.f64(double %{{.+}})
+  // LLVM: }
+}
+
+long long call_llroundl(long double f) {
+  return llroundl(f);
+  // CHECK: cir.func @call_llroundl
+  // CHECK: %{{.+}} = cir.llround %{{.+}} : !cir.long_double<!cir.f80> -> !s64i
+  // AARCH64: %{{.+}} = cir.llround %{{.+}} : !cir.long_double<!cir.double> -> !s64i
+
+  // LLVM: define i64 @call_llroundl
+  // LLVM:   %{{.+}} = call i64 @llvm.llround.i64.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+}
+
+// lrint
+
+long my_lrintf(float f) {
+  return __builtin_lrintf(f);
+  // CHECK: cir.func @my_lrintf
+  // CHECK: %{{.+}} = cir.lrint %{{.+}} : !cir.float -> !s64i
+
+  // LLVM: define i64 @my_lrintf
+  // LLVM:   %{{.+}} = call i64 @llvm.lrint.i64.f32(float %{{.+}})
+  // LLVM: }
+}
+
+long my_lrint(double f) {
+  return __builtin_lrint(f);
+  // CHECK: cir.func @my_lrint
+  // CHECK: %{{.+}} = cir.lrint %{{.+}} : !cir.double -> !s64i
+
+  // LLVM: define i64 @my_lrint
+  // LLVM:   %{{.+}} = call i64 @llvm.lrint.i64.f64(double %{{.+}})
+  // LLVM: }
+}
+
+long my_lrintl(long double f) {
+  return __builtin_lrintl(f);
+  // CHECK: cir.func @my_lrintl
+  // CHECK: %{{.+}} = cir.lrint %{{.+}} : !cir.long_double<!cir.f80> -> !s64i
+  // AARCH64: %{{.+}} = cir.lrint %{{.+}} : !cir.long_double<!cir.double> -> !s64i
+
+  // LLVM: define i64 @my_lrintl
+  // LLVM:   %{{.+}} = call i64 @llvm.lrint.i64.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+}
+
+long lrintf(float);
+long lrint(double);
+long lrintl(long double);
+
+long call_lrintf(float f) {
+  return lrintf(f);
+  // CHECK: cir.func @call_lrintf
+  // CHECK: %{{.+}} = cir.lrint %{{.+}} : !cir.float -> !s64i
+
+  // LLVM: define i64 @call_lrintf
+  // LLVM:   %{{.+}} = call i64 @llvm.lrint.i64.f32(float %{{.+}})
+  // LLVM: }
+}
+
+long call_lrint(double f) {
+  return lrint(f);
+  // CHECK: cir.func @call_lrint
+  // CHECK: %{{.+}} = cir.lrint %{{.+}} : !cir.double -> !s64i
+
+  // LLVM: define i64 @call_lrint
+  // LLVM:   %{{.+}} = call i64 @llvm.lrint.i64.f64(double %{{.+}})
+  // LLVM: }
+}
+
+long call_lrintl(long double f) {
+  return lrintl(f);
+  // CHECK: cir.func @call_lrintl
+  // CHECK: %{{.+}} = cir.lrint %{{.+}} : !cir.long_double<!cir.f80> -> !s64i
+  // AARCH64: %{{.+}} = cir.lrint %{{.+}} : !cir.long_double<!cir.double> -> !s64i
+
+  // LLVM: define i64 @call_lrintl
+  // LLVM:   %{{.+}} = call i64 @llvm.lrint.i64.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+}
+
+// llrint
+
+long long my_llrintf(float f) {
+  return __builtin_llrintf(f);
+  // CHECK: cir.func @my_llrintf
+  // CHECK: %{{.+}} = cir.llrint %{{.+}} : !cir.float -> !s64i
+
+  // LLVM: define i64 @my_llrintf
+  // LLVM:   %{{.+}} = call i64 @llvm.llrint.i64.f32(float %{{.+}})
+  // LLVM: }
+}
+
+long long my_llrint(double f) {
+  return __builtin_llrint(f);
+  // CHECK: cir.func @my_llrint
+  // CHECK: %{{.+}} = cir.llrint %{{.+}} : !cir.double -> !s64i
+
+  // LLVM: define i64 @my_llrint
+  // LLVM:   %{{.+}} = call i64 @llvm.llrint.i64.f64(double %{{.+}})
+  // LLVM: }
+}
+
+long long my_llrintl(long double f) {
+  return __builtin_llrintl(f);
+  // CHECK: cir.func @my_llrintl
+  // CHECK: %{{.+}} = cir.llrint %{{.+}} : !cir.long_double<!cir.f80> -> !s64i
+  // AARCH64: %{{.+}} = cir.llrint %{{.+}} : !cir.long_double<!cir.double> -> !s64i
+
+  // LLVM: define i64 @my_llrintl
+  // LLVM:   %{{.+}} = call i64 @llvm.llrint.i64.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+}
+
+long long llrintf(float);
+long long llrint(double);
+long long llrintl(long double);
+
+long long call_llrintf(float f) {
+  return llrintf(f);
+  // CHECK: cir.func @call_llrintf
+  // CHECK: %{{.+}} = cir.llrint %{{.+}} : !cir.float -> !s64i
+
+  // LLVM: define i64 @call_llrintf
+  // LLVM:   %{{.+}} = call i64 @llvm.llrint.i64.f32(float %{{.+}})
+  // LLVM: }
+}
+
+long long call_llrint(double f) {
+  return llrint(f);
+  // CHECK: cir.func @call_llrint
+  // CHECK: %{{.+}} = cir.llrint %{{.+}} : !cir.double -> !s64i
+
+  // LLVM: define i64 @call_llrint
+  // LLVM:   %{{.+}} = call i64 @llvm.llrint.i64.f64(double %{{.+}})
+  // LLVM: }
+}
+
+long long call_llrintl(long double f) {
+  return llrintl(f);
+  // CHECK: cir.func @call_llrintl
+  // CHECK: %{{.+}} = cir.llrint %{{.+}} : !cir.long_double<!cir.f80> -> !s64i
+  // AARCH64: %{{.+}} = cir.llrint %{{.+}} : !cir.long_double<!cir.double> -> !s64i
+
+  // LLVM: define i64 @call_llrintl
+  // LLVM:   %{{.+}} = call i64 @llvm.llrint.i64.f80(x86_fp80 %{{.+}})
+  // LLVM: }
+}
+
 // ceil
 
 float my_ceilf(float f) {

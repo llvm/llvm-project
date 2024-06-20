@@ -3219,8 +3219,7 @@ private:
 };
 
 template <typename CIROp, typename LLVMOp>
-class CIRUnaryFPToFPBuiltinOpLowering
-    : public mlir::OpConversionPattern<CIROp> {
+class CIRUnaryFPBuiltinOpLowering : public mlir::OpConversionPattern<CIROp> {
 public:
   using mlir::OpConversionPattern<CIROp>::OpConversionPattern;
 
@@ -3235,20 +3234,29 @@ public:
 };
 
 using CIRCeilOpLowering =
-    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::CeilOp, mlir::LLVM::FCeilOp>;
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::CeilOp, mlir::LLVM::FCeilOp>;
 using CIRFloorOpLowering =
-    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::FloorOp, mlir::LLVM::FFloorOp>;
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::FloorOp, mlir::LLVM::FFloorOp>;
 using CIRFabsOpLowering =
-    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::FAbsOp, mlir::LLVM::FAbsOp>;
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::FAbsOp, mlir::LLVM::FAbsOp>;
 using CIRNearbyintOpLowering =
-    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::NearbyintOp,
-                                    mlir::LLVM::NearbyintOp>;
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::NearbyintOp,
+                                mlir::LLVM::NearbyintOp>;
 using CIRRintOpLowering =
-    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::RintOp, mlir::LLVM::RintOp>;
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::RintOp, mlir::LLVM::RintOp>;
 using CIRRoundOpLowering =
-    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::RoundOp, mlir::LLVM::RoundOp>;
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::RoundOp, mlir::LLVM::RoundOp>;
 using CIRTruncOpLowering =
-    CIRUnaryFPToFPBuiltinOpLowering<mlir::cir::TruncOp, mlir::LLVM::FTruncOp>;
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::TruncOp, mlir::LLVM::FTruncOp>;
+
+using CIRLroundOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::LroundOp, mlir::LLVM::LroundOp>;
+using CIRLLroundOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::LLroundOp, mlir::LLVM::LlroundOp>;
+using CIRLrintOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::LrintOp, mlir::LLVM::LrintOp>;
+using CIRLLrintOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::LLrintOp, mlir::LLVM::LlrintOp>;
 
 template <typename CIROp, typename LLVMOp>
 class CIRBinaryFPToFPBuiltinOpLowering
@@ -3299,11 +3307,12 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRStackSaveLowering, CIRStackRestoreLowering, CIRUnreachableLowering,
       CIRTrapLowering, CIRInlineAsmOpLowering, CIRSetBitfieldLowering,
       CIRGetBitfieldLowering, CIRPrefetchLowering, CIRObjSizeOpLowering,
-      CIRIsConstantOpLowering, CIRCmpThreeWayOpLowering, CIRCeilOpLowering,
-      CIRFloorOpLowering, CIRFAbsOpLowering, CIRNearbyintOpLowering,
-      CIRRintOpLowering, CIRRoundOpLowering, CIRTruncOpLowering,
-      CIRCopysignOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering>(
-      converter, patterns.getContext());
+      CIRIsConstantOpLowering, CIRCmpThreeWayOpLowering, CIRLroundOpLowering,
+      CIRLLroundOpLowering, CIRLrintOpLowering, CIRLLrintOpLowering,
+      CIRCeilOpLowering, CIRFloorOpLowering, CIRFAbsOpLowering,
+      CIRNearbyintOpLowering, CIRRintOpLowering, CIRRoundOpLowering,
+      CIRTruncOpLowering, CIRCopysignOpLowering, CIRFMaxOpLowering,
+      CIRFMinOpLowering>(converter, patterns.getContext());
 }
 
 namespace {

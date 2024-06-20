@@ -59,6 +59,19 @@ static RValue buildUnaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
 }
 
 template <typename Op>
+static RValue buildUnaryMaybeConstrainedFPToIntBuiltin(CIRGenFunction &CGF,
+                                                       const CallExpr &E) {
+  auto ResultType = CGF.ConvertType(E.getType());
+  auto Src = CGF.buildScalarExpr(E.getArg(0));
+
+  if (CGF.getBuilder().getIsFPConstrained())
+    llvm_unreachable("constraint FP operations are NYI");
+
+  auto Call = CGF.getBuilder().create<Op>(Src.getLoc(), ResultType, Src);
+  return RValue::get(Call->getResult(0));
+}
+
+template <typename Op>
 static RValue buildBinaryFPBuiltin(CIRGenFunction &CGF, const CallExpr &E) {
   auto Arg0 = CGF.buildScalarExpr(E.getArg(0));
   auto Arg1 = CGF.buildScalarExpr(E.getArg(1));
@@ -636,6 +649,9 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_lround:
     case Builtin::BI__builtin_lroundf:
     case Builtin::BI__builtin_lroundl:
+      return buildUnaryMaybeConstrainedFPToIntBuiltin<mlir::cir::LroundOp>(
+          *this, *E);
+
     case Builtin::BI__builtin_lroundf128:
       llvm_unreachable("NYI");
 
@@ -645,6 +661,9 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_llround:
     case Builtin::BI__builtin_llroundf:
     case Builtin::BI__builtin_llroundl:
+      return buildUnaryMaybeConstrainedFPToIntBuiltin<mlir::cir::LLroundOp>(
+          *this, *E);
+
     case Builtin::BI__builtin_llroundf128:
       llvm_unreachable("NYI");
 
@@ -654,6 +673,9 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_lrint:
     case Builtin::BI__builtin_lrintf:
     case Builtin::BI__builtin_lrintl:
+      return buildUnaryMaybeConstrainedFPToIntBuiltin<mlir::cir::LrintOp>(*this,
+                                                                          *E);
+
     case Builtin::BI__builtin_lrintf128:
       llvm_unreachable("NYI");
 
@@ -663,6 +685,9 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_llrint:
     case Builtin::BI__builtin_llrintf:
     case Builtin::BI__builtin_llrintl:
+      return buildUnaryMaybeConstrainedFPToIntBuiltin<mlir::cir::LLrintOp>(
+          *this, *E);
+
     case Builtin::BI__builtin_llrintf128:
       llvm_unreachable("NYI");
 
