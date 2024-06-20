@@ -985,7 +985,7 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
     auto rhsType = cast<ShapedType>(rhs.getType());
     auto initType = cast<ShapedType>(init.getType());
     int constexpr offset = (int)isTranspose;
-    if (reduceLeft)
+    if constexpr (reduceLeft)
       return lhsType.getShape().begin()[offset] == 1 &&
              initType.getShape().begin()[offset] == 1;
     else
@@ -995,8 +995,8 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
 
   SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter, Value lhs,
                                          Value rhs, Value init) const override {
-    if (reduceLeft) {
-      if (isTranspose) {
+    if constexpr (reduceLeft) {
+      if constexpr (isTranspose) {
         lhs = collapseTrailingSingletonDim(rewriter, lhs);
         init = collapseTrailingSingletonDim(rewriter, init);
       } else {
@@ -1004,7 +1004,7 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
         init = collapseLeadingSingletonDim(rewriter, init);
       }
     } else {
-      if (isTranspose) {
+      if constexpr (isTranspose) {
         rhs = collapseLeadingSingletonDim(rewriter, rhs);
         init = collapseLeadingSingletonDim(rewriter, init);
       } else {
@@ -1017,7 +1017,7 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
 
   Value expandResult(PatternRewriter &rewriter, Value result,
                      RankedTensorType expandedType) const override {
-    if (reduceLeft)
+    if constexpr (reduceLeft)
       return rewriter.create<tensor::ExpandShapeOp>(
           result.getLoc(), expandedType, result,
           getReassociationsForLeadingDims(expandedType.getRank()));
