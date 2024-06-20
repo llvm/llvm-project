@@ -101,23 +101,36 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     else
       OS << ", \"" << Alias << "\"";
     OS << ", AArch64::" << AEK;
-    if (AEK == "AEK_NONE") {
-      // HACK: don't emit posfeat/negfeat strings for FMVOnlyExtensions.
-      OS << ", {}, {}";
-    } else {
-      OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
-      OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
-    }
-    OS << ", " << Rec->getValueAsString("FMVBit");
-    OS << ", \"" << Rec->getValueAsString("FMVDependencies") << "\"";
-    OS << ", " << (uint64_t)Rec->getValueAsInt("FMVPriority");
+    OS << ", \"+" << Rec->getValueAsString("Name") << "\""; // posfeature
+    OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
     OS << "},\n";
   };
-  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, FEAT_INIT, \"\", "
-        "ExtensionInfo::MaxFMVPriority},\n";
+  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {} },\n";
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"
+     << "\n";
+
+  // Emit FMV information
+  auto FMVExts = RK.getAllDerivedDefinitionsIfDefined("FMVExtension");
+  OS << "#ifdef EMIT_FMV_INFO\n"
+     << "const std::vector<llvm::AArch64::FMVInfo>& "
+        "llvm::AArch64::getFMVInfo() {\n"
+     << "  static std::vector<FMVInfo> I;\n"
+     << "  if(I.size()) return I;\n"
+     << "  I.reserve(" << FMVExts.size() << ");\n";
+  for (const Record *Rec : FMVExts) {
+    OS << "  I.emplace_back(";
+    OS << "\"" << Rec->getValueAsString("Name") << "\"";
+    OS << ", " << Rec->getValueAsString("Bit");
+    OS << ", \"" << Rec->getValueAsString("BackendFeatures") << "\"";
+    OS << ", " << (uint64_t)Rec->getValueAsInt("Priority");
+    OS << ");\n";
+  };
+  OS << "  return I;\n"
+     << "}\n"
+     << "#undef EMIT_FMV_INFO\n"
+     << "#endif // EMIT_FMV_INFO\n"
      << "\n";
 
   // Emit extension dependencies
