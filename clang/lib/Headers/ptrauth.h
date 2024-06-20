@@ -68,11 +68,29 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
    On arm64e, the integer must fall within the range of a uint16_t;
    other bits may be ignored.
 
+   For the purposes of ptrauth_sign_constant, the result of calling
+   this function is considered a constant expression if the arguments
+   are constant.  Some restrictions may be imposed on the pointer.
+
    The first argument must be an expression of pointer type.
    The second argument must be an expression of integer type.
    The result will have type uintptr_t. */
 #define ptrauth_blend_discriminator(__pointer, __integer)                      \
   __builtin_ptrauth_blend_discriminator(__pointer, __integer)
+
+/* Return a signed pointer for a constant address in a manner which guarantees
+   a non-attackable sequence.
+
+   The value must be a constant expression of pointer type which evaluates to
+   a non-null pointer.
+   The key must be a constant expression of type ptrauth_key.
+   The extra data must be a constant expression of pointer or integer type;
+   if an integer, it will be coerced to ptrauth_extra_data_t.
+   The result will have the same type as the original value.
+
+   This can be used in constant expressions.  */
+#define ptrauth_sign_constant(__value, __key, __data)                          \
+  __builtin_ptrauth_sign_constant(__value, __key, __data)
 
 /* Add a signature to the given pointer value using a specific key,
    using the given extra data as a salt to the signing process.
@@ -125,6 +143,19 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define ptrauth_auth_data(__value, __old_key, __old_data)                      \
   __builtin_ptrauth_auth(__value, __old_key, __old_data)
 
+/* Compute a constant discriminator from the given string.
+
+   The argument must be a string literal of char character type.  The result
+   has type ptrauth_extra_data_t.
+
+   The result value is never zero and always within range for both the
+   __ptrauth qualifier and ptrauth_blend_discriminator.
+
+   This can be used in constant expressions.
+*/
+#define ptrauth_string_discriminator(__string)                                 \
+  __builtin_ptrauth_string_discriminator(__string)
+
 /* Compute a signature for the given pair of pointer-sized values.
    The order of the arguments is significant.
 
@@ -162,6 +193,13 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     ((ptrauth_extra_data_t)0);                                                 \
   })
 
+#define ptrauth_sign_constant(__value, __key, __data)                          \
+  ({                                                                           \
+    (void)__key;                                                               \
+    (void)__data;                                                              \
+    __value;                                                                   \
+  })
+
 #define ptrauth_sign_unauthenticated(__value, __key, __data)                   \
   ({                                                                           \
     (void)__key;                                                               \
@@ -184,6 +222,12 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
     __value;                                                                   \
+  })
+
+#define ptrauth_string_discriminator(__string)                                 \
+  ({                                                                           \
+    (void)__string;                                                            \
+    ((ptrauth_extra_data_t)0);                                                 \
   })
 
 #define ptrauth_sign_generic_data(__value, __data)                             \
