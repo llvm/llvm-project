@@ -7325,38 +7325,31 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   // cost model. Note that we do this as pre-processing; the VPlan may not have
   // any recipes associated with the original induction increment instruction
   // and may replace truncates with VPWidenIntOrFpInductionRecipe. We precompute
-  // the cost of both induction increment instructions that are represented by
-  // recipes and those that are not, to avoid distinguishing between them here,
-  // and skip all recipes that represent induction increments (the former case)
-  // later on, if they exist, to avoid counting them twice. Similarly we
-  // pre-compute the cost of any optimized truncates.
+  // the cost of induction phis and increments (both that are represented by
+  // recipes and those that are not), to avoid distinguishing between them here,
+  // and skip all recipes that represent induction phis and increments (the
+  // former case) later on, if they exist, to avoid counting them twice.
+  // Similarly we pre-compute the cost of any optimized truncates.
   // TODO: Switch to more accurate costing based on VPlan.
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-    if (CostCtx.SkipCostComputation.insert(IVInc).second) {
-      InstructionCost InductionCost = CostCtx.getLegacyCost(IVInc, VF);
-      LLVM_DEBUG({
-        dbgs() << "Cost of " << InductionCost << " for VF " << VF
-               << ":\n induction increment " << *IVInc << "\n";
-        IVInc->dump();
-      });
-      Cost += InductionCost;
-    }
+    SmallVector<Instruction *> IVInsts = {IV, IVInc};
     for (User *U : IV->users()) {
       auto *CI = cast<Instruction>(U);
       if (!CostCtx.CM.isOptimizableIVTruncate(CI, VF))
         continue;
-      assert(!CostCtx.SkipCostComputation.contains(CI) &&
-             "Same cast for multiple inductions?");
-      CostCtx.SkipCostComputation.insert(CI);
-      InstructionCost CastCost = CostCtx.getLegacyCost(CI, VF);
+      IVInsts.push_back(CI);
+    }
+    for (Instruction *IVInst : IVInsts) {
+      if (!CostCtx.SkipCostComputation.insert(IVInst).second)
+        continue;
+      InstructionCost InductionCost = CostCtx.getLegacyCost(IVInst, VF);
       LLVM_DEBUG({
-        dbgs() << "Cost of " << CastCost << " for VF " << VF
-               << ":\n induction cast " << *CI << "\n";
-        CI->dump();
+        dbgs() << "Cost of " << InductionCost << " for VF " << VF
+               << ": induction instruction " << *IVInst << "\n";
       });
-      Cost += CastCost;
+      Cost += InductionCost;
     }
   }
 
