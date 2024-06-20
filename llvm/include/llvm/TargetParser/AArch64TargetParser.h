@@ -304,21 +304,8 @@ struct Alias {
   StringRef Name;
 };
 
-inline constexpr Alias CpuAliases[] = {
-    {"cobalt-100", "neoverse-n2"},
-    {"grace", "neoverse-v2"},
-    // Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
-    {"cyclone", "apple-a7"},
-    {"apple-a8", "apple-a7"},
-    {"apple-a9", "apple-a7"},
-    {"apple-s4", "apple-a12"},
-    {"apple-s5", "apple-a12"},
-    {"apple-m1", "apple-a14"},
-    {"apple-m2", "apple-a15"},
-    {"apple-m3", "apple-a16"},
-    // Alias for the latest Apple processor model supported by LLVM.
-    {"apple-latest", "apple-m4"},
-};
+#define EMIT_CPU_ALIAS
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
 
 const ExtensionInfo &getExtensionByID(ArchExtKind(ExtID));
 
