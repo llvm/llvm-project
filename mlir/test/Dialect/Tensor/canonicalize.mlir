@@ -1120,8 +1120,8 @@ func.func @compose_expand_of_expand_of_zero_dim(%arg0 : tensor<f32>)
 // CHECK-LABEL: func.func @collapse_of_cast(
 // CHECK-SAME:         %[[IN:.*]]: tensor<8x12x32xf32>) -> tensor<?x32xf32> {
 // CHECK-NEXT:    %[[COLLAPSE:.*]] = tensor.collapse_shape %[[IN]] {{\[}}[0, 1], [2]] : tensor<8x12x32xf32> into tensor<96x32xf32>
-// CHECK-NEXT     %[[CAST:.*]] = tensor.cast %[[COLLAPSE]] : tensor<96x32xf32> to tensor<?x32xf32>
-// CHECK-NEXT     return %[[CAST]] : tensor<?x32xf32>
+// CHECK-NEXT:    %[[CAST:.*]] = tensor.cast %[[COLLAPSE]] : tensor<96x32xf32> to tensor<?x32xf32>
+// CHECK-NEXT:    return %[[CAST]] : tensor<?x32xf32>
 func.func @collapse_of_cast(%t: tensor<8x12x32xf32>) -> tensor<?x32xf32> {
   %0 = tensor.cast %t : tensor<8x12x32xf32> to tensor<?x?x?xf32>
   %1 = tensor.collapse_shape %0 [[0, 1], [2]] : tensor<?x?x?xf32> into tensor<?x?xf32>

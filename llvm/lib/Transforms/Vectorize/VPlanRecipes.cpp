@@ -577,7 +577,8 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       // When loop is unrolled without vectorizing, retrieve UF - Offset.
       Res = State.get(getOperand(0), State.UF - Offset);
     }
-    Res->setName(Name);
+    if (isa<ExtractElementInst>(Res))
+      Res->setName(Name);
     return Res;
   }
   case VPInstruction::LogicalAnd: {
@@ -675,6 +676,25 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
+    return true;
+  };
+  llvm_unreachable("switch should return");
+}
+
+bool VPInstruction::onlyFirstPartUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (Instruction::isBinaryOp(getOpcode()))
+    return vputils::onlyFirstPartUsed(this);
+
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::ICmp:
+  case Instruction::Select:
+    return vputils::onlyFirstPartUsed(this);
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::CanonicalIVIncrementForPart:
     return true;
   };
   llvm_unreachable("switch should return");

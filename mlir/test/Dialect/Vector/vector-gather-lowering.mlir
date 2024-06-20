@@ -206,3 +206,13 @@ func.func @strided_gather(%base : memref<100x3xf32>,
 // CHECK:           scf.if %[[MASK_3]] -> (vector<4xf32>)
 // CHECK:             %[[M_3:.*]] = vector.load %[[COLLAPSED]][%[[IDX_3]]] : memref<300xf32>, vector<1xf32>
 // CHECK:             %[[V_3:.*]] = vector.extract %[[M_3]][0] : f32 from vector<1xf32>
+
+// CHECK-LABEL: @scalable_gather_1d
+// CHECK-NOT: extract
+// CHECK: vector.gather
+// CHECK-NOT: extract
+func.func @scalable_gather_1d(%base: tensor<?xf32>, %v: vector<[2]xindex>, %mask: vector<[2]xi1>, %pass_thru: vector<[2]xf32>) -> vector<[2]xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.gather %base[%c0][%v], %mask, %pass_thru : tensor<?xf32>, vector<[2]xindex>, vector<[2]xi1>, vector<[2]xf32> into vector<[2]xf32>
+  return %0 : vector<[2]xf32>
+}

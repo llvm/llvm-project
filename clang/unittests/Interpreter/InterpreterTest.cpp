@@ -283,10 +283,11 @@ TEST_F(InterpreterTest, InstantiateTemplate) {
 }
 
 // This test exposes an ARM specific problem in the interpreter, see
-// https://github.com/llvm/llvm-project/issues/94741.
+// https://github.com/llvm/llvm-project/issues/94994.
 #ifndef __arm__
 TEST_F(InterpreterTest, Value) {
-  std::unique_ptr<Interpreter> Interp = createInterpreter();
+  std::vector<const char *> Args = {"-fno-sized-deallocation"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
   Value V1;
   llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));

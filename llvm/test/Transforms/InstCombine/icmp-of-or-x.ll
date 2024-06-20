@@ -399,3 +399,13 @@ define i1 @icmp_eq_x_invertable_y2(i8 %x, i8 %y) {
   %r = icmp eq i8 %yy, %or
   ret i1 %r
 }
+
+define i1 @PR38139(i8 %arg) {
+; CHECK-LABEL: @PR38139(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[ARG:%.*]], -64
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %masked = or i8 %arg, 192
+  %r = icmp ne i8 %masked, %arg
+  ret i1 %r
+}

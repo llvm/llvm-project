@@ -662,6 +662,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
+  if (getTargetMachine().getTargetTriple().isOSLinux()) {
+    // Custom lowering of llvm.clear_cache.
+    setOperationAction(ISD::CLEAR_CACHE, MVT::Other, Custom);
+  }
+
   if (Subtarget.hasVInstructions()) {
     setBooleanVectorContents(ZeroOrOneBooleanContent);
 
@@ -1102,12 +1107,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::EXTRACT_SUBVECTOR},
                            VT, Custom);
         setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
-        if (Subtarget.hasStdExtZfbfmin()) {
-          if (Subtarget.hasVInstructionsF16())
-            setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-          else if (Subtarget.hasVInstructionsF16Minimal())
-            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
-        }
+        if (Subtarget.hasStdExtZfbfmin())
+          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
         setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                            Custom);
         setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -1340,12 +1341,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                               ISD::EXTRACT_SUBVECTOR},
                              VT, Custom);
           setOperationAction({ISD::LOAD, ISD::STORE}, VT, Custom);
-          if (Subtarget.hasStdExtZfbfmin()) {
-            if (Subtarget.hasVInstructionsF16())
-              setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
-            else if (Subtarget.hasVInstructionsF16Minimal())
-              setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
-          }
+          if (Subtarget.hasStdExtZfbfmin())
+            setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
@@ -6738,9 +6735,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
           Subtarget.hasStdExtZfhminOrZhinxmin() &&
           !Subtarget.hasVInstructionsF16())) ||
         (Op.getValueType().getScalarType() == MVT::bf16 &&
-         (Subtarget.hasVInstructionsBF16() && Subtarget.hasStdExtZfbfmin() &&
-          Subtarget.hasVInstructionsF16Minimal() &&
-          !Subtarget.hasVInstructionsF16()))) {
+         (Subtarget.hasVInstructionsBF16() && Subtarget.hasStdExtZfbfmin()))) {
       if (Op.getValueType() == MVT::nxv32f16 ||
           Op.getValueType() == MVT::nxv32bf16)
         return SplitVectorOp(Op, DAG);
@@ -7152,7 +7147,27 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPSpliceExperimental(Op, DAG);
   case ISD::EXPERIMENTAL_VP_REVERSE:
     return lowerVPReverseExperimental(Op, DAG);
+  case ISD::CLEAR_CACHE: {
+    assert(getTargetMachine().getTargetTriple().isOSLinux() &&
+           "llvm.clear_cache only needs custom lower on Linux targets");
+    SDLoc DL(Op);
+    SDValue Flags = DAG.getConstant(0, DL, Subtarget.getXLenVT());
+    return emitFlushICache(DAG, Op.getOperand(0), Op.getOperand(1),
+                           Op.getOperand(2), Flags, DL);
   }
+  }
+}
+
+SDValue RISCVTargetLowering::emitFlushICache(SelectionDAG &DAG, SDValue InChain,
+                                             SDValue Start, SDValue End,
+                                             SDValue Flags, SDLoc DL) const {
+  MakeLibCallOptions CallOptions;
+  std::pair<SDValue, SDValue> CallResult =
+      makeLibCall(DAG, RTLIB::RISCV_FLUSH_ICACHE, MVT::isVoid,
+                  {Start, End, Flags}, CallOptions, DL, InChain);
+
+  // This function returns void so only the out chain matters.
+  return CallResult.second;
 }
 
 static SDValue getTargetNode(GlobalAddressSDNode *N, const SDLoc &DL, EVT Ty,

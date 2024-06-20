@@ -535,7 +535,7 @@ namespace {
 /// library).
 ///
 /// This is done by traversing the AST of all shader entry point functions
-/// and of all exported functions, and any functions that are refrenced
+/// and of all exported functions, and any functions that are referenced
 /// from this AST. In other words, any functions that are reachable from
 /// the entry points.
 class DiagnoseHLSLAvailability
@@ -775,9 +775,34 @@ DiagnoseHLSLAvailability::FindAvailabilityAttr(const Decl *D) {
 void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
                                                      const AvailabilityAttr *AA,
                                                      SourceRange Range) {
-  if (ReportOnlyShaderStageIssues && !AA->getEnvironment())
-    return;
 
+  IdentifierInfo *IIEnv = AA->getEnvironment();
+
+  if (!IIEnv) {
+    // The availability attribute does not have environment -> it depends only
+    // on shader model version and not on specific the shader stage.
+
+    // Skip emitting the diagnostics if the diagnostic mode is set to
+    // strict (-fhlsl-strict-availability) because all relevant diagnostics
+    // were already emitted in the DiagnoseUnguardedAvailability scan
+    // (SemaAvailability.cpp).
+    if (SemaRef.getLangOpts().HLSLStrictAvailability)
+      return;
+
+    // Do not report shader-stage-independent issues if scanning a function
+    // that was already scanned in a different shader stage context (they would
+    // be duplicate)
+    if (ReportOnlyShaderStageIssues)
+      return;
+
+  } else {
+    // The availability attribute has environment -> we need to know
+    // the current stage context to property diagnose it.
+    if (InUnknownShaderStageContext())
+      return;
+  }
+
+  // Check introduced version and if environment matches
   bool EnvironmentMatches = HasMatchingEnvironmentOrNone(AA);
   VersionTuple Introduced = AA->getIntroduced();
   VersionTuple TargetVersion =
@@ -786,24 +811,16 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
   if (TargetVersion >= Introduced && EnvironmentMatches)
     return;
 
-  // Do not diagnose shade-stage-specific availability when the shader stage
-  // context is unknown
-  if (InUnknownShaderStageContext() && AA->getEnvironment() != nullptr)
-    return;
-
   // Emit diagnostic message
   const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
   llvm::StringRef PlatformName(
       AvailabilityAttr::getPrettyPlatformName(TI.getPlatformName()));
 
   llvm::StringRef CurrentEnvStr =
-      AvailabilityAttr::getPrettyEnviromentName(GetCurrentShaderEnvironment());
+      llvm::Triple::getEnvironmentTypeName(GetCurrentShaderEnvironment());
 
-  llvm::StringRef AttrEnvStr = AA->getEnvironment()
-                                   ? AvailabilityAttr::getPrettyEnviromentName(
-                                         AvailabilityAttr::getEnvironmentType(
-                                             AA->getEnvironment()->getName()))
-                                   : "";
+  llvm::StringRef AttrEnvStr =
+      AA->getEnvironment() ? AA->getEnvironment()->getName() : "";
   bool UseEnvironment = !AttrEnvStr.empty();
 
   if (EnvironmentMatches) {
@@ -824,5 +841,14 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
 } // namespace
 
 void SemaHLSL::DiagnoseAvailabilityViolations(TranslationUnitDecl *TU) {
+  // Skip running the diagnostics scan if the diagnostic mode is
+  // strict (-fhlsl-strict-availability) and the target shader stage is known
+  // because all relevant diagnostics were already emitted in the
+  // DiagnoseUnguardedAvailability scan (SemaAvailability.cpp).
+  const TargetInfo &TI = SemaRef.getASTContext().getTargetInfo();
+  if (SemaRef.getLangOpts().HLSLStrictAvailability &&
+      TI.getTriple().getEnvironment() != llvm::Triple::EnvironmentType::Library)
+    return;
+
   DiagnoseHLSLAvailability(SemaRef).RunOnTranslationUnit(TU);
 }
