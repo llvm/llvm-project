@@ -3296,6 +3296,25 @@ def IterEndOp : CIR_Op<"iterator_end"> {
 // Floating Point Ops
 //===----------------------------------------------------------------------===//
 
+class UnaryFPToIntBuiltinOp<string mnemonic> : CIR_Op<mnemonic, [Pure]> {
+  let arguments = (ins CIR_AnyFloat:$src);
+  let results = (outs CIR_IntType:$result);
+
+  let summary = [{
+    Builtin function that takes a floating-point value as input and produces an
+    integral value as output.
+  }];
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($result) attr-dict
+  }];
+}
+
+def LroundOp : UnaryFPToIntBuiltinOp<"lround">;
+def LLroundOp : UnaryFPToIntBuiltinOp<"llround">;
+def LrintOp : UnaryFPToIntBuiltinOp<"lrint">;
+def LLrintOp : UnaryFPToIntBuiltinOp<"llrint">;
+
 class UnaryFPToFPBuiltinOp<string mnemonic>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
   let arguments = (ins CIR_AnyFloat:$src);
