@@ -630,21 +630,35 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getDIEUnitOffset() const {
   return std::nullopt;
 }
 
-std::optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
+std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUIndex() const {
+  // Return the DW_IDX_compile_unit attribute value if it is specified.
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
   // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
-  // implicitly refer to the single CU, but only if we don't have a
-  // DW_IDX_type_unit.
-  if (lookup(dwarf::DW_IDX_type_unit).has_value())
-    return std::nullopt;
+  // implicitly refer to the single CU. 
   if (NameIdx->getCUCount() == 1)
     return 0;
   return std::nullopt;
 }
 
+std::optional<uint64_t> DWARFDebugNames::Entry::getCUIndex() const {
+  // Return the DW_IDX_compile_unit attribute value but only if we don't have a
+  // DW_IDX_type_unit attribute. Use Entry::getRelatedCUIndex() to get the
+  // associated CU index if this behaviour is not desired.
+  if (lookup(dwarf::DW_IDX_type_unit).has_value())
+    return std::nullopt;
+  return getRelatedCUIndex();
+}
+
 std::optional<uint64_t> DWARFDebugNames::Entry::getCUOffset() const {
   std::optional<uint64_t> Index = getCUIndex();
+  if (!Index || *Index >= NameIdx->getCUCount())
+    return std::nullopt;
+  return NameIdx->getCUOffset(*Index);
+}
+
+std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUOffset() const {
+  std::optional<uint64_t> Index = getRelatedCUIndex();
   if (!Index || *Index >= NameIdx->getCUCount())
     return std::nullopt;
   return NameIdx->getCUOffset(*Index);
@@ -668,29 +682,6 @@ DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
   if (ForeignTUIndex >= NameIdx->getForeignTUCount())
     return std::nullopt; // Invalid foreign TU index.
   return NameIdx->getForeignTUSignature(ForeignTUIndex);
-}
-
-std::optional<uint64_t>
-DWARFDebugNames::Entry::getForeignTUSkeletonCUOffset() const {
-  // Must have a DW_IDX_type_unit and it must be a foreign type unit.
-  if (!getForeignTUTypeSignature())
-    return std::nullopt;
-  // Lookup the DW_IDX_compile_unit and make sure we have one, if we don't
-  // we don't default to returning the first compile unit like getCUOffset().
-  std::optional<uint64_t> CUIndex;
-  std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit);
-  if (Off) {
-    CUIndex = Off->getAsUnsignedConstant();
-  } else {
-    // Check if there is only 1 CU and return that. Most .o files generate one
-    // .debug_names table per source file where there is 1 CU and many TUs.
-    if (NameIdx->getCUCount() == 1)
-      CUIndex = 0;
-  }
-  // Extract the CU index and return the right CU offset.
-  if (CUIndex && *CUIndex < NameIdx->getCUCount())
-    return NameIdx->getCUOffset(*CUIndex);
-  return std::nullopt;
 }
 
 std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {

@@ -70,7 +70,7 @@ DebugNamesDWARFIndex::GetForeignTypeUnit(const DebugNames::Entry &entry) const {
   // file from it and get the type unit by signature from there. If we find
   // the type unit in the .dwo file, we don't need to check that the
   // DW_AT_dwo_name matches because each .dwo file can have its own type unit.
-  std::optional<uint64_t> cu_offset = entry.getForeignTUSkeletonCUOffset();
+  std::optional<uint64_t> cu_offset = entry.getRelatedCUOffset();
   if (!cu_offset)
     return nullptr; // Return NULL, this is a type unit, but couldn't find it.
 
