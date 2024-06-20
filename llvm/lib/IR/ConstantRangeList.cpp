@@ -21,7 +21,6 @@ bool ConstantRangeList::isOrderedRanges(ArrayRef<ConstantRange> RangesRef) {
     auto CurRange = RangesRef[i];
     auto PreRange = RangesRef[i - 1];
     if (CurRange.getLower().sge(CurRange.getUpper()) ||
-        CurRange.getLower().sle(PreRange.getLower()) ||
         CurRange.getLower().sle(PreRange.getUpper()))
       return false;
   }
@@ -51,12 +50,13 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
     return;
   }
 
-  auto LowerBound =
-      std::lower_bound(Ranges.begin(), Ranges.end(), NewRange,
-                       [](const ConstantRange &a, const ConstantRange &b) {
-                         return a.getLower().slt(b.getLower());
-                       });
-  if (LowerBound != Ranges.end() && *LowerBound == NewRange)
+  auto LowerBound = lower_bound(
+      Ranges, NewRange, [](const ConstantRange &a, const ConstantRange &b) {
+        return a.getLower().slt(b.getLower());
+      });
+  if (LowerBound != Ranges.end() &&
+      LowerBound->getLower().eq(NewRange.getLower()) &&
+      LowerBound->getUpper().sge(NewRange.getUpper()))
     return;
 
   // Slow insert.

@@ -2064,21 +2064,8 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     auto Inits = Attrs.getAttribute(Attribute::Initializes).getInitializes();
     Check(!Inits.empty(), "Attribute 'initializes' does not support empty list",
           V);
-
-    Check(Inits[0].getLower().slt(Inits[0].getUpper()),
-          "Attribute 'initializes' requires interval lower less than upper", V);
-    for (size_t i = 1; i < Inits.size(); i++) {
-      auto Previous = Inits[i - 1];
-      auto Current = Inits[i];
-      Check(Current.getLower().slt(Current.getUpper()),
-            "Attribute 'initializes' requires interval lower less than upper",
-            V);
-      Check(Current.getLower().sgt(Previous.getLower()),
-            "Attribute 'initializes' requires intervals in ascending order!",
-            V);
-      Check(Current.getLower().sgt(Previous.getUpper()),
-            "Attribute 'initializes' requires intervals merged!", V);
-    }
+    Check(ConstantRangeList::isOrderedRanges(Inits),
+          "Attribute 'initializes' does not support unordered ranges", V);
   }
 
   if (Attrs.hasAttribute(Attribute::NoFPClass)) {

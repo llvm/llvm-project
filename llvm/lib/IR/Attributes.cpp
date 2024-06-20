@@ -200,7 +200,6 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
   ID.AddInteger(Val.size());
-  ID.AddInteger(Val[0].getBitWidth());
   for (auto &CR : Val) {
     CR.getLower().Profile(ID);
     CR.getUpper().Profile(ID);
@@ -212,11 +211,11 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    // ConstantRange is a dynamically sized class and cannot use
-    // SpecificBumpPtrAllocator. Instead, we use normal Alloc for allocation
-    // for allocation and record the allocated pointer in
+    // ConstantRangeListAttributeImpl is a dynamically sized class and cannot
+    // use SpecificBumpPtrAllocator. Instead, we use normal Alloc for
+    // allocation and record the allocated pointer in
     // `ConstantRangeListAttributes`. LLVMContext destructor will call the
-    // destuctor of the allocated pointer explicitly.
+    // destructor of the allocated pointer explicitly.
     void *Mem = pImpl->Alloc.Allocate(
         ConstantRangeListAttributeImpl::totalSizeToAlloc(Val),
         alignof(ConstantRangeListAttributeImpl));

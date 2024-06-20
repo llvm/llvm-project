@@ -1536,7 +1536,7 @@ public:
   std::vector<MDNode *> DistinctMDNodes;
 
   // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
-  // ConstantRange. Since ConstantRange is a dynamically sized class, it's not
+  // ConstantRange. Since this is a dynamically sized class, it's not
   // possible to use SpecificBumpPtrAllocator. Instead, we use normal Alloc
   // for allocation and record all allocated pointers in this vector. In the
   // LLVMContext destructor, call the destuctors of everything in the vector.

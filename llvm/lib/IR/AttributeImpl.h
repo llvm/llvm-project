@@ -138,7 +138,6 @@ public:
                       ArrayRef<ConstantRange> Val) {
     ID.AddInteger(Kind);
     ID.AddInteger(Val.size());
-    ID.AddInteger(Val[0].getBitWidth());
     for (auto &CR : Val) {
       CR.getLower().Profile(ID);
       CR.getUpper().Profile(ID);
