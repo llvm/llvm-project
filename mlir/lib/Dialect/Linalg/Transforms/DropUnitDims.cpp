@@ -839,43 +839,31 @@ struct LinalgFoldUnitExtentDimsPass
 namespace {
 
 static SmallVector<ReassociationIndices>
-getReassociationsForTrailingDims(int64_t rank) {
-  SmallVector<ReassociationIndices> reassociation(rank - 1, {});
-  if (rank > 1) {
-    reassociation[rank - 2] =
-        (rank == 1) ? ReassociationIndices{0} : ReassociationIndices{0, 1};
-    for (int64_t i = 0; i < rank - 2; i++)
-      reassociation[i] = {i};
+getReassociationForReshapeAtDim(int64_t rank, int64_t pos,
+                                bool fromRight = false) {
+  SmallVector<ReassociationIndices> reassociation(rank - 1, {0, 1});
+  if (rank > 2) {
+    int64_t offsetPos = pos - (int64_t)fromRight;
+    for (int64_t i = 0; i < rank - 1; i++) {
+      if (i == offsetPos)
+        reassociation[i] = ReassociationIndices{i, i + 1};
+      else if (i < offsetPos)
+        reassociation[i] = ReassociationIndices{i};
+      else
+        reassociation[i] = ReassociationIndices{i + offsetPos + 1};
+    }
   }
   return reassociation;
 }
 
-static SmallVector<ReassociationIndices>
-getReassociationsForLeadingDims(int64_t rank) {
-  SmallVector<ReassociationIndices> reassociation(rank - 1, {});
-  if (rank > 1) {
-    reassociation[0] =
-        (rank == 1) ? ReassociationIndices{0} : ReassociationIndices{0, 1};
-    for (int64_t i = 1; i < rank - 1; i++)
-      reassociation[i] = {i + rank - 2};
-  }
-  return reassociation;
-}
-
-static Value collapseLeadingSingletonDim(PatternRewriter &rewriter, Value val) {
+static Value collapseSingletonDimAt(PatternRewriter &rewriter, Value val,
+                                    int64_t pos, bool fromRight = false) {
   auto valType = cast<ShapedType>(val.getType());
+  SmallVector<int64_t> collapsedShape(valType.getShape());
+  collapsedShape.erase(collapsedShape.begin() + pos);
   return collapseValue(
-      rewriter, val.getLoc(), val, valType.getShape().drop_front(1),
-      getReassociationsForLeadingDims(valType.getRank()),
-      ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape);
-}
-
-static Value collapseTrailingSingletonDim(PatternRewriter &rewriter,
-                                          Value val) {
-  auto valType = cast<ShapedType>(val.getType());
-  return collapseValue(
-      rewriter, val.getLoc(), val, valType.getShape().drop_back(1),
-      getReassociationsForTrailingDims(valType.getRank()),
+      rewriter, val.getLoc(), val, collapsedShape,
+      getReassociationForReshapeAtDim(valType.getRank(), pos, fromRight),
       ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape);
 }
 
@@ -951,16 +939,16 @@ struct RankReduceBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
 
   SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter, Value lhs,
                                          Value rhs, Value init) const override {
-    auto collapsedLhs = collapseLeadingSingletonDim(rewriter, lhs);
-    auto collapsedRhs = collapseLeadingSingletonDim(rewriter, rhs);
-    auto collapsedInit = collapseLeadingSingletonDim(rewriter, init);
+    auto collapsedLhs = collapseSingletonDimAt(rewriter, lhs, 0);
+    auto collapsedRhs = collapseSingletonDimAt(rewriter, rhs, 0);
+    auto collapsedInit = collapseSingletonDimAt(rewriter, init, 0);
     return SmallVector<Value, 3>{collapsedLhs, collapsedRhs, collapsedInit};
   }
   Value expandResult(PatternRewriter &rewriter, Value result,
                      RankedTensorType expandedType) const override {
-  return rewriter.create<tensor::ExpandShapeOp>(
-      result.getLoc(), expandedType, result,
-      getReassociationsForLeadingDims(expandedType.getRank()));
+    return rewriter.create<tensor::ExpandShapeOp>(
+        result.getLoc(), expandedType, result,
+        getReassociationForReshapeAtDim(expandedType.getRank(), 0));
   }
 };
 
@@ -968,11 +956,32 @@ template <typename FromOpTy, typename ToOpTy>
 struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
   using RankReduceContractionOps<FromOpTy, ToOpTy>::RankReduceContractionOps;
 
+  static bool constexpr isBatched =
+      std::is_same<FromOpTy, BatchMatmulOp>::value ||
+      std::is_same<FromOpTy, BatchMatvecOp>::value ||
+      std::is_same<FromOpTy, BatchVecmatOp>::value ||
+      std::is_same<FromOpTy, BatchMatmulTransposeAOp>::value ||
+      std::is_same<FromOpTy, BatchMatmulTransposeBOp>::value;
+
+  static bool constexpr isLHSTransposed =
+      std::is_same<FromOpTy, BatchMatmulTransposeAOp>::value ||
+      std::is_same<FromOpTy, MatmulTransposeAOp>::value;
+
+  static bool constexpr isRHSTransposed =
+      std::is_same<FromOpTy, BatchMatmulTransposeBOp>::value ||
+      std::is_same<FromOpTy, MatmulTransposeBOp>::value;
+
   static bool constexpr isTranspose =
+      std::is_same<FromOpTy, BatchMatmulTransposeAOp>::value ||
+      std::is_same<FromOpTy, BatchMatmulTransposeBOp>::value ||
       std::is_same<FromOpTy, MatmulTransposeAOp>::value ||
       std::is_same<FromOpTy, MatmulTransposeBOp>::value;
 
   static bool constexpr reduceLeft =
+      (std::is_same<FromOpTy, BatchMatmulOp>::value &&
+       std::is_same<ToOpTy, BatchVecmatOp>::value) ||
+      (std::is_same<FromOpTy, BatchMatmulTransposeAOp>::value &&
+       std::is_same<ToOpTy, BatchVecmatOp>::value) ||
       (std::is_same<FromOpTy, MatmulOp>::value &&
        std::is_same<ToOpTy, VecmatOp>::value) ||
       (std::is_same<FromOpTy, MatmulTransposeAOp>::value &&
@@ -980,37 +989,41 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
       (std::is_same<FromOpTy, MatvecOp>::value &&
        std::is_same<ToOpTy, DotOp>::value);
 
+  static int constexpr lhsTransposeOffset = (int)isLHSTransposed;
+  static int constexpr rhsTransposeOffset = (int)isRHSTransposed;
+  static int constexpr batchOffset = (int)isBatched;
+
   bool checkTypes(Value lhs, Value rhs, Value init) const override {
     auto lhsType = cast<ShapedType>(lhs.getType());
     auto rhsType = cast<ShapedType>(rhs.getType());
     auto initType = cast<ShapedType>(init.getType());
-    int constexpr offset = (int)isTranspose;
     if constexpr (reduceLeft)
-      return lhsType.getShape().begin()[offset] == 1 &&
-             initType.getShape().begin()[offset] == 1;
+      return lhsType.getShape().begin()[lhsTransposeOffset + batchOffset] ==
+                 1 &&
+             initType.getShape().begin()[lhsTransposeOffset + batchOffset] == 1;
     else
-      return rhsType.getShape().rbegin()[offset] == 1 &&
-             initType.getShape().rbegin()[offset] == 1;
+      return rhsType.getShape().rbegin()[rhsTransposeOffset] == 1 &&
+             initType.getShape().rbegin()[rhsTransposeOffset] == 1;
   }
 
   SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter, Value lhs,
                                          Value rhs, Value init) const override {
+
     if constexpr (reduceLeft) {
-      if constexpr (isTranspose) {
-        lhs = collapseTrailingSingletonDim(rewriter, lhs);
-        init = collapseTrailingSingletonDim(rewriter, init);
-      } else {
-        lhs = collapseLeadingSingletonDim(rewriter, lhs);
-        init = collapseLeadingSingletonDim(rewriter, init);
-      }
+      lhs = collapseSingletonDimAt(rewriter, lhs,
+                                   lhsTransposeOffset + batchOffset,
+                                   /*fromRight=*/isLHSTransposed);
+      init = collapseSingletonDimAt(rewriter, init,
+                                    lhsTransposeOffset + batchOffset,
+                                    /*fromRight*/ isLHSTransposed);
     } else {
-      if constexpr (isTranspose) {
-        rhs = collapseLeadingSingletonDim(rewriter, rhs);
-        init = collapseLeadingSingletonDim(rewriter, init);
-      } else {
-        rhs = collapseTrailingSingletonDim(rewriter, rhs);
-        init = collapseTrailingSingletonDim(rewriter, init);
-      }
+      auto rhsRank = cast<ShapedType>(rhs.getType()).getRank();
+      auto initRank = cast<ShapedType>(init.getType()).getRank();
+      rhs = collapseSingletonDimAt(
+          rewriter, rhs, rhsRank - rhsTransposeOffset - 1, /*fromRight=*/true);
+      init = collapseSingletonDimAt(rewriter, init,
+                                    initRank - rhsTransposeOffset - 1,
+                                    /*fromRight=*/true);
     }
     return SmallVector<Value, 3>{lhs, rhs, init};
   }
@@ -1020,11 +1033,13 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
     if constexpr (reduceLeft)
       return rewriter.create<tensor::ExpandShapeOp>(
           result.getLoc(), expandedType, result,
-          getReassociationsForLeadingDims(expandedType.getRank()));
+          getReassociationForReshapeAtDim(expandedType.getRank(), 0));
     else
       return rewriter.create<tensor::ExpandShapeOp>(
           result.getLoc(), expandedType, result,
-          getReassociationsForTrailingDims(expandedType.getRank()));
+          getReassociationForReshapeAtDim(expandedType.getRank(),
+                                          expandedType.getRank() - 1,
+                                          /*fromRight=*/true));
   }
 };
 
@@ -1033,6 +1048,7 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
 void mlir::linalg::populateContractionOpRankReducingPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
+  // Unbatching patterns for unit batch size
   patterns.add<RankReduceBatched<BatchMatmulOp, MatmulOp>>(context);
   patterns.add<RankReduceBatched<BatchMatmulTransposeAOp, MatmulTransposeAOp>>(
       context);
@@ -1040,10 +1056,21 @@ void mlir::linalg::populateContractionOpRankReducingPatterns(
       context);
   patterns.add<RankReduceBatched<BatchMatvecOp, MatvecOp>>(context);
   patterns.add<RankReduceBatched<BatchVecmatOp, VecmatOp>>(context);
+
+  // Non-batch rank 1 reducing patterns
   patterns.add<RankReduceMatmul<MatmulOp, VecmatOp>>(context);
   patterns.add<RankReduceMatmul<MatmulOp, MatvecOp>>(context);
   patterns.add<RankReduceMatmul<MatmulTransposeAOp, VecmatOp>>(context);
   patterns.add<RankReduceMatmul<MatmulTransposeBOp, MatvecOp>>(context);
+  // Batch rank 1 reducing patterns
+  patterns.add<RankReduceMatmul<BatchMatmulOp, BatchVecmatOp>>(context);
+  patterns.add<RankReduceMatmul<BatchMatmulOp, BatchMatvecOp>>(context);
+  patterns.add<RankReduceMatmul<BatchMatmulTransposeAOp, BatchVecmatOp>>(
+      context);
+  patterns.add<RankReduceMatmul<BatchMatmulTransposeBOp, BatchMatvecOp>>(
+      context);
+
+  // Non-batch rank 0 reducing patterns
   patterns.add<RankReduceMatmul<MatvecOp, DotOp>>(context);
   patterns.add<RankReduceMatmul<VecmatOp, DotOp>>(context);
 }
