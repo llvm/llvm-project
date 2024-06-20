@@ -170,9 +170,9 @@ public:
     return m_process->GetTarget().GetSearchFilterForModule(nullptr);
   }
 
-  virtual bool GetTypeBitSize(const CompilerType &compiler_type,
-                              uint64_t &size) {
-    return false;
+  virtual std::optional<uint64_t>
+  GetTypeBitSize(const CompilerType &compiler_type) {
+    return {};
   }
 
   virtual void SymbolsDidLoad(const ModuleList &module_list) {}
