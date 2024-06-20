@@ -1346,13 +1346,22 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       }
     }
 
-    auto Eval = [&](Expr *Init, unsigned ElemIndex) {
-      return visitArrayElemInit(ElemIndex, Init);
-    };
-
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
-      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+      if (const auto *EmbedS =
+              dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+        PrimType TargetT = classifyPrim(Init->getType());
+
+        auto Eval = [&](const Expr *Init, unsigned ElemIndex) {
+          PrimType InitT = classifyPrim(Init->getType());
+          if (!this->visit(Init))
+            return false;
+          if (InitT != TargetT) {
+            if (!this->emitCast(InitT, TargetT, E))
+              return false;
+          }
+          return this->emitInitElem(TargetT, ElemIndex, Init);
+        };
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
       } else {
