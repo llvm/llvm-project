@@ -34,11 +34,13 @@ public:
         OldInitializingDecl(Ctx->InitializingDecl) {
     Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
     Ctx->InitializingDecl = VD;
+    Ctx->InitStack.push_back(InitLink::Decl(VD));
   }
 
   ~DeclScope() {
     this->Ctx->GlobalDecl = OldGlobalDecl;
     this->Ctx->InitializingDecl = OldInitializingDecl;
+    this->Ctx->InitStack.pop_back();
   }
 
 private:
@@ -71,6 +73,20 @@ private:
   bool OldDiscardResult;
   bool OldInitializing;
 };
+
+template <class Emitter>
+bool InitLink::emit(ByteCodeExprGen<Emitter> *Ctx, const Expr *E) const {
+  switch (Kind) {
+  case K_This:
+    return Ctx->emitThis(E);
+  case K_Field:
+    // We're assuming there's a base pointer on the stack already.
+    return Ctx->emitGetPtrFieldPop(Offset, E);
+  case K_Decl:
+    return Ctx->visitDeclRef(D, E);
+  }
+  return true;
+}
 
 } // namespace interp
 } // namespace clang
@@ -3732,7 +3748,12 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXDefaultInitExpr(
     const CXXDefaultInitExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
-  return this->delegate(E->getExpr());
+
+  bool Old = InitStackActive;
+  InitStackActive = !isa<FunctionDecl>(E->getUsedContext());
+  bool Result = this->delegate(E->getExpr());
+  InitStackActive = Old;
+  return Result;
 }
 
 template <class Emitter>
@@ -3788,6 +3809,17 @@ bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
     return this->emitGetPtrThisField(this->LambdaThisCapture.Offset, E);
   }
 
+  // In some circumstances, the 'this' pointer does not actually refer to the
+  // instance pointer of the current function frame, but e.g. to the declaration
+  // currently being initialized. Here we emit the necessary instruction(s) for
+  // this scenario.
+  if (InitStackActive && !InitStack.empty()) {
+    for (const InitLink &IL : InitStack) {
+      if (!IL.emit<Emitter>(this, E))
+        return false;
+    }
+    return true;
+  }
   return this->emitThis(E);
 }
 
