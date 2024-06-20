@@ -36,7 +36,7 @@ public:
   /// Return the identifier associated with the given ID number.
   ///
   /// The ID 0 is associated with the NULL identifier.
-  virtual IdentifierInfo *GetIdentifier(unsigned ID) = 0;
+  virtual IdentifierInfo *GetIdentifier(uint64_t ID) = 0;
 
   /// Map a module ID to a module.
   virtual Module *getModule(unsigned ModuleID) = 0;
