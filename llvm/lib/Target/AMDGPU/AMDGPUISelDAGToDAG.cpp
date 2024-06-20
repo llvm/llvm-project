@@ -2554,7 +2554,8 @@ void AMDGPUDAGToDAGISel::SelectPOPSExitingWaveID(SDNode *N) {
   // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
   // mayLoad/mayStore and tablegen complains about the mismatch.
   SDValue Reg = CurDAG->getRegister(AMDGPU::SRC_POPS_EXITING_WAVE_ID, MVT::i32);
-  CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, N->getVTList(), Reg);
+  SDValue Chain = N->getOperand(0);
+  CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, N->getVTList(), {Reg, Chain});
 }
 
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {
