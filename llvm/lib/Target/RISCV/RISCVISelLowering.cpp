@@ -13706,8 +13706,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   if (VT != Subtarget.getXLenVT())
     return SDValue();
 
-  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXTHeadBa())
-    return SDValue();
+  const bool HasShlAdd =
+      Subtarget.hasStdExtZba() || Subtarget.hasVendorXTHeadBa();
 
   ConstantSDNode *CNode = dyn_cast<ConstantSDNode>(N->getOperand(1));
   if (!CNode)
@@ -13720,105 +13720,121 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   // other target properly freezes X in these cases either.
   SDValue X = N->getOperand(0);
 
-  for (uint64_t Divisor : {3, 5, 9}) {
-    if (MulAmt % Divisor != 0)
-      continue;
-    uint64_t MulAmt2 = MulAmt / Divisor;
-    // 3/5/9 * 2^N ->  shl (shXadd X, X), N
-    if (isPowerOf2_64(MulAmt2)) {
-      SDLoc DL(N);
-      SDValue X = N->getOperand(0);
-      // Put the shift first if we can fold a zext into the
-      // shift forming a slli.uw.
-      if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
-          X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
-        SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
-                                  DAG.getConstant(Log2_64(MulAmt2), DL, VT));
-        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
-                           DAG.getConstant(Log2_64(Divisor - 1), DL, VT), Shl);
+  if (HasShlAdd) {
+    for (uint64_t Divisor : {3, 5, 9}) {
+      if (MulAmt % Divisor != 0)
+        continue;
+      uint64_t MulAmt2 = MulAmt / Divisor;
+      // 3/5/9 * 2^N ->  shl (shXadd X, X), N
+      if (isPowerOf2_64(MulAmt2)) {
+        SDLoc DL(N);
+        SDValue X = N->getOperand(0);
+        // Put the shift first if we can fold a zext into the
+        // shift forming a slli.uw.
+        if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
+            X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
+          SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
+                                    DAG.getConstant(Log2_64(MulAmt2), DL, VT));
+          return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
+                             DAG.getConstant(Log2_64(Divisor - 1), DL, VT),
+                             Shl);
+        }
+        // Otherwise, put rhe shl second so that it can fold with following
+        // instructions (e.g. sext or add).
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+        return DAG.getNode(ISD::SHL, DL, VT, Mul359,
+                           DAG.getConstant(Log2_64(MulAmt2), DL, VT));
       }
-      // Otherwise, put rhe shl second so that it can fold with following
-      // instructions (e.g. sext or add).
-      SDValue Mul359 =
-          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-      return DAG.getNode(ISD::SHL, DL, VT, Mul359,
-                         DAG.getConstant(Log2_64(MulAmt2), DL, VT));
+
+      // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
+      if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
+        SDLoc DL(N);
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                           DAG.getConstant(Log2_64(MulAmt2 - 1), DL, VT),
+                           Mul359);
+      }
     }
 
-    // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
-    if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
-      SDLoc DL(N);
-      SDValue Mul359 =
-          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getConstant(Log2_64(MulAmt2 - 1), DL, VT),
-                         Mul359);
+    // If this is a power 2 + 2/4/8, we can use a shift followed by a single
+    // shXadd. First check if this a sum of two power of 2s because that's
+    // easy. Then count how many zeros are up to the first bit.
+    if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
+      unsigned ScaleShift = llvm::countr_zero(MulAmt);
+      if (ScaleShift >= 1 && ScaleShift < 4) {
+        unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
+        SDLoc DL(N);
+        SDValue Shift1 =
+            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                           DAG.getConstant(ScaleShift, DL, VT), Shift1);
+      }
+    }
+
+    // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
+    // This is the two instruction form, there are also three instruction
+    // variants we could implement.  e.g.
+    //   (2^(1,2,3) * 3,5,9 + 1) << C2
+    //   2^(C1>3) * 3,5,9 +/- 1
+    for (uint64_t Divisor : {3, 5, 9}) {
+      uint64_t C = MulAmt - 1;
+      if (C <= Divisor)
+        continue;
+      unsigned TZ = llvm::countr_zero(C);
+      if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
+        SDLoc DL(N);
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+        return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                           DAG.getConstant(TZ, DL, VT), X);
+      }
+    }
+
+    // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
+    if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
+      unsigned ScaleShift = llvm::countr_zero(MulAmt - 1);
+      if (ScaleShift >= 1 && ScaleShift < 4) {
+        unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
+        SDLoc DL(N);
+        SDValue Shift1 =
+            DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+        return DAG.getNode(ISD::ADD, DL, VT, Shift1,
+                           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                                       DAG.getConstant(ScaleShift, DL, VT), X));
+      }
+    }
+
+    // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
+    for (uint64_t Offset : {3, 5, 9}) {
+      if (isPowerOf2_64(MulAmt + Offset)) {
+        SDLoc DL(N);
+        SDValue Shift1 =
+            DAG.getNode(ISD::SHL, DL, VT, X,
+                        DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
+        SDValue Mul359 =
+            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                        DAG.getConstant(Log2_64(Offset - 1), DL, VT), X);
+        return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
+      }
     }
   }
 
-  // If this is a power 2 + 2/4/8, we can use a shift followed by a single
-  // shXadd. First check if this a sum of two power of 2s because that's
-  // easy. Then count how many zeros are up to the first bit.
-  if (isPowerOf2_64(MulAmt & (MulAmt - 1))) {
-    unsigned ScaleShift = llvm::countr_zero(MulAmt);
-    if (ScaleShift >= 1 && ScaleShift < 4) {
-      unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
-      SDLoc DL(N);
-      SDValue Shift1 =
-          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                         DAG.getConstant(ScaleShift, DL, VT), Shift1);
-    }
-  }
-
-  // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
-  // This is the two instruction form, there are also three instruction
-  // variants we could implement.  e.g.
-  //   (2^(1,2,3) * 3,5,9 + 1) << C2
-  //   2^(C1>3) * 3,5,9 +/- 1
-  for (uint64_t Divisor : {3, 5, 9}) {
-    uint64_t C = MulAmt - 1;
-    if (C <= Divisor)
-      continue;
-    unsigned TZ = llvm::countr_zero(C);
-    if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
-      SDLoc DL(N);
-      SDValue Mul359 =
-          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getConstant(TZ, DL, VT), X);
-    }
-  }
-
-  // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
-  if (MulAmt > 2 && isPowerOf2_64((MulAmt - 1) & (MulAmt - 2))) {
-    unsigned ScaleShift = llvm::countr_zero(MulAmt - 1);
-    if (ScaleShift >= 1 && ScaleShift < 4) {
-      unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
-      SDLoc DL(N);
-      SDValue Shift1 =
-          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
-      return DAG.getNode(ISD::ADD, DL, VT, Shift1,
-                         DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                     DAG.getConstant(ScaleShift, DL, VT), X));
-    }
-  }
-
-  // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
-  for (uint64_t Offset : {3, 5, 9}) {
-    if (isPowerOf2_64(MulAmt + Offset)) {
-      SDLoc DL(N);
-      SDValue Shift1 =
-          DAG.getNode(ISD::SHL, DL, VT, X,
-                      DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
-      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                   DAG.getConstant(Log2_64(Offset - 1), DL, VT),
-                                   X);
-      return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
-    }
+  // 2^N - 2^M -> (sub (shl X, C1), (shl X, C2))
+  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  if (isPowerOf2_64(MulAmt + MulAmtLowBit)) {
+    uint64_t ShiftAmt1 = MulAmt + MulAmtLowBit;
+    SDLoc DL(N);
+    SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                                 DAG.getConstant(Log2_64(ShiftAmt1), DL, VT));
+    SDValue Shift2 =
+        DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                    DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT));
+    return DAG.getNode(ISD::SUB, DL, VT, Shift1, Shift2);
   }
 
   return SDValue();

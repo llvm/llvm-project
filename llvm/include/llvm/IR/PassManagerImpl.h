@@ -15,7 +15,10 @@
 #ifndef LLVM_IR_PASSMANAGERIMPL_H
 #define LLVM_IR_PASSMANAGERIMPL_H
 
+#include "llvm/Support/CommandLine.h"
 #include "llvm/IR/PassManager.h"
+
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 
