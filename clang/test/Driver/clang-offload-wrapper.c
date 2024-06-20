@@ -43,7 +43,6 @@
 // CHECK-IR: [[DESC:@.+]] = internal constant [[DESCTY]] { i32 1, ptr [[IMAGES]], ptr [[ENTBEGIN]], ptr [[ENTEND]] }
 
 // CHECK-IR: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr [[REGFN:@.+]], ptr null }]
-// CHECK-IR: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr [[UNREGFN:@.+]], ptr null }]
 
 // CHECK-IR: define internal void [[REGFN]]()
 // CHECK-IR:   call void @__tgt_register_lib(ptr [[DESC]])
@@ -51,7 +50,6 @@
 
 // CHECK-IR: declare void @__tgt_register_lib(ptr)
 
-// CHECK-IR: define internal void [[UNREGFN]]()
 // CHECK-IR:   call void @__tgt_unregister_lib(ptr [[DESC]])
 // CHECK-IR:   ret void
 

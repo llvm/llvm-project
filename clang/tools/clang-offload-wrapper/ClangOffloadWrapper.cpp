@@ -330,6 +330,17 @@ private:
     // Construct function body
     IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
     Builder.CreateCall(RegFuncC, BinDesc);
+
+    // Register the destructors with 'atexit'. This is expected the
+    // runtime and ensures that we clean up before dynamic objects are
+    // destroyed. This needs to be done after plugin initialization to ensure
+    // that it is called before the plugin runtime is destroyed.
+    Function *UnregFunc = createUnregisterFunction(BinDesc);
+    auto *AtExitTy = FunctionType::get(
+        Type::getInt32Ty(C), PointerType::getUnqual(C), /*isVarArg=*/false);
+    FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
+    Builder.CreateCall(AtExit, UnregFunc);
+
     Builder.CreateRetVoid();
 
     // Add this function to constructors.
@@ -341,7 +352,7 @@ private:
     appendToGlobalCtors(M, Func, /*Priority*/ 1);
   }
 
-  void createUnregisterFunction(GlobalVariable *BinDesc) {
+  Function *createUnregisterFunction(GlobalVariable *BinDesc) {
     auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
     auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
                                   ".omp_offloading.descriptor_unreg", &M);
@@ -358,9 +369,7 @@ private:
     Builder.CreateCall(UnRegFuncC, BinDesc);
     Builder.CreateRetVoid();
 
-    // Add this function to global destructors.
-    // Match priority of __tgt_register_lib
-    appendToGlobalDtors(M, Func, /*Priority*/ 1);
+    return Func;
   }
 
 public:
@@ -426,7 +435,6 @@ public:
     GlobalVariable *Desc = createBinDesc(Binaries);
     assert(Desc && "no binary descriptor");
     createRegisterFunction(Desc, OffloadArchs);
-    createUnregisterFunction(Desc);
     return M;
   }
 
