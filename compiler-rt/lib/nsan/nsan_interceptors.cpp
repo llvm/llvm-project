@@ -154,15 +154,15 @@ INTERCEPTOR(void *, valloc, uptr size) {
   return res;
 }
 
-INTERCEPTOR(void *, memalign, uptr Alignment, uptr size) {
-  void *const res = REAL(memalign)(Alignment, size);
+INTERCEPTOR(void *, memalign, uptr align, uptr size) {
+  void *const res = REAL(memalign)(align, size);
   if (res)
     __nsan_set_value_unknown(static_cast<u8 *>(res), size);
   return res;
 }
 
-INTERCEPTOR(void *, __libc_memalign, uptr Alignment, uptr size) {
-  void *const res = REAL(__libc_memalign)(Alignment, size);
+INTERCEPTOR(void *, __libc_memalign, uptr align, uptr size) {
+  void *const res = REAL(__libc_memalign)(align, size);
   if (res)
     __nsan_set_value_unknown(static_cast<u8 *>(res), size);
   return res;
@@ -175,30 +175,30 @@ INTERCEPTOR(void *, pvalloc, uptr size) {
   return res;
 }
 
-INTERCEPTOR(void *, aligned_alloc, uptr Alignment, uptr size) {
-  void *const res = REAL(aligned_alloc)(Alignment, size);
+INTERCEPTOR(void *, aligned_alloc, uptr align, uptr size) {
+  void *const res = REAL(aligned_alloc)(align, size);
   if (res)
     __nsan_set_value_unknown(static_cast<u8 *>(res), size);
   return res;
 }
 
-INTERCEPTOR(int, posix_memalign, void **Memptr, uptr Alignment, uptr size) {
-  int res = REAL(posix_memalign)(Memptr, Alignment, size);
-  if (res == 0 && *Memptr)
-    __nsan_set_value_unknown(static_cast<u8 *>(*Memptr), size);
+INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr size) {
+  int res = REAL(posix_memalign)(memptr, align, size);
+  if (res == 0 && *memptr)
+    __nsan_set_value_unknown(static_cast<u8 *>(*memptr), size);
   return res;
 }
 
-INTERCEPTOR(char *, strfry, char *S) {
-  const auto Len = internal_strlen(S);
-  char *res = REAL(strfry)(S);
+INTERCEPTOR(char *, strfry, char *s) {
+  const auto Len = internal_strlen(s);
+  char *res = REAL(strfry)(s);
   if (res)
-    __nsan_set_value_unknown(reinterpret_cast<u8 *>(S), Len);
+    __nsan_set_value_unknown(reinterpret_cast<u8 *>(s), Len);
   return res;
 }
 
-INTERCEPTOR(char *, strsep, char **Stringp, const char *Delim) {
-  char *OrigStringp = REAL(strsep)(Stringp, Delim);
+INTERCEPTOR(char *, strsep, char **Stringp, const char *delim) {
+  char *OrigStringp = REAL(strsep)(Stringp, delim);
   if (Stringp != nullptr) {
     // The previous character has been overwritten with a '\0' char.
     __nsan_set_value_unknown(reinterpret_cast<u8 *>(*Stringp) - 1, 1);
@@ -206,12 +206,12 @@ INTERCEPTOR(char *, strsep, char **Stringp, const char *Delim) {
   return OrigStringp;
 }
 
-INTERCEPTOR(char *, strtok, char *Str, const char *Delim) {
+INTERCEPTOR(char *, strtok, char *str, const char *delim) {
   // This is overly conservative, but the probability that modern code is using
   // strtok on double data is essentially zero anyway.
-  if (Str)
-    __nsan_set_value_unknown(reinterpret_cast<u8 *>(Str), internal_strlen(Str));
-  return REAL(strtok)(Str, Delim);
+  if (str)
+    __nsan_set_value_unknown(reinterpret_cast<u8 *>(str), internal_strlen(str));
+  return REAL(strtok)(str, delim);
 }
 
 static void nsanCopyZeroTerminated(char *dst, const char *src, uptr n) {
