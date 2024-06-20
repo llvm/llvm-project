@@ -60,8 +60,6 @@ enum SpecialTypeKind {
   STK_Pipe,
   STK_DeviceEvent,
   STK_Pointer,
-  STK_CoopMatr,
-  STK_JointMatr,
   STK_Last = -1
 };
 
@@ -115,33 +113,7 @@ make_descr_sampled_image(const Type *SampledTy, const MachineInstr *ImageTy) {
           .Val,
       SpecialTypeKind::STK_SampledImage);
 }
-/*
-union MatrAttrs {
-  struct BitFlags {
-    unsigned Layout : 2;
 
-    unsigned Depth : 2;
-    unsigned Arrayed : 1;
-    unsigned MS : 1;
-    unsigned Sampled : 2;
-    unsigned ImageFormat : 6;
-    unsigned AQ : 2;
-  } Flags;
-  unsigned Val;
-
-  MatrAttrs(unsigned Dim, unsigned Depth, unsigned Arrayed, unsigned MS,
-             unsigned Sampled, unsigned ImageFormat, unsigned AQ = 0) {
-    Val = 0;
-    Flags.Dim = Dim;
-    Flags.Depth = Depth;
-    Flags.Arrayed = Arrayed;
-    Flags.MS = MS;
-    Flags.Sampled = Sampled;
-    Flags.ImageFormat = ImageFormat;
-    Flags.AQ = AQ;
-  }
-};
-*/
 inline SpecialTypeDescriptor make_descr_sampler() {
   return std::make_tuple(nullptr, 0U, SpecialTypeKind::STK_Sampler);
 }

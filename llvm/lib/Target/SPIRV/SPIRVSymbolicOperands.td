@@ -303,7 +303,6 @@ defm SPV_INTEL_cache_controls : ExtensionOperand<108>;
 defm SPV_INTEL_global_variable_host_access : ExtensionOperand<109>;
 defm SPV_INTEL_global_variable_fpga_decorations : ExtensionOperand<110>;
 defm SPV_KHR_cooperative_matrix : ExtensionOperand<111>;
-defm SPV_INTEL_joint_matrix : ExtensionOperand<112>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
