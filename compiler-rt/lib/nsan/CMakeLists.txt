@@ -3,11 +3,11 @@ add_compiler_rt_component(nsan)
 include_directories(..)
 
 set(NSAN_SOURCES
-  nsan.cc
-  nsan_flags.cc
-  nsan_interceptors.cc
-  nsan_stats.cc
-  nsan_suppressions.cc
+  nsan.cpp
+  nsan_flags.cpp
+  nsan_interceptors.cpp
+  nsan_stats.cpp
+  nsan_suppressions.cpp
 )
 
 set(NSAN_HEADERS

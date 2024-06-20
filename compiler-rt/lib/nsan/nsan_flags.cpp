@@ -15,15 +15,14 @@
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
 
-namespace __nsan {
+using namespace __sanitizer;
+using namespace __nsan;
 
 SANITIZER_INTERFACE_WEAK_DEF(const char *, __nsan_default_options, void) {
   return "";
 }
 
-using namespace __sanitizer;
-
-Flags flags_data;
+Flags __nsan::flags_data;
 
 void Flags::SetDefaults() {
 #define NSAN_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
@@ -47,7 +46,7 @@ static const char *MaybeCallNsanDefaultOptions() {
   return (&__nsan_default_options) ? __nsan_default_options() : "";
 }
 
-void InitializeFlags() {
+void __nsan::InitializeFlags() {
   SetCommonFlagsDefaults();
   {
     CommonFlags cf;
@@ -74,5 +73,3 @@ void InitializeFlags() {
 
   flags().PopulateCache();
 }
-
-} // namespace __nsan

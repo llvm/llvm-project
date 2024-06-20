@@ -40,52 +40,53 @@ public:
   ~Stats();
 
   // Signal that we checked the instruction at the given address.
-  void addCheck(CheckTypeT CheckType, __sanitizer::uptr PC,
-                __sanitizer::uptr BP, double RelErr);
+  void AddCheck(CheckTypeT check_ty, __sanitizer::uptr pc, __sanitizer::uptr bp,
+                double rel_err);
   // Signal that we warned for the instruction at the given address.
-  void addWarning(CheckTypeT CheckType, __sanitizer::uptr PC,
-                  __sanitizer::uptr BP, double RelErr);
+  void AddWarning(CheckTypeT check_ty, __sanitizer::uptr pc,
+                  __sanitizer::uptr bp, double rel_err);
 
   // Signal that we detected a floating-point load where the shadow type was
   // invalid.
-  void addInvalidLoadTrackingEvent(__sanitizer::uptr PC, __sanitizer::uptr BP);
+  void AddInvalidLoadTrackingEvent(__sanitizer::uptr pc, __sanitizer::uptr bp);
   // Signal that we detected a floating-point load where the shadow type was
   // unknown but the value was nonzero.
-  void addUnknownLoadTrackingEvent(__sanitizer::uptr PC, __sanitizer::uptr BP);
+  void AddUnknownLoadTrackingEvent(__sanitizer::uptr pc, __sanitizer::uptr bp);
 
-  void print() const;
+  void Print() const;
 
 private:
   using IndexMap = __sanitizer::AddrHashMap<__sanitizer::uptr, 11>;
 
   struct CheckAndWarningsValue {
-    CheckTypeT CheckTy;
-    __sanitizer::u32 StackId = 0;
-    __sanitizer::u64 NumChecks = 0;
-    __sanitizer::u64 NumWarnings = 0;
+    CheckTypeT check_ty;
+    __sanitizer::u32 stack_id = 0;
+    __sanitizer::u64 num_checks = 0;
+    __sanitizer::u64 num_warnings = 0;
     // This is a bitcasted double. Doubles have the nice idea to be ordered as
     // ints.
-    double MaxRelativeError = 0;
+    double max_relative_err = 0;
   };
-  // Maps key(CheckType, StackId) to indices in CheckAndWarnings.
+  // Map Key(check_ty, StackId) to indices in CheckAndWarnings.
   IndexMap CheckAndWarningsMap;
-  __sanitizer::InternalMmapVectorNoCtor<CheckAndWarningsValue> CheckAndWarnings;
-  mutable __sanitizer::Mutex CheckAndWarningsMutex;
+  __sanitizer::InternalMmapVectorNoCtor<CheckAndWarningsValue>
+      check_and_warnings;
+  mutable __sanitizer::Mutex check_and_warning_mutex;
 
   struct LoadTrackingValue {
-    CheckTypeT CheckTy;
-    __sanitizer::u32 StackId = 0;
-    __sanitizer::u64 NumInvalid = 0;
-    __sanitizer::u64 NumUnknown = 0;
+    CheckTypeT check_ty;
+    __sanitizer::u32 stack_id = 0;
+    __sanitizer::u64 num_invalid = 0;
+    __sanitizer::u64 num_unknown = 0;
   };
-  // Maps key(CheckTypeT::kLoad, StackId) to indices in TrackedLoads.
+  // Map Key(CheckTypeT::kLoad, StackId) to indices in TrackedLoads.
   IndexMap LoadTrackingMap;
   __sanitizer::InternalMmapVectorNoCtor<LoadTrackingValue> TrackedLoads;
   mutable __sanitizer::Mutex TrackedLoadsMutex;
 };
 
 extern Stats *nsan_stats;
-void initializeStats();
+void InitializeStats();
 
 } // namespace __nsan
 
