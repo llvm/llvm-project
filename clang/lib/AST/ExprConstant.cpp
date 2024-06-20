@@ -59,6 +59,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/SipHash.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
@@ -12636,10 +12637,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Visit(E->getArg(0));
 
   case Builtin::BI__builtin_ptrauth_string_discriminator: {
-    auto literal = cast<StringLiteral>(E->getArg(0)->IgnoreParenImpCasts());
-    auto result = getPointerAuthStringDiscriminator(Info.Ctx,
-                                                    literal->getString());
-    return Success(result, E);
+    const auto *Literal =
+        cast<StringLiteral>(E->getArg(0)->IgnoreParenImpCasts());
+    uint64_t Result = getPointerAuthStableSipHash(Literal->getString());
+    return Success(Result, E);
   }
 
   case Builtin::BI__builtin_ffs:
