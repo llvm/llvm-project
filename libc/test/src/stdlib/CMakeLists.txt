@@ -54,48 +54,6 @@ add_libc_test(
     libc.src.stdlib.atoll
 )
 
-add_libc_test(
-  block_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    block_test.cpp
-  DEPENDS
-    libc.src.stdlib.block
-    libc.src.__support.CPP.array
-    libc.src.__support.CPP.span
-    libc.src.string.memcpy
-)
-
-add_libc_test(
-  freelist_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    freelist_test.cpp
-  DEPENDS
-    libc.src.stdlib.freelist
-    libc.src.__support.CPP.array
-    libc.src.__support.CPP.span
-)
-
-if(LLVM_LIBC_FULL_BUILD)
-  add_libc_test(
-    freelist_heap_test
-    SUITE
-      libc-stdlib-tests
-    SRCS
-      freelist_heap_test.cpp
-      freelist_malloc_test.cpp
-    DEPENDS
-      libc.src.__support.CPP.span
-      libc.src.stdlib.freelist_heap
-      libc.src.stdlib.malloc
-      libc.src.string.memcmp
-      libc.src.string.memcpy
-  )
-endif()
-
 add_fp_unittest(
   strtod_test
   SUITE
