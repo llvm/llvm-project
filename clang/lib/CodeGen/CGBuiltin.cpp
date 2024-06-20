@@ -14189,7 +14189,7 @@ Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   ArgStr.split(Features, "+");
   for (auto &Feature : Features) {
     Feature = Feature.trim();
-    if (!llvm::AArch64::parseArchExtension(Feature))
+    if (!llvm::AArch64::parseFMVExtension(Feature))
       return Builder.getFalse();
     if (Feature != "default")
       Features.push_back(Feature);
