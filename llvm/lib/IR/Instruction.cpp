@@ -25,33 +25,21 @@
 #include "llvm/IR/Type.h"
 using namespace llvm;
 
+InsertPosition::InsertPosition(Instruction *InsertBefore)
+    : InsertAt(InsertBefore ? InsertBefore->getIterator()
+                            : InstListType::iterator()) {}
+InsertPosition::InsertPosition(BasicBlock *InsertAtEnd)
+    : InsertAt(InsertAtEnd ? InsertAtEnd->end() : InstListType::iterator()) {}
+
 Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         InstListType::iterator InsertBefore)
+                         InsertPosition InsertBefore)
     : User(ty, Value::InstructionVal + it, Ops, NumOps) {
   // When called with an iterator, there must be a block to insert into.
-  BasicBlock *BB = InsertBefore->getParent();
-  assert(BB && "Instruction to insert before is not in a basic block!");
-  insertInto(BB, InsertBefore);
-}
-
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         Instruction *InsertBefore)
-    : User(ty, Value::InstructionVal + it, Ops, NumOps) {
-
-  // If requested, insert this instruction into a basic block...
-  if (InsertBefore) {
-    BasicBlock *BB = InsertBefore->getParent();
+  if (InstListType::iterator InsertIt = InsertBefore; InsertIt.isValid()) {
+    BasicBlock *BB = InsertIt.getNodeParent();
     assert(BB && "Instruction to insert before is not in a basic block!");
-    insertInto(BB, InsertBefore->getIterator());
+    insertInto(BB, InsertBefore);
   }
-}
-
-Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
-                         BasicBlock *InsertAtEnd)
-    : User(ty, Value::InstructionVal + it, Ops, NumOps) {
-  // If requested, append this instruction into the basic block.
-  if (InsertAtEnd)
-    insertInto(InsertAtEnd, InsertAtEnd->end());
 }
 
 Instruction::~Instruction() {
