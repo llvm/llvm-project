@@ -27,8 +27,6 @@ void test(int *dp, int (*fp)(int), int value) {
   ptrauth_auth_data(&pu6, VALID_DATA_KEY, value);
   ptrauth_auth_data(dp, VALID_DATA_KEY, pu7);
 
-  int t1 = ptrauth_string_discriminator("string");
-  (void)t1;
   int t2 = ptrauth_sign_generic_data(dp, 0);
   (void)t2;
   t0 = ptrauth_type_discriminator(int (*)(int));
@@ -65,4 +63,9 @@ void test(int *dp, int (*fp)(int), int value) {
   (void)p13;
   void * __ptrauth_swift_value_witness_function_pointer(VALID_CODE_KEY) p14;
   (void)p14;
+}
+
+void test_string_discriminator(int *dp) {
+  ptrauth_extra_data_t t0 = ptrauth_string_discriminator("string");
+  (void)t0;
 }

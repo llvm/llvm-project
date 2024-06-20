@@ -557,9 +557,15 @@ result has type ``ptrauth_extra_data_t``.
 
   ptrauth_string_discriminator(string)
 
-Produce a discriminator value for the given string.  ``string`` must be a string literal of ``char`` character type.  The result has type ``ptrauth_extra_data_t``.
+Compute a constant discriminator from the given string.
 
-The result is always a constant expression.  The result value is never zero and always within range for both the ``__ptrauth`` qualifier and ``ptrauth_blend_discriminator``.
+``string`` must be a string literal of ``char`` character type.  The result has
+type ``ptrauth_extra_data_t``.
+
+The result value is never zero and always within range for both the
+``__ptrauth`` qualifier and ``ptrauth_blend_discriminator``.
+
+This can be used in constant expressions.
 
 ``ptrauth_strip``
 ^^^^^^^^^^^^^^^^^
