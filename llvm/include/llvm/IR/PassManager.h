@@ -39,7 +39,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/Analysis.h"
@@ -47,8 +46,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManagerInternal.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeName.h"
 #include <cassert>
 #include <cstring>
@@ -59,8 +56,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 

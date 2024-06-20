@@ -65,6 +65,8 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
