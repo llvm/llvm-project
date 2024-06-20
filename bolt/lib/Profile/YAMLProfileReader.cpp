@@ -22,6 +22,7 @@ namespace opts {
 extern cl::opt<unsigned> Verbosity;
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
+extern cl::opt<bool> MatchingFunctionsWithHash;
 
 static llvm::cl::opt<bool>
     IgnoreHash("profile-ignore-hash",
@@ -329,9 +330,6 @@ Error YAMLProfileReader::preprocessProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::mayHaveProfileData(const BinaryFunction &BF) {
-  if (!opts::IgnoreHash) {
-    return true;
-  }
   for (StringRef Name : BF.getNames())
     if (ProfileFunctionNames.contains(Name))
       return true;
@@ -366,10 +364,26 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     return Profile.Hash == static_cast<uint64_t>(BF.getHash());
   };
 
+  uint64_t MatchedWithExactName = 0;
+  uint64_t MatchedWithHash = 0;
+  uint64_t MatchedWithLTOCommonName = 0;
+
   // Computes hash for binary functions.
-  if (!opts::IgnoreHash)
+  if (opts::MatchingFunctionsWithHash) {
     for (auto &[_, BF] : BC.getBinaryFunctions())
       BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
+  }
+  else {
+    for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
+      if (!BF)
+        continue;
+      BinaryFunction &Function = *BF;
+
+      if (!opts::IgnoreHash)
+        Function.computeHash(YamlBP.Header.IsDFSOrder,
+                             YamlBP.Header.HashFunction);
+    }
+  }
 
   // This first pass assigns profiles that match 100% by name and by hash.
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
@@ -380,8 +394,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     // the profile.
     Function.setExecutionCount(BinaryFunction::COUNT_NO_PROFILE);
 
-    if (profileMatches(YamlBF, Function))
+    if (profileMatches(YamlBF, Function)) {
       matchProfileToFunction(YamlBF, Function);
+      ++MatchedWithExactName;
+    }
   }
 
   // Uses the strict hash of profiled and binary functions to match functions
@@ -402,6 +418,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
           !ProfiledFunctions.count(It->second)) {
         auto *BF = It->second;
         matchProfileToFunction(YamlBF, *BF);
+        ++MatchedWithHash;
       }
     }
   }
@@ -420,6 +437,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       for (BinaryFunction *BF : Functions) {
         if (!ProfiledFunctions.count(BF) && profileMatches(*YamlBF, *BF)) {
           matchProfileToFunction(*YamlBF, *BF);
+          ++MatchedWithLTOCommonName;
           return true;
         }
       }
@@ -431,8 +449,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     // partially.
     if (!ProfileMatched && LTOProfiles.size() == 1 && Functions.size() == 1 &&
         !LTOProfiles.front()->Used &&
-        !ProfiledFunctions.count(*Functions.begin()))
+        !ProfiledFunctions.count(*Functions.begin())) {
       matchProfileToFunction(*LTOProfiles.front(), **Functions.begin());
+      ++MatchedWithLTOCommonName;
+    }
   }
 
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
@@ -443,6 +463,15 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
+
+  if (opts::Verbosity >= 2) {
+    outs() << "BOLT-INFO: matched " << MatchedWithExactName
+      << " functions with identical names\n";
+    outs() << "BOLT-INFO: matched " << MatchedWithHash
+      << " functions with hash\n";
+    outs() << "BOLT-INFO: matched " << MatchedWithLTOCommonName
+      << " functions with matching LTO common names\n";
+  }
 
   // Set for parseFunctionProfile().
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");

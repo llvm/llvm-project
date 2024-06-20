@@ -82,6 +82,7 @@ extern cl::opt<bool> Hugify;
 extern cl::opt<bool> Instrument;
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::opt<bool> KeepNops;
+extern cl::opt<bool> MatchingFunctionsWithHash;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TerminalTrap;
@@ -2982,6 +2983,9 @@ void RewriteInstance::selectFunctionsToProcess() {
     if (mustSkip(Function))
       return false;
 
+    if (opts::MatchingFunctionsWithHash)
+      return true;
+
     // If the list is not empty, only process functions from the list.
     if (!opts::ForceFunctionNames.empty() || !ForceFunctionsNR.empty()) {
       // Regex check (-funcs and -funcs-file options).
@@ -2998,6 +3002,7 @@ void RewriteInstance::selectFunctionsToProcess() {
     }
 
     if (opts::Lite) {
+
       // Forcibly include functions specified in the -function-order file.
       if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
         for (const StringRef Name : Function.getNames())
@@ -3008,7 +3013,6 @@ void RewriteInstance::selectFunctionsToProcess() {
             if (ReorderFunctionsLTOCommonSet.contains(*LTOCommonName))
               return true;
       }
-
       if (ProfileReader && !ProfileReader->mayHaveProfileData(Function))
         return false;
 
