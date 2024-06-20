@@ -2941,10 +2941,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
                   m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
-          GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
-              Builder.getInt8Ty(), GEP.getPointerOperand(), V);
-          NewGEP->setIsInBounds(GEP.isInBounds());
-          return NewGEP;
+          return GetElementPtrInst::Create(Builder.getInt8Ty(),
+                                           GEP.getPointerOperand(), V,
+                                           GEP.getNoWrapFlags());
         }
       }
     }

@@ -23,20 +23,22 @@
 
 namespace llvm {
 
+namespace densemap::detail {
+// A bit mixer with very low latency using one multiplications and one
+// xor-shift. The constant is from splitmix64.
+inline uint64_t mix(uint64_t x) {
+  x *= 0xbf58476d1ce4e5b9u;
+  x ^= x >> 31;
+  return x;
+}
+} // namespace densemap::detail
+
 namespace detail {
 
 /// Simplistic combination of 32-bit hash values into 32-bit hash values.
-static inline unsigned combineHashValue(unsigned a, unsigned b) {
-  uint64_t key = (uint64_t)a << 32 | (uint64_t)b;
-  key += ~(key << 32);
-  key ^= (key >> 22);
-  key += ~(key << 13);
-  key ^= (key >> 8);
-  key += (key << 3);
-  key ^= (key >> 15);
-  key += ~(key << 27);
-  key ^= (key >> 31);
-  return (unsigned)key;
+inline unsigned combineHashValue(unsigned a, unsigned b) {
+  uint64_t x = (uint64_t)a << 32 | (uint64_t)b;
+  return (unsigned)densemap::detail::mix(x);
 }
 
 } // end namespace detail

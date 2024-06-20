@@ -1459,3 +1459,23 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   Plan.addSCEVExpansion(Expr, Expanded);
   return Expanded;
 }
+
+bool vputils::isHeaderMask(VPValue *V, VPlan &Plan) {
+  if (isa<VPActiveLaneMaskPHIRecipe>(V))
+    return true;
+
+  auto IsWideCanonicalIV = [](VPValue *A) {
+    return isa<VPWidenCanonicalIVRecipe>(A) ||
+           (isa<VPWidenIntOrFpInductionRecipe>(A) &&
+            cast<VPWidenIntOrFpInductionRecipe>(A)->isCanonical());
+  };
+
+  VPValue *A, *B;
+  if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B))))
+    return B == Plan.getTripCount() &&
+           (match(A, m_ScalarIVSteps(m_CanonicalIV(), m_SpecificInt(1))) ||
+            IsWideCanonicalIV(A));
+
+  return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
+         IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
+}
