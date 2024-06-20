@@ -10545,48 +10545,37 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   // Get a pointer to the first element of the array.
   Array.addArray(Info, E, ArrayType);
 
-  auto InvalidType = [&] {
-    Info.FFDiag(E, diag::note_constexpr_unsupported_layout)
-      << E->getType();
-    return false;
-  };
-
-  // FIXME: Perform the checks on the field types in SemaInit.
-  RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
-  RecordDecl::field_iterator Field = Record->field_begin();
-  if (Field == Record->field_end())
-    return InvalidType();
-
-  // Start pointer.
-  if (!Field->getType()->isPointerType() ||
-      !Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
-                            ArrayType->getElementType()))
-    return InvalidType();
-
   // FIXME: What if the initializer_list type has base classes, etc?
   Result = APValue(APValue::UninitStruct(), 0, 2);
   Array.moveInto(Result.getStructField(0));
 
-  if (++Field == Record->field_end())
-    return InvalidType();
+  RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl::field_iterator Field = Record->field_begin();
+  assert(Field != Record->field_end() &&
+         Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
+                              ArrayType->getElementType()) &&
+         "Expected std::initializer_list first field to be const E *");
+  ++Field;
+  assert(Field != Record->field_end() &&
+         "Expected std::initializer_list to have two fields");
 
-  if (Field->getType()->isPointerType() &&
-      Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
-                           ArrayType->getElementType())) {
+  if (Info.Ctx.hasSameType(Field->getType(), Info.Ctx.getSizeType())) {
+    // Length.
+    Result.getStructField(1) = APValue(APSInt(ArrayType->getSize()));
+  } else {
     // End pointer.
+    assert(Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
+                                ArrayType->getElementType()) &&
+           "Expected std::initializer_list second field to be const E *");
     if (!HandleLValueArrayAdjustment(Info, E, Array,
                                      ArrayType->getElementType(),
                                      ArrayType->getZExtSize()))
       return false;
     Array.moveInto(Result.getStructField(1));
-  } else if (Info.Ctx.hasSameType(Field->getType(), Info.Ctx.getSizeType()))
-    // Length.
-    Result.getStructField(1) = APValue(APSInt(ArrayType->getSize()));
-  else
-    return InvalidType();
+  }
 
-  if (++Field != Record->field_end())
-    return InvalidType();
+  assert(++Field == Record->field_end() &&
+         "Expected std::initializer_list to only have two fields");
 
   return true;
 }
