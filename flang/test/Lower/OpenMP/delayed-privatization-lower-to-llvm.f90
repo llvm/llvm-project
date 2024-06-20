@@ -27,7 +27,7 @@ end
 subroutine lower_region_with_if_print
   real(kind=8), dimension(1,1) :: u1
   !$omp parallel firstprivate(u1) 
-    if (any(u1/=1)) print *,"if branch"
+    if (any(u1/=1)) u1 = u1 + 1
   !$omp end parallel
 end subroutine
 
