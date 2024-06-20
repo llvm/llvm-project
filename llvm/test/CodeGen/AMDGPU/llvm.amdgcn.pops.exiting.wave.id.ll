@@ -36,9 +36,9 @@ define amdgpu_ps void @test(ptr addrspace(1) inreg %ptr) {
 define amdgpu_ps void @test_loop() {
 ; SDAG-LABEL: test_loop:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
 ; SDAG-NEXT:  .LBB1_1: ; %loop
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SDAG-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
 ; SDAG-NEXT:    s_cmp_eq_u32 s0, 0
 ; SDAG-NEXT:    s_cbranch_scc1 .LBB1_1
 ; SDAG-NEXT:  ; %bb.2: ; %exit
@@ -46,9 +46,9 @@ define amdgpu_ps void @test_loop() {
 ;
 ; GFX9-GISEL-LABEL: test_loop:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
 ; GFX9-GISEL-NEXT:  .LBB1_1: ; %loop
 ; GFX9-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
 ; GFX9-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX9-GISEL-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GFX9-GISEL-NEXT:  ; %bb.2: ; %exit
@@ -56,9 +56,9 @@ define amdgpu_ps void @test_loop() {
 ;
 ; GFX10-GISEL-LABEL: test_loop:
 ; GFX10-GISEL:       ; %bb.0:
-; GFX10-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
 ; GFX10-GISEL-NEXT:  .LBB1_1: ; %loop
 ; GFX10-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
 ; GFX10-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX10-GISEL-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GFX10-GISEL-NEXT:  ; %bb.2: ; %exit
@@ -77,14 +77,23 @@ define amdgpu_ps i32 @test_if(i1 inreg %cond) {
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_bitcmp0_b32 s0, 0
 ; SDAG-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; SDAG-NEXT:    s_cbranch_scc1 .LBB2_2
+; SDAG-NEXT:  ; %bb.1: ; %body
+; SDAG-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; SDAG-NEXT:  .LBB2_2: ; %exit
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-GISEL-LABEL: test_if:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_mov_b32 s1, s0
-; GFX9-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
 ; GFX9-GISEL-NEXT:    s_xor_b32 s1, s1, 1
 ; GFX9-GISEL-NEXT:    s_and_b32 s1, s1, 1
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX9-GISEL-NEXT:    s_cbranch_scc1 .LBB2_2
+; GFX9-GISEL-NEXT:  ; %bb.1: ; %body
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; GFX9-GISEL-NEXT:  .LBB2_2: ; %exit
 ; GFX9-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: test_if:
@@ -92,6 +101,11 @@ define amdgpu_ps i32 @test_if(i1 inreg %cond) {
 ; GFX10-GISEL-NEXT:    s_xor_b32 s0, s0, 1
 ; GFX10-GISEL-NEXT:    s_and_b32 s1, s0, 1
 ; GFX10-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; GFX10-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX10-GISEL-NEXT:    s_cbranch_scc1 .LBB2_2
+; GFX10-GISEL-NEXT:  ; %bb.1: ; %body
+; GFX10-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; GFX10-GISEL-NEXT:  .LBB2_2: ; %exit
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 entry:
   %id1 = call i32 @llvm.amdgcn.pops.exiting.wave.id()
