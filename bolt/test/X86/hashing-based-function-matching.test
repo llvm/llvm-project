@@ -5,7 +5,7 @@
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
-# RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=1 \
+# RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=2 \
 # RUN:   --print-cfg 2>&1 | FileCheck %s
 
 # CHECK: Binary Function "main" after building cfg
@@ -57,7 +57,7 @@ header:
 functions:
   - name:            main2
     fid:             0
-    hash:            0x72f82deaa6fe65fb
+    hash:            0x72F82DEAA6FE65FB
     exec:            1
     nblocks:         6
     blocks:

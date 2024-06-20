@@ -363,6 +363,11 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     return Profile.Hash == static_cast<uint64_t>(BF.getHash());
   };
 
+  // Computes hash for binary functions.
+  if (!opts::IgnoreHash)
+    for (auto &[_, BF] : BC.getBinaryFunctions())
+      BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
+
   // This first pass assigns profiles that match 100% by name and by hash.
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
     if (!BF)
@@ -372,35 +377,29 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     // the profile.
     Function.setExecutionCount(BinaryFunction::COUNT_NO_PROFILE);
 
-    // Recompute hash once per function.
-    if (!opts::IgnoreHash)
-      Function.computeHash(YamlBP.Header.IsDFSOrder,
-                           YamlBP.Header.HashFunction);
-
     if (profileMatches(YamlBF, Function))
       matchProfileToFunction(YamlBF, Function);
   }
 
   // Uses the strict hash of profiled and binary functions to match functions
   // that are not matched by name or common name.
-  std::unordered_map<size_t, BinaryFunction *> StrictBinaryFunctionHashes;
-  StrictBinaryFunctionHashes.reserve(BC.getBinaryFunctions().size());
+  if (!opts::IgnoreHash) {
+    std::unordered_map<size_t, BinaryFunction *> StrictHashToBF;
+    StrictHashToBF.reserve(BC.getBinaryFunctions().size());
 
-  for (auto &[_, BF] : BC.getBinaryFunctions()) {
-    if (ProfiledFunctions.count(&BF))
-      continue;
-    BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
-    StrictBinaryFunctionHashes[BF.getHash()] = &BF;
-  }
+    for (auto &[_, BF] : BC.getBinaryFunctions()) {
+      StrictHashToBF[BF.getHash()] = &BF;
+    }
 
-  for (auto YamlBF : YamlBP.Functions) {
-    if (YamlBF.Used)
-      continue;
-    auto It = StrictBinaryFunctionHashes.find(YamlBF.Hash);
-    if (It != StrictBinaryFunctionHashes.end() &&
-        !ProfiledFunctions.count(It->second)) {
-      auto *BF = It->second;
-      matchProfileToFunction(YamlBF, *BF);
+    for (auto YamlBF : YamlBP.Functions) {
+      if (YamlBF.Used)
+        continue;
+      auto It = StrictHashToBF.find(YamlBF.Hash);
+      if (It != StrictHashToBF.end() &&
+          !ProfiledFunctions.count(It->second)) {
+        auto *BF = It->second;
+        matchProfileToFunction(YamlBF, *BF);
+      }
     }
   }
 
@@ -441,7 +440,6 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
              << '\n';
-
 
   // Set for parseFunctionProfile().
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
