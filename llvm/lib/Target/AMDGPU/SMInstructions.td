@@ -167,6 +167,20 @@ multiclass SM_Pseudo_Loads<RegisterClass baseClass,
   def _IMM : SM_Load_Pseudo <opName, baseClass, dstClass, IMM_Offset>;
   def _SGPR : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_Offset>;
   def _SGPR_IMM : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_IMM_Offset>;
+
+  // The constrained multi-dword load equivalents with early clobber flag at
+  // the dst operand. They are needed only for codegen and there is no need for
+  // their real opcodes.
+  let SubtargetPredicate = isGFX8Plus,
+      Constraints = !if(!gt(dstClass.RegTypes[0].Size, 32),
+                         "@earlyclobber $sdst", "") in {
+    let PseudoInstr = NAME # !cast<OffsetMode>(IMM_Offset).Variant in
+      def _IMM_ec : SM_Load_Pseudo <opName, baseClass, dstClass, IMM_Offset>;
+    let PseudoInstr = NAME # !cast<OffsetMode>(SGPR_Offset).Variant in
+      def _SGPR_ec : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_Offset>;
+    let PseudoInstr = NAME # !cast<OffsetMode>(SGPR_IMM_Offset).Variant in
+      def _SGPR_IMM_ec : SM_Load_Pseudo <opName, baseClass, dstClass, SGPR_IMM_Offset>;
+  }
 }
 
 multiclass SM_Pseudo_Stores<RegisterClass baseClass,
