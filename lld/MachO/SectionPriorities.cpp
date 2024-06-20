@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SectionPriorities.h"
+#include "BPSectionOrderer.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
@@ -352,7 +353,13 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
 DenseMap<const InputSection *, size_t>
 macho::PriorityBuilder::buildInputSectionPriorities() {
   DenseMap<const InputSection *, size_t> sectionPriorities;
-  if (config->callGraphProfileSort) {
+  if (!config->profileGuidedFunctionOrderPath.empty() ||
+      config->functionOrderForCompression || config->dataOrderForCompression) {
+    TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
+    sectionPriorities = runBalancedPartitioning(
+        highestAvailablePriority, config->profileGuidedFunctionOrderPath,
+        config->functionOrderForCompression, config->dataOrderForCompression);
+  } else if (config->callGraphProfileSort) {
     // Sort sections by the profile data provided by __LLVM,__cg_profile
     // sections.
     //
