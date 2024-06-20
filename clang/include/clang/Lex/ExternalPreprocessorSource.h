@@ -13,6 +13,9 @@
 #ifndef LLVM_CLANG_LEX_EXTERNALPREPROCESSORSOURCE_H
 #define LLVM_CLANG_LEX_EXTERNALPREPROCESSORSOURCE_H
 
+#include <cassert>
+#include <cstdint>
+  
 namespace clang {
 
 class IdentifierInfo;
