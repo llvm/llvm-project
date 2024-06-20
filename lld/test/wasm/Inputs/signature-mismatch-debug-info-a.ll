@@ -1,6 +1,6 @@
 target triple = "wasm32-unknown-emscripten"
 
-define void @foo(i32 %a) !dbg !6 {
+define weak void @foo(i32 %a) !dbg !6 {
   ret void
 }
 
