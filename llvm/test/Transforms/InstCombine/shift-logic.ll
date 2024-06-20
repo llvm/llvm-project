@@ -247,12 +247,14 @@ define i32 @lshr_or_extra_use(i32 %x, i32 %y, ptr %p) {
 define i32 @PR44028(i32 %x) {
 ; CHECK-LABEL: @PR44028(
 ; CHECK-NEXT:    [[SH1:%.*]] = ashr exact i32 [[X:%.*]], 16
-; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[SH1]], shl (i32 ptrtoint (ptr @g to i32), i32 16)
+; CHECK-NEXT:    [[SH2:%.*]] = shl i32 ptrtoint (ptr @g to i32), 16
+; CHECK-NEXT:    [[T0:%.*]] = xor i32 [[SH1]], [[SH2]]
 ; CHECK-NEXT:    [[T27:%.*]] = ashr exact i32 [[T0]], 16
 ; CHECK-NEXT:    ret i32 [[T27]]
 ;
   %sh1 = ashr exact i32 %x, 16
-  %t0 = xor i32 %sh1, shl (i32 ptrtoint (ptr @g to i32), i32 16)
+  %sh2 = shl i32 ptrtoint (ptr @g to i32), 16
+  %t0 = xor i32 %sh1, %sh2
   %t27 = ashr exact i32 %t0, 16
   ret i32 %t27
 }
