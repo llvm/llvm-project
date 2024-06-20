@@ -18,8 +18,6 @@ func.func @omp_master() -> () {
 
 // CHECK-LABEL: omp_masked
 func.func @omp_masked(%filtered_thread_id : i32) -> () {
-
-
   // CHECK: omp.masked filter(%{{.*}} : i32)
   "omp.masked" (%filtered_thread_id) ({
     omp.terminator
@@ -31,6 +29,7 @@ func.func @omp_masked(%filtered_thread_id : i32) -> () {
   }) : () -> ()
   return
 }
+
 func.func @omp_taskwait() -> () {
   // CHECK: omp.taskwait
   omp.taskwait
