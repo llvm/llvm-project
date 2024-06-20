@@ -5202,11 +5202,10 @@ bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
     // in conflict, but we can't tell which until the condition is evaluated.
     if (EC.Cond.getCondition() == nullptr && NewCondition == nullptr) {
       if (EC.Effect.kind() == NewEC.Effect.kind()) {
-        const Expr *PrevCond =
-            Conditions.empty() ? nullptr : Conditions[Idx].getCondition();
-        if (PrevCond != NewEC.Cond.getCondition())
-          Errs.push_back({EC, NewEC});
-        return false;
+        // There is no condition, and the effect kind is already present,
+        // so just fail to insert the new one (creating a duplicate),
+        // and return success.
+        return true;
       }
 
       if (EC.Effect.kind() == NewOppositeKind) {

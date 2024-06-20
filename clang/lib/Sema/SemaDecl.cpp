@@ -20594,16 +20594,17 @@ bool Sema::diagnoseConflictingFunctionEffect(
       continue;
 
     FunctionEffect::Kind PrevKind = PrevEC.Effect.kind();
+    // Note that we allow PrevKind == NewKind; it's redundant and ignored.
 
-    if (PrevKind == NewKind || PrevEC.Effect.oppositeKind() == NewKind)
+    if (PrevEC.Effect.oppositeKind() == NewKind)
       return Incompatible(PrevEC);
 
-    // A new allocating is incompatible with a previous nonblocking(true).
+    // A new allocating is incompatible with a previous nonblocking.
     if (PrevKind == FunctionEffect::Kind::NonBlocking &&
         NewKind == FunctionEffect::Kind::Allocating)
       return Incompatible(PrevEC);
 
-    // A new nonblocking(true) is incompatible with a previous allocating.
+    // A new nonblocking is incompatible with a previous allocating.
     if (PrevKind == FunctionEffect::Kind::Allocating &&
         NewKind == FunctionEffect::Kind::NonBlocking)
       return Incompatible(PrevEC);

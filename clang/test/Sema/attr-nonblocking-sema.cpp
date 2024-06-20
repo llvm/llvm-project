@@ -178,5 +178,6 @@ void ambiguous() [[clang::nonblocking(B)]] [[clang::blocking]]; // expected-note
 
 void f7() {
   ambiguous<true>(); // expected-error {{no matching function for call to 'ambiguous'}}
+  ambiguous<false>();
 }
 #endif // __cplusplus
