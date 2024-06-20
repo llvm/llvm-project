@@ -171,6 +171,27 @@ s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_LO)
 s_getreg_b32 s0, hwreg(HW_REG_SHADER_CYCLES_HI)
 // GFX13: encoding: [0x1e,0xf8,0x00,0xb9]
 
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA1_STATE)
+// GFX13: encoding: [0x24,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA2_STATE)
+// GFX13: encoding: [0x25,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA3_STATE)
+// GFX13: encoding: [0x26,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA4_STATE)
+// GFX13: encoding: [0x27,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_SEMA5_STATE)
+// GFX13: encoding: [0x28,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_GPR_MSB_IDX0)
+// GFX13: encoding: [0x2c,0xf8,0x00,0xb9]
+
+s_getreg_b32 s0, hwreg(HW_REG_WAVE_GPR_IDX123)
+// GFX13: encoding: [0x2d,0xf8,0x00,0xb9]
+
 s_setreg_b32 0, s0
 // GFX13: encoding: [0x00,0x00,0x80,0xb9]
 
