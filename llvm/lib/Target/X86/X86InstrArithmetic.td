@@ -756,10 +756,11 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
   def 32mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
   def 64mr   : BinOpMR_MF<BaseOpc, mnemonic, Xi64, opnode>;
   let Predicates = [HasNDD, In64BitMode] in {
-    def 8mr_ND    : BinOpMR_RF<BaseOpc, mnemonic, Xi8 , opnode>;
-    def 16mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi16, opnode>, PD;
-    def 32mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi32, opnode>;
-    def 64mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi64, opnode>;
+    defvar node = !if(!eq(CommutableRR, 0), opnode, null_frag);
+    def 8mr_ND    : BinOpMR_RF<BaseOpc, mnemonic, Xi8 , node>;
+    def 16mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi16, node>, PD;
+    def 32mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi32, node>;
+    def 64mr_ND   : BinOpMR_RF<BaseOpc, mnemonic, Xi64, node>;
     def 8mr_NF_ND    : BinOpMR_R<BaseOpc, mnemonic, Xi8>, EVEX_NF;
     def 16mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi16>, EVEX_NF, PD;
     def 32mr_NF_ND   : BinOpMR_R<BaseOpc, mnemonic, Xi32>, EVEX_NF;
@@ -944,10 +945,11 @@ multiclass ArithBinOp_RFF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
   def 32mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi32, opnode>, OpSize32;
   def 64mr   : BinOpMRF_MF<BaseOpc, mnemonic, Xi64, opnode>;
   let Predicates = [HasNDD, In64BitMode] in {
-    def 8mr_ND    : BinOpMRF_RF<BaseOpc, mnemonic, Xi8 , opnode>;
-    def 16mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi16, opnode>, PD;
-    def 32mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi32, opnode>;
-    def 64mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi64, opnode>;
+    defvar node = !if(!eq(CommutableRR, 0), opnode, null_frag);
+    def 8mr_ND    : BinOpMRF_RF<BaseOpc, mnemonic, Xi8 , node>;
+    def 16mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi16, node>, PD;
+    def 32mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi32, node>;
+    def 64mr_ND   : BinOpMRF_RF<BaseOpc, mnemonic, Xi64, node>;
   }
   let Predicates = [In64BitMode] in {
     def 8mr_EVEX    : BinOpMRF_MF<BaseOpc, mnemonic, Xi8 , null_frag>, PL;
@@ -1108,14 +1110,26 @@ let isCompare = 1 in {
 
 // Patterns to recognize loads on the LHS of an ADC. We can't make X86adc_flag
 // commutable since it has EFLAGs as an input.
-def : Pat<(X86adc_flag (loadi8 addr:$src2), GR8:$src1, EFLAGS),
-          (ADC8rm GR8:$src1, addr:$src2)>;
-def : Pat<(X86adc_flag (loadi16 addr:$src2), GR16:$src1, EFLAGS),
-          (ADC16rm GR16:$src1, addr:$src2)>;
-def : Pat<(X86adc_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
-          (ADC32rm GR32:$src1, addr:$src2)>;
-def : Pat<(X86adc_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
-          (ADC64rm GR64:$src1, addr:$src2)>;
+let Predicates = [NoNDD] in {
+  def : Pat<(X86adc_flag (loadi8 addr:$src2), GR8:$src1, EFLAGS),
+            (ADC8rm GR8:$src1, addr:$src2)>;
+  def : Pat<(X86adc_flag (loadi16 addr:$src2), GR16:$src1, EFLAGS),
+            (ADC16rm GR16:$src1, addr:$src2)>;
+  def : Pat<(X86adc_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
+            (ADC32rm GR32:$src1, addr:$src2)>;
+  def : Pat<(X86adc_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
+            (ADC64rm GR64:$src1, addr:$src2)>;
+}
+let Predicates = [HasNDD] in {
+  def : Pat<(X86adc_flag (loadi8 addr:$src2), GR8:$src1, EFLAGS),
+            (ADC8rm_ND GR8:$src1, addr:$src2)>;
+  def : Pat<(X86adc_flag (loadi16 addr:$src2), GR16:$src1, EFLAGS),
+            (ADC16rm_ND GR16:$src1, addr:$src2)>;
+  def : Pat<(X86adc_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
+            (ADC32rm_ND GR32:$src1, addr:$src2)>;
+  def : Pat<(X86adc_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
+            (ADC64rm_ND GR64:$src1, addr:$src2)>;
+}
 
 // Patterns to recognize RMW ADC with loads in operand 1.
 def : Pat<(store (X86adc_flag GR8:$src, (loadi8 addr:$dst), EFLAGS),
