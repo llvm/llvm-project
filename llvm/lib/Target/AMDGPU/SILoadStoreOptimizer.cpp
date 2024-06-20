@@ -216,8 +216,7 @@ private:
                                    CombineInfo &Paired, bool Modify = false);
   static bool widthsFit(const GCNSubtarget &STI, const CombineInfo &CI,
                         const CombineInfo &Paired);
-  static unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired,
-                               const GCNSubtarget *STI = nullptr);
+  unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired);
   static std::pair<unsigned, unsigned> getSubRegIdxs(const CombineInfo &CI,
                                                      const CombineInfo &Paired);
   const TargetRegisterClass *
@@ -344,7 +343,6 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
   case AMDGPU::S_LOAD_DWORD_IMM:
-  case AMDGPU::S_LOAD_DWORD_IMM_ec:
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORD:
@@ -513,7 +511,6 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
-  case AMDGPU::S_LOAD_DWORD_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
@@ -602,7 +599,6 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
-  case AMDGPU::S_LOAD_DWORD_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
@@ -719,7 +715,6 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_LOAD_DWORDX3_IMM:
   case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
-  case AMDGPU::S_LOAD_DWORD_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX2_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX3_IMM_ec:
   case AMDGPU::S_LOAD_DWORDX4_IMM_ec:
@@ -1476,7 +1471,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
-  const unsigned Opcode = getNewOpcode(CI, Paired, STM);
+  const unsigned Opcode = getNewOpcode(CI, Paired);
 
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
 
@@ -1688,8 +1683,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatStorePair(
 }
 
 unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
-                                            const CombineInfo &Paired,
-                                            const GCNSubtarget *STI) {
+                                            const CombineInfo &Paired) {
   const unsigned Width = CI.Width + Paired.Width;
 
   switch (getCommonInstClass(CI, Paired)) {
@@ -1732,8 +1726,9 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM;
     }
   case S_LOAD_IMM:
-    // For targets that support XNACK replay, use the constrained load opcode.
-    if (STI && STI->hasXnackReplay()) {
+    // Use the constrained opcodes when the subtarget has the XNACK support
+    // enabled.
+    if (STM->isXNACKEnabled()) {
       switch (Width) {
       default:
         return 0;
