@@ -390,6 +390,8 @@ else()
         malloc.h
       DEPENDS
         libc.src.__support.freelist_heap
+      COMPILE_OPTIONS
+        -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
     )
   else()
     add_entrypoint_external(

@@ -17,14 +17,11 @@
 namespace LIBC_NAMESPACE {
 
 namespace {
-// Users can define LIBC_FREELIST_MALLOC_SIZE for setting the default buffer
-// size used by freelist malloc.
 #ifdef LIBC_FREELIST_MALLOC_SIZE
+// This is set via the LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE configuration.
 constexpr size_t SIZE = LIBC_FREELIST_MALLOC_SIZE;
 #else
-// TODO: We should probably have something akin to what scudo/sanitizer
-// allocators do where each platform defines this.
-constexpr size_t SIZE = 0x40000000ULL; // 1GB
+#error "LIBC_FREELIST_MALLOC_SIZE was not defined for this build."
 #endif
 LIBC_CONSTINIT FreeListHeapBuffer<SIZE> freelist_heap_buffer;
 } // namespace
