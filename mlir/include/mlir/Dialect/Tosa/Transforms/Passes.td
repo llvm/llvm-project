@@ -127,4 +127,25 @@ def TosaReduceTransposes : Pass<"tosa-reduce-transposes", "func::FuncOp"> {
   }];
 }
 
+def TosaInputShape : Pass<"experimental-tosa-input-shape", "func::FuncOp"> {
+  let summary = "Override dynamic input shapes of function arguments to specified static shapes.";
+  let description = [{
+    Pass that overrides the dynamic input shapes of function arguments to specified static shapes.
+    It is an error if a specified static shape conflicts with the static dimensions in an original input shape.
+  }];
+
+  let constructor = "tosa::createTosaInputShapePass()";
+  let dependentDialects = [
+    "func::FuncDialect",
+    "tensor::TensorDialect",
+    "tosa::TosaDialect",
+  ];
+  let options = [
+    ListOption<"args", "args", "std::string",
+          "Comma-separated list of shape descriptions. Each description contains the "
+          "argument name, a colon, and a shape with dimensions separated by x "
+          "(e.g. arg0:5x5,arg3:2x64)">,
+  ];
+}
+
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES
