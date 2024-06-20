@@ -167,7 +167,7 @@ void llvm::computeLTOCacheKey(
 
   // Sort the export list elements GUIDs.
   llvm::sort(ExportsGUID);
-  for (auto &[GUID, ExportType] : ExportsGUID) {
+  for (auto [GUID, ExportType] : ExportsGUID) {
     // The export list can impact the internalization, be conservative here
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
     AddUint8(ExportType);

@@ -35,7 +35,8 @@ public:
   /// The functions to import from a source module and their import type.
   /// Note we choose unordered_map over (Small)DenseMap. The number of imports
   /// from a source module could be small but DenseMap size grows to 64 quickly
-  /// and not memory efficient.
+  /// and not memory efficient (see
+  /// https://llvm.org/docs/ProgrammersManual.html#llvm-adt-densemap-h)
   using FunctionsToImportTy =
       std::unordered_map<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
 
