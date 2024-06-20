@@ -3002,7 +3002,6 @@ void RewriteInstance::selectFunctionsToProcess() {
     }
 
     if (opts::Lite) {
-
       // Forcibly include functions specified in the -function-order file.
       if (opts::ReorderFunctions == ReorderFunctions::RT_USER) {
         for (const StringRef Name : Function.getNames())
@@ -3013,6 +3012,7 @@ void RewriteInstance::selectFunctionsToProcess() {
             if (ReorderFunctionsLTOCommonSet.contains(*LTOCommonName))
               return true;
       }
+
       if (ProfileReader && !ProfileReader->mayHaveProfileData(Function))
         return false;
 

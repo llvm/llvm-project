@@ -402,7 +402,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   // Uses the strict hash of profiled and binary functions to match functions
   // that are not matched by name or common name.
-  if (!opts::IgnoreHash) {
+  if (opts::MatchingFunctionsWithHash) {
     std::unordered_map<size_t, BinaryFunction *> StrictHashToBF;
     StrictHashToBF.reserve(BC.getBinaryFunctions().size());
 
