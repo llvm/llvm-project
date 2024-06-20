@@ -282,15 +282,15 @@ if(OPENMP_STANDALONE_BUILD)
       ${LLVM_LIBRARY_DIRS}
     REQUIRED
   )
-
-  macro(pythonize_bool var)
-  if (${var})
-    set(${var} True)
-  else()
-    set(${var} False)
-  endif()
-  endmacro()
 endif()
+
+macro(pythonize_bool var)
+if (${var})
+  set(${var} True)
+else()
+  set(${var} False)
+endif()
+endmacro()
 
 if(OPENMP_STANDALONE_BUILD OR TARGET omp)
   # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
