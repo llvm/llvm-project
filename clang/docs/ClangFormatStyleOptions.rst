@@ -221,31 +221,22 @@ the configuration (without a prefix: ``Auto``).
       someLongFunction(argument1,
           argument2);
 
-  * ``BAS_AlwaysBreak`` (in configuration: ``AlwaysBreak``)
-    Always break after an open bracket, if the parameters don't fit
-    on a single line, e.g.:
+  * ``BAS_ABDeprecated`` (in configuration: ``ABDeprecated``)
+    ``BAS_AlwaysBreak``
+    This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    For backward compatibility. Do not use.
 
-    .. code-block:: c++
-
-      someLongFunction(
-          argument1, argument2);
-
-  * ``BAS_BlockIndent`` (in configuration: ``BlockIndent``)
-    Always break after an open bracket, if the parameters don't fit
-    on a single line. Closing brackets will be placed on a new line.
-    E.g.:
-
-    .. code-block:: c++
-
-      someLongFunction(
-          argument1, argument2
-      )
-
-
-    .. note::
-
-     This currently only applies to braced initializer lists (when
-     ``Cpp11BracedListStyle`` is ``true``) and parentheses.
+  * ``BAS_BIDeprecated`` (in configuration: ``BIDeprecated``)
+    ``BAS_BlockIndent``
+    This is **deprecated**. See ``BreakAfterOpenBracketBracedList``,
+    ``BreakAfterOpenBracketFunction``, ``BreakAfterOpenBracketIf``,
+    ``BreakAfterOpenBracketLoop``, ``BreakAfterOpenBracketSwitch``.
+    in combination with ``BreakBeforeCloseBracketBracedList``,
+    ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+    ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch``.
+    For backward compatibility. Do not use.
 
 
 
