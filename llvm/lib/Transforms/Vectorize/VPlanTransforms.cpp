@@ -999,6 +999,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
                                  : Instruction::ZExt;
         auto *VPC =
             new VPWidenCastRecipe(Instruction::CastOps(ExtOpcode), A, TruncTy);
+        if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue()) {
+          // UnderlyingExt has distinct return type, used to retain legacy cost.
+          VPC->setUnderlyingValue(UnderlyingExt);
+        }
         VPC->insertBefore(&R);
         Trunc->replaceAllUsesWith(VPC);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
@@ -1334,13 +1338,10 @@ static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
   // Walk users of wide canonical IVs and collect to all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
   SmallVector<VPValue *> HeaderMasks;
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
   for (auto *Wide : WideCanonicalIVs) {
     for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
       auto *HeaderMask = dyn_cast<VPInstruction>(U);
-      if (!HeaderMask || HeaderMask->getOpcode() != Instruction::ICmp ||
-          HeaderMask->getPredicate() != CmpInst::ICMP_ULE ||
-          HeaderMask->getOperand(1) != BTC)
+      if (!HeaderMask || !vputils::isHeaderMask(HeaderMask, Plan))
         continue;
 
       assert(HeaderMask->getOperand(0) == Wide &&
@@ -1518,6 +1519,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
           VPInstruction *New = Builder.createOverflowingOp(
               Instruction::Add, {A, B}, {false, false},
               RecWithFlags->getDebugLoc());
+          New->setUnderlyingValue(RecWithFlags->getUnderlyingValue());
           RecWithFlags->replaceAllUsesWith(New);
           RecWithFlags->eraseFromParent();
           CurRec = New;

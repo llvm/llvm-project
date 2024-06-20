@@ -4393,6 +4393,12 @@ def PtrauthSignUnauthenticated : Builtin {
   let Prototype = "void*(void*,int,void*)";
 }
 
+def PtrauthSignConstant : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_constant"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const, Constexpr];
+  let Prototype = "void*(void*,int,void*)";
+}
+
 def PtrauthSignGenericData : Builtin {
   let Spellings = ["__builtin_ptrauth_sign_generic_data"];
   let Attributes = [CustomTypeChecking, NoThrow, Const];
@@ -4409,6 +4415,12 @@ def PtrauthAuth : Builtin {
   let Spellings = ["__builtin_ptrauth_auth"];
   let Attributes = [CustomTypeChecking, NoThrow];
   let Prototype = "void*(void*,int,void*)";
+}
+
+def PtrauthStringDiscriminator : Builtin {
+  let Spellings = ["__builtin_ptrauth_string_discriminator"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "size_t(char const*)";
 }
 
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.

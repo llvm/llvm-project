@@ -426,28 +426,54 @@ static bool InstructionStoresToFI(const MachineInstr *MI, int FI) {
 static void applyBitsNotInRegMaskToRegUnitsMask(const TargetRegisterInfo &TRI,
                                                 BitVector &RUs,
                                                 const uint32_t *Mask) {
-  BitVector ClobberedRUs(TRI.getNumRegUnits(), true);
+  // FIXME: This intentionally works in reverse due to some issues with the
+  // Register Units infrastructure.
+  //
+  // This is used to apply callee-saved-register masks to the clobbered regunits
+  // mask.
+  //
+  // The right way to approach this is to start with a BitVector full of ones,
+  // then reset all the bits of the regunits of each register that is set in the
+  // mask (registers preserved), then OR the resulting bits with the Clobbers
+  // mask. This correctly prioritizes the saved registers, so if a RU is shared
+  // between a register that is preserved, and one that is NOT preserved, that
+  // RU will not be set in the output vector (the clobbers).
+  //
+  // What we have to do for now is the opposite: we have to assume that the
+  // regunits of all registers that are NOT preserved are clobbered, even if
+  // those regunits are preserved by another register. So if a RU is shared
+  // like described previously, that RU will be set.
+  //
+  // This is to work around an issue which appears in AArch64, but isn't
+  // exclusive to that target: AArch64's Qn registers (128 bits) have Dn
+  // register (lower 64 bits). A few Dn registers are preserved by some calling
+  // conventions, but Qn and Dn share exactly the same reg units.
+  //
+  // If we do this the right way, Qn will be marked as NOT clobbered even though
+  // its upper 64 bits are NOT preserved. The conservative approach handles this
+  // correctly at the cost of some missed optimizations on other targets.
+  //
+  // This is caused by how RegUnits are handled within TableGen. Ideally, Qn
+  // should have an extra RegUnit to model the "unknown" bits not covered by the
+  // subregs.
+  BitVector RUsFromRegsNotInMask(TRI.getNumRegUnits());
   const unsigned NumRegs = TRI.getNumRegs();
   const unsigned MaskWords = (NumRegs + 31) / 32;
   for (unsigned K = 0; K < MaskWords; ++K) {
     const uint32_t Word = Mask[K];
-    if (!Word)
-      continue;
-
     for (unsigned Bit = 0; Bit < 32; ++Bit) {
       const unsigned PhysReg = (K * 32) + Bit;
       if (PhysReg == NumRegs)
         break;
 
-      // Check if we have a valid PhysReg that is set in the mask.
-      if ((Word >> Bit) & 1) {
+      if (PhysReg && !((Word >> Bit) & 1)) {
         for (MCRegUnitIterator RUI(PhysReg, &TRI); RUI.isValid(); ++RUI)
-          ClobberedRUs.reset(*RUI);
+          RUsFromRegsNotInMask.set(*RUI);
       }
     }
   }
 
-  RUs |= ClobberedRUs;
+  RUs |= RUsFromRegsNotInMask;
 }
 
 /// Examine the instruction for potentai LICM candidate. Also
