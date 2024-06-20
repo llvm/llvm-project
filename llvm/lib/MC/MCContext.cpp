@@ -70,7 +70,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
                      bool DoAutoReset, StringRef Swift5ReflSegmentName)
     : Swift5ReflectionSegmentName(Swift5ReflSegmentName), TT(TheTriple),
       SrcMgr(mgr), InlineSrcMgr(nullptr), DiagHandler(defaultDiagHandler),
-      MAI(mai), MRI(mri), MSTI(msti), Symbols(Allocator), UsedNames(Allocator),
+      MAI(mai), MRI(mri), MSTI(msti), Symbols(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
@@ -153,7 +153,6 @@ void MCContext::reset() {
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
-  UsedNames.clear();
   Symbols.clear();
   Allocator.Reset();
   Instances.clear();
@@ -179,7 +178,6 @@ void MCContext::reset() {
   ELFEntrySizeMap.clear();
   ELFSeenGenericMergeableSections.clear();
 
-  NextID.clear();
   DwarfLocSeen = false;
   GenDwarfForAssembly = false;
   GenDwarfFileNumber = 0;
@@ -214,11 +212,21 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
 
   assert(!NameRef.empty() && "Normal symbols cannot be unnamed!");
 
-  MCSymbol *&Sym = Symbols[NameRef];
-  if (!Sym)
-    Sym = createSymbol(NameRef, false, false);
+  MCSymbolTableEntry &Entry = getSymbolTableEntry(NameRef);
+  if (!Entry.second.Symbol) {
+    bool IsRenamable = NameRef.starts_with(MAI->getPrivateGlobalPrefix());
+    bool IsTemporary = IsRenamable && !SaveTempLabels;
+    if (!Entry.second.Used) {
+      Entry.second.Used = true;
+      Entry.second.Symbol = createSymbolImpl(&Entry, IsTemporary);
+    } else {
+      assert(IsRenamable && "cannot rename non-private symbol");
+      // Slow path: we need to rename a temp symbol from the user.
+      Entry.second.Symbol = createRenamableSymbol(NameRef, false, IsTemporary);
+    }
+  }
 
-  return Sym;
+  return Entry.second.Symbol;
 }
 
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,
@@ -237,7 +245,11 @@ MCSymbol *MCContext::getOrCreateLSDASymbol(const Twine &FuncName) {
                            FuncName);
 }
 
-MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
+MCSymbolTableEntry &MCContext::getSymbolTableEntry(StringRef Name) {
+  return *Symbols.try_emplace(Name, MCSymbolTableValue{}).first;
+}
+
+MCSymbol *MCContext::createSymbolImpl(const MCSymbolTableEntry *Name,
                                       bool IsTemporary) {
   static_assert(std::is_trivially_destructible<MCSymbolCOFF>(),
                 "MCSymbol classes must be trivially destructible");
@@ -273,49 +285,37 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
       MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
 }
 
-MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
-                                  bool IsTemporary) {
-  // Determine whether this is a user written assembler temporary or normal
-  // label, if used.
-  if (!SaveTempLabels && !IsTemporary)
-    IsTemporary = Name.starts_with(MAI->getPrivateGlobalPrefix());
+MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
+                                           bool AlwaysAddSuffix,
+                                           bool IsTemporary) {
+  SmallString<128> NewName;
+  Name.toVector(NewName);
+  size_t NameLen = NewName.size();
 
-  SmallString<128> NewName = Name;
-  bool AddSuffix = AlwaysAddSuffix;
-  unsigned &NextUniqueID = NextID[Name];
-  while (true) {
-    if (AddSuffix) {
-      NewName.resize(Name.size());
-      raw_svector_ostream(NewName) << NextUniqueID++;
-    }
-    auto NameEntry = UsedNames.insert(std::make_pair(NewName.str(), true));
-    if (NameEntry.second || !NameEntry.first->second) {
-      // Ok, we found a name.
-      // Mark it as used for a non-section symbol.
-      NameEntry.first->second = true;
-      // Have the MCSymbol object itself refer to the copy of the string that is
-      // embedded in the UsedNames entry.
-      return createSymbolImpl(&*NameEntry.first, IsTemporary);
-    }
-    assert(IsTemporary && "Cannot rename non-temporary symbols");
-    AddSuffix = true;
+  MCSymbolTableEntry &NameEntry = getSymbolTableEntry(NewName.str());
+  MCSymbolTableEntry *EntryPtr = &NameEntry;
+  while (AlwaysAddSuffix || EntryPtr->second.Used) {
+    AlwaysAddSuffix = false;
+
+    NewName.resize(NameLen);
+    raw_svector_ostream(NewName) << NameEntry.second.NextUniqueID++;
+    EntryPtr = &getSymbolTableEntry(NewName.str());
   }
-  llvm_unreachable("Infinite loop");
+
+  EntryPtr->second.Used = true;
+  return createSymbolImpl(EntryPtr, IsTemporary);
 }
 
 MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
   if (!UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, /*IsTemporary=*/true);
-
-  SmallString<128> NameSV;
-  raw_svector_ostream(NameSV) << MAI->getPrivateGlobalPrefix() << Name;
-  return createSymbol(NameSV, AlwaysAddSuffix, true);
+  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name,
+                               AlwaysAddSuffix, /*IsTemporary=*/true);
 }
 
 MCSymbol *MCContext::createNamedTempSymbol(const Twine &Name) {
-  SmallString<128> NameSV;
-  raw_svector_ostream(NameSV) << MAI->getPrivateGlobalPrefix() << Name;
-  return createSymbol(NameSV, true, false);
+  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name, true,
+                               /*IsTemporary=*/!SaveTempLabels);
 }
 
 MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
@@ -323,9 +323,9 @@ MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
 }
 
 MCSymbol *MCContext::createLinkerPrivateSymbol(const Twine &Name) {
-  SmallString<128> NameSV;
-  raw_svector_ostream(NameSV) << MAI->getLinkerPrivateGlobalPrefix() << Name;
-  return createSymbol(NameSV, true, false);
+  return createRenamableSymbol(MAI->getLinkerPrivateGlobalPrefix() + Name,
+                               /*AlwaysAddSuffix=*/true,
+                               /*IsTemporary=*/false);
 }
 
 MCSymbol *MCContext::createTempSymbol() { return createTempSymbol("tmp"); }
@@ -372,7 +372,7 @@ MCSymbol *MCContext::getDirectionalLocalSymbol(unsigned LocalLabelVal,
 MCSymbol *MCContext::lookupSymbol(const Twine &Name) const {
   SmallString<128> NameSV;
   StringRef NameRef = Name.toStringRef(NameSV);
-  return Symbols.lookup(NameRef);
+  return Symbols.lookup(NameRef).Symbol;
 }
 
 void MCContext::setSymbolValue(MCStreamer &Streamer, const Twine &Sym,
@@ -389,9 +389,8 @@ wasm::WasmSignature *MCContext::createWasmSignature() {
   return new (WasmSignatureAllocator.Allocate()) wasm::WasmSignature;
 }
 
-MCSymbolXCOFF *
-MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
-                                 bool IsTemporary) {
+MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
+                                                bool IsTemporary) {
   if (!Name)
     return new (nullptr, *this) MCSymbolXCOFF(nullptr, IsTemporary);
 
@@ -431,15 +430,13 @@ MCContext::createXCOFFSymbolImpl(const StringMapEntry<bool> *Name,
   else
     ValidName.append(InvalidName);
 
-  auto NameEntry = UsedNames.insert(std::make_pair(ValidName.str(), true));
-  assert((NameEntry.second || !NameEntry.first->second) &&
-         "This name is used somewhere else.");
-  // Mark the name as used for a non-section symbol.
-  NameEntry.first->second = true;
+  MCSymbolTableEntry &NameEntry = getSymbolTableEntry(ValidName.str());
+  assert(!NameEntry.second.Used && "This name is used somewhere else.");
+  NameEntry.second.Used = true;
   // Have the MCSymbol object itself refer to the copy of the string
-  // that is embedded in the UsedNames entry.
-  MCSymbolXCOFF *XSym = new (&*NameEntry.first, *this)
-      MCSymbolXCOFF(&*NameEntry.first, IsTemporary);
+  // that is embedded in the symbol table entry.
+  MCSymbolXCOFF *XSym =
+      new (&NameEntry, *this) MCSymbolXCOFF(&NameEntry, IsTemporary);
   XSym->setSymbolTableName(MCSymbolXCOFF::getUnqualifiedName(OriginalName));
   return XSym;
 }
@@ -485,7 +482,8 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
                                               bool Comdat, unsigned UniqueID,
                                               const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *R;
-  MCSymbol *&Sym = Symbols[Section];
+  MCSymbolTableEntry &SymEntry = getSymbolTableEntry(Section);
+  MCSymbol *Sym = SymEntry.second.Symbol;
   // A section symbol can not redefine regular symbols. There may be multiple
   // sections with the same name, in which case the first such section wins.
   if (Sym && Sym->isDefined() &&
@@ -494,10 +492,10 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
   if (Sym && Sym->isUndefined()) {
     R = cast<MCSymbolELF>(Sym);
   } else {
-    auto NameIter = UsedNames.insert(std::make_pair(Section, false)).first;
-    R = new (&*NameIter, *this) MCSymbolELF(&*NameIter, /*isTemporary*/ false);
+    SymEntry.second.Used = true;
+    R = new (&SymEntry, *this) MCSymbolELF(&SymEntry, /*isTemporary*/ false);
     if (!Sym)
-      Sym = R;
+      SymEntry.second.Symbol = R;
   }
   R->setBinding(ELF::STB_LOCAL);
   R->setType(ELF::STT_SECTION);
@@ -750,8 +748,9 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
 
   StringRef CachedName = Entry.first.SectionName;
 
-  MCSymbol *Begin = createSymbol(CachedName, true, false);
-  Symbols[Begin->getName()] = Begin;
+  MCSymbol *Begin = createRenamableSymbol(CachedName, true, false);
+  // Begin always has a different name than CachedName... see #48596.
+  getSymbolTableEntry(Begin->getName()).second.Symbol = Begin;
   cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
 
   MCSectionWasm *Result = new (WasmAllocator.Allocate())
