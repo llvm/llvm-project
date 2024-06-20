@@ -71,7 +71,7 @@ public:
     if (Previous)
       Previous->ReaderInitialized(Reader);
   }
-  void IdentifierRead(serialization::IdentID ID,
+  void IdentifierRead(serialization::IdentifierID ID,
                       IdentifierInfo *II) override {
     if (Previous)
       Previous->IdentifierRead(ID, II);
@@ -80,7 +80,7 @@ public:
     if (Previous)
       Previous->TypeRead(Idx, T);
   }
-  void DeclRead(serialization::DeclID ID, const Decl *D) override {
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
     if (Previous)
       Previous->DeclRead(ID, D);
   }
@@ -102,7 +102,7 @@ public:
                                    bool DeletePrevious)
       : DelegatingDeserializationListener(Previous, DeletePrevious) {}
 
-  void DeclRead(serialization::DeclID ID, const Decl *D) override {
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
     llvm::outs() << "PCH DECL: " << D->getDeclKindName();
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
       llvm::outs() << " - ";
@@ -128,7 +128,7 @@ public:
       : DelegatingDeserializationListener(Previous, DeletePrevious), Ctx(Ctx),
         NamesToCheck(NamesToCheck) {}
 
-  void DeclRead(serialization::DeclID ID, const Decl *D) override {
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
       if (NamesToCheck.find(ND->getNameAsString()) != NamesToCheck.end()) {
         unsigned DiagID
@@ -535,8 +535,14 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
                                   CI.getSourceManager().getMainFileID())) {
       M->IsInferred = true;
-      CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
-        .setInferredModuleAllowedBy(M, *OriginalModuleMap);
+      auto FileCharacter =
+          M->IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
+      FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(
+          *OriginalModuleMap, FileCharacter);
+      CI.getPreprocessor()
+          .getHeaderSearchInfo()
+          .getModuleMap()
+          .setInferredModuleAllowedBy(M, OriginalModuleMapFID);
     }
   }
 
@@ -621,7 +627,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         std::string(InputFile), CI.getPCHContainerReader(),
         ASTUnit::LoadPreprocessorOnly, ASTDiags, CI.getFileSystemOpts(),
-        /*HeaderSearchOptions=*/nullptr, CI.getCodeGenOpts().DebugTypeExtRefs);
+        /*HeaderSearchOptions=*/nullptr);
     if (!AST)
       return false;
 
@@ -689,8 +695,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         std::string(InputFile), CI.getPCHContainerReader(),
         ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
-        CI.getHeaderSearchOptsPtr(),
-        CI.getCodeGenOpts().DebugTypeExtRefs);
+        CI.getHeaderSearchOptsPtr(), CI.getLangOptsPtr());
 
     if (!AST)
       return false;
@@ -752,8 +757,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // IR files bypass the rest of initialization.
   if (Input.getKind().getLanguage() == Language::LLVM_IR) {
-    assert(hasIRSupport() &&
-           "This action does not have IR file support!");
+    if (!hasIRSupport()) {
+      CI.getDiagnostics().Report(diag::err_ast_action_on_llvm_ir)
+          << Input.getFile();
+      return false;
+    }
 
     // Inform the diagnostic client we are processing a source file.
     CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), nullptr);

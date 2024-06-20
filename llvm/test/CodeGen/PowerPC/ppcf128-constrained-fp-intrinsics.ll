@@ -1383,19 +1383,18 @@ define i32 @test_fptoui_ppc_i32_ppc_fp128(ppc_fp128 %first) #0 {
 ; PC64-NEXT:    nop
 ; PC64-NEXT:    mffs 0
 ; PC64-NEXT:    mtfsb1 31
-; PC64-NEXT:    lis 4, -32768
-; PC64-NEXT:    bc 12, 8, .LBB31_3
-; PC64-NEXT:    b .LBB31_4
-; PC64-NEXT:  .LBB31_3: # %entry
-; PC64-NEXT:    li 4, 0
-; PC64-NEXT:  .LBB31_4: # %entry
+; PC64-NEXT:    li 3, 0
 ; PC64-NEXT:    mtfsb0 30
 ; PC64-NEXT:    fadd 1, 2, 1
 ; PC64-NEXT:    mtfsf 1, 0
 ; PC64-NEXT:    fctiwz 0, 1
 ; PC64-NEXT:    stfd 0, 120(1)
-; PC64-NEXT:    lwz 3, 124(1)
-; PC64-NEXT:    xor 3, 3, 4
+; PC64-NEXT:    bc 12, 8, .LBB31_4
+; PC64-NEXT:  # %bb.3: # %entry
+; PC64-NEXT:    lis 3, -32768
+; PC64-NEXT:  .LBB31_4: # %entry
+; PC64-NEXT:    lwz 4, 124(1)
+; PC64-NEXT:    xor 3, 4, 3
 ; PC64-NEXT:    addi 1, 1, 128
 ; PC64-NEXT:    ld 0, 16(1)
 ; PC64-NEXT:    lwz 12, 8(1)

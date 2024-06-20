@@ -29,6 +29,10 @@ public:
     for (StringRef str : initializer)
       insert(str);
   }
+  template <typename Container> explicit StringSet(Container &&C) {
+    for (auto &&Str : C)
+      insert(Str);
+  }
   explicit StringSet(AllocatorTy a) : Base(a) {}
 
   std::pair<typename Base::iterator, bool> insert(StringRef key) {

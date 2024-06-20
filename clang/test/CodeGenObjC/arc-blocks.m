@@ -445,8 +445,8 @@ void test13(id x) {
   // CHECK:      [[X:%.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[B:%.*]] = alloca ptr, align 8
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align 8
-  // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
   // CHECK-NEXT: [[COND_CLEANUP_SAVE:%.*]] = alloca ptr,
+  // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
   // CHECK-NEXT: [[T0:%.*]] = call ptr @llvm.objc.retain(ptr {{%.*}})
   // CHECK-NEXT: store ptr [[T0]], ptr [[X]], align 8
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[B]])
@@ -460,8 +460,8 @@ void test13(id x) {
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[X]], align 8
   // CHECK-NEXT: [[T1:%.*]] = call ptr @llvm.objc.retain(ptr [[T0]])
   // CHECK-NEXT: store ptr [[T1]], ptr [[CAPTURE]], align 8
-  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: store ptr [[CAPTURE]], ptr [[COND_CLEANUP_SAVE]], align 8
+  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br label
   // CHECK:      br label
   // CHECK:      [[T0:%.*]] = phi ptr

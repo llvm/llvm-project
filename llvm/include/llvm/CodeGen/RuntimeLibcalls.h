@@ -82,6 +82,12 @@ namespace RTLIB {
   /// UNKNOWN_LIBCALL if there is none.
   Libcall getSYNC(unsigned Opc, MVT VT);
 
+  /// Return the outline atomics value for the given atomic ordering, access
+  /// size and set of libcalls for a given atomic, or UNKNOWN_LIBCALL if there
+  /// is none.
+  Libcall getOutlineAtomicHelper(const Libcall (&LC)[5][4],
+                                 AtomicOrdering Order, uint64_t MemSize);
+
   /// Return the outline atomics value for the given opcode, atomic ordering
   /// and type, or UNKNOWN_LIBCALL if there is none.
   Libcall getOUTLINE_ATOMIC(unsigned Opc, AtomicOrdering Order, MVT VT);

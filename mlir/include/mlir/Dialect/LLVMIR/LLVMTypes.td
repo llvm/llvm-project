@@ -40,7 +40,7 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
     ```
   }];
 
-  let parameters = (ins "Type":$elementType, "unsigned":$numElements);
+  let parameters = (ins "Type":$elementType, "uint64_t":$numElements);
   let assemblyFormat = [{
     `<` $numElements `x` custom<PrettyLLVMType>($elementType) `>`
   }];
@@ -49,7 +49,7 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
 
   let builders = [
     TypeBuilderWithInferredContext<(ins "Type":$elementType,
-                                        "unsigned":$numElements)>
+                                        "uint64_t":$numElements)>
   ];
 
   let extraClassDeclaration = [{
@@ -123,7 +123,7 @@ def LLVMFunctionType : LLVMType<"LLVMFunction", "func"> {
 
 def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "areCompatible", "verifyEntries"]>]> {
+      "getIndexBitwidth", "areCompatible", "verifyEntries"]>]> {
   let summary = "LLVM pointer type";
   let description = [{
     The `!llvm.ptr` type is an LLVM pointer type. This type typically represents
@@ -162,6 +162,8 @@ def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec"> {
     elements can be processed as one in SIMD context.
   }];
 
+  let typeName = "llvm.fixed_vec";
+
   let parameters = (ins "Type":$elementType, "unsigned":$numElements);
   let assemblyFormat = [{
     `<` $numElements `x` custom<PrettyLLVMType>($elementType) `>`
@@ -191,6 +193,8 @@ def LLVMScalableVectorType : LLVMType<"LLVMScalableVector", "vec"> {
     unknown length that is known to be divisible by some constant. These
     elements can be processed as one in SIMD context.
   }];
+
+  let typeName = "llvm.scalable_vec";
 
   let parameters = (ins "Type":$elementType, "unsigned":$minNumElements);
   let assemblyFormat = [{

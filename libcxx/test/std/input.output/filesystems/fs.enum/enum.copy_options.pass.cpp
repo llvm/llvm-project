@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
 
 // enum class copy_options;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
 #include "check_bitmask_types.h"
 #include "test_macros.h"
-
+namespace fs = std::filesystem;
 
 constexpr fs::copy_options ME(int val) { return static_cast<fs::copy_options>(val); }
 
@@ -30,7 +30,7 @@ int main(int, char**) {
   typedef std::underlying_type<E>::type UT;
   static_assert(!std::is_convertible<E, UT>::value, "");
 
-  LIBCPP_ONLY(static_assert(std::is_same<UT, unsigned short>::value, "")); // Implementation detail
+  LIBCPP_STATIC_ASSERT(std::is_same<UT, unsigned short>::value, ""); // Implementation detail
 
   typedef check_bitmask_type<E, E::skip_existing, E::update_existing> BitmaskTester;
   assert(BitmaskTester::check());

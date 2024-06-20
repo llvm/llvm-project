@@ -650,7 +650,7 @@
 ; RUN:             -implicit-check-not='{{remark:|error:}}'
 
 ; Verbose diagnostics are suppressed but not errors.
-; IMPNOT:{{.*}}command line:1:22: error: CHECK-NOT: excluded string found in input
+; IMPNOT:{{.*}}command line:1:22: error: IMPLICIT-CHECK-NOT: excluded string found in input
 
 ;         IMPNOT:<<<<<<
 ;    IMPNOT-NEXT:            1: hello world again! 

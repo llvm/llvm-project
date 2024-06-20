@@ -75,7 +75,9 @@
 #error Unknown compiler
 #endif
 
-#if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD)
+#if (KMP_OS_LINUX || KMP_OS_WINDOWS || KMP_OS_FREEBSD || KMP_OS_NETBSD ||      \
+     KMP_OS_DRAGONFLY || KMP_OS_AIX) &&                                        \
+    !KMP_OS_WASI
 #define KMP_AFFINITY_SUPPORTED 1
 #if KMP_OS_WINDOWS && KMP_ARCH_X86_64
 #define KMP_GROUP_AFFINITY 1
@@ -105,8 +107,9 @@
    128-bit extended precision type yet */
 typedef long double _Quad;
 #elif KMP_COMPILER_GCC
-/* GCC on NetBSD lacks __multc3/__divtc3 builtins needed for quad */
-#if !KMP_OS_NETBSD
+/* GCC on NetBSD lacks __multc3/__divtc3 builtins needed for quad until
+   NetBSD 10.0 which ships with GCC 10.5 */
+#if (!KMP_OS_NETBSD || __GNUC__ >= 10)
 typedef __float128 _Quad;
 #undef KMP_HAVE_QUAD
 #define KMP_HAVE_QUAD 1
@@ -175,7 +178,8 @@ typedef unsigned long long kmp_uint64;
 #define KMP_UINT64_SPEC "llu"
 #endif /* KMP_OS_UNIX */
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM ||          \
+    KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
 #elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
@@ -185,7 +189,7 @@ typedef unsigned long long kmp_uint64;
 #error "Can't determine size_t printf format specifier."
 #endif
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_WASM || KMP_ARCH_PPC
 #define KMP_SIZE_T_MAX (0xFFFFFFFF)
 #else
 #define KMP_SIZE_T_MAX (0xFFFFFFFFFFFFFFFF)
@@ -214,8 +218,8 @@ typedef kmp_uint32 kmp_uint;
 #define KMP_INT_MIN ((kmp_int32)0x80000000)
 
 // stdarg handling
-#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64) &&                   \
-    (KMP_OS_FREEBSD || KMP_OS_LINUX)
+#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_WASM) &&  \
+    (KMP_OS_FREEBSD || KMP_OS_LINUX || KMP_OS_WASI)
 typedef va_list *kmp_va_list;
 #define kmp_va_deref(ap) (*(ap))
 #define kmp_va_addr_of(ap) (&(ap))
@@ -304,6 +308,8 @@ template <> struct traits_t<unsigned long long> {
    !KMP_MIC)
 
 #if KMP_OS_WINDOWS
+// Don't include everything related to NT status code, we'll do that explicitly
+#define WIN32_NO_STATUS
 #include <windows.h>
 
 static inline int KMP_GET_PAGE_SIZE(void) {
@@ -463,7 +469,7 @@ enum kmp_mem_fence_type {
 #pragma intrinsic(InterlockedExchangeAdd)
 #pragma intrinsic(InterlockedCompareExchange)
 #pragma intrinsic(InterlockedExchange)
-#if !(KMP_COMPILER_ICX && KMP_32_BIT_ARCH)
+#if !KMP_32_BIT_ARCH
 #pragma intrinsic(InterlockedExchange64)
 #endif
 #endif
@@ -1045,7 +1051,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
 
 #if KMP_ARCH_PPC64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS ||     \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32
 #if KMP_OS_WINDOWS
 #undef KMP_MB
 #define KMP_MB() std::atomic_thread_fence(std::memory_order_seq_cst)
@@ -1145,7 +1151,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
   KMP_COMPARE_AND_STORE_REL64((volatile kmp_int64 *)(volatile void *)&(a),     \
                               (kmp_int64)(b), (kmp_int64)(c))
 
-#if KMP_ARCH_X86 || KMP_ARCH_MIPS
+#if KMP_ARCH_X86 || KMP_ARCH_MIPS || KMP_ARCH_WASM || KMP_ARCH_PPC
 // What about ARM?
 #define TCR_PTR(a) ((void *)TCR_4(a))
 #define TCW_PTR(a, b) TCW_4((a), (b))
@@ -1287,9 +1293,26 @@ bool __kmp_atomic_compare_store_rel(std::atomic<T> *p, T expected, T desired) {
 extern void *__kmp_lookup_symbol(const char *name, bool next = false);
 #define KMP_DLSYM(name) __kmp_lookup_symbol(name)
 #define KMP_DLSYM_NEXT(name) __kmp_lookup_symbol(name, true)
+#elif KMP_OS_WASI
+#define KMP_DLSYM(name) nullptr
+#define KMP_DLSYM_NEXT(name) nullptr
 #else
 #define KMP_DLSYM(name) dlsym(RTLD_DEFAULT, name)
 #define KMP_DLSYM_NEXT(name) dlsym(RTLD_NEXT, name)
+#endif
+
+// MSVC doesn't have this, but clang/clang-cl does.
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
+// Same as LLVM_BUILTIN_UNREACHABLE. States that it is UB to reach this point.
+#if __has_builtin(__builtin_unreachable) || defined(__GNUC__)
+#define KMP_BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define KMP_BUILTIN_UNREACHABLE __assume(false)
+#else
+#define KMP_BUILTIN_UNREACHABLE
 #endif
 
 #endif /* KMP_OS_H */

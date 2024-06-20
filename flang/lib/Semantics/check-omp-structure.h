@@ -33,6 +33,17 @@ static OmpClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
 static OmpClauseSet privateReductionSet{
     OmpClauseSet{Clause::OMPC_reduction} | privateSet};
+// omp.td cannot differentiate allowed/not allowed clause list for few
+// directives for fortran. nowait is not allowed on begin directive clause list
+// for below list of directives. Directives with conflicting list of clauses are
+// included in below list.
+static const OmpDirectiveSet noWaitClauseNotAllowedSet{
+    Directive::OMPD_do,
+    Directive::OMPD_do_simd,
+    Directive::OMPD_sections,
+    Directive::OMPD_single,
+    Directive::OMPD_workshare,
+};
 } // namespace omp
 } // namespace llvm
 
@@ -61,6 +72,7 @@ public:
   void Enter(const parser::OpenMPLoopConstruct &);
   void Leave(const parser::OpenMPLoopConstruct &);
   void Enter(const parser::OmpEndLoopDirective &);
+  void Leave(const parser::OmpEndLoopDirective &);
 
   void Enter(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OpenMPBlockConstruct &);
@@ -151,8 +163,8 @@ private:
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
-  void CheckIsVarPartOfAnotherVar(
-      const parser::CharBlock &source, const parser::OmpObjectList &objList);
+  void CheckIsVarPartOfAnotherVar(const parser::CharBlock &source,
+      const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(
       const parser::OmpObjectList &objList);
   void CheckSymbolNames(
@@ -193,6 +205,7 @@ private:
   bool CheckIntrinsicOperator(
       const parser::DefinedOperator::IntrinsicOperator &);
   void CheckReductionTypeList(const parser::OmpClause::Reduction &);
+  void CheckReductionModifier(const parser::OmpClause::Reduction &);
   void CheckMasterNesting(const parser::OpenMPBlockConstruct &x);
   void ChecksOnOrderedAsBlock();
   void CheckBarrierNesting(const parser::OpenMPSimpleStandaloneConstruct &x);

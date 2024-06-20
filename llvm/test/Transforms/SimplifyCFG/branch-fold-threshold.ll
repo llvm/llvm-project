@@ -67,8 +67,8 @@ lor.lhs.false:
   %cmp1 = icmp slt i32 %add, %b
   br i1 %cmp1, label %cond.false, label %cond.end
 ; NORMAL-LABEL: lor.lhs.false:
-; AGGRESIVE-LABEL: lor.lhs.false:
-; WAYAGGRESIVE-LABEL: lor.lhs.false:
+; AGGRESSIVE-LABEL: lor.lhs.false:
+; WAYAGGRESSIVE-LABEL-NOT: lor.lhs.false:
 ; NORMAL: br i1
 ; AGGRESSIVE: br i1
 ; WAYAGGRESSIVE-NOT: br i1

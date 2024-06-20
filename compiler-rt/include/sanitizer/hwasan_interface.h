@@ -44,6 +44,10 @@ void SANITIZER_CDECL __hwasan_tag_memory(const volatile void *p,
 void *SANITIZER_CDECL __hwasan_tag_pointer(const volatile void *p,
                                            unsigned char tag);
 
+/// Get tag from the pointer.
+unsigned char SANITIZER_CDECL
+__hwasan_get_tag_from_pointer(const volatile void *p);
+
 // Set memory tag from the current SP address to the given address to zero.
 // This is meant to annotate longjmp and other non-local jumps.
 // This function needs to know the (almost) exact destination frame address;

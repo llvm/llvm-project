@@ -490,7 +490,7 @@ struct FragmentCompiler {
     StringRef Str = StringRef(*Arg).trim();
     // Don't support negating here, its handled if the item is in the Add or
     // Remove list.
-    if (Str.startswith("-") || Str.contains(',')) {
+    if (Str.starts_with("-") || Str.contains(',')) {
       diag(Error, "Invalid clang-tidy check name", Arg.Range);
       return;
     }
@@ -572,32 +572,46 @@ struct FragmentCompiler {
 #else
     static llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags;
 #endif
-    auto Filters = std::make_shared<std::vector<llvm::Regex>>();
-    for (auto &HeaderPattern : F.IgnoreHeader) {
-      // Anchor on the right.
-      std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
-      llvm::Regex CompiledRegex(AnchoredPattern, Flags);
-      std::string RegexError;
-      if (!CompiledRegex.isValid(RegexError)) {
-        diag(Warning,
-             llvm::formatv("Invalid regular expression '{0}': {1}",
-                           *HeaderPattern, RegexError)
-                 .str(),
-             HeaderPattern.Range);
-        continue;
+    std::shared_ptr<std::vector<llvm::Regex>> Filters;
+    if (!F.IgnoreHeader.empty()) {
+      Filters = std::make_shared<std::vector<llvm::Regex>>();
+      for (auto &HeaderPattern : F.IgnoreHeader) {
+        // Anchor on the right.
+        std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
+        llvm::Regex CompiledRegex(AnchoredPattern, Flags);
+        std::string RegexError;
+        if (!CompiledRegex.isValid(RegexError)) {
+          diag(Warning,
+               llvm::formatv("Invalid regular expression '{0}': {1}",
+                             *HeaderPattern, RegexError)
+                   .str(),
+               HeaderPattern.Range);
+          continue;
+        }
+        Filters->push_back(std::move(CompiledRegex));
       }
-      Filters->push_back(std::move(CompiledRegex));
     }
-    if (Filters->empty())
+    // Optional to override the resulting AnalyzeAngledIncludes
+    // only if it's explicitly set in the current fragment.
+    // Otherwise it's inherited from parent fragment.
+    std::optional<bool> AnalyzeAngledIncludes;
+    if (F.AnalyzeAngledIncludes.has_value())
+      AnalyzeAngledIncludes = **F.AnalyzeAngledIncludes;
+    if (!Filters && !AnalyzeAngledIncludes.has_value())
       return;
-    auto Filter = [Filters](llvm::StringRef Path) {
-      for (auto &Regex : *Filters)
-        if (Regex.match(Path))
-          return true;
-      return false;
-    };
-    Out.Apply.push_back([Filter](const Params &, Config &C) {
-      C.Diagnostics.Includes.IgnoreHeader.emplace_back(Filter);
+    Out.Apply.push_back([Filters = std::move(Filters),
+                         AnalyzeAngledIncludes](const Params &, Config &C) {
+      if (Filters) {
+        auto Filter = [Filters](llvm::StringRef Path) {
+          for (auto &Regex : *Filters)
+            if (Regex.match(Path))
+              return true;
+          return false;
+        };
+        C.Diagnostics.Includes.IgnoreHeader.emplace_back(std::move(Filter));
+      }
+      if (AnalyzeAngledIncludes.has_value())
+        C.Diagnostics.Includes.AnalyzeAngledIncludes = *AnalyzeAngledIncludes;
     });
   }
 

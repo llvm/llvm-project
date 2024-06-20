@@ -89,7 +89,7 @@ static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
   // where both are valid examples of the same platform+environment but in the
   // variant (2) the simulator is hardcoded as part of the platform name. Both
   // forms above should match for "iossimulator" requirement.
-  if (Target.getTriple().isOSDarwin() && PlatformEnv.endswith("simulator"))
+  if (Target.getTriple().isOSDarwin() && PlatformEnv.ends_with("simulator"))
     return PlatformEnv == Feature || CmpPlatformEnv(PlatformEnv, Feature);
 
   return PlatformEnv == Feature;
@@ -140,8 +140,8 @@ bool Module::isUnimportable(const LangOptions &LangOpts,
       return true;
     }
     for (unsigned I = 0, N = Current->Requirements.size(); I != N; ++I) {
-      if (hasFeature(Current->Requirements[I].first, LangOpts, Target) !=
-              Current->Requirements[I].second) {
+      if (hasFeature(Current->Requirements[I].FeatureName, LangOpts, Target) !=
+          Current->Requirements[I].RequiredState) {
         Req = Current->Requirements[I];
         return true;
       }
@@ -166,7 +166,8 @@ bool Module::isForBuilding(const LangOptions &LangOpts) const {
   // for either.
   if (!LangOpts.isCompilingModule() && getTopLevelModule()->IsFramework &&
       CurrentModule == LangOpts.ModuleName &&
-      !CurrentModule.endswith("_Private") && TopLevelName.endswith("_Private"))
+      !CurrentModule.ends_with("_Private") &&
+      TopLevelName.ends_with("_Private"))
     TopLevelName = TopLevelName.drop_back(8);
 
   return TopLevelName == CurrentModule;
@@ -300,10 +301,13 @@ bool Module::directlyUses(const Module *Requested) {
     if (Requested->isSubModuleOf(Use))
       return true;
 
-  // Anyone is allowed to use our builtin stdarg.h and stddef.h and their
-  // accompanying modules.
-  if (Requested->getTopLevelModuleName() == "_Builtin_stdarg" ||
-      Requested->getTopLevelModuleName() == "_Builtin_stddef")
+  // Anyone is allowed to use our builtin stddef.h and its accompanying modules.
+  if (Requested->fullModuleNameIs({"_Builtin_stddef", "max_align_t"}) ||
+      Requested->fullModuleNameIs({"_Builtin_stddef_wint_t"}))
+    return true;
+  // Darwin is allowed is to use our builtin 'ptrauth.h' and its accompanying
+  // module.
+  if (!Requested->Parent && Requested->Name == "ptrauth")
     return true;
 
   if (NoUndeclaredIncludes)
@@ -315,7 +319,7 @@ bool Module::directlyUses(const Module *Requested) {
 void Module::addRequirement(StringRef Feature, bool RequiredState,
                             const LangOptions &LangOpts,
                             const TargetInfo &Target) {
-  Requirements.push_back(Requirement(std::string(Feature), RequiredState));
+  Requirements.push_back(Requirement{std::string(Feature), RequiredState});
 
   // If this feature is currently available, we're done.
   if (hasFeature(Feature, LangOpts, Target) == RequiredState)
@@ -375,7 +379,7 @@ Module *Module::findOrInferSubmodule(StringRef Name) {
 
 Module *Module::getGlobalModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the global module "
-                                "fragment from the C++ 20 Named modules");
+                                "fragment from the C++20 Named modules");
 
   for (auto *SubModule : SubModules)
     if (SubModule->isExplicitGlobalModule())
@@ -386,7 +390,7 @@ Module *Module::getGlobalModuleFragment() const {
 
 Module *Module::getPrivateModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the private module "
-                                "fragment from the C++ 20 Named modules");
+                                "fragment from the C++20 Named modules");
 
   for (auto *SubModule : SubModules)
     if (SubModule->isPrivateModule())
@@ -500,9 +504,9 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     for (unsigned I = 0, N = Requirements.size(); I != N; ++I) {
       if (I)
         OS << ", ";
-      if (!Requirements[I].second)
+      if (!Requirements[I].RequiredState)
         OS << "!";
-      OS << Requirements[I].first;
+      OS << Requirements[I].FeatureName;
     }
     OS << "\n";
   }
@@ -719,27 +723,4 @@ void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,
     }
   };
   VisitModule({M, nullptr});
-}
-
-void VisibleModuleSet::makeTransitiveImportsVisible(Module *M,
-                                                    SourceLocation Loc,
-                                                    VisibleCallback Vis,
-                                                    ConflictCallback Cb) {
-  for (auto *I : M->Imports)
-    setVisible(I, Loc, Vis, Cb);
-}
-
-ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
-    : Signature(M.Signature), ClangModule(&M) {
-  if (M.Directory)
-    Path = M.Directory->getName();
-  if (auto File = M.getASTFile())
-    ASTFile = File->getName();
-}
-
-std::string ASTSourceDescriptor::getModuleName() const {
-  if (ClangModule)
-    return ClangModule->Name;
-  else
-    return std::string(PCHModuleName);
 }

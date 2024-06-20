@@ -62,17 +62,6 @@ static void test_no_chrono_specs() {
         std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{2}, std::chrono::day{31}});
 
   // Valid year, invalid month, valid day
-#ifdef _WIN32
-  check(SV(" is not a valid date"),
-        SV("{}"),
-        std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{31}});
-  check(SV("****** is not a valid date******"),
-        SV("{:*^32}"),
-        std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{31}});
-  check(SV("*********** is not a valid date"),
-        SV("{:*>31}"),
-        std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{31}});
-#else  // _WIN32
   check(SV("1970-00-31 is not a valid date"),
         SV("{}"),
         std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{31}});
@@ -82,20 +71,8 @@ static void test_no_chrono_specs() {
   check(SV("*1970-00-31 is not a valid date"),
         SV("{:*>31}"),
         std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{31}});
-#endif // _WIN32
 
   // Valid year, invalid month, invalid day
-#ifdef _WIN32
-  check(SV(" is not a valid date"),
-        SV("{}"),
-        std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{32}});
-  check(SV("****** is not a valid date******"),
-        SV("{:*^32}"),
-        std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{32}});
-  check(SV("*********** is not a valid date"),
-        SV("{:*>31}"),
-        std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{32}});
-#else  // _WIN32
   check(SV("1970-00-32 is not a valid date"),
         SV("{}"),
         std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{32}});
@@ -105,7 +82,6 @@ static void test_no_chrono_specs() {
   check(SV("*1970-00-32 is not a valid date"),
         SV("{:*>31}"),
         std::chrono::year_month_day{std::chrono::year{1970}, std::chrono::month{0}, std::chrono::day{32}});
-#endif // _WIN32
 
   // Invalid year, valid month, valid day
   check(SV("-32768-01-31 is not a valid date"),

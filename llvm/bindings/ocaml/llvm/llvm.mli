@@ -36,6 +36,9 @@ type lltype
     This type covers a wide range of subclasses. *)
 type llvalue
 
+(** Non-instruction debug info record. See the [llvm::DbgRecord] class.*)
+type lldbgrecord
+
 (** Used to store users and usees of values. See the [llvm::Use] class. *)
 type lluse
 
@@ -793,6 +796,9 @@ val dump_value : llvalue -> unit
 (** [string_of_llvalue v] returns a string describing the value [v]. *)
 val string_of_llvalue : llvalue -> string
 
+(** [string_of_lldbgrecord r] returns a string describing the DbgRecord [r]. *)
+val string_of_lldbgrecord : lldbgrecord -> string
+
 (** [replace_all_uses_with old new] replaces all uses of the value [old]
     with the value [new]. See the method [llvm::Value::replaceAllUsesWith]. *)
 val replace_all_uses_with : llvalue -> llvalue -> unit
@@ -1129,16 +1135,6 @@ val const_nuw_mul : llvalue -> llvalue -> llvalue
     constants.
     See the method [llvm::ConstantExpr::getXor]. *)
 val const_xor : llvalue -> llvalue -> llvalue
-
-(** [const_icmp pred c1 c2] returns the constant comparison of two integer
-    constants, [c1 pred c2].
-    See the method [llvm::ConstantExpr::getICmp]. *)
-val const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
-
-(** [const_fcmp pred c1 c2] returns the constant comparison of two floating
-    point constants, [c1 pred c2].
-    See the method [llvm::ConstantExpr::getFCmp]. *)
-val const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
 
 (** [const_shl c1 c2] returns the constant integer [c1] left-shifted by the
     constant integer [c2].

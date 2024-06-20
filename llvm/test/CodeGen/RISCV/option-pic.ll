@@ -9,8 +9,8 @@
 
 define i32 @get_symbol() nounwind {
 ; CHECK-LABEL: <get_symbol>:
-; CHECK: lui	a0, 0
-; CHECK: lw	a0, 0(a0)
+; CHECK: lui	a0, 0x0
+; CHECK: lw	a0, 0x0(a0)
   tail call void asm sideeffect ".option pic", ""()
   %v = load i32, ptr @symbol
   ret i32 %v

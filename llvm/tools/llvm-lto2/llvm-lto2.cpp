@@ -187,6 +187,15 @@ static cl::opt<bool> EnableFreestanding(
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
     cl::Hidden);
 
+static cl::opt<bool> TryUseNewDbgInfoFormat(
+    "try-experimental-debuginfo-iterators",
+    cl::desc("Enable debuginfo iterator positions, if they're built in"),
+    cl::init(false), cl::Hidden);
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+
 static void check(Error E, std::string Msg) {
   if (!E)
     return;
@@ -221,6 +230,20 @@ static int usage() {
 
 static int run(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
+  // Load bitcode into the new debug info format by default.
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
+
+  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
+  // new debug-info format.
+  if (TryUseNewDbgInfoFormat) {
+    // Turn the new debug-info format on.
+    UseNewDbgInfoFormat = true;
+  }
+  // Since llvm-lto2 collects multiple IR modules together, for simplicity's
+  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single debug
+  // info format.
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   // FIXME: Workaround PR30396 which means that a symbol can appear
   // more than once if it is defined in module-level assembly and
@@ -228,10 +251,9 @@ static int run(int argc, char **argv) {
   // resolutions and apply them in the order observed.
   std::map<std::pair<std::string, std::string>, std::list<SymbolResolution>>
       CommandLineResolutions;
-  for (std::string R : SymbolResolutions) {
-    StringRef Rest = R;
-    StringRef FileName, SymbolName;
-    std::tie(FileName, Rest) = Rest.split(',');
+  for (StringRef R : SymbolResolutions) {
+    StringRef Rest, FileName, SymbolName;
+    std::tie(FileName, Rest) = R.split(',');
     if (Rest.empty()) {
       llvm::errs() << "invalid resolution: " << R << '\n';
       return 1;

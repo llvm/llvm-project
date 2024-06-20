@@ -46,7 +46,11 @@ struct MemprofMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const;
 };
 
+#if SANITIZER_APPLE
 constexpr uptr kAllocatorSpace = 0x600000000000ULL;
+#else
+constexpr uptr kAllocatorSpace = 0x500000000000ULL;
+#endif
 constexpr uptr kAllocatorSize = 0x40000000000ULL; // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
 template <typename AddressSpaceViewTy>
@@ -99,7 +103,7 @@ void *memprof_aligned_alloc(uptr alignment, uptr size,
                             BufferedStackTrace *stack);
 int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
                            BufferedStackTrace *stack);
-uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp);
+uptr memprof_malloc_usable_size(const void *ptr);
 
 void PrintInternalAllocatorStats();
 

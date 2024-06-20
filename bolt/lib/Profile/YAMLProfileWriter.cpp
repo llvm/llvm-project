@@ -9,8 +9,9 @@
 #include "bolt/Profile/YAMLProfileWriter.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Profile/BoltAddressTranslation.h"
+#include "bolt/Profile/DataAggregator.h"
 #include "bolt/Profile/ProfileReaderBase.h"
-#include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -26,26 +27,55 @@ extern llvm::cl::opt<bool> ProfileUseDFS;
 namespace llvm {
 namespace bolt {
 
-namespace {
-void convert(const BinaryFunction &BF,
-             yaml::bolt::BinaryFunctionProfile &YamlBF) {
+const BinaryFunction *YAMLProfileWriter::setCSIDestination(
+    const BinaryContext &BC, yaml::bolt::CallSiteInfo &CSI,
+    const MCSymbol *Symbol, const BoltAddressTranslation *BAT,
+    uint32_t Offset) {
+  CSI.DestId = 0; // designated for unknown functions
+  CSI.EntryDiscriminator = 0;
+
+  if (Symbol) {
+    uint64_t EntryID = 0;
+    if (const BinaryFunction *Callee =
+            BC.getFunctionForSymbol(Symbol, &EntryID)) {
+      if (BAT && BAT->isBATFunction(Callee->getAddress()))
+        std::tie(Callee, EntryID) = BAT->translateSymbol(BC, *Symbol, Offset);
+      else if (const BinaryBasicBlock *BB =
+                   Callee->getBasicBlockContainingOffset(Offset))
+        BC.getFunctionForSymbol(Callee->getSecondaryEntryPointSymbol(*BB),
+                                &EntryID);
+      CSI.DestId = Callee->getFunctionNumber();
+      CSI.EntryDiscriminator = EntryID;
+      return Callee;
+    }
+  }
+  return nullptr;
+}
+
+yaml::bolt::BinaryFunctionProfile
+YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
+                           const BoltAddressTranslation *BAT) {
+  yaml::bolt::BinaryFunctionProfile YamlBF;
   const BinaryContext &BC = BF.getBinaryContext();
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
   // Prepare function and block hashes
-  BF.computeHash(opts::ProfileUseDFS);
+  BF.computeHash(UseDFS);
   BF.computeBlockHashes();
 
-  YamlBF.Name = BF.getPrintName();
+  YamlBF.Name = DataAggregator::getLocationName(BF, BAT);
   YamlBF.Id = BF.getFunctionNumber();
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
 
   BinaryFunction::BasicBlockOrderType Order;
-  llvm::copy(opts::ProfileUseDFS ? BF.dfs() : BF.getLayout().blocks(),
+  llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),
              std::back_inserter(Order));
+
+  const FunctionLayout Layout = BF.getLayout();
+  Layout.updateLayoutIndices(Order);
 
   for (const BinaryBasicBlock *BB : Order) {
     yaml::bolt::BinaryBasicBlockProfile YamlBB;
@@ -80,46 +110,30 @@ void convert(const BinaryFunction &BF,
           continue;
         for (const IndirectCallProfile &CSP : ICSP.get()) {
           StringRef TargetName = "";
-          CSI.DestId = 0; // designated for unknown functions
-          CSI.EntryDiscriminator = 0;
-          if (CSP.Symbol) {
-            const BinaryFunction *Callee = BC.getFunctionForSymbol(CSP.Symbol);
-            if (Callee) {
-              CSI.DestId = Callee->getFunctionNumber();
-              TargetName = Callee->getOneName();
-            }
-          }
+          const BinaryFunction *Callee =
+              setCSIDestination(BC, CSI, CSP.Symbol, BAT);
+          if (Callee)
+            TargetName = Callee->getOneName();
           CSI.Count = CSP.Count;
           CSI.Mispreds = CSP.Mispreds;
           CSTargets.emplace_back(TargetName, CSI);
         }
       } else { // direct call or a tail call
-        uint64_t EntryID = 0;
-        CSI.DestId = 0;
         StringRef TargetName = "";
         const MCSymbol *CalleeSymbol = BC.MIB->getTargetSymbol(Instr);
         const BinaryFunction *const Callee =
-            BC.getFunctionForSymbol(CalleeSymbol, &EntryID);
-        if (Callee) {
-          CSI.DestId = Callee->getFunctionNumber();
-          CSI.EntryDiscriminator = EntryID;
+            setCSIDestination(BC, CSI, CalleeSymbol, BAT);
+        if (Callee)
           TargetName = Callee->getOneName();
-        }
 
+        auto getAnnotationWithDefault = [&](const MCInst &Inst, StringRef Ann) {
+          return BC.MIB->getAnnotationWithDefault(Instr, Ann, 0ull);
+        };
         if (BC.MIB->getConditionalTailCall(Instr)) {
-          auto CTCCount =
-              BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "CTCTakenCount");
-          if (CTCCount) {
-            CSI.Count = *CTCCount;
-            auto CTCMispreds =
-                BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "CTCMispredCount");
-            if (CTCMispreds)
-              CSI.Mispreds = *CTCMispreds;
-          }
+          CSI.Count = getAnnotationWithDefault(Instr, "CTCTakenCount");
+          CSI.Mispreds = getAnnotationWithDefault(Instr, "CTCMispredCount");
         } else {
-          auto Count = BC.MIB->tryGetAnnotationAs<uint64_t>(Instr, "Count");
-          if (Count)
-            CSI.Count = *Count;
+          CSI.Count = getAnnotationWithDefault(Instr, "Count");
         }
 
         if (CSI.Count)
@@ -165,8 +179,8 @@ void convert(const BinaryFunction &BF,
 
     YamlBF.Blocks.emplace_back(YamlBB);
   }
+  return YamlBF;
 }
-} // end anonymous namespace
 
 std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   const BinaryContext &BC = RI.getBinaryContext();
@@ -189,6 +203,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
   BP.Header.Origin = std::string(RI.getProfileReader()->getReaderName());
   BP.Header.IsDFSOrder = opts::ProfileUseDFS;
+  BP.Header.HashFunction = HashFunction::Default;
 
   StringSet<> EventNames = RI.getProfileReader()->getEventNames();
   if (!EventNames.empty()) {
@@ -221,9 +236,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
       if (!BF.hasValidProfile() && !RI.getProfileReader()->isTrustedSource())
         continue;
 
-      yaml::bolt::BinaryFunctionProfile YamlBF;
-      convert(BF, YamlBF);
-      BP.Functions.emplace_back(YamlBF);
+      BP.Functions.emplace_back(convert(BF, opts::ProfileUseDFS));
     }
   }
 

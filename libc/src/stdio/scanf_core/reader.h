@@ -38,10 +38,11 @@ class Reader {
 
 public:
   // TODO: Set buff_len with a proper constant
-  Reader(ReadBuffer *string_buffer) : rb(string_buffer) {}
+  LIBC_INLINE Reader(ReadBuffer *string_buffer) : rb(string_buffer) {}
 
-  Reader(void *stream, StreamGetc stream_getc_in, StreamUngetc stream_ungetc_in,
-         ReadBuffer *stream_buffer = nullptr)
+  LIBC_INLINE Reader(void *stream, StreamGetc stream_getc_in,
+                     StreamUngetc stream_ungetc_in,
+                     ReadBuffer *stream_buffer = nullptr)
       : rb(stream_buffer), input_stream(stream), stream_getc(stream_getc_in),
         stream_ungetc(stream_ungetc_in) {}
 
@@ -63,7 +64,7 @@ public:
   // this is a file reader, else c is ignored.
   void ungetc(char c);
 
-  size_t chars_read() { return cur_chars_read; }
+  LIBC_INLINE size_t chars_read() { return cur_chars_read; }
 };
 
 } // namespace scanf_core

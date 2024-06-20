@@ -12,34 +12,22 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+avx512vl,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX512,AVX512BWVL
 
 define void @shuffle_v32i8_to_v16i8_1(ptr %L, ptr %S) nounwind {
-; AVX1-LABEL: shuffle_v32i8_to_v16i8_1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [1,3,5,7,9,11,13,15,1,3,5,7,9,11,13,15]
-; AVX1-NEXT:    # xmm2 = mem[0,0]
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v32i8_to_v16i8_1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX2-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1,3,5,7,9,11,13,15,1,3,5,7,9,11,13,15]
-; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX2-NEXT:    vmovdqa %xmm0, (%rsi)
-; AVX2-NEXT:    retq
+; AVX-LABEL: shuffle_v32i8_to_v16i8_1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX-NEXT:    vmovq {{.*#+}} xmm2 = [1,3,5,7,9,11,13,15,0,0,0,0,0,0,0,0]
+; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: shuffle_v32i8_to_v16i8_1:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512F-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX512F-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1,3,5,7,9,11,13,15,1,3,5,7,9,11,13,15]
+; AVX512F-NEXT:    vmovq {{.*#+}} xmm2 = [1,3,5,7,9,11,13,15,0,0,0,0,0,0,0,0]
 ; AVX512F-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX512F-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -50,7 +38,7 @@ define void @shuffle_v32i8_to_v16i8_1(ptr %L, ptr %S) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VL-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1,3,5,7,9,11,13,15,1,3,5,7,9,11,13,15]
+; AVX512VL-NEXT:    vmovq {{.*#+}} xmm2 = [1,3,5,7,9,11,13,15,0,0,0,0,0,0,0,0]
 ; AVX512VL-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -147,27 +135,16 @@ define void @shuffle_v8i32_to_v4i32_1(ptr %L, ptr %S) nounwind {
 }
 
 define void @shuffle_v32i8_to_v8i8_1(ptr %L, ptr %S) nounwind {
-; AVX1-LABEL: shuffle_v32i8_to_v8i8_1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,5,9,13,1,5,9,13,1,5,9,13,1,5,9,13]
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vmovq %xmm0, (%rsi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v32i8_to_v8i8_1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX2-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,5,9,13,1,5,9,13,1,5,9,13,1,5,9,13]
-; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX2-NEXT:    vmovq %xmm0, (%rsi)
-; AVX2-NEXT:    retq
+; AVX-LABEL: shuffle_v32i8_to_v8i8_1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX-NEXT:    vmovd {{.*#+}} xmm2 = [1,5,9,13,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX-NEXT:    vmovq %xmm0, (%rsi)
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: shuffle_v32i8_to_v8i8_1:
 ; AVX512F:       # %bb.0:
@@ -207,27 +184,16 @@ define void @shuffle_v32i8_to_v8i8_1(ptr %L, ptr %S) nounwind {
 }
 
 define void @shuffle_v32i8_to_v8i8_2(ptr %L, ptr %S) nounwind {
-; AVX1-LABEL: shuffle_v32i8_to_v8i8_2:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14]
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vmovq %xmm0, (%rsi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v32i8_to_v8i8_2:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX2-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2,6,10,14,2,6,10,14,2,6,10,14,2,6,10,14]
-; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX2-NEXT:    vmovq %xmm0, (%rsi)
-; AVX2-NEXT:    retq
+; AVX-LABEL: shuffle_v32i8_to_v8i8_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX-NEXT:    vmovd {{.*#+}} xmm2 = [2,6,10,14,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX-NEXT:    vmovq %xmm0, (%rsi)
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: shuffle_v32i8_to_v8i8_2:
 ; AVX512F:       # %bb.0:
@@ -267,27 +233,16 @@ define void @shuffle_v32i8_to_v8i8_2(ptr %L, ptr %S) nounwind {
 }
 
 define void @shuffle_v32i8_to_v8i8_3(ptr %L, ptr %S) nounwind {
-; AVX1-LABEL: shuffle_v32i8_to_v8i8_3:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,7,11,15,3,7,11,15,3,7,11,15,3,7,11,15]
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX1-NEXT:    vmovq %xmm0, (%rsi)
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: shuffle_v32i8_to_v8i8_3:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX2-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [3,7,11,15,3,7,11,15,3,7,11,15,3,7,11,15]
-; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; AVX2-NEXT:    vmovq %xmm0, (%rsi)
-; AVX2-NEXT:    retq
+; AVX-LABEL: shuffle_v32i8_to_v8i8_3:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa 16(%rdi), %xmm1
+; AVX-NEXT:    vmovd {{.*#+}} xmm2 = [3,7,11,15,0,0,0,0,0,0,0,0,0,0,0,0]
+; AVX-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; AVX-NEXT:    vmovq %xmm0, (%rsi)
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: shuffle_v32i8_to_v8i8_3:
 ; AVX512F:       # %bb.0:
@@ -538,7 +493,7 @@ define void @shuffle_v32i8_to_v4i8_1(ptr %L, ptr %S) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,9,0,0,1,9,0,0,1,9,0,0,1,9,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [1,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -598,7 +553,7 @@ define void @shuffle_v32i8_to_v4i8_2(ptr %L, ptr %S) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,10,0,0,2,10,0,0,2,10,0,0,2,10,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [2,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -658,7 +613,7 @@ define void @shuffle_v32i8_to_v4i8_3(ptr %L, ptr %S) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3,11,0,0,3,11,0,0,3,11,0,0,3,11,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [3,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -718,7 +673,7 @@ define void @shuffle_v32i8_to_v4i8_4(ptr %L, ptr %S) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4,12,0,0,4,12,0,0,4,12,0,0,4,12,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [4,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -778,7 +733,7 @@ define void @shuffle_v32i8_to_v4i8_5(ptr %L, ptr %S) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [5,13,0,0,5,13,0,0,5,13,0,0,5,13,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [5,13,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -838,7 +793,7 @@ define void @shuffle_v32i8_to_v4i8_6(ptr %L, ptr %S) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [6,14,0,0,6,14,0,0,6,14,0,0,6,14,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [6,14,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -898,7 +853,7 @@ define void @shuffle_v32i8_to_v4i8_7(ptr %L, ptr %S) nounwind {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [7,15,0,0,7,15,0,0,7,15,0,0,7,15,0,0]
+; AVX1-NEXT:    vmovd {{.*#+}} xmm2 = [7,15,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]

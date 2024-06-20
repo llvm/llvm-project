@@ -129,40 +129,56 @@ define <2 x i32> @t8(<2 x i16> %x) {
   %r = and <2 x i32> %i1, <i32 -2147483648, i32 -2147483648>
   ret <2 x i32> %r
 }
+
 define <2 x i32> @t9(<2 x i16> %x) {
 ; CHECK-LABEL: @t9(
-; CHECK-NEXT:    [[X_SIGNEXT:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[X_SIGNEXT]], <i32 -2147483648, i32 undef>
+; CHECK-NEXT:    [[I1:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[I1]], <i32 -2147483648, i32 -2147483648>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %i0 = zext <2 x i16> %x to <2 x i32>
-  %i1 = shl <2 x i32> %i0, <i32 16, i32 undef>
+  %i1 = shl <2 x i32> %i0, <i32 16, i32 poison>
   %r = and <2 x i32> %i1, <i32 -2147483648, i32 -2147483648>
-  ; Here undef can be propagated into the mask.
   ret <2 x i32> %r
 }
-define <2 x i32> @t10(<2 x i16> %x) {
-; CHECK-LABEL: @t10(
-; CHECK-NEXT:    [[X_SIGNEXT:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[X_SIGNEXT]], <i32 -2147483648, i32 0>
+
+; If we folded this, we wouldn't be able to keep the undef mask.
+define <2 x i32> @t10_undef(<2 x i16> %x) {
+; CHECK-LABEL: @t10_undef(
+; CHECK-NEXT:    [[I0:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[I1:%.*]] = shl nuw <2 x i32> [[I0]], <i32 16, i32 16>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[I1]], <i32 -2147483648, i32 undef>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %i0 = zext <2 x i16> %x to <2 x i32>
   %i1 = shl <2 x i32> %i0, <i32 16, i32 16>
   %r = and <2 x i32> %i1, <i32 -2147483648, i32 undef>
-  ; CAREFUL! We can't keep undef mask here, since high bits are no longer zero,
-  ; we must sanitize it to 0.
   ret <2 x i32> %r
 }
-define <2 x i32> @t11(<2 x i16> %x) {
-; CHECK-LABEL: @t11(
-; CHECK-NEXT:    [[X_SIGNEXT:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[X_SIGNEXT]], <i32 -2147483648, i32 undef>
+
+define <2 x i32> @t10_poison(<2 x i16> %x) {
+; CHECK-LABEL: @t10_poison(
+; CHECK-NEXT:    [[I1:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[I1]], <i32 -2147483648, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %i0 = zext <2 x i16> %x to <2 x i32>
-  %i1 = shl <2 x i32> %i0, <i32 16, i32 undef>
-  %r = and <2 x i32> %i1, <i32 -2147483648, i32 undef>
-  ; Here undef mask is fine.
+  %i1 = shl <2 x i32> %i0, <i32 16, i32 16>
+  %r = and <2 x i32> %i1, <i32 -2147483648, i32 poison>
+  ; CAREFUL! We can't keep poison mask here, since high bits are no longer zero,
+  ; we must sanitize it to 0.
+  ret <2 x i32> %r
+}
+
+define <2 x i32> @t11(<2 x i16> %x) {
+; CHECK-LABEL: @t11(
+; CHECK-NEXT:    [[X_SIGNEXT:%.*]] = sext <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[X_SIGNEXT]], <i32 -2147483648, i32 poison>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %i0 = zext <2 x i16> %x to <2 x i32>
+  %i1 = shl <2 x i32> %i0, <i32 16, i32 poison>
+  %r = and <2 x i32> %i1, <i32 -2147483648, i32 poison>
+  ; Here poison mask is fine.
   ret <2 x i32> %r
 }

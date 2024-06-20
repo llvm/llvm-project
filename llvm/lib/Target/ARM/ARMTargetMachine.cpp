@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
@@ -109,7 +110,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMSLSHardeningPass(Registry);
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
-  initializeARMDAGToDAGISelPass(Registry);
+  initializeARMDAGToDAGISelLegacyPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -130,9 +131,9 @@ computeTargetABI(const Triple &TT, StringRef CPU,
 
   if (ABIName == "aapcs16")
     return ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-  else if (ABIName.startswith("aapcs"))
+  else if (ABIName.starts_with("aapcs"))
     return ARMBaseTargetMachine::ARM_ABI_AAPCS;
-  else if (ABIName.startswith("apcs"))
+  else if (ABIName.starts_with("apcs"))
     return ARMBaseTargetMachine::ARM_ABI_APCS;
 
   llvm_unreachable("Unhandled/unknown ABI Name!");
@@ -417,7 +418,7 @@ void ARMPassConfig::addIRPasses() {
   if (TM->Options.ThreadModel == ThreadModel::Single)
     addPass(createLowerAtomicPass());
   else
-    addPass(createAtomicExpandPass());
+    addPass(createAtomicExpandLegacyPass());
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
@@ -618,4 +619,24 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardCatchretPass());
   }
+}
+
+yaml::MachineFunctionInfo *
+ARMBaseTargetMachine::createDefaultFuncInfoYAML() const {
+  return new yaml::ARMFunctionInfo();
+}
+
+yaml::MachineFunctionInfo *
+ARMBaseTargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
+  const auto *MFI = MF.getInfo<ARMFunctionInfo>();
+  return new yaml::ARMFunctionInfo(*MFI);
+}
+
+bool ARMBaseTargetMachine::parseMachineFunctionInfo(
+    const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
+    SMDiagnostic &Error, SMRange &SourceRange) const {
+  const auto &YamlMFI = static_cast<const yaml::ARMFunctionInfo &>(MFI);
+  MachineFunction &MF = PFS.MF;
+  MF.getInfo<ARMFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
+  return false;
 }

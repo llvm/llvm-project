@@ -23,7 +23,7 @@
 #include <windows.h>
 #else
 #include <fcntl.h>
-#ifndef BENCHMARK_OS_FUCHSIA
+#if !defined(BENCHMARK_OS_FUCHSIA) && !defined(BENCHMARK_OS_QURT)
 #include <sys/resource.h>
 #endif
 #include <sys/time.h>
@@ -37,6 +37,9 @@
 #include <mach/mach_init.h>
 #include <mach/mach_port.h>
 #include <mach/thread_act.h>
+#endif
+#if defined(BENCHMARK_OS_QURT)
+#include <qurt.h>
 #endif
 #endif
 
@@ -56,7 +59,6 @@
 
 #include "check.h"
 #include "log.h"
-#include "sleep.h"
 #include "string_util.h"
 
 namespace benchmark {
@@ -64,6 +66,9 @@ namespace benchmark {
 // Suppress unused warnings on helper functions.
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+#if defined(__NVCOMPILER)
+#pragma diag_suppress declared_but_not_referenced
 #endif
 
 namespace {
@@ -79,7 +84,7 @@ double MakeTime(FILETIME const& kernel_time, FILETIME const& user_time) {
           static_cast<double>(user.QuadPart)) *
          1e-7;
 }
-#elif !defined(BENCHMARK_OS_FUCHSIA)
+#elif !defined(BENCHMARK_OS_FUCHSIA) && !defined(BENCHMARK_OS_QURT)
 double MakeTime(struct rusage const& ru) {
   return (static_cast<double>(ru.ru_utime.tv_sec) +
           static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 +
@@ -97,7 +102,8 @@ double MakeTime(thread_basic_info_data_t const& info) {
 #endif
 #if defined(CLOCK_PROCESS_CPUTIME_ID) || defined(CLOCK_THREAD_CPUTIME_ID)
 double MakeTime(struct timespec const& ts) {
-  return ts.tv_sec + (static_cast<double>(ts.tv_nsec) * 1e-9);
+  return static_cast<double>(ts.tv_sec) +
+         (static_cast<double>(ts.tv_nsec) * 1e-9);
 }
 #endif
 
@@ -119,11 +125,15 @@ double ProcessCPUUsage() {
                       &user_time))
     return MakeTime(kernel_time, user_time);
   DiagnoseAndExit("GetProccessTimes() failed");
+#elif defined(BENCHMARK_OS_QURT)
+  return static_cast<double>(
+             qurt_timer_timetick_to_us(qurt_timer_get_ticks())) *
+         1.0e-6;
 #elif defined(BENCHMARK_OS_EMSCRIPTEN)
   // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, ...) returns 0 on Emscripten.
   // Use Emscripten-specific API. Reported CPU time would be exactly the
   // same as total time, but this is ok because there aren't long-latency
-  // syncronous system calls in Emscripten.
+  // synchronous system calls in Emscripten.
   return emscripten_get_now() * 1e-3;
 #elif defined(CLOCK_PROCESS_CPUTIME_ID) && !defined(BENCHMARK_OS_MACOSX)
   // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
@@ -149,6 +159,10 @@ double ThreadCPUUsage() {
   GetThreadTimes(this_thread, &creation_time, &exit_time, &kernel_time,
                  &user_time);
   return MakeTime(kernel_time, user_time);
+#elif defined(BENCHMARK_OS_QURT)
+  return static_cast<double>(
+             qurt_timer_timetick_to_us(qurt_timer_get_ticks())) *
+         1.0e-6;
 #elif defined(BENCHMARK_OS_MACOSX)
   // FIXME We want to use clock_gettime, but its not available in MacOS 10.11.
   // See https://github.com/google/benchmark/pull/292
@@ -167,6 +181,9 @@ double ThreadCPUUsage() {
 #elif defined(BENCHMARK_OS_RTEMS)
   // RTEMS doesn't support CLOCK_THREAD_CPUTIME_ID. See
   // https://github.com/RTEMS/rtems/blob/master/cpukit/posix/src/clockgettime.c
+  return ProcessCPUUsage();
+#elif defined(BENCHMARK_OS_ZOS)
+  // z/OS doesn't support CLOCK_THREAD_CPUTIME_ID.
   return ProcessCPUUsage();
 #elif defined(BENCHMARK_OS_SOLARIS)
   struct rusage ru;

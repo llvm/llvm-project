@@ -32,7 +32,7 @@ using namespace ento;
 namespace {
 class PaddingChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
-  mutable std::unique_ptr<BugType> PaddingBug;
+  const BugType PaddingBug{this, "Excessive Padding", "Performance"};
   mutable BugReporter *BR;
 
 public:
@@ -117,7 +117,7 @@ public:
       return;
     uint64_t Elts = 0;
     if (const ConstantArrayType *CArrTy = dyn_cast<ConstantArrayType>(ArrTy))
-      Elts = CArrTy->getSize().getZExtValue();
+      Elts = CArrTy->getZExtSize();
     if (Elts == 0)
       return;
     const RecordType *RT = ArrTy->getElementType()->getAs<RecordType>();
@@ -310,10 +310,6 @@ public:
   void reportRecord(
       const RecordDecl *RD, CharUnits BaselinePad, CharUnits OptimalPad,
       const SmallVector<const FieldDecl *, 20> &OptimalFieldsOrder) const {
-    if (!PaddingBug)
-      PaddingBug =
-          std::make_unique<BugType>(this, "Excessive Padding", "Performance");
-
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
     Os << "Excessive padding in '";
@@ -341,8 +337,7 @@ public:
 
     PathDiagnosticLocation CELoc =
         PathDiagnosticLocation::create(RD, BR->getSourceManager());
-    auto Report =
-        std::make_unique<BasicBugReport>(*PaddingBug, Os.str(), CELoc);
+    auto Report = std::make_unique<BasicBugReport>(PaddingBug, Os.str(), CELoc);
     Report->setDeclWithIssue(RD);
     Report->addRange(RD->getSourceRange());
     BR->emitReport(std::move(Report));

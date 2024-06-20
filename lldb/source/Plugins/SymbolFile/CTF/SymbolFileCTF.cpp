@@ -342,7 +342,7 @@ SymbolFileCTF::CreateInteger(const CTFInteger &ctf_integer) {
 
   CompilerType compiler_type = m_ast->GetBasicType(basic_type);
 
-  if (basic_type != eBasicTypeVoid) {
+  if (basic_type != eBasicTypeVoid && basic_type != eBasicTypeBool) {
     // Make sure the type we got is an integer type.
     bool compiler_type_is_signed = false;
     if (!compiler_type.IsIntegerType(compiler_type_is_signed))
@@ -603,6 +603,7 @@ llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
                       ctf_type->uid, ctf_type->name, ctf_type->kind),
         llvm::inconvertibleErrorCode());
   }
+  llvm_unreachable("Unexpected CTF type kind");
 }
 
 llvm::Expected<std::unique_ptr<CTFType>>
@@ -801,7 +802,8 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
       }
 
       Type *arg_type = ResolveTypeUID(arg_uid);
-      arg_types.push_back(arg_type->GetFullCompilerType());
+      arg_types.push_back(arg_type ? arg_type->GetFullCompilerType()
+                                   : CompilerType());
     }
 
     if (symbol) {
@@ -812,8 +814,9 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
 
       // Create function type.
       CompilerType func_type = m_ast->CreateFunctionType(
-          ret_type->GetFullCompilerType(), arg_types.data(), arg_types.size(),
-          is_variadic, 0, clang::CallingConv::CC_C);
+          ret_type ? ret_type->GetFullCompilerType() : CompilerType(),
+          arg_types.data(), arg_types.size(), is_variadic, 0,
+          clang::CallingConv::CC_C);
       lldb::user_id_t function_type_uid = m_types.size() + 1;
       TypeSP type_sp =
           MakeType(function_type_uid, symbol->GetName(), 0, nullptr,
@@ -1020,23 +1023,18 @@ lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
   return type_sp.get();
 }
 
-void SymbolFileCTF::FindTypes(
-    lldb_private::ConstString name,
-    const lldb_private::CompilerDeclContext &parent_decl_ctx,
-    uint32_t max_matches,
-    llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-    lldb_private::TypeMap &types) {
+void SymbolFileCTF::FindTypes(const lldb_private::TypeQuery &match,
+                              lldb_private::TypeResults &results) {
+  // Make sure we haven't already searched this SymbolFile before.
+  if (results.AlreadySearched(this))
+    return;
 
-  searched_symbol_files.clear();
-  searched_symbol_files.insert(this);
-
-  size_t matches = 0;
+  ConstString name = match.GetTypeBasename();
   for (TypeSP type_sp : GetTypeList().Types()) {
-    if (matches == max_matches)
-      break;
     if (type_sp && type_sp->GetName() == name) {
-      types.Insert(type_sp);
-      matches++;
+      results.InsertUnique(type_sp);
+      if (results.Done(match))
+        return;
     }
   }
 }

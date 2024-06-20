@@ -43,9 +43,11 @@ class DWARFObject;
 class raw_ostream;
 struct DIDumpOptions;
 struct DWARFSection;
-namespace dwarflinker_parallel {
+namespace dwarf_linker {
+namespace parallel {
 class CompileUnit;
 }
+} // namespace dwarf_linker
 
 /// Base class describing the header of any kind of "unit."  Some information
 /// is specific to certain unit types.  We separate this class out so we can
@@ -83,7 +85,7 @@ public:
                 uint64_t *offset_ptr, DWARFSectionKind SectionKind);
   // For units in DWARF Package File, remember the index entry and update
   // the abbreviation offset read by extract().
-  bool applyIndexEntry(const DWARFUnitIndex::Entry *Entry);
+  Error applyIndexEntry(const DWARFUnitIndex::Entry *Entry);
   uint64_t getOffset() const { return Offset; }
   const dwarf::FormParams &getFormParams() const { return FormParams; }
   uint16_t getVersion() const { return FormParams.Version; }
@@ -256,7 +258,7 @@ class DWARFUnit {
   std::shared_ptr<DWARFUnit> DWO;
 
 protected:
-  friend dwarflinker_parallel::CompileUnit;
+  friend dwarf_linker::parallel::CompileUnit;
 
   /// Return the index of a \p Die entry inside the unit's DIE vector.
   ///

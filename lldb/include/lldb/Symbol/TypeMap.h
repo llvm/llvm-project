@@ -27,7 +27,7 @@ public:
   void Clear();
 
   void Dump(Stream *s, bool show_context,
-            lldb::DescriptionLevel level = lldb::eDescriptionLevelFull);
+            lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) const;
 
   TypeMap FindTypes(ConstString name);
 
@@ -41,10 +41,12 @@ public:
 
   lldb::TypeSP GetTypeAtIndex(uint32_t idx);
 
+  lldb::TypeSP FirstType() const;
+
   typedef std::multimap<lldb::user_id_t, lldb::TypeSP> collection;
   typedef AdaptedIterable<collection, lldb::TypeSP, map_adapter> TypeIterable;
 
-  TypeIterable Types() { return TypeIterable(m_types); }
+  TypeIterable Types() const { return TypeIterable(m_types); }
 
   void ForEach(
       std::function<bool(const lldb::TypeSP &type_sp)> const &callback) const;
@@ -52,10 +54,6 @@ public:
   void ForEach(std::function<bool(lldb::TypeSP &type_sp)> const &callback);
 
   bool Remove(const lldb::TypeSP &type_sp);
-
-  void RemoveMismatchedTypes(llvm::StringRef type_scope,
-                             llvm::StringRef type_basename,
-                             lldb::TypeClass type_class, bool exact_match);
 
 private:
   typedef collection::iterator iterator;

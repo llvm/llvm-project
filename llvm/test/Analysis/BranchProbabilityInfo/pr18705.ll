@@ -4,8 +4,8 @@
 ; calcLoopBranchHeuristics should return early without setting the weights.
 ; calcFloatingPointHeuristics, which is run later, sets the weights.
 ;
-; CHECK: edge while.body -> if.then probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK: edge while.body -> if.else probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK: edge %while.body -> %if.then probability is 0x50000000 / 0x80000000 = 62.50%
+; CHECK: edge %while.body -> %if.else probability is 0x30000000 / 0x80000000 = 37.50%
 
 define void @foo1(i32 %n, ptr nocapture %b, ptr nocapture %c, ptr nocapture %d, ptr nocapture readonly %f0, ptr nocapture readonly %f1) {
 entry:

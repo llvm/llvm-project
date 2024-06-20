@@ -61,7 +61,7 @@ entry:
 ; CHECK: define void @salvage_gep0
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata ptr %queue,
-; CHECK-SAME:                           metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_plus_uconst, 0, DW_OP_stack_value))
+; CHECK-SAME:                           metadata !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_stack_value))
   store ptr %1, ptr %im_not_dead, align 8
   ret void, !dbg !26
 }

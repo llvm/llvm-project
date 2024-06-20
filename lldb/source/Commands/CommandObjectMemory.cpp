@@ -372,8 +372,6 @@ protected:
     if (view_as_type_cstr && view_as_type_cstr[0]) {
       // We are viewing memory as a type
 
-      const bool exact_match = false;
-      TypeList type_list;
       uint32_t reference_count = 0;
       uint32_t pointer_count = 0;
       size_t idx;
@@ -452,18 +450,18 @@ protected:
         }
       }
 
-      llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
       ConstString lookup_type_name(type_str.c_str());
       StackFrame *frame = m_exe_ctx.GetFramePtr();
       ModuleSP search_first;
-      if (frame) {
+      if (frame)
         search_first = frame->GetSymbolContext(eSymbolContextModule).module_sp;
-      }
-      target->GetImages().FindTypes(search_first.get(), lookup_type_name,
-                                    exact_match, 1, searched_symbol_files,
-                                    type_list);
+      TypeQuery query(lookup_type_name.GetStringRef(),
+                      TypeQueryOptions::e_find_one);
+      TypeResults results;
+      target->GetImages().FindTypes(search_first.get(), query, results);
+      TypeSP type_sp = results.GetFirstType();
 
-      if (type_list.GetSize() == 0 && lookup_type_name.GetCString()) {
+      if (!type_sp && lookup_type_name.GetCString()) {
         LanguageType language_for_type =
             m_memory_options.m_language_for_type.GetCurrentValue();
         std::set<LanguageType> languages_to_check;
@@ -499,15 +497,14 @@ protected:
       }
 
       if (!compiler_type.IsValid()) {
-        if (type_list.GetSize() == 0) {
+        if (type_sp) {
+          compiler_type = type_sp->GetFullCompilerType();
+        } else {
           result.AppendErrorWithFormat("unable to find any types that match "
                                        "the raw type '%s' for full type '%s'\n",
                                        lookup_type_name.GetCString(),
                                        view_as_type_cstr);
           return;
-        } else {
-          TypeSP type_sp(type_list.GetTypeAtIndex(0));
-          compiler_type = type_sp->GetFullCompilerType();
         }
       }
 
@@ -980,35 +977,6 @@ public:
   Options *GetOptions() override { return &m_option_group; }
 
 protected:
-  class ProcessMemoryIterator {
-  public:
-    ProcessMemoryIterator(ProcessSP process_sp, lldb::addr_t base)
-        : m_process_sp(process_sp), m_base_addr(base) {
-      lldbassert(process_sp.get() != nullptr);
-    }
-
-    bool IsValid() { return m_is_valid; }
-
-    uint8_t operator[](lldb::addr_t offset) {
-      if (!IsValid())
-        return 0;
-
-      uint8_t retval = 0;
-      Status error;
-      if (0 ==
-          m_process_sp->ReadMemory(m_base_addr + offset, &retval, 1, error)) {
-        m_is_valid = false;
-        return 0;
-      }
-
-      return retval;
-    }
-
-  private:
-    ProcessSP m_process_sp;
-    lldb::addr_t m_base_addr;
-    bool m_is_valid = true;
-  };
   void DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "process" for validity as eCommandRequiresProcess
     // ensures it is valid
@@ -1109,8 +1077,8 @@ protected:
     found_location = low_addr;
     bool ever_found = false;
     while (count) {
-      found_location = FastSearch(found_location, high_addr, buffer.GetBytes(),
-                                  buffer.GetByteSize());
+      found_location = process->FindInMemory(
+          found_location, high_addr, buffer.GetBytes(), buffer.GetByteSize());
       if (found_location == LLDB_INVALID_ADDRESS) {
         if (!ever_found) {
           result.AppendMessage("data not found within the range.\n");
@@ -1145,34 +1113,6 @@ protected:
     }
 
     result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
-  }
-
-  lldb::addr_t FastSearch(lldb::addr_t low, lldb::addr_t high, uint8_t *buffer,
-                          size_t buffer_size) {
-    const size_t region_size = high - low;
-
-    if (region_size < buffer_size)
-      return LLDB_INVALID_ADDRESS;
-
-    std::vector<size_t> bad_char_heuristic(256, buffer_size);
-    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
-    ProcessMemoryIterator iterator(process_sp, low);
-
-    for (size_t idx = 0; idx < buffer_size - 1; idx++) {
-      decltype(bad_char_heuristic)::size_type bcu_idx = buffer[idx];
-      bad_char_heuristic[bcu_idx] = buffer_size - idx - 1;
-    }
-    for (size_t s = 0; s <= (region_size - buffer_size);) {
-      int64_t j = buffer_size - 1;
-      while (j >= 0 && buffer[j] == iterator[s + j])
-        j--;
-      if (j < 0)
-        return low + s;
-      else
-        s += bad_char_heuristic[iterator[s + buffer_size - 1]];
-    }
-
-    return LLDB_INVALID_ADDRESS;
   }
 
   OptionGroupOptions m_option_group;
@@ -1424,7 +1364,7 @@ protected:
         // Be careful, getAsInteger with a radix of 16 rejects "0xab" so we
         // have to special case that:
         bool success = false;
-        if (entry.ref().startswith("0x"))
+        if (entry.ref().starts_with("0x"))
           success = !entry.ref().getAsInteger(0, uval64);
         if (!success)
           success = !entry.ref().getAsInteger(16, uval64);

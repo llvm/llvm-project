@@ -15,14 +15,15 @@
 #include "llvm/Support/Regex.h"
 #include <cstdint>
 #include <fstream>
-#include <list>
 #include <map>
-#include <vector>
 
 using namespace llvm;
 using namespace sampleprof;
 
 namespace llvm {
+
+class CleanupInstaller;
+
 namespace sampleprof {
 
 // Stream based trace line iterator
@@ -605,6 +606,11 @@ public:
                          std::optional<uint32_t> PIDFilter);
   // Extract perf script type by peaking at the input
   static PerfContent checkPerfScriptType(StringRef FileName);
+
+  // Cleanup installers for temporary files created by perf script command.
+  // Those files will be automatically removed when running destructor or
+  // receiving signals.
+  static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
 protected:
   // The parsed MMap event

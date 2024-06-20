@@ -35,7 +35,7 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.char<1>
 ! CHECK:  %[[VAL_3:.*]] = fir.convert %{{.*}}#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] typeparams %{{.*}}  {{.*}}Ec
-! CHECK:  %[[VAL_5:.*]] = fir.call @bar() fastmath<contract> : () -> !fir.char<1>
+! CHECK:  %[[VAL_5:.*]] = fir.call @bar() fastmath<contract> {is_bind_c} : () -> !fir.char<1>
 ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_1]] : !fir.ref<!fir.char<1>>
 ! CHECK:  %[[VAL_6:.*]] = arith.constant false
 ! CHECK:  %[[VAL_7:.*]] = hlfir.as_expr %[[VAL_1]] move %[[VAL_6]] : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>

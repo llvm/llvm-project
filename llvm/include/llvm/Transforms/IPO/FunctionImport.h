@@ -31,9 +31,9 @@ class Module;
 /// based on the provided summary informations.
 class FunctionImporter {
 public:
-  /// Set of functions to import from a source module. Each entry is a set
-  /// containing all the GUIDs of all functions to import for a source module.
-  using FunctionsToImportTy = std::unordered_set<GlobalValue::GUID>;
+  /// The functions to import from a source module and their import type.
+  using FunctionsToImportTy =
+      DenseMap<GlobalValue::GUID, GlobalValueSummary::ImportKind>;
 
   /// The different reasons selectCallee will chose not to import a
   /// candidate.
@@ -99,8 +99,13 @@ public:
   /// index's module path string table).
   using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
 
-  /// The set contains an entry for every global value the module exports.
-  using ExportSetTy = DenseSet<ValueInfo>;
+  /// The map contains an entry for every global value the module exports.
+  /// The key is ValueInfo, and the value indicates whether the definition
+  /// or declaration is visible to another module. If a function's definition is
+  /// visible to other modules, the global values this function referenced are
+  /// visible and shouldn't be internalized.
+  /// TODO: Rename to `ExportMapTy`.
+  using ExportSetTy = DenseMap<ValueInfo, GlobalValueSummary::ImportKind>;
 
   /// A function of this type is used to load modules referenced by the index.
   using ModuleLoaderTy =
@@ -207,11 +212,15 @@ bool convertToDeclaration(GlobalValue &GV);
 /// \p ModuleToSummariesForIndex will be populated with the needed summaries
 /// from each required module path. Use a std::map instead of StringMap to get
 /// stable order for bitcode emission.
+///
+/// \p DecSummaries will be popluated with the subset of of summary pointers
+/// that have 'declaration' import type among all summaries the module need.
 void gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
+    GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
 std::error_code EmitImportsFiles(

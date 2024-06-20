@@ -44,25 +44,25 @@
     %arg1.addr = alloca i32, align 4
     %arg3.addr = alloca i32, align 4
     %local1 = alloca i32, align 4
-    store i32 %arg1, i32* %arg1.addr, align 4
-    store i32 %arg3, i32* %arg3.addr, align 4
-    %0 = bitcast i32* %local1 to i8*, !dbg !14
+    store i32 %arg1, ptr %arg1.addr, align 4
+    store i32 %arg3, ptr %arg3.addr, align 4
+    %0 = bitcast ptr %local1 to ptr, !dbg !14
     %mul = mul nsw i32 %arg3, %arg1, !dbg !14
-    store i32 %mul, i32* %local1, align 4, !dbg !14
+    store i32 %mul, ptr %local1, align 4, !dbg !14
     %add = add nsw i32 %arg2, %arg1, !dbg !14
     %sub = sub nsw i32 %add, %arg3, !dbg !14
-    %call = call i32 @foo(i32 %mul, i32 %sub, i32* nonnull %local1, i32* nonnull %arg1.addr, i32* nonnull %arg3.addr, i32 %add), !dbg !14
-    %1 = load i32, i32* %local1, align 4, !dbg !14
+    %call = call i32 @foo(i32 %mul, i32 %sub, ptr nonnull %local1, ptr nonnull %arg1.addr, ptr nonnull %arg3.addr, i32 %add), !dbg !14
+    %1 = load i32, ptr %local1, align 4, !dbg !14
     %add2 = add nsw i32 %1, %call, !dbg !14
-    store i32 %add2, i32* %local1, align 4, !dbg !14
-    %call3 = call i32 @foo2(i32* nonnull %local1), !dbg !14
-    %2 = load i32, i32* %local1, align 4, !dbg !14
+    store i32 %add2, ptr %local1, align 4, !dbg !14
+    %call3 = call i32 @foo2(ptr nonnull %local1), !dbg !14
+    %2 = load i32, ptr %local1, align 4, !dbg !14
     ret i32 %2, !dbg !14
   }
   
-  declare !dbg !4 dso_local i32 @foo(i32, i32, i32*, i32*, i32*, i32) local_unnamed_addr
+  declare !dbg !4 dso_local i32 @foo(i32, i32, ptr, ptr, ptr, i32) local_unnamed_addr
   
-  declare !dbg !5 dso_local i32 @foo2(i32*) local_unnamed_addr
+  declare !dbg !5 dso_local i32 @foo2(ptr) local_unnamed_addr
   
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!6, !7, !8}

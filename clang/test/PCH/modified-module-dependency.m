@@ -2,7 +2,7 @@
 // RUN: mkdir -p %t-dir
 // RUN: echo '@import test;' > %t-dir/prefix.h
 // RUN: echo 'void foo(void);' > %t-dir/test.h
-// RUN: cp %S/modified-module-dependency.module.map %t-dir/module.map
+// RUN: cp %S/modified-module-dependency.module.map %t-dir/module.modulemap
 
 // Precompile prefix.pch.
 // RUN: %clang_cc1 -x objective-c -I %t-dir -fmodules -fimplicit-module-maps -fmodules-cache-path=%t-dir/cache -fdisable-module-hash -emit-pch %t-dir/prefix.h -o %t-dir/prefix.pch

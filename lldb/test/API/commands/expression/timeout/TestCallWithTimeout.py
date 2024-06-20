@@ -46,7 +46,7 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
         return_value = interp.HandleCommand(
             "expr -t 100 -u true -- wait_a_while(1000000)", result
         )
-        self.assertEquals(return_value, lldb.eReturnStatusFailed)
+        self.assertEqual(return_value, lldb.eReturnStatusFailed)
 
         # Okay, now do it again with long enough time outs:
 
@@ -63,7 +63,7 @@ class ExprCommandWithTimeoutsTestCase(TestBase):
         return_value = interp.HandleCommand(
             "expr -t 1000000 -u true -- wait_a_while(1000)", result
         )
-        self.assertEquals(return_value, lldb.eReturnStatusSuccessFinishResult)
+        self.assertEqual(return_value, lldb.eReturnStatusSuccessFinishResult)
 
         # Finally set the one thread timeout and make sure that doesn't change
         # things much:

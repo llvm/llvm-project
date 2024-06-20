@@ -109,9 +109,6 @@ void AMDGPUUnifyDivergentExitNodes::getAnalysisUsage(AnalysisUsage &AU) const {
     // FIXME: preserve PostDominatorTreeWrapperPass
   }
 
-  // No divergent values are changed, only blocks and branch edges.
-  AU.addPreserved<UniformityInfoWrapperPass>();
-
   // We preserve the non-critical-edgeness property
   AU.addPreservedID(BreakCriticalEdgesID);
 

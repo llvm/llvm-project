@@ -1362,16 +1362,14 @@ Whatever code you want that control, use ``DebugCounter::shouldExecute`` to cont
   if (DebugCounter::shouldExecute(DeleteAnInstruction))
     I->eraseFromParent();
 
-That's all you have to do.  Now, using opt, you can control when this code triggers using
-the '``--debug-counter``' option.  There are two counters provided, ``skip`` and ``count``.
-``skip`` is the number of times to skip execution of the codepath.  ``count`` is the number
-of times, once we are done skipping, to execute the codepath.
+That's all you have to do. Now, using opt, you can control when this code triggers using
+the '``--debug-counter``' Options.To specify when to execute the codepath.
 
 .. code-block:: none
 
-  $ opt --debug-counter=passname-delete-instruction-skip=1,passname-delete-instruction-count=2 -passname
+  $ opt --debug-counter=passname-delete-instruction=2-3 -passname
 
-This will skip the above code the first time we hit it, then execute it twice, then skip the rest of the executions.
+This will skip the above code the first two times we hit it, then execute it 2 times, then skip the rest of the executions.
 
 So if executed on the following code:
 
@@ -1385,8 +1383,32 @@ So if executed on the following code:
 It would delete number ``%2`` and ``%3``.
 
 A utility is provided in `utils/bisect-skip-count` to binary search
-skip and count arguments. It can be used to automatically minimize the
-skip and count for a debug-counter variable.
+the begin and end of the range argument. It can be used to automatically minimize the
+range for a debug-counter variable.
+
+A more general utility is provided in `llvm/tools/reduce-chunk-list/reduce-chunk-list.cpp` to minimize debug counter chunks lists.
+
+How to use reduce-chunk-list:
+First, Figure out the number of calls to the debug counter you want to minimize.
+To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
+Than find the line with the counter of interest. it should look like:
+.. code-block:: none
+
+  my-counter               : {5678,empty}
+
+The number of calls to `my-counter` is 5678
+
+Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
+Build a reproducer script like:
+.. code-block:: bash
+
+  #! /bin/bash
+  opt -debug-counter=my-counter=$1
+  # ... Test result of the command. Failure of the script is considered interesting
+
+Than run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
+This command may take some time.
+but when it is done, it will print the result like: `Minimal Chunks = 0:1:5:11-12:33-34`
 
 .. _ViewGraph:
 
@@ -2747,24 +2769,6 @@ pointer from an iterator is very straight-forward.  Assuming that ``i`` is a
   Instruction* pinst = &*i; // Grab pointer to instruction reference
   const Instruction& inst = *j;
 
-However, the iterators you'll be working with in the LLVM framework are special:
-they will automatically convert to a ptr-to-instance type whenever they need to.
-Instead of dereferencing the iterator and then taking the address of the result,
-you can simply assign the iterator to the proper pointer type and you get the
-dereference and address-of operation as a result of the assignment (behind the
-scenes, this is a result of overloading casting mechanisms).  Thus the second
-line of the last example,
-
-.. code-block:: c++
-
-  Instruction *pinst = &*i;
-
-is semantically equivalent to
-
-.. code-block:: c++
-
-  Instruction *pinst = i;
-
 It's also possible to turn a class pointer into the corresponding iterator, and
 this is a constant time operation (very efficient).  The following code snippet
 illustrates use of the conversion constructors provided by LLVM iterators.  By
@@ -2778,18 +2782,6 @@ obtaining it via iteration over some structure:
     ++it; // After this line, it refers to the instruction after *inst
     if (it != inst->getParent()->end()) errs() << *it << "\n";
   }
-
-Unfortunately, these implicit conversions come at a cost; they prevent these
-iterators from conforming to standard iterator conventions, and thus from being
-usable with standard algorithms and containers.  For example, they prevent the
-following code, where ``B`` is a ``BasicBlock``, from compiling:
-
-.. code-block:: c++
-
-  llvm::SmallVector<llvm::Instruction *, 16>(B->begin(), B->end());
-
-Because of this, these implicit conversions may be removed some day, and
-``operator*`` changed to return a pointer instead of a reference.
 
 .. _iterate_complex:
 

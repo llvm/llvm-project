@@ -71,10 +71,10 @@ void mlir::affine::reorderOperandsByHoistability(RewriterBase &rewriter,
                        op->getContext());
   canonicalizeMapAndOperands(&map, &operands);
 
-  rewriter.startRootUpdate(op);
+  rewriter.startOpModification(op);
   op.setMap(map);
   op->setOperands(operands);
-  rewriter.finalizeRootUpdate(op);
+  rewriter.finalizeOpModification(op);
 }
 
 /// Build an affine.apply that is a subexpression `expr` of `originalOp`s affine

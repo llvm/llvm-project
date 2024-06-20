@@ -18,13 +18,8 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class AsmPrinter;
 class FunctionPass;
 class InstructionSelector;
-class MCInst;
-class MCOperand;
-class MachineInstr;
-class MachineOperand;
 class PassRegistry;
 class RISCVRegisterBankInfo;
 class RISCVSubtarget;
@@ -65,6 +60,7 @@ void initializeRISCVExpandAtomicPseudoPass(PassRegistry &);
 
 FunctionPass *createRISCVInsertVSETVLIPass();
 void initializeRISCVInsertVSETVLIPass(PassRegistry &);
+extern char &RISCVInsertVSETVLIID;
 
 FunctionPass *createRISCVPostRAExpandPseudoPass();
 void initializeRISCVPostRAExpandPseudoPass(PassRegistry &);
@@ -77,10 +73,6 @@ void initializeRISCVInsertWriteVXRMPass(PassRegistry &);
 FunctionPass *createRISCVRedundantCopyEliminationPass();
 void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);
 
-FunctionPass *createRISCVInitUndefPass();
-void initializeRISCVInitUndefPass(PassRegistry &);
-extern char &RISCVInitUndefID;
-
 FunctionPass *createRISCVMoveMergePass();
 void initializeRISCVMoveMergePass(PassRegistry &);
 
@@ -90,7 +82,7 @@ void initializeRISCVPushPopOptPass(PassRegistry &);
 InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
                                                     RISCVSubtarget &,
                                                     RISCVRegisterBankInfo &);
-void initializeRISCVDAGToDAGISelPass(PassRegistry &);
+void initializeRISCVDAGToDAGISelLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVPostLegalizerCombiner();
 void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);

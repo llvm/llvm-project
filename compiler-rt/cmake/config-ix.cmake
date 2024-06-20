@@ -103,7 +103,7 @@ check_cxx_compiler_flag("-Werror -msse4.2"   COMPILER_RT_HAS_MSSE4_2_FLAG)
 check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
 check_cxx_compiler_flag("-Werror -mcrc"      COMPILER_RT_HAS_MCRC_FLAG)
 check_cxx_compiler_flag(-fno-partial-inlining COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG)
-check_cxx_compiler_flag(-Werror -ftrivial-auto-var-init=pattern COMPILER_RT_HAS_TRIVIAL_AUTO_INIT)
+check_cxx_compiler_flag("-Werror -ftrivial-auto-var-init=pattern" COMPILER_RT_HAS_TRIVIAL_AUTO_INIT)
 
 if(NOT WIN32 AND NOT CYGWIN)
   # MinGW warns if -fvisibility-inlines-hidden is used.
@@ -127,6 +127,7 @@ check_cxx_compiler_flag("-Werror -Wframe-larger-than=512" COMPILER_RT_HAS_WFRAME
 check_cxx_compiler_flag("-Werror -Wglobal-constructors"   COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG)
 check_cxx_compiler_flag("-Werror -Wc99-extensions"     COMPILER_RT_HAS_WC99_EXTENSIONS_FLAG)
 check_cxx_compiler_flag("-Werror -Wgnu"                COMPILER_RT_HAS_WGNU_FLAG)
+check_cxx_compiler_flag("-Werror -Wgnu-anonymous-struct" COMPILER_RT_HAS_WGNU_ANONYMOUS_STRUCT_FLAG)
 check_cxx_compiler_flag("-Werror -Wvariadic-macros"    COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG)
 check_cxx_compiler_flag("-Werror -Wunused-parameter"   COMPILER_RT_HAS_WUNUSED_PARAMETER_FLAG)
 check_cxx_compiler_flag("-Werror -Wcovered-switch-default" COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG)
@@ -150,21 +151,21 @@ check_cxx_compiler_flag(/wd4391 COMPILER_RT_HAS_WD4391_FLAG)
 check_cxx_compiler_flag(/wd4722 COMPILER_RT_HAS_WD4722_FLAG)
 check_cxx_compiler_flag(/wd4800 COMPILER_RT_HAS_WD4800_FLAG)
 
-check_cxx_compiler_flag(-Werror -Warray-bounds COMPILER_RT_HAS_ARRAY_BOUNDS_FLAG)
-check_cxx_compiler_flag(-Werror -Wuninitialized COMPILER_RT_HAS_UNINITIALIZED_FLAG)
-check_cxx_compiler_flag(-Werror -Wshadow COMPILER_RT_HAS_SHADOW_FLAG)
-check_cxx_compiler_flag(-Werror -Wempty-body COMPILER_RT_HAS_EMPTY_BODY_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-pointer-memaccess COMPILER_RT_HAS_SIZEOF_POINTER_MEMACCESS_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-array-argument COMPILER_RT_HAS_SIZEOF_ARRAY_ARGUMENT_FLAG)
-check_cxx_compiler_flag(-Werror -Wsuspicious-memaccess COMPILER_RT_HAS_SUSPICIOUS_MEMACCESS_FLAG)
-check_cxx_compiler_flag(-Werror -Wbuiltin-memcpy-chk-size COMPILER_RT_HAS_BUILTIN_MEMCPY_CHK_SIZE_FLAG)
-check_cxx_compiler_flag(-Werror -Warray-bounds-pointer-arithmetic COMPILER_RT_HAS_ARRAY_BOUNDS_POINTER_ARITHMETIC_FLAG)
-check_cxx_compiler_flag(-Werror -Wreturn-stack-address COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-array-decay COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG)
-check_cxx_compiler_flag(-Werror -Wformat-insufficient-args COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG)
-check_cxx_compiler_flag(-Werror -Wformat-security COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-array-div COMPILER_RT_HAS_SIZEOF_ARRAY_DIV_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-pointer-div COMPILER_RT_HAS_SIZEOF_POINTER_DIV_FLAG)
+check_cxx_compiler_flag("-Werror -Warray-bounds" COMPILER_RT_HAS_ARRAY_BOUNDS_FLAG)
+check_cxx_compiler_flag("-Werror -Wuninitialized" COMPILER_RT_HAS_UNINITIALIZED_FLAG)
+check_cxx_compiler_flag("-Werror -Wshadow" COMPILER_RT_HAS_SHADOW_FLAG)
+check_cxx_compiler_flag("-Werror -Wempty-body" COMPILER_RT_HAS_EMPTY_BODY_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-pointer-memaccess" COMPILER_RT_HAS_SIZEOF_POINTER_MEMACCESS_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-array-argument" COMPILER_RT_HAS_SIZEOF_ARRAY_ARGUMENT_FLAG)
+check_cxx_compiler_flag("-Werror -Wsuspicious-memaccess" COMPILER_RT_HAS_SUSPICIOUS_MEMACCESS_FLAG)
+check_cxx_compiler_flag("-Werror -Wbuiltin-memcpy-chk-size" COMPILER_RT_HAS_BUILTIN_MEMCPY_CHK_SIZE_FLAG)
+check_cxx_compiler_flag("-Werror -Warray-bounds-pointer-arithmetic" COMPILER_RT_HAS_ARRAY_BOUNDS_POINTER_ARITHMETIC_FLAG)
+check_cxx_compiler_flag("-Werror -Wreturn-stack-address" COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-array-decay" COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG)
+check_cxx_compiler_flag("-Werror -Wformat-insufficient-args" COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG)
+check_cxx_compiler_flag("-Werror -Wformat-security" COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-array-div" COMPILER_RT_HAS_SIZEOF_ARRAY_DIV_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-pointer-div" COMPILER_RT_HAS_SIZEOF_POINTER_DIV_FLAG)
 
 # Symbols.
 check_symbol_exists(__func__ "" COMPILER_RT_HAS_FUNC_SYMBOL)
@@ -180,21 +181,6 @@ check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
 check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
 check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 check_library_exists(execinfo backtrace "" COMPILER_RT_HAS_LIBEXECINFO)
-
-# Look for terminfo library, used in unittests that depend on LLVMSupport.
-if(LLVM_ENABLE_TERMINFO STREQUAL FORCE_ON)
-  set(MAYBE_REQUIRED REQUIRED)
-else()
-  set(MAYBE_REQUIRED)
-endif()
-if(LLVM_ENABLE_TERMINFO)
-  find_library(COMPILER_RT_TERMINFO_LIB NAMES terminfo tinfo curses ncurses ncursesw ${MAYBE_REQUIRED})
-endif()
-if(COMPILER_RT_TERMINFO_LIB)
-  set(LLVM_ENABLE_TERMINFO 1)
-else()
-  set(LLVM_ENABLE_TERMINFO 0)
-endif()
 
 if (ANDROID AND COMPILER_RT_HAS_LIBDL)
   # Android's libstdc++ has a dependency on libdl.
@@ -450,33 +436,41 @@ if(APPLE)
   set(TSAN_SUPPORTED_OS osx)
   set(XRAY_SUPPORTED_OS osx)
   set(FUZZER_SUPPORTED_OS osx)
-  set(ORC_SUPPORTED_OS osx)
+  set(ORC_SUPPORTED_OS)
   set(UBSAN_SUPPORTED_OS osx)
   set(LSAN_SUPPORTED_OS osx)
   set(STATS_SUPPORTED_OS osx)
 
-  # Note: In order to target x86_64h on OS X the minimum deployment target must
-  # be 10.8 or higher.
-  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.10)
+  # FIXME: Support a general COMPILER_RT_ENABLE_OSX to match other platforms.
+  set(ORC_ENABLE_OSX 1 CACHE BOOL "Whether to build the orc runtime library for osx")
+  if(ORC_ENABLE_OSX)
+    set(ORC_SUPPORTED_OS osx)
+  endif()
+
+  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.13)
   set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
+
+  string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
+         MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
+
   if(NOT SANITIZER_MIN_OSX_VERSION)
-    string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
-           MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
     if(MACOSX_VERSION_MIN_FLAG)
-      set(SANITIZER_MIN_OSX_VERSION "${CMAKE_MATCH_1}")
+      set(MIN_OSX_VERSION "${CMAKE_MATCH_1}")
     elseif(CMAKE_OSX_DEPLOYMENT_TARGET)
-      set(SANITIZER_MIN_OSX_VERSION ${CMAKE_OSX_DEPLOYMENT_TARGET})
+      set(MIN_OSX_VERSION ${CMAKE_OSX_DEPLOYMENT_TARGET})
     else()
-      set(SANITIZER_MIN_OSX_VERSION ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
+      set(MIN_OSX_VERSION ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
     endif()
-    if(SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.7")
+
+    # Note: In order to target x86_64h on OS X the minimum deployment target must
+    # be 10.8 or higher.
+    if(MIN_OSX_VERSION VERSION_LESS "10.7")
       message(FATAL_ERROR "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too old.")
     endif()
-    if(SANITIZER_MIN_OSX_VERSION VERSION_GREATER ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
-      message(WARNING "macOS deployment target '${SANITIZER_MIN_OSX_VERSION}' is too new, setting to '${DEFAULT_SANITIZER_MIN_OSX_VERSION}' instead.")
-      set(SANITIZER_MIN_OSX_VERSION ${DEFAULT_SANITIZER_MIN_OSX_VERSION})
-    endif()
   endif()
+
+  set(SANITIZER_MIN_OSX_VERSION "${MIN_OSX_VERSION}" CACHE STRING
+    "Minimum OS X version to target (e.g. 10.10) for sanitizers.")
 
   # We're setting the flag manually for each target OS
   set(CMAKE_OSX_DEPLOYMENT_TARGET "")
@@ -624,6 +618,9 @@ if(APPLE)
   list_intersect(PROFILE_SUPPORTED_ARCH
     ALL_PROFILE_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(CTX_PROFILE_SUPPORTED_ARCH
+    ALL_CTX_PROFILE_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(TSAN_SUPPORTED_ARCH
     ALL_TSAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
@@ -670,6 +667,7 @@ else()
   filter_available_targets(HWASAN_SUPPORTED_ARCH ${ALL_HWASAN_SUPPORTED_ARCH})
   filter_available_targets(MEMPROF_SUPPORTED_ARCH ${ALL_MEMPROF_SUPPORTED_ARCH})
   filter_available_targets(PROFILE_SUPPORTED_ARCH ${ALL_PROFILE_SUPPORTED_ARCH})
+  filter_available_targets(CTX_PROFILE_SUPPORTED_ARCH ${ALL_CTX_PROFILE_SUPPORTED_ARCH})
   filter_available_targets(TSAN_SUPPORTED_ARCH ${ALL_TSAN_SUPPORTED_ARCH})
   filter_available_targets(UBSAN_SUPPORTED_ARCH ${ALL_UBSAN_SUPPORTED_ARCH})
   filter_available_targets(SAFESTACK_SUPPORTED_ARCH
@@ -793,6 +791,13 @@ if (PROFILE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
   set(COMPILER_RT_HAS_PROFILE TRUE)
 else()
   set(COMPILER_RT_HAS_PROFILE FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND CTX_PROFILE_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Linux")
+  set(COMPILER_RT_HAS_CTX_PROFILE TRUE)
+else()
+  set(COMPILER_RT_HAS_CTX_PROFILE FALSE)
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND TSAN_SUPPORTED_ARCH)

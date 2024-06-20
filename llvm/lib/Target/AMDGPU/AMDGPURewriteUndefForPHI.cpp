@@ -85,7 +85,6 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<UniformityInfoWrapperPass>();
     AU.setPreservesCFG();
   }
 };

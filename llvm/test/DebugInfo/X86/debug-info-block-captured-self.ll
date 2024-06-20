@@ -1,6 +1,9 @@
 ; RUN: llc -mtriple x86_64-apple-darwin -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s
 ;
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple x86_64-apple-darwin -filetype=obj -o %t.o < %s
+; RUN: llvm-dwarfdump %t.o | FileCheck %s
+;
 ; Test that DW_AT_location is generated for a captured "self" inside a
 ; block.
 ;

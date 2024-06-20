@@ -3,6 +3,7 @@
 
 declare i1 @barrier()
 declare void @llvm.assume(i1)
+declare void @use.i8(i8)
 
 define i1 @icmp_ult_x_y(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_ult_x_y(
@@ -238,9 +239,9 @@ define i1 @icmp_sle_negx_y_fail_maybe_zero(i8 %x, i8 %y) {
 
 define i1 @icmp_eq_x_invertable_y_todo(i8 %x, i1 %y) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y_todo(
-; CHECK-NEXT:    [[YY:%.*]] = select i1 [[Y:%.*]], i8 7, i8 24
+; CHECK-NEXT:    [[YY:%.*]] = select i1 [[Y:%.*]], i8 -8, i8 -25
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[YY]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %yy = select i1 %y, i8 7, i8 24
@@ -251,9 +252,8 @@ define i1 @icmp_eq_x_invertable_y_todo(i8 %x, i1 %y) {
 
 define i1 @icmp_eq_x_invertable_y(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y(
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[YY]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[YY:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %yy = xor i8 %y, -1
@@ -262,11 +262,26 @@ define i1 @icmp_eq_x_invertable_y(i8 %x, i8 %y) {
   ret i1 %r
 }
 
+define i1 @icmp_eq_x_invertable_y_fail_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_eq_x_invertable_y_fail_multiuse(
+; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[YY]], [[X:%.*]]
+; CHECK-NEXT:    call void @use.i8(i8 [[AND]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %yy = xor i8 %y, -1
+  %and = and i8 %x, %yy
+  call void @use.i8(i8 %and)
+  %r = icmp eq i8 %x, %and
+  ret i1 %r
+}
+
 define i1 @icmp_eq_x_invertable_y2_todo(i8 %x, i1 %y) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y2_todo(
-; CHECK-NEXT:    [[YY:%.*]] = select i1 [[Y:%.*]], i8 7, i8 24
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[YY]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[YY]], [[AND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[Y:%.*]], i8 -8, i8 -25
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %yy = select i1 %y, i8 7, i8 24
@@ -277,9 +292,8 @@ define i1 @icmp_eq_x_invertable_y2_todo(i8 %x, i1 %y) {
 
 define i1 @icmp_eq_x_invertable_y2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_eq_x_invertable_y2(
-; CHECK-NEXT:    [[YY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[YY]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], [[YY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %yy = xor i8 %y, -1

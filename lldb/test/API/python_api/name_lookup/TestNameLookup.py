@@ -53,7 +53,7 @@ class TestNameLookup(TestBase):
         self.assertGreaterEqual(len(mangled_to_symbol), 6)
         for mangled in mangled_to_symbol.keys():
             symbol_contexts = target.FindFunctions(mangled, lldb.eFunctionNameTypeFull)
-            self.assertEquals(symbol_contexts.GetSize(), 1)
+            self.assertEqual(symbol_contexts.GetSize(), 1)
             for symbol_context in symbol_contexts:
                 self.assertTrue(symbol_context.GetFunction().IsValid())
                 self.assertTrue(symbol_context.GetSymbol().IsValid())

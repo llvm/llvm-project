@@ -64,7 +64,6 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    mov x8, #16 // =0x10
 ; CHECK-NEXT:    mov x10, #8 // =0x8
-; CHECK-NEXT:    ld1w { z4.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    mov v2.b[7], w11
 ; CHECK-NEXT:    mov v1.b[7], w9
 ; CHECK-NEXT:    uunpklo z3.h, z3.b
@@ -86,22 +85,23 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK-NEXT:    asr z2.s, z2.s, #31
 ; CHECK-NEXT:    asr z1.s, z1.s, #31
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x9, lsl #2]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    cmpne p2.s, p0/z, z3.s, #0
-; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x0, x10, lsl #2]
+; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x0, x9, lsl #2]
 ; CHECK-NEXT:    and z2.s, z2.s, #0x1
 ; CHECK-NEXT:    and z1.s, z1.s, #0x1
-; CHECK-NEXT:    mov z4.s, p1/m, #0 // =0x0
-; CHECK-NEXT:    mov z0.s, p2/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.s, p1/m, #0 // =0x0
 ; CHECK-NEXT:    cmpne p3.s, p0/z, z2.s, #0
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
-; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
-; CHECK-NEXT:    st1w { z4.s }, p0, [x0, x8, lsl #2]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x9, lsl #2]
-; CHECK-NEXT:    mov z3.s, p3/m, #0 // =0x0
-; CHECK-NEXT:    mov z2.s, p1/m, #0 // =0x0
-; CHECK-NEXT:    st1w { z3.s }, p0, [x0, x10, lsl #2]
-; CHECK-NEXT:    st1w { z2.s }, p0, [x0]
+; CHECK-NEXT:    cmpne p4.s, p0/z, z1.s, #0
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, x10, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z3.s, p2/m, #0 // =0x0
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    mov z2.s, p3/m, #0 // =0x0
+; CHECK-NEXT:    mov z1.s, p4/m, #0 // =0x0
+; CHECK-NEXT:    st1w { z3.s }, p0, [x0, x9, lsl #2]
+; CHECK-NEXT:    st1w { z2.s }, p0, [x0, x10, lsl #2]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x0]
 ; CHECK-NEXT:  .LBB1_2: // %exit
 ; CHECK-NEXT:    ret
   %broadcast.splat = shufflevector <32 x i1> zeroinitializer, <32 x i1> zeroinitializer, <32 x i32> zeroinitializer

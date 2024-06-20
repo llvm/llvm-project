@@ -72,11 +72,11 @@ class SendSignalTestCase(TestBase):
 
         # Now make sure the thread was stopped with a SIGUSR1:
         threads = lldbutil.get_stopped_threads(process, lldb.eStopReasonSignal)
-        self.assertEquals(len(threads), 1, "One thread stopped for a signal.")
+        self.assertEqual(len(threads), 1, "One thread stopped for a signal.")
         thread = threads[0]
 
-        self.assertTrue(
-            thread.GetStopReasonDataCount() >= 1, "There was data in the event."
+        self.assertGreaterEqual(
+            thread.GetStopReasonDataCount(), 1, "There was data in the event."
         )
         self.assertEqual(
             thread.GetStopReasonDataAtIndex(0),
@@ -96,7 +96,7 @@ class SendSignalTestCase(TestBase):
         )
         self.assertTrue(got_event, "Got an event")
         state = lldb.SBProcess.GetStateFromEvent(event)
-        self.assertEquals(
+        self.assertEqual(
             state,
             expected_state,
             "It was the %s state." % lldb.SBDebugger.StateAsCString(expected_state),

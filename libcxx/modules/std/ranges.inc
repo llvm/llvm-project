@@ -138,8 +138,22 @@ export namespace std {
     }
 #endif // _LIBCPP_HAS_NO_LOCALIZATION
 
+    // Note: This declaration not in the synopsis or explicitly in the wording.
+    // However it is needed for the range adaptors.
+    // [range.adaptor.object]/3
+    //   The template parameter D for range_adaptor_closure may be an
+    //   incomplete type. If an expression of type cv D is used as an operand
+    //   to the | operator, D shall be complete and model
+    //   derived_from<range_adaptor_closure<D>>. The behavior of an expression
+    //   involving an object of type cv D as an operand to the | operator is
+    //   undefined if overload resolution selects a program-defined operator|
+    //   function.
+    // This is used internally in C++20 mode.
+    using std::ranges::operator|;
+#if _LIBCPP_STD_VER >= 23
     // [range.adaptor.object], range adaptor objects
-    // using std::ranges::range_adaptor_closure;
+    using std::ranges::range_adaptor_closure;
+#endif
 
     // [range.all], all view
     namespace views {
@@ -204,13 +218,11 @@ export namespace std {
       using std::ranges::views::drop_while;
     } // namespace views
 
-#ifdef _LIBCPP_ENABLE_EXPERIMENTAL
     using std::ranges::join_view;
 
     namespace views {
       using std::ranges::views::join;
     } // namespace views
-#endif // _LIBCPP_ENABLE_EXPERIMENTAL
 #if 0
     using std::ranges::join_with_view;
 

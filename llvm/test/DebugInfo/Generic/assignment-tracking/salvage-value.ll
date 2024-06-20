@@ -1,5 +1,7 @@
 ; RUN: opt %s -S -o - -passes=instcombine \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -o - -passes=instcombine \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Hand-written (the debug info doesn't necessarily make sense and isn't fully
 ;; formed). Test salvaging a dbg.assign value and address. Checks and comments

@@ -73,10 +73,12 @@ class FrameAPITestCase(TestBase):
                 gpr_reg_set = lldbutil.get_GPRs(frame)
                 pc_value = gpr_reg_set.GetChildMemberWithName("pc")
                 self.assertTrue(pc_value, "We should have a valid PC.")
-                pc_value_int = int(pc_value.GetValue(), 0)
+                               
+    
                 # Make sure on arm targets we dont mismatch PC value on the basis of thumb bit.
                 # Frame PC will not have thumb bit set in case of a thumb
                 # instruction as PC.
+                pc_value_int = int(pc_value.GetValue(), 0)
                 if self.getArchitecture() in ["arm", "armv7", "armv7k"]:
                     pc_value_int &= ~1
                 self.assertEqual(
@@ -91,7 +93,17 @@ class FrameAPITestCase(TestBase):
                     frame.GetSP(),
                     "SP gotten as a value should equal frame's GetSP",
                 )
-
+                # Test that the "register" property's flat list matches the list from
+                # the "registers" property that returns register sets:
+                register_regs = set()
+                flattened_regs = set()
+                for reg_set in frame.registers:
+                    for reg in reg_set:
+                        flattened_regs.add(reg.name)
+                for reg in frame.register:
+                    register_regs.add(reg.name)
+                self.assertEqual(register_regs, flattened_regs, "register matches registers")
+                        
             print("---", file=session)
             process.Continue()
 

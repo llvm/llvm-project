@@ -75,6 +75,10 @@ public:
     return static_cast<bool>(Value);
   }
 
+  bool isLiteral(bool b) const {
+    return kind() == Literal && static_cast<bool>(Value) == b;
+  }
+
   ArrayRef<const Formula *> operands() const {
     return ArrayRef(reinterpret_cast<Formula *const *>(this + 1),
                     numOperands(kind()));

@@ -171,9 +171,7 @@ class RISCVInsertWriteVXRM : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVInsertWriteVXRM() : MachineFunctionPass(ID) {
-    initializeRISCVInsertWriteVXRMPass(*PassRegistry::getPassRegistry());
-  }
+  RISCVInsertWriteVXRM() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -200,13 +198,23 @@ char RISCVInsertWriteVXRM::ID = 0;
 INITIALIZE_PASS(RISCVInsertWriteVXRM, DEBUG_TYPE, RISCV_INSERT_WRITE_VXRM_NAME,
                 false, false)
 
+static bool ignoresVXRM(const MachineInstr &MI) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
+  default:
+    return false;
+  case RISCV::VNCLIP_WI:
+  case RISCV::VNCLIPU_WI:
+    return MI.getOperand(3).getImm() == 0;
+  }
+}
+
 bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
   bool NeedVXRMWrite = false;
   for (const MachineInstr &MI : MBB) {
     int VXRMIdx = RISCVII::getVXRMOpNum(MI.getDesc());
-    if (VXRMIdx >= 0) {
+    if (VXRMIdx >= 0 && !ignoresVXRM(MI)) {
       unsigned NewVXRMImm = MI.getOperand(VXRMIdx).getImm();
 
       if (!BBInfo.VXRMUse.isValid())
@@ -217,7 +225,8 @@ bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VXRM)) {
+    if (MI.isCall() || MI.isInlineAsm() ||
+        MI.modifiesRegister(RISCV::VXRM, /*TRI=*/nullptr)) {
       if (!BBInfo.VXRMUse.isValid())
         BBInfo.VXRMUse.setUnknown();
 
@@ -358,7 +367,7 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
 
   for (MachineInstr &MI : MBB) {
     int VXRMIdx = RISCVII::getVXRMOpNum(MI.getDesc());
-    if (VXRMIdx >= 0) {
+    if (VXRMIdx >= 0 && !ignoresVXRM(MI)) {
       unsigned NewVXRMImm = MI.getOperand(VXRMIdx).getImm();
 
       if (PendingInsert || !Info.isStatic() ||
@@ -378,7 +387,8 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VXRM))
+    if (MI.isCall() || MI.isInlineAsm() ||
+        MI.modifiesRegister(RISCV::VXRM, /*TRI=*/nullptr))
       Info.setUnknown();
   }
 

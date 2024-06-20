@@ -27,7 +27,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
 
@@ -61,13 +62,13 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
     return 0;
 
   // LLVM and clang headers are in the penultimate position.
-  if (Filename.startswith("llvm/") || Filename.startswith("llvm-c/") ||
-      Filename.startswith("clang/") || Filename.startswith("clang-c/"))
+  if (Filename.starts_with("llvm/") || Filename.starts_with("llvm-c/") ||
+      Filename.starts_with("clang/") || Filename.starts_with("clang-c/"))
     return 2;
 
   // Put these between system and llvm headers to be consistent with LLVM
   // clang-format style.
-  if (Filename.startswith("gtest/") || Filename.startswith("gmock/"))
+  if (Filename.starts_with("gtest/") || Filename.starts_with("gmock/"))
     return 3;
 
   // System headers are sorted to the end.
@@ -81,8 +82,8 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
   // to leave it in the top position.
   IncludeDirective ID = {HashLoc, FilenameRange, std::string(FileName),

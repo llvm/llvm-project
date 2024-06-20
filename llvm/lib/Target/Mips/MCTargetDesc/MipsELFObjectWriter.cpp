@@ -498,10 +498,9 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
 
   assert(Relocs.size() == Sorted.size() && "Some relocs were not consumed");
 
-  // Overwrite the original vector with the sorted elements. The caller expects
-  // them in reverse order.
+  // Overwrite the original vector with the sorted elements.
   unsigned CopyTo = 0;
-  for (const auto &R : reverse(Sorted))
+  for (const auto &R : Sorted)
     Relocs[CopyTo++] = R.R;
 }
 

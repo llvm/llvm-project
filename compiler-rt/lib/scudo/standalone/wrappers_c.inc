@@ -27,6 +27,24 @@ static void reportDeallocation(void *ptr) {
     if (__scudo_deallocate_hook)
       __scudo_deallocate_hook(ptr);
 }
+static void reportReallocAllocation(void *old_ptr, void *new_ptr, size_t size) {
+  DCHECK_NE(new_ptr, nullptr);
+
+  if (SCUDO_ENABLE_HOOKS) {
+    if (__scudo_realloc_allocate_hook)
+      __scudo_realloc_allocate_hook(old_ptr, new_ptr, size);
+    else if (__scudo_allocate_hook)
+      __scudo_allocate_hook(new_ptr, size);
+  }
+}
+static void reportReallocDeallocation(void *old_ptr) {
+  if (SCUDO_ENABLE_HOOKS) {
+    if (__scudo_realloc_deallocate_hook)
+      __scudo_realloc_deallocate_hook(old_ptr);
+    else if (__scudo_deallocate_hook)
+      __scudo_deallocate_hook(old_ptr);
+  }
+}
 
 extern "C" {
 
@@ -175,10 +193,25 @@ INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
     return nullptr;
   }
 
+  // Given that the reporting of deallocation and allocation are not atomic, we
+  // always pretend the old pointer will be released so that the user doesn't
+  // need to worry about the false double-use case from the view of hooks.
+  //
+  // For example, assume that `realloc` releases the old pointer and allocates a
+  // new pointer. Before the reporting of both operations has been done, another
+  // thread may get the old pointer from `malloc`. It may be misinterpreted as
+  // double-use if it's not handled properly on the hook side.
+  reportReallocDeallocation(ptr);
   void *NewPtr = SCUDO_ALLOCATOR.reallocate(ptr, size, SCUDO_MALLOC_ALIGNMENT);
-  if (NewPtr != ptr) {
-    reportAllocation(NewPtr, size);
-    reportDeallocation(ptr);
+  if (NewPtr != nullptr) {
+    // Note that even if NewPtr == ptr, the size has changed. We still need to
+    // report the new size.
+    reportReallocAllocation(/*OldPtr=*/ptr, NewPtr, size);
+  } else {
+    // If `realloc` fails, the old pointer is not released. Report the old
+    // pointer as allocated again.
+    reportReallocAllocation(/*OldPtr=*/ptr, /*NewPtr=*/ptr,
+                            SCUDO_ALLOCATOR.getAllocSize(ptr));
   }
 
   return scudo::setErrnoOnNull(NewPtr);
@@ -214,13 +247,16 @@ void SCUDO_PREFIX(malloc_postinit)() {
 INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
   if (param == M_DECAY_TIME) {
     if (SCUDO_ANDROID) {
-      if (value == 0) {
-        // Will set the release values to their minimum values.
-        value = INT32_MIN;
-      } else {
-        // Will set the release values to their maximum values.
+      // Before changing the interval, reset the memory usage status by doing a
+      // M_PURGE call so that we can minimize the impact of any unreleased pages
+      // introduced by interval transition.
+      SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::Force);
+
+      // The values allowed on Android are {-1, 0, 1}. "1" means the longest
+      // interval.
+      CHECK(value >= -1 && value <= 1);
+      if (value == 1)
         value = INT32_MAX;
-      }
     }
 
     SCUDO_ALLOCATOR.setOption(scudo::Option::ReleaseInterval,

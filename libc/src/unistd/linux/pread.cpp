@@ -10,7 +10,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-
+#include "src/__support/macros/sanitizer.h" // for MSAN_UNPOISON
 #include "src/errno/libc_errno.h"
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
@@ -28,6 +28,9 @@ LLVM_LIBC_FUNCTION(ssize_t, pread,
   ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_pread64, fd, buf,
                                                       count, offset);
 #endif
+  // The cast is important since there is a check that dereferences the pointer
+  // which fails on void*.
+  MSAN_UNPOISON(reinterpret_cast<char *>(buf), count);
   if (ret < 0) {
     libc_errno = static_cast<int>(-ret);
     return -1;

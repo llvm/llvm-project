@@ -152,3 +152,57 @@ define ptr addrspace(3) @atomic_load_monotonic_p3i8_offset(ptr addrspace(3) %ptr
   %load = load atomic ptr addrspace(3), ptr addrspace(3) %gep monotonic, align 4
   ret ptr addrspace(3) %load
 }
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_f16:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_u16 v0, v0{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i16 @atomic_load_monotonic_f16(ptr addrspace(3) %ptr) {
+  %load = load atomic half, ptr addrspace(3) %ptr monotonic, align 2
+  %ret = bitcast half %load to i16
+  ret i16 %ret
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_f16_offset:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_u16 v0, v0 offset:32{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i16 @atomic_load_monotonic_f16_offset(ptr addrspace(3) %ptr) {
+  %gep = getelementptr inbounds half, ptr addrspace(3) %ptr, i32 16
+  %load = load atomic half, ptr addrspace(3) %gep monotonic, align 2
+  %ret = bitcast half %load to i16
+  ret i16 %ret
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_bf16:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_u16 v0, v0{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i16 @atomic_load_monotonic_bf16(ptr addrspace(3) %ptr) {
+  %load = load atomic bfloat, ptr addrspace(3) %ptr monotonic, align 2
+  %ret = bitcast bfloat %load to i16
+  ret i16 %ret
+}
+
+; GCN-LABEL: {{^}}atomic_load_monotonic_bf16_offset:
+; GCN: s_waitcnt
+; GFX9-NOT: s_mov_b32 m0
+; CI-NEXT: s_mov_b32 m0
+; GCN-NEXT: ds_read_u16 v0, v0 offset:32{{$}}
+; GCN-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i16 @atomic_load_monotonic_bf16_offset(ptr addrspace(3) %ptr) {
+  %gep = getelementptr inbounds bfloat, ptr addrspace(3) %ptr, i32 16
+  %load = load atomic bfloat, ptr addrspace(3) %gep monotonic, align 2
+  %ret = bitcast bfloat %load to i16
+  ret i16 %ret
+}

@@ -94,13 +94,12 @@ namespace {
 
 protected:
     bool hasTOCLoReloc(const MachineInstr &MI) {
-      if (MI.getOpcode() == PPC::LDtocL ||
-          MI.getOpcode() == PPC::ADDItocL ||
+      if (MI.getOpcode() == PPC::LDtocL || MI.getOpcode() == PPC::ADDItocL8 ||
           MI.getOpcode() == PPC::LWZtocL)
         return true;
 
       for (const MachineOperand &MO : MI.operands()) {
-        if ((MO.getTargetFlags() & PPCII::MO_ACCESS_MASK) == PPCII::MO_TOC_LO)
+        if (MO.getTargetFlags() == PPCII::MO_TOC_LO)
           return true;
       }
 

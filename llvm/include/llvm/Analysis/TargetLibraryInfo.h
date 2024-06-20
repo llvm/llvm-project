@@ -129,7 +129,8 @@ public:
     MASSV,            // IBM MASS vector library.
     SVML,             // Intel short vector math library.
     SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
-    ArmPL        // Arm Performance Libraries.
+    ArmPL,       // Arm Performance Libraries.
+    AMDLIBM      // AMD Math Vector library.
   };
 
   TargetLibraryInfoImpl();
@@ -155,6 +156,10 @@ public:
   ///
   /// FDecl is assumed to have a parent Module when using this function.
   bool getLibFunc(const Function &FDecl, LibFunc &F) const;
+
+  /// Searches for a function name using an Instruction \p Opcode.
+  /// Currently, only the frem instruction is supported.
+  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const;
 
   /// Forces a function to be marked as unavailable.
   void setUnavailable(LibFunc F) {
@@ -358,6 +363,12 @@ public:
   bool getLibFunc(const CallBase &CB, LibFunc &F) const {
     return !CB.isNoBuiltin() && CB.getCalledFunction() &&
            getLibFunc(*(CB.getCalledFunction()), F);
+  }
+
+  /// Searches for a function name using an Instruction \p Opcode.
+  /// Currently, only the frem instruction is supported.
+  bool getLibFunc(unsigned int Opcode, Type *Ty, LibFunc &F) const {
+    return Impl->getLibFunc(Opcode, Ty, F);
   }
 
   /// Disables all builtins.
@@ -621,6 +632,10 @@ public:
   TargetLibraryInfoWrapperPass();
   explicit TargetLibraryInfoWrapperPass(const Triple &T);
   explicit TargetLibraryInfoWrapperPass(const TargetLibraryInfoImpl &TLI);
+
+  // FIXME: This should be removed when PlaceSafepoints is fixed to not create a
+  // PassManager inside a pass.
+  explicit TargetLibraryInfoWrapperPass(const TargetLibraryInfo &TLI);
 
   TargetLibraryInfo &getTLI(const Function &F) {
     FunctionAnalysisManager DummyFAM;

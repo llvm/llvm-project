@@ -34,12 +34,12 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -286,7 +286,7 @@ static bool isDuplexPairMatch(unsigned Ga, unsigned Gb) {
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                                int &FrameIndex) const {
   switch (MI.getOpcode()) {
     default:
@@ -334,7 +334,7 @@ unsigned HexagonInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   switch (MI.getOpcode()) {
     default:
@@ -2765,12 +2765,40 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::PS_vloadrw_nt_ai:
   case Hexagon::V6_vL32b_ai:
   case Hexagon::V6_vS32b_ai:
+  case Hexagon::V6_vS32b_pred_ai:
+  case Hexagon::V6_vS32b_npred_ai:
   case Hexagon::V6_vS32b_qpred_ai:
   case Hexagon::V6_vS32b_nqpred_ai:
+  case Hexagon::V6_vS32b_new_ai:
+  case Hexagon::V6_vS32b_new_pred_ai:
+  case Hexagon::V6_vS32b_new_npred_ai:
+  case Hexagon::V6_vS32b_nt_pred_ai:
+  case Hexagon::V6_vS32b_nt_npred_ai:
+  case Hexagon::V6_vS32b_nt_new_ai:
+  case Hexagon::V6_vS32b_nt_new_pred_ai:
+  case Hexagon::V6_vS32b_nt_new_npred_ai:
+  case Hexagon::V6_vS32b_nt_qpred_ai:
+  case Hexagon::V6_vS32b_nt_nqpred_ai:
   case Hexagon::V6_vL32b_nt_ai:
   case Hexagon::V6_vS32b_nt_ai:
   case Hexagon::V6_vL32Ub_ai:
   case Hexagon::V6_vS32Ub_ai:
+  case Hexagon::V6_vL32b_cur_ai:
+  case Hexagon::V6_vL32b_tmp_ai:
+  case Hexagon::V6_vL32b_pred_ai:
+  case Hexagon::V6_vL32b_npred_ai:
+  case Hexagon::V6_vL32b_cur_pred_ai:
+  case Hexagon::V6_vL32b_cur_npred_ai:
+  case Hexagon::V6_vL32b_tmp_pred_ai:
+  case Hexagon::V6_vL32b_tmp_npred_ai:
+  case Hexagon::V6_vL32b_nt_cur_ai:
+  case Hexagon::V6_vL32b_nt_tmp_ai:
+  case Hexagon::V6_vL32b_nt_pred_ai:
+  case Hexagon::V6_vL32b_nt_npred_ai:
+  case Hexagon::V6_vL32b_nt_cur_pred_ai:
+  case Hexagon::V6_vL32b_nt_cur_npred_ai:
+  case Hexagon::V6_vL32b_nt_tmp_pred_ai:
+  case Hexagon::V6_vL32b_nt_tmp_npred_ai:
   case Hexagon::V6_vgathermh_pseudo:
   case Hexagon::V6_vgathermw_pseudo:
   case Hexagon::V6_vgathermhw_pseudo:
@@ -3042,7 +3070,7 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 /// Get the base register and byte offset of a load/store instr.
 bool HexagonInstrInfo::getMemOperandsWithOffsetWidth(
     const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
-    int64_t &Offset, bool &OffsetIsScalable, unsigned &Width,
+    int64_t &Offset, bool &OffsetIsScalable, LocationSize &Width,
     const TargetRegisterInfo *TRI) const {
   OffsetIsScalable = false;
   const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, Width);
@@ -3258,9 +3286,9 @@ unsigned HexagonInstrInfo::getAddrMode(const MachineInstr &MI) const {
 // returned in Offset and the access size is returned in AccessSize.
 // If the base operand has a subregister or the offset field does not contain
 // an immediate value, return nullptr.
-MachineOperand *HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI,
-                                                   int64_t &Offset,
-                                                   unsigned &AccessSize) const {
+MachineOperand *
+HexagonInstrInfo::getBaseAndOffset(const MachineInstr &MI, int64_t &Offset,
+                                   LocationSize &AccessSize) const {
   // Return if it is not a base+offset type instruction or a MemOp.
   if (getAddrMode(MI) != HexagonII::BaseImmOffset &&
       getAddrMode(MI) != HexagonII::BaseLongOffset &&
@@ -3489,7 +3517,7 @@ unsigned HexagonInstrInfo::getCompoundOpcode(const MachineInstr &GA,
       (GB.getOpcode() != Hexagon::J2_jumptnew))
     return -1u;
   Register DestReg = GA.getOperand(0).getReg();
-  if (!GB.readsRegister(DestReg))
+  if (!GB.readsRegister(DestReg, /*TRI=*/nullptr))
     return -1u;
   if (DestReg != Hexagon::P0 && DestReg != Hexagon::P1)
     return -1u;
@@ -4295,11 +4323,9 @@ unsigned HexagonInstrInfo::getInstrTimingClassLatency(
 ///
 /// This is a raw interface to the itinerary that may be directly overriden by
 /// a target. Use computeOperandLatency to get the best estimate of latency.
-int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
-                                        const MachineInstr &DefMI,
-                                        unsigned DefIdx,
-                                        const MachineInstr &UseMI,
-                                        unsigned UseIdx) const {
+std::optional<unsigned> HexagonInstrInfo::getOperandLatency(
+    const InstrItineraryData *ItinData, const MachineInstr &DefMI,
+    unsigned DefIdx, const MachineInstr &UseMI, unsigned UseIdx) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
 
   // Get DefIdx and UseIdx for super registers.
@@ -4308,7 +4334,7 @@ int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   if (DefMO.isReg() && DefMO.getReg().isPhysical()) {
     if (DefMO.isImplicit()) {
       for (MCPhysReg SR : HRI.superregs(DefMO.getReg())) {
-        int Idx = DefMI.findRegisterDefOperandIdx(SR, false, false, &HRI);
+        int Idx = DefMI.findRegisterDefOperandIdx(SR, &HRI, false, false);
         if (Idx != -1) {
           DefIdx = Idx;
           break;
@@ -4319,7 +4345,7 @@ int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     const MachineOperand &UseMO = UseMI.getOperand(UseIdx);
     if (UseMO.isImplicit()) {
       for (MCPhysReg SR : HRI.superregs(UseMO.getReg())) {
-        int Idx = UseMI.findRegisterUseOperandIdx(SR, false, &HRI);
+        int Idx = UseMI.findRegisterUseOperandIdx(SR, &HRI, false);
         if (Idx != -1) {
           UseIdx = Idx;
           break;
@@ -4328,9 +4354,9 @@ int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
     }
   }
 
-  int Latency = TargetInstrInfo::getOperandLatency(ItinData, DefMI, DefIdx,
-                                                   UseMI, UseIdx);
-  if (!Latency)
+  std::optional<unsigned> Latency = TargetInstrInfo::getOperandLatency(
+      ItinData, DefMI, DefIdx, UseMI, UseIdx);
+  if (Latency == 0)
     // We should never have 0 cycle latency between two instructions unless
     // they can be packetized together. However, this decision can't be made
     // here.

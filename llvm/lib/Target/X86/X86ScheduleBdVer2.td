@@ -933,7 +933,7 @@ def PdWriteVBROADCASTF128 : SchedWriteRes<[PdFPU01, PdFPFMA]> {
   let ReleaseAtCycles = [1, 3];
   let NumMicroOps = 2;
 }
-def : InstRW<[PdWriteVBROADCASTF128], (instrs VBROADCASTF128)>;
+def : InstRW<[PdWriteVBROADCASTF128], (instrs VBROADCASTF128rm)>;
 
 defm : PdWriteResXMMPair<WriteFVarShuffle,  [PdFPU1, PdFPXBR],  3>;
 defm : PdWriteResYMMPair<WriteFVarShuffleY, [PdFPU1, PdFPXBR],  3, [2, 2], 2>;
@@ -1275,12 +1275,12 @@ def : InstRW<[WritePHAdd.Folded], (instrs PHADDDrm, PHSUBDrm,
 
 defm : PdWriteResXMMPair<WriteCLMul, [PdFPU0, PdFPMMA], 12, [1, 7], 5, 1>;
 
-def PdWriteVPCLMULQDQrr : SchedWriteRes<[PdFPU0, PdFPMMA]> {
+def PdWriteVPCLMULQDQrri : SchedWriteRes<[PdFPU0, PdFPMMA]> {
   let Latency = 12;
   let ReleaseAtCycles = [1, 7];
   let NumMicroOps = 6;
 }
-def : InstRW<[PdWriteVPCLMULQDQrr], (instrs VPCLMULQDQrr)>;
+def : InstRW<[PdWriteVPCLMULQDQrri], (instrs VPCLMULQDQrri)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SSE4A instructions.

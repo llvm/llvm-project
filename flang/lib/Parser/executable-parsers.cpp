@@ -92,9 +92,9 @@ TYPE_CONTEXT_PARSER("execution part"_en_US,
 //        close-stmt | continue-stmt | cycle-stmt | deallocate-stmt |
 //        endfile-stmt | error-stop-stmt | event-post-stmt | event-wait-stmt |
 //        exit-stmt | fail-image-stmt | flush-stmt | form-team-stmt |
-//        goto-stmt | if-stmt | inquire-stmt | lock-stmt | nullify-stmt |
-//        open-stmt | pointer-assignment-stmt | print-stmt | read-stmt |
-//        return-stmt | rewind-stmt | stop-stmt | sync-all-stmt |
+//        goto-stmt | if-stmt | inquire-stmt | lock-stmt | notify-wait-stmt |
+//        nullify-stmt | open-stmt | pointer-assignment-stmt | print-stmt |
+//        read-stmt | return-stmt | rewind-stmt | stop-stmt | sync-all-stmt |
 //        sync-images-stmt | sync-memory-stmt | sync-team-stmt | unlock-stmt |
 //        wait-stmt | where-stmt | write-stmt | computed-goto-stmt | forall-stmt
 // R1159 continue-stmt -> CONTINUE
@@ -119,6 +119,7 @@ TYPE_PARSER(first(construct<ActionStmt>(indirect(Parser<AllocateStmt>{})),
     construct<ActionStmt>(indirect(Parser<IfStmt>{})),
     construct<ActionStmt>(indirect(Parser<InquireStmt>{})),
     construct<ActionStmt>(indirect(Parser<LockStmt>{})),
+    construct<ActionStmt>(indirect(Parser<NotifyWaitStmt>{})),
     construct<ActionStmt>(indirect(Parser<NullifyStmt>{})),
     construct<ActionStmt>(indirect(Parser<OpenStmt>{})),
     construct<ActionStmt>(indirect(Parser<PrintStmt>{})),
@@ -253,11 +254,15 @@ TYPE_PARSER(construct<ConcurrentControl>(name / "=", scalarIntExpr / ":",
 
 // R1130 locality-spec ->
 //         LOCAL ( variable-name-list ) | LOCAL_INIT ( variable-name-list ) |
+//         REDUCE ( reduce-operation : variable-name-list ) |
 //         SHARED ( variable-name-list ) | DEFAULT ( NONE )
 TYPE_PARSER(construct<LocalitySpec>(construct<LocalitySpec::Local>(
                 "LOCAL" >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(construct<LocalitySpec::LocalInit>(
         "LOCAL_INIT"_sptok >> parenthesized(listOfNames))) ||
+    construct<LocalitySpec>(construct<LocalitySpec::Reduce>(
+        "REDUCE (" >> Parser<LocalitySpec::Reduce::Operator>{} / ":",
+        listOfNames / ")")) ||
     construct<LocalitySpec>(construct<LocalitySpec::Shared>(
         "SHARED" >> parenthesized(listOfNames))) ||
     construct<LocalitySpec>(
@@ -453,6 +458,13 @@ TYPE_CONTEXT_PARSER("STOP statement"_en_US,
 // parse time.
 TYPE_PARSER(construct<StopCode>(scalar(expr)))
 
+// F2030: R1166 notify-wait-stmt ->
+//         NOTIFY WAIT ( notify-variable [, event-wait-spec-list] )
+TYPE_CONTEXT_PARSER("NOTIFY WAIT statement"_en_US,
+    construct<NotifyWaitStmt>(
+        "NOTIFY WAIT"_sptok >> "("_tok >> scalar(variable),
+        defaulted("," >> nonemptyList(Parser<EventWaitSpec>{})) / ")"))
+
 // R1164 sync-all-stmt -> SYNC ALL [( [sync-stat-list] )]
 TYPE_CONTEXT_PARSER("SYNC ALL statement"_en_US,
     construct<SyncAllStmt>("SYNC ALL"_sptok >>
@@ -486,15 +498,14 @@ TYPE_CONTEXT_PARSER("EVENT POST statement"_en_US,
 //         EVENT WAIT ( event-variable [, event-wait-spec-list] )
 TYPE_CONTEXT_PARSER("EVENT WAIT statement"_en_US,
     construct<EventWaitStmt>("EVENT WAIT"_sptok >> "("_tok >> scalar(variable),
-        defaulted("," >> nonemptyList(Parser<EventWaitStmt::EventWaitSpec>{})) /
-            ")"))
+        defaulted("," >> nonemptyList(Parser<EventWaitSpec>{})) / ")"))
 
 // R1174 until-spec -> UNTIL_COUNT = scalar-int-expr
 constexpr auto untilSpec{"UNTIL_COUNT =" >> scalarIntExpr};
 
 // R1173 event-wait-spec -> until-spec | sync-stat
-TYPE_PARSER(construct<EventWaitStmt::EventWaitSpec>(untilSpec) ||
-    construct<EventWaitStmt::EventWaitSpec>(statOrErrmsg))
+TYPE_PARSER(construct<EventWaitSpec>(untilSpec) ||
+    construct<EventWaitSpec>(statOrErrmsg))
 
 // R1177 team-variable -> scalar-variable
 constexpr auto teamVariable{scalar(variable)};
@@ -531,25 +542,34 @@ TYPE_CONTEXT_PARSER("UNLOCK statement"_en_US,
     construct<UnlockStmt>("UNLOCK (" >> lockVariable,
         defaulted("," >> nonemptyList(statOrErrmsg)) / ")"))
 
-// CUF-kernel-do-construct -> CUF-kernel-do-directive do-construct
-// CUF-kernel-do-directive ->
-//     !$CUF KERNEL DO [ (scalar-int-constant-expr) ] <<< grid, block [, stream]
-//     >>> do-construct
-// grid -> * | scalar-int-expr | ( scalar-int-expr-list )
-// block -> * | scalar-int-expr | ( scalar-int-expr-list )
-// stream -> ( 0, | STREAM = ) scalar-int-expr
+// CUF-kernel-do-construct ->
+//   !$CUF KERNEL DO [ (scalar-int-constant-expr) ]
+//      <<< grid, block [, stream] >>>
+//      [ cuf-reduction... ]
+//      do-construct
+// star-or-expr -> * | scalar-int-expr
+// grid -> * | scalar-int-expr | ( star-or-expr-list )
+// block -> * | scalar-int-expr | ( star-or-expr-list )
+// stream -> 0, scalar-int-expr | STREAM = scalar-int-expr
+// cuf-reduction -> [ REDUCTION | REDUCE ] (
+//                  acc-reduction-op : scalar-variable-list )
+
+constexpr auto starOrExpr{construct<CUFKernelDoConstruct::StarOrExpr>(
+    "*" >> pure<std::optional<ScalarIntExpr>>() ||
+    applyFunction(presentOptional<ScalarIntExpr>, scalarIntExpr))};
+constexpr auto gridOrBlock{parenthesized(nonemptyList(starOrExpr)) ||
+    applyFunction(singletonList<CUFKernelDoConstruct::StarOrExpr>, starOrExpr)};
+
+TYPE_PARSER(("REDUCTION"_tok || "REDUCE"_tok) >>
+    parenthesized(construct<CUFReduction>(Parser<CUFReduction::Operator>{},
+        ":" >> nonemptyList(scalar(variable)))))
+
 TYPE_PARSER(sourced(beginDirective >> "$CUF KERNEL DO"_tok >>
     construct<CUFKernelDoConstruct::Directive>(
-        maybe(parenthesized(scalarIntConstantExpr)),
-        "<<<" >>
-            ("*" >> pure<std::list<ScalarIntExpr>>() ||
-                parenthesized(nonemptyList(scalarIntExpr)) ||
-                applyFunction(singletonList<ScalarIntExpr>, scalarIntExpr)),
-        "," >> ("*" >> pure<std::list<ScalarIntExpr>>() ||
-                   parenthesized(nonemptyList(scalarIntExpr)) ||
-                   applyFunction(singletonList<ScalarIntExpr>, scalarIntExpr)),
-        maybe((", 0 ,"_tok || ", STREAM ="_tok) >> scalarIntExpr) / ">>>" /
-            endDirective)))
+        maybe(parenthesized(scalarIntConstantExpr)), "<<<" >> gridOrBlock,
+        "," >> gridOrBlock,
+        maybe((", 0 ,"_tok || ", STREAM ="_tok) >> scalarIntExpr) / ">>>",
+        many(Parser<CUFReduction>{}) / endDirective)))
 TYPE_CONTEXT_PARSER("!$CUF KERNEL DO construct"_en_US,
     extension<LanguageFeature::CUDA>(construct<CUFKernelDoConstruct>(
         Parser<CUFKernelDoConstruct::Directive>{},

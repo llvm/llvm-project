@@ -13,6 +13,7 @@
 
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBStructuredData.h"
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
@@ -314,6 +315,23 @@ public:
   /// Resolve the command just as HandleCommand would, expanding abbreviations
   /// and aliases.  If successful, result->GetOutput has the full expansion.
   void ResolveCommand(const char *command_line, SBCommandReturnObject &result);
+
+  SBStructuredData GetStatistics();
+
+  /// Returns a list of handled commands, output and error. Each element in
+  /// the list is a dictionary with the following keys/values:
+  /// - "command" (string): The command that was given by the user.
+  /// - "commandName" (string): The name of the executed command.
+  /// - "commandArguments" (string): The arguments of the executed command.
+  /// - "output" (string): The output of the command. Empty ("") if no output.
+  /// - "error" (string): The error of the command. Empty ("") if no error.
+  /// - "durationInSeconds" (float): The time it took to execute the command.
+  /// - "timestampInEpochSeconds" (int): The timestamp when the command is
+  ///   executed.
+  ///
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
+  /// this list. Otherwise this list is empty.
+  SBStructuredData GetTranscript();
 
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;

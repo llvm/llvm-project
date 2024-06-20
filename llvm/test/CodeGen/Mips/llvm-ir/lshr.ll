@@ -427,7 +427,6 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS2-NEXT:    lwr $5, 11($1)
 ; MIPS2-NEXT:    andi $2, $2, 7
 ; MIPS2-NEXT:    not $6, $2
-; MIPS2-NEXT:    andi $6, $6, 31
 ; MIPS2-NEXT:    srlv $7, $5, $2
 ; MIPS2-NEXT:    sllv $4, $4, $6
 ; MIPS2-NEXT:    srlv $3, $3, $2
@@ -481,7 +480,6 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32-NEXT:    lwr $5, 11($1)
 ; MIPS32-NEXT:    andi $2, $2, 7
 ; MIPS32-NEXT:    not $6, $2
-; MIPS32-NEXT:    andi $6, $6, 31
 ; MIPS32-NEXT:    srlv $7, $5, $2
 ; MIPS32-NEXT:    sllv $4, $4, $6
 ; MIPS32-NEXT:    srlv $3, $3, $2
@@ -534,7 +532,6 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32R2-NEXT:    lwr $5, 11($1)
 ; MIPS32R2-NEXT:    andi $2, $2, 7
 ; MIPS32R2-NEXT:    not $6, $2
-; MIPS32R2-NEXT:    andi $6, $6, 31
 ; MIPS32R2-NEXT:    srlv $7, $5, $2
 ; MIPS32R2-NEXT:    sllv $4, $4, $6
 ; MIPS32R2-NEXT:    srlv $3, $3, $2
@@ -577,7 +574,6 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 ; MIPS32R6-NEXT:    lw $5, 8($1)
 ; MIPS32R6-NEXT:    andi $2, $2, 7
 ; MIPS32R6-NEXT:    not $6, $2
-; MIPS32R6-NEXT:    andi $6, $6, 31
 ; MIPS32R6-NEXT:    srlv $7, $5, $2
 ; MIPS32R6-NEXT:    sllv $4, $4, $6
 ; MIPS32R6-NEXT:    srlv $3, $3, $2

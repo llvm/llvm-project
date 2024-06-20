@@ -12,6 +12,7 @@ type llmodule
 type llmetadata
 type lltype
 type llvalue
+type lldbgrecord
 type lluse
 type llbasicblock
 type llbuilder
@@ -528,6 +529,7 @@ external value_name : llvalue -> string = "llvm_value_name"
 external set_value_name : string -> llvalue -> unit = "llvm_set_value_name"
 external dump_value : llvalue -> unit = "llvm_dump_value"
 external string_of_llvalue : llvalue -> string = "llvm_string_of_llvalue"
+external string_of_lldbgrecord : lldbgrecord -> string = "llvm_string_of_lldbgrecord"
 external replace_all_uses_with : llvalue -> llvalue -> unit
                                = "llvm_replace_all_uses_with"
 
@@ -649,10 +651,6 @@ external const_mul : llvalue -> llvalue -> llvalue = "llvm_const_mul"
 external const_nsw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nsw_mul"
 external const_nuw_mul : llvalue -> llvalue -> llvalue = "llvm_const_nuw_mul"
 external const_xor : llvalue -> llvalue -> llvalue = "llvm_const_xor"
-external const_icmp : Icmp.t -> llvalue -> llvalue -> llvalue
-                    = "llvm_const_icmp"
-external const_fcmp : Fcmp.t -> llvalue -> llvalue -> llvalue
-                    = "llvm_const_fcmp"
 external const_shl : llvalue -> llvalue -> llvalue = "llvm_const_shl"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                    = "llvm_const_gep"

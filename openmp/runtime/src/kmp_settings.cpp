@@ -255,8 +255,13 @@ static void __kmp_stg_parse_bool(char const *name, char const *value,
 // placed here in order to use __kmp_round4k static function
 void __kmp_check_stksize(size_t *val) {
   // if system stack size is too big then limit the size for worker threads
+#if KMP_OS_AIX
+  if (*val > KMP_DEFAULT_STKSIZE * 2) // Use 2 times, 16 is too large for AIX.
+    *val = KMP_DEFAULT_STKSIZE * 2;
+#else
   if (*val > KMP_DEFAULT_STKSIZE * 16) // just a heuristics...
     *val = KMP_DEFAULT_STKSIZE * 16;
+#endif
   if (*val < __kmp_sys_min_stksize)
     *val = __kmp_sys_min_stksize;
   if (*val > KMP_MAX_STKSIZE)
@@ -873,6 +878,10 @@ static void __kmp_stg_print_wait_policy(kmp_str_buf_t *buffer, char const *name,
     case library_throughput: {
       value = "PASSIVE";
     } break;
+    case library_none:
+    case library_serial: {
+      value = NULL;
+    } break;
     }
   } else {
     switch (__kmp_library) {
@@ -884,6 +893,9 @@ static void __kmp_stg_print_wait_policy(kmp_str_buf_t *buffer, char const *name,
     } break;
     case library_throughput: {
       value = "throughput";
+    } break;
+    case library_none: {
+      value = NULL;
     } break;
     }
   }
@@ -2004,6 +2016,7 @@ static inline const char *
 __kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
   switch (type) {
   case KMP_HW_CORE_TYPE_UNKNOWN:
+  case KMP_HW_MAX_NUM_CORE_TYPES:
     return "unknown";
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
   case KMP_HW_CORE_TYPE_ATOM:
@@ -2012,7 +2025,8 @@ __kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
     return "intel_core";
 #endif
   }
-  return "unknown";
+  KMP_ASSERT2(false, "Unhandled kmp_hw_core_type_t enumeration");
+  KMP_BUILTIN_UNREACHABLE;
 }
 
 #if KMP_AFFINITY_SUPPORTED
@@ -4359,8 +4373,8 @@ static void __kmp_stg_parse_omp_schedule(char const *name, char const *value,
                                          void *data) {
   size_t length;
   const char *ptr = value;
-  SKIP_WS(ptr);
-  if (value) {
+  if (ptr) {
+    SKIP_WS(ptr);
     length = KMP_STRLEN(value);
     if (length) {
       if (value[length - 1] == '"' || value[length - 1] == '\'')
@@ -4428,6 +4442,10 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
     case kmp_sch_auto:
       __kmp_str_buf_print(buffer, "%s,%d'\n", "auto", __kmp_chunk);
       break;
+    default:
+      KMP_ASSERT2(false, "Unhandled sched_type enumeration");
+      KMP_BUILTIN_UNREACHABLE;
+      break;
     }
   } else {
     switch (sched) {
@@ -4452,6 +4470,10 @@ static void __kmp_stg_print_omp_schedule(kmp_str_buf_t *buffer,
       break;
     case kmp_sch_auto:
       __kmp_str_buf_print(buffer, "%s'\n", "auto");
+      break;
+    default:
+      KMP_ASSERT2(false, "Unhandled sched_type enumeration");
+      KMP_BUILTIN_UNREACHABLE;
       break;
     }
   }
@@ -4867,9 +4889,6 @@ static void __kmp_stg_parse_spin_backoff_params(const char *name,
       if (num <= 0) { // The number of retries should be > 0
         msg = KMP_I18N_STR(ValueTooSmall);
         num = 1;
-      } else if (num > KMP_INT_MAX) {
-        msg = KMP_I18N_STR(ValueTooLarge);
-        num = KMP_INT_MAX;
       }
       if (msg != NULL) {
         // Message is not empty. Print warning.
@@ -4966,9 +4985,6 @@ static void __kmp_stg_parse_adaptive_lock_props(const char *name,
       if (num < 0) { // The number of retries should be >= 0
         msg = KMP_I18N_STR(ValueTooSmall);
         num = 1;
-      } else if (num > KMP_INT_MAX) {
-        msg = KMP_I18N_STR(ValueTooLarge);
-        num = KMP_INT_MAX;
       }
       if (msg != NULL) {
         // Message is not empty. Print warning.
@@ -6171,9 +6187,9 @@ void __kmp_env_initialize(char const *string) {
     // specifier, even as substrings.
     //
     // I can't find a case-insensitive version of strstr on Windows* OS.
-    // Use the case-sensitive version for now.
+    // Use the case-sensitive version for now. AIX does the same.
 
-#if KMP_OS_WINDOWS
+#if KMP_OS_WINDOWS || KMP_OS_AIX
 #define FIND strstr
 #else
 #define FIND strcasestr
@@ -6404,6 +6420,8 @@ void __kmp_env_initialize(char const *string) {
         }
         if ((__kmp_nested_proc_bind.bind_types[0] != proc_bind_intel) &&
             (__kmp_nested_proc_bind.bind_types[0] != proc_bind_default)) {
+          if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_false)
+            __kmp_affinity.type = affinity_none;
           if (__kmp_affinity.type == affinity_default) {
             __kmp_affinity.type = affinity_compact;
             __kmp_affinity.flags.dups = FALSE;

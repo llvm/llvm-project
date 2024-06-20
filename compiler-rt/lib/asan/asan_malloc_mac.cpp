@@ -22,7 +22,10 @@
 
 using namespace __asan;
 #define COMMON_MALLOC_ZONE_NAME "asan"
-#define COMMON_MALLOC_ENTER() ENSURE_ASAN_INITED()
+#  define COMMON_MALLOC_ENTER() \
+    do {                        \
+      AsanInitFromRtl();        \
+    } while (false)
 #  define COMMON_MALLOC_SANITIZER_INITIALIZED AsanInited()
 #  define COMMON_MALLOC_FORCE_LOCK() asan_mz_force_lock()
 #  define COMMON_MALLOC_FORCE_UNLOCK() asan_mz_force_unlock()

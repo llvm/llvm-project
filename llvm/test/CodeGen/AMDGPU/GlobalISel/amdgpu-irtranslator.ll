@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel %s -o - 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -O0 -stop-after=irtranslator -global-isel %s -o - 2>&1 | FileCheck %s
 
 ; This file checks that the translation from llvm IR to generic
 ; MachineInstr is correct.

@@ -106,7 +106,7 @@ define i1 @extractelt_v16i1(ptr %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a0)
 ; RV32-NEXT:    vmseq.vi v8, v8, 0
-; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    srl a0, a0, a1
 ; RV32-NEXT:    andi a0, a0, 1
@@ -117,7 +117,7 @@ define i1 @extractelt_v16i1(ptr %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a0)
 ; RV64-NEXT:    vmseq.vi v8, v8, 0
-; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    srl a0, a0, a1
 ; RV64-NEXT:    andi a0, a0, 1
@@ -128,7 +128,7 @@ define i1 @extractelt_v16i1(ptr %x, i64 %idx) nounwind {
 ; RV32ZBS-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV32ZBS-NEXT:    vle8.v v8, (a0)
 ; RV32ZBS-NEXT:    vmseq.vi v8, v8, 0
-; RV32ZBS-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV32ZBS-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32ZBS-NEXT:    vmv.x.s a0, v8
 ; RV32ZBS-NEXT:    bext a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -138,7 +138,7 @@ define i1 @extractelt_v16i1(ptr %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; RV64ZBS-NEXT:    vle8.v v8, (a0)
 ; RV64ZBS-NEXT:    vmseq.vi v8, v8, 0
-; RV64ZBS-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; RV64ZBS-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64ZBS-NEXT:    vmv.x.s a0, v8
 ; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
@@ -155,7 +155,7 @@ define i1 @extractelt_v32i1(ptr %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a0)
 ; RV32-NEXT:    vmseq.vi v10, v8, 0
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    srl a0, a0, a1
 ; RV32-NEXT:    andi a0, a0, 1
@@ -167,7 +167,7 @@ define i1 @extractelt_v32i1(ptr %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a0)
 ; RV64-NEXT:    vmseq.vi v10, v8, 0
-; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v10
 ; RV64-NEXT:    srl a0, a0, a1
 ; RV64-NEXT:    andi a0, a0, 1
@@ -179,7 +179,7 @@ define i1 @extractelt_v32i1(ptr %x, i64 %idx) nounwind {
 ; RV32ZBS-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV32ZBS-NEXT:    vle8.v v8, (a0)
 ; RV32ZBS-NEXT:    vmseq.vi v10, v8, 0
-; RV32ZBS-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32ZBS-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV32ZBS-NEXT:    vmv.x.s a0, v10
 ; RV32ZBS-NEXT:    bext a0, a0, a1
 ; RV32ZBS-NEXT:    ret
@@ -190,7 +190,7 @@ define i1 @extractelt_v32i1(ptr %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; RV64ZBS-NEXT:    vle8.v v8, (a0)
 ; RV64ZBS-NEXT:    vmseq.vi v10, v8, 0
-; RV64ZBS-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64ZBS-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; RV64ZBS-NEXT:    vmv.x.s a0, v10
 ; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
@@ -221,7 +221,7 @@ define i1 @extractelt_v64i1(ptr %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a0)
 ; RV64-NEXT:    vmseq.vi v12, v8, 0
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.x.s a0, v12
 ; RV64-NEXT:    srl a0, a0, a1
 ; RV64-NEXT:    andi a0, a0, 1
@@ -246,7 +246,7 @@ define i1 @extractelt_v64i1(ptr %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vsetvli zero, a2, e8, m4, ta, ma
 ; RV64ZBS-NEXT:    vle8.v v8, (a0)
 ; RV64ZBS-NEXT:    vmseq.vi v12, v8, 0
-; RV64ZBS-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64ZBS-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV64ZBS-NEXT:    vmv.x.s a0, v12
 ; RV64ZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBS-NEXT:    ret
@@ -326,9 +326,9 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32-NEXT:    andi sp, sp, -128
 ; RV32-NEXT:    andi a1, a1, 255
 ; RV32-NEXT:    li a2, 128
+; RV32-NEXT:    addi a3, a0, 128
 ; RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; RV32-NEXT:    addi a2, a0, 128
-; RV32-NEXT:    vle8.v v16, (a2)
+; RV32-NEXT:    vle8.v v16, (a3)
 ; RV32-NEXT:    vle8.v v24, (a0)
 ; RV32-NEXT:    mv a0, sp
 ; RV32-NEXT:    add a1, a0, a1
@@ -357,9 +357,9 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV64-NEXT:    andi sp, sp, -128
 ; RV64-NEXT:    andi a1, a1, 255
 ; RV64-NEXT:    li a2, 128
+; RV64-NEXT:    addi a3, a0, 128
 ; RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; RV64-NEXT:    addi a2, a0, 128
-; RV64-NEXT:    vle8.v v16, (a2)
+; RV64-NEXT:    vle8.v v16, (a3)
 ; RV64-NEXT:    vle8.v v24, (a0)
 ; RV64-NEXT:    mv a0, sp
 ; RV64-NEXT:    add a1, a0, a1
@@ -388,9 +388,9 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32ZBS-NEXT:    andi sp, sp, -128
 ; RV32ZBS-NEXT:    andi a1, a1, 255
 ; RV32ZBS-NEXT:    li a2, 128
+; RV32ZBS-NEXT:    addi a3, a0, 128
 ; RV32ZBS-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; RV32ZBS-NEXT:    addi a2, a0, 128
-; RV32ZBS-NEXT:    vle8.v v16, (a2)
+; RV32ZBS-NEXT:    vle8.v v16, (a3)
 ; RV32ZBS-NEXT:    vle8.v v24, (a0)
 ; RV32ZBS-NEXT:    mv a0, sp
 ; RV32ZBS-NEXT:    add a1, a0, a1
@@ -419,9 +419,9 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    andi sp, sp, -128
 ; RV64ZBS-NEXT:    andi a1, a1, 255
 ; RV64ZBS-NEXT:    li a2, 128
+; RV64ZBS-NEXT:    addi a3, a0, 128
 ; RV64ZBS-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; RV64ZBS-NEXT:    addi a2, a0, 128
-; RV64ZBS-NEXT:    vle8.v v16, (a2)
+; RV64ZBS-NEXT:    vle8.v v16, (a3)
 ; RV64ZBS-NEXT:    vle8.v v24, (a0)
 ; RV64ZBS-NEXT:    mv a0, sp
 ; RV64ZBS-NEXT:    add a1, a0, a1

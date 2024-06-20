@@ -109,7 +109,7 @@ public:
     return ExtractIndexFromString(name.GetCString());
   }
   bool MightHaveChildren() override { return true; }
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
 protected:
   AbstractListFrontEnd(ValueObject &valobj)
@@ -136,9 +136,9 @@ class ForwardListFrontEnd : public AbstractListFrontEnd {
 public:
   ForwardListFrontEnd(ValueObject &valobj);
 
-  size_t CalculateNumChildren() override;
-  ValueObjectSP GetChildAtIndex(size_t idx) override;
-  bool Update() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+  lldb::ChildCacheState Update() override;
 };
 
 class ListFrontEnd : public AbstractListFrontEnd {
@@ -147,11 +147,11 @@ public:
 
   ~ListFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
 private:
   lldb::addr_t m_node_address = 0;
@@ -160,7 +160,7 @@ private:
 
 } // end anonymous namespace
 
-bool AbstractListFrontEnd::Update() {
+lldb::ChildCacheState AbstractListFrontEnd::Update() {
   m_loop_detected = 0;
   m_count = UINT32_MAX;
   m_head = nullptr;
@@ -180,10 +180,10 @@ bool AbstractListFrontEnd::Update() {
     list_type = list_type.GetNonReferenceType();
 
   if (list_type.GetNumTemplateArguments() == 0)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_element_type = list_type.GetTypeTemplateArgument(0);
 
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 bool AbstractListFrontEnd::HasLoop(size_t count) {
@@ -240,7 +240,7 @@ ForwardListFrontEnd::ForwardListFrontEnd(ValueObject &valobj)
   Update();
 }
 
-size_t ForwardListFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t> ForwardListFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
 
@@ -253,8 +253,8 @@ size_t ForwardListFrontEnd::CalculateNumChildren() {
   return m_count;
 }
 
-ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(size_t idx) {
-  if (idx >= CalculateNumChildren())
+ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return nullptr;
 
   if (!m_head)
@@ -284,22 +284,22 @@ ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(size_t idx) {
                                    m_element_type);
 }
 
-bool ForwardListFrontEnd::Update() {
+lldb::ChildCacheState ForwardListFrontEnd::Update() {
   AbstractListFrontEnd::Update();
 
   Status err;
   ValueObjectSP backend_addr(m_backend.AddressOf(err));
   if (err.Fail() || !backend_addr)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
 
   ValueObjectSP impl_sp(m_backend.GetChildMemberWithName("__before_begin_"));
   if (!impl_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   impl_sp = GetFirstValueOfLibCXXCompressedPair(*impl_sp);
   if (!impl_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_head = impl_sp->GetChildMemberWithName("__next_").get();
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 ListFrontEnd::ListFrontEnd(lldb::ValueObjectSP valobj_sp)
@@ -308,7 +308,7 @@ ListFrontEnd::ListFrontEnd(lldb::ValueObjectSP valobj_sp)
     Update();
 }
 
-size_t ListFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t> ListFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
   if (!m_head || !m_tail || m_node_address == 0)
@@ -343,11 +343,11 @@ size_t ListFrontEnd::CalculateNumChildren() {
   }
 }
 
-lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(size_t idx) {
+lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {
   static ConstString g_value("__value_");
   static ConstString g_next("__next_");
 
-  if (idx >= CalculateNumChildren())
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return lldb::ValueObjectSP();
 
   if (!m_head || !m_tail || m_node_address == 0)
@@ -394,7 +394,7 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(size_t idx) {
                                    m_element_type);
 }
 
-bool ListFrontEnd::Update() {
+lldb::ChildCacheState ListFrontEnd::Update() {
   AbstractListFrontEnd::Update();
   m_tail = nullptr;
   m_node_address = 0;
@@ -402,16 +402,16 @@ bool ListFrontEnd::Update() {
   Status err;
   ValueObjectSP backend_addr(m_backend.AddressOf(err));
   if (err.Fail() || !backend_addr)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_node_address = backend_addr->GetValueAsUnsigned(0);
   if (!m_node_address || m_node_address == LLDB_INVALID_ADDRESS)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   ValueObjectSP impl_sp(m_backend.GetChildMemberWithName("__end_"));
   if (!impl_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_head = impl_sp->GetChildMemberWithName("__next_").get();
   m_tail = impl_sp->GetChildMemberWithName("__prev_").get();
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 SyntheticChildrenFrontEnd *formatters::LibcxxStdListSyntheticFrontEndCreator(

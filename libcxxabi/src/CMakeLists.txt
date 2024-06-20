@@ -166,7 +166,10 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
   endif()
 endif()
-target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_BUILTINS_LIBRARY} ${LIBCXXABI_LIBRARIES})
+target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_LIBRARIES})
+if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
+endif()
 target_link_libraries(cxxabi_shared_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_shared_objects
   PROPERTIES
@@ -210,31 +213,34 @@ if (LIBCXXABI_ENABLE_SHARED)
   endif()
 
   add_library(cxxabi-reexports INTERFACE)
-
-  # -exported_symbols_list is only available on Apple platforms
-  if (APPLE)
-    function(export_symbols file)
+  function(reexport_symbols file)
+    # -exported_symbols_list is only available on Apple platforms
+    if (APPLE)
       target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${file}")
-    endfunction()
-    function(reexport_symbols file)
-      export_symbols("${file}")
       target_link_libraries(cxxabi-reexports INTERFACE "-Wl,-reexported_symbols_list,${file}")
-    endfunction()
-
-    export_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
-
-    if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
     endif()
+  endfunction()
 
-    if (LIBCXXABI_ENABLE_EXCEPTIONS)
-      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/exceptions.exp")
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/cxxabiv1.exp")
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/fundamental-types.exp")
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-misc.exp")
 
-      if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
-        reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
-      else()
-        reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
-      endif()
+  if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
+  endif()
+
+  # Note that std:: exception types are always defined by the library regardless of
+  # whether the exception runtime machinery is provided.
+  reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-exceptions.exp")
+
+  if (LIBCXXABI_ENABLE_EXCEPTIONS)
+    reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-exceptions.exp")
+
+    if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
+      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
+    else()
+      reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
     endif()
   endif()
 endif()
@@ -262,7 +268,10 @@ if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   # then its code shouldn't declare them with hidden visibility.  They might
   # actually be provided by a shared library at link time.
   if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
-    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete=force-hidden)
+    if (NOT CXX_SUPPORTS_FVISIBILITY_GLOBAL_NEW_DELETE_EQ_FORCE_HIDDEN_FLAG)
+      target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility-global-new-delete-hidden)
+    endif()
   endif()
   # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in libcxx's
   # __config_site too. Define it in the same way here, to avoid redefinition
@@ -295,6 +304,7 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
+add_dependencies(cxxabi-test-depends cxxabi cxx)
 
 if (LIBCXXABI_INSTALL_LIBRARY)
   install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}

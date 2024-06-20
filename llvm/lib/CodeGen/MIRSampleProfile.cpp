@@ -372,7 +372,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
   MF.RenumberBlocks();
   if (ViewBFIBefore && ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
-       MF.getFunction().getName().equals(ViewBlockFreqFuncName))) {
+       MF.getFunction().getName() == ViewBlockFreqFuncName)) {
     MBFI->view("MIR_Prof_loader_b." + MF.getName(), false);
   }
 
@@ -382,7 +382,7 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
 
   if (ViewBFIAfter && ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
-       MF.getFunction().getName().equals(ViewBlockFreqFuncName))) {
+       MF.getFunction().getName() == ViewBlockFreqFuncName)) {
     MBFI->view("MIR_prof_loader_a." + MF.getName(), false);
   }
 

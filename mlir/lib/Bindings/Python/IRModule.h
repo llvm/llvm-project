@@ -4,6 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_IRMODULES_H
@@ -53,7 +54,7 @@ public:
            "cannot construct PyObjectRef with null referrent");
     assert(this->object && "cannot construct PyObjectRef with null object");
   }
-  PyObjectRef(PyObjectRef &&other)
+  PyObjectRef(PyObjectRef &&other) noexcept
       : referrent(other.referrent), object(std::move(other.object)) {
     other.referrent = nullptr;
     assert(!other.object);
@@ -200,6 +201,9 @@ public:
   /// Gets the count of live context objects. Used for testing.
   static size_t getLiveCount();
 
+  /// Get a list of Python objects which are still in the live context map.
+  std::vector<PyOperation *> getLiveOperationObjects();
+
   /// Gets the count of live operations associated with this context.
   /// Used for testing.
   size_t getLiveOperationCount();
@@ -214,11 +218,18 @@ public:
   /// This is useful for when some non-bindings code destroys the operation and
   /// the bindings need to made aware. For example, in the case when pass
   /// manager is run.
+  ///
+  /// Note that this does *NOT* clear the nested operations.
   void clearOperation(MlirOperation op);
 
   /// Clears all operations nested inside the given op using
   /// `clearOperation(MlirOperation)`.
   void clearOperationsInside(PyOperationBase &op);
+  void clearOperationsInside(MlirOperation op);
+
+  /// Clears the operaiton _and_ all operations inside using
+  /// `clearOperation(MlirOperation)`.
+  void clearOperationAndInside(PyOperationBase &op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.
@@ -241,6 +252,7 @@ public:
 
 private:
   PyMlirContext(MlirContext context);
+
   // Interns the mapping of live MlirContext::ptr to PyMlirContext instances,
   // preserving the relationship that an MlirContext maps to a single
   // PyMlirContext wrapper. This could be replaced in the future with an
@@ -484,7 +496,8 @@ public:
       mlirDialectRegistryDestroy(registry);
   }
   PyDialectRegistry(PyDialectRegistry &) = delete;
-  PyDialectRegistry(PyDialectRegistry &&other) : registry(other.registry) {
+  PyDialectRegistry(PyDialectRegistry &&other) noexcept
+      : registry(other.registry) {
     other.registry = {nullptr};
   }
 
@@ -572,6 +585,10 @@ public:
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const pybind11::object &fileObject,
                      std::optional<int64_t> bytecodeVersion);
+
+  // Implement the walk method.
+  void walk(std::function<MlirWalkResult(MlirOperation)> callback,
+            MlirWalkOrder walkOrder);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);

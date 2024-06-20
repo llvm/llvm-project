@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DEBUGNAMESDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
-#include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/ManualDWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "lldb/Utility/ConstString.h"
@@ -41,6 +40,11 @@ public:
                  llvm::function_ref<bool(DWARFDIE die)> callback) override {}
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
+      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+
+  /// Uses DWARF5's IDX_parent fields, when available, to speed up this query.
+  void GetFullyQualifiedType(
+      const DWARFDeclContext &context,
       llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetTypes(ConstString name,
                 llvm::function_ref<bool(DWARFDIE die)> callback) override;
@@ -79,9 +83,14 @@ private:
   std::unique_ptr<DebugNames> m_debug_names_up;
   ManualDWARFIndex m_fallback;
 
-  std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
+  DWARFUnit *GetNonSkeletonUnit(const DebugNames::Entry &entry) const;
+  DWARFDIE GetDIE(const DebugNames::Entry &entry) const;
   bool ProcessEntry(const DebugNames::Entry &entry,
                     llvm::function_ref<bool(DWARFDIE die)> callback);
+
+  /// Returns true if `parent_entries` have identical names to `parent_names`.
+  bool SameParentChain(llvm::ArrayRef<llvm::StringRef> parent_names,
+                       llvm::ArrayRef<DebugNames::Entry> parent_entries) const;
 
   static void MaybeLogLookupError(llvm::Error error,
                                   const DebugNames::NameIndex &ni,

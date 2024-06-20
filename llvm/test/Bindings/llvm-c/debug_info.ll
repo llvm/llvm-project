@@ -1,4 +1,4 @@
-; RUN: llvm-c-test --test-dibuilder | FileCheck %s
+; RUN: llvm-c-test --test-dibuilder-old-debuginfo-format | FileCheck %s
 
 ; CHECK: ; ModuleID = 'debuginfo.c'
 ; CHECK-NEXT: source_filename = "debuginfo.c"
@@ -8,8 +8,10 @@
 ; CHECK-NEXT:   call void @llvm.dbg.declare(metadata i64 0, metadata !38, metadata !DIExpression()), !dbg !43
 ; CHECK-NEXT:   call void @llvm.dbg.declare(metadata i64 0, metadata !39, metadata !DIExpression()), !dbg !43
 ; CHECK-NEXT:   call void @llvm.dbg.declare(metadata i64 0, metadata !40, metadata !DIExpression()), !dbg !43
-; CHECK:      vars:                                             ; No predecessors!
+; CHECK-NEXT:   br label %vars
+; CHECK:      vars:
 ; CHECK-NEXT:   call void @llvm.dbg.value(metadata i64 0, metadata !41, metadata !DIExpression(DW_OP_constu, 0, DW_OP_stack_value)), !dbg !44
+; CHECK-NEXT:   ret i64 0
 ; CHECK-NEXT: }
 
 ; CHECK:      ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)

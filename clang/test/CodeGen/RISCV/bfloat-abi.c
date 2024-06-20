@@ -467,7 +467,7 @@ struct floatbfloat3 {
 // CHECK-RV64-NEXT:    ret [2 x i64] [[TMP4]]
 //
 // CHECK-RV32-LABEL: define dso_local void @fh3
-// CHECK-RV32-SAME: (ptr noalias sret([[STRUCT_FLOATBFLOAT3:%.*]]) align 4 [[AGG_RESULT:%.*]], float noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]], bfloat noundef [[D:%.*]]) #[[ATTR0]] {
+// CHECK-RV32-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_FLOATBFLOAT3:%.*]]) align 4 [[AGG_RESULT:%.*]], float noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]], bfloat noundef [[D:%.*]]) #[[ATTR0]] {
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-RV32-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4
@@ -545,7 +545,7 @@ struct bfloat5 {
 // CHECK-RV64-NEXT:    ret [2 x i64] [[TMP5]]
 //
 // CHECK-RV32-LABEL: define dso_local void @h5
-// CHECK-RV32-SAME: (ptr noalias sret([[STRUCT_BFLOAT5:%.*]]) align 2 [[AGG_RESULT:%.*]], bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]], bfloat noundef [[D:%.*]], bfloat noundef [[E:%.*]]) #[[ATTR0]] {
+// CHECK-RV32-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_BFLOAT5:%.*]]) align 2 [[AGG_RESULT:%.*]], bfloat noundef [[A:%.*]], bfloat noundef [[B:%.*]], bfloat noundef [[C:%.*]], bfloat noundef [[D:%.*]], bfloat noundef [[E:%.*]]) #[[ATTR0]] {
 // CHECK-RV32-NEXT:  entry:
 // CHECK-RV32-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-RV32-NEXT:    [[A_ADDR:%.*]] = alloca bfloat, align 2

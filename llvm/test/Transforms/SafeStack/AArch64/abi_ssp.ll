@@ -1,5 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=aarch64-linux-android < %s -o - | FileCheck --check-prefixes=TLS,ANDROID %s
 ; RUN: opt -safe-stack -S -mtriple=aarch64-unknown-fuchsia < %s -o - | FileCheck --check-prefixes=TLS,FUCHSIA %s
+; RUN: opt -passes=safe-stack -S -mtriple=aarch64-linux-android < %s -o - | FileCheck --check-prefixes=TLS,ANDROID %s
+; RUN: opt -passes=safe-stack -S -mtriple=aarch64-unknown-fuchsia < %s -o - | FileCheck --check-prefixes=TLS,FUCHSIA %s
 
 define void @foo() nounwind uwtable safestack sspreq {
 entry:

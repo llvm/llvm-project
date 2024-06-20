@@ -75,6 +75,15 @@ class CommandObjectStatsDump : public CommandObjectParsed {
       case 'a':
         m_all_targets = true;
         break;
+      case 's':
+        m_stats_options.summary_only = true;
+        break;
+      case 'f':
+        m_stats_options.load_all_debug_info = true;
+        break;
+      case 't':
+        m_stats_options.include_transcript = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -83,13 +92,17 @@ class CommandObjectStatsDump : public CommandObjectParsed {
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_all_targets = false;
+      m_stats_options = StatisticsOptions();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return llvm::ArrayRef(g_statistics_dump_options);
     }
 
+    const StatisticsOptions &GetStatisticsOptions() { return m_stats_options; }
+
     bool m_all_targets = false;
+    StatisticsOptions m_stats_options = StatisticsOptions();
   };
 
 public:
@@ -109,7 +122,8 @@ protected:
       target = m_exe_ctx.GetTargetPtr();
 
     result.AppendMessageWithFormatv(
-        "{0:2}", DebuggerStats::ReportStatistics(GetDebugger(), target));
+        "{0:2}", DebuggerStats::ReportStatistics(
+                     GetDebugger(), target, m_options.GetStatisticsOptions()));
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 

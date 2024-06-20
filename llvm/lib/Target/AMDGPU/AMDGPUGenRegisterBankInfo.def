@@ -284,6 +284,7 @@ const RegisterBankInfo::ValueMapping *getValueMapping(unsigned BankID,
     break;
   }
 
+  assert(Idx < std::size(ValMappings));
   assert(Log2_32_Ceil(Size) == Log2_32_Ceil(ValMappings[Idx].BreakDown->Length));
   assert(BankID == ValMappings[Idx].BreakDown->RegBank->getID());
 

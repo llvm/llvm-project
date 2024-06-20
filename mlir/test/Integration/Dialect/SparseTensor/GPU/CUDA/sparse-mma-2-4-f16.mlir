@@ -4,7 +4,7 @@
 // RUN: mlir-opt \
 // RUN: --pass-pipeline="builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-nvgpu-to-nvvm,affine-expand-index-ops,lower-affine,convert-arith-to-llvm),convert-vector-to-llvm,canonicalize,cse)" \
 // RUN: %s \
-// RUN: | mlir-opt --test-lower-to-nvvm="cubin-chip=sm_80 cubin-features=+ptx71 cubin-format=%gpu_compilation_format" \
+// RUN: | mlir-opt --gpu-lower-to-nvvm-pipeline="cubin-chip=sm_80 cubin-features=+ptx71 cubin-format=%gpu_compilation_format" \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_c_runner_utils \

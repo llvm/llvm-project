@@ -1,5 +1,7 @@
 ; RUN: opt -passes=sroa,verify -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa,verify -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ; Check that single sliced allocas retain their assignment tracking debug info.
 
@@ -30,20 +32,20 @@ entry:
   %a = alloca %struct.a, align 1, !DIAssignID !23
   call void @llvm.dbg.assign(metadata i1 undef, metadata !15, metadata !DIExpression(), metadata !23, metadata ptr %a, metadata !DIExpression()), !dbg !24
   %0 = bitcast ptr %a to ptr, !dbg !25
-  call void @llvm.lifetime.start.p0i8(i64 8, ptr %0), !dbg !25
+  call void @llvm.lifetime.start.p0(i64 8, ptr %0), !dbg !25
   %b = getelementptr inbounds %struct.a, ptr %a, i32 0, i32 0, !dbg !26
   %arraydecay = getelementptr inbounds [8 x i8], ptr %b, i64 0, i64 0, !dbg !27
   %1 = load i32, ptr @c, align 4, !dbg !28
   %conv = sext i32 %1 to i64, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr align 1 %arraydecay, ptr align 1 null, i64 %conv, i1 false), !dbg !27
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %arraydecay, ptr align 1 null, i64 %conv, i1 false), !dbg !27
   %2 = bitcast ptr %a to ptr, !dbg !33
-  call void @llvm.lifetime.end.p0i8(i64 8, ptr %2), !dbg !33
+  call void @llvm.lifetime.end.p0(i64 8, ptr %2), !dbg !33
   ret void, !dbg !33
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}

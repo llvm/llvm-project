@@ -28,8 +28,5 @@ translating the following operations:
     *   `cf.cond_br`
 *   'func' Dialect
     *   `func.call`
-    *   `func.constant`
     *   `func.func`
     *   `func.return`
-*   'arith' Dialect
-    *   `arith.constant`

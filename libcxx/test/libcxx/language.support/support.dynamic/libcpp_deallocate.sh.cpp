@@ -11,7 +11,7 @@
 
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 // XFAIL: sanitizer-new-delete && !hwasan
 
@@ -20,6 +20,9 @@
 
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc
+
+// TODO(mordante) fix this test after updating clang in Docker
+// UNSUPPORTED: clang-15, clang-16, clang-17, clang-18, clang-19
 
 // RUN: %{build} -faligned-allocation -fsized-deallocation
 // RUN: %{run}
@@ -187,13 +190,13 @@ void test_allocator_and_new_match() {
   stats.reset();
 #if defined(NO_SIZE) && defined(NO_ALIGN)
   {
-    int* x = new int(42);
+    int* x = DoNotOptimize(new int(42));
     delete x;
     assert(stats.expect_plain());
   }
   stats.reset();
   {
-    AlignedType* a = new AlignedType();
+    AlignedType* a = DoNotOptimize(new AlignedType());
     delete a;
     assert(stats.expect_plain());
   }
@@ -202,14 +205,14 @@ void test_allocator_and_new_match() {
   stats.reset();
 #if TEST_STD_VER >= 11
   {
-    int* x = new int(42);
+    int* x = DoNotOptimize(new int(42));
     delete x;
     assert(stats.expect_plain());
   }
 #endif
   stats.reset();
   {
-    AlignedType* a = new AlignedType();
+    AlignedType* a = DoNotOptimize(new AlignedType());
     delete a;
     assert(stats.expect_align(TEST_ALIGNOF(AlignedType)));
   }
@@ -217,13 +220,13 @@ void test_allocator_and_new_match() {
 #elif defined(NO_ALIGN)
   stats.reset();
   {
-    int* x = new int(42);
+    int* x = DoNotOptimize(new int(42));
     delete x;
     assert(stats.expect_size(sizeof(int)));
   }
   stats.reset();
   {
-    AlignedType* a = new AlignedType();
+    AlignedType* a = DoNotOptimize(new AlignedType());
     delete a;
     assert(stats.expect_size(sizeof(AlignedType)));
   }
@@ -231,13 +234,13 @@ void test_allocator_and_new_match() {
 #else
   stats.reset();
   {
-    int* x = new int(42);
+    int* x = DoNotOptimize(new int(42));
     delete x;
     assert(stats.expect_size(sizeof(int)));
   }
   stats.reset();
   {
-    AlignedType* a = new AlignedType();
+    AlignedType* a = DoNotOptimize(new AlignedType());
     delete a;
     assert(stats.expect_size_align(sizeof(AlignedType),
                                    TEST_ALIGNOF(AlignedType)));

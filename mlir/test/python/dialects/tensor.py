@@ -4,6 +4,7 @@ from mlir.ir import *
 import mlir.dialects.arith as arith
 import mlir.dialects.func as func
 import mlir.dialects.tensor as tensor
+from mlir.extras import types as T
 
 
 def run(f):
@@ -139,3 +140,37 @@ def testFromElementsOp():
                 t = tensor.FromElementsOp(RankedTensorType.get((1, 2), f32), [c0, c1])
                 # CHECK: %{{.*}} = "tensor.from_elements"(%[[C0]], %[[C1]]) : (f32, f32) -> tensor<1x2xf32>
                 print(t)
+
+
+# CHECK-LABEL: TEST: testGenerateRegionOp
+@run
+def testGenerateRegionOp():
+    S = ShapedType.get_dynamic_size()
+    with Context(), Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            # CHECK: %[[VAL_0:.*]] = arith.constant 1 : index
+            # CHECK: %[[VAL_1:.*]] = arith.constant 2 : index
+            one = arith.constant(T.index(), 1)
+            two = arith.constant(T.index(), 2)
+
+            @tensor.generate(T.tensor(S, 3, S, T.index()), dynamic_extents=[one, two])
+            def generate_one(i: T.index(), j: T.index(), k: T.index()):
+                ij = arith.addi(i, j)
+                ijk = arith.addi(ij, k)
+                return ijk
+
+            assert (
+                isinstance(generate_one, Value)
+                and generate_one.owner.name == "tensor.generate"
+            )
+
+        # CHECK:         %[[GENERATED:.*]] = tensor.generate
+        # CHECK-SAME:    %[[VAL_0]],
+        # CHECK-SAME:    %[[VAL_1]] {
+        # CHECK:         ^bb0(%[[VAL_1:.*]]: index, %[[VAL_2:.*]]: index, %[[VAL_3:.*]]: index):
+        # CHECK:           %[[VAL_4:.*]] = arith.addi %[[VAL_1]], %[[VAL_2]] : index
+        # CHECK:           %[[VAL_5:.*]] = arith.addi %[[VAL_4]], %[[VAL_3]] : index
+        # CHECK:           tensor.yield %[[VAL_5]] : index
+        # CHECK:         } : tensor<?x3x?xindex>
+        print(module)

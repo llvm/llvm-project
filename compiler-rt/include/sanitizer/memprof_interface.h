@@ -59,6 +59,12 @@ const char *SANITIZER_CDECL __memprof_default_options(void);
 /// \returns 0 on success.
 int SANITIZER_CDECL __memprof_profile_dump(void);
 
+/// Closes the existing file descriptor, if it is valid and not stdout or
+/// stderr, and resets the internal state such that the profile filename is
+/// reopened on the next profile dump attempt. This can be used to enable
+/// multiple rounds of profiling on the same binary.
+void SANITIZER_CDECL __memprof_profile_reset(void);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

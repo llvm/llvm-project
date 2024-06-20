@@ -28,12 +28,12 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
+#include "clang/Analysis/FlowSensitive/AdornedCFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
-#include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -61,6 +61,11 @@ std::ostream &operator<<(std::ostream &OS,
 }
 
 namespace test {
+
+// Caps the number of block visits in any individual analysis. Given that test
+// code is typically quite small, we set a low number to help catch any problems
+// early. But, the choice is arbitrary.
+constexpr std::int32_t MaxBlockVisitsInAnalysis = 2'000;
 
 /// Returns the environment at the program point marked with `Annotation` from
 /// the mapping of annotated program points to analysis state.
@@ -95,7 +100,7 @@ struct AnalysisOutputs {
   const FunctionDecl *Target;
   /// Contains the control flow graph built from the body of the `Target`
   /// function and is analyzed.
-  const ControlFlowContext &CFCtx;
+  const AdornedCFG &ACFG;
   /// The analysis to be run.
   TypeErasedDataflowAnalysis &Analysis;
   /// Initial state to start the analysis.
@@ -256,9 +261,10 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
           llvm::errc::invalid_argument, "Could not find the target function.");
 
     // Build the control flow graph for the target function.
-    auto MaybeCFCtx = ControlFlowContext::build(*Target);
-    if (!MaybeCFCtx) return MaybeCFCtx.takeError();
-    auto &CFCtx = *MaybeCFCtx;
+    auto MaybeACFG = AdornedCFG::build(*Target);
+    if (!MaybeACFG)
+      return MaybeACFG.takeError();
+    auto &ACFG = *MaybeACFG;
 
     // Initialize states for running dataflow analysis.
     DataflowAnalysisContext DACtx(AI.SolverFactory(),
@@ -266,7 +272,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     Environment InitEnv(DACtx, *Target);
     auto Analysis = AI.MakeAnalysis(Context, InitEnv);
 
-    AnalysisOutputs AO{AnnotatedCode, Context, Target, CFCtx,
+    AnalysisOutputs AO{AnnotatedCode, Context, Target, ACFG,
                        Analysis,      InitEnv, {}};
 
     // Additional test setup.
@@ -277,8 +283,10 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     // If successful, the dataflow analysis returns a mapping from block IDs to
     // the post-analysis states for the CFG blocks that have been evaluated.
     llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
-        MaybeBlockStates = runTypeErasedDataflowAnalysis(
-            CFCtx, Analysis, InitEnv, TypeErasedPostVisitCFG);
+        MaybeBlockStates =
+            runTypeErasedDataflowAnalysis(ACFG, Analysis, InitEnv,
+                                          TypeErasedPostVisitCFG,
+                                          MaxBlockVisitsInAnalysis);
     if (!MaybeBlockStates) return MaybeBlockStates.takeError();
     AO.BlockStates = *MaybeBlockStates;
 
@@ -347,8 +355,8 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
   auto SetupTest = [&StmtToAnnotations,
                     PrevSetupTest = std::move(AI.SetupTest)](
                        AnalysisOutputs &AO) -> llvm::Error {
-    auto MaybeStmtToAnnotations = buildStatementToAnnotationMapping(
-        cast<FunctionDecl>(AO.InitEnv.getDeclCtx()), AO.Code);
+    auto MaybeStmtToAnnotations =
+        buildStatementToAnnotationMapping(AO.InitEnv.getCurrentFunc(), AO.Code);
     if (!MaybeStmtToAnnotations) {
       return MaybeStmtToAnnotations.takeError();
     }
@@ -420,9 +428,13 @@ llvm::Error checkDataflowWithNoopAnalysis(
              ASTContext &)>
         VerifyResults = [](const auto &, auto &) {},
     DataflowAnalysisOptions Options = {BuiltinOptions()},
-    LangStandard::Kind Std = LangStandard::lang_cxx17);
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback =
+        {});
 
 /// Returns the `ValueDecl` for the given identifier.
+/// The returned pointer is guaranteed to be non-null; the function asserts if
+/// no `ValueDecl` with the given name is found.
 ///
 /// Requirements:
 ///
@@ -444,7 +456,7 @@ const IndirectFieldDecl *findIndirectFieldDecl(ASTContext &ASTCtx,
 /// Requirements:
 ///
 ///   `Name` must be unique in `ASTCtx`.
-template <class LocT>
+template <class LocT = StorageLocation>
 LocT &getLocForDecl(ASTContext &ASTCtx, const Environment &Env,
                     llvm::StringRef Name) {
   const ValueDecl *VD = findValueDecl(ASTCtx, Name);
@@ -458,12 +470,21 @@ LocT &getLocForDecl(ASTContext &ASTCtx, const Environment &Env,
 /// Requirements:
 ///
 ///   `Name` must be unique in `ASTCtx`.
-template <class ValueT>
+template <class ValueT = Value>
 ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
                         llvm::StringRef Name) {
   const ValueDecl *VD = findValueDecl(ASTCtx, Name);
   assert(VD != nullptr);
   return *cast<ValueT>(Env.getValue(*VD));
+}
+
+/// Returns the storage location for the field called `Name` of `Loc`.
+/// Optionally casts the field storage location to `T`.
+template <typename T = StorageLocation>
+std::enable_if_t<std::is_base_of_v<StorageLocation, T>, T &>
+getFieldLoc(const RecordStorageLocation &Loc, llvm::StringRef Name,
+            ASTContext &ASTCtx) {
+  return *cast<T>(Loc.getChild(*findValueDecl(ASTCtx, Name)));
 }
 
 /// Returns the value of a `Field` on the record referenced by `Loc.`
@@ -476,6 +497,14 @@ inline Value *getFieldValue(const RecordStorageLocation *Loc,
   if (FieldLoc == nullptr)
     return nullptr;
   return Env.getValue(*FieldLoc);
+}
+
+/// Returns the value of a `Field` on the record referenced by `Loc.`
+/// Returns null if `Loc` is null.
+inline Value *getFieldValue(const RecordStorageLocation *Loc,
+                            llvm::StringRef Name, ASTContext &ASTCtx,
+                            const Environment &Env) {
+  return getFieldValue(Loc, *findValueDecl(ASTCtx, Name), Env);
 }
 
 /// Creates and owns constraints which are boolean values.

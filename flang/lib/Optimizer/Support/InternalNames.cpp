@@ -240,7 +240,8 @@ llvm::StringRef fir::NameUniquer::doProgramEntry() {
 
 std::pair<fir::NameUniquer::NameKind, fir::NameUniquer::DeconstructedName>
 fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
-  if (uniq.startswith("_Q")) {
+  uniq = fir::NameUniquer::dropTypeConversionMarkers(uniq);
+  if (uniq.starts_with("_Q")) {
     llvm::SmallVector<std::string> modules;
     llvm::SmallVector<std::string> procs;
     std::int64_t blockId = 0;
@@ -353,8 +354,8 @@ mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
 
 static std::string getDerivedTypeObjectName(llvm::StringRef mangledTypeName,
                                             const llvm::StringRef separator) {
-  if (mangledTypeName.ends_with(boxprocSuffix))
-    mangledTypeName = mangledTypeName.drop_back(boxprocSuffix.size());
+  mangledTypeName =
+      fir::NameUniquer::dropTypeConversionMarkers(mangledTypeName);
   auto result = fir::NameUniquer::deconstruct(mangledTypeName);
   if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return "";
@@ -378,4 +379,11 @@ fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
 std::string fir::NameUniquer::getTypeDescriptorBindingTableName(
     llvm::StringRef mangledTypeName) {
   return getDerivedTypeObjectName(mangledTypeName, bindingTableSeparator);
+}
+
+llvm::StringRef
+fir::NameUniquer::dropTypeConversionMarkers(llvm::StringRef mangledTypeName) {
+  if (mangledTypeName.ends_with(boxprocSuffix))
+    return mangledTypeName.drop_back(boxprocSuffix.size());
+  return mangledTypeName;
 }

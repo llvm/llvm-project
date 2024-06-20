@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define <4 x i32> @foo(<4 x i32> %x, i32 %f) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i32> undef, i32 [[F:%.*]], i64 0
+; CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x i32> poison, i32 [[F:%.*]], i64 0
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[F]], 1
 ; CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <4 x i32> [[VECINIT]], i32 [[ADD]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[F]], i64 0
@@ -31,8 +31,8 @@ define <4 x i32> @bar(<4 x i32> %x, i32 %f) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[F:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i32> [[TMP2]], <i32 2, i32 3>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    ret <4 x i32> [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+; CHECK-NEXT:    ret <4 x i32> [[TMP4]]
 ;
   %add = add nsw i32 %f, 2
   %vecinit = insertelement <4 x i32> undef, i32 %add, i32 0

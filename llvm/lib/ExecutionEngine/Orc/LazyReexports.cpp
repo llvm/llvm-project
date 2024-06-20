@@ -218,7 +218,7 @@ void LazyReexportsMaterializationUnit::materialize(
 
   // No registered dependencies, so these calls cannot fail.
   cantFail(R->notifyResolved(Stubs));
-  cantFail(R->notifyEmitted());
+  cantFail(R->notifyEmitted({}));
 }
 
 void LazyReexportsMaterializationUnit::discard(const JITDylib &JD,

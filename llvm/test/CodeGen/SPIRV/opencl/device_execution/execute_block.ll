@@ -1,5 +1,7 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 
+; REQUIRES: asserts
+
 ; CHECK: %[[#bool:]] = OpTypeBool
 ; CHECK: %[[#true:]] = OpConstantTrue %[[#bool]]
 ; CHECK: OpBranchConditional %[[#true]]

@@ -239,10 +239,8 @@ define i32 @test14(i32 %X1, i32 %X2) {
 
 define i32 @test15(i32 %X1, i32 %X2, i32 %X3) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[A:%.*]] = icmp ne i32 [[X1:%.*]], 0
 ; CHECK-NEXT:    [[B:%.*]] = icmp slt i32 [[X2:%.*]], [[X3:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[X1]], i32 0
+; CHECK-NEXT:    [[D:%.*]] = select i1 [[B]], i32 [[X1:%.*]], i32 0
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %A = icmp ne i32 %X1, 0

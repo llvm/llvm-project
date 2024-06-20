@@ -145,7 +145,7 @@ body:             |
     liveins: $z1
 
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp, debug-location !34
-    renamable $p0 = PTRUE_S 31, debug-location !34
+    renamable $p0 = PTRUE_S 31, implicit $vg, debug-location !34
     $x0 = ADDXri %stack.0, 0, 0, debug-location !34
     ST1W_IMM renamable $z1, killed renamable $p0, %stack.0, 0, debug-location !34 :: (store unknown-size into %stack.0, align 16)
     $z0 = COPY renamable $z1, debug-location !34
@@ -157,7 +157,7 @@ body:             |
     $z7 = COPY renamable $z1, debug-location !34
     BL @bar, csr_aarch64_sve_aapcs, implicit-def dead $lr, implicit $sp, implicit $z0, implicit $z1, implicit $z2, implicit $z3, implicit $z4, implicit $z5, implicit $z6, implicit $z7, implicit $x0, implicit-def $sp, implicit-def $z0, implicit-def $z1, debug-location !34
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp, debug-location !34
-    renamable $p0 = PTRUE_S 31, debug-location !34
+    renamable $p0 = PTRUE_S 31, implicit $vg, debug-location !34
     $z3 = IMPLICIT_DEF
     renamable $z1 = LD1W_IMM renamable $p0, %stack.0, 0, debug-location !34 :: (load unknown-size from %stack.0, align 16)
     ST1W_IMM renamable $z3, killed renamable $p0, %stack.0, 0 :: (store unknown-size into %stack.0, align 16)

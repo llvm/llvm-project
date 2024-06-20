@@ -371,7 +371,7 @@ func.func @divbyc(%arga: tensor<32xf64, #SV>,
 // CHECK:             %[[VAL_17:.*]] = math.log1p %[[VAL_16]] : f64
 // CHECK:             %[[VAL_18:.*]] = math.sin %[[VAL_17]] : f64
 // CHECK:             %[[VAL_19:.*]] = math.tanh %[[VAL_18]] : f64
-// CHECK:             %[[Y:.*]] = sparse_tensor.insert %[[VAL_19]] into %{{.*}}[%[[VAL_10]]] : tensor<32xf64, #sparse{{[0-9]*}}>
+// CHECK:             %[[Y:.*]] = tensor.insert %[[VAL_19]] into %{{.*}}[%[[VAL_10]]] : tensor<32xf64, #sparse{{[0-9]*}}>
 // CHECK:             scf.yield %[[Y]]
 // CHECK:           }
 // CHECK:           %[[VAL_20:.*]] = sparse_tensor.load %[[T]] hasInserts : tensor<32xf64, #sparse{{[0-9]*}}>
@@ -412,7 +412,7 @@ func.func @zero_preserving_math(%arga: tensor<32xf64, #SV>) -> tensor<32xf64, #S
 // CHECK:             %[[VAL_11:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_10]]] : memref<?xindex>
 // CHECK:             %[[VAL_12:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_10]]] : memref<?xcomplex<f64>>
 // CHECK:             %[[VAL_13:.*]] = complex.div %[[VAL_12]], %[[VAL_3]] : complex<f64>
-// CHECK:             %[[Y:.*]] = sparse_tensor.insert %[[VAL_13]] into %{{.*}}[%[[VAL_11]]] : tensor<32xcomplex<f64>, #sparse{{[0-9]*}}>
+// CHECK:             %[[Y:.*]] = tensor.insert %[[VAL_13]] into %{{.*}}[%[[VAL_11]]] : tensor<32xcomplex<f64>, #sparse{{[0-9]*}}>
 // CHECK:             scf.yield %[[Y]]
 // CHECK:           }
 // CHECK:           %[[VAL_14:.*]] = sparse_tensor.load %[[T]] hasInserts : tensor<32xcomplex<f64>, #sparse{{[0-9]*}}>

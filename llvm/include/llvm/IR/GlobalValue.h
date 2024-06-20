@@ -24,7 +24,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MD5.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -40,6 +39,10 @@ class Module;
 namespace Intrinsic {
 typedef unsigned ID;
 } // end namespace Intrinsic
+
+// Choose ';' as the delimiter. ':' was used once but it doesn't work well for
+// Objective-C functions which commonly have :'s in their names.
+inline constexpr char kGlobalIdentifierDelimiter = ';';
 
 class GlobalValue : public Constant {
 public:
@@ -356,6 +359,7 @@ public:
   // storage is shared between `G1` and `G2`.
   void setSanitizerMetadata(SanitizerMetadata Meta);
   void removeSanitizerMetadata();
+  void setNoSanitizeMetadata();
 
   bool isTagged() const {
     return hasSanitizerMetadata() && getSanitizerMetadata().Memtag;
@@ -560,8 +564,7 @@ public:
   /// arbitrary GlobalValue, this is not the function you're looking for; see
   /// Mangler.h.
   static StringRef dropLLVMManglingEscape(StringRef Name) {
-    if (!Name.empty() && Name[0] == '\1')
-      return Name.substr(1);
+    Name.consume_front("\1");
     return Name;
   }
 
@@ -584,7 +587,7 @@ public:
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).
-  static GUID getGUID(StringRef GlobalName) { return MD5Hash(GlobalName); }
+  static GUID getGUID(StringRef GlobalName);
 
   /// Return a 64-bit global unique ID constructed from global value name
   /// (i.e. returned by getGlobalIdentifier()).

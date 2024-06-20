@@ -26,7 +26,7 @@
     %p1.coerce.fca.1.extract = extractvalue [3 x i32] %p1.coerce, 1
     call void @llvm.dbg.value(metadata i32 %p1.coerce.fca.1.extract, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !18
     call void @llvm.dbg.value(metadata i32 undef, metadata !17, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32)), !dbg !18
-    %call = tail call arm_aapcscc i32 bitcast (i32 (...)* @fn2 to i32 (i32)*)(i32 %p1.coerce.fca.1.extract), !dbg !19
+    %call = tail call arm_aapcscc i32 @fn2(i32 %p1.coerce.fca.1.extract), !dbg !19
     %cmp = icmp sge i32 %p1.coerce.fca.0.extract, %call, !dbg !19
     %conv = zext i1 %cmp to i32, !dbg !19
     ret i32 %conv, !dbg !19

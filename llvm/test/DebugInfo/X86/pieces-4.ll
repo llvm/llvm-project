@@ -1,5 +1,7 @@
 ; RUN: llc < %s -experimental-debug-variable-locations=true | FileCheck %s
 ; RUN: llc -filetype=obj < %s -experimental-debug-variable-locations=true | llvm-dwarfdump -debug-loc - | FileCheck %s --check-prefix=DWARF
+; RUN: llc --try-experimental-debuginfo-iterators < %s -experimental-debug-variable-locations=true | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -filetype=obj < %s -experimental-debug-variable-locations=true | llvm-dwarfdump -debug-loc - | FileCheck %s --check-prefix=DWARF
 
 ; Compile the following with -O1:
 

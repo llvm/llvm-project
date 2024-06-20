@@ -33,12 +33,14 @@ public:
   constexpr expected(unexpected<E> unexp)
       : unexp(unexp.error()), is_expected(false) {}
 
-  constexpr bool has_value() { return is_expected; }
+  constexpr bool has_value() const { return is_expected; }
 
-  constexpr T value() { return exp; }
-  constexpr E error() { return unexp; }
+  constexpr T &value() { return exp; }
+  constexpr E &error() { return unexp; }
+  constexpr const T &value() const { return exp; }
+  constexpr const E &error() const { return unexp; }
 
-  constexpr operator bool() { return is_expected; }
+  constexpr operator bool() const { return is_expected; }
 
   constexpr T &operator*() { return exp; }
   constexpr const T &operator*() const { return exp; }

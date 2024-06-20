@@ -55,15 +55,6 @@ def MxSDT_BiArithCCRInOut : SDTypeProfile<2, 3, [
   /*   CCR */ SDTCisSameAs<1, 4>
 ]>;
 
-// RES1, RES2, CCR <- op LHS, RHS
-def MxSDT_2BiArithCCROut : SDTypeProfile<3, 2, [
-  /* RES 1 */ SDTCisInt<0>,
-  /* RES 2 */ SDTCisSameAs<0, 1>,
-  /*   CCR */ SDTCisVT<1, i8>,
-  /*   LHS */ SDTCisSameAs<0, 2>,
-  /*   RHS */ SDTCisSameAs<0, 3>
-]>;
-
 def MxSDT_CmpTest : SDTypeProfile<1, 2, [
    /* CCR */ SDTCisVT<0, i8>,
    /* Ops */ SDTCisSameAs<1, 2>
@@ -134,7 +125,7 @@ def MxAddX : SDNode<"M68kISD::ADDX", MxSDT_BiArithCCRInOut>;
 def MxSubX : SDNode<"M68kISD::SUBX", MxSDT_BiArithCCRInOut>;
 
 def MxSMul : SDNode<"M68kISD::SMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
-def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_2BiArithCCROut, [SDNPCommutative]>;
+def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 
 def MxCmp     : SDNode<"M68kISD::CMP", MxSDT_CmpTest>;
 def MxBtst    : SDNode<"M68kISD::BTST", MxSDT_CmpTest>;
@@ -186,6 +177,7 @@ let RenderMethod = "addRegOperands", SuperClasses = [MxRegClass]in {
   def MxDRegClass : MxOpClass<"DReg">;
 
   def MxFPDRegClass : MxOpClass<"FPDReg">;
+  def MxFPCRegClass : MxOpClass<"FPCReg">;
 }
 
 class MxOperand<ValueType vt, MxSize size, string letter, RegisterClass rc, dag pat = (null_frag)> {
@@ -208,38 +200,47 @@ class MxRegOp<ValueType vt,
 
 // REGISTER DIRECT. The operand is in the data register specified by
 // the effective address register field.
-def MxXRD16 : MxRegOp<i16, XR16, MxSize16, "r">;
-def MxXRD32 : MxRegOp<i32, XR32, MxSize32, "r">;
-
-def MxXRD16_TC : MxRegOp<i16, XR16_TC, MxSize16, "r">;
-def MxXRD32_TC : MxRegOp<i32, XR32_TC, MxSize32, "r">;
+foreach size = [16, 32] in {
+  def MxXRD # size : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("XR"#size),
+                             !cast<MxSize>("MxSize"#size), "r">;
+  def MxXRD # size # _TC : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("XR"#size#"_TC"),
+                                   !cast<MxSize>("MxSize"#size), "r">;
+} // foreach size
 
 // DATA REGISTER DIRECT. The operand is in the data register specified by
 // the effective address register field.
 let ParserMatchClass = MxDRegClass in {
-  def MxDRD8  : MxRegOp<i8,  DR8,  MxSize8,  "d">;
-  def MxDRD16 : MxRegOp<i16, DR16, MxSize16, "d">;
-  def MxDRD32 : MxRegOp<i32, DR32, MxSize32, "d">;
-
-  def MxDRD16_TC : MxRegOp<i16, DR16_TC, MxSize16, "d">;
-  def MxDRD32_TC : MxRegOp<i32, DR32_TC, MxSize32, "d">;
-}
+foreach size = [8, 16, 32] in {
+  def MxDRD # size : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("DR"#size),
+                             !cast<MxSize>("MxSize"#size), "d">;
+  if !gt(size, 8) then
+  def MxDRD # size # _TC : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("DR"#size#"_TC"),
+                                   !cast<MxSize>("MxSize"#size), "d">;
+} // foreach size
+} // let ParserMatchClass
 
 // ADDRESS REGISTER DIRECT. The operand is in the address register specified by
 // the effective address register field.
 let ParserMatchClass = MxARegClass in {
-  def MxARD16 : MxRegOp<i16, AR16, MxSize16, "a">;
-  def MxARD32 : MxRegOp<i32, AR32, MxSize32, "a">;
-
-  def MxARD16_TC : MxRegOp<i16, AR16_TC, MxSize16, "a">;
-  def MxARD32_TC : MxRegOp<i32, AR32_TC, MxSize32, "a">;
-}
+foreach size = [16, 32] in {
+  def MxARD # size : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("AR"#size),
+                             !cast<MxSize>("MxSize"#size), "a">;
+  def MxARD # size # _TC : MxRegOp<!cast<ValueType>("i"#size), !cast<MxRegClass>("AR"#size#"_TC"),
+                                   !cast<MxSize>("MxSize"#size), "a">;
+} // foreach size
+} // let ParserMatchClass
 
 // FLOATING POINT DATA REGISTER.
 let ParserMatchClass = MxFPDRegClass in {
   def MxFPR32 : MxRegOp<f32, FPDR32, MxSizeF32, "fp">;
   def MxFPR64 : MxRegOp<f64, FPDR64, MxSizeF64, "fp">;
   def MxFPR80 : MxRegOp<f80, FPDR80, MxSizeF80, "fp">;
+}
+
+// FLOATING POINT SYSTEM CONTROL REGISTER
+let ParserMatchClass = MxFPCRegClass in {
+  def MxFPCSR : MxRegOp<i32, FPCSC, MxSize32, "fpcs">;
+  def MxFPIR  : MxRegOp<i32, FPIC,  MxSize32, "fpi">;
 }
 
 class MxMemOp<dag ops, MxSize size, string letter,
@@ -257,13 +258,11 @@ class MxMemOp<dag ops, MxSize size, string letter,
 // a data reference with the exception of the jump and jump-to-subroutine
 // instructions.
 def MxARI         : MxOpClass<"ARI">;
-def MxARI8        : MxMemOp<(ops AR32), MxSize8,  "j", "printARI8Mem", MxARI>;
-def MxARI16       : MxMemOp<(ops AR32), MxSize16, "j", "printARI16Mem", MxARI>;
-def MxARI32       : MxMemOp<(ops AR32), MxSize32, "j", "printARI32Mem", MxARI>;
-
-def MxARI8_TC     : MxMemOp<(ops AR32_TC), MxSize8,  "j", "printARI8Mem", MxARI>;
-def MxARI16_TC    : MxMemOp<(ops AR32_TC), MxSize16, "j", "printARI16Mem", MxARI>;
-def MxARI32_TC    : MxMemOp<(ops AR32_TC), MxSize32, "j", "printARI32Mem", MxARI>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARI # size       : MxMemOp<(ops AR32),    ResSize, "j", "printARI"#size#"Mem", MxARI>;
+  def MxARI # size # _TC : MxMemOp<(ops AR32_TC), ResSize, "j", "printARI"#size#"Mem", MxARI>;
+} // foreach size
 
 // ADDRESS REGISTER INDIRECT WITH POSTINCREMENT. The address of the operand is
 // in the address register specified by the register field. After the operand
@@ -273,13 +272,11 @@ def MxARI32_TC    : MxMemOp<(ops AR32_TC), MxSize32, "j", "printARI32Mem", MxARI
 // by two rather than one to keep the stack pointer on a word boundary.
 // The reference is classified as a data reference.
 def MxARIPI       : MxOpClass<"ARIPI">;
-def MxARIPI8      : MxMemOp<(ops AR32), MxSize8,  "o", "printARIPI8Mem", MxARIPI>;
-def MxARIPI16     : MxMemOp<(ops AR32), MxSize16, "o", "printARIPI16Mem", MxARIPI>;
-def MxARIPI32     : MxMemOp<(ops AR32), MxSize32, "o", "printARIPI32Mem", MxARIPI>;
-
-def MxARIPI8_TC   : MxMemOp<(ops AR32_TC), MxSize8,  "o", "printARIPI8Mem", MxARIPI>;
-def MxARIPI16_TC  : MxMemOp<(ops AR32_TC), MxSize16, "o", "printARIPI16Mem", MxARIPI>;
-def MxARIPI32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "o", "printARIPI32Mem", MxARIPI>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARIPI # size       : MxMemOp<(ops AR32),    ResSize, "o", "printARIPI"#size#"Mem", MxARIPI>;
+  def MxARIPI # size # _TC : MxMemOp<(ops AR32_TC), ResSize, "o", "printARIPI"#size#"Mem", MxARIPI>;
+} // foreach size
 
 // ADDRESS REGISTER INDIRECT WITH PREDECREMENT. The address of the operand is in
 // the address register specified by the register field. Before the operand
@@ -289,13 +286,11 @@ def MxARIPI32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "o", "printARIPI32Mem", MxA
 // two rather than one to keep the stack pointer on a word boundary.
 // The reference is classified as a data reference.
 def MxARIPD       : MxOpClass<"ARIPD">;
-def MxARIPD8      : MxMemOp<(ops AR32), MxSize8,  "e", "printARIPD8Mem", MxARIPD>;
-def MxARIPD16     : MxMemOp<(ops AR32), MxSize16, "e", "printARIPD16Mem", MxARIPD>;
-def MxARIPD32     : MxMemOp<(ops AR32), MxSize32, "e", "printARIPD32Mem", MxARIPD>;
-
-def MxARIPD8_TC   : MxMemOp<(ops AR32_TC), MxSize8,  "e", "printARIPD8Mem", MxARIPD>;
-def MxARIPD16_TC  : MxMemOp<(ops AR32_TC), MxSize16, "e", "printARIPD16Mem", MxARIPD>;
-def MxARIPD32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "e", "printARIPD32Mem", MxARIPD>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARIPD # size       : MxMemOp<(ops AR32),    ResSize, "e", "printARIPD"#size#"Mem", MxARIPD>;
+  def MxARIPD # size # _TC : MxMemOp<(ops AR32_TC), ResSize, "e", "printARIPD"#size#"Mem", MxARIPD>;
+} // foreach size
 
 // ADDRESS REGISTER INDIRECT WITH DISPLACEMENT. This addressing mode requires one
 // word of extension. The address of the operand is the sum of the address in
@@ -303,13 +298,11 @@ def MxARIPD32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "e", "printARIPD32Mem", MxA
 // extension word. The reference is classified as a data reference with the
 // exception of the jump and jump-to-subroutine instructions.
 def MxARID        : MxOpClass<"ARID">;
-def MxARID8       : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize8,  "p", "printARID8Mem", MxARID>;
-def MxARID16      : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize16, "p", "printARID16Mem", MxARID>;
-def MxARID32      : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize32, "p", "printARID32Mem", MxARID>;
-
-def MxARID8_TC    : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize8,  "p", "printARID8Mem", MxARID>;
-def MxARID16_TC   : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize16, "p", "printARID16Mem", MxARID>;
-def MxARID32_TC   : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize32, "p", "printARID32Mem", MxARID>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARID # size       : MxMemOp<(ops i16imm:$disp, AR32:$reg),    ResSize, "p", "printARID"#size#"Mem", MxARID>;
+  def MxARID # size # _TC : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), ResSize, "p", "printARID"#size#"Mem", MxARID>;
+} // foreach size
 
 // ADDRESS REGISTER INDIRECT WITH INDEX. This addressing mode requires one word
 // of extension. The address of the operand is the sum of the address in the
@@ -318,19 +311,11 @@ def MxARID32_TC   : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize32, "p", "pr
 // The reference is classified as a data reference with the exception of the
 // jump and jump-to-subroutine instructions
 def MxARII       : MxOpClass<"ARII">;
-def MxARII8      : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
-                           MxSize8,  "f", "printARII8Mem", MxARII>;
-def MxARII16     : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
-                           MxSize16, "f", "printARII16Mem", MxARII>;
-def MxARII32     : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
-                           MxSize32, "f", "printARII32Mem", MxARII>;
-
-def MxARII8_TC   : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
-                           MxSize8,  "f", "printARII8Mem", MxARII>;
-def MxARII16_TC  : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
-                           MxSize16, "f", "printARII16Mem", MxARII>;
-def MxARII32_TC  : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
-                           MxSize32, "f", "printARII32Mem", MxARII>;
+foreach size = ["8", "16", "32"] in {
+  defvar ResSize = !cast<MxSize>("MxSize"#size);
+  def MxARII # size       : MxMemOp<(ops i8imm:$disp, AR32:$reg,    XR32:$index), ResSize, "f", "printARII"#size#"Mem", MxARII>;
+  def MxARII # size # _TC : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32:$index), ResSize, "f", "printARII"#size#"Mem", MxARII>;
+} // foreach size
 
 // ABSOLUTE SHORT ADDRESS. This addressing mode requires one word of extension.
 // The address of the operand is the extension word. The 16-bit address is sign
@@ -363,14 +348,14 @@ def MxPCD : MxOpClass<"PCD">;
 def MxPCI : MxOpClass<"PCI">;
 
 let OperandType = "OPERAND_PCREL" in {
+foreach size = ["8", "16", "32"] in {
+defvar ResSize = !cast<MxSize>("MxSize"#size);
 // PROGRAM COUNTER WITH DISPLACEMENT. This addressing mode requires one word of
 // extension. The address of the operand is the sum of the address in the program
 // counter and the Sign-extended 16-bit displacement integer in the extension
 // word. The value in the program counter is the address of the extension word.
 // The reference is classified as a program reference.
-def MxPCD8     : MxMemOp<(ops i16imm), MxSize8,  "q", "printPCD8Mem", MxPCD>;
-def MxPCD16    : MxMemOp<(ops i16imm), MxSize16, "q", "printPCD16Mem", MxPCD>;
-def MxPCD32    : MxMemOp<(ops i16imm), MxSize32, "q", "printPCD32Mem", MxPCD>;
+def MxPCD # size : MxMemOp<(ops i16imm), ResSize,  "q", "printPCD"#size#"Mem", MxPCD>;
 
 // PROGRAM COUNTER WITH INDEX. This addressing mode requires one word of
 // extension. The address is the sum of the address in the program counter, the
@@ -378,9 +363,8 @@ def MxPCD32    : MxMemOp<(ops i16imm), MxSize32, "q", "printPCD32Mem", MxPCD>;
 // word, and the contents of the index register.  The value in the program
 // counter is the address of the extension word. This reference is classified as
 // a program reference.
-def MxPCI8   : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize8,  "k", "printPCI8Mem", MxPCI>;
-def MxPCI16  : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize16, "k", "printPCI16Mem", MxPCI>;
-def MxPCI32  : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize32, "k", "printPCI32Mem", MxPCI>;
+def MxPCI # size : MxMemOp<(ops i8imm:$disp, XR32:$index), ResSize,  "k", "printPCI"#size#"Mem", MxPCI>;
+} // foreach size
 } // OPERAND_PCREL
 
 def MxImm : AsmOperandClass {
@@ -515,9 +499,14 @@ def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
 // Pattern Fragments
 //===----------------------------------------------------------------------===//
 
-def MximmSExt8  : PatLeaf<(i8  imm)>;
-def MximmSExt16 : PatLeaf<(i16 imm)>;
-def MximmSExt32 : PatLeaf<(i32 imm)>;
+def Mxi8immSExt8  : PatLeaf<(i8  imm)>;
+def MximmSExt8    : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
+
+def Mxi16immSExt16 : PatLeaf<(i16 imm)>;
+def MximmSExt16    : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
+
+def Mxi32immSExt32 : PatLeaf<(i32 imm)>;
+def MximmSExt32    : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
 
 // Used for Shifts and Rotations, since M68k immediates in these instructions
 // are 1 <= i <= 8. Generally, if immediate is bigger than 8 it will be moved
@@ -710,7 +699,7 @@ foreach size = [8, 16, 32] in {
   // #imm
   def MxOp#size#AddrMode_i
     : MxImmOpBundle<size, !cast<MxOperand>("Mxi"#size#"imm"),
-                    !cast<PatFrag>("MximmSExt"#size)>;
+                    !cast<PatFrag>("Mxi"#size#"immSExt"#size)>;
 } // foreach size = [8, 16, 32]
 
 foreach size = [16, 32] in {
@@ -727,6 +716,9 @@ foreach size = [32, 64, 80] in
 def MxOp#size#AddrMode_fpr
   : MxOpBundle<size, !cast<MxOperand>("MxFPR"#size), ?>;
 
+def MxOp32AddrMode_fpcs : MxOpBundle<32, MxFPCSR, ?>;
+def MxOp32AddrMode_fpi  : MxOpBundle<32, MxFPIR, ?>;
+
 class MxType8Class<string rLet, MxOperand reg>
     : MxType<i8, "b", "", rLet, reg,
              MxARI8,   MxCP_ARI,
@@ -737,7 +729,7 @@ class MxType8Class<string rLet, MxOperand reg>
              MxAL8,    MxCP_AL,
              MxPCD8,   MxCP_PCD,
              MxPCI8,   MxCP_PCI,
-             Mxi8imm,  MximmSExt8,
+             Mxi8imm,  Mxi8immSExt8,
              Mxloadi8>;
 
 def MxType8 : MxType8Class<?,?>;
@@ -752,7 +744,7 @@ class MxType16Class<string rLet, MxOperand reg>
              MxAL16,    MxCP_AL,
              MxPCD16,   MxCP_PCD,
              MxPCI16,   MxCP_PCI,
-             Mxi16imm,  MximmSExt16,
+             Mxi16imm,  Mxi16immSExt16,
              Mxloadi16>;
 
 def MxType16 : MxType16Class<?,?>;
@@ -767,7 +759,7 @@ class MxType32Class<string rLet, MxOperand reg>
              MxAL32,    MxCP_AL,
              MxPCD32,   MxCP_PCD,
              MxPCI32,   MxCP_PCI,
-             Mxi32imm,  MximmSExt32,
+             Mxi32imm,  Mxi32immSExt32,
              Mxloadi32>;
 
 def MxType32 : MxType32Class<?,?>;

@@ -98,8 +98,8 @@ class FrameOptimizerPass : public BinaryFunctionPass {
   void removeUnusedStores(const FrameAnalysis &FA, BinaryFunction &BF);
 
   /// Perform shrinkwrapping step
-  void performShrinkWrapping(const RegAnalysis &RA, const FrameAnalysis &FA,
-                             BinaryContext &BC);
+  Error performShrinkWrapping(const RegAnalysis &RA, const FrameAnalysis &FA,
+                              BinaryContext &BC);
 
 public:
   explicit FrameOptimizerPass(const cl::opt<bool> &PrintPass)
@@ -108,7 +108,7 @@ public:
   const char *getName() const override { return "frame-optimizer"; }
 
   /// Pass entry point
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 
   bool shouldPrint(const BinaryFunction &BF) const override {
     return BinaryFunctionPass::shouldPrint(BF) && FuncsChanged.count(&BF) > 0;

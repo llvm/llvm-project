@@ -141,8 +141,8 @@ RawComment::RawComment(const SourceManager &SourceMgr, SourceRange SR,
     Kind = K.first;
     IsTrailingComment |= K.second;
 
-    IsAlmostTrailingComment = RawText.startswith("//<") ||
-                                 RawText.startswith("/*<");
+    IsAlmostTrailingComment =
+        RawText.starts_with("//<") || RawText.starts_with("/*<");
   } else {
     Kind = RCK_Merged;
     IsTrailingComment =

@@ -588,5 +588,30 @@ TEST_F(PragmaIncludeTest, OutlivesFMAndSM) {
   EXPECT_THAT(PI.getExporters(Private2FE.get(), FM),
               testing::ElementsAre(llvm::cantFail(FM.getFileRef("public.h"))));
 }
+
+TEST_F(PragmaIncludeTest, CanRecordManyTimes) {
+  Inputs.Code = R"cpp(
+    #include "public.h"
+  )cpp";
+  Inputs.ExtraFiles["public.h"] = R"cpp(
+    #include "private.h"
+  )cpp";
+  Inputs.ExtraFiles["private.h"] = R"cpp(
+    // IWYU pragma: private, include "public.h"
+  )cpp";
+
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  auto PrivateFE = FM.getFile("private.h");
+  llvm::StringRef Public = PI.getPublic(PrivateFE.get());
+  EXPECT_EQ(Public, "\"public.h\"");
+
+  // This build populates same PI during build, but this time we don't have
+  // any IWYU pragmas. Make sure strings from previous recordings are still
+  // alive.
+  Inputs.Code = "";
+  build();
+  EXPECT_EQ(Public, "\"public.h\"");
+}
 } // namespace
 } // namespace clang::include_cleaner

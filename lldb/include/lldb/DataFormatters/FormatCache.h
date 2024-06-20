@@ -45,14 +45,11 @@ private:
     void Set(lldb::TypeSummaryImplSP);
     void Set(lldb::SyntheticChildrenSP);
   };
-  typedef std::map<ConstString, Entry> CacheMap;
-  CacheMap m_map;
+  std::map<ConstString, Entry> m_entries;
   std::recursive_mutex m_mutex;
 
   uint64_t m_cache_hits = 0;
   uint64_t m_cache_misses = 0;
-
-  Entry &GetEntry(ConstString type);
 
 public:
   FormatCache() = default;

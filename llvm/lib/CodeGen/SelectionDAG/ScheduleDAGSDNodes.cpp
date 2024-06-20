@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -512,7 +513,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         Dep.setLatency(OpLatency);
         if (!isChain && !UnitLatencies) {
           computeOperandLatency(OpN, N, i, Dep);
-          ST.adjustSchedDependency(OpSU, DefIdx, &SU, i, Dep);
+          ST.adjustSchedDependency(OpSU, DefIdx, &SU, i, Dep, nullptr);
         }
 
         if (!SU.addPred(Dep) && !Dep.isCtrl() && OpSU->NumRegDefsLeft > 1) {
@@ -659,18 +660,19 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
   if (Use->isMachineOpcode())
     // Adjust the use operand index by num of defs.
     OpIdx += TII->get(Use->getMachineOpcode()).getNumDefs();
-  int Latency = TII->getOperandLatency(InstrItins, Def, DefIdx, Use, OpIdx);
-  if (Latency > 1 && Use->getOpcode() == ISD::CopyToReg &&
+  std::optional<unsigned> Latency =
+      TII->getOperandLatency(InstrItins, Def, DefIdx, Use, OpIdx);
+  if (Latency > 1U && Use->getOpcode() == ISD::CopyToReg &&
       !BB->succ_empty()) {
     unsigned Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
     if (Register::isVirtualRegister(Reg))
       // This copy is a liveout value. It is likely coalesced, so reduce the
       // latency so not to penalize the def.
       // FIXME: need target specific adjustment here?
-      Latency = Latency - 1;
+      Latency = *Latency - 1;
   }
-  if (Latency >= 0)
-    dep.setLatency(Latency);
+  if (Latency)
+    dep.setLatency(*Latency);
 }
 
 void ScheduleDAGSDNodes::dumpNode(const SUnit &SU) const {
@@ -887,8 +889,9 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
 
     if (MI->isCandidateForCallSiteEntry() &&
-        DAG->getTarget().Options.EmitCallSiteInfo)
-      MF.addCallArgsForwardingRegs(MI, DAG->getCallSiteInfo(Node));
+        DAG->getTarget().Options.EmitCallSiteInfo) {
+      MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
+    }
 
     if (DAG->getNoMergeSiteInfo(Node)) {
       MI->setFlag(MachineInstr::MIFlag::NoMerge);
@@ -896,6 +899,14 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
 
     if (MDNode *MD = DAG->getPCSections(Node))
       MI->setPCSections(MF, MD);
+
+    // Set MMRAs on _all_ added instructions.
+    if (MDNode *MMRA = DAG->getMMRAMetadata(Node)) {
+      for (MachineBasicBlock::iterator It = MI->getIterator(),
+                                       End = std::next(After);
+           It != End; ++It)
+        It->setMMRAMetadata(MF, MMRA);
+    }
 
     return MI;
   };

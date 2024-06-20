@@ -11,7 +11,7 @@ func.func @single_iteration_some(%A: memref<?x?x?xi32>) {
   scf.parallel (%i0, %i1, %i2) = (%c0, %c3, %c7) to (%c1, %c6, %c10) step (%c1, %c2, %c3) {
     %c42 = arith.constant 42 : i32
     memref.store %c42, %A[%i0, %i1, %i2] : memref<?x?x?xi32>
-    scf.yield
+    scf.reduce
   }
   return
 }
@@ -26,7 +26,7 @@ func.func @single_iteration_some(%A: memref<?x?x?xi32>) {
 // CHECK-DAG:           [[C0:%.*]] = arith.constant 0 : index
 // CHECK:           scf.parallel ([[V0:%.*]]) = ([[C3]]) to ([[C6]]) step ([[C2]]) {
 // CHECK:             memref.store [[C42]], [[ARG0]]{{\[}}[[C0]], [[V0]], [[C7]]] : memref<?x?x?xi32>
-// CHECK:             scf.yield
+// CHECK:             scf.reduce
 // CHECK:           }
 // CHECK:           return
 
@@ -42,7 +42,7 @@ func.func @single_iteration_all(%A: memref<?x?x?xi32>) {
   scf.parallel (%i0, %i1, %i2) = (%c0, %c3, %c7) to (%c1, %c6, %c10) step (%c1, %c3, %c3) {
     %c42 = arith.constant 42 : i32
     memref.store %c42, %A[%i0, %i1, %i2] : memref<?x?x?xi32>
-    scf.yield
+    scf.reduce
   }
   return
 }
@@ -55,7 +55,7 @@ func.func @single_iteration_all(%A: memref<?x?x?xi32>) {
 // CHECK-DAG:           [[C0:%.*]] = arith.constant 0 : index
 // CHECK-NOT:           scf.parallel
 // CHECK:               memref.store [[C42]], [[ARG0]]{{\[}}[[C0]], [[C3]], [[C7]]] : memref<?x?x?xi32>
-// CHECK-NOT:           scf.yield
+// CHECK-NOT:           scf.reduce
 // CHECK:               return
 
 // -----
@@ -67,17 +67,15 @@ func.func @single_iteration_reduce(%A: index, %B: index) -> (index, index) {
   %c3 = arith.constant 3 : index
   %c6 = arith.constant 6 : index
   %0:2 = scf.parallel (%i0, %i1) = (%c1, %c3) to (%c2, %c6) step (%c1, %c3) init(%A, %B) -> (index, index) {
-    scf.reduce(%i0) : index {
+    scf.reduce(%i0, %i1 : index, index)  {
     ^bb0(%lhs: index, %rhs: index):
       %1 = arith.addi %lhs, %rhs : index
       scf.reduce.return %1 : index
-    }
-    scf.reduce(%i1) : index {
+    }, {
     ^bb0(%lhs: index, %rhs: index):
       %2 = arith.muli %lhs, %rhs : index
       scf.reduce.return %2 : index
     }
-    scf.yield
   }
   return %0#0, %0#1 : index, index
 }
@@ -109,11 +107,11 @@ func.func @nested_parallel(%0: memref<?x?x?xf64>) -> memref<?x?x?xf64> {
       scf.parallel (%arg3) = (%c0) to (%3) step (%c1) {
         %5 = memref.load %0[%arg1, %arg2, %arg3] : memref<?x?x?xf64>
         memref.store %5, %4[%arg1, %arg2, %arg3] : memref<?x?x?xf64>
-        scf.yield
+        scf.reduce
       }
-      scf.yield
+      scf.reduce
     }
-    scf.yield
+    scf.reduce
   }
   return %4 : memref<?x?x?xf64>
 }
@@ -759,66 +757,15 @@ func.func @remove_empty_parallel_loop(%lb: index, %ub: index, %s: index) {
   // CHECK-NOT: test.transform
   %0 = scf.parallel (%i, %j, %k) = (%lb, %ub, %lb) to (%ub, %ub, %ub) step (%s, %s, %s) init(%init) -> f32 {
     %1 = "test.produce"() : () -> f32
-    scf.reduce(%1) : f32 {
+    scf.reduce(%1 : f32) {
     ^bb0(%lhs: f32, %rhs: f32):
       %2 = "test.transform"(%lhs, %rhs) : (f32, f32) -> f32
       scf.reduce.return %2 : f32
     }
-    scf.yield
   }
   // CHECK: "test.consume"(%[[INIT]])
   "test.consume"(%0) : (f32) -> ()
   return
-}
-
-// -----
-
-func.func private @process(%0 : memref<128x128xf32>)
-func.func private @process_tensor(%0 : tensor<128x128xf32>) -> memref<128x128xf32>
-
-// CHECK-LABEL: last_value
-//  CHECK-SAME:   %[[T0:[0-9a-z]*]]: tensor<128x128xf32>
-//  CHECK-SAME:   %[[T1:[0-9a-z]*]]: tensor<128x128xf32>
-//  CHECK-SAME:   %[[T2:[0-9a-z]*]]: tensor<128x128xf32>
-//  CHECK-SAME:   %[[M0:[0-9a-z]*]]: memref<128x128xf32>
-func.func @last_value(%t0: tensor<128x128xf32>, %t1: tensor<128x128xf32>,
-                 %t2: tensor<128x128xf32>, %m0: memref<128x128xf32>,
-                 %lb : index, %ub : index, %step : index)
-  -> (tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>)
-{
-  // CHECK-NEXT: %[[M1:.*]] = bufferization.to_memref %[[T1]] : memref<128x128xf32>
-  // CHECK-NEXT: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args(%[[BBARG_T2:.*]] = %[[T2]]) -> (tensor<128x128xf32>) {
-  %0:3 = scf.for %arg0 = %lb to %ub step %step iter_args(%arg1 = %t0, %arg2 = %t1, %arg3 = %t2)
-    -> (tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>)
-  {
-    %m1 = bufferization.to_memref %arg2 : memref<128x128xf32>
-
-    // CHECK-NEXT:   call @process(%[[M0]]) : (memref<128x128xf32>) -> ()
-    func.call @process(%m0) : (memref<128x128xf32>) -> ()
-
-    // CHECK-NEXT:   call @process(%[[M1]]) : (memref<128x128xf32>) -> ()
-    func.call @process(%m1) : (memref<128x128xf32>) -> ()
-
-    // This does not hoist (fails the bbArg has at most a single check).
-    // CHECK-NEXT:   %[[T:.*]] = func.call @process_tensor(%[[BBARG_T2]]) : (tensor<128x128xf32>) -> memref<128x128xf32>
-    // CHECK-NEXT:   %[[YIELD_T:.*]] = bufferization.to_tensor %[[T:.*]]
-    %m2 = func.call @process_tensor(%arg3): (tensor<128x128xf32>) -> memref<128x128xf32>
-    %3 = bufferization.to_tensor %m2 : memref<128x128xf32>
-
-    // All this stuff goes away, incrementally
-    %1 = bufferization.to_tensor %m0 : memref<128x128xf32>
-    %2 = bufferization.to_tensor %m1 : memref<128x128xf32>
-
-    // CHECK-NEXT:   scf.yield %[[YIELD_T]] : tensor<128x128xf32>
-    scf.yield %1, %2, %3 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
-
-  // CHECK-NEXT: }
-  }
-
-  // CHECK-NEXT: %[[R0:.*]] = bufferization.to_tensor %[[M0]] : memref<128x128xf32>
-  // CHECK-NEXT: %[[R1:.*]] = bufferization.to_tensor %[[M1]] : memref<128x128xf32>
-  // CHECK-NEXT: return %[[R0]], %[[R1]], %[[FOR_RES]] : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
-  return %0#0, %0#1, %0#2 : tensor<128x128xf32>, tensor<128x128xf32>, tensor<128x128xf32>
 }
 
 // -----
@@ -1249,6 +1196,35 @@ func.func @while_unused_arg2(%val0: i32) -> i32 {
 // CHECK:           scf.yield
 // CHECK:         }
 // CHECK:         return %[[RES]] : i32
+
+
+// -----
+
+// CHECK-LABEL: func @test_align_args
+//       CHECK:  %[[RES:.*]]:3 = scf.while (%[[ARG0:.*]] = %{{.*}}, %[[ARG1:.*]] = %{{.*}}, %[[ARG2:.*]] = %{{.*}}) : (f32, i32, i64) -> (f32, i32, i64) {
+//       CHECK:  scf.condition(%{{.*}}) %[[ARG0]], %[[ARG1]], %[[ARG2]] : f32, i32, i64
+//       CHECK:  ^bb0(%[[ARG3:.*]]: f32, %[[ARG4:.*]]: i32, %[[ARG5:.*]]: i64):
+//       CHECK:  %[[R1:.*]] = "test.test"(%[[ARG5]]) : (i64) -> f32
+//       CHECK:  %[[R2:.*]] = "test.test"(%[[ARG3]]) : (f32) -> i32
+//       CHECK:  %[[R3:.*]] = "test.test"(%[[ARG4]]) : (i32) -> i64
+//       CHECK:  scf.yield %[[R1]], %[[R2]], %[[R3]] : f32, i32, i64
+//       CHECK:  return %[[RES]]#2, %[[RES]]#0, %[[RES]]#1
+func.func @test_align_args() -> (i64, f32, i32) {
+  %0 = "test.test"() : () -> (f32)
+  %1 = "test.test"() : () -> (i32)
+  %2 = "test.test"() : () -> (i64)
+  %3:3 = scf.while (%arg0 = %0, %arg1 = %1, %arg2 = %2) : (f32, i32, i64) -> (i64, f32, i32) {
+    %cond = "test.test"() : () -> (i1)
+    scf.condition(%cond) %arg2, %arg0, %arg1 : i64, f32, i32
+  } do {
+  ^bb0(%arg3: i64, %arg4: f32, %arg5: i32):
+    %4 = "test.test"(%arg3) : (i64) -> (f32)
+    %5 = "test.test"(%arg4) : (f32) -> (i32)
+    %6 = "test.test"(%arg5) : (i32) -> (i64)
+    scf.yield %4, %5, %6 : f32, i32, i64
+  }
+  return %3#0, %3#1, %3#2 : i64, f32, i32
+}
 
 
 // -----
@@ -1756,6 +1732,87 @@ func.func @do_not_fold_tensor_cast_from_dynamic_to_static_type_into_forall(
 // CHECK:         parallel_insert_slice
 // CHECK-SAME:      : tensor<1xi32> into tensor<2xi32>
 // CHECK:         tensor.cast
+
+// -----
+
+#map = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
+#map1 = affine_map<(d0)[s0] -> (d0 * s0)>
+#map2 = affine_map<(d0)[s0, s1] -> (-(d0 * s1) + s0, s1)>
+module {
+  func.func @fold_iter_args_not_being_modified_within_scfforall(%arg0: index, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>) -> (tensor<?xf32>, tensor<?xf32>) {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 4.200000e+01 : f32
+    %0 = linalg.fill ins(%cst : f32) outs(%arg1 : tensor<?xf32>) -> tensor<?xf32>
+    %dim = tensor.dim %arg1, %c0 : tensor<?xf32>
+    %1 = affine.apply #map()[%dim, %arg0]
+    %2:2 = scf.forall (%arg3) in (%1) shared_outs(%arg4 = %arg1, %arg5 = %arg2) -> (tensor<?xf32>, tensor<?xf32>) {
+      %3 = affine.apply #map1(%arg3)[%arg0]
+      %4 = affine.min #map2(%arg3)[%dim, %arg0]
+      %extracted_slice0 = tensor.extract_slice %arg4[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %extracted_slice1 = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %5 = linalg.elemwise_unary ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %5 into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+      }
+    }
+    return %2#0, %2#1 : tensor<?xf32>, tensor<?xf32>
+  }
+}
+// CHECK-LABEL: @fold_iter_args_not_being_modified_within_scfforall
+//  CHECK-SAME:   (%{{.*}}: index, %[[ARG1:.*]]: tensor<?xf32>, %[[ARG2:.*]]: tensor<?xf32>) -> (tensor<?xf32>, tensor<?xf32>) {
+//       CHECK:    %[[RESULT:.*]] = scf.forall 
+//  CHECK-SAME:                       shared_outs(%[[ITER_ARG_5:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
+//       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
+//       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ITER_ARG_5]]
+//       CHECK:      %[[ELEM:.*]] = linalg.elemwise_unary ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      scf.forall.in_parallel {
+//  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_5]]
+//  CHECK-NEXT:      }
+//  CHECK-NEXT:    }
+//  CHECK-NEXT:    return %[[ARG1]], %[[RESULT]]
+
+// -----
+
+#map = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
+#map1 = affine_map<(d0)[s0] -> (d0 * s0)>
+#map2 = affine_map<(d0)[s0, s1] -> (-(d0 * s1) + s0, s1)>
+module {
+  func.func @fold_iter_args_with_no_use_of_result_scfforall(%arg0: index, %arg1: tensor<?xf32>, %arg2: tensor<?xf32>, %arg3: tensor<?xf32>) -> tensor<?xf32> {
+    %cst = arith.constant 4.200000e+01 : f32
+    %c0 = arith.constant 0 : index
+    %0 = linalg.fill ins(%cst : f32) outs(%arg1 : tensor<?xf32>) -> tensor<?xf32>
+    %dim = tensor.dim %arg1, %c0 : tensor<?xf32>
+    %1 = affine.apply #map()[%dim, %arg0]
+    %2:3 = scf.forall (%arg4) in (%1) shared_outs(%arg5 = %arg1, %arg6 = %arg2, %arg7 = %arg3) -> (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) {
+      %3 = affine.apply #map1(%arg4)[%arg0]
+      %4 = affine.min #map2(%arg4)[%dim, %arg0]
+      %extracted_slice = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %extracted_slice_0 = tensor.extract_slice %arg6[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %extracted_slice_1 = tensor.extract_slice %arg7[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %extracted_slice_2 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %5 = linalg.elemwise_unary ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
+      scf.forall.in_parallel {
+        tensor.parallel_insert_slice %5 into %arg6[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+        tensor.parallel_insert_slice %extracted_slice into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+        tensor.parallel_insert_slice %extracted_slice_0 into %arg7[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+        tensor.parallel_insert_slice %5 into %arg7[%4] [%3] [1] : tensor<?xf32> into tensor<?xf32>
+      }
+    }
+    return %2#1 : tensor<?xf32>
+  }
+}
+// CHECK-LABEL: @fold_iter_args_with_no_use_of_result_scfforall
+//  CHECK-SAME:   (%{{.*}}: index, %[[ARG1:.*]]: tensor<?xf32>, %[[ARG2:.*]]: tensor<?xf32>, %[[ARG3:.*]]: tensor<?xf32>) -> tensor<?xf32> {
+//       CHECK:    %[[RESULT:.*]] = scf.forall 
+//  CHECK-SAME:                       shared_outs(%[[ITER_ARG_6:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
+//       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
+//       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ARG3]]
+//       CHECK:      %[[ELEM:.*]] = linalg.elemwise_unary ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      scf.forall.in_parallel {
+//  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_6]]
+//  CHECK-NEXT:      }
+//  CHECK-NEXT:    }
+//  CHECK-NEXT:    return %[[RESULT]]
 
 // -----
 

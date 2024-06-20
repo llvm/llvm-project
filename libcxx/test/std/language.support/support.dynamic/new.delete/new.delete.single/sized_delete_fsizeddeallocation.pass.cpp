@@ -15,7 +15,7 @@
 // XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
 
 // REQUIRES: -fsized-deallocation
-// ADDITIONAL_COMPILE_FLAGS: -fsized-deallocation, -O3
+// ADDITIONAL_COMPILE_FLAGS: -fsized-deallocation -O3
 
 #if !defined(__cpp_sized_deallocation)
 # error __cpp_sized_deallocation should be defined

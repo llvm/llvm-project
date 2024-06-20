@@ -1298,11 +1298,12 @@ define i32 @test_chr_14(ptr %i, ptr %j, i32 %sum0, i1 %pred, i32 %z) !prof !14 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Z_FR:%.*]] = freeze i32 [[Z:%.*]]
 ; CHECK-NEXT:    [[I0:%.*]] = load i32, ptr [[I:%.*]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = icmp eq i32 [[Z_FR]], 1
-; CHECK-NEXT:    br i1 [[V1]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
+; CHECK-NEXT:    [[V1_NOT:%.*]] = icmp eq i32 [[Z_FR]], 1
+; CHECK-NEXT:    br i1 [[V1_NOT]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       entry.split.nonchr:
+; CHECK-NEXT:    [[PRED_FR:%.*]] = freeze i1 [[PRED:%.*]]
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i32 [[Z_FR]], 0
-; CHECK-NEXT:    [[V3_NONCHR:%.*]] = and i1 [[V0]], [[PRED:%.*]]
+; CHECK-NEXT:    [[V3_NONCHR:%.*]] = and i1 [[V0]], [[PRED_FR]]
 ; CHECK-NEXT:    br i1 [[V3_NONCHR]], label [[BB0_NONCHR:%.*]], label [[BB1]], !prof [[PROF16]]
 ; CHECK:       bb0.nonchr:
 ; CHECK-NEXT:    call void @foo()
@@ -1583,7 +1584,7 @@ define i32 @test_chr_17(i32 %i, i1 %j) !prof !14 {
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1]], label [[BB0:%.*]], !prof [[PROF16]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[TMP0]], [[I]]
+; CHECK-NEXT:    [[S:%.*]] = add nuw nsw i32 [[TMP0]], [[I]]
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[I]], [[BBQ]] ], [ [[TMP0]], [[BBE]] ], [ [[S]], [[BB0]] ]
@@ -1942,8 +1943,8 @@ define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) !prof !14 {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i64 [[I_FR]], 2
 ; CHECK-NEXT:    switch i64 [[I_FR]], label [[BB2:%.*]] [
-; CHECK-NEXT:    i64 2, label [[BB3_NONCHR2:%.*]]
-; CHECK-NEXT:    i64 86, label [[BB2_NONCHR1:%.*]]
+; CHECK-NEXT:      i64 2, label [[BB3_NONCHR2:%.*]]
+; CHECK-NEXT:      i64 86, label [[BB2_NONCHR1:%.*]]
 ; CHECK-NEXT:    ], !prof [[PROF19:![0-9]+]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @foo()

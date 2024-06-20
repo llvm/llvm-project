@@ -436,7 +436,7 @@ void SourcePrinter::printLines(formatted_raw_ostream &OS,
     OS << Delimiter << LineInfo.FunctionName;
     // If demangling is successful, FunctionName will end with "()". Print it
     // only if demangling did not run or was unsuccessful.
-    if (!StringRef(LineInfo.FunctionName).endswith("()"))
+    if (!StringRef(LineInfo.FunctionName).ends_with("()"))
       OS << "()";
     OS << ":\n";
   }

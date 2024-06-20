@@ -31,8 +31,8 @@ define i8 @phi_other_edge(i1 %c, i8 %a, i8 %b, i32 %sw) {
 ; CHECK-SAME: (i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i32 [[SW:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[SW]], label [[TEST:%.*]] [
-; CHECK-NEXT:    i32 0, label [[THEN:%.*]]
-; CHECK-NEXT:    i32 1, label [[ELSE:%.*]]
+; CHECK-NEXT:      i32 0, label [[THEN:%.*]]
+; CHECK-NEXT:      i32 1, label [[ELSE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       test:
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN]], label [[ELSE]]
@@ -172,7 +172,8 @@ define i32 @PR23752() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 icmp sgt (ptr @b, ptr @c), i32 0, i32 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt ptr @b, @c
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP2]], i32 0, i32 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[SEL]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
@@ -183,7 +184,8 @@ entry:
 
 for.body:
   %phi = phi i32 [ 0, %entry ], [ %sel, %for.body ]
-  %sel = select i1 icmp sgt (ptr @b, ptr @c), i32 %phi, i32 1
+  %cmp2 = icmp sgt ptr @b, @c
+  %sel = select i1 %cmp2, i32 %phi, i32 1
   %cmp = icmp ne i32 %sel, 1
   br i1 %cmp, label %for.body, label %if.end
 
@@ -204,7 +206,7 @@ define i1 @test1(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -231,7 +233,7 @@ define i1 @test2(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -258,7 +260,7 @@ define i1 @test3(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -288,7 +290,7 @@ define i1 @test4(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p
+  %pval = load i32, ptr %p
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -317,7 +319,7 @@ define i1 @test5(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p, !noundef !0
+  %pval = load i32, ptr %p, !noundef !0
   %cmp1 = icmp slt i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -344,7 +346,7 @@ define i1 @test6(ptr %p, i1 %unknown) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %pval = load i32, i32* %p, !noundef !0
+  %pval = load i32, ptr %p, !noundef !0
   %cmp1 = icmp ult i32 %pval, 255
   br i1 %cmp1, label %next, label %exit
 
@@ -370,6 +372,29 @@ define i64 @select_cond_may_undef(i32 %a) {
   %narrow = select i1 %is_a_nonnegative, i32 %a, i32 0
   %max = sext i32 %narrow to i64
   ret i64 %max
+}
+
+define i32 @test_solve_select_at_use(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: define i32 @test_solve_select_at_use
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[A]], -1
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i32 [[C]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i32 [[B]]
+;
+entry:
+  %cmp = icmp slt i32 %a, 0
+  %retval = select i1 %cmp, i32 %b, i32 %c
+  %cond = icmp sgt i32 %a, -1
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  ret i32 %retval
+if.else:
+  ret i32 %retval
 }
 
 !0 = !{}

@@ -1,14 +1,14 @@
 # RUN: llvm-mc -triple riscv32 -mattr=-relax -filetype obj %s \
-# RUN:    | llvm-objdump -M no-aliases -d -r - \
+# RUN:    | llvm-objdump --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:    | FileCheck --check-prefix NORELAX %s
 # RUN: llvm-mc -triple riscv32 -mattr=+relax -filetype obj %s \
-# RUN:    | llvm-objdump -M no-aliases -d -r - \
+# RUN:    | llvm-objdump --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:    | FileCheck --check-prefix RELAX %s
 # RUN: llvm-mc -triple riscv64 -mattr=-relax -filetype obj %s \
-# RUN:    | llvm-objdump -M no-aliases -d -r - \
+# RUN:    | llvm-objdump --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:    | FileCheck --check-prefix NORELAX %s
 # RUN: llvm-mc -triple riscv64 -mattr=+relax -filetype obj %s \
-# RUN:    | llvm-objdump -M no-aliases -d -r - \
+# RUN:    | llvm-objdump --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:    | FileCheck --check-prefix RELAX %s
 
 # Fixups for %pcrel_hi / %pcrel_lo can be evaluated within a section,

@@ -220,7 +220,7 @@ for.end:
 
 ; Test that dbg.value intrinsincs adjacent to the `icmp slt i32 0, 0` get
 ; rotated as expected. The icmp is loop-invariant and so gets hoisted to the
-; preheader via a different code path. This is more difficult for DPValue
+; preheader via a different code path. This is more difficult for DbgVariableRecord
 ; debug-info records to handle, because they have to get detached and moved
 ; somewhere else during rotation.
 define void @invariant_hoist() !dbg !70 {

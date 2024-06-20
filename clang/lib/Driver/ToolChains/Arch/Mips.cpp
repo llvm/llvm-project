@@ -221,6 +221,7 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   bool IsN64 = ABIName == "64";
   bool IsPIC = false;
   bool NonPIC = false;
+  bool HasNaN2008Opt = false;
 
   Arg *LastPICArg = Args.getLastArg(options::OPT_fPIC, options::OPT_fno_PIC,
                                     options::OPT_fpic, options::OPT_fno_pic,
@@ -285,9 +286,10 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mnan_EQ)) {
     StringRef Val = StringRef(A->getValue());
     if (Val == "2008") {
-      if (mips::getIEEE754Standard(CPUName) & mips::Std2008)
+      if (mips::getIEEE754Standard(CPUName) & mips::Std2008) {
         Features.push_back("+nan2008");
-      else {
+        HasNaN2008Opt = true;
+      } else {
         Features.push_back("-nan2008");
         D.Diag(diag::warn_target_unsupported_nan2008) << CPUName;
       }
@@ -323,6 +325,8 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Val;
     }
+  } else if (HasNaN2008Opt) {
+    Features.push_back("+abs2008");
   }
 
   AddTargetFeature(Args, Features, options::OPT_msingle_float,
@@ -337,6 +341,15 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                    "dspr2");
   AddTargetFeature(Args, Features, options::OPT_mmsa, options::OPT_mno_msa,
                    "msa");
+  if (Arg *A = Args.getLastArg(
+          options::OPT_mstrict_align, options::OPT_mno_strict_align,
+          options::OPT_mno_unaligned_access, options::OPT_munaligned_access)) {
+    if (A->getOption().matches(options::OPT_mstrict_align) ||
+        A->getOption().matches(options::OPT_mno_unaligned_access))
+      Features.push_back(Args.MakeArgString("+strict-align"));
+    else
+      Features.push_back(Args.MakeArgString("-strict-align"));
+  }
 
   // Add the last -mfp32/-mfpxx/-mfp64, if none are given and the ABI is O32
   // pass -mfpxx, or if none are given and fp64a is default, pass fp64 and
@@ -356,6 +369,9 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   } else if (mips::isFP64ADefault(Triple, CPUName)) {
     Features.push_back("+fp64");
     Features.push_back("+nooddspreg");
+  } else if (Arg *A = Args.getLastArg(options::OPT_mmsa)) {
+    if (A->getOption().matches(options::OPT_mmsa))
+      Features.push_back("+fp64");
   }
 
   AddTargetFeature(Args, Features, options::OPT_mno_odd_spreg,
@@ -486,6 +502,13 @@ bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
                                options::OPT_mdouble_float))
     if (A->getOption().matches(options::OPT_msingle_float))
       UseFPXX = false;
+  // FP64 should be used for MSA.
+  if (Arg *A = Args.getLastArg(options::OPT_mmsa))
+    if (A->getOption().matches(options::OPT_mmsa))
+      UseFPXX = llvm::StringSwitch<bool>(CPUName)
+                    .Cases("mips32r2", "mips32r3", "mips32r5", false)
+                    .Cases("mips64r2", "mips64r3", "mips64r5", false)
+                    .Default(UseFPXX);
 
   return UseFPXX;
 }

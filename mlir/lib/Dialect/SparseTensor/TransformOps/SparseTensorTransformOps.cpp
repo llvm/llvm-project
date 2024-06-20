@@ -25,7 +25,7 @@ DiagnosedSilenceableFailure transform::MatchSparseInOut::matchOperation(
     return emitSilenceableFailure(current->getLoc(),
                                   "operation has no sparse input or output");
   }
-  results.set(getResult().cast<OpResult>(), state.getPayloadOps(getTarget()));
+  results.set(cast<OpResult>(getResult()), state.getPayloadOps(getTarget()));
   return DiagnosedSilenceableFailure::success();
 }
 

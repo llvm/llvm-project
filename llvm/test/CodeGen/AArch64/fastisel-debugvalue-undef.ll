@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -fast-isel=1 -o - -print-after="finalize-isel" %s 2>&1 | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -fast-isel=1 -o - -print-after="finalize-isel" %s 2>&1 | FileCheck %s
 
 ; Check that we emit a DBG_VALUE for the `@llvm.dbg.value` which has `undef` has first arg.
 

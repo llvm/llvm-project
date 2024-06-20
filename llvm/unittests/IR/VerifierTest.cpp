@@ -105,8 +105,10 @@ TEST(VerifierTest, InvalidRetAttribute) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str()).startswith(
-      "Attribute 'uwtable' does not apply to function return values"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with(
+              "Attribute 'uwtable' does not apply to function return values"));
 }
 
 /// Test the verifier rejects invalid nofpclass values that the assembler may
@@ -134,11 +136,11 @@ TEST(VerifierTest, InvalidNoFPClassAttribute) {
     StringRef ErrMsg(ErrorOS.str());
 
     if (InvalidMask == 0) {
-      EXPECT_TRUE(ErrMsg.startswith(
+      EXPECT_TRUE(ErrMsg.starts_with(
           "Attribute 'nofpclass' must have at least one test bit set"))
           << ErrMsg;
     } else {
-      EXPECT_TRUE(ErrMsg.startswith("Invalid value for 'nofpclass' test mask"))
+      EXPECT_TRUE(ErrMsg.starts_with("Invalid value for 'nofpclass' test mask"))
           << ErrMsg;
     }
   }
@@ -171,32 +173,33 @@ TEST(VerifierTest, CrossModuleRef) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M2, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str())
-                  .equals("Global is referenced in a different module!\n"
-                          "ptr @foo2\n"
-                          "; ModuleID = 'M2'\n"
-                          "  %call = call i32 @foo2()\n"
-                          "ptr @foo1\n"
-                          "; ModuleID = 'M1'\n"
-                          "Global is used by function in a different module\n"
-                          "ptr @foo2\n"
-                          "; ModuleID = 'M2'\n"
-                          "ptr @foo3\n"
-                          "; ModuleID = 'M3'\n"));
+  EXPECT_TRUE(StringRef(ErrorOS.str()) ==
+              "Global is referenced in a different module!\n"
+              "ptr @foo2\n"
+              "; ModuleID = 'M2'\n"
+              "  %call = call i32 @foo2()\n"
+              "ptr @foo1\n"
+              "; ModuleID = 'M1'\n"
+              "Global is used by function in a different module\n"
+              "ptr @foo2\n"
+              "; ModuleID = 'M2'\n"
+              "ptr @foo3\n"
+              "; ModuleID = 'M3'\n");
 
   Error.clear();
   EXPECT_TRUE(verifyModule(M1, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str()).equals(
-      "Referencing function in another module!\n"
-      "  %call = call i32 @foo2()\n"
-      "; ModuleID = 'M1'\n"
-      "ptr @foo2\n"
-      "; ModuleID = 'M2'\n"));
+  EXPECT_TRUE(StringRef(ErrorOS.str()) ==
+              "Referencing function in another module!\n"
+              "  %call = call i32 @foo2()\n"
+              "; ModuleID = 'M1'\n"
+              "ptr @foo2\n"
+              "; ModuleID = 'M2'\n");
 
   Error.clear();
   EXPECT_TRUE(verifyModule(M3, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str()).startswith(
-      "Referencing personality function in another module!"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("Referencing personality function in another module!"));
 
   // Erase bad methods to avoid triggering an assertion failure on destruction
   F1->eraseFromParent();
@@ -211,9 +214,9 @@ TEST(VerifierTest, InvalidVariableLinkage) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(
-      StringRef(ErrorOS.str()).startswith("Global is external, but doesn't "
-                                          "have external or weak linkage!"));
+  EXPECT_TRUE(StringRef(ErrorOS.str())
+                  .starts_with("Global is external, but doesn't "
+                               "have external or weak linkage!"));
 }
 
 TEST(VerifierTest, InvalidFunctionLinkage) {
@@ -225,9 +228,9 @@ TEST(VerifierTest, InvalidFunctionLinkage) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(
-      StringRef(ErrorOS.str()).startswith("Global is external, but doesn't "
-                                          "have external or weak linkage!"));
+  EXPECT_TRUE(StringRef(ErrorOS.str())
+                  .starts_with("Global is external, but doesn't "
+                               "have external or weak linkage!"));
 }
 
 TEST(VerifierTest, DetectInvalidDebugInfo) {
@@ -284,8 +287,9 @@ TEST(VerifierTest, MDNodeWrongContext) {
   std::string Error;
   raw_string_ostream ErrorOS(Error);
   EXPECT_TRUE(verifyModule(M, &ErrorOS));
-  EXPECT_TRUE(StringRef(ErrorOS.str())
-                  .startswith("MDNode context does not match Module context!"));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("MDNode context does not match Module context!"));
 }
 
 TEST(VerifierTest, AttributesWrongContext) {
@@ -333,6 +337,62 @@ TEST(VerifierTest, SwitchInst) {
   // set one case value to function argument.
   Switch->setOperand(2, F->getArg(1));
   EXPECT_TRUE(verifyFunction(*F));
+}
+
+TEST(VerifierTest, CrossFunctionRef) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F1 = Function::Create(FTy, Function::ExternalLinkage, "foo1", M);
+  Function *F2 = Function::Create(FTy, Function::ExternalLinkage, "foo2", M);
+  BasicBlock *Entry1 = BasicBlock::Create(C, "entry", F1);
+  BasicBlock *Entry2 = BasicBlock::Create(C, "entry", F2);
+  Type *I32 = Type::getInt32Ty(C);
+
+  Value *Alloca = new AllocaInst(I32, 0, "alloca", Entry1);
+  ReturnInst::Create(C, Entry1);
+
+  Instruction *Store = new StoreInst(ConstantInt::get(I32, 0), Alloca, Entry2);
+  ReturnInst::Create(C, Entry2);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyModule(M, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("Referring to an instruction in another function!"));
+
+  // Explicitly erase the store to avoid a use-after-free when the module is
+  // destroyed.
+  Store->eraseFromParent();
+}
+
+TEST(VerifierTest, AtomicRMW) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *FPTy = Type::getFloatTy(C);
+  Constant *CF = ConstantFP::getZero(FPTy);
+
+  // Invalid scalable type : atomicrmw (<vscale x 2 x float>)
+  Constant *CV = ConstantVector::getSplat(ElementCount::getScalable(2), CF);
+  new AtomicRMWInst(AtomicRMWInst::FAdd, Ptr, CV, Align(8),
+                    AtomicOrdering::SequentiallyConsistent, SyncScope::System,
+                    Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(ErrorOS.str())
+          .starts_with("atomicrmw fadd operand must have floating-point or "
+                       "fixed vector of floating-point type!"))
+      << ErrorOS.str();
 }
 
 } // end anonymous namespace

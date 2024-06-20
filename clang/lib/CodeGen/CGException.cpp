@@ -127,6 +127,8 @@ const EHPersonality
 EHPersonality::GNU_Wasm_CPlusPlus = { "__gxx_wasm_personality_v0", nullptr };
 const EHPersonality EHPersonality::XL_CPlusPlus = {"__xlcxx_personality_v1",
                                                    nullptr};
+const EHPersonality EHPersonality::ZOS_CPlusPlus = {"__zos_cxx_personality_v2",
+                                                    nullptr};
 
 static const EHPersonality &getCPersonality(const TargetInfo &Target,
                                             const LangOptions &L) {
@@ -156,7 +158,9 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
   case ObjCRuntime::WatchOS:
     return EHPersonality::NeXT_ObjC;
   case ObjCRuntime::GNUstep:
-    if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
+    if (T.isOSCygMing())
+      return EHPersonality::GNU_CPlusPlus_SEH;
+    else if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
     [[fallthrough]];
   case ObjCRuntime::GCC:
@@ -185,6 +189,8 @@ static const EHPersonality &getCXXPersonality(const TargetInfo &Target,
     return EHPersonality::GNU_CPlusPlus_SEH;
   if (L.hasWasmExceptions())
     return EHPersonality::GNU_Wasm_CPlusPlus;
+  if (T.isOSzOS())
+    return EHPersonality::ZOS_CPlusPlus;
   return EHPersonality::GNU_CPlusPlus;
 }
 
@@ -210,7 +216,8 @@ static const EHPersonality &getObjCXXPersonality(const TargetInfo &Target,
     return getObjCPersonality(Target, L);
 
   case ObjCRuntime::GNUstep:
-    return EHPersonality::GNU_ObjCXX;
+    return Target.getTriple().isOSCygMing() ? EHPersonality::GNU_CPlusPlus_SEH
+                                            : EHPersonality::GNU_ObjCXX;
 
   // The GCC runtime's personality function inherently doesn't support
   // mixed EH.  Use the ObjC personality just to avoid returning null.
@@ -277,7 +284,7 @@ static bool LandingPadHasOnlyCXXUses(llvm::LandingPadInst *LPI) {
       if (llvm::GlobalVariable *GV = dyn_cast<llvm::GlobalVariable>(Val))
         // ObjC EH selector entries are always global variables with
         // names starting like this.
-        if (GV->getName().startswith("OBJC_EHTYPE"))
+        if (GV->getName().starts_with("OBJC_EHTYPE"))
           return false;
     } else {
       // Check if any of the filter values have the ObjC prefix.
@@ -288,7 +295,7 @@ static bool LandingPadHasOnlyCXXUses(llvm::LandingPadInst *LPI) {
             cast<llvm::GlobalVariable>((*II)->stripPointerCasts()))
           // ObjC EH selector entries are always global variables with
           // names starting like this.
-          if (GV->getName().startswith("OBJC_EHTYPE"))
+          if (GV->getName().starts_with("OBJC_EHTYPE"))
             return false;
       }
     }
@@ -390,7 +397,7 @@ namespace {
 void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
   // Make sure the exception object is cleaned up if there's an
   // exception during initialization.
-  pushFullExprCleanup<FreeException>(EHCleanup, addr.getPointer());
+  pushFullExprCleanup<FreeException>(EHCleanup, addr.emitRawPointer(*this));
   EHScopeStack::stable_iterator cleanup = EHStack.stable_begin();
 
   // __cxa_allocate_exception returns a void*;  we need to cast this
@@ -409,8 +416,8 @@ void CodeGenFunction::EmitAnyExprToExn(const Expr *e, Address addr) {
                    /*IsInit*/ true);
 
   // Deactivate the cleanup block.
-  DeactivateCleanupBlock(cleanup,
-                         cast<llvm::Instruction>(typedAddr.getPointer()));
+  DeactivateCleanupBlock(
+      cleanup, cast<llvm::Instruction>(typedAddr.emitRawPointer(*this)));
 }
 
 Address CodeGenFunction::getExceptionSlot() {
@@ -1045,7 +1052,8 @@ static void emitWasmCatchPadBlock(CodeGenFunction &CGF,
   CGF.Builder.CreateStore(Exn, CGF.getExceptionSlot());
   llvm::CallInst *Selector = CGF.Builder.CreateCall(GetSelectorFn, CPI);
 
-  llvm::Function *TypeIDFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
+  llvm::Function *TypeIDFn =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
 
   // If there's only a single catch-all, branch directly to its handler.
   if (CatchScope.getNumHandlers() == 1 &&
@@ -1130,7 +1138,7 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
 
   // Select the right handler.
   llvm::Function *llvm_eh_typeid_for =
-    CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for);
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
   llvm::Type *argTy = llvm_eh_typeid_for->getArg(0)->getType();
   LangAS globAS = CGF.CGM.GetGlobalVarAddressSpace(nullptr);
 
@@ -1827,7 +1835,8 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
                                                    llvm::Value *ParentFP) {
   llvm::CallInst *RecoverCall = nullptr;
   CGBuilderTy Builder(*this, AllocaInsertPt);
-  if (auto *ParentAlloca = dyn_cast<llvm::AllocaInst>(ParentVar.getPointer())) {
+  if (auto *ParentAlloca =
+          dyn_cast_or_null<llvm::AllocaInst>(ParentVar.getBasePointer())) {
     // Mark the variable escaped if nobody else referenced it and compute the
     // localescape index.
     auto InsertPair = ParentCGF.EscapedLocals.insert(
@@ -1844,8 +1853,8 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
     // If the parent didn't have an alloca, we're doing some nested outlining.
     // Just clone the existing localrecover call, but tweak the FP argument to
     // use our FP value. All other arguments are constants.
-    auto *ParentRecover =
-        cast<llvm::IntrinsicInst>(ParentVar.getPointer()->stripPointerCasts());
+    auto *ParentRecover = cast<llvm::IntrinsicInst>(
+        ParentVar.emitRawPointer(*this)->stripPointerCasts());
     assert(ParentRecover->getIntrinsicID() == llvm::Intrinsic::localrecover &&
            "expected alloca or localrecover in parent LocalDeclMap");
     RecoverCall = cast<llvm::CallInst>(ParentRecover->clone());
@@ -1917,8 +1926,9 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         const VarDecl *D = cast<VarDecl>(I.first);
         if (isa<ImplicitParamDecl>(D) &&
             D->getType() == getContext().VoidPtrTy) {
-          assert(D->getName().startswith("frame_pointer"));
-          FramePtrAddrAlloca = cast<llvm::AllocaInst>(I.second.getPointer());
+          assert(D->getName().starts_with("frame_pointer"));
+          FramePtrAddrAlloca =
+              cast<llvm::AllocaInst>(I.second.getBasePointer());
           break;
         }
       }
@@ -1979,7 +1989,7 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
         LValue ThisFieldLValue =
             EmitLValueForLambdaField(LambdaThisCaptureField);
         if (!LambdaThisCaptureField->getType()->isPointerType()) {
-          CXXThisValue = ThisFieldLValue.getAddress(*this).getPointer();
+          CXXThisValue = ThisFieldLValue.getAddress().emitRawPointer(*this);
         } else {
           CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
                              .getScalarVal();

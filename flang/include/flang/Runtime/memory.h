@@ -12,7 +12,7 @@
 #ifndef FORTRAN_RUNTIME_MEMORY_H_
 #define FORTRAN_RUNTIME_MEMORY_H_
 
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include <cassert>
 #include <memory>
 #include <type_traits>
@@ -23,14 +23,17 @@ class Terminator;
 
 [[nodiscard]] RT_API_ATTRS void *AllocateMemoryOrCrash(
     const Terminator &, std::size_t bytes);
-template <typename A> [[nodiscard]] A &AllocateOrCrash(const Terminator &t) {
+template <typename A>
+[[nodiscard]] RT_API_ATTRS A &AllocateOrCrash(const Terminator &t) {
   return *reinterpret_cast<A *>(AllocateMemoryOrCrash(t, sizeof(A)));
 }
+RT_API_ATTRS void *ReallocateMemoryOrCrash(
+    const Terminator &, void *ptr, std::size_t newByteSize);
 RT_API_ATTRS void FreeMemory(void *);
 template <typename A> RT_API_ATTRS void FreeMemory(A *p) {
   FreeMemory(reinterpret_cast<void *>(p));
 }
-template <typename A> void FreeMemoryAndNullify(A *&p) {
+template <typename A> RT_API_ATTRS void FreeMemoryAndNullify(A *&p) {
   FreeMemory(p);
   p = nullptr;
 }
@@ -76,6 +79,8 @@ public:
     return p;
   }
 
+  RT_DIAG_PUSH
+  RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
   // Replace the pointer.
   RT_API_ATTRS void reset(pointer_type p = pointer_type{}) {
     std::swap(ptr_, p);
@@ -87,6 +92,7 @@ public:
 
   // Exchange the pointer with another object.
   RT_API_ATTRS void swap(OwningPtr &other) { std::swap(ptr_, other.ptr_); }
+  RT_DIAG_POP
 
   // Get the stored pointer.
   RT_API_ATTRS pointer_type get() const { return ptr_; }
@@ -125,9 +131,12 @@ inline RT_API_ATTRS bool operator!=(std::nullptr_t, const OwningPtr<X> &x) {
 
 template <typename A> class SizedNew {
 public:
-  explicit SizedNew(const Terminator &terminator) : terminator_{terminator} {}
+  explicit RT_API_ATTRS SizedNew(const Terminator &terminator)
+      : terminator_{terminator} {}
+
   template <typename... X>
-  [[nodiscard]] OwningPtr<A> operator()(std::size_t bytes, X &&...x) {
+  [[nodiscard]] RT_API_ATTRS OwningPtr<A> operator()(
+      std::size_t bytes, X &&...x) {
     return OwningPtr<A>{new (AllocateMemoryOrCrash(terminator_, bytes))
             A{std::forward<X>(x)...}};
   }
@@ -138,7 +147,8 @@ private:
 
 template <typename A> struct New : public SizedNew<A> {
   using SizedNew<A>::SizedNew;
-  template <typename... X> [[nodiscard]] OwningPtr<A> operator()(X &&...x) {
+  template <typename... X>
+  [[nodiscard]] RT_API_ATTRS OwningPtr<A> operator()(X &&...x) {
     return SizedNew<A>::operator()(sizeof(A), std::forward<X>(x)...);
   }
 };

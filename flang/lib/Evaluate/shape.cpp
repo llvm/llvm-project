@@ -258,7 +258,8 @@ public:
             if constexpr (LBOUND_SEMANTICS) {
               bool ok{false};
               auto lbValue{ToInt64(*lbound)};
-              if (dimension_ == rank - 1 && object->IsAssumedSize()) {
+              if (dimension_ == rank - 1 &&
+                  semantics::IsAssumedSizeArray(symbol)) {
                 // last dimension of assumed-size dummy array: don't worry
                 // about handling an empty dimension
                 ok = !invariantOnly_ || IsScopeInvariantExpr(*lbound);
@@ -527,7 +528,8 @@ MaybeExtentExpr GetExtent(
         if (j++ == dimension) {
           if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
             return extent;
-          } else if (details->IsAssumedSize() && j == symbol.Rank()) {
+          } else if (semantics::IsAssumedSizeArray(symbol) &&
+              j == symbol.Rank()) {
             break;
           } else if (semantics::IsDescriptor(symbol)) {
             return ExtentExpr{DescriptorInquiry{NamedEntity{base},
@@ -608,7 +610,8 @@ MaybeExtentExpr GetRawUpperBound(
       const auto &bound{details->shape()[dimension].ubound().GetExplicit()};
       if (bound && (!invariantOnly || IsScopeInvariantExpr(*bound))) {
         return *bound;
-      } else if (details->IsAssumedSize() && dimension + 1 == symbol.Rank()) {
+      } else if (semantics::IsAssumedSizeArray(symbol) &&
+          dimension + 1 == symbol.Rank()) {
         return std::nullopt;
       } else {
         return ComputeUpperBound(
@@ -661,7 +664,8 @@ static MaybeExtentExpr GetUBOUND(FoldingContext *context,
       const semantics::ShapeSpec &shapeSpec{details->shape()[dimension]};
       if (auto ubound{GetExplicitUBOUND(context, shapeSpec, invariantOnly)}) {
         return *ubound;
-      } else if (details->IsAssumedSize() && dimension + 1 == symbol.Rank()) {
+      } else if (semantics::IsAssumedSizeArray(symbol) &&
+          dimension + 1 == symbol.Rank()) {
         return std::nullopt; // UBOUND() folding replaces with -1
       } else if (auto lb{GetLBOUND(base, dimension, invariantOnly)}) {
         return ComputeUpperBound(
@@ -881,8 +885,12 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
         intrinsic->name == "ubound") {
       // For LBOUND/UBOUND, these are the array-valued cases (no DIM=)
       if (!call.arguments().empty() && call.arguments().front()) {
-        return Shape{
-            MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+        if (IsAssumedRank(*call.arguments().front())) {
+          return Shape{MaybeExtentExpr{}};
+        } else {
+          return Shape{
+              MaybeExtentExpr{ExtentExpr{call.arguments().front()->Rank()}}};
+        }
       }
     } else if (intrinsic->name == "all" || intrinsic->name == "any" ||
         intrinsic->name == "count" || intrinsic->name == "iall" ||
@@ -969,9 +977,14 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
               }
             }
           } else {
-            // Non-scalar MASK= -> [COUNT(mask)]
-            ActualArguments toCount{ActualArgument{common::Clone(
-                DEREF(call.arguments().at(1).value().UnwrapExpr()))}};
+            // Non-scalar MASK= -> [COUNT(mask, KIND=extent_kind)]
+            ActualArgument kindArg{
+                AsGenericExpr(Constant<ExtentType>{ExtentType::kind})};
+            kindArg.set_keyword(context_->SaveTempName("kind"));
+            ActualArguments toCount{
+                ActualArgument{common::Clone(
+                    DEREF(call.arguments().at(1).value().UnwrapExpr()))},
+                std::move(kindArg)};
             auto specific{context_->intrinsics().Probe(
                 CallCharacteristics{"count"}, toCount, *context_)};
             CHECK(specific);

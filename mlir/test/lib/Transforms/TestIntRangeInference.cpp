@@ -9,6 +9,7 @@
 // functionality has been integrated into SCCP.
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -39,9 +40,8 @@ static LogicalResult replaceWithConstant(DataFlowSolver &solver, OpBuilder &b,
       maybeDefiningOp ? maybeDefiningOp->getDialect()
                       : value.getParentRegion()->getParentOp()->getDialect();
   Attribute constAttr = b.getIntegerAttr(value.getType(), *maybeConstValue);
-  Value constant =
-      folder.getOrCreateConstant(b.getInsertionBlock(), valueDialect, constAttr,
-                                 value.getType(), value.getLoc());
+  Value constant = folder.getOrCreateConstant(
+      b.getInsertionBlock(), valueDialect, constAttr, value.getType());
   if (!constant)
     return failure();
 
@@ -107,6 +107,7 @@ struct TestIntRangeInference
     Operation *op = getOperation();
     DataFlowSolver solver;
     solver.load<DeadCodeAnalysis>();
+    solver.load<SparseConstantPropagation>();
     solver.load<IntegerRangeAnalysis>();
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();

@@ -147,7 +147,8 @@ public:
             Files.makeAbsolutePath(FixAbsoluteFilePath);
             tooling::Replacement R(FixAbsoluteFilePath, Repl.getOffset(),
                                    Repl.getLength(), Repl.getReplacementText());
-            Replacements &Replacements = FileReplacements[R.getFilePath()];
+            auto &Entry = FileReplacements[R.getFilePath()];
+            Replacements &Replacements = Entry.Replaces;
             llvm::Error Err = Replacements.add(R);
             if (Err) {
               // FIXME: Implement better conflict handling.
@@ -174,6 +175,7 @@ public:
             }
             FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
             FixLocations.push_back(std::make_pair(FixLoc, CanBeApplied));
+            Entry.BuildDir = Error.BuildDirectory;
           }
         }
       }
@@ -189,9 +191,14 @@ public:
 
   void finish() {
     if (TotalFixes > 0) {
-      Rewriter Rewrite(SourceMgr, LangOpts);
+      auto &VFS = Files.getVirtualFileSystem();
+      auto OriginalCWD = VFS.getCurrentWorkingDirectory();
+      bool AnyNotWritten = false;
+
       for (const auto &FileAndReplacements : FileReplacements) {
+        Rewriter Rewrite(SourceMgr, LangOpts);
         StringRef File = FileAndReplacements.first();
+        VFS.setCurrentWorkingDirectory(FileAndReplacements.second.BuildDir);
         llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> Buffer =
             SourceMgr.getFileManager().getBufferForFile(File);
         if (!Buffer) {
@@ -208,8 +215,8 @@ public:
           continue;
         }
         llvm::Expected<tooling::Replacements> Replacements =
-            format::cleanupAroundReplacements(Code, FileAndReplacements.second,
-                                              *Style);
+            format::cleanupAroundReplacements(
+                Code, FileAndReplacements.second.Replaces, *Style);
         if (!Replacements) {
           llvm::errs() << llvm::toString(Replacements.takeError()) << "\n";
           continue;
@@ -226,13 +233,18 @@ public:
         if (!tooling::applyAllReplacements(Replacements.get(), Rewrite)) {
           llvm::errs() << "Can't apply replacements for file " << File << "\n";
         }
+        AnyNotWritten |= Rewrite.overwriteChangedFiles();
       }
-      if (Rewrite.overwriteChangedFiles()) {
+
+      if (AnyNotWritten) {
         llvm::errs() << "clang-tidy failed to apply suggested fixes.\n";
       } else {
         llvm::errs() << "clang-tidy applied " << AppliedFixes << " of "
                      << TotalFixes << " suggested fixes.\n";
       }
+
+      if (OriginalCWD)
+        VFS.setCurrentWorkingDirectory(*OriginalCWD);
     }
   }
 
@@ -289,13 +301,18 @@ private:
     return CharSourceRange::getCharRange(BeginLoc, EndLoc);
   }
 
+  struct ReplacementsWithBuildDir {
+    StringRef BuildDir;
+    Replacements Replaces;
+  };
+
   FileManager Files;
   LangOptions LangOpts; // FIXME: use langopts from each original file
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   DiagnosticConsumer *DiagPrinter;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
-  llvm::StringMap<Replacements> FileReplacements;
+  llvm::StringMap<ReplacementsWithBuildDir> FileReplacements;
   ClangTidyContext &Context;
   FixBehaviour ApplyFixes;
   unsigned TotalFixes = 0U;
@@ -356,11 +373,11 @@ static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
 
   const auto &RegisteredCheckers =
       AnalyzerOptions::getRegisteredCheckers(IncludeExperimental);
-  bool AnalyzerChecksEnabled = false;
-  for (StringRef CheckName : RegisteredCheckers) {
-    std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
-    AnalyzerChecksEnabled |= Context.isCheckEnabled(ClangTidyCheckName);
-  }
+  const bool AnalyzerChecksEnabled =
+      llvm::any_of(RegisteredCheckers, [&](StringRef CheckName) -> bool {
+        return Context.isCheckEnabled(
+            (AnalyzerCheckNamePrefix + CheckName).str());
+      });
 
   if (!AnalyzerChecksEnabled)
     return List;
@@ -373,7 +390,7 @@ static CheckersList getAnalyzerCheckersAndPackages(ClangTidyContext &Context,
   for (StringRef CheckName : RegisteredCheckers) {
     std::string ClangTidyCheckName((AnalyzerCheckNamePrefix + CheckName).str());
 
-    if (CheckName.startswith("core") ||
+    if (CheckName.starts_with("core") ||
         Context.isCheckEnabled(ClangTidyCheckName)) {
       List.emplace_back(std::string(CheckName), true);
     }
@@ -524,7 +541,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
         CommandLineArguments AdjustedArgs = Args;
         if (Opts.ExtraArgsBefore) {
           auto I = AdjustedArgs.begin();
-          if (I != AdjustedArgs.end() && !StringRef(*I).startswith("-"))
+          if (I != AdjustedArgs.end() && !StringRef(*I).starts_with("-"))
             ++I; // Skip compiler binary name, if it is there.
           AdjustedArgs.insert(I, Opts.ExtraArgsBefore->begin(),
                               Opts.ExtraArgsBefore->end());

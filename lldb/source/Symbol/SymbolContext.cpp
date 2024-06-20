@@ -8,6 +8,7 @@
 
 #include "lldb/Symbol/SymbolContext.h"
 
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -23,6 +24,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -67,11 +69,12 @@ void SymbolContext::Clear(bool clear_target) {
   variable = nullptr;
 }
 
-bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
-                                    const Address &addr, bool show_fullpaths,
-                                    bool show_module, bool show_inlined_frames,
-                                    bool show_function_arguments,
-                                    bool show_function_name) const {
+bool SymbolContext::DumpStopContext(
+    Stream *s, ExecutionContextScope *exe_scope, const Address &addr,
+    bool show_fullpaths, bool show_module, bool show_inlined_frames,
+    bool show_function_arguments, bool show_function_name,
+    bool show_function_display_name,
+    std::optional<Stream::HighlightSettings> settings) const {
   bool dumped_something = false;
   if (show_module && module_sp) {
     if (show_fullpaths)
@@ -81,7 +84,6 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
     s->PutChar('`');
     dumped_something = true;
   }
-
   if (function != nullptr) {
     SymbolContext inline_parent_sc;
     Address inline_parent_addr;
@@ -92,10 +94,12 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       ConstString name;
       if (!show_function_arguments)
         name = function->GetNameNoArguments();
+      if (!name && show_function_display_name)
+        name = function->GetDisplayName();
       if (!name)
         name = function->GetName();
       if (name)
-        name.Dump(s);
+        s->PutCStringColorHighlighted(name.GetStringRef(), settings);
     }
 
     if (addr.IsValid()) {
@@ -145,7 +149,8 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
         const bool show_function_name = true;
         return inline_parent_sc.DumpStopContext(
             s, exe_scope, inline_parent_addr, show_fullpaths, show_module,
-            show_inlined_frames, show_function_arguments, show_function_name);
+            show_inlined_frames, show_function_arguments, show_function_name,
+            show_function_display_name);
       }
     } else {
       if (line_entry.IsValid()) {
@@ -163,7 +168,12 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       dumped_something = true;
       if (symbol->GetType() == eSymbolTypeTrampoline)
         s->PutCString("symbol stub for: ");
-      symbol->GetName().Dump(s);
+      ConstString name;
+      if (show_function_display_name)
+        name = symbol->GetDisplayName();
+      if (!name)
+        name = symbol->GetName();
+      s->PutCStringColorHighlighted(name.GetStringRef(), settings);
     }
 
     if (addr.IsValid() && symbol->ValueIsAddress()) {
@@ -185,8 +195,9 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
   return dumped_something;
 }
 
-void SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                                   Target *target) const {
+void SymbolContext::GetDescription(
+    Stream *s, lldb::DescriptionLevel level, Target *target,
+    std::optional<Stream::HighlightSettings> settings) const {
   if (module_sp) {
     s->Indent("     Module: file = \"");
     module_sp->GetFileSpec().Dump(s->AsRawOstream());
@@ -246,7 +257,7 @@ void SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level,
 
   if (symbol != nullptr) {
     s->Indent("     Symbol: ");
-    symbol->GetDescription(s, level, target);
+    symbol->GetDescription(s, level, target, settings);
     s->EOL();
   }
 
@@ -470,10 +481,11 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
             curr_inlined_block->GetInlinedFunctionInfo();
         next_frame_pc = range.GetBaseAddress();
         next_frame_sc.line_entry.range.GetBaseAddress() = next_frame_pc;
-        next_frame_sc.line_entry.file =
-            curr_inlined_block_inlined_info->GetCallSite().GetFile();
-        next_frame_sc.line_entry.original_file =
-            curr_inlined_block_inlined_info->GetCallSite().GetFile();
+        next_frame_sc.line_entry.file_sp = std::make_shared<SupportFile>(
+            curr_inlined_block_inlined_info->GetCallSite().GetFile());
+        next_frame_sc.line_entry.original_file_sp =
+            std::make_shared<SupportFile>(
+                curr_inlined_block_inlined_info->GetCallSite().GetFile());
         next_frame_sc.line_entry.line =
             curr_inlined_block_inlined_info->GetCallSite().GetLine();
         next_frame_sc.line_entry.column =

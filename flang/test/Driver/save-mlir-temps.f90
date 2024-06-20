@@ -51,9 +51,9 @@
 ! Content to check from the MLIR outputs
 !--------------------------
 ! MLIR-FIR-NOT: llvm.func
-! MLIR-FIR: func.func @{{.*}}main() {
+! MLIR-FIR: func.func @{{.*}}main(){{.*}}
 
-! MLIR-FIR-NOT: func.func
-! MLIR-LLVMIR: llvm.func @{{.*}}main() {
+! MLIR-LLVMIR-NOT: func.func
+! MLIR-LLVMIR: llvm.func @{{.*}}main(){{.*}}
 
 end program

@@ -21,7 +21,6 @@ namespace llvm {
 class X86Subtarget;
 class X86TargetMachine;
 
-/// This class provides the information for the target register banks.
 class X86LegalizerInfo : public LegalizerInfo {
 private:
   /// Keep a reference to the X86Subtarget around so that we can
@@ -31,8 +30,15 @@ private:
 public:
   X86LegalizerInfo(const X86Subtarget &STI, const X86TargetMachine &TM);
 
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
+
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
+
+private:
+  bool legalizeBuildVector(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           LegalizerHelper &Helper) const;
 };
 } // namespace llvm
 #endif

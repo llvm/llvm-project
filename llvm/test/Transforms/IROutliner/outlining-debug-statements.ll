@@ -51,14 +51,7 @@ entry:
   ret void
 }
 
-; CHECK: define internal void @outlined_ir_func_0(ptr [[ARG0:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) #1 {
 ; CHECK: entry_to_outline:
-; CHECK-NEXT:    store i32 2, ptr [[ARG0]], align 4
-; CHECK-NEXT:    store i32 3, ptr [[ARG1]], align 4
-; CHECK-NEXT:    store i32 4, ptr [[ARG2]], align 4
-; CHECK-NEXT:    [[AL:%.*]] = load i32, ptr [[ARG0]], align 4
-; CHECK-NEXT:    [[BL:%.*]] = load i32, ptr [[ARG1]], align 4
-; CHECK-NEXT:    [[CL:%.*]] = load i32, ptr [[ARG2]], align 4
 
 !0 = !DIFile(filename: "foo.c", directory: "/tmp")
 !1 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-// XFAIL: c++03
-// XFAIL: !non-lockfree-atomics
+// UNSUPPORTED: c++03
+// XFAIL: !has-1024-bit-atomics
+
+// Until we drop support for the synchronization library in C++11/14/17
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // XFAIL: availability-synchronization_library-missing
 
@@ -40,8 +43,10 @@ struct TestFn {
       A a(T(1));
       static_assert(noexcept(std::atomic_notify_all(&a)), "");
 
-      std::atomic<bool> is_ready[2] = {false, false};
-      auto f                        = [&](int index) {
+      std::atomic<bool> is_ready[2];
+      is_ready[0] = false;
+      is_ready[1] = false;
+      auto f      = [&](int index) {
         assert(std::atomic_load(&a) == T(1));
         is_ready[index].store(true);
 
@@ -63,8 +68,10 @@ struct TestFn {
       volatile A a(T(2));
       static_assert(noexcept(std::atomic_notify_all(&a)), "");
 
-      std::atomic<bool> is_ready[2] = {false, false};
-      auto f                        = [&](int index) {
+      std::atomic<bool> is_ready[2];
+      is_ready[0] = false;
+      is_ready[1] = false;
+      auto f      = [&](int index) {
         assert(std::atomic_load(&a) == T(2));
         is_ready[index].store(true);
 

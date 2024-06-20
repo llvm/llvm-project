@@ -9,6 +9,8 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "TestingSupport.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
@@ -24,7 +26,9 @@ namespace {
 
 using namespace clang;
 using namespace dataflow;
+using ::clang::dataflow::test::findValueDecl;
 using ::clang::dataflow::test::getFieldValue;
+using ::testing::Contains;
 using ::testing::IsNull;
 using ::testing::NotNull;
 
@@ -55,6 +59,52 @@ TEST_F(EnvironmentTest, FlowCondition) {
   auto &NotX = A.makeNot(X);
   EXPECT_FALSE(Env.proves(NotX));
   EXPECT_FALSE(Env.allows(NotX));
+}
+
+TEST_F(EnvironmentTest, SetAndGetValueOnCfgOmittedNodes) {
+  // Check that we can set a value on an expression that is omitted from the CFG
+  // (see `ignoreCFGOmittedNodes()`), then retrieve that same value from the
+  // expression. This is a regression test; `setValue()` and `getValue()`
+  // previously did not use `ignoreCFGOmittedNodes()` consistently.
+
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+    struct S {
+      int f();
+    };
+    void target() {
+      // Method call on a temporary produces an `ExprWithCleanups`.
+      S().f();
+      (1);
+    }
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  const ExprWithCleanups *WithCleanups = selectFirst<ExprWithCleanups>(
+      "cleanups",
+      match(exprWithCleanups(hasType(isInteger())).bind("cleanups"), Context));
+  ASSERT_NE(WithCleanups, nullptr);
+
+  const ParenExpr *Paren = selectFirst<ParenExpr>(
+      "paren", match(parenExpr(hasType(isInteger())).bind("paren"), Context));
+  ASSERT_NE(Paren, nullptr);
+
+  Environment Env(DAContext);
+  IntegerValue *Val1 =
+      cast<IntegerValue>(Env.createValue(Unit->getASTContext().IntTy));
+  Env.setValue(*WithCleanups, *Val1);
+  EXPECT_EQ(Env.getValue(*WithCleanups), Val1);
+
+  IntegerValue *Val2 =
+      cast<IntegerValue>(Env.createValue(Unit->getASTContext().IntTy));
+  Env.setValue(*Paren, *Val2);
+  EXPECT_EQ(Env.getValue(*Paren), Val2);
 }
 
 TEST_F(EnvironmentTest, CreateValueRecursiveType) {
@@ -96,18 +146,24 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
   // Verify that the struct and the field (`R`) with first appearance of the
   // type is created successfully.
   Environment Env(DAContext, *Fun);
+  Env.initialize();
   auto &SLoc = cast<RecordStorageLocation>(Env.createObject(Ty));
   PointerValue *PV = cast_or_null<PointerValue>(getFieldValue(&SLoc, *R, Env));
   EXPECT_THAT(PV, NotNull());
 }
 
-TEST_F(EnvironmentTest, JoinRecords) {
+TEST_F(EnvironmentTest, DifferentReferenceLocInJoin) {
+  // This tests the case where the storage location for a reference-type
+  // variable is different for two states being joined. We used to believe this
+  // could not happen and therefore had an assertion disallowing this; this test
+  // exists to demonstrate that we can handle this condition without a failing
+  // assertion. See also the discussion here:
+  // https://discourse.llvm.org/t/70086/6
+
   using namespace ast_matchers;
 
   std::string Code = R"cc(
-    struct S {};
-    // Need to use the type somewhere so that the `QualType` gets created;
-    S s;
+    void f(int &ref) {}
   )cc";
 
   auto Unit =
@@ -116,38 +172,26 @@ TEST_F(EnvironmentTest, JoinRecords) {
 
   ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
 
-  auto Results =
-      match(qualType(hasDeclaration(recordDecl(hasName("S")))).bind("SType"),
-            Context);
-  const QualType *TyPtr = selectFirst<QualType>("SType", Results);
-  ASSERT_THAT(TyPtr, NotNull());
-  QualType Ty = *TyPtr;
-  ASSERT_FALSE(Ty.isNull());
+  const ValueDecl *Ref = findValueDecl(Context, "ref");
 
-  auto *ConstructExpr = CXXConstructExpr::CreateEmpty(Context, 0);
-  ConstructExpr->setType(Ty);
-  ConstructExpr->setValueKind(VK_PRValue);
+  Environment Env1(DAContext);
+  StorageLocation &Loc1 = Env1.createStorageLocation(Context.IntTy);
+  Env1.setStorageLocation(*Ref, Loc1);
 
-  // Two different `RecordValue`s with the same location are joined into a
-  // third `RecordValue` with that same location.
-  {
-    Environment Env1(DAContext);
-    auto &Val1 = *cast<RecordValue>(Env1.createValue(Ty));
-    RecordStorageLocation &Loc = Val1.getLoc();
-    Env1.setValue(Loc, Val1);
+  Environment Env2(DAContext);
+  StorageLocation &Loc2 = Env2.createStorageLocation(Context.IntTy);
+  Env2.setStorageLocation(*Ref, Loc2);
 
-    Environment Env2(DAContext);
-    auto &Val2 = Env2.create<RecordValue>(Loc);
-    Env2.setValue(Loc, Val2);
-    Env2.setValue(Loc, Val2);
+  EXPECT_NE(&Loc1, &Loc2);
 
-    Environment::ValueModel Model;
-    Environment EnvJoined = Environment::join(Env1, Env2, Model);
-    auto *JoinedVal = cast<RecordValue>(EnvJoined.getValue(Loc));
-    EXPECT_NE(JoinedVal, &Val1);
-    EXPECT_NE(JoinedVal, &Val2);
-    EXPECT_EQ(&JoinedVal->getLoc(), &Loc);
-  }
+  Environment::ValueModel Model;
+  Environment EnvJoined =
+      Environment::join(Env1, Env2, Model, Environment::DiscardExprState);
+
+  // Joining environments with different storage locations for the same
+  // declaration results in the declaration being removed from the joined
+  // environment.
+  EXPECT_EQ(EnvJoined.getStorageLocation(*Ref), nullptr);
 }
 
 TEST_F(EnvironmentTest, InitGlobalVarsFun) {
@@ -175,6 +219,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsFun) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Fun);
+  Env.initialize();
   EXPECT_THAT(Env.getValue(*Var), NotNull());
 }
 
@@ -225,6 +270,7 @@ TEST_F(EnvironmentTest, IncludeFieldsFromDefaultInitializers) {
   // Verify that the `X` field of `S` is populated when analyzing the
   // constructor, even though it is not referenced directly in the constructor.
   Environment Env(DAContext, *Constructor);
+  Env.initialize();
   auto &Loc = cast<RecordStorageLocation>(Env.createObject(QTy));
   EXPECT_THAT(getFieldValue(&Loc, *XDecl, Env), NotNull());
 }
@@ -268,6 +314,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsFieldFun) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Fun);
+  Env.initialize();
   const auto *GlobalLoc =
       cast<RecordStorageLocation>(Env.getStorageLocation(*GlobalDecl));
   auto *BarVal = getFieldValue(GlobalLoc, *BarDecl, Env);
@@ -303,38 +350,90 @@ TEST_F(EnvironmentTest, InitGlobalVarsConstructor) {
 
   // Verify the global variable is populated when we analyze `Target`.
   Environment Env(DAContext, *Ctor);
+  Env.initialize();
   EXPECT_THAT(Env.getValue(*Var), NotNull());
 }
 
-TEST_F(EnvironmentTest, RefreshRecordValue) {
+// Pointers to Members are a tricky case of accessor calls, complicated further
+// when using templates where the pointer to the member is a template argument.
+// This is a repro of a failure case seen in the wild.
+TEST_F(EnvironmentTest,
+       ModelMemberForAccessorUsingMethodPointerThroughTemplate) {
   using namespace ast_matchers;
 
   std::string Code = R"cc(
-     struct S {};
-     void target () {
-       S s;
-       s;
-     }
+      struct S {
+        int accessor() {return member;}
+
+        int member = 0;
+      };
+
+      template <auto method>
+      int Target(S* S) {
+        return (S->*method)();
+      }
+
+     // We want to analyze the instantiation of Target for the accessor.
+     int Instantiator () {S S; return Target<&S::accessor>(&S); }
   )cc";
 
+  auto Unit =
+      // C++17 for the simplifying use of auto in the template declaration.
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++17"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results = match(
+      decl(anyOf(functionDecl(hasName("Target"), isTemplateInstantiation())
+                     .bind("target"),
+                 fieldDecl(hasName("member")).bind("member"),
+                 recordDecl(hasName("S")).bind("struct"))),
+      Context);
+  const auto *Fun = selectFirst<FunctionDecl>("target", Results);
+  const auto *Struct = selectFirst<RecordDecl>("struct", Results);
+  const auto *Member = selectFirst<FieldDecl>("member", Results);
+  ASSERT_THAT(Fun, NotNull());
+  ASSERT_THAT(Struct, NotNull());
+  ASSERT_THAT(Member, NotNull());
+
+  // Verify that `member` is modeled for `S` when we analyze
+  // `Target<&S::accessor>`.
+  Environment Env(DAContext, *Fun);
+  Env.initialize();
+  EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
+              Contains(Member));
+}
+
+TEST_F(EnvironmentTest, Stmt) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct S { int i; };
+      void foo() {
+        S AnS = S{1};
+      }
+    )cc";
   auto Unit =
       tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
   auto &Context = Unit->getASTContext();
 
   ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
 
-  auto Results = match(functionDecl(hasName("target")).bind("target"), Context);
-  const auto *Target = selectFirst<FunctionDecl>("target", Results);
-  ASSERT_THAT(Target, NotNull());
+  auto *DeclStatement = const_cast<DeclStmt *>(selectFirst<DeclStmt>(
+      "d", match(declStmt(hasSingleDecl(varDecl(hasName("AnS")))).bind("d"),
+                 Context)));
+  ASSERT_THAT(DeclStatement, NotNull());
+  auto *Init = (cast<VarDecl>(*DeclStatement->decl_begin()))->getInit();
+  ASSERT_THAT(Init, NotNull());
 
-  Results = match(declRefExpr(to(varDecl(hasName("s")))).bind("s"), Context);
-  const auto *DRE = selectFirst<DeclRefExpr>("s", Results);
-  ASSERT_THAT(DRE, NotNull());
-
-  Environment Env(DAContext, *Target);
-  EXPECT_THAT(Env.getStorageLocation(*DRE), IsNull());
-  refreshRecordValue(*DRE, Env);
-  EXPECT_THAT(Env.getStorageLocation(*DRE), NotNull());
+  // Verify that we can retrieve the result object location for the initializer
+  // expression when we analyze the DeclStmt for `AnS`.
+  Environment Env(DAContext, *DeclStatement);
+  // Don't crash when initializing.
+  Env.initialize();
+  // And don't crash when retrieving the result object location.
+  Env.getResultObjectLocation(*Init);
 }
 
 } // namespace

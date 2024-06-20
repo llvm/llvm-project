@@ -1,7 +1,7 @@
 // This test will test the correstness of generating DILabel and
 // llvm.dbg.label for labels.
 //
-// RUN: %clang_cc1 -emit-llvm %s -o - -emit-llvm -debug-info-kind=limited | FileCheck %s
+// RUN: %clang_cc1 %s -o - -emit-llvm -debug-info-kind=limited | FileCheck %s
 
 int f1(int a, int b) {
   int sum;

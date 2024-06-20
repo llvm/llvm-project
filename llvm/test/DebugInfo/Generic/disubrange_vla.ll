@@ -4,6 +4,13 @@
 ; RUN: llvm-dwarfdump -verbose %t >> %t2
 ; RUN: cat %t2 | FileCheck %s
 
+; Repeat the test with experimental debuginfo iterators.
+; RUN: rm -rf %t %t2
+; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O0 -filetype=obj < %s > %t
+; RUN: llvm-dwarfdump -name=vla_expr %t > %t2
+; RUN: llvm-dwarfdump -verbose %t >> %t2
+; RUN: cat %t2 | FileCheck %s
+
 ; This test runs llvm-dwarfdump twice:
 ; - First to get the debug entry for 'vla_expr'.
 ; - Second to check that this is the entry referenced in DW_AT_count.

@@ -140,7 +140,7 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
     const float ONE[2] = {1.0f, -1.0f};
     const float SMALL[2] = {-0x1.0p-25f, 0x1.0p-25f};
 
-    int sign = static_cast<int>(xbits.get_sign());
+    int sign = xbits.is_neg() ? 1 : 0;
 
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       return (x_abs > 0x7f80'0000) ? x : ONE[sign];
@@ -154,7 +154,7 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
   double xd = static_cast<double>(x);
   double xsq = xd * xd;
 
-  const uint32_t EIGHT = 3 << FPBits::FloatProp::MANTISSA_WIDTH;
+  const uint32_t EIGHT = 3 << FPBits::FRACTION_LEN;
   int idx = static_cast<int>(FPBits(x_abs + EIGHT).get_val());
 
   double x4 = xsq * xsq;

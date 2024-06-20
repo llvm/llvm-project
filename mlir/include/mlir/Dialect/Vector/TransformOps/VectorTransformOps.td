@@ -10,7 +10,7 @@
 #define VECTOR_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Vector/Transforms/VectorTransformsBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -89,6 +89,20 @@ def ApplyTransferPermutationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyLowerBitCastPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_bitcast",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector bitcast operations should be lowered to
+    finer-grained vector primitives.
+
+    This is usally a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerBroadcastPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_broadcast",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -151,7 +165,7 @@ def ApplyLowerMaskedTransfersPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_masked_transfers",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Apply opt-in patterns that lower vector.mask operations surrounding 
+    Apply opt-in patterns that lower vector.mask operations surrounding
     side-effecting ops:
       - MaskedTransferReadOpPattern
       - MaskedTransferWriteOpPattern
@@ -292,6 +306,34 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyLowerInterleavePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_interleave",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector interleave operations should be lowered to
+    finer-grained vector primitives.
+
+    This is usally a late step that is run after bufferization as part of the
+    process of lowering to e.g. LLVM or NVVM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyInterleaveToShufflePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.interleave_to_shuffle",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that 1D vector interleave operations should be rewritten as
+    vector shuffle operations.
+
+    This is motivated by some current codegen backends not handling vector
+    interleave operations.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyRewriteNarrowTypePatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.rewrite_narrow_types",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -376,7 +418,7 @@ def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
       - ReorderCastOpsOnBroadcast
       - ReorderElementwiseOpsOnTranspose
 
-    These patterns have the effect of rewriting a vector.multi_reduce into a 
+    These patterns have the effect of rewriting a vector.multi_reduce into a
     vector.contract.
   }];
 

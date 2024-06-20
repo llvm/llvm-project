@@ -1,0 +1,129 @@
+# RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK,NDD %s
+# RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr,+nf -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK,NDD-NF %s
+
+...
+---
+name:            ndd_2_non_ndd_xor
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: xorq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x31,0xf0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = XOR64rr_ND killed renamable $rax, killed renamable $rsi, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_sub
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: subq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x29,0xf0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = SUB64rr_ND killed renamable $rax, killed renamable $rsi, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_commutable
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: xorq    %rsi, %rax                      # EVEX TO LEGACY Compression encoding: [0x48,0x31,0xf0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = XOR64rr_ND killed renamable $rsi, killed renamable $rax, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_commutable_new_opcode
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; CHECK: shldq   $52, %rsi, %rax                 # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xa4,0xf0,0x34]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = SHRD64rri8_ND killed renamable $rsi, killed renamable $rax, 12, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_incommutable
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi
+    ; NDD:     subq    %rax, %rsi, %rax              # encoding: [0x62,0xf4,0xfc,0x18,0x29,0xc6]
+    ; NDD-NF: {nf} subq    %rax, %rsi, %rax          # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x29,0xc6]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $rsi, implicit-def dead $eflags
+    renamable $rax = SUB64rr_ND killed renamable $rsi, killed renamable $rax, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_mem
+body:             |
+  bb.0.entry:
+    ; NDD:    addq    $123456, (%rax), %rax          # encoding: [0x62,0xf4,0xfc,0x18,0x81,0x00,0x40,0xe2,0x01,0x00]
+    ; NDD-NF: {nf} addq $123456, (%rax), %rax        # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0x81,0x00,0x40,0xe2,0x01,0x00]
+    renamable $rax = MOV64rm $noreg, 1, $noreg, 0, $fs
+    renamable $rax = nsw ADD64mi32_ND killed renamable $rax, 1, $noreg, 0, $noreg, 123456, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_egpr
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $r16
+    ; CHECK: xorq    %r16, %rax                      # EVEX TO LEGACY Compression encoding: [0xd5,0x48,0x31,0xc0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $r16, implicit-def dead $eflags
+    renamable $rax = XOR64rr_ND killed renamable $rax, killed renamable $r16, implicit-def dead $eflags
+    RET64 $rax
+...
+---
+name:            ndd_2_non_ndd_egpr_nf
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $r16
+    ; CHECK: {nf} xorq %r16, %rax                   # EVEX TO EVEX Compression encoding: [0x62,0xe4,0xfc,0x0c,0x31,0xc0]
+    renamable $rax = ADD64rr_ND killed renamable $rdi, renamable $r16, implicit-def dead $eflags
+    renamable $rax = XOR64rr_NF_ND killed renamable $rax, killed renamable $r16
+    RET64 $rax
+...
+---
+name:            bswapr_to_movberr
+body:             |
+  bb.0.entry:
+    liveins: $rax
+    ; CHECK: bswapq  %rax                            # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0xc8]
+    renamable $rax = MOVBE64rr killed renamable $rax
+    RET64 killed $rax
+...
+---
+name:            non_nf_2_nf
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $r16
+    ; CHECK:  addq %r16, %rdi                        # encoding: [0xd5,0x48,0x01,0xc7]
+    ; NDD:    xorq %r16, %rdi, %rax                  # encoding: [0x62,0xe4,0xfc,0x18,0x31,0xc7]
+    ; NDD-NF: {nf} xorq %r16, %rdi, %rax             # EVEX TO EVEX Compression encoding: [0x62,0xe4,0xfc,0x1c,0x31,0xc7]
+    ; CHECK:  addq %r16, %rax, %rdi                  # encoding: [0x62,0xe4,0xc4,0x18,0x01,0xc0]
+    ; CHECK:  adcq %rdi, %r16, %rax                  # encoding: [0x62,0xfc,0xfc,0x18,0x11,0xf8]
+    $rdi = ADD64rr $rdi, $r16, implicit-def dead $eflags
+    $rax = XOR64rr_ND $rdi, $r16, implicit-def dead $eflags
+    $rdi = ADD64rr_ND $rax, $r16, implicit-def $eflags
+    $rax = ADC64rr_ND $r16, $rdi, implicit-def dead $eflags, implicit $eflags
+    RET64 $rax
+...
+---
+name:            cfcmov_no_convert
+body:             |
+  bb.0.entry:
+    liveins: $eflags, $rax, $rbx
+    ; CHECK: cfcmovew %bx, %ax, %ax                  # encoding: [0x62,0xf4,0x7d,0x1c,0x44,0xc3]
+    ; CHECK: cfcmovsw 24(%rax), %bx, %bx             # encoding: [0x62,0xf4,0x65,0x1c,0x48,0x58,0x18]
+    ; CHECK: cfcmovel %ebx, %eax, %eax               # encoding: [0x62,0xf4,0x7c,0x1c,0x44,0xc3]
+    ; CHECK: cfcmovsl 24(%rax), %ebx, %ebx           # encoding: [0x62,0xf4,0x64,0x1c,0x48,0x58,0x18]
+    ; CHECK: cfcmoveq %rbx, %rax, %rax               # encoding: [0x62,0xf4,0xfc,0x1c,0x44,0xc3]
+    ; CHECK: cfcmovsq 24(%rax), %rbx, %rbx           # encoding: [0x62,0xf4,0xe4,0x1c,0x48,0x58,0x18]
+    $ax = CFCMOV16rr_ND $ax, $bx, 4, implicit $eflags
+    $bx = CFCMOV16rm_ND $bx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
+    $eax = CFCMOV32rr_ND $eax, $ebx, 4, implicit $eflags
+    $ebx = CFCMOV32rm_ND $ebx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
+    $rax = CFCMOV64rr_ND $rax, $rbx, 4, implicit $eflags
+    $rbx = CFCMOV64rm_ND $rbx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
+    RET64 $rax
+...

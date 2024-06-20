@@ -177,7 +177,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     return CapabilityExpr();
 
   if (const auto* SLit = dyn_cast<StringLiteral>(AttrExp)) {
-    if (SLit->getString() == StringRef("*"))
+    if (SLit->getString() == "*")
       // The "*" expr is a universal lock, which essentially turns off
       // checks until it is removed from the lockset.
       return CapabilityExpr(new (Arena) til::Wildcard(), StringRef("wildcard"),
@@ -197,7 +197,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   else if (const auto *UO = dyn_cast<UnaryOperator>(AttrExp)) {
     if (UO->getOpcode() == UO_LNot) {
       Neg = true;
-      AttrExp = UO->getSubExpr();
+      AttrExp = UO->getSubExpr()->IgnoreImplicit();
     }
   }
 
@@ -995,7 +995,7 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
   IncompleteArgs.clear();
 }
 
-/*
+#ifndef NDEBUG
 namespace {
 
 class TILPrinter :
@@ -1016,4 +1016,4 @@ void printSCFG(CFGWalker &Walker) {
 
 } // namespace threadSafety
 } // namespace clang
-*/
+#endif // NDEBUG

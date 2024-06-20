@@ -542,6 +542,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
     } else if (!MaskEltCount.isScalable())
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
+
   // Do not iterate on scalable vector. The num of elements is unknown at
   // compile-time.
   if (isa<ScalableVectorType>(V1VTy))
@@ -679,13 +680,14 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
 
   // Simplify BinOps with their identity values first. They are no-ops and we
   // can always return the other value, including undef or poison values.
-  // FIXME: remove unnecessary duplicated identity patterns below.
-  // FIXME: Use AllowRHSConstant with getBinOpIdentity to handle additional ops,
-  //        like X << 0 = X.
-  Constant *Identity = ConstantExpr::getBinOpIdentity(Opcode, C1->getType());
-  if (Identity) {
+  if (Constant *Identity = ConstantExpr::getBinOpIdentity(
+          Opcode, C1->getType(), /*AllowRHSIdentity*/ false)) {
     if (C1 == Identity)
       return C2;
+    if (C2 == Identity)
+      return C1;
+  } else if (Constant *Identity = ConstantExpr::getBinOpIdentity(
+                 Opcode, C1->getType(), /*AllowRHSIdentity*/ true)) {
     if (C2 == Identity)
       return C1;
   }
@@ -734,9 +736,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // X / 0 -> poison
       if (match(C2, m_CombineOr(m_Undef(), m_Zero())))
         return PoisonValue::get(C2->getType());
-      // undef / 1 -> undef
-      if (match(C2, m_One()))
-        return C1;
       // undef / X -> 0       otherwise
       return Constant::getNullValue(C1->getType());
     case Instruction::URem:
@@ -755,18 +754,12 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // X >>l undef -> poison
       if (isa<UndefValue>(C2))
         return PoisonValue::get(C2->getType());
-      // undef >>l 0 -> undef
-      if (match(C2, m_Zero()))
-        return C1;
       // undef >>l X -> 0
       return Constant::getNullValue(C1->getType());
     case Instruction::AShr:
       // X >>a undef -> poison
       if (isa<UndefValue>(C2))
         return PoisonValue::get(C2->getType());
-      // undef >>a 0 -> undef
-      if (match(C2, m_Zero()))
-        return C1;
       // TODO: undef >>a X -> poison if the shift is exact
       // undef >>a X -> 0
       return Constant::getNullValue(C1->getType());
@@ -774,9 +767,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // X << undef -> undef
       if (isa<UndefValue>(C2))
         return PoisonValue::get(C2->getType());
-      // undef << 0 -> undef
-      if (match(C2, m_Zero()))
-        return C1;
       // undef << X -> 0
       return Constant::getNullValue(C1->getType());
     case Instruction::FSub:
@@ -810,21 +800,12 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   // Handle simplifications when the RHS is a constant int.
   if (ConstantInt *CI2 = dyn_cast<ConstantInt>(C2)) {
     switch (Opcode) {
-    case Instruction::Add:
-      if (CI2->isZero()) return C1;                             // X + 0 == X
-      break;
-    case Instruction::Sub:
-      if (CI2->isZero()) return C1;                             // X - 0 == X
-      break;
     case Instruction::Mul:
-      if (CI2->isZero()) return C2;                             // X * 0 == 0
-      if (CI2->isOne())
-        return C1;                                              // X * 1 == X
+      if (CI2->isZero())
+        return C2; // X * 0 == 0
       break;
     case Instruction::UDiv:
     case Instruction::SDiv:
-      if (CI2->isOne())
-        return C1;                                            // X / 1 == X
       if (CI2->isZero())
         return PoisonValue::get(CI2->getType());              // X / 0 == poison
       break;
@@ -836,9 +817,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return PoisonValue::get(CI2->getType());              // X % 0 == poison
       break;
     case Instruction::And:
-      if (CI2->isZero()) return C2;                           // X & 0 == 0
-      if (CI2->isMinusOne())
-        return C1;                                            // X & -1 == X
+      if (CI2->isZero())
+        return C2; // X & 0 == 0
 
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
         // If and'ing the address of a global with a constant, fold it.
@@ -868,7 +848,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
           }
 
           if (GVAlign > 1) {
-            unsigned DstWidth = CI2->getType()->getBitWidth();
+            unsigned DstWidth = CI2->getBitWidth();
             unsigned SrcWidth = std::min(DstWidth, Log2(GVAlign));
             APInt BitsNotSet(APInt::getLowBitsSet(DstWidth, SrcWidth));
 
@@ -880,26 +860,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       }
       break;
     case Instruction::Or:
-      if (CI2->isZero()) return C1;        // X | 0 == X
       if (CI2->isMinusOne())
-        return C2;                         // X | -1 == -1
-      break;
-    case Instruction::Xor:
-      if (CI2->isZero()) return C1;        // X ^ 0 == X
-
-      if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
-        switch (CE1->getOpcode()) {
-        default: break;
-        case Instruction::ICmp:
-        case Instruction::FCmp:
-          // cmp pred ^ true -> cmp !pred
-          assert(CI2->isOne());
-          CmpInst::Predicate pred = (CmpInst::Predicate)CE1->getPredicate();
-          pred = CmpInst::getInversePredicate(pred);
-          return ConstantExpr::getCompare(pred, CE1->getOperand(0),
-                                          CE1->getOperand(1));
-        }
-      }
+        return C2; // X | -1 == -1
       break;
     }
   } else if (isa<ConstantInt>(C1)) {
@@ -1177,10 +1139,9 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2) {
                                 GV->getType()->getAddressSpace()))
         return ICmpInst::ICMP_UGT;
     }
-  } else {
+  } else if (auto *CE1 = dyn_cast<ConstantExpr>(V1)) {
     // Ok, the LHS is known to be a constantexpr.  The RHS can be any of a
     // constantexpr, a global, block address, or a simple constant.
-    ConstantExpr *CE1 = cast<ConstantExpr>(V1);
     Constant *CE1Op0 = CE1->getOperand(0);
 
     switch (CE1->getOpcode()) {
@@ -1305,9 +1266,9 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     // Fast path for splatted constants.
     if (Constant *C1Splat = C1->getSplatValue())
       if (Constant *C2Splat = C2->getSplatValue())
-        return ConstantVector::getSplat(
-            C1VTy->getElementCount(),
-            ConstantExpr::getCompare(Predicate, C1Splat, C2Splat));
+        if (Constant *Elt =
+                ConstantFoldCompareInstruction(Predicate, C1Splat, C2Splat))
+          return ConstantVector::getSplat(C1VTy->getElementCount(), Elt);
 
     // Do not iterate on scalable vector. The number of elements is unknown at
     // compile-time.
@@ -1325,8 +1286,11 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
           ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, I));
       Constant *C2E =
           ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, I));
+      Constant *Elt = ConstantFoldCompareInstruction(Predicate, C1E, C2E);
+      if (!Elt)
+        return nullptr;
 
-      ResElts.push_back(ConstantExpr::getCompare(Predicate, C1E, C2E));
+      ResElts.push_back(Elt);
     }
 
     return ConstantVector::get(ResElts);
@@ -1434,54 +1398,10 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
       // other way if possible.
       // Also, if C1 is null and C2 isn't, flip them around.
       Predicate = ICmpInst::getSwappedPredicate(Predicate);
-      return ConstantExpr::getICmp(Predicate, C2, C1);
+      return ConstantFoldCompareInstruction(Predicate, C2, C1);
     }
   }
   return nullptr;
-}
-
-/// Test whether the given sequence of *normalized* indices is "inbounds".
-template<typename IndexTy>
-static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
-  // No indices means nothing that could be out of bounds.
-  if (Idxs.empty()) return true;
-
-  // If the first index is zero, it's in bounds.
-  if (cast<Constant>(Idxs[0])->isNullValue()) return true;
-
-  // If the first index is one and all the rest are zero, it's in bounds,
-  // by the one-past-the-end rule.
-  if (auto *CI = dyn_cast<ConstantInt>(Idxs[0])) {
-    if (!CI->isOne())
-      return false;
-  } else {
-    auto *CV = cast<ConstantDataVector>(Idxs[0]);
-    CI = dyn_cast_or_null<ConstantInt>(CV->getSplatValue());
-    if (!CI || !CI->isOne())
-      return false;
-  }
-
-  for (unsigned i = 1, e = Idxs.size(); i != e; ++i)
-    if (!cast<Constant>(Idxs[i])->isNullValue())
-      return false;
-  return true;
-}
-
-/// Test whether a given ConstantInt is in-range for a SequentialType.
-static bool isIndexInRangeOfArrayType(uint64_t NumElements,
-                                      const ConstantInt *CI) {
-  // We cannot bounds check the index if it doesn't fit in an int64_t.
-  if (CI->getValue().getSignificantBits() > 64)
-    return false;
-
-  // A negative index or an index past the end of our sequential type is
-  // considered out-of-range.
-  int64_t IndexVal = CI->getSExtValue();
-  if (IndexVal < 0 || (IndexVal != 0 && (uint64_t)IndexVal >= NumElements))
-    return false;
-
-  // Otherwise, it is in-range.
-  return true;
 }
 
 // Combine Indices - If the source pointer to this getelementptr instruction
@@ -1490,6 +1410,10 @@ static bool isIndexInRangeOfArrayType(uint64_t NumElements,
 static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
                               ArrayRef<Value *> Idxs) {
   if (PointeeTy != GEP->getResultElementType())
+    return nullptr;
+
+  // Leave inrange handling to DL-aware constant folding.
+  if (GEP->getInRange())
     return nullptr;
 
   Constant *Idx0 = cast<Constant>(Idxs[0]);
@@ -1501,7 +1425,7 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
     NewIndices.append(Idxs.begin() + 1, Idxs.end());
     return ConstantExpr::getGetElementPtr(
         GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
-        NewIndices, InBounds && GEP->isInBounds(), GEP->getInRangeIndex());
+        NewIndices, InBounds && GEP->isInBounds());
   }
 
   gep_type_iterator LastI = gep_type_end(GEP);
@@ -1550,21 +1474,14 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
   NewIndices.push_back(ConstantExpr::get(Instruction::Add, Idx0, LastIdx));
   NewIndices.append(Idxs.begin() + 1, Idxs.end());
 
-  // The combined GEP normally inherits its index inrange attribute from
-  // the inner GEP, but if the inner GEP's last index was adjusted by the
-  // outer GEP, any inbounds attribute on that index is invalidated.
-  std::optional<unsigned> IRIndex = GEP->getInRangeIndex();
-  if (IRIndex && *IRIndex == GEP->getNumIndices() - 1)
-    IRIndex = std::nullopt;
-
   return ConstantExpr::getGetElementPtr(
       GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
-      NewIndices, InBounds && GEP->isInBounds(), IRIndex);
+      NewIndices, InBounds && GEP->isInBounds());
 }
 
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           bool InBounds,
-                                          std::optional<unsigned> InRangeIndex,
+                                          std::optional<ConstantRange> InRange,
                                           ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
 
@@ -1575,12 +1492,11 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     return PoisonValue::get(GEPTy);
 
   if (isa<UndefValue>(C))
-    // If inbounds, we can choose an out-of-bounds pointer as a base pointer.
-    return InBounds ? PoisonValue::get(GEPTy) : UndefValue::get(GEPTy);
+    return UndefValue::get(GEPTy);
 
   auto IsNoOp = [&]() {
     // Avoid losing inrange information.
-    if (InRangeIndex)
+    if (InRange)
       return false;
 
     return all_of(Idxs, [](Value *Idx) {
@@ -1598,163 +1514,6 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     if (auto *GEP = dyn_cast<GEPOperator>(CE))
       if (Constant *C = foldGEPOfGEP(GEP, PointeeTy, InBounds, Idxs))
         return C;
-
-  // Check to see if any array indices are not within the corresponding
-  // notional array or vector bounds. If so, try to determine if they can be
-  // factored out into preceding dimensions.
-  SmallVector<Constant *, 8> NewIdxs;
-  Type *Ty = PointeeTy;
-  Type *Prev = C->getType();
-  auto GEPIter = gep_type_begin(PointeeTy, Idxs);
-  bool Unknown =
-      !isa<ConstantInt>(Idxs[0]) && !isa<ConstantDataVector>(Idxs[0]);
-  for (unsigned i = 1, e = Idxs.size(); i != e;
-       Prev = Ty, Ty = (++GEPIter).getIndexedType(), ++i) {
-    if (!isa<ConstantInt>(Idxs[i]) && !isa<ConstantDataVector>(Idxs[i])) {
-      // We don't know if it's in range or not.
-      Unknown = true;
-      continue;
-    }
-    if (!isa<ConstantInt>(Idxs[i - 1]) && !isa<ConstantDataVector>(Idxs[i - 1]))
-      // Skip if the type of the previous index is not supported.
-      continue;
-    if (InRangeIndex && i == *InRangeIndex + 1) {
-      // If an index is marked inrange, we cannot apply this canonicalization to
-      // the following index, as that will cause the inrange index to point to
-      // the wrong element.
-      continue;
-    }
-    if (isa<StructType>(Ty)) {
-      // The verify makes sure that GEPs into a struct are in range.
-      continue;
-    }
-    if (isa<VectorType>(Ty)) {
-      // There can be awkward padding in after a non-power of two vector.
-      Unknown = true;
-      continue;
-    }
-    auto *STy = cast<ArrayType>(Ty);
-    if (ConstantInt *CI = dyn_cast<ConstantInt>(Idxs[i])) {
-      if (isIndexInRangeOfArrayType(STy->getNumElements(), CI))
-        // It's in range, skip to the next index.
-        continue;
-      if (CI->isNegative()) {
-        // It's out of range and negative, don't try to factor it.
-        Unknown = true;
-        continue;
-      }
-    } else {
-      auto *CV = cast<ConstantDataVector>(Idxs[i]);
-      bool InRange = true;
-      for (unsigned I = 0, E = CV->getNumElements(); I != E; ++I) {
-        auto *CI = cast<ConstantInt>(CV->getElementAsConstant(I));
-        InRange &= isIndexInRangeOfArrayType(STy->getNumElements(), CI);
-        if (CI->isNegative()) {
-          Unknown = true;
-          break;
-        }
-      }
-      if (InRange || Unknown)
-        // It's in range, skip to the next index.
-        // It's out of range and negative, don't try to factor it.
-        continue;
-    }
-    if (isa<StructType>(Prev)) {
-      // It's out of range, but the prior dimension is a struct
-      // so we can't do anything about it.
-      Unknown = true;
-      continue;
-    }
-
-    // Determine the number of elements in our sequential type.
-    uint64_t NumElements = STy->getArrayNumElements();
-    if (!NumElements) {
-      Unknown = true;
-      continue;
-    }
-
-    // It's out of range, but we can factor it into the prior
-    // dimension.
-    NewIdxs.resize(Idxs.size());
-
-    // Expand the current index or the previous index to a vector from a scalar
-    // if necessary.
-    Constant *CurrIdx = cast<Constant>(Idxs[i]);
-    auto *PrevIdx =
-        NewIdxs[i - 1] ? NewIdxs[i - 1] : cast<Constant>(Idxs[i - 1]);
-    bool IsCurrIdxVector = CurrIdx->getType()->isVectorTy();
-    bool IsPrevIdxVector = PrevIdx->getType()->isVectorTy();
-    bool UseVector = IsCurrIdxVector || IsPrevIdxVector;
-
-    if (!IsCurrIdxVector && IsPrevIdxVector)
-      CurrIdx = ConstantDataVector::getSplat(
-          cast<FixedVectorType>(PrevIdx->getType())->getNumElements(), CurrIdx);
-
-    if (!IsPrevIdxVector && IsCurrIdxVector)
-      PrevIdx = ConstantDataVector::getSplat(
-          cast<FixedVectorType>(CurrIdx->getType())->getNumElements(), PrevIdx);
-
-    Constant *Factor =
-        ConstantInt::get(CurrIdx->getType()->getScalarType(), NumElements);
-    if (UseVector)
-      Factor = ConstantDataVector::getSplat(
-          IsPrevIdxVector
-              ? cast<FixedVectorType>(PrevIdx->getType())->getNumElements()
-              : cast<FixedVectorType>(CurrIdx->getType())->getNumElements(),
-          Factor);
-
-    NewIdxs[i] =
-        ConstantFoldBinaryInstruction(Instruction::SRem, CurrIdx, Factor);
-
-    Constant *Div =
-        ConstantFoldBinaryInstruction(Instruction::SDiv, CurrIdx, Factor);
-
-    // We're working on either ConstantInt or vectors of ConstantInt,
-    // so these should always fold.
-    assert(NewIdxs[i] != nullptr && Div != nullptr && "Should have folded");
-
-    unsigned CommonExtendedWidth =
-        std::max(PrevIdx->getType()->getScalarSizeInBits(),
-                 Div->getType()->getScalarSizeInBits());
-    CommonExtendedWidth = std::max(CommonExtendedWidth, 64U);
-
-    // Before adding, extend both operands to i64 to avoid
-    // overflow trouble.
-    Type *ExtendedTy = Type::getIntNTy(Div->getContext(), CommonExtendedWidth);
-    if (UseVector)
-      ExtendedTy = FixedVectorType::get(
-          ExtendedTy,
-          IsPrevIdxVector
-              ? cast<FixedVectorType>(PrevIdx->getType())->getNumElements()
-              : cast<FixedVectorType>(CurrIdx->getType())->getNumElements());
-
-    if (!PrevIdx->getType()->isIntOrIntVectorTy(CommonExtendedWidth))
-      PrevIdx =
-          ConstantFoldCastInstruction(Instruction::SExt, PrevIdx, ExtendedTy);
-
-    if (!Div->getType()->isIntOrIntVectorTy(CommonExtendedWidth))
-      Div = ConstantFoldCastInstruction(Instruction::SExt, Div, ExtendedTy);
-
-    assert(PrevIdx && Div && "Should have folded");
-    NewIdxs[i - 1] = ConstantExpr::getAdd(PrevIdx, Div);
-  }
-
-  // If we did any factoring, start over with the adjusted indices.
-  if (!NewIdxs.empty()) {
-    for (unsigned i = 0, e = Idxs.size(); i != e; ++i)
-      if (!NewIdxs[i]) NewIdxs[i] = cast<Constant>(Idxs[i]);
-    return ConstantExpr::getGetElementPtr(PointeeTy, C, NewIdxs, InBounds,
-                                          InRangeIndex);
-  }
-
-  // If all indices are known integers and normalized, we can do a simple
-  // check for the "inbounds" property.
-  if (!Unknown && !InBounds)
-    if (auto *GV = dyn_cast<GlobalVariable>(C))
-      if (!GV->hasExternalWeakLinkage() && GV->getValueType() == PointeeTy &&
-          isInBoundsIndices(Idxs))
-        return ConstantExpr::getGetElementPtr(PointeeTy, C, Idxs,
-                                              /*InBounds=*/true, InRangeIndex);
 
   return nullptr;
 }

@@ -12,10 +12,11 @@
 
 // directory_iterator
 
-#include "filesystem_include.h"
+#include <filesystem>
 
 #include <concepts>
 #include <ranges>
+namespace fs = std::filesystem;
 
 static_assert(std::same_as<std::ranges::iterator_t<fs::directory_iterator>, fs::directory_iterator>);
 static_assert(std::ranges::common_range<fs::directory_iterator>);

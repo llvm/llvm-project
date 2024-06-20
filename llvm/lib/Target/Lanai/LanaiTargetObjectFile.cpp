@@ -80,7 +80,7 @@ bool LanaiTargetObjectFile::isGlobalInSmallSectionImpl(
   // Global values placed in sections starting with .ldata do not fit in
   // 21-bits, so always use large memory access for them. FIXME: This is a
   // workaround for a tool limitation.
-  if (GVA->getSection().startswith(".ldata"))
+  if (GVA->getSection().starts_with(".ldata"))
     return false;
 
   if (TM.getCodeModel() == CodeModel::Small)

@@ -19,7 +19,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
@@ -113,23 +114,15 @@ enum {
 
   UsesVXRMShift = HasRoundModeOpShift + 1,
   UsesVXRMMask = 1 << UsesVXRMShift,
-};
 
-enum VLMUL : uint8_t {
-  LMUL_1 = 0,
-  LMUL_2,
-  LMUL_4,
-  LMUL_8,
-  LMUL_RESERVED,
-  LMUL_F8,
-  LMUL_F4,
-  LMUL_F2
-};
-
-enum {
-  TAIL_UNDISTURBED_MASK_UNDISTURBED = 0,
-  TAIL_AGNOSTIC = 1,
-  MASK_AGNOSTIC = 2,
+  // Indicates whether these instructions can partially overlap between source
+  // registers and destination registers according to the vector spec.
+  // 0 -> not a vector pseudo
+  // 1 -> default value for vector pseudos. not widening or narrowing.
+  // 2 -> narrowing case
+  // 3 -> widening case
+  TargetOverlapConstraintTypeShift = UsesVXRMShift + 1,
+  TargetOverlapConstraintTypeMask = 3ULL << TargetOverlapConstraintTypeShift,
 };
 
 // Helper functions to read TSFlags.
@@ -245,7 +238,6 @@ static inline bool isFirstDefTiedToFirstUse(const MCInstrDesc &Desc) {
 enum {
   MO_None = 0,
   MO_CALL = 1,
-  MO_PLT = 2,
   MO_LO = 3,
   MO_HI = 4,
   MO_PCREL_LO = 5,
@@ -256,11 +248,15 @@ enum {
   MO_TPREL_ADD = 10,
   MO_TLS_GOT_HI = 11,
   MO_TLS_GD_HI = 12,
+  MO_TLSDESC_HI = 13,
+  MO_TLSDESC_LOAD_LO = 14,
+  MO_TLSDESC_ADD_LO = 15,
+  MO_TLSDESC_CALL = 16,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have
   // multiple "bitmask" flags.
-  MO_DIRECT_FLAG_MASK = 15
+  MO_DIRECT_FLAG_MASK = 31
 };
 } // namespace RISCVII
 
@@ -301,7 +297,8 @@ enum OperandType : unsigned {
   OPERAND_RVKRNUM_0_7,
   OPERAND_RVKRNUM_1_10,
   OPERAND_RVKRNUM_2_14,
-  OPERAND_LAST_RISCV_IMM = OPERAND_RVKRNUM_2_14,
+  OPERAND_SPIMM,
+  OPERAND_LAST_RISCV_IMM = OPERAND_SPIMM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
@@ -376,6 +373,15 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 }
 } // namespace RISCVFPRndMode
 
+namespace RISCVVXRndMode {
+enum RoundingMode {
+  RNU = 0,
+  RNE = 1,
+  RDN = 2,
+  ROD = 3,
+};
+} // namespace RISCVVXRndMode
+
 //===----------------------------------------------------------------------===//
 // Floating-point Immediates
 //
@@ -392,6 +398,7 @@ int getLoadFPImm(APFloat FPImm);
 namespace RISCVSysReg {
 struct SysReg {
   const char *Name;
+  const char *AltName;
   const char *DeprecatedName;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
@@ -415,22 +422,9 @@ struct SysReg {
       return true;
     return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
   }
-
-  bool haveVendorRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
-    // Not in 32-bit mode.
-    if (isRV32Only && ActiveFeatures[RISCV::Feature64Bit])
-      return false;
-    // No required feature associated with the system register.
-    if (FeaturesRequired.none())
-      return false;
-    return (FeaturesRequired & ActiveFeatures) == FeaturesRequired;
-  }
 };
 
-struct SiFiveReg : SysReg {};
-
 #define GET_SysRegsList_DECL
-#define GET_SiFiveRegsList_DECL
 #include "RISCVGenSearchableTables.inc"
 } // end namespace RISCVSysReg
 
@@ -483,61 +477,6 @@ llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
 
 } // namespace RISCVFeatures
-
-namespace RISCVVType {
-// Is this a SEW value that can be encoded into the VTYPE format.
-inline static bool isValidSEW(unsigned SEW) {
-  return isPowerOf2_32(SEW) && SEW >= 8 && SEW <= 1024;
-}
-
-// Is this a LMUL value that can be encoded into the VTYPE format.
-inline static bool isValidLMUL(unsigned LMUL, bool Fractional) {
-  return isPowerOf2_32(LMUL) && LMUL <= 8 && (!Fractional || LMUL != 1);
-}
-
-unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
-                     bool MaskAgnostic);
-
-inline static RISCVII::VLMUL getVLMUL(unsigned VType) {
-  unsigned VLMUL = VType & 0x7;
-  return static_cast<RISCVII::VLMUL>(VLMUL);
-}
-
-// Decode VLMUL into 1,2,4,8 and fractional indicator.
-std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL);
-
-inline static RISCVII::VLMUL encodeLMUL(unsigned LMUL, bool Fractional) {
-  assert(isValidLMUL(LMUL, Fractional) && "Unsupported LMUL");
-  unsigned LmulLog2 = Log2_32(LMUL);
-  return static_cast<RISCVII::VLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
-}
-
-inline static unsigned decodeVSEW(unsigned VSEW) {
-  assert(VSEW < 8 && "Unexpected VSEW value");
-  return 1 << (VSEW + 3);
-}
-
-inline static unsigned encodeSEW(unsigned SEW) {
-  assert(isValidSEW(SEW) && "Unexpected SEW value");
-  return Log2_32(SEW) - 3;
-}
-
-inline static unsigned getSEW(unsigned VType) {
-  unsigned VSEW = (VType >> 3) & 0x7;
-  return decodeVSEW(VSEW);
-}
-
-inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
-
-inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
-
-void printVType(unsigned VType, raw_ostream &OS);
-
-unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
-
-std::optional<RISCVII::VLMUL>
-getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW);
-} // namespace RISCVVType
 
 namespace RISCVRVC {
 bool compress(MCInst &OutInst, const MCInst &MI, const MCSubtargetInfo &STI);
@@ -596,12 +535,9 @@ inline unsigned encodeRlist(MCRegister EndReg, bool IsRV32E = false) {
   }
 }
 
-inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
-                                       bool IsEABI) {
+inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64) {
   assert(RlistVal != RLISTENCODE::INVALID_RLIST &&
          "{ra, s0-s10} is not supported, s11 must be included.");
-  if (IsEABI)
-    return 16;
   if (!IsRV64) {
     switch (RlistVal) {
     case RLISTENCODE::RA:
@@ -648,18 +584,20 @@ inline static unsigned getStackAdjBase(unsigned RlistVal, bool IsRV64,
 }
 
 inline static bool getSpimm(unsigned RlistVal, unsigned &SpimmVal,
-                            int64_t StackAdjustment, bool IsRV64, bool IsEABI) {
+                            int64_t StackAdjustment, bool IsRV64) {
   if (RlistVal == RLISTENCODE::INVALID_RLIST)
     return false;
-  unsigned stackAdj = getStackAdjBase(RlistVal, IsRV64, IsEABI);
-  SpimmVal = (StackAdjustment - stackAdj) / 16;
+  unsigned StackAdjBase = getStackAdjBase(RlistVal, IsRV64);
+  StackAdjustment -= StackAdjBase;
+  if (StackAdjustment % 16 != 0)
+    return false;
+  SpimmVal = StackAdjustment / 16;
   if (SpimmVal > 3)
     return false;
   return true;
 }
 
 void printRlist(unsigned SlistEncode, raw_ostream &OS);
-void printSpimm(int64_t Spimm, raw_ostream &OS);
 } // namespace RISCVZC
 
 } // namespace llvm

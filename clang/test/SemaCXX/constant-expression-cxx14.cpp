@@ -44,13 +44,13 @@ constexpr int g(int k) {
   return 3 * k3 + 5 * k2 + n * k - 20;
 }
 static_assert(g(2) == 42, "");
-constexpr int h(int n) {  // expected-error {{constexpr function never produces a constant expression}}
-  static const int m = n; // expected-note {{control flows through the definition of a static variable}} \
+constexpr int h(int n) {  // cxx14_20-error {{constexpr function never produces a constant expression}}
+  static const int m = n; // cxx14_20-note {{control flows through the definition of a static variable}} \
                           // cxx14_20-warning {{definition of a static variable in a constexpr function is a C++23 extension}}
   return m;
 }
-constexpr int i(int n) {        // expected-error {{constexpr function never produces a constant expression}}
-  thread_local const int m = n; // expected-note {{control flows through the definition of a thread_local variable}} \
+constexpr int i(int n) {        // cxx14_20-error {{constexpr function never produces a constant expression}}
+  thread_local const int m = n; // cxx14_20-note {{control flows through the definition of a thread_local variable}} \
                                 // cxx14_20-warning {{definition of a thread_local variable in a constexpr function is a C++23 extension}}
   return m;
 }
@@ -68,6 +68,7 @@ constexpr int j(int k) {
     }
   }
 } // expected-note 2{{control reached end of constexpr function}}
+  // cxx23-warning@-1 {{does not return a value in all control paths}}
 static_assert(j(0) == -3, "");
 static_assert(j(1) == 5, "");
 static_assert(j(2), ""); // expected-error {{constant expression}} expected-note {{in call to 'j(2)'}}
@@ -104,10 +105,10 @@ static_assert(l(false) == 5, "");
 static_assert(l(true), ""); // expected-error {{constant expression}} expected-note {{in call to 'l(true)'}}
 
 // Potential constant expression checking is still applied where possible.
-constexpr int htonl(int x) { // expected-error {{never produces a constant expression}}
+constexpr int htonl(int x) { // cxx14_20-error {{never produces a constant expression}}
   typedef unsigned char uchar;
   uchar arr[4] = { uchar(x >> 24), uchar(x >> 16), uchar(x >> 8), uchar(x) };
-  return *reinterpret_cast<int*>(arr); // expected-note {{reinterpret_cast is not allowed in a constant expression}}
+  return *reinterpret_cast<int*>(arr); // cxx14_20-note {{reinterpret_cast is not allowed in a constant expression}}
 }
 
 constexpr int maybe_htonl(bool isBigEndian, int x) {
@@ -183,7 +184,7 @@ namespace string_assign {
   static_assert(!test1(100), "");
   static_assert(!test1(101), ""); // expected-error {{constant expression}} expected-note {{in call to 'test1(101)'}}
 
-  constexpr void f() { // expected-error{{constexpr function never produces a constant expression}} expected-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
+  constexpr void f() { // cxx14_20-error{{constexpr function never produces a constant expression}} cxx14_20-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
     char foo[10] = { "z" }; // expected-note {{here}}
     foo[10] = 'x'; // expected-warning {{past the end}}
   }
@@ -207,14 +208,14 @@ namespace array_resize {
 namespace potential_const_expr {
   constexpr void set(int &n) { n = 1; }
   constexpr int div_zero_1() { int z = 0; set(z); return 100 / z; } // no error
-  constexpr int div_zero_2() { // expected-error {{never produces a constant expression}}
+  constexpr int div_zero_2() { // cxx14_20-error {{never produces a constant expression}}
     int z = 0;
-    return 100 / (set(z), 0); // expected-note {{division by zero}}
+    return 100 / (set(z), 0); // cxx14_20-note {{division by zero}}
   }
-  int n; // expected-note {{declared here}}
-  constexpr int ref() { // expected-error {{never produces a constant expression}}
+  int n; // cxx14_20-note {{declared here}}
+  constexpr int ref() { // cxx14_20-error {{never produces a constant expression}}
     int &r = n;
-    return r; // expected-note {{read of non-const variable 'n'}}
+    return r; // cxx14_20-note {{read of non-const variable 'n'}}
   }
 }
 
@@ -846,8 +847,8 @@ namespace StmtExpr {
   static_assert(g() == 0, ""); // expected-error {{constant expression}} expected-note {{in call}}
 
   // FIXME: We should handle the void statement expression case.
-  constexpr int h() { // expected-error {{never produces a constant}}
-    ({ if (true) {} }); // expected-note {{not supported}}
+  constexpr int h() { // cxx14_20-error {{never produces a constant}}
+    ({ if (true) {} }); // cxx14_20-note {{not supported}}
     return 0;
   }
 }
@@ -1043,9 +1044,9 @@ static_assert(sum(Cs) == 'a' + 'b', ""); // expected-error{{not an integral cons
 constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant expression}} expected-note{{in call}}
 }
 
-constexpr void PR28739(int n) { // expected-error {{never produces a constant}}
+constexpr void PR28739(int n) { // cxx14_20-error {{never produces a constant}}
   int *p = &n;                  // expected-note {{array 'p' declared here}}
-  p += (__int128)(unsigned long)-1; // expected-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
+  p += (__int128)(unsigned long)-1; // cxx14_20-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
   // expected-warning@-1 {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4611686018427387904 elements)}}
 }
 

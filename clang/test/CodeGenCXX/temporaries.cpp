@@ -414,13 +414,13 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[I]])
     A i = (foo(), A());
 
-    // CHECK-NEXT: call void @_ZN7Elision4fooAEv(ptr sret([[A]]) align 8 [[T0]])
+    // CHECK-NEXT: call void @_ZN7Elision4fooAEv(ptr dead_on_unwind writable sret([[A]]) align 8 [[T0]])
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[J]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[T0]])
     A j = (fooA(), A());
 
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[T1]])
-    // CHECK-NEXT: call void @_ZN7Elision4fooAEv(ptr sret([[A]]) align 8 [[K]])
+    // CHECK-NEXT: call void @_ZN7Elision4fooAEv(ptr dead_on_unwind writable sret([[A]]) align 8 [[K]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[T1]])
     A k = (A(), fooA());
 
@@ -447,7 +447,7 @@ namespace Elision {
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[I]])
   }
 
-  // CHECK: define{{.*}} void @_ZN7Elision5test2Ev(ptr noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test2Ev(ptr dead_on_unwind noalias writable sret([[A]]) align 8
   A test2() {
     // CHECK:      call void @_ZN7Elision3fooEv()
     // CHECK-NEXT: call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[RET:%.*]])
@@ -455,7 +455,7 @@ namespace Elision {
     return (foo(), A());
   }
 
-  // CHECK: define{{.*}} void @_ZN7Elision5test3EiNS_1AE(ptr noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test3EiNS_1AE(ptr dead_on_unwind noalias writable sret([[A]]) align 8
   A test3(int v, A x) {
     if (v < 5)
     // CHECK:      call void @_ZN7Elision1AC1Ev(ptr {{[^,]*}} [[RET:%.*]])
@@ -495,7 +495,7 @@ namespace Elision {
     // CHECK:      call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[X]])
   }
 
-  // CHECK: define{{.*}} void @_ZN7Elision5test5Ev(ptr noalias sret([[A]]) align 8
+  // CHECK: define{{.*}} void @_ZN7Elision5test5Ev(ptr dead_on_unwind noalias writable sret([[A]]) align 8
   struct B { A a; B(); };
   A test5() {
     // CHECK:      [[AT0:%.*]] = alloca [[A]], align 8
@@ -533,7 +533,7 @@ namespace Elision {
   void test6(const C *x) {
     // CHECK:      [[T0:%.*]] = alloca [[A]], align 8
     // CHECK:      [[X:%.*]] = load ptr, ptr {{%.*}}, align 8
-    // CHECK-NEXT: call void @_ZNK7Elision1CcvNS_1AEEv(ptr sret([[A]]) align 8 [[T0]], ptr {{[^,]*}} [[X]])
+    // CHECK-NEXT: call void @_ZNK7Elision1CcvNS_1AEEv(ptr dead_on_unwind writable sret([[A]]) align 8 [[T0]], ptr {{[^,]*}} [[X]])
     // CHECK-NEXT: call void @_ZNK7Elision1A3fooEv(ptr {{[^,]*}} [[T0]])
     // CHECK-NEXT: call void @_ZN7Elision1AD1Ev(ptr {{[^,]*}} [[T0]])
     // CHECK-NEXT: ret void

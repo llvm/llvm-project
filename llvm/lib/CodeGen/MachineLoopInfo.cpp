@@ -198,7 +198,25 @@ MDNode *MachineLoop::getLoopID() const {
   return LoopID;
 }
 
-bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
+bool MachineLoop::isLoopInvariantImplicitPhysReg(Register Reg) const {
+  MachineFunction *MF = getHeader()->getParent();
+  MachineRegisterInfo *MRI = &MF->getRegInfo();
+
+  if (MRI->isConstantPhysReg(Reg))
+    return true;
+
+  if (!MF->getSubtarget()
+           .getRegisterInfo()
+           ->shouldAnalyzePhysregInMachineLoopInfo(Reg))
+    return false;
+
+  return !llvm::any_of(
+      MRI->def_instructions(Reg),
+      [this](const MachineInstr &MI) { return this->contains(&MI); });
+}
+
+bool MachineLoop::isLoopInvariant(MachineInstr &I,
+                                  const Register ExcludeReg) const {
   MachineFunction *MF = I.getParent()->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetSubtargetInfo &ST = MF->getSubtarget();
@@ -213,6 +231,9 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
     Register Reg = MO.getReg();
     if (Reg == 0) continue;
 
+    if (ExcludeReg == Reg)
+      continue;
+
     // An instruction that uses or defines a physical register can't e.g. be
     // hoisted, so mark this as not invariant.
     if (Reg.isPhysical()) {
@@ -222,7 +243,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I) const {
         // it could get allocated to something with a def during allocation.
         // However, if the physreg is known to always be caller saved/restored
         // then this use is safe to hoist.
-        if (!MRI->isConstantPhysReg(Reg) &&
+        if (!isLoopInvariantImplicitPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
             !TII->isIgnorableUse(MO))
           return false;

@@ -37,6 +37,12 @@ def ROCDL_Dialect : Dialect {
     static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
       return ::llvm::StringLiteral("rocdl.reqd_work_group_size");
     }
+    /// MLIR's gpu-related infrastructure effectively assume uniform workgroup
+    /// sizes, so this attribute defaults to "true" on `rocdl.kernel` functions.
+    /// It is provided here to allow overriding this assumption.
+    static constexpr ::llvm::StringLiteral getUniformWorkGroupSizeAttrName() {
+      return ::llvm::StringLiteral("rocdl.uniform_work_group_size");
+    }
 
     /// The address space value that represents global memory.
     static constexpr unsigned kGlobalMemoryAddressSpace = 1;
@@ -45,6 +51,14 @@ def ROCDL_Dialect : Dialect {
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
   }];
+
+  let discardableAttrs = (ins
+     "::mlir::UnitAttr":$kernel,
+     "::mlir::DenseI32ArrayAttr":$reqd_work_group_size,
+     "::mlir::StringAttr":$flat_work_group_size,
+     "::mlir::IntegerAttr":$max_flat_work_group_size,
+     "::mlir::IntegerAttr":$waves_per_eu
+  );
 
   let useDefaultAttributePrinterParser = 1;
 }
@@ -144,6 +158,24 @@ Arguments<(ins I32:$index,
    }];
 }
 
+def ROCDL_BallotOp :
+  ROCDL_Op<"ballot">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins I1:$pred)> {
+  let summary = "Vote across thread group";
+
+  let description = [{
+      Ballot provides a bit mask containing the 1-bit predicate value from each lane. 
+      The nth bit of the result contains the 1 bit contributed by the nth warp lane.
+  }];
+
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder,
+            llvm::Intrinsic::amdgcn_ballot, {$pred}, {$_resultType});
+  }];
+
+  let assemblyFormat = "$pred attr-dict `:` type($res)";
+}
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
@@ -180,6 +212,23 @@ def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
 
+// Emits the waintcnt instruction. The bitfield's semantics depend
+// on the target chipset
+def ROCDL_WaitcntOp : ROCDL_Op<"waitcnt">, Arguments<(ins I32Attr:$bitfield)> {
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_waitcnt,
+      {builder.getInt32($bitfield)});
+  }];
+  let assemblyFormat = "attr-dict $bitfield";
+}
+
+def ROCDL_SBarrierOp : ROCDL_Op<"s.barrier"> {
+  string llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_barrier);
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
 def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   string llvmBuilder = [{
     llvm::LLVMContext &llvmContext = builder.getContext();
@@ -190,6 +239,22 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
                         llvmContext.getOrInsertSyncScopeID("workgroup"));
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def ROCDL_SetPrioOp : ROCDL_IntrOp<"s.setprio", [], [], [], 0>,
+  Arguments<(ins I16Attr:$priority)> {
+  let results = (outs);
+  let assemblyFormat = "$priority attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_s_setprio,builder.getInt16(op.getPriority()));";
+}
+
+def ROCDL_SchedBarrier : ROCDL_IntrOp<"sched.barrier", [], [], [], 0>,
+  Arguments<(ins I32Attr:$mask)> {
+  let results = (outs);
+  let assemblyFormat = "$mask attr-dict";
+  string llvmBuilder =
+    "createIntrinsicCall(builder, llvm::Intrinsic::amdgcn_sched_barrier,builder.getInt32(op.getMask()));";
 }
 
 
@@ -253,22 +318,23 @@ def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.f
 
 //===---------------------------------------------------------------------===//
 // WMMA intrinsics
-class ROCDL_Wmma_IntrOp<string mnemonic, list<Trait> traits = []> :
+class ROCDL_Wmma_IntrOp<string mnemonic, list<int> overloadedOperands,
+                        list<Trait> traits = []> :
   LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
                   "amdgcn_" # !subst(".","_", mnemonic),
-                  [0], [], traits, 1>,
+                  [0], overloadedOperands, traits, 1>,
   Arguments<(ins Variadic<LLVM_Type>:$args)> {
   let assemblyFormat =
     "$args attr-dict `:` functional-type($args, $res)";
 }
 
 // Available on RDNA3
-def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16">;
-def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16">;
-def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16">;
-def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16">;
-def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8">;
-def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4">;
+def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16", [0]>;
+def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16", [0]>;
+def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16", [0]>;
+def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16", [0]>;
+def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8", [1]>;
+def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4", [1]>;
 
 //===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
@@ -358,43 +424,6 @@ def ROCDL_RawPtrBufferAtomicSmaxOp : ROCDL_RawPtrBufferAtomicNoRet<"smax">;
 def ROCDL_RawPtrBufferAtomicUminOp : ROCDL_RawPtrBufferAtomicNoRet<"umin">;
 // Note: not supported on all architectures
 def ROCDL_RawPtrBufferAtomicFaddOp : ROCDL_RawPtrBufferAtomicNoRet<"fadd">;
-
-/// LEGACY BUFFER OPERATIONS. DO NOT USE IN NEW CODE. KEPT FOR IR COMPATIBILITY.
-//===---------------------------------------------------------------------===//
-// Vector buffer load/store intrinsics
-
-def ROCDL_MubufLoadOp :
-  ROCDL_Op<"buffer.load">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$rsrc,
-                 LLVM_Type:$vindex,
-                 LLVM_Type:$offset,
-                 LLVM_Type:$glc,
-                 LLVM_Type:$slc)>{
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder,
-          llvm::Intrinsic::amdgcn_buffer_load, {$rsrc, $vindex, $offset, $glc,
-          $slc}, {$_resultType});
-  }];
-  let hasCustomAssemblyFormat = 1;
-}
-
-def ROCDL_MubufStoreOp :
-  ROCDL_Op<"buffer.store">,
-  Arguments<(ins LLVM_Type:$vdata,
-                 LLVM_Type:$rsrc,
-                 LLVM_Type:$vindex,
-                 LLVM_Type:$offset,
-                 LLVM_Type:$glc,
-                 LLVM_Type:$slc)>{
-  string llvmBuilder = [{
-    auto vdataType = moduleTranslation.convertType(op.getVdata().getType());
-    createIntrinsicCall(builder,
-          llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
-          $offset, $glc, $slc}, {vdataType});
-  }];
-  let hasCustomAssemblyFormat = 1;
-}
 
 //===---------------------------------------------------------------------===//
 // Raw buffer load/store intrinsics
@@ -635,7 +664,9 @@ def ROCDL_TargettAttr :
     StringRefParameter<"Target triple.", "\"amdgcn-amd-amdhsa\"">:$triple,
     StringRefParameter<"Target chip.", "\"gfx900\"">:$chip,
     StringRefParameter<"Target chip features.", "\"\"">:$features,
-    StringRefParameter<"ABI version.", "\"400\"">:$abi,
+    // Also update the default builder below and rocdl-attach-target in
+    // Dialect/GPU/Transforms/Passes.td .
+    StringRefParameter<"ABI version.", "\"500\"">:$abi,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
   );
@@ -647,7 +678,7 @@ def ROCDL_TargettAttr :
                      CArg<"StringRef", "\"amdgcn-amd-amdhsa\"">:$triple,
                      CArg<"StringRef", "\"gfx900\"">:$chip,
                      CArg<"StringRef", "\"\"">:$features,
-                     CArg<"StringRef", "\"400\"">:$abiVersion,
+                     CArg<"StringRef", "\"500\"">:$abiVersion,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
       return Base::get($_ctxt, optLevel, triple, chip, features, abiVersion,

@@ -543,6 +543,7 @@ namespace __lsan {
 void InitializeInterceptors() {
   // Fuchsia doesn't use interceptors that require any setup.
 #if !SANITIZER_FUCHSIA
+  __interception::DoesNotSupportStaticLinking();
   InitializeSignalInterceptors();
 
   INTERCEPT_FUNCTION(malloc);

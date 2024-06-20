@@ -26,6 +26,7 @@ using namespace lld::elf;
 constexpr uint64_t ppc64TocOffset = 0x8000;
 constexpr uint64_t dynamicThreadPointerOffset = 0x8000;
 
+namespace {
 // The instruction encoding of bits 21-30 from the ISA for the Xform and Dform
 // instructions that can be used as part of the initial exec TLS sequence.
 enum XFormOpcd {
@@ -139,6 +140,7 @@ enum class PPCPrefixedInsn : uint64_t {
   PSTXV = PREFIX_8LS | 0xd8000000,
   PSTXVP = PREFIX_8LS | 0xf8000000
 };
+
 static bool checkPPCLegacyInsn(uint32_t encoding) {
   PPCLegacyInsn insn = static_cast<PPCLegacyInsn>(encoding);
   if (insn == PPCLegacyInsn::NOINSN)
@@ -164,7 +166,6 @@ enum class LegacyToPrefixMask : uint64_t {
       0x8000000003e00000, // S/T (6-10) - The [S/T]X bit moves from 28 to 5.
 };
 
-namespace {
 class PPC64 final : public TargetInfo {
 public:
   PPC64();
@@ -253,7 +254,7 @@ static bool addOptional(StringRef name, uint64_t value,
   Symbol *sym = symtab.find(name);
   if (!sym || sym->isDefined())
     return false;
-  sym->resolve(Defined{/*file=*/nullptr, StringRef(), STB_GLOBAL, STV_HIDDEN,
+  sym->resolve(Defined{ctx.internalFile, StringRef(), STB_GLOBAL, STV_HIDDEN,
                        STT_FUNC, value,
                        /*size=*/0, /*section=*/nullptr});
   defined.push_back(cast<Defined>(sym));
@@ -285,7 +286,7 @@ static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
   // The full section content has the extent of [begin, end). We drop unused
   // instructions and write [first,end).
   auto *sec = make<InputSection>(
-      nullptr, SHF_ALLOC, SHT_PROGBITS, 4,
+      ctx.internalFile, SHF_ALLOC, SHT_PROGBITS, 4,
       ArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
                4 * (buf.size() - first)),
       ".text");
@@ -346,7 +347,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
   uint64_t index = std::min<uint64_t>(offset / 8, relas.size() - 1);
   for (;;) {
     if (relas[index].r_offset == offset) {
-      Symbol &sym = tocSec->getFile<ELFT>()->getRelocTargetSym(relas[index]);
+      Symbol &sym = tocSec->file->getRelocTargetSym(relas[index]);
       return {dyn_cast<Defined>(&sym), getAddend<ELFT>(relas[index])};
     }
     if (relas[index].r_offset < offset || index == 0)

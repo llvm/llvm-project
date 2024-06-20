@@ -24,7 +24,7 @@ add_lv_impl_folder(Readers
   Readers/LVBinaryReader.cpp
   Readers/LVCodeViewReader.cpp
   Readers/LVCodeViewVisitor.cpp
-  Readers/LVELFReader.cpp
+  Readers/LVDWARFReader.cpp
   )
 
 list(APPEND LIBLV_ADDITIONAL_HEADER_DIRS

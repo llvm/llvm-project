@@ -47,6 +47,74 @@ using mlir::LLVM::linkage::getMaxEnumValForLinkage;
 
 #include "mlir/Dialect/LLVMIR/LLVMOpsDialect.cpp.inc"
 
+//===----------------------------------------------------------------------===//
+// Property Helpers
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// IntegerOverflowFlags
+
+namespace mlir {
+static Attribute convertToAttribute(MLIRContext *ctx,
+                                    IntegerOverflowFlags flags) {
+  return IntegerOverflowFlagsAttr::get(ctx, flags);
+}
+
+static LogicalResult
+convertFromAttribute(IntegerOverflowFlags &flags, Attribute attr,
+                     function_ref<InFlightDiagnostic()> emitError) {
+  auto flagsAttr = dyn_cast<IntegerOverflowFlagsAttr>(attr);
+  if (!flagsAttr) {
+    return emitError() << "expected 'overflowFlags' attribute to be an "
+                          "IntegerOverflowFlagsAttr, but got "
+                       << attr;
+  }
+  flags = flagsAttr.getValue();
+  return success();
+}
+} // namespace mlir
+
+static ParseResult parseOverflowFlags(AsmParser &p,
+                                      IntegerOverflowFlags &flags) {
+  if (failed(p.parseOptionalKeyword("overflow"))) {
+    flags = IntegerOverflowFlags::none;
+    return success();
+  }
+  if (p.parseLess())
+    return failure();
+  do {
+    StringRef kw;
+    SMLoc loc = p.getCurrentLocation();
+    if (p.parseKeyword(&kw))
+      return failure();
+    std::optional<IntegerOverflowFlags> flag =
+        symbolizeIntegerOverflowFlags(kw);
+    if (!flag)
+      return p.emitError(loc,
+                         "invalid overflow flag: expected nsw, nuw, or none");
+    flags = flags | *flag;
+  } while (succeeded(p.parseOptionalComma()));
+  return p.parseGreater();
+}
+
+static void printOverflowFlags(AsmPrinter &p, Operation *op,
+                               IntegerOverflowFlags flags) {
+  if (flags == IntegerOverflowFlags::none)
+    return;
+  p << " overflow<";
+  SmallVector<StringRef, 2> strs;
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nsw))
+    strs.push_back("nsw");
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nuw))
+    strs.push_back("nuw");
+  llvm::interleaveComma(strs, p);
+  p << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// Attribute Helpers
+//===----------------------------------------------------------------------===//
+
 static constexpr const char kElemTypeAttrName[] = "elem_type";
 
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
@@ -69,7 +137,13 @@ static ParseResult parseLLVMOpAttrs(OpAsmParser &parser,
 
 static void printLLVMOpAttrs(OpAsmPrinter &printer, Operation *op,
                              DictionaryAttr attrs) {
-  printer.printOptionalAttrDict(processFMFAttr(attrs.getValue()));
+  auto filteredAttrs = processFMFAttr(attrs.getValue());
+  if (auto iface = dyn_cast<IntegerOverflowFlagsInterface>(op)) {
+    printer.printOptionalAttrDict(
+        filteredAttrs, /*elidedAttrs=*/{iface.getOverflowFlagsAttrName()});
+  } else {
+    printer.printOptionalAttrDict(filteredAttrs);
+  }
 }
 
 /// Verifies `symbol`'s use in `op` to ensure the symbol is a valid and
@@ -553,7 +627,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
     // we don't do anything here. The verifier will catch it and emit a proper
     // error. All other canonicalization is done in the fold method.
     bool requiresConst = !rawConstantIndices.empty() &&
-                         currType.isa_and_nonnull<LLVMStructType>();
+                         isa_and_nonnull<LLVMStructType>(currType);
     if (Value val = llvm::dyn_cast_if_present<Value>(iter)) {
       APInt intC;
       if (requiresConst && matchPattern(val, m_ConstantInt(&intC)) &&
@@ -765,25 +839,19 @@ void LoadOp::getEffects(
 }
 
 /// Returns true if the given type is supported by atomic operations. All
-/// integer and float types with limited bit width are supported. Additionally,
-/// depending on the operation pointers may be supported as well.
-static bool isTypeCompatibleWithAtomicOp(Type type, bool isPointerTypeAllowed) {
-  if (llvm::isa<LLVMPointerType>(type))
-    return isPointerTypeAllowed;
-
-  std::optional<unsigned> bitWidth;
-  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
+/// integer, float, and pointer types with a power-of-two bitsize and a minimal
+/// size of 8 bits are supported.
+static bool isTypeCompatibleWithAtomicOp(Type type,
+                                         const DataLayout &dataLayout) {
+  if (!isa<IntegerType, LLVMPointerType>(type))
     if (!isCompatibleFloatingPointType(type))
       return false;
-    bitWidth = floatType.getWidth();
-  }
-  if (auto integerType = llvm::dyn_cast<IntegerType>(type))
-    bitWidth = integerType.getWidth();
-  // The type is neither an integer, float, or pointer type.
-  if (!bitWidth)
+
+  llvm::TypeSize bitWidth = dataLayout.getTypeSizeInBits(type);
+  if (bitWidth.isScalable())
     return false;
-  return *bitWidth == 8 || *bitWidth == 16 || *bitWidth == 32 ||
-         *bitWidth == 64;
+  // Needs to be at least 8 bits and a power of two.
+  return bitWidth >= 8 && (bitWidth & (bitWidth - 1)) == 0;
 }
 
 /// Verifies the attributes and the type of atomic memory access operations.
@@ -791,8 +859,8 @@ template <typename OpTy>
 LogicalResult verifyAtomicMemOp(OpTy memOp, Type valueType,
                                 ArrayRef<AtomicOrdering> unsupportedOrderings) {
   if (memOp.getOrdering() != AtomicOrdering::not_atomic) {
-    if (!isTypeCompatibleWithAtomicOp(valueType,
-                                      /*isPointerTypeAllowed=*/true))
+    DataLayout dataLayout = DataLayout::closest(memOp);
+    if (!isTypeCompatibleWithAtomicOp(valueType, dataLayout))
       return memOp.emitOpError("unsupported type ")
              << valueType << " for atomic access";
     if (llvm::is_contained(unsupportedOrderings, memOp.getOrdering()))
@@ -816,11 +884,11 @@ LogicalResult LoadOp::verify() {
 
 void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
                    Value addr, unsigned alignment, bool isVolatile,
-                   bool isNonTemporal, AtomicOrdering ordering,
-                   StringRef syncscope) {
+                   bool isNonTemporal, bool isInvariant,
+                   AtomicOrdering ordering, StringRef syncscope) {
   build(builder, state, type, addr,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
-        isNonTemporal, ordering,
+        isNonTemporal, isInvariant, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
@@ -902,6 +970,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
 
 void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
                    FlatSymbolRefAttr callee, ValueRange args) {
+  assert(callee && "expected non-null callee in direct call builder");
   build(builder, state, results,
         TypeAttr::get(getLLVMFuncType(builder.getContext(), results, args)),
         callee, args, /*fastmathFlags=*/nullptr, /*branch_weights=*/nullptr,
@@ -1219,8 +1288,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
 
   // Parse the function arguments.
-  if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes))
+  if (parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren))
     return failure();
 
   bool isVarArg = parser.parseOptionalKeyword("vararg").succeeded();
@@ -1232,6 +1300,9 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
       return failure();
   }
 
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
   // Parse the trailing type list and resolve the operands.
   return parseCallTypeAndResolveOperands(parser, result, isDirect, operands);
 }
@@ -1239,8 +1310,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 LLVMFunctionType CallOp::getCalleeFunctionType() {
   if (getCalleeType())
     return *getCalleeType();
-  else
-    return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
+  return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
 }
 
 ///===---------------------------------------------------------------------===//
@@ -1435,8 +1505,7 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
 LLVMFunctionType InvokeOp::getCalleeFunctionType() {
   if (getCalleeType())
     return *getCalleeType();
-  else
-    return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
+  return getLLVMFuncType(getContext(), getResultTypes(), getArgOperands());
 }
 
 ///===----------------------------------------------------------------------===//
@@ -1710,7 +1779,7 @@ LogicalResult ReturnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verifier for LLVM::AddressOfOp.
+// LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 
 static Operation *parentLLVMModule(Operation *op) {
@@ -1751,6 +1820,11 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   return success();
 }
 
+// AddressOfOp constant-folds to the global symbol name.
+OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
+  return getGlobalNameAttr();
+}
+
 //===----------------------------------------------------------------------===//
 // Verifier for LLVM::ComdatOp.
 //===----------------------------------------------------------------------===//
@@ -1781,7 +1855,8 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool isConstant, Linkage linkage, StringRef name,
                      Attribute value, uint64_t alignment, unsigned addrSpace,
                      bool dsoLocal, bool threadLocal, SymbolRefAttr comdat,
-                     ArrayRef<NamedAttribute> attrs) {
+                     ArrayRef<NamedAttribute> attrs,
+                     DIGlobalVariableExpressionAttr dbgExpr) {
   result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
@@ -1812,6 +1887,10 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
     result.addAttribute(getAddrSpaceAttrName(result.name),
                         builder.getI32IntegerAttr(addrSpace));
   result.attributes.append(attrs.begin(), attrs.end());
+
+  if (dbgExpr)
+    result.addAttribute(getDbgExprAttrName(result.name), dbgExpr);
+
   result.addRegion();
 }
 
@@ -2153,11 +2232,10 @@ LogicalResult ShuffleVectorOp::verify() {
 //===----------------------------------------------------------------------===//
 
 // Add the entry block to the function.
-Block *LLVMFuncOp::addEntryBlock() {
+Block *LLVMFuncOp::addEntryBlock(OpBuilder &builder) {
   assert(empty() && "function already has an entry block");
-
-  auto *entry = new Block;
-  push_back(entry);
+  OpBuilder::InsertionGuard g(builder);
+  Block *entry = builder.createBlock(&getBody());
 
   // FIXME: Allow passing in proper locations for the entry arguments.
   LLVMFunctionType type = getFunctionType();
@@ -2478,6 +2556,24 @@ Region *LLVMFuncOp::getCallableRegion() {
 }
 
 //===----------------------------------------------------------------------===//
+// UndefOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold an undef operation to a dedicated undef attribute.
+OpFoldResult LLVM::UndefOp::fold(FoldAdaptor) {
+  return LLVM::UndefAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// PoisonOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a poison operation to a dedicated poison attribute.
+OpFoldResult LLVM::PoisonOp::fold(FoldAdaptor) {
+  return LLVM::PoisonAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroOp.
 //===----------------------------------------------------------------------===//
 
@@ -2488,6 +2584,15 @@ LogicalResult LLVM::ZeroOp::verify() {
              << "target extension type does not support zero-initializer";
 
   return success();
+}
+
+/// Fold a zero operation to a builtin zero attribute when possible and fall
+/// back to a dedicated zero attribute.
+OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
+  OpFoldResult result = Builder(getContext()).getZeroAttr(getType());
+  if (result)
+    return result;
+  return LLVM::ZeroAttr::get(getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2539,6 +2644,30 @@ LogicalResult LLVM::ConstantOp::verify() {
   if (!llvm::isa<IntegerAttr, ArrayAttr, FloatAttr, ElementsAttr>(getValue()))
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
+  if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
+    if (!llvm::isa<IntegerType>(getType()))
+      return emitOpError() << "expected integer type";
+  }
+  if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
+    const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
+    unsigned floatWidth = APFloat::getSizeInBits(sem);
+    if (auto floatTy = dyn_cast<FloatType>(getType())) {
+      if (floatTy.getWidth() != floatWidth) {
+        return emitOpError() << "expected float type of width " << floatWidth;
+      }
+    }
+    // See the comment for getLLVMConstant for more details about why 8-bit
+    // floats can be represented by integers.
+    if (isa<IntegerType>(getType()) && !getType().isInteger(floatWidth)) {
+      return emitOpError() << "expected integer type of width " << floatWidth;
+    }
+  }
+  if (auto splatAttr = dyn_cast<SplatElementsAttr>(getValue())) {
+    if (!isa<VectorType>(getType()) && !isa<LLVM::LLVMArrayType>(getType()) &&
+        !isa<LLVM::LLVMFixedVectorType>(getType()) &&
+        !isa<LLVM::LLVMScalableVectorType>(getType()))
+      return emitOpError() << "expected vector or array type";
+  }
   return success();
 }
 
@@ -2586,7 +2715,8 @@ LogicalResult AtomicRMWOp::verify() {
     if (!mlir::LLVM::isCompatibleFloatingPointType(valType))
       return emitOpError("expected LLVM IR floating point type");
   } else if (getBinOp() == AtomicBinOp::xchg) {
-    if (!isTypeCompatibleWithAtomicOp(valType, /*isPointerTypeAllowed=*/true))
+    DataLayout dataLayout = DataLayout::closest(*this);
+    if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
       return emitOpError("unexpected LLVM IR type for 'xchg' bin_op");
   } else {
     auto intType = llvm::dyn_cast<IntegerType>(valType);
@@ -2633,8 +2763,8 @@ LogicalResult AtomicCmpXchgOp::verify() {
   if (!ptrType)
     return emitOpError("expected LLVM IR pointer type for operand #0");
   auto valType = getVal().getType();
-  if (!isTypeCompatibleWithAtomicOp(valType,
-                                    /*isPointerTypeAllowed=*/true))
+  DataLayout dataLayout = DataLayout::closest(*this);
+  if (!isTypeCompatibleWithAtomicOp(valType, dataLayout))
     return emitOpError("unexpected LLVM IR type");
   if (getSuccessOrdering() < AtomicOrdering::monotonic ||
       getFailureOrdering() < AtomicOrdering::monotonic)
@@ -2726,15 +2856,26 @@ LogicalResult SExtOp::verify() { return verifyExtOp<SExtOp>(*this); }
 // Folder and verifier for LLVM::BitcastOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
-  // bitcast(x : T0, T0) -> x
-  if (getArg().getType() == getType())
-    return getArg();
-  // bitcast(bitcast(x : T0, T1), T0) -> x
-  if (auto prev = getArg().getDefiningOp<BitcastOp>())
-    if (prev.getArg().getType() == getType())
+/// Folds a cast op that can be chained.
+template <typename T>
+static OpFoldResult foldChainableCast(T castOp,
+                                      typename T::FoldAdaptor adaptor) {
+  // cast(x : T0, T0) -> x
+  if (castOp.getArg().getType() == castOp.getType())
+    return castOp.getArg();
+  if (auto prev = castOp.getArg().template getDefiningOp<T>()) {
+    // cast(cast(x : T0, T1), T0) -> x
+    if (prev.getArg().getType() == castOp.getType())
       return prev.getArg();
+    // cast(cast(x : T0, T1), T2) -> cast(x: T0, T2)
+    castOp.getArgMutable().set(prev.getArg());
+    return Value{castOp};
+  }
   return {};
+}
+
+OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
+  return foldChainableCast(*this, adaptor);
 }
 
 LogicalResult LLVM::BitcastOp::verify() {
@@ -2751,10 +2892,8 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (!resultType)
     return success();
 
-  auto isVector = [](Type type) {
-    return llvm::isa<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>(
-        type);
-  };
+  auto isVector =
+      llvm::IsaPred<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>;
 
   // Due to bitcast requiring both operands to be of the same size, it is not
   // possible for only one of the two to be a pointer of vectors.
@@ -2778,14 +2917,7 @@ LogicalResult LLVM::BitcastOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
-  // addrcast(x : T0, T0) -> x
-  if (getArg().getType() == getType())
-    return getArg();
-  // addrcast(addrcast(x : T0, T1), T0) -> x
-  if (auto prev = getArg().getDefiningOp<AddrSpaceCastOp>())
-    if (prev.getArg().getType() == getType())
-      return prev.getArg();
-  return {};
+  return foldChainableCast(*this, adaptor);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2879,7 +3011,7 @@ OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult CallIntrinsicOp::verify() {
-  if (!getIntrin().startswith("llvm."))
+  if (!getIntrin().starts_with("llvm."))
     return emitOpError() << "intrinsic name must start with 'llvm.'";
   return success();
 }
@@ -2896,7 +3028,8 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
     return TypeSwitch<Attribute, AliasResult>(attr)
         .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
               DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
+              DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
+              DIGlobalVariableExpressionAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
               DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
               DISubroutineTypeAttr, LoopAnnotationAttr, LoopVectorizeAttr,
@@ -2921,6 +3054,19 @@ LogicalResult LinkerOptionsOp::verify() {
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// InlineAsmOp
+//===----------------------------------------------------------------------===//
+
+void InlineAsmOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (getHasSideEffects()) {
+    effects.emplace_back(MemoryEffects::Write::get());
+    effects.emplace_back(MemoryEffects::Read::get());
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3152,6 +3298,19 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
+  // If this was folded from an operation other than llvm.mlir.constant, it
+  // should be materialized as such. Note that an llvm.mlir.zero may fold into
+  // a builtin zero attribute and thus will materialize as a llvm.mlir.constant.
+  if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
+    if (isa<LLVM::LLVMPointerType>(type))
+      return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+  if (isa<LLVM::UndefAttr>(value))
+    return builder.create<LLVM::UndefOp>(loc, type);
+  if (isa<LLVM::PoisonAttr>(value))
+    return builder.create<LLVM::PoisonOp>(loc, type);
+  if (isa<LLVM::ZeroAttr>(value))
+    return builder.create<LLVM::ZeroOp>(loc, type);
+  // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
 

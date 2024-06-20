@@ -27,7 +27,7 @@ char3 f3(int x) {
   return __builtin_astype(x, char3);
 }
 
-//CHECK: define{{.*}} spir_func <4 x i8> @f4(i32 noundef %[[x:.*]])
+//CHECK: define{{.*}} spir_func noundef <4 x i8> @f4(i32 noundef %[[x:.*]])
 //CHECK: %[[astype:.*]] = bitcast i32 %[[x]] to <4 x i8>
 //CHECK-NOT: shufflevector
 //CHECK: ret <4 x i8> %[[astype]]
@@ -43,7 +43,7 @@ int f5(char3 x) {
   return __builtin_astype(x, int);
 }
 
-//CHECK: define{{.*}} spir_func i32 @f6(<4 x i8> noundef %[[x:.*]])
+//CHECK: define{{.*}} spir_func noundef i32 @f6(<4 x i8> noundef %[[x:.*]])
 //CHECK: %[[astype:.*]] = bitcast <4 x i8> %[[x]] to i32
 //CHECK-NOT: shufflevector
 //CHECK: ret i32 %[[astype]]
@@ -51,7 +51,7 @@ int f6(char4 x) {
   return __builtin_astype(x, int);
 }
 
-//CHECK: define{{.*}} spir_func <3 x i8> @f7(<3 x i8> noundef returned %[[x:.*]])
+//CHECK: define{{.*}} spir_func noundef <3 x i8> @f7(<3 x i8> noundef returned %[[x:.*]])
 //CHECK-NOT: bitcast
 //CHECK-NOT: shufflevector
 //CHECK: ret <3 x i8> %[[x]]
@@ -67,21 +67,21 @@ int3 f8(char16 x) {
   return __builtin_astype(x, int3);
 }
 
-//CHECK: define{{.*}} spir_func ptr addrspace(1) @addr_cast(ptr noundef readnone %[[x:.*]])
+//CHECK: define{{.*}} spir_func noundef ptr addrspace(1) @addr_cast(ptr noundef readnone %[[x:.*]])
 //CHECK: %[[cast:.*]] ={{.*}} addrspacecast ptr %[[x]] to ptr addrspace(1)
 //CHECK: ret ptr addrspace(1) %[[cast]]
 global int* addr_cast(int *x) {
   return __builtin_astype(x, global int*);
 }
 
-//CHECK: define{{.*}} spir_func ptr addrspace(1) @int_to_ptr(i32 noundef %[[x:.*]])
+//CHECK: define{{.*}} spir_func noundef ptr addrspace(1) @int_to_ptr(i32 noundef %[[x:.*]])
 //CHECK: %[[cast:.*]] = inttoptr i32 %[[x]] to ptr addrspace(1)
 //CHECK: ret ptr addrspace(1) %[[cast]]
 global int* int_to_ptr(int x) {
   return __builtin_astype(x, global int*);
 }
 
-//CHECK: define{{.*}} spir_func i32 @ptr_to_int(ptr noundef %[[x:.*]])
+//CHECK: define{{.*}} spir_func noundef i32 @ptr_to_int(ptr noundef %[[x:.*]])
 //CHECK: %[[cast:.*]] = ptrtoint ptr %[[x]] to i32
 //CHECK: ret i32 %[[cast]]
 int ptr_to_int(int *x) {

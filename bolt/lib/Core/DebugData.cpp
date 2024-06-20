@@ -13,7 +13,6 @@
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/DIEBuilder.h"
-#include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DIE.h"
@@ -23,7 +22,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
@@ -32,8 +30,8 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <limits>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -230,7 +228,7 @@ template <typename DebugVector, typename ListEntry, typename DebugAddressEntry>
 static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
                          DebugAddrWriter &AddrWriter, DWARFUnit &CU,
                          uint32_t &Index, const ListEntry BaseAddressx,
-                         const ListEntry OffsetPair, const ListEntry EndOfList,
+                         const ListEntry OffsetPair,
                          const std::function<void(uint32_t)> &Func) {
   if (Entries.size() < 2)
     return false;
@@ -241,7 +239,9 @@ static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
     const DebugAddressEntry &Entry = Entries[Index];
     if (Entry.LowPC == 0)
       break;
-    assert(Base <= Entry.LowPC && "Entry base is higher than low PC");
+    // In case rnglists or loclists are not sorted.
+    if (Base > Entry.LowPC)
+      break;
     uint32_t StartOffset = Entry.LowPC - Base;
     uint32_t EndOffset = Entry.HighPC - Base;
     if (encodeULEB128(EndOffset, TempBuffer) > 2)
@@ -266,8 +266,6 @@ static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
     encodeULEB128(OffsetEntry.EndOffset, OS);
     Func(OffsetEntry.Index);
   }
-  support::endian::write(OS, static_cast<uint8_t>(EndOfList),
-                         llvm::endianness::little);
   return true;
 }
 
@@ -276,19 +274,17 @@ DebugRangeListsSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
   std::lock_guard<std::mutex> Lock(WriterMutex);
 
   RangeEntries.push_back(CurrentOffset);
-  bool WrittenStartxLength = false;
   std::sort(
       Ranges.begin(), Ranges.end(),
       [](const DebugAddressRange &R1, const DebugAddressRange &R2) -> bool {
         return R1.LowPC < R2.LowPC;
       });
   for (unsigned I = 0; I < Ranges.size();) {
-    WrittenStartxLength = false;
     if (emitWithBase<DebugAddressRangesVector, dwarf::RnglistEntries,
-                     DebugAddressRange>(
-            *CUBodyStream, Ranges, *AddrWriter, *CU, I,
-            dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
-            dwarf::DW_RLE_end_of_list, [](uint32_t Index) -> void {}))
+                     DebugAddressRange>(*CUBodyStream, Ranges, *AddrWriter, *CU,
+                                        I, dwarf::DW_RLE_base_addressx,
+                                        dwarf::DW_RLE_offset_pair,
+                                        [](uint32_t Index) -> void {}))
       continue;
 
     const DebugAddressRange &Range = Ranges[I];
@@ -299,12 +295,11 @@ DebugRangeListsSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
     encodeULEB128(Index, *CUBodyStream);
     encodeULEB128(Range.HighPC - Range.LowPC, *CUBodyStream);
     ++I;
-    WrittenStartxLength = true;
   }
-  if (WrittenStartxLength)
-    support::endian::write(*CUBodyStream,
-                           static_cast<uint8_t>(dwarf::DW_RLE_end_of_list),
-                           llvm::endianness::little);
+
+  support::endian::write(*CUBodyStream,
+                         static_cast<uint8_t>(dwarf::DW_RLE_end_of_list),
+                         llvm::endianness::little);
   CurrentOffset = CUBodyBuffer->size();
   return RangeEntries.size() - 1;
 }
@@ -688,7 +683,6 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
   }
 
   std::vector<uint64_t> OffsetsArray;
-  bool WrittenStartxLength = false;
   auto writeExpression = [&](uint32_t Index) -> void {
     const DebugLocationEntry &Entry = LocList[Index];
     encodeULEB128(Entry.Expr.size(), LocBodyStream);
@@ -696,12 +690,11 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
         reinterpret_cast<const char *>(Entry.Expr.data()), Entry.Expr.size());
   };
   for (unsigned I = 0; I < LocList.size();) {
-    WrittenStartxLength = false;
     if (emitWithBase<DebugLocationsVector, dwarf::LoclistEntries,
-                     DebugLocationEntry>(
-            LocBodyStream, LocList, AddrWriter, CU, I,
-            dwarf::DW_LLE_base_addressx, dwarf::DW_LLE_offset_pair,
-            dwarf::DW_LLE_end_of_list, writeExpression))
+                     DebugLocationEntry>(LocBodyStream, LocList, AddrWriter, CU,
+                                         I, dwarf::DW_LLE_base_addressx,
+                                         dwarf::DW_LLE_offset_pair,
+                                         writeExpression))
       continue;
 
     const DebugLocationEntry &Entry = LocList[I];
@@ -713,13 +706,11 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
     encodeULEB128(Entry.HighPC - Entry.LowPC, LocBodyStream);
     writeExpression(I);
     ++I;
-    WrittenStartxLength = true;
   }
 
-  if (WrittenStartxLength)
-    support::endian::write(LocBodyStream,
-                           static_cast<uint8_t>(dwarf::DW_LLE_end_of_list),
-                           llvm::endianness::little);
+  support::endian::write(LocBodyStream,
+                         static_cast<uint8_t>(dwarf::DW_LLE_end_of_list),
+                         llvm::endianness::little);
 }
 
 void DebugLoclistWriter::addList(DIEBuilder &DIEBldr, DIE &Die,
@@ -851,45 +842,56 @@ std::string SimpleBinaryPatcher::patchBinary(StringRef BinaryContents) {
   return BinaryContentsStr;
 }
 
-void DebugStrOffsetsWriter::initialize(
-    const DWARFSection &StrOffsetsSection,
-    const std::optional<StrOffsetsContributionDescriptor> Contr) {
+void DebugStrOffsetsWriter::initialize(DWARFUnit &Unit) {
+  if (Unit.getVersion() < 5)
+    return;
+  const DWARFSection &StrOffsetsSection = Unit.getStringOffsetSection();
+  const std::optional<StrOffsetsContributionDescriptor> &Contr =
+      Unit.getStringOffsetsTableContribution();
   if (!Contr)
     return;
-
   const uint8_t DwarfOffsetByteSize = Contr->getDwarfOffsetByteSize();
   assert(DwarfOffsetByteSize == 4 &&
          "Dwarf String Offsets Byte Size is not supported.");
-  uint32_t Index = 0;
+  StrOffsets.reserve(Contr->Size);
   for (uint64_t Offset = 0; Offset < Contr->Size; Offset += DwarfOffsetByteSize)
-    IndexToAddressMap[Index++] = support::endian::read32le(
-        StrOffsetsSection.Data.data() + Contr->Base + Offset);
+    StrOffsets.push_back(support::endian::read32le(
+        StrOffsetsSection.Data.data() + Contr->Base + Offset));
 }
 
 void DebugStrOffsetsWriter::updateAddressMap(uint32_t Index, uint32_t Address) {
-  assert(IndexToAddressMap.count(Index) > 0 && "Index is not found.");
   IndexToAddressMap[Index] = Address;
   StrOffsetSectionWasModified = true;
 }
 
 void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
                                             DIEBuilder &DIEBldr) {
-  if (IndexToAddressMap.empty())
-    return;
-
   std::optional<AttrInfo> AttrVal =
       findAttributeInfo(Unit.getUnitDIE(), dwarf::DW_AT_str_offsets_base);
-  assert(AttrVal && "DW_AT_str_offsets_base not present.");
-  std::optional<uint64_t> Val = AttrVal->V.getAsSectionOffset();
-  assert(Val && "DW_AT_str_offsets_base Value not present.");
+  if (!AttrVal && !Unit.isDWOUnit())
+    return;
+  std::optional<uint64_t> Val = std::nullopt;
+  if (AttrVal) {
+    Val = AttrVal->V.getAsSectionOffset();
+  } else {
+    if (!Unit.isDWOUnit())
+      BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: "
+                   "DW_AT_str_offsets_base Value not present\n";
+    Val = 0;
+  }
   DIE &Die = *DIEBldr.getUnitDIEbyUnit(Unit);
   DIEValue StrListBaseAttrInfo =
       Die.findAttribute(dwarf::DW_AT_str_offsets_base);
   auto RetVal = ProcessedBaseOffsets.find(*Val);
   // Handling re-use of str-offsets section.
   if (RetVal == ProcessedBaseOffsets.end() || StrOffsetSectionWasModified) {
+    initialize(Unit);
+    // Update String Offsets that were modified.
+    for (const auto &Entry : IndexToAddressMap)
+      StrOffsets[Entry.first] = Entry.second;
     // Writing out the header for each section.
-    support::endian::write(*StrOffsetsStream, CurrentSectionSize + 4,
+    support::endian::write(*StrOffsetsStream,
+                           static_cast<uint32_t>(StrOffsets.size() * 4 + 4),
                            llvm::endianness::little);
     support::endian::write(*StrOffsetsStream, static_cast<uint16_t>(5),
                            llvm::endianness::little);
@@ -902,8 +904,8 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
       DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
                            StrListBaseAttrInfo.getForm(),
                            DIEInteger(BaseOffset));
-    for (const auto &Entry : IndexToAddressMap)
-      support::endian::write(*StrOffsetsStream, Entry.second,
+    for (const uint32_t Offset : StrOffsets)
+      support::endian::write(*StrOffsetsStream, Offset,
                              llvm::endianness::little);
   } else {
     DIEBldr.replaceValue(&Die, dwarf::DW_AT_str_offsets_base,
@@ -912,7 +914,7 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
   }
 
   StrOffsetSectionWasModified = false;
-  IndexToAddressMap.clear();
+  clear();
 }
 
 void DebugStrWriter::create() {
@@ -921,7 +923,11 @@ void DebugStrWriter::create() {
 }
 
 void DebugStrWriter::initialize() {
-  auto StrSection = BC.DwCtx->getDWARFObj().getStrSection();
+  StringRef StrSection;
+  if (IsDWO)
+    StrSection = DwCtx.getDWARFObj().getStrDWOSection();
+  else
+    StrSection = DwCtx.getDWARFObj().getStrSection();
   (*StrStream) << StrSection;
 }
 
@@ -1180,7 +1186,7 @@ static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
     Error Err = Error::success();
     const char *CStr = StrData.getCStr(&Offset, &Err);
     if (Err) {
-      errs() << "BOLT-ERROR: could not extract string from .debug_line_str";
+      BC.errs() << "BOLT-ERROR: could not extract string from .debug_line_str";
       continue;
     }
     const size_t NewOffset = LineStr.addString(CStr);

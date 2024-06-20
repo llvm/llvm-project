@@ -14,8 +14,12 @@
 #define FORTRAN_OPTIMIZER_SUPPORT_UTILS_H
 
 #include "flang/Common/default-kinds.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/FatalError.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -26,7 +30,9 @@
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
-  return cop.getValue().cast<mlir::IntegerAttr>().getValue().getSExtValue();
+  return mlir::cast<mlir::IntegerAttr>(cop.getValue())
+      .getValue()
+      .getSExtValue();
 }
 
 // Reconstruct binding tables for dynamic dispatch.
@@ -70,6 +76,67 @@ fromDefaultKinds(const Fortran::common::IntrinsicTypeDefaultKinds &defKinds) {
           static_cast<fir::KindTy>(
               defKinds.GetDefaultKind(Fortran::common::TypeCategory::Real))};
 }
+
+inline std::string mlirTypeToString(mlir::Type type) {
+  std::string result{};
+  llvm::raw_string_ostream sstream(result);
+  sstream << type;
+  return result;
+}
+
+inline std::string numericMlirTypeToFortran(fir::FirOpBuilder &builder,
+                                            mlir::Type type, mlir::Location loc,
+                                            const llvm::Twine &name) {
+  if (type.isF16())
+    return "REAL(KIND=2)";
+  else if (type.isBF16())
+    return "REAL(KIND=3)";
+  else if (type.isTF32())
+    return "REAL(KIND=unknown)";
+  else if (type.isF32())
+    return "REAL(KIND=4)";
+  else if (type.isF64())
+    return "REAL(KIND=8)";
+  else if (type.isF80())
+    return "REAL(KIND=10)";
+  else if (type.isF128())
+    return "REAL(KIND=16)";
+  else if (type.isInteger(8))
+    return "INTEGER(KIND=1)";
+  else if (type.isInteger(16))
+    return "INTEGER(KIND=2)";
+  else if (type.isInteger(32))
+    return "INTEGER(KIND=4)";
+  else if (type.isInteger(64))
+    return "INTEGER(KIND=8)";
+  else if (type.isInteger(128))
+    return "INTEGER(KIND=16)";
+  else if (type == fir::ComplexType::get(builder.getContext(), 2))
+    return "COMPLEX(KIND=2)";
+  else if (type == fir::ComplexType::get(builder.getContext(), 3))
+    return "COMPLEX(KIND=3)";
+  else if (type == fir::ComplexType::get(builder.getContext(), 4))
+    return "COMPLEX(KIND=4)";
+  else if (type == fir::ComplexType::get(builder.getContext(), 8))
+    return "COMPLEX(KIND=8)";
+  else if (type == fir::ComplexType::get(builder.getContext(), 10))
+    return "COMPLEX(KIND=10)";
+  else if (type == fir::ComplexType::get(builder.getContext(), 16))
+    return "COMPLEX(KIND=16)";
+  else
+    fir::emitFatalError(loc, "unsupported type in " + name + ": " +
+                                 fir::mlirTypeToString(type));
+}
+
+inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
+                              mlir::Location loc,
+                              const llvm::Twine &intrinsicName) {
+  TODO(loc,
+       "intrinsic: " +
+           fir::numericMlirTypeToFortran(builder, type, loc, intrinsicName) +
+           " in " + intrinsicName);
+}
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

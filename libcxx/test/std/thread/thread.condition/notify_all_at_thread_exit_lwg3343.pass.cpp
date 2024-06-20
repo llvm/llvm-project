@@ -35,12 +35,18 @@
 
 int condition_variable_lock_skipped_counter = 0;
 
+TEST_DIAGNOSTIC_PUSH
+// MSVC warning C4583: 'X::cv_': destructor is not implicitly called
+TEST_MSVC_DIAGNOSTIC_IGNORED(4583)
+
 union X {
     X() : cv_() {}
     ~X() {}
     std::condition_variable cv_;
     unsigned char bytes_[sizeof(std::condition_variable)];
 };
+
+TEST_DIAGNOSTIC_POP
 
 void test()
 {

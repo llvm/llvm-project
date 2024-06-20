@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon \
-// RUN:     -S -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | \
+// RUN:     -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | \
 // RUN:     FileCheck -check-prefixes=CHECK,CHECK-A64 %s
 // RUN: %clang_cc1 -triple armv8-none-linux-gnueabi -target-feature +neon \
-// RUN:     -target-feature +fp16 -S -disable-O0-optnone -emit-llvm -o - %s | \
+// RUN:     -target-feature +fp16 -disable-O0-optnone -emit-llvm -o - %s | \
 // RUN:     opt -S -passes=mem2reg | FileCheck -check-prefixes=CHECK,CHECK-A32 %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
@@ -11,7 +11,7 @@
 
 // CHECK-LABEL: @test_vld1_f16_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float16x4x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.float16x4x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float16x4x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float16x4x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x [[HALF:half|i16]]>, <4 x [[HALF]]> } @llvm.{{aarch64.neon.ld1x2.v4f16.p0|arm.neon.vld1x2.v4i16.p0}}(ptr %a)
 // CHECK: store { <4 x [[HALF]]>, <4 x [[HALF]]> } [[VLD1XN]], ptr [[__RET]]
@@ -25,7 +25,7 @@ float16x4x2_t test_vld1_f16_x2(float16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_f16_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float16x4x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.float16x4x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float16x4x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float16x4x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x [[HALF:half|i16]]>, <4 x [[HALF]]>, <4 x [[HALF]]> } @llvm.{{aarch64.neon.ld1x3.v4f16.p0|arm.neon.vld1x3.v4i16.p0}}(ptr %a)
 // CHECK: store { <4 x [[HALF]]>, <4 x [[HALF]]>, <4 x [[HALF]]> } [[VLD1XN]], ptr [[__RET]]
@@ -39,7 +39,7 @@ float16x4x3_t test_vld1_f16_x3(float16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_f16_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float16x4x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.float16x4x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float16x4x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float16x4x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x [[HALF:half|i16]]>, <4 x [[HALF]]>, <4 x [[HALF]]>, <4 x [[HALF]]> } @llvm.{{aarch64.neon.ld1x4.v4f16.p0|arm.neon.vld1x4.v4i16.p0}}(ptr %a)
 // CHECK: store { <4 x [[HALF]]>, <4 x [[HALF]]>, <4 x [[HALF]]>, <4 x [[HALF]]> } [[VLD1XN]], ptr [[__RET]]
@@ -53,7 +53,7 @@ float16x4x4_t test_vld1_f16_x4(float16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_f32_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float32x2x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.float32x2x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float32x2x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float32x2x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x float>, <2 x float> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v2f32.p0(ptr %a)
 // CHECK: store { <2 x float>, <2 x float> } [[VLD1XN]], ptr [[__RET]]
@@ -67,7 +67,7 @@ float32x2x2_t test_vld1_f32_x2(float32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_f32_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float32x2x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.float32x2x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float32x2x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float32x2x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x float>, <2 x float>, <2 x float> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v2f32.p0(ptr %a)
 // CHECK: store { <2 x float>, <2 x float>, <2 x float> } [[VLD1XN]], ptr [[__RET]]
@@ -80,7 +80,7 @@ float32x2x3_t test_vld1_f32_x3(float32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_f32_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float32x2x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.float32x2x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float32x2x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float32x2x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x float>, <2 x float>, <2 x float>, <2 x float> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v2f32.p0(ptr %a)
 // CHECK: store { <2 x float>, <2 x float>, <2 x float>, <2 x float> } [[VLD1XN]], ptr [[__RET]]
@@ -94,7 +94,7 @@ float32x2x4_t test_vld1_f32_x4(float32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_p16_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly16x4x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.poly16x4x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly16x4x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly16x4x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -108,7 +108,7 @@ poly16x4x2_t test_vld1_p16_x2(poly16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_p16_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly16x4x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.poly16x4x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly16x4x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly16x4x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -122,7 +122,7 @@ poly16x4x3_t test_vld1_p16_x3(poly16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_p16_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly16x4x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.poly16x4x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly16x4x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly16x4x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -136,7 +136,7 @@ poly16x4x4_t test_vld1_p16_x4(poly16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_p8_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly8x8x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.poly8x8x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly8x8x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly8x8x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -150,7 +150,7 @@ poly8x8x2_t test_vld1_p8_x2(poly8_t const *a) {
 
 // CHECK-LABEL: @test_vld1_p8_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly8x8x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.poly8x8x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly8x8x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly8x8x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -164,7 +164,7 @@ poly8x8x3_t test_vld1_p8_x3(poly8_t const *a) {
 
 // CHECK-LABEL: @test_vld1_p8_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly8x8x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.poly8x8x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly8x8x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly8x8x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -178,7 +178,7 @@ poly8x8x4_t test_vld1_p8_x4(poly8_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s16_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int16x4x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int16x4x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int16x4x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int16x4x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -192,7 +192,7 @@ int16x4x2_t test_vld1_s16_x2(int16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s16_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int16x4x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int16x4x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int16x4x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int16x4x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -206,7 +206,7 @@ int16x4x3_t test_vld1_s16_x3(int16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s16_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int16x4x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int16x4x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int16x4x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int16x4x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -220,7 +220,7 @@ int16x4x4_t test_vld1_s16_x4(int16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s32_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int32x2x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int32x2x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int32x2x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int32x2x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i32>, <2 x i32> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v2i32.p0(ptr %a)
 // CHECK: store { <2 x i32>, <2 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -234,7 +234,7 @@ int32x2x2_t test_vld1_s32_x2(int32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s32_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int32x2x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int32x2x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int32x2x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int32x2x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v2i32.p0(ptr %a)
 // CHECK: store { <2 x i32>, <2 x i32>, <2 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -248,7 +248,7 @@ int32x2x3_t test_vld1_s32_x3(int32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s32_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int32x2x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int32x2x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int32x2x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int32x2x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v2i32.p0(ptr %a)
 // CHECK: store { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -262,7 +262,7 @@ int32x2x4_t test_vld1_s32_x4(int32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s64_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int64x1x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int64x1x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int64x1x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int64x1x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <1 x i64>, <1 x i64> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v1i64.p0(ptr %a)
 // CHECK: store { <1 x i64>, <1 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -276,7 +276,7 @@ int64x1x2_t test_vld1_s64_x2(int64_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s64_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int64x1x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int64x1x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int64x1x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int64x1x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <1 x i64>, <1 x i64>, <1 x i64> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v1i64.p0(ptr %a)
 // CHECK: store { <1 x i64>, <1 x i64>, <1 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -290,7 +290,7 @@ int64x1x3_t test_vld1_s64_x3(int64_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s64_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int64x1x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int64x1x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int64x1x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int64x1x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v1i64.p0(ptr %a)
 // CHECK: store { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -304,7 +304,7 @@ int64x1x4_t test_vld1_s64_x4(int64_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s8_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int8x8x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int8x8x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int8x8x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int8x8x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -318,7 +318,7 @@ int8x8x2_t test_vld1_s8_x2(int8_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s8_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int8x8x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int8x8x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int8x8x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int8x8x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -332,7 +332,7 @@ int8x8x3_t test_vld1_s8_x3(int8_t const *a) {
 
 // CHECK-LABEL: @test_vld1_s8_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int8x8x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.int8x8x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int8x8x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int8x8x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -346,7 +346,7 @@ int8x8x4_t test_vld1_s8_x4(int8_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u16_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint16x4x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint16x4x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint16x4x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint16x4x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -360,7 +360,7 @@ uint16x4x2_t test_vld1_u16_x2(uint16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u16_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint16x4x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint16x4x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint16x4x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint16x4x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -374,7 +374,7 @@ uint16x4x3_t test_vld1_u16_x3(uint16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u16_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint16x4x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint16x4x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint16x4x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint16x4x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v4i16.p0(ptr %a)
 // CHECK: store { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -388,7 +388,7 @@ uint16x4x4_t test_vld1_u16_x4(uint16_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u32_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint32x2x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint32x2x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint32x2x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint32x2x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i32>, <2 x i32> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v2i32.p0(ptr %a)
 // CHECK: store { <2 x i32>, <2 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -402,7 +402,7 @@ uint32x2x2_t test_vld1_u32_x2(uint32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u32_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint32x2x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint32x2x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint32x2x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint32x2x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v2i32.p0(ptr %a)
 // CHECK: store { <2 x i32>, <2 x i32>, <2 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -416,7 +416,7 @@ uint32x2x3_t test_vld1_u32_x3(uint32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u32_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint32x2x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint32x2x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint32x2x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint32x2x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v2i32.p0(ptr %a)
 // CHECK: store { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -430,7 +430,7 @@ uint32x2x4_t test_vld1_u32_x4(uint32_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u64_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint64x1x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint64x1x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint64x1x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint64x1x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <1 x i64>, <1 x i64> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v1i64.p0(ptr %a)
 // CHECK: store { <1 x i64>, <1 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -444,7 +444,7 @@ uint64x1x2_t test_vld1_u64_x2(uint64_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u64_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint64x1x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint64x1x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint64x1x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint64x1x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <1 x i64>, <1 x i64>, <1 x i64> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v1i64.p0(ptr %a)
 // CHECK: store { <1 x i64>, <1 x i64>, <1 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -458,7 +458,7 @@ uint64x1x3_t test_vld1_u64_x3(uint64_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u64_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint64x1x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint64x1x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint64x1x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint64x1x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v1i64.p0(ptr %a)
 // CHECK: store { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -472,7 +472,7 @@ uint64x1x4_t test_vld1_u64_x4(uint64_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u8_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint8x8x2_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint8x8x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint8x8x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint8x8x2_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -486,7 +486,7 @@ uint8x8x2_t test_vld1_u8_x2(uint8_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u8_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint8x8x3_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint8x8x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint8x8x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint8x8x3_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -500,7 +500,7 @@ uint8x8x3_t test_vld1_u8_x3(uint8_t const *a) {
 
 // CHECK-LABEL: @test_vld1_u8_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint8x8x4_t, align 8
-// CHECK-A32: ptr noalias sret(%struct.uint8x8x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint8x8x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint8x8x4_t, align 8
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v8i8.p0(ptr %a)
 // CHECK: store { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -514,7 +514,7 @@ uint8x8x4_t test_vld1_u8_x4(uint8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_f16_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float16x8x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.float16x8x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float16x8x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float16x8x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x [[HALF:half|i16]]>, <8 x [[HALF]]> } @llvm.{{aarch64.neon.ld1x2.v8f16.p0|arm.neon.vld1x2.v8i16.p0}}(ptr %a)
 // CHECK: store { <8 x [[HALF]]>, <8 x [[HALF]]> } [[VLD1XN]], ptr [[__RET]]
@@ -528,7 +528,7 @@ float16x8x2_t test_vld1q_f16_x2(float16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_f16_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float16x8x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.float16x8x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float16x8x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float16x8x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x [[HALF:half|i16]]>, <8 x [[HALF]]>, <8 x [[HALF]]> } @llvm.{{aarch64.neon.ld1x3.v8f16.p0|arm.neon.vld1x3.v8i16.p0}}(ptr %a)
 // CHECK: store { <8 x [[HALF]]>, <8 x [[HALF]]>, <8 x [[HALF]]> } [[VLD1XN]], ptr [[__RET]]
@@ -542,7 +542,7 @@ float16x8x3_t test_vld1q_f16_x3(float16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_f16_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float16x8x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.float16x8x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float16x8x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float16x8x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x [[HALF:half|i16]]>, <8 x [[HALF]]>, <8 x [[HALF]]>, <8 x [[HALF]]> } @llvm.{{aarch64.neon.ld1x4.v8f16.p0|arm.neon.vld1x4.v8i16.p0}}(ptr %a)
 // CHECK: store { <8 x [[HALF]]>, <8 x [[HALF]]>, <8 x [[HALF]]>, <8 x [[HALF]]> } [[VLD1XN]], ptr [[__RET]]
@@ -556,7 +556,7 @@ float16x8x4_t test_vld1q_f16_x4(float16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_f32_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float32x4x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.float32x4x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float32x4x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float32x4x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x float>, <4 x float> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v4f32.p0(ptr %a)
 // CHECK: store { <4 x float>, <4 x float> } [[VLD1XN]], ptr [[__RET]]
@@ -570,7 +570,7 @@ float32x4x2_t test_vld1q_f32_x2(float32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_f32_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float32x4x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.float32x4x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float32x4x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float32x4x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x float>, <4 x float>, <4 x float> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v4f32.p0(ptr %a)
 // CHECK: store { <4 x float>, <4 x float>, <4 x float> } [[VLD1XN]], ptr [[__RET]]
@@ -584,7 +584,7 @@ float32x4x3_t test_vld1q_f32_x3(float32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_f32_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.float32x4x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.float32x4x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.float32x4x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.float32x4x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v4f32.p0(ptr %a)
 // CHECK: store { <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[VLD1XN]], ptr [[__RET]]
@@ -598,7 +598,7 @@ float32x4x4_t test_vld1q_f32_x4(float32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_p16_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly16x8x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.poly16x8x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly16x8x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly16x8x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -612,7 +612,7 @@ poly16x8x2_t test_vld1q_p16_x2(poly16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_p16_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly16x8x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.poly16x8x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly16x8x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly16x8x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -626,7 +626,7 @@ poly16x8x3_t test_vld1q_p16_x3(poly16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_p16_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly16x8x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.poly16x8x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly16x8x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly16x8x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -640,7 +640,7 @@ poly16x8x4_t test_vld1q_p16_x4(poly16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_p8_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly8x16x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.poly8x16x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly8x16x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly8x16x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -654,7 +654,7 @@ poly8x16x2_t test_vld1q_p8_x2(poly8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_p8_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly8x16x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.poly8x16x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly8x16x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly8x16x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -668,7 +668,7 @@ poly8x16x3_t test_vld1q_p8_x3(poly8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_p8_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.poly8x16x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.poly8x16x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.poly8x16x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.poly8x16x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -682,7 +682,7 @@ poly8x16x4_t test_vld1q_p8_x4(poly8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s16_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int16x8x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int16x8x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int16x8x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int16x8x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -696,7 +696,7 @@ int16x8x2_t test_vld1q_s16_x2(int16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s16_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int16x8x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int16x8x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int16x8x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int16x8x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -710,7 +710,7 @@ int16x8x3_t test_vld1q_s16_x3(int16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s16_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int16x8x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int16x8x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int16x8x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int16x8x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -724,7 +724,7 @@ int16x8x4_t test_vld1q_s16_x4(int16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s32_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int32x4x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int32x4x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int32x4x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int32x4x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v4i32.p0(ptr %a)
 // CHECK: store { <4 x i32>, <4 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -738,7 +738,7 @@ int32x4x2_t test_vld1q_s32_x2(int32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s32_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int32x4x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int32x4x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int32x4x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int32x4x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v4i32.p0(ptr %a)
 // CHECK: store { <4 x i32>, <4 x i32>, <4 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -752,7 +752,7 @@ int32x4x3_t test_vld1q_s32_x3(int32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s32_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int32x4x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int32x4x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int32x4x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int32x4x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v4i32.p0(ptr %a)
 // CHECK: store { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -766,7 +766,7 @@ int32x4x4_t test_vld1q_s32_x4(int32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s64_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int64x2x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int64x2x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int64x2x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int64x2x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v2i64.p0(ptr %a)
 // CHECK: store { <2 x i64>, <2 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -780,7 +780,7 @@ int64x2x2_t test_vld1q_s64_x2(int64_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s64_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int64x2x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int64x2x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int64x2x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int64x2x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v2i64.p0(ptr %a)
 // CHECK: store { <2 x i64>, <2 x i64>, <2 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -794,7 +794,7 @@ int64x2x3_t test_vld1q_s64_x3(int64_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s64_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int64x2x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int64x2x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int64x2x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int64x2x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v2i64.p0(ptr %a)
 // CHECK: store { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -808,7 +808,7 @@ int64x2x4_t test_vld1q_s64_x4(int64_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s8_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int8x16x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int8x16x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int8x16x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int8x16x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -822,7 +822,7 @@ int8x16x2_t test_vld1q_s8_x2(int8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s8_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int8x16x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int8x16x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int8x16x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int8x16x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -836,7 +836,7 @@ int8x16x3_t test_vld1q_s8_x3(int8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_s8_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.int8x16x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.int8x16x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.int8x16x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.int8x16x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -850,7 +850,7 @@ int8x16x4_t test_vld1q_s8_x4(int8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u16_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint16x8x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint16x8x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint16x8x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint16x8x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -864,7 +864,7 @@ uint16x8x2_t test_vld1q_u16_x2(uint16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u16_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint16x8x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint16x8x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint16x8x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint16x8x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -878,7 +878,7 @@ uint16x8x3_t test_vld1q_u16_x3(uint16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u16_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint16x8x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint16x8x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint16x8x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint16x8x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v8i16.p0(ptr %a)
 // CHECK: store { <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16> } [[VLD1XN]], ptr [[__RET]]
@@ -892,7 +892,7 @@ uint16x8x4_t test_vld1q_u16_x4(uint16_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u32_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint32x4x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint32x4x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint32x4x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint32x4x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v4i32.p0(ptr %a)
 // CHECK: store { <4 x i32>, <4 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -906,7 +906,7 @@ uint32x4x2_t test_vld1q_u32_x2(uint32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u32_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint32x4x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint32x4x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint32x4x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint32x4x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v4i32.p0(ptr %a)
 // CHECK: store { <4 x i32>, <4 x i32>, <4 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -920,7 +920,7 @@ uint32x4x3_t test_vld1q_u32_x3(uint32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u32_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint32x4x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint32x4x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint32x4x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint32x4x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v4i32.p0(ptr %a)
 // CHECK: store { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[VLD1XN]], ptr [[__RET]]
@@ -934,7 +934,7 @@ uint32x4x4_t test_vld1q_u32_x4(uint32_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u64_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint64x2x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint64x2x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint64x2x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint64x2x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v2i64.p0(ptr %a)
 // CHECK: store { <2 x i64>, <2 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -948,7 +948,7 @@ uint64x2x2_t test_vld1q_u64_x2(uint64_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u64_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint64x2x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint64x2x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint64x2x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint64x2x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v2i64.p0(ptr %a)
 // CHECK: store { <2 x i64>, <2 x i64>, <2 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -962,7 +962,7 @@ uint64x2x3_t test_vld1q_u64_x3(uint64_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u64_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint64x2x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint64x2x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint64x2x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint64x2x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v2i64.p0(ptr %a)
 // CHECK: store { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[VLD1XN]], ptr [[__RET]]
@@ -976,7 +976,7 @@ uint64x2x4_t test_vld1q_u64_x4(uint64_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u8_x2(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint8x16x2_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint8x16x2_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint8x16x2_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint8x16x2_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x2|arm.neon.vld1x2}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -990,7 +990,7 @@ uint8x16x2_t test_vld1q_u8_x2(uint8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u8_x3(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint8x16x3_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint8x16x3_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint8x16x3_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint8x16x3_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x3|arm.neon.vld1x3}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]
@@ -1004,7 +1004,7 @@ uint8x16x3_t test_vld1q_u8_x3(uint8_t const *a) {
 
 // CHECK-LABEL: @test_vld1q_u8_x4(
 // CHECK-A64: [[RETVAL:%.*]] = alloca %struct.uint8x16x4_t, align 16
-// CHECK-A32: ptr noalias sret(%struct.uint8x16x4_t) align 8 [[RETVAL:%.*]],
+// CHECK-A32: ptr dead_on_unwind noalias writable sret(%struct.uint8x16x4_t) align 8 [[RETVAL:%.*]],
 // CHECK: [[__RET:%.*]] = alloca %struct.uint8x16x4_t, align {{16|8}}
 // CHECK: [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.{{aarch64.neon.ld1x4|arm.neon.vld1x4}}.v16i8.p0(ptr %a)
 // CHECK: store { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], ptr [[__RET]]

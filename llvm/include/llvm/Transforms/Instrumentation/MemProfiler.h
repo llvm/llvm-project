@@ -17,9 +17,7 @@
 
 namespace llvm {
 class Function;
-class FunctionPass;
 class Module;
-class ModulePass;
 
 namespace vfs {
 class FileSystem;

@@ -70,7 +70,7 @@ int main(int, char**) {
 
   // tuple
   {
-    std::tuple<short> tps[] = {{1}, {2}, {3}};
+    std::tuple<short> tps[] = {{short{1}}, {short{2}}, {short{3}}};
     auto ev                 = tps | std::views::elements<0>;
     auto expected           = {1, 2, 3};
     assert(std::ranges::equal(ev, expected));

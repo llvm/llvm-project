@@ -93,7 +93,7 @@ void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)
     : Context(Ctx), CurrentWinFrameInfo(nullptr),
-      CurrentProcWinFrameInfoStartIndex(0), UseAssemblerInfoForParsing(false) {
+      CurrentProcWinFrameInfoStartIndex(0) {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
@@ -141,7 +141,7 @@ void MCStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   unsigned Index = IsLittleEndian ? 0 : 8 - Size;
   emitBytes(StringRef(reinterpret_cast<char *>(&Swapped) + Index, Size));
 }
-void MCStreamer::emitIntValue(APInt Value) {
+void MCStreamer::emitIntValue(const APInt &Value) {
   if (Value.getNumWords() == 1) {
     emitIntValue(Value.getLimitedValue(), Value.getBitWidth() / 8);
     return;
@@ -1167,7 +1167,8 @@ void MCStreamer::endCOFFSymbolDef() {
   llvm_unreachable("this directive only supported on COFF targets");
 }
 void MCStreamer::emitFileDirective(StringRef Filename) {}
-void MCStreamer::emitFileDirective(StringRef Filename, StringRef CompilerVerion,
+void MCStreamer::emitFileDirective(StringRef Filename,
+                                   StringRef CompilerVersion,
                                    StringRef TimeStamp, StringRef Description) {
 }
 void MCStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
@@ -1190,10 +1191,7 @@ void MCStreamer::emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
 }
 
 void MCStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
-                                          StringRef Rename) {
-  llvm_unreachable("emitXCOFFRenameDirective is only supported on "
-                   "XCOFF targets");
-}
+                                          StringRef Rename) {}
 
 void MCStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
   llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");
@@ -1316,6 +1314,9 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
   case Triple::DriverKit:
     // DriverKit always uses the build version load command.
     return VersionTuple();
+  case Triple::XROS:
+    // XROS always uses the build version load command.
+    return VersionTuple();
   default:
     break;
   }
@@ -1342,6 +1343,9 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
                                            : MachO::PLATFORM_WATCHOS;
   case Triple::DriverKit:
     return MachO::PLATFORM_DRIVERKIT;
+  case Triple::XROS:
+    return Target.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
+                                           : MachO::PLATFORM_XROS;
   default:
     break;
   }
@@ -1373,6 +1377,9 @@ void MCStreamer::emitVersionForTarget(
     break;
   case Triple::DriverKit:
     Version = Target.getDriverKitVersion();
+    break;
+  case Triple::XROS:
+    Version = Target.getOSVersion();
     break;
   default:
     llvm_unreachable("unexpected OS type");

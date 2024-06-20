@@ -59,7 +59,7 @@ inline_memcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
 
 LIBC_INLINE MemcmpReturnType inline_memcmp_x86(CPtr p1, CPtr p2, size_t count) {
   if (count == 0)
-    return MemcmpReturnType::ZERO();
+    return MemcmpReturnType::zero();
   if (count == 1)
     return generic::Memcmp<uint8_t>::block(p1, p2);
   if (count == 2)

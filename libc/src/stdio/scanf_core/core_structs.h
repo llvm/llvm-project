@@ -11,7 +11,6 @@
 
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/FPUtil/FPBits.h"
 
 #include <inttypes.h>
 #include <stddef.h>
@@ -46,7 +45,7 @@ struct FormatSection {
 
   cpp::bitset<256> scan_set;
 
-  bool operator==(const FormatSection &other) {
+  LIBC_INLINE bool operator==(const FormatSection &other) {
     if (has_conv != other.has_conv)
       return false;
 

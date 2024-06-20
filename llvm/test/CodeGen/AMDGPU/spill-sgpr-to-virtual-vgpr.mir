@@ -53,41 +53,41 @@ body:             |
   bb.0:
     liveins: $sgpr30_sgpr31, $sgpr10, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN-LABEL: name: sgpr_spill_lane_crossover
-    ; GCN: liveins: $sgpr10, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $vgpr0, $sgpr30_sgpr31, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN: liveins: $sgpr10, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $vgpr63, $sgpr30_sgpr31, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr64, 0, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr65, 1, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr66, 2, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr67, 3, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr68, 4, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr69, 5, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr70, 6, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr71, 7, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr72, 8, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr73, 9, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr74, 10, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr75, 11, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr76, 12, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr77, 13, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr78, 14, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr79, 15, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr80, 16, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr81, 17, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr82, 18, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr83, 19, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr84, 20, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr85, 21, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr86, 22, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr87, 23, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr88, 24, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr89, 25, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr90, 26, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr91, 27, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr92, 28, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr93, 29, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr94, 30, $vgpr0
-    ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr95, 31, $vgpr0
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr64, 0, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr65, 1, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr66, 2, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr67, 3, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr68, 4, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr69, 5, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr70, 6, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr71, 7, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr72, 8, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr73, 9, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr74, 10, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr75, 11, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr76, 12, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr77, 13, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr78, 14, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr79, 15, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr80, 16, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr81, 17, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr82, 18, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr83, 19, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr84, 20, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr85, 21, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr86, 22, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr87, 23, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr88, 24, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr89, 25, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr90, 26, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr91, 27, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr92, 28, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr93, 29, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr94, 30, $vgpr63
+    ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR killed $sgpr95, 31, $vgpr63
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR killed $sgpr10, 0, [[DEF]]
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr64, 1, [[DEF]], implicit-def $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, implicit $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95

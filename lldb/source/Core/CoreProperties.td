@@ -4,11 +4,16 @@ let Definition = "modulelist" in {
   def EnableExternalLookup: Property<"enable-external-lookup", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Control the use of external tools and repositories to locate symbol files. Directories listed in target.debug-file-search-paths and directory of the executable are always checked first for separate debug info files. Then depending on this setting: On macOS, Spotlight would be also used to locate a matching .dSYM bundle based on the UUID of the executable. On NetBSD, directory /usr/libdata/debug would be also searched. On platforms other than NetBSD directory /usr/lib/debug would be also searched.">;
+    Desc<"Control the use of external tools and repositories to locate symbol files. Directories listed in target.debug-file-search-paths and directory of the executable are always checked first for separate debug info files. Then depending on this setting: On macOS, Spotlight would be also used to locate a matching .dSYM bundle based on the UUID of the executable. On NetBSD, directory /usr/libdata/debug would be also searched. On platforms other than NetBSD directory /usr/lib/debug would be also searched. If all other methods fail there may be symbol-locator plugins that, if configured properly, will also attempt to acquire symbols. The debuginfod plugin defaults to the DEGUFINFOD_URLS environment variable which is configurable through the 'plugin.symbol-locator.debuginfod.server_urls' setting.">;
   def EnableBackgroundLookup: Property<"enable-background-lookup", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"On macOS, enable calling dsymForUUID (or an equivalent script/binary) in the background to locate symbol files that weren't found.">;
+    Desc<"Alias for backward compatibility: when enabled this is the equivalent to 'symbols.auto-download background'.">;
+  def AutoDownload: Property<"auto-download", "Enum">,
+    Global,
+    DefaultEnumValue<"eSymbolDownloadOff">,
+    EnumValues<"OptionEnumValues(g_auto_download_enum_values)">,
+    Desc<"On macOS, automatically download symbols with dsymForUUID (or an equivalent script/binary) for relevant images in the debug session.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -127,7 +132,7 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the line to be marked.">;
-  def TerminalWidth: Property<"term-width", "SInt64">,
+  def TerminalWidth: Property<"term-width", "UInt64">,
     Global,
     DefaultUnsignedValue<80>,
     Desc<"The maximum number of columns to use for displaying text.">;
@@ -203,6 +208,14 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying suggestion in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
+  def ShowRegexMatchAnsiPrefix: Property<"show-regex-match-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.red}">,
+    Desc<"When displaying a regex match in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the match.">;
+  def ShowRegexMatchAnsiSuffix: Property<"show-regex-match-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying a regex match in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the match.">;
   def ShowDontUsePoHint: Property<"show-dont-use-po-hint", "Boolean">,
     Global,
     DefaultTrue,

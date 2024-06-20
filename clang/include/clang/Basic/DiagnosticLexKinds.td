@@ -100,13 +100,24 @@ def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_invalid_char_raw_delim : Error<
-  "invalid character '%0' character in raw string delimiter"
+  "invalid character '%0' in raw string delimiter"
+  "; use PREFIX( )PREFIX to delimit raw string">;
+def err_invalid_newline_raw_delim : Error<
+  "invalid newline character in raw string delimiter"
   "; use PREFIX( )PREFIX to delimit raw string">;
 def err_unterminated_raw_string : Error<
   "raw string missing terminating delimiter )%0\"">;
 def warn_cxx98_compat_raw_string_literal : Warning<
   "raw string literals are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+
+def warn_cxx26_compat_raw_string_literal_character_set : Warning<
+  " '%0' in a raw string literal delimiter is incompatible "
+  "with standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
+def ext_cxx26_raw_string_literal_character_set : Extension<
+  " '%0' in a raw string literal delimiter is a C++2c extension">,
+  InGroup<CXX26>, DefaultIgnore;
 
 def warn_multichar_character_literal : Warning<
   "multi-character character constant">, InGroup<MultiChar>;
@@ -246,7 +257,10 @@ def warn_cxx17_hex_literal : Warning<
   "C++ standards before C++17">,
   InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
 def ext_binary_literal : Extension<
-  "binary integer literals are a GNU extension">, InGroup<GNUBinaryLiteral>;
+  "binary integer literals are a C23 extension">, InGroup<C23>;
+def warn_c23_compat_binary_literal : Warning<
+  "binary integer literals are incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def ext_binary_literal_cxx14 : Extension<
   "binary integer literals are a C++14 extension">, InGroup<CXX14BinaryLiteral>;
 def warn_cxx11_compat_binary_literal : Warning<
@@ -459,9 +473,16 @@ def err_embedded_directive : Error<
 def ext_embedded_directive : Extension<
   "embedding a directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
-def ext_missing_varargs_arg : Extension<
-  "must specify at least one argument for '...' parameter of variadic macro">,
-  InGroup<GNUZeroVariadicMacroArguments>;
+def ext_c_missing_varargs_arg : Extension<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "a C23 extension">, InGroup<C23>;
+def ext_cxx_missing_varargs_arg : Extension<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "a C++20 extension">, InGroup<CXX20>;
+def warn_c17_compat_missing_varargs_arg : Warning<
+  "passing no argument for the '...' parameter of a variadic macro is "
+  "incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def warn_cxx17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C++ standards before C++20">,
@@ -884,6 +905,9 @@ def warn_quoted_include_in_framework_header : Warning<
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
   >, InGroup<FrameworkIncludePrivateFromPublic>;
+def warn_deprecated_module_dot_map : Warning<
+  "'%0' as a module map name is deprecated, rename it to %select{module.modulemap|module.private.modulemap}1%select{| in the 'Modules' directory of the framework}2">,
+  InGroup<DeprecatedModuleDotMap>;
 
 def remark_pp_include_directive_modular_translation : Remark<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
@@ -975,5 +999,5 @@ def err_pp_unclosed_pragma_unsafe_buffer_usage :
 Error<"'#pragma unsafe_buffer_usage' was not ended">;
 
 def err_pp_pragma_unsafe_buffer_usage_syntax :
-Error<"Expected 'begin' or 'end'">;
+Error<"expected 'begin' or 'end'">;
 }

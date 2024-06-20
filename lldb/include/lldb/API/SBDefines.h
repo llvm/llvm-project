@@ -43,6 +43,8 @@
 namespace lldb {
 
 class LLDB_API SBAddress;
+class LLDB_API SBAddressRange;
+class LLDB_API SBAddressRangeList;
 class LLDB_API SBAttachInfo;
 class LLDB_API SBBlock;
 class LLDB_API SBBreakpoint;
@@ -99,6 +101,7 @@ class LLDB_API SBReproducer;
 class LLDB_API SBScriptObject;
 class LLDB_API SBSection;
 class LLDB_API SBSourceManager;
+class LLDB_API SBStatisticsOptions;
 class LLDB_API SBStream;
 class LLDB_API SBStringList;
 class LLDB_API SBStructuredData;

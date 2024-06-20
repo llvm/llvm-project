@@ -11,9 +11,10 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
-#if !defined(LIBC_TARGET_ARCH_IS_X86)
-#error "Invalid include"
+#if !(defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE2))
+#error "sqrtss / sqrtsd need SSE2"
 #endif
 
 #include "src/__support/FPUtil/generic/sqrt.h"
@@ -33,7 +34,7 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
   return result;
 }
 
-#ifdef LONG_DOUBLE_IS_DOUBLE
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 template <> LIBC_INLINE long double sqrt<long double>(long double x) {
   long double result;
   __asm__ __volatile__("sqrtsd %x1, %x0" : "=x"(result) : "x"(x));

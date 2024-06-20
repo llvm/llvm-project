@@ -97,7 +97,7 @@ TEST(LlvmLibcStrErrorTest, KnownErrors) {
       ".lib section in a.out corrupted",
       "Attempting to link in too many shared libraries",
       "Cannot exec a shared library directly",
-      "Invalid or incomplete multibyte or wide character",
+      "Unknown error 84", // Unknown
       "Interrupted system call should be restarted",
       "Streams pipe error",
       "Too many users",

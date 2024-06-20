@@ -68,16 +68,19 @@ Sections:
     Flags:           [ ]
   - Name:            .gnu.warning.foo
     Type:            SHT_PROGBITS
+  - Name:            .gnu_debuglink
+    Type:            SHT_PROGBITS
 ProgramHeaders:
   # Use an arbitrary segment type to show that the segment type is unimportant.
   - Type:     0x61234567
     FirstSec: non_alloc_in_segment
     LastSec:  non_alloc_in_segment
 
-# CHECK: SectionHeaderCount: 6
+# CHECK: SectionHeaderCount: 7
 
 # CHECK: Name: non_alloc_in_segment
 # CHECK: Name: .bss
 # CHECK: Name: .text
 # CHECK: Name: .gnu.warning.foo
+# CHECK: Name: .gnu_debuglink
 # CHECK: Name: .shstrtab

@@ -36,6 +36,9 @@ class type_info; // forward declaration
 
 // runtime routines use C calling conventions, but are in __cxxabiv1 namespace
 namespace __cxxabiv1 {
+
+struct __cxa_exception;
+
 extern "C"  {
 
 // 2.4.2 Allocating the Exception Object
@@ -43,12 +46,19 @@ extern _LIBCXXABI_FUNC_VIS void *
 __cxa_allocate_exception(size_t thrown_size) throw();
 extern _LIBCXXABI_FUNC_VIS void
 __cxa_free_exception(void *thrown_exception) throw();
+// This function is an LLVM extension, which mirrors the same extension in libsupc++ and libcxxrt
+extern _LIBCXXABI_FUNC_VIS __cxa_exception*
+#ifdef __wasm__
+// In Wasm, a destructor returns its argument
+__cxa_init_primary_exception(void* object, std::type_info* tinfo, void*(_LIBCXXABI_DTOR_FUNC* dest)(void*)) throw();
+#else
+__cxa_init_primary_exception(void* object, std::type_info* tinfo, void(_LIBCXXABI_DTOR_FUNC* dest)(void*)) throw();
+#endif
 
 // 2.4.3 Throwing the Exception Object
 extern _LIBCXXABI_FUNC_VIS _LIBCXXABI_NORETURN void
 __cxa_throw(void *thrown_exception, std::type_info *tinfo,
-#ifdef __USING_WASM_EXCEPTIONS__
-            // In Wasm, a destructor returns its argument
+#ifdef __wasm__
             void *(_LIBCXXABI_DTOR_FUNC *dest)(void *));
 #else
             void (_LIBCXXABI_DTOR_FUNC *dest)(void *));

@@ -94,7 +94,7 @@ struct Test1OutIters {
 
 TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::cpp17_input_iterator_list<int*>(), TestOutIters());
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::cpp17_input_iterator_list<std::unique_ptr<int>*>(), Test1OutIters());
 
   { // Make sure that padding bits aren't copied

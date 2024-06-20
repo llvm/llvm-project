@@ -1482,6 +1482,10 @@ int printAffineMap(MlirContext ctx) {
   // CHECK: (d0, d1, d2) -> (d0)
   // CHECK: (d0, d1, d2) -> (d2)
 
+  // CHECK: distinct[0]<"foo">
+  mlirAttributeDump(mlirDisctinctAttrCreate(
+      mlirStringAttrGet(ctx, mlirStringRefCreateFromCString("foo"))));
+
   return 0;
 }
 
@@ -1970,6 +1974,15 @@ int testOperands(void) {
   fprintf(stderr, "\n");
   // CHECK: Second replacement use owner: "dummy.op2"
 
+  MlirOpOperand use5 = mlirValueGetFirstUse(constTwoValue);
+  MlirOpOperand use6 = mlirOpOperandGetNextUse(use5);
+  if (!mlirValueEqual(mlirOpOperandGetValue(use5),
+                      mlirOpOperandGetValue(use6))) {
+    fprintf(stderr,
+            "ERROR: First and second operand should share the same value\n");
+    return 5;
+  }
+
   mlirOperationDestroy(op);
   mlirOperationDestroy(op2);
   mlirOperationDestroy(constZero);
@@ -2231,9 +2244,22 @@ typedef struct {
   const char *x;
 } callBackData;
 
-void walkCallBack(MlirOperation op, void *rootOpVoid) {
+MlirWalkResult walkCallBack(MlirOperation op, void *rootOpVoid) {
   fprintf(stderr, "%s: %s\n", ((callBackData *)(rootOpVoid))->x,
           mlirIdentifierStr(mlirOperationGetName(op)).data);
+  return MlirWalkResultAdvance;
+}
+
+MlirWalkResult walkCallBackTestWalkResult(MlirOperation op, void *rootOpVoid) {
+  fprintf(stderr, "%s: %s\n", ((callBackData *)(rootOpVoid))->x,
+          mlirIdentifierStr(mlirOperationGetName(op)).data);
+  if (strcmp(mlirIdentifierStr(mlirOperationGetName(op)).data, "func.func") ==
+      0)
+    return MlirWalkResultSkip;
+  if (strcmp(mlirIdentifierStr(mlirOperationGetName(op)).data, "arith.addi") ==
+      0)
+    return MlirWalkResultInterrupt;
+  return MlirWalkResultAdvance;
 }
 
 int testOperationWalk(MlirContext ctx) {
@@ -2246,6 +2272,9 @@ int testOperationWalk(MlirContext ctx) {
                              "    arith.addi %1, %1: i32\n"
                              "    return\n"
                              "  }\n"
+                             "  func.func @bar() {\n"
+                             "    return\n"
+                             "  }\n"
                              "}";
   MlirModule module =
       mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
@@ -2253,22 +2282,42 @@ int testOperationWalk(MlirContext ctx) {
   callBackData data;
   data.x = "i love you";
 
-  // CHECK: i love you: arith.constant
-  // CHECK: i love you: arith.addi
-  // CHECK: i love you: func.return
-  // CHECK: i love you: func.func
-  // CHECK: i love you: builtin.module
+  // CHECK-NEXT: i love you: arith.constant
+  // CHECK-NEXT: i love you: arith.addi
+  // CHECK-NEXT: i love you: func.return
+  // CHECK-NEXT: i love you: func.func
+  // CHECK-NEXT: i love you: func.return
+  // CHECK-NEXT: i love you: func.func
+  // CHECK-NEXT: i love you: builtin.module
   mlirOperationWalk(mlirModuleGetOperation(module), walkCallBack,
                     (void *)(&data), MlirWalkPostOrder);
 
   data.x = "i don't love you";
-  // CHECK: i don't love you: builtin.module
-  // CHECK: i don't love you: func.func
-  // CHECK: i don't love you: arith.constant
-  // CHECK: i don't love you: arith.addi
-  // CHECK: i don't love you: func.return
+  // CHECK-NEXT: i don't love you: builtin.module
+  // CHECK-NEXT: i don't love you: func.func
+  // CHECK-NEXT: i don't love you: arith.constant
+  // CHECK-NEXT: i don't love you: arith.addi
+  // CHECK-NEXT: i don't love you: func.return
+  // CHECK-NEXT: i don't love you: func.func
+  // CHECK-NEXT: i don't love you: func.return
   mlirOperationWalk(mlirModuleGetOperation(module), walkCallBack,
                     (void *)(&data), MlirWalkPreOrder);
+
+  data.x = "interrupt";
+  // Interrupted at `arith.addi`
+  // CHECK-NEXT: interrupt: arith.constant
+  // CHECK-NEXT: interrupt: arith.addi
+  mlirOperationWalk(mlirModuleGetOperation(module), walkCallBackTestWalkResult,
+                    (void *)(&data), MlirWalkPostOrder);
+
+  data.x = "skip";
+  // Skip at `func.func`
+  // CHECK-NEXT: skip: builtin.module
+  // CHECK-NEXT: skip: func.func
+  // CHECK-NEXT: skip: func.func
+  mlirOperationWalk(mlirModuleGetOperation(module), walkCallBackTestWalkResult,
+                    (void *)(&data), MlirWalkPreOrder);
+
   mlirModuleDestroy(module);
   return 0;
 }

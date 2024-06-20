@@ -317,13 +317,13 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_EQ(0x4000UL, MB.get()->getBufferSize());
  
   StringRef BufData = MB.get()->getBuffer();
-  EXPECT_TRUE(BufData.substr(0x0000,8).equals("12345678"));
-  EXPECT_TRUE(BufData.substr(0x0FF8,8).equals("12345678"));
-  EXPECT_TRUE(BufData.substr(0x1000,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData.substr(0x2FF8,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData.substr(0x3000,8).equals("ABCDEFGH"));
-  EXPECT_TRUE(BufData.substr(0x3FF8,8).equals("ABCDEFGH"));
-   
+  EXPECT_TRUE(BufData.substr(0x0000, 8) == "12345678");
+  EXPECT_TRUE(BufData.substr(0x0FF8, 8) == "12345678");
+  EXPECT_TRUE(BufData.substr(0x1000, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData.substr(0x2FF8, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData.substr(0x3000, 8) == "ABCDEFGH");
+  EXPECT_TRUE(BufData.substr(0x3FF8, 8) == "ABCDEFGH");
+
   // Try non-page aligned.
   ErrorOr<OwningBuffer> MB2 = MemoryBuffer::getFileSlice(TestPath.str(),
                                                          0x3000, 0x0800);
@@ -332,10 +332,10 @@ TEST_F(MemoryBufferTest, slice) {
   EXPECT_EQ(0x3000UL, MB2.get()->getBufferSize());
   
   StringRef BufData2 = MB2.get()->getBuffer();
-  EXPECT_TRUE(BufData2.substr(0x0000,8).equals("12345678"));
-  EXPECT_TRUE(BufData2.substr(0x17F8,8).equals("12345678"));
-  EXPECT_TRUE(BufData2.substr(0x1800,8).equals("abcdefgh"));
-  EXPECT_TRUE(BufData2.substr(0x2FF8,8).equals("abcdefgh"));
+  EXPECT_TRUE(BufData2.substr(0x0000, 8) == "12345678");
+  EXPECT_TRUE(BufData2.substr(0x17F8, 8) == "12345678");
+  EXPECT_TRUE(BufData2.substr(0x1800, 8) == "abcdefgh");
+  EXPECT_TRUE(BufData2.substr(0x2FF8, 8) == "abcdefgh");
 }
 
 TEST_F(MemoryBufferTest, writableSlice) {
@@ -432,7 +432,7 @@ TEST_F(MemoryBufferTest, mmapVolatileNoNull) {
   OwningBuffer MB = std::move(*MBOrError);
   EXPECT_EQ(MB->getBufferKind(), MemoryBuffer::MemoryBuffer_MMap);
   EXPECT_EQ(MB->getBufferSize(), std::size_t(FileWrites * 8));
-  EXPECT_TRUE(MB->getBuffer().startswith("01234567"));
+  EXPECT_TRUE(MB->getBuffer().starts_with("01234567"));
 }
 
 // Test that SmallVector without a null terminator gets one.

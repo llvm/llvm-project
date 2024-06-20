@@ -263,13 +263,18 @@ def _typeArrayAttr(x, context):
     return _arrayAttr([TypeAttr.get(t, context=context) for t in x], context)
 
 
+@register_attribute_builder("MemRefTypeAttr")
+def _memref_type_attr(x, context):
+    return _typeAttr(x, context)
+
+
 try:
     import numpy as np
 
     @register_attribute_builder("F64ElementsAttr")
     def _f64ElementsAttr(x, context):
         return DenseElementsAttr.get(
-            np.array(x, dtype=np.int64),
+            np.array(x, dtype=np.float64),
             type=F64Type.get(context=context),
             context=context,
         )

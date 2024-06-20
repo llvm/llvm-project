@@ -157,6 +157,25 @@
 #define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
+// clang-format off
+#if defined(__clang__) || defined(__GNUC__)
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
+  _Pragma("GCC diagnostic push")                                               \
+  _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
+  _Pragma("GCC diagnostic pop")
+#elif defined(_MSC_VER)
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
+  _Pragma("warning(push)")                                                     \
+  _Pragma("warning(disable : 4996)")
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
+  _Pragma("warning(pop)")
+#else
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+#define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+#endif
+// clang-format on
+
 // Indicate that a non-static, non-const C++ member function reinitializes
 // the entire object to a known state, independent of the previous state of
 // the object.
@@ -257,6 +276,14 @@
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL _Ret_notnull_
 #else
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL
+#endif
+
+/// LLVM_ATTRIBUTE_RESTRICT - Annotates a pointer to tell the compiler that
+/// it is not aliased in the current scope.
+#if defined(__clang__) || defined(__GNUC__) || defined(_MSC_VER)
+#define LLVM_ATTRIBUTE_RESTRICT __restrict
+#else
+#define LLVM_ATTRIBUTE_RESTRICT
 #endif
 
 /// \macro LLVM_ATTRIBUTE_RETURNS_NOALIAS Used to mark a function as returning a

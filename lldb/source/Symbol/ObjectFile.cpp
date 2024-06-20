@@ -607,15 +607,15 @@ lldb::SymbolType
 ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
                                   lldb::SymbolType symbol_type_hint) {
   if (!name.empty()) {
-    if (name.startswith("_OBJC_")) {
+    if (name.starts_with("_OBJC_")) {
       // ObjC
-      if (name.startswith("_OBJC_CLASS_$_"))
+      if (name.starts_with("_OBJC_CLASS_$_"))
         return lldb::eSymbolTypeObjCClass;
-      if (name.startswith("_OBJC_METACLASS_$_"))
+      if (name.starts_with("_OBJC_METACLASS_$_"))
         return lldb::eSymbolTypeObjCMetaClass;
-      if (name.startswith("_OBJC_IVAR_$_"))
+      if (name.starts_with("_OBJC_IVAR_$_"))
         return lldb::eSymbolTypeObjCIVar;
-    } else if (name.startswith(".objc_class_name_")) {
+    } else if (name.starts_with(".objc_class_name_")) {
       // ObjC v1
       return lldb::eSymbolTypeObjCClass;
     }

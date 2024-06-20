@@ -501,7 +501,6 @@ void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE,
                                   SRE->getLoc());
   }
   const MCConstantExpr *MCOffset = MCConstantExpr::create(Offset, getContext());
-  MCObjectStreamer::visitUsedExpr(*SRE);
   if (std::optional<std::pair<bool, std::string>> Err =
           MCObjectStreamer::emitRelocDirective(
               *MCOffset, "BFD_RELOC_NONE", SRE, SRE->getLoc(),
@@ -893,11 +892,8 @@ void MCELFStreamer::createAttributesSection(
 MCStreamer *llvm::createELFStreamer(MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     std::unique_ptr<MCObjectWriter> &&OW,
-                                    std::unique_ptr<MCCodeEmitter> &&CE,
-                                    bool RelaxAll) {
+                                    std::unique_ptr<MCCodeEmitter> &&CE) {
   MCELFStreamer *S =
       new MCELFStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

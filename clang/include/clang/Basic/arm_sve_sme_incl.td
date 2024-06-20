@@ -93,6 +93,7 @@
 // m: uint32_t
 // n: uint64_t
 
+// [: svuint8_t
 // t: svint32_t
 // z: svuint32_t
 // g: svuint64_t
@@ -128,6 +129,7 @@
 // Z: const pointer to uint64_t
 
 // Prototype modifiers added for SVE2p1
+// {: 128b vector
 // }: svcount_t
 
 class MergeType<int val, string suffix=""> {
@@ -192,38 +194,44 @@ def FirstSplatOperand         : FlagType<0x00000400>;
 // These flags are used to specify which scalar operand
 // needs to be duplicated/splatted into a vector.
 //      :                                     :
-def SplatOperandMask          : FlagType<0x00001C00>;
-def IsLoad                    : FlagType<0x00002000>;
-def IsStore                   : FlagType<0x00004000>;
-def IsGatherLoad              : FlagType<0x00008000>;
-def IsScatterStore            : FlagType<0x00010000>;
-def IsStructLoad              : FlagType<0x00020000>;
-def IsStructStore             : FlagType<0x00040000>;
-def IsZExtReturn              : FlagType<0x00080000>; // Return value is sign-extend by default
-def IsOverloadNone            : FlagType<0x00100000>; // Intrinsic does not take any overloaded types.
-def IsOverloadWhile           : FlagType<0x00200000>; // Use {default type, typeof(operand1)} as overloaded types.
-def IsOverloadWhileRW         : FlagType<0x00400000>; // Use {pred(default type), typeof(operand0)} as overloaded types.
-def IsOverloadCvt             : FlagType<0x00800000>; // Use {typeof(operand0), typeof(last operand)} as overloaded types.
-def OverloadKindMask          : FlagType<0x00E00000>; // When the masked values are all '0', the default type is used as overload type.
-def IsByteIndexed             : FlagType<0x01000000>;
-def IsAppendSVALL             : FlagType<0x02000000>; // Appends SV_ALL as the last operand.
-def IsInsertOp1SVALL          : FlagType<0x04000000>; // Inserts SV_ALL as the second operand.
-def IsPrefetch                : FlagType<0x08000000>; // Contiguous prefetches.
-def IsGatherPrefetch          : FlagType<0x10000000>;
-def ReverseCompare            : FlagType<0x20000000>; // Compare operands must be swapped.
-def ReverseUSDOT              : FlagType<0x40000000>; // Unsigned/signed operands must be swapped.
-def IsUndef                   : FlagType<0x80000000>; // Codegen `undef` of given type.
-def IsTupleCreate             : FlagType<0x100000000>;
-def IsTupleGet                : FlagType<0x200000000>;
-def IsTupleSet                : FlagType<0x400000000>;
-def ReverseMergeAnyBinOp      : FlagType<0x800000000>; // e.g. Implement SUBR_X using SUB_X.
-def ReverseMergeAnyAccOp      : FlagType<0x1000000000>; // e.g. Implement MSB_X using MLS_X.
-def IsStreaming               : FlagType<0x2000000000>;
-def IsStreamingCompatible     : FlagType<0x4000000000>;
-def IsSharedZA                : FlagType<0x8000000000>;
-def IsPreservesZA             : FlagType<0x10000000000>;
-def IsReadZA                  : FlagType<0x20000000000>;
-def IsWriteZA                 : FlagType<0x40000000000>;
+def SplatOperandMask                : FlagType<0x00001C00>;
+def IsLoad                          : FlagType<0x00002000>;
+def IsStore                         : FlagType<0x00004000>;
+def IsGatherLoad                    : FlagType<0x00008000>;
+def IsScatterStore                  : FlagType<0x00010000>;
+def IsStructLoad                    : FlagType<0x00020000>;
+def IsStructStore                   : FlagType<0x00040000>;
+def IsZExtReturn                    : FlagType<0x00080000>; // Return value is sign-extend by default
+def IsOverloadNone                  : FlagType<0x00100000>; // Intrinsic does not take any overloaded types.
+def IsOverloadWhileOrMultiVecCvt    : FlagType<0x00200000>; // Use {default type, typeof(operand1)} as overloaded types.
+def IsOverloadWhileRW               : FlagType<0x00400000>; // Use {pred(default type), typeof(operand0)} as overloaded types.
+def IsOverloadCvt                   : FlagType<0x00800000>; // Use {typeof(operand0), typeof(last operand)} as overloaded types.
+def OverloadKindMask                : FlagType<0x00E00000>; // When the masked values are all '0', the default type is used as overload type.
+def IsByteIndexed                   : FlagType<0x01000000>;
+def IsAppendSVALL                   : FlagType<0x02000000>; // Appends SV_ALL as the last operand.
+def IsInsertOp1SVALL                : FlagType<0x04000000>; // Inserts SV_ALL as the second operand.
+def IsPrefetch                      : FlagType<0x08000000>; // Contiguous prefetches.
+def IsGatherPrefetch                : FlagType<0x10000000>;
+def ReverseCompare                  : FlagType<0x20000000>; // Compare operands must be swapped.
+def ReverseUSDOT                    : FlagType<0x40000000>; // Unsigned/signed operands must be swapped.
+def IsUndef                         : FlagType<0x80000000>; // Codegen `undef` of given type.
+def IsTupleCreate                   : FlagType<0x100000000>;
+def IsTupleGet                      : FlagType<0x200000000>;
+def IsTupleSet                      : FlagType<0x400000000>;
+def ReverseMergeAnyBinOp            : FlagType<0x800000000>; // e.g. Implement SUBR_X using SUB_X.
+def ReverseMergeAnyAccOp            : FlagType<0x1000000000>; // e.g. Implement MSB_X using MLS_X.
+def IsStreaming                     : FlagType<0x2000000000>;
+def IsStreamingCompatible           : FlagType<0x4000000000>;
+def IsReadZA                        : FlagType<0x8000000000>;
+def IsWriteZA                       : FlagType<0x10000000000>;
+def IsReductionQV                   : FlagType<0x20000000000>;
+def IsStreamingOrSVE2p1             : FlagType<0x40000000000>; // Use for intrinsics that are common between sme/sme2 and sve2p1.
+def IsInZA                          : FlagType<0x80000000000>;
+def IsOutZA                         : FlagType<0x100000000000>;
+def IsInOutZA                       : FlagType<0x200000000000>;
+def IsInZT0                         : FlagType<0x400000000000>;
+def IsOutZT0                        : FlagType<0x800000000000>;
+def IsInOutZT0                      : FlagType<0x1000000000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {

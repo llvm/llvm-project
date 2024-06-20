@@ -40,7 +40,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 @_ZTV1B = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.B*, i32)* @_ZN1B1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !1, !vcall_visibility !5
 
 
-; CHECK-LABEL: define i32 @test
+; CHECK-LABEL: define {{(noundef )?}}i32 @test
 define i32 @test(%struct.A* %obj, i32 %a) {
 entry:
   %0 = bitcast %struct.A* %obj to i8***

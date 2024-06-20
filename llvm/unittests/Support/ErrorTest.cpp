@@ -13,6 +13,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -1132,4 +1133,47 @@ TEST(Error, moveInto) {
   }
 }
 
+TEST(Error, FatalBadAllocErrorHandlersInteraction) {
+  auto ErrorHandler = [](void *Data, const char *, bool) {};
+  install_fatal_error_handler(ErrorHandler, nullptr);
+  // The following call should not crash; previously, a bug in
+  // install_bad_alloc_error_handler asserted that no fatal-error handler is
+  // installed already.
+  install_bad_alloc_error_handler(ErrorHandler, nullptr);
+
+  // Don't interfere with other tests.
+  remove_fatal_error_handler();
+  remove_bad_alloc_error_handler();
+}
+
+TEST(Error, BadAllocFatalErrorHandlersInteraction) {
+  auto ErrorHandler = [](void *Data, const char *, bool) {};
+  install_bad_alloc_error_handler(ErrorHandler, nullptr);
+  // The following call should not crash; related to
+  // FatalBadAllocErrorHandlersInteraction: Ensure that the error does not occur
+  // in the other direction.
+  install_fatal_error_handler(ErrorHandler, nullptr);
+
+  // Don't interfere with other tests.
+  remove_fatal_error_handler();
+  remove_bad_alloc_error_handler();
+}
+
+TEST(Error, ForwardToExpected) {
+  auto ErrorReturningFct = [](bool Fail) {
+    return Fail ? make_error<StringError>(llvm::errc::invalid_argument,
+                                          "Some Error")
+                : Error::success();
+  };
+  auto ExpectedReturningFct = [&](bool Fail) -> Expected<int> {
+    auto Err = ErrorReturningFct(Fail);
+    if (Err)
+      return Err;
+    return 42;
+  };
+  std::optional<int> MaybeV;
+  EXPECT_THAT_ERROR(ExpectedReturningFct(true).moveInto(MaybeV), Failed());
+  EXPECT_THAT_ERROR(ExpectedReturningFct(false).moveInto(MaybeV), Succeeded());
+  EXPECT_EQ(*MaybeV, 42);
+}
 } // namespace

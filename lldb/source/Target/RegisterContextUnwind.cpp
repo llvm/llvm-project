@@ -1555,12 +1555,12 @@ RegisterContextUnwind::SavedLocationForRegister(
   }
 
   if (unwindplan_regloc.IsSame()) {
-    if (!IsFrameZero() &&
+    if (!m_all_registers_available &&
         (regnum.GetAsKind(eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_PC ||
          regnum.GetAsKind(eRegisterKindGeneric) == LLDB_REGNUM_GENERIC_RA)) {
       UnwindLogMsg("register %s (%d) is marked as 'IsSame' - it is a pc or "
-                   "return address reg on a non-zero frame -- treat as if we "
-                   "have no information",
+                   "return address reg on a frame which does not have all "
+                   "registers available -- treat as if we have no information",
                    regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
       return UnwindLLDB::RegisterSearchResult::eRegisterNotFound;
     } else {

@@ -514,13 +514,12 @@ define void @test34(ptr noalias %p) {
   store i32 0, ptr %p
   ret void
 }
-; Same as previous case, but with an sret argument.
-; TODO: The first store could be eliminated if sret is not visible on unwind.
-define void @test34_sret(ptr noalias sret(i32) %p) {
-; CHECK-LABEL: @test34_sret(
-; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
+
+; Same as previous case, but with a dead_on_unwind argument.
+define void @test34_dead_on_unwind(ptr noalias dead_on_unwind %p) {
+; CHECK-LABEL: @test34_dead_on_unwind(
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, ptr %p
@@ -790,4 +789,17 @@ define i32 @test48(ptr %P, ptr noalias %Q, ptr %R) {
   store i32 3, ptr %Q
   %l = load i32, ptr %R
   ret i32 %l
+}
+
+define void @test49() {
+; CHECK-LABEL: @test49(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr readonly null, i8 0, i64 0, i1 false)
+; CHECK-NEXT:    store ptr null, ptr null, align 8
+; CHECK-NEXT:    ret void
+;
+bb:
+  call void @llvm.memset.p0.i64(ptr readonly null, i8 0, i64 0, i1 false)
+  store ptr null, ptr null, align 8
+  ret void
 }

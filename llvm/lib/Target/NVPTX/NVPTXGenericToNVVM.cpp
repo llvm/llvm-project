@@ -62,7 +62,7 @@ bool GenericToNVVM::runOnModule(Module &M) {
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
     if (GV.getType()->getAddressSpace() == llvm::ADDRESS_SPACE_GENERIC &&
         !llvm::isTexture(GV) && !llvm::isSurface(GV) && !llvm::isSampler(GV) &&
-        !GV.getName().startswith("llvm.")) {
+        !GV.getName().starts_with("llvm.")) {
       GlobalVariable *NewGV = new GlobalVariable(
           M, GV.getValueType(), GV.isConstant(), GV.getLinkage(),
           GV.hasInitializer() ? GV.getInitializer() : nullptr, "", &GV,
@@ -236,14 +236,6 @@ Value *GenericToNVVM::remapConstantExpr(Module *M, Function *F, ConstantExpr *C,
   // the converted operands.
   unsigned Opcode = C->getOpcode();
   switch (Opcode) {
-  case Instruction::ICmp:
-    // CompareConstantExpr (icmp)
-    return Builder.CreateICmp(CmpInst::Predicate(C->getPredicate()),
-                              NewOperands[0], NewOperands[1]);
-  case Instruction::FCmp:
-    // CompareConstantExpr (fcmp)
-    llvm_unreachable("Address space conversion should have no effect "
-                     "on float point CompareConstantExpr (fcmp)!");
   case Instruction::ExtractElement:
     // ExtractElementConstantExpr
     return Builder.CreateExtractElement(NewOperands[0], NewOperands[1]);

@@ -350,7 +350,6 @@ bool AMDGPURegBankCombinerImpl::matchFPMed3ToClamp(MachineInstr &MI,
 
 void AMDGPURegBankCombinerImpl::applyClamp(MachineInstr &MI,
                                            Register &Reg) const {
-  B.setInstrAndDebugLoc(MI);
   B.buildInstr(AMDGPU::G_AMDGPU_CLAMP, {MI.getOperand(0)}, {Reg},
                MI.getFlags());
   MI.eraseFromParent();
@@ -358,7 +357,6 @@ void AMDGPURegBankCombinerImpl::applyClamp(MachineInstr &MI,
 
 void AMDGPURegBankCombinerImpl::applyMed3(MachineInstr &MI,
                                           Med3MatchInfo &MatchInfo) const {
-  B.setInstrAndDebugLoc(MI);
   B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
                {getAsVgpr(MatchInfo.Val0), getAsVgpr(MatchInfo.Val1),
                 getAsVgpr(MatchInfo.Val2)},

@@ -18,12 +18,12 @@ define void @abs_v2i64() {
 ;
 
 entry:
-  %a0 = load i64, i64* getelementptr inbounds (i64, ptr @a, i64 0), align 8
-  %a1 = load i64, i64* getelementptr inbounds (i64, ptr @a, i64 1), align 8
+  %a0 = load i64, ptr @a, align 8
+  %a1 = load i64, ptr getelementptr inbounds (i64, ptr @a, i64 1), align 8
   %r0 = call i64 @llvm.abs.i64(i64 %a0, i1 false)
   %r1 = call i64 @llvm.abs.i64(i64 %a1, i1 false)
-  store i64 %r0, i64* getelementptr inbounds (i64, ptr @a, i64 0), align 8
-  store i64 %r1, i64* getelementptr inbounds (i64, ptr @a, i64 1), align 8
+  store i64 %r0, ptr @a, align 8
+  store i64 %r1, ptr getelementptr inbounds (i64, ptr @a, i64 1), align 8
   ret void
 }
 
@@ -37,18 +37,18 @@ define void @abs_v4i32() {
 ;
 
 entry:
-  %a0 = load i32, i32* getelementptr inbounds (i32, ptr @a, i64 0), align 8
-  %a1 = load i32, i32* getelementptr inbounds (i32, ptr @a, i64 1), align 8
-  %a2 = load i32, i32* getelementptr inbounds (i32, ptr @a, i64 2), align 8
-  %a3 = load i32, i32* getelementptr inbounds (i32, ptr @a, i64 3), align 8
+  %a0 = load i32, ptr @a, align 8
+  %a1 = load i32, ptr getelementptr inbounds (i32, ptr @a, i64 1), align 8
+  %a2 = load i32, ptr getelementptr inbounds (i32, ptr @a, i64 2), align 8
+  %a3 = load i32, ptr getelementptr inbounds (i32, ptr @a, i64 3), align 8
   %r0 = call i32 @llvm.abs.i32(i32 %a0, i1 false)
   %r1 = call i32 @llvm.abs.i32(i32 %a1, i1 false)
   %r2 = call i32 @llvm.abs.i32(i32 %a2, i1 false)
   %r3 = call i32 @llvm.abs.i32(i32 %a3, i1 false)
-  store i32 %r0, i32* getelementptr inbounds (i32, ptr @a, i64 0), align 8
-  store i32 %r1, i32* getelementptr inbounds (i32, ptr @a, i64 1), align 8
-  store i32 %r2, i32* getelementptr inbounds (i32, ptr @a, i64 2), align 8
-  store i32 %r3, i32* getelementptr inbounds (i32, ptr @a, i64 3), align 8
+  store i32 %r0, ptr @a, align 8
+  store i32 %r1, ptr getelementptr inbounds (i32, ptr @a, i64 1), align 8
+  store i32 %r2, ptr getelementptr inbounds (i32, ptr @a, i64 2), align 8
+  store i32 %r3, ptr getelementptr inbounds (i32, ptr @a, i64 3), align 8
   ret void
 }
 
@@ -62,14 +62,14 @@ define void @abs_v8i16() {
 ;
 
 entry:
-  %a0  = load i16, i16* getelementptr inbounds (i16, ptr @a, i64 0), align 8
-  %a1  = load i16, i16* getelementptr inbounds (i16, ptr @a, i64 1), align 8
-  %a2  = load i16, i16* getelementptr inbounds (i16, ptr @a, i64 2), align 8
-  %a3  = load i16, i16* getelementptr inbounds (i16, ptr @a, i64 3), align 8
-  %a4  = load i16, i16* getelementptr inbounds (i16, ptr @a, i64 4), align 8
-  %a5  = load i16, i16* getelementptr inbounds (i16, ptr @a, i64 5), align 8
-  %a6  = load i16, i16* getelementptr inbounds (i16, ptr @a, i64 6), align 8
-  %a7  = load i16, i16* getelementptr inbounds (i16, ptr @a, i64 7), align 8
+  %a0  = load i16, ptr @a, align 8
+  %a1  = load i16, ptr getelementptr inbounds (i16, ptr @a, i64 1), align 8
+  %a2  = load i16, ptr getelementptr inbounds (i16, ptr @a, i64 2), align 8
+  %a3  = load i16, ptr getelementptr inbounds (i16, ptr @a, i64 3), align 8
+  %a4  = load i16, ptr getelementptr inbounds (i16, ptr @a, i64 4), align 8
+  %a5  = load i16, ptr getelementptr inbounds (i16, ptr @a, i64 5), align 8
+  %a6  = load i16, ptr getelementptr inbounds (i16, ptr @a, i64 6), align 8
+  %a7  = load i16, ptr getelementptr inbounds (i16, ptr @a, i64 7), align 8
   %r0  = call i16 @llvm.abs.i16(i16 %a0, i1 false)
   %r1  = call i16 @llvm.abs.i16(i16 %a1, i1 false)
   %r2  = call i16 @llvm.abs.i16(i16 %a2, i1 false)
@@ -78,14 +78,14 @@ entry:
   %r5  = call i16 @llvm.abs.i16(i16 %a5, i1 false)
   %r6  = call i16 @llvm.abs.i16(i16 %a6, i1 false)
   %r7  = call i16 @llvm.abs.i16(i16 %a7, i1 false)
-  store i16 %r0,  i16* getelementptr inbounds (i16, ptr @a, i64 0), align 8
-  store i16 %r1,  i16* getelementptr inbounds (i16, ptr @a, i64 1), align 8
-  store i16 %r2,  i16* getelementptr inbounds (i16, ptr @a, i64 2), align 8
-  store i16 %r3,  i16* getelementptr inbounds (i16, ptr @a, i64 3), align 8
-  store i16 %r4,  i16* getelementptr inbounds (i16, ptr @a, i64 4), align 8
-  store i16 %r5,  i16* getelementptr inbounds (i16, ptr @a, i64 5), align 8
-  store i16 %r6,  i16* getelementptr inbounds (i16, ptr @a, i64 6), align 8
-  store i16 %r7,  i16* getelementptr inbounds (i16, ptr @a, i64 7), align 8
+  store i16 %r0,  ptr @a, align 8
+  store i16 %r1,  ptr getelementptr inbounds (i16, ptr @a, i64 1), align 8
+  store i16 %r2,  ptr getelementptr inbounds (i16, ptr @a, i64 2), align 8
+  store i16 %r3,  ptr getelementptr inbounds (i16, ptr @a, i64 3), align 8
+  store i16 %r4,  ptr getelementptr inbounds (i16, ptr @a, i64 4), align 8
+  store i16 %r5,  ptr getelementptr inbounds (i16, ptr @a, i64 5), align 8
+  store i16 %r6,  ptr getelementptr inbounds (i16, ptr @a, i64 6), align 8
+  store i16 %r7,  ptr getelementptr inbounds (i16, ptr @a, i64 7), align 8
   ret void
 }
 
@@ -99,22 +99,22 @@ define void @abs_v16i8() {
 ;
 
 entry:
-  %a0  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  0), align 8
-  %a1  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  1), align 8
-  %a2  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  2), align 8
-  %a3  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  3), align 8
-  %a4  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  4), align 8
-  %a5  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  5), align 8
-  %a6  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  6), align 8
-  %a7  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  7), align 8
-  %a8  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  8), align 8
-  %a9  = load i8, i8* getelementptr inbounds (i8, ptr @a, i64  9), align 8
-  %a10 = load i8, i8* getelementptr inbounds (i8, ptr @a, i64 10), align 8
-  %a11 = load i8, i8* getelementptr inbounds (i8, ptr @a, i64 11), align 8
-  %a12 = load i8, i8* getelementptr inbounds (i8, ptr @a, i64 12), align 8
-  %a13 = load i8, i8* getelementptr inbounds (i8, ptr @a, i64 13), align 8
-  %a14 = load i8, i8* getelementptr inbounds (i8, ptr @a, i64 14), align 8
-  %a15 = load i8, i8* getelementptr inbounds (i8, ptr @a, i64 15), align 8
+  %a0  = load i8, ptr @a, align 8
+  %a1  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  1), align 8
+  %a2  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  2), align 8
+  %a3  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  3), align 8
+  %a4  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  4), align 8
+  %a5  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  5), align 8
+  %a6  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  6), align 8
+  %a7  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  7), align 8
+  %a8  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  8), align 8
+  %a9  = load i8, ptr getelementptr inbounds (i8, ptr @a, i64  9), align 8
+  %a10 = load i8, ptr getelementptr inbounds (i8, ptr @a, i64 10), align 8
+  %a11 = load i8, ptr getelementptr inbounds (i8, ptr @a, i64 11), align 8
+  %a12 = load i8, ptr getelementptr inbounds (i8, ptr @a, i64 12), align 8
+  %a13 = load i8, ptr getelementptr inbounds (i8, ptr @a, i64 13), align 8
+  %a14 = load i8, ptr getelementptr inbounds (i8, ptr @a, i64 14), align 8
+  %a15 = load i8, ptr getelementptr inbounds (i8, ptr @a, i64 15), align 8
   %r0  = call i8 @llvm.abs.i8(i8 %a0,  i1 false)
   %r1  = call i8 @llvm.abs.i8(i8 %a1,  i1 false)
   %r2  = call i8 @llvm.abs.i8(i8 %a2,  i1 false)
@@ -131,21 +131,21 @@ entry:
   %r13 = call i8 @llvm.abs.i8(i8 %a13, i1 false)
   %r14 = call i8 @llvm.abs.i8(i8 %a14, i1 false)
   %r15 = call i8 @llvm.abs.i8(i8 %a15, i1 false)
-  store i8 %r0,  i8* getelementptr inbounds (i8, ptr @a, i64  0), align 8
-  store i8 %r1,  i8* getelementptr inbounds (i8, ptr @a, i64  1), align 8
-  store i8 %r2,  i8* getelementptr inbounds (i8, ptr @a, i64  2), align 8
-  store i8 %r3,  i8* getelementptr inbounds (i8, ptr @a, i64  3), align 8
-  store i8 %r4,  i8* getelementptr inbounds (i8, ptr @a, i64  4), align 8
-  store i8 %r5,  i8* getelementptr inbounds (i8, ptr @a, i64  5), align 8
-  store i8 %r6,  i8* getelementptr inbounds (i8, ptr @a, i64  6), align 8
-  store i8 %r7,  i8* getelementptr inbounds (i8, ptr @a, i64  7), align 8
-  store i8 %r8,  i8* getelementptr inbounds (i8, ptr @a, i64  8), align 8
-  store i8 %r9,  i8* getelementptr inbounds (i8, ptr @a, i64  9), align 8
-  store i8 %r10, i8* getelementptr inbounds (i8, ptr @a, i64 10), align 8
-  store i8 %r11, i8* getelementptr inbounds (i8, ptr @a, i64 11), align 8
-  store i8 %r12, i8* getelementptr inbounds (i8, ptr @a, i64 12), align 8
-  store i8 %r13, i8* getelementptr inbounds (i8, ptr @a, i64 13), align 8
-  store i8 %r14, i8* getelementptr inbounds (i8, ptr @a, i64 14), align 8
-  store i8 %r15, i8* getelementptr inbounds (i8, ptr @a, i64 15), align 8
+  store i8 %r0,  ptr @a, align 8
+  store i8 %r1,  ptr getelementptr inbounds (i8, ptr @a, i64  1), align 8
+  store i8 %r2,  ptr getelementptr inbounds (i8, ptr @a, i64  2), align 8
+  store i8 %r3,  ptr getelementptr inbounds (i8, ptr @a, i64  3), align 8
+  store i8 %r4,  ptr getelementptr inbounds (i8, ptr @a, i64  4), align 8
+  store i8 %r5,  ptr getelementptr inbounds (i8, ptr @a, i64  5), align 8
+  store i8 %r6,  ptr getelementptr inbounds (i8, ptr @a, i64  6), align 8
+  store i8 %r7,  ptr getelementptr inbounds (i8, ptr @a, i64  7), align 8
+  store i8 %r8,  ptr getelementptr inbounds (i8, ptr @a, i64  8), align 8
+  store i8 %r9,  ptr getelementptr inbounds (i8, ptr @a, i64  9), align 8
+  store i8 %r10, ptr getelementptr inbounds (i8, ptr @a, i64 10), align 8
+  store i8 %r11, ptr getelementptr inbounds (i8, ptr @a, i64 11), align 8
+  store i8 %r12, ptr getelementptr inbounds (i8, ptr @a, i64 12), align 8
+  store i8 %r13, ptr getelementptr inbounds (i8, ptr @a, i64 13), align 8
+  store i8 %r14, ptr getelementptr inbounds (i8, ptr @a, i64 14), align 8
+  store i8 %r15, ptr getelementptr inbounds (i8, ptr @a, i64 15), align 8
   ret void
 }

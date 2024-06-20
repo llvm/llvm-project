@@ -19,11 +19,13 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Mutex.h"
 #include <algorithm>
 #include <cstring>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -296,37 +298,44 @@ bool isKernelFunction(const Function &F) {
   return (x == 1);
 }
 
-bool getAlign(const Function &F, unsigned index, unsigned &align) {
+MaybeAlign getAlign(const Function &F, unsigned Index) {
+  // First check the alignstack metadata
+  if (MaybeAlign StackAlign =
+          F.getAttributes().getAttributes(Index).getStackAlignment())
+    return StackAlign;
+
+  // If that is missing, check the legacy nvvm metadata
   std::vector<unsigned> Vs;
   bool retval = findAllNVVMAnnotation(&F, "align", Vs);
   if (!retval)
-    return false;
-  for (unsigned v : Vs) {
-    if ((v >> 16) == index) {
-      align = v & 0xFFFF;
-      return true;
-    }
-  }
-  return false;
+    return std::nullopt;
+  for (unsigned V : Vs)
+    if ((V >> 16) == Index)
+      return Align(V & 0xFFFF);
+
+  return std::nullopt;
 }
 
-bool getAlign(const CallInst &I, unsigned index, unsigned &align) {
+MaybeAlign getAlign(const CallInst &I, unsigned Index) {
+  // First check the alignstack metadata
+  if (MaybeAlign StackAlign =
+          I.getAttributes().getAttributes(Index).getStackAlignment())
+    return StackAlign;
+
+  // If that is missing, check the legacy nvvm metadata
   if (MDNode *alignNode = I.getMetadata("callalign")) {
     for (int i = 0, n = alignNode->getNumOperands(); i < n; i++) {
       if (const ConstantInt *CI =
               mdconst::dyn_extract<ConstantInt>(alignNode->getOperand(i))) {
-        unsigned v = CI->getZExtValue();
-        if ((v >> 16) == index) {
-          align = v & 0xFFFF;
-          return true;
-        }
-        if ((v >> 16) > index) {
-          return false;
-        }
+        unsigned V = CI->getZExtValue();
+        if ((V >> 16) == Index)
+          return Align(V & 0xFFFF);
+        if ((V >> 16) > Index)
+          return std::nullopt;
       }
     }
   }
-  return false;
+  return std::nullopt;
 }
 
 Function *getMaybeBitcastedCallee(const CallBase *CB) {

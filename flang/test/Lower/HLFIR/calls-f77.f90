@@ -18,7 +18,7 @@ subroutine call_int_arg_var(n)
 end subroutine
 ! CHECK-LABEL: func.func @_QPcall_int_arg_var(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<i32>
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcall_int_arg_varEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFcall_int_arg_varEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:  fir.call @_QPtake_i4(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 
 subroutine call_int_arg_expr()
@@ -26,7 +26,7 @@ subroutine call_int_arg_expr()
 end subroutine
 ! CHECK-LABEL: func.func @_QPcall_int_arg_expr() {
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 42 : i32
-! CHECK:  %[[VAL_1:.*]]:3 = hlfir.associate %[[VAL_0]] {uniq_name = "adapt.valuebyref"} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+! CHECK:  %[[VAL_1:.*]]:3 = hlfir.associate %[[VAL_0]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:  fir.call @_QPtake_i4(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_1]]#1, %[[VAL_1]]#2 : !fir.ref<i32>, i1
 
@@ -35,7 +35,7 @@ subroutine call_real_arg_expr()
 end subroutine
 ! CHECK-LABEL: func.func @_QPcall_real_arg_expr() {
 ! CHECK:  %[[VAL_0:.*]] = arith.constant 4.200000e-01 : f32
-! CHECK:  %[[VAL_1:.*]]:3 = hlfir.associate %[[VAL_0]] {uniq_name = "adapt.valuebyref"} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
+! CHECK:  %[[VAL_1:.*]]:3 = hlfir.associate %[[VAL_0]] {adapt.valuebyref} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
 ! CHECK:  fir.call @_QPtake_r4(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_1]]#1, %[[VAL_1]]#2 : !fir.ref<f32>, i1
 
@@ -45,7 +45,7 @@ subroutine call_real_arg_var(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPcall_real_arg_var(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<f32>
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcall_real_arg_varEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFcall_real_arg_varEx"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:  fir.call @_QPtake_r4(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<f32>) -> ()
 
 subroutine call_logical_arg_var(x)
@@ -54,7 +54,7 @@ subroutine call_logical_arg_var(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPcall_logical_arg_var(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.logical<4>>
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcall_logical_arg_varEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFcall_logical_arg_varEx"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:  fir.call @_QPtake_l4(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<!fir.logical<4>>) -> ()
 
 subroutine call_logical_arg_expr()
@@ -63,7 +63,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcall_logical_arg_expr() {
 ! CHECK:  %[[VAL_0:.*]] = arith.constant true
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (i1) -> !fir.logical<4>
-! CHECK:  %[[VAL_2:.*]]:3 = hlfir.associate %[[VAL_1]] {uniq_name = "adapt.valuebyref"} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
+! CHECK:  %[[VAL_2:.*]]:3 = hlfir.associate %[[VAL_1]] {adapt.valuebyref} : (!fir.logical<4>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>, i1)
 ! CHECK:  fir.call @_QPtake_l4(%[[VAL_2]]#1) fastmath<contract> : (!fir.ref<!fir.logical<4>>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_2]]#1, %[[VAL_2]]#2 : !fir.ref<!fir.logical<4>>, i1
 
@@ -73,7 +73,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcall_logical_arg_expr_2() {
 ! CHECK:  %[[VAL_0:.*]] = arith.constant true
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (i1) -> !fir.logical<8>
-! CHECK:  %[[VAL_2:.*]]:3 = hlfir.associate %[[VAL_1]] {uniq_name = "adapt.valuebyref"} : (!fir.logical<8>) -> (!fir.ref<!fir.logical<8>>, !fir.ref<!fir.logical<8>>, i1)
+! CHECK:  %[[VAL_2:.*]]:3 = hlfir.associate %[[VAL_1]] {adapt.valuebyref} : (!fir.logical<8>) -> (!fir.ref<!fir.logical<8>>, !fir.ref<!fir.logical<8>>, i1)
 ! CHECK:  fir.call @_QPtake_l8(%[[VAL_2]]#1) fastmath<contract> : (!fir.ref<!fir.logical<8>>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_2]]#1, %[[VAL_2]]#2 : !fir.ref<!fir.logical<8>>, i1
 
@@ -84,7 +84,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcall_char_arg_var(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.boxchar<1>
 ! CHECK:  %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 {uniq_name = "_QFcall_char_arg_varEx"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcall_char_arg_varEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:  fir.call @_QPtake_c(%[[VAL_2]]#0) fastmath<contract> : (!fir.boxchar<1>) -> ()
 
 subroutine call_char_arg_var_expr(x)
@@ -94,10 +94,10 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPcall_char_arg_var_expr(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.boxchar<1>
 ! CHECK:  %[[VAL_1:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 {uniq_name = "_QFcall_char_arg_var_exprEx"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]]#0 typeparams %[[VAL_1]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcall_char_arg_var_exprEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:  %[[VAL_3:.*]] = arith.addi %[[VAL_1]]#1, %[[VAL_1]]#1 : index
 ! CHECK:  %[[VAL_4:.*]] = hlfir.concat %[[VAL_2]]#0, %[[VAL_2]]#0 len %[[VAL_3]] : (!fir.boxchar<1>, !fir.boxchar<1>, index) -> !hlfir.expr<!fir.char<1,?>>
-! CHECK:  %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]] typeparams %[[VAL_3]] {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
+! CHECK:  %[[VAL_5:.*]]:3 = hlfir.associate %[[VAL_4]] typeparams %[[VAL_3]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
 ! CHECK:  fir.call @_QPtake_c(%[[VAL_5]]#0) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_5]]#1, %[[VAL_5]]#2 : !fir.ref<!fir.char<1,?>>, i1
 
@@ -110,7 +110,7 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 10 : index
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 20 : index
 ! CHECK:  %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
-! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {uniq_name = "_QFcall_arg_array_varEn"} : (!fir.ref<!fir.array<10x20xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x20xi32>>, !fir.ref<!fir.array<10x20xi32>>)
+! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFcall_arg_array_varEn"} : (!fir.ref<!fir.array<10x20xi32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<10x20xi32>>, !fir.ref<!fir.array<10x20xi32>>)
 ! CHECK:  fir.call @_QPtake_arr(%[[VAL_4]]#1) fastmath<contract> : (!fir.ref<!fir.array<10x20xi32>>) -> ()
 
 subroutine call_arg_array_2(n)
@@ -119,7 +119,7 @@ subroutine call_arg_array_2(n)
 end subroutine
 ! CHECK-LABEL: func.func @_QPcall_arg_array_2(
 ! CHECK-SAME:    %[[VAL_0:.*]]: !fir.box<!fir.array<?x?xi32>>
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<contiguous, optional>, uniq_name = "_QFcall_arg_array_2En"} : (!fir.box<!fir.array<?x?xi32>>) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<contiguous, optional>, uniq_name = "_QFcall_arg_array_2En"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xi32>>, !fir.box<!fir.array<?x?xi32>>)
 ! CHECK:  %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.ref<!fir.array<?x?xi32>>
 ! CHECK:  fir.call @_QPtake_arr_2(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.array<?x?xi32>>) -> ()
 
@@ -156,7 +156,7 @@ subroutine return_char(n)
 end subroutine
 ! CHECK-LABEL: func.func @_QPreturn_char(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}n
-! CHECK:  %[[VAL_2:.*]] = arith.constant -1 : i32
+! CHECK:  %[[VAL_2:.*]] = arith.constant 6 : i32
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : index
@@ -186,3 +186,16 @@ subroutine alternate_return_call(n1, n2, k)
   ! CHECK: ^[[block2]]: // pred: ^bb0
 7 k =  1; return
 end
+
+! -----------------------------------------------------------------------------
+!     Test calls to user procedures with intrinsic interfaces
+! -----------------------------------------------------------------------------
+
+! CHECK-NAME: func.func @_QPintrinsic_iface()
+subroutine intrinsic_iface()
+  intrinsic acos
+  real :: x
+  procedure(acos) :: proc
+  x = proc(1.0)
+end subroutine
+! CHECK" fir.call @_QPproc(%{{.*}}) {{.*}}: (!fir.ref<f32>) -> f32

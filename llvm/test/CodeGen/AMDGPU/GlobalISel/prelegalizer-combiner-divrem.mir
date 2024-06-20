@@ -327,8 +327,8 @@ body: |
     %ptr2:_(p1) = G_IMPLICIT_DEF
     %ptr3:_(p1) = COPY $vgpr2_vgpr3
     %ptr4:_(p1) = COPY $vgpr4_vgpr5
-    G_STORE %src1:_(s32), %ptr1:_(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
-    G_STORE %src2:_(s32), %ptr2:_(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
+    G_STORE %src1:_(s32), %ptr1:_(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+    G_STORE %src2:_(s32), %ptr2:_(p1) :: (volatile store (s32) into `ptr addrspace(1) undef`, addrspace 1)
     %div:_(s32) = G_SDIV %src1:_(s32), %src2:_(s32)
     G_STORE %div:_(s32), %ptr3:_(p1) :: (store (s32), addrspace 1, align 4)
     %rem:_(s32) = G_SREM %src1:_(s32), %src2:_(s32)

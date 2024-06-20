@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVSupport.h"
 #include <limits>
 #include <list>
-#include <map>
 #include <string>
 
 namespace llvm {
@@ -247,20 +246,17 @@ public:
   virtual void setName(StringRef ObjectName) {}
 
   LVElement *getParent() const {
-    assert((!Parent.Element ||
-            (Parent.Element && static_cast<LVElement *>(Parent.Element))) &&
+    assert((!Parent.Element || static_cast<LVElement *>(Parent.Element)) &&
            "Invalid element");
     return Parent.Element;
   }
   LVScope *getParentScope() const {
-    assert((!Parent.Scope ||
-            (Parent.Scope && static_cast<LVScope *>(Parent.Scope))) &&
+    assert((!Parent.Scope || static_cast<LVScope *>(Parent.Scope)) &&
            "Invalid scope");
     return Parent.Scope;
   }
   LVSymbol *getParentSymbol() const {
-    assert((!Parent.Symbol ||
-            (Parent.Symbol && static_cast<LVSymbol *>(Parent.Symbol))) &&
+    assert((!Parent.Symbol || static_cast<LVSymbol *>(Parent.Symbol)) &&
            "Invalid symbol");
     return Parent.Symbol;
   }

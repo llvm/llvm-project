@@ -38,9 +38,7 @@ define <vscale x 1 x double> @fma_true(<vscale x 1 x double> %x, <vscale x 1 x d
 ; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
-  %true = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
-  %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x i1> %true, i32 %vl)
+  %1 = call fast <vscale x 1 x double> @llvm.vp.fmul.nxv1f64(<vscale x 1 x double> %x, <vscale x 1 x double> %y, <vscale x 1 x i1> splat (i1 true), i32 %vl)
   %2 = call fast <vscale x 1 x double> @llvm.vp.fadd.nxv1f64(<vscale x 1 x double> %1, <vscale x 1 x double> %z, <vscale x 1 x i1> %m, i32 %vl)
   ret <vscale x 1 x double> %2
 }

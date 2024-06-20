@@ -6,6 +6,8 @@
 ---
 name:            test_relocate
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 body:             |
   bb.0.entry:
     liveins: $rdi
@@ -25,6 +27,8 @@ body:             |
 ---
 name:            test_relocate_multi_regmasks
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 body:             |
   bb.0.entry:
     liveins: $rdi

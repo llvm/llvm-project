@@ -143,6 +143,18 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
         if (int Res = cmpNumbers((uint64_t)TyL, (uint64_t)TyR))
           return Res;
         continue;
+      } else if (LA.isConstantRangeAttribute() &&
+                 RA.isConstantRangeAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        const ConstantRange &LCR = LA.getRange();
+        const ConstantRange &RCR = RA.getRange();
+        if (int Res = cmpAPInts(LCR.getLower(), RCR.getLower()))
+          return Res;
+        if (int Res = cmpAPInts(LCR.getUpper(), RCR.getUpper()))
+          return Res;
+        continue;
       }
       if (LA < RA)
         return -1;
@@ -405,6 +417,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
   case Value::ConstantExprVal: {
     const ConstantExpr *LE = cast<ConstantExpr>(L);
     const ConstantExpr *RE = cast<ConstantExpr>(R);
+    if (int Res = cmpNumbers(LE->getOpcode(), RE->getOpcode()))
+      return Res;
     unsigned NumOperandsL = LE->getNumOperands();
     unsigned NumOperandsR = RE->getNumOperands();
     if (int Res = cmpNumbers(NumOperandsL, NumOperandsR))
@@ -412,6 +426,37 @@ int FunctionComparator::cmpConstants(const Constant *L,
     for (unsigned i = 0; i < NumOperandsL; ++i) {
       if (int Res = cmpConstants(cast<Constant>(LE->getOperand(i)),
                                  cast<Constant>(RE->getOperand(i))))
+        return Res;
+    }
+    if (auto *GEPL = dyn_cast<GEPOperator>(LE)) {
+      auto *GEPR = cast<GEPOperator>(RE);
+      if (int Res = cmpTypes(GEPL->getSourceElementType(),
+                             GEPR->getSourceElementType()))
+        return Res;
+      if (int Res = cmpNumbers(GEPL->getNoWrapFlags().getRaw(),
+                               GEPR->getNoWrapFlags().getRaw()))
+        return Res;
+
+      std::optional<ConstantRange> InRangeL = GEPL->getInRange();
+      std::optional<ConstantRange> InRangeR = GEPR->getInRange();
+      if (InRangeL) {
+        if (!InRangeR)
+          return 1;
+        if (int Res = cmpAPInts(InRangeL->getLower(), InRangeR->getLower()))
+          return Res;
+        if (int Res = cmpAPInts(InRangeL->getUpper(), InRangeR->getUpper()))
+          return Res;
+      } else if (InRangeR) {
+        return -1;
+      }
+    }
+    if (auto *OBOL = dyn_cast<OverflowingBinaryOperator>(LE)) {
+      auto *OBOR = cast<OverflowingBinaryOperator>(RE);
+      if (int Res =
+              cmpNumbers(OBOL->hasNoUnsignedWrap(), OBOR->hasNoUnsignedWrap()))
+        return Res;
+      if (int Res =
+              cmpNumbers(OBOL->hasNoSignedWrap(), OBOR->hasNoSignedWrap()))
         return Res;
     }
     return 0;

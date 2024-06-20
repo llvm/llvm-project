@@ -9,7 +9,8 @@
 #ifndef LLVM_TOOLS_LLVM_DWARFUTIL_OPTIONS_H
 #define LLVM_TOOLS_LLVM_DWARFUTIL_OPTIONS_H
 
-#include "llvm/ADT/StringRef.h"
+#include <cstdint>
+#include <string>
 
 namespace llvm {
 namespace dwarfutil {
@@ -39,7 +40,7 @@ struct Options {
   bool Verbose = false;
   int NumThreads = 0;
   bool Verify = false;
-  bool UseLLVMDWARFLinker = false;
+  bool UseDWARFLinkerParallel = false;
   DwarfUtilAccelKind AccelTableKind = DwarfUtilAccelKind::None;
 
   std::string getSeparateDebugFileName() const {

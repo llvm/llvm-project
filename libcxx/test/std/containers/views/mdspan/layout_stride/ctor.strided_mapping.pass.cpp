@@ -106,7 +106,7 @@ constexpr void test_conversion() {
 }
 
 template <class IdxT, size_t... Extents>
-using ToM = typename std::layout_stride::template mapping<std::extents<IdxT, Extents...>>;
+using ToM = std::layout_stride::mapping<std::extents<IdxT, Extents...>>;
 
 template <class FromL, class IdxT, size_t... Extents>
 using FromM = typename FromL::template mapping<std::extents<IdxT, Extents...>>;

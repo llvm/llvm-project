@@ -150,7 +150,7 @@ define double @fadd_undef_op1_constant_0(double %x) {
 
 define double @fsub_undef_op0_constant_0(double %x) {
 ; CHECK-LABEL: @fsub_undef_op0_constant_0(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double undef
 ;
   %r = fsub double undef, 0x0000000000000000
   ret double %r

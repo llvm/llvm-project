@@ -37,8 +37,7 @@ private:
   void handleMoveFix(const ParmVarDecl &Var, const DeclRefExpr &CopyArgument,
                      const ASTContext &Context);
 
-  llvm::DenseMap<const FunctionDecl *, FunctionParmMutationAnalyzer>
-      MutationAnalyzers;
+  ExprMutationAnalyzer::Memoized MutationAnalyzerCache;
   utils::IncludeInserter Inserter;
   const std::vector<StringRef> AllowedTypes;
 };

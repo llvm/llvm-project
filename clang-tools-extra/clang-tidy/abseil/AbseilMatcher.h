@@ -52,7 +52,7 @@ AST_POLYMORPHIC_MATCHER(
       "profiling", "random",   "status",    "strings",   "synchronization",
       "time",      "types",    "utility"};
   return llvm::any_of(AbseilLibraries, [&](const char *Library) {
-    return Path.startswith(Library);
+    return Path.starts_with(Library);
   });
 }
 

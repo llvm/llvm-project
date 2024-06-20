@@ -1157,6 +1157,12 @@ struct AnalysisGetter {
     return nullptr;
   }
 
+  /// Invalidates the analyses. Valid only when using the new pass manager.
+  void invalidateAnalyses() {
+    assert(FAM && "Can only be used from the new PM!");
+    FAM->clear();
+  }
+
   AnalysisGetter(FunctionAnalysisManager &FAM, bool CachedOnly = false)
       : FAM(&FAM), CachedOnly(CachedOnly) {}
   AnalysisGetter(Pass *P, bool CachedOnly = false)
@@ -1285,6 +1291,10 @@ struct InformationCache {
   bool isOnlyUsedByAssume(const Instruction &I) const {
     return AssumeOnlyValues.contains(&I);
   }
+
+  /// Invalidates the cached analyses. Valid only when using the new pass
+  /// manager.
+  void invalidateAnalyses() { AG.invalidateAnalyses(); }
 
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>
@@ -2161,7 +2171,7 @@ public:
     Function *F = I->getFunction();
     auto &ORE = Configuration.OREGetter(F);
 
-    if (RemarkName.startswith("OMP"))
+    if (RemarkName.starts_with("OMP"))
       ORE.emit([&]() {
         return RemarkCB(RemarkKind(Configuration.PassName, RemarkName, I))
                << " [" << RemarkName << "]";
@@ -2181,7 +2191,7 @@ public:
 
     auto &ORE = Configuration.OREGetter(F);
 
-    if (RemarkName.startswith("OMP"))
+    if (RemarkName.starts_with("OMP"))
       ORE.emit([&]() {
         return RemarkCB(RemarkKind(Configuration.PassName, RemarkName, F))
                << " [" << RemarkName << "]";
@@ -5408,9 +5418,13 @@ struct AANoFPClass
     return false;
   }
 
-  /// Return true if we assume that the underlying value is nofpclass.
+  /// Return the underlying assumed nofpclass.
   FPClassTest getAssumedNoFPClass() const {
     return static_cast<FPClassTest>(getAssumed());
+  }
+  /// Return the underlying known nofpclass.
+  FPClassTest getKnownNoFPClass() const {
+    return static_cast<FPClassTest>(getKnown());
   }
 
   /// Create an abstract attribute view for the position \p IRP.

@@ -116,7 +116,7 @@ function(darwin_test_archs os valid_archs)
   if(NOT TEST_COMPILE_ONLY)
     message(STATUS "Finding valid architectures for ${os}...")
     set(SIMPLE_C ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/src.c)
-    file(WRITE ${SIMPLE_C} "#include <stdio.h>\nint main(void) { printf(__FILE__); return 0; }\n")
+    file(WRITE ${SIMPLE_C} "#include <stdio.h>\n#include <unistd.h>\nint main(void) { printf(__FILE__); fork(); return 0; }\n")
 
     set(os_linker_flags)
     foreach(flag ${DARWIN_${os}_LINK_FLAGS})
@@ -336,7 +336,7 @@ macro(darwin_add_builtin_library name suffix)
 
   list(APPEND ${LIB_OS}_${suffix}_libs ${libname})
   list(APPEND ${LIB_OS}_${suffix}_lipo_flags -arch ${arch} $<TARGET_FILE:${libname}>)
-  set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Libraries")
+  set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT/Libraries")
 endmacro()
 
 function(darwin_lipo_libs name)
@@ -355,7 +355,7 @@ function(darwin_lipo_libs name)
       )
     add_custom_target(${name}
       DEPENDS ${LIB_OUTPUT_DIR}/lib${name}.a)
-    set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT Misc")
+    set_target_properties(${name} PROPERTIES FOLDER "Compiler-RT/Misc")
     add_dependencies(${LIB_PARENT_TARGET} ${name})
 
     if(CMAKE_CONFIGURATION_TYPES)

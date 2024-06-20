@@ -118,7 +118,13 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
     FileSpec dsym_fspec(module_sp->GetSymbolFileFileSpec());
 
     ObjectFileSP dsym_objfile_sp;
-    if (!dsym_fspec) {
+    // On Darwin, we store the debug information either in object files,
+    // using the debug map to tie them to the executable, or in a dSYM.  We
+    // pass through this routine both for binaries and for .o files, but in the
+    // latter case there will never be an external debug file.  So we shouldn't
+    // do all the stats needed to find it.
+    if (!dsym_fspec && module_sp->GetObjectFile()->CalculateType() !=
+        ObjectFile::eTypeObjectFile) {
       // No symbol file was specified in the module, lets try and find one
       // ourselves.
       FileSpec file_spec = obj_file->GetFileSpec();

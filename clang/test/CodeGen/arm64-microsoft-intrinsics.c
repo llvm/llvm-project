@@ -21,6 +21,20 @@ long test_InterlockedAdd_constant(long volatile *Addend) {
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd'
 
+__int64 test_InterlockedAdd64(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64(Addend, Value);
+}
+
+__int64 test_InterlockedAdd64_constant(__int64 volatile *Addend) {
+  return _InterlockedAdd64(Addend, -1);
+}
+
+// CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64(ptr %Addend, i64 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 seq_cst, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64'
+
 void check__dmb(void) {
   __dmb(0);
 }

@@ -24,7 +24,7 @@ RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/op-convert
 RUN: llvm-dwarfdump %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset.o 2>&1 | FileCheck %s --check-prefix OBJ
 RUN: llvm-dwarfdump %t.dSYM 2>&1 | FileCheck %s --check-prefix DSYM
 
-RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs \
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs \
 RUN:  %p/../Inputs/private/tmp/op-convert-offset/op-convert-offset \
 RUN:  -o %t.dSYM 2>&1
 RUN: llvm-dwarfdump \

@@ -18,6 +18,7 @@
 #include "kmp_itt.h"
 #include "kmp_lock.h"
 #include "kmp_stats.h"
+#include "kmp_utils.h"
 #include "ompt-specific.h"
 
 #define MAX_MESSAGE 512
@@ -653,6 +654,12 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
         serial_team->t.t_dispatch->th_disp_buffer->next;
     __kmp_free(disp_buffer);
   }
+
+  /* pop the task team stack */
+  if (serial_team->t.t_serialized > 1) {
+    __kmp_pop_task_team_node(this_thr, serial_team);
+  }
+
   this_thr->th.th_def_allocator = serial_team->t.t_def_allocator; // restore
 
   --serial_team->t.t_serialized;
@@ -691,6 +698,11 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     this_thr->th.th_current_task->td_flags.executing = 1;
 
     if (__kmp_tasking_mode != tskm_immediate_exec) {
+      // Restore task state from serial team structure
+      KMP_DEBUG_ASSERT(serial_team->t.t_primary_task_state == 0 ||
+                       serial_team->t.t_primary_task_state == 1);
+      this_thr->th.th_task_state =
+          (kmp_uint8)serial_team->t.t_primary_task_state;
       // Copy the task team from the new child / old parent team to the thread.
       this_thr->th.th_task_team =
           this_thr->th.th_team->t.t_task_team[this_thr->th.th_task_state];
@@ -1533,8 +1545,9 @@ void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
   kmp_dyna_lockseq_t lockseq = __kmp_map_hint_to_lock(hint);
   if (*lk == 0) {
     if (KMP_IS_D_LOCK(lockseq)) {
-      KMP_COMPARE_AND_STORE_ACQ32((volatile kmp_int32 *)crit, 0,
-                                  KMP_GET_D_TAG(lockseq));
+      KMP_COMPARE_AND_STORE_ACQ32(
+          (volatile kmp_int32 *)&((kmp_base_tas_lock_t *)crit)->poll, 0,
+          KMP_GET_D_TAG(lockseq));
     } else {
       __kmp_init_indirect_csptr(crit, loc, global_tid, KMP_GET_I_TAG(lockseq));
     }
@@ -4232,7 +4245,7 @@ void __kmpc_doacross_wait(ident_t *loc, int gtid, const kmp_int64 *vec) {
   up = pr_buf->th_doacross_info[3];
   st = pr_buf->th_doacross_info[4];
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_dependence_t deps[num_dims];
+  SimpleVLA<ompt_dependence_t> deps(num_dims);
 #endif
   if (st == 1) { // most common case
     if (vec[0] < lo || vec[0] > up) {
@@ -4344,7 +4357,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, const kmp_int64 *vec) {
   lo = pr_buf->th_doacross_info[2];
   st = pr_buf->th_doacross_info[4];
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_dependence_t deps[num_dims];
+  SimpleVLA<ompt_dependence_t> deps(num_dims);
 #endif
   if (st == 1) { // most common case
     iter_number = vec[0] - lo;

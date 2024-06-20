@@ -1,5 +1,7 @@
 ; RUN: opt %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=2 -S -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=2 -S -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Check that loop-vectorize removes redundant debug intrinsics after it makes
 ;; a change. This has a significant positive impact on peak memory and compiler

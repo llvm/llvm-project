@@ -705,6 +705,13 @@ MLIR_CAPI_EXPORTED void mlirOperationMoveAfter(MlirOperation op,
 MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
                                                 MlirOperation other);
 
+/// Operation walk result.
+typedef enum MlirWalkResult {
+  MlirWalkResultAdvance,
+  MlirWalkResultInterrupt,
+  MlirWalkResultSkip
+} MlirWalkResult;
+
 /// Traversal order for operation walk.
 typedef enum MlirWalkOrder {
   MlirWalkPreOrder,
@@ -713,7 +720,8 @@ typedef enum MlirWalkOrder {
 
 /// Operation walker type. The handler is passed an (opaque) reference to an
 /// operation and a pointer to a `userData`.
-typedef void (*MlirOperationWalkCallback)(MlirOperation, void *userData);
+typedef MlirWalkResult (*MlirOperationWalkCallback)(MlirOperation,
+                                                    void *userData);
 
 /// Walks operation `op` in `walkOrder` and calls `callback` on that operation.
 /// `*userData` is passed to the callback as well and can be used to tunnel some
@@ -939,6 +947,9 @@ MLIR_CAPI_EXPORTED void mlirValueReplaceAllUsesOfWith(MlirValue of,
 
 /// Returns whether the op operand is null.
 MLIR_CAPI_EXPORTED bool mlirOpOperandIsNull(MlirOpOperand opOperand);
+
+/// Returns the value of an op operand.
+MLIR_CAPI_EXPORTED MlirValue mlirOpOperandGetValue(MlirOpOperand opOperand);
 
 /// Returns the owner operation of an op operand.
 MLIR_CAPI_EXPORTED MlirOperation mlirOpOperandGetOwner(MlirOpOperand opOperand);

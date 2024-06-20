@@ -332,7 +332,23 @@ def TestCopyCount : Test_Attr<"TestCopyCount"> {
   let assemblyFormat = "`<` $copy_count `>`";
 }
 
+def TestConditionalAliasAttr : Test_Attr<"TestConditionalAlias"> {
+  let mnemonic = "conditional_alias";
+  let parameters = (ins "mlir::StringAttr":$value);
+  let assemblyFormat = [{
+    `<` custom<ConditionalAlias>($value) `>`
+  }];
+}
 
+// Test AsmParser::parseFloat(const fltSemnatics&, APFloat&) API through the
+// custom parser and printer.
+def TestCustomFloatAttr : Test_Attr<"TestCustomFloat"> {
+  let mnemonic = "custom_float";
+  let parameters = (ins "mlir::StringAttr":$type_str, APFloatParameter<"">:$value);
 
+  let assemblyFormat = [{
+    `<` custom<CustomFloatAttr>($type_str, $value) `>`
+  }];
+}
 
 #endif // TEST_ATTRDEFS

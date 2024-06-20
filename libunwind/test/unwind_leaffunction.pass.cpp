@@ -28,7 +28,7 @@ _Unwind_Reason_Code frame_handler(struct _Unwind_Context* ctx, void* arg) {
   (void)arg;
   Dl_info info = { 0, 0, 0, 0 };
 
-  // Unwind until the main is reached, above frames deeped on the platform and
+  // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
   if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(ctx)), &info) &&
       info.dli_sname && !strcmp("main", info.dli_sname)) {
@@ -43,18 +43,22 @@ void signal_handler(int signum) {
   _Exit(-1);
 }
 
-__attribute__((noinline)) void crashing_leaf_func(void) {
+__attribute__((noinline)) void crashing_leaf_func(int do_trap) {
   // libunwind searches for the address before the return address which points
-  // to the trap instruction. NOP guarantees the trap instruction is not the
-  // first instruction of the function.
-  // We should keep this here for other unwinders that also decrement pc.
-  __asm__ __volatile__("nop");
-  __builtin_trap();
+  // to the trap instruction. We make the trap conditional and prevent inlining
+  // of the function to ensure that the compiler doesn't remove the `ret`
+  // instruction altogether.
+  //
+  // It's also important that the trap instruction isn't the first instruction
+  // in the function (which it isn't because of the branch) for other unwinders
+  // that also decrement pc.
+  if (do_trap)
+    __builtin_trap();
 }
 
 int main(int, char**) {
   signal(SIGTRAP, signal_handler);
   signal(SIGILL, signal_handler);
-  crashing_leaf_func();
+  crashing_leaf_func(1);
   return -2;
 }

@@ -201,7 +201,7 @@
 ; CHECK-INVALIDATE-ALL-CG-NOT: Running analysis: NoOpModuleAnalysis
 
 ; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager %s 2>&1 \
-; RUN:     -passes='require<targetlibinfo>,invalidate<all>,require<targetlibinfo>' \
+; RUN:     -passes='require<target-lib-info>,invalidate<all>,require<target-lib-info>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-TLI
 ; CHECK-TLI: Running pass: RequireAnalysisPass
 ; CHECK-TLI: Running analysis: TargetLibraryAnalysis
@@ -211,7 +211,7 @@
 ; CHECK-TLI-NOT: Running analysis: TargetLibraryAnalysis
 
 ; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager %s 2>&1 \
-; RUN:     -passes='require<targetir>,invalidate<all>,require<targetir>' \
+; RUN:     -passes='require<target-ir>,invalidate<all>,require<target-ir>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-TIRA
 ; CHECK-TIRA: Running pass: RequireAnalysisPass
 ; CHECK-TIRA: Running analysis: TargetIRAnalysis
@@ -290,8 +290,9 @@
 ; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager \
 ; RUN:     -passes='default<O0>' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O0 --check-prefix=%llvmcheckext
-; CHECK-O0: Running pass: AlwaysInlinerPass
-; CHECK-O0-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-O0: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-O0-NEXT: Running pass: EntryExitInstrumenterPass
+; CHECK-O0-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-O0-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-EXT-NEXT: Running pass: {{.*}}Bye
 ; We don't have checks for CHECK-NOEXT here, but this simplifies the test, while

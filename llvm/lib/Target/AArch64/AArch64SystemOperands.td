@@ -643,6 +643,14 @@ defm : TLBI<"PAALLOS",      0b110, 0b1000, 0b0001, 0b100, 0>;
 defm : TLBI<"PAALL",        0b110, 0b1000, 0b0111, 0b100, 0>;
 }
 
+// Armv9.5-A TLBI VMALL for Dirty State
+let Requires = ["AArch64::FeatureTLBIW"] in {
+//                           op1,   CRn,    CRm,    op2,   needsreg
+defm : TLBI<"VMALLWS2E1",    0b100, 0b1000, 0b0110, 0b010, 0>;
+defm : TLBI<"VMALLWS2E1IS",  0b100, 0b1000, 0b0010, 0b010, 0>;
+defm : TLBI<"VMALLWS2E1OS",  0b100, 0b1000, 0b0101, 0b010, 0>;
+}
+
 //===----------------------------------------------------------------------===//
 // MRS/MSR (system register read/write) instruction options.
 //===----------------------------------------------------------------------===//
@@ -738,6 +746,7 @@ def : ROSysReg<"ID_AA64PFR1_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b001>;
 def : ROSysReg<"ID_AA64PFR2_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b010>;
 def : ROSysReg<"ID_AA64DFR0_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b000>;
 def : ROSysReg<"ID_AA64DFR1_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b001>;
+def : ROSysReg<"ID_AA64DFR2_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b010>;
 def : ROSysReg<"ID_AA64AFR0_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b100>;
 def : ROSysReg<"ID_AA64AFR1_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b101>;
 def : ROSysReg<"ID_AA64ISAR0_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b000>;
@@ -977,8 +986,10 @@ def : RWSysReg<"SPSR_irq",           0b11, 0b100, 0b0100, 0b0011, 0b000>;
 def : RWSysReg<"SPSR_abt",           0b11, 0b100, 0b0100, 0b0011, 0b001>;
 def : RWSysReg<"SPSR_und",           0b11, 0b100, 0b0100, 0b0011, 0b010>;
 def : RWSysReg<"SPSR_fiq",           0b11, 0b100, 0b0100, 0b0011, 0b011>;
+let Requires = [{ {AArch64::FeatureFPARMv8} }] in {
 def : RWSysReg<"FPCR",               0b11, 0b011, 0b0100, 0b0100, 0b000>;
 def : RWSysReg<"FPSR",               0b11, 0b011, 0b0100, 0b0100, 0b001>;
+}
 def : RWSysReg<"DSPSR_EL0",          0b11, 0b011, 0b0100, 0b0101, 0b000>;
 def : RWSysReg<"DLR_EL0",            0b11, 0b011, 0b0100, 0b0101, 0b001>;
 def : RWSysReg<"IFSR32_EL2",         0b11, 0b100, 0b0101, 0b0000, 0b001>;
@@ -1932,8 +1943,33 @@ def : RWSysReg<"PM",                0b11, 0b000, 0b0100, 0b0011, 0b001>;
 // 2023 ISA Extension
 // AArch64 Floating-point Mode Register controls behaviors of the FP8
 // instructions (FEAT_FPMR)
-let Requires = [{ {AArch64::FeatureFPMR} }] in {
 //                                 Op0   Op1    CRn     CRm     Op2
 def : ROSysReg<"ID_AA64FPFR0_EL1", 0b11, 0b000, 0b0000, 0b0100, 0b111>;
 def : RWSysReg<"FPMR",             0b11, 0b011, 0b0100, 0b0100, 0b010>;
-}
+
+// v9.5a Software Stepping Enhancements (FEAT_STEP2)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"MDSTEPOP_EL1",      0b10, 0b000, 0b0000, 0b0101, 0b010>;
+
+// v9.5a System PMU zero register (FEAT_SPMU2)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : WOSysReg<"SPMZR_EL0",         0b10, 0b011, 0b1001, 0b1100, 0b100>;
+
+// v9.5a Delegated SError exceptions for EL3 (FEAT_E3DSE)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"VDISR_EL3",         0b11, 0b110, 0b1100, 0b0001, 0b001>;
+def : RWSysReg<"VSESR_EL3",         0b11, 0b110, 0b0101, 0b0010, 0b011>;
+
+// v9.5a Hardware Dirty State Tracking Structure (FEAT_HDBSS)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"HDBSSBR_EL2",       0b11, 0b100, 0b0010, 0b0011, 0b010>;
+def : RWSysReg<"HDBSSPROD_EL2",     0b11, 0b100, 0b0010, 0b0011, 0b011>;
+
+// v9.5a Hardware Accelerator for Cleaning Dirty State (FEAT_HACDBS)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"HACDBSBR_EL2",      0b11, 0b100, 0b0010, 0b0011, 0b100>;
+def : RWSysReg<"HACDBSCONS_EL2",    0b11, 0b100, 0b0010, 0b0011, 0b101>;
+
+// v9.5a Fine Grained Write Trap EL3 (FEAT_FGWTE3)
+//                                  Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"FGWTE3_EL3",        0b11, 0b110, 0b0001, 0b0001, 0b101>;

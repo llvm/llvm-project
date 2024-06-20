@@ -83,6 +83,10 @@ struct ClangTidyOptions {
   /// main files will always be displayed.
   std::optional<std::string> HeaderFilterRegex;
 
+  /// \brief Exclude warnings from headers matching this filter, even if they
+  /// match \c HeaderFilterRegex.
+  std::optional<std::string> ExcludeHeaderFilterRegex;
+
   /// Output warnings from system headers matching \c HeaderFilterRegex.
   std::optional<bool> SystemHeaders;
 

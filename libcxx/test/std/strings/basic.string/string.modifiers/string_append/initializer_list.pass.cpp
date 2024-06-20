@@ -18,6 +18,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 #include "nasty_string.h"
+#include "asan_testing.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test() {
@@ -26,6 +27,7 @@ TEST_CONSTEXPR_CXX20 void test() {
   S s(CONVERT_TO_CSTRING(CharT, "123"));
   s.append({CharT('a'), CharT('b'), CharT('c')});
   assert(s == CONVERT_TO_CSTRING(CharT, "123abc"));
+  LIBCPP_ASSERT(is_string_asan_correct(s));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -40,6 +42,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test<std::u32string>();
 
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_string>();
 #endif

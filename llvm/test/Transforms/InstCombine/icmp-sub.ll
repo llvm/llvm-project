@@ -36,7 +36,7 @@ define i1 @test_nuw_nsw_and_unsigned_pred(i64 %x) {
 
 define i1 @test_nuw_nsw_and_signed_pred(i64 %x) {
 ; CHECK-LABEL: @test_nuw_nsw_and_signed_pred(
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i64 [[X:%.*]], 7
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i64 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nuw nsw i64 10, %x
@@ -46,8 +46,7 @@ define i1 @test_nuw_nsw_and_signed_pred(i64 %x) {
 
 define i1 @test_negative_nuw_and_signed_pred(i64 %x) {
 ; CHECK-LABEL: @test_negative_nuw_and_signed_pred(
-; CHECK-NEXT:    [[NOTSUB:%.*]] = add nuw i64 [[X:%.*]], -11
-; CHECK-NEXT:    [[Z:%.*]] = icmp sgt i64 [[NOTSUB]], -4
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt i64 [[X:%.*]], 7
 ; CHECK-NEXT:    ret i1 [[Z]]
 ;
   %y = sub nuw i64 10, %x

@@ -17,7 +17,6 @@
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/JSONNodeDumper.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -198,6 +197,19 @@ LLVM_DUMP_METHOD void Type::dump() const { QualType(this, 0).dump(); }
 LLVM_DUMP_METHOD void Type::dump(llvm::raw_ostream &OS,
                                  const ASTContext &Context) const {
   QualType(this, 0).dump(OS, Context);
+}
+
+//===----------------------------------------------------------------------===//
+// TypeLoc method implementations
+//===----------------------------------------------------------------------===//
+
+LLVM_DUMP_METHOD void TypeLoc::dump() const {
+  ASTDumper(llvm::errs(), /*ShowColors=*/false).Visit(*this);
+}
+
+LLVM_DUMP_METHOD void TypeLoc::dump(llvm::raw_ostream &OS,
+                                    const ASTContext &Context) const {
+  ASTDumper(OS, Context, Context.getDiagnostics().getShowColors()).Visit(*this);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang_cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang_cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -triple aarch64-gnu-linux -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -triple aarch64-gnu-linux -x c++ -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
 
 // no-sanitize-memory-param-retval does NOT conflict with enable-noundef-analysis
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
 
 //************ Passing structs by value
 // TODO: No structs may currently be marked noundef
@@ -26,7 +26,7 @@ struct NoCopy {
 };
 NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
-// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
 // CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr noundef %
 
 struct Huge {
@@ -34,7 +34,7 @@ struct Huge {
 };
 Huge ret_huge() { return {}; }
 void pass_huge(Huge h) {}
-// CHECK: [[DEF]] void @{{.*}}ret_huge{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}ret_huge{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
 // CHECK: [[DEF]] void @{{.*}}pass_huge{{.*}}(ptr noundef
 } // namespace check_structs
 
@@ -58,7 +58,7 @@ union NoCopy {
 };
 NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
-// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
 // CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr noundef %
 } // namespace check_unions
 

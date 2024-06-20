@@ -24,22 +24,6 @@ define void @test_store(ptr %ptr, target("aarch64.svcount") %val) nounwind {
 }
 
 define target("aarch64.svcount") @test_alloca_store_reload(target("aarch64.svcount") %val) nounwind {
-; CHECKO0-LABEL: test_alloca_store_reload:
-; CHECKO0:       // %bb.0:
-; CHECKO0-NEXT:    sub sp, sp, #16
-; CHECKO0-NEXT:    add x8, sp, #14
-; CHECKO0-NEXT:    str p0, [x8]
-; CHECKO0-NEXT:    ldr p0, [x8]
-; CHECKO0-NEXT:    add sp, sp, #16
-; CHECKO0-NEXT:    ret
-;
-; CHECKO3-LABEL: test_alloca_store_reload:
-; CHECKO3:       // %bb.0:
-; CHECKO3-NEXT:    sub sp, sp, #16
-; CHECKO3-NEXT:    add x8, sp, #14
-; CHECKO3-NEXT:    str p0, [x8]
-; CHECKO3-NEXT:    add sp, sp, #16
-; CHECKO3-NEXT:    ret
 ; CHECK-O0-LABEL: test_alloca_store_reload:
 ; CHECK-O0:       // %bb.0:
 ; CHECK-O0-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -102,34 +86,6 @@ define void @test_pass_1arg(target("aarch64.svcount") %arg) nounwind {
 
 declare void @take_svcount_5(target("aarch64.svcount") %arg0, target("aarch64.svcount") %arg1, target("aarch64.svcount") %arg2, target("aarch64.svcount") %arg3, target("aarch64.svcount") %arg4)
 define void @test_pass_5args(target("aarch64.svcount") %arg) nounwind {
-; CHECKO0-LABEL: test_pass_5args:
-; CHECKO0:       // %bb.0:
-; CHECKO0-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECKO0-NEXT:    addvl sp, sp, #-1
-; CHECKO0-NEXT:    mov p3.b, p0.b
-; CHECKO0-NEXT:    str p3, [sp, #7, mul vl]
-; CHECKO0-NEXT:    addpl x0, sp, #7
-; CHECKO0-NEXT:    mov p0.b, p3.b
-; CHECKO0-NEXT:    mov p1.b, p3.b
-; CHECKO0-NEXT:    mov p2.b, p3.b
-; CHECKO0-NEXT:    bl take_svcount_5
-; CHECKO0-NEXT:    addvl sp, sp, #1
-; CHECKO0-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
-; CHECKO0-NEXT:    ret
-;
-; CHECKO3-LABEL: test_pass_5args:
-; CHECKO3:       // %bb.0:
-; CHECKO3-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECKO3-NEXT:    addvl sp, sp, #-1
-; CHECKO3-NEXT:    addpl x0, sp, #7
-; CHECKO3-NEXT:    mov p1.b, p0.b
-; CHECKO3-NEXT:    mov p2.b, p0.b
-; CHECKO3-NEXT:    mov p3.b, p0.b
-; CHECKO3-NEXT:    str p0, [sp, #7, mul vl]
-; CHECKO3-NEXT:    bl take_svcount_5
-; CHECKO3-NEXT:    addvl sp, sp, #1
-; CHECKO3-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
-; CHECKO3-NEXT:    ret
 ; CHECK-O0-LABEL: test_pass_5args:
 ; CHECK-O0:       // %bb.0:
 ; CHECK-O0-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill

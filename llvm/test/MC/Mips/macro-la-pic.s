@@ -255,3 +255,25 @@ la $25, 2f
 # XN32: lw $25, %got_disp(.Ltmp1)($gp)  # encoding: [0x8f,0x99,A,A]
 # XN32:                                 #   fixup A - offset: 0, value: %got_disp(.Ltmp1), kind: fixup_Mips_GOT_DISP
 2:
+
+la $2,.Lstr
+# O32:      lw      $2, %got(.Lstr)($gp)          # encoding: [0x8f,0x82,A,A]
+# O32-NEXT:                           #   fixup A - offset: 0, value: %got(.Lstr), kind: fixup_Mips_GOT
+# O32-NEXT: addiu   $2, $2, %lo(.Lstr)            # encoding: [0x24,0x42,A,A]
+# O32-NEXT:                           #   fixup A - offset: 0, value: %lo(.Lstr), kind: fixup_Mips_LO16
+
+# N32:      lw      $2, %got_disp(.Lstr)($gp)     # encoding: [0x8f,0x82,A,A]
+# N32-NEXT:                           #   fixup A - offset: 0, value: %got_disp(.Lstr), kind: fixup_Mips_GOT_DISP
+
+la $2,$str2
+# O32:      lw      $2, %got($str2)($gp)          # encoding: [0x8f,0x82,A,A]
+# O32-NEXT: #   fixup A - offset: 0, value: %got($str2), kind: fixup_Mips_GOT
+# O32-NEXT: addiu   $2, $2, %lo($str2)            # encoding: [0x24,0x42,A,A]
+# O32-NEXT: #   fixup A - offset: 0, value: %lo($str2), kind: fixup_Mips_LO16
+
+# N32:      lw      $2, %got_disp($str2)($gp)     # encoding: [0x8f,0x82,A,A]
+# N32-NEXT:                           #   fixup A - offset: 0, value: %got_disp($str2), kind: fixup_Mips_GOT_DISP
+
+.rodata
+.Lstr: .4byte 0
+$str2: .4byte 0

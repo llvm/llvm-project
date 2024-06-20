@@ -549,6 +549,7 @@ bool DYLDRendezvous::SOEntryIsMainExecutable(const SOEntry &entry) {
   switch (triple.getOS()) {
   case llvm::Triple::FreeBSD:
   case llvm::Triple::NetBSD:
+  case llvm::Triple::OpenBSD:
     return entry.file_spec == m_exe_file_spec;
   case llvm::Triple::Linux:
     if (triple.isAndroid())

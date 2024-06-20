@@ -102,13 +102,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ;; Don't place the instrumented globals in a comdat when the unique module ID is empty.
 ; NOMODULEID:      @.str = internal constant { [4 x i8], [28 x i8] } { [4 x i8] c"str\00", [28 x i8] zeroinitializer }, align 32
 ; NOMODULEID:      @_ZL3buf = internal global { [4 x i8], [28 x i8] } zeroinitializer, align 32
-; NOMODULEID:      @__asan_global_.str = private global {{.*}}, section "asan_globals", !associated !0
-; NOMODULEID:      @__asan_global__ZL3buf = private global {{.*}}, section "asan_globals", !associated !1
+; NOMODULEID:      @__asan_global_.str = private global {{.*}}, section "asan_globals"{{.*}}, !associated !0
+; NOMODULEID:      @__asan_global__ZL3buf = private global {{.*}}, section "asan_globals"{{.*}}, !associated !1
 ; NOMODULEID:      @llvm.compiler.used = appending global [4 x ptr] [ptr @.str, ptr @_ZL3buf, ptr @__asan_global_.str, ptr @__asan_global__ZL3buf]
 
 ; NOMODULEID:      define internal void @asan.module_ctor() #[[#]] comdat {
 ; NOMODULEID-NEXT:   call void @__asan_init()
-; NOMODULEID-NEXT:   call void @__asan_version_mismatch_check_v8()
+; NOMODULEID-NEXT:   call void @__asan_version_mismatch_check_{{.*}}
 ; NOMODULEID-NEXT:   call void @__asan_register_elf_globals(i64 ptrtoint (ptr @___asan_globals_registered to i64), i64 ptrtoint (ptr @__start_asan_globals to i64), i64 ptrtoint (ptr @__stop_asan_globals to i64))
 ; NOMODULEID-NEXT:   ret void
 ; NOMODULEID-NEXT: }

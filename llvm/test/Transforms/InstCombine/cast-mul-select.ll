@@ -2,6 +2,8 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; RUN: opt -passes=debugify,instcombine -S < %s | FileCheck %s -check-prefix DBGINFO
 
+; RUN: opt -passes=debugify,instcombine -S < %s --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DBGINFO
+
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32"
 
 define i32 @mul(i32 %x, i32 %y) {
@@ -145,7 +147,7 @@ define i32 @eval_sext_multi_use_in_one_inst(i32 %x) {
 ; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[A:%.*]] = and i16 [[T]], 14
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]]
-; CHECK-NEXT:    [[O:%.*]] = or i16 [[M]], -32768
+; CHECK-NEXT:    [[O:%.*]] = or disjoint i16 [[M]], -32768
 ; CHECK-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -156,7 +158,7 @@ define i32 @eval_sext_multi_use_in_one_inst(i32 %x) {
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[A]], metadata [[META77:![0-9]+]], metadata !DIExpression()), !dbg [[DBG82]]
 ; DBGINFO-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]], !dbg [[DBG83:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[M]], metadata [[META78:![0-9]+]], metadata !DIExpression()), !dbg [[DBG83]]
-; DBGINFO-NEXT:    [[O:%.*]] = or i16 [[M]], -32768, !dbg [[DBG84:![0-9]+]]
+; DBGINFO-NEXT:    [[O:%.*]] = or disjoint i16 [[M]], -32768, !dbg [[DBG84:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i16 [[O]], metadata [[META79:![0-9]+]], metadata !DIExpression()), !dbg [[DBG84]]
 ; DBGINFO-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32, !dbg [[DBG85:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[R]], metadata [[META80:![0-9]+]], metadata !DIExpression()), !dbg [[DBG85]]
@@ -205,7 +207,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO-NEXT:  entry:
 ; DBGINFO-NEXT:    br label [[WHILE_BODY:%.*]], !dbg [[DBG94:![0-9]+]]
 ; DBGINFO:       while.body:
-; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[B:%.*]], metadata [[META89:![0-9]+]], metadata !DIExpression(DW_OP_constu, 0, DW_OP_eq, DW_OP_stack_value)), !dbg [[DBG95:![0-9]+]]
+; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[B:%.*]], metadata [[META89:![0-9]+]], metadata !DIExpression(DW_OP_lit0, DW_OP_eq, DW_OP_stack_value)), !dbg [[DBG95:![0-9]+]]
 ; DBGINFO-NEXT:    br i1 [[C1:%.*]], label [[FOR_BODY3_US:%.*]], label [[FOR_BODY3:%.*]], !dbg [[DBG96:![0-9]+]]
 ; DBGINFO:       for.body3.us:
 ; DBGINFO-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[B]], 0, !dbg [[DBG95]]

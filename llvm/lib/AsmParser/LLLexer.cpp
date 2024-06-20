@@ -438,9 +438,12 @@ lltok::Kind LLLexer::LexCaret() {
 
 /// Lex all tokens that start with a # character.
 ///    AttrGrpID ::= #[0-9]+
+///    Hash ::= #
 lltok::Kind LLLexer::LexHash() {
   // Handle AttrGrpID: #[0-9]+
-  return LexUIntID(lltok::AttrGrpID);
+  if (isdigit(static_cast<unsigned char>(CurPtr[0])))
+    return LexUIntID(lltok::AttrGrpID);
+  return lltok::hash;
 }
 
 /// Lex a label, integer type, keyword, or hexadecimal integer constant.
@@ -563,6 +566,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(fast);
   KEYWORD(nuw);
   KEYWORD(nsw);
+  KEYWORD(nusw);
   KEYWORD(exact);
   KEYWORD(disjoint);
   KEYWORD(inbounds);
@@ -571,6 +575,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(addrspace);
   KEYWORD(section);
   KEYWORD(partition);
+  KEYWORD(code_model);
   KEYWORD(alias);
   KEYWORD(ifunc);
   KEYWORD(module);
@@ -616,6 +621,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(anyregcc);
   KEYWORD(preserve_mostcc);
   KEYWORD(preserve_allcc);
+  KEYWORD(preserve_nonecc);
   KEYWORD(ghccc);
   KEYWORD(x86_intrcc);
   KEYWORD(hhvmcc);
@@ -635,6 +641,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
   KEYWORD(graalcc);
+  KEYWORD(riscv_vector_cc);
 
   KEYWORD(cc);
   KEYWORD(c);
@@ -697,11 +704,13 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(uinc_wrap);
   KEYWORD(udec_wrap);
 
+  KEYWORD(splat);
   KEYWORD(vscale);
   KEYWORD(x);
   KEYWORD(blockaddress);
   KEYWORD(dso_local_equivalent);
   KEYWORD(no_cfi);
+  KEYWORD(ptrauth);
 
   // Metadata types.
   KEYWORD(distinct);
@@ -730,6 +739,9 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(live);
   KEYWORD(dsoLocal);
   KEYWORD(canAutoHide);
+  KEYWORD(importType);
+  KEYWORD(definition);
+  KEYWORD(declaration);
   KEYWORD(function);
   KEYWORD(insts);
   KEYWORD(funcFlags);
@@ -904,7 +916,7 @@ lltok::Kind LLLexer::LexIdentifier() {
 
 #define DWKEYWORD(TYPE, TOKEN)                                                 \
   do {                                                                         \
-    if (Keyword.startswith("DW_" #TYPE "_")) {                                 \
+    if (Keyword.starts_with("DW_" #TYPE "_")) {                                \
       StrVal.assign(Keyword.begin(), Keyword.end());                           \
       return lltok::TOKEN;                                                     \
     }                                                                          \
@@ -920,17 +932,32 @@ lltok::Kind LLLexer::LexIdentifier() {
 
 #undef DWKEYWORD
 
-  if (Keyword.startswith("DIFlag")) {
+// Keywords for debug record types.
+#define DBGRECORDTYPEKEYWORD(STR)                                              \
+  do {                                                                         \
+    if (Keyword == "dbg_" #STR) {                                              \
+      StrVal = #STR;                                                           \
+      return lltok::DbgRecordType;                                             \
+    }                                                                          \
+  } while (false)
+
+  DBGRECORDTYPEKEYWORD(value);
+  DBGRECORDTYPEKEYWORD(declare);
+  DBGRECORDTYPEKEYWORD(assign);
+  DBGRECORDTYPEKEYWORD(label);
+#undef DBGRECORDTYPEKEYWORD
+
+  if (Keyword.starts_with("DIFlag")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::DIFlag;
   }
 
-  if (Keyword.startswith("DISPFlag")) {
+  if (Keyword.starts_with("DISPFlag")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::DISPFlag;
   }
 
-  if (Keyword.startswith("CSK_")) {
+  if (Keyword.starts_with("CSK_")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::ChecksumKind;
   }

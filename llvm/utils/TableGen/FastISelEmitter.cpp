@@ -1,4 +1,4 @@
-///===- FastISelEmitter.cpp - Generate an instruction selector -------------===//
+///===- FastISelEmitter.cpp - Generate an instruction selector ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,11 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "InfoByHwMode.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -29,7 +29,6 @@
 #include <set>
 #include <utility>
 using namespace llvm;
-
 
 /// InstructionMemo - This class holds additional information about an
 /// instruction needed to emit code for it.
@@ -61,15 +60,15 @@ namespace {
 class ImmPredicateSet {
   DenseMap<TreePattern *, unsigned> ImmIDs;
   std::vector<TreePredicateFn> PredsByName;
-public:
 
+public:
   unsigned getIDFor(TreePredicateFn Pred) {
     unsigned &Entry = ImmIDs[Pred.getOrigPatFragRecord()];
     if (Entry == 0) {
       PredsByName.push_back(Pred);
       Entry = PredsByName.size();
     }
-    return Entry-1;
+    return Entry - 1;
   }
 
   const TreePredicateFn &getPredicate(unsigned i) {
@@ -80,7 +79,6 @@ public:
   typedef std::vector<TreePredicateFn>::const_iterator iterator;
   iterator begin() const { return PredsByName.begin(); }
   iterator end() const { return PredsByName.end(); }
-
 };
 } // End anonymous namespace
 
@@ -92,26 +90,39 @@ struct OperandsSignature {
   class OpKind {
     enum { OK_Reg, OK_FP, OK_Imm, OK_Invalid = -1 };
     char Repr;
-  public:
 
+  public:
     OpKind() : Repr(OK_Invalid) {}
 
     bool operator<(OpKind RHS) const { return Repr < RHS.Repr; }
     bool operator==(OpKind RHS) const { return Repr == RHS.Repr; }
 
-    static OpKind getReg() { OpKind K; K.Repr = OK_Reg; return K; }
-    static OpKind getFP()  { OpKind K; K.Repr = OK_FP; return K; }
+    static OpKind getReg() {
+      OpKind K;
+      K.Repr = OK_Reg;
+      return K;
+    }
+    static OpKind getFP() {
+      OpKind K;
+      K.Repr = OK_FP;
+      return K;
+    }
     static OpKind getImm(unsigned V) {
-      assert((unsigned)OK_Imm+V < 128 &&
+      assert((unsigned)OK_Imm + V < 128 &&
              "Too many integer predicates for the 'Repr' char");
-      OpKind K; K.Repr = OK_Imm+V; return K;
+      OpKind K;
+      K.Repr = OK_Imm + V;
+      return K;
     }
 
     bool isReg() const { return Repr == OK_Reg; }
-    bool isFP() const  { return Repr == OK_FP; }
+    bool isFP() const { return Repr == OK_FP; }
     bool isImm() const { return Repr >= OK_Imm; }
 
-    unsigned getImmCode() const { assert(isImm()); return Repr-OK_Imm; }
+    unsigned getImmCode() const {
+      assert(isImm());
+      return Repr - OK_Imm;
+    }
 
     void printManglingSuffix(raw_ostream &OS, ImmPredicateSet &ImmPredicates,
                              bool StripImmCodes) const {
@@ -123,11 +134,10 @@ struct OperandsSignature {
         OS << 'i';
         if (!StripImmCodes)
           if (unsigned Code = getImmCode())
-            OS << "_" << ImmPredicates.getPredicate(Code-1).getFnName();
+            OS << "_" << ImmPredicates.getPredicate(Code - 1).getFnName();
       }
     }
   };
-
 
   SmallVector<OpKind, 3> Operands;
 
@@ -162,15 +172,17 @@ struct OperandsSignature {
   void emitImmediatePredicate(raw_ostream &OS, ImmPredicateSet &ImmPredicates) {
     bool EmittedAnything = false;
     for (unsigned i = 0, e = Operands.size(); i != e; ++i) {
-      if (!Operands[i].isImm()) continue;
+      if (!Operands[i].isImm())
+        continue;
 
       unsigned Code = Operands[i].getImmCode();
-      if (Code == 0) continue;
+      if (Code == 0)
+        continue;
 
       if (EmittedAnything)
         OS << " &&\n        ";
 
-      TreePredicateFn PredFn = ImmPredicates.getPredicate(Code-1);
+      TreePredicateFn PredFn = ImmPredicates.getPredicate(Code - 1);
 
       // Emit the type check.
       TreePattern *TP = PredFn.getOrigPatFragRecord();
@@ -179,7 +191,7 @@ struct OperandsSignature {
              "Cannot use variable value types with fast isel");
       OS << "VT == " << getEnumName(VVT.getSimple().SimpleTy) << " && ";
 
-      OS << PredFn.getFnName() << "(imm" << i <<')';
+      OS << PredFn.getFnName() << "(imm" << i << ')';
       EmittedAnything = true;
     }
   }
@@ -188,37 +200,36 @@ struct OperandsSignature {
   /// of the Operands array accordingly. Return true if all the operands
   /// are supported, false otherwise.
   ///
-  bool initialize(TreePatternNode *InstPatNode, const CodeGenTarget &Target,
-                  MVT::SimpleValueType VT,
-                  ImmPredicateSet &ImmediatePredicates,
+  bool initialize(TreePatternNode &InstPatNode, const CodeGenTarget &Target,
+                  MVT::SimpleValueType VT, ImmPredicateSet &ImmediatePredicates,
                   const CodeGenRegisterClass *OrigDstRC) {
-    if (InstPatNode->isLeaf())
+    if (InstPatNode.isLeaf())
       return false;
 
-    if (InstPatNode->getOperator()->getName() == "imm") {
+    if (InstPatNode.getOperator()->getName() == "imm") {
       Operands.push_back(OpKind::getImm(0));
       return true;
     }
 
-    if (InstPatNode->getOperator()->getName() == "fpimm") {
+    if (InstPatNode.getOperator()->getName() == "fpimm") {
       Operands.push_back(OpKind::getFP());
       return true;
     }
 
     const CodeGenRegisterClass *DstRC = nullptr;
 
-    for (unsigned i = 0, e = InstPatNode->getNumChildren(); i != e; ++i) {
-      TreePatternNode *Op = InstPatNode->getChild(i);
+    for (unsigned i = 0, e = InstPatNode.getNumChildren(); i != e; ++i) {
+      TreePatternNode &Op = InstPatNode.getChild(i);
 
       // Handle imm operands specially.
-      if (!Op->isLeaf() && Op->getOperator()->getName() == "imm") {
+      if (!Op.isLeaf() && Op.getOperator()->getName() == "imm") {
         unsigned PredNo = 0;
-        if (!Op->getPredicateCalls().empty()) {
-          TreePredicateFn PredFn = Op->getPredicateCalls()[0].Fn;
+        if (!Op.getPredicateCalls().empty()) {
+          TreePredicateFn PredFn = Op.getPredicateCalls()[0].Fn;
           // If there is more than one predicate weighing in on this operand
           // then we don't handle it.  This doesn't typically happen for
           // immediates anyway.
-          if (Op->getPredicateCalls().size() > 1 ||
+          if (Op.getPredicateCalls().size() > 1 ||
               !PredFn.isImmediatePattern() || PredFn.usesOperands())
             return false;
           // Ignore any instruction with 'FastIselShouldIgnore', these are
@@ -229,21 +240,20 @@ struct OperandsSignature {
           if (Rec->getValueAsBit("FastIselShouldIgnore"))
             return false;
 
-          PredNo = ImmediatePredicates.getIDFor(PredFn)+1;
+          PredNo = ImmediatePredicates.getIDFor(PredFn) + 1;
         }
 
         Operands.push_back(OpKind::getImm(PredNo));
         continue;
       }
 
-
       // For now, filter out any operand with a predicate.
       // For now, filter out any operand with multiple values.
-      if (!Op->getPredicateCalls().empty() || Op->getNumTypes() != 1)
+      if (!Op.getPredicateCalls().empty() || Op.getNumTypes() != 1)
         return false;
 
-      if (!Op->isLeaf()) {
-         if (Op->getOperator()->getName() == "fpimm") {
+      if (!Op.isLeaf()) {
+        if (Op.getOperator()->getName() == "fpimm") {
           Operands.push_back(OpKind::getFP());
           continue;
         }
@@ -251,15 +261,15 @@ struct OperandsSignature {
         return false;
       }
 
-      assert(Op->hasConcreteType(0) && "Type infererence not done?");
+      assert(Op.hasConcreteType(0) && "Type infererence not done?");
 
       // For now, all the operands must have the same type (if they aren't
       // immediates).  Note that this causes us to reject variable sized shifts
       // on X86.
-      if (Op->getSimpleType(0) != VT)
+      if (Op.getSimpleType(0) != VT)
         return false;
 
-      DefInit *OpDI = dyn_cast<DefInit>(Op->getLeafValue());
+      DefInit *OpDI = dyn_cast<DefInit>(Op.getLeafValue());
       if (!OpDI)
         return false;
       Record *OpLeafRec = OpDI->getDef();
@@ -347,7 +357,6 @@ struct OperandsSignature {
     }
   }
 
-
   void PrintManglingSuffix(raw_ostream &OS, const std::vector<std::string> &PR,
                            ImmPredicateSet &ImmPredicates,
                            bool StripImmCodes = false) const {
@@ -380,7 +389,7 @@ class FastISelMap {
   typedef std::map<MVT::SimpleValueType, RetPredMap> TypeRetPredMap;
   typedef std::map<std::string, TypeRetPredMap> OpcodeTypeRetPredMap;
   typedef std::map<OperandsSignature, OpcodeTypeRetPredMap>
-            OperandsOpcodeTypeRetPredMap;
+      OperandsOpcodeTypeRetPredMap;
 
   OperandsOpcodeTypeRetPredMap SimplePatterns;
 
@@ -389,22 +398,22 @@ class FastISelMap {
                       MVT::SimpleValueType, std::string>>
       SimplePatternsCheck;
 
-  std::map<OperandsSignature, std::vector<OperandsSignature> >
-    SignaturesWithConstantForms;
+  std::map<OperandsSignature, std::vector<OperandsSignature>>
+      SignaturesWithConstantForms;
 
   StringRef InstNS;
   ImmPredicateSet ImmediatePredicates;
+
 public:
   explicit FastISelMap(StringRef InstNS);
 
   void collectPatterns(CodeGenDAGPatterns &CGP);
   void printImmediatePredicates(raw_ostream &OS);
   void printFunctionDefinitions(raw_ostream &OS);
+
 private:
-  void emitInstructionCode(raw_ostream &OS,
-                           const OperandsSignature &Operands,
-                           const PredMap &PM,
-                           const std::string &RetVTName);
+  void emitInstructionCode(raw_ostream &OS, const OperandsSignature &Operands,
+                           const PredMap &PM, const std::string &RetVTName);
 };
 } // End anonymous namespace
 
@@ -421,19 +430,19 @@ static std::string getLegalCName(std::string OpName) {
 
 FastISelMap::FastISelMap(StringRef instns) : InstNS(instns) {}
 
-static std::string PhyRegForNode(TreePatternNode *Op,
+static std::string PhyRegForNode(TreePatternNode &Op,
                                  const CodeGenTarget &Target) {
   std::string PhysReg;
 
-  if (!Op->isLeaf())
+  if (!Op.isLeaf())
     return PhysReg;
 
-  Record *OpLeafRec = cast<DefInit>(Op->getLeafValue())->getDef();
+  Record *OpLeafRec = cast<DefInit>(Op.getLeafValue())->getDef();
   if (!OpLeafRec->isSubClassOf("Register"))
     return PhysReg;
 
   PhysReg += cast<StringInit>(OpLeafRec->getValue("Namespace")->getValue())
-               ->getValue();
+                 ->getValue();
   PhysReg += "::";
   PhysReg += Target.getRegBank().getReg(OpLeafRec)->getName();
   return PhysReg;
@@ -443,15 +452,16 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
   const CodeGenTarget &Target = CGP.getTargetInfo();
 
   // Scan through all the patterns and record the simple ones.
-  for (CodeGenDAGPatterns::ptm_iterator I = CGP.ptm_begin(),
-       E = CGP.ptm_end(); I != E; ++I) {
+  for (CodeGenDAGPatterns::ptm_iterator I = CGP.ptm_begin(), E = CGP.ptm_end();
+       I != E; ++I) {
     const PatternToMatch &Pattern = *I;
 
     // For now, just look at Instructions, so that we don't have to worry
     // about emitting multiple instructions for a pattern.
-    TreePatternNode *Dst = Pattern.getDstPattern();
-    if (Dst->isLeaf()) continue;
-    Record *Op = Dst->getOperator();
+    TreePatternNode &Dst = Pattern.getDstPattern();
+    if (Dst.isLeaf())
+      continue;
+    Record *Op = Dst.getOperator();
     if (!Op->isSubClassOf("Instruction"))
       continue;
     CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(Op);
@@ -467,11 +477,11 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
 
     // For now, ignore multi-instruction patterns.
     bool MultiInsts = false;
-    for (unsigned i = 0, e = Dst->getNumChildren(); i != e; ++i) {
-      TreePatternNode *ChildOp = Dst->getChild(i);
-      if (ChildOp->isLeaf())
+    for (unsigned i = 0, e = Dst.getNumChildren(); i != e; ++i) {
+      TreePatternNode &ChildOp = Dst.getChild(i);
+      if (ChildOp.isLeaf())
         continue;
-      if (ChildOp->getOperator()->isSubClassOf("Instruction")) {
+      if (ChildOp.getOperator()->isSubClassOf("Instruction")) {
         MultiInsts = true;
         break;
       }
@@ -495,35 +505,38 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     } else {
       // If this isn't a leaf, then continue since the register classes are
       // a bit too complicated for now.
-      if (!Dst->getChild(1)->isLeaf()) continue;
+      if (!Dst.getChild(1).isLeaf())
+        continue;
 
-      DefInit *SR = dyn_cast<DefInit>(Dst->getChild(1)->getLeafValue());
+      DefInit *SR = dyn_cast<DefInit>(Dst.getChild(1).getLeafValue());
       if (SR)
         SubRegNo = getQualifiedName(SR->getDef());
       else
-        SubRegNo = Dst->getChild(1)->getLeafValue()->getAsString();
+        SubRegNo = Dst.getChild(1).getLeafValue()->getAsString();
     }
 
     // Inspect the pattern.
-    TreePatternNode *InstPatNode = Pattern.getSrcPattern();
-    if (!InstPatNode) continue;
-    if (InstPatNode->isLeaf()) continue;
+    TreePatternNode &InstPatNode = Pattern.getSrcPattern();
+    if (InstPatNode.isLeaf())
+      continue;
 
     // Ignore multiple result nodes for now.
-    if (InstPatNode->getNumTypes() > 1) continue;
+    if (InstPatNode.getNumTypes() > 1)
+      continue;
 
-    Record *InstPatOp = InstPatNode->getOperator();
+    Record *InstPatOp = InstPatNode.getOperator();
     std::string OpcodeName = getOpcodeName(InstPatOp, CGP);
     MVT::SimpleValueType RetVT = MVT::isVoid;
-    if (InstPatNode->getNumTypes()) RetVT = InstPatNode->getSimpleType(0);
+    if (InstPatNode.getNumTypes())
+      RetVT = InstPatNode.getSimpleType(0);
     MVT::SimpleValueType VT = RetVT;
-    if (InstPatNode->getNumChildren()) {
-      assert(InstPatNode->getChild(0)->getNumTypes() == 1);
-      VT = InstPatNode->getChild(0)->getSimpleType(0);
+    if (InstPatNode.getNumChildren()) {
+      assert(InstPatNode.getChild(0).getNumTypes() == 1);
+      VT = InstPatNode.getChild(0).getSimpleType(0);
     }
 
     // For now, filter out any instructions with predicates.
-    if (!InstPatNode->getPredicateCalls().empty())
+    if (!InstPatNode.getPredicateCalls().empty())
       continue;
 
     // Check all the operands.
@@ -533,20 +546,20 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
       continue;
 
     std::vector<std::string> PhysRegInputs;
-    if (InstPatNode->getOperator()->getName() == "imm" ||
-        InstPatNode->getOperator()->getName() == "fpimm")
+    if (InstPatNode.getOperator()->getName() == "imm" ||
+        InstPatNode.getOperator()->getName() == "fpimm")
       PhysRegInputs.push_back("");
     else {
       // Compute the PhysRegs used by the given pattern, and check that
       // the mapping from the src to dst patterns is simple.
       bool FoundNonSimplePattern = false;
       unsigned DstIndex = 0;
-      for (unsigned i = 0, e = InstPatNode->getNumChildren(); i != e; ++i) {
-        std::string PhysReg = PhyRegForNode(InstPatNode->getChild(i), Target);
+      for (unsigned i = 0, e = InstPatNode.getNumChildren(); i != e; ++i) {
+        std::string PhysReg = PhyRegForNode(InstPatNode.getChild(i), Target);
         if (PhysReg.empty()) {
-          if (DstIndex >= Dst->getNumChildren() ||
-              Dst->getChild(DstIndex)->getName() !=
-              InstPatNode->getChild(i)->getName()) {
+          if (DstIndex >= Dst.getNumChildren() ||
+              Dst.getChild(DstIndex).getName() !=
+                  InstPatNode.getChild(i).getName()) {
             FoundNonSimplePattern = true;
             break;
           }
@@ -556,7 +569,7 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
         PhysRegInputs.push_back(PhysReg);
       }
 
-      if (Op->getName() != "EXTRACT_SUBREG" && DstIndex < Dst->getNumChildren())
+      if (Op->getName() != "EXTRACT_SUBREG" && DstIndex < Dst.getNumChildren())
         FoundNonSimplePattern = true;
 
       if (FoundNonSimplePattern)
@@ -568,29 +581,24 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     raw_string_ostream SuffixOS(ManglingSuffix);
     Operands.PrintManglingSuffix(SuffixOS, ImmediatePredicates, true);
     if (!StringSwitch<bool>(ManglingSuffix)
-        .Cases("", "r", "rr", "ri", "i", "f", true)
-        .Default(false))
+             .Cases("", "r", "rr", "ri", "i", "f", true)
+             .Default(false))
       continue;
 
     // Get the predicate that guards this pattern.
     std::string PredicateCheck = Pattern.getPredicateCheck();
 
     // Ok, we found a pattern that we can handle. Remember it.
-    InstructionMemo Memo(
-      Pattern.getDstPattern()->getOperator()->getName(),
-      DstRC,
-      SubRegNo,
-      PhysRegInputs,
-      PredicateCheck
-    );
+    InstructionMemo Memo(Pattern.getDstPattern().getOperator()->getName(),
+                         DstRC, SubRegNo, PhysRegInputs, PredicateCheck);
 
     int complexity = Pattern.getPatternComplexity(CGP);
 
     auto inserted_simple_pattern = SimplePatternsCheck.insert(
-        std::make_tuple(Operands, OpcodeName, VT, RetVT, PredicateCheck));
+        std::tuple(Operands, OpcodeName, VT, RetVT, PredicateCheck));
     if (!inserted_simple_pattern.second) {
       PrintFatalError(Pattern.getSrcRecord()->getLoc(),
-                    "Duplicate predicate in FastISel table!");
+                      "Duplicate predicate in FastISel table!");
     }
 
     // Note: Instructions with the same complexity will appear in the order
@@ -602,8 +610,8 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
     // them down to a signature that doesn't have predicates so that we can
     // associate them with the stripped predicate version.
     if (Operands.hasAnyImmediateCodes()) {
-      SignaturesWithConstantForms[Operands.getWithoutImmCodes()]
-        .push_back(Operands);
+      SignaturesWithConstantForms[Operands.getWithoutImmCodes()].push_back(
+          Operands);
     }
   }
 }
@@ -645,7 +653,8 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
       if (OneHadNoPredicate) {
         PrintFatalError("Multiple instructions match and one with no "
                         "predicate came before one with a predicate!  "
-                        "name:" + Memo.Name + "  predicate: " + PredicateCheck);
+                        "name:" +
+                        Memo.Name + "  predicate: " + PredicateCheck);
       }
       OS << "  if (" + PredicateCheck + ") {\n";
       OS << "  ";
@@ -669,8 +678,8 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
       Operands.PrintArguments(OS, Memo.PhysRegs);
       OS << ");\n";
     } else {
-      OS << "extractsubreg(" << RetVTName
-         << ", Op0, " << Memo.SubRegNo << ");\n";
+      OS << "extractsubreg(" << RetVTName << ", Op0, " << Memo.SubRegNo
+         << ");\n";
     }
 
     if (!PredicateCheck.empty()) {
@@ -684,7 +693,6 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
   OS << "}\n";
   OS << "\n";
 }
-
 
 void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
   // Now emit code for all the patterns that we collected.
@@ -762,8 +770,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       }
 
       // Emit one function for the opcode that demultiplexes based on the type.
-      OS << "unsigned fastEmit_"
-         << getLegalCName(Opcode) << "_";
+      OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_";
       Operands.PrintManglingSuffix(OS, ImmediatePredicates);
       OS << "(MVT VT, MVT RetVT";
       if (!Operands.empty())
@@ -809,13 +816,12 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
     // constrained forms of the immediate (e.g., 32-bit sext immediate in a
     // 64-bit operand), check them first.
 
-    std::map<OperandsSignature, std::vector<OperandsSignature> >::iterator MI
-      = SignaturesWithConstantForms.find(Operands);
+    std::map<OperandsSignature, std::vector<OperandsSignature>>::iterator MI =
+        SignaturesWithConstantForms.find(Operands);
     if (MI != SignaturesWithConstantForms.end()) {
       // Unique any duplicates out of the list.
       llvm::sort(MI->second);
-      MI->second.erase(std::unique(MI->second.begin(), MI->second.end()),
-                       MI->second.end());
+      MI->second.erase(llvm::unique(MI->second), MI->second.end());
 
       // Check each in order it was seen.  It would be nice to have a good
       // relative ordering between them, but we're not going for optimality
@@ -840,8 +846,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
     for (const auto &I : OTM) {
       const std::string &Opcode = I.first;
 
-      OS << "  case " << Opcode << ": return fastEmit_"
-         << getLegalCName(Opcode) << "_";
+      OS << "  case " << Opcode << ": return fastEmit_" << getLegalCName(Opcode)
+         << "_";
       Operands.PrintManglingSuffix(OS, ImmediatePredicates);
       OS << "(VT, RetVT";
       if (!Operands.empty())
@@ -862,7 +868,8 @@ static void EmitFastISel(RecordKeeper &RK, raw_ostream &OS) {
   CodeGenDAGPatterns CGP(RK);
   const CodeGenTarget &Target = CGP.getTargetInfo();
   emitSourceFileHeader("\"Fast\" Instruction Selector for the " +
-                       Target.getName().str() + " target", OS);
+                           Target.getName().str() + " target",
+                       OS);
 
   // Determine the target's namespace name.
   StringRef InstNS = Target.getInstNamespace();

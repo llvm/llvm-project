@@ -217,6 +217,10 @@ public:
   /// redundencies.
   PresburgerRelation simplify() const;
 
+  /// Return whether the given PresburgerRelation is full-dimensional. By full-
+  /// dimensional we mean that it is not flat along any dimension.
+  bool isFullDim() const;
+
   /// Print the set's internal state.
   void print(raw_ostream &os) const;
   void dump() const;

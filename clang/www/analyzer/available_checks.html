@@ -369,6 +369,33 @@ int test() {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
+
+<tr><td><a id="cplusplus.ArrayDelete"><div class="namedescr expandable"><span class="name">
+cplusplus.ArrayDelete</span><span class="lang">
+(C++)</span><div class="descr">
+Reports destructions of arrays of polymorphic objects that are destructed as
+their base class. If the type of an array-pointer is different from the type of
+its underlying objects, calling <code>delete[]</code> is undefined.
+</div></div></a></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+class Base {
+public:
+  virtual ~Base() {}
+};
+class Derived : public Base {};
+
+Base *create() {
+  Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
+  return x;
+}
+
+void sink(Base *x) {
+  delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' undefined
+}
+</pre></div></div></td></tr>
+
+
 <tr><td><a id="cplusplus.NewDelete"><div class="namedescr expandable"><span class="name">
 cplusplus.NewDelete</span><span class="lang">
 (C++)</span><div class="descr">

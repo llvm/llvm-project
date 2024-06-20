@@ -74,8 +74,20 @@ struct GCNRegPressure {
     return getOccupancy(ST) > O.getOccupancy(ST);
   }
 
-  bool less(const GCNSubtarget &ST, const GCNRegPressure& O,
-    unsigned MaxOccupancy = std::numeric_limits<unsigned>::max()) const;
+  /// Compares \p this GCNRegpressure to \p O, returning true if \p this is
+  /// less. Since GCNRegpressure contains different types of pressures, and due
+  /// to target-specific pecularities (e.g. we care about occupancy rather than
+  /// raw register usage), we determine if \p this GCNRegPressure is less than
+  /// \p O based on the following tiered comparisons (in order order of
+  /// precedence):
+  /// 1. Better occupancy
+  /// 2. Less spilling (first preference to VGPR spills, then to SGPR spills)
+  /// 3. Less tuple register pressure (first preference to VGPR tuples if we
+  /// determine that SGPR pressure is not important)
+  /// 4. Less raw register pressure (first preference to VGPR tuples if we
+  /// determine that SGPR pressure is not important)
+  bool less(const MachineFunction &MF, const GCNRegPressure &O,
+            unsigned MaxOccupancy = std::numeric_limits<unsigned>::max()) const;
 
   bool operator==(const GCNRegPressure &O) const {
     return std::equal(&Value[0], &Value[TOTAL_KINDS], O.Value);
@@ -83,6 +95,18 @@ struct GCNRegPressure {
 
   bool operator!=(const GCNRegPressure &O) const {
     return !(*this == O);
+  }
+
+  GCNRegPressure &operator+=(const GCNRegPressure &RHS) {
+    for (unsigned I = 0; I < TOTAL_KINDS; ++I)
+      Value[I] += RHS.Value[I];
+    return *this;
+  }
+
+  GCNRegPressure &operator-=(const GCNRegPressure &RHS) {
+    for (unsigned I = 0; I < TOTAL_KINDS; ++I)
+      Value[I] -= RHS.Value[I];
+    return *this;
   }
 
   void dump() const;
@@ -103,6 +127,20 @@ inline GCNRegPressure max(const GCNRegPressure &P1, const GCNRegPressure &P2) {
   for (unsigned I = 0; I < GCNRegPressure::TOTAL_KINDS; ++I)
     Res.Value[I] = std::max(P1.Value[I], P2.Value[I]);
   return Res;
+}
+
+inline GCNRegPressure operator+(const GCNRegPressure &P1,
+                                const GCNRegPressure &P2) {
+  GCNRegPressure Sum = P1;
+  Sum += P2;
+  return Sum;
+}
+
+inline GCNRegPressure operator-(const GCNRegPressure &P1,
+                                const GCNRegPressure &P2) {
+  GCNRegPressure Diff = P1;
+  Diff -= P2;
+  return Diff;
 }
 
 class GCNRPTracker {

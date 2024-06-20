@@ -9,9 +9,12 @@ function(_add_capi_test_executable name)
   add_llvm_executable(${name}
     PARTIAL_SOURCES_INTENDED
     ${ARG_UNPARSED_ARGUMENTS})
+  set_target_properties(${name} PROPERTIES FOLDER "MLIR/Tests")
+
   llvm_update_compile_flags(${name})
   if(MLIR_BUILD_MLIR_C_DYLIB)
     target_link_libraries(${name} PRIVATE
+      LLVMCore
       MLIR-C)
   else()
     target_link_libraries(${name} PRIVATE
@@ -35,6 +38,13 @@ _add_capi_test_executable(mlir-capi-ir-test
     MLIRCAPIIR
     MLIRCAPIFunc
     MLIRCAPIRegisterEverything
+)
+
+_add_capi_test_executable(mlir-capi-irdl-test
+  irdl.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIIRDL
 )
 
 _add_capi_test_executable(mlir-capi-llvm-test
@@ -84,4 +94,22 @@ _add_capi_test_executable(mlir-capi-transform-test
     MLIRCAPIIR
     MLIRCAPIRegisterEverything
     MLIRCAPITransformDialect
+)
+
+_add_capi_test_executable(mlir-capi-transform-interpreter-test
+  transform_interpreter.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegisterEverything
+    MLIRCAPITransformDialect
+    MLIRCAPITransformDialectTransforms
+)
+
+_add_capi_test_executable(mlir-capi-translation-test
+  translation.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPILLVM
+    MLIRCAPIRegisterEverything
+    MLIRCAPITarget
 )

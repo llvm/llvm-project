@@ -19,6 +19,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_range.h"
+
 template <class T>
 struct View : std::ranges::view_base {
   T* begin() const;
@@ -40,12 +42,6 @@ static_assert(!std::is_invocable_v<decltype((std::views::values))>);
 static_assert(!std::is_invocable_v<decltype((std::views::values)), View<int>>);
 static_assert(std::is_invocable_v<decltype((std::views::values)), View<std::pair<int, int>>>);
 static_assert(!std::is_invocable_v<decltype((std::views::values)), View<std::tuple<int>>>);
-
-template <class View, class T>
-concept CanBePiped =
-    requires(View&& view, T&& t) {
-      { std::forward<View>(view) | std::forward<T>(t) };
-    };
 
 static_assert(!CanBePiped<View<int>, decltype((std::views::elements<0>))>);
 static_assert(CanBePiped<View<std::pair<int, int>>, decltype((std::views::elements<0>))>);

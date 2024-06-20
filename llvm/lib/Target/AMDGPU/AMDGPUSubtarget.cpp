@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
@@ -165,6 +166,15 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   return *this;
 }
 
+void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
+  LLVMContext &Ctx = F.getContext();
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+      hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
+  }
+}
+
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
 bool AMDGPUSubtarget::useRealTrue16Insts() const {
@@ -201,14 +211,18 @@ unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
   case AMDGPU::V_LSHLREV_B64_e64:
   case AMDGPU::V_LSHLREV_B64_gfx10:
   case AMDGPU::V_LSHLREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHLREV_B64_e32_gfx12:
+  case AMDGPU::V_LSHLREV_B64_e64_gfx12:
   case AMDGPU::V_LSHL_B64_e64:
   case AMDGPU::V_LSHRREV_B64_e64:
   case AMDGPU::V_LSHRREV_B64_gfx10:
   case AMDGPU::V_LSHRREV_B64_e64_gfx11:
+  case AMDGPU::V_LSHRREV_B64_e64_gfx12:
   case AMDGPU::V_LSHR_B64_e64:
   case AMDGPU::V_ASHRREV_I64_e64:
   case AMDGPU::V_ASHRREV_I64_gfx10:
   case AMDGPU::V_ASHRREV_I64_e64_gfx11:
+  case AMDGPU::V_ASHRREV_I64_e64_gfx12:
   case AMDGPU::V_ASHR_I64_e64:
     return 1;
   }
@@ -428,7 +442,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
   std::pair<unsigned, unsigned> Default(1, getMaxWavesPerEU());
 
   // If minimum/maximum flat work group sizes were explicitly requested using
-  // "amdgpu-flat-work-group-size" attribute, then set default minimum/maximum
+  // "amdgpu-flat-workgroup-size" attribute, then set default minimum/maximum
   // number of waves per execution unit to values implied by requested
   // minimum/maximum flat work group sizes.
   unsigned MinImpliedByFlatWorkGroupSize =
@@ -567,7 +581,7 @@ unsigned AMDGPUSubtarget::getImplicitArgNumBytes(const Function &F) const {
   // Assume all implicit inputs are used by default
   const Module *M = F.getParent();
   unsigned NBytes =
-      AMDGPU::getCodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
+      AMDGPU::getAMDHSACodeObjectVersion(*M) >= AMDGPU::AMDHSA_COV5 ? 256 : 56;
   return F.getFnAttributeAsParsedInteger("amdgpu-implicitarg-num-bytes",
                                          NBytes);
 }
@@ -638,6 +652,17 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
+void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  if (isWave32()) {
+    // Fix implicit $vcc operands after MIParser has verified that they match
+    // the instruction definitions.
+    for (auto &MBB : MF) {
+      for (auto &MI : MBB)
+        InstrInfo.fixImplicitOperands(MI);
+    }
+  }
+}
+
 bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16_e64) != -1;
 }
@@ -649,29 +674,8 @@ bool GCNSubtarget::useVGPRIndexMode() const {
 bool GCNSubtarget::useAA() const { return UseAA; }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
-  if (getGeneration() >= AMDGPUSubtarget::GFX10)
-    return getMaxWavesPerEU();
-
-  if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    if (SGPRs <= 80)
-      return 10;
-    if (SGPRs <= 88)
-      return 9;
-    if (SGPRs <= 100)
-      return 8;
-    return 7;
-  }
-  if (SGPRs <= 48)
-    return 10;
-  if (SGPRs <= 56)
-    return 9;
-  if (SGPRs <= 64)
-    return 8;
-  if (SGPRs <= 72)
-    return 7;
-  if (SGPRs <= 80)
-    return 6;
-  return 5;
+  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(SGPRs, getMaxWavesPerEU(),
+                                                   getGeneration());
 }
 
 unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs) const {
@@ -845,8 +849,9 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
 }
 
-void GCNSubtarget::adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
-                                         int UseOpIdx, SDep &Dep) const {
+void GCNSubtarget::adjustSchedDependency(
+    SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
   if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
       !Def->isInstr() || !Use->isInstr())
     return;
@@ -1001,6 +1006,9 @@ GCNSubtarget::createFillMFMAShadowMutation(const TargetInstrInfo *TII) const {
 }
 
 unsigned GCNSubtarget::getNSAThreshold(const MachineFunction &MF) const {
+  if (getGeneration() >= AMDGPUSubtarget::GFX12)
+    return 0; // Not MIMG encoding.
+
   if (NSAThreshold.getNumOccurrences() > 0)
     return std::max(NSAThreshold.getValue(), 2u);
 
@@ -1100,4 +1108,9 @@ void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {
 
 unsigned GCNUserSGPRUsageInfo::getNumFreeUserSGPRs() {
   return AMDGPU::getMaxNumUserSGPRs(ST) - NumUsedUserSGPRs;
+}
+
+SmallVector<unsigned>
+AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
+  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3);
 }

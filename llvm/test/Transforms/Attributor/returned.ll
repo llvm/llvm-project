@@ -36,9 +36,9 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i8
-; CHECK: @[[_ZTI1X:[a-zA-Z0-9_$"\\.-]+]] = external dso_local constant { ptr, ptr }, align 8
-; CHECK: @[[_ZTI1Y:[a-zA-Z0-9_$"\\.-]+]] = external dso_local constant { ptr, ptr, ptr }, align 8
+; CHECK: @G = external global i8
+; CHECK: @_ZTI1X = external dso_local constant { ptr, ptr }, align 8
+; CHECK: @_ZTI1Y = external dso_local constant { ptr, ptr, ptr }, align 8
 ;.
 define i32 @sink_r0(i32 %r) #0 {
 ; CHECK: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable

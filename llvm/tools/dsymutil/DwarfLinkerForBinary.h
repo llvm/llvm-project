@@ -14,10 +14,6 @@
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "RelocationMap.h"
-#include "llvm/DWARFLinker/DWARFLinker.h"
-#include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
-#include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
-#include "llvm/DWARFLinker/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"
@@ -25,6 +21,8 @@
 #include <optional>
 
 namespace llvm {
+using namespace dwarf_linker;
+
 namespace dsymutil {
 
 /// DwarfLinkerForBinaryRelocationMap contains the logic to handle the
@@ -55,12 +53,12 @@ public:
   DwarfLinkerForBinaryRelocationMap() = default;
 };
 
-template <typename OutDwarfFile> struct ObjectWithRelocMap {
+struct ObjectWithRelocMap {
   ObjectWithRelocMap(
-      std::unique_ptr<OutDwarfFile> Object,
+      std::unique_ptr<DWARFFile> Object,
       std::shared_ptr<DwarfLinkerForBinaryRelocationMap> OutRelocs)
       : Object(std::move(Object)), OutRelocs(OutRelocs) {}
-  std::unique_ptr<OutDwarfFile> Object;
+  std::unique_ptr<DWARFFile> Object;
   std::shared_ptr<DwarfLinkerForBinaryRelocationMap> OutRelocs;
 };
 
@@ -104,8 +102,7 @@ public:
 private:
 
   /// Keeps track of relocations.
-  template <typename AddressesMapBase>
-  class AddressManager : public AddressesMapBase {
+  class AddressManager : public dwarf_linker::AddressesMap {
 
     const DwarfLinkerForBinary &Linker;
 
@@ -195,18 +192,20 @@ private:
 
     /// Checks that there is a relocation in the \p Relocs array against a
     /// debug map entry between \p StartOffset and \p NextOffset.
+    /// Print debug output if \p Verbose is set.
     ///
     /// \returns relocation value if relocation exist, otherwise std::nullopt.
     std::optional<int64_t>
     hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
-                         uint64_t StartOffset, uint64_t EndOffset);
+                         uint64_t StartOffset, uint64_t EndOffset,
+                         bool Verbose);
 
     std::optional<int64_t> getExprOpAddressRelocAdjustment(
         DWARFUnit &U, const DWARFExpression::Operation &Op,
-        uint64_t StartOffset, uint64_t EndOffset) override;
+        uint64_t StartOffset, uint64_t EndOffset, bool Verbose) override;
 
-    std::optional<int64_t>
-    getSubprogramRelocAdjustment(const DWARFDie &DIE) override;
+    std::optional<int64_t> getSubprogramRelocAdjustment(const DWARFDie &DIE,
+                                                        bool Verbose) override;
 
     std::optional<StringRef> getLibraryInstallName() override;
 
@@ -241,8 +240,7 @@ private:
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const Triple &triple);
-  template <typename OutDWARFFile, typename AddressesMap>
-  ErrorOr<std::unique_ptr<OutDWARFFile>>
+  ErrorOr<std::unique_ptr<dwarf_linker::DWARFFile>>
   loadObject(const DebugMapObject &Obj, const DebugMap &DebugMap,
              remarks::RemarkLinker &RL,
              std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM);
@@ -257,21 +255,19 @@ private:
 
   Error copySwiftInterfaces(StringRef Architecture) const;
 
-  template <typename OutStreamer>
   void copySwiftReflectionMetadata(
-      const llvm::dsymutil::DebugMapObject *Obj, OutStreamer *Streamer,
+      const llvm::dsymutil::DebugMapObject *Obj,
+      classic::DwarfStreamer *Streamer,
       std::vector<uint64_t> &SectionToOffsetInDwarf,
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply);
 
-  template <typename Linker, typename OutDwarfFile, typename AddressMapBase>
+  template <typename Linker>
   bool linkImpl(const DebugMap &Map,
                 typename Linker::OutputFileType ObjectType);
 
-  template <typename OutDwarfFile, typename AddressMap>
-  Error emitRelocations(
-      const DebugMap &DM,
-      std::vector<ObjectWithRelocMap<OutDwarfFile>> &ObjectsForLinking);
+  Error emitRelocations(const DebugMap &DM,
+                        std::vector<ObjectWithRelocMap> &ObjectsForLinking);
 
   raw_fd_ostream &OutFile;
   BinaryHolder &BinHolder;

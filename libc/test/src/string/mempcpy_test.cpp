@@ -14,7 +14,7 @@
 // mempcpy behavior (returning the end of what was copied).
 TEST(LlvmLibcMempcpyTest, Simple) {
   const char *src = "12345";
-  char dest[10];
+  char dest[10] = {};
   void *result = LIBC_NAMESPACE::mempcpy(dest, src, 6);
   ASSERT_EQ(static_cast<char *>(result), dest + 6);
   ASSERT_STREQ(src, dest);

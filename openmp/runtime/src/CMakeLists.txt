@@ -10,12 +10,19 @@
 
 include(ExtendPath)
 
+# The generated headers will be placed in clang's resource directory if present.
+if(OPENMP_STANDALONE_BUILD OR NOT LLVM_RUNTIMES_BUILD)
+  set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
+else()
+  set(LIBOMP_HEADERS_INTDIR ${LLVM_BINARY_DIR}/${LIBOMP_HEADERS_INSTALL_PATH})
+endif()
+
 # Configure omp.h, kmp_config.h and omp-tools.h if necessary
-configure_file(${LIBOMP_INC_DIR}/omp.h.var omp.h @ONLY)
-configure_file(${LIBOMP_INC_DIR}/ompx.h.var ompx.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/omp.h.var ${LIBOMP_HEADERS_INTDIR}/omp.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/ompx.h.var ${LIBOMP_HEADERS_INTDIR}/ompx.h @ONLY)
 configure_file(kmp_config.h.cmake kmp_config.h @ONLY)
 if(${LIBOMP_OMPT_SUPPORT})
-  configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var omp-tools.h @ONLY)
+  configure_file(${LIBOMP_INC_DIR}/omp-tools.h.var ${LIBOMP_HEADERS_INTDIR}/omp-tools.h @ONLY)
 endif()
 
 # Generate message catalog files: kmp_i18n_id.inc and kmp_i18n_default.inc
@@ -108,7 +115,11 @@ else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
-    libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
+    if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+      libomp_append(LIBOMP_GNUASMFILES z_AIX_asm.S) # AIX assembly file
+    else()
+      libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
+    endif()
   endif()
   libomp_append(LIBOMP_CXXFILES thirdparty/ittnotify/ittnotify_static.cpp LIBOMP_USE_ITT_NOTIFY)
   libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)
@@ -148,6 +159,10 @@ if(UNIX)
   set(LIBOMP_DL_LIBS ${CMAKE_DL_LIBS})
 endif()
 
+# Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
+# avoid an unwanted dependency on libstdc++.so.
+add_definitions(-U_GLIBCXX_ASSERTIONS)
+
 # Add the OpenMP library
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 
@@ -155,12 +170,14 @@ libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
 # Build libomp library. Add LLVMSupport dependency if building in-tree with libomptarget profiling enabled.
 if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMP_PROFILING))
   add_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES})
+  set_property(TARGET omp PROPERTY FOLDER "OpenMP/Libraries")
   # Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
   target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS})
 else()
   add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES} PARTIAL_SOURCES_INTENDED
     LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS}
     LINK_COMPONENTS Support
+    BUILDTREE_ONLY
     )
   # libomp must be a C++ library such that it can link libLLVMSupport
   set(LIBOMP_LINKER_LANGUAGE CXX)
@@ -213,6 +230,7 @@ if(NOT LIBOMP_LIBRARY_DIR)
 else()
   set(LIBOMP_LIBRARY_DIR ${LIBOMP_LIBRARY_DIR} PARENT_SCOPE)
 endif()
+set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 
 # Add symbolic links to libomp
@@ -225,11 +243,17 @@ if(NOT WIN32)
     WORKING_DIRECTORY ${LIBOMP_LIBRARY_DIR}
   )
 endif()
-set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
+
+# Definitions for testing, for reuse when testing libomptarget-nvptx.
+set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
+  "Path to folder containing omp.h")
+set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
+  "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 
 # Create *.inc before compiling any sources
 # objects depend on : .inc files
 add_custom_target(libomp-needed-headers DEPENDS kmp_i18n_id.inc kmp_i18n_default.inc)
+set_target_properties(libomp-needed-headers PROPERTIES FOLDER "OpenMP/Sourcegenning")
 add_dependencies(omp libomp-needed-headers)
 
 # Windows specific build rules
@@ -271,6 +295,7 @@ if(WIN32)
   set(LIBOMP_IMP_LIB_TARGET omp)
   set(LIBOMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.def)
   add_custom_target(libomp-needed-def-file DEPENDS ${LIBOMP_GENERATED_DEF_FILE})
+  set_target_properties(libomp-needed-def-file PROPERTIES FOLDER "OpenMP/Sourcegenning")
   add_dependencies(omp libomp-needed-def-file)
 
   # Create the main def file with ordinals to use for building the runtime dll to maintain backwards compatible exports order
@@ -289,6 +314,7 @@ if(WIN32)
     # Create the auxiliary def file without ordinals to use for building the import library to import by name
     set(LIBOMPIMP_GENERATED_DEF_FILE ${LIBOMP_LIB_NAME}.imp.def)
     add_custom_target(libompimp-needed-def-file DEPENDS ${LIBOMPIMP_GENERATED_DEF_FILE})
+    set_target_properties(libompimp-needed-def-file PROPERTIES FOLDER "OpenMP/Resources")
     add_custom_command(
       OUTPUT  ${LIBOMPIMP_GENERATED_DEF_FILE}
       COMMAND ${PERL_EXECUTABLE} ${LIBOMP_TOOLS_DIR}/generate-def.pl ${LIBOMP_GDFLAGS} -D NAME=${LIBOMP_LIB_FILE} -D NOORDINALS
@@ -298,27 +324,46 @@ if(WIN32)
     # while this merely generates an import library off a def file, CMAKE still requires it to have a "source" so feed it a dummy one,
     # making it a .txt which CMAKE will filter out from the librarian (a .cpp will make lib.exe punt trying to resolve the .def symbols)
     add_library(${LIBOMP_IMP_LIB_TARGET} STATIC kmp_dummy.txt)
+    set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES FOLDER "OpenMP/Libraries")
     set_target_properties(${LIBOMP_IMP_LIB_TARGET} PROPERTIES
         PREFIX "" SUFFIX "" OUTPUT_NAME "${LIBOMP_IMP_LIB_FILE}" LINKER_LANGUAGE ${LIBOMP_LINKER_LANGUAGE}
         STATIC_LIBRARY_OPTIONS "${CMAKE_LINK_DEF_FILE_FLAG}${CMAKE_CURRENT_BINARY_DIR}/${LIBOMPIMP_GENERATED_DEF_FILE}")
     add_dependencies(${LIBOMP_IMP_LIB_TARGET} libompimp-needed-def-file)
+    add_dependencies(omp ${LIBOMP_IMP_LIB_TARGET})
   endif()
 endif()
 
 # Building the Fortran module files
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
-if(${LIBOMP_FORTRAN_MODULES})
-  configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
-  configure_file(${LIBOMP_INC_DIR}/omp_lib.f90.var omp_lib.f90 @ONLY)
+configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
+configure_file(${LIBOMP_INC_DIR}/omp_lib.F90.var omp_lib.F90 @ONLY)
+
+set(BUILD_FORTRAN_MODULES False)
+if (NOT ${LIBOMP_FORTRAN_MODULES_COMPILER} STREQUAL "")
+  # If libomp is built as an LLVM runtime and the flang compiler is available,
+  # compile the Fortran module files.
+  message(STATUS "configuring openmp to build Fortran module files using ${LIBOMP_FORTRAN_MODULES_COMPILER}")
+  set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
+  add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
+  add_custom_command(
+    OUTPUT omp_lib.mod omp_lib_kinds.mod
+    COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE}
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}
+      ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
+  )
+  set(BUILD_FORTRAN_MODULES True)
+elseif(${LIBOMP_FORTRAN_MODULES})
+  # The following requests explicit building of the Fortran module files
   # Workaround for gfortran to build modules with the
   # omp_sched_monotonic integer parameter
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
     set(ADDITIONAL_Fortran_FLAGS "-fno-range-check")
   endif()
   add_custom_target(libomp-mod ALL DEPENDS omp_lib.mod omp_lib_kinds.mod)
+  set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Misc")
   libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
   if(CMAKE_Fortran_COMPILER_SUPPORTS_F90)
-    set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.f90)
+    set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
   else()
     message(FATAL_ERROR "Fortran module build requires Fortran 90 compiler")
   endif()
@@ -330,6 +375,7 @@ if(${LIBOMP_FORTRAN_MODULES})
       ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
   )
   set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES omp_lib${CMAKE_C_OUTPUT_EXTENSION})
+  set(BUILD_FORTRAN_MODULES True)
 endif()
 
 # Move files to exports/ directory if requested
@@ -340,6 +386,7 @@ endif()
 # Micro test rules for after library has been built (cmake/LibompMicroTests.cmake)
 include(LibompMicroTests)
 add_custom_target(libomp-micro-tests)
+set_target_properties(libomp-micro-tests PROPERTIES FOLDER "OpenMP/Tests")
 if(NOT ${MIC} AND NOT CMAKE_CROSSCOMPILING)
   add_dependencies(libomp-micro-tests libomp-test-touch)
 endif()
@@ -393,21 +440,25 @@ else()
 endif()
 install(
   FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/omp.h
-  ${CMAKE_CURRENT_BINARY_DIR}/ompx.h
+  ${LIBOMP_HEADERS_INTDIR}/omp.h
+  ${LIBOMP_HEADERS_INTDIR}/ompx.h
   DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
 )
 if(${LIBOMP_OMPT_SUPPORT})
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
+  install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
   # install under legacy name ompt.h
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
+  install(FILES ${LIBOMP_HEADERS_INTDIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
   set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 endif()
-if(${LIBOMP_FORTRAN_MODULES})
+if(${BUILD_FORTRAN_MODULES})
+  set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
+  if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
+    set (destination ${LIBOMP_MODULES_INSTALL_PATH})
+  endif()
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.mod
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib_kinds.mod
-    DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH}
+    DESTINATION ${destination}
   )
 endif()

@@ -12,7 +12,6 @@ FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
-  Machine: EM_X86_64
 Sections:
   - Name: .dynamic
     Type: SHT_DYNAMIC
@@ -29,10 +28,35 @@ FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
   Type:    ET_EXEC
-  Machine: EM_X86_64
 Sections:
   - Name: .dynamic
     Type: SHT_DYNAMIC
     Entries:
       - Tag:   DT_SONAME
         Value: 1
+
+# RUN: yaml2obj %s --docnum=3 -o %t.invalidaddr
+# RUN: llvm-objdump -p %t.invalidaddr 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t.invalidaddr --implicit-check-not=warning: --check-prefix=ADDR
+
+# ADDR:       Dynamic Section:
+# ADDR-NEXT:  warning: '[[FILE]]': virtual address is not in any segment: 0x474
+# ADDR-NEXT:    NEEDED       0xffffffffbe5a0b5f
+# ADDR-NEXT:    STRTAB       0x0000000000000474
+
+---
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag: DT_NEEDED
+        Value: 0xFFFFFFFFBE5A0B5F
+      - Tag: DT_STRTAB
+        Value: 0x474
+      - Tag: DT_NULL
+        Value: 0x0

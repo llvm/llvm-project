@@ -602,21 +602,28 @@ protected:
 
   /// Whether the external AST source has provided a layout for this
   /// record.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseExternalLayout : 1;
 
   /// Whether we need to infer alignment, even when we have an
   /// externally-provided layout.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned InferAlignment : 1;
 
   /// Packed - Whether the record is packed or not.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Packed : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnion : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMac68kAlign : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsNaturalAlign : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsMsStruct : 1;
 
   /// UnfilledBitsInLastUnit - If the last field laid out was a bitfield,
@@ -2349,7 +2356,7 @@ static const CXXMethodDecl *computeKeyFunction(ASTContext &Context,
     if (!MD->isVirtual())
       continue;
 
-    if (MD->isPure())
+    if (MD->isPureVirtual())
       continue;
 
     // Ignore implicit member functions, they are always marked as inline, but
@@ -2451,6 +2458,11 @@ static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
 }
 
 static bool isMsLayout(const ASTContext &Context) {
+  // Check if it's CUDA device compilation; ensure layout consistency with host.
+  if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice &&
+      Context.getAuxTargetInfo())
+    return Context.getAuxTargetInfo()->getCXXABI().isMicrosoft();
+
   return Context.getTargetInfo().getCXXABI().isMicrosoft();
 }
 
@@ -2942,8 +2954,8 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
   }
 
   if (!FoundBase) {
-    if (MDCUsesEBO && BaseDecl->isEmpty()) {
-      assert(BaseLayout.getNonVirtualSize() == CharUnits::Zero());
+    if (MDCUsesEBO && BaseDecl->isEmpty() &&
+        (BaseLayout.getNonVirtualSize() == CharUnits::Zero())) {
       BaseOffset = CharUnits::Zero();
     } else {
       // Otherwise, lay the base out at the end of the MDC.
@@ -3293,7 +3305,7 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
   // Seed the working set with our non-destructor, non-pure virtual methods.
   for (const CXXMethodDecl *MD : RD->methods())
     if (MicrosoftVTableContext::hasVtableSlot(MD) &&
-        !isa<CXXDestructorDecl>(MD) && !MD->isPure())
+        !isa<CXXDestructorDecl>(MD) && !MD->isPureVirtual())
       Work.insert(MD);
   while (!Work.empty()) {
     const CXXMethodDecl *MD = *Work.begin();

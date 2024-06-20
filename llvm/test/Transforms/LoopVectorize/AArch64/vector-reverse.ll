@@ -17,9 +17,9 @@ define void @vector_reverse_f64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT: %[[REVERSE:.*]] = shufflevector <8 x double> %[[WIDE]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT: %[[FADD:.*]] = fadd <8 x double> %[[REVERSE]]
 ; CHECK-NEXT: %[[GEP2:.*]] = getelementptr inbounds double, ptr {{.*}}, i64 {{.*}}
-; CHECK-NEXT: %[[REVERSE6:.*]] = shufflevector <8 x double> %[[FADD]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT: %[[GEP3:.*]] = getelementptr inbounds double, ptr %[[GEP2]], i32 0
 ; CHECK-NEXT: %[[GEP4:.*]] = getelementptr inbounds double, ptr %[[GEP3]], i32 -7
+; CHECK-NEXT: %[[REVERSE6:.*]] = shufflevector <8 x double> %[[FADD]], <8 x double> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:  store <8 x double> %[[REVERSE6]], ptr %[[GEP4]], align 8
 
 entry:
@@ -50,9 +50,9 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT: %[[REVERSE:.*]] = shufflevector <8 x i64> %[[WIDE]], <8 x i64> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT: %[[FADD:.*]] = add <8 x i64> %[[REVERSE]]
 ; CHECK-NEXT: %[[GEP2:.*]] = getelementptr inbounds i64, ptr {{.*}}, i64 {{.*}}
-; CHECK-NEXT: %[[REVERSE6:.*]] = shufflevector <8 x i64> %[[FADD]], <8 x i64> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT: %[[GEP3:.*]] = getelementptr inbounds i64, ptr %[[GEP2]], i32 0
 ; CHECK-NEXT: %[[GEP4:.*]] = getelementptr inbounds i64, ptr %[[GEP3]], i32 -7
+; CHECK-NEXT: %[[REVERSE6:.*]] = shufflevector <8 x i64> %[[FADD]], <8 x i64> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:  store <8 x i64> %[[REVERSE6]], ptr %[[GEP4]], align 8
 
 entry:

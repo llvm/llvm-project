@@ -46,10 +46,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#include <unistd.h>
-#endif
-
 using namespace lld;
 using namespace llvm::opt;
 using namespace llvm;
@@ -73,11 +69,21 @@ enum {
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info infoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
-               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
-  {PREFIX,      NAME,        HELPTEXT,                                         \
-   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
-   PARAM,       FLAGS,       VISIBILITY,                                       \
-   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+               VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
+               VALUES)                                                         \
+  {PREFIX,                                                                     \
+   NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   HELPTEXTSFORVARIANTS,                                                       \
+   METAVAR,                                                                    \
+   OPT_##ID,                                                                   \
+   opt::Option::KIND##Class,                                                   \
+   PARAM,                                                                      \
+   FLAGS,                                                                      \
+   VISIBILITY,                                                                 \
+   OPT_##GROUP,                                                                \
+   OPT_##ALIAS,                                                                \
+   ALIASARGS,                                                                  \
    VALUES},
 #include "Options.inc"
 #undef OPTION
@@ -274,8 +280,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lldmap:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_reproduce))
     add("-reproduce:" + StringRef(a->getValue()));
-  if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
-    add("-lldltocache:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_file_alignment))
     add("-filealign:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_section_alignment))
@@ -297,10 +301,30 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     StringRef v = a->getValue();
     if (!v.empty())
       add("-pdb:" + v);
+    if (args.hasArg(OPT_strip_all)) {
+      add("-debug:nodwarf,nosymtab");
+    } else if (args.hasArg(OPT_strip_debug)) {
+      add("-debug:nodwarf,symtab");
+    }
   } else if (args.hasArg(OPT_strip_debug)) {
     add("-debug:symtab");
   } else if (!args.hasArg(OPT_strip_all)) {
     add("-debug:dwarf");
+  }
+  if (auto *a = args.getLastArg(OPT_build_id)) {
+    StringRef v = a->getValue();
+    if (v == "none")
+      add("-build-id:no");
+    else {
+      if (!v.empty())
+        warn("unsupported build id hashing: " + v + ", using default hashing.");
+      add("-build-id");
+    }
+  } else {
+    if (args.hasArg(OPT_strip_debug) || args.hasArg(OPT_strip_all))
+      add("-build-id:no");
+    else
+      add("-build-id");
   }
 
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
@@ -332,6 +356,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (args.getLastArgValue(OPT_m) != "thumb2pe" &&
       args.getLastArgValue(OPT_m) != "arm64pe" &&
+      args.getLastArgValue(OPT_m) != "arm64ecpe" &&
       args.hasFlag(OPT_disable_dynamicbase, OPT_dynamicbase, false))
     add("-dynamicbase:no");
   if (args.hasFlag(OPT_disable_high_entropy_va, OPT_high_entropy_va, false))
@@ -395,6 +420,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-machine:arm");
     else if (s == "arm64pe")
       add("-machine:arm64");
+    else if (s == "arm64ecpe")
+      add("-machine:arm64ec");
     else
       error("unknown parameter: -m" + s);
   }
@@ -424,8 +451,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     add("-mllvm:-mcpu=" + StringRef(arg->getValue()));
-  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
-    add("-opt:lldltojobs=" + StringRef(arg->getValue()));
   if (auto *arg = args.getLastArg(OPT_lto_O))
     add("-opt:lldlto=" + StringRef(arg->getValue()));
   if (auto *arg = args.getLastArg(OPT_lto_CGO))
@@ -436,6 +461,29 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-lto-cs-profile-generate");
   if (auto *arg = args.getLastArg(OPT_lto_cs_profile_file))
     add("-lto-cs-profile-file:" + StringRef(arg->getValue()));
+  if (args.hasArg(OPT_plugin_opt_emit_llvm))
+    add("-lldemit:llvm");
+  if (args.hasArg(OPT_lto_emit_asm))
+    add("-lldemit:asm");
+  if (auto *arg = args.getLastArg(OPT_lto_sample_profile))
+    add("-lto-sample-profile:" + StringRef(arg->getValue()));
+
+  if (auto *a = args.getLastArg(OPT_thinlto_cache_dir))
+    add("-lldltocache:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_thinlto_cache_policy))
+    add("-lldltocachepolicy:" + StringRef(a->getValue()));
+  if (args.hasArg(OPT_thinlto_emit_imports_files))
+    add("-thinlto-emit-imports-files");
+  if (args.hasArg(OPT_thinlto_index_only))
+    add("-thinlto-index-only");
+  if (auto *arg = args.getLastArg(OPT_thinlto_index_only_eq))
+    add("-thinlto-index-only:" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
+    add("-opt:lldltojobs=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_object_suffix_replace_eq))
+    add("-thinlto-object-suffix-replace:" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_prefix_replace_eq))
+    add("-thinlto-prefix-replace:" + StringRef(arg->getValue()));
 
   for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
     add("-mllvm:-" + StringRef(a->getValue()));

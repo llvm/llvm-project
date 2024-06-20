@@ -32,7 +32,8 @@ class IteratorRangeChecker
                    check::PreStmt<ArraySubscriptExpr>,
                    check::PreStmt<MemberExpr>> {
 
-  std::unique_ptr<BugType> OutOfRangeBugType;
+  const BugType OutOfRangeBugType{this, "Iterator out of range",
+                                  "Misuse of STL APIs"};
 
   void verifyDereference(CheckerContext &C, SVal Val) const;
   void verifyIncrement(CheckerContext &C, SVal Iter) const;
@@ -42,12 +43,10 @@ class IteratorRangeChecker
   void verifyAdvance(CheckerContext &C, SVal LHS, SVal RHS) const;
   void verifyPrev(CheckerContext &C, SVal LHS, SVal RHS) const;
   void verifyNext(CheckerContext &C, SVal LHS, SVal RHS) const;
-  void reportBug(const StringRef &Message, SVal Val, CheckerContext &C,
+  void reportBug(StringRef Message, SVal Val, CheckerContext &C,
                  ExplodedNode *ErrNode) const;
 
 public:
-  IteratorRangeChecker();
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const UnaryOperator *UO, CheckerContext &C) const;
   void checkPreStmt(const BinaryOperator *BO, CheckerContext &C) const;
@@ -57,24 +56,24 @@ public:
   using AdvanceFn = void (IteratorRangeChecker::*)(CheckerContext &, SVal,
                                                    SVal) const;
 
+  // FIXME: these three functions are also listed in IteratorModeling.cpp,
+  // perhaps unify their handling?
   CallDescriptionMap<AdvanceFn> AdvanceFunctions = {
-      {{{"std", "advance"}, 2}, &IteratorRangeChecker::verifyAdvance},
-      {{{"std", "prev"}, 2}, &IteratorRangeChecker::verifyPrev},
-      {{{"std", "next"}, 2}, &IteratorRangeChecker::verifyNext},
+      {{CDM::SimpleFunc, {"std", "advance"}, 2},
+       &IteratorRangeChecker::verifyAdvance},
+      {{CDM::SimpleFunc, {"std", "prev"}, 2},
+       &IteratorRangeChecker::verifyPrev},
+      {{CDM::SimpleFunc, {"std", "next"}, 2},
+       &IteratorRangeChecker::verifyNext},
   };
 };
 
 bool isPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
 bool isAheadOfRange(ProgramStateRef State, const IteratorPosition &Pos);
 bool isBehindPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
-bool isZero(ProgramStateRef State, const NonLoc &Val);
+bool isZero(ProgramStateRef State, NonLoc Val);
 
-} //namespace
-
-IteratorRangeChecker::IteratorRangeChecker() {
-  OutOfRangeBugType.reset(
-      new BugType(this, "Iterator out of range", "Misuse of STL APIs"));
-}
+} // namespace
 
 void IteratorRangeChecker::checkPreCall(const CallEvent &Call,
                                         CheckerContext &C) const {
@@ -275,10 +274,10 @@ void IteratorRangeChecker::verifyNext(CheckerContext &C, SVal LHS,
   verifyRandomIncrOrDecr(C, OO_Plus, LHS, RHS);
 }
 
-void IteratorRangeChecker::reportBug(const StringRef &Message, SVal Val,
+void IteratorRangeChecker::reportBug(StringRef Message, SVal Val,
                                      CheckerContext &C,
                                      ExplodedNode *ErrNode) const {
-  auto R = std::make_unique<PathSensitiveBugReport>(*OutOfRangeBugType, Message,
+  auto R = std::make_unique<PathSensitiveBugReport>(OutOfRangeBugType, Message,
                                                     ErrNode);
 
   const auto *Pos = getIteratorPosition(C.getState(), Val);
@@ -295,7 +294,7 @@ bool isLess(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 bool isGreater(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 bool isEqual(ProgramStateRef State, SymbolRef Sym1, SymbolRef Sym2);
 
-bool isZero(ProgramStateRef State, const NonLoc &Val) {
+bool isZero(ProgramStateRef State, NonLoc Val) {
   auto &BVF = State->getBasicVals();
   return compare(State, Val,
                  nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(0))),

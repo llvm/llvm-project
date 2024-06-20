@@ -146,10 +146,17 @@ void ODRHash::AddTemplateName(TemplateName Name) {
   case TemplateName::Template:
     AddDecl(Name.getAsTemplateDecl());
     break;
+  case TemplateName::QualifiedTemplate: {
+    QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName();
+    if (NestedNameSpecifier *NNS = QTN->getQualifier())
+      AddNestedNameSpecifier(NNS);
+    AddBoolean(QTN->hasTemplateKeyword());
+    AddTemplateName(QTN->getUnderlyingTemplate());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
-  case TemplateName::QualifiedTemplate:
   case TemplateName::DependentTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
@@ -180,6 +187,10 @@ void ODRHash::AddTemplateArgument(TemplateArgument TA) {
       TA.getAsIntegral().Profile(ID);
       break;
     }
+    case TemplateArgument::StructuralValue:
+      AddQualType(TA.getStructuralValueType());
+      AddStructuralValue(TA.getAsStructuralValue());
+      break;
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion:
       AddTemplateName(TA.getAsTemplateOrTemplatePattern());
@@ -458,7 +469,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddTemplateArgument(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -476,7 +487,7 @@ public:
         D->hasDefaultArgument() && !D->defaultArgumentWasInherited();
     Hash.AddBoolean(hasDefaultArgument);
     if (hasDefaultArgument) {
-      AddStmt(D->getDefaultArgument());
+      AddTemplateArgument(D->getDefaultArgument().getArgument());
     }
     Hash.AddBoolean(D->isParameterPack());
 
@@ -688,9 +699,15 @@ void ODRHash::AddFunctionDecl(const FunctionDecl *Function,
   ID.AddInteger(Function->getStorageClass());
   AddBoolean(Function->isInlineSpecified());
   AddBoolean(Function->isVirtualAsWritten());
-  AddBoolean(Function->isPure());
+  AddBoolean(Function->isPureVirtual());
   AddBoolean(Function->isDeletedAsWritten());
   AddBoolean(Function->isExplicitlyDefaulted());
+
+  StringLiteral *DeletedMessage = Function->getDeletedMessage();
+  AddBoolean(DeletedMessage);
+
+  if (DeletedMessage)
+    ID.AddString(DeletedMessage->getBytes());
 
   AddDecl(Function);
 
@@ -742,7 +759,7 @@ void ODRHash::AddEnumDecl(const EnumDecl *Enum) {
     AddBoolean(Enum->isScopedUsingClassTag());
 
   if (Enum->getIntegerTypeSourceInfo())
-    AddQualType(Enum->getIntegerType());
+    AddQualType(Enum->getIntegerType().getCanonicalType());
 
   // Filter out sub-Decls which will not be processed in order to get an
   // accurate count of Decl's.
@@ -938,6 +955,10 @@ public:
   void VisitConstantArrayType(const ConstantArrayType *T) {
     T->getSize().Profile(ID);
     VisitArrayType(T);
+  }
+
+  void VisitArrayParameterType(const ArrayParameterType *T) {
+    VisitConstantArrayType(T);
   }
 
   void VisitDependentSizedArrayType(const DependentSizedArrayType *T) {
@@ -1248,4 +1269,67 @@ void ODRHash::AddQualType(QualType T) {
 
 void ODRHash::AddBoolean(bool Value) {
   Bools.push_back(Value);
+}
+
+void ODRHash::AddStructuralValue(const APValue &Value) {
+  ID.AddInteger(Value.getKind());
+
+  // 'APValue::Profile' uses pointer values to make hash for LValue and
+  // MemberPointer, but they differ from one compiler invocation to another.
+  // So, handle them explicitly here.
+
+  switch (Value.getKind()) {
+  case APValue::LValue: {
+    const APValue::LValueBase &Base = Value.getLValueBase();
+    if (!Base) {
+      ID.AddInteger(Value.getLValueOffset().getQuantity());
+      break;
+    }
+
+    assert(Base.is<const ValueDecl *>());
+    AddDecl(Base.get<const ValueDecl *>());
+    ID.AddInteger(Value.getLValueOffset().getQuantity());
+
+    bool OnePastTheEnd = Value.isLValueOnePastTheEnd();
+    if (Value.hasLValuePath()) {
+      QualType TypeSoFar = Base.getType();
+      for (APValue::LValuePathEntry E : Value.getLValuePath()) {
+        if (const auto *AT = TypeSoFar->getAsArrayTypeUnsafe()) {
+          if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+            OnePastTheEnd |= CAT->getSize() == E.getAsArrayIndex();
+          TypeSoFar = AT->getElementType();
+        } else {
+          const Decl *D = E.getAsBaseOrMember().getPointer();
+          if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+            if (FD->getParent()->isUnion())
+              ID.AddInteger(FD->getFieldIndex());
+            TypeSoFar = FD->getType();
+          } else {
+            TypeSoFar =
+                D->getASTContext().getRecordType(cast<CXXRecordDecl>(D));
+          }
+        }
+      }
+    }
+    unsigned Val = 0;
+    if (Value.isNullPointer())
+      Val |= 1 << 0;
+    if (OnePastTheEnd)
+      Val |= 1 << 1;
+    if (Value.hasLValuePath())
+      Val |= 1 << 2;
+    ID.AddInteger(Val);
+    break;
+  }
+  case APValue::MemberPointer: {
+    const ValueDecl *D = Value.getMemberPointerDecl();
+    assert(D);
+    AddDecl(D);
+    ID.AddInteger(
+        D->getASTContext().getMemberPointerPathAdjustment(Value).getQuantity());
+    break;
+  }
+  default:
+    Value.Profile(ID);
+  }
 }

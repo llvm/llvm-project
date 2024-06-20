@@ -49,6 +49,14 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isPointerToConst) {
   return pointerType(pointee(qualType(isConstQualified())));
 }
 
+// Returns QualType matcher for target char type only.
+AST_MATCHER(QualType, isSimpleChar) {
+  const auto ActualType = Node.getTypePtr();
+  return ActualType &&
+         (ActualType->isSpecificBuiltinType(BuiltinType::Char_S) ||
+          ActualType->isSpecificBuiltinType(BuiltinType::Char_U));
+}
+
 AST_MATCHER(Expr, hasUnevaluatedContext) {
   if (isa<CXXNoexceptExpr>(Node) || isa<RequiresExpr>(Node))
     return true;
@@ -120,7 +128,7 @@ private:
 
   private:
     MatchMode determineMatchMode(llvm::StringRef Regex) {
-      if (Regex.startswith(":") || Regex.startswith("^:")) {
+      if (Regex.starts_with(":") || Regex.starts_with("^:")) {
         return MatchMode::MatchFullyQualified;
       }
       return Regex.contains(":") ? MatchMode::MatchQualified

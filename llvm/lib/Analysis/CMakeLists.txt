@@ -55,6 +55,7 @@ add_llvm_component_library(LLVMAnalysis
   DependenceAnalysis.cpp
   DependenceGraphBuilder.cpp
   DevelopmentModeInlineAdvisor.cpp
+  DomConditionCache.cpp
   DomPrinter.cpp
   DomTreeUpdater.cpp
   DominanceFrontier.cpp
@@ -75,8 +76,6 @@ add_llvm_component_library(LLVMAnalysis
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
   InteractiveModelRunner.cpp
-  Interval.cpp
-  IntervalPartition.cpp
   LazyBranchProbabilityInfo.cpp
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp
@@ -140,7 +139,6 @@ add_llvm_component_library(LLVMAnalysis
   ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
-  VFABIDemangling.cpp
   ${GeneratedMLSources}
 
   ADDITIONAL_HEADER_DIRS
@@ -161,3 +159,9 @@ add_llvm_component_library(LLVMAnalysis
   Support
   TargetParser
   )
+
+include(CheckCXXSymbolExists)
+check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
+if(HAS_LOGF128)
+ target_compile_definitions(LLVMAnalysis PRIVATE HAS_LOGF128)
+endif()

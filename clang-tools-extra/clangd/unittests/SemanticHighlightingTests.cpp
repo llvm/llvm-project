@@ -621,7 +621,7 @@ sizeof...($TemplateParameter[[Elements]]);
       struct $Class_def[[Foo]] {
         int $Field_decl[[Waldo]];
         void $Method_def[[bar]]() {
-          $Class[[Foo]]().$Field_dependentName[[Waldo]];
+          $Class[[Foo]]().$Field[[Waldo]];
         }
         template $Bracket[[<]]typename $TemplateParameter_def[[U]]$Bracket[[>]]
         void $Method_def[[bar1]]() {
@@ -1075,6 +1075,22 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
           template $Bracket[[<]]int$Bracket[[>]] class $Class_def[[Y]] {
             using $Class[[Y]]$Bracket[[<]]0$Bracket[[>]]::$Unknown_dependentName[[xxx]];
           };
+        };
+    )cpp",
+      // Heuristically resolved IndirectFieldDecl
+      R"cpp(
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        struct $Class_def[[Base]] {
+          struct {
+            int $Field_decl[[waldo]];
+          };
+        };
+        template $Bracket[[<]]typename $TemplateParameter_def[[T]]$Bracket[[>]]
+        struct $Class_def[[Derived]] : $Class[[Base]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]] {
+          using $Class[[Base]]$Bracket[[<]]$TemplateParameter[[T]]$Bracket[[>]]::$Field_dependentName[[waldo]];
+          void $Method_def[[foo]]() {
+            $Field_dependentName[[waldo]];
+          }
         };
     )cpp"};
   for (const auto &TestCase : TestCases)

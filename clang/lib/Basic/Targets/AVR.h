@@ -146,7 +146,9 @@ public:
     case 'R': // Integer constant (Range: -6 to 5)
       Info.setRequiresImmediate(-6, 5);
       return true;
-    case 'G': // Floating point constant
+    case 'G': // Floating point constant 0.0
+      Info.setRequiresImmediate(0);
+      return true;
     case 'Q': // A memory address based on Y or Z pointer with displacement.
       return true;
     }
@@ -172,6 +174,10 @@ public:
   bool setCPU(const std::string &Name) override;
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   StringRef getABI() const override { return ABI; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
 
 protected:
   std::string CPU;

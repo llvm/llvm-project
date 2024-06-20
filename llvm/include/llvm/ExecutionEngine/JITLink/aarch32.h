@@ -41,7 +41,13 @@ enum EdgeKind_aarch32 : Edge::Kind {
   /// Absolute 32-bit value relocation
   Data_Pointer32,
 
-  LastDataRelocation = Data_Pointer32,
+  /// Relative 31-bit value relocation that preserves the most-significant bit
+  Data_PRel31,
+
+  /// Create GOT entry and store offset
+  Data_RequestGOTAndTransformToDelta32,
+
+  LastDataRelocation = Data_RequestGOTAndTransformToDelta32,
 
   ///
   /// Relocations of class Arm (covers fixed-width 4-byte instruction subset)
@@ -98,7 +104,11 @@ enum EdgeKind_aarch32 : Edge::Kind {
   Thumb_MovtPrel,
 
   LastThumbRelocation = Thumb_MovtPrel,
-  LastRelocation = LastThumbRelocation,
+
+  /// No-op relocation
+  None,
+
+  LastRelocation = None,
 };
 
 /// Flags enum for AArch32-specific symbol properties
@@ -123,32 +133,29 @@ const char *getEdgeKindName(Edge::Kind K);
 ///
 /// Stubs are often called "veneers" in the official docs and online.
 ///
-enum StubsFlavor {
-  Unsupported = 0,
-  Thumbv7,
+enum class StubsFlavor {
+  Undefined = 0,
+  pre_v7,
+  v7,
 };
 
 /// JITLink sub-arch configuration for Arm CPU models
 struct ArmConfig {
   bool J1J2BranchEncoding = false;
-  StubsFlavor Stubs = Unsupported;
+  StubsFlavor Stubs = StubsFlavor::Undefined;
+  // In the long term, we might want a linker switch like --target1-rel
+  bool Target1Rel = false;
 };
 
 /// Obtain the sub-arch configuration for a given Arm CPU model.
 inline ArmConfig getArmConfigForCPUArch(ARMBuildAttrs::CPUArch CPUArch) {
   ArmConfig ArmCfg;
-  switch (CPUArch) {
-  case ARMBuildAttrs::v7:
-  case ARMBuildAttrs::v8_A:
+  if (CPUArch == ARMBuildAttrs::v7 || CPUArch >= ARMBuildAttrs::v7E_M) {
     ArmCfg.J1J2BranchEncoding = true;
-    ArmCfg.Stubs = Thumbv7;
-    break;
-  default:
-    DEBUG_WITH_TYPE("jitlink", {
-      dbgs() << "  Warning: ARM config not defined for CPU architecture "
-             << getCPUArchName(CPUArch);
-    });
-    break;
+    ArmCfg.Stubs = StubsFlavor::v7;
+  } else {
+    ArmCfg.J1J2BranchEncoding = false;
+    ArmCfg.Stubs = StubsFlavor::pre_v7;
   }
   return ArmCfg;
 }
@@ -195,12 +202,10 @@ struct FixupInfoThumb : public FixupInfoBase {
 ///
 template <EdgeKind_aarch32 Kind> struct FixupInfo {};
 
-namespace {
 struct FixupInfoArmBranch : public FixupInfoArm {
   static constexpr uint32_t Opcode = 0x0a000000;
   static constexpr uint32_t ImmMask = 0x00ffffff;
 };
-} // namespace
 
 template <> struct FixupInfo<Arm_Jump24> : public FixupInfoArmBranch {
   static constexpr uint32_t OpcodeMask = 0x0f000000;
@@ -214,13 +219,11 @@ template <> struct FixupInfo<Arm_Call> : public FixupInfoArmBranch {
   static constexpr uint32_t BitBlx = 0x10000000;
 };
 
-namespace {
 struct FixupInfoArmMov : public FixupInfoArm {
   static constexpr uint32_t OpcodeMask = 0x0ff00000;
   static constexpr uint32_t ImmMask = 0x000f0fff;
   static constexpr uint32_t RegMask = 0x0000f000;
 };
-} // namespace
 
 template <> struct FixupInfo<Arm_MovtAbs> : public FixupInfoArmMov {
   static constexpr uint32_t Opcode = 0x03400000;
@@ -244,13 +247,11 @@ template <> struct FixupInfo<Thumb_Call> : public FixupInfoThumb {
   static constexpr uint16_t LoBitNoBlx = 0x1000;
 };
 
-namespace {
 struct FixupInfoThumbMov : public FixupInfoThumb {
   static constexpr HalfWords OpcodeMask{0xfbf0, 0x8000};
   static constexpr HalfWords ImmMask{0x040f, 0x70ff};
   static constexpr HalfWords RegMask{0x0000, 0x0f00};
 };
-} // namespace
 
 template <> struct FixupInfo<Thumb_MovtAbs> : public FixupInfoThumbMov {
   static constexpr HalfWords Opcode{0xf2c0, 0x0000};
@@ -294,7 +295,8 @@ inline Expected<int64_t> readAddend(LinkGraph &G, Block &B,
   if (Kind <= LastThumbRelocation)
     return readAddendThumb(G, B, Offset, Kind, ArmCfg);
 
-  llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
+  assert(Kind == None && "Not associated with a relocation class");
+  return 0;
 }
 
 /// Helper function to apply the fixup for Data-class relocations.
@@ -321,76 +323,86 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   if (Kind <= LastThumbRelocation)
     return applyFixupThumb(G, B, E, ArmCfg);
 
-  llvm_unreachable("Relocation must be of class Data, Arm or Thumb");
+  assert(Kind == None && "Not associated with a relocation class");
+  return Error::success();
 }
 
-/// Stubs builder for a specific StubsFlavor
-///
-/// Right now we only have one default stub kind, but we want to extend this
-/// and allow creation of specific kinds in the future (e.g. branch range
-/// extension or interworking).
-///
-/// Let's keep it simple for the moment and not wire this through a GOT.
-///
-template <StubsFlavor Flavor>
-class StubsManager : public TableManager<StubsManager<Flavor>> {
+/// Populate a Global Offset Table from edges that request it.
+class GOTBuilder : public TableManager<GOTBuilder> {
 public:
-  StubsManager() = default;
+  static StringRef getSectionName() { return "$__GOT"; }
 
-  /// Name of the object file section that will contain all our stubs.
-  static StringRef getSectionName();
-
-  /// Implements link-graph traversal via visitExistingEdges().
-  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getTarget().isDefined())
-      return false;
-
-    switch (E.getKind()) {
-    case Thumb_Call:
-    case Thumb_Jump24: {
-      DEBUG_WITH_TYPE("jitlink", {
-        dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
-               << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
-               << formatv("{0:x}", E.getOffset()) << ")\n";
-      });
-      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
-      return true;
-    }
-    }
-    return false;
-  }
-
-  /// Create a branch range extension stub for the class's flavor.
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
   Symbol &createEntry(LinkGraph &G, Symbol &Target);
 
 private:
-  /// Create a new node in the link-graph for the given stub template.
-  template <size_t Size>
-  Block &addStub(LinkGraph &G, const uint8_t (&Code)[Size],
-                 uint64_t Alignment) {
-    ArrayRef<char> Template(reinterpret_cast<const char *>(Code), Size);
-    return G.createContentBlock(getStubsSection(G), Template,
-                                orc::ExecutorAddr(), Alignment, 0);
+  Section *GOTSection = nullptr;
+};
+
+/// Stubs builder emits non-position-independent Arm stubs for pre-v7 CPUs.
+/// These architectures have no MovT/MovW instructions and don't support Thumb2.
+/// BL is the only Thumb instruction that can generate stubs and they can always
+/// be transformed into BLX.
+class StubsManager_prev7 {
+public:
+  StubsManager_prev7() = default;
+
+  /// Name of the object file section that will contain all our stubs.
+  static StringRef getSectionName() {
+    return "__llvm_jitlink_aarch32_STUBS_prev7";
   }
 
-  /// Get or create the object file section that will contain all our stubs.
-  Section &getStubsSection(LinkGraph &G) {
-    if (!StubsSection)
-      StubsSection = &G.createSection(getSectionName(),
-                                      orc::MemProt::Read | orc::MemProt::Exec);
-    return *StubsSection;
+  /// Implements link-graph traversal via visitExistingEdges()
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
+
+private:
+  // Each stub uses a single block that can have 2 entryponts, one for Arm and
+  // one for Thumb
+  struct StubMapEntry {
+    Block *B = nullptr;
+    Symbol *ArmEntry = nullptr;
+    Symbol *ThumbEntry = nullptr;
+  };
+
+  std::pair<StubMapEntry *, bool> getStubMapSlot(StringRef Name) {
+    auto &&[Stubs, NewStub] = StubMap.try_emplace(Name);
+    return std::make_pair(&Stubs->second, NewStub);
   }
 
+  Symbol *getOrCreateSlotEntrypoint(LinkGraph &G, StubMapEntry &Slot,
+                                    bool Thumb);
+
+  DenseMap<StringRef, StubMapEntry> StubMap;
   Section *StubsSection = nullptr;
 };
 
-/// Create a branch range extension stub with Thumb encoding for v7 CPUs.
-template <>
-Symbol &StubsManager<Thumbv7>::createEntry(LinkGraph &G, Symbol &Target);
+/// Stubs builder for v7 emits non-position-independent Arm and Thumb stubs.
+class StubsManager_v7 {
+public:
+  StubsManager_v7() = default;
 
-template <> inline StringRef StubsManager<Thumbv7>::getSectionName() {
-  return "__llvm_jitlink_aarch32_STUBS_Thumbv7";
-}
+  /// Name of the object file section that will contain all our stubs.
+  static StringRef getSectionName() {
+    return "__llvm_jitlink_aarch32_STUBS_v7";
+  }
+
+  /// Implements link-graph traversal via visitExistingEdges().
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E);
+
+private:
+  // Two slots per external: Arm and Thumb
+  using StubMapEntry = std::tuple<Symbol *, Symbol *>;
+
+  Symbol *&getStubSymbolSlot(StringRef Name, bool Thumb) {
+    StubMapEntry &Stubs = StubMap.try_emplace(Name).first->second;
+    if (Thumb)
+      return std::get<1>(Stubs);
+    return std::get<0>(Stubs);
+  }
+
+  DenseMap<StringRef, StubMapEntry> StubMap;
+  Section *StubsSection = nullptr;
+};
 
 } // namespace aarch32
 } // namespace jitlink

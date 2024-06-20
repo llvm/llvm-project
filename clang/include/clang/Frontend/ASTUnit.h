@@ -241,7 +241,7 @@ private:
 
   /// A list of the serialization ID numbers for each of the top-level
   /// declarations parsed within the precompiled preamble.
-  std::vector<serialization::DeclID> TopLevelDeclsInPreamble;
+  std::vector<LocalDeclID> TopLevelDeclsInPreamble;
 
   /// Whether we should be caching code-completion results.
   bool ShouldCacheCodeCompletionResults : 1;
@@ -697,7 +697,8 @@ public:
                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                   const FileSystemOptions &FileSystemOpts,
                   std::shared_ptr<HeaderSearchOptions> HSOpts,
-                  bool UseDebugInfo = false, bool OnlyLocalDecls = false,
+                  std::shared_ptr<LangOptions> LangOpts = nullptr,
+                  bool OnlyLocalDecls = false,
                   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
                   bool AllowASTWithCompilerErrors = false,
                   bool UserFilesAreVolatile = false,
@@ -904,7 +905,7 @@ public:
                     SourceManager &SourceMgr, FileManager &FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
-                    std::unique_ptr<SyntaxOnlyAction> Act = nullptr);
+                    std::unique_ptr<SyntaxOnlyAction> Act);
 
   /// Save this translation unit to a file with the given name.
   ///

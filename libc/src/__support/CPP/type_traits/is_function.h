@@ -12,12 +12,11 @@
 #include "src/__support/CPP/type_traits/is_const.h"
 #include "src/__support/CPP/type_traits/is_reference.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE::cpp {
 
 // is_function
-#if LIBC_HAS_BUILTIN(__is_function)
+#if __has_builtin(__is_function)
 template <typename T>
 struct is_function : integral_constant<bool, __is_function(T)> {};
 #else

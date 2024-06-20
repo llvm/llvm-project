@@ -43,3 +43,19 @@ TEST(LlvmLibcFixedVectorTest, Destroy) {
   LIBC_NAMESPACE::FixedVector<int, 20>::destroy(&fixed_vector);
   ASSERT_TRUE(fixed_vector.empty());
 }
+
+TEST(LlvmLibcFixedVectorTest, Iteration) {
+  LIBC_NAMESPACE::FixedVector<int, 20> v;
+  for (int i = 0; i < 3; i++)
+    v.push_back(i);
+  auto it = v.rbegin();
+  ASSERT_EQ(*it, 2);
+  ASSERT_EQ(*++it, 1);
+  ASSERT_EQ(*++it, 0);
+  // TODO: need an overload of Test::test for iterators?
+  // ASSERT_EQ(++it, v.rend());
+  // ASSERT_EQ(v.rbegin(), v.rbegin());
+  ASSERT_TRUE(++it == v.rend());
+  for (auto it = v.rbegin(), e = v.rend(); it != e; ++it)
+    ASSERT_GT(*it, -1);
+}

@@ -20,6 +20,7 @@ static_library("Core") {
     "BlockCounter.cpp",
     "BugReporter.cpp",
     "BugReporterVisitors.cpp",
+    "BugSuppression.cpp",
     "CallDescription.cpp",
     "CallEvent.cpp",
     "Checker.cpp",

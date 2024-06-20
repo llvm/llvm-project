@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
+// REQUIRES: can-create-symlinks
+// UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -20,7 +21,7 @@
 // bool create_directory(const path& p, const path& attr);
 // bool create_directory(const path& p, const path& attr, error_code& ec) noexcept;
 
-#include "filesystem_include.h"
+#include <filesystem>
 #include <type_traits>
 #include <cassert>
 
@@ -29,7 +30,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-
+namespace fs = std::filesystem;
 using namespace fs;
 
 fs::perms read_umask() {

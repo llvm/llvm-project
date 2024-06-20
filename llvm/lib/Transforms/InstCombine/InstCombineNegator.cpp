@@ -43,14 +43,11 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
 namespace llvm {
-class AssumptionCache;
 class DataLayout;
-class DominatorTree;
 class LLVMContext;
 } // namespace llvm
 
@@ -97,13 +94,13 @@ static cl::opt<unsigned>
                     cl::desc("What is the maximal lookup depth when trying to "
                              "check for viability of negation sinking."));
 
-Negator::Negator(LLVMContext &C, const SimplifyQuery &SQ, bool IsTrulyNegation_)
-    : Builder(C, TargetFolder(SQ.DL),
+Negator::Negator(LLVMContext &C, const DataLayout &DL, bool IsTrulyNegation_)
+    : Builder(C, TargetFolder(DL),
               IRBuilderCallbackInserter([&](Instruction *I) {
                 ++NegatorNumInstructionsCreatedTotal;
                 NewInstructions.push_back(I);
               })),
-      SQ(SQ), IsTrulyNegation(IsTrulyNegation_) {}
+      IsTrulyNegation(IsTrulyNegation_) {}
 
 #if LLVM_ENABLE_STATS
 Negator::~Negator() {
@@ -143,7 +140,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
 
   // Integral constants can be freely negated.
   if (match(V, m_AnyIntegralConstant()))
-    return ConstantExpr::getNeg(cast<Constant>(V), /*HasNUW=*/false,
+    return ConstantExpr::getNeg(cast<Constant>(V),
                                 /*HasNSW=*/false);
 
   // If we have a non-instruction, then give up.
@@ -252,7 +249,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     unsigned SrcWidth = SrcOp->getType()->getScalarSizeInBits();
     const APInt &FullShift = APInt(SrcWidth, SrcWidth - 1);
     if (IsTrulyNegation &&
-        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowUndef(FullShift)))) {
+        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowPoison(FullShift)))) {
       Value *Ashr = Builder.CreateAShr(X, FullShift);
       return Builder.CreateSExt(Ashr, I->getType());
     }
@@ -261,9 +258,9 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   case Instruction::And: {
     Constant *ShAmt;
     // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)
-    if (match(I, m_c_And(m_OneUse(m_TruncOrSelf(
-                             m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
-                         m_One()))) {
+    if (match(I, m_And(m_OneUse(m_TruncOrSelf(
+                           m_LShr(m_Value(X), m_ImmConstant(ShAmt)))),
+                       m_One()))) {
       unsigned BW = X->getType()->getScalarSizeInBits();
       Constant *BWMinusOne = ConstantInt::get(X->getType(), BW - 1);
       Value *R = Builder.CreateShl(X, Builder.CreateSub(BWMinusOne, ShAmt));
@@ -323,7 +320,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     return NegatedPHI;
   }
   case Instruction::Select: {
-    if (isKnownNegation(I->getOperand(1), I->getOperand(2))) {
+    if (isKnownNegation(I->getOperand(1), I->getOperand(2), /*NeedNSW=*/false,
+                        /*AllowPoison=*/false)) {
       // Of one hand of select is known to be negation of another hand,
       // just swap the hands around.
       auto *NewSelect = cast<SelectInst>(I->clone());
@@ -402,8 +400,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
         I->getName() + ".neg", /* HasNUW */ false, IsNSW);
   }
   case Instruction::Or: {
-    if (!haveNoCommonBitsSet(I->getOperand(0), I->getOperand(1),
-                             SQ.getWithInstruction(I)))
+    if (!cast<PossiblyDisjointInst>(I)->isDisjoint())
       return nullptr; // Don't know how to handle `or` in general.
     std::array<Value *, 2> Ops = getSortedOperandsOfBinOp(I);
     // `or`/`add` are interchangeable when operands have no common bits set.
@@ -539,7 +536,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
   if (!NegatorEnabled || !DebugCounter::shouldExecute(NegatorCounter))
     return nullptr;
 
-  Negator N(Root->getContext(), IC.getSimplifyQuery(), LHSIsZero);
+  Negator N(Root->getContext(), IC.getDataLayout(), LHSIsZero);
   std::optional<Result> Res = N.run(Root, IsNSW);
   if (!Res) { // Negation failed.
     LLVM_DEBUG(dbgs() << "Negator: failed to sink negation into " << *Root

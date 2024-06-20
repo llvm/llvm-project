@@ -77,7 +77,7 @@ static mlir::Value packageBufferizedExpr(mlir::Location loc,
 /// currently enforced by the verifiers that only accept HLFIR value or
 /// variable types which do not include tuples.
 static hlfir::Entity getBufferizedExprStorage(mlir::Value bufferizedExpr) {
-  auto tupleType = bufferizedExpr.getType().dyn_cast<mlir::TupleType>();
+  auto tupleType = mlir::dyn_cast<mlir::TupleType>(bufferizedExpr.getType());
   if (!tupleType)
     return hlfir::Entity{bufferizedExpr};
   assert(tupleType.size() == 2 && "unexpected tuple type");
@@ -90,7 +90,7 @@ static hlfir::Entity getBufferizedExprStorage(mlir::Value bufferizedExpr) {
 /// Helper to extract the clean-up flag from a tuple created by
 /// packageBufferizedExpr.
 static mlir::Value getBufferizedExprMustFreeFlag(mlir::Value bufferizedExpr) {
-  auto tupleType = bufferizedExpr.getType().dyn_cast<mlir::TupleType>();
+  auto tupleType = mlir::dyn_cast<mlir::TupleType>(bufferizedExpr.getType());
   if (!tupleType)
     return bufferizedExpr;
   assert(tupleType.size() == 2 && "unexpected tuple type");
@@ -122,9 +122,10 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
         fir::FortranVariableFlagsAttr::get(
             builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
 
-    auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName,
-                                                      /*shape=*/nullptr,
-                                                      lenParams, declAttrs);
+    auto declareOp =
+        builder.create<hlfir::DeclareOp>(loc, alloc, tmpName,
+                                         /*shape=*/nullptr, lenParams,
+                                         /*dummy_scope=*/nullptr, declAttrs);
 
     int rank = extents.size();
     fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
@@ -152,11 +153,27 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
 
   mlir::Value allocmem = builder.createHeapTemporary(loc, sequenceType, tmpName,
                                                      extents, lenParams);
-  auto declareOp =
-      builder.create<hlfir::DeclareOp>(loc, allocmem, tmpName, shape, lenParams,
-                                       fir::FortranVariableFlagsAttr{});
+  auto declareOp = builder.create<hlfir::DeclareOp>(
+      loc, allocmem, tmpName, shape, lenParams,
+      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
   mlir::Value trueVal = builder.createBool(loc, true);
   return {hlfir::Entity{declareOp.getBase()}, trueVal};
+}
+
+/// Copy \p source into a new temporary and package the temporary into a
+/// <temp,cleanup> tuple. The temporary may be heap or stack allocated.
+static mlir::Value copyInTempAndPackage(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        hlfir::Entity source) {
+  auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
+  builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
+                                  /*keep_lhs_length_if_realloc=*/false,
+                                  /*temporary_lhs=*/true);
+  // Dereference allocatable temporary directly to simplify processing
+  // of its uses.
+  if (temp.isAllocatable())
+    temp = hlfir::derefPointersAndAllocatables(loc, builder, temp);
+  return packageBufferizedExpr(loc, builder, temp, cleanup);
 }
 
 struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
@@ -178,12 +195,7 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     }
     // Otherwise, create a copy in a new buffer.
     hlfir::Entity source = hlfir::Entity{adaptor.getVar()};
-    auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
-    builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
-                                    /*keep_lhs_length_if_realloc=*/false,
-                                    /*temporary_lhs=*/true);
-    mlir::Value bufferizedExpr =
-        packageBufferizedExpr(loc, builder, temp, cleanup);
+    mlir::Value bufferizedExpr = copyInTempAndPackage(loc, builder, source);
     rewriter.replaceOp(asExpr, bufferizedExpr);
     return mlir::success();
   }
@@ -207,7 +219,7 @@ struct ShapeOfOpConversion
     } else {
       // everything else failed so try to create a shape from static type info
       hlfir::ExprType exprTy =
-          adaptor.getExpr().getType().dyn_cast_or_null<hlfir::ExprType>();
+          mlir::dyn_cast_or_null<hlfir::ExprType>(adaptor.getExpr().getType());
       if (exprTy)
         shape = hlfir::genExprShape(builder, loc, exprTy);
     }
@@ -256,9 +268,9 @@ struct AssignOpConversion : public mlir::OpConversionPattern<hlfir::AssignOp> {
     llvm::SmallVector<mlir::Value> newOperands;
     for (mlir::Value operand : adaptor.getOperands())
       newOperands.push_back(getBufferizedExprStorage(operand));
-    rewriter.startRootUpdate(assign);
+    rewriter.startOpModification(assign);
     assign->setOperands(newOperands);
-    rewriter.finalizeRootUpdate(assign);
+    rewriter.finalizeOpModification(assign);
     return mlir::success();
   }
 };
@@ -320,7 +332,7 @@ struct SetLengthOpConversion
                                           /*shape=*/std::nullopt, lenParams);
     auto declareOp = builder.create<hlfir::DeclareOp>(
         loc, alloca, tmpName, /*shape=*/mlir::Value{}, lenParams,
-        fir::FortranVariableFlagsAttr{});
+        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
     hlfir::Entity temp{declareOp.getBase()};
     // Assign string value to the created temp.
     builder.create<hlfir::AssignOp>(loc, string, temp,
@@ -452,7 +464,7 @@ struct AssociateOpConversion
       //   %0 = hlfir.as_expr %x move %true :
       //       (!fir.box<!fir.heap<!fir.type<_T{y:i32}>>>, i1) ->
       //       !hlfir.expr<!fir.type<_T{y:i32}>>
-      //   %1:3 = hlfir.associate %0 {uniq_name = "adapt.valuebyref"} :
+      //   %1:3 = hlfir.associate %0 {adapt.valuebyref} :
       //       (!hlfir.expr<!fir.type<_T{y:i32}>>) ->
       //       (!fir.ref<!fir.type<_T{y:i32}>>,
       //        !fir.ref<!fir.type<_T{y:i32}>>,
@@ -469,10 +481,10 @@ struct AssociateOpConversion
           assert(mlir::isa<fir::ClassType>(sourceVar.getType()) &&
                  fir::isAllocatableType(sourceVar.getType()));
           assert(sourceVar.getType() == assocType);
-        } else if ((sourceVar.getType().isa<fir::BaseBoxType>() &&
-                    !assocType.isa<fir::BaseBoxType>()) ||
-                   ((sourceVar.getType().isa<fir::BoxCharType>() &&
-                     !assocType.isa<fir::BoxCharType>()))) {
+        } else if ((mlir::isa<fir::BaseBoxType>(sourceVar.getType()) &&
+                    !mlir::isa<fir::BaseBoxType>(assocType)) ||
+                   ((mlir::isa<fir::BoxCharType>(sourceVar.getType()) &&
+                     !mlir::isa<fir::BoxCharType>(assocType)))) {
           sourceVar = builder.create<fir::BoxAddrOp>(loc, assocType, sourceVar);
         } else {
           sourceVar = builder.createConvert(loc, assocType, sourceVar);
@@ -522,11 +534,23 @@ struct AssociateOpConversion
       mlir::Value firBase = hlfir::Entity{bufferizedExpr}.getFirBase();
       replaceWith(bufferizedExpr, firBase, mustFree);
       eraseAllUsesInDestroys(associate.getSource(), rewriter);
+      // Make sure to erase the hlfir.destroy if there is an indirection through
+      // a hlfir.no_reassoc operation.
+      if (auto noReassoc = mlir::dyn_cast_or_null<hlfir::NoReassocOp>(
+              associate.getSource().getDefiningOp()))
+        eraseAllUsesInDestroys(noReassoc.getVal(), rewriter);
       return mlir::success();
     }
     if (isTrivialValue) {
-      auto temp = builder.createTemporary(loc, bufferizedExpr.getType(),
-                                          associate.getUniqName());
+      llvm::SmallVector<mlir::NamedAttribute, 1> attrs;
+      if (associate->hasAttr(fir::getAdaptToByRefAttrName())) {
+        attrs.push_back(fir::getAdaptToByRefAttr(builder));
+      }
+      llvm::StringRef name = "";
+      if (associate.getUniqName())
+        name = *associate.getUniqName();
+      auto temp =
+          builder.createTemporary(loc, bufferizedExpr.getType(), name, attrs);
       builder.create<fir::StoreOp>(loc, bufferizedExpr, temp);
       mlir::Value mustFree = builder.createBool(loc, false);
       replaceWith(temp, temp, mustFree);
@@ -535,12 +559,7 @@ struct AssociateOpConversion
     // non-trivial value with more than one use. We will have to make a copy and
     // use that
     hlfir::Entity source = hlfir::Entity{bufferizedExpr};
-    auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
-    builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
-                                    /*keep_lhs_length_if_realloc=*/false,
-                                    /*temporary_lhs=*/true);
-    mlir::Value bufferTuple =
-        packageBufferizedExpr(loc, builder, temp, cleanup);
+    mlir::Value bufferTuple = copyInTempAndPackage(loc, builder, source);
     bufferizedExpr = getBufferizedExprStorage(bufferTuple);
     replaceWith(bufferizedExpr, hlfir::Entity{bufferizedExpr}.getFirBase(),
                 getBufferizedExprMustFreeFlag(bufferTuple));
@@ -577,13 +596,13 @@ static void genBufferDestruction(mlir::Location loc, fir::FirOpBuilder &builder,
       // for MERGE with polymorphic results.
       if (mustFinalize)
         TODO(loc, "finalizing polymorphic temporary in HLFIR");
-    } else if (var.getType().isa<fir::BaseBoxType, fir::BoxCharType>()) {
+    } else if (mlir::isa<fir::BaseBoxType, fir::BoxCharType>(var.getType())) {
       if (mustFinalize && !mlir::isa<fir::BaseBoxType>(var.getType()))
         fir::emitFatalError(loc, "non-finalizable variable");
 
       addr = builder.create<fir::BoxAddrOp>(loc, heapType, var);
     } else {
-      if (!var.getType().isa<fir::HeapType>())
+      if (!mlir::isa<fir::HeapType>(var.getType()))
         addr = builder.create<fir::ConvertOp>(loc, heapType, var);
 
       if (mustFinalize || deallocComponents) {
@@ -723,13 +742,15 @@ struct HLFIRListener : public mlir::OpBuilder::Listener {
   HLFIRListener(fir::FirOpBuilder &builder,
                 mlir::ConversionPatternRewriter &rewriter)
       : builder{builder}, rewriter{rewriter} {}
-  void notifyOperationInserted(mlir::Operation *op) override {
-    builder.notifyOperationInserted(op);
-    rewriter.notifyOperationInserted(op);
+  void notifyOperationInserted(mlir::Operation *op,
+                               mlir::OpBuilder::InsertPoint previous) override {
+    builder.notifyOperationInserted(op, previous);
+    rewriter.getListener()->notifyOperationInserted(op, previous);
   }
-  virtual void notifyBlockCreated(mlir::Block *block) override {
-    builder.notifyBlockCreated(block);
-    rewriter.notifyBlockCreated(block);
+  virtual void notifyBlockInserted(mlir::Block *block, mlir::Region *previous,
+                                   mlir::Region::iterator previousIt) override {
+    builder.notifyBlockInserted(block, previous, previousIt);
+    rewriter.getListener()->notifyBlockInserted(block, previous, previousIt);
   }
   fir::FirOpBuilder &builder;
   mlir::ConversionPatternRewriter &rewriter;
@@ -816,7 +837,7 @@ struct ElementalOpConversion
       // the assign, insert an hlfir.destroy to mark the expression end-of-life.
       // If the expression creation allocated a buffer on the heap inside the
       // loop, this will ensure the buffer properly deallocated.
-      if (elementValue.getType().isa<hlfir::ExprType>() &&
+      if (mlir::isa<hlfir::ExprType>(elementValue.getType()) &&
           wasCreatedInCurrentBlock(elementValue, builder))
         builder.create<hlfir::DestroyOp>(loc, elementValue);
     }
@@ -827,9 +848,9 @@ struct ElementalOpConversion
     // Explicitly delete the body of the elemental to get rid
     // of any users of hlfir.expr values inside the body as early
     // as possible.
-    rewriter.startRootUpdate(elemental);
+    rewriter.startOpModification(elemental);
     rewriter.eraseBlock(elemental.getBody());
-    rewriter.finalizeRootUpdate(elemental);
+    rewriter.finalizeOpModification(elemental);
     rewriter.replaceOp(elemental, bufferizedExpr);
     return mlir::success();
   }
@@ -911,11 +932,12 @@ public:
                         hlfir::EndAssociateOp, hlfir::SetLengthOp>();
 
     target.markUnknownOpDynamicallyLegal([](mlir::Operation *op) {
-      return llvm::all_of(
-                 op->getResultTypes(),
-                 [](mlir::Type ty) { return !ty.isa<hlfir::ExprType>(); }) &&
+      return llvm::all_of(op->getResultTypes(),
+                          [](mlir::Type ty) {
+                            return !mlir::isa<hlfir::ExprType>(ty);
+                          }) &&
              llvm::all_of(op->getOperandTypes(), [](mlir::Type ty) {
-               return !ty.isa<hlfir::ExprType>();
+               return !mlir::isa<hlfir::ExprType>(ty);
              });
     });
     if (mlir::failed(
@@ -927,7 +949,3 @@ public:
   }
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createBufferizeHLFIRPass() {
-  return std::make_unique<BufferizeHLFIR>();
-}

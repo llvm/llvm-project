@@ -187,3 +187,27 @@ func.func @convert_2d_mask_from_svbool(%svbool: vector<3x[16]xi1>) -> vector<3x[
   // CHECK-NEXT: llvm.return %[[MASK]] : !llvm.array<3 x vector<[1]xi1>>
   return %mask : vector<3x[1]xi1>
 }
+
+// -----
+
+func.func @arm_sve_zip_x2(%a: vector<[8]xi16>, %b: vector<[8]xi16>)
+  -> (vector<[8]xi16>, vector<[8]xi16>)
+{
+  // CHECK: arm_sve.intr.zip.x2
+  %0, %1 = arm_sve.zip.x2 %a, %b : vector<[8]xi16>
+  return %0, %1 : vector<[8]xi16>, vector<[8]xi16>
+}
+
+// -----
+
+func.func @arm_sve_zip_x4(
+  %a: vector<[16]xi8>,
+  %b: vector<[16]xi8>,
+  %c: vector<[16]xi8>,
+  %d: vector<[16]xi8>
+) -> (vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>)
+{
+  // CHECK: arm_sve.intr.zip.x4
+  %0, %1, %2, %3 = arm_sve.zip.x4 %a, %b, %c, %d : vector<[16]xi8>
+  return %0, %1, %2, %3 : vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>, vector<[16]xi8>
+}

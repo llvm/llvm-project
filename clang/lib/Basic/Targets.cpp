@@ -644,6 +644,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
       return std::make_unique<PS4OSTargetInfo<X86_64TargetInfo>>(Triple, Opts);
     case llvm::Triple::PS5:
       return std::make_unique<PS5OSTargetInfo<X86_64TargetInfo>>(Triple, Opts);
+    case llvm::Triple::Hurd:
+      return std::make_unique<HurdTargetInfo<X86_64TargetInfo>>(Triple, Opts);
     default:
       return std::make_unique<X86_64TargetInfo>(Triple, Opts);
     }
@@ -758,7 +760,7 @@ using namespace clang::targets;
 TargetInfo *
 TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,
                              const std::shared_ptr<TargetOptions> &Opts) {
-  llvm::Triple Triple(Opts->Triple);
+  llvm::Triple Triple(llvm::Triple::normalize(Opts->Triple));
 
   // Construct the target
   std::unique_ptr<TargetInfo> Target = AllocateTarget(Triple, *Opts);

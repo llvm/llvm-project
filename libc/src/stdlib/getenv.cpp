@@ -16,7 +16,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, getenv, (const char *name)) {
-  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.envPtr);
+  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
 
   if (name == nullptr || env_ptr == nullptr)
     return nullptr;

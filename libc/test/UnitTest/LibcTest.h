@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
-#define LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
+#define LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H
 
 // This is defined as a simple macro in test.h so that it exists for platforms
 // that don't use our test infrastructure. It's defined as a proper function
@@ -100,6 +100,15 @@ bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
 
 } // namespace internal
 
+struct TestOptions {
+  // If set, then just this one test from the suite will be run.
+  const char *TestFilter = nullptr;
+  // Should the test results print color codes to stdout?
+  bool PrintColor = true;
+  // Should the test results print timing only in milliseconds, as GTest does?
+  bool TimeInMs = false;
+};
+
 // NOTE: One should not create instances and call methods on them directly. One
 // should use the macros TEST or TEST_F to write test cases.
 class Test {
@@ -107,13 +116,14 @@ class Test {
   internal::RunContext *Ctx = nullptr;
 
   void setContext(internal::RunContext *C) { Ctx = C; }
+  static int getNumTests();
 
 public:
   virtual ~Test() {}
   virtual void SetUp() {}
   virtual void TearDown() {}
 
-  static int runTests(const char *);
+  static int runTests(const TestOptions &Options);
 
 protected:
   static void addTest(Test *T);
@@ -125,8 +135,11 @@ protected:
   // is the result of the |Cond| operation on |LHS| and |RHS|. Though not bad,
   // |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
   // of type promotion.
-  template <typename ValType,
-            cpp::enable_if_t<cpp::is_integral_v<ValType>, int> = 0>
+  template <
+      typename ValType,
+      cpp::enable_if_t<cpp::is_integral_v<ValType> || is_big_int_v<ValType> ||
+                           cpp::is_fixed_point_v<ValType>,
+                       int> = 0>
   bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, internal::Location Loc) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
@@ -481,4 +494,6 @@ CString libc_make_test_file_path_func(const char *file_name);
 
 #define WITH_SIGNAL(X) X
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_LIBCTEST_H
+#define LIBC_TEST_HAS_MATCHERS() (1)
+
+#endif // LLVM_LIBC_TEST_UNITTEST_LIBCTEST_H

@@ -50,11 +50,31 @@ static bool hasLifetimeMarkers(LLVM::AllocaOp allocaOp) {
 static void
 handleInlinedAllocas(Operation *call,
                      iterator_range<Region::iterator> inlinedBlocks) {
+  // Locate the entry block of the closest callsite ancestor that has either the
+  // IsolatedFromAbove or AutomaticAllocationScope trait. In pure LLVM dialect
+  // programs, this is the LLVMFuncOp containing the call site. However, in
+  // mixed-dialect programs, the callsite might be nested in another operation
+  // that carries one of these traits. In such scenarios, this traversal stops
+  // at the closest ancestor with either trait, ensuring visibility post
+  // relocation and respecting allocation scopes.
+  Block *callerEntryBlock = nullptr;
+  Operation *currentOp = call;
+  while (Operation *parentOp = currentOp->getParentOp()) {
+    if (parentOp->mightHaveTrait<OpTrait::IsIsolatedFromAbove>() ||
+        parentOp->mightHaveTrait<OpTrait::AutomaticAllocationScope>()) {
+      callerEntryBlock = &currentOp->getParentRegion()->front();
+      break;
+    }
+    currentOp = parentOp;
+  }
+
+  // Avoid relocating the alloca operations if the call has been inlined into
+  // the entry block already, which is typically the encompassing
+  // LLVM function, or if the relevant entry block cannot be identified.
   Block *calleeEntryBlock = &(*inlinedBlocks.begin());
-  Block *callerEntryBlock = &(*calleeEntryBlock->getParent()->begin());
-  if (calleeEntryBlock == callerEntryBlock)
-    // Nothing to do.
+  if (!callerEntryBlock || callerEntryBlock == calleeEntryBlock)
     return;
+
   SmallVector<std::tuple<LLVM::AllocaOp, IntegerAttr, bool>> allocasToMove;
   bool shouldInsertLifetimes = false;
   bool hasDynamicAlloca = false;
@@ -167,7 +187,7 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
   };
 
   for (Block &block : inlinedBlocks) {
-    for (Operation &op : block) {
+    block.walk([&](Operation *op) {
       if (auto aliasInterface = dyn_cast<LLVM::AliasAnalysisOpInterface>(op)) {
         aliasInterface.setAliasScopes(
             convertScopeList(aliasInterface.getAliasScopesOrNull()));
@@ -182,7 +202,7 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
         noAliasScope.setScopeAttr(cast<LLVM::AliasScopeAttr>(
             mapping.lookup(noAliasScope.getScopeAttr())));
       }
-    }
+    });
   }
 }
 
@@ -337,9 +357,7 @@ static void createNewAliasScopesFromNoAliasParameter(
   // Go through every instruction and attempt to find which noalias parameters
   // it is definitely based on and definitely not based on.
   for (Block &inlinedBlock : inlinedBlocks) {
-    for (auto aliasInterface :
-         inlinedBlock.getOps<LLVM::AliasAnalysisOpInterface>()) {
-
+    inlinedBlock.walk([&](LLVM::AliasAnalysisOpInterface aliasInterface) {
       // Collect the pointer arguments affected by the alias scopes.
       SmallVector<Value> pointerArgs = aliasInterface.getAccessedOperands();
 
@@ -375,7 +393,7 @@ static void createNewAliasScopesFromNoAliasParameter(
             }
             return true;
           }))
-        continue;
+        return;
 
       // Add all noalias parameter scopes to the noalias scope list that we are
       // not based on.
@@ -418,7 +436,7 @@ static void createNewAliasScopesFromNoAliasParameter(
       // arguments.
       if (aliasesOtherKnownObject ||
           isa<LLVM::CallOp>(aliasInterface.getOperation()))
-        continue;
+        return;
 
       SmallVector<Attribute> aliasScopes;
       for (LLVM::SSACopyOp noAlias : noAliasParams)
@@ -429,7 +447,7 @@ static void createNewAliasScopesFromNoAliasParameter(
         aliasInterface.setAliasScopes(
             concatArrayAttr(aliasInterface.getAliasScopesOrNull(),
                             ArrayAttr::get(call->getContext(), aliasScopes)));
-    }
+    });
   }
 }
 
@@ -452,7 +470,7 @@ appendCallOpAliasScopes(Operation *call,
   // Simply append the call op's alias and noalias scopes to any operation
   // implementing AliasAnalysisOpInterface.
   for (Block &block : inlinedBlocks) {
-    for (auto aliasInterface : block.getOps<LLVM::AliasAnalysisOpInterface>()) {
+    block.walk([&](LLVM::AliasAnalysisOpInterface aliasInterface) {
       if (aliasScopes)
         aliasInterface.setAliasScopes(concatArrayAttr(
             aliasInterface.getAliasScopesOrNull(), aliasScopes));
@@ -460,7 +478,7 @@ appendCallOpAliasScopes(Operation *call,
       if (noAliasScopes)
         aliasInterface.setNoAliasScopes(concatArrayAttr(
             aliasInterface.getNoAliasScopesOrNull(), noAliasScopes));
-    }
+    });
   }
 }
 
@@ -632,8 +650,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
                        bool wouldBeCloned) const final {
     if (!wouldBeCloned)
       return false;
-    auto callOp = dyn_cast<LLVM::CallOp>(call);
-    if (!callOp) {
+    if (!isa<LLVM::CallOp>(call)) {
       LLVM_DEBUG(llvm::dbgs()
                  << "Cannot inline: call is not an LLVM::CallOp\n");
       return false;
@@ -644,7 +661,11 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
                  << "Cannot inline: callable is not an LLVM::LLVMFuncOp\n");
       return false;
     }
-    // TODO: Generate aliasing metadata from noalias argument/result attributes.
+    if (funcOp.isVarArg()) {
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline: callable is variadic\n");
+      return false;
+    }
+    // TODO: Generate aliasing metadata from noalias result attributes.
     if (auto attrs = funcOp.getArgAttrs()) {
       for (DictionaryAttr attrDict : attrs->getAsRange<DictionaryAttr>()) {
         if (attrDict.contains(LLVM::LLVMDialect::getInAllocaAttrName())) {
@@ -684,40 +705,9 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     return true;
   }
 
-  /// Conservative allowlist of operations supported so far.
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
-    if (isPure(op))
-      return true;
-    // clang-format off
-    if (isa<LLVM::AllocaOp,
-            LLVM::AssumeOp,
-            LLVM::AtomicRMWOp,
-            LLVM::AtomicCmpXchgOp,
-            LLVM::CallOp,
-            LLVM::CallIntrinsicOp,
-            LLVM::DbgDeclareOp,
-            LLVM::DbgLabelOp,
-            LLVM::DbgValueOp,
-            LLVM::FenceOp,
-            LLVM::InlineAsmOp,
-            LLVM::LifetimeEndOp,
-            LLVM::LifetimeStartOp,
-            LLVM::LoadOp,
-            LLVM::MemcpyOp,
-            LLVM::MemcpyInlineOp,
-            LLVM::MemmoveOp,
-            LLVM::MemsetOp,
-            LLVM::NoAliasScopeDeclOp,
-            LLVM::StackRestoreOp,
-            LLVM::StackSaveOp,
-            LLVM::StoreOp,
-            LLVM::UnreachableOp>(op))
-      return true;
-    // clang-format on
-    LLVM_DEBUG(llvm::dbgs()
-               << "Cannot inline: unhandled side effecting operation \""
-               << op->getName() << "\"\n");
-    return false;
+    // The inliner cannot handle variadic function arguments.
+    return !isa<LLVM::VaStartOp>(op);
   }
 
   /// Handle the given inlined return by replacing it with a branch. This
@@ -763,8 +753,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       return handleByValArgument(builder, callable, argument, elementType,
                                  requestedAlignment);
     }
-    if ([[maybe_unused]] std::optional<NamedAttribute> attr =
-            argumentAttrs.getNamed(LLVM::LLVMDialect::getNoAliasAttrName())) {
+    if (argumentAttrs.contains(LLVM::LLVMDialect::getNoAliasAttrName())) {
       if (argument.use_empty())
         return argument;
 

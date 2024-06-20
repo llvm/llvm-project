@@ -3,9 +3,9 @@
 
 --- |
 
-  define i8 @test(i8* %a) {
+  define i8 @test(ptr %a) {
   entry:
-    %0 = load i8, i8* %a, align 1, !pcsections !0
+    %0 = load i8, ptr %a, align 1, !pcsections !0
     ret i8 %0
   }
 

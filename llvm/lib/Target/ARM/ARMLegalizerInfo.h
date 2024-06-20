@@ -23,12 +23,12 @@ namespace llvm {
 
 class ARMSubtarget;
 
-/// This class provides the information for the target register banks.
 class ARMLegalizerInfo : public LegalizerInfo {
 public:
   ARMLegalizerInfo(const ARMSubtarget &ST);
 
-  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI) const override;
+  bool legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
+                      LostDebugLocObserver &LocObserver) const override;
 
 private:
   void setFCmpLibcallsGNU();

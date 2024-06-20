@@ -24,7 +24,7 @@ public:
   LogicalResult matchAndRewrite(func::FuncOp op,
                                 PatternRewriter &rewriter) const final {
     if (op.getSymName() == "bar") {
-      rewriter.updateRootInPlace(op, [&op]() { op.setSymName("foo"); });
+      rewriter.modifyOpInPlace(op, [&op]() { op.setSymName("foo"); });
       return success();
     }
     return failure();

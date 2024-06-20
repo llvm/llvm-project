@@ -130,10 +130,24 @@ constexpr TypeBuilderFunc getModel<signed char>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc getModel<unsigned char>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return mlir::IntegerType::get(context, 8 * sizeof(unsigned char));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<void *>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return fir::LLVMPointerType::get(context,
                                      mlir::IntegerType::get(context, 8));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<void (*)(int)>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::LLVMPointerType::get(
+        context,
+        mlir::FunctionType::get(context, /*inputs=*/{}, /*results*/ {}));
   };
 }
 template <>

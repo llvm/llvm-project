@@ -338,15 +338,14 @@ void testPromotedStruct(_Atomic(PS) *fp) {
 }
 
 PS test_promoted_load(_Atomic(PS) *addr) {
-  // CHECK-LABEL: @test_promoted_load(ptr noalias sret(%struct.PS) align 2 %agg.result, ptr noundef %addr)
+  // CHECK-LABEL: @test_promoted_load(ptr dead_on_unwind noalias writable sret(%struct.PS) align 2 %agg.result, ptr noundef %addr)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[ATOMIC_RES:%.*]] = alloca { %struct.PS, [2 x i8] }, align 8
   // CHECK:   store ptr %addr, ptr [[ADDR_ARG]], align 4
   // CHECK:   [[ADDR:%.*]] = load ptr, ptr [[ADDR_ARG]], align 4
-  // CHECK:   [[RES:%.*]] = call arm_aapcscc i64 @__atomic_load_8(ptr noundef [[ADDR]], i32 noundef 5)
-  // CHECK:   store i64 [[RES]], ptr [[ATOMIC_RES]], align 8
-  // CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr align 2 %agg.result, ptr align 8 [[ATOMIC_RES]], i32 6, i1 false)
-
+  // CHECK:   [[ATOMIC_RES:%.*]] = load atomic i64, ptr [[ADDR]] seq_cst, align 8
+  // CHECK:   store i64 [[ATOMIC_RES]], ptr [[ATOMIC_RES_ADDR:%.*]], align 8
+  // CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr align 2 %agg.result, ptr align 8 [[ATOMIC_RES_ADDR]], i32 6, i1 false)
   return __c11_atomic_load(addr, 5);
 }
 
@@ -362,13 +361,13 @@ void test_promoted_store(_Atomic(PS) *addr, PS *val) {
   // CHECK:   [[VAL:%.*]] = load ptr, ptr [[VAL_ARG]], align 4
   // CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[NONATOMIC_TMP]], ptr align 2 [[VAL]], i32 6, i1 false)
   // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ATOMIC_VAL]], ptr align 2 [[NONATOMIC_TMP]], i64 6, i1 false)
-  // CHECK:   [[VAL64:%.*]] = load i64, ptr [[ATOMIC_VAL]], align 2
-  // CHECK:   call arm_aapcscc void @__atomic_store_8(ptr noundef [[ADDR]], i64 noundef [[VAL64]], i32 noundef 5)
+  // CHECK:   [[ATOMIC:%.*]] = load i64, ptr [[ATOMIC_VAL]], align 8
+  // CHECK:   store atomic i64 [[ATOMIC]], ptr [[ADDR]] seq_cst, align 8
   __c11_atomic_store(addr, *val, 5);
 }
 
 PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
-  // CHECK-LABEL: @test_promoted_exchange(ptr noalias sret(%struct.PS) align 2 %agg.result, ptr noundef %addr, ptr noundef %val)
+  // CHECK-LABEL: @test_promoted_exchange(ptr dead_on_unwind noalias writable sret(%struct.PS) align 2 %agg.result, ptr noundef %addr, ptr noundef %val)
   // CHECK:   [[ADDR_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[VAL_ARG:%.*]] = alloca ptr, align 4
   // CHECK:   [[NONATOMIC_TMP:%.*]] = alloca %struct.PS, align 2
@@ -380,10 +379,10 @@ PS test_promoted_exchange(_Atomic(PS) *addr, PS *val) {
   // CHECK:   [[VAL:%.*]] = load ptr, ptr [[VAL_ARG]], align 4
   // CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[NONATOMIC_TMP]], ptr align 2 [[VAL]], i32 6, i1 false)
   // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ATOMIC_VAL]], ptr align 2 [[NONATOMIC_TMP]], i64 6, i1 false)
-  // CHECK:   [[VAL64:%.*]] = load i64, ptr [[ATOMIC_VAL]], align 2
-  // CHECK:   [[RES:%.*]] = call arm_aapcscc i64 @__atomic_exchange_8(ptr noundef [[ADDR]], i64 noundef [[VAL64]], i32 noundef 5)
-  // CHECK:   store i64 [[RES]], ptr [[ATOMIC_RES]], align 8
-  // CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr align 2 %agg.result, ptr align 8 [[ATOMIC_RES]], i32 6, i1 false)
+  // CHECK:   [[ATOMIC:%.*]] = load i64, ptr [[ATOMIC_VAL]], align 8
+  // CHECK:   [[ATOMIC_RES:%.*]] = atomicrmw xchg ptr [[ADDR]], i64 [[ATOMIC]] seq_cst, align 8
+  // CHECK:   store i64 [[ATOMIC_RES]], ptr [[ATOMIC_RES_PTR:%.*]], align 8
+  // CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr align 2 %agg.result, ptr align 8 [[ATOMIC_RES_PTR]], i32 6, i1 false)
   return __c11_atomic_exchange(addr, *val, 5);
 }
 
@@ -404,9 +403,10 @@ _Bool test_promoted_cmpxchg(_Atomic(PS) *addr, PS *desired, PS *new) {
   // CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[NONATOMIC_TMP]], ptr align 2 [[NEW]], i32 6, i1 false)
   // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ATOMIC_DESIRED]], ptr align 2 [[DESIRED]], i64 6, i1 false)
   // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ATOMIC_NEW]], ptr align 2 [[NONATOMIC_TMP]], i64 6, i1 false)
-  // CHECK:   [[NEW64:%.*]] = load i64, ptr [[ATOMIC_NEW]], align 2
-  // CHECK:   [[RES:%.*]] = call arm_aapcscc zeroext i1 @__atomic_compare_exchange_8(ptr noundef [[ADDR]], ptr noundef [[ATOMIC_DESIRED]], i64 noundef [[NEW64]], i32 noundef 5, i32 noundef 5)
-  // CHECK:   ret i1 [[RES]]
+  // CHECK:   [[VAL1:%.*]] = load i64, ptr [[ATOMIC_DESIRED]], align 8
+  // CHECK:   [[VAL2:%.*]] = load i64, ptr [[ATOMIC_NEW]], align 8
+  // CHECK:   [[RES_PAIR:%.*]] = cmpxchg ptr [[ADDR]], i64 [[VAL1]], i64 [[VAL2]] seq_cst seq_cst, align 8
+  // CHECK:   [[RES:%.*]] = extractvalue { i64, i1 } [[RES_PAIR]], 1
   return __c11_atomic_compare_exchange_strong(addr, desired, *new, 5, 5);
 }
 
@@ -414,12 +414,12 @@ struct Empty {};
 
 struct Empty test_empty_struct_load(_Atomic(struct Empty)* empty) {
   // CHECK-LABEL: @test_empty_struct_load(
-  // CHECK: call arm_aapcscc zeroext i8 @__atomic_load_1(ptr noundef %{{.*}}, i32 noundef 5)
+  // CHECK: load atomic i8, ptr {{.*}}, align 1
   return __c11_atomic_load(empty, 5);
 }
 
 void test_empty_struct_store(_Atomic(struct Empty)* empty, struct Empty value) {
   // CHECK-LABEL: @test_empty_struct_store(
-  // CHECK: call arm_aapcscc void @__atomic_store_1(ptr noundef %{{.*}}, i8 noundef zeroext %{{.*}}, i32 noundef 5)
+  // CHECK: store atomic i8 {{.*}}, ptr {{.*}}, align 1
   __c11_atomic_store(empty, value, 5);
 }

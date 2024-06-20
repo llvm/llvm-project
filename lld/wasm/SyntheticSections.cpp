@@ -55,9 +55,9 @@ public:
 } // namespace
 
 bool DylinkSection::isNeeded() const {
-  return config->isPic ||
+  return ctx.isPic ||
          config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic ||
-         !symtab->sharedFiles.empty();
+         !ctx.sharedFiles.empty();
 }
 
 void DylinkSection::writeBody() {
@@ -72,10 +72,10 @@ void DylinkSection::writeBody() {
     sub.writeTo(os);
   }
 
-  if (symtab->sharedFiles.size()) {
+  if (ctx.sharedFiles.size()) {
     SubSection sub(WASM_DYLINK_NEEDED);
-    writeUleb128(sub.os, symtab->sharedFiles.size(), "Needed");
-    for (auto *so : symtab->sharedFiles)
+    writeUleb128(sub.os, ctx.sharedFiles.size(), "Needed");
+    for (auto *so : ctx.sharedFiles)
       writeStr(sub.os, llvm::sys::path::filename(so->getName()), "so name");
     sub.writeTo(os);
   }
@@ -174,7 +174,7 @@ void ImportSection::addGOTEntry(Symbol *sym) {
     return;
   LLVM_DEBUG(dbgs() << "addGOTEntry: " << toString(*sym) << "\n");
   sym->setGOTIndex(numImportedGlobals++);
-  if (config->isPic) {
+  if (ctx.isPic) {
     // Any symbol that is assigned an normal GOT entry must be exported
     // otherwise the dynamic linker won't be able create the entry that contains
     // it.
@@ -319,7 +319,7 @@ void TableSection::addTable(InputTable *table) {
     return;
   // Some inputs require that the indirect function table be assigned to table
   // number 0.
-  if (config->legacyFunctionTable &&
+  if (ctx.legacyFunctionTable &&
       isa<DefinedTable>(WasmSym::indirectFunctionTable) &&
       cast<DefinedTable>(WasmSym::indirectFunctionTable)->table == table) {
     if (out.importSec->getNumImportedTables()) {
@@ -474,7 +474,7 @@ void GlobalSection::writeBody() {
       // In the case of dynamic linking, unless we have 'extended-const'
       // available, these global must to be mutable since they get updated to
       // the correct runtime value during `__wasm_apply_global_relocs`.
-      if (!config->extendedConst && config->isPic && !sym->isTLS())
+      if (!config->extendedConst && ctx.isPic && !sym->isTLS())
         mutable_ = true;
       // With multi-theadeding any TLS globals must be mutable since they get
       // set during `__wasm_apply_global_tls_relocs`
@@ -487,7 +487,7 @@ void GlobalSection::writeBody() {
     bool useExtendedConst = false;
     uint32_t globalIdx;
     int64_t offset;
-    if (config->extendedConst && config->isPic) {
+    if (config->extendedConst && ctx.isPic) {
       if (auto *d = dyn_cast<DefinedData>(sym)) {
         if (!sym->isTLS()) {
           globalIdx = WasmSym::memoryBase->getGlobalIndex();
@@ -582,14 +582,12 @@ void ElemSection::writeBody() {
 
   WasmInitExpr initExpr;
   initExpr.Extended = false;
-  if (config->isPic) {
+  if (ctx.isPic) {
     initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
-    initExpr.Inst.Value.Global =
-        (config->is64.value_or(false) ? WasmSym::tableBase32
-                                      : WasmSym::tableBase)
-            ->getGlobalIndex();
+    initExpr.Inst.Value.Global = WasmSym::tableBase->getGlobalIndex();
   } else {
-    initExpr.Inst.Opcode = WASM_OPCODE_I32_CONST;
+    bool is64 = config->is64.value_or(false);
+    initExpr.Inst.Opcode = is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
     initExpr.Inst.Value.Int32 = config->tableBase;
   }
   writeInitExpr(os, initExpr);

@@ -110,6 +110,7 @@ namespace llvm {
 template <class GraphType> struct GraphTraits;
 class BasicBlock;
 class Function;
+class Loop;
 class Instruction;
 class LLVMContext;
 class MemoryAccess;
@@ -700,6 +701,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(MemoryPhi, MemoryAccess)
 class MemorySSA {
 public:
   MemorySSA(Function &, AliasAnalysis *, DominatorTree *);
+  MemorySSA(Loop &, AliasAnalysis *, DominatorTree *);
 
   // MemorySSA must remain where it's constructed; Walkers it creates store
   // pointers to it.
@@ -800,10 +802,11 @@ protected:
   // Used by Memory SSA dumpers and wrapper pass
   friend class MemorySSAUpdater;
 
+  template <typename IterT>
   void verifyOrderingDominationAndDefUses(
-      Function &F, VerificationLevel = VerificationLevel::Fast) const;
-  void verifyDominationNumbers(const Function &F) const;
-  void verifyPrevDefInPhis(Function &F) const;
+      IterT Blocks, VerificationLevel = VerificationLevel::Fast) const;
+  template <typename IterT> void verifyDominationNumbers(IterT Blocks) const;
+  template <typename IterT> void verifyPrevDefInPhis(IterT Blocks) const;
 
   // This is used by the use optimizer and updater.
   AccessList *getWritableBlockAccesses(const BasicBlock *BB) const {
@@ -847,7 +850,8 @@ private:
   class OptimizeUses;
 
   CachingWalker *getWalkerImpl();
-  void buildMemorySSA(BatchAAResults &BAA);
+  template <typename IterT>
+  void buildMemorySSA(BatchAAResults &BAA, IterT Blocks);
 
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
@@ -871,7 +875,8 @@ private:
   void renumberBlock(const BasicBlock *) const;
   AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
-  Function &F;
+  Function *F = nullptr;
+  Loop *L = nullptr;
 
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
@@ -953,6 +958,8 @@ public:
       : OS(OS), EnsureOptimizedUses(EnsureOptimizedUses) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Printer pass for \c MemorySSA via the walker.
@@ -964,11 +971,14 @@ public:
   explicit MemorySSAWalkerPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for \c MemorySSA.
 struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c MemorySSA.

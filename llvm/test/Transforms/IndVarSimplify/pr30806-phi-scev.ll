@@ -43,7 +43,7 @@ define void @foo(ptr %buf, i32 %denominator, ptr %flag) local_unnamed_addr {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[WHILE_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[BUF_ADDR_07:%.*]] = phi ptr [ [[BUF]], [[WHILE_BODY_LR_PH]] ], [ [[CALL:%.*]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[DIV]] to i64
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], [[TMP2]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @theSize, align 4
 ; CHECK-NEXT:    store i32 [[TMP3]], ptr [[I]], align 4
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[I]], i64 [[INDVARS_IV_NEXT]])

@@ -1,1 +1,1 @@
-py -3 git-clang-format %*
+py -3 %~pn0 %*
