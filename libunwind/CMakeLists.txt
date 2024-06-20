@@ -220,6 +220,10 @@ add_cxx_compile_flags_if_supported(-EHsc)
 #
 # This leads to libunwind not being built with this flag, which makes
 # libunwind quite useless in this setup.
+#
+# NOTE: we need to work around https://gitlab.kitware.com/cmake/cmake/-/issues/23454
+#       because CMAKE_REQUIRED_LINK_OPTIONS (c.f. CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG)
+#       is incompatible with CMAKE_TRY_COMPILE_TARGET_TYPE==STATIC_LIBRARY.
 set(_previous_CMAKE_TRY_COMPILE_TARGET_TYPE ${CMAKE_TRY_COMPILE_TARGET_TYPE})
 set(_previous_CMAKE_REQUIRED_LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS})
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
