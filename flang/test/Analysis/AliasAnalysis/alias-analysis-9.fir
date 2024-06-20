@@ -1,10 +1,13 @@
-// RUN: fir-opt %s -split-input-file -o /dev/null \
+// Check AliasAnalysis for pointer components.
+//
+// Throughout this test, The ".fir" suffix on symbols indicates a version of the
+// MLIR after convert-hlfir-to-fir.  A key difference is that component access
+// is via fir.coordinate_of instead of hlfir.designate.  We would like alias
+// analysis results to be the same in both versions.
+
+// RUN: fir-opt %s -split-input-file -o /dev/null --mlir-disable-threading  \
 // RUN:   -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' \
 // RUN:   2>&1 | FileCheck -match-full-lines %s
-
-// FIXME: Extend much of this to check that it also works after
-// convert-hlfir-to-fir, where component access is via fir.coordinate_of instead
-// of hlfir.designate.
 
 // FIXME: What about renaming this test to ptr-component.fir?  What about
 // merging with alias-analysis-3.fir as it has the same focus?
@@ -27,27 +30,34 @@
 // CHECK-LABEL: Testing : "_QMmPfoo"
 // x and y are non pointer, non target argument and therefore do not alias.
 // CHECK-DAG: x#0 <-> y#0: NoAlias
+// CHECK-DAG: x.fir#0 <-> y.fir#0: NoAlias
 
 // y is not a pointer object and therefore does not alias with the x%next
 // component.  Also assigning x to y would not modify x.next
 // CHECK-DAG: y#0 <-> xnext1#0: NoAlias
 // CHECK-DAG: y#0 <-> xnext2#0: NoAlias
+// CHECK-DAG: y.fir#0 <-> xnext1.fir#0: NoAlias
+// CHECK-DAG: y.fir#0 <-> xnext2.fir#0: NoAlias
 
 // We need to catch the fact that assigning y to x will modify xnext. 
 // The only side-effect between the 2 loads of x.next is the assignment to x, 
 // therefore x needs to alias with x.next to prevent the loads from being merged.
 // CHECK-DAG: x#0 <-> xnext1#0: MayAlias
 // CHECK-DAG: x#0 <-> xnext2#0: MayAlias
+// CHECK-DAG: x.fir#0 <-> xnext1.fir#0: MayAlias
+// CHECK-DAG: x.fir#0 <-> xnext2.fir#0: MayAlias
 
 // TODO: xnext1#0 <-> xnext2#0 are the same and therefore MustAlias but 
 //       we are currently not comparing operands involved in offset computations
 // CHECK-DAG: xnext1#0 <-> xnext2#0: MayAlias
+// CHECK-DAG: xnext1.fir#0 <-> xnext2.fir#0: MayAlias
 
-// TODO: This should be NoAlias.  However, AliasAnalysis currently
+// TODO: These should be NoAlias.  However, AliasAnalysis currently
 // indiscriminately treats all pointers as aliasing.  That makes sense for the
 // addresses within the pointers but not necessarily for the addresses of the
 // pointers.
 // CHECK-DAG: xnext1#0 <-> ynext#0: MayAlias
+// CHECK-DAG: xnext1.fir#0 <-> ynext.fir#0: MayAlias
 
 func.func @_QMmPfoo(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "y"}) {
   %0 = fir.alloca i32 {bindc_name = "i1", uniq_name = "_QMmFfooEi1"}
@@ -73,11 +83,51 @@ func.func @_QMmPfoo(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir
   return
 }
 
+func.func @_QMmPfoo.fir(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "y"}) {
+  %0 = fir.alloca !fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %1 = fir.alloca i32 {bindc_name = "i1", uniq_name = "_QMmFfooEi1"}
+  %2 = fir.declare %1 {uniq_name = "_QMmFfooEi1"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.alloca i32 {bindc_name = "i2", uniq_name = "_QMmFfooEi2"}
+  %4 = fir.declare %3 {uniq_name = "_QMmFfooEi2"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %5 = fir.declare %arg0 {test.ptr = "x.fir", uniq_name = "_QMmFfooEx"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %6 = fir.declare %arg1 {test.ptr = "y.fir", uniq_name = "_QMmFfooEy"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %7 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
+  %8 = fir.coordinate_of %5, %7 {test.ptr="xnext1.fir"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %9 = fir.load %8 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %10 = fir.box_addr %9 : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %11 = fir.field_index i, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
+  %12 = fir.coordinate_of %10, %11 : (!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %13 = fir.load %12 : !fir.ref<i32>
+  fir.store %13 to %2 : !fir.ref<i32>
+  %14 = fir.embox %5 : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %15 = fir.embox %6 : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  fir.store %14 to %0 : !fir.ref<!fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>
+  %16 = fir.address_of(@_QQclX746D70332E66697200) : !fir.ref<!fir.char<1,9>>
+  %c9 = arith.constant 9 : index
+  %c14_i32 = arith.constant 14 : i32
+  %17 = fir.convert %0 : (!fir.ref<!fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ref<!fir.box<none>>
+  %18 = fir.convert %15 : (!fir.box<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.box<none>
+  %19 = fir.convert %16 : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<i8>
+  %20 = fir.call @_FortranAAssign(%17, %18, %19, %c14_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  %21 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
+  %22 = fir.coordinate_of %5, %21 {test.ptr="xnext2.fir"}: (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %23 = fir.load %22 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %24 = fir.box_addr %23 : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %25 = fir.field_index i, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
+  %26 = fir.coordinate_of %24, %25 : (!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %27 = fir.load %26 : !fir.ref<i32>
+  fir.store %27 to %4 : !fir.ref<i32>
+  %28 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
+  %29 = fir.coordinate_of %6, %28 {test.ptr="ynext.fir"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  return
+}
+
 // -----
 
 // Same test as above focusing on aliasing between x%next and y%next data
 // CHECK-LABEL: Testing : "_QMmPfoo2"
 // CHECK-DAG: xnext#0 <-> ynext#0: MayAlias
+// CHECK-DAG: xnext.fir#0 <-> ynext.fir#0: MayAlias
 
 func.func @_QMmPfoo2(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "y"}) {
   %4:2 = hlfir.declare %arg0 {uniq_name = "_QMmFfooEx"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>)
@@ -89,6 +139,20 @@ func.func @_QMmPfoo2(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fi
   %9 = hlfir.designate %5#0{"next"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %10 = fir.load %9 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
   %11 = fir.box_addr %10 {test.ptr = "ynext"} : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  return
+}
+
+func.func @_QMmPfoo2.fir(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "y"}) {
+  %0 = fir.declare %arg0 {uniq_name = "_QMmFfooEx"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %1 = fir.declare %arg1 {uniq_name = "_QMmFfooEy"} : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %2 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
+  %3 = fir.coordinate_of %0, %2 : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %4 = fir.load %3 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %5 = fir.box_addr %4 {test.ptr = "xnext.fir"} : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
+  %6 = fir.field_index next, !fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>
+  %7 = fir.coordinate_of %1, %6 : (!fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %8 = fir.load %7 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>>
+  %9 = fir.box_addr %8 {test.ptr = "ynext.fir"} : (!fir.box<!fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>>) -> !fir.ptr<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>>
   return
 }
 
@@ -107,6 +171,7 @@ func.func @_QMmPfoo2(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fi
 
 // CHECK-LABEL: Testing : "_QMmPfoo3"
 // CHECK-DAG: yarray#0 <-> xarray#0: MayAlias
+// CHECK-DAG: yarray.fir#0 <-> xarray.fir#0: MayAlias
 
 func.func @_QMmPfoo3(%arg0: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>> {fir.bindc_name = "y"}) {
   %0:2 = hlfir.declare %arg0 {uniq_name = "_QMmFfooEx"} : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>)
@@ -121,6 +186,30 @@ func.func @_QMmPfoo3(%arg0: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!
   %c1_0 = arith.constant 1 : index
   %8 = hlfir.designate %7 (%c1_0)  {test.ptr = "xarray"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
   hlfir.assign %5 to %8 : i32, !fir.ref<i32>
+  return
+}
+
+func.func @_QMmPfoo3.fir(%arg0: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>> {fir.bindc_name = "y"}) {
+  %0 = fir.declare %arg0 {uniq_name = "_QMmFfooEx"} : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
+  %1 = fir.declare %arg1 {uniq_name = "_QMmFfooEy"} : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>
+  %2 = fir.field_index array, !fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
+  %3 = fir.coordinate_of %1, %2 : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+  %4 = fir.load %3 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %5:3 = fir.box_dims %4, %c0 : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+  %6 = fir.shift %5#0 : (index) -> !fir.shift<1>
+  %7 = fir.array_coor %4(%6) %c1 {test.ptr="yarray.fir"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>, index) -> !fir.ref<i32>
+  %8 = fir.load %7 : !fir.ref<i32>
+  %9 = fir.field_index array, !fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>
+  %10 = fir.coordinate_of %0, %9 : (!fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+  %11 = fir.load %10 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+  %c1_0 = arith.constant 1 : index
+  %c0_1 = arith.constant 0 : index
+  %12:3 = fir.box_dims %11, %c0_1 : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+  %13 = fir.shift %12#0 : (index) -> !fir.shift<1>
+  %14 = fir.array_coor %11(%13) %c1_0 {test.ptr="xarray.fir"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>, index) -> !fir.ref<i32>
+  fir.store %8 to %14 : !fir.ref<i32>
   return
 }
 
@@ -144,11 +233,20 @@ func.func @_QMmPfoo3(%arg0: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.ptr<!
 
 // CHECK-LABEL: Testing : "_QMmPtest"
 // CHECK-DAG: x#0 <-> x%p#0: MayAlias
+// CHECK-DAG: x.fir#0 <-> x%p.fir#0: MayAlias
 
 func.func @_QMmPtest() {
   %0 = fir.address_of(@_QMmEx) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>
   %1:2 = hlfir.declare %0 {test.ptr="x", uniq_name = "_QMmEx"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>)
   %2 = hlfir.designate %1#0{"p"}   {test.ptr="x%p", fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+  return
+}
+
+func.func @_QMmPtest.fir() {
+  %0 = fir.address_of(@_QMmEx) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>
+  %1 = fir.declare %0 {test.ptr = "x.fir", uniq_name = "_QMmEx"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>
+  %2 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>
+  %3 = fir.coordinate_of %1, %2 {test.ptr="x%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<i32>>>
   return
 }
 
@@ -177,6 +275,8 @@ func.func @_QMmPtest() {
 // composite is nested within another composite.
 // CHECK-DAG: x#0 <-> x%p#0: MayAlias
 // CHECK-DAG: x%x#0 <-> x%x%p#0: MayAlias
+// CHECK-DAG: x.fir#0 <-> x%p.fir#0: MayAlias
+// CHECK-DAG: x%x.fir#0 <-> x%x%p.fir#0: MayAlias
 
 // The addresses of different components of the same composite do not alias.
 //
@@ -191,6 +291,9 @@ func.func @_QMmPtest() {
 // CHECK-DAG: x%x#0 <-> x%i#0: MayAlias
 // CHECK-DAG: x%p#0 <-> x%i#0: NoAlias
 // CHECK-DAG: x%x#0 <-> x%p#0: MayAlias
+// CHECK-DAG: x%x.fir#0 <-> x%i.fir#0: MayAlias
+// CHECK-DAG: x%p.fir#0 <-> x%i.fir#0: NoAlias
+// CHECK-DAG: x%x.fir#0 <-> x%p.fir#0: MayAlias
 
 func.func @_QMmPtest() {
   %0 = fir.alloca !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "x", uniq_name = "_QMmFtestEx"}
@@ -199,6 +302,20 @@ func.func @_QMmPtest() {
   %3 = hlfir.designate %1#0{"p"}   {test.ptr="x%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   %4 = hlfir.designate %1#0{"i"} {test.ptr="x%i"}  : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
   %5 = hlfir.designate %2{"p"}   {test.ptr="x%x%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  return
+}
+
+func.func @_QMmPtest.fir() {
+  %0 = fir.alloca !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "x", uniq_name = "_QMmFtestEx"}
+  %1 = fir.declare %0 {test.ptr = "x.fir", uniq_name = "_QMmFtestEx"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %2 = fir.field_index x, !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %3 = fir.coordinate_of %1, %2 {test.ptr="x%x.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>>
+  %4 = fir.field_index p, !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %5 = fir.coordinate_of %1, %4 {test.ptr="x%p.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %6 = fir.field_index i, !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %7 = fir.coordinate_of %1, %6 {test.ptr="x%i.fir"} : (!fir.ref<!fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+  %8 = fir.field_index p, !fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>
+  %9 = fir.coordinate_of %3, %8 {test.ptr="x%x%p.fir"} : (!fir.ref<!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   return
 }
 
@@ -231,28 +348,50 @@ func.func @_QMmPtest() {
 // CHECK-LABEL: Testing : "_QMmPtest"
 
 // Check when composite is a dummy arg.
+//
 // CHECK-DAG: argp#0 <-> arg#0: MayAlias
 // CHECK-DAG: argp#0 <-> arg%p#0: MayAlias
 // CHECK-DAG: argp#0 <-> arg%i#0: NoAlias
+// CHECK-DAG: argp.fir#0 <-> arg.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> arg%p.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> arg%i.fir#0: NoAlias
+//
 // CHECK-DAG: argp.tgt#0 <-> arg#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> arg%p#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> arg%i#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg.fir#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg%p.fir#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg%i.fir#0: NoAlias
+//
 // CHECK-DAG: arga#0 <-> arg#0: NoAlias
 // CHECK-DAG: arga#0 <-> arg%p#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> arg.fir#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> arg%p.fir#0: NoAlias
 
 // Check when composite is a global.
+//
 // CHECK-DAG: argp#0 <-> glob#0: MayAlias
 // CHECK-DAG: argp#0 <-> glob%p#0: MayAlias
 // CHECK-DAG: argp#0 <-> glob%i#0: NoAlias
+// CHECK-DAG: argp.fir#0 <-> glob.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> glob%p.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> glob%i.fir#0: NoAlias
+//
 // CHECK-DAG: argp.tgt#0 <-> glob#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> glob%p#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> glob%i#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob.fir#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob%p.fir#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob%i.fir#0: NoAlias
+//
 // CHECK-DAG: arga#0 <-> glob#0: NoAlias
 // CHECK-DAG: arga#0 <-> glob%p#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> glob.fir#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> glob%p.fir#0: NoAlias
 
 // Check when composite is a local and thus cannot alias a dummy arg.
 //
-// TODO: The argp vs. loc%p case should be NoAlias.  However, AliasAnalysis
+// TODO: The argp vs. loc%p cases should be NoAlias.  However, AliasAnalysis
 // currently indiscriminately treats all pointers as aliasing.  That makes sense
 // for the addresses within the pointers but not necessarily for the addresses
 // of the pointers here.
@@ -260,11 +399,21 @@ func.func @_QMmPtest() {
 // CHECK-DAG: argp#0 <-> loc#0: NoAlias
 // CHECK-DAG: argp#0 <-> loc%p#0: MayAlias
 // CHECK-DAG: argp#0 <-> loc%i#0: NoAlias
+// CHECK-DAG: argp.fir#0 <-> loc.fir#0: NoAlias
+// CHECK-DAG: argp.fir#0 <-> loc%p.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> loc%i.fir#0: NoAlias
+//
 // CHECK-DAG: argp.tgt#0 <-> loc#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> loc%p#0: NoAlias
 // CHECK-DAG: argp.tgt#0 <-> loc%i#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc.fir#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc%p.fir#0: NoAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc%i.fir#0: NoAlias
+//
 // CHECK-DAG: arga#0 <-> loc#0: NoAlias
 // CHECK-DAG: arga#0 <-> loc%p#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> loc.fir#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> loc%p.fir#0: NoAlias
 
 fir.global @_QMmEglob : !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
 
@@ -290,6 +439,38 @@ func.func @_QMmPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = 
   %13:2 = hlfir.declare %12 {test.ptr="loc", uniq_name = "_QMmFtestEloc"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>)
   %14 = hlfir.designate %13#0{"p"}   {test.ptr="loc%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   %15 = hlfir.designate %13#0{"i"} {test.ptr="loc%i"}  : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
+
+  return
+}
+
+func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "argp"}, %arg1: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.bindc_name = "arga"}, %arg2: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>> {fir.bindc_name = "arg"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+
+  %1 = fir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, test.ptr = "argp.fir", uniq_name = "_QMmFtestEargp"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %2 = fir.load %1 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %3 = fir.box_addr %2 {test.ptr = "argp.tgt.fir"} : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+
+  %4 = fir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable>, test.ptr = "arga.fir", uniq_name = "_QMmFtestEarga"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+
+  %5 = fir.declare %arg2 dummy_scope %0 {test.ptr = "arg.fir", uniq_name = "_QMmFtestEarg"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %6 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %7 = fir.coordinate_of %5, %6 {test.ptr="arg%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %8 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %9 = fir.coordinate_of %5, %8 {test.ptr="arg%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+
+  %10 = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %11 = fir.declare %10 {test.ptr = "glob.fir", uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %12 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %13 = fir.coordinate_of %11, %12 {test.ptr="glob%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %14 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %15 = fir.coordinate_of %11, %14 {test.ptr="glob%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+
+  %16 = fir.alloca !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "loc", uniq_name = "_QMmFtestEloc"}
+  %17 = fir.declare %16 {test.ptr = "loc.fir", uniq_name = "_QMmFtestEloc"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %18 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %19 = fir.coordinate_of %17, %18 {test.ptr="loc%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %20 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %21 = fir.coordinate_of %17, %20 {test.ptr="loc%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
 
   return
 }
@@ -321,31 +502,53 @@ func.func @_QMmPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = 
 // CHECK-LABEL: Testing : "_QMmFparentPtest"
 
 // Check when composite is a dummy arg.
+//
 // CHECK-DAG: argp#0 <-> arg#0: MayAlias
 // CHECK-DAG: argp#0 <-> arg%p#0: MayAlias
 // CHECK-DAG: argp#0 <-> arg%i#0: NoAlias
-// TODO: Shouldn't these three be NoAlias?  However, argp.tgt is currently
-// handled as Indirect.
+// CHECK-DAG: argp.fir#0 <-> arg.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> arg%p.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> arg%i.fir#0: NoAlias
+//
+// TODO: Shouldn't these be NoAlias?  However, argp.tgt is currently handled as
+// Indirect.
 // CHECK-DAG: argp.tgt#0 <-> arg#0: MayAlias
 // CHECK-DAG: argp.tgt#0 <-> arg%p#0: MayAlias
 // CHECK-DAG: argp.tgt#0 <-> arg%i#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg%p.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> arg%i.fir#0: MayAlias
+//
+// TODO: Shouldn't the arga vs. arg%p cases be NoAlias?  However, arga is
+// treated like a target because it's HostAssoc and arg is Argument, and arg%p
+// is treated like a pointer.
 // CHECK-DAG: arga#0 <-> arg#0: NoAlias
-// TODO: Shouldn't this be NoAlias?  However, arga is treated like a target
-// because it's HostAssoc and arg is Argument, and arg%p is treated like a
-// pointer.
 // CHECK-DAG: arga#0 <-> arg%p#0: MayAlias
+// CHECK-DAG: arga.fir#0 <-> arg.fir#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> arg%p.fir#0: MayAlias
 
 // Check when composite is a global.
+//
 // CHECK-DAG: argp#0 <-> glob#0: MayAlias
 // CHECK-DAG: argp#0 <-> glob%p#0: MayAlias
 // CHECK-DAG: argp#0 <-> glob%i#0: NoAlias
-// TODO: Shouldn't these three be NoAlias?  However, argp.tgt is currently
-// handled as Indirect.
+// CHECK-DAG: argp.fir#0 <-> glob.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> glob%p.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> glob%i.fir#0: NoAlias
+//
+// TODO: Shouldn't these be NoAlias?  However, argp.tgt is currently handled as
+// Indirect.
 // CHECK-DAG: argp.tgt#0 <-> glob#0: MayAlias
 // CHECK-DAG: argp.tgt#0 <-> glob%p#0: MayAlias
 // CHECK-DAG: argp.tgt#0 <-> glob%i#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob%p.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> glob%i.fir#0: MayAlias
+//
 // CHECK-DAG: arga#0 <-> glob#0: NoAlias
 // CHECK-DAG: arga#0 <-> glob%p#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> glob.fir#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> glob%p.fir#0: NoAlias
 
 // Check when composite is a local and thus cannot alias a dummy arg.
 //
@@ -357,13 +560,23 @@ func.func @_QMmPtest(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = 
 // CHECK-DAG: argp#0 <-> loc#0: NoAlias
 // CHECK-DAG: argp#0 <-> loc%p#0: MayAlias
 // CHECK-DAG: argp#0 <-> loc%i#0: NoAlias
-// TODO: Shouldn't these three be NoAlias?  However, argp.tgt is currently
-// handled as Indirect.
+// CHECK-DAG: argp.fir#0 <-> loc.fir#0: NoAlias
+// CHECK-DAG: argp.fir#0 <-> loc%p.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> loc%i.fir#0: NoAlias
+//
+// TODO: Shouldn't these be NoAlias?  However, argp.tgt is currently handled as
+// Indirect.
 // CHECK-DAG: argp.tgt#0 <-> loc#0: MayAlias
 // CHECK-DAG: argp.tgt#0 <-> loc%p#0: MayAlias
 // CHECK-DAG: argp.tgt#0 <-> loc%i#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc%p.fir#0: MayAlias
+// CHECK-DAG: argp.tgt.fir#0 <-> loc%i.fir#0: MayAlias
+//
 // CHECK-DAG: arga#0 <-> loc#0: NoAlias
 // CHECK-DAG: arga#0 <-> loc%p#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> loc.fir#0: NoAlias
+// CHECK-DAG: arga.fir#0 <-> loc%p.fir#0: NoAlias
 
 fir.global @_QMmEglob : !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
 
@@ -395,6 +608,44 @@ func.func private @_QMmFparentPtest(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.box<
   %41:2 = hlfir.declare %40 {test.ptr="loc", uniq_name = "_QMmFparentFtestEloc"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>)
   %42 = hlfir.designate %41#0{"p"}   {test.ptr="loc%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
   %43 = hlfir.designate %41#0{"i"} {test.ptr="loc%i"}  : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<i32>
+
+  return
+}
+
+func.func private @_QMmFparentPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>> {fir.bindc_name = "arg"}, %arg1: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>>> {fir.host_assoc}) attributes {fir.host_symbol = @_QMmPparent, llvm.linkage = #llvm.linkage<internal>} {
+  %0 = fir.dummy_scope : !fir.dscope
+
+  %c0_i32 = arith.constant 0 : i32
+  %1 = fir.coordinate_of %arg1, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<i32>>>>
+  %2 = fir.load %1 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<i32>>>>
+  %3 = fir.declare %2 {fortran_attrs = #fir.var_attrs<pointer, host_assoc>, test.ptr = "argp.fir", uniq_name = "_QMmFparentEargp"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %4 = fir.load %3 : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %5 = fir.box_addr %4 {test.ptr = "argp.tgt.fir"} : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+
+  %c1_i32 = arith.constant 1 : i32
+  %6 = fir.coordinate_of %arg1, %c1_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<i32>>>>
+  %7 = fir.load %6 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<i32>>>>
+  %8 = fir.declare %7 {fortran_attrs = #fir.var_attrs<allocatable, host_assoc>, test.ptr = "arga.fir", uniq_name = "_QMmFparentEarga"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+
+  %9 = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %10 = fir.declare %9 {test.ptr = "glob.fir", uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %11 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %12 = fir.coordinate_of %10, %11 {test.ptr="glob%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %13 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %14 = fir.coordinate_of %10, %13 {test.ptr="glob%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+
+  %15 = fir.declare %arg0 dummy_scope %0 {test.ptr = "arg.fir", uniq_name = "_QMmFparentFtestEarg"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %16 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %17 = fir.coordinate_of %15, %16 {test.ptr="arg%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %18 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %19 = fir.coordinate_of %15, %18 {test.ptr="arg%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
+
+  %20 = fir.alloca !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "loc", uniq_name = "_QMmFparentFtestEloc"}
+  %21 = fir.declare %20 {test.ptr = "loc.fir", uniq_name = "_QMmFparentFtestEloc"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>
+  %22 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %23 = fir.coordinate_of %21, %22 {test.ptr="loc%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+  %24 = fir.field_index i, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>
+  %25 = fir.coordinate_of %21, %24 {test.ptr="loc%i.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<i32>>,i:i32}>>, !fir.field) -> !fir.ref<i32>
 
   return
 }

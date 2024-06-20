@@ -353,6 +353,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             followBoxData = true;
         })
         .Case<fir::ArrayCoorOp, fir::CoordinateOp>([&](auto op) {
+          if (isPointerReference(ty))
+            attributes.set(Attribute::Pointer);
           v = op->getOperand(0);
           defOp = v.getDefiningOp();
           if (mlir::isa<fir::BaseBoxType>(v.getType()))
