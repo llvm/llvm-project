@@ -3263,7 +3263,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
 void ASTWriter::WriteType(QualType T) {
   TypeIdx &IdxRef = TypeIdxs[T];
   if (IdxRef.getValue() == 0) // we haven't seen this type before.
-    IdxRef = TypeIdx(NextTypeID++);
+    IdxRef = TypeIdx(0, NextTypeID++);
   TypeIdx Idx = IdxRef;
 
   assert(Idx.getModuleFileIndex() == 0 && "Re-writing a type from a prior AST");
@@ -6106,9 +6106,9 @@ static TypeID MakeTypeID(ASTContext &Context, QualType T,
     return TypeIdxFromBuiltin(BT).asTypeID(FastQuals);
 
   if (T == Context.AutoDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
+    return TypeIdx(0, PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
   if (T == Context.AutoRRefDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
+    return TypeIdx(0, PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
 
   return IdxForType(T).asTypeID(FastQuals);
 }
@@ -6129,7 +6129,7 @@ TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
 
       // We haven't seen this type before. Assign it a new ID and put it
       // into the queue of types to emit.
-      Idx = TypeIdx(NextTypeID++);
+      Idx = TypeIdx(0, NextTypeID++);
       DeclTypesToEmit.push(T);
     }
     return Idx;
@@ -6659,18 +6659,19 @@ void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
   // This copes with an interesting
   // case for chained AST writing where we schedule writing the type and then,
   // later, deserialize the type from another AST. In this case, we want to
-  // keep the just writing entry so that we can properly write it out to
+  // keep the entry from a later module so that we can properly write it out to
   // the AST file.
   TypeIdx &StoredIdx = TypeIdxs[T];
 
   // Ignore it if the type comes from the current being written module file.
+  // Since the current being written module file
   unsigned ModuleFileIndex = StoredIdx.getModuleFileIndex();
   if (ModuleFileIndex == 0 && StoredIdx.getValue())
     return;
 
   // Otherwise, keep the highest ID since the module file comes later has
   // higher module file indexes.
-  if (Idx.getValue() >= StoredIdx.getValue())
+  if (Idx.getModuleFileIndex() >= StoredIdx.getModuleFileIndex())
     StoredIdx = Idx;
 }
 

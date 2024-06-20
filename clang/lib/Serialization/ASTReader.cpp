@@ -7084,15 +7084,34 @@ TypeSourceInfo *ASTRecordReader::readTypeSourceInfo() {
   return TInfo;
 }
 
+static unsigned getIndexForTypeID(serialization::TypeID ID) {
+  return (ID & llvm::maskTrailingOnes<TypeID>(32)) >> Qualifiers::FastWidth;
+  ;
+}
+
+static unsigned getModuleFileIndexForTypeID(serialization::TypeID ID) {
+  return ID >> 32;
+}
+
+static bool isPredefinedTypes(serialization::TypeID ID) {
+  // We don't need to erase the higher bits since if these bits are not 0,
+  // it must be larger than NUM_PREDEF_TYPE_IDS.
+  return (ID >> Qualifiers::FastWidth) < NUM_PREDEF_TYPE_IDS;
+}
+
 std::pair<ModuleFile *, unsigned>
 ASTReader::translateTypeIDToIndex(serialization::TypeID ID) const {
-  unsigned Index =
-      (ID & llvm::maskTrailingOnes<TypeID>(32)) >> Qualifiers::FastWidth;
+  assert(!isPredefinedTypes(ID) &&
+         "Predefined type shouldn't be in TypesLoaded");
+  unsigned ModuleFileIndex = getModuleFileIndexForTypeID(ID);
+  assert(ModuleFileIndex && "Untranslated Local Decl?");
 
-  ModuleFile *OwningModuleFile = getOwningModuleFile(ID);
+  ModuleFile *OwningModuleFile = &getModuleManager()[ModuleFileIndex - 1];
   assert(OwningModuleFile &&
          "untranslated type ID or local type ID shouldn't be in TypesLoaded");
-  return {OwningModuleFile, OwningModuleFile->BaseTypeIndex + Index};
+
+  return {OwningModuleFile,
+          OwningModuleFile->BaseTypeIndex + getIndexForTypeID(ID)};
 }
 
 QualType ASTReader::GetType(TypeID ID) {
@@ -7101,9 +7120,9 @@ QualType ASTReader::GetType(TypeID ID) {
 
   unsigned FastQuals = ID & Qualifiers::FastMask;
 
-  if (uint64_t Index = ID >> Qualifiers::FastWidth;
-      Index < NUM_PREDEF_TYPE_IDS) {
+  if (isPredefinedTypes(ID)) {
     QualType T;
+    unsigned Index = getIndexForTypeID(ID);
     switch ((PredefinedTypeIDs)Index) {
     case PREDEF_TYPE_LAST_ID:
       // We should never use this one.
@@ -7394,13 +7413,13 @@ QualType ASTReader::getLocalType(ModuleFile &F, TypeID LocalID) {
 
 serialization::TypeID ASTReader::getGlobalTypeID(ModuleFile &F,
                                                  TypeID LocalID) const {
-  if ((LocalID >> Qualifiers::FastWidth) < NUM_PREDEF_TYPE_IDS)
+  if (isPredefinedTypes(LocalID))
     return LocalID;
 
   if (!F.ModuleOffsetMap.empty())
     ReadModuleOffsetMap(F);
 
-  unsigned ModuleFileIndex = LocalID >> 32;
+  unsigned ModuleFileIndex = getModuleFileIndexForTypeID(LocalID);
   LocalID &= llvm::maskTrailingOnes<TypeID>(32);
 
   if (ModuleFileIndex == 0)
@@ -7642,16 +7661,6 @@ ModuleFile *ASTReader::getOwningModuleFile(GlobalDeclID ID) const {
     return nullptr;
 
   uint64_t ModuleFileIndex = ID.getModuleFileIndex();
-  assert(ModuleFileIndex && "Untranslated Local Decl?");
-
-  return &getModuleManager()[ModuleFileIndex - 1];
-}
-
-ModuleFile *ASTReader::getOwningModuleFile(TypeID ID) const {
-  if (ID < NUM_PREDEF_TYPE_IDS)
-    return nullptr;
-
-  uint64_t ModuleFileIndex = ID >> 32;
   assert(ModuleFileIndex && "Untranslated Local Decl?");
 
   return &getModuleManager()[ModuleFileIndex - 1];

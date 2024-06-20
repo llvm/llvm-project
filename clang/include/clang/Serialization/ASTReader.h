@@ -1881,6 +1881,9 @@ public:
   QualType GetType(serialization::TypeID ID);
 
   /// Resolve a local type ID within a given AST file into a type.
+  ///
+  /// A local type ID is only meaningful with the corresponding module file.
+  /// See the implementation of getGlobalTypeID for details.
   QualType getLocalType(ModuleFile &F, serialization::TypeID LocalID);
 
   /// Map a local type ID within a given AST file into a global type ID.
@@ -1907,7 +1910,6 @@ public:
   /// if the declaration is not from a module file.
   ModuleFile *getOwningModuleFile(const Decl *D) const;
   ModuleFile *getOwningModuleFile(GlobalDeclID ID) const;
-  ModuleFile *getOwningModuleFile(serialization::TypeID ID) const;
 
   /// Returns the source location for the decl \p ID.
   SourceLocation getSourceLocationForDeclID(GlobalDeclID ID);

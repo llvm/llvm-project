@@ -72,11 +72,10 @@ using DeclID = DeclIDBase::DeclID;
 /// An ID number that refers to a type in an AST file.
 ///
 /// The ID of a type is partitioned into three parts:
-/// - the lower
-/// three bits are used to store the const/volatile/restrict
-/// qualifiers (as with QualType).
-/// - the upper 29 bits provide a type index in the corresponding
-/// module file.
+/// - the lower three bits are used to store the const/volatile/restrict
+///   qualifiers (as with QualType).
+/// - the next 29 bits provide a type index in the corresponding
+///   module file.
 /// - the upper 32 bits provide a module file index.
 ///
 /// The type index values are partitioned into two
@@ -95,7 +94,6 @@ class TypeIdx {
 
 public:
   TypeIdx() = default;
-  explicit TypeIdx(uint32_t Idx) : ModuleFileIndex(0), Idx(Idx) {}
 
   explicit TypeIdx(uint32_t ModuleFileIdx, uint32_t Idx)
       : ModuleFileIndex(ModuleFileIdx), Idx(Idx) {}
@@ -114,7 +112,7 @@ public:
 
   static TypeIdx fromTypeID(TypeID ID) {
     if (ID == TypeID(-1))
-      return TypeIdx(-1);
+      return TypeIdx(0, -1);
 
     return TypeIdx(ID >> 32, (ID & llvm::maskTrailingOnes<TypeID>(32)) >>
                                  Qualifiers::FastWidth);
