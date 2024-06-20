@@ -23,6 +23,7 @@ if(CLANG_PLUGIN_SUPPORT)
   set(support_plugins SUPPORT_PLUGINS)
 endif()
 
+# 用于生成 clang 二进制文件
 add_clang_tool(clang
   driver.cpp
   cc1_main.cpp

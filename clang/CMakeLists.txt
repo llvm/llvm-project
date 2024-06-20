@@ -1,14 +1,20 @@
 cmake_minimum_required(VERSION 3.20.0)
+
+# 设置子项目的名称为 Clang
 set(LLVM_SUBPROJECT_TITLE "Clang")
 
+# LLVM_COMMON_CMAKE_UTILS指当前子项目的 cmake 预定义属性
+# 每一个子项目该属性具体值各不相同
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 endif()
+
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
 # If we are not building as a part of LLVM, build Clang as an
 # standalone project, using LLVM as an external library:
+# 如果不是在编译 LLVM 项目的时候编译子项目Clang，而是将 LLVM 项目作为外部库来单独编译 Clang时：
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(Clang)
   set(CLANG_BUILT_STANDALONE TRUE)

@@ -225,6 +225,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   return 1;
 }
 
+// Cratels: clang代码的真正入口
 int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // Cratels:  标记栈底位置
   noteBottomOfStack();
@@ -239,6 +240,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
 
+  // TODO: 初始化所有 target 的具体作用尚不清楚
   llvm::InitializeAllTargets();
 
   llvm::BumpPtrAllocator A;
