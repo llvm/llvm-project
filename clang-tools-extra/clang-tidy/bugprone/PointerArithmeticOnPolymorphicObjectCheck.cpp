@@ -24,7 +24,7 @@ PointerArithmeticOnPolymorphicObjectCheck::
                                               ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreInheritedVirtualFunctions(
-          Options.get("IgnoreInheritedVirtualFunctions", true)) {}
+          Options.get("IgnoreInheritedVirtualFunctions", false)) {}
 
 void PointerArithmeticOnPolymorphicObjectCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

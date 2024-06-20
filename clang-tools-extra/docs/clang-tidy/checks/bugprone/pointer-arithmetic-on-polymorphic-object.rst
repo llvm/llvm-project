@@ -43,8 +43,7 @@ Options
   When `true`, objects that only inherit a virtual function are not checked.
   Classes that do not declare a new virtual function are excluded
   by default, as they make up the majority of false positives.
-  Default: `true`.
-  When using the alias `cert-ctr56-cpp`, default: `false`.
+  Default: `false`.
 
   .. code-block:: c++
   
