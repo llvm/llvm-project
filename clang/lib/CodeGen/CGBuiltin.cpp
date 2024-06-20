@@ -725,11 +725,7 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
 
     if (IntrinsicID) {
       llvm::MDBuilder MDHelper(CGF.getLLVMContext());
-      MDNode *RootMD;
-      if (CGF.getLangOpts().CPlusPlus)
-        RootMD = MDHelper.createTBAARoot("Simple C++ TBAA");
-      else
-        RootMD = MDHelper.createTBAARoot("Simple C/C++ TBAA");
+      MDNode *RootMD = CGF.CGM.getTBAARoot();
       // Emit "int" TBAA metadata on FP math libcalls.
       MDNode *AliasType = MDHelper.createTBAANode("int", RootMD);
       MDNode *MDInt = MDHelper.createTBAAStructTagNode(AliasType, AliasType, 0);
