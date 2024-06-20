@@ -805,29 +805,26 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   };
   // Detecting functions is brittle. It would be better if we could annotate
   // the LParen type of functions/calls.
-  const auto IsFunctionDeclParen = [&](const FormatToken &Tok) {
+  auto IsFunctionDeclParen = [&](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.Previous &&
            (Tok.Previous->is(TT_FunctionDeclarationName) ||
-            (Tok.Previous->Previous &&
-             Tok.Previous->Previous->is(tok::coloncolon) &&
-             Tok.Previous->Previous->Previous &&
-             Tok.Previous->Previous->Previous->is(TT_FunctionDeclarationName)));
+            Tok.endsSequence(TT_FunctionDeclarationName, tok::coloncolon));
   };
-  const auto IsLambdaParameterList = [](const FormatToken *Left) {
+  auto IsLambdaParameterList = [](const FormatToken *Tok) {
     // adapted from TokenAnnotator.cpp:isLambdaParameterList()
     // Skip <...> if present.
-    if (Left->Previous && Left->Previous->is(tok::greater) &&
-        Left->Previous->MatchingParen &&
-        Left->Previous->MatchingParen->is(TT_TemplateOpener)) {
-      Left = Left->Previous->MatchingParen;
+    if (Tok->Previous && Tok->Previous->is(tok::greater) &&
+        Tok->Previous->MatchingParen &&
+        Tok->Previous->MatchingParen->is(TT_TemplateOpener)) {
+      Tok = Tok->Previous->MatchingParen;
     }
 
     // Check for `[...]`.
-    return Left->Previous && Left->Previous->is(tok::r_square) &&
-           Left->Previous->MatchingParen &&
-           Left->Previous->MatchingParen->is(TT_LambdaLSquare);
+    return Tok->Previous && Tok->Previous->is(tok::r_square) &&
+           Tok->Previous->MatchingParen &&
+           Tok->Previous->MatchingParen->is(TT_LambdaLSquare);
   };
-  const auto IsFunctionCallParen = [&](const FormatToken &Tok) {
+  auto IsFunctionCallParen = [&](const FormatToken &Tok) {
     return Tok.is(tok::l_paren) && Tok.ParameterCount > 0 && Tok.Previous &&
            Tok.Previous->is(tok::identifier);
   };
