@@ -2039,3 +2039,145 @@ define ptr @gep_nusw_nuw_missing_noundef(ptr %p, i64 %index) {
   %gep = getelementptr nusw nuw i32, ptr %p, i64 %index
   ret ptr %gep
 }
+
+define void @addrec_gep_inbounds_nneg(ptr %p, ptr %end) {
+; CHECK-LABEL: 'addrec_gep_inbounds_nneg'
+; CHECK-NEXT:  Classifying expressions for: @addrec_gep_inbounds_nneg
+; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%p,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoint ptr %p to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, ptr %iv, i64 1
+; CHECK-NEXT:    --> {(4 + %p)<nuw>,+,4}<nuw><%loop> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint ptr %p to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @addrec_gep_inbounds_nneg
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %p to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %p to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi ptr [ %p, %entry], [ %iv.next, %loop ]
+  %iv.next = getelementptr inbounds i32, ptr %iv, i64 1
+  %cmp = icmp ne ptr %iv.next, %end
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+define void @addrec_gep_inbounds_neg(ptr %p, ptr %end) {
+; CHECK-LABEL: 'addrec_gep_inbounds_neg'
+; CHECK-NEXT:  Classifying expressions for: @addrec_gep_inbounds_neg
+; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%p,+,-4}<nw><%loop> U: full-set S: full-set Exits: ((-4 * ((-4 + (-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %p to i64)) /u 4)) + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, ptr %iv, i64 -1
+; CHECK-NEXT:    --> {(-4 + %p),+,-4}<nw><%loop> U: full-set S: full-set Exits: (-4 + (-4 * ((-4 + (-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %p to i64)) /u 4)) + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @addrec_gep_inbounds_neg
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %p to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %p to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi ptr [ %p, %entry], [ %iv.next, %loop ]
+  %iv.next = getelementptr inbounds i32, ptr %iv, i64 -1
+  %cmp = icmp ne ptr %iv.next, %end
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+define void @addrec_gep_nusw_nneg(ptr %p, ptr %end) {
+; CHECK-LABEL: 'addrec_gep_nusw_nneg'
+; CHECK-NEXT:  Classifying expressions for: @addrec_gep_nusw_nneg
+; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%p,+,4}<nuw><%loop> U: full-set S: full-set Exits: ((4 * ((-4 + (-1 * (ptrtoint ptr %p to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = getelementptr nusw i32, ptr %iv, i64 1
+; CHECK-NEXT:    --> {(4 + %p)<nuw>,+,4}<nuw><%loop> U: [4,0) S: [4,0) Exits: (4 + (4 * ((-4 + (-1 * (ptrtoint ptr %p to i64)) + (ptrtoint ptr %end to i64)) /u 4))<nuw> + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @addrec_gep_nusw_nneg
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %p to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %p to i64)) + (ptrtoint ptr %end to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi ptr [ %p, %entry], [ %iv.next, %loop ]
+  %iv.next = getelementptr nusw i32, ptr %iv, i64 1
+  %cmp = icmp ne ptr %iv.next, %end
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+define void @addrec_gep_nusw_neg(ptr %p, ptr %end) {
+; CHECK-LABEL: 'addrec_gep_nusw_neg'
+; CHECK-NEXT:  Classifying expressions for: @addrec_gep_nusw_neg
+; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%p,+,-4}<nw><%loop> U: full-set S: full-set Exits: ((-4 * ((-4 + (-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %p to i64)) /u 4)) + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = getelementptr nusw i32, ptr %iv, i64 -1
+; CHECK-NEXT:    --> {(-4 + %p),+,-4}<nw><%loop> U: full-set S: full-set Exits: (-4 + (-4 * ((-4 + (-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %p to i64)) /u 4)) + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @addrec_gep_nusw_neg
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %p to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387903
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-4 + (-1 * (ptrtoint ptr %end to i64)) + (ptrtoint ptr %p to i64)) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi ptr [ %p, %entry], [ %iv.next, %loop ]
+  %iv.next = getelementptr nusw i32, ptr %iv, i64 -1
+  %cmp = icmp ne ptr %iv.next, %end
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+define void @addrec_gep_nuw(ptr %p, ptr %end, i64 %step) {
+; CHECK-LABEL: 'addrec_gep_nuw'
+; CHECK-NEXT:  Classifying expressions for: @addrec_gep_nuw
+; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%p,+,(4 * %step)<nuw>}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = getelementptr nuw i32, ptr %iv, i64 %step
+; CHECK-NEXT:    --> {((4 * %step)<nuw> + %p)<nuw>,+,(4 * %step)<nuw>}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @addrec_gep_nuw
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi ptr [ %p, %entry], [ %iv.next, %loop ]
+  %iv.next = getelementptr nuw i32, ptr %iv, i64 %step
+  %cmp = icmp ne ptr %iv.next, %end
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+define void @addrec_gep_nusw_nuw(ptr %p, ptr %end, i64 %step) {
+; CHECK-LABEL: 'addrec_gep_nusw_nuw'
+; CHECK-NEXT:  Classifying expressions for: @addrec_gep_nusw_nuw
+; CHECK-NEXT:    %iv = phi ptr [ %p, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%p,+,(4 * %step)<nuw><nsw>}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = getelementptr nusw nuw i32, ptr %iv, i64 %step
+; CHECK-NEXT:    --> {((4 * %step)<nuw><nsw> + %p)<nuw>,+,(4 * %step)<nuw><nsw>}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @addrec_gep_nusw_nuw
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi ptr [ %p, %entry], [ %iv.next, %loop ]
+  %iv.next = getelementptr nusw nuw i32, ptr %iv, i64 %step
+  %cmp = icmp ne ptr %iv.next, %end
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
