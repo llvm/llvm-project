@@ -29,8 +29,8 @@ using namespace __sanitizer;
 using __nsan::nsan_init_is_running;
 using __nsan::nsan_initialized;
 
-static constexpr uptr kEarlyAllocBufSize = 16384;
-static uptr AllocatedBytes;
+constexpr uptr kEarlyAllocBufSize = 16384;
+static uptr allocated_bytes;
 static char early_alloc_buf[kEarlyAllocBufSize];
 
 static bool isInEarlyAllocBuf(const void *ptr) {
@@ -38,20 +38,14 @@ static bool isInEarlyAllocBuf(const void *ptr) {
           ((uptr)ptr - (uptr)early_alloc_buf) < sizeof(early_alloc_buf));
 }
 
-static u8 *toU8Ptr(wchar_t *ptr) { return reinterpret_cast<u8 *>(ptr); }
-
-static const u8 *toU8Ptr(const wchar_t *ptr) {
-  return reinterpret_cast<const u8 *>(ptr);
-}
-
 template <typename T> T min(T a, T b) { return a < b ? a : b; }
 
 // Handle allocation requests early (before all interceptors are setup). dlsym,
 // for example, calls calloc.
 static void *HandleEarlyAlloc(uptr size) {
-  void *Mem = (void *)&early_alloc_buf[AllocatedBytes];
-  AllocatedBytes += size;
-  CHECK_LT(AllocatedBytes, kEarlyAllocBufSize);
+  void *Mem = (void *)&early_alloc_buf[allocated_bytes];
+  allocated_bytes += size;
+  CHECK_LT(allocated_bytes, kEarlyAllocBufSize);
   return Mem;
 }
 
@@ -68,7 +62,7 @@ INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
 
 INTERCEPTOR(wchar_t *, wmemset, wchar_t *dst, wchar_t v, uptr size) {
   wchar_t *res = REAL(wmemset)(dst, v, size);
-  __nsan_set_value_unknown(toU8Ptr(dst), sizeof(wchar_t) * size);
+  __nsan_set_value_unknown((u8 *)dst, sizeof(wchar_t) * size);
   return res;
 }
 
@@ -86,7 +80,7 @@ INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
 
 INTERCEPTOR(wchar_t *, wmemmove, wchar_t *dst, const wchar_t *src, uptr size) {
   wchar_t *res = REAL(wmemmove)(dst, src, size);
-  __nsan_copy_values(toU8Ptr(dst), toU8Ptr(src), sizeof(wchar_t) * size);
+  __nsan_copy_values((u8 *)dst, (const u8 *)src, sizeof(wchar_t) * size);
   return res;
 }
 
@@ -107,7 +101,7 @@ INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
 
 INTERCEPTOR(wchar_t *, wmemcpy, wchar_t *dst, const wchar_t *src, uptr size) {
   wchar_t *res = REAL(wmemcpy)(dst, src, size);
-  __nsan_copy_values(toU8Ptr(dst), toU8Ptr(src), sizeof(wchar_t) * size);
+  __nsan_copy_values((u8 *)dst, (const u8 *)src, sizeof(wchar_t) * size);
   return res;
 }
 
@@ -227,8 +221,8 @@ static void nsanCopyZeroTerminated(char *dst, const char *src, uptr n) {
 }
 
 static void nsanWCopyZeroTerminated(wchar_t *dst, const wchar_t *src, uptr n) {
-  __nsan_copy_values(toU8Ptr(dst), toU8Ptr(src), sizeof(wchar_t) * n);
-  __nsan_set_value_unknown(toU8Ptr(dst + n), sizeof(wchar_t));
+  __nsan_copy_values((u8 *)dst, (const u8 *)(src), sizeof(wchar_t) * n);
+  __nsan_set_value_unknown((u8 *)(dst + n), sizeof(wchar_t));
 }
 
 INTERCEPTOR(char *, strdup, const char *S) {

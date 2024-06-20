@@ -58,25 +58,25 @@ void InitializeInterceptors();
 
 // See notes in nsan_platform.
 // printf-free (see comment in nsan_interceptors.cc).
-inline u8 *getShadowAddrFor(u8 *Ptr) {
+inline u8 *GetShadowAddrFor(u8 *Ptr) {
   uptr AppOffset = ((uptr)Ptr) & ShadowMask();
   return (u8 *)(AppOffset * kShadowScale + ShadowAddr());
 }
 
 // printf-free (see comment in nsan_interceptors.cc).
-inline const u8 *getShadowAddrFor(const u8 *Ptr) {
-  return getShadowAddrFor(const_cast<u8 *>(Ptr));
+inline const u8 *GetShadowAddrFor(const u8 *Ptr) {
+  return GetShadowAddrFor(const_cast<u8 *>(Ptr));
 }
 
 // printf-free (see comment in nsan_interceptors.cc).
-inline u8 *getShadowTypeAddrFor(u8 *Ptr) {
+inline u8 *GetShadowTypeAddrFor(u8 *Ptr) {
   uptr AppOffset = ((uptr)Ptr) & ShadowMask();
   return (u8 *)(AppOffset + TypesAddr());
 }
 
 // printf-free (see comment in nsan_interceptors.cc).
-inline const u8 *getShadowTypeAddrFor(const u8 *Ptr) {
-  return getShadowTypeAddrFor(const_cast<u8 *>(Ptr));
+inline const u8 *GetShadowTypeAddrFor(const u8 *Ptr) {
+  return GetShadowTypeAddrFor(const_cast<u8 *>(Ptr));
 }
 
 // Information about value types and their shadow counterparts.

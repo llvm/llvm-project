@@ -51,16 +51,16 @@
 using namespace __sanitizer;
 using namespace __nsan;
 
-static constexpr const int kMaxVectorWidth = 8;
+constexpr int kMaxVectorWidth = 8;
 
 // When copying application memory, we also copy its shadow and shadow type.
 // FIXME: We could provide fixed-size versions that would nicely
 // vectorize for known sizes.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
-  internal_memmove((void *)getShadowTypeAddrFor(daddr),
-                   getShadowTypeAddrFor(saddr), size);
-  internal_memmove((void *)getShadowAddrFor(daddr), getShadowAddrFor(saddr),
+  internal_memmove((void *)GetShadowTypeAddrFor(daddr),
+                   GetShadowTypeAddrFor(saddr), size);
+  internal_memmove((void *)GetShadowAddrFor(daddr), GetShadowAddrFor(saddr),
                    size * kShadowScale);
 }
 
@@ -68,7 +68,7 @@ __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
 // vectorize for known sizes.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __nsan_set_value_unknown(const u8 *addr, uptr size) {
-  internal_memset((void *)getShadowTypeAddrFor(addr), 0, size);
+  internal_memset((void *)GetShadowTypeAddrFor(addr), 0, size);
 }
 
 
@@ -83,25 +83,27 @@ const char FTInfo<long double>::kTypePattern[sizeof(long double)];
 
 // Helper for __nsan_dump_shadow_mem: Reads the value at address `ptr`,
 // identified by its type id.
-template <typename ShadowFT> __float128 readShadowInternal(const u8 *ptr) {
+template <typename ShadowFT>
+static __float128 ReadShadowInternal(const u8 *ptr) {
   ShadowFT Shadow;
   __builtin_memcpy(&Shadow, ptr, sizeof(Shadow));
   return Shadow;
 }
 
-__float128 readShadow(const u8 *ptr, const char ShadowTypeId) {
+static __float128 ReadShadow(const u8 *ptr, const char ShadowTypeId) {
   switch (ShadowTypeId) {
   case 'd':
-    return readShadowInternal<double>(ptr);
+    return ReadShadowInternal<double>(ptr);
   case 'l':
-    return readShadowInternal<long double>(ptr);
+    return ReadShadowInternal<long double>(ptr);
   case 'q':
-    return readShadowInternal<__float128>(ptr);
+    return ReadShadowInternal<__float128>(ptr);
   default:
     return 0.0;
   }
 }
 
+namespace {
 class Decorator : public __sanitizer::SanitizerCommonDecorator {
 public:
   Decorator() : SanitizerCommonDecorator() {}
@@ -109,8 +111,6 @@ public:
   const char *Name() { return Green(); }
   const char *End() { return Default(); }
 };
-
-namespace {
 
 // Workaround for the fact that Printf() does not support floats.
 struct PrintBuffer {
@@ -202,12 +202,12 @@ static void NsanAtexit() {
 // We have to have 3 versions because we need to know which type we are storing
 // since we are setting the type shadow memory.
 template <typename FT> static u8 *getShadowPtrForStore(u8 *store_addr, uptr n) {
-  unsigned char *shadow_type = getShadowTypeAddrFor(store_addr);
+  unsigned char *shadow_type = GetShadowTypeAddrFor(store_addr);
   for (uptr i = 0; i < n; ++i) {
     __builtin_memcpy(shadow_type + i * sizeof(FT), FTInfo<FT>::kTypePattern,
                      sizeof(FTInfo<FT>::kTypePattern));
   }
-  return getShadowAddrFor(store_addr);
+  return GetShadowAddrFor(store_addr);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u8 *
@@ -244,7 +244,7 @@ template <typename FT> static bool IsUnknownShadowType(const u8 *shadow_type) {
 // They return nullptr if the type of the value is unknown or incomplete.
 template <typename FT>
 static const u8 *getShadowPtrForLoad(const u8 *load_addr, uptr n) {
-  const u8 *const shadow_type = getShadowTypeAddrFor(load_addr);
+  const u8 *const shadow_type = GetShadowTypeAddrFor(load_addr);
   for (uptr i = 0; i < n; ++i) {
     if (!IsValidShadowType<FT>(shadow_type + i * sizeof(FT))) {
       // If loadtracking stats are enabled, log loads with invalid types
@@ -266,7 +266,7 @@ static const u8 *getShadowPtrForLoad(const u8 *load_addr, uptr n) {
       return nullptr;
     }
   }
-  return getShadowAddrFor(load_addr);
+  return GetShadowAddrFor(load_addr);
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE const u8 *
@@ -288,14 +288,14 @@ __nsan_get_shadow_ptr_for_longdouble_load(const u8 *load_addr, uptr n) {
 // opaque.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u8 *
 __nsan_internal_get_raw_shadow_ptr(const u8 *addr) {
-  return getShadowAddrFor(const_cast<u8 *>(addr));
+  return GetShadowAddrFor(const_cast<u8 *>(addr));
 }
 
 // Returns the raw shadow type pointer. The returned pointer should be
 // considered opaque.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE u8 *
 __nsan_internal_get_raw_shadow_type_ptr(const u8 *addr) {
-  return reinterpret_cast<u8 *>(getShadowTypeAddrFor(const_cast<u8 *>(addr)));
+  return reinterpret_cast<u8 *>(GetShadowTypeAddrFor(const_cast<u8 *>(addr)));
 }
 
 static ValueType getValueType(u8 c) { return static_cast<ValueType>(c & 0x3); }
@@ -322,8 +322,8 @@ static bool checkValueConsistency(const u8 *shadow_type) {
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __nsan_dump_shadow_mem(const u8 *addr, size_t size_bytes, size_t bytes_per_line,
                        size_t shadow_value_type_ids) {
-  const u8 *const shadow_type = getShadowTypeAddrFor(addr);
-  const u8 *const shadow = getShadowAddrFor(addr);
+  const u8 *const shadow_type = GetShadowTypeAddrFor(addr);
+  const u8 *const shadow = GetShadowAddrFor(addr);
 
   constexpr int kMaxNumDecodedValues = 16;
   __float128 decoded_values[kMaxNumDecodedValues];
@@ -356,7 +356,7 @@ __nsan_dump_shadow_mem(const u8 *addr, size_t size_bytes, size_t bytes_per_line,
         printf("f%x ", pos);
         if (LastPos == sizeof(float) - 1) {
           decoded_values[num_decoded_values] =
-              readShadow(shadow + kShadowScale * (Offset + 1 - sizeof(float)),
+              ReadShadow(shadow + kShadowScale * (Offset + 1 - sizeof(float)),
                          static_cast<char>(shadow_value_type_ids & 0xff));
           ++num_decoded_values;
         }
@@ -364,7 +364,7 @@ __nsan_dump_shadow_mem(const u8 *addr, size_t size_bytes, size_t bytes_per_line,
       case kDoubleValueType:
         printf("d%x ", pos);
         if (LastPos == sizeof(double) - 1) {
-          decoded_values[num_decoded_values] = readShadow(
+          decoded_values[num_decoded_values] = ReadShadow(
               shadow + kShadowScale * (Offset + 1 - sizeof(double)),
               static_cast<char>((shadow_value_type_ids >> 8) & 0xff));
           ++num_decoded_values;
@@ -373,7 +373,7 @@ __nsan_dump_shadow_mem(const u8 *addr, size_t size_bytes, size_t bytes_per_line,
       case kFp80ValueType:
         printf("l%x ", pos);
         if (LastPos == sizeof(long double) - 1) {
-          decoded_values[num_decoded_values] = readShadow(
+          decoded_values[num_decoded_values] = ReadShadow(
               shadow + kShadowScale * (Offset + 1 - sizeof(long double)),
               static_cast<char>((shadow_value_type_ids >> 16) & 0xff));
           ++num_decoded_values;
@@ -470,17 +470,17 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
                static_cast<long double>(100.0 * abs_err / largest),
                log2l(static_cast<long double>(abs_err / largest / Eps)));
     }
-    char UlpErrBuf[128] = "";
-    const double ShadowUlpDiff = GetULPDiff(check_value, check_shadow);
-    if (ShadowUlpDiff != kMaxULPDiff) {
+    char ulp_err_buf[128] = "";
+    const double shadow_ulp_diff = GetULPDiff(check_value, check_shadow);
+    if (shadow_ulp_diff != kMaxULPDiff) {
       // This is the ULP diff in the internal domain. The user actually cares
       // about that in the original domain.
-      const double UlpDiff =
-          ShadowUlpDiff / (u64{1} << (FTInfo<InternalFT>::kMantissaBits -
-                                      FTInfo<FT>::kMantissaBits));
-      snprintf(UlpErrBuf, sizeof(UlpErrBuf) - 1,
-               "(%.0f ULPs == %.1f digits == %.1f bits)", UlpDiff,
-               log10(UlpDiff), log2(UlpDiff));
+      const double ulp_diff =
+          shadow_ulp_diff / (u64{1} << (FTInfo<InternalFT>::kMantissaBits -
+                                        FTInfo<FT>::kMantissaBits));
+      snprintf(ulp_err_buf, sizeof(ulp_err_buf) - 1,
+               "(%.0f ULPs == %.1f digits == %.1f bits)", ulp_diff,
+               log10(ulp_diff), log2(ulp_diff));
     }
     Printf("WARNING: NumericalStabilitySanitizer: inconsistent shadow results");
     switch (CheckType) {
@@ -525,7 +525,7 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
            ShadowPrinter::dec(Shadow).Buffer, ShadowPrinter::hex(Shadow).Buffer,
            FTInfo<FT>::kCppTypeName, ValuePrinter::dec(Shadow).Buffer,
            ValuePrinter::hex(Shadow).Buffer, RelErrBuf,
-           ValuePrinter::hex(abs_err).Buffer, UlpErrBuf);
+           ValuePrinter::hex(abs_err).Buffer, ulp_err_buf);
     stack.Print();
   }
 
