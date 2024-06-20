@@ -264,17 +264,17 @@ def main():
         help="allow alpha checkers from clang-analyzer.",
     )
     parser.add_argument(
-        "-clang-tidy-binary", metavar="PATH", help="path to clang-tidy binary"
+        "-clang-tidy-binary", metavar="PATH", help="path to clang-tidy binary."
     )
     parser.add_argument(
         "-clang-apply-replacements-binary",
         metavar="PATH",
-        help="path to clang-apply-replacements binary",
+        help="path to clang-apply-replacements binary.",
     )
     parser.add_argument(
         "-checks",
         default=None,
-        help="checks filter, when not specified, use clang-tidy default",
+        help="checks filter, when not specified, use clang-tidy default.",
     )
     config_group = parser.add_mutually_exclusive_group()
     config_group.add_argument(
@@ -350,16 +350,16 @@ def main():
         help="number of tidy instances to be run in parallel.",
     )
     parser.add_argument(
-        "files", nargs="*", default=[".*"], help="files to be processed (regex on path)"
+        "files", nargs="*", default=[".*"], help="files to be processed (regex on path)."
     )
-    parser.add_argument("-fix", action="store_true", help="apply fix-its")
+    parser.add_argument("-fix", action="store_true", help="apply fix-its.")
     parser.add_argument(
-        "-format", action="store_true", help="Reformat code after applying fixes"
+        "-format", action="store_true", help="Reformat code after applying fixes."
     )
     parser.add_argument(
         "-style",
         default="file",
-        help="The style of reformat code after applying fixes",
+        help="The style of reformat code after applying fixes.",
     )
     parser.add_argument(
         "-use-color",
@@ -388,7 +388,7 @@ def main():
         help="Additional argument to prepend to the compiler command line.",
     )
     parser.add_argument(
-        "-quiet", action="store_true", help="Run clang-tidy in quiet mode"
+        "-quiet", action="store_true", help="Run clang-tidy in quiet mode."
     )
     parser.add_argument(
         "-load",
@@ -400,7 +400,7 @@ def main():
     parser.add_argument(
         "-warnings-as-errors",
         default=None,
-        help="Upgrades warnings to errors. Same format as '-checks'",
+        help="Upgrades warnings to errors. Same format as '-checks'.",
     )
     args = parser.parse_args()
 
