@@ -356,6 +356,25 @@ Given that ``signedPointer`` matches the layout for signed pointers signed with
 the given key, extract the raw pointer from it.  This operation does not trap
 and cannot fail, even if the pointer is not validly signed.
 
+``ptrauth_sign_constant``
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  ptrauth_sign_constant(pointer, key, discriminator)
+
+Return a signed pointer for a constant address in a manner which guarantees
+a non-attackable sequence.
+
+``pointer`` must be a constant expression of pointer type which evaluates to
+a non-null pointer.
+``key``  must be a constant expression of type ``ptrauth_key``.
+``discriminator`` must be a constant expression of pointer or integer type;
+if an integer, it will be coerced to ``ptrauth_extra_data_t``.
+The result will have the same type as ``pointer``.
+
+This can be used in constant expressions.
+
 ``ptrauth_sign_unauthenticated``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
