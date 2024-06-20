@@ -1080,12 +1080,14 @@ bool SPIRVGlobalRegistry::isScalarOrVectorSigned(const SPIRVType *Type) const {
   return IntType && IntType->getOperand(2).getImm() != 0;
 }
 
+SPIRVType *SPIRVGlobalRegistry::getPointeeType(SPIRVType *PtrType) {
+  return PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
+             ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
+             : nullptr;
+}
+
 unsigned SPIRVGlobalRegistry::getPointeeTypeOp(Register PtrReg) {
-  SPIRVType *PtrType = getSPIRVTypeForVReg(PtrReg);
-  SPIRVType *ElemType =
-      PtrType && PtrType->getOpcode() == SPIRV::OpTypePointer
-          ? getSPIRVTypeForVReg(PtrType->getOperand(2).getReg())
-          : nullptr;
+  SPIRVType *ElemType = getPointeeType(getSPIRVTypeForVReg(PtrReg));
   return ElemType ? ElemType->getOpcode() : 0;
 }
 

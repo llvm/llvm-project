@@ -1850,10 +1850,20 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
   else if (Opcode == SPIRV::OpCooperativeMatrixStoreKHR && ArgSz > 4)
     LiteralIdx = 4;
   SmallVector<uint32_t, 1> ImmArgs;
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (LiteralIdx > 0)
-    ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx],
-                                            MIRBuilder.getMRI()));
+    ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  if (Opcode == SPIRV::OpCooperativeMatrixLengthKHR) {
+    SPIRVType *CoopMatrType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
+    if (!CoopMatrType)
+      report_fatal_error("Can't find a register's type definition");
+    MIRBuilder.buildInstr(Opcode)
+        .addDef(Call->ReturnRegister)
+        .addUse(TypeReg)
+        .addUse(CoopMatrType->getOperand(0).getReg());
+    return true;
+  }
   return buildOpFromWrapper(MIRBuilder, Opcode, Call,
                             IsSet ? TypeReg : Register(0), ImmArgs);
 }

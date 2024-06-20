@@ -874,7 +874,7 @@ def OpCooperativeMatrixLoadKHR: Op<4457, (outs ID:$res),
                   "$res = OpCooperativeMatrixLoadKHR $resType $pointer $memory_layout">;
 def OpCooperativeMatrixStoreKHR: Op<4458, (outs),
                   (ins ID:$pointer, ID:$objectToStore, ID:$memory_layout, variable_ops),
-                  "OpCooperativeMatrixStoreKHR $pointer $objectToStore  $memory_layout">;
+                  "OpCooperativeMatrixStoreKHR $pointer $objectToStore $memory_layout">;
 def OpCooperativeMatrixMulAddKHR: Op<4459, (outs ID:$res),
                   (ins TYPE:$type, ID:$A, ID:$B, ID:$C, variable_ops),
                   "$res = OpCooperativeMatrixMulAddKHR $type $A $B $C">;

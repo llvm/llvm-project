@@ -292,6 +292,8 @@ public:
     return Res->second;
   }
 
+  // Return a pointee's type, or nullptr otherwise.
+  SPIRVType *getPointeeType(SPIRVType *PtrType);
   // Return a pointee's type op code, or 0 otherwise.
   unsigned getPointeeTypeOp(Register PtrReg);
 
