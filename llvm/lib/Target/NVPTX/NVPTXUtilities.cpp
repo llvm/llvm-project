@@ -82,6 +82,7 @@ static void cacheAnnotationFromMD(const MDNode *MetadataNode,
       retval[Key].push_back(Val->getZExtValue());
     } else if (MDNode *VecMd =
                    dyn_cast<MDNode>(MetadataNode->getOperand(i + 1))) {
+      // note: only "grid_constant" annotations support vector MDNodes.
       // assert: there can only exist one unique key value pair of
       // the form (string key, MDNode node). Operands of such a node
       // shall always be unsigned ints.

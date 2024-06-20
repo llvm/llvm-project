@@ -387,7 +387,11 @@ void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
         cast<AddrSpaceCastInst>(IRB.CreateAddrSpaceCast(
             Arg, IRB.getPtrTy(ADDRESS_SPACE_PARAM), Arg->getName() + ".param"));
 
-    // Cast param address to generic address space
+    // Cast param address to generic address space. We do not use an
+    // addrspacecast to generic here, because, LLVM considers `Arg` to be in the
+    // generic address space, and a `generic -> param` cast followed by a `param
+    // -> generic` cast will be folded away. The `param -> generic` intrinsic
+    // will be correctly lowered to `cvta.param`.
     Value *CvtToGenCall = IRB.CreateIntrinsic(
         IRB.getPtrTy(ADDRESS_SPACE_GENERIC), Intrinsic::nvvm_ptr_param_to_gen,
         CastToParam, nullptr, CastToParam->getName() + ".gen");
