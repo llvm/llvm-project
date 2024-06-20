@@ -1435,7 +1435,7 @@ RValue CIRGenFunction::buildCall(clang::QualType CalleeType,
   // Chain calls use the same code path to add the inviisble chain parameter to
   // the function type.
   if (isa<FunctionNoProtoType>(FnType) || Chain) {
-    assert(!MissingFeatures::chainCalls());
+    assert(!MissingFeatures::chainCall());
     assert(!MissingFeatures::addressSpace());
     auto CalleeTy = getTypes().GetFunctionType(FnInfo);
     // get non-variadic function type

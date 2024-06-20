@@ -12,12 +12,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfo.h"
+#include "CIRCXXABI.h"
+#include "LowerTypes.h"
 
 namespace mlir {
 namespace cir {
 
 // Pin the vtable to this file.
 ABIInfo::~ABIInfo() = default;
+
+CIRCXXABI &ABIInfo::getCXXABI() const { return LT.getCXXABI(); }
 
 } // namespace cir
 } // namespace mlir
