@@ -484,7 +484,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     return R && !R->isReplicator();
   };
 
-  // 1. Create an IR basic block, or reuse the last one or ExitBB if possible.
+  // 1. Create an IR basic block.
   if (PrevVPBB && /* A */
       !((SingleHPred = getSingleHierarchicalPredecessor()) &&
         SingleHPred->getExitingBasicBlock() == PrevVPBB &&
@@ -845,6 +845,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
 /// VPBB are moved to the newly created VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
+  assert(VPBB->getNumSuccessors() == 0 && "VPBB must be a leave node");
   VPIRBasicBlock *IRMiddleVPBB = new VPIRBasicBlock(IRBB);
   for (auto &R : make_early_inc_range(*VPBB))
     R.moveBefore(*IRMiddleVPBB, IRMiddleVPBB->end());
