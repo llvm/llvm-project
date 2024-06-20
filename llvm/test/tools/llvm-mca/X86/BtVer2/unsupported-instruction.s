@@ -1,10 +1,13 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -skip-unsupported-instructions -timeline %s 2>&1 | FileCheck --check-prefix=CHECK-SKIP %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -skip-unsupported-instructions=any -timeline %s 2>&1 | FileCheck --check-prefix=CHECK-SKIP %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -skip-unsupported-instructions=lack-sched -timeline %s 2>&1 | FileCheck --check-prefix=CHECK-SKIP %s
+# RUN: not llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -skip-unsupported-instructions=parse-failure -timeline %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 # RUN: not llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 
-# Test checks that unsupported instructions exit with an error, unless -skip-unsupported-instructions is passed, in which case the remaining instructions should be analysed.
+# Test checks that unsupported instructions exit with an error, unless -skip-unsupported-instructions=lack-sched is passed, in which case the remaining instructions should be analysed.
+# Additionally check that -skip-unsupported-instructions=parse-failure continues to raise the lack of scheduling information.
 
 # CHECK-SKIP: warning: found an unsupported instruction in the input assembly sequence, skipping with -skip-unsupported-instructions, note accuracy will be impacted:
-# CHECK-ERROR: error: found an unsupported instruction in the input assembly sequence, use -skip-unsupported-instructions to ignore.
+# CHECK-ERROR: error: found an unsupported instruction in the input assembly sequence, use -skip-unsupported-instructions=lack-sched to ignore these on the input.
 
 bzhi %eax, %ebx, %ecx
 

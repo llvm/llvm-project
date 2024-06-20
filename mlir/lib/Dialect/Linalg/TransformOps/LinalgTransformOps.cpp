@@ -369,12 +369,11 @@ void transform::BufferizeToAllocationOp::getEffects(
   if (getBufferizeDestinationOnly()) {
     // The destination is replaced with a newly allocated buffer, but the op
     // itself remains in place.
-    onlyReadsHandle(getTarget(), effects);
+    onlyReadsHandle(getTargetMutable(), effects);
   } else {
-    consumesHandle(getTarget(), effects);
+    consumesHandle(getTargetMutable(), effects);
   }
-  producesHandle(getAllocatedBuffer(), effects);
-  producesHandle(getNewOps(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -463,7 +462,7 @@ DiagnosedSilenceableFailure transform::DecomposeInterfaceOp::applyToOne(
 
 void transform::EliminateLinalgOpAnchoredEmptyTensorsOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 
@@ -1040,9 +1039,9 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::FuseIntoContainingOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getProducerOp(), effects);
-  onlyReadsHandle(getContainingOp(), effects);
-  producesHandle(getResults(), effects);
+  consumesHandle(getProducerOpMutable(), effects);
+  onlyReadsHandle(getContainingOpMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -1391,8 +1390,8 @@ DiagnosedSilenceableFailure transform::MultiTileSizesOp::applyToOne(
 
 void transform::MultiTileSizesOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
-  producesHandle(getResults(), effects);
+  onlyReadsHandle(getTargetMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   if (isa<TransformParamTypeInterface>(getLowSize().getType()))
     onlyReadsPayload(effects);
   else
@@ -1478,9 +1477,9 @@ transform::PackOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::PackOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::consumesHandle(getTarget(), effects);
-  transform::onlyReadsHandle(getPackedSizes(), effects);
-  transform::producesHandle(getPackedOp(), effects);
+  transform::consumesHandle(getTargetMutable(), effects);
+  transform::onlyReadsHandle(getPackedSizesMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -1549,9 +1548,9 @@ SmallVector<OpFoldResult> PackGreedilyOp::getMixedMatmulPackedSizes() {
 
 void transform::PackGreedilyOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::consumesHandle(getTarget(), effects);
-  transform::onlyReadsHandle(getMatmulPackedSizes(), effects);
-  transform::producesHandle(getPackedOp(), effects);
+  transform::consumesHandle(getTargetMutable(), effects);
+  transform::onlyReadsHandle(getMatmulPackedSizesMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -1761,11 +1760,9 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
 
 void PadOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
-  onlyReadsHandle(getPadToMultipleOf(), effects);
-  producesHandle(getPadded(), effects);
-  producesHandle(getPad(), effects);
-  producesHandle(getCopy(), effects);
+  consumesHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getPadToMultipleOfMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -1992,9 +1989,9 @@ LogicalResult transform::HoistPadBuildPackingLoopNestOp::verify() {
 
 void transform::HoistPadBuildPackingLoopNestOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
-  transform::onlyReadsHandle(getLoop(), effects);
-  transform::producesHandle(getPackingLoop(), effects);
+  transform::onlyReadsHandle(getTargetMutable(), effects);
+  transform::onlyReadsHandle(getLoopMutable(), effects);
+  transform::producesHandle(getOperation()->getOpResults(), effects);
   transform::modifiesPayload(effects);
 }
 
@@ -2135,8 +2132,8 @@ transform::ReplaceOp::apply(transform::TransformRewriter &rewriter,
 
 void transform::ReplaceOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
-  producesHandle(getReplacement(), effects);
+  consumesHandle(getTargetMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -2361,10 +2358,10 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
 
 void SplitOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
+  consumesHandle(getTargetMutable(), effects);
   if (getDynamicSplitPoint())
-    onlyReadsHandle(getDynamicSplitPoint(), effects);
-  producesHandle(getResults(), effects);
+    onlyReadsHandle(getDynamicSplitPointMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -2523,9 +2520,12 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
 
   if (failed(result))
     return emitDefaultSilenceableFailure(target);
-  results.push_back(result->initialOp);
-  results.push_back(result->parallelTiledOp);
-  results.push_back(result->mergeOp);
+  for (Value initValue : result->initialValues)
+    results.push_back(initValue.getDefiningOp());
+  for (auto parallelTiledOp : result->parallelTiledOps)
+    results.push_back(parallelTiledOp);
+  for (auto mergeOp : result->mergeOps)
+    results.push_back(mergeOp);
   results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
 }
@@ -2574,9 +2574,12 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
     diag.attachNote(target.getLoc()) << "target operation";
     return diag;
   }
-  results.push_back(result->initialOp);
-  results.push_back(result->parallelTiledOp);
-  results.push_back(result->mergeOp);
+  for (Value initValue : result->initialValues)
+    results.push_back(initValue.getDefiningOp());
+  for (auto parallelTiledOp : result->parallelTiledOps)
+    results.push_back(parallelTiledOp);
+  for (auto mergeOp : result->mergeOps)
+    results.push_back(mergeOp);
   results.push_back(result->loops);
   return DiagnosedSilenceableFailure::success();
 }
@@ -2823,92 +2826,11 @@ SmallVector<OpFoldResult> transform::TileUsingForOp::getMixedSizes() {
   return results;
 }
 
-// We want to parse `DenseI64ArrayAttr` using the short form without the
-// `array` prefix to be consistent in the IR with `parseDynamicIndexList`.
-ParseResult parseOptionalInterchange(OpAsmParser &parser,
-                                     OperationState &result) {
-  if (failed(parser.parseOptionalKeyword("interchange")))
-    return success();
-  if (failed(parser.parseEqual()))
-    return failure();
-  result.addAttribute(
-      transform::TileUsingForOp::getInterchangeAttrName(result.name),
-      DenseI64ArrayAttr::parse(parser, Type{}));
-  return success();
-}
-
-void printOptionalInterchange(OpAsmPrinter &p,
-                              ArrayRef<int64_t> interchangeVals) {
-  if (!interchangeVals.empty()) {
-    p << " interchange = [";
-    llvm::interleaveComma(interchangeVals, p,
-                          [&](int64_t integer) { p << integer; });
-    p << "]";
-  }
-}
-
-ParseResult transform::TileUsingForOp::parse(OpAsmParser &parser,
-                                             OperationState &result) {
-  OpAsmParser::UnresolvedOperand target;
-  SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
-  DenseI64ArrayAttr staticSizes;
-  FunctionType functionalType;
-  llvm::SMLoc operandLoc;
-  DenseBoolArrayAttr scalableVals;
-
-  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc) ||
-      parseDynamicIndexList(parser, dynamicSizes, staticSizes, scalableVals) ||
-      parseOptionalInterchange(parser, result) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(functionalType))
-    return ParseResult::failure();
-
-  size_t numExpectedLoops =
-      staticSizes.size() - llvm::count(staticSizes.asArrayRef(), 0);
-  if (functionalType.getNumResults() != numExpectedLoops + 1) {
-    return parser.emitError(parser.getNameLoc())
-           << "expected " << (numExpectedLoops + 1) << " result type(s)";
-  }
-  if (functionalType.getNumInputs() != dynamicSizes.size() + 1) {
-    return parser.emitError(operandLoc)
-           << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
-  }
-  if (parser.resolveOperand(target, functionalType.getInputs().front(),
-                            result.operands) ||
-      parser.resolveOperands(dynamicSizes,
-                             functionalType.getInputs().drop_front(),
-                             operandLoc, result.operands)) {
-    return failure();
-  }
-
-  result.addAttribute(getScalableSizesAttrName(result.name), scalableVals);
-
-  result.addAttribute(getStaticSizesAttrName(result.name), staticSizes);
-  result.addTypes(functionalType.getResults());
-  return success();
-}
-
-void TileUsingForOp::print(OpAsmPrinter &p) {
-  p << ' ' << getTarget();
-  printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes(),
-                        /*valueTypes=*/{}, getScalableSizesAttr(),
-                        OpAsmParser::Delimiter::Square);
-  printOptionalInterchange(p, getInterchange());
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      /*elidedAttrs=*/{getInterchangeAttrName(getOperation()->getName()),
-                       getScalableSizesAttrName(getOperation()->getName()),
-                       getStaticSizesAttrName(getOperation()->getName())});
-  p << " : ";
-  p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());
-}
-
 void transform::TileUsingForOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
-  onlyReadsHandle(getDynamicSizes(), effects);
-  producesHandle(getTiledLinalgOp(), effects);
-  producesHandle(getLoops(), effects);
+  consumesHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getDynamicSizesMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -3073,12 +2995,12 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
 
 void transform::TileUsingForallOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
-  onlyReadsHandle(getTileSizes(), effects);
-  onlyReadsHandle(getNumThreads(), effects);
-  onlyReadsHandle(getPackedNumThreads(), effects);
-  onlyReadsHandle(getPackedTileSizes(), effects);
-  producesHandle(getResults(), effects);
+  consumesHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getTileSizesMutable(), effects);
+  onlyReadsHandle(getNumThreadsMutable(), effects);
+  onlyReadsHandle(getPackedNumThreadsMutable(), effects);
+  onlyReadsHandle(getPackedTileSizesMutable(), effects);
+  producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -3219,80 +3141,6 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 // VectorizeOp
 //===----------------------------------------------------------------------===//
 
-static const StringLiteral kVectorSizesKeyword = "vector_sizes";
-
-ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
-                                          OperationState &result) {
-  OpAsmParser::UnresolvedOperand target;
-  SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
-  DenseI64ArrayAttr staticSizes;
-  SmallVector<Type> operandTypes;
-  llvm::SMLoc operandLoc;
-  DenseBoolArrayAttr scalableVals;
-
-  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc))
-    return ParseResult::failure();
-
-  if (succeeded(parser.parseOptionalKeyword(kVectorSizesKeyword))) {
-    if (failed(parseDynamicIndexList(parser, dynamicSizes, staticSizes,
-                                     scalableVals)))
-      return ParseResult::failure();
-  }
-
-  if (succeeded(parser.parseOptionalKeyword(
-          getVectorizeNdExtractAttrName(result.name))))
-    result.addAttribute(getVectorizeNdExtractAttrName(result.name),
-                        parser.getBuilder().getUnitAttr());
-
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonTypeList(operandTypes))
-    return ParseResult::failure();
-
-  if (operandTypes.size() != dynamicSizes.size() + 1) {
-    return parser.emitError(operandLoc)
-           << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
-  }
-  if (parser.resolveOperand(target, operandTypes.front(), result.operands) ||
-      parser.resolveOperands(dynamicSizes, ArrayRef(operandTypes).drop_front(),
-                             operandLoc, result.operands)) {
-    return failure();
-  }
-
-  if (scalableVals)
-    result.addAttribute(getScalableSizesAttrName(result.name), scalableVals);
-  if (staticSizes)
-    result.addAttribute(getStaticVectorSizesAttrName(result.name), staticSizes);
-
-  return success();
-}
-
-void transform::VectorizeOp::print(OpAsmPrinter &p) {
-  p << ' ' << getTarget() << ' ';
-  if (!getMixedVectorSizes().empty()) {
-    p << kVectorSizesKeyword << ' ';
-    printDynamicIndexList(p, getOperation(), getVectorSizes(),
-                          getStaticVectorSizesAttr(),
-                          /*valueTypes=*/{}, getScalableSizesAttr(),
-                          OpAsmParser::Delimiter::Square);
-  }
-
-  if (getVectorizeNdExtract())
-    p << getVectorizeNdExtractAttrName() << ' ';
-
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      /*elidedAttrs=*/{
-          getScalableSizesAttrName(getOperation()->getName()),
-          getStaticVectorSizesAttrName(getOperation()->getName())});
-  p << " : ";
-  p << getTarget().getType();
-  if (!getVectorSizes().empty()) {
-    p << ", ";
-    llvm::interleaveComma(getVectorSizes(), p,
-                          [&](Value operand) { p << operand.getType(); });
-  }
-}
-
 DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     transform::TransformRewriter &rewriter,
     mlir::transform::TransformResults &transformResults,
@@ -3330,8 +3178,8 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
 
 void transform::VectorizeOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  consumesHandle(getTarget(), effects);
-  onlyReadsHandle(getVectorSizes(), effects);
+  consumesHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getVectorSizesMutable(), effects);
   modifiesPayload(effects);
 }
 

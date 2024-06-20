@@ -64,59 +64,107 @@ int16_t3 test_mad_int16_t3(int16_t3 p0, int16_t3 p1, int16_t3 p2) { return mad(p
 int16_t4 test_mad_int16_t4(int16_t4 p0, int16_t4 p1, int16_t4 p2) { return mad(p0, p1, p2); }
 #endif // __HLSL_ENABLE_16_BIT
 
-// NATIVE_HALF: %hlsl.fmad = call half @llvm.fmuladd.f16(half %0, half %1, half %2)
+// NATIVE_HALF: %[[p0:.*]] = load half, ptr %p0.addr, align 2
+// NATIVE_HALF: %[[p1:.*]] = load half, ptr %p1.addr, align 2
+// NATIVE_HALF: %[[p2:.*]] = load half, ptr %p2.addr, align 2
+// NATIVE_HALF: %hlsl.fmad = call half @llvm.fmuladd.f16(half %[[p0]], half %[[p1]], half %[[p2]])
 // NATIVE_HALF: ret half %hlsl.fmad
-// NO_HALF: %hlsl.fmad = call float @llvm.fmuladd.f32(float %0, float %1, float %2)
+// NO_HALF: %[[p0:.*]] = load float, ptr %p0.addr, align 4
+// NO_HALF: %[[p1:.*]] = load float, ptr %p1.addr, align 4
+// NO_HALF: %[[p2:.*]] = load float, ptr %p2.addr, align 4
+// NO_HALF: %hlsl.fmad = call float @llvm.fmuladd.f32(float %[[p0]], float %[[p1]], float %[[p2]])
 // NO_HALF: ret float %hlsl.fmad
 half test_mad_half(half p0, half p1, half p2) { return mad(p0, p1, p2); }
 
-// NATIVE_HALF: %hlsl.fmad = call <2 x half>  @llvm.fmuladd.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2)
+// NATIVE_HALF: %[[p0:.*]] = load <2 x half>, ptr %p0.addr, align 4
+// NATIVE_HALF: %[[p1:.*]] = load <2 x half>, ptr %p1.addr, align 4
+// NATIVE_HALF: %[[p2:.*]] = load <2 x half>, ptr %p2.addr, align 4
+// NATIVE_HALF: %hlsl.fmad = call <2 x half>  @llvm.fmuladd.v2f16(<2 x half> %[[p0]], <2 x half> %[[p1]], <2 x half> %[[p2]])
 // NATIVE_HALF: ret <2 x half> %hlsl.fmad
-// NO_HALF: %hlsl.fmad = call <2 x float>  @llvm.fmuladd.v2f32(<2 x float> %0, <2 x float> %1, <2 x float> %2)
+// NO_HALF: %[[p0:.*]] = load <2 x float>, ptr %p0.addr, align 8
+// NO_HALF: %[[p1:.*]] = load <2 x float>, ptr %p1.addr, align 8
+// NO_HALF: %[[p2:.*]] = load <2 x float>, ptr %p2.addr, align 8
+// NO_HALF: %hlsl.fmad = call <2 x float>  @llvm.fmuladd.v2f32(<2 x float> %[[p0]], <2 x float> %[[p1]], <2 x float> %[[p2]])
 // NO_HALF: ret <2 x float> %hlsl.fmad
 half2 test_mad_half2(half2 p0, half2 p1, half2 p2) { return mad(p0, p1, p2); }
 
-// NATIVE_HALF: %hlsl.fmad = call <3 x half>  @llvm.fmuladd.v3f16(<3 x half> %0, <3 x half> %1, <3 x half> %2)
+// NATIVE_HALF: %[[p0:.*]] = load <3 x half>, ptr %p0.addr, align 8
+// NATIVE_HALF: %[[p1:.*]] = load <3 x half>, ptr %p1.addr, align 8
+// NATIVE_HALF: %[[p2:.*]] = load <3 x half>, ptr %p2.addr, align 8
+// NATIVE_HALF: %hlsl.fmad = call <3 x half>  @llvm.fmuladd.v3f16(<3 x half> %[[p0]], <3 x half> %[[p1]], <3 x half> %[[p2]])
 // NATIVE_HALF: ret <3 x half> %hlsl.fmad
-// NO_HALF: %hlsl.fmad = call <3 x float>  @llvm.fmuladd.v3f32(<3 x float> %0, <3 x float> %1, <3 x float> %2)
+// NO_HALF: %[[p0:.*]] = load <3 x float>, ptr %p0.addr, align 16
+// NO_HALF: %[[p1:.*]] = load <3 x float>, ptr %p1.addr, align 16
+// NO_HALF: %[[p2:.*]] = load <3 x float>, ptr %p2.addr, align 16
+// NO_HALF: %hlsl.fmad = call <3 x float>  @llvm.fmuladd.v3f32(<3 x float> %[[p0]], <3 x float> %[[p1]], <3 x float> %[[p2]])
 // NO_HALF: ret <3 x float> %hlsl.fmad
 half3 test_mad_half3(half3 p0, half3 p1, half3 p2) { return mad(p0, p1, p2); }
 
-// NATIVE_HALF: %hlsl.fmad = call <4 x half>  @llvm.fmuladd.v4f16(<4 x half> %0, <4 x half> %1, <4 x half> %2)
+// NATIVE_HALF: %[[p0:.*]] = load <4 x half>, ptr %p0.addr, align 8
+// NATIVE_HALF: %[[p1:.*]] = load <4 x half>, ptr %p1.addr, align 8
+// NATIVE_HALF: %[[p2:.*]] = load <4 x half>, ptr %p2.addr, align 8
+// NATIVE_HALF: %hlsl.fmad = call <4 x half>  @llvm.fmuladd.v4f16(<4 x half> %[[p0]], <4 x half> %[[p1]], <4 x half> %[[p2]])
 // NATIVE_HALF: ret <4 x half> %hlsl.fmad
-// NO_HALF: %hlsl.fmad = call <4 x float>  @llvm.fmuladd.v4f32(<4 x float> %0, <4 x float> %1, <4 x float> %2)
+// NO_HALF: %[[p0:.*]] = load <4 x float>, ptr %p0.addr, align 16
+// NO_HALF: %[[p1:.*]] = load <4 x float>, ptr %p1.addr, align 16
+// NO_HALF: %[[p2:.*]] = load <4 x float>, ptr %p2.addr, align 16
+// NO_HALF: %hlsl.fmad = call <4 x float>  @llvm.fmuladd.v4f32(<4 x float> %[[p0]], <4 x float> %[[p1]], <4 x float> %[[p2]])
 // NO_HALF: ret <4 x float> %hlsl.fmad
 half4 test_mad_half4(half4 p0, half4 p1, half4 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call float @llvm.fmuladd.f32(float %0, float %1, float %2)
+// CHECK: %[[p0:.*]] = load float, ptr %p0.addr, align 4
+// CHECK: %[[p1:.*]] = load float, ptr %p1.addr, align 4
+// CHECK: %[[p2:.*]] = load float, ptr %p2.addr, align 4
+// CHECK: %hlsl.fmad = call float @llvm.fmuladd.f32(float %[[p0]], float %[[p1]], float %[[p2]])
 // CHECK: ret float %hlsl.fmad
 float test_mad_float(float p0, float p1, float p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call <2 x float>  @llvm.fmuladd.v2f32(<2 x float> %0, <2 x float> %1, <2 x float> %2)
+// CHECK: %[[p0:.*]] = load <2 x float>, ptr %p0.addr, align 8
+// CHECK: %[[p1:.*]] = load <2 x float>, ptr %p1.addr, align 8
+// CHECK: %[[p2:.*]] = load <2 x float>, ptr %p2.addr, align 8
+// CHECK: %hlsl.fmad = call <2 x float>  @llvm.fmuladd.v2f32(<2 x float> %[[p0]], <2 x float> %[[p1]], <2 x float> %[[p2]])
 // CHECK: ret <2 x float> %hlsl.fmad
 float2 test_mad_float2(float2 p0, float2 p1, float2 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call <3 x float>  @llvm.fmuladd.v3f32(<3 x float> %0, <3 x float> %1, <3 x float> %2)
+// CHECK: %[[p0:.*]] = load <3 x float>, ptr %p0.addr, align 16
+// CHECK: %[[p1:.*]] = load <3 x float>, ptr %p1.addr, align 16
+// CHECK: %[[p2:.*]] = load <3 x float>, ptr %p2.addr, align 16
+// CHECK: %hlsl.fmad = call <3 x float>  @llvm.fmuladd.v3f32(<3 x float> %[[p0]], <3 x float> %[[p1]], <3 x float> %[[p2]])
 // CHECK: ret <3 x float> %hlsl.fmad
 float3 test_mad_float3(float3 p0, float3 p1, float3 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call <4 x float>  @llvm.fmuladd.v4f32(<4 x float> %0, <4 x float> %1, <4 x float> %2)
+// CHECK: %[[p0:.*]] = load <4 x float>, ptr %p0.addr, align 16
+// CHECK: %[[p1:.*]] = load <4 x float>, ptr %p1.addr, align 16
+// CHECK: %[[p2:.*]] = load <4 x float>, ptr %p2.addr, align 16
+// CHECK: %hlsl.fmad = call <4 x float>  @llvm.fmuladd.v4f32(<4 x float> %[[p0]], <4 x float> %[[p1]], <4 x float> %[[p2]])
 // CHECK: ret <4 x float> %hlsl.fmad
 float4 test_mad_float4(float4 p0, float4 p1, float4 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call double @llvm.fmuladd.f64(double %0, double %1, double %2)
+// CHECK: %[[p0:.*]] = load double, ptr %p0.addr, align 8
+// CHECK: %[[p1:.*]] = load double, ptr %p1.addr, align 8
+// CHECK: %[[p2:.*]] = load double, ptr %p2.addr, align 8
+// CHECK: %hlsl.fmad = call double @llvm.fmuladd.f64(double %[[p0]], double %[[p1]], double %[[p2]])
 // CHECK: ret double %hlsl.fmad
 double test_mad_double(double p0, double p1, double p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call <2 x double>  @llvm.fmuladd.v2f64(<2 x double> %0, <2 x double> %1, <2 x double> %2)
+// CHECK: %[[p0:.*]] = load <2 x double>, ptr %p0.addr, align 16
+// CHECK: %[[p1:.*]] = load <2 x double>, ptr %p1.addr, align 16
+// CHECK: %[[p2:.*]] = load <2 x double>, ptr %p2.addr, align 16
+// CHECK: %hlsl.fmad = call <2 x double>  @llvm.fmuladd.v2f64(<2 x double> %[[p0]], <2 x double> %[[p1]], <2 x double> %[[p2]])
 // CHECK: ret <2 x double> %hlsl.fmad
 double2 test_mad_double2(double2 p0, double2 p1, double2 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call <3 x double>  @llvm.fmuladd.v3f64(<3 x double> %0, <3 x double> %1, <3 x double> %2)
+// CHECK: %[[p0:.*]] = load <3 x double>, ptr %p0.addr, align 32
+// CHECK: %[[p1:.*]] = load <3 x double>, ptr %p1.addr, align 32
+// CHECK: %[[p2:.*]] = load <3 x double>, ptr %p2.addr, align 32
+// CHECK: %hlsl.fmad = call <3 x double>  @llvm.fmuladd.v3f64(<3 x double> %[[p0]], <3 x double> %[[p1]], <3 x double> %[[p2]])
 // CHECK: ret <3 x double> %hlsl.fmad
 double3 test_mad_double3(double3 p0, double3 p1, double3 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call <4 x double>  @llvm.fmuladd.v4f64(<4 x double> %0, <4 x double> %1, <4 x double> %2)
+// CHECK: %[[p0:.*]] = load <4 x double>, ptr %p0.addr, align 32
+// CHECK: %[[p1:.*]] = load <4 x double>, ptr %p1.addr, align 32
+// CHECK: %[[p2:.*]] = load <4 x double>, ptr %p2.addr, align 32
+// CHECK: %hlsl.fmad = call <4 x double>  @llvm.fmuladd.v4f64(<4 x double> %[[p0]], <4 x double> %[[p1]], <4 x double> %[[p2]])
 // CHECK: ret <4 x double> %hlsl.fmad
 double4 test_mad_double4(double4 p0, double4 p1, double4 p2) { return mad(p0, p1, p2); }
 
@@ -216,31 +264,41 @@ uint64_t3 test_mad_uint64_t3(uint64_t3 p0, uint64_t3 p1, uint64_t3 p2) { return 
 // SPIR_CHECK: add nuw <4 x i64>  %{{.*}}, %{{.*}}
 uint64_t4 test_mad_uint64_t4(uint64_t4 p0, uint64_t4 p1, uint64_t4 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call <2 x float>  @llvm.fmuladd.v2f32(<2 x float> %splat.splat, <2 x float> %1, <2 x float> %2)
+// CHECK: %[[p1:.*]] = load <2 x float>, ptr %p1.addr, align 8
+// CHECK: %[[p2:.*]] = load <2 x float>, ptr %p2.addr, align 8
+// CHECK: %hlsl.fmad = call <2 x float>  @llvm.fmuladd.v2f32(<2 x float> %splat.splat, <2 x float> %[[p1]], <2 x float> %[[p2]])
 // CHECK: ret <2 x float> %hlsl.fmad
 float2 test_mad_float2_splat(float p0, float2 p1, float2 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %hlsl.fmad = call <3 x float>  @llvm.fmuladd.v3f32(<3 x float> %splat.splat, <3 x float> %1, <3 x float> %2)
+// CHECK: %[[p1:.*]] = load <3 x float>, ptr %p1.addr, align 16
+// CHECK: %[[p2:.*]] = load <3 x float>, ptr %p2.addr, align 16
+// CHECK: %hlsl.fmad = call <3 x float>  @llvm.fmuladd.v3f32(<3 x float> %splat.splat, <3 x float> %[[p1]], <3 x float> %[[p2]])
 // CHECK: ret <3 x float> %hlsl.fmad
 float3 test_mad_float3_splat(float p0, float3 p1, float3 p2) { return mad(p0, p1, p2); }
 
-// CHECK:  %hlsl.fmad = call <4 x float>  @llvm.fmuladd.v4f32(<4 x float> %splat.splat, <4 x float> %1, <4 x float> %2)
+// CHECK: %[[p1:.*]] = load <4 x float>, ptr %p1.addr, align 16
+// CHECK: %[[p2:.*]] = load <4 x float>, ptr %p2.addr, align 16
+// CHECK:  %hlsl.fmad = call <4 x float>  @llvm.fmuladd.v4f32(<4 x float> %splat.splat, <4 x float> %[[p1]], <4 x float> %[[p2]])
 // CHECK:  ret <4 x float> %hlsl.fmad
 float4 test_mad_float4_splat(float p0, float4 p1, float4 p2) { return mad(p0, p1, p2); }
 
-// CHECK: %conv = sitofp i32 %2 to float
+// CHECK: %[[p0:.*]] = load <2 x float>, ptr %p0.addr, align 8
+// CHECK: %[[p1:.*]] = load <2 x float>, ptr %p1.addr, align 8
+// CHECK: %conv = sitofp i32 %{{.*}} to float
 // CHECK: %splat.splatinsert = insertelement <2 x float> poison, float %conv, i64 0
 // CHECK: %splat.splat = shufflevector <2 x float> %splat.splatinsert, <2 x float> poison, <2 x i32> zeroinitializer
-// CHECK: %hlsl.fmad = call <2 x float>  @llvm.fmuladd.v2f32(<2 x float> %0, <2 x float> %1, <2 x float> %splat.splat)
+// CHECK: %hlsl.fmad = call <2 x float>  @llvm.fmuladd.v2f32(<2 x float> %[[p0]], <2 x float> %[[p1]], <2 x float> %splat.splat)
 // CHECK: ret <2 x float> %hlsl.fmad
 float2 test_mad_float2_int_splat(float2 p0, float2 p1, int p2) {
   return mad(p0, p1, p2);
 }
 
-// CHECK: %conv = sitofp i32 %2 to float
+// CHECK: %[[p0:.*]] = load <3 x float>, ptr %p0.addr, align 16
+// CHECK: %[[p1:.*]] = load <3 x float>, ptr %p1.addr, align 16
+// CHECK: %conv = sitofp i32 %{{.*}} to float
 // CHECK: %splat.splatinsert = insertelement <3 x float> poison, float %conv, i64 0
 // CHECK: %splat.splat = shufflevector <3 x float> %splat.splatinsert, <3 x float> poison, <3 x i32> zeroinitializer
-// CHECK:  %hlsl.fmad = call <3 x float>  @llvm.fmuladd.v3f32(<3 x float> %0, <3 x float> %1, <3 x float> %splat.splat)
+// CHECK:  %hlsl.fmad = call <3 x float>  @llvm.fmuladd.v3f32(<3 x float> %[[p0]], <3 x float> %[[p1]], <3 x float> %splat.splat)
 // CHECK: ret <3 x float> %hlsl.fmad
 float3 test_mad_float3_int_splat(float3 p0, float3 p1, int p2) {
   return mad(p0, p1, p2);

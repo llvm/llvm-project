@@ -811,7 +811,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
   // this may happen while we're comparing two templates' constraint
   // equivalence.
   LocalInstantiationScope ScopeForParameters(S);
-  if (auto *FD = llvm::dyn_cast<FunctionDecl>(DeclInfo.getDecl()))
+  if (auto *FD = DeclInfo.getDecl()->getAsFunction())
     for (auto *PVD : FD->parameters())
       ScopeForParameters.InstantiatedLocal(PVD, PVD);
 
@@ -1161,6 +1161,13 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
               S, cast<concepts::NestedRequirement>(Req), First);
         break;
       }
+    return;
+  } else if (auto *TTE = dyn_cast<TypeTraitExpr>(SubstExpr);
+             TTE && TTE->getTrait() == clang::TypeTrait::BTT_IsDeducible) {
+    assert(TTE->getNumArgs() == 2);
+    S.Diag(SubstExpr->getSourceRange().getBegin(),
+           diag::note_is_deducible_constraint_evaluated_to_false)
+        << TTE->getArg(0)->getType() << TTE->getArg(1)->getType();
     return;
   }
 

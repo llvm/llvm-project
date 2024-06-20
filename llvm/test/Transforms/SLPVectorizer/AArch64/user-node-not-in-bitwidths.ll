@@ -5,12 +5,7 @@ define void @h() {
 ; CHECK-LABEL: define void @h() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr null, i64 16
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 0 to i1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 poison, i1 false, i1 false, i1 false>, i1 [[TMP0]], i32 4
-; CHECK-NEXT:    [[TMP2:%.*]] = or <8 x i1> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i1> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <8 x i1> [[TMP3]] to <8 x i16>
-; CHECK-NEXT:    store <8 x i16> [[TMP4]], ptr [[ARRAYIDX2]], align 2
+; CHECK-NEXT:    store <8 x i16> zeroinitializer, ptr [[ARRAYIDX2]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -1631,12 +1631,14 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic"),              \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")
 // clang-format on
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
@@ -7840,8 +7842,9 @@ static bool printLLVMOMPOFFLOADNoteLLVMStyle(uint32_t NoteType,
 
 static void printCoreNoteLLVMStyle(const CoreNote &Note, ScopedPrinter &W) {
   W.printNumber("Page Size", Note.PageSize);
+  ListScope D(W, "Mappings");
   for (const CoreFileMapping &Mapping : Note.Mappings) {
-    ListScope D(W, "Mapping");
+    DictScope D(W);
     W.printHex("Start", Mapping.Start);
     W.printHex("End", Mapping.End);
     W.printHex("Offset", Mapping.Offset);

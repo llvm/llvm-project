@@ -353,6 +353,12 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   assert(DeferredDeactivationCleanupStack.empty() &&
          "mismatched activate/deactivate of cleanups!");
 
+  if (CGM.shouldEmitConvergenceTokens()) {
+    ConvergenceTokenStack.pop_back();
+    assert(ConvergenceTokenStack.empty() &&
+           "mismatched push/pop in convergence stack!");
+  }
+
   bool OnlySimpleReturnStmts = NumSimpleReturnExprs > 0
     && NumSimpleReturnExprs == NumReturnExprs
     && ReturnBlock.getBlock()->use_empty();
@@ -812,6 +818,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::SanitizeMemTag);
     if (SanOpts.has(SanitizerKind::Thread))
       Fn->addFnAttr(llvm::Attribute::SanitizeThread);
+    if (SanOpts.has(SanitizerKind::NumericalStability))
+      Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);
     if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
       Fn->addFnAttr(llvm::Attribute::SanitizeMemory);
   }
@@ -977,6 +985,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
              (getLangOpts().HIP && getLangOpts().CUDAIsDevice))) {
     // Add metadata for a kernel function.
     EmitKernelMetadata(FD, Fn);
+  }
+
+  if (FD && FD->hasAttr<ClspvLibclcBuiltinAttr>()) {
+    Fn->setMetadata("clspv_libclc_builtin",
+                    llvm::MDNode::get(getLLVMContext(), {}));
   }
 
   // If we are checking function types, emit a function type signature as
@@ -1277,6 +1290,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (CurFuncDecl)
     if (const auto *VecWidth = CurFuncDecl->getAttr<MinVectorWidthAttr>())
       LargestVectorWidth = VecWidth->getVectorWidth();
+
+  if (CGM.shouldEmitConvergenceTokens())
+    ConvergenceTokenStack.push_back(getOrEmitConvergenceEntryToken(CurFn));
 }
 
 void CodeGenFunction::EmitFunctionBody(const Stmt *Body) {
@@ -2464,11 +2480,11 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
 Address CodeGenFunction::EmitVAListRef(const Expr* E) {
   if (getContext().getBuiltinVaListType()->isArrayType())
     return EmitPointerWithAlignment(E);
-  return EmitLValue(E).getAddress(*this);
+  return EmitLValue(E).getAddress();
 }
 
 Address CodeGenFunction::EmitMSVAListRef(const Expr *E) {
-  return EmitLValue(E).getAddress(*this);
+  return EmitLValue(E).getAddress();
 }
 
 void CodeGenFunction::EmitDeclRefExprDbgValue(const DeclRefExpr *E,
@@ -2621,7 +2637,6 @@ CodeGenFunction::SanitizerScope::~SanitizerScope() {
 
 void CodeGenFunction::InsertHelper(llvm::Instruction *I,
                                    const llvm::Twine &Name,
-                                   llvm::BasicBlock *BB,
                                    llvm::BasicBlock::iterator InsertPt) const {
   LoopStack.InsertHelper(I);
   if (IsSanitizerScope)
@@ -2629,11 +2644,11 @@ void CodeGenFunction::InsertHelper(llvm::Instruction *I,
 }
 
 void CGBuilderInserter::InsertHelper(
-    llvm::Instruction *I, const llvm::Twine &Name, llvm::BasicBlock *BB,
+    llvm::Instruction *I, const llvm::Twine &Name,
     llvm::BasicBlock::iterator InsertPt) const {
-  llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
+  llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
   if (CGF)
-    CGF->InsertHelper(I, Name, BB, InsertPt);
+    CGF->InsertHelper(I, Name, InsertPt);
 }
 
 // Emits an error if we don't have a valid set of target features for the
@@ -2765,10 +2780,9 @@ llvm::Value *CodeGenFunction::FormAArch64ResolverCondition(
     // only for features that are not enabled in the target. The exception is
     // for features whose extension instructions are executed as NOP on targets
     // without extension support.
-    if (!getContext().getTargetInfo().hasFeature(Feature) ||
-        Feature.equals("bti") || Feature.equals("memtag") ||
-        Feature.equals("memtag2") || Feature.equals("memtag3") ||
-        Feature.equals("dgh"))
+    if (!getContext().getTargetInfo().hasFeature(Feature) || Feature == "bti" ||
+        Feature == "memtag" || Feature == "memtag2" || Feature == "memtag3" ||
+        Feature == "dgh")
       CondFeatures.push_back(Feature);
   }
   if (!CondFeatures.empty()) {
@@ -2938,7 +2952,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     SourceLocation SecondaryLoc, llvm::Value *Alignment,
     llvm::Value *OffsetValue, llvm::Value *TheCheck,
     llvm::Instruction *Assumption) {
-  assert(Assumption && isa<llvm::CallInst>(Assumption) &&
+  assert(isa_and_nonnull<llvm::CallInst>(Assumption) &&
          cast<llvm::CallInst>(Assumption)->getCalledOperand() ==
              llvm::Intrinsic::getDeclaration(
                  Builder.GetInsertBlock()->getParent()->getParent(),

@@ -106,11 +106,14 @@ def get_tidy_invocation(
     use_color,
     plugins,
     warnings_as_errors,
+    exclude_header_filter,
 ):
     """Gets a command line for clang-tidy."""
     start = [clang_tidy_binary]
     if allow_enabling_alpha_checkers:
         start.append("-allow-enabling-analyzer-alpha-checkers")
+    if exclude_header_filter is not None:
+        start.append("--exclude-header-filter=" + exclude_header_filter)
     if header_filter is not None:
         start.append("-header-filter=" + header_filter)
     if line_filter is not None:
@@ -228,6 +231,7 @@ def run_tidy(args, clang_tidy_binary, tmpdir, build_path, queue, lock, failed_fi
             args.use_color,
             args.plugins,
             args.warnings_as_errors,
+            args.exclude_header_filter,
         )
 
         proc = subprocess.Popen(
@@ -291,6 +295,14 @@ def main():
         "This option internally works exactly the same way as "
         "-config option after reading specified config file. "
         "Use either -config-file or -config, not both.",
+    )
+    parser.add_argument(
+        "-exclude-header-filter",
+        default=None,
+        help="Regular expression matching the names of the "
+        "headers to exclude diagnostics from. Diagnostics from "
+        "the main file of each translation unit are always "
+        "displayed.",
     )
     parser.add_argument(
         "-header-filter",
@@ -450,6 +462,7 @@ def main():
             args.use_color,
             args.plugins,
             args.warnings_as_errors,
+            args.exclude_header_filter,
         )
         invocation.append("-list-checks")
         invocation.append("-")

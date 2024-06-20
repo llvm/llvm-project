@@ -79,7 +79,7 @@ using ProfileCount = Function::ProfileCount;
 // are not in the public header file...
 template class llvm::SymbolTableListTraits<BasicBlock>;
 
-static cl::opt<unsigned> NonGlobalValueMaxNameSize(
+static cl::opt<int> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
 
@@ -384,6 +384,9 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   switch (M->getFramePointer()) {
   case FramePointerKind::None:
     // 0 ("none") is the default.
+    break;
+  case FramePointerKind::Reserved:
+    B.addAttribute("frame-pointer", "reserved");
     break;
   case FramePointerKind::NonLeaf:
     B.addAttribute("frame-pointer", "non-leaf");
@@ -1493,7 +1496,19 @@ bool Intrinsic::isConstrainedFPIntrinsic(ID QID) {
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
+#undef INSTRUCTION
     return true;
+  default:
+    return false;
+  }
+}
+
+bool Intrinsic::hasConstrainedFPRoundingModeOperand(Intrinsic::ID QID) {
+  switch (QID) {
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
+  case Intrinsic::INTRINSIC:                                                   \
+    return ROUND_MODE == 1;
+#include "llvm/IR/ConstrainedOps.def"
 #undef INSTRUCTION
   default:
     return false;

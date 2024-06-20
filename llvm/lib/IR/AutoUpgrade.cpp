@@ -5368,8 +5368,8 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
 
-  if (T.isRISCV64()) {
-    // Make i32 a native type for 64-bit RISC-V.
+  if (T.isLoongArch64() || T.isRISCV64()) {
+    // Make i32 a native type for 64-bit LoongArch and RISC-V.
     auto I = DL.find("-n64-");
     if (I != StringRef::npos)
       return (DL.take_front(I) + "-n32:64-" + DL.drop_front(I + 5)).str();
@@ -5403,6 +5403,14 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
       Res.append("-p9:192:256:256:32");
 
+    return Res;
+  }
+
+  // AArch64 data layout upgrades.
+  if (T.isAArch64()) {
+    // Add "-Fn32"
+    if (!DL.empty() && !DL.contains("-Fn32"))
+      Res.append("-Fn32");
     return Res;
   }
 

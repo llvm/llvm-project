@@ -1111,24 +1111,22 @@ static CanThrowResult canDynamicCastThrow(const CXXDynamicCastExpr *DC) {
 }
 
 static CanThrowResult canTypeidThrow(Sema &S, const CXXTypeidExpr *DC) {
+  // A typeid of a type is a constant and does not throw.
   if (DC->isTypeOperand())
     return CT_Cannot;
 
-  Expr *Op = DC->getExprOperand();
-  if (Op->isTypeDependent())
+  if (DC->isValueDependent())
     return CT_Dependent;
 
-  const RecordType *RT = Op->getType()->getAs<RecordType>();
-  if (!RT)
+  // If this operand is not evaluated it cannot possibly throw.
+  if (!DC->isPotentiallyEvaluated())
     return CT_Cannot;
 
-  if (!cast<CXXRecordDecl>(RT->getDecl())->isPolymorphic())
-    return CT_Cannot;
+  // Can throw std::bad_typeid if a nullptr is dereferenced.
+  if (DC->hasNullCheck())
+    return CT_Can;
 
-  if (Op->Classify(S.Context).isPRValue())
-    return CT_Cannot;
-
-  return CT_Can;
+  return S.canThrow(DC->getExprOperand());
 }
 
 CanThrowResult Sema::canThrow(const Stmt *S) {
@@ -1157,8 +1155,9 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   }
 
   case Expr::CXXTypeidExprClass:
-    //   - a potentially evaluated typeid expression applied to a glvalue
-    //     expression whose type is a polymorphic class type
+    //   - a potentially evaluated typeid expression applied to a (possibly
+    //     parenthesized) built-in unary * operator applied to a pointer to a
+    //     polymorphic class type
     return canTypeidThrow(*this, cast<CXXTypeidExpr>(S));
 
     //   - a potentially evaluated call to a function, member function, function
@@ -1414,6 +1413,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::PackIndexingExprClass:
   case Expr::StringLiteralClass:
   case Expr::SourceLocExprClass:
+  case Expr::EmbedExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
     // These expressions can never throw.
@@ -1425,6 +1425,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
 
     // Most statements can throw if any substatement can throw.
   case Stmt::OpenACCComputeConstructClass:
+  case Stmt::OpenACCLoopConstructClass:
   case Stmt::AttributedStmtClass:
   case Stmt::BreakStmtClass:
   case Stmt::CapturedStmtClass:

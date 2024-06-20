@@ -93,7 +93,7 @@ void MCTargetStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {}
 
 MCStreamer::MCStreamer(MCContext &Ctx)
     : Context(Ctx), CurrentWinFrameInfo(nullptr),
-      CurrentProcWinFrameInfoStartIndex(0), UseAssemblerInfoForParsing(false) {
+      CurrentProcWinFrameInfoStartIndex(0) {
   SectionStack.push_back(std::pair<MCSectionSubPair, MCSectionSubPair>());
 }
 
@@ -841,10 +841,10 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
       std::string SectionName = (MainCFISecCOFF->getName() + "$" +
                                  TextSecCOFF->getName().split('$').second)
                                     .str();
-      return Context.getCOFFSection(
-          SectionName,
-          MainCFISecCOFF->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT,
-          MainCFISecCOFF->getKind(), "", COFF::IMAGE_COMDAT_SELECT_ANY);
+      return Context.getCOFFSection(SectionName,
+                                    MainCFISecCOFF->getCharacteristics() |
+                                        COFF::IMAGE_SCN_LNK_COMDAT,
+                                    "", COFF::IMAGE_COMDAT_SELECT_ANY);
     }
   }
 

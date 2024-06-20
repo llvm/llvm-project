@@ -71,8 +71,6 @@ private:
   bool RelocatableDeviceCode;
   /// Mangle context for device.
   std::unique_ptr<MangleContext> DeviceMC;
-  /// Some zeros used for GEPs.
-  llvm::Constant *Zeros[2];
 
   llvm::FunctionCallee getSetupArgumentFn() const;
   llvm::FunctionCallee getLaunchFn() const;
@@ -91,9 +89,7 @@ private:
   /// where the C code specifies const char*.
   llvm::Constant *makeConstantString(const std::string &Str,
                                      const std::string &Name = "") {
-    auto ConstStr = CGM.GetAddrOfConstantCString(Str, Name.c_str());
-    return llvm::ConstantExpr::getGetElementPtr(ConstStr.getElementType(),
-                                                ConstStr.getPointer(), Zeros);
+    return CGM.GetAddrOfConstantCString(Str, Name.c_str()).getPointer();
   }
 
   /// Helper function which generates an initialized constant array from Str,
@@ -117,7 +113,7 @@ private:
     }
     if (Alignment)
       GV->setAlignment(llvm::Align(Alignment));
-    return llvm::ConstantExpr::getGetElementPtr(GV->getValueType(), GV, Zeros);
+    return GV;
   }
 
   /// Helper function that generates an empty dummy function returning void.
@@ -230,8 +226,6 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   IntTy = CGM.IntTy;
   SizeTy = CGM.SizeTy;
   VoidTy = CGM.VoidTy;
-  Zeros[0] = llvm::ConstantInt::get(SizeTy, 0);
-  Zeros[1] = Zeros[0];
   PtrTy = CGM.UnqualPtrTy;
 }
 

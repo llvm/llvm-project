@@ -471,6 +471,8 @@ enum {
   LLVMAttributeFunctionIndex = -1,
 };
 
+typedef unsigned LLVMAttributeIndex;
+
 /**
  * Tail call kind for LLVMSetTailCallKind and LLVMGetTailCallKind.
  *
@@ -484,8 +486,6 @@ typedef enum {
   LLVMTailCallKindMustTail = 2,
   LLVMTailCallKindNoTail = 3,
 } LLVMTailCallKind;
-
-typedef unsigned LLVMAttributeIndex;
 
 enum {
   LLVMFastMathAllowReassoc = (1 << 0),
@@ -2354,11 +2354,6 @@ LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNSWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstICmp(LLVMIntPredicate Predicate,
-                           LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstFCmp(LLVMRealPredicate Predicate,
-                           LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
-LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices);
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
@@ -3529,8 +3524,7 @@ LLVMOpcode LLVMGetInstructionOpcode(LLVMValueRef Inst);
 /**
  * Obtain the predicate of an instruction.
  *
- * This is only valid for instructions that correspond to llvm::ICmpInst
- * or llvm::ConstantExpr whose opcode is llvm::Instruction::ICmp.
+ * This is only valid for instructions that correspond to llvm::ICmpInst.
  *
  * @see llvm::ICmpInst::getPredicate()
  */
@@ -3539,8 +3533,7 @@ LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst);
 /**
  * Obtain the float predicate of an instruction.
  *
- * This is only valid for instructions that correspond to llvm::FCmpInst
- * or llvm::ConstantExpr whose opcode is llvm::Instruction::FCmp.
+ * This is only valid for instructions that correspond to llvm::FCmpInst.
  *
  * @see llvm::FCmpInst::getPredicate()
  */
@@ -3736,6 +3729,28 @@ void LLVMSetNormalDest(LLVMValueRef InvokeInst, LLVMBasicBlockRef B);
  * @see llvm::CatchSwitchInst::setUnwindDest()
  */
 void LLVMSetUnwindDest(LLVMValueRef InvokeInst, LLVMBasicBlockRef B);
+
+/**
+ * Get the default destination of a CallBr instruction.
+ *
+ * @see llvm::CallBrInst::getDefaultDest()
+ */
+LLVMBasicBlockRef LLVMGetCallBrDefaultDest(LLVMValueRef CallBr);
+
+/**
+ * Get the number of indirect destinations of a CallBr instruction.
+ *
+ * @see llvm::CallBrInst::getNumIndirectDests()
+
+ */
+unsigned LLVMGetCallBrNumIndirectDests(LLVMValueRef CallBr);
+
+/**
+ * Get the indirect destination of a CallBr instruction at the given index.
+ *
+ * @see llvm::CallBrInst::getIndirectDest()
+ */
+LLVMBasicBlockRef LLVMGetCallBrIndirectDest(LLVMValueRef CallBr, unsigned Idx);
 
 /**
  * @}
@@ -3935,9 +3950,28 @@ const unsigned *LLVMGetIndices(LLVMValueRef Inst);
 
 LLVMBuilderRef LLVMCreateBuilderInContext(LLVMContextRef C);
 LLVMBuilderRef LLVMCreateBuilder(void);
+/**
+ * Set the builder position before Instr but after any attached debug records,
+ * or if Instr is null set the position to the end of Block.
+ */
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
                          LLVMValueRef Instr);
+/**
+ * Set the builder position before Instr and any attached debug records,
+ * or if Instr is null set the position to the end of Block.
+ */
+void LLVMPositionBuilderBeforeDbgRecords(LLVMBuilderRef Builder,
+                                         LLVMBasicBlockRef Block,
+                                         LLVMValueRef Inst);
+/**
+ * Set the builder position before Instr but after any attached debug records.
+ */
 void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr);
+/**
+ * Set the builder position before Instr and any attached debug records.
+ */
+void LLVMPositionBuilderBeforeInstrAndDbgRecords(LLVMBuilderRef Builder,
+                                                 LLVMValueRef Instr);
 void LLVMPositionBuilderAtEnd(LLVMBuilderRef Builder, LLVMBasicBlockRef Block);
 LLVMBasicBlockRef LLVMGetInsertBlock(LLVMBuilderRef Builder);
 void LLVMClearInsertionPosition(LLVMBuilderRef Builder);
@@ -4023,6 +4057,12 @@ LLVMValueRef LLVMBuildSwitch(LLVMBuilderRef, LLVMValueRef V,
                              LLVMBasicBlockRef Else, unsigned NumCases);
 LLVMValueRef LLVMBuildIndirectBr(LLVMBuilderRef B, LLVMValueRef Addr,
                                  unsigned NumDests);
+LLVMValueRef LLVMBuildCallBr(LLVMBuilderRef B, LLVMTypeRef Ty, LLVMValueRef Fn,
+                             LLVMBasicBlockRef DefaultDest,
+                             LLVMBasicBlockRef *IndirectDests,
+                             unsigned NumIndirectDests, LLVMValueRef *Args,
+                             unsigned NumArgs, LLVMOperandBundleRef *Bundles,
+                             unsigned NumBundles, const char *Name);
 LLVMValueRef LLVMBuildInvoke2(LLVMBuilderRef, LLVMTypeRef Ty, LLVMValueRef Fn,
                               LLVMValueRef *Args, unsigned NumArgs,
                               LLVMBasicBlockRef Then, LLVMBasicBlockRef Catch,

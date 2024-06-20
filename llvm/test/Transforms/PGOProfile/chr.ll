@@ -1298,11 +1298,12 @@ define i32 @test_chr_14(ptr %i, ptr %j, i32 %sum0, i1 %pred, i32 %z) !prof !14 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Z_FR:%.*]] = freeze i32 [[Z:%.*]]
 ; CHECK-NEXT:    [[I0:%.*]] = load i32, ptr [[I:%.*]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = icmp eq i32 [[Z_FR]], 1
-; CHECK-NEXT:    br i1 [[V1]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
+; CHECK-NEXT:    [[V1_NOT:%.*]] = icmp eq i32 [[Z_FR]], 1
+; CHECK-NEXT:    br i1 [[V1_NOT]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
 ; CHECK:       entry.split.nonchr:
+; CHECK-NEXT:    [[PRED_FR:%.*]] = freeze i1 [[PRED:%.*]]
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i32 [[Z_FR]], 0
-; CHECK-NEXT:    [[V3_NONCHR:%.*]] = and i1 [[V0]], [[PRED:%.*]]
+; CHECK-NEXT:    [[V3_NONCHR:%.*]] = and i1 [[V0]], [[PRED_FR]]
 ; CHECK-NEXT:    br i1 [[V3_NONCHR]], label [[BB0_NONCHR:%.*]], label [[BB1]], !prof [[PROF16]]
 ; CHECK:       bb0.nonchr:
 ; CHECK-NEXT:    call void @foo()

@@ -105,13 +105,12 @@ define <64 x float> @vfwmul_v64f16(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vslidedown.vx v16, v8, a0
 ; CHECK-NEXT:    vslidedown.vx v8, v0, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    vfwmul.vv v8, v16, v24
+; CHECK-NEXT:    vfwmul.vv v24, v16, v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfwmul.vv v8, v16, v0
@@ -216,13 +215,12 @@ define <32 x double> @vfwmul_v32f32(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vslidedown.vi v16, v8, 16
 ; CHECK-NEXT:    vslidedown.vi v8, v0, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v24, v8
-; CHECK-NEXT:    vfwmul.vv v8, v16, v24
+; CHECK-NEXT:    vfwmul.vv v24, v16, v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfwmul.vv v8, v16, v0

@@ -304,6 +304,7 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxxabi DEPENDS ${LIBCXXABI_BUILD_TARGETS})
+add_dependencies(cxxabi-test-depends cxxabi cxx)
 
 if (LIBCXXABI_INSTALL_LIBRARY)
   install(TARGETS ${LIBCXXABI_INSTALL_TARGETS}

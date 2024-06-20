@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-linux-gnu -v \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \

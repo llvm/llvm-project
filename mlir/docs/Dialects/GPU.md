@@ -37,9 +37,6 @@ complex lifetime analysis following the principles of MLIR that promote
 structure and representing analysis results in the IR.
 
 ## GPU Compilation
-### Deprecation notice
-The `--gpu-to-(cubin|hsaco)` passes will be deprecated in a future release.
-
 ### Compilation overview
 The compilation process in the GPU dialect has two main stages: GPU module
 serialization and offloading operations translation. Together these stages can

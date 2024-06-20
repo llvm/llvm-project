@@ -2,7 +2,7 @@
 
 // RUN: %clang_cc1 -triple arm64-windows -O1 \
 // RUN: -fms-compatibility -fms-compatibility-version=17.00 \
-// RUN: -fsyntax-only -Werror \
+// RUN: -Werror \
 // RUN: -isystem %S/Inputs/include %s -o - -emit-llvm 2>&1 \
 // RUN: | FileCheck %s
 

@@ -91,8 +91,8 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
 // RUN: --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CUDA
 
-// CUDA: clang{{.*}} -o [[IMG_SM52:.+]] --target=nvptx64-nvidia-cuda -march=sm_52
 // CUDA: clang{{.*}} -o [[IMG_SM70:.+]] --target=nvptx64-nvidia-cuda -march=sm_70
+// CUDA: clang{{.*}} -o [[IMG_SM52:.+]] --target=nvptx64-nvidia-cuda -march=sm_52
 // CUDA: fatbinary{{.*}}-64 --create {{.*}}.fatbin --image=profile=sm_70,file=[[IMG_SM70]] --image=profile=sm_52,file=[[IMG_SM52]] 
 // CUDA: usr/bin/ld{{.*}} {{.*}}.openmp.image.{{.*}}.o {{.*}}.cuda.image.{{.*}}.o
 
@@ -118,9 +118,9 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   --compress --compression-level=6 \
 // RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=HIP
 
-// HIP: clang{{.*}} -o [[IMG_GFX908:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx908
 // HIP: clang{{.*}} -o [[IMG_GFX90A:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx90a
-// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx90a,hipv4-amdgcn-amd-amdhsa--gfx908 -input=/dev/null -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
+// HIP: clang{{.*}} -o [[IMG_GFX908:.+]] --target=amdgcn-amd-amdhsa -mcpu=gfx908
+// HIP: clang-offload-bundler{{.*}}-type=o -bundle-align=4096 -compress -compression-level=6 -targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx90a,hip-amdgcn-amd-amdhsa--gfx908 -input=/dev/null -input=[[IMG_GFX90A]] -input=[[IMG_GFX908]] -output={{.*}}.hipfb
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
@@ -186,8 +186,8 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld %t1.o %t2.o %t.a -o a.out 2>&1 | FileCheck %s --check-prefix=ARCH-ALL
 
-// ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
 // ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx90a -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
+// ARCH-ALL: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx908 -O2 -Wl,--no-undefined {{.*}}.o {{.*}}.o
 
 // RUN: clang-offload-packager -o %t.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=x86_64-unknown-linux-gnu \
@@ -210,7 +210,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=RELOCATABLE-LINK-HIP
 
 // RELOCATABLE-LINK-HIP: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa
-// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux,hipv4-amdgcn-amd-amdhsa--gfx90a -input=/dev/null -input={{.*}} -output={{.*}}
+// RELOCATABLE-LINK-HIP: clang-offload-bundler{{.*}} -type=o -bundle-align=4096 -targets=host-x86_64-unknown-linux,hip-amdgcn-amd-amdhsa--gfx90a -input=/dev/null -input={{.*}} -output={{.*}}
 // RELOCATABLE-LINK-HIP: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-HIP: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
 
@@ -226,3 +226,10 @@ __attribute__((visibility("protected"), used)) int x;
 // RELOCATABLE-LINK-CUDA: fatbinary{{.*}} -64 --create {{.*}}.fatbin --image=profile=sm_89,file={{.*}}.img
 // RELOCATABLE-LINK-CUDA: /usr/bin/ld.lld{{.*}}-r
 // RELOCATABLE-LINK-CUDA: llvm-objcopy{{.*}}a.out --remove-section .llvm.offloading
+
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld --override=image=openmp=%t.o %t.o -o a.out 2>&1 \
+// RUN: | FileCheck %s --check-prefix=OVERRIDE
+// OVERRIDE-NOT: clang
+// OVERRIDE: /usr/bin/ld

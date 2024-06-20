@@ -568,3 +568,91 @@ define i1 @trunc_equality_both_sext(i32 %x, i8 %y) {
   %c = icmp ne i16 %xt, %ye
   ret i1 %c
 }
+
+define i1 @test_eq1(i32 %x, i16 %y) {
+; CHECK-LABEL: @test_eq1(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %conv1 = trunc nsw i32 %x to i8
+  %conv2 = trunc nsw i16 %y to i8
+  %cond = icmp eq i8 %conv1, %conv2
+  ret i1 %cond
+}
+
+; FIXME: It is weird that we generate truncs for test_eq2, but not for test_eq1.
+
+define i1 @test_eq2(i32 %x, i16 %y) {
+; CHECK-LABEL: @test_eq2(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i16 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %conv1 = trunc nsw i32 %x to i8
+  %conv2 = trunc nsw i16 %y to i8
+  %cond = icmp eq i8 %conv2, %conv1
+  ret i1 %cond
+}
+
+define i1 @test_ult(i32 %x, i16 %y) {
+; CHECK-LABEL: @test_ult(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %conv1 = trunc nsw i32 %x to i8
+  %conv2 = trunc nsw i16 %y to i8
+  %cond = icmp ult i8 %conv1, %conv2
+  ret i1 %cond
+}
+
+define i1 @test_slt(i32 %x, i16 %y) {
+; CHECK-LABEL: @test_slt(
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %conv1 = trunc nsw i32 %x to i8
+  %conv2 = trunc nsw i16 %y to i8
+  %cond = icmp slt i8 %conv1, %conv2
+  ret i1 %cond
+}
+
+define i1 @test_ult_nuw(i32 %x, i16 %y) {
+; CHECK-LABEL: @test_ult_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %conv1 = trunc nuw nsw i32 %x to i8
+  %conv2 = trunc nuw nsw i16 %y to i8
+  %cond = icmp ult i8 %conv1, %conv2
+  ret i1 %cond
+}
+
+define i1 @test_slt_nuw(i32 %x, i16 %y) {
+; CHECK-LABEL: @test_slt_nuw(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[Y:%.*]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[COND]]
+;
+  %conv1 = trunc nuw nsw i32 %x to i8
+  %conv2 = trunc nuw nsw i16 %y to i8
+  %cond = icmp slt i8 %conv1, %conv2
+  ret i1 %cond
+}
+
+@foo = external global i8
+@bar = external global i8
+
+define i1 @constexpr_trunc() {
+; CHECK-LABEL: @constexpr_trunc(
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ne i16 trunc (i64 sub (i64 sub (i64 ptrtoint (ptr @bar to i64), i64 ptrtoint (ptr @foo to i64)), i64 8) to i16), trunc (i64 sub (i64 sub (i64 0, i64 ptrtoint (ptr @foo to i64)), i64 8) to i16)
+; CHECK-NEXT:    ret i1 [[CMP5]]
+;
+  %conv = zext i16 trunc (i64 sub (i64 sub nuw nsw (i64 ptrtoint (ptr @bar to i64), i64 ptrtoint (ptr @foo to i64)), i64 8) to i16) to i32
+  %conv1 = zext i16 trunc (i64 sub (i64 sub nuw nsw (i64 0, i64 ptrtoint (ptr @foo to i64)), i64 8) to i16) to i32
+  %cmp5 = icmp ne i32 %conv, %conv1
+  ret i1 %cmp5
+}

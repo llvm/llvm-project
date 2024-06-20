@@ -2060,12 +2060,6 @@ void erase(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
 }
 
-template <typename Container, typename ValueType>
-LLVM_DEPRECATED("Use erase instead", "erase")
-void erase_value(Container &C, ValueType V) {
-  erase(C, V);
-}
-
 /// Wrapper function to append range `R` to container `C`.
 ///
 /// C.insert(C.end(), R.begin(), R.end());

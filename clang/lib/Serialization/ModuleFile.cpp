@@ -59,11 +59,9 @@ LLVM_DUMP_METHOD void ModuleFile::dump() {
   // Remapping tables.
   llvm::errs() << "  Base source location offset: " << SLocEntryBaseOffset
                << '\n';
-  dumpLocalRemap("Source location offset local -> global map", SLocRemap);
 
   llvm::errs() << "  Base identifier ID: " << BaseIdentifierID << '\n'
                << "  Number of identifiers: " << LocalNumIdentifiers << '\n';
-  dumpLocalRemap("Identifier ID local -> global map", IdentifierRemap);
 
   llvm::errs() << "  Base macro ID: " << BaseMacroID << '\n'
                << "  Number of macros: " << LocalNumMacros << '\n';
@@ -88,7 +86,6 @@ LLVM_DUMP_METHOD void ModuleFile::dump() {
                << "  Number of types: " << LocalNumTypes << '\n';
   dumpLocalRemap("Type index local -> global map", TypeRemap);
 
-  llvm::errs() << "  Base decl ID: " << BaseDeclID << '\n'
+  llvm::errs() << "  Base decl index: " << BaseDeclIndex << '\n'
                << "  Number of decls: " << LocalNumDecls << '\n';
-  dumpLocalRemap("Decl ID local -> global map", DeclRemap);
 }

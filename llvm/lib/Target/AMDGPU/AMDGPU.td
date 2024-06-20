@@ -1168,8 +1168,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
-   FeatureMaxHardClauseLength32
+   FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast
   ]
 >;
 
@@ -1534,6 +1533,12 @@ def FeatureISAVersion11_5_1 : FeatureSet<
      FeatureVGPRSingleUseHintInsts,
      Feature1_5xVGPRs])>;
 
+def FeatureISAVersion11_5_2 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureVGPRSingleUseHintInsts])>;
+
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
    FeatureLDSBankCount32,
@@ -1566,7 +1571,12 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureHasRestrictedSOffset,
    FeatureVGPRSingleUseHintInsts,
    FeatureScalarDwordx3Loads,
-   FeatureDPPSrc1SGPR]>;
+   FeatureDPPSrc1SGPR,
+   FeatureMaxHardClauseLength32]>;
+
+def FeatureISAVersion12_Generic: FeatureSet<
+  !listconcat(FeatureISAVersion12.Features,
+    [FeatureRequiresCOV6])>;
 
 //===----------------------------------------------------------------------===//
 
@@ -1854,7 +1864,9 @@ def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
 
 def HasBufferFlatGlobalAtomicsF64 :
   Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
-  AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
+  // FIXME: This is too coarse, and working around using pseudo's predicates on real instruction.
+  AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX10Insts, FeatureSouthernIslands, FeatureSeaIslands)>;
+
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
   AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
@@ -1918,7 +1930,8 @@ def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
 
 def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
-def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">;
+def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,
+  AssemblerPredicate<(all_of (not FeatureTrue16BitInsts))>;
 
 // Control use of True16 instructions. The real True16 instructions are
 // True16 instructions as they are defined in the ISA. Fake True16
@@ -1927,7 +1940,10 @@ def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()
 def UseRealTrue16Insts : True16PredicateClass<"Subtarget->useRealTrue16Insts()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts)>;
 def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() && "
-                                              "!Subtarget->useRealTrue16Insts()">;
+                                              "!Subtarget->useRealTrue16Insts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
+  // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
+  // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
