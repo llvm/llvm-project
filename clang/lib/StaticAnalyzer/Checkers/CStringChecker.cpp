@@ -427,21 +427,6 @@ static std::optional<NonLoc> getIndex(ProgramStateRef State,
   return Offset.castAs<NonLoc>();
 }
 
-// Try to get hold of the origin region (e.g. the actual array region from an
-// element region).
-static const TypedValueRegion *getOriginRegion(const ElementRegion *ER) {
-  const MemRegion *MR = ER->getSuperRegion();
-  const MemRegion *Ret = MR;
-  assert(MR);
-  if (const auto *sym = MR->getAs<SymbolicRegion>()) {
-    SymbolRef sym2 = sym->getSymbol();
-    if (!sym2)
-      return nullptr;
-    Ret = sym2->getOriginRegion();
-  }
-  return dyn_cast_or_null<TypedValueRegion>(Ret);
-}
-
 // Basically 1 -> 1st, 12 -> 12th, etc.
 static void printIdxWithOrdinalSuffix(llvm::raw_ostream &Os, unsigned Idx) {
   Os << Idx << llvm::getOrdinalSuffix(Idx);
@@ -461,7 +446,7 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   if (!ER)
     return State;
 
-  const TypedValueRegion *Orig = getOriginRegion(ER);
+  const auto *Orig = ER->getSuperRegion()->getAs<TypedValueRegion>();
   if (!Orig)
     return State;
 
