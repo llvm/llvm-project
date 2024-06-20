@@ -1731,33 +1731,33 @@ struct DropUnitDimFromBroadcastOp final
 
   LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
                                 PatternRewriter &rewriter) const override {
-    auto srcVT = dyn_cast<VectorType>(broadcastOp.getSourceType());
-    if (!srcVT)
+    auto srcVecTy = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    if (!srcVecTy)
       return failure();
-    auto resVT = broadcastOp.getResultVectorType();
-    VectorType newSrcVT = srcVT;
-    VectorType newResVT = resVT;
+    auto resVecTy = broadcastOp.getResultVectorType();
+    auto srcVecTyBuilder = VectorType::Builder(srcVecTy);
+    auto resVecTyBuilder = VectorType::Builder(resVecTy);
     auto broadcastedUnitDims = broadcastOp.computeBroadcastedUnitDims();
     // Reversing allows us to remove dims from the back without keeping track of
     // removed dimensions.
-    for (const auto &dim : llvm::enumerate(llvm::reverse(srcVT.getShape()))) {
+    for (const auto &dim :
+         llvm::enumerate(llvm::reverse(srcVecTy.getShape()))) {
       if (dim.value() == 1 &&
-          !srcVT.getScalableDims()[srcVT.getRank() - dim.index() - 1] &&
-          !broadcastedUnitDims.contains(srcVT.getRank() - dim.index() - 1)) {
-        newSrcVT = VectorType::Builder(newSrcVT).dropDim(srcVT.getRank() -
-                                                         dim.index() - 1);
-        newResVT = VectorType::Builder(newResVT).dropDim(resVT.getRank() -
-                                                         dim.index() - 1);
+          !srcVecTy.getScalableDims()[srcVecTy.getRank() - dim.index() - 1] &&
+          !broadcastedUnitDims.contains(srcVecTy.getRank() - dim.index() - 1)) {
+        srcVecTyBuilder.dropDim(srcVecTy.getRank() - dim.index() - 1);
+        resVecTyBuilder.dropDim(resVecTy.getRank() - dim.index() - 1);
       }
     }
 
-    if (newSrcVT == srcVT)
+    if (VectorType(srcVecTyBuilder) == srcVecTy)
       return failure();
     auto loc = broadcastOp->getLoc();
     auto newSource = rewriter.create<vector::ShapeCastOp>(
-        loc, newSrcVT, broadcastOp.getSource());
-    auto newOp = rewriter.create<vector::BroadcastOp>(loc, newResVT, newSource);
-    rewriter.replaceOpWithNewOp<ShapeCastOp>(broadcastOp, resVT,
+        loc, VectorType(srcVecTyBuilder), broadcastOp.getSource());
+    auto newOp = rewriter.create<vector::BroadcastOp>(
+        loc, VectorType(resVecTyBuilder), newSource);
+    rewriter.replaceOpWithNewOp<ShapeCastOp>(broadcastOp, resVecTy,
                                              newOp.getResult());
     return success();
   }
