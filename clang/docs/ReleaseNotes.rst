@@ -95,6 +95,9 @@ ABI Changes in This Version
 - Fixed Microsoft calling convention when returning classes that have a deleted
   copy assignment operator. Such a class should be returned indirectly.
 
+- Fixed tail padding not being reused on types with oversized bit-fields and
+  potentially-overlapping members (#GH50766).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
