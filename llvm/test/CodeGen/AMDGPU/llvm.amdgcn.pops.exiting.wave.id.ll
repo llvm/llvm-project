@@ -32,3 +32,42 @@ define amdgpu_ps void @test(ptr addrspace(1) inreg %ptr) {
   store i32 %id, ptr addrspace(1) %ptr
   ret void
 }
+
+define amdgpu_ps void @test_loop() {
+; SDAG-LABEL: test_loop:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; SDAG-NEXT:  .LBB1_1: ; %loop
+; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
+; SDAG-NEXT:    s_cmp_eq_u32 s0, 0
+; SDAG-NEXT:    s_cbranch_scc1 .LBB1_1
+; SDAG-NEXT:  ; %bb.2: ; %exit
+; SDAG-NEXT:    s_endpgm
+;
+; GFX9-GISEL-LABEL: test_loop:
+; GFX9-GISEL:       ; %bb.0:
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; GFX9-GISEL-NEXT:  .LBB1_1: ; %loop
+; GFX9-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX9-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX9-GISEL-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX9-GISEL-NEXT:  ; %bb.2: ; %exit
+; GFX9-GISEL-NEXT:    s_endpgm
+;
+; GFX10-GISEL-LABEL: test_loop:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; GFX10-GISEL-NEXT:  .LBB1_1: ; %loop
+; GFX10-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX10-GISEL-NEXT:    s_cbranch_scc1 .LBB1_1
+; GFX10-GISEL-NEXT:  ; %bb.2: ; %exit
+; GFX10-GISEL-NEXT:    s_endpgm
+  br label %loop
+loop:
+  %id = call i32 @llvm.amdgcn.pops.exiting.wave.id()
+  %cond = icmp eq i32 %id, 0
+  br i1 %cond, label %loop, label %exit
+exit:
+  ret void
+}
