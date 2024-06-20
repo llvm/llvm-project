@@ -1892,8 +1892,8 @@ public:
   QualType getLocalType(ModuleFile &F, serialization::LocalTypeID LocalID);
 
   /// Map a local type ID within a given AST file into a global type ID.
-  serialization::TypeID getGlobalTypeID(ModuleFile &F,
-                                        serialization::LocalTypeID LocalID) const;
+  serialization::TypeID
+  getGlobalTypeID(ModuleFile &F, serialization::LocalTypeID LocalID) const;
 
   /// Read a type from the current position in the given record, which
   /// was read from the given AST file.

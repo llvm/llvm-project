@@ -6696,7 +6696,8 @@ void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
   TypeIdx &StoredIdx = TypeIdxs[T];
 
   // Ignore it if the type comes from the current being written module file.
-  // Since the current module file being written logically has the highest index.
+  // Since the current module file being written logically has the highest
+  // index.
   unsigned ModuleFileIndex = StoredIdx.getModuleFileIndex();
   if (ModuleFileIndex == 0 && StoredIdx.getValue())
     return;
