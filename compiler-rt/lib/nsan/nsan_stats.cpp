@@ -22,72 +22,73 @@
 #include <assert.h>
 #include <stdio.h>
 
-namespace __nsan {
-
 using namespace __sanitizer;
+using namespace __nsan;
 
 Stats::Stats() {
-  CheckAndWarnings.Initialize(0);
+  check_and_warnings.Initialize(0);
   TrackedLoads.Initialize(0);
 }
 
 Stats::~Stats() { Printf("deleting nsan stats\n"); }
 
-static uptr key(CheckTypeT CheckType, u32 StackId) {
+static uptr Key(CheckTypeT CheckType, u32 StackId) {
   return static_cast<uptr>(CheckType) +
          StackId * static_cast<uptr>(CheckTypeT::kMaxCheckType);
 }
 
 template <typename MapT, typename VectorT, typename Fn>
-void UpdateEntry(CheckTypeT CheckTy, uptr PC, uptr BP, MapT *Map,
-                 VectorT *Vector, Mutex *Mutex, Fn F) {
+static void UpdateEntry(CheckTypeT check_ty, uptr pc, uptr bp, MapT *map,
+                        VectorT *vector, Mutex *mutex, Fn F) {
   BufferedStackTrace Stack;
-  Stack.Unwind(PC, BP, nullptr, false);
-  u32 StackId = StackDepotPut(Stack);
-  typename MapT::Handle Handle(Map, key(CheckTy, StackId));
-  Lock L(Mutex);
+  Stack.Unwind(pc, bp, nullptr, false);
+  u32 stack_id = StackDepotPut(Stack);
+  typename MapT::Handle Handle(map, Key(check_ty, stack_id));
+  Lock L(mutex);
   if (Handle.created()) {
-    typename VectorT::value_type Entry;
-    Entry.StackId = StackId;
-    Entry.CheckTy = CheckTy;
-    F(Entry);
-    Vector->push_back(Entry);
+    typename VectorT::value_type entry;
+    entry.stack_id = stack_id;
+    entry.check_ty = check_ty;
+    F(entry);
+    vector->push_back(entry);
   } else {
-    auto &Entry = (*Vector)[*Handle];
-    F(Entry);
+    auto &entry = (*vector)[*Handle];
+    F(entry);
   }
 }
 
-void Stats::addCheck(CheckTypeT CheckTy, uptr PC, uptr BP, double RelErr) {
-  UpdateEntry(CheckTy, PC, BP, &CheckAndWarningsMap, &CheckAndWarnings,
-              &CheckAndWarningsMutex, [RelErr](CheckAndWarningsValue &Entry) {
-                ++Entry.NumChecks;
-                if (RelErr > Entry.MaxRelativeError) {
-                  Entry.MaxRelativeError = RelErr;
+void Stats::AddCheck(CheckTypeT check_ty, uptr pc, uptr bp, double rel_err) {
+  UpdateEntry(check_ty, pc, bp, &CheckAndWarningsMap, &check_and_warnings,
+              &check_and_warning_mutex,
+              [rel_err](CheckAndWarningsValue &entry) {
+                ++entry.num_checks;
+                if (rel_err > entry.max_relative_err) {
+                  entry.max_relative_err = rel_err;
                 }
               });
 }
 
-void Stats::addWarning(CheckTypeT CheckTy, uptr PC, uptr BP, double RelErr) {
-  UpdateEntry(CheckTy, PC, BP, &CheckAndWarningsMap, &CheckAndWarnings,
-              &CheckAndWarningsMutex, [RelErr](CheckAndWarningsValue &Entry) {
-                ++Entry.NumWarnings;
-                if (RelErr > Entry.MaxRelativeError) {
-                  Entry.MaxRelativeError = RelErr;
+void Stats::AddWarning(CheckTypeT check_ty, uptr pc, uptr bp, double rel_err) {
+  UpdateEntry(check_ty, pc, bp, &CheckAndWarningsMap, &check_and_warnings,
+              &check_and_warning_mutex,
+              [rel_err](CheckAndWarningsValue &entry) {
+                ++entry.num_warnings;
+                if (rel_err > entry.max_relative_err) {
+                  entry.max_relative_err = rel_err;
                 }
               });
 }
 
-void Stats::addInvalidLoadTrackingEvent(uptr PC, uptr BP) {
-  UpdateEntry(CheckTypeT::kLoad, PC, BP, &LoadTrackingMap, &TrackedLoads,
+void Stats::AddInvalidLoadTrackingEvent(uptr pc, uptr bp) {
+  UpdateEntry(CheckTypeT::kLoad, pc, bp, &LoadTrackingMap, &TrackedLoads,
               &TrackedLoadsMutex,
-              [](LoadTrackingValue &Entry) { ++Entry.NumInvalid; });
+              [](LoadTrackingValue &entry) { ++entry.num_invalid; });
 }
 
-void Stats::addUnknownLoadTrackingEvent(uptr PC, uptr BP) {
-  UpdateEntry(CheckTypeT::kLoad, PC, BP, &LoadTrackingMap, &TrackedLoads,
+void Stats::AddUnknownLoadTrackingEvent(uptr pc, uptr bp) {
+  UpdateEntry(CheckTypeT::kLoad, pc, bp, &LoadTrackingMap, &TrackedLoads,
               &TrackedLoadsMutex,
-              [](LoadTrackingValue &Entry) { ++Entry.NumUnknown; });
+              [](LoadTrackingValue &entry) { ++entry.num_unknown; });
 }
 
 static const char *CheckTypeDisplay(CheckTypeT CheckType) {
@@ -115,20 +116,20 @@ static const char *CheckTypeDisplay(CheckTypeT CheckType) {
   return "";
 }
 
-void Stats::print() const {
+void Stats::Print() const {
   {
-    Lock L(&CheckAndWarningsMutex);
-    for (const auto &Entry : CheckAndWarnings) {
-      Printf("warned %llu times out of %llu %s checks ", Entry.NumWarnings,
-             Entry.NumChecks, CheckTypeDisplay(Entry.CheckTy));
-      if (Entry.NumWarnings > 0) {
+    Lock L(&check_and_warning_mutex);
+    for (const auto &entry : check_and_warnings) {
+      Printf("warned %llu times out of %llu %s checks ", entry.num_warnings,
+             entry.num_checks, CheckTypeDisplay(entry.check_ty));
+      if (entry.num_warnings > 0) {
         char RelErrBuf[64];
         snprintf(RelErrBuf, sizeof(RelErrBuf) - 1, "%f",
-                 Entry.MaxRelativeError * 100.0);
+                 entry.max_relative_err * 100.0);
         Printf("(max relative error: %s%%) ", RelErrBuf);
       }
       Printf("at:\n");
-      StackDepotGet(Entry.StackId).Print();
+      StackDepotGet(entry.stack_id).Print();
     }
   }
 
@@ -136,12 +137,12 @@ void Stats::print() const {
     Lock L(&TrackedLoadsMutex);
     u64 TotalInvalidLoadTracking = 0;
     u64 TotalUnknownLoadTracking = 0;
-    for (const auto &Entry : TrackedLoads) {
-      TotalInvalidLoadTracking += Entry.NumInvalid;
-      TotalUnknownLoadTracking += Entry.NumUnknown;
-      Printf("invalid/unknown type for %llu/%llu loads at:\n", Entry.NumInvalid,
-             Entry.NumUnknown);
-      StackDepotGet(Entry.StackId).Print();
+    for (const auto &entry : TrackedLoads) {
+      TotalInvalidLoadTracking += entry.num_invalid;
+      TotalUnknownLoadTracking += entry.num_unknown;
+      Printf("invalid/unknown type for %llu/%llu loads at:\n",
+             entry.num_invalid, entry.num_unknown);
+      StackDepotGet(entry.stack_id).Print();
     }
     Printf(
         "There were %llu/%llu floating-point loads where the shadow type was "
@@ -150,9 +151,7 @@ void Stats::print() const {
   }
 }
 
-alignas(64) static char StatsPlaceholder[sizeof(Stats)];
-Stats *nsan_stats = nullptr;
+alignas(64) static char stats_placeholder[sizeof(Stats)];
+Stats *__nsan::nsan_stats = nullptr;
 
-void initializeStats() { nsan_stats = new (StatsPlaceholder) Stats(); }
-
-} // namespace __nsan
+void __nsan::InitializeStats() { nsan_stats = new (stats_placeholder) Stats(); }

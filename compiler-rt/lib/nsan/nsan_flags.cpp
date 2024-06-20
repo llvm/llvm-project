@@ -18,11 +18,9 @@
 using namespace __sanitizer;
 using namespace __nsan;
 
-namespace __nsan {
 SANITIZER_INTERFACE_WEAK_DEF(const char *, __nsan_default_options, void) {
   return "";
 }
-} // namespace __nsan
 
 Flags __nsan::flags_data;
 

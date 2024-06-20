@@ -71,7 +71,6 @@ __nsan_set_value_unknown(const u8 *addr, uptr size) {
   internal_memset((void *)getShadowTypeAddrFor(addr), 0, size);
 }
 
-namespace __nsan {
 
 const char *FTInfo<float>::kCppTypeName = "float";
 const char *FTInfo<double>::kCppTypeName = "double";
@@ -177,8 +176,6 @@ template <typename T> T max(T a, T b) { return a < b ? b : a; }
 
 } // end anonymous namespace
 
-} // end namespace __nsan
-
 void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
                                                  void *context,
                                                  bool request_fast,
@@ -189,7 +186,7 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_print_accumulated_stats() {
   if (nsan_stats)
-    nsan_stats->print();
+    nsan_stats->Print();
 }
 
 static void NsanAtexit() {
@@ -228,18 +225,18 @@ __nsan_get_shadow_ptr_for_longdouble_store(u8 *store_addr, uptr n) {
   return getShadowPtrForStore<long double>(store_addr, n);
 }
 
-template <typename FT> static bool isValidShadowType(const u8 *shadow_type) {
+template <typename FT> static bool IsValidShadowType(const u8 *shadow_type) {
   return __builtin_memcmp(shadow_type, FTInfo<FT>::kTypePattern, sizeof(FT)) ==
          0;
 }
 
-template <int kSize, typename T> static bool isZero(const T *ptr) {
+template <int kSize, typename T> static bool IsZero(const T *ptr) {
   constexpr const char kZeros[kSize] = {}; // Zero initialized.
   return __builtin_memcmp(ptr, kZeros, kSize) == 0;
 }
 
-template <typename FT> static bool isUnknownShadowType(const u8 *shadow_type) {
-  return isZero<sizeof(FTInfo<FT>::kTypePattern)>(shadow_type);
+template <typename FT> static bool IsUnknownShadowType(const u8 *shadow_type) {
+  return IsZero<sizeof(FTInfo<FT>::kTypePattern)>(shadow_type);
 }
 
 // The three folowing functions check that the address stores a complete
@@ -249,21 +246,21 @@ template <typename FT>
 static const u8 *getShadowPtrForLoad(const u8 *load_addr, uptr n) {
   const u8 *const shadow_type = getShadowTypeAddrFor(load_addr);
   for (uptr i = 0; i < n; ++i) {
-    if (!isValidShadowType<FT>(shadow_type + i * sizeof(FT))) {
+    if (!IsValidShadowType<FT>(shadow_type + i * sizeof(FT))) {
       // If loadtracking stats are enabled, log loads with invalid types
       // (tampered with through type punning).
       if (flags().enable_loadtracking_stats) {
-        if (isUnknownShadowType<FT>(shadow_type + i * sizeof(FT))) {
+        if (IsUnknownShadowType<FT>(shadow_type + i * sizeof(FT))) {
           // Warn only if the value is non-zero. Zero is special because
           // applications typically initialize large buffers to zero in an
           // untyped way.
-          if (!isZero<sizeof(FT)>(load_addr)) {
+          if (!IsZero<sizeof(FT)>(load_addr)) {
             GET_CALLER_PC_BP;
-            nsan_stats->addUnknownLoadTrackingEvent(pc, bp);
+            nsan_stats->AddUnknownLoadTrackingEvent(pc, bp);
           }
         } else {
           GET_CALLER_PC_BP;
-          nsan_stats->addInvalidLoadTrackingEvent(pc, bp);
+          nsan_stats->AddInvalidLoadTrackingEvent(pc, bp);
         }
       }
       return nullptr;
@@ -442,7 +439,7 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
     // want to avoid having to move the computation of `largest` before the
     // absolute value check when this branch is not taken.
     const InternalFT largest = max(ftAbs(check_value), ftAbs(check_shadow));
-    nsan_stats->addCheck(CheckType, pc, bp, abs_err / largest);
+    nsan_stats->AddCheck(CheckType, pc, bp, abs_err / largest);
   }
 
   // Note: writing the comparison that way ensures that when `abs_err` is Nan
@@ -534,7 +531,7 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
 
   if (flags().enable_warning_stats) {
     GET_CALLER_PC_BP;
-    nsan_stats->addWarning(CheckType, pc, bp, abs_err / largest);
+    nsan_stats->AddWarning(CheckType, pc, bp, abs_err / largest);
   }
 
   if (flags().halt_on_error) {
@@ -565,10 +562,10 @@ __nsan_internal_check_longdouble_q(long double value, __float128 shadow,
   return checkFT(value, shadow, static_cast<CheckTypeT>(check_type), check_arg);
 }
 
-static const char *getTruthValueName(bool v) { return v ? "true" : "false"; }
+static const char *GetTruthValueName(bool v) { return v ? "true" : "false"; }
 
 // This uses the same values as CmpInst::Predicate.
-static const char *getPredicateName(int v) {
+static const char *GetPredicateName(int v) {
   switch (v) {
   case 0:
     return "(false)";
@@ -618,21 +615,19 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   }
 
   GET_CALLER_PC_BP;
-  BufferedStackTrace Stack;
-  Stack.Unwind(pc, bp, nullptr, false);
+  BufferedStackTrace stack;
+  stack.Unwind(pc, bp, nullptr, false);
 
-  if (GetSuppressionForStack(&Stack, CheckKind::Fcmp)) {
+  if (GetSuppressionForStack(&stack, CheckKind::Fcmp)) {
     // FIXME: optionally print.
     return;
   }
 
-  if (flags().enable_warning_stats) {
-    nsan_stats->addWarning(CheckTypeT::kFcmp, pc, bp, 0.0);
-  }
+  if (flags().enable_warning_stats)
+    nsan_stats->AddWarning(CheckTypeT::kFcmp, pc, bp, 0.0);
 
-  if (flags().disable_warnings) {
+  if (flags().disable_warnings)
     return;
-  }
 
   // FIXME: ideally we would print the shadow value as FP128. Right now because
   // we truncate to long double we can sometimes see stuff like:
@@ -640,7 +635,7 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   using ValuePrinter = FTPrinter<FT>;
   using ShadowPrinter = FTPrinter<ShadowFT>;
   Decorator D;
-  const char *const PredicateName = getPredicateName(Predicate);
+  const char *const PredicateName = GetPredicateName(Predicate);
   Printf("%s", D.Warning());
   Printf("WARNING: NumericalStabilitySanitizer: floating-point comparison "
          "results depend on precision\n"
@@ -651,20 +646,20 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
          "%s",
          // Native, decimal.
          FTInfo<FT>::kCppTypeName, ValuePrinter::dec(Lhs).Buffer, PredicateName,
-         ValuePrinter::dec(Rhs).Buffer, getTruthValueName(result),
+         ValuePrinter::dec(Rhs).Buffer, GetTruthValueName(result),
          // Shadow, decimal
          FTInfo<ShadowFT>::kCppTypeName, ShadowPrinter::dec(LhsShadow).Buffer,
          PredicateName, ShadowPrinter::dec(RhsShadow).Buffer,
-         getTruthValueName(ShadowResult),
+         GetTruthValueName(ShadowResult),
          // Native, hex.
          FTInfo<FT>::kCppTypeName, ValuePrinter::hex(Lhs).Buffer, PredicateName,
-         ValuePrinter::hex(Rhs).Buffer, getTruthValueName(result),
+         ValuePrinter::hex(Rhs).Buffer, GetTruthValueName(result),
          // Shadow, hex
          FTInfo<ShadowFT>::kCppTypeName, ShadowPrinter::hex(LhsShadow).Buffer,
          PredicateName, ShadowPrinter::hex(RhsShadow).Buffer,
-         getTruthValueName(ShadowResult), D.End());
+         GetTruthValueName(ShadowResult), D.End());
   Printf("%s", D.Default());
-  Stack.Print();
+  stack.Print();
   if (flags().halt_on_error) {
     Printf("Exiting\n");
     Die();
@@ -799,7 +794,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
 
   InitializeInterceptors();
 
-  initializeStats();
+  InitializeStats();
   if (flags().print_stats_on_exit)
     Atexit(NsanAtexit);
 
