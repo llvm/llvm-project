@@ -8868,7 +8868,7 @@ ScalarEvolution::computeBackedgeTakenCount(const Loop *L,
 
 ScalarEvolution::ExitLimit
 ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
-                                  bool ControlsOnlyExit, bool AllowPredicates) {
+                                  bool IsOnlyExit, bool AllowPredicates) {
   assert(L->contains(ExitingBlock) && "Exit count for non-loop block?");
   // If our exiting block does not dominate the latch, then its connection with
   // loop's exit limit may be far from trivial.
@@ -8884,7 +8884,8 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
            "It should have one successor in loop and one exit block!");
     // Proceed to the next level to examine the exit condition expression.
     return computeExitLimitFromCond(L, BI->getCondition(), ExitIfTrue,
-                                    ControlsOnlyExit, AllowPredicates);
+                                    /*ControlsOnlyExit=*/IsOnlyExit,
+                                    AllowPredicates);
   }
 
   if (SwitchInst *SI = dyn_cast<SwitchInst>(Term)) {
@@ -8897,7 +8898,8 @@ ScalarEvolution::computeExitLimit(const Loop *L, BasicBlock *ExitingBlock,
         Exit = SBB;
       }
     assert(Exit && "Exiting block must have at least one exit");
-    return computeExitLimitFromSingleExitSwitch(L, SI, Exit, ControlsOnlyExit);
+    return computeExitLimitFromSingleExitSwitch(
+        L, SI, Exit, /*ControlsOnlyExit=*/IsOnlyExit);
   }
 
   return getCouldNotCompute();
