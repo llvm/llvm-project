@@ -1334,13 +1334,10 @@ static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
   // Walk users of wide canonical IVs and collect to all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
   SmallVector<VPValue *> HeaderMasks;
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
   for (auto *Wide : WideCanonicalIVs) {
     for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
       auto *HeaderMask = dyn_cast<VPInstruction>(U);
-      if (!HeaderMask || HeaderMask->getOpcode() != Instruction::ICmp ||
-          HeaderMask->getPredicate() != CmpInst::ICMP_ULE ||
-          HeaderMask->getOperand(1) != BTC)
+      if (!HeaderMask || !vputils::isHeaderMask(HeaderMask, Plan))
         continue;
 
       assert(HeaderMask->getOperand(0) == Wide &&
