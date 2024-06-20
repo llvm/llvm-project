@@ -2466,6 +2466,21 @@ s_sendmsg_rtn_b32 null, 0
 s_sendmsg_rtn_b32 s0, 0x1234
 // GFX13: encoding: [0x34,0x4c,0x80,0xbe]
 
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_SEMA1)
+// GFX13: encoding: [0x8c,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_SEMA2)
+// GFX13: encoding: [0x8d,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_SEMA3)
+// GFX13: encoding: [0x8e,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_SEMA4)
+// GFX13: encoding: [0x8f,0x4c,0x80,0xbe]
+
+s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_SEMA5)
+// GFX13: encoding: [0x90,0x4c,0x80,0xbe]
+
 s_sendmsg_rtn_b64 s[0:1], 0
 // GFX13: encoding: [0x00,0x4d,0x80,0xbe]
 

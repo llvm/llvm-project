@@ -119,6 +119,11 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_RTN_GET_SE_AID_ID"},   ID_RTN_GET_SE_AID_ID,       isGFX12Plus},
   {{"MSG_RTN_GET_CLUSTER_BARRIER_STATE"}, ID_RTN_GET_CLUSTER_BARRIER_STATE,
                                                             isGFX12_10},
+  {{"MSG_RTN_GET_SEMA1"},       ID_RTN_GET_SEMA1,           isGFX13Plus},
+  {{"MSG_RTN_GET_SEMA2"},       ID_RTN_GET_SEMA2,           isGFX13Plus},
+  {{"MSG_RTN_GET_SEMA3"},       ID_RTN_GET_SEMA3,           isGFX13Plus},
+  {{"MSG_RTN_GET_SEMA4"},       ID_RTN_GET_SEMA4,           isGFX13Plus},
+  {{"MSG_RTN_GET_SEMA5"},       ID_RTN_GET_SEMA5,           isGFX13Plus},
 };
 
 static constexpr CustomOperand SysMsgOperands[] = {
