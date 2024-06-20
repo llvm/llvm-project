@@ -71,7 +71,7 @@ public:
 
   void testOverflow(LdExpFunc func) {
     NormalFloat x(Sign::POS, FPBits::MAX_BIASED_EXPONENT - 10,
-                  NormalFloat::ONE + 0xF00);
+                  NormalFloat::ONE + 0xFB);
     for (int32_t exp = 10; exp < 100; ++exp) {
       ASSERT_FP_EQ(inf, func(T(x), exp));
       ASSERT_FP_EQ(neg_inf, func(-T(x), exp));

@@ -1494,7 +1494,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf16.h
   COMPILE_OPTIONS
-    -O0 -ggdb3
+    -O3
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions

@@ -142,8 +142,10 @@ LIBC_INLINE constexpr T logb(T x) {
   return static_cast<T>(normal.get_unbiased_exponent());
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE constexpr T ldexp(T x, long exp) {
+template <typename T, typename U>
+LIBC_INLINE constexpr cpp::enable_if_t<
+    cpp::is_floating_point_v<T> && cpp::is_integral_v<U>, T>
+ldexp(T x, U exp) {
   FPBits<T> bits(x);
   if (LIBC_UNLIKELY((exp == 0) || bits.is_zero() || bits.is_inf_or_nan()))
     return x;
@@ -156,6 +158,8 @@ LIBC_INLINE constexpr T ldexp(T x, long exp) {
   // calculating the limit.
   constexpr int EXP_LIMIT =
       FPBits<T>::MAX_BIASED_EXPONENT + FPBits<T>::FRACTION_LEN + 1;
+  // Make sure that we can safely cast exp to int when not returning early.
+  static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
     int rounding_mode = quick_get_round();
     Sign sign = bits.sign();
@@ -185,9 +189,7 @@ LIBC_INLINE constexpr T ldexp(T x, long exp) {
   }
 
   // For all other values, NormalFloat to T conversion handles it the right way.
-  DyadicFloat<cpp::max(FPBits<T>::STORAGE_LEN, 32)> normal(bits.get_val());
-  // Make sure that exp fits into an int when not taking the fast paths above.
-  static_assert(EXP_LIMIT <= INT_MAX && -EXP_LIMIT >= INT_MIN);
+  DyadicFloat<FPBits<T>::STORAGE_LEN> normal(bits.get_val());
   normal.exponent += static_cast<int>(exp);
   return static_cast<T>(normal);
 }

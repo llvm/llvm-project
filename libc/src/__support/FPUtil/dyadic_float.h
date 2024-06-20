@@ -14,7 +14,6 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/big_int.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/__support/macros/properties/types.h" // float16
 
 #include <stddef.h>
 
@@ -127,7 +126,7 @@ template <size_t Bits> struct DyadicFloat {
         shift >= MantissaType::BITS ? MantissaType(0) : mantissa >> shift;
 
     T d_hi = FPBits<T>::create_value(
-                 sign, exp_hi,
+                 sign, static_cast<output_bits_t>(exp_hi),
                  (static_cast<output_bits_t>(m_hi) & FPBits<T>::SIG_MASK) |
                      IMPLICIT_MASK)
                  .get_val();
@@ -144,25 +143,32 @@ template <size_t Bits> struct DyadicFloat {
 
     if (LIBC_UNLIKELY(exp_lo <= 0)) {
       // d_lo is denormal, but the output is normal.
-      int scale_up_exponent = 2 * PRECISION;
+      int scale_up_exponent = 1 - exp_lo;
       T scale_up_factor =
-          FPBits<T>::create_value(sign, FPBits<T>::EXP_BIAS + scale_up_exponent,
+          FPBits<T>::create_value(sign,
+                                  static_cast<output_bits_t>(
+                                      FPBits<T>::EXP_BIAS + scale_up_exponent),
                                   IMPLICIT_MASK)
               .get_val();
       T scale_down_factor =
-          FPBits<T>::create_value(sign, FPBits<T>::EXP_BIAS - scale_up_exponent,
+          FPBits<T>::create_value(sign,
+                                  static_cast<output_bits_t>(
+                                      FPBits<T>::EXP_BIAS - scale_up_exponent),
                                   IMPLICIT_MASK)
               .get_val();
 
-      d_lo = FPBits<T>::create_value(sign, exp_lo + scale_up_exponent,
-                                     IMPLICIT_MASK)
+      d_lo = FPBits<T>::create_value(
+                 sign, static_cast<output_bits_t>(exp_lo + scale_up_exponent),
+                 IMPLICIT_MASK)
                  .get_val();
 
       return multiply_add(d_lo, T(round_and_sticky), d_hi * scale_up_factor) *
              scale_down_factor;
     }
 
-    d_lo = FPBits<T>::create_value(sign, exp_lo, IMPLICIT_MASK).get_val();
+    d_lo = FPBits<T>::create_value(sign, static_cast<output_bits_t>(exp_lo),
+                                   IMPLICIT_MASK)
+               .get_val();
 
     // Still correct without FMA instructions if `d_lo` is not underflow.
     T r = multiply_add(d_lo, T(round_and_sticky), d_hi);
@@ -170,7 +176,8 @@ template <size_t Bits> struct DyadicFloat {
     if (LIBC_UNLIKELY(denorm)) {
       // Exponent before rounding is in denormal range, simply clear the
       // exponent field.
-      output_bits_t clear_exp = (output_bits_t(exp_hi) << FPBits<T>::SIG_LEN);
+      output_bits_t clear_exp = static_cast<output_bits_t>(
+          output_bits_t(exp_hi) << FPBits<T>::SIG_LEN);
       output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
       if (!(r_bits & FPBits<T>::EXP_MASK)) {
         // Output is denormal after rounding, clear the implicit bit for 80-bit
@@ -182,10 +189,6 @@ template <size_t Bits> struct DyadicFloat {
     }
 
     return r;
-  }
-
-  LIBC_INLINE explicit constexpr operator float16() const {
-    return static_cast<float16>(static_cast<float>(*this));
   }
 
   LIBC_INLINE explicit constexpr operator MantissaType() const {
