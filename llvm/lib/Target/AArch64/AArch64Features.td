@@ -253,7 +253,6 @@ def FeaturePredRes : ExtensionWithMArch<"predres", "PredRes", "FEAT_SPECRES",
 def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP", "FEAT_DPB2",
   "Enable v8.5 Cache Clean to Point of Deep Persistence">;
 
-let ArchExtKindSpelling = "AEK_NONE" in
 def FeatureBranchTargetId : ExtensionWithMArch<"bti", "BTI", "FEAT_BTI",
   "Enable Branch Target Identification">;
 

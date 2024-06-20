@@ -19,6 +19,7 @@
 // RUN: %clang -target aarch64 -march=armv9-a --print-enabled-extensions 2>&1 | sort | FileCheck -check-prefix=ARCH-EXTENSION --implicit-check-not FEAT_ %s
 // ARCH-EXTENSION: FEAT_AMUv1
 // ARCH-EXTENSION: FEAT_AdvSIMD
+// ARCH-EXTENSION: FEAT_BTI
 // ARCH-EXTENSION: FEAT_CCIDX
 // ARCH-EXTENSION: FEAT_CRC32
 // ARCH-EXTENSION: FEAT_CSV2_2
