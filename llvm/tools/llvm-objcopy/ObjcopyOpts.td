@@ -146,6 +146,12 @@ def extract_main_partition
     : Flag<["--"], "extract-main-partition">,
       HelpText<"Extract main partition from the input file">;
 
+defm set_max_section_offset
+    : Eq<"set-max-section-offset",
+         "Emit an error if input section has a file offset greater than the "
+         "specified `offset`">,
+      MetaVarName<"offset">;
+
 def localize_hidden
     : Flag<["--"], "localize-hidden">,
       HelpText<

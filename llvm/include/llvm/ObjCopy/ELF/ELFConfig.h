@@ -31,6 +31,7 @@ struct ELFConfig {
   bool KeepFileSymbols = false;
   bool LocalizeHidden = false;
   bool VerifyNoteSections = true;
+  std::optional<uint64_t> MaxSectionOffset;
 };
 
 } // namespace objcopy

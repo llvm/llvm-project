@@ -350,6 +350,11 @@ them.
 
  Extract the named partition from the output.
 
+.. option:: --set-max-section-offset <value>
+
+ Emit an error if input section has a file offset greater than the specified
+ ``<value>``.
+
 .. option:: --gap-fill <value>
 
  For binary outputs, fill the gaps between sections with ``<value>`` instead
