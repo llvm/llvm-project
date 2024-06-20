@@ -51,10 +51,10 @@ __nsan_default_options();
 
 namespace __nsan {
 
-extern bool NsanInitialized;
-extern bool NsanInitIsRunning;
+extern bool nsan_initialized;
+extern bool nsan_init_is_running;
 
-void initializeInterceptors();
+void InitializeInterceptors();
 
 // See notes in nsan_platform.
 // printf-free (see comment in nsan_interceptors.cc).

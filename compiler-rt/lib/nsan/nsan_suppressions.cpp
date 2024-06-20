@@ -25,51 +25,51 @@ const char *const kSuppressionConsistency = "consistency";
 
 using namespace __sanitizer;
 
-ALIGNED(64) static char SuppressionPlaceholder[sizeof(SuppressionContext)];
-static SuppressionContext *SuppressionCtx = nullptr;
+alignas(64) static char suppressionPlaceholder[sizeof(SuppressionContext)];
+static SuppressionContext *suppressionCtx = nullptr;
 
 // The order should match the enum CheckKind.
 static const char *kSuppressionTypes[] = {kSuppressionFcmp,
                                           kSuppressionConsistency};
 
 void InitializeSuppressions() {
-  CHECK_EQ(nullptr, SuppressionCtx);
-  SuppressionCtx = new (SuppressionPlaceholder)
+  CHECK_EQ(nullptr, suppressionCtx);
+  suppressionCtx = new (suppressionPlaceholder)
       SuppressionContext(kSuppressionTypes, ARRAY_SIZE(kSuppressionTypes));
-  SuppressionCtx->ParseFromFile(flags().suppressions);
-  SuppressionCtx->Parse(__nsan_default_suppressions());
+  suppressionCtx->ParseFromFile(flags().suppressions);
+  suppressionCtx->Parse(__nsan_default_suppressions());
 }
 
-static Suppression *GetSuppressionForAddr(uptr Addr, const char *SupprType) {
-  Suppression *S = nullptr;
+static Suppression *GetSuppressionForAddr(uptr addr, const char *supprType) {
+  Suppression *s = nullptr;
 
   // Suppress by module name.
-  SuppressionContext *Suppressions = SuppressionCtx;
-  if (const char *ModuleName =
-          Symbolizer::GetOrInit()->GetModuleNameForPc(Addr)) {
-    if (Suppressions->Match(ModuleName, SupprType, &S))
-      return S;
+  SuppressionContext *suppressions = suppressionCtx;
+  if (const char *moduleName =
+          Symbolizer::GetOrInit()->GetModuleNameForPc(addr)) {
+    if (suppressions->Match(moduleName, supprType, &s))
+      return s;
   }
 
   // Suppress by file or function name.
-  SymbolizedStack *Frames = Symbolizer::GetOrInit()->SymbolizePC(Addr);
-  for (SymbolizedStack *Cur = Frames; Cur; Cur = Cur->next) {
-    if (Suppressions->Match(Cur->info.function, SupprType, &S) ||
-        Suppressions->Match(Cur->info.file, SupprType, &S)) {
+  SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(addr);
+  for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
+    if (suppressions->Match(cur->info.function, supprType, &s) ||
+        suppressions->Match(cur->info.file, supprType, &s)) {
       break;
     }
   }
-  Frames->ClearAll();
-  return S;
+  frames->ClearAll();
+  return s;
 }
 
-Suppression *GetSuppressionForStack(const StackTrace *Stack, CheckKind K) {
-  for (uptr I = 0, E = Stack->size; I < E; I++) {
-    Suppression *S = GetSuppressionForAddr(
-        StackTrace::GetPreviousInstructionPc(Stack->trace[I]),
-        kSuppressionTypes[static_cast<int>(K)]);
-    if (S)
-      return S;
+Suppression *GetSuppressionForStack(const StackTrace *stack, CheckKind k) {
+  for (uptr i = 0, e = stack->size; i < e; i++) {
+    Suppression *s = GetSuppressionForAddr(
+        StackTrace::GetPreviousInstructionPc(stack->trace[i]),
+        kSuppressionTypes[static_cast<int>(k)]);
+    if (s)
+      return s;
   }
   return nullptr;
 }

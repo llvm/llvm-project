@@ -150,7 +150,7 @@ void Stats::print() const {
   }
 }
 
-ALIGNED(64) static char StatsPlaceholder[sizeof(Stats)];
+alignas(64) static char StatsPlaceholder[sizeof(Stats)];
 Stats *nsan_stats = nullptr;
 
 void initializeStats() { nsan_stats = new (StatsPlaceholder) Stats(); }
