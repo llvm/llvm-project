@@ -1597,9 +1597,6 @@ void prepareUserCallArguments(
         if (dataTy.isAssumedRank()) {
           dataTy =
               dataTy.getBoxTypeWithNewShape(fir::getBase(actualExv).getType());
-          if (dataTy.isAssumedRank())
-            TODO(loc, "associating assumed-rank target to pointer assumed-rank "
-                      "argument");
         }
         mlir::Value irBox = builder.createTemporary(loc, dataTy);
         fir::MutableBoxValue ptrBox(irBox,
