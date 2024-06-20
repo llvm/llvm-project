@@ -36,10 +36,10 @@ CIRGenFunction::AutoVarEmission
 CIRGenFunction::buildAutoVarAlloca(const VarDecl &D,
                                    mlir::OpBuilder::InsertPoint ip) {
   QualType Ty = D.getType();
-  // TODO: (|| Ty.getAddressSpace() == LangAS::opencl_private &&
-  //        getLangOpts().OpenCL))
   assert(!MissingFeatures::openCL());
-  assert(Ty.getAddressSpace() == LangAS::Default);
+  assert(
+      Ty.getAddressSpace() == LangAS::Default ||
+      (Ty.getAddressSpace() == LangAS::opencl_private && getLangOpts().OpenCL));
   assert(!D.hasAttr<AnnotateAttr>() && "not implemented");
 
   auto loc = getLoc(D.getSourceRange());

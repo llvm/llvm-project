@@ -993,7 +993,8 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm_unreachable("NYI");
 
   if (FD && getLangOpts().OpenCL) {
-    llvm_unreachable("NYI");
+    // TODO(cir): Emit OpenCL kernel metadata
+    assert(!MissingFeatures::openCL());
   }
 
   // If we are checking function types, emit a function type signature as

@@ -25,8 +25,14 @@ using namespace clang;
 using namespace cir;
 
 unsigned CIRGenTypes::ClangCallConvToCIRCallConv(clang::CallingConv CC) {
-  assert(CC == CC_C && "No other calling conventions implemented.");
-  return cir::CallingConv::C;
+  switch (CC) {
+  case CC_C:
+    return cir::CallingConv::C;
+  case CC_OpenCLKernel:
+    return CGM.getTargetCIRGenInfo().getOpenCLKernelCallingConv();
+  default:
+    llvm_unreachable("No other calling conventions implemented.");
+  }
 }
 
 CIRGenTypes::CIRGenTypes(CIRGenModule &cgm)

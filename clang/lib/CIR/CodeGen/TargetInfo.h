@@ -78,6 +78,21 @@ public:
                                            mlir::Type DestTy,
                                            bool IsNonNull = false) const;
 
+  /// Get LLVM calling convention for OpenCL kernel.
+  virtual unsigned getOpenCLKernelCallingConv() const {
+    // OpenCL kernels are called via an explicit runtime API with arguments
+    // set with clSetKernelArg(), not as normal sub-functions.
+    // Return SPIR_KERNEL by default as the kernel calling convention to
+    // ensure the fingerprint is fixed such way that each OpenCL argument
+    // gets one matching argument in the produced kernel function argument
+    // list to enable feasible implementation of clSetKernelArg() with
+    // aggregates etc. In case we would use the default C calling conv here,
+    // clSetKernelArg() might break depending on the target-specific
+    // conventions; different targets might split structs passed as values
+    // to multiple function arguments etc.
+    return llvm::CallingConv::SPIR_KERNEL;
+  }
+
   virtual ~TargetCIRGenInfo() {}
 };
 
