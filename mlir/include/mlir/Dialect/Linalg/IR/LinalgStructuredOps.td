@@ -82,6 +82,11 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
         types:
           parallel, reduction, window
 
+    Any values within the output operands that are not unindexed by the 
+    `indexing_maps` are undefined.
+    Any dimensions associated with a `reduction` `iterator_types` must not 
+    be used for indexing output operands, otherwise the results are undefined.
+
     Example:
     Defining a #matmul_trait attribute in MLIR can be done as follows:
       ```mlir
