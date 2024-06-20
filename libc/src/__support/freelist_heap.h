@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_FREELIST_HEAP_H
-#define LLVM_LIBC_SRC_STDLIB_FREELIST_HEAP_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H
+#define LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H
 
 #include <stddef.h>
 
@@ -220,4 +220,4 @@ extern FreeListHeap<> *freelist_heap;
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDLIB_FREELIST_HEAP_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H
