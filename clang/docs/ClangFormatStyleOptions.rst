@@ -6232,8 +6232,7 @@ the configuration (without a prefix: ``Auto``).
       Other: true
 
   * ``bool ExceptDoubleParentheses`` Override any of the following options to prevent addition of space
-    between the first two parentheses in situations where a pair of
-    parentheses have been used.
+    when both opening and closing parentheses use multiple parentheses.
 
     .. code-block:: c++
 
@@ -6279,10 +6278,6 @@ the configuration (without a prefix: ``Auto``).
 
       true:                                 false:
       t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
-      decltype( ( x ) )                     decltype((x))
-      x = ( (int32)y )                      x = ((int32))y
-      y = ( (int ( * )( int ))foo )( x );   y = ((int (*)(int))foo)(x);
-       __attribute__( ( noreturn ) )        __attribute__((noreturn))
 
 
 .. _SpacesInParentheses:
