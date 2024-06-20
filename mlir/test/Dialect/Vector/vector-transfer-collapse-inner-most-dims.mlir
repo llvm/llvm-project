@@ -367,6 +367,33 @@ func.func @contiguous_inner_most_dynamic_outer_scalable_inner_dim(%a: index, %b:
 
 // -----
 
+func.func @contiguous_inner_most_non_zero_idxs(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%i, %c0] {in_bounds = [true, true]} : vector<8x1xf32>, memref<16x1xf32>
+  return
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_non_zero_idxs(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<8x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) {
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<8x1xf32> to vector<8xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX]]] {in_bounds = [true]} : vector<8xf32>, memref<16xf32, strided<[1]>>
+
+// The index to be dropped is != 0 - this is currently not supported.
+
+func.func @negative_contiguous_inner_most_dim_non_zero_idxs(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%i, %i] {in_bounds = [true, true]} : vector<8x1xf32>, memref<16x1xf32>
+  return
+}
+// CHECK-LABEL: func @negative_contiguous_inner_most_dim_non_zero_idxs
+// CHECK-NOT:     memref.subview
+// CHECK-NOT:     memref.shape_cast
+// CHECK:         vector.transfer_write
+
+// -----
+
 func.func @drop_inner_most_dim(%arg0: memref<1x512x16x1xf32, strided<[8192, 16, 1, 1], offset: ?>>, %arg1: vector<1x16x16x1xf32>, %arg2: index) {
   %c0 = arith.constant 0 : index
   vector.transfer_write %arg1, %arg0[%c0, %arg2, %c0, %c0]
