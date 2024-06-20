@@ -11546,6 +11546,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.SveCountTy;
       break;
     }
+    case 'b': {
+      Type = Context.AMDGPUBufferRsrcTy;
+      break;
+    }
     default:
       llvm_unreachable("Unexpected target builtin type");
     }
