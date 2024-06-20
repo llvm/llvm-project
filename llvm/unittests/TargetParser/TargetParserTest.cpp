@@ -2473,7 +2473,7 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {},
          {"v8.1a", "crc", "fp-armv8", "lse", "rdm", "neon"},
          {}},
-        {AArch64::ARMV9_5A, {}, {"v9.5a", "sve", "sve2", "mops", "cpa"}, {}},
+        {AArch64::ARMV9_5A, {}, {"v9.5a", "mops", "cpa"}, {}},
 
         // Positive modifiers
         {AArch64::ARMV8A, {"fp16"}, {"fullfp16"}, {}},
