@@ -80,7 +80,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
 
   uint64_t *PrefixPtr = (uint64_t *)Result - 1;
 
-  *PrefixPtr = ID.get();
+  *PrefixPtr = ID.getRawValue();
 
   // We leave the upper 16 bits to store the module IDs. 48 bits should be
   // sufficient to store a declaration ID.
@@ -129,6 +129,7 @@ unsigned Decl::getOwningModuleID() const {
 void Decl::setOwningModuleID(unsigned ID) {
   assert(isFromASTFile() && "Only works on a deserialized declaration");
   uint64_t *IDAddress = (uint64_t *)this - 1;
+  *IDAddress &= llvm::maskTrailingOnes<uint64_t>(48);
   *IDAddress |= (uint64_t)ID << 48;
 }
 
@@ -690,7 +691,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
     IdentifierInfo *IIEnv = A->getEnvironment();
     StringRef TargetEnv =
         Context.getTargetInfo().getTriple().getEnvironmentName();
-    StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(
+    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
         Context.getTargetInfo().getTriple().getEnvironment());
     // Matching environment or no environment on attribute
     if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
@@ -1115,29 +1116,37 @@ bool Decl::isInExportDeclContext() const {
   while (DC && !isa<ExportDecl>(DC))
     DC = DC->getLexicalParent();
 
-  return DC && isa<ExportDecl>(DC);
+  return isa_and_nonnull<ExportDecl>(DC);
 }
 
 bool Decl::isInAnotherModuleUnit() const {
   auto *M = getOwningModule();
 
-  if (!M)
+  if (!M || !M->isNamedModule())
     return false;
 
-  M = M->getTopLevelModule();
-  // FIXME: It is problematic if the header module lives in another module
-  // unit. Consider to fix this by techniques like
-  // ExternalASTSource::hasExternalDefinitions.
-  if (M->isHeaderLikeModule())
-    return false;
-
-  // A global module without parent implies that we're parsing the global
-  // module. So it can't be in another module unit.
-  if (M->isGlobalModule())
-    return false;
-
-  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::isInCurrentModuleUnit() const {
+  auto *M = getOwningModule();
+
+  if (!M || !M->isNamedModule())
+    return false;
+
+  return M == getASTContext().getCurrentNamedModule();
+}
+
+bool Decl::shouldEmitInExternalSource() const {
+  ExternalASTSource *Source = getASTContext().getExternalSource();
+  if (!Source)
+    return false;
+
+  return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
+}
+
+bool Decl::isInNamedModule() const {
+  return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
 bool Decl::isFromExplicitGlobalModule() const {

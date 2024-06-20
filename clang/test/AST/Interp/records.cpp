@@ -1479,4 +1479,17 @@ namespace VirtOperator {
   };
   constexpr bool cmp_base_derived = D() == D(); // both-warning {{ambiguous}}
 }
+
+namespace FloatAPValue {
+  struct ClassTemplateArg {
+    int a;
+    float f;
+  };
+  template<ClassTemplateArg A> struct ClassTemplateArgTemplate {
+    static constexpr const ClassTemplateArg &Arg = A;
+  };
+  ClassTemplateArgTemplate<ClassTemplateArg{1, 2.0f}> ClassTemplateArgObj;
+  template<const ClassTemplateArg&> struct ClassTemplateArgRefTemplate {};
+  ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
+}
 #endif

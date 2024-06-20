@@ -157,3 +157,92 @@ define <8 x i1> @compare_oge_v8f16 (<8 x half> %x, <8 x half> %y) {
   %res = fcmp oge <8 x half> %x, %y
   ret <8 x i1> %res
 }
+
+; CHECK-LABEL: abs_v8f16:
+; CHECK-NEXT:  .functype abs_v8f16 (v128) -> (v128)
+; CHECK-NEXT:  f16x8.abs $push0=, $0
+; CHECK-NEXT:  return $pop0
+declare <8 x half> @llvm.fabs.v8f16(<8 x half>) nounwind readnone
+define <8 x half> @abs_v8f16(<8 x half> %x) {
+  %a = call <8 x half> @llvm.fabs.v8f16(<8 x half> %x)
+  ret <8 x half> %a
+}
+
+; CHECK-LABEL: neg_v8f16:
+; CHECK-NEXT:  .functype neg_v8f16 (v128) -> (v128)
+; CHECK-NEXT:  f16x8.neg $push0=, $0
+; CHECK-NEXT:  return $pop0
+define <8 x half> @neg_v8f16(<8 x half> %x) {
+  %a = fsub nsz <8 x half> <half 0., half 0., half 0., half 0., half 0., half 0., half 0., half 0.>, %x
+  ret <8 x half> %a
+}
+
+; CHECK-LABEL: sqrt_v8f16:
+; CHECK-NEXT:  .functype sqrt_v8f16 (v128) -> (v128)
+; CHECK-NEXT:  f16x8.sqrt $push0=, $0
+; CHECK-NEXT:  return $pop0
+declare <8 x half> @llvm.sqrt.v8f16(<8 x half> %x)
+define <8 x half> @sqrt_v8f16(<8 x half> %x) {
+  %a = call <8 x half> @llvm.sqrt.v8f16(<8 x half> %x)
+  ret <8 x half> %a
+}
+
+; CHECK-LABEL: ceil_v8f16:
+; CHECK-NEXT:  .functype ceil_v8f16 (v128) -> (v128){{$}}
+; CHECK-NEXT:  f16x8.ceil $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT:  return $pop[[R]]{{$}}
+declare <8 x half> @llvm.ceil.v8f16(<8 x half>)
+define <8 x half> @ceil_v8f16(<8 x half> %a) {
+  %v = call <8 x half> @llvm.ceil.v8f16(<8 x half> %a)
+  ret <8 x half> %v
+}
+
+; CHECK-LABEL: floor_v8f16:
+; CHECK-NEXT:  .functype floor_v8f16 (v128) -> (v128){{$}}
+; CHECK-NEXT:  f16x8.floor $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT:  return $pop[[R]]{{$}}
+declare <8 x half> @llvm.floor.v8f16(<8 x half>)
+define <8 x half> @floor_v8f16(<8 x half> %a) {
+  %v = call <8 x half> @llvm.floor.v8f16(<8 x half> %a)
+  ret <8 x half> %v
+}
+
+; CHECK-LABEL: trunc_v8f16:
+; CHECK-NEXT:  .functype trunc_v8f16 (v128) -> (v128){{$}}
+; CHECK-NEXT:  f16x8.trunc $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT:  return $pop[[R]]{{$}}
+declare <8 x half> @llvm.trunc.v8f16(<8 x half>)
+define <8 x half> @trunc_v8f16(<8 x half> %a) {
+  %v = call <8 x half> @llvm.trunc.v8f16(<8 x half> %a)
+  ret <8 x half> %v
+}
+
+; CHECK-LABEL: nearest_v8f16:
+; CHECK-NEXT:  .functype nearest_v8f16 (v128) -> (v128){{$}}
+; CHECK-NEXT:  f16x8.nearest $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT:  return $pop[[R]]{{$}}
+declare <8 x half> @llvm.nearbyint.v8f16(<8 x half>)
+define <8 x half> @nearest_v8f16(<8 x half> %a) {
+  %v = call <8 x half> @llvm.nearbyint.v8f16(<8 x half> %a)
+  ret <8 x half> %v
+}
+
+; CHECK-LABEL: nearest_v8f16_via_rint:
+; CHECK-NEXT:  .functype nearest_v8f16_via_rint (v128) -> (v128){{$}}
+; CHECK-NEXT:  f16x8.nearest $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT:  return $pop[[R]]{{$}}
+declare <8 x half> @llvm.rint.v8f16(<8 x half>)
+define <8 x half> @nearest_v8f16_via_rint(<8 x half> %a) {
+  %v = call <8 x half> @llvm.rint.v8f16(<8 x half> %a)
+  ret <8 x half> %v
+}
+
+; CHECK-LABEL: nearest_v8f16_via_roundeven:
+; CHECK-NEXT:  .functype nearest_v8f16_via_roundeven (v128) -> (v128){{$}}
+; CHECK-NEXT:  f16x8.nearest $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT:  return $pop[[R]]{{$}}
+declare <8 x half> @llvm.roundeven.v8f16(<8 x half>)
+define <8 x half> @nearest_v8f16_via_roundeven(<8 x half> %a) {
+  %v = call <8 x half> @llvm.roundeven.v8f16(<8 x half> %a)
+  ret <8 x half> %v
+}

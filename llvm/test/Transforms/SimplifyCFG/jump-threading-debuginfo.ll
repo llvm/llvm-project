@@ -16,28 +16,28 @@ define void @test_phi_extra_use(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META7:![0-9]+]], metadata !DIExpression()), !dbg [[DBG13:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 1, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
+; CHECK-NEXT:      #dbg_value(i32 0, [[META7:![0-9]+]], !DIExpression(), [[META13:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 1, [[META7]], !DIExpression(), [[META13]])
 ; CHECK-NEXT:    call void @use.i1(i1 true)
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 2, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 3, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
+; CHECK-NEXT:      #dbg_value(i32 2, [[META7]], !DIExpression(), [[META13]])
+; CHECK-NEXT:      #dbg_value(i32 3, [[META7]], !DIExpression(), [[META13]])
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[JOIN2:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 1, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
+; CHECK-NEXT:      #dbg_value(i32 0, [[META7]], !DIExpression(), [[META13]])
+; CHECK-NEXT:      #dbg_value(i32 1, [[META7]], !DIExpression(), [[META13]])
 ; CHECK-NEXT:    call void @use.i1(i1 false)
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 2, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 3, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 4, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 5, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
+; CHECK-NEXT:      #dbg_value(i32 2, [[META7]], !DIExpression(), [[META13]])
+; CHECK-NEXT:      #dbg_value(i32 3, [[META7]], !DIExpression(), [[META13]])
+; CHECK-NEXT:      #dbg_value(i32 4, [[META7]], !DIExpression(), [[META13]])
+; CHECK-NEXT:      #dbg_value(i32 5, [[META7]], !DIExpression(), [[META13]])
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[JOIN2]]
 ; CHECK:       join2:
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 6, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 7, metadata [[META7]], metadata !DIExpression()), !dbg [[DBG13]]
-; CHECK-NEXT:    ret void, !dbg [[DBG13]]
+; CHECK-NEXT:      #dbg_value(i32 6, [[META7]], !DIExpression(), [[META13]])
+; CHECK-NEXT:      #dbg_value(i32 7, [[META7]], !DIExpression(), [[META13]])
+; CHECK-NEXT:    ret void, !dbg [[META13]]
 ;
   br i1 %c, label %if, label %else
 

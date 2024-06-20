@@ -240,6 +240,11 @@ function(llvm_ExternalProject_Add name source_dir)
       list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
     endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
+    # Add LLVMgold.so dependency if it is available, as clang may need it for
+    # LTO.
+    if(CLANG_IN_TOOLCHAIN AND TARGET LLVMgold)
+      list(APPEND ARG_DEPENDS LLVMgold)
+    endif()
   endif()
 
   if(ARG_STRIP_TOOL)

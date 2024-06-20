@@ -511,6 +511,57 @@ static void handleAccessGroups(Operation *call,
           accessGroupOpInterface.getAccessGroupsOrNull(), accessGroups));
 }
 
+/// Updates locations inside loop annotations to reflect that they were inlined.
+static void
+handleLoopAnnotations(Operation *call,
+                      iterator_range<Region::iterator> inlinedBlocks) {
+  // Attempt to extract a DISubprogram from the callee.
+  auto func = call->getParentOfType<FunctionOpInterface>();
+  if (!func)
+    return;
+  LocationAttr funcLoc = func->getLoc();
+  auto fusedLoc = dyn_cast_if_present<FusedLoc>(funcLoc);
+  if (!fusedLoc)
+    return;
+  auto scope =
+      dyn_cast_if_present<LLVM::DISubprogramAttr>(fusedLoc.getMetadata());
+  if (!scope)
+    return;
+
+  // Helper to build a new fused location that reflects the inlining of the loop
+  // annotation.
+  auto updateLoc = [&](FusedLoc loc) -> FusedLoc {
+    if (!loc)
+      return {};
+    Location callSiteLoc = CallSiteLoc::get(loc, call->getLoc());
+    return FusedLoc::get(loc.getContext(), callSiteLoc, scope);
+  };
+
+  AttrTypeReplacer replacer;
+  replacer.addReplacement([&](LLVM::LoopAnnotationAttr loopAnnotation)
+                              -> std::pair<Attribute, WalkResult> {
+    FusedLoc newStartLoc = updateLoc(loopAnnotation.getStartLoc());
+    FusedLoc newEndLoc = updateLoc(loopAnnotation.getEndLoc());
+    if (!newStartLoc && !newEndLoc)
+      return {loopAnnotation, WalkResult::advance()};
+    auto newLoopAnnotation = LLVM::LoopAnnotationAttr::get(
+        loopAnnotation.getContext(), loopAnnotation.getDisableNonforced(),
+        loopAnnotation.getVectorize(), loopAnnotation.getInterleave(),
+        loopAnnotation.getUnroll(), loopAnnotation.getUnrollAndJam(),
+        loopAnnotation.getLicm(), loopAnnotation.getDistribute(),
+        loopAnnotation.getPipeline(), loopAnnotation.getPeeled(),
+        loopAnnotation.getUnswitch(), loopAnnotation.getMustProgress(),
+        loopAnnotation.getIsVectorized(), newStartLoc, newEndLoc,
+        loopAnnotation.getParallelAccesses());
+    // Needs to advance, as loop annotations can be nested.
+    return {newLoopAnnotation, WalkResult::advance()};
+  });
+
+  for (Block &block : inlinedBlocks)
+    for (Operation &op : block)
+      replacer.recursivelyReplaceElementsIn(&op);
+}
+
 /// If `requestedAlignment` is higher than the alignment specified on `alloca`,
 /// realigns `alloca` if this does not exceed the natural stack alignment.
 /// Returns the post-alignment of `alloca`, whether it was realigned or not.
@@ -639,8 +690,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
         // Cache set of StringAttrs for fast lookup in `isLegalToInline`.
         disallowedFunctionAttrs({
             StringAttr::get(dialect->getContext(), "noduplicate"),
-            StringAttr::get(dialect->getContext(), "noinline"),
-            StringAttr::get(dialect->getContext(), "optnone"),
             StringAttr::get(dialect->getContext(), "presplitcoroutine"),
             StringAttr::get(dialect->getContext(), "returns_twice"),
             StringAttr::get(dialect->getContext(), "strictfp"),
@@ -651,14 +700,20 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     if (!wouldBeCloned)
       return false;
     if (!isa<LLVM::CallOp>(call)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Cannot inline: call is not an LLVM::CallOp\n");
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline: call is not an '"
+                              << LLVM::CallOp::getOperationName() << "' op\n");
       return false;
     }
     auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
     if (!funcOp) {
       LLVM_DEBUG(llvm::dbgs()
-                 << "Cannot inline: callable is not an LLVM::LLVMFuncOp\n");
+                 << "Cannot inline: callable is not an '"
+                 << LLVM::LLVMFuncOp::getOperationName() << "' op\n");
+      return false;
+    }
+    if (funcOp.isNoInline()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Cannot inline: function is marked no_inline\n");
       return false;
     }
     if (funcOp.isVarArg()) {
@@ -784,6 +839,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     handleInlinedAllocas(call, inlinedBlocks);
     handleAliasScopes(call, inlinedBlocks);
     handleAccessGroups(call, inlinedBlocks);
+    handleLoopAnnotations(call, inlinedBlocks);
   }
 
   // Keeping this (immutable) state on the interface allows us to look up

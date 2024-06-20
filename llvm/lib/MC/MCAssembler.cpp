@@ -66,7 +66,6 @@ STATISTIC(EmittedFillFragments,
 STATISTIC(EmittedNopsFragments, "Number of emitted assembler fragments - nops");
 STATISTIC(EmittedOrgFragments, "Number of emitted assembler fragments - org");
 STATISTIC(evaluateFixup, "Number of evaluated fixups");
-STATISTIC(FragmentLayouts, "Number of fragment layouts");
 STATISTIC(ObjectBytes, "Number of emitted object file bytes");
 STATISTIC(RelaxationSteps, "Number of assembler layout and relaxation steps");
 STATISTIC(RelaxedInstructions, "Number of relaxed instructions");
@@ -404,29 +403,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCAsmLayout &Layout,
   llvm_unreachable("invalid fragment kind");
 }
 
-void MCAsmLayout::layoutFragment(MCFragment *F) {
-  MCFragment *Prev = F->getPrevNode();
-
-  // We should never try to recompute something which is valid.
-  assert(!isFragmentValid(F) && "Attempt to recompute a valid fragment!");
-  // We should never try to compute the fragment layout if its predecessor
-  // isn't valid.
-  assert((!Prev || isFragmentValid(Prev)) &&
-         "Attempt to compute fragment before its predecessor!");
-
-  assert(!F->IsBeingLaidOut && "Already being laid out!");
-  F->IsBeingLaidOut = true;
-
-  ++stats::FragmentLayouts;
-
-  // Compute fragment offset and size.
-  if (Prev)
-    F->Offset = Prev->Offset + getAssembler().computeFragmentSize(*this, *Prev);
-  else
-    F->Offset = 0;
-  F->IsBeingLaidOut = false;
-  LastValidFragment[F->getParent()] = F;
-
+void MCAsmLayout::layoutBundle(MCFragment *F) {
   // If bundling is enabled and this fragment has instructions in it, it has to
   // obey the bundling restrictions. With padding, we'll have:
   //
@@ -443,32 +420,45 @@ void MCAsmLayout::layoutFragment(MCFragment *F) {
   // The fragment's offset will point to after the padding, and its computed
   // size won't include the padding.
   //
-  // When the -mc-relax-all flag is used, we optimize bundling by writting the
-  // padding directly into fragments when the instructions are emitted inside
-  // the streamer. When the fragment is larger than the bundle size, we need to
-  // ensure that it's bundle aligned. This means that if we end up with
-  // multiple fragments, we must emit bundle padding between fragments.
-  //
   // ".align N" is an example of a directive that introduces multiple
   // fragments. We could add a special case to handle ".align N" by emitting
   // within-fragment padding (which would produce less padding when N is less
   // than the bundle size), but for now we don't.
   //
-  if (Assembler.isBundlingEnabled() && F->hasInstructions()) {
-    assert(isa<MCEncodedFragment>(F) &&
-           "Only MCEncodedFragment implementations have instructions");
-    MCEncodedFragment *EF = cast<MCEncodedFragment>(F);
-    uint64_t FSize = Assembler.computeFragmentSize(*this, *EF);
+  assert(isa<MCEncodedFragment>(F) &&
+         "Only MCEncodedFragment implementations have instructions");
+  MCEncodedFragment *EF = cast<MCEncodedFragment>(F);
+  uint64_t FSize = Assembler.computeFragmentSize(*this, *EF);
 
-    if (!Assembler.getRelaxAll() && FSize > Assembler.getBundleAlignSize())
-      report_fatal_error("Fragment can't be larger than a bundle size");
+  if (FSize > Assembler.getBundleAlignSize())
+    report_fatal_error("Fragment can't be larger than a bundle size");
 
-    uint64_t RequiredBundlePadding =
-        computeBundlePadding(Assembler, EF, EF->Offset, FSize);
-    if (RequiredBundlePadding > UINT8_MAX)
-      report_fatal_error("Padding cannot exceed 255 bytes");
-    EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
-    EF->Offset += RequiredBundlePadding;
+  uint64_t RequiredBundlePadding =
+      computeBundlePadding(Assembler, EF, EF->Offset, FSize);
+  if (RequiredBundlePadding > UINT8_MAX)
+    report_fatal_error("Padding cannot exceed 255 bytes");
+  EF->setBundlePadding(static_cast<uint8_t>(RequiredBundlePadding));
+  EF->Offset += RequiredBundlePadding;
+}
+
+uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
+  ensureValid(F);
+  return F->Offset;
+}
+
+void MCAsmLayout::ensureValid(const MCFragment *Frag) const {
+  MCSection &Sec = *Frag->getParent();
+  if (Sec.hasLayout())
+    return;
+  Sec.setHasLayout(true);
+  uint64_t Offset = 0;
+  for (MCFragment &F : Sec) {
+    F.Offset = Offset;
+    if (Assembler.isBundlingEnabled() && F.hasInstructions()) {
+      const_cast<MCAsmLayout *>(this)->layoutBundle(&F);
+      Offset = F.Offset;
+    }
+    Offset += getAssembler().computeFragmentSize(*this, F);
   }
 }
 
@@ -824,8 +814,11 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   for (MCSection &Sec : *this) {
     // Create dummy fragments to eliminate any empty sections, this simplifies
     // layout.
-    if (Sec.getFragmentList().empty())
-      new MCDataFragment(&Sec);
+    if (Sec.empty()) {
+      auto *F = getContext().allocFragment<MCDataFragment>();
+      F->setParent(&Sec);
+      Sec.addFragment(*F);
+    }
 
     Sec.setOrdinal(SectionIndex++);
   }
@@ -834,6 +827,19 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
   for (unsigned i = 0, e = Layout.getSectionOrder().size(); i != e; ++i) {
     MCSection *Sec = Layout.getSectionOrder()[i];
     Sec->setLayoutOrder(i);
+
+    // Chain together fragments from all subsections.
+    MCDummyFragment Dummy(Sec);
+    MCFragment *Tail = &Dummy;
+    for (auto &[_, List] : Sec->Subsections) {
+      if (!List.Head)
+        continue;
+      Tail->Next = List.Head;
+      Tail = List.Tail;
+    }
+    Sec->Subsections.clear();
+    Sec->Subsections.push_back({0u, {Dummy.getNext(), Tail}});
+    Sec->CurFragList = &Sec->Subsections[0].second;
 
     unsigned FragmentIndex = 0;
     for (MCFragment &Frag : *Sec)
@@ -848,7 +854,7 @@ void MCAssembler::layout(MCAsmLayout &Layout) {
     // another. If any fragment has changed size, we have to re-layout (and
     // as a result possibly further relax) all.
     for (MCSection &Sec : *this)
-      Layout.invalidateFragmentsFrom(&*Sec.begin());
+      Sec.setHasLayout(false);
   }
 
   DEBUG_WITH_TYPE("mc-dump", {
@@ -1098,9 +1104,11 @@ bool MCAssembler::relaxBoundaryAlign(MCAsmLayout &Layout,
 
   uint64_t AlignedOffset = Layout.getFragmentOffset(&BF);
   uint64_t AlignedSize = 0;
-  for (const MCFragment *F = BF.getLastFragment(); F != &BF;
-       F = F->getPrevNode())
+  for (const MCFragment *F = BF.getNext();; F = F->getNext()) {
     AlignedSize += computeFragmentSize(Layout, *F);
+    if (F == BF.getLastFragment())
+      break;
+  }
 
   Align BoundaryAlignment = BF.getAlignment();
   uint64_t NewSize = needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
@@ -1109,7 +1117,6 @@ bool MCAssembler::relaxBoundaryAlign(MCAsmLayout &Layout,
   if (NewSize == BF.getSize())
     return false;
   BF.setSize(NewSize);
-  Layout.invalidateFragmentsFrom(&BF);
   return true;
 }
 
@@ -1219,47 +1226,19 @@ bool MCAssembler::relaxFragment(MCAsmLayout &Layout, MCFragment &F) {
   }
 }
 
-bool MCAssembler::layoutSectionOnce(MCAsmLayout &Layout, MCSection &Sec) {
-  // Holds the first fragment which needed relaxing during this layout. It will
-  // remain NULL if none were relaxed.
-  // When a fragment is relaxed, all the fragments following it should get
-  // invalidated because their offset is going to change.
-  MCFragment *FirstRelaxedFragment = nullptr;
-
-  // Attempt to relax all the fragments in the section.
-  for (MCFragment &Frag : Sec) {
-    // Check if this is a fragment that needs relaxation.
-    bool RelaxedFrag = relaxFragment(Layout, Frag);
-    if (RelaxedFrag && !FirstRelaxedFragment)
-      FirstRelaxedFragment = &Frag;
-  }
-  if (FirstRelaxedFragment) {
-    Layout.invalidateFragmentsFrom(FirstRelaxedFragment);
-    return true;
-  }
-  return false;
-}
-
 bool MCAssembler::layoutOnce(MCAsmLayout &Layout) {
   ++stats::RelaxationSteps;
 
-  bool WasRelaxed = false;
-  for (MCSection &Sec : *this) {
-    while (layoutSectionOnce(Layout, Sec))
-      WasRelaxed = true;
-  }
-
-  return WasRelaxed;
+  bool Changed = false;
+  for (MCSection &Sec : *this)
+    for (MCFragment &Frag : Sec)
+      if (relaxFragment(Layout, Frag))
+        Changed = true;
+  return Changed;
 }
 
 void MCAssembler::finishLayout(MCAsmLayout &Layout) {
   assert(getBackendPtr() && "Expected assembler backend");
-  // The layout is done. Mark every fragment as valid.
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection &Section = *Layout.getSectionOrder()[i];
-    Layout.getFragmentOffset(&*Section.getFragmentList().rbegin());
-    computeFragmentSize(Layout, *Section.getFragmentList().rbegin());
-  }
   getBackend().finishLayout(*this, Layout);
 }
 

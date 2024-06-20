@@ -1330,9 +1330,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (MachineDominatorTree *MDT =
-          P.getAnalysisIfAvailable<MachineDominatorTree>())
-    MDT->recordSplitCriticalEdge(this, Succ, NMBB);
+  if (auto *MDTWrapper =
+          P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
+    MDTWrapper->getDomTree().recordSplitCriticalEdge(this, Succ, NMBB);
 
   if (MachineLoopInfo *MLI = P.getAnalysisIfAvailable<MachineLoopInfo>())
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {

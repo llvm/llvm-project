@@ -66,6 +66,7 @@ export inline int getA2() {
 export class A {
 public:
     int getMem();
+
     // The consuming module which didn't use m:partA completely is expected to be
     // not changed.
     int getMem2();

@@ -542,6 +542,8 @@ TYPE_TRAIT_2(__reference_converts_from_temporary, ReferenceConvertsFromTemporary
 // is not exposed to users.
 TYPE_TRAIT_2(/*EmptySpellingName*/, IsDeducible, KEYCXX)
 
+TYPE_TRAIT_1(__is_bitwise_cloneable, IsBitwiseCloneable, KEYALL)
+
 // Embarcadero Expression Traits
 EXPRESSION_TRAIT(__is_lvalue_expr, IsLValueExpr, KEYCXX)
 EXPRESSION_TRAIT(__is_rvalue_expr, IsRValueExpr, KEYCXX)
