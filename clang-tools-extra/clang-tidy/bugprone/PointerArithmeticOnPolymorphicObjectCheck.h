@@ -13,7 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-/// Finds pointer arithmetic performed on classes that declare a
+/// Finds pointer arithmetic performed on classes that contain a
 /// virtual function.
 ///
 /// For the user-facing documentation see:

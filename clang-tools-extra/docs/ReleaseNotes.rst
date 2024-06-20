@@ -137,7 +137,7 @@ New checks
 - New :doc:`bugprone-pointer-arithmetic-on-polymorphic-object
   <clang-tidy/checks/bugprone/pointer-arithmetic-on-polymorphic-object>` check.
 
-  Finds pointer arithmetic performed on classes that declare a virtual function.
+  Finds pointer arithmetic performed on classes that contain a virtual function.
 
 - New :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
