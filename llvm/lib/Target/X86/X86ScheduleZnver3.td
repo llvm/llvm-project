@@ -1301,7 +1301,7 @@ defm : Zn3WriteResXMMPair<WriteAESKeyGen, [Zn3FPAES01], 4, [1], 1>; // Key Gener
 // Carry-less multiplication instructions.
 defm : Zn3WriteResXMMPair<WriteCLMul, [Zn3FPCLM01], 4, [4], 4>;
 
-// EMMS/FEMMS
+// EMMS
 defm : Zn3WriteResInt<WriteEMMS, [Zn3ALU0123], 2, [1], 1>; // FIXME: latency not from llvm-exegesis
 
 // Load/store MXCSR
