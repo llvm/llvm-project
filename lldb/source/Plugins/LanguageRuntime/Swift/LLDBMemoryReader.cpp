@@ -619,18 +619,54 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
     return {};
 
   Address resolved(file_address, object_file->GetSectionList());
-  if (!resolved.IsValid()) {
+
+  // If the address doesn't have a section it means we couldn't find a section
+  // that contains that file address, and the "resolved" instance is wrong. 
+  // Calculate the virtual address by finding out the slide of the associated 
+  // module, and adding that to the file address.
+  if (resolved.GetSection()) {
+    LLDB_LOGV(log,
+              "[MemoryReader] Successfully resolved mapped address {0:x} into "
+              "file address {1:x}",
+              address, resolved.GetFileAddress());
+    return resolved;
+  }
+  auto *sec_list = module->GetSectionList();
+  if (sec_list->GetSize() == 0) {
     LLDB_LOG(log,
-             "[MemoryReader] Could not make a real address out of file address "
-             "{0:x} and object file {1}",
+             "[MemoryReader] Could not calculate virtual address from file "
+             "address {0:x}, no sections in {1}",
              file_address, object_file->GetFileSpec().GetFilename());
     return {};
   }
+  auto sec = sec_list->GetSectionAtIndex(0);
+  auto sec_file_address = sec->GetFileAddress();
+  auto sec_load_address = sec->GetLoadBaseAddress(&m_process.GetTarget());
 
+  bool overflow = false;
+  auto slide =
+      llvm::SaturatingAdd(sec_load_address, -sec_file_address, &overflow);
+  if (overflow) {
+    LLDB_LOG(log,
+             "[MemoryReader] section load address {0:x} - file address {1:x} "
+             "overflows",
+             sec_load_address, sec_file_address);
+    return {};
+  }
+
+  auto virtual_address = llvm::SaturatingAdd(file_address, slide, &overflow);
+  if (overflow) {
+    LLDB_LOG(log, "[MemoryReader] file address {0:x} + slide {1:x} overflows",
+             sec_load_address, sec_file_address);
+    return {};
+  }
+
+  resolved = Address(virtual_address);
   LLDB_LOGV(log,
-            "[MemoryReader] Successfully resolved mapped address {0:x} into "
-            "file address {1:x}",
-            address, resolved.GetFileAddress());
+            "[MemoryReader] Could not find section with file address {0:x} "
+            "and file {1}, resolved it into virtual address {2:x}",
+            file_address, object_file->GetFileSpec().GetFilename(),
+            virtual_address);
   return resolved;
 }
 
