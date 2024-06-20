@@ -722,7 +722,7 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
 
   auto obj_file_format = GetObjectFileFormat(obj_format_type);
   if (!obj_file_format)
-    return false;
+    return {};
 
   bool should_register_with_symbol_obj_file = [&]() -> bool {
     if (!m_process.GetTarget().GetSwiftReadMetadataFromDSYM())
@@ -772,7 +772,7 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
   }
 
   if (!maybe_segment_name)
-    return false;
+    return {};
 
   llvm::StringRef segment_name = *maybe_segment_name;
 
@@ -780,7 +780,7 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
   auto maybe_start_and_end = lldb_memory_reader->addModuleToAddressMap(
       module, should_register_with_symbol_obj_file);
   if (!maybe_start_and_end)
-    return false;
+    return {};
 
   uint64_t start_address, end_address;
   std::tie(start_address, end_address) = *maybe_start_and_end;
@@ -794,7 +794,7 @@ SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
   });
 
   if (segment_iter == section_list->end())
-    return false;
+    return {};
 
   auto *segment = segment_iter->get();
   Section *maybe_secondary_segment = nullptr;
