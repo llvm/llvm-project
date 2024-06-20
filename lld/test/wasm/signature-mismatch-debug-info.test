@@ -1,0 +1,8 @@
+# This is a regression test that checks whether a function signature mismatch
+# in functions with debug info does not cause does not cause a segmentation
+# fault when writing .debug_info section.
+
+; RUN: llc -filetype=obj %p/Inputs/signature-mismatch-debug-info-a.ll -o %t.a.o
+; RUN: llc -filetype=obj %p/Inputs/signature-mismatch-debug-info-b.ll -o %t.b.o
+; RUN: llc -filetype=obj %p/Inputs/signature-mismatch-debug-info-main.ll -o %t.main.o
+; RUN: wasm-ld -o %t.wasm %t.a.o %t.b.o %t.main.o --export=main --no-entry
