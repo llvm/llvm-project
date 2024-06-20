@@ -1,0 +1,181 @@
+; ModuleID = 'LLVMDialectModule'
+source_filename = "LLVMDialectModule"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@nl = internal constant [2 x i8] c"\0A\00"
+@frmt_spec = internal constant [4 x i8] c"%f \00"
+
+declare !dbg !3 void @free(ptr)
+
+declare !dbg !6 i32 @printf(ptr, ...)
+
+declare !dbg !7 ptr @malloc(i64)
+
+define void @main() !dbg !8 {
+  %1 = call ptr @malloc(i64 ptrtoint (ptr getelementptr (double, ptr null, i64 6) to i64)), !dbg !9
+  %2 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } undef, ptr %1, 0, !dbg !9
+  %3 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %2, ptr %1, 1, !dbg !9
+  %4 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %3, i64 0, 2, !dbg !9
+  %5 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %4, i64 1, 3, 0, !dbg !9
+  %6 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, i64 6, 3, 1, !dbg !9
+  %7 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %6, i64 6, 4, 0, !dbg !9
+  %8 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %7, i64 1, 4, 1, !dbg !9
+  %9 = call ptr @malloc(i64 ptrtoint (ptr getelementptr (double, ptr null, i64 6) to i64)), !dbg !10
+  %10 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } undef, ptr %9, 0, !dbg !10
+  %11 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %10, ptr %9, 1, !dbg !10
+  %12 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %11, i64 0, 2, !dbg !10
+  %13 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %12, i64 6, 3, 0, !dbg !10
+  %14 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, i64 1, 3, 1, !dbg !10
+  %15 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %14, i64 1, 4, 0, !dbg !10
+  %16 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %15, i64 1, 4, 1, !dbg !10
+  %17 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %18 = getelementptr double, ptr %17, i64 0, !dbg !10
+  store double 1.000000e+00, ptr %18, align 8, !dbg !10
+  %19 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %20 = getelementptr double, ptr %19, i64 1, !dbg !10
+  store double 2.000000e+00, ptr %20, align 8, !dbg !10
+  %21 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %22 = getelementptr double, ptr %21, i64 2, !dbg !10
+  store double 3.000000e+00, ptr %22, align 8, !dbg !10
+  %23 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %24 = getelementptr double, ptr %23, i64 3, !dbg !10
+  store double 4.000000e+00, ptr %24, align 8, !dbg !10
+  %25 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %26 = getelementptr double, ptr %25, i64 4, !dbg !10
+  store double 5.000000e+00, ptr %26, align 8, !dbg !10
+  %27 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %28 = getelementptr double, ptr %27, i64 5, !dbg !10
+  store double 6.000000e+00, ptr %28, align 8, !dbg !10
+  %29 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %30 = getelementptr double, ptr %29, i64 0, !dbg !9
+  store double 1.000000e+00, ptr %30, align 8, !dbg !9
+  %31 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %32 = getelementptr double, ptr %31, i64 1, !dbg !9
+  store double 2.000000e+00, ptr %32, align 8, !dbg !9
+  %33 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %34 = getelementptr double, ptr %33, i64 2, !dbg !9
+  store double 3.000000e+00, ptr %34, align 8, !dbg !9
+  %35 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %36 = getelementptr double, ptr %35, i64 3, !dbg !9
+  store double 4.000000e+00, ptr %36, align 8, !dbg !9
+  %37 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %38 = getelementptr double, ptr %37, i64 4, !dbg !9
+  store double 5.000000e+00, ptr %38, align 8, !dbg !9
+  %39 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %40 = getelementptr double, ptr %39, i64 5, !dbg !9
+  store double 6.000000e+00, ptr %40, align 8, !dbg !9
+  %41 = call ptr @malloc(i64 ptrtoint (ptr getelementptr (double, ptr null, i64 1) to i64)), !dbg !11
+  %42 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } undef, ptr %41, 0, !dbg !11
+  %43 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, ptr %41, 1, !dbg !11
+  %44 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %43, i64 0, 2, !dbg !11
+  %45 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %44, i64 1, 3, 0, !dbg !11
+  %46 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %45, i64 1, 3, 1, !dbg !11
+  %47 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %46, i64 1, 4, 0, !dbg !11
+  %48 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %47, i64 1, 4, 1, !dbg !11
+  %49 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %50 = getelementptr double, ptr %49, i64 0, !dbg !11
+  %51 = load double, ptr %50, align 8, !dbg !11
+  %52 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %53 = getelementptr double, ptr %52, i64 0, !dbg !11
+  %54 = load double, ptr %53, align 8, !dbg !11
+  %55 = fmul double %51, %54, !dbg !11
+  %56 = fadd double %55, 0.000000e+00, !dbg !11
+  %57 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %58 = getelementptr double, ptr %57, i64 1, !dbg !11
+  %59 = load double, ptr %58, align 8, !dbg !11
+  %60 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %61 = getelementptr double, ptr %60, i64 1, !dbg !11
+  %62 = load double, ptr %61, align 8, !dbg !11
+  %63 = fmul double %59, %62, !dbg !11
+  %64 = fadd double %56, %63, !dbg !11
+  %65 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %66 = getelementptr double, ptr %65, i64 2, !dbg !11
+  %67 = load double, ptr %66, align 8, !dbg !11
+  %68 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %69 = getelementptr double, ptr %68, i64 2, !dbg !11
+  %70 = load double, ptr %69, align 8, !dbg !11
+  %71 = fmul double %67, %70, !dbg !11
+  %72 = fadd double %64, %71, !dbg !11
+  %73 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %74 = getelementptr double, ptr %73, i64 3, !dbg !11
+  %75 = load double, ptr %74, align 8, !dbg !11
+  %76 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %77 = getelementptr double, ptr %76, i64 3, !dbg !11
+  %78 = load double, ptr %77, align 8, !dbg !11
+  %79 = fmul double %75, %78, !dbg !11
+  %80 = fadd double %72, %79, !dbg !11
+  %81 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %82 = getelementptr double, ptr %81, i64 4, !dbg !11
+  %83 = load double, ptr %82, align 8, !dbg !11
+  %84 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %85 = getelementptr double, ptr %84, i64 4, !dbg !11
+  %86 = load double, ptr %85, align 8, !dbg !11
+  %87 = fmul double %83, %86, !dbg !11
+  %88 = fadd double %80, %87, !dbg !11
+  %89 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %90 = getelementptr double, ptr %89, i64 5, !dbg !11
+  %91 = load double, ptr %90, align 8, !dbg !11
+  %92 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %93 = getelementptr double, ptr %92, i64 5, !dbg !11
+  %94 = load double, ptr %93, align 8, !dbg !11
+  %95 = fmul double %91, %94, !dbg !11
+  %96 = fadd double %88, %95, !dbg !11
+  %97 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %48, 1, !dbg !11
+  %98 = getelementptr double, ptr %97, i64 0, !dbg !11
+  store double %96, ptr %98, align 8, !dbg !11
+  br label %99, !dbg !12
+
+99:                                               ; preds = %113, %0
+  %100 = phi i64 [ 0, %0 ], [ %115, %113 ]
+  %101 = icmp slt i64 %100, 1, !dbg !12
+  br i1 %101, label %102, label %116, !dbg !12
+
+102:                                              ; preds = %99
+  br label %103, !dbg !12
+
+103:                                              ; preds = %106, %102
+  %104 = phi i64 [ 0, %102 ], [ %112, %106 ]
+  %105 = icmp slt i64 %104, 1, !dbg !12
+  br i1 %105, label %106, label %113, !dbg !12
+
+106:                                              ; preds = %103
+  %107 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %48, 1, !dbg !12
+  %108 = add i64 %100, %104, !dbg !12
+  %109 = getelementptr double, ptr %107, i64 %108, !dbg !12
+  %110 = load double, ptr %109, align 8, !dbg !12
+  %111 = call i32 (ptr, ...) @printf(ptr @frmt_spec, double %110), !dbg !12
+  %112 = add i64 %104, 1, !dbg !12
+  br label %103, !dbg !12
+
+113:                                              ; preds = %103
+  %114 = call i32 (ptr, ...) @printf(ptr @nl), !dbg !12
+  %115 = add i64 %100, 1, !dbg !12
+  br label %99, !dbg !12
+
+116:                                              ; preds = %99
+  %117 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 0, !dbg !10
+  call void @free(ptr %117), !dbg !10
+  %118 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 0, !dbg !9
+  call void @free(ptr %118), !dbg !9
+  ret void, !dbg !13
+}
+
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
+!2 = !DIFile(filename: "matmul3.mlir", directory: "")
+!3 = !DISubprogram(name: "free", linkageName: "free", scope: !2, file: !2, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagOptimized)
+!4 = !DISubroutineType(cc: DW_CC_normal, types: !5)
+!5 = !{}
+!6 = !DISubprogram(name: "printf", linkageName: "printf", scope: !2, file: !2, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagOptimized)
+!7 = !DISubprogram(name: "malloc", linkageName: "malloc", scope: !2, file: !2, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagOptimized)
+!8 = distinct !DISubprogram(name: "main", linkageName: "main", scope: !2, file: !2, line: 2, type: !4, scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1)
+!9 = !DILocation(line: 6, column: 10, scope: !8)
+!10 = !DILocation(line: 4, column: 10, scope: !8)
+!11 = !DILocation(line: 7, column: 10, scope: !8)
+!12 = !DILocation(line: 8, column: 5, scope: !8)
+!13 = !DILocation(line: 9, column: 5, scope: !8)
+

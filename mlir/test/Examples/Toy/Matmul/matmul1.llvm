@@ -1,0 +1,239 @@
+; ModuleID = 'LLVMDialectModule'
+source_filename = "LLVMDialectModule"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+@nl = internal constant [2 x i8] c"\0A\00"
+@frmt_spec = internal constant [4 x i8] c"%f \00"
+
+declare !dbg !3 void @free(ptr)
+
+declare !dbg !6 i32 @printf(ptr, ...)
+
+declare !dbg !7 ptr @malloc(i64)
+
+define void @main() !dbg !8 {
+  %1 = call ptr @malloc(i64 ptrtoint (ptr getelementptr (double, ptr null, i64 6) to i64)), !dbg !9
+  %2 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } undef, ptr %1, 0, !dbg !9
+  %3 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %2, ptr %1, 1, !dbg !9
+  %4 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %3, i64 0, 2, !dbg !9
+  %5 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %4, i64 3, 3, 0, !dbg !9
+  %6 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %5, i64 2, 3, 1, !dbg !9
+  %7 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %6, i64 2, 4, 0, !dbg !9
+  %8 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %7, i64 1, 4, 1, !dbg !9
+  %9 = call ptr @malloc(i64 ptrtoint (ptr getelementptr (double, ptr null, i64 6) to i64)), !dbg !10
+  %10 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } undef, ptr %9, 0, !dbg !10
+  %11 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %10, ptr %9, 1, !dbg !10
+  %12 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %11, i64 0, 2, !dbg !10
+  %13 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %12, i64 2, 3, 0, !dbg !10
+  %14 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %13, i64 3, 3, 1, !dbg !10
+  %15 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %14, i64 3, 4, 0, !dbg !10
+  %16 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %15, i64 1, 4, 1, !dbg !10
+  %17 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %18 = getelementptr double, ptr %17, i64 0, !dbg !10
+  store double 1.000000e+00, ptr %18, align 8, !dbg !10
+  %19 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %20 = getelementptr double, ptr %19, i64 1, !dbg !10
+  store double 2.000000e+00, ptr %20, align 8, !dbg !10
+  %21 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %22 = getelementptr double, ptr %21, i64 2, !dbg !10
+  store double 3.000000e+00, ptr %22, align 8, !dbg !10
+  %23 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %24 = getelementptr double, ptr %23, i64 3, !dbg !10
+  store double 4.000000e+00, ptr %24, align 8, !dbg !10
+  %25 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %26 = getelementptr double, ptr %25, i64 4, !dbg !10
+  store double 5.000000e+00, ptr %26, align 8, !dbg !10
+  %27 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !10
+  %28 = getelementptr double, ptr %27, i64 5, !dbg !10
+  store double 6.000000e+00, ptr %28, align 8, !dbg !10
+  %29 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %30 = getelementptr double, ptr %29, i64 0, !dbg !9
+  store double 1.000000e+00, ptr %30, align 8, !dbg !9
+  %31 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %32 = getelementptr double, ptr %31, i64 1, !dbg !9
+  store double 2.000000e+00, ptr %32, align 8, !dbg !9
+  %33 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %34 = getelementptr double, ptr %33, i64 2, !dbg !9
+  store double 3.000000e+00, ptr %34, align 8, !dbg !9
+  %35 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %36 = getelementptr double, ptr %35, i64 3, !dbg !9
+  store double 4.000000e+00, ptr %36, align 8, !dbg !9
+  %37 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %38 = getelementptr double, ptr %37, i64 4, !dbg !9
+  store double 5.000000e+00, ptr %38, align 8, !dbg !9
+  %39 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !9
+  %40 = getelementptr double, ptr %39, i64 5, !dbg !9
+  store double 6.000000e+00, ptr %40, align 8, !dbg !9
+  %41 = call ptr @malloc(i64 ptrtoint (ptr getelementptr (double, ptr null, i64 4) to i64)), !dbg !11
+  %42 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } undef, ptr %41, 0, !dbg !11
+  %43 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %42, ptr %41, 1, !dbg !11
+  %44 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %43, i64 0, 2, !dbg !11
+  %45 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %44, i64 2, 3, 0, !dbg !11
+  %46 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %45, i64 2, 3, 1, !dbg !11
+  %47 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %46, i64 2, 4, 0, !dbg !11
+  %48 = insertvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %47, i64 1, 4, 1, !dbg !11
+  %49 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %50 = getelementptr double, ptr %49, i64 0, !dbg !11
+  %51 = load double, ptr %50, align 8, !dbg !11
+  %52 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %53 = getelementptr double, ptr %52, i64 0, !dbg !11
+  %54 = load double, ptr %53, align 8, !dbg !11
+  %55 = fmul double %51, %54, !dbg !11
+  %56 = fadd double %55, 0.000000e+00, !dbg !11
+  %57 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %58 = getelementptr double, ptr %57, i64 1, !dbg !11
+  %59 = load double, ptr %58, align 8, !dbg !11
+  %60 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %61 = getelementptr double, ptr %60, i64 2, !dbg !11
+  %62 = load double, ptr %61, align 8, !dbg !11
+  %63 = fmul double %59, %62, !dbg !11
+  %64 = fadd double %56, %63, !dbg !11
+  %65 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %66 = getelementptr double, ptr %65, i64 2, !dbg !11
+  %67 = load double, ptr %66, align 8, !dbg !11
+  %68 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %69 = getelementptr double, ptr %68, i64 4, !dbg !11
+  %70 = load double, ptr %69, align 8, !dbg !11
+  %71 = fmul double %67, %70, !dbg !11
+  %72 = fadd double %64, %71, !dbg !11
+  %73 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %48, 1, !dbg !11
+  %74 = getelementptr double, ptr %73, i64 0, !dbg !11
+  store double %72, ptr %74, align 8, !dbg !11
+  %75 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %76 = getelementptr double, ptr %75, i64 0, !dbg !11
+  %77 = load double, ptr %76, align 8, !dbg !11
+  %78 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %79 = getelementptr double, ptr %78, i64 1, !dbg !11
+  %80 = load double, ptr %79, align 8, !dbg !11
+  %81 = fmul double %77, %80, !dbg !11
+  %82 = fadd double %81, 0.000000e+00, !dbg !11
+  %83 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %84 = getelementptr double, ptr %83, i64 1, !dbg !11
+  %85 = load double, ptr %84, align 8, !dbg !11
+  %86 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %87 = getelementptr double, ptr %86, i64 3, !dbg !11
+  %88 = load double, ptr %87, align 8, !dbg !11
+  %89 = fmul double %85, %88, !dbg !11
+  %90 = fadd double %82, %89, !dbg !11
+  %91 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %92 = getelementptr double, ptr %91, i64 2, !dbg !11
+  %93 = load double, ptr %92, align 8, !dbg !11
+  %94 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %95 = getelementptr double, ptr %94, i64 5, !dbg !11
+  %96 = load double, ptr %95, align 8, !dbg !11
+  %97 = fmul double %93, %96, !dbg !11
+  %98 = fadd double %90, %97, !dbg !11
+  %99 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %48, 1, !dbg !11
+  %100 = getelementptr double, ptr %99, i64 1, !dbg !11
+  store double %98, ptr %100, align 8, !dbg !11
+  %101 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %102 = getelementptr double, ptr %101, i64 3, !dbg !11
+  %103 = load double, ptr %102, align 8, !dbg !11
+  %104 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %105 = getelementptr double, ptr %104, i64 0, !dbg !11
+  %106 = load double, ptr %105, align 8, !dbg !11
+  %107 = fmul double %103, %106, !dbg !11
+  %108 = fadd double %107, 0.000000e+00, !dbg !11
+  %109 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %110 = getelementptr double, ptr %109, i64 4, !dbg !11
+  %111 = load double, ptr %110, align 8, !dbg !11
+  %112 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %113 = getelementptr double, ptr %112, i64 2, !dbg !11
+  %114 = load double, ptr %113, align 8, !dbg !11
+  %115 = fmul double %111, %114, !dbg !11
+  %116 = fadd double %108, %115, !dbg !11
+  %117 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %118 = getelementptr double, ptr %117, i64 5, !dbg !11
+  %119 = load double, ptr %118, align 8, !dbg !11
+  %120 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %121 = getelementptr double, ptr %120, i64 4, !dbg !11
+  %122 = load double, ptr %121, align 8, !dbg !11
+  %123 = fmul double %119, %122, !dbg !11
+  %124 = fadd double %116, %123, !dbg !11
+  %125 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %48, 1, !dbg !11
+  %126 = getelementptr double, ptr %125, i64 2, !dbg !11
+  store double %124, ptr %126, align 8, !dbg !11
+  %127 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %128 = getelementptr double, ptr %127, i64 3, !dbg !11
+  %129 = load double, ptr %128, align 8, !dbg !11
+  %130 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %131 = getelementptr double, ptr %130, i64 1, !dbg !11
+  %132 = load double, ptr %131, align 8, !dbg !11
+  %133 = fmul double %129, %132, !dbg !11
+  %134 = fadd double %133, 0.000000e+00, !dbg !11
+  %135 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %136 = getelementptr double, ptr %135, i64 4, !dbg !11
+  %137 = load double, ptr %136, align 8, !dbg !11
+  %138 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %139 = getelementptr double, ptr %138, i64 3, !dbg !11
+  %140 = load double, ptr %139, align 8, !dbg !11
+  %141 = fmul double %137, %140, !dbg !11
+  %142 = fadd double %134, %141, !dbg !11
+  %143 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 1, !dbg !11
+  %144 = getelementptr double, ptr %143, i64 5, !dbg !11
+  %145 = load double, ptr %144, align 8, !dbg !11
+  %146 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 1, !dbg !11
+  %147 = getelementptr double, ptr %146, i64 5, !dbg !11
+  %148 = load double, ptr %147, align 8, !dbg !11
+  %149 = fmul double %145, %148, !dbg !11
+  %150 = fadd double %142, %149, !dbg !11
+  %151 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %48, 1, !dbg !11
+  %152 = getelementptr double, ptr %151, i64 3, !dbg !11
+  store double %150, ptr %152, align 8, !dbg !11
+  br label %153, !dbg !12
+
+153:                                              ; preds = %168, %0
+  %154 = phi i64 [ 0, %0 ], [ %170, %168 ]
+  %155 = icmp slt i64 %154, 2, !dbg !12
+  br i1 %155, label %156, label %171, !dbg !12
+
+156:                                              ; preds = %153
+  br label %157, !dbg !12
+
+157:                                              ; preds = %160, %156
+  %158 = phi i64 [ 0, %156 ], [ %167, %160 ]
+  %159 = icmp slt i64 %158, 2, !dbg !12
+  br i1 %159, label %160, label %168, !dbg !12
+
+160:                                              ; preds = %157
+  %161 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %48, 1, !dbg !12
+  %162 = mul i64 %154, 2, !dbg !12
+  %163 = add i64 %162, %158, !dbg !12
+  %164 = getelementptr double, ptr %161, i64 %163, !dbg !12
+  %165 = load double, ptr %164, align 8, !dbg !12
+  %166 = call i32 (ptr, ...) @printf(ptr @frmt_spec, double %165), !dbg !12
+  %167 = add i64 %158, 1, !dbg !12
+  br label %157, !dbg !12
+
+168:                                              ; preds = %157
+  %169 = call i32 (ptr, ...) @printf(ptr @nl), !dbg !12
+  %170 = add i64 %154, 1, !dbg !12
+  br label %153, !dbg !12
+
+171:                                              ; preds = %153
+  %172 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %16, 0, !dbg !10
+  call void @free(ptr %172), !dbg !10
+  %173 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %8, 0, !dbg !9
+  call void @free(ptr %173), !dbg !9
+  ret void, !dbg !13
+}
+
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!1}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
+!2 = !DIFile(filename: "matmul1.mlir", directory: "")
+!3 = !DISubprogram(name: "free", linkageName: "free", scope: !2, file: !2, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagOptimized)
+!4 = !DISubroutineType(cc: DW_CC_normal, types: !5)
+!5 = !{}
+!6 = !DISubprogram(name: "printf", linkageName: "printf", scope: !2, file: !2, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagOptimized)
+!7 = !DISubprogram(name: "malloc", linkageName: "malloc", scope: !2, file: !2, line: 1, type: !4, scopeLine: 1, spFlags: DISPFlagOptimized)
+!8 = distinct !DISubprogram(name: "main", linkageName: "main", scope: !2, file: !2, line: 2, type: !4, scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1)
+!9 = !DILocation(line: 6, column: 10, scope: !8)
+!10 = !DILocation(line: 4, column: 10, scope: !8)
+!11 = !DILocation(line: 7, column: 10, scope: !8)
+!12 = !DILocation(line: 8, column: 5, scope: !8)
+!13 = !DILocation(line: 9, column: 5, scope: !8)
+
