@@ -26,6 +26,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
 
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
