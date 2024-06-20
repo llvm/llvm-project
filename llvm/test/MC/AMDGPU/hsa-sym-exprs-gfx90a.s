@@ -88,7 +88,7 @@ expr_defined:
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&6144)>>11
 // ASM-NEXT: .amdhsa_next_free_vgpr defined_boolean+1
 // ASM-NEXT: .amdhsa_next_free_sgpr defined_boolean+2
-// ASM-NEXT: .amdhsa_accum_offset (((((((0&(~65536))|(defined_boolean<<16))&(~63))|(((4/4)-1)<<0))&63)>>0)+1)*4
+// ASM-NEXT: .amdhsa_accum_offset 4
 // ASM-NEXT: .amdhsa_reserve_vcc defined_boolean
 // ASM-NEXT: .amdhsa_reserve_flat_scratch defined_boolean
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
