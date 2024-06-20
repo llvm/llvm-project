@@ -813,6 +813,30 @@ void mlir::linalg::populateMoveInitOperandsToInputPattern(
 }
 
 namespace {
+/// Pass that removes unit-extent dims within generic ops.
+struct LinalgFoldUnitExtentDimsPass
+    : public impl::LinalgFoldUnitExtentDimsPassBase<
+          LinalgFoldUnitExtentDimsPass> {
+  using impl::LinalgFoldUnitExtentDimsPassBase<
+      LinalgFoldUnitExtentDimsPass>::LinalgFoldUnitExtentDimsPassBase;
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    MLIRContext *context = op->getContext();
+    RewritePatternSet patterns(context);
+    ControlDropUnitDims options;
+    if (useRankReducingSlices) {
+      options.rankReductionStrategy = linalg::ControlDropUnitDims::
+          RankReductionStrategy::ExtractInsertSlice;
+    }
+    linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
+    populateMoveInitOperandsToInputPattern(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+} // namespace
+
+namespace {
 
 static SmallVector<ReassociationIndices>
 getReassociationsForTrailingDims(int64_t rank) {
@@ -853,20 +877,6 @@ static Value collapseTrailingSingletonDim(PatternRewriter &rewriter,
       rewriter, val.getLoc(), val, valType.getShape().drop_back(1),
       getReassociationsForTrailingDims(valType.getRank()),
       ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape);
-}
-
-static Value expandLeadingSingletonDim(PatternRewriter &rewriter, Value val,
-                                       RankedTensorType expandedType) {
-  return rewriter.create<tensor::ExpandShapeOp>(
-      val.getLoc(), expandedType, val,
-      getReassociationsForLeadingDims(expandedType.getRank()));
-}
-
-static Value expandTrailingSingletonDim(PatternRewriter &rewriter, Value val,
-                                        RankedTensorType expandedType) {
-  return rewriter.create<tensor::ExpandShapeOp>(
-      val.getLoc(), expandedType, val,
-      getReassociationsForTrailingDims(expandedType.getRank()));
 }
 
 template <typename FromOpTy, typename ToOpTy>
@@ -948,7 +958,9 @@ struct RankReduceBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
   }
   Value expandResult(PatternRewriter &rewriter, Value result,
                      RankedTensorType expandedType) const override {
-    return expandLeadingSingletonDim(rewriter, result, expandedType);
+  return rewriter.create<tensor::ExpandShapeOp>(
+      result.getLoc(), expandedType, result,
+      getReassociationsForLeadingDims(expandedType.getRank()));
   }
 };
 
@@ -956,8 +968,14 @@ template <typename FromOpTy, typename ToOpTy>
 struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
   using RankReduceContractionOps<FromOpTy, ToOpTy>::RankReduceContractionOps;
 
-  static bool constexpr reduceLeading =
+  static bool constexpr isTranspose =
+      std::is_same<FromOpTy, MatmulTransposeAOp>::value ||
+      std::is_same<FromOpTy, MatmulTransposeBOp>::value;
+
+  static bool constexpr reduceLeft =
       (std::is_same<FromOpTy, MatmulOp>::value &&
+       std::is_same<ToOpTy, VecmatOp>::value) ||
+      (std::is_same<FromOpTy, MatmulTransposeAOp>::value &&
        std::is_same<ToOpTy, VecmatOp>::value) ||
       (std::is_same<FromOpTy, MatvecOp>::value &&
        std::is_same<ToOpTy, DotOp>::value);
@@ -966,30 +984,47 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
     auto lhsType = cast<ShapedType>(lhs.getType());
     auto rhsType = cast<ShapedType>(rhs.getType());
     auto initType = cast<ShapedType>(init.getType());
-    if (reduceLeading)
-      return lhsType.getShape()[0] == 1 && initType.getShape()[0] == 1;
+    int constexpr offset = (int)isTranspose;
+    if (reduceLeft)
+      return lhsType.getShape().begin()[offset] == 1 &&
+             initType.getShape().begin()[offset] == 1;
     else
-      return rhsType.getShape().back() == 1 && initType.getShape().back() == 1;
+      return rhsType.getShape().rbegin()[offset] == 1 &&
+             initType.getShape().rbegin()[offset] == 1;
   }
 
   SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter, Value lhs,
                                          Value rhs, Value init) const override {
-    if (reduceLeading) {
-      auto collapsedLhs = collapseLeadingSingletonDim(rewriter, lhs);
-      auto collapsedInit = collapseLeadingSingletonDim(rewriter, init);
-      return SmallVector<Value, 3>{collapsedLhs, rhs, collapsedInit};
+    if (reduceLeft) {
+      if (isTranspose) {
+        lhs = collapseTrailingSingletonDim(rewriter, lhs);
+        init = collapseTrailingSingletonDim(rewriter, init);
+      } else {
+        lhs = collapseLeadingSingletonDim(rewriter, lhs);
+        init = collapseLeadingSingletonDim(rewriter, init);
+      }
     } else {
-      auto collapsedRhs = collapseTrailingSingletonDim(rewriter, rhs);
-      auto collapsedInit = collapseTrailingSingletonDim(rewriter, init);
-      return SmallVector<Value, 3>{lhs, collapsedRhs, collapsedInit};
+      if (isTranspose) {
+        rhs = collapseLeadingSingletonDim(rewriter, rhs);
+        init = collapseLeadingSingletonDim(rewriter, init);
+      } else {
+        rhs = collapseTrailingSingletonDim(rewriter, rhs);
+        init = collapseTrailingSingletonDim(rewriter, init);
+      }
     }
+    return SmallVector<Value, 3>{lhs, rhs, init};
   }
+
   Value expandResult(PatternRewriter &rewriter, Value result,
                      RankedTensorType expandedType) const override {
-    if (reduceLeading)
-      return expandLeadingSingletonDim(rewriter, result, expandedType);
+    if (reduceLeft)
+      return rewriter.create<tensor::ExpandShapeOp>(
+          result.getLoc(), expandedType, result,
+          getReassociationsForLeadingDims(expandedType.getRank()));
     else
-      return expandTrailingSingletonDim(rewriter, result, expandedType);
+      return rewriter.create<tensor::ExpandShapeOp>(
+          result.getLoc(), expandedType, result,
+          getReassociationsForTrailingDims(expandedType.getRank()));
   }
 };
 
@@ -1007,30 +1042,8 @@ void mlir::linalg::populateContractionOpRankReducingPatterns(
   patterns.add<RankReduceBatched<BatchVecmatOp, VecmatOp>>(context);
   patterns.add<RankReduceMatmul<MatmulOp, VecmatOp>>(context);
   patterns.add<RankReduceMatmul<MatmulOp, MatvecOp>>(context);
+  patterns.add<RankReduceMatmul<MatmulTransposeAOp, VecmatOp>>(context);
+  patterns.add<RankReduceMatmul<MatmulTransposeBOp, MatvecOp>>(context);
   patterns.add<RankReduceMatmul<MatvecOp, DotOp>>(context);
   patterns.add<RankReduceMatmul<VecmatOp, DotOp>>(context);
 }
-
-namespace {
-/// Pass that removes unit-extent dims within generic ops.
-struct LinalgFoldUnitExtentDimsPass
-    : public impl::LinalgFoldUnitExtentDimsPassBase<
-          LinalgFoldUnitExtentDimsPass> {
-  using impl::LinalgFoldUnitExtentDimsPassBase<
-      LinalgFoldUnitExtentDimsPass>::LinalgFoldUnitExtentDimsPassBase;
-  void runOnOperation() override {
-    Operation *op = getOperation();
-    MLIRContext *context = op->getContext();
-    RewritePatternSet patterns(context);
-    ControlDropUnitDims options;
-    if (useRankReducingSlices) {
-      options.rankReductionStrategy = linalg::ControlDropUnitDims::
-          RankReductionStrategy::ExtractInsertSlice;
-    }
-    linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
-    populateMoveInitOperandsToInputPattern(patterns);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
-};
-
-} // namespace

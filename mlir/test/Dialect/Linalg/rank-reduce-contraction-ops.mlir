@@ -197,6 +197,24 @@ func.func @matvec_to_dot_tensor(%arg0: tensor<1x?xf32>, %arg1: tensor<?xf32>, %a
 
 // -----
 
+func.func @matmul_transpose_a_to_vecmat(%arg0: memref<?x1xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x1xf32>) {
+  // CHECK-LABEL: @matmul_transpose_a_to_vecmat
+  // CHECK: linalg.vecmat
+    linalg.matmul_transpose_a ins(%arg0, %arg1: memref<?x1xf32>, memref<?x?xf32>) outs(%arg2: memref<?x1xf32>)
+    return
+}
+
+// -----
+
+func.func @matmul_transpose_b_to_matvec(%arg0: memref<?x?xf32>, %arg1: memref<1x?xf32>, %arg2: memref<1x?xf32>) {
+  // CHECK-LABEL: @matmul_transpose_b_to_matvec
+  // CHECK: linalg.matvec
+    linalg.matmul_transpose_b ins(%arg0, %arg1: memref<?x?xf32>, memref<1x?xf32>) outs(%arg2: memref<1x?xf32>)
+    return
+}
+
+// -----
+
 func.func @nonsingleton_batch_matmul(%arg0 : tensor<2x?x?xf32>, %arg1 : tensor<2x?x?xf32>, %arg2: tensor<2x?x?xf32>) -> tensor<2x?x?xf32> {
   // CHECK-LABEL: @nonsingleton_batch_matmul
   // CHECK-NOT:   collapse_shape
