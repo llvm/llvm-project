@@ -1142,6 +1142,9 @@ def LWE : NamedBitOperand<"lwe">;
 def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
 def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
+def SignedA : NamedBitOperand<"signed_a">;
+def SignedB : NamedBitOperand<"signed_b">;
+
 def FORMAT : CustomOperand<i8>;
 
 def DMask : NamedIntOperand<i16, "dmask">;

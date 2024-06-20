@@ -212,11 +212,11 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[TMP123:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP123]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP120]], [[TMP119]]
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = fadd fast <4 x float> [[TMP121]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX5:%.*]] = fadd fast <4 x float> [[TMP122]], [[BIN_RDX4]]
 ; CHECK-NEXT:    [[TMP124:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[BIN_RDX5]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[PREHEADER]] ]

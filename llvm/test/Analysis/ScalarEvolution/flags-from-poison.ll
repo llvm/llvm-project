@@ -1956,3 +1956,86 @@ define noundef i32 @add-recurse-inline() {
   %res = add nuw i32 %x, %y
   ret i32 %res
 }
+
+define noundef ptr @gep_inbounds(ptr %p, i64 %index) {
+; CHECK-LABEL: 'gep_inbounds'
+; CHECK-NEXT:  Classifying expressions for: @gep_inbounds
+; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %index
+; CHECK-NEXT:    --> ((4 * %index)<nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @gep_inbounds
+;
+  %gep = getelementptr inbounds i32, ptr %p, i64 %index
+  ret ptr %gep
+}
+
+define noundef ptr @gep_inbounds_nneg(ptr %p, i32 %index) {
+; CHECK-LABEL: 'gep_inbounds_nneg'
+; CHECK-NEXT:  Classifying expressions for: @gep_inbounds_nneg
+; CHECK-NEXT:    %index.ext = zext i32 %index to i64
+; CHECK-NEXT:    --> (zext i32 %index to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %gep = getelementptr inbounds i32, ptr %p, i64 %index.ext
+; CHECK-NEXT:    --> ((4 * (zext i32 %index to i64))<nuw><nsw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @gep_inbounds_nneg
+;
+  %index.ext = zext i32 %index to i64
+  %gep = getelementptr inbounds i32, ptr %p, i64 %index.ext
+  ret ptr %gep
+}
+
+define noundef ptr @gep_nusw(ptr %p, i64 %index) {
+; CHECK-LABEL: 'gep_nusw'
+; CHECK-NEXT:  Classifying expressions for: @gep_nusw
+; CHECK-NEXT:    %gep = getelementptr nusw i32, ptr %p, i64 %index
+; CHECK-NEXT:    --> ((4 * %index)<nsw> + %p) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @gep_nusw
+;
+  %gep = getelementptr nusw i32, ptr %p, i64 %index
+  ret ptr %gep
+}
+
+define noundef ptr @gep_nusw_nneg(ptr %p, i32 %index) {
+; CHECK-LABEL: 'gep_nusw_nneg'
+; CHECK-NEXT:  Classifying expressions for: @gep_nusw_nneg
+; CHECK-NEXT:    %index.ext = zext i32 %index to i64
+; CHECK-NEXT:    --> (zext i32 %index to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %gep = getelementptr nusw i32, ptr %p, i64 %index.ext
+; CHECK-NEXT:    --> ((4 * (zext i32 %index to i64))<nuw><nsw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @gep_nusw_nneg
+;
+  %index.ext = zext i32 %index to i64
+  %gep = getelementptr nusw i32, ptr %p, i64 %index.ext
+  ret ptr %gep
+}
+
+define noundef ptr @gep_nuw(ptr %p, i64 %index) {
+; CHECK-LABEL: 'gep_nuw'
+; CHECK-NEXT:  Classifying expressions for: @gep_nuw
+; CHECK-NEXT:    %gep = getelementptr nuw i32, ptr %p, i64 %index
+; CHECK-NEXT:    --> ((4 * %index)<nuw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @gep_nuw
+;
+  %gep = getelementptr nuw i32, ptr %p, i64 %index
+  ret ptr %gep
+}
+
+define noundef ptr @gep_nusw_nuw(ptr %p, i64 %index) {
+; CHECK-LABEL: 'gep_nusw_nuw'
+; CHECK-NEXT:  Classifying expressions for: @gep_nusw_nuw
+; CHECK-NEXT:    %gep = getelementptr nusw nuw i32, ptr %p, i64 %index
+; CHECK-NEXT:    --> ((4 * %index)<nuw><nsw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @gep_nusw_nuw
+;
+  %gep = getelementptr nusw nuw i32, ptr %p, i64 %index
+  ret ptr %gep
+}
+
+define ptr @gep_nusw_nuw_missing_noundef(ptr %p, i64 %index) {
+; CHECK-LABEL: 'gep_nusw_nuw_missing_noundef'
+; CHECK-NEXT:  Classifying expressions for: @gep_nusw_nuw_missing_noundef
+; CHECK-NEXT:    %gep = getelementptr nusw nuw i32, ptr %p, i64 %index
+; CHECK-NEXT:    --> ((4 * %index) + %p) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @gep_nusw_nuw_missing_noundef
+;
+  %gep = getelementptr nusw nuw i32, ptr %p, i64 %index
+  ret ptr %gep
+}
