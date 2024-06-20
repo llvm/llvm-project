@@ -724,7 +724,7 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
                                        /*ObectHasErrors=*/false,
                                        /*EnteringConttext=*/false,
                                        /*MayBePseudoDestructor=*/nullptr,
-                                       /*IsTypename=*/false,
+                                       /*IsTypename=*/true,
                                        /*IdentifierInfo=*/nullptr,
                                        /*OnlyNamespace=*/false,
                                        /*InUsingDeclaration=*/true)) {
