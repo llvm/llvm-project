@@ -71,6 +71,17 @@ struct Trivial {
 static_assert(HasTrivialABI<Trivial>::value, "");
 #endif
 
+struct TrivialNoAssignment {
+  int arr[4];
+  TrivialNoAssignment& operator=(const TrivialNoAssignment&) = delete;
+};
+
+struct TrivialNoConstruction {
+  int arr[4];
+  TrivialNoConstruction()                                        = default;
+  TrivialNoConstruction(const TrivialNoConstruction&)            = delete;
+  TrivialNoConstruction& operator=(const TrivialNoConstruction&) = default;
+};
 
 void test_trivial()
 {
@@ -135,6 +146,26 @@ void test_trivial()
         static_assert(HasTrivialABI<P>::value, "");
     }
 #endif
+    {
+        using P = std::pair<TrivialNoAssignment, int>;
+        static_assert(std::is_trivially_copy_constructible<P>::value, "");
+        static_assert(std::is_trivially_move_constructible<P>::value, "");
+#if TEST_STD_VER >= 11 // This is https://llvm.org/PR90605
+        static_assert(!std::is_trivially_copy_assignable<P>::value, "");
+        static_assert(!std::is_trivially_move_assignable<P>::value, "");
+#endif // TEST_STD_VER >= 11
+        static_assert(std::is_trivially_destructible<P>::value, "");
+    }
+    {
+        using P = std::pair<TrivialNoConstruction, int>;
+#if TEST_STD_VER >= 11
+        static_assert(!std::is_trivially_copy_constructible<P>::value, "");
+        static_assert(!std::is_trivially_move_constructible<P>::value, "");
+#endif // TEST_STD_VER >= 11
+        static_assert(!std::is_trivially_copy_assignable<P>::value, "");
+        static_assert(!std::is_trivially_move_assignable<P>::value, "");
+        static_assert(std::is_trivially_destructible<P>::value, "");
+    }
 }
 
 void test_layout() {
