@@ -466,20 +466,17 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   unsigned Encoding;
   uint32_t NumExtraInhabitants;
   unsigned Flags;
-  Metadata *Annotations;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, uint64_t SizeInBits,
                 uint32_t AlignInBits, unsigned Encoding,
-                uint32_t NumExtraInhabitants, unsigned Flags,
-                Metadata *Annotations)
+                uint32_t NumExtraInhabitants, unsigned Flags)
       : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
         Encoding(Encoding), NumExtraInhabitants(NumExtraInhabitants),
-        Flags(Flags), Annotations(Annotations) {}
+        Flags(Flags) {}
   MDNodeKeyImpl(const DIBasicType *N)
       : Tag(N->getTag()), Name(N->getRawName()), SizeInBits(N->getSizeInBits()),
         AlignInBits(N->getAlignInBits()), Encoding(N->getEncoding()),
-        NumExtraInhabitants(N->getNumExtraInhabitants()), Flags(N->getFlags()),
-        Annotations(N->getRawAnnotations()) {
+        NumExtraInhabitants(N->getNumExtraInhabitants()), Flags(N->getFlags()) {
   }
 
   bool isKeyOf(const DIBasicType *RHS) const {
@@ -488,12 +485,11 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
            AlignInBits == RHS->getAlignInBits() &&
            Encoding == RHS->getEncoding() &&
            NumExtraInhabitants == RHS->getNumExtraInhabitants() &&
-           Flags == RHS->getFlags() && Annotations == RHS->getRawAnnotations();
+           Flags == RHS->getFlags();
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Tag, Name, SizeInBits, AlignInBits, Encoding,
-                        Annotations);
+    return hash_combine(Tag, Name, SizeInBits, AlignInBits, Encoding);
   }
 };
 
@@ -735,24 +731,18 @@ template <> struct MDNodeKeyImpl<DISubroutineType> {
   unsigned Flags;
   uint8_t CC;
   Metadata *TypeArray;
-  Metadata *Annotations;
 
-  MDNodeKeyImpl(unsigned Flags, uint8_t CC, Metadata *TypeArray,
-                Metadata *Annotations)
-      : Flags(Flags), CC(CC), TypeArray(TypeArray), Annotations(Annotations) {}
+  MDNodeKeyImpl(unsigned Flags, uint8_t CC, Metadata *TypeArray)
+      : Flags(Flags), CC(CC), TypeArray(TypeArray) {}
   MDNodeKeyImpl(const DISubroutineType *N)
-      : Flags(N->getFlags()), CC(N->getCC()), TypeArray(N->getRawTypeArray()),
-        Annotations(N->getRawAnnotations()) {}
+      : Flags(N->getFlags()), CC(N->getCC()), TypeArray(N->getRawTypeArray()) {}
 
   bool isKeyOf(const DISubroutineType *RHS) const {
     return Flags == RHS->getFlags() && CC == RHS->getCC() &&
-           TypeArray == RHS->getRawTypeArray() &&
-           Annotations == RHS->getRawAnnotations();
+           TypeArray == RHS->getRawTypeArray();
   }
 
-  unsigned getHashValue() const {
-    return hash_combine(Flags, CC, TypeArray, Annotations);
-  }
+  unsigned getHashValue() const { return hash_combine(Flags, CC, TypeArray); }
 };
 
 template <> struct MDNodeKeyImpl<DIFile> {

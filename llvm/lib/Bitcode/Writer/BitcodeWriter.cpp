@@ -1816,7 +1816,6 @@ void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getEncoding());
   Record.push_back(N->getFlags());
-  Record.push_back(VE.getMetadataOrNullID(N->getRawAnnotations()));
   Record.push_back(N->getNumExtraInhabitants());
 
   Stream.EmitRecord(bitc::METADATA_BASIC_TYPE, Record, Abbrev);
@@ -1932,7 +1931,6 @@ void ModuleBitcodeWriter::writeDISubroutineType(
   Record.push_back(N->getFlags());
   Record.push_back(VE.getMetadataOrNullID(N->getTypeArray().get()));
   Record.push_back(N->getCC());
-  Record.push_back(VE.getMetadataOrNullID(N->getRawAnnotations()));
 
   Stream.EmitRecord(bitc::METADATA_SUBROUTINE_TYPE, Record, Abbrev);
   Record.clear();
