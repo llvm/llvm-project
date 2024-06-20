@@ -1896,6 +1896,11 @@ let SubtargetPredicate = isGFX13Plus in {
     let hasSideEffects = 1;
     let Defs = [MODE];
   }
+
+  def S_SEMA_SIGNAL            : SOPP_Pseudo<"s_sema_signal", (ins i16imm:$simm16), "$simm16">;
+  def S_SEMA_WAIT              : SOPP_Pseudo<"s_sema_wait", (ins i16imm:$simm16), "$simm16">;
+  def S_SEMA_SET_LIMIT         : SOPP_Pseudo<"s_sema_set_limit", (ins i16imm:$simm16), "$simm16">;
+  def S_SEMA_SIGNAL_AFTER_VALU : SOPP_Pseudo<"s_sema_signal_after_valu", (ins i16imm:$simm16), "$simm16">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2795,11 +2800,10 @@ defm S_DELAY_ALU              : SOPP_Real_32_gfx13<0x2e>;
 defm S_WAIT_EVENT             : SOPP_Real_32_gfx13<0x2f>;
 defm S_SINGLEUSE_VDST         : SOPP_Real_32_gfx13<0x30>;
 defm S_BARRIER_LEAVE          : SOPP_Real_32_gfx13<0x31>;
-// TODO-GFX13:
-//defm S_SEMA_SIGNAL            : SOPP_Real_32_gfx13<0x32>;
-//defm S_SEMA_WAIT              : SOPP_Real_32_gfx13<0x33>;
-//defm S_SEMA_SET_LIMIT         : SOPP_Real_32_gfx13<0x34>;
-//defm S_SEMA_SIGNAL_AFTER_VALU : SOPP_Real_32_gfx13<0x35>;
+defm S_SEMA_SIGNAL            : SOPP_Real_32_gfx13<0x32>;
+defm S_SEMA_WAIT              : SOPP_Real_32_gfx13<0x33>;
+defm S_SEMA_SET_LIMIT         : SOPP_Real_32_gfx13<0x34>;
+defm S_SEMA_SIGNAL_AFTER_VALU : SOPP_Real_32_gfx13<0x35>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX12 only.
