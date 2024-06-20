@@ -1060,11 +1060,6 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
-static llvm::StringRef getPrettyEnviromentName(llvm::Triple::EnvironmentType EnvironmentType) {
-  if (EnvironmentType >= llvm::Triple::Pixel && EnvironmentType <= llvm::Triple::Amplification)
-    return llvm::Triple::getEnvironmentTypeName(EnvironmentType);
-  return "";
-}
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
              .Case("pixel", llvm::Triple::Pixel)
@@ -4470,36 +4465,20 @@ def HLSLShader : InheritableAttr {
   let Subjects = SubjectList<[HLSLEntry]>;
   let LangOpts = [HLSL];
   let Args = [
-    EnumArgument<"Type", "ShaderType", /*is_string=*/true,
+    EnumArgument<"Type", "llvm::Triple::EnvironmentType", /*is_string=*/true,
                  ["pixel", "vertex", "geometry", "hull", "domain", "compute",
                   "raygeneration", "intersection", "anyhit", "closesthit",
                   "miss", "callable", "mesh", "amplification"],
                  ["Pixel", "Vertex", "Geometry", "Hull", "Domain", "Compute",
                   "RayGeneration", "Intersection", "AnyHit", "ClosestHit",
-                  "Miss", "Callable", "Mesh", "Amplification"]>
+                  "Miss", "Callable", "Mesh", "Amplification"],
+                  /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
   ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
   let AdditionalMembers =
 [{
-  static const unsigned ShaderTypeMaxValue = (unsigned)HLSLShaderAttr::Amplification;
-
-  static llvm::Triple::EnvironmentType getTypeAsEnvironment(HLSLShaderAttr::ShaderType ShaderType) {
-    switch (ShaderType) {
-      case HLSLShaderAttr::Pixel:         return llvm::Triple::Pixel;
-      case HLSLShaderAttr::Vertex:        return llvm::Triple::Vertex;
-      case HLSLShaderAttr::Geometry:      return llvm::Triple::Geometry;
-      case HLSLShaderAttr::Hull:          return llvm::Triple::Hull;
-      case HLSLShaderAttr::Domain:        return llvm::Triple::Domain;
-      case HLSLShaderAttr::Compute:       return llvm::Triple::Compute;
-      case HLSLShaderAttr::RayGeneration: return llvm::Triple::RayGeneration;
-      case HLSLShaderAttr::Intersection:  return llvm::Triple::Intersection;
-      case HLSLShaderAttr::AnyHit:        return llvm::Triple::AnyHit;
-      case HLSLShaderAttr::ClosestHit:    return llvm::Triple::ClosestHit;
-      case HLSLShaderAttr::Miss:          return llvm::Triple::Miss;
-      case HLSLShaderAttr::Callable:      return llvm::Triple::Callable;
-      case HLSLShaderAttr::Mesh:          return llvm::Triple::Mesh;
-      case HLSLShaderAttr::Amplification: return llvm::Triple::Amplification;
-    }
+  static bool isValidShaderType(llvm::Triple::EnvironmentType ShaderType) {
+    return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
   }
 }];
 }

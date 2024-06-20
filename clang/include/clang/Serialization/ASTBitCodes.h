@@ -59,7 +59,7 @@ const unsigned VERSION_MINOR = 1;
 ///
 /// The ID numbers of identifiers are consecutive (in order of discovery)
 /// and start at 1. 0 is reserved for NULL.
-using IdentifierID = uint32_t;
+using IdentifierID = uint64_t;
 
 /// The number of predefined identifier IDs.
 const unsigned int NUM_PREDEF_IDENT_IDS = 1;
@@ -254,6 +254,12 @@ public:
     return BitOffset.get() + DeclTypesBlockStartOffset;
   }
 };
+
+// The unaligned decl ID used in the Blobs of bistreams.
+using unaligned_decl_id_t =
+    llvm::support::detail::packed_endian_specific_integral<
+        serialization::DeclID, llvm::endianness::native,
+        llvm::support::unaligned>;
 
 /// The number of predefined preprocessed entity IDs.
 const unsigned int NUM_PREDEF_PP_ENTITY_IDS = 1;
@@ -688,6 +694,12 @@ enum ASTRecordTypes {
   /// Record code for lexical and visible block for delayed namespace in
   /// reduced BMI.
   DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD = 68,
+
+  /// Record code for \#pragma clang unsafe_buffer_usage begin/end
+  PP_UNSAFE_BUFFER_USAGE = 69,
+
+  /// Record code for vtables to emit.
+  VTABLES_TO_EMIT = 70,
 };
 
 /// Record types used within a source manager block.
@@ -1085,6 +1097,9 @@ enum PredefinedTypeIDs {
 // \brief WebAssembly reference types with auto numeration
 #define WASM_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+// \brief AMDGPU types with auto numeration
+#define AMDGPU_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/AMDGPUTypes.def"
 
   /// The placeholder type for unresolved templates.
   PREDEF_TYPE_UNRESOLVED_TEMPLATE,
@@ -1097,7 +1112,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 503;
+const unsigned NUM_PREDEF_TYPE_IDS = 504;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1946,6 +1961,7 @@ enum StmtCode {
 
   // OpenACC Constructs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
+  STMT_OPENACC_LOOP_CONSTRUCT,
 };
 
 /// The kinds of designators that can occur in a
@@ -1979,32 +1995,43 @@ enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
 
 /// Describes the categories of an Objective-C class.
 struct ObjCCategoriesInfo {
-  // The ID of the definition
-  LocalDeclID DefinitionID;
+  // The ID of the definition. Use unaligned_decl_id_t to keep
+  // ObjCCategoriesInfo 32-bit aligned.
+  unaligned_decl_id_t DefinitionID;
 
   // Offset into the array of category lists.
   unsigned Offset;
 
+  ObjCCategoriesInfo() = default;
+  ObjCCategoriesInfo(LocalDeclID ID, unsigned Offset)
+      : DefinitionID(ID.getRawValue()), Offset(Offset) {}
+
+  DeclID getDefinitionID() const { return DefinitionID; }
+
   friend bool operator<(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID < Y.DefinitionID;
+    return X.getDefinitionID() < Y.getDefinitionID();
   }
 
   friend bool operator>(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID > Y.DefinitionID;
+    return X.getDefinitionID() > Y.getDefinitionID();
   }
 
   friend bool operator<=(const ObjCCategoriesInfo &X,
                          const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID <= Y.DefinitionID;
+    return X.getDefinitionID() <= Y.getDefinitionID();
   }
 
   friend bool operator>=(const ObjCCategoriesInfo &X,
                          const ObjCCategoriesInfo &Y) {
-    return X.DefinitionID >= Y.DefinitionID;
+    return X.getDefinitionID() >= Y.getDefinitionID();
   }
 };
+
+static_assert(alignof(ObjCCategoriesInfo) <= 4);
+static_assert(std::is_standard_layout_v<ObjCCategoriesInfo> &&
+              std::is_trivial_v<ObjCCategoriesInfo>);
 
 /// A key used when looking up entities by \ref DeclarationName.
 ///

@@ -161,12 +161,17 @@ define void @derived_type() !dbg !3 {
 
 ; CHECK-DAG: #[[INT:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int">
 ; CHECK-DAG: #[[FILE:.+]] = #llvm.di_file<"debug-info.ll" in "/">
+; CHECK-DAG: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "size">
+; CHECK-DAG: #[[GV:.+]] = #llvm.di_global_variable<{{.*}}name = "gv"{{.*}}>
 ; CHECK-DAG: #[[COMP1:.+]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array1", line = 10, baseType = #[[INT]], sizeInBits = 128, alignInBits = 32>
 ; CHECK-DAG: #[[COMP2:.+]] = #llvm.di_composite_type<{{.*}}, file = #[[FILE]], scope = #[[FILE]], baseType = #[[INT]]>
 ; CHECK-DAG: #[[COMP3:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<count = 4 : i64>>
 ; CHECK-DAG: #[[COMP4:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector, elements = #llvm.di_subrange<lowerBound = 0 : i64, upperBound = 4 : i64, stride = 1 : i64>>
-; CHECK-DAG: #[[COMP5:.+]] = #llvm.di_composite_type<{{.*}}, flags = Vector>
-; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]], #[[COMP5]]>
+; CHECK-DAG: #[[COMP5:.+]] = #llvm.di_composite_type<{{.*}}, name = "var_elements"{{.*}}elements = #llvm.di_subrange<count = #[[VAR]], stride = #[[GV]]>>
+; CHECK-DAG: #[[COMP6:.+]] = #llvm.di_composite_type<{{.*}}, name = "expr_elements"{{.*}}elements = #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>>>
+; CHECK-DAG: #llvm.di_subroutine_type<types = #[[COMP1]], #[[COMP2]], #[[COMP3]], #[[COMP4]], #[[COMP5]], #[[COMP6]]>
+
+@gv = external global i64
 
 define void @composite_type() !dbg !3 {
   ret void
@@ -179,7 +184,7 @@ define void @composite_type() !dbg !3 {
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !3 = distinct !DISubprogram(name: "composite_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
-!5 = !{!7, !8, !9, !10, !18}
+!5 = !{!7, !8, !9, !10, !18, !22}
 !6 = !DIBasicType(name: "int")
 !7 = !DICompositeType(tag: DW_TAG_array_type, name: "array1", line: 10, size: 128, align: 32, baseType: !6)
 !8 = !DICompositeType(tag: DW_TAG_array_type, name: "array2", file: !2, scope: !2, baseType: !6)
@@ -189,12 +194,16 @@ define void @composite_type() !dbg !3 {
 !12 = !DISubrange(lowerBound: 0, upperBound: 4, stride: 1)
 !13 = !{!11}
 !14 = !{!12}
-
-; Verifies that unsupported subrange nodes are skipped.
-!15 = !DISubrange(count: !16)
+!15 = !DISubrange(count: !16, stride: !23)
 !16 = !DILocalVariable(scope: !3, name: "size")
 !17 = !{!15}
-!18 = !DICompositeType(tag: DW_TAG_array_type, name: "unsupported_elements", flags: DIFlagVector, elements: !17, baseType: !6)
+!18 = !DICompositeType(tag: DW_TAG_array_type, name: "var_elements", flags: DIFlagVector, elements: !17, baseType: !6)
+!19 = !DISubrange(count: !20)
+!20 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 16, DW_OP_deref)
+!21 = !{!19}
+!22 = !DICompositeType(tag: DW_TAG_array_type, name: "expr_elements", flags: DIFlagVector, elements: !21, baseType: !6)
+!23 = !DIGlobalVariable(name: "gv", scope: !1, file: !2, line: 3, type: !6, isLocal: false, isDefinition: false)
+
 
 ; // -----
 
@@ -752,3 +761,35 @@ define void @class_field(ptr %arg1) !dbg !18 {
 !11 = !{!6, !7, !8} ; C -> A, B, C
 
 !18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+
+; // -----
+
+; Verify the string type is handled correctly
+
+define void @string_type(ptr %arg1) {
+  call void @llvm.dbg.value(metadata ptr %arg1, metadata !4, metadata !DIExpression()), !dbg !10
+  call void @llvm.dbg.value(metadata ptr %arg1, metadata !9, metadata !DIExpression()), !dbg !10
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!4 = !DILocalVariable(scope: !5, name: "string_size", file: !2, type: !3);
+!5 = distinct !DISubprogram(name: "test", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!6 = !DIStringType(name: "character(*)", stringLength: !4, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !7)
+!7 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+!8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
+!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6);
+!10 = !DILocation(line: 1, column: 2, scope: !5)
+
+; CHECK: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
+; CHECK: #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)"
+; CHECK-SAME: sizeInBits = 32
+; CHECK-SAME: alignInBits = 8
+; CHECK-SAME: stringLength = #[[VAR]]
+; CHECK-SAME: stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>
+; CHECK-SAME: stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>

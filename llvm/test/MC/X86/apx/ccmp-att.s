@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64 -show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-401: error:
+# ERROR-COUNT-402: error:
 # ERROR-NOT: error:
 ## Condition flags
 
@@ -1211,3 +1211,9 @@
 # CHECK: ccmpeq {dfv=of} %r9, %r15
 # CHECK: encoding: [0x62,0x54,0xc4,0x04,0x39,0xcf]
          ccmpeq {dfv=of} %r9, %r15
+
+## Case sensitive
+
+# CHECK: ccmpoq {dfv=of,sf,zf,cf} %rax, %rbx
+# CHECK: encoding: [0x62,0xf4,0xfc,0x00,0x39,0xc3]
+         ccmpoq {dFV=Cf,zF,SF,of} %rax, %rbx

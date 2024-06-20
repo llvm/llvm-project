@@ -173,8 +173,8 @@ class X86_32ABIInfo : public ABIInfo {
 public:
 
   void computeInfo(CGFunctionInfo &FI) const override;
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   X86_32ABIInfo(CodeGen::CodeGenTypes &CGT, bool DarwinVectorABI,
                 bool RetSmallStructInRegABI, bool Win32StructABI,
@@ -1066,8 +1066,8 @@ void X86_32ABIInfo::rewriteWithInAlloca(CGFunctionInfo &FI) const {
                   StackAlign);
 }
 
-Address X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF,
-                                 Address VAListAddr, QualType Ty) const {
+RValue X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                QualType Ty, AggValueSlot Slot) const {
 
   auto TypeInfo = getContext().getTypeInfoInChars(Ty);
 
@@ -1075,7 +1075,7 @@ Address X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF,
   ABIArgInfo AI = classifyArgumentType(Ty, State, /*ArgIndex*/ 0);
   // Empty records are ignored for parameter passing purposes.
   if (AI.isIgnore())
-    return CGF.CreateMemTemp(Ty);
+    return Slot.asRValue();
 
   // x86-32 changes the alignment of certain arguments on the stack.
   //
@@ -1084,9 +1084,9 @@ Address X86_32ABIInfo::EmitVAArg(CodeGenFunction &CGF,
   TypeInfo.Align = CharUnits::fromQuantity(
                 getTypeStackAlignInBytes(Ty, TypeInfo.Align.getQuantity()));
 
-  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false,
-                          TypeInfo, CharUnits::fromQuantity(4),
-                          /*AllowHigherAlign*/ true);
+  return emitVoidPtrVAArg(CGF, VAListAddr, Ty, /*Indirect*/ false, TypeInfo,
+                          CharUnits::fromQuantity(4),
+                          /*AllowHigherAlign*/ true, Slot);
 }
 
 bool X86_32TargetCodeGenInfo::isStructReturnInRegABI(
@@ -1367,10 +1367,10 @@ public:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
-  Address EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                      QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
+  RValue EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                     AggValueSlot Slot) const override;
 
   bool has64BitPointers() const {
     return Has64BitPointers;
@@ -1386,8 +1386,8 @@ public:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 
   bool isHomogeneousAggregateBaseType(QualType Ty) const override {
     // FIXME: Assumes vectorcall is in use.
@@ -3020,8 +3020,8 @@ static Address EmitX86_64VAArgFromMemory(CodeGenFunction &CGF,
   return Address(Res, LTy, Align);
 }
 
-Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                 QualType Ty) const {
+RValue X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                QualType Ty, AggValueSlot Slot) const {
   // Assume that va_list type is correct; should be pointer to LLVM type:
   // struct {
   //   i32 gp_offset;
@@ -3037,12 +3037,14 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // Empty records are ignored for parameter passing purposes.
   if (AI.isIgnore())
-    return CGF.CreateMemTemp(Ty);
+    return Slot.asRValue();
 
   // AMD64-ABI 3.5.7p5: Step 1. Determine whether type may be passed
   // in the registers. If not go to step 7.
   if (!neededInt && !neededSSE)
-    return EmitX86_64VAArgFromMemory(CGF, VAListAddr, Ty);
+    return CGF.EmitLoadOfAnyValue(
+        CGF.MakeAddrLValue(EmitX86_64VAArgFromMemory(CGF, VAListAddr, Ty), Ty),
+        Slot);
 
   // AMD64-ABI 3.5.7p5: Step 2. Compute num_gp to hold the number of
   // general purpose registers needed to pass type and num_fp to hold
@@ -3205,11 +3207,11 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CGF.EmitBlock(ContBlock);
   Address ResAddr = emitMergePHI(CGF, RegAddr, InRegBlock, MemAddr, InMemBlock,
                                  "vaarg.addr");
-  return ResAddr;
+  return CGF.EmitLoadOfAnyValue(CGF.MakeAddrLValue(ResAddr, Ty), Slot);
 }
 
-Address X86_64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                   QualType Ty) const {
+RValue X86_64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                  QualType Ty, AggValueSlot Slot) const {
   // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
   // not 1, 2, 4, or 8 bytes, must be passed by reference."
   uint64_t Width = getContext().getTypeSize(Ty);
@@ -3218,7 +3220,7 @@ Address X86_64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false);
+                          /*allowHigherAlign*/ false, Slot);
 }
 
 ABIArgInfo WinX86_64ABIInfo::reclassifyHvaArgForVectorCall(
@@ -3410,8 +3412,8 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 }
 
-Address WinX86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                                    QualType Ty) const {
+RValue WinX86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                                   QualType Ty, AggValueSlot Slot) const {
   // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
   // not 1, 2, 4, or 8 bytes, must be passed by reference."
   uint64_t Width = getContext().getTypeSize(Ty);
@@ -3420,7 +3422,7 @@ Address WinX86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
                           CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false);
+                          /*allowHigherAlign*/ false, Slot);
 }
 
 std::unique_ptr<TargetCodeGenInfo> CodeGen::createX86_32TargetCodeGenInfo(

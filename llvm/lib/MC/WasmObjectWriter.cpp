@@ -877,7 +877,7 @@ void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
       break;
     case wasm::WASM_EXTERNAL_TABLE:
       W->OS << char(Import.Table.ElemType);
-      encodeULEB128(0, W->OS);           // flags
+      encodeULEB128(Import.Table.Limits.Flags, W->OS);
       encodeULEB128(NumElements, W->OS); // initial
       break;
     case wasm::WASM_EXTERNAL_TAG:
@@ -1022,7 +1022,8 @@ void WasmObjectWriter::writeElemSection(
     encodeULEB128(TableNumber, W->OS); // the table number
 
   // init expr for starting offset
-  W->OS << char(wasm::WASM_OPCODE_I32_CONST);
+  W->OS << char(is64Bit() ? wasm::WASM_OPCODE_I64_CONST
+                          : wasm::WASM_OPCODE_I32_CONST);
   encodeSLEB128(InitialTableOffset, W->OS);
   W->OS << char(wasm::WASM_OPCODE_END);
 
@@ -1856,27 +1857,21 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       report_fatal_error(".fini_array sections are unsupported");
     if (!WS.getName().starts_with(".init_array"))
       continue;
-    if (WS.getFragmentList().empty())
-      continue;
-
-    // init_array is expected to contain a single non-empty data fragment
-    if (WS.getFragmentList().size() != 3)
-      report_fatal_error("only one .init_array section fragment supported");
-
     auto IT = WS.begin();
+    if (IT == WS.end())
+      continue;
     const MCFragment &EmptyFrag = *IT;
     if (EmptyFrag.getKind() != MCFragment::FT_Data)
       report_fatal_error(".init_array section should be aligned");
 
-    IT = std::next(IT);
-    const MCFragment &AlignFrag = *IT;
+    const MCFragment &AlignFrag = *EmptyFrag.getNext();
     if (AlignFrag.getKind() != MCFragment::FT_Align)
       report_fatal_error(".init_array section should be aligned");
     if (cast<MCAlignFragment>(AlignFrag).getAlignment() !=
         Align(is64Bit() ? 8 : 4))
       report_fatal_error(".init_array section should be aligned for pointers");
 
-    const MCFragment &Frag = *std::next(IT);
+    const MCFragment &Frag = *AlignFrag.getNext();
     if (Frag.hasInstructions() || Frag.getKind() != MCFragment::FT_Data)
       report_fatal_error("only data supported in .init_array section");
 

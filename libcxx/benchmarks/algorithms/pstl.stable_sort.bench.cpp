@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
+#include <execution>
 
 #include "common.h"
 

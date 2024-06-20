@@ -2707,7 +2707,8 @@ enum {
   eHandleCommandFlagEchoCommentCommand = (1u << 3),
   eHandleCommandFlagPrintResult = (1u << 4),
   eHandleCommandFlagPrintErrors = (1u << 5),
-  eHandleCommandFlagStopOnCrash = (1u << 6)
+  eHandleCommandFlagStopOnCrash = (1u << 6),
+  eHandleCommandFlagAllowRepeats = (1u << 7)
 };
 
 void CommandInterpreter::HandleCommandsFromFile(
@@ -3129,14 +3130,19 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  if (!is_interactive) {
+  const bool allow_repeats =
+      io_handler.GetFlags().Test(eHandleCommandFlagAllowRepeats);
+
+  if (!is_interactive && !allow_repeats) {
     // When we are not interactive, don't execute blank lines. This will happen
     // sourcing a commands file. We don't want blank lines to repeat the
     // previous command and cause any errors to occur (like redefining an
     // alias, get an error and stop parsing the commands file).
+    // But obey the AllowRepeats flag if the user has set it.
     if (line.empty())
       return;
-
+  }
+  if (!is_interactive) {
     // When using a non-interactive file handle (like when sourcing commands
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
@@ -3388,6 +3394,8 @@ CommandInterpreter::GetIOHandler(bool force_create,
         flags |= eHandleCommandFlagPrintResult;
       if (options->m_print_errors != eLazyBoolNo)
         flags |= eHandleCommandFlagPrintErrors;
+      if (options->m_allow_repeats == eLazyBoolYes)
+        flags |= eHandleCommandFlagAllowRepeats;
     } else {
       flags = eHandleCommandFlagEchoCommand | eHandleCommandFlagPrintResult |
               eHandleCommandFlagPrintErrors;

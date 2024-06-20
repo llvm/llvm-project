@@ -105,9 +105,9 @@ GetFlattenedSpellings(const Record &Attr) {
 
 static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
-      .EndsWith("Decl *", "Record.GetLocalDeclAs<" +
+      .EndsWith("Decl *", "Record.readDeclAs<" +
                               std::string(type.data(), 0, type.size() - 1) +
-                              ">(LocalDeclID(Record.readInt()))")
+                              ">()")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
       .Case("IdentifierInfo *", "Record.readIdentifier()")

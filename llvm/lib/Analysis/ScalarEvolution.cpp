@@ -10483,29 +10483,29 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // Get the initial value for the loop.
   const SCEV *Start = getSCEVAtScope(AddRec->getStart(), L->getParentLoop());
   const SCEV *Step = getSCEVAtScope(AddRec->getOperand(1), L->getParentLoop());
-
-  // For now we handle only constant steps.
-  //
-  // TODO: Handle a nonconstant Step given AddRec<NUW>. If the
-  // AddRec is NUW, then (in an unsigned sense) it cannot be counting up to wrap
-  // to 0, it must be counting down to equal 0. Consequently, N = Start / -Step.
-  // We have not yet seen any such cases.
   const SCEVConstant *StepC = dyn_cast<SCEVConstant>(Step);
-  if (!StepC || StepC->getValue()->isZero())
+
+  if (!isLoopInvariant(Step, L))
     return getCouldNotCompute();
+
+  // Specialize step for this loop so we get context sensitive facts below.
+  const SCEV *StepWLG = applyLoopGuards(Step, L);
 
   // For positive steps (counting up until unsigned overflow):
   //   N = -Start/Step (as unsigned)
   // For negative steps (counting down to zero):
   //   N = Start/-Step
   // First compute the unsigned distance from zero in the direction of Step.
-  bool CountDown = StepC->getAPInt().isNegative();
-  const SCEV *Distance = CountDown ? Start : getNegativeSCEV(Start);
+  bool CountDown = isKnownNegative(StepWLG);
+  if (!CountDown && !isKnownNonNegative(StepWLG))
+    return getCouldNotCompute();
 
+  const SCEV *Distance = CountDown ? Start : getNegativeSCEV(Start);
   // Handle unitary steps, which cannot wraparound.
   // 1*N = -Start; -1*N = Start (mod 2^BW), so:
   //   N = Distance (as unsigned)
-  if (StepC->getValue()->isOne() || StepC->getValue()->isMinusOne()) {
+  if (StepC &&
+      (StepC->getValue()->isOne() || StepC->getValue()->isMinusOne())) {
     APInt MaxBECount = getUnsignedRangeMax(applyLoopGuards(Distance, L));
     MaxBECount = APIntOps::umin(MaxBECount, getUnsignedRangeMax(Distance));
 
@@ -10536,6 +10536,13 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   // will have undefined behavior due to wrapping.
   if (ControlsOnlyExit && AddRec->hasNoSelfWrap() &&
       loopHasNoAbnormalExits(AddRec->getLoop())) {
+
+    // If the stride is zero, the loop must be infinite.  In C++, most loops
+    // are finite by assumption, in which case the step being zero implies
+    // UB must execute if the loop is entered.
+    if (!loopIsFiniteByAssumption(L) && !isKnownNonZero(StepWLG))
+      return getCouldNotCompute();
+
     const SCEV *Exact =
         getUDivExpr(Distance, CountDown ? getNegativeSCEV(Step) : Step);
     const SCEV *ConstantMax = getCouldNotCompute();
@@ -10550,6 +10557,8 @@ ScalarEvolution::ExitLimit ScalarEvolution::howFarToZero(const SCEV *V,
   }
 
   // Solve the general equation.
+  if (!StepC || StepC->getValue()->isZero())
+    return getCouldNotCompute();
   const SCEV *E = SolveLinEquationWithOverflow(StepC->getAPInt(),
                                                getNegativeSCEV(Start), *this);
 
@@ -14973,6 +14982,9 @@ void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
 // 4, A / B becomes X / 8).
 bool ScalarEvolution::matchURem(const SCEV *Expr, const SCEV *&LHS,
                                 const SCEV *&RHS) {
+  if (Expr->getType()->isPointerTy())
+    return false;
+
   // Try to match 'zext (trunc A to iB) to iY', which is used
   // for URem with constant power-of-2 second operands. Make sure the size of
   // the operand A matches the size of the whole expressions.

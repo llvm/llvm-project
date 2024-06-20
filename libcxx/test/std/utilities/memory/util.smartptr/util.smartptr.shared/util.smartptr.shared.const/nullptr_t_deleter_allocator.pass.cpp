@@ -17,8 +17,6 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-#include "types.h"
-
 struct A
 {
     static int count;
@@ -29,25 +27,6 @@ struct A
 };
 
 int A::count = 0;
-
-// LWG 3233. Broken requirements for shared_ptr converting constructors
-// https://cplusplus.github.io/LWG/issue3233
-static_assert( std::is_constructible<std::shared_ptr<int>,  std::nullptr_t, test_deleter<int>, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int>,  std::nullptr_t, bad_deleter, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int>,  std::nullptr_t, no_nullptr_deleter, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int>,  std::nullptr_t, no_move_deleter, test_allocator<int> >::value, "");
-
-#if TEST_STD_VER >= 17
-static_assert( std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, test_deleter<int>, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, bad_deleter, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, no_nullptr_deleter, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[]>,  std::nullptr_t, no_move_deleter, test_allocator<int> >::value, "");
-
-static_assert( std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, test_deleter<int>, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, bad_deleter, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, no_nullptr_deleter, test_allocator<int> >::value, "");
-static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::nullptr_t, no_move_deleter, test_allocator<int> >::value, "");
-#endif
 
 int main(int, char**)
 {

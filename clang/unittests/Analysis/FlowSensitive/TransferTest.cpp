@@ -3345,6 +3345,32 @@ TEST(TransferTest, ResultObjectLocationForBuiltinBitCastExpr) {
       });
 }
 
+TEST(TransferTest, ResultObjectLocationForAtomicExpr) {
+  std::string Code = R"(
+    struct S {};
+    void target(_Atomic(S) *ptr) {
+      S s = __c11_atomic_load(ptr, __ATOMIC_SEQ_CST);
+      // [[p]]
+    }
+  )";
+  using ast_matchers::atomicExpr;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  using ast_matchers::traverse;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Atomic = selectFirst<AtomicExpr>(
+            "atomic", match(atomicExpr().bind("atomic"), ASTCtx));
+
+        EXPECT_EQ(&Env.getResultObjectLocation(*Atomic),
+                  &getLocForDecl<RecordStorageLocation>(ASTCtx, Env, "s"));
+      });
+}
+
 TEST(TransferTest, ResultObjectLocationPropagatesThroughConditionalOperator) {
   std::string Code = R"(
     struct A {
@@ -3793,6 +3819,26 @@ TEST(TransferTest, Postincrement) {
 
         EXPECT_EQ(&getValueForDecl(ASTCtx, Env, "OldVal"),
                   &getValueForDecl(ASTCtx, Env, "I"));
+      });
+}
+
+// We test just one of the compound assignment operators because we know the
+// code for propagating the storage location is shared among all of them.
+TEST(TransferTest, AddAssign) {
+  std::string Code = R"(
+    void target(int I) {
+      int &IRef = (I += 1);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        EXPECT_EQ(&getLocForDecl(ASTCtx, Env, "IRef"),
+                  &getLocForDecl(ASTCtx, Env, "I"));
       });
 }
 

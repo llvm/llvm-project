@@ -607,7 +607,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
   }
   }
 
-  assert(!Known.hasConflict() && "Bits known to be one AND zero?");
   LLVM_DEBUG(dumpResult(MI, Known, Depth));
 
   // Update the cache.
