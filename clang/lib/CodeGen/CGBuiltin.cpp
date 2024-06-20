@@ -615,6 +615,17 @@ static Value *emitTernaryBuiltin(CodeGenFunction &CGF,
   return CGF.Builder.CreateCall(F, { Src0, Src1, Src2 });
 }
 
+static Value *emitQuaternaryBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+                                    unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
+  llvm::Value *Src3 = CGF.EmitScalarExpr(E->getArg(3));
+
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, {Src0, Src1, Src2, Src3});
+}
+
 // Emit an intrinsic that has 1 float or double operand, and 1 integer.
 static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
                                const CallExpr *E,
@@ -734,17 +745,14 @@ static llvm::Value *EmitOverflowIntrinsic(CodeGenFunction &CGF,
   return CGF.Builder.CreateExtractValue(Tmp, 0);
 }
 
-static Value *emitRangedBuiltin(CodeGenFunction &CGF,
-                                unsigned IntrinsicID,
+static Value *emitRangedBuiltin(CodeGenFunction &CGF, unsigned IntrinsicID,
                                 int low, int high) {
-    llvm::MDBuilder MDHelper(CGF.getLLVMContext());
-    llvm::MDNode *RNode = MDHelper.createRange(APInt(32, low), APInt(32, high));
-    Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {});
-    llvm::Instruction *Call = CGF.Builder.CreateCall(F);
-    Call->setMetadata(llvm::LLVMContext::MD_range, RNode);
-    Call->setMetadata(llvm::LLVMContext::MD_noundef,
-                      llvm::MDNode::get(CGF.getLLVMContext(), std::nullopt));
-    return Call;
+  Function *F = CGF.CGM.getIntrinsic(IntrinsicID, {});
+  llvm::CallInst *Call = CGF.Builder.CreateCall(F);
+  llvm::ConstantRange CR(APInt(32, low), APInt(32, high));
+  Call->addRangeRetAttr(CR);
+  Call->addRetAttr(llvm::Attribute::AttrKind::NoUndef);
+  return Call;
 }
 
 namespace {
@@ -14192,7 +14200,7 @@ Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
   ArgStr.split(Features, "+");
   for (auto &Feature : Features) {
     Feature = Feature.trim();
-    if (!llvm::AArch64::parseArchExtension(Feature))
+    if (!llvm::AArch64::parseFMVExtension(Feature))
       return Builder.getFalse();
     if (Feature != "default")
       Features.push_back(Feature);
@@ -19111,6 +19119,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::amdgcn_s_sendmsg_rtn, {ResultType});
     return Builder.CreateCall(F, {Arg});
   }
+  case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc:
+    return emitQuaternaryBuiltin(*this, E, Intrinsic::amdgcn_make_buffer_rsrc);
   default:
     return nullptr;
   }

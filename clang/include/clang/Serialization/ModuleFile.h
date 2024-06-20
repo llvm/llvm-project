@@ -310,9 +310,6 @@ public:
   /// Base identifier ID for identifiers local to this module.
   serialization::IdentifierID BaseIdentifierID = 0;
 
-  /// Remapping table for identifier IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> IdentifierRemap;
-
   /// Actual data for the on-disk hash table of identifiers.
   ///
   /// This pointer points into a memory buffer, where the on-disk hash
