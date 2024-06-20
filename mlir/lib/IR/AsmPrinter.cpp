@@ -28,6 +28,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Support/ScalableVectorType.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -2607,17 +2608,10 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
       })
       .Case<VectorType>([&](VectorType vectorTy) {
-        auto scalableDims = vectorTy.getScalableDims();
         os << "vector<";
-        auto vShape = vectorTy.getShape();
-        unsigned lastDim = vShape.size();
-        unsigned dimIdx = 0;
-        for (dimIdx = 0; dimIdx < lastDim; dimIdx++) {
-          if (!scalableDims.empty() && scalableDims[dimIdx])
-            os << '[';
-          os << vShape[dimIdx];
-          if (!scalableDims.empty() && scalableDims[dimIdx])
-            os << ']';
+        auto dims = VectorDimList::from(vectorTy);
+        if (!dims.empty()) {
+          llvm::interleave(dims, os, "x");
           os << 'x';
         }
         printType(vectorTy.getElementType());

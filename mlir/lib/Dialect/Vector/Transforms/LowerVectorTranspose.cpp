@@ -32,6 +32,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/ScalableVectorType.h"
 
 #define DEBUG_TYPE "lower-vector-transpose"
 
@@ -432,18 +433,17 @@ public:
   LogicalResult matchAndRewrite(vector::TransposeOp op,
                                 PatternRewriter &rewriter) const override {
     Value input = op.getVector();
-    VectorType resType = op.getResultVectorType();
+    ScalableVectorType resType = op.getResultVectorType();
 
     // Set up convenience transposition table.
     ArrayRef<int64_t> transp = op.getPermutation();
 
     if (resType.getRank() == 2 &&
-        ((resType.getShape().front() == 1 &&
-          !resType.getScalableDims().front()) ||
-         (resType.getShape().back() == 1 &&
-          !resType.getScalableDims().back())) &&
+        (resType.getDims().front() == VectorDim::getFixed(1) ||
+         resType.getDims().back() == VectorDim::getFixed(1)) &&
         transp == ArrayRef<int64_t>({1, 0})) {
-      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, input);
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, Type(resType),
+                                                       input);
       return success();
     }
 

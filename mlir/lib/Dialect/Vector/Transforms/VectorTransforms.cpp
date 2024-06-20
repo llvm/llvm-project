@@ -39,6 +39,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/ScalableVectorType.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -1239,15 +1240,12 @@ struct FoldI1Select : public OpRewritePattern<arith::SelectOp> {
 /// (the most inner dim in `vectorType` is not a unit dim (it's a "scalable
 /// unit")
 static FailureOr<size_t>
-getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
+getTransferFoldableInnerUnitDims(MemRefType srcType,
+                                 ScalableVectorType vectorType) {
   SmallVector<int64_t> srcStrides;
   int64_t srcOffset;
   if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
     return failure();
-
-  auto isUnitDim = [](VectorType type, int dim) {
-    return type.getDimSize(dim) == 1 && !type.getScalableDims()[dim];
-  };
 
   // According to vector.transfer_read/write semantics, the vector can be a
   // slice. Thus, we have to offset the check index with `rankDiff` in
@@ -1259,7 +1257,8 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
     // It can be folded only if they are 1 and the stride is 1.
     int dim = vectorType.getRank() - i - 1;
     if (srcStrides[dim + rankDiff] != 1 ||
-        srcType.getDimSize(dim + rankDiff) != 1 || !isUnitDim(vectorType, dim))
+        srcType.getDimSize(dim + rankDiff) != 1 ||
+        vectorType.getDim(dim) != VectorDim::getFixed(1))
       break;
     result++;
   }

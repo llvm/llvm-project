@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
+#include "mlir/Support/ScalableVectorType.h"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -122,13 +123,11 @@ struct TransferReadPermutationLowering
     permutationMap = inversePermutation(permutationMap);
     AffineMap newMap = permutationMap.compose(map);
     // Apply the reverse transpose to deduce the type of the transfer_read.
-    ArrayRef<int64_t> originalShape = op.getVectorType().getShape();
-    SmallVector<int64_t> newVectorShape(originalShape.size());
-    ArrayRef<bool> originalScalableDims = op.getVectorType().getScalableDims();
-    SmallVector<bool> newScalableDims(originalShape.size());
-    for (const auto &pos : llvm::enumerate(permutation)) {
-      newVectorShape[pos.value()] = originalShape[pos.index()];
-      newScalableDims[pos.value()] = originalScalableDims[pos.index()];
+    auto originalDims = VectorDimList::from(op.getVectorType());
+    SmallVector<VectorDim> newDims(op.getVectorType().getRank(),
+                                   VectorDim::getFixed(0));
+    for (auto [originalIdx, newIdx] : llvm::enumerate(permutation)) {
+      newDims[newIdx] = originalDims[originalIdx];
     }
 
     // Transpose in_bounds attribute.
@@ -138,8 +137,8 @@ struct TransferReadPermutationLowering
                          : ArrayAttr();
 
     // Generate new transfer_read operation.
-    VectorType newReadType = VectorType::get(
-        newVectorShape, op.getVectorType().getElementType(), newScalableDims);
+    VectorType newReadType =
+        ScalableVectorType::get(newDims, op.getVectorType().getElementType());
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.getSource(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
