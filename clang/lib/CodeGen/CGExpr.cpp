@@ -650,16 +650,13 @@ unsigned CodeGenFunction::getAccessedFieldNo(unsigned Idx,
       ->getZExtValue();
 }
 
-/// Emit the hash_16_bytes function from include/llvm/ADT/Hashing.h.
-static llvm::Value *emitHash16Bytes(CGBuilderTy &Builder, llvm::Value *Low,
-                                    llvm::Value *High) {
-  llvm::Value *KMul = Builder.getInt64(0x9ddfea08eb382d69ULL);
-  llvm::Value *K47 = Builder.getInt64(47);
-  llvm::Value *A0 = Builder.CreateMul(Builder.CreateXor(Low, High), KMul);
-  llvm::Value *A1 = Builder.CreateXor(Builder.CreateLShr(A0, K47), A0);
-  llvm::Value *B0 = Builder.CreateMul(Builder.CreateXor(High, A1), KMul);
-  llvm::Value *B1 = Builder.CreateXor(Builder.CreateLShr(B0, K47), B0);
-  return Builder.CreateMul(B1, KMul);
+static llvm::Value *emitHashMix(CGBuilderTy &Builder, llvm::Value *Acc,
+                                llvm::Value *Ptr) {
+  llvm::Value *A0 =
+      Builder.CreateMul(Ptr, Builder.getInt64(0xbf58476d1ce4e5b9u));
+  llvm::Value *A1 =
+      Builder.CreateXor(A0, Builder.CreateLShr(A0, Builder.getInt64(31)));
+  return Builder.CreateXor(Acc, A1);
 }
 
 bool CodeGenFunction::isNullPointerAllowed(TypeCheckKind TCK) {
@@ -821,11 +818,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       EmitBlock(VptrNotNull);
     }
 
-    // Compute a hash of the mangled name of the type.
-    //
-    // FIXME: This is not guaranteed to be deterministic! Move to a
-    //        fingerprinting mechanism once LLVM provides one. For the time
-    //        being the implementation happens to be deterministic.
+    // Compute a deterministic hash of the mangled name of the type.
     SmallString<64> MangledName;
     llvm::raw_svector_ostream Out(MangledName);
     CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty.getUnqualifiedType(),
@@ -834,15 +827,13 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     // Contained in NoSanitizeList based on the mangled type.
     if (!CGM.getContext().getNoSanitizeList().containsType(SanitizerKind::Vptr,
                                                            Out.str())) {
-      llvm::hash_code TypeHash = hash_value(Out.str());
-
-      // Load the vptr, and compute hash_16_bytes(TypeHash, vptr).
-      llvm::Value *Low = llvm::ConstantInt::get(Int64Ty, TypeHash);
+      // Load the vptr, and mix it with TypeHash.
+      llvm::Value *TypeHash =
+          llvm::ConstantInt::get(Int64Ty, xxh3_64bits(Out.str()));
       Address VPtrAddr(Ptr, IntPtrTy, getPointerAlign());
       llvm::Value *VPtrVal = Builder.CreateLoad(VPtrAddr);
-      llvm::Value *High = Builder.CreateZExt(VPtrVal, Int64Ty);
-
-      llvm::Value *Hash = emitHash16Bytes(Builder, Low, High);
+      llvm::Value *Hash =
+          emitHashMix(Builder, TypeHash, Builder.CreateZExt(VPtrVal, Int64Ty));
       Hash = Builder.CreateTrunc(Hash, IntPtrTy);
 
       // Look the hash up in our cache.
