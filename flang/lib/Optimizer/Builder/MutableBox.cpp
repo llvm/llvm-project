@@ -527,7 +527,14 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
         mlir::ValueRange newLbounds = lbounds.empty()
                                           ? mlir::ValueRange{arr.getLBounds()}
                                           : mlir::ValueRange{lbounds};
-        if (box.isDescribedByVariables()) {
+        if (box.hasAssumedRank()) {
+          assert(arr.hasAssumedRank() &&
+                 "expect both arr and box to be assumed-rank");
+          mlir::Value reboxed = builder.create<fir::ReboxAssumedRankOp>(
+              loc, box.getBoxTy(), arr.getAddr(),
+              fir::LowerBoundModifierAttribute::Preserve);
+          writer.updateWithIrBox(reboxed);
+        } else if (box.isDescribedByVariables()) {
           // LHS is a contiguous pointer described by local variables. Open RHS
           // fir.box to update the LHS.
           auto rawAddr = builder.create<fir::BoxAddrOp>(loc, arr.getMemTy(),
