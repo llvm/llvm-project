@@ -700,6 +700,8 @@ Bug Fixes in This Version
 - Correctly reject declarations where a statement is required in C.
   Fixes #GH92775
 
+- Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
