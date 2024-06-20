@@ -11,8 +11,8 @@
 # RUN: llvm-objdump -h %t.rv32 | FileCheck --check-prefix=JUMPTABLE32 %s
 # RUN: llvm-objdump -h %t.rv64 | FileCheck --check-prefix=JUMPTABLE64 %s
 
-# JUMPTABLE32:  2 .riscv.jvt    00000000 000110d4 TEXT
-# JUMPTABLE64:  2 .riscv.jvt    00000000 0000000000011140 TEXT
+# JUMPTABLE32:  2 .riscv.jvt    00000000 000110cc TEXT
+# JUMPTABLE64:  2 .riscv.jvt    00000000 0000000000011138 TEXT
 
 .global _start
 .p2align 3
