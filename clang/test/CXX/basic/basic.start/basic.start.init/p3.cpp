@@ -16,9 +16,9 @@ int main(int argc, char **argv)
   = delete; // expected-error {{'main' is not allowed to be deleted}}
 #else
 {
-  int (*pmain)(int, char**) = &main; // expected-error {{expressions that refer to 'main' are an extension}}
+  int (*pmain)(int, char**) = &main; // expected-error {{expressions that refer to 'main' are a Clang extension}}
 
   if (argc)
-    main(0, 0); // expected-error {{expressions that refer to 'main' are an extension}}
+    main(0, 0); // expected-error {{expressions that refer to 'main' are a Clang extension}}
 }
 #endif
