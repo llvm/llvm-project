@@ -16,7 +16,7 @@ void foo() {
 //CHECK:     scf.while : () -> () {
 //CHECK:       %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32> 
 //CHECK:       %[[C2_I32:.+]] = arith.constant 2 : i32 
-//CHECK:       %[[ONE:.+]] = arith.cmpi ult, %[[ZERO:.+]], %[[C2_I32]] : i32 
+//CHECK:       %[[ONE:.+]] = arith.cmpi slt, %[[ZERO:.+]], %[[C2_I32]] : i32 
 //CHECK:       %[[TWO:.+]] = arith.extui %[[ONE:.+]] : i1 to i32 
 //CHECK:       %[[C0_I32_0:.+]] = arith.constant 0 : i32 
 //CHECK:       %[[THREE:.+]] = arith.cmpi ne, %[[TWO:.+]], %[[C0_I32_0]] : i32 
