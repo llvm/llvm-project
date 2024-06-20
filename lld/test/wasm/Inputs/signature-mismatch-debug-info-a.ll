@@ -5,7 +5,6 @@ define void @foo(i32 %a) !dbg !6 {
 }
 
 define void @test0() !dbg !10 {
-entry:
   call void @foo(i32 3), !dbg !13
   ret void, !dbg !14
 }

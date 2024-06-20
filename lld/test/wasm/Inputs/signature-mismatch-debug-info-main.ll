@@ -1,14 +1,12 @@
 target triple = "wasm32-unknown-emscripten"
 
 define i32 @main() !dbg !6 {
-entry:
   call void @test0(), !dbg !10
   call void @test1(), !dbg !11
   ret i32 0, !dbg !12
 }
 
 declare void @test0()
-
 declare void @test1()
 
 !llvm.dbg.cu = !{!0}
