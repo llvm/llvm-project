@@ -139,7 +139,7 @@ public:
   ///     Returns \b true if this Platform plug-in was able to find
   ///     a suitable executable, \b false otherwise.
   virtual Status ResolveExecutable(const ModuleSpec &module_spec,
-                                   lldb::ModuleSP &module_sp,
+                                   lldb::ModuleSP &exe_module_sp,
                                    const FileSpecList *module_search_paths_ptr);
 
   /// Find a symbol file given a symbol file module specification.
@@ -1004,10 +1004,7 @@ protected:
 
   virtual const char *GetCacheHostname();
 
-  virtual Status
-  ResolveRemoteExecutable(const ModuleSpec &module_spec,
-                          lldb::ModuleSP &exe_module_sp,
-                          const FileSpecList *module_search_paths_ptr);
+  /// The method is virtual for mocking in the unit tests.
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
