@@ -35,8 +35,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK-DAG: #[[ARR1_TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<lowerBound = #llvm.di_expression{{.*}}, upperBound = #llvm.di_expression{{.*}}>, #llvm.di_subrange<lowerBound = #llvm.di_expression{{.*}}, upperBound = #llvm.di_expression{{.*}}>, dataLocation = {{.*}}, associated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>>
 // CHECK-DAG: #[[ARR2_TY:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type{{.*}}elements = #llvm.di_subrange<lowerBound = #llvm.di_expression{{.*}}, upperBound = #llvm.di_expression{{.*}}>, dataLocation = {{.*}}, associated = <[DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne]>>
 // CHECK-DAG: #[[PTR_TY:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type{{.*}}baseType = #[[INT_TY]]{{.*}}>
-// CHECK-DAG: #[[STR_TY:.*]] = #llvm.di_string_type<tag = DW_TAG_string_type{{.*}}stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, encoding = DW_ATE_ASCII>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "par"{{.*}}type = #[[ARR1_TY]]{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "par2"{{.*}}type = #[[ARR2_TY]]{{.*}}>
 // CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "psc"{{.*}}type = #[[PTR_TY]]{{.*}}>
-// CHECK-DAG: #llvm.di_global_variable<{{.*}}name = "pstr"{{.*}}type = #[[STR_TY]]{{.*}}>

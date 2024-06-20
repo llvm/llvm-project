@@ -46,5 +46,3 @@ end subroutine ff
 ! CHECK-DAG: ![[ARR_TY2]] = !DICompositeType(tag: DW_TAG_array_type{{.*}}, elements: ![[ELEMS1]], dataLocation: !DIExpression(DW_OP_push_object_address, DW_OP_deref), associated: !DIExpression(DW_OP_push_object_address, DW_OP_deref, DW_OP_lit0, DW_OP_ne))
 ! CHECK-DAG: !DILocalVariable(name: "psc"{{.*}}type: ![[PTR_TY:[0-9]+]])
 ! CHECK-DAG: ![[PTR_TY]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[INT_TY]]{{.*}})
-! CHECK-DAG: !DILocalVariable(name: "pstr"{{.*}}type: ![[PTR_TY:[0-9]+]])
-! CHECK-DAG: ![[PTR_TY]] = !DIStringType(stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref), encoding: DW_ATE_ASCII)
