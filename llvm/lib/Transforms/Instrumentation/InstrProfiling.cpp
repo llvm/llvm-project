@@ -948,6 +948,7 @@ Value *InstrLowerer::getBitmapAddress(InstrProfMCDCTVBitmapUpdate *I) {
   IRBuilder<> EntryBuilder(&Fn->getEntryBlock().front());
   auto *Bias = getOrCreateBiasVar(getInstrProfBitmapBiasVarName());
   auto *BiasLI = EntryBuilder.CreateLoad(Int64Ty, Bias, "profbm_bias");
+  // Assume BiasLI invariant (in the function at least)
   BiasLI->setMetadata(LLVMContext::MD_invariant_load,
                       MDNode::get(M.getContext(), std::nullopt));
 
