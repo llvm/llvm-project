@@ -764,6 +764,11 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
     InstructionCost Cost = 0;
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
+    InstructionCost BackedgeCost =
+        Ctx.TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
+    LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
+                      << ": vector loop backedge\n");
+    Cost += BackedgeCost;
     return Cost;
   }
 
