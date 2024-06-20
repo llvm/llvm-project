@@ -10,33 +10,40 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace mlir;
 
 #include "mlir/Dialect/DLTI/DLTIDialect.cpp.inc"
 
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
+
+#define DEBUG_TYPE "dlti"
+
 //===----------------------------------------------------------------------===//
 // DataLayoutEntryAttr
 //===----------------------------------------------------------------------===//
-//
-constexpr const StringLiteral mlir::DataLayoutEntryAttr::kAttrKeyword;
-
 namespace mlir {
-namespace impl {
-class DataLayoutEntryStorage : public AttributeStorage {
+namespace detail {
+class DataLayoutEntryAttrStorage : public AttributeStorage {
 public:
   using KeyTy = std::pair<DataLayoutEntryKey, Attribute>;
 
-  DataLayoutEntryStorage(DataLayoutEntryKey entryKey, Attribute value)
+  DataLayoutEntryAttrStorage(DataLayoutEntryKey entryKey, Attribute value)
       : entryKey(entryKey), value(value) {}
 
-  static DataLayoutEntryStorage *construct(AttributeStorageAllocator &allocator,
-                                           const KeyTy &key) {
-    return new (allocator.allocate<DataLayoutEntryStorage>())
-        DataLayoutEntryStorage(key.first, key.second);
+  static DataLayoutEntryAttrStorage *
+  construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
+    return new (allocator.allocate<DataLayoutEntryAttrStorage>())
+        DataLayoutEntryAttrStorage(key.first, key.second);
   }
 
   bool operator==(const KeyTy &other) const {
@@ -46,7 +53,7 @@ public:
   DataLayoutEntryKey entryKey;
   Attribute value;
 };
-} // namespace impl
+} // namespace detail
 } // namespace mlir
 
 DataLayoutEntryAttr DataLayoutEntryAttr::get(StringAttr key, Attribute value) {
@@ -65,7 +72,7 @@ Attribute DataLayoutEntryAttr::getValue() const { return getImpl()->value; }
 
 /// Parses an attribute with syntax:
 ///   attr ::= `#target.` `dl_entry` `<` (type | quoted-string) `,` attr `>`
-DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
+Attribute DataLayoutEntryAttr::parse(AsmParser &parser, Type ty) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -93,7 +100,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
 }
 
 void DataLayoutEntryAttr::print(AsmPrinter &os) const {
-  os << DataLayoutEntryAttr::kAttrKeyword << "<";
+  os << "<";
   if (auto type = llvm::dyn_cast_if_present<Type>(getKey()))
     os << type;
   else
@@ -104,51 +111,6 @@ void DataLayoutEntryAttr::print(AsmPrinter &os) const {
 //===----------------------------------------------------------------------===//
 // DataLayoutSpecAttr
 //===----------------------------------------------------------------------===//
-//
-constexpr const StringLiteral mlir::DataLayoutSpecAttr::kAttrKeyword;
-constexpr const StringLiteral
-    mlir::DLTIDialect::kDataLayoutAllocaMemorySpaceKey;
-constexpr const StringLiteral
-    mlir::DLTIDialect::kDataLayoutProgramMemorySpaceKey;
-constexpr const StringLiteral
-    mlir::DLTIDialect::kDataLayoutGlobalMemorySpaceKey;
-
-constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutStackAlignmentKey;
-
-namespace mlir {
-namespace impl {
-class DataLayoutSpecStorage : public AttributeStorage {
-public:
-  using KeyTy = ArrayRef<DataLayoutEntryInterface>;
-
-  DataLayoutSpecStorage(ArrayRef<DataLayoutEntryInterface> entries)
-      : entries(entries) {}
-
-  bool operator==(const KeyTy &key) const { return key == entries; }
-
-  static DataLayoutSpecStorage *construct(AttributeStorageAllocator &allocator,
-                                          const KeyTy &key) {
-    return new (allocator.allocate<DataLayoutSpecStorage>())
-        DataLayoutSpecStorage(allocator.copyInto(key));
-  }
-
-  ArrayRef<DataLayoutEntryInterface> entries;
-};
-} // namespace impl
-} // namespace mlir
-
-DataLayoutSpecAttr
-DataLayoutSpecAttr::get(MLIRContext *ctx,
-                        ArrayRef<DataLayoutEntryInterface> entries) {
-  return Base::get(ctx, entries);
-}
-
-DataLayoutSpecAttr
-DataLayoutSpecAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                               MLIRContext *context,
-                               ArrayRef<DataLayoutEntryInterface> entries) {
-  return Base::getChecked(emitError, context, entries);
-}
 
 LogicalResult
 DataLayoutSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
@@ -277,10 +239,6 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
   return DataLayoutSpecAttr::get(getContext(), entries);
 }
 
-DataLayoutEntryListRef DataLayoutSpecAttr::getEntries() const {
-  return getImpl()->entries;
-}
-
 StringAttr
 DataLayoutSpecAttr::getEndiannessIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(DLTIDialect::kDataLayoutEndiannessKey);
@@ -303,6 +261,7 @@ DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(
       DLTIDialect::kDataLayoutGlobalMemorySpaceKey);
 }
+
 StringAttr
 DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(
@@ -313,7 +272,7 @@ DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
 ///   attr ::= `#target.` `dl_spec` `<` attr-list? `>`
 ///   attr-list ::= attr
 ///               | attr `,` attr-list
-DataLayoutSpecAttr DataLayoutSpecAttr::parse(AsmParser &parser) {
+Attribute DataLayoutSpecAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseLess()))
     return {};
 
@@ -332,9 +291,101 @@ DataLayoutSpecAttr DataLayoutSpecAttr::parse(AsmParser &parser) {
 }
 
 void DataLayoutSpecAttr::print(AsmPrinter &os) const {
-  os << DataLayoutSpecAttr::kAttrKeyword << "<";
+  os << "<";
   llvm::interleaveComma(getEntries(), os);
   os << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// TargetDeviceSpecAttr
+//===----------------------------------------------------------------------===//
+
+namespace mlir {
+/// A FieldParser for key-value pairs of DeviceID-target device spec pairs that
+/// make up a target system spec.
+template <>
+struct FieldParser<DeviceIDTargetDeviceSpecPair> {
+  static FailureOr<DeviceIDTargetDeviceSpecPair> parse(AsmParser &parser) {
+    std::string deviceID;
+
+    if (failed(parser.parseString(&deviceID))) {
+      parser.emitError(parser.getCurrentLocation())
+          << "DeviceID is missing, or is not of string type";
+      return failure();
+    }
+
+    if (failed(parser.parseColon())) {
+      parser.emitError(parser.getCurrentLocation()) << "Missing colon";
+      return failure();
+    }
+
+    auto target_device_spec =
+        FieldParser<TargetDeviceSpecInterface>::parse(parser);
+    if (failed(target_device_spec)) {
+      parser.emitError(parser.getCurrentLocation())
+          << "Error in parsing target device spec";
+      return failure();
+    }
+
+    return std::make_pair(parser.getBuilder().getStringAttr(deviceID),
+                          *target_device_spec);
+  }
+};
+
+inline AsmPrinter &operator<<(AsmPrinter &printer,
+                              DeviceIDTargetDeviceSpecPair param) {
+  return printer << param.first << " : " << param.second;
+}
+
+} // namespace mlir
+
+LogicalResult
+TargetDeviceSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             ArrayRef<DataLayoutEntryInterface> entries) {
+  // Entries in a target device spec can only have StringAttr as key. It does
+  // not support type as a key. Hence not reusing
+  // DataLayoutEntryInterface::verify.
+  DenseSet<StringAttr> ids;
+  for (DataLayoutEntryInterface entry : entries) {
+    if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
+      return emitError()
+             << "dlti.target_device_spec does not allow type as a key: "
+             << type;
+    } else {
+      auto id = entry.getKey().get<StringAttr>();
+      if (!ids.insert(id).second)
+        return emitError() << "repeated layout entry key: " << id.getValue();
+    }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TargetSystemSpecAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TargetSystemSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                             ArrayRef<DeviceIDTargetDeviceSpecPair> entries) {
+  DenseSet<TargetSystemSpecInterface::DeviceID> device_ids;
+
+  for (const auto &entry : entries) {
+    TargetDeviceSpecInterface target_device_spec = entry.second;
+
+    // First verify that a target device spec is valid.
+    if (failed(TargetDeviceSpecAttr::verify(emitError,
+                                            target_device_spec.getEntries())))
+      return failure();
+
+    // Check that device IDs are unique across all entries.
+    TargetSystemSpecInterface::DeviceID device_id = entry.first;
+    if (!device_ids.insert(device_id).second) {
+      return emitError() << "repeated Device ID in dlti.target_system_spec: "
+                         << device_id;
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -376,31 +427,11 @@ public:
 } // namespace
 
 void DLTIDialect::initialize() {
-  addAttributes<DataLayoutEntryAttr, DataLayoutSpecAttr>();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
+      >();
   addInterfaces<TargetDataLayoutInterface>();
-}
-
-Attribute DLTIDialect::parseAttribute(DialectAsmParser &parser,
-                                      Type type) const {
-  StringRef attrKind;
-  if (parser.parseKeyword(&attrKind))
-    return {};
-
-  if (attrKind == DataLayoutEntryAttr::kAttrKeyword)
-    return DataLayoutEntryAttr::parse(parser);
-  if (attrKind == DataLayoutSpecAttr::kAttrKeyword)
-    return DataLayoutSpecAttr::parse(parser);
-
-  parser.emitError(parser.getNameLoc(), "unknown attrribute type: ")
-      << attrKind;
-  return {};
-}
-
-void DLTIDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
-  llvm::TypeSwitch<Attribute>(attr)
-      .Case<DataLayoutEntryAttr, DataLayoutSpecAttr>(
-          [&](auto a) { a.print(os); })
-      .Default([](Attribute) { llvm_unreachable("unknown attribute kind"); });
 }
 
 LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
@@ -412,6 +443,13 @@ LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
     }
     if (isa<ModuleOp>(op))
       return detail::verifyDataLayoutOp(op);
+    return success();
+  } else if (attr.getName() == DLTIDialect::kTargetSystemDescAttrName) {
+    if (!llvm::isa<TargetSystemSpecAttr>(attr.getValue())) {
+      return op->emitError()
+             << "'" << DLTIDialect::kTargetSystemDescAttrName
+             << "' is expected to be a #dlti.target_system_spec attribute";
+    }
     return success();
   }
 
