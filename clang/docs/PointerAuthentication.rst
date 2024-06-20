@@ -328,6 +328,23 @@ be done in a single instruction with an immediate integer.
 ``pointer`` must have pointer type, and ``integer`` must have integer type. The
 result has type ``ptrauth_extra_data_t``.
 
+``ptrauth_string_discriminator``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  ptrauth_string_discriminator(string)
+
+Compute a constant discriminator from the given string.
+
+``string`` must be a string literal of ``char`` character type.  The result has
+type ``ptrauth_extra_data_t``.
+
+The result value is never zero and always within range for both the
+``__ptrauth`` qualifier and ``ptrauth_blend_discriminator``.
+
+This can be used in constant expressions.
+
 ``ptrauth_strip``
 ^^^^^^^^^^^^^^^^^
 
