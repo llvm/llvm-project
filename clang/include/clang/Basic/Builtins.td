@@ -4393,6 +4393,12 @@ def PtrauthSignUnauthenticated : Builtin {
   let Prototype = "void*(void*,int,void*)";
 }
 
+def PtrauthSignConstant : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_constant"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const, Constexpr];
+  let Prototype = "void*(void*,int,void*)";
+}
+
 def PtrauthSignGenericData : Builtin {
   let Spellings = ["__builtin_ptrauth_sign_generic_data"];
   let Attributes = [CustomTypeChecking, NoThrow, Const];

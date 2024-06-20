@@ -136,3 +136,84 @@ void test_sign_generic_data(int *dp) {
 
   int *mismatch = __builtin_ptrauth_sign_generic_data(dp, 0); // expected-error {{incompatible integer to pointer conversion initializing 'int *' with an expression of type}}
 }
+
+
+typedef int (*fp_t)(int);
+
+static int dv_weakref __attribute__((weakref("dv")));
+extern int dv_weak __attribute__((weak));
+
+int *t_cst_sig1 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY); // expected-error {{too few arguments}}
+int *t_cst_sig2 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, &dv, &dv); // expected-error {{too many arguments}}
+
+int *t_cst_sig3 = __builtin_ptrauth_sign_constant(mismatched_type, VALID_DATA_KEY, 0); // expected-error {{signed value must have pointer type; type here is 'struct A'}}
+int *t_cst_sig4 = __builtin_ptrauth_sign_constant(&dv, mismatched_type, 0); // expected-error {{passing 'struct A' to parameter of incompatible type 'int'}}
+int *t_cst_sig5 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, mismatched_type); // expected-error {{extra discriminator must have pointer or integer type; type here is 'struct A'}}
+
+float *t_cst_result = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+
+int *t_cst_valid1 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
+int *t_cst_valid2 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&dv, 0));
+int *t_cst_valid3 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&dv + 8, 0));
+int *t_cst_valid4 = __builtin_ptrauth_sign_constant(&dv_weak, VALID_DATA_KEY, 0);
+int *t_cst_valid5 = __builtin_ptrauth_sign_constant(&dv_weakref, VALID_DATA_KEY, 0);
+
+int *t_cst_ptr = __builtin_ptrauth_sign_constant(NULL, VALID_DATA_KEY, &dv); // expected-error {{argument to ptrauth_sign_constant must refer to a global variable or function}}
+int *t_cst_key = __builtin_ptrauth_sign_constant(&dv, INVALID_KEY, 0); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+int *t_cst_disc1 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, &fv); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+int *t_cst_disc2 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&fv, 0)); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+
+fp_t t_cst_f_valid1 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, 0);
+fp_t t_cst_f_valid2 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, __builtin_ptrauth_blend_discriminator(&dv, 0));
+fp_t t_cst_f_valid3 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, __builtin_ptrauth_blend_discriminator(&dv + 8, 0));
+
+fp_t t_cst_f_key = __builtin_ptrauth_sign_constant(&fv, INVALID_KEY, 0); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+fp_t t_cst_f_disc1 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, &fv); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+fp_t t_cst_f_disc2 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, __builtin_ptrauth_blend_discriminator(&fv, 0)); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+
+int *t_cst_offset = __builtin_ptrauth_sign_constant((int *)((char*)&dv + 16), VALID_DATA_KEY, 0);
+fp_t t_cst_f_offset = __builtin_ptrauth_sign_constant((int (*)(int))((char*)&fv + 16), VALID_CODE_KEY, 0); // expected-error {{argument to ptrauth_sign_constant must refer to a global variable or function}}
+
+void test_sign_constant(int *dp, fp_t fp) {
+  int *sig1 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY); // expected-error {{too few arguments}}
+  int *sig2 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, &dv, &dv); // expected-error {{too many arguments}}
+
+  int *sig3 = __builtin_ptrauth_sign_constant(mismatched_type, VALID_DATA_KEY, 0); // expected-error {{signed value must have pointer type; type here is 'struct A'}}
+  int *sig4 = __builtin_ptrauth_sign_constant(&dv, mismatched_type, 0); // expected-error {{passing 'struct A' to parameter of incompatible type 'int'}}
+  int *sig5 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, mismatched_type); // expected-error {{extra discriminator must have pointer or integer type; type here is 'struct A'}}
+
+  float *result = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0); // expected-warning {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+
+  int *valid1 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, 0);
+  int *valid2 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&dv, 0));
+  int *valid3 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&dv + 8, 0));
+  int *valid4 = __builtin_ptrauth_sign_constant(&dv_weak, VALID_DATA_KEY, 0);
+  int *valid5 = __builtin_ptrauth_sign_constant(&dv_weakref, VALID_DATA_KEY, 0);
+
+  int *ptr = __builtin_ptrauth_sign_constant(NULL, VALID_DATA_KEY, &dv); // expected-error {{argument to ptrauth_sign_constant must refer to a global variable or function}}
+  int *key = __builtin_ptrauth_sign_constant(&dv, INVALID_KEY, 0); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+  int *disc1 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, &fv); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+  int *disc2 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&fv, 0)); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+
+  int *ptr2 = __builtin_ptrauth_sign_constant(dp, VALID_DATA_KEY, 0); // expected-error {{argument to ptrauth_sign_constant must refer to a global variable or function}}
+  int *disc3 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, dp); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+  int *disc4 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(dp, 0)); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+  int *disc5 = __builtin_ptrauth_sign_constant(&dv, VALID_DATA_KEY, __builtin_ptrauth_blend_discriminator(&dv, *dp)); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+
+  fp_t f_valid1 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, 0);
+  fp_t f_valid2 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, __builtin_ptrauth_blend_discriminator(&dv, 0));
+  fp_t f_valid3 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, __builtin_ptrauth_blend_discriminator(&dv + 8, 0));
+
+  fp_t f_key = __builtin_ptrauth_sign_constant(&fv, INVALID_KEY, 0); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+  fp_t f_disc1 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, &fv); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+  fp_t f_disc2 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, __builtin_ptrauth_blend_discriminator(&fv, 0)); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+
+  fp_t f_ptr = __builtin_ptrauth_sign_constant(fp, VALID_CODE_KEY, 0); // expected-error {{argument to ptrauth_sign_constant must refer to a global variable or function}}
+  fp_t f_disc3 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, dp); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+
+  fp_t f_disc4 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, __builtin_ptrauth_blend_discriminator(dp, 0)); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+  fp_t f_disc5 = __builtin_ptrauth_sign_constant(&fv, VALID_CODE_KEY, __builtin_ptrauth_blend_discriminator(&dv, *dp)); // expected-error {{discriminator argument to ptrauth_sign_constant must be a constant integer, the address of the global variable where the result will be stored, or a blend of the two}}
+
+  int *offset = __builtin_ptrauth_sign_constant((int *)((char*)&dv + 16), VALID_DATA_KEY, 0);
+  fp_t f_offset = __builtin_ptrauth_sign_constant((fp_t)((char*)&fv + 16), VALID_CODE_KEY, 0); // expected-error {{argument to ptrauth_sign_constant must refer to a global variable or function}}
+}
