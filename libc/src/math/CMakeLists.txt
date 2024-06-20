@@ -210,6 +210,8 @@ add_math_entrypoint_object(fromfpxl)
 add_math_entrypoint_object(fromfpxf16)
 add_math_entrypoint_object(fromfpxf128)
 
+add_math_entrypoint_object(getpayloadf16)
+
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
 
@@ -349,6 +351,10 @@ add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
 add_math_entrypoint_object(scalbnf128)
+
+add_math_entrypoint_object(setpayloadf16)
+
+add_math_entrypoint_object(setpayloadsigf16)
 
 add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
