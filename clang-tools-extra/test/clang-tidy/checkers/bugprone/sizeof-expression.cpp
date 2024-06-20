@@ -103,27 +103,27 @@ int Test1(const char* ptr) {
   sum += sizeof(LEN + - + -sizeof(X));
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof(sizeof(...))'
   sum += sizeof(char) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have the same type
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have the same type
   sum += sizeof(A) / sizeof(S);
-  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: suspicious usage of 'sizeof(...)/sizeof(...)': numerator is not a multiple of denominator
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
   sum += sizeof(char) / sizeof(int);
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)': numerator is not a multiple of denominator
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
   sum += sizeof(char) / sizeof(A);
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)': numerator is not a multiple of denominator
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
   sum += sizeof(B[0]) / sizeof(A);
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)': numerator is not a multiple of denominator
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
   sum += sizeof(ptr) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)': size of pointer is divided by size of pointed type
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; size of pointer is divided by size of pointed type
   sum += sizeof(ptr) / sizeof(ptr[0]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)': size of pointer is divided by size of pointed type
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; size of pointer is divided by size of pointed type
   sum += sizeof(ptr) / sizeof(char*);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have pointer types
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have pointer types
   sum += sizeof(ptr) / sizeof(void*);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have pointer types
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have pointer types
   sum += sizeof(ptr) / sizeof(const void volatile*);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have pointer types
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have pointer types
   sum += sizeof(ptr) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)': size of pointer is divided by size of pointed type
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; size of pointer is divided by size of pointed type
   sum += sizeof(int) * sizeof(char);
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: suspicious 'sizeof' by 'sizeof' multiplication
   sum += sizeof(ptr) * sizeof(ptr[0]);
@@ -156,11 +156,11 @@ int CE4 = sizeof sizeof(MyConstChar);
 int Test2(MyConstChar* A) {
   int sum = 0;
   sum += sizeof(MyConstChar) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have the same type
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have the same type
   sum += sizeof(MyConstChar) / sizeof(MyChar);
-  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have the same type
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have the same type
   sum += sizeof(A[0]) / sizeof(char);
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have the same type
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have the same type
   return sum;
 }
 
@@ -169,7 +169,7 @@ int Foo() { int A[T]; return sizeof(T); }
 // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: suspicious usage of 'sizeof(K)'
 template <typename T>
 int Bar() { T A[5]; return sizeof(A[0]) / sizeof(T); }
-// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have the same type
+// CHECK-MESSAGES: :[[@LINE-1]]:41: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have the same type
 int Test3() { return Foo<42>() + Bar<char>(); }
 
 static const char* kABC = "abc";
@@ -247,9 +247,9 @@ int Test5() {
   sum += sizeof(A10) / sizeof(PtrArray[0]);
   sum += sizeof(PC) / sizeof(PtrArray[0]);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: suspicious usage of 'sizeof()' on an expression of pointer type
-  // CHECK-MESSAGES: :[[@LINE-2]]:21: warning: suspicious usage of 'sizeof(...)/sizeof(...)': both expressions have the same type
+  // CHECK-MESSAGES: :[[@LINE-2]]:21: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions have the same type
   sum += sizeof(ArrayC) / sizeof(PtrArray[0]);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: suspicious usage of 'sizeof(...)/sizeof(...)': numerator is not a multiple of denominator
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: suspicious usage of 'sizeof(...)/sizeof(...)'; numerator is not a multiple of denominator
 
   // These pointers do not point to aggregate types, so they are not reported in this mode:
   sum += sizeof(PChar);

@@ -342,32 +342,32 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
 
     if (DenominatorSize > CharUnits::Zero() &&
         !NumeratorSize.isMultipleOf(DenominatorSize)) {
-      diag(E->getOperatorLoc(), "suspicious usage of 'sizeof(...)/sizeof(...)':"
+      diag(E->getOperatorLoc(), "suspicious usage of 'sizeof(...)/sizeof(...)';"
                                 " numerator is not a multiple of denominator")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     } else if (ElementSize > CharUnits::Zero() &&
                DenominatorSize > CharUnits::Zero() &&
                ElementSize != DenominatorSize) {
       diag(E->getOperatorLoc(),
-           "suspicious usage of 'sizeof(array)/sizeof(...)':"
+           "suspicious usage of 'sizeof(array)/sizeof(...)';"
            " denominator differs from the size of array elements")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     } else if (NumTy && DenomTy && NumTy == DenomTy) {
       diag(E->getOperatorLoc(),
-           "suspicious usage of 'sizeof(...)/sizeof(...)': both expressions "
+           "suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions "
            "have the same type")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     } else if (!WarnOnSizeOfPointer) {
       // When 'WarnOnSizeOfPointer' is enabled, these messages become redundant:
       if (PointedTy && DenomTy && PointedTy == DenomTy) {
         diag(E->getOperatorLoc(),
-             "suspicious usage of 'sizeof(...)/sizeof(...)': size of pointer "
+             "suspicious usage of 'sizeof(...)/sizeof(...)'; size of pointer "
              "is divided by size of pointed type")
             << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
       } else if (NumTy && DenomTy && NumTy->isPointerType() &&
                  DenomTy->isPointerType()) {
         diag(E->getOperatorLoc(),
-             "suspicious usage of 'sizeof(...)/sizeof(...)': both expressions "
+             "suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions "
              "have pointer types")
             << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
       }
