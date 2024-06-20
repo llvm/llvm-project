@@ -30,9 +30,6 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
 }
 
 const AArch64::ArchInfo *AArch64::getArchForCpu(StringRef CPU) {
-  if (CPU == "generic")
-    return &ARMV8A;
-
   // Note: this now takes cpu aliases into account
   std::optional<CpuInfo> Cpu = parseCpu(CPU);
   if (!Cpu)
@@ -266,7 +263,8 @@ bool AArch64::ExtensionSet::parseModifier(StringRef Modifier,
 }
 
 void AArch64::ExtensionSet::reconstructFromParsedFeatures(
-    const std::vector<std::string> &Features) {
+    const std::vector<std::string> &Features,
+    std::vector<std::string> &NonExtensions) {
   assert(Touched.none() && "Bitset already initialized");
   for (auto &F : Features) {
     bool IsNegated = F[0] == '-';
@@ -276,7 +274,9 @@ void AArch64::ExtensionSet::reconstructFromParsedFeatures(
         Enabled.reset(AE->ID);
       else
         Enabled.set(AE->ID);
+      continue;
     }
+    NonExtensions.push_back(F);
   }
 }
 

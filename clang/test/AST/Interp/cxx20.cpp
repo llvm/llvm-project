@@ -814,3 +814,16 @@ namespace GH64949 {
                               // both-note {{subobject 'g' is not initialized}} \
                               // both-warning {{expression result unused}}
 }
+
+/// This used to cause an assertion failure inside EvaluationResult::checkFullyInitialized.
+namespace CheckingNullPtrForInitialization {
+  struct X {
+    consteval operator const char *() const {
+      return nullptr;
+    }
+  };
+  const char *f() {
+    constexpr X x;
+    return x;
+  }
+}

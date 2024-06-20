@@ -1373,7 +1373,7 @@ std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path)
       llvm::sys::path::is_absolute(Path,
                                    llvm::sys::path::Style::windows_backslash))
     // This covers windows absolute path with forward slash as well, as the
-    // forward slashes are treated as path seperation in llvm::path
+    // forward slashes are treated as path separation in llvm::path
     // regardless of what path::Style is used.
     return {};
 

@@ -113,6 +113,8 @@ def POSIX : StandardSpec<"POSIX"> {
   NamedType PThreadRWLockAttrTType = NamedType<"pthread_rwlockattr_t">;
   PtrType PThreadRWLockAttrTPtr = PtrType<PThreadRWLockAttrTType>;
   ConstType ConstPThreadRWLockAttrTPtr = ConstType<PThreadRWLockAttrTPtr>;
+  RestrictedPtrType RestrictedPThreadRWLockAttrTPtr = RestrictedPtrType<PThreadRWLockAttrTType>;
+  ConstType ConstRestrictedPThreadRWLockAttrTPtr = ConstType<RestrictedPThreadRWLockAttrTPtr>;
 
   NamedType PThreadMutexAttrTType = NamedType<"pthread_mutexattr_t">;
   PtrType PThreadMutexAttrTPtr = PtrType<PThreadMutexAttrTType>;
@@ -125,6 +127,10 @@ def POSIX : StandardSpec<"POSIX"> {
   RestrictedPtrType RestrictedPThreadMutexTPtr = RestrictedPtrType<PThreadMutexTType>;
   ConstType ConstPThreadMutexTPtr = ConstType<PThreadMutexTPtr>;
   ConstType ConstRestrictedPThreadMutexTPtr = ConstType<RestrictedPThreadMutexTPtr>;
+
+  NamedType PThreadRWLockTType = NamedType<"pthread_rwlock_t">;
+  PtrType PThreadRWLockTPtr = PtrType<PThreadRWLockTType>;
+  RestrictedPtrType RestrictedPThreadRWLockTPtr = RestrictedPtrType<PThreadRWLockTType>;
 
   PtrType PThreadTPtr = PtrType<PThreadTType>;
   RestrictedPtrType RestrictedPThreadTPtr = RestrictedPtrType<PThreadTType>;
@@ -1003,6 +1009,7 @@ def POSIX : StandardSpec<"POSIX"> {
         PThreadOnceCallback,
         PThreadOnceT,
         PThreadRWLockAttrTType,
+        PThreadRWLockTType,
         PThreadStartT,
         PThreadTSSDtorT,
         PThreadTType,
@@ -1259,6 +1266,51 @@ def POSIX : StandardSpec<"POSIX"> {
           RetValSpec<IntType>,
           [ArgSpec<PThreadRWLockAttrTPtr>, ArgSpec<IntType>]
       >,
+      FunctionSpec<
+        "pthread_rwlock_init",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>, ArgSpec<ConstRestrictedPThreadRWLockAttrTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_tryrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_trywrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_timedrdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_timedwrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPThreadRWLockTPtr>, ArgSpec<ConstRestrictStructTimeSpecPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_rdlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_wrlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_unlock",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
+      FunctionSpec<
+        "pthread_rwlock_destroy",
+        RetValSpec<IntType>,
+        [ArgSpec<PThreadRWLockTPtr>]
+      >,
     ]
   >;
 
@@ -1292,6 +1344,11 @@ def POSIX : StandardSpec<"POSIX"> {
             "fileno",
             RetValSpec<IntType>,
             [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+            "fdopen",
+            RetValSpec<FILEPtr>,
+            [ArgSpec<IntType>, ArgSpec<ConstCharPtr>]
           >,
       ]
   >;
@@ -1616,6 +1673,7 @@ def POSIX : StandardSpec<"POSIX"> {
       PThreadMutexTType,
       PThreadOnceT,
       PThreadRWLockAttrTType,
+      PThreadRWLockTType,
       PThreadTType,
       PidT,
       SSizeTType,

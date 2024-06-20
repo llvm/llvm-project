@@ -1466,7 +1466,7 @@ define i32 @bitcast_known_nonzero(<2 x i16> %xx) {
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    cvttps2dq %xmm0, %xmm0
 ; X86-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [256,256,u,u,u,u,u,u]
 ; X86-NEXT:    movd %xmm0, %eax
 ; X86-NEXT:    bsfl %eax, %ecx
 ; X86-NEXT:    movl $32, %eax
@@ -1480,7 +1480,7 @@ define i32 @bitcast_known_nonzero(<2 x i16> %xx) {
 ; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; X64-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [256,256,u,u,u,u,u,u]
 ; X64-NEXT:    vmovd %xmm0, %eax
 ; X64-NEXT:    bsfl %eax, %ecx
 ; X64-NEXT:    movl $32, %eax
