@@ -59,7 +59,7 @@ const unsigned VERSION_MINOR = 1;
 ///
 /// The ID numbers of identifiers are consecutive (in order of discovery)
 /// and start at 1. 0 is reserved for NULL.
-using IdentifierID = uint32_t;
+using IdentifierID = uint64_t;
 
 /// The number of predefined identifier IDs.
 const unsigned int NUM_PREDEF_IDENT_IDS = 1;
@@ -2004,9 +2004,9 @@ struct ObjCCategoriesInfo {
 
   ObjCCategoriesInfo() = default;
   ObjCCategoriesInfo(LocalDeclID ID, unsigned Offset)
-      : DefinitionID(ID.get()), Offset(Offset) {}
+      : DefinitionID(ID.getRawValue()), Offset(Offset) {}
 
-  LocalDeclID getDefinitionID() const { return LocalDeclID(DefinitionID); }
+  DeclID getDefinitionID() const { return DefinitionID; }
 
   friend bool operator<(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {

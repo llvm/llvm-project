@@ -2590,3 +2590,34 @@ func.func @vector_bitcast_2d(%arg0: vector<2x4xi32>) -> vector<2x2xi64> {
   %0 = vector.bitcast %arg0 : vector<2x4xi32> to vector<2x2xi64>
   return %0 : vector<2x2xi64>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @vector_from_elements_1d(
+//  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: f32)
+//       CHECK:   %[[undef:.*]] = llvm.mlir.undef : vector<3xf32>
+//       CHECK:   %[[c0:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK:   %[[insert0:.*]] = llvm.insertelement %[[a]], %[[undef]][%[[c0]] : i64] : vector<3xf32>
+//       CHECK:   %[[c1:.*]] = llvm.mlir.constant(1 : i64) : i64
+//       CHECK:   %[[insert1:.*]] = llvm.insertelement %[[b]], %[[insert0]][%[[c1]] : i64] : vector<3xf32>
+//       CHECK:   %[[c2:.*]] = llvm.mlir.constant(2 : i64) : i64
+//       CHECK:   %[[insert2:.*]] = llvm.insertelement %[[a]], %[[insert1]][%[[c2]] : i64] : vector<3xf32>
+//       CHECK:   return %[[insert2]]
+func.func @vector_from_elements_1d(%a: f32, %b: f32) -> vector<3xf32> {
+  %0 = vector.from_elements %a, %b, %a : vector<3xf32>
+  return %0 : vector<3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @vector_from_elements_0d(
+//  CHECK-SAME:     %[[a:.*]]: f32)
+//       CHECK:   %[[undef:.*]] = llvm.mlir.undef : vector<1xf32>
+//       CHECK:   %[[c0:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK:   %[[insert0:.*]] = llvm.insertelement %[[a]], %[[undef]][%[[c0]] : i64] : vector<1xf32>
+//       CHECK:   %[[cast:.*]] = builtin.unrealized_conversion_cast %[[insert0]] : vector<1xf32> to vector<f32>
+//       CHECK:   return %[[cast]]
+func.func @vector_from_elements_0d(%a: f32) -> vector<f32> {
+  %0 = vector.from_elements %a : vector<f32>
+  return %0 : vector<f32>
+}
