@@ -101,6 +101,8 @@ static const int UseBiasVar = 0;
 static const char *FileOpenMode = "a+b";
 static void *BiasAddr = NULL;
 static void *BiasDefaultAddr = NULL;
+static void *BitmapBiasAddr = NULL;
+static void *BitmapBiasDefaultAddr = NULL;
 static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   /* Get the sizes of various profile data sections. Taken from
    * __llvm_profile_get_size_for_buffer(). */
