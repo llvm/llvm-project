@@ -1330,11 +1330,20 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       }
     }
 
+    auto Eval = [&](Expr *Init, unsigned ElemIndex) {
+      return visitArrayElemInit(ElemIndex, Init);
+    };
+
     unsigned ElementIndex = 0;
     for (const Expr *Init : Inits) {
-      if (!this->visitArrayElemInit(ElementIndex, Init))
-        return false;
-      ++ElementIndex;
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+        if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
+          return false;
+      } else {
+        if (!this->visitArrayElemInit(ElementIndex, Init))
+          return false;
+        ++ElementIndex;
+      }
     }
 
     // Expand the filler expression.
@@ -1478,6 +1487,12 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
       return true;
   }
   return this->delegate(E->getSubExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
+  auto It = E->begin();
+  return this->visit(*It);
 }
 
 static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,

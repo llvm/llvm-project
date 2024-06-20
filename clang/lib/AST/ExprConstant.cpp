@@ -7727,6 +7727,11 @@ public:
     return Error(E);
   }
 
+  bool VisitEmbedExpr(const EmbedExpr *E) {
+    const auto It = E->begin();
+    return StmtVisitorTy::Visit(*It);
+  }
+
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
     return StmtVisitorTy::Visit(E->getFunctionName());
   }
@@ -9142,6 +9147,11 @@ public:
     APValue LValResult = E->EvaluateInContext(
         Info.Ctx, Info.CurrentCall->CurSourceLocExprScope.getDefaultExpr());
     Result.setFrom(Info.Ctx, LValResult);
+    return true;
+  }
+
+  bool VisitEmbedExpr(const EmbedExpr *E) {
+    llvm::report_fatal_error("Not yet implemented for ExprConstant.cpp");
     return true;
   }
 
@@ -11256,8 +11266,17 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   // If the initializer might depend on the array index, run it for each
   // array element.
-  if (NumEltsToInit != NumElts && MaybeElementDependentArrayFiller(ArrayFiller))
+  if (NumEltsToInit != NumElts &&
+      MaybeElementDependentArrayFiller(ArrayFiller)) {
     NumEltsToInit = NumElts;
+  } else {
+    for (auto *Init : Args) {
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts()))
+        NumEltsToInit += EmbedS->getDataElementCount() - 1;
+    }
+    if (NumEltsToInit > NumElts)
+      NumEltsToInit = NumElts;
+  }
 
   LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
                           << NumEltsToInit << ".\n");
@@ -11275,15 +11294,48 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   LValue Subobject = This;
   Subobject.addArray(Info, ExprToVisit, CAT);
-  for (unsigned Index = 0; Index != NumEltsToInit; ++Index) {
-    const Expr *Init = Index < Args.size() ? Args[Index] : ArrayFiller;
-    if (!EvaluateInPlace(Result.getArrayInitializedElt(Index),
-                         Info, Subobject, Init) ||
+  auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
+    if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
+                         Subobject, Init) ||
         !HandleLValueArrayAdjustment(Info, Init, Subobject,
                                      CAT->getElementType(), 1)) {
       if (!Info.noteFailure())
         return false;
       Success = false;
+    }
+    return true;
+  };
+  unsigned ArrayIndex = 0;
+  QualType DestTy = CAT->getElementType();
+  APSInt Value(Info.Ctx.getTypeSize(DestTy), DestTy->isUnsignedIntegerType());
+  for (unsigned Index = 0; Index != NumEltsToInit; ++Index) {
+    const Expr *Init = Index < Args.size() ? Args[Index] : ArrayFiller;
+    if (ArrayIndex >= NumEltsToInit)
+      break;
+    if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+      StringLiteral *SL = EmbedS->getDataStringLiteral();
+      for (unsigned I = EmbedS->getStartingElementPos(),
+                    N = EmbedS->getDataElementCount();
+           I != EmbedS->getStartingElementPos() + N; ++I) {
+        Value = SL->getCodeUnit(I);
+        if (DestTy->isIntegerType()) {
+          Result.getArrayInitializedElt(ArrayIndex) = APValue(Value);
+        } else {
+          assert(DestTy->isFloatingType() && "unexpected type");
+          const FPOptions FPO =
+              Init->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+          APFloat FValue(0.0);
+          if (!HandleIntToFloatCast(Info, Init, FPO, EmbedS->getType(), Value,
+                                    DestTy, FValue))
+            return false;
+          Result.getArrayInitializedElt(ArrayIndex) = APValue(FValue);
+        }
+        ArrayIndex++;
+      }
+    } else {
+      if (!Eval(Init, ArrayIndex))
+        return false;
+      ++ArrayIndex;
     }
   }
 
@@ -16390,6 +16442,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SizeOfPackExprClass:
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
+  case Expr::EmbedExprClass:
     return NoDiag();
 
   case Expr::PackIndexingExprClass:

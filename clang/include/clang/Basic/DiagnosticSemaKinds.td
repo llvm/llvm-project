@@ -1097,8 +1097,6 @@ def note_surrounding_namespace_starts_here : Note<
   "surrounding namespace with visibility attribute starts here">;
 def err_pragma_loop_invalid_argument_type : Error<
   "invalid argument of type %0; expected an integer type">;
-def err_pragma_loop_invalid_argument_value : Error<
-  "%select{invalid value '%0'; must be positive|value '%0' is too large}1">;
 def err_pragma_loop_compatibility : Error<
   "%select{incompatible|duplicate}0 directives '%1' and '%2'">;
 def err_pragma_loop_precedes_nonloop : Error<
