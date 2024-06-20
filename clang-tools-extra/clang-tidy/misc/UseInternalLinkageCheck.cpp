@@ -82,11 +82,19 @@ static constexpr StringRef Message =
 
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
-    diag(FD->getLocation(), Message) << "function" << FD;
+    DiagnosticBuilder DB = diag(FD->getLocation(), Message) << "function" << FD;
+    SourceLocation FixLoc = FD->getTypeSpecStartLoc();
+    if (FixLoc.isInvalid() || FixLoc.isMacroID())
+      return;
+    DB << FixItHint::CreateInsertion(FixLoc, "static ");
     return;
   }
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var")) {
-    diag(VD->getLocation(), Message) << "variable" << VD;
+    DiagnosticBuilder DB = diag(VD->getLocation(), Message) << "variable" << VD;
+    SourceLocation FixLoc = VD->getTypeSpecStartLoc();
+    if (FixLoc.isInvalid() || FixLoc.isMacroID())
+      return;
+    DB << FixItHint::CreateInsertion(FixLoc, "static ");
     return;
   }
   llvm_unreachable("");

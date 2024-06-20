@@ -4,6 +4,7 @@
 
 void func() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'func'
+// CHECK-FIXES: static void func() {}
 
 template<class T>
 void func_template() {}

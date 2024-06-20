@@ -4,6 +4,7 @@
 
 int global;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: variable 'global'
+// CHECK-FIXES: static int global;
 
 template<class T>
 T global_template;
