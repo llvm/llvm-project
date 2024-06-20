@@ -202,6 +202,16 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BreakAfterControlStatementStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakAfterControlStatementStyle &Value) {
+    IO.enumCase(Value, "Default", FormatStyle::BACSS_Default);
+    IO.enumCase(Value, "MultiLine", FormatStyle::BACSS_MultiLine);
+    IO.enumCase(Value, "No", FormatStyle::BACSS_No);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::BracketAlignmentStyle> {
   static void enumeration(IO &IO, FormatStyle::BracketAlignmentStyle &Value) {
     IO.enumCase(Value, "Align", FormatStyle::BAS_Align);
@@ -965,6 +975,8 @@ template <> struct MappingTraits<FormatStyle> {
 
     IO.mapOptional("AccessModifierOffset", Style.AccessModifierOffset);
     IO.mapOptional("AlignAfterOpenBracket", Style.AlignAfterOpenBracket);
+    IO.mapOptional("AlignAfterControlStatement",
+                   Style.AlignAfterControlStatement);
     IO.mapOptional("AlignArrayOfStructures", Style.AlignArrayOfStructures);
     IO.mapOptional("AlignConsecutiveAssignments",
                    Style.AlignConsecutiveAssignments);
@@ -1499,6 +1511,7 @@ static void expandPresetsSpacesInParens(FormatStyle &Expanded) {
 FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
   LLVMStyle.AccessModifierOffset = -2;
+  LLVMStyle.AlignAfterControlStatement = FormatStyle::BACSS_Default;
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
   LLVMStyle.AlignArrayOfStructures = FormatStyle::AIAS_None;
   LLVMStyle.AlignConsecutiveAssignments = {};
