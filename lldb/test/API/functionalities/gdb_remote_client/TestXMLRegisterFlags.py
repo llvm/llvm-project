@@ -976,3 +976,82 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         self.expect(
             "register info x0", substrs=["| 63-0  |\n" "|-------|\n" "| valid |"]
         )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_many_fields_same_enum(self):
+        """Check that an enum can be reused by many fields, and fields of many
+        registers."""
+
+        self.setup_register_test(
+            """\
+          <enum id="some_enum" size="8">
+            <evalue name="valid" value="1"/>
+          </enum>
+          <flags id="x0_flags" size="8">
+            <field name="f1" start="0" end="0" type="some_enum"/>
+            <field name="f2" start="1" end="1" type="some_enum"/>
+          </flags>
+          <flags id="cpsr_flags" size="4">
+            <field name="f1" start="0" end="0" type="some_enum"/>
+            <field name="f2" start="1" end="1" type="some_enum"/>
+          </flags>
+          <reg name="pc" bitsize="64"/>
+          <reg name="x0" regnum="0" bitsize="64" type="x0_flags"/>
+          <reg name="cpsr" regnum="33" bitsize="32" type="cpsr_flags"/>"""
+        )
+
+        expected_info = [
+            dedent(
+                """\
+             f2: 1 = valid
+
+             f1: 1 = valid$"""
+            )
+        ]
+        self.expect("register info x0", patterns=expected_info)
+
+        self.expect("register info cpsr", patterns=expected_info)
+
+        expected_read = ["\(f2 = valid, f1 = valid\)$"]
+        self.expect("register read x0", patterns=expected_read)
+        self.expect("register read cpsr", patterns=expected_read)
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_fields_same_name_different_enum(self):
+        """Check that lldb does something sensible when there are two fields with
+        the same name, but their enum types differ."""
+
+        # It's unlikely anyone would do this intentionally but it is allowed by
+        # the protocol spec so we have to cope with it.
+        self.setup_register_test(
+            """\
+          <enum id="foo_enum" size="8">
+            <evalue name="foo_0" value="1"/>
+          </enum>
+          <enum id="foo_alt_enum" size="8">
+            <evalue name="foo_1" value="1"/>
+          </enum>
+          <flags id="x0_flags" size="8">
+            <field name="foo" start="0" end="0" type="foo_enum"/>
+            <field name="foo" start="1" end="1" type="foo_alt_enum"/>
+          </flags>
+          <reg name="pc" bitsize="64"/>
+          <reg name="x0" regnum="0" bitsize="64" type="x0_flags"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>"""
+        )
+
+        self.expect(
+            "register info x0",
+            patterns=[
+                dedent(
+                    """\
+             foo: 1 = foo_1
+
+             foo: 1 = foo_0$"""
+                )
+            ],
+        )
+
+        self.expect("register read x0", patterns=["\(foo = foo_1, foo = foo_0\)$"])

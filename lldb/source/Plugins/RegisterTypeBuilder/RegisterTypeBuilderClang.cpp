@@ -70,25 +70,35 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
 
       if (const FieldEnum *enum_type = field.GetEnum()) {
         const FieldEnum::Enumerators &enumerators = enum_type->GetEnumerators();
+        if (!enumerators.empty()) {
+          std::string enum_type_name =
+              "__lldb_register_fields_enum_" + enum_type->GetID();
 
-        if (enumerators.empty())
-          continue;
+          // Enums can be used by mutiple fields and multiple registers, so we
+          // may have built this one already.
+          CompilerType field_enum_type =
+              type_system->GetTypeForIdentifier<clang::EnumDecl>(
+                  enum_type_name);
 
-        std::string enum_type_name =
-            register_type_name + "_" + field.GetName() + "_enum";
-        field_type = type_system->CreateEnumerationType(
-            enum_type_name, type_system->GetTranslationUnitDecl(),
-            OptionalClangModuleID(), Declaration(), field_uint_type, false);
+          if (field_enum_type)
+            field_type = field_enum_type;
+          else {
+            field_type = type_system->CreateEnumerationType(
+                enum_type_name, type_system->GetTranslationUnitDecl(),
+                OptionalClangModuleID(), Declaration(), field_uint_type, false);
 
-        type_system->StartTagDeclarationDefinition(field_type);
+            type_system->StartTagDeclarationDefinition(field_type);
 
-        Declaration decl;
-        for (auto enumerator : enumerators)
-          type_system->AddEnumerationValueToEnumerationType(
-              field_type, decl, enumerator.m_name.c_str(), enumerator.m_value,
-              byte_size * 8);
+            Declaration decl;
+            for (auto enumerator : enumerators) {
+              type_system->AddEnumerationValueToEnumerationType(
+                  field_type, decl, enumerator.m_name.c_str(),
+                  enumerator.m_value, byte_size * 8);
+            }
 
-        type_system->CompleteTagDeclarationDefinition(field_type);
+            type_system->CompleteTagDeclarationDefinition(field_type);
+          }
+        }
       }
 
       type_system->AddFieldToRecordType(fields_type, field.GetName(),
