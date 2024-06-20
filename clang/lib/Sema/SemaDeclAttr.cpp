@@ -7340,14 +7340,13 @@ struct register_binding_flags {
   bool other = false;
   bool basic = false;
 
-  bool srv;
-  bool uav;
-  bool cbv;
-  bool sampler;
+  bool srv = false;
+  bool uav = false;
+  bool cbv = false;
+  bool sampler = false;
 
   bool contains_numeric = false;
   bool default_globals = false;
-  bool is_member = false;
 };
 
 bool isDeclaredWithinCOrTBuffer(const Decl *decl) {
@@ -7392,6 +7391,63 @@ const HLSLResourceAttr *getHLSLResourceAttrFromVarDecl(VarDecl *SamplerUAVOrSRV)
   TheRecordDecl = TheRecordDecl->getCanonicalDecl();
   const auto *Attr = TheRecordDecl->getAttr<HLSLResourceAttr>();
   return Attr;
+}
+
+void traverseType(QualType T, register_binding_flags &r) {
+  if (T->isIntegralOrEnumerationType() || T->isFloatingType()) {
+    r.contains_numeric = true;
+    return;
+  } else if (const RecordType *RT = T->getAs<RecordType>()) {
+    RecordDecl *SubRD = RT->getDecl();
+    if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(SubRD)) {
+      auto TheRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
+      TheRecordDecl = TheRecordDecl->getCanonicalDecl();
+      const auto *Attr = TheRecordDecl->getAttr<HLSLResourceAttr>();
+      llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
+      switch (DeclResourceClass) {
+      case llvm::hlsl::ResourceClass::SRV: {
+        r.srv = true;
+        break;
+      }
+      case llvm::hlsl::ResourceClass::UAV: {
+        r.uav = true;
+        break;
+      }
+      case llvm::hlsl::ResourceClass::CBuffer: {
+        r.cbv = true;
+        break;
+      }
+      case llvm::hlsl::ResourceClass::Sampler: {
+        r.sampler = true;
+        break;
+      }
+      case llvm::hlsl::ResourceClass::Invalid: {
+        llvm_unreachable("Resource class should be valid.");
+        break;
+      }
+      }
+    }
+
+    else if (SubRD->isCompleteDefinition()) {
+      for (auto Field : SubRD->fields()) {
+        QualType T = Field->getType();
+        traverseType(T, r);
+      }
+    }
+  }
+}
+
+void setResourceClassFlagsFromRecordDecl(register_binding_flags &r,
+                                         const RecordDecl *RD) {
+  if (!RD)
+    return;
+
+  if (RD->isCompleteDefinition()) {
+    for (auto Field : RD->fields()) {
+      QualType T = Field->getType();
+      traverseType(T, r);
+    }
+  }
 }
 
 register_binding_flags HLSLFillRegisterBindingFlags(Sema &S, Decl *D) {
@@ -7452,7 +7508,12 @@ register_binding_flags HLSLFillRegisterBindingFlags(Sema &S, Decl *D) {
         r.basic = true;
       else if (SamplerUAVOrSRV->getType()->isAggregateType()) {        
         r.udt = true;
-        // recurse through members, set appropriate resource class flags.
+        QualType VarType = SamplerUAVOrSRV->getType();
+        if (const RecordType *RT = VarType->getAs<RecordType>()) {
+          const RecordDecl *RD = RT->getDecl();
+          // recurse through members, set appropriate resource class flags.
+          setResourceClassFlagsFromRecordDecl(r, RD);
+        }
       }
       else
         r.other = true;
@@ -7479,6 +7540,9 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
 
 static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
                                           const ParsedAttr &AL) {
+  if (S.RequireCompleteType(D->getBeginLoc(), cast<ValueDecl>(D)->getType(),
+                            diag::err_incomplete_type))
+    return;
   StringRef Space = "space0";
   StringRef Slot = "";
 

@@ -4859,6 +4859,8 @@ void Parser::ParseStructDeclaration(
 
     // If attributes exist after the declarator, parse them.
     MaybeParseGNUAttributes(DeclaratorInfo.D);
+    if (getLangOpts().HLSL)
+      MaybeParseHLSLSemantics(DeclaratorInfo.D);
 
     // We're done with this declarator;  invoke the callback.
     FieldsCallback(DeclaratorInfo);
