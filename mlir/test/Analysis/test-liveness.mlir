@@ -40,7 +40,7 @@ func.func @func_simpleBranch(%arg0: i32, %arg1 : i32) -> i32 {
   // CHECK-SAME:    arg0@0 arg1@0 val_2
   // CHECK: return
   // CHECK-SAME:    val_2
-  // CHECK-NEXT EndCurrentlyLive
+  // CHECK-NEXT:EndCurrentlyLive
   %result = arith.addi %arg0, %arg1 : i32
   return %result : i32
 }
@@ -197,9 +197,9 @@ func.func @func_ranges(%cond : i1, %arg1 : i32, %arg2 : i32, %arg3 : i32) -> i32
   // CHECK-NEXT:    %2 = arith.addi
   // CHECK-NEXT:    %3 = arith.muli
   // CHECK-NEXT: val_7
-  // CHECK-NEXT    %2 = arith.addi
-  // CHECK-NEXT    %3 = arith.muli
-  // CHECK-NEXT    %4 = arith.muli
+  // CHECK-NEXT:   %2 = arith.addi
+  // CHECK-NEXT:   %3 = arith.muli
+  // CHECK-NEXT:   %4 = arith.muli
   // CHECK:      val_8
   // CHECK-NEXT:    %3 = arith.muli
   // CHECK-NEXT:    %4 = arith.muli

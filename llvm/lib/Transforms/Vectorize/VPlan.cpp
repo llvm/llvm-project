@@ -231,6 +231,11 @@ Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
     return Data
         .PerPartScalars[Def][Instance.Part][Instance.Lane.mapToCacheIndex(VF)];
   }
+  if (!Instance.Lane.isFirstLane() &&
+      vputils::isUniformAfterVectorization(Def) &&
+      hasScalarValue(Def, {Instance.Part, VPLane::getFirstLane()})) {
+    return Data.PerPartScalars[Def][Instance.Part][0];
+  }
 
   assert(hasVectorValue(Def, Instance.Part));
   auto *VecPart = Data.PerPartOutput[Def][Instance.Part];
@@ -443,24 +448,21 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 }
 
 void VPIRBasicBlock::execute(VPTransformState *State) {
-  assert(getHierarchicalSuccessors().empty() &&
-         "VPIRBasicBlock cannot have successors at the moment");
 
   State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
   executeRecipes(State, getIRBasicBlock());
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
-    auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     BasicBlock *PredBB = State->CFG.VPBB2IRBB[PredVPBB];
-
     assert(PredBB && "Predecessor basic-block not found building successor.");
-    auto *PredBBTerminator = PredBB->getTerminator();
     LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
 
+    auto *PredBBTerminator = PredBB->getTerminator();
     auto *TermBr = cast<BranchInst>(PredBBTerminator);
     // Set each forward successor here when it is created, excluding
     // backedges. A backward successor is set when the branch is created.
+    const auto &PredVPSuccessors = PredVPBB->getHierarchicalSuccessors();
     unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
     assert(!TermBr->getSuccessor(idx) &&
            "Trying to reset an existing successor block.");
@@ -480,38 +482,14 @@ void VPBasicBlock::execute(VPTransformState *State) {
     return R && !R->isReplicator();
   };
 
-  // 1. Create an IR basic block, or reuse the last one or ExitBB if possible.
-  if (getPlan()->getVectorLoopRegion()->getSingleSuccessor() == this) {
-    // ExitBB can be re-used for the exit block of the Plan.
-    NewBB = State->CFG.ExitBB;
-    State->CFG.PrevBB = NewBB;
-    State->Builder.SetInsertPoint(NewBB->getFirstNonPHI());
-
-    // Update the branch instruction in the predecessor to branch to ExitBB.
-    VPBlockBase *PredVPB = getSingleHierarchicalPredecessor();
-    VPBasicBlock *ExitingVPBB = PredVPB->getExitingBasicBlock();
-    assert(PredVPB->getSingleSuccessor() == this &&
-           "predecessor must have the current block as only successor");
-    BasicBlock *ExitingBB = State->CFG.VPBB2IRBB[ExitingVPBB];
-    // The Exit block of a loop is always set to be successor 0 of the Exiting
-    // block.
-    cast<BranchInst>(ExitingBB->getTerminator())->setSuccessor(0, NewBB);
-    // Set the insert point for recipe execution in the block.
-    State->Builder.SetInsertPoint(NewBB->getTerminator());
-    if (getSuccessors().size() == 1) {
-      BranchInst *Br = State->Builder.CreateBr(NewBB);
-      Br->setSuccessor(0, nullptr);
-      NewBB->getTerminator()->eraseFromParent();
-      State->Builder.SetInsertPoint(NewBB->getTerminator());
-    }
-    State->CFG.DTU.applyUpdates({{DominatorTree::Insert, ExitingBB, NewBB}});
-  } else if (PrevVPBB && /* A */
-             !((SingleHPred = getSingleHierarchicalPredecessor()) &&
-               SingleHPred->getExitingBasicBlock() == PrevVPBB &&
-               PrevVPBB->getSingleHierarchicalSuccessor() &&
-               (SingleHPred->getParent() == getEnclosingLoopRegion() &&
-                !IsLoopRegion(SingleHPred))) &&         /* B */
-             !(Replica && getPredecessors().empty())) { /* C */
+  // 1. Create an IR basic block.
+  if (PrevVPBB && /* A */
+      !((SingleHPred = getSingleHierarchicalPredecessor()) &&
+        SingleHPred->getExitingBasicBlock() == PrevVPBB &&
+        PrevVPBB->getSingleHierarchicalSuccessor() &&
+        (SingleHPred->getParent() == getEnclosingLoopRegion() &&
+         !IsLoopRegion(SingleHPred))) &&         /* B */
+      !(Replica && getPredecessors().empty())) { /* C */
     // The last IR basic block is reused, as an optimization, in three cases:
     // A. the first VPBB reuses the loop pre-header BB - when PrevVPBB is null;
     // B. when the current VPBB has a single (hierarchical) predecessor which
@@ -904,6 +882,18 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   }
 }
 
+/// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
+/// VPBB are moved to the newly created VPIRBasicBlock.
+static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
+  VPIRBasicBlock *IRMiddleVPBB = new VPIRBasicBlock(IRBB);
+  for (auto &R : make_early_inc_range(*VPBB))
+    R.moveBefore(*IRMiddleVPBB, IRMiddleVPBB->end());
+  VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
+  VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
+  VPBlockUtils::connectBlocks(PredVPBB, IRMiddleVPBB);
+  delete VPBB;
+}
+
 /// Generate the code inside the preheader and body of the vectorized loop.
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
@@ -913,6 +903,9 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
   State->Builder.SetInsertPoint(VectorPreHeader->getTerminator());
+  replaceVPBBWithIRVPBB(
+      cast<VPBasicBlock>(getVectorLoopRegion()->getSingleSuccessor()),
+      State->CFG.ExitBB);
 
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
   cast<BranchInst>(VectorPreHeader->getTerminator())->setSuccessor(0, nullptr);
@@ -1532,4 +1525,24 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   }
   Plan.addSCEVExpansion(Expr, Expanded);
   return Expanded;
+}
+
+bool vputils::isHeaderMask(VPValue *V, VPlan &Plan) {
+  if (isa<VPActiveLaneMaskPHIRecipe>(V))
+    return true;
+
+  auto IsWideCanonicalIV = [](VPValue *A) {
+    return isa<VPWidenCanonicalIVRecipe>(A) ||
+           (isa<VPWidenIntOrFpInductionRecipe>(A) &&
+            cast<VPWidenIntOrFpInductionRecipe>(A)->isCanonical());
+  };
+
+  VPValue *A, *B;
+  if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B))))
+    return B == Plan.getTripCount() &&
+           (match(A, m_ScalarIVSteps(m_CanonicalIV(), m_SpecificInt(1))) ||
+            IsWideCanonicalIV(A));
+
+  return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
+         IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
 }

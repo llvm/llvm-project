@@ -2330,39 +2330,47 @@ llvm.func @streaming_compatible_func() attributes {arm_streaming_compatible} {
 // -----
 
 // CHECK-LABEL: @new_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @new_za_func() attributes {arm_new_za} {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_new_za" }
+// CHECK: #[[ATTR]] = { "aarch64_new_za" }
+
+// -----
 
 // CHECK-LABEL: @in_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @in_za_func() attributes {arm_in_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_in_za" }
+// CHECK: #[[ATTR]] = { "aarch64_in_za" }
+
+// -----
 
 // CHECK-LABEL: @out_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @out_za_func() attributes {arm_out_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_out_za" }
+// CHECK: #[[ATTR]] = { "aarch64_out_za" }
+
+// -----
 
 // CHECK-LABEL: @inout_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @inout_za_func() attributes {arm_inout_za } {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_inout_za" }
+// CHECK: #[[ATTR]] = { "aarch64_inout_za" }
+
+// -----
 
 // CHECK-LABEL: @preserves_za_func
-// CHECK: #[[ATTR:[0-9]*]]
+// CHECK-SAME: #[[ATTR:[0-9]*]]
 llvm.func @preserves_za_func() attributes {arm_preserves_za} {
   llvm.return
 }
-// CHECK #[[ATTR]] = { "aarch64_preserves_za" }
+// CHECK: #[[ATTR]] = { "aarch64_preserves_za" }
 
 // -----
 

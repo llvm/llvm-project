@@ -557,13 +557,13 @@ inline _LIBCPP_HIDE_FROM_ABI long double hypot(long double __x, long double __y,
 
 template <class _A1, class _A2, class _A3>
 inline _LIBCPP_HIDE_FROM_ABI
-    typename enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value && is_arithmetic<_A3>::value,
-                          __promote<_A1, _A2, _A3> >::type
-    hypot(_A1 __lcpp_x, _A2 __lcpp_y, _A3 __lcpp_z) _NOEXCEPT {
+typename enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value && is_arithmetic<_A3>::value,
+                      __promote<_A1, _A2, _A3> >::type
+hypot(_A1 __lcpp_x, _A2 __lcpp_y, _A3 __lcpp_z) _NOEXCEPT {
   typedef typename __promote<_A1, _A2, _A3>::type __result_type;
-  static_assert((!(is_same<_A1, __result_type>::value && is_same<_A2, __result_type>::value &&
-                   is_same<_A3, __result_type>::value)),
-                "");
+  static_assert(
+      !(is_same<_A1, __result_type>::value && is_same<_A2, __result_type>::value && is_same<_A3, __result_type>::value),
+      "");
   return std::hypot((__result_type)__lcpp_x, (__result_type)__lcpp_y, (__result_type)__lcpp_z);
 }
 #endif
@@ -629,7 +629,7 @@ template <class _A1,
 _LIBCPP_CONSTEXPR inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type
 __constexpr_copysign(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename std::__promote<_A1, _A2>::type __result_type;
-  static_assert((!(std::_IsSame<_A1, __result_type>::value && std::_IsSame<_A2, __result_type>::value)), "");
+  static_assert(!(std::_IsSame<_A1, __result_type>::value && std::_IsSame<_A2, __result_type>::value), "");
   return __builtin_copysign((__result_type)__x, (__result_type)__y);
 }
 

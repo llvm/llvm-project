@@ -590,9 +590,7 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
 }
 
 bool isGenericAtomic(unsigned Opc) {
-  return Opc == AMDGPU::G_AMDGPU_ATOMIC_FMIN ||
-         Opc == AMDGPU::G_AMDGPU_ATOMIC_FMAX ||
-         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
+  return Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN ||

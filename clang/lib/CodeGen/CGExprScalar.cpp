@@ -506,6 +506,7 @@ public:
   }
 
   Value *VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E);
+  Value *VisitEmbedExpr(EmbedExpr *E);
 
   Value *VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
@@ -1796,6 +1797,12 @@ ScalarExprEmitter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
                                                      "usn_addr_cast");
 }
 
+Value *ScalarExprEmitter::VisitEmbedExpr(EmbedExpr *E) {
+  assert(E->getDataElementCount() == 1);
+  auto It = E->begin();
+  return Builder.getInt((*It)->getValue());
+}
+
 Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
   // Vector Mask Case
   if (E->getNumSubExprs() == 2) {
@@ -1937,7 +1944,26 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
     }
   }
 
-  return EmitLoadOfLValue(E);
+  llvm::Value *Result = EmitLoadOfLValue(E);
+
+  // If -fdebug-info-for-profiling is specified, emit a pseudo variable and its
+  // debug info for the pointer, even if there is no variable associated with
+  // the pointer's expression.
+  if (CGF.CGM.getCodeGenOpts().DebugInfoForProfiling && CGF.getDebugInfo()) {
+    if (llvm::LoadInst *Load = dyn_cast<llvm::LoadInst>(Result)) {
+      if (llvm::GetElementPtrInst *GEP =
+              dyn_cast<llvm::GetElementPtrInst>(Load->getPointerOperand())) {
+        if (llvm::Instruction *Pointer =
+                dyn_cast<llvm::Instruction>(GEP->getPointerOperand())) {
+          QualType Ty = E->getBase()->getType();
+          if (!E->isArrow())
+            Ty = CGF.getContext().getPointerType(Ty);
+          CGF.getDebugInfo()->EmitPseudoVariable(Builder, Pointer, Ty);
+        }
+      }
+    }
+  }
+  return Result;
 }
 
 Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
@@ -5338,28 +5364,9 @@ Value *ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
     CGF.EmitVariablyModifiedType(Ty);
 
   Address ArgValue = Address::invalid();
-  Address ArgPtr = CGF.EmitVAArg(VE, ArgValue);
+  RValue ArgPtr = CGF.EmitVAArg(VE, ArgValue);
 
-  llvm::Type *ArgTy = ConvertType(VE->getType());
-
-  // If EmitVAArg fails, emit an error.
-  if (!ArgPtr.isValid()) {
-    CGF.ErrorUnsupported(VE, "va_arg expression");
-    return llvm::UndefValue::get(ArgTy);
-  }
-
-  // FIXME Volatility.
-  llvm::Value *Val = Builder.CreateLoad(ArgPtr);
-
-  // If EmitVAArg promoted the type, we must truncate it.
-  if (ArgTy != Val->getType()) {
-    if (ArgTy->isPointerTy() && !Val->getType()->isPointerTy())
-      Val = Builder.CreateIntToPtr(Val, ArgTy);
-    else
-      Val = Builder.CreateTrunc(Val, ArgTy);
-  }
-
-  return Val;
+  return ArgPtr.getScalarVal();
 }
 
 Value *ScalarExprEmitter::VisitBlockExpr(const BlockExpr *block) {
