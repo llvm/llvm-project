@@ -4004,6 +4004,9 @@ def err_attribute_argument_out_of_bounds_extra_info : Error<
   "%plural{0:no parameters to index into|"
   "1:can only be 1, since there is one parameter|"
   ":must be between 1 and %2}2">;
+def warn_attribute_mismatch : Warning<
+  "attribute mismatch between function declarations of %0">,
+  InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 
 // Thread Safety Analysis
 def warn_unlock_but_no_lock : Warning<"releasing %0 '%1' that was not held">,
@@ -4054,7 +4057,6 @@ def warn_acquired_before : Warning<
 def warn_acquired_before_after_cycle : Warning<
   "cycle in acquired_before/after dependencies, starting with '%0'">,
   InGroup<ThreadSafetyAnalysis>, DefaultIgnore;
-
 
 // Thread safety warnings negative capabilities
 def warn_acquire_requires_negative_cap : Warning<
