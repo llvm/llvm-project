@@ -451,6 +451,11 @@ void VPIRBasicBlock::execute(VPTransformState *State) {
 
   State->Builder.SetInsertPoint(getIRBasicBlock()->getTerminator());
   executeRecipes(State, getIRBasicBlock());
+  if (getSingleSuccessor() && isa<UnreachableInst>(getIRBasicBlock()->getTerminator())) {
+    auto *Br = State->Builder.CreateBr(getIRBasicBlock());
+    Br->setOperand(0, nullptr);
+getIRBasicBlock()->getTerminator()->eraseFromParent();
+  }
 
   for (VPBlockBase *PredVPBlock : getHierarchicalPredecessors()) {
     VPBasicBlock *PredVPBB = PredVPBlock->getExitingBasicBlock();
@@ -891,6 +896,10 @@ static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPBlockBase *PredVPBB = VPBB->getSinglePredecessor();
   VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
   VPBlockUtils::connectBlocks(PredVPBB, IRMiddleVPBB);
+  for (auto *Succ : to_vector(VPBB->getSuccessors())) {
+    VPBlockUtils::connectBlocks(IRMiddleVPBB, Succ);
+    VPBlockUtils::disconnectBlocks(VPBB, Succ);
+  }
   delete VPBB;
 }
 
