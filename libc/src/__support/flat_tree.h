@@ -1,5 +1,6 @@
 #include "include/llvm-libc-macros/stdint-macros.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/utility/move.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
@@ -126,6 +127,48 @@ template <typename T, unsigned Factor> class TreeNode {
     }
     return nullptr;
   }
+
+  struct SplitResult {
+    T median;
+    TreeNode *left, *right;
+  };
+
+  // This allocation buffer is used hold dynamically allocated tree nodes.
+  // The btree insertion path needs to support fallible allocation. Therefore,
+  // new nodes are allocated in batches. In the worst case, the number of
+  // allocations should be proportional to the height of the tree, which should
+  // not be too large. Hence, the buffer will be reserved on the stack.
+  class AllocationBuffer {
+    TreeNode **buffer;
+
+    LIBC_INLINE AllocationBuffer(TreeNode **buffer) : buffer(buffer) {}
+
+  public:
+    LIBC_INLINE TreeNode *next() { return *buffer++; }
+
+    template <class F>
+    LIBC_INLINE static bool with_allocations(unsigned size, F &&func) {
+      TreeNode **buffer =
+          static_cast<TreeNode **>(__builtin_alloca(size * sizeof(TreeNode *)));
+      unsigned allocated;
+      // allocate nodes in batch
+      for (allocated = 0; allocated < size; ++allocated) {
+        AllocChecker ac;
+        buffer[allocated] = new (ac) TreeNode();
+        if (!ac)
+          break;
+      }
+      // On failure, squash all existing allocations.
+      if (allocated < size) {
+        for (unsigned i = 0; i < allocated; ++i)
+          delete buffer[i];
+        return false;
+      }
+      AllocationBuffer alloc_buffer(buffer);
+      func(alloc_buffer);
+      return true;
+    }
+  };
 
   LIBC_INLINE TreeNode() : key_nodes{} {}
 };
