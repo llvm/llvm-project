@@ -4179,6 +4179,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     return error(ID.Loc, "lshr constexprs are no longer supported");
   case lltok::kw_ashr:
     return error(ID.Loc, "ashr constexprs are no longer supported");
+  case lltok::kw_shl:
+    return error(ID.Loc, "shl constexprs are no longer supported");
   case lltok::kw_fneg:
     return error(ID.Loc, "fneg constexprs are no longer supported");
   case lltok::kw_select:
@@ -4208,7 +4210,6 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_add:
   case lltok::kw_sub:
   case lltok::kw_mul:
-  case lltok::kw_shl:
   case lltok::kw_xor: {
     bool NUW = false;
     bool NSW = false;
@@ -4216,7 +4217,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     Constant *Val0, *Val1;
     Lex.Lex();
     if (Opc == Instruction::Add || Opc == Instruction::Sub ||
-        Opc == Instruction::Mul || Opc == Instruction::Shl) {
+        Opc == Instruction::Mul) {
       if (EatIfPresent(lltok::kw_nuw))
         NUW = true;
       if (EatIfPresent(lltok::kw_nsw)) {

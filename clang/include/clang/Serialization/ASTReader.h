@@ -661,14 +661,6 @@ private:
   /// been loaded.
   std::vector<IdentifierInfo *> IdentifiersLoaded;
 
-  using GlobalIdentifierMapType =
-      ContinuousRangeMap<serialization::IdentifierID, ModuleFile *, 4>;
-
-  /// Mapping from global identifier IDs to the module in which the
-  /// identifier resides along with the offset that should be added to the
-  /// global identifier ID to produce a local ID.
-  GlobalIdentifierMapType GlobalIdentifierMap;
-
   /// A vector containing macros that have already been
   /// loaded.
   ///
@@ -1547,6 +1539,11 @@ private:
   /// Translate a \param GlobalDeclID to the index of DeclsLoaded array.
   unsigned translateGlobalDeclIDToIndex(GlobalDeclID ID) const;
 
+  /// Translate an \param IdentifierID ID to the index of IdentifiersLoaded
+  /// array and the corresponding module file.
+  std::pair<ModuleFile *, unsigned>
+  translateIdentifierIDToIndex(serialization::IdentifierID ID) const;
+
 public:
   /// Load the AST file and validate its contents against the given
   /// Preprocessor.
@@ -2131,7 +2128,7 @@ public:
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);
 
-  void SetIdentifierInfo(unsigned ID, IdentifierInfo *II);
+  void SetIdentifierInfo(serialization::IdentifierID ID, IdentifierInfo *II);
   void SetGloballyVisibleDecls(IdentifierInfo *II,
                                const SmallVectorImpl<GlobalDeclID> &DeclIDs,
                                SmallVectorImpl<Decl *> *Decls = nullptr);
@@ -2158,10 +2155,10 @@ public:
     return DecodeIdentifierInfo(ID);
   }
 
-  IdentifierInfo *getLocalIdentifier(ModuleFile &M, unsigned LocalID);
+  IdentifierInfo *getLocalIdentifier(ModuleFile &M, uint64_t LocalID);
 
   serialization::IdentifierID getGlobalIdentifierID(ModuleFile &M,
-                                                    unsigned LocalID);
+                                                    uint64_t LocalID);
 
   void resolvePendingMacro(IdentifierInfo *II, const PendingMacroInfo &PMInfo);
 
