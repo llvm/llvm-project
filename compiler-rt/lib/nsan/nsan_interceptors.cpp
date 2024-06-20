@@ -31,11 +31,11 @@ using __nsan::nsan_initialized;
 
 static constexpr uptr kEarlyAllocBufSize = 16384;
 static uptr AllocatedBytes;
-static char EarlyAllocBuf[kEarlyAllocBufSize];
+static char early_alloc_buf[kEarlyAllocBufSize];
 
-static bool isInEarlyAllocBuf(const void *Ptr) {
-  return ((uptr)Ptr >= (uptr)EarlyAllocBuf &&
-          ((uptr)Ptr - (uptr)EarlyAllocBuf) < sizeof(EarlyAllocBuf));
+static bool isInEarlyAllocBuf(const void *ptr) {
+  return ((uptr)ptr >= (uptr)early_alloc_buf &&
+          ((uptr)ptr - (uptr)early_alloc_buf) < sizeof(early_alloc_buf));
 }
 
 static u8 *toU8Ptr(wchar_t *ptr) { return reinterpret_cast<u8 *>(ptr); }
@@ -49,25 +49,25 @@ template <typename T> T min(T a, T b) { return a < b ? a : b; }
 // Handle allocation requests early (before all interceptors are setup). dlsym,
 // for example, calls calloc.
 static void *HandleEarlyAlloc(uptr size) {
-  void *Mem = (void *)&EarlyAllocBuf[AllocatedBytes];
+  void *Mem = (void *)&early_alloc_buf[AllocatedBytes];
   AllocatedBytes += size;
   CHECK_LT(AllocatedBytes, kEarlyAllocBufSize);
   return Mem;
 }
 
-INTERCEPTOR(void *, memset, void *dst, int V, uptr size) {
+INTERCEPTOR(void *, memset, void *dst, int v, uptr size) {
   // NOTE: This guard is needed because nsan's initialization code might call
   // memset.
   if (!nsan_initialized && REAL(memset) == nullptr)
-    return internal_memset(dst, V, size);
+    return internal_memset(dst, v, size);
 
-  void *res = REAL(memset)(dst, V, size);
+  void *res = REAL(memset)(dst, v, size);
   __nsan_set_value_unknown(static_cast<u8 *>(dst), size);
   return res;
 }
 
-INTERCEPTOR(wchar_t *, wmemset, wchar_t *dst, wchar_t V, uptr size) {
-  wchar_t *res = REAL(wmemset)(dst, V, size);
+INTERCEPTOR(wchar_t *, wmemset, wchar_t *dst, wchar_t v, uptr size) {
+  wchar_t *res = REAL(wmemset)(dst, v, size);
   __nsan_set_value_unknown(toU8Ptr(dst), sizeof(wchar_t) * size);
   return res;
 }
@@ -123,8 +123,8 @@ INTERCEPTOR(void *, malloc, uptr size) {
   return res;
 }
 
-INTERCEPTOR(void *, realloc, void *Ptr, uptr size) {
-  void *res = REAL(realloc)(Ptr, size);
+INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
+  void *res = REAL(realloc)(ptr, size);
   // FIXME: We might want to copy the types from the original allocation
   // (although that would require that we know its size).
   if (res)
