@@ -838,16 +838,16 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   return type_sp;
 }
 
-ConstString
+std::string
 DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
   if (llvm::StringRef(die.GetName()).contains("<"))
-    return ConstString();
+    return {};
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
-  if (ParseTemplateParameterInfos(die, template_param_infos)) {
-    return ConstString(m_ast.PrintTemplateParams(template_param_infos));
-  }
-  return ConstString();
+  if (ParseTemplateParameterInfos(die, template_param_infos))
+    return m_ast.PrintTemplateParams(template_param_infos);
+
+  return {};
 }
 
 TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
@@ -1632,7 +1632,7 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
     case DW_TAG_union_type: {
       if (const char *class_union_struct_name = parent_decl_ctx_die.GetName()) {
         qualified_name.insert(
-            0, GetDIEClassTemplateParams(parent_decl_ctx_die).AsCString(""));
+            0, GetDIEClassTemplateParams(parent_decl_ctx_die));
         qualified_name.insert(0, "::");
         qualified_name.insert(0, class_union_struct_name);
       }
@@ -1650,7 +1650,7 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
     qualified_name.append("::");
 
   qualified_name.append(name);
-  qualified_name.append(GetDIEClassTemplateParams(die).AsCString(""));
+  qualified_name.append(GetDIEClassTemplateParams(die));
 
   return qualified_name;
 }

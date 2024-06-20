@@ -3072,14 +3072,43 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
 
     // See comments below about -gsimple-template-names for why we attempt to
     // compute missing template parameter names.
-    ConstString template_params;
-    if (type_system) {
-      DWARFASTParser *dwarf_ast = type_system->GetDWARFParser();
-      if (dwarf_ast)
-        template_params = dwarf_ast->GetDIEClassTemplateParams(die);
+    std::vector<std::string> template_params;
+    DWARFDeclContext die_dwarf_decl_ctx;
+    DWARFASTParser *dwarf_ast = type_system ? type_system->GetDWARFParser() : nullptr;
+    for (DWARFDIE ctx_die = die; ctx_die && !isUnitType(ctx_die.Tag());
+         ctx_die = ctx_die.GetParentDeclContextDIE()) {
+      die_dwarf_decl_ctx.AppendDeclContext(ctx_die.Tag(), ctx_die.GetName());
+      template_params.push_back(
+          (ctx_die.IsStructUnionOrClass() && dwarf_ast)
+              ? dwarf_ast->GetDIEClassTemplateParams(ctx_die)
+              : "");
     }
+    const bool any_template_params = llvm::any_of(
+        template_params, [](llvm::StringRef p) { return !p.empty(); });
 
-    const DWARFDeclContext die_dwarf_decl_ctx = die.GetDWARFDeclContext();
+    auto die_matches = [&](DWARFDIE type_die) {
+      // Resolve the type if both have the same tag or {class, struct} tags.
+      const bool tag_matches =
+          type_die.Tag() == tag ||
+          (IsStructOrClassTag(type_die.Tag()) && IsStructOrClassTag(tag));
+      if (!tag_matches)
+        return false;
+      if (any_template_params) {
+        size_t pos = 0;
+        for (DWARFDIE ctx_die = type_die;
+             ctx_die && !isUnitType(ctx_die.Tag()) &&
+             pos < template_params.size();
+             ctx_die = ctx_die.GetParentDeclContextDIE(), ++pos) {
+          if (template_params[pos].empty())
+            continue;
+          if (template_params[pos] != dwarf_ast->GetDIEClassTemplateParams(ctx_die))
+            return false;
+        }
+        if (pos != template_params.size())
+          return false;
+      }
+      return true;
+    };
     m_index->GetFullyQualifiedType(die_dwarf_decl_ctx, [&](DWARFDIE type_die) {
       // Make sure type_die's language matches the type system we are
       // looking for. We don't want to find a "Foo" type from Java if we
@@ -3088,13 +3117,7 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
           !type_system->SupportsLanguage(GetLanguage(*type_die.GetCU())))
         return true;
 
-      const dw_tag_t type_tag = type_die.Tag();
-      // Resolve the type if both have the same tag or {class, struct} tags.
-      const bool try_resolving_type =
-          type_tag == tag ||
-          (IsStructOrClassTag(type_tag) && IsStructOrClassTag(tag));
-
-      if (!try_resolving_type) {
+      if (!die_matches(type_die)) {
         if (log) {
           GetObjectFile()->GetModule()->LogMessage(
               log,
@@ -3121,27 +3144,6 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
       Type *resolved_type = ResolveType(type_die, false);
       if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
         return true;
-
-      // With -gsimple-template-names, the DIE name may not contain the template
-      // parameters. If the declaration has template parameters but doesn't
-      // contain '<', check that the child template parameters match.
-      if (template_params) {
-        llvm::StringRef test_base_name =
-            GetTypeForDIE(type_die)->GetBaseName().GetStringRef();
-        auto i = test_base_name.find('<');
-
-        // Full name from clang AST doesn't contain '<' so this type_die isn't
-        // a template parameter, but we're expecting template parameters, so
-        // bail.
-        if (i == llvm::StringRef::npos)
-          return true;
-
-        llvm::StringRef test_template_params =
-            test_base_name.slice(i, test_base_name.size());
-        // Bail if template parameters don't match.
-        if (test_template_params != template_params.GetStringRef())
-          return true;
-      }
 
       type_sp = resolved_type->shared_from_this();
       return false;
