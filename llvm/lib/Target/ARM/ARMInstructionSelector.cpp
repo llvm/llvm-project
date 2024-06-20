@@ -61,6 +61,10 @@ private:
   bool selectSelect(MachineInstrBuilder &MIB, MachineRegisterInfo &MRI) const;
   bool selectShift(unsigned ShiftOpc, MachineInstrBuilder &MIB) const;
 
+  bool selectConstantUsingPool(MachineInstrBuilder &MIB) const;
+  void emitLoadFromConstantPool(const Register DefReg, const Constant *CPVal,
+                                MachineInstrBuilder &MIB) const;
+
   // Check if the types match and both operands have the expected size and
   // register bank.
   bool validOpRegPair(MachineRegisterInfo &MRI, unsigned LHS, unsigned RHS,
@@ -812,6 +816,57 @@ bool ARMInstructionSelector::selectShift(unsigned ShiftOpc,
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
+bool ARMInstructionSelector::selectConstantUsingPool(
+    MachineInstrBuilder &MIB) const {
+  MachineInstr &MI = *MIB;
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+
+  const Register DefReg = MI.getOperand(0).getReg();
+  MachineOperand &ConstOperand = MI.getOperand(1);
+  if (!ConstOperand.isCImm())
+    return false;
+  const Constant *ConstVal = ConstOperand.getCImm();
+  uint64_t ImmVal = ConstOperand.getCImm()->getZExtValue();
+
+  if (ConstantMaterializationCost(ImmVal, Subtarget) > 2 &&
+      !Subtarget->genExecuteOnly()) {
+    emitLoadFromConstantPool(DefReg, ConstVal, MIB);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
+void ARMInstructionSelector::emitLoadFromConstantPool(
+    const Register DefReg, const Constant *ConstVal,
+    MachineInstrBuilder &MIB) const {
+  MachineBasicBlock &MBB = *MIB->getParent();
+  MachineFunction &MF = *MBB.getParent();
+  const DataLayout &DL = MF.getDataLayout();
+
+  auto InsertBefore = std::next(MIB->getIterator());
+  auto &DbgLoc = MIB->getDebugLoc();
+
+  Type *ConstTy = ConstVal->getType();
+  unsigned Size = DL.getTypeStoreSize(ConstTy);
+  Align Alignment = DL.getPrefTypeAlign(ConstTy);
+
+  MachineConstantPool *Pool = MF.getConstantPool();
+  unsigned ConstIndex = Pool->getConstantPoolIndex(ConstVal, Alignment);
+
+  auto Load = BuildMI(MBB, InsertBefore, DbgLoc, TII.get(ARM::LDRcp))
+                  .addDef(DefReg)
+                  .addConstantPoolIndex(ConstIndex)
+                  .addImm(0)
+                  .add(predOps(ARMCC::AL));
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getConstantPool(MF);
+  Load->addMemOperand(MF, MF.getMachineMemOperand(PtrInfo,
+                                                  MachineMemOperand::MOLoad,
+                                                  Size, Alignment));
+  constrainSelectedInstRegOperands(*Load, TII, TRI, RBI);
+}
+
 void ARMInstructionSelector::renderVFPF32Imm(
   MachineInstrBuilder &NewInstBuilder, const MachineInstr &OldInst,
   int OpIdx) const {
@@ -970,6 +1025,9 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     return selectCopy(I, TII, MRI, TRI, RBI);
   }
   case G_CONSTANT: {
+    if (selectConstantUsingPool(MIB))
+      return true;
+
     if (!MRI.getType(I.getOperand(0).getReg()).isPointer()) {
       // Non-pointer constants should be handled by TableGen.
       LLVM_DEBUG(dbgs() << "Unsupported constant type\n");

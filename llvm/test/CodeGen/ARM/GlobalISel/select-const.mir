@@ -23,3 +23,22 @@ body:             |
     MOVPCLR 14 /* CC::al */, $noreg, implicit $r0
 
 ...
+---
+name:            get_from_constpool
+legalized:       true
+regBankSelected: true
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb, preferred-register: '' }
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: get_from_constpool
+    ; CHECK: [[LDRcp:%[0-9]+]]:gpr = LDRcp %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
+    ; CHECK-NEXT: $r0 = COPY [[LDRcp]]
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
+    %0:gprb(s32) = G_CONSTANT i32 287454020
+    $r0 = COPY %0(s32)
+    BX_RET 14 /* CC::al */, $noreg, implicit $r0
+
+...
