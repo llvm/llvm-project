@@ -4746,9 +4746,8 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
       if (process) {
         if (ObjCLanguageRuntime *objc_runtime =
                 ObjCLanguageRuntime::Get(*process)) {
-          std::optional<uint64_t> bit_size =
-              objc_runtime->GetTypeBitSize(GetType(qual_type));
-          if (bit_size)
+          if (std::optional<uint64_t> bit_size =
+                  objc_runtime->GetTypeBitSize(GetType(qual_type)))
             return *bit_size;
         }
       } else {
