@@ -51,32 +51,32 @@ __nsan_default_options();
 
 namespace __nsan {
 
-extern bool NsanInitialized;
-extern bool NsanInitIsRunning;
+extern bool nsan_initialized;
+extern bool nsan_init_is_running;
 
-void initializeInterceptors();
+void InitializeInterceptors();
 
 // See notes in nsan_platform.
 // printf-free (see comment in nsan_interceptors.cc).
-inline u8 *getShadowAddrFor(u8 *Ptr) {
+inline u8 *GetShadowAddrFor(u8 *Ptr) {
   uptr AppOffset = ((uptr)Ptr) & ShadowMask();
   return (u8 *)(AppOffset * kShadowScale + ShadowAddr());
 }
 
 // printf-free (see comment in nsan_interceptors.cc).
-inline const u8 *getShadowAddrFor(const u8 *Ptr) {
-  return getShadowAddrFor(const_cast<u8 *>(Ptr));
+inline const u8 *GetShadowAddrFor(const u8 *Ptr) {
+  return GetShadowAddrFor(const_cast<u8 *>(Ptr));
 }
 
 // printf-free (see comment in nsan_interceptors.cc).
-inline u8 *getShadowTypeAddrFor(u8 *Ptr) {
+inline u8 *GetShadowTypeAddrFor(u8 *Ptr) {
   uptr AppOffset = ((uptr)Ptr) & ShadowMask();
   return (u8 *)(AppOffset + TypesAddr());
 }
 
 // printf-free (see comment in nsan_interceptors.cc).
-inline const u8 *getShadowTypeAddrFor(const u8 *Ptr) {
-  return getShadowTypeAddrFor(const_cast<u8 *>(Ptr));
+inline const u8 *GetShadowTypeAddrFor(const u8 *Ptr) {
+  return GetShadowTypeAddrFor(const_cast<u8 *>(Ptr));
 }
 
 // Information about value types and their shadow counterparts.
@@ -164,60 +164,60 @@ template <> struct FTInfo<__float128> {
 constexpr double kMaxULPDiff = INFINITY;
 
 // Helper for getULPDiff that works on bit representations.
-template <typename BT> double getULPDiffBits(BT V1Bits, BT V2Bits) {
+template <typename BT> double GetULPDiffBits(BT v1_bits, BT v2_bits) {
   // If the integer representations of two same-sign floats are subtracted then
   // the absolute value of the result is equal to one plus the number of
   // representable floats between them.
-  return V1Bits >= V2Bits ? V1Bits - V2Bits : V2Bits - V1Bits;
+  return v1_bits >= v2_bits ? v1_bits - v2_bits : v2_bits - v1_bits;
 }
 
-// Returns the the number of floating point values between V1 and V2, capped to
+// Returns the the number of floating point values between v1 and v2, capped to
 // u64max. Return 0 for (-0.0,0.0).
-template <typename FT> double getULPDiff(FT V1, FT V2) {
-  if (V1 == V2) {
+template <typename FT> double GetULPDiff(FT v1, FT v2) {
+  if (v1 == v2) {
     return 0; // Typically, -0.0 and 0.0
   }
   using BT = typename FTInfo<FT>::orig_bits_type;
   static_assert(sizeof(FT) == sizeof(BT), "not implemented");
   static_assert(sizeof(BT) <= 64, "not implemented");
-  BT V1Bits;
-  __builtin_memcpy(&V1Bits, &V1, sizeof(BT));
-  BT V2Bits;
-  __builtin_memcpy(&V2Bits, &V2, sizeof(BT));
+  BT v1_bits;
+  __builtin_memcpy(&v1_bits, &v1, sizeof(BT));
+  BT v2_bits;
+  __builtin_memcpy(&v2_bits, &v2, sizeof(BT));
   // Check whether the signs differ. IEEE-754 float types always store the sign
   // in the most significant bit. NaNs and infinities are handled by the calling
   // code.
   constexpr BT kSignMask = BT{1} << (CHAR_BIT * sizeof(BT) - 1);
-  if ((V1Bits ^ V2Bits) & kSignMask) {
+  if ((v1_bits ^ v2_bits) & kSignMask) {
     // Signs differ. We can get the ULPs as `getULPDiff(negative_number, -0.0)
     // + getULPDiff(0.0, positive_number)`.
-    if (V1Bits & kSignMask) {
-      return getULPDiffBits<BT>(V1Bits, kSignMask) +
-             getULPDiffBits<BT>(0, V2Bits);
+    if (v1_bits & kSignMask) {
+      return GetULPDiffBits<BT>(v1_bits, kSignMask) +
+             GetULPDiffBits<BT>(0, v2_bits);
     } else {
-      return getULPDiffBits<BT>(V2Bits, kSignMask) +
-             getULPDiffBits<BT>(0, V1Bits);
+      return GetULPDiffBits<BT>(v2_bits, kSignMask) +
+             GetULPDiffBits<BT>(0, v1_bits);
     }
   }
-  return getULPDiffBits(V1Bits, V2Bits);
+  return GetULPDiffBits(v1_bits, v2_bits);
 }
 
 // FIXME: This needs mor work: Because there is no 80-bit integer type, we have
 // to go through __uint128_t. Therefore the assumptions about the sign bit do
 // not hold.
-template <> inline double getULPDiff(long double V1, long double V2) {
+template <> inline double GetULPDiff(long double v1, long double v2) {
   using BT = __uint128_t;
-  BT V1Bits = 0;
-  __builtin_memcpy(&V1Bits, &V1, sizeof(long double));
-  BT V2Bits = 0;
-  __builtin_memcpy(&V2Bits, &V2, sizeof(long double));
-  if ((V1Bits ^ V2Bits) & (BT{1} << (CHAR_BIT * sizeof(BT) - 1)))
-    return (V1 == V2) ? __sanitizer::u64{0} : kMaxULPDiff; // Signs differ.
+  BT v1_bits = 0;
+  __builtin_memcpy(&v1_bits, &v1, sizeof(long double));
+  BT v2_bits = 0;
+  __builtin_memcpy(&v2_bits, &v2, sizeof(long double));
+  if ((v1_bits ^ v2_bits) & (BT{1} << (CHAR_BIT * sizeof(BT) - 1)))
+    return v1 == v2 ? __sanitizer::u64{0} : kMaxULPDiff; // Signs differ.
   // If the integer representations of two same-sign floats are subtracted then
   // the absolute value of the result is equal to one plus the number of
   // representable floats between them.
-  BT Diff = V1Bits >= V2Bits ? V1Bits - V2Bits : V2Bits - V1Bits;
-  return Diff >= kMaxULPDiff ? kMaxULPDiff : Diff;
+  BT diff = v1_bits >= v2_bits ? v1_bits - v2_bits : v2_bits - v1_bits;
+  return diff >= kMaxULPDiff ? kMaxULPDiff : diff;
 }
 
 } // end namespace __nsan
