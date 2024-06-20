@@ -68,7 +68,7 @@ public:
   void SymbolsDidLoad(const ModuleList &module_list) { ++m_generation; }
   void ModulesDidLoad(const ModuleList &module_list);
 
-  bool GetObjectDescription(Stream &str, ValueObject &object);
+  llvm::Error GetObjectDescription(Stream &str, ValueObject &object);
 
   SwiftExceptionPrecondition *GetExceptionPrecondition();
 
@@ -329,8 +329,9 @@ protected:
   std::string GetObjectDescriptionExpr_Ref(ValueObject &object);
   std::string GetObjectDescriptionExpr_Copy(ValueObject &object,
       lldb::addr_t &copy_location);
-  bool RunObjectDescriptionExpr(ValueObject &object, std::string &expr_string,
-                                Stream &result);
+  llvm::Error RunObjectDescriptionExpr(ValueObject &object,
+                                       std::string &expr_string,
+                                       Stream &result);
   /// We have to load swift dependent libraries by hand, but if they
   /// are missing, we shouldn't keep trying.
   llvm::StringSet<> m_library_negative_cache;

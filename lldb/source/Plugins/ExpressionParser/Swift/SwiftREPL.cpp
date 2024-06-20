@@ -536,7 +536,8 @@ bool SwiftREPL::PrintOneVariable(Debugger &debugger, StreamFileSP &output_sp,
       fprintf(output_sp->GetFile().GetStream(), "%s", color);
     }
 
-    valobj_sp->Dump(*output_sp, options);
+    if (llvm::Error error = valobj_sp->Dump(*output_sp, options))
+      *output_sp << "error: " << toString(std::move(error));
 
     if (colorize_out)
       fprintf(output_sp->GetFile().GetStream(), ANSI_ESCAPE1(ANSI_CTRL_NORMAL));

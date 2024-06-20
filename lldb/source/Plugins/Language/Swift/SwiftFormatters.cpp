@@ -710,7 +710,11 @@ bool lldb_private::formatters::swift::CountableClosedRange_SummaryProvider(
 bool lldb_private::formatters::swift::BuiltinObjC_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   stream.Printf("0x%" PRIx64 " ", valobj.GetValueAsUnsigned(0));
-  stream.Printf("%s", valobj.GetObjectDescription());
+  llvm::Expected<std::string> desc = valobj.GetObjectDescription();
+  if (desc)
+    stream << toString(desc.takeError());
+  else
+    stream << *desc;
   return true;
 }
 
