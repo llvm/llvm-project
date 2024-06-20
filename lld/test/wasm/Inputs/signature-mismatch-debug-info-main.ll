@@ -1,9 +1,9 @@
 target triple = "wasm32-unknown-emscripten"
 
 define i32 @main() !dbg !6 {
-  call void @test0(), !dbg !10
-  call void @test1(), !dbg !11
-  ret i32 0, !dbg !12
+  call void @test0()
+  call void @test1()
+  ret i32 0
 }
 
 declare void @test0()
@@ -23,6 +23,3 @@ declare void @test1()
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
 !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-!10 = !DILocation(line: 5, column: 3, scope: !6)
-!11 = !DILocation(line: 6, column: 3, scope: !6)
-!12 = !DILocation(line: 7, column: 3, scope: !6)

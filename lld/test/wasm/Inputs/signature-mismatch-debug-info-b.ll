@@ -5,8 +5,8 @@ define weak void @foo(i32 %a, i32 %b) !dbg !6 {
 }
 
 define void @test1() !dbg !10 {
-  call void @foo(i32 4, i32 5), !dbg !13
-  ret void, !dbg !14
+  call void @foo(i32 4, i32 5)
+  ret void
 }
 
 !llvm.dbg.cu = !{!0}
@@ -26,5 +26,3 @@ define void @test1() !dbg !10 {
 !10 = distinct !DISubprogram(name: "test1", scope: !1, file: !1, line: 7, type: !11, scopeLine: 7, spFlags: DISPFlagDefinition, unit: !0)
 !11 = !DISubroutineType(types: !12)
 !12 = !{null}
-!13 = !DILocation(line: 8, column: 3, scope: !10)
-!14 = !DILocation(line: 9, column: 1, scope: !10)
