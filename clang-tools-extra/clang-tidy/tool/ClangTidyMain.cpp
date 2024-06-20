@@ -325,7 +325,7 @@ option is recognized.
 )"),
                                   cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> AllowEmptyCheckList("allow-empty-checks", desc(R"(
+static cl::opt<bool> AllowNoChecks("allow-no-checks", desc(R"(
 Allow empty enabled checks. This suppresses
 the "no checks enabled" error when disabling
 all of the checks.
@@ -606,7 +606,7 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   if (ListChecks) {
-    if (EnabledChecks.empty() && !AllowEmptyCheckList) {
+    if (EnabledChecks.empty() && !AllowNoChecks) {
       llvm::errs() << "No checks enabled.\n";
       return 1;
     }
@@ -659,7 +659,7 @@ int clangTidyMain(int argc, const char **argv) {
     return 0;
   }
 
-  if (EnabledChecks.empty() && !AllowEmptyCheckList) {
+  if (EnabledChecks.empty() && !AllowNoChecks) {
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
     return 1;
