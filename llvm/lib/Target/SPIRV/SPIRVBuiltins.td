@@ -119,9 +119,6 @@ def : DemangledBuiltin<"__spirv_Select", OpenCL_std, Select, 3, 3>;
 // Composite Construct builtin record:
 def : DemangledBuiltin<"__spirv_CompositeConstruct", OpenCL_std, Construct, 1, 0>;
 
-// Dot builtin record:
-def : DemangledBuiltin<"dot", OpenCL_std, Dot, 2, 2>;
-
 //===----------------------------------------------------------------------===//
 // Class defining an extended builtin record used for lowering into an
 // OpExtInst instruction.
