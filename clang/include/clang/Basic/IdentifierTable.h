@@ -757,7 +757,7 @@ public:
     if (Name == "import")
       II->setModulesImport(true);
 
-    if (Name.equals("module"))
+    if (Name == "module")
       II->setModulesDeclaration(true);
 
     return *II;

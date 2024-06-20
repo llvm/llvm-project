@@ -161,9 +161,7 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerCallback != CLK_LexAfterModuleImport &&
-      CurLexerCallback != CLK_LexAfterModuleDecl)
-    CurLexerCallback = CLK_TokenLexer;
+  CurLexerCallback = CLK_TokenLexer;
 }
 
 /// EnterTokenStream - Add a "macro" context to the top of the include stack,

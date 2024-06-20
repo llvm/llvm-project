@@ -1741,6 +1741,8 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
+  void LexModuleName(Token &Result, const Token FirstName,
+                     bool AllowMacroExpansion = true);
   bool LexAfterModuleImport(Token &Result);
   bool LexAfterModuleDecl(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);

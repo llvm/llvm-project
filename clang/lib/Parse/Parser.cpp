@@ -2681,36 +2681,41 @@ bool Parser::ParseModuleName(
     SourceLocation UseLoc,
     SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
     bool IsImport) {
-  // Parse the module path.
-  while (true) {
-    if (!Tok.is(tok::identifier)) {
-      if (Tok.is(tok::code_completion)) {
-        cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteModuleImport(UseLoc, Path);
-        return true;
-      }
-
-      Diag(Tok, diag::err_module_expected_ident) << IsImport;
-      SkipUntil(tok::semi, StopBeforeMatch);
+  auto ExpectIdentifier = [&](Token T) {
+    if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteModuleImport(UseLoc, Path);
       return true;
     }
+    Diag(T, diag::err_module_expected_ident) << IsImport;
+    SkipUntil(tok::semi, StopBeforeMatch);
+    return true;
+  };
+  if (Tok.isNot(tok::annot_module_name))
+    return ExpectIdentifier(Tok);
+  auto *Info = static_cast<ModuleNameInfo *>(Tok.getAnnotationValue());
+  ConsumeAnnotationToken();
 
-    // Record this part of the module path.
-    Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
-    ConsumeToken();
-
-    if (!TryConsumeToken(tok::period)) {
-      // [cpp.module]/p2: where the pp-tokens (if any) shall not begin with a (
-      // preprocessing token [...]
-      //
-      // We already diagnose in preprocessor and just skip to semicolon.
-      if (Tok.is(tok::l_paren)) {
-        SkipUntil(tok::semi, StopBeforeMatch);
-        return true;
-      }
-      return false;
-    }
+  // Parse the module path.
+  for (const auto &T : Info->Toks) {
+    if (T.is(tok::identifier))
+      Path.push_back(std::make_pair(T.getIdentifierInfo(), T.getLocation()));
   }
+
+  // Invoke the code completion action if the last token in module name sequence
+  // is '.' but not an identifier.
+  if (Info->Toks.back().isNot(tok::identifier))
+    return ExpectIdentifier(Info->Toks.back());
+
+  // [cpp.module]/p2: where the pp-tokens (if any) shall not begin with a (
+  // preprocessing token [...]
+  //
+  // Skip unitl ';' to recovery.
+  if (getLangOpts().CPlusPlusModules && Tok.is(tok::l_paren)) {
+    SkipUntil(tok::semi, StopBeforeMatch);
+    return true;
+  }
+  return false;
 }
 
 /// Try recover parser when module annotation appears where it must not

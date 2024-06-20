@@ -3922,7 +3922,13 @@ void Parser::ParseDeclarationSpecifiers(
 
       // We're done with the declaration-specifiers.
       goto DoneWithDeclSpec;
-
+    case tok::annot_module_name: {
+      PP.EnterTokenStream(
+          static_cast<ModuleNameInfo *>(Tok.getAnnotationValue())->Toks,
+          /*DisableMacroExpansion=*/true, /*IsReinject=*/false);
+      ConsumeAnyToken();
+      [[fallthrough]];
+    }
       // typedef-name
     case tok::kw___super:
     case tok::kw_decltype:

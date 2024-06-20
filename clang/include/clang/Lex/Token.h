@@ -345,6 +345,17 @@ struct PragmaLoopHintInfo {
   Token Option;
   ArrayRef<Token> Toks;
 };
+
+/// Module/Partition name token sequance.
+///
+///     module-name:
+///           module-name-qualifier[opt] identifier
+///
+///     module-name-qualifier
+///           module-name-qualifier[opt] identifier .
+struct ModuleNameInfo {
+  ArrayRef<Token> Toks;
+};
 } // end namespace clang
 
 #endif // LLVM_CLANG_LEX_TOKEN_H
