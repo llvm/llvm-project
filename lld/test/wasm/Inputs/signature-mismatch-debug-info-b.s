@@ -1,5 +1,6 @@
   .functype  foo (i32, i32) -> ()
   .functype  test1 () -> ()
+
   .section  .text.foo,"",@
   .weak  foo
   .type  foo,@function
