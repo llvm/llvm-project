@@ -39,10 +39,9 @@
 ; CHECK:   Lower uses of LDS variables from non-kernel functions
 
 @lds = internal unnamed_addr addrspace(3) global i32 poison, align 4
-@dynlds = external addrspace(3) global [0 x i32]
+
 define amdgpu_kernel void @test() {
 entry:
   store i32 1, ptr addrspace(3) @lds
-  store i32 0, ptr addrspace(3) @dynlds
   ret void
 }

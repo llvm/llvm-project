@@ -218,10 +218,10 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
       for (auto *GV : GVs) {
         bool IsAbsolute = GV->isAbsoluteSymbolRef();
         bool IsDirectMapDynLDSGV = AMDGPU::isDynamicLDS(*GV) && DirectMapKernel.contains(Fn);
+        if (IsDirectMapDynLDSGV)
+          continue;
         if (HasAbsoluteGVs.has_value()) {
-          if (*HasAbsoluteGVs != IsAbsolute ) {
-            if(IsDirectMapDynLDSGV)
-              continue;
+          if (*HasAbsoluteGVs != IsAbsolute) {
             report_fatal_error(
                 "Module cannot mix absolute and non-absolute LDS GVs");
           }
