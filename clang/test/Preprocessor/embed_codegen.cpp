@@ -43,8 +43,9 @@ a
 };
 
 // CHECK: store i32 107, ptr %b, align 4
-int b =
+int b = (
 #embed<jk.txt>
+    )
 ;
 
 

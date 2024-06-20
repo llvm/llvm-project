@@ -1018,6 +1018,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
 
     // primary-expression
   case tok::numeric_constant:
+  case tok::binary_data:
     // constant: integer-constant
     // constant: floating-constant
 
@@ -1067,18 +1068,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   }
 
   case tok::annot_embed: {
-    // We've met #embed in a context where a single value is expected. Take last
-    // element from #embed data as if it were a comma expression.
-    EmbedAnnotationData *Data =
-        reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
-    SourceLocation StartLoc = ConsumeAnnotationToken();
-    ASTContext &Context = Actions.getASTContext();
-    Res = IntegerLiteral::Create(Context,
-                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
-                                 Context.UnsignedCharTy, StartLoc);
-    if (Data->BinaryData.size() > 1)
-      Diag(StartLoc, diag::warn_unused_comma_left_operand);
-    break;
+    injectEmbedTokens();
+    return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
+                               isVectorLiteral, NotPrimaryExpression);
   }
 
   case tok::kw___super:
@@ -3578,15 +3570,29 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
                                   T.getCloseLocation());
 }
 
-void Parser::ExpandEmbedDirective(SmallVectorImpl<Expr *> &Exprs) {
+void Parser::injectEmbedTokens() {
   EmbedAnnotationData *Data =
       reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
-  SourceLocation StartLoc = ConsumeAnnotationToken();
-  ASTContext &Context = Actions.getASTContext();
-  for (auto Byte : Data->BinaryData) {
-    Exprs.push_back(IntegerLiteral::Create(Context, llvm::APInt(CHAR_BIT, Byte),
-                                           Context.UnsignedCharTy, StartLoc));
+  MutableArrayRef<Token> Toks(
+      PP.getPreprocessorAllocator().Allocate<Token>(Data->BinaryData.size() * 2 - 1),
+      Data->BinaryData.size() * 2 - 1);
+  unsigned I = 0;
+  for (auto &Byte : Data->BinaryData) {
+    Toks[I].startToken();
+    Toks[I].setKind(tok::binary_data);
+    Toks[I].setLocation(Tok.getLocation());
+    Toks[I].setLength(1);
+    Toks[I].setLiteralData(&Byte);
+    if (I != ((Data->BinaryData.size() - 1) * 2)) {
+      Toks[I + 1].startToken();
+      Toks[I + 1].setKind(tok::comma);
+      Toks[I + 1].setLocation(Tok.getLocation());
+    }
+    I += 2;
   }
+  PP.EnterTokenStream(std::move(Toks), /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/false);
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 }
 
 /// ParseExpressionList - Used for C/C++ (argument-)expression-list.
@@ -3624,17 +3630,8 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
       Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
-    } else if (Tok.is(tok::annot_embed)) {
-      ExpandEmbedDirective(Exprs);
-      if (Tok.isNot(tok::comma))
-        break;
-      Token Comma = Tok;
-      ConsumeToken();
-      checkPotentialAngleBracketDelimiter(Comma);
-      continue;
-    } else {
+    } else
       Expr = ParseAssignmentExpression();
-    }
 
     if (EarlyTypoCorrection)
       Expr = Actions.CorrectDelayedTyposInExpr(Expr);
