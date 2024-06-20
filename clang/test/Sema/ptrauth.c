@@ -47,6 +47,18 @@ void test_blend_discriminator(int *dp, int (*fp)(int), int value) {
   float *mismatch = __builtin_ptrauth_blend_discriminator(dp, value); // expected-error {{incompatible integer to pointer conversion initializing 'float *' with an expression of type}}
 }
 
+void test_string_discriminator(const char *str) {
+  __builtin_ptrauth_string_discriminator(); // expected-error {{too few arguments}}
+  __builtin_ptrauth_string_discriminator(str, str); // expected-error {{too many arguments}}
+  (void) __builtin_ptrauth_string_discriminator("test string"); // no warning
+
+  __builtin_ptrauth_string_discriminator(str); // expected-error {{argument must be a string literal}}
+  __builtin_ptrauth_string_discriminator(L"wide test"); // expected-error {{argument must be a string literal}} expected-warning {{incompatible pointer types passing 'int[10]' to parameter of type 'const char *'}}
+
+  void *mismatch = __builtin_ptrauth_string_discriminator("test string"); // expected-error {{incompatible integer to pointer conversion initializing 'void *' with an expression of type 'unsigned long'}}
+}
+
+
 void test_sign_unauthenticated(int *dp, int (*fp)(int)) {
   __builtin_ptrauth_sign_unauthenticated(dp, VALID_DATA_KEY); // expected-error {{too few arguments}}
   __builtin_ptrauth_sign_unauthenticated(dp, VALID_DATA_KEY, dp, dp); // expected-error {{too many arguments}}

@@ -2166,6 +2166,24 @@ static ExprResult PointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
   return Call;
 }
 
+static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+
+  // We've already performed normal call type-checking.
+  const Expr *Arg = Call->getArg(0)->IgnoreParenImpCasts();
+
+  // Operand must be an ordinary or UTF-8 string literal.
+  const auto *Literal = dyn_cast<StringLiteral>(Arg);
+  if (!Literal || Literal->getCharByteWidth() != 1) {
+    S.Diag(Arg->getExprLoc(), diag::err_ptrauth_string_not_literal)
+        << (Literal ? 1 : 0) << Arg->getSourceRange();
+    return ExprError();
+  }
+
+  return Call;
+}
+
 static ExprResult BuiltinLaunder(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 1))
     return ExprError();
@@ -2933,6 +2951,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return PointerAuthSignGenericData(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
     return PointerAuthAuthAndResign(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_string_discriminator:
+    return PointerAuthStringDiscriminator(*this, TheCall);
   // OpenCL v2.0, s6.13.16 - Pipe functions
   case Builtin::BIread_pipe:
   case Builtin::BIwrite_pipe:
