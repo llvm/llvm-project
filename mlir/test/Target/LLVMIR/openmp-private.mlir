@@ -157,19 +157,15 @@ omp.private {type = private} @multi_block.privatizer : !llvm.ptr alloc {
 llvm.func @lower_region_with_addressof() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x f64 {bindc_name = "u1"} : (i64) -> !llvm.ptr
-  %2 = llvm.mlir.constant(0 : index) : i64
-  %3 = llvm.mlir.constant(4 : i32) : i32
-  %4 = llvm.mlir.constant(1.000000e+00 : f64) : f64
-  %5 = llvm.mlir.constant(1 : index) : i64
   omp.parallel private(@_QFlower_region_with_addressof_privatizer %1 -> %arg0 : !llvm.ptr) {
     %c0 = llvm.mlir.constant(111 : i64) : i64
-    %7 = llvm.getelementptr %arg0[%c0] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    llvm.call @bar(%7) : (!llvm.ptr) -> ()
+    %2 = llvm.getelementptr %arg0[%c0] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.call @bar(%2) : (!llvm.ptr) -> ()
 
     %c1 = llvm.mlir.constant(222 : i64) : i64
-    %8 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
-    %9 = llvm.getelementptr %8[%c1] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    llvm.call @bar(%9) : (!llvm.ptr) -> ()
+    %3 = llvm.mlir.addressof @_QQfoo: !llvm.ptr
+    %4 = llvm.getelementptr %3[%c1] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.call @bar(%4) : (!llvm.ptr) -> ()
     omp.terminator
   }
 
