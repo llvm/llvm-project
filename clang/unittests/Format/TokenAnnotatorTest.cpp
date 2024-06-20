@@ -3180,6 +3180,18 @@ TEST_F(TokenAnnotatorTest, FunctionTryBlock) {
   EXPECT_TOKEN(Tokens[36], tok::l_brace, TT_FunctionLBrace);
 }
 
+TEST_F(TokenAnnotatorTest, TypenameMacro) {
+  auto Style = getLLVMStyle();
+  Style.TypenameMacros.push_back("STRUCT");
+
+  auto Tokens = annotate("STRUCT(T, B) { int i; };", Style);
+  ASSERT_EQ(Tokens.size(), 13u);
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TypenameMacro);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_TypeDeclarationParen);
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_Unknown);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
