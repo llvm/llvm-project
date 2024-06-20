@@ -69,6 +69,44 @@ void CheckAndStoreIntToDescriptor(
 // the CMDSTAT variable is not present, error termination is initiated.
 std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
     const Descriptor *cmdmsg, Terminator &terminator) {
+  // On both Windows and Linux, errno is set when system returns -1.
+  if (status == -1) {
+    // On Windows, ENOENT means the command interpreter can't be found.
+    // On Linux, system calls execl with filepath "/bin/sh", ENOENT means the
+    // file pathname does not exist.
+    if (errno == ENOENT) {
+      if (!cmdstat) {
+        terminator.Crash("Command line execution is not supported, system "
+                         "returns -1 with errno ENOENT.");
+      } else {
+        StoreIntToDescriptor(cmdstat, NO_SUPPORT_ERR, terminator);
+        CheckAndCopyCharsToDescriptor(cmdmsg,
+            "Command line execution is not supported, system returns -1 with "
+            "errno ENOENT.");
+      }
+    } else {
+      char err_buffer[30];
+      char msg[]{"Execution error with system status code: -1, errno: "};
+#ifdef _WIN32
+      if (strerror_s(err_buffer, sizeof(err_buffer), errno) != 0)
+#else
+      if (strerror_r(errno, err_buffer, sizeof(err_buffer)) != 0)
+#endif
+        terminator.Crash("errno to char msg failed.");
+      char *newMsg{static_cast<char *>(AllocateMemoryOrCrash(
+          terminator, std::strlen(msg) + std::strlen(err_buffer) + 1))};
+      std::strcat(newMsg, err_buffer);
+
+      if (!cmdstat) {
+        terminator.Crash(newMsg);
+      } else {
+        StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
+        CheckAndCopyCharsToDescriptor(cmdmsg, newMsg);
+      }
+      FreeMemory(newMsg);
+    }
+  }
+
 #ifdef _WIN32
   // On WIN32 API std::system returns exit status directly
   std::int64_t exitStatusVal{status};
@@ -118,44 +156,6 @@ std::int64_t TerminationCheck(std::int64_t status, const Descriptor *cmdstat,
     }
   }
 #endif
-
-  // On both Windows and Linux, errno is set when system returns -1.
-  if (status == -1) {
-    // On Windows, ENOENT means the command interpreter can't be found.
-    // On Linux, system calls execl with filepath "/bin/sh", ENOENT means the
-    // file pathname does not exist.
-    if (errno == ENOENT) {
-      if (!cmdstat) {
-        terminator.Crash("Command line execution is not supported, system "
-                         "returns -1 with errno ENOENT.");
-      } else {
-        StoreIntToDescriptor(cmdstat, NO_SUPPORT_ERR, terminator);
-        CheckAndCopyCharsToDescriptor(cmdmsg,
-            "Command line execution is not supported, system returns -1 with "
-            "errno ENOENT.");
-      }
-    } else {
-      char err_buffer[30];
-      char msg[]{"Execution error with system status code: -1, errno: "};
-#ifdef _WIN32
-      if (strerror_s(err_buffer, sizeof(err_buffer), errno) != 0)
-#else
-      if (strerror_r(errno, err_buffer, sizeof(err_buffer)) != 0)
-#endif
-        terminator.Crash("errno to char errno failed.");
-      char *newMsg{static_cast<char *>(AllocateMemoryOrCrash(
-          terminator, std::strlen(msg) + std::strlen(err_buffer) + 1))};
-      std::strcat(newMsg, err_buffer);
-
-      if (!cmdstat) {
-        terminator.Crash(newMsg);
-      } else {
-        StoreIntToDescriptor(cmdstat, EXECL_ERR, terminator);
-        CheckAndCopyCharsToDescriptor(cmdmsg, newMsg);
-      }
-      FreeMemory(newMsg);
-    }
-  }
 
 #if defined(WIFSIGNALED) && defined(WTERMSIG)
   if (WIFSIGNALED(status)) {
