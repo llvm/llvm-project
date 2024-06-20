@@ -47,7 +47,7 @@ i10 test_arith(i10 lhs, i10 rhs) {
 //      CHECK: cir.func @_Z10test_arithDB10_S_(%arg0: !cir.int<s, 10> loc({{.+}}), %arg1: !cir.int<s, 10> loc({{.+}})) -> !cir.int<s, 10>
 //      CHECK:   %[[#LHS:]] = cir.load %{{.+}} : !cir.ptr<!cir.int<s, 10>>, !cir.int<s, 10>
 // CHECK-NEXT:   %[[#RHS:]] = cir.load %{{.+}} : !cir.ptr<!cir.int<s, 10>>, !cir.int<s, 10>
-// CHECK-NEXT:   %{{.+}} = cir.binop(add, %[[#LHS]], %[[#RHS]]) : !cir.int<s, 10>
+// CHECK-NEXT:   %{{.+}} = cir.binop(add, %[[#LHS]], %[[#RHS]]) nsw : !cir.int<s, 10>
 //      CHECK: }
 
 void Size1ExtIntParam(unsigned _BitInt(1) A) {

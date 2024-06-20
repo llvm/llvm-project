@@ -20,7 +20,7 @@ void sw1(int a) {
 // CHECK-NEXT: case (equal, 0)  {
 // CHECK-NEXT:   %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:   %5 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
+// CHECK-NEXT:   %6 = cir.binop(add, %4, %5) nsw : !s32i
 // CHECK-NEXT:   cir.store %6, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:   cir.break
 // CHECK-NEXT: },
@@ -32,7 +32,7 @@ void sw1(int a) {
 // CHECK-NEXT:       %4 = cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
 // CHECK-NEXT:       %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:       %6 = cir.const #cir.int<1> : !s32i
-// CHECK-NEXT:       %7 = cir.binop(add, %5, %6) : !s32i
+// CHECK-NEXT:       %7 = cir.binop(add, %5, %6) nsw : !s32i
 // CHECK-NEXT:       cir.store %7, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:       %8 = cir.const #cir.int<100> : !s32i
 // CHECK-NEXT:       cir.store %8, %4 : !s32i, !cir.ptr<!s32i>

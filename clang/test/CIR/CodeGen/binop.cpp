@@ -14,10 +14,10 @@ void b0(int a, int b) {
   x = x | b;
 }
 
-// CHECK: = cir.binop(mul, %3, %4) : !s32i
+// CHECK: = cir.binop(mul, %3, %4) nsw : !s32i
 // CHECK: = cir.binop(div, %6, %7) : !s32i
 // CHECK: = cir.binop(rem, %9, %10) : !s32i
-// CHECK: = cir.binop(add, %12, %13) : !s32i
+// CHECK: = cir.binop(add, %12, %13) nsw : !s32i
 // CHECK: = cir.binop(sub, %15, %16) nsw : !s32i
 // CHECK: = cir.shift( right, %18 : !s32i, %19 : !s32i) -> !s32i
 // CHECK: = cir.shift(left, %21 : !s32i, %22 : !s32i) -> !s32i

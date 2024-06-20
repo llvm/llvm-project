@@ -648,6 +648,25 @@ public:
                                     lhs, rhs);
   }
 
+  mlir::Value createFAdd(mlir::Value lhs, mlir::Value rhs) {
+    assert(!MissingFeatures::metaDataNode());
+    if (IsFPConstrained)
+      llvm_unreachable("Constrained FP NYI");
+
+    assert(!MissingFeatures::foldBinOpFMF());
+    return create<mlir::cir::BinOp>(lhs.getLoc(), mlir::cir::BinOpKind::Add,
+                                    lhs, rhs);
+  }
+  mlir::Value createFMul(mlir::Value lhs, mlir::Value rhs) {
+    assert(!MissingFeatures::metaDataNode());
+    if (IsFPConstrained)
+      llvm_unreachable("Constrained FP NYI");
+
+    assert(!MissingFeatures::foldBinOpFMF());
+    return create<mlir::cir::BinOp>(lhs.getLoc(), mlir::cir::BinOpKind::Mul,
+                                    lhs, rhs);
+  }
+
   mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
                             mlir::cir::PointerType destType, bool isRefCast,
                             mlir::cir::DynamicCastInfoAttr info) {

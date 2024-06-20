@@ -30,7 +30,7 @@ void l0() {
 // CHECK: %3 = cir.load %2 : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK: %4 = cir.load %3 : !cir.ptr<!s32i>, !s32i
 // CHECK: %5 = cir.const #cir.int<1> : !s32i
-// CHECK: %6 = cir.binop(add, %4, %5) : !s32i
+// CHECK: %6 = cir.binop(add, %4, %5) nsw : !s32i
 // CHECK: %7 = cir.get_member %1[0] {name = "i"} : !cir.ptr<!ty_22anon2E422> -> !cir.ptr<!cir.ptr<!s32i>>
 // CHECK: %8 = cir.load %7 : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK: cir.store %6, %8 : !s32i, !cir.ptr<!s32i>

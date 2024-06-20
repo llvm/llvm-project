@@ -1289,6 +1289,38 @@ static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
 }
 
 mlir::Value ScalarExprEmitter::buildMul(const BinOpInfo &Ops) {
+  if (Ops.CompType->isSignedIntegerOrEnumerationType()) {
+    switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined:
+      if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return Builder.createMul(Ops.LHS, Ops.RHS);
+      [[fallthrough]];
+    case LangOptions::SOB_Undefined:
+      if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return Builder.createNSWMul(Ops.LHS, Ops.RHS);
+      [[fallthrough]];
+    case LangOptions::SOB_Trapping:
+      if (CanElideOverflowCheck(CGF.getContext(), Ops))
+        return Builder.createNSWMul(Ops.LHS, Ops.RHS);
+      llvm_unreachable("NYI");
+    }
+  }
+  if (Ops.FullType->isConstantMatrixType()) {
+    llvm_unreachable("NYI");
+  }
+  if (Ops.CompType->isUnsignedIntegerType() &&
+      CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
+      !CanElideOverflowCheck(CGF.getContext(), Ops))
+    llvm_unreachable("NYI");
+
+  if (mlir::cir::isFPOrFPVectorTy(Ops.LHS.getType())) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
+    return Builder.createFMul(Ops.LHS, Ops.RHS);
+  }
+
+  if (Ops.isFixedPointOp())
+    llvm_unreachable("NYI");
+
   return Builder.create<mlir::cir::BinOp>(
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.FullType),
       mlir::cir::BinOpKind::Mul, Ops.LHS, Ops.RHS);
@@ -1308,6 +1340,39 @@ mlir::Value ScalarExprEmitter::buildAdd(const BinOpInfo &Ops) {
   if (Ops.LHS.getType().isa<mlir::cir::PointerType>() ||
       Ops.RHS.getType().isa<mlir::cir::PointerType>())
     return buildPointerArithmetic(CGF, Ops, /*isSubtraction=*/false);
+  if (Ops.CompType->isSignedIntegerOrEnumerationType()) {
+    switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
+    case LangOptions::SOB_Defined:
+      if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return Builder.createAdd(Ops.LHS, Ops.RHS);
+      [[fallthrough]];
+    case LangOptions::SOB_Undefined:
+      if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+        return Builder.createNSWAdd(Ops.LHS, Ops.RHS);
+      [[fallthrough]];
+    case LangOptions::SOB_Trapping:
+      if (CanElideOverflowCheck(CGF.getContext(), Ops))
+        return Builder.createNSWAdd(Ops.LHS, Ops.RHS);
+
+      llvm_unreachable("NYI");
+    }
+  }
+  if (Ops.FullType->isConstantMatrixType()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (Ops.CompType->isUnsignedIntegerType() &&
+      CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
+      !CanElideOverflowCheck(CGF.getContext(), Ops))
+    llvm_unreachable("NYI");
+
+  if (mlir::cir::isFPOrFPVectorTy(Ops.LHS.getType())) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
+    return Builder.createFAdd(Ops.LHS, Ops.RHS);
+  }
+
+  if (Ops.isFixedPointOp())
+    llvm_unreachable("NYI");
 
   return Builder.create<mlir::cir::BinOp>(
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.FullType),
@@ -1344,7 +1409,7 @@ mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
         !CanElideOverflowCheck(CGF.getContext(), Ops))
       llvm_unreachable("NYI");
 
-    if (Ops.CompType->isFloatingType()) {
+    if (mlir::cir::isFPOrFPVectorTy(Ops.LHS.getType())) {
       CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
       return Builder.createFSub(Ops.LHS, Ops.RHS);
     }
