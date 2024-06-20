@@ -84,7 +84,7 @@ expr_defined:
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&6144)>>11
 // ASM-NEXT: .amdhsa_next_free_vgpr 0
 // ASM-NEXT: .amdhsa_next_free_sgpr 0
-// ASM-NEXT: .amdhsa_accum_offset (((((((0&(~65536))|(defined_boolean<<16))&(~63))|(0<<0))&63)>>0)+1)*4
+// ASM-NEXT: .amdhsa_accum_offset 4
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM-NEXT: .amdhsa_float_round_mode_32 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&12288)>>12
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&49152)>>14
