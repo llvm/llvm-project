@@ -9479,6 +9479,57 @@ ExprResult InitializationSequence::Perform(Sema &S,
       // Wrap it in a construction of a std::initializer_list<T>.
       CurInit = new (S.Context) CXXStdInitializerListExpr(Step->Type, MTE);
 
+      if (!Step->Type->isDependentType()) {
+        QualType ElementType;
+        [[maybe_unused]] bool IsStdInitializerList =
+            S.isStdInitializerList(Step->Type, &ElementType);
+        assert(IsStdInitializerList &&
+               "StdInitializerList step to non-std::initializer_list");
+        const CXXRecordDecl *Record =
+            Step->Type->getAsCXXRecordDecl()->getDefinition();
+        assert(Record && Record->isCompleteDefinition() &&
+               "std::initializer_list should have already be "
+               "complete/instantiated by this point");
+
+        auto InvalidType = [&] {
+          S.Diag(Record->getLocation(),
+                 diag::err_std_initializer_list_malformed)
+              << Step->Type.getUnqualifiedType();
+          return ExprError();
+        };
+
+        if (Record->isUnion() || Record->getNumBases() != 0 ||
+            Record->isPolymorphic())
+          return InvalidType();
+
+        RecordDecl::field_iterator Field = Record->field_begin();
+        if (Field == Record->field_end())
+          return InvalidType();
+
+        // Start pointer
+        if (!Field->getType()->isPointerType() ||
+            !S.Context.hasSameType(Field->getType()->getPointeeType(),
+                                   ElementType.withConst()))
+          return InvalidType();
+
+        if (++Field == Record->field_end())
+          return InvalidType();
+
+        // Size or end pointer
+        if (const auto *PT = Field->getType()->getAs<PointerType>()) {
+          if (!S.Context.hasSameType(PT->getPointeeType(),
+                                     ElementType.withConst()))
+            return InvalidType();
+        } else {
+          if (Field->isBitField() ||
+              !S.Context.hasSameType(Field->getType(), S.Context.getSizeType()))
+            return InvalidType();
+        }
+
+        if (++Field != Record->field_end())
+          return InvalidType();
+      }
+
       // Bind the result, in case the library has given initializer_list a
       // non-trivial destructor.
       if (shouldBindAsTemporary(Entity))
