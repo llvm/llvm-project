@@ -628,12 +628,18 @@ public:
            "inconsistent operands' types not supported yet");
     mlir::Type mlirType = getTypeConverter()->convertType(op.getType());
     assert((mlirType.isa<mlir::IntegerType>() ||
-            mlirType.isa<mlir::FloatType>()) &&
+            mlirType.isa<mlir::FloatType>() ||
+            mlirType.isa<mlir::VectorType>()) &&
            "operand type not supported yet");
+
+    auto type = op.getLhs().getType();
+    if (auto VecType = type.dyn_cast<mlir::cir::VectorType>()) {
+      type = VecType.getEltType();
+    }
 
     switch (op.getKind()) {
     case mlir::cir::BinOpKind::Add:
-      if (mlirType.isa<mlir::IntegerType>())
+      if (type.isa<mlir::cir::IntType>())
         rewriter.replaceOpWithNewOp<mlir::arith::AddIOp>(
             op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       else
@@ -641,7 +647,7 @@ public:
             op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       break;
     case mlir::cir::BinOpKind::Sub:
-      if (mlirType.isa<mlir::IntegerType>())
+      if (type.isa<mlir::cir::IntType>())
         rewriter.replaceOpWithNewOp<mlir::arith::SubIOp>(
             op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       else
@@ -649,7 +655,7 @@ public:
             op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       break;
     case mlir::cir::BinOpKind::Mul:
-      if (mlirType.isa<mlir::IntegerType>())
+      if (type.isa<mlir::cir::IntType>())
         rewriter.replaceOpWithNewOp<mlir::arith::MulIOp>(
             op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       else
@@ -657,23 +663,25 @@ public:
             op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       break;
     case mlir::cir::BinOpKind::Div:
-      if (mlirType.isa<mlir::IntegerType>()) {
-        if (mlirType.isSignlessInteger())
+      if (auto ty = type.dyn_cast<mlir::cir::IntType>()) {
+        if (ty.isUnsigned())
           rewriter.replaceOpWithNewOp<mlir::arith::DivUIOp>(
               op, mlirType, adaptor.getLhs(), adaptor.getRhs());
         else
-          llvm_unreachable("integer mlirType not supported in CIR yet");
+          rewriter.replaceOpWithNewOp<mlir::arith::DivSIOp>(
+              op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       } else
         rewriter.replaceOpWithNewOp<mlir::arith::DivFOp>(
             op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       break;
     case mlir::cir::BinOpKind::Rem:
-      if (mlirType.isa<mlir::IntegerType>()) {
-        if (mlirType.isSignlessInteger())
+      if (auto ty = type.dyn_cast<mlir::cir::IntType>()) {
+        if (ty.isUnsigned())
           rewriter.replaceOpWithNewOp<mlir::arith::RemUIOp>(
               op, mlirType, adaptor.getLhs(), adaptor.getRhs());
         else
-          llvm_unreachable("integer mlirType not supported in CIR yet");
+          rewriter.replaceOpWithNewOp<mlir::arith::RemSIOp>(
+              op, mlirType, adaptor.getLhs(), adaptor.getRhs());
       } else
         rewriter.replaceOpWithNewOp<mlir::arith::RemFOp>(
             op, mlirType, adaptor.getLhs(), adaptor.getRhs());
@@ -703,144 +711,22 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::CmpOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto type = adaptor.getLhs().getType();
-    auto integerType =
-        mlir::IntegerType::get(getContext(), 1, mlir::IntegerType::Signless);
+    auto type = op.getLhs().getType();
 
     mlir::Value mlirResult;
-    switch (op.getKind()) {
-    case mlir::cir::CmpOpKind::gt: {
-      if (type.isa<mlir::IntegerType>()) {
-        mlir::arith::CmpIPredicate cmpIType;
-        if (!type.isSignlessInteger())
-          llvm_unreachable("integer type not supported in CIR yet");
-        cmpIType = mlir::arith::CmpIPredicate::ugt;
-        mlirResult = rewriter.create<mlir::arith::CmpIOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpIPredicateAttr::get(getContext(), cmpIType),
-            adaptor.getLhs(), adaptor.getRhs());
-      } else if (type.isa<mlir::FloatType>()) {
-        mlirResult = rewriter.create<mlir::arith::CmpFOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpFPredicateAttr::get(
-                getContext(), mlir::arith::CmpFPredicate::UGT),
-            adaptor.getLhs(), adaptor.getRhs(),
-            mlir::arith::FastMathFlagsAttr::get(
-                getContext(), mlir::arith::FastMathFlags::none));
-      } else {
-        llvm_unreachable("Unknown Operand Type");
-      }
-      break;
-    }
-    case mlir::cir::CmpOpKind::ge: {
-      if (type.isa<mlir::IntegerType>()) {
-        mlir::arith::CmpIPredicate cmpIType;
-        if (!type.isSignlessInteger())
-          llvm_unreachable("integer type not supported in CIR yet");
-        cmpIType = mlir::arith::CmpIPredicate::uge;
-        mlirResult = rewriter.create<mlir::arith::CmpIOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpIPredicateAttr::get(getContext(), cmpIType),
-            adaptor.getLhs(), adaptor.getRhs());
-      } else if (type.isa<mlir::FloatType>()) {
-        mlirResult = rewriter.create<mlir::arith::CmpFOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpFPredicateAttr::get(
-                getContext(), mlir::arith::CmpFPredicate::UGE),
-            adaptor.getLhs(), adaptor.getRhs(),
-            mlir::arith::FastMathFlagsAttr::get(
-                getContext(), mlir::arith::FastMathFlags::none));
-      } else {
-        llvm_unreachable("Unknown Operand Type");
-      }
-      break;
-    }
-    case mlir::cir::CmpOpKind::lt: {
-      if (type.isa<mlir::IntegerType>()) {
-        mlir::arith::CmpIPredicate cmpIType;
-        if (!type.isSignlessInteger())
-          llvm_unreachable("integer type not supported in CIR yet");
-        cmpIType = mlir::arith::CmpIPredicate::ult;
-        mlirResult = rewriter.create<mlir::arith::CmpIOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpIPredicateAttr::get(getContext(), cmpIType),
-            adaptor.getLhs(), adaptor.getRhs());
-      } else if (type.isa<mlir::FloatType>()) {
-        mlirResult = rewriter.create<mlir::arith::CmpFOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpFPredicateAttr::get(
-                getContext(), mlir::arith::CmpFPredicate::ULT),
-            adaptor.getLhs(), adaptor.getRhs(),
-            mlir::arith::FastMathFlagsAttr::get(
-                getContext(), mlir::arith::FastMathFlags::none));
-      } else {
-        llvm_unreachable("Unknown Operand Type");
-      }
-      break;
-    }
-    case mlir::cir::CmpOpKind::le: {
-      if (type.isa<mlir::IntegerType>()) {
-        mlir::arith::CmpIPredicate cmpIType;
-        if (!type.isSignlessInteger())
-          llvm_unreachable("integer type not supported in CIR yet");
-        cmpIType = mlir::arith::CmpIPredicate::ule;
-        mlirResult = rewriter.create<mlir::arith::CmpIOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpIPredicateAttr::get(getContext(), cmpIType),
-            adaptor.getLhs(), adaptor.getRhs());
-      } else if (type.isa<mlir::FloatType>()) {
-        mlirResult = rewriter.create<mlir::arith::CmpFOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpFPredicateAttr::get(
-                getContext(), mlir::arith::CmpFPredicate::ULE),
-            adaptor.getLhs(), adaptor.getRhs(),
-            mlir::arith::FastMathFlagsAttr::get(
-                getContext(), mlir::arith::FastMathFlags::none));
-      } else {
-        llvm_unreachable("Unknown Operand Type");
-      }
-      break;
-    }
-    case mlir::cir::CmpOpKind::eq: {
-      if (type.isa<mlir::IntegerType>()) {
-        mlirResult = rewriter.create<mlir::arith::CmpIOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpIPredicateAttr::get(getContext(),
-                                                mlir::arith::CmpIPredicate::eq),
-            adaptor.getLhs(), adaptor.getRhs());
-      } else if (type.isa<mlir::FloatType>()) {
-        mlirResult = rewriter.create<mlir::arith::CmpFOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpFPredicateAttr::get(
-                getContext(), mlir::arith::CmpFPredicate::UEQ),
-            adaptor.getLhs(), adaptor.getRhs(),
-            mlir::arith::FastMathFlagsAttr::get(
-                getContext(), mlir::arith::FastMathFlags::none));
-      } else {
-        llvm_unreachable("Unknown Operand Type");
-      }
-      break;
-    }
-    case mlir::cir::CmpOpKind::ne: {
-      if (type.isa<mlir::IntegerType>()) {
-        mlirResult = rewriter.create<mlir::arith::CmpIOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpIPredicateAttr::get(getContext(),
-                                                mlir::arith::CmpIPredicate::ne),
-            adaptor.getLhs(), adaptor.getRhs());
-      } else if (type.isa<mlir::FloatType>()) {
-        mlirResult = rewriter.create<mlir::arith::CmpFOp>(
-            op.getLoc(), integerType,
-            mlir::arith::CmpFPredicateAttr::get(
-                getContext(), mlir::arith::CmpFPredicate::UNE),
-            adaptor.getLhs(), adaptor.getRhs(),
-            mlir::arith::FastMathFlagsAttr::get(
-                getContext(), mlir::arith::FastMathFlags::none));
-      } else {
-        llvm_unreachable("Unknown Operand Type");
-      }
-      break;
-    }
+
+    if (auto ty = type.dyn_cast<mlir::cir::IntType>()) {
+      auto kind = convertCmpKindToCmpIPredicate(op.getKind(), ty.isSigned());
+      mlirResult = rewriter.create<mlir::arith::CmpIOp>(
+          op.getLoc(), kind, adaptor.getLhs(), adaptor.getRhs());
+    } else if (auto ty = type.dyn_cast<mlir::cir::CIRFPTypeInterface>()) {
+      auto kind = convertCmpKindToCmpFPredicate(op.getKind());
+      mlirResult = rewriter.create<mlir::arith::CmpFOp>(
+          op.getLoc(), kind, adaptor.getLhs(), adaptor.getRhs());
+    } else if (auto ty = type.dyn_cast<mlir::cir::PointerType>()) {
+      llvm_unreachable("pointer comparison not supported yet");
+    } else {
+      return op.emitError() << "unsupported type for CmpOp: " << type;
     }
 
     // MLIR comparison ops return i1, but cir::CmpOp returns the same type as
@@ -1143,6 +1029,39 @@ public:
   }
 };
 
+class CIRVectorCmpOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::VecCmpOp> {
+public:
+  using OpConversionPattern<mlir::cir::VecCmpOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::VecCmpOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    assert(op.getType().isa<mlir::cir::VectorType>() &&
+           op.getLhs().getType().isa<mlir::cir::VectorType>() &&
+           op.getRhs().getType().isa<mlir::cir::VectorType>() &&
+           "Vector compare with non-vector type");
+    auto elementType =
+        op.getLhs().getType().cast<mlir::cir::VectorType>().getEltType();
+    mlir::Value bitResult;
+    if (auto intType = elementType.dyn_cast<mlir::cir::IntType>()) {
+      bitResult = rewriter.create<mlir::arith::CmpIOp>(
+          op.getLoc(),
+          convertCmpKindToCmpIPredicate(op.getKind(), intType.isSigned()),
+          adaptor.getLhs(), adaptor.getRhs());
+    } else if (elementType.isa<mlir::cir::CIRFPTypeInterface>()) {
+      bitResult = rewriter.create<mlir::arith::CmpFOp>(
+          op.getLoc(), convertCmpKindToCmpFPredicate(op.getKind()),
+          adaptor.getLhs(), adaptor.getRhs());
+    } else {
+      return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
+    }
+    rewriter.replaceOpWithNewOp<mlir::arith::ExtSIOp>(
+        op, typeConverter->convertType(op.getType()), bitResult);
+    return mlir::success();
+  }
+};
+
 class CIRCastOpLowering : public mlir::OpConversionPattern<mlir::cir::CastOp> {
 public:
   using OpConversionPattern<mlir::cir::CastOp>::OpConversionPattern;
@@ -1345,22 +1264,22 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering, CIRBrOpLowering>(patterns.getContext());
 
-  patterns
-      .add<CIRCmpOpLowering, CIRCallOpLowering, CIRUnaryOpLowering,
-           CIRBinOpLowering, CIRLoadOpLowering, CIRConstantOpLowering,
-           CIRStoreOpLowering, CIRAllocaOpLowering, CIRFuncOpLowering,
-           CIRScopeOpLowering, CIRBrCondOpLowering, CIRTernaryOpLowering,
-           CIRYieldOpLowering, CIRCosOpLowering, CIRGlobalOpLowering,
-           CIRGetGlobalOpLowering, CIRCastOpLowering, CIRPtrStrideOpLowering,
-           CIRSqrtOpLowering, CIRCeilOpLowering, CIRExp2OpLowering,
-           CIRExpOpLowering, CIRFAbsOpLowering, CIRFloorOpLowering,
-           CIRLog10OpLowering, CIRLog2OpLowering, CIRLogOpLowering,
-           CIRRoundOpLowering, CIRPtrStrideOpLowering, CIRSinOpLowering,
-           CIRShiftOpLowering, CIRBitClzOpLowering, CIRBitCtzOpLowering,
-           CIRBitPopcountOpLowering, CIRBitClrsbOpLowering, CIRBitFfsOpLowering,
-           CIRBitParityOpLowering, CIRIfOpLowering, CIRVectorCreateLowering,
-           CIRVectorInsertLowering, CIRVectorExtractLowering>(
-          converter, patterns.getContext());
+  patterns.add<
+      CIRCmpOpLowering, CIRCallOpLowering, CIRUnaryOpLowering, CIRBinOpLowering,
+      CIRLoadOpLowering, CIRConstantOpLowering, CIRStoreOpLowering,
+      CIRAllocaOpLowering, CIRFuncOpLowering, CIRScopeOpLowering,
+      CIRBrCondOpLowering, CIRTernaryOpLowering, CIRYieldOpLowering,
+      CIRCosOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
+      CIRCastOpLowering, CIRPtrStrideOpLowering, CIRSqrtOpLowering,
+      CIRCeilOpLowering, CIRExp2OpLowering, CIRExpOpLowering, CIRFAbsOpLowering,
+      CIRFloorOpLowering, CIRLog10OpLowering, CIRLog2OpLowering,
+      CIRLogOpLowering, CIRRoundOpLowering, CIRPtrStrideOpLowering,
+      CIRSinOpLowering, CIRShiftOpLowering, CIRBitClzOpLowering,
+      CIRBitCtzOpLowering, CIRBitPopcountOpLowering, CIRBitClrsbOpLowering,
+      CIRBitFfsOpLowering, CIRBitParityOpLowering, CIRIfOpLowering,
+      CIRVectorCreateLowering, CIRVectorInsertLowering,
+      CIRVectorExtractLowering, CIRVectorCmpOpLowering>(converter,
+                                                        patterns.getContext());
 }
 
 static mlir::TypeConverter prepareTypeConverter() {

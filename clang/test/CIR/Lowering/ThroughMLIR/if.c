@@ -21,7 +21,7 @@ void foo() {
 //CHECK:   memref.alloca_scope  {
 //CHECK:     %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32> 
 //CHECK:     %[[C0_I32_1:.+]] = arith.constant 0 : i32 
-//CHECK:     %[[ONE:.+]] = arith.cmpi ugt, %[[ZERO]], %[[C0_I32_1]] : i32 
+//CHECK:     %[[ONE:.+]] = arith.cmpi sgt, %[[ZERO]], %[[C0_I32_1]] : i32 
 //CHECK:     %[[TWO:.+]] = arith.extui %[[ONE]] : i1 to i32 
 //CHECK:     %[[C0_I32_2:.+]] = arith.constant 0 : i32 
 //CHECK:     %[[THREE:.+]] = arith.cmpi ne, %[[TWO]], %[[C0_I32_2]] : i32 
@@ -60,7 +60,7 @@ void foo2() {
 //CHECK:   memref.alloca_scope  {
 //CHECK:     %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32> 
 //CHECK:     %[[C3_I32:.+]] = arith.constant 3 : i32 
-//CHECK:     %[[ONE:.+]] = arith.cmpi ult, %[[ZERO]], %[[C3_I32]] : i32 
+//CHECK:     %[[ONE:.+]] = arith.cmpi slt, %[[ZERO]], %[[C3_I32]] : i32 
 //CHECK:     %[[TWO:.+]] = arith.extui %[[ONE]] : i1 to i32 
 //CHECK:     %[[C0_I32_1]] = arith.constant 0 : i32 
 //CHECK:     %[[THREE:.+]] = arith.cmpi ne, %[[TWO]], %[[C0_I32_1]] : i32 
@@ -100,7 +100,7 @@ void foo3() {
 //CHECK:   memref.alloca_scope  {
 //CHECK:     %[[ZERO:.+]] = memref.load %[[alloca]][] : memref<i32> 
 //CHECK:     %[[C3_I32:.+]] = arith.constant 3 : i32 
-//CHECK:     %[[ONE:.+]] = arith.cmpi ult, %[[ZERO]], %[[C3_I32]] : i32 
+//CHECK:     %[[ONE:.+]] = arith.cmpi slt, %[[ZERO]], %[[C3_I32]] : i32 
 //CHECK:     %[[TWO:.+]] = arith.extui %[[ONE]] : i1 to i32 
 //CHECK:     %[[C0_I32_1:.+]] = arith.constant 0 : i32 
 //CHECK:     %[[THREE:.+]] = arith.cmpi ne, %[[TWO:.+]], %[[C0_I32_1]] : i32 
@@ -113,7 +113,7 @@ void foo3() {
 //CHECK:       memref.alloca_scope  {
 //CHECK:         %[[SIX:.+]] = memref.load %[[alloca_2]][] : memref<i32> 
 //CHECK:         %[[C2_I32_3:.+]] = arith.constant 2 : i32 
-//CHECK:         %[[SEVEN:.+]] = arith.cmpi ugt, %[[SIX]], %[[C2_I32_3]] : i32 
+//CHECK:         %[[SEVEN:.+]] = arith.cmpi sgt, %[[SIX]], %[[C2_I32_3]] : i32 
 //CHECK:         %[[EIGHT:.+]] = arith.extui %[[SEVEN]] : i1 to i32 
 //CHECK:         %[[C0_I32_4:.+]] = arith.constant 0 : i32 
 //CHECK:         %[[NINE:.+]] = arith.cmpi ne, %[[EIGHT]], %[[C0_I32_4]] : i32 
