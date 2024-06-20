@@ -2028,10 +2028,11 @@ namespace {
                           | Data.HFI.IndexHeaderMapHeader;
       LE.write<uint8_t>(Flags);
 
-      if (!Data.HFI.ControllingMacro)
-        LE.write<uint32_t>(Data.HFI.ControllingMacroID);
+      if (Data.HFI.LazyControllingMacro.isID())
+        LE.write<IdentifierID>(Data.HFI.LazyControllingMacro.getID());
       else
-        LE.write<uint32_t>(Writer.getIdentifierRef(Data.HFI.ControllingMacro));
+        LE.write<IdentifierID>(
+            Writer.getIdentifierRef(Data.HFI.LazyControllingMacro.getPtr()));
 
       unsigned Offset = 0;
       if (!Data.HFI.Framework.empty()) {
