@@ -209,9 +209,9 @@ def FeatureMPAM : SubtargetFeature<
     "mpam", "HasMPAM", "true",
     "Enable v8.4-A Memory system Partitioning and Monitoring extension (FEAT_MPAM)">;
 
-def FeatureDIT : Extension<
-    "dit", "DIT",
-    "Enable v8.4-A Data Independent Timing instructions (FEAT_DIT)", []>;
+def FeatureDIT : SubtargetFeature<
+    "dit", "HasDIT", "true",
+    "Enable v8.4-A Data Independent Timing instructions (FEAT_DIT)">;
 
 def FeatureTRACEV8_4 : SubtargetFeature<
     "tracev8.4", "HasTRACEV8_4", "true",
@@ -260,9 +260,8 @@ def FeaturePredRes : Extension<"predres", "PredRes",
 def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "CCDP", "true",
     "Enable v8.5 Cache Clean to Point of Deep Persistence (FEAT_DPB2)" >;
 
-let ArchExtKindSpelling = "AEK_NONE" in
-def FeatureBranchTargetId : Extension<"bti", "BTI",
-    "Enable Branch Target Identification (FEAT_BTI)", []>;
+def FeatureBranchTargetId : SubtargetFeature<"bti", "BTI", "true",
+    "Enable Branch Target Identification (FEAT_BTI)">;
 
 let ArchExtKindSpelling = "AEK_RAND", MArchName = "rng" in
 def FeatureRandGen : Extension<"rand", "RandGen",
@@ -300,8 +299,8 @@ def FeatureEnhancedCounterVirtualization :
 def FeatureXS : SubtargetFeature<"xs", "HasXS",
     "true", "Enable Armv8.7-A limited-TLB-maintenance instruction (FEAT_XS)">;
 
-def FeatureWFxT : Extension<"wfxt", "WFxT",
-    "Enable Armv8.7-A WFET and WFIT instruction (FEAT_WFxT)", []>;
+def FeatureWFxT : SubtargetFeature<"wfxt", "WFxT", "true",
+    "Enable Armv8.7-A WFET and WFIT instruction (FEAT_WFxT)">;
 
 def FeatureHCX : SubtargetFeature<
     "hcx", "HasHCX", "true", "Enable Armv8.7-A HCRX_EL2 system register (FEAT_HCX)">;
