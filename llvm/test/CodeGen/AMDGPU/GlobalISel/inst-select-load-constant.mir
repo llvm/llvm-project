@@ -167,15 +167,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 0, 0 :: (load (<2 x s32>), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1 = COPY [[S_LOAD_DWORDX2_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[COPY]], 0, 0 :: (load (<2 x s32>), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_v2s32_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 0, 0 :: (load (<2 x s32>), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1 = COPY [[S_LOAD_DWORDX2_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[COPY]], 0, 0 :: (load (<2 x s32>), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(<2 x s32>) = G_LOAD %0 :: (load (<2 x s32>), align 4, addrspace 4)
     $sgpr0_sgpr1 = COPY %1
@@ -210,15 +210,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 0, 0 :: (load (<4 x s16>), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1 = COPY [[S_LOAD_DWORDX2_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[COPY]], 0, 0 :: (load (<4 x s16>), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_v4s16_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 0, 0 :: (load (<4 x s16>), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1 = COPY [[S_LOAD_DWORDX2_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[COPY]], 0, 0 :: (load (<4 x s16>), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(<4 x s16>) = G_LOAD %0 :: (load (<4 x s16>), align 4, addrspace 4)
     $sgpr0_sgpr1 = COPY %1
@@ -254,15 +254,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (<4 x s32>), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[S_LOAD_DWORDX4_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 0, 0 :: (load (<4 x s32>), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_v4s32_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (<4 x s32>), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[S_LOAD_DWORDX4_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 0, 0 :: (load (<4 x s32>), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(<4 x  s32>) = G_LOAD %0 :: (load (<4 x s32>), align 4, addrspace 4)
     $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
@@ -342,15 +342,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 0, 0 :: (load (s64), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1 = COPY [[S_LOAD_DWORDX2_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[COPY]], 0, 0 :: (load (s64), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_s64_align4
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 0, 0 :: (load (s64), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1 = COPY [[S_LOAD_DWORDX2_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[COPY]], 0, 0 :: (load (s64), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_LOAD %0 :: (load (s64), align 4, addrspace 4)
     $sgpr0_sgpr1 = COPY %1
@@ -386,15 +386,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (<2 x s64>), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[S_LOAD_DWORDX4_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 0, 0 :: (load (<2 x s64>), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_v2s64
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (<2 x s64>), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[S_LOAD_DWORDX4_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 0, 0 :: (load (<2 x s64>), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(<2 x s64>) = G_LOAD %0 :: (load (<2 x s64>), align 4, addrspace 4)
     $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
@@ -782,15 +782,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (<8 x s16>), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[S_LOAD_DWORDX4_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 0, 0 :: (load (<8 x s16>), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_v8s16
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (<8 x s16>), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[S_LOAD_DWORDX4_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 0, 0 :: (load (<8 x s16>), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(<8 x s16>) = G_LOAD %0 :: (load (<8 x s16>), align 4, addrspace 4)
     $sgpr0_sgpr1_sgpr2_sgpr3 = COPY %1
@@ -826,15 +826,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]], 0, 0 :: (load (<8 x s32>), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY [[S_LOAD_DWORDX8_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sgpr_256 = S_LOAD_DWORDX8_IMM_ec [[COPY]], 0, 0 :: (load (<8 x s32>), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_v8s32
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]], 0, 0 :: (load (<8 x s32>), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY [[S_LOAD_DWORDX8_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sgpr_256 = S_LOAD_DWORDX8_IMM_ec [[COPY]], 0, 0 :: (load (<8 x s32>), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(<8 x s32>) = G_LOAD %0 :: (load (<8 x s32>), align 4, addrspace 4)
     $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY %1
@@ -870,15 +870,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX16_IMM:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM [[COPY]], 0, 0 :: (load (<16 x s32>), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY [[S_LOAD_DWORDX16_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sgpr_512 = S_LOAD_DWORDX16_IMM_ec [[COPY]], 0, 0 :: (load (<16 x s32>), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_v16s32
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX16_IMM:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM [[COPY]], 0, 0 :: (load (<16 x s32>), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY [[S_LOAD_DWORDX16_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sgpr_512 = S_LOAD_DWORDX16_IMM_ec [[COPY]], 0, 0 :: (load (<16 x s32>), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(<16 x s32>) = G_LOAD %0 :: (load (<16 x s32>), align 4, addrspace 4)
     $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %1
@@ -914,15 +914,15 @@ body: |
     ; GFX8: liveins: $sgpr0_sgpr1
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[S_LOAD_DWORDX16_IMM:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM [[COPY]], 0, 0 :: (load (<8 x s64>), align 4, addrspace 4)
-    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY [[S_LOAD_DWORDX16_IMM]]
+    ; GFX8-NEXT: early-clobber %1:sgpr_512 = S_LOAD_DWORDX16_IMM_ec [[COPY]], 0, 0 :: (load (<8 x s64>), align 4, addrspace 4)
+    ; GFX8-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %1
     ;
     ; GFX10-LABEL: name: load_constant_v8s64
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORDX16_IMM:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM [[COPY]], 0, 0 :: (load (<8 x s64>), align 4, addrspace 4)
-    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY [[S_LOAD_DWORDX16_IMM]]
+    ; GFX10-NEXT: early-clobber %1:sgpr_512 = S_LOAD_DWORDX16_IMM_ec [[COPY]], 0, 0 :: (load (<8 x s64>), align 4, addrspace 4)
+    ; GFX10-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %1
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(<8 x s64>) = G_LOAD %0 :: (load (<8 x s64>), align 4, addrspace 4)
     $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %1

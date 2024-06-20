@@ -549,8 +549,8 @@ end:
 ; GCN-LABEL: {{^}}test_export_clustering:
 ; PREGFX11-DAG: v_mov_b32_e32 [[W0:v[0-9]+]], 0
 ; PREGFX11-DAG: v_mov_b32_e32 [[W1:v[0-9]+]], 1.0
-; PREGFX11-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s0
-; PREGFX11-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s1
+; PREGFX11-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s2
+; PREGFX11-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s3
 ; PREGFX11-DAG: v_add_f32_e{{32|64}} [[Z0:v[0-9]+]]
 ; PREGFX11-DAG: v_sub_f32_e{{32|64}} [[Z1:v[0-9]+]]
 ; PREGFX11: exp param0 [[X]], [[Y]], [[Z0]], [[W0]]{{$}}

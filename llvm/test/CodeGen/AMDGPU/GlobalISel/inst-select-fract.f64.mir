@@ -16,9 +16,9 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
+    ; CHECK-NEXT: early-clobber %3:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY %3.sub0_sub1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY %3.sub2_sub3
     ; CHECK-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (s64), addrspace 1)
     ; CHECK-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775808
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]
@@ -64,9 +64,9 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
+    ; CHECK-NEXT: early-clobber %3:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (<2 x s64>), align 4, addrspace 4)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY %3.sub0_sub1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY %3.sub2_sub3
     ; CHECK-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY2]], 0, 0 :: (load (s64), addrspace 1)
     ; CHECK-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -9223372036854775808
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY [[S_MOV_B]]

@@ -866,13 +866,104 @@ def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
 
+class SMRDAlignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{
+  // Returns true if it is a naturally aligned multi-dword load.
+  LoadSDNode *Ld = cast<LoadSDNode>(N);
+  unsigned Size = Ld->getMemoryVT().getStoreSize();
+  return (Size <= 4) || (Ld->getAlign().value() >= PowerOf2Ceil(Size));
+}]> {
+  let GISelPredicateCode = [{
+    auto &Ld = cast<GLoad>(MI);
+    TypeSize Size = Ld.getMMO().getSize().getValue();
+    return (Size <= 4) || (Ld.getMMO().getAlign().value() >= PowerOf2Ceil(Size));
+  }];
+}
+
+class SMRDUnalignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{
+  // Returns true if it is an under aligned multi-dword load.
+  LoadSDNode *Ld = cast<LoadSDNode>(N);
+  unsigned Size = Ld->getMemoryVT().getStoreSize();
+  return (Size > 4) && (Ld->getAlign().value() < PowerOf2Ceil(Size));
+}]> {
+  let GISelPredicateCode = [{
+    auto &Ld = cast<GLoad>(MI);
+    TypeSize Size = Ld.getMMO().getSize().getValue();
+    return (Size > 4) && (Ld.getMMO().getAlign().value() < PowerOf2Ceil(Size));
+  }];
+}
+
+def alignedmultidwordload : SMRDAlignedLoadPat<smrd_load>;
+def unalignedmultidwordload : SMRDUnalignedLoadPat<smrd_load>;
+
+multiclass SMRD_Align_Pattern <string Instr, ValueType vt> {
+
+  // 1. IMM offset
+  def : GCNPat <
+    (alignedmultidwordload (SMRDImm i64:$sbase, i32:$offset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))> {
+    let OtherPredicates = [isGFX8Plus];
+  }
+  def : GCNPat <
+    (unalignedmultidwordload (SMRDImm i64:$sbase, i32:$offset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM_ec") $sbase, $offset, 0))> {
+    let OtherPredicates = [isGFX8Plus];
+  }
+
+  // 2. SGPR offset
+  def : GCNPat <
+    (alignedmultidwordload (SMRDSgpr i64:$sbase, i32:$soffset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))> {
+    let OtherPredicates = [isGFX8Only];
+  }
+  def : GCNPat <
+    (unalignedmultidwordload (SMRDSgpr i64:$sbase, i32:$soffset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_ec") $sbase, $soffset, 0))> {
+    let OtherPredicates = [isGFX8Only];
+  }
+  def : GCNPat <
+    (alignedmultidwordload (SMRDSgpr i64:$sbase, i32:$soffset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
+  def : GCNPat <
+    (unalignedmultidwordload (SMRDSgpr i64:$sbase, i32:$soffset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, 0, 0))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
+
+  // 3. SGPR+IMM offset
+  def : GCNPat <
+    (alignedmultidwordload (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
+  def : GCNPat <
+    (unalignedmultidwordload (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, $offset, 0))> {
+    let OtherPredicates = [isGFX9Plus];
+  }
+
+  // 4. No offset
+  def : GCNPat <
+    (vt (alignedmultidwordload (i64 SReg_64:$sbase))),
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))> {
+    let OtherPredicates = [isGFX8Plus];
+  }
+  def : GCNPat <
+    (vt (unalignedmultidwordload (i64 SReg_64:$sbase))),
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM_ec") i64:$sbase, 0, 0))> {
+    let OtherPredicates = [isGFX8Plus];
+  }
+}
+
 multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
 
   // 1. IMM offset
   def : GCNPat <
     (smrd_load (SMRDImm i64:$sbase, i32:$offset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))
-  >;
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))> {
+    let OtherPredicates = [isGFX6GFX7];
+  }
 
   // 2. 32-bit IMM offset on CI
   if immci then def : GCNPat <
@@ -885,26 +976,17 @@ multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
   def : GCNPat <
     (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
     (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))> {
-    let OtherPredicates = [isNotGFX9Plus];
-  }
-  def : GCNPat <
-    (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))> {
-    let OtherPredicates = [isGFX9Plus];
+    let OtherPredicates = [isGFX6GFX7];
   }
 
-  // 4. SGPR+IMM offset
-  def : GCNPat <
-    (smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))> {
-    let OtherPredicates = [isGFX9Plus];
-  }
-
-  // 5. No offset
+  // 4. No offset
   def : GCNPat <
     (vt (smrd_load (i64 SReg_64:$sbase))),
-    (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))
-  >;
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))> {
+    let OtherPredicates = [isGFX6GFX7];
+  }
+
+  defm : SMRD_Align_Pattern<Instr, vt>;
 }
 
 multiclass SMLoad_Pattern <string Instr, ValueType vt, bit immci = true> {
