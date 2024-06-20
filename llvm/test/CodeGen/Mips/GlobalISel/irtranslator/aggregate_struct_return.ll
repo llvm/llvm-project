@@ -12,12 +12,12 @@ define { float, float } @add_complex_float(ptr %a, ptr %b) {
   ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load (s32) from %ir..realp)
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir..imagp)
+  ; MIPS32-NEXT:   %5:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %5(p0) :: (load (s32) from %ir..imagp)
   ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
   ; MIPS32-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from %ir..realp1)
-  ; MIPS32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY1]], [[C]](s32)
-  ; MIPS32-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir..imagp3)
+  ; MIPS32-NEXT:   %9:_(p0) = nuw nusw G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; MIPS32-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD %9(p0) :: (load (s32) from %ir..imagp3)
   ; MIPS32-NEXT:   [[FADD:%[0-9]+]]:_(s32) = G_FADD [[LOAD]], [[LOAD2]]
   ; MIPS32-NEXT:   [[FADD1:%[0-9]+]]:_(s32) = G_FADD [[LOAD1]], [[LOAD3]]
   ; MIPS32-NEXT:   $f0 = COPY [[FADD]](s32)
@@ -50,12 +50,12 @@ define { double, double } @add_complex_double(ptr %a, ptr %b) {
   ; MIPS32-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; MIPS32-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY2]](p0) :: (load (s64) from %ir..realp)
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
-  ; MIPS32-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64) from %ir..imagp)
+  ; MIPS32-NEXT:   %5:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD %5(p0) :: (load (s64) from %ir..imagp)
   ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY1]](p0)
   ; MIPS32-NEXT:   [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[COPY3]](p0) :: (load (s64) from %ir..realp1)
-  ; MIPS32-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY1]], [[C]](s32)
-  ; MIPS32-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from %ir..imagp3)
+  ; MIPS32-NEXT:   %9:_(p0) = nuw nusw G_PTR_ADD [[COPY1]], [[C]](s32)
+  ; MIPS32-NEXT:   [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD %9(p0) :: (load (s64) from %ir..imagp3)
   ; MIPS32-NEXT:   [[FADD:%[0-9]+]]:_(s64) = G_FADD [[LOAD]], [[LOAD2]]
   ; MIPS32-NEXT:   [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[LOAD1]], [[LOAD3]]
   ; MIPS32-NEXT:   $d0 = COPY [[FADD]](s64)
@@ -91,9 +91,9 @@ define void @call_ret_complex_float(ptr %z) {
   ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32-NEXT:   %5:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE [[COPY1]](s32), [[COPY3]](p0) :: (store (s32) into %ir..realp)
-  ; MIPS32-NEXT:   G_STORE [[COPY2]](s32), [[PTR_ADD]](p0) :: (store (s32) into %ir..imagp)
+  ; MIPS32-NEXT:   G_STORE [[COPY2]](s32), %5(p0) :: (store (s32) into %ir..imagp)
   ; MIPS32-NEXT:   RetRA
 entry:
   %call = call { float, float } @ret_complex_float()
@@ -120,9 +120,9 @@ define void @call_ret_complex_double(ptr %z) {
   ; MIPS32-NEXT:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
   ; MIPS32-NEXT:   [[COPY3:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
   ; MIPS32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw G_PTR_ADD [[COPY]], [[C]](s32)
+  ; MIPS32-NEXT:   %5:_(p0) = nuw nusw G_PTR_ADD [[COPY]], [[C]](s32)
   ; MIPS32-NEXT:   G_STORE [[COPY1]](s64), [[COPY3]](p0) :: (store (s64) into %ir..realp)
-  ; MIPS32-NEXT:   G_STORE [[COPY2]](s64), [[PTR_ADD]](p0) :: (store (s64) into %ir..imagp)
+  ; MIPS32-NEXT:   G_STORE [[COPY2]](s64), %5(p0) :: (store (s64) into %ir..imagp)
   ; MIPS32-NEXT:   RetRA
 entry:
   %call = call { double, double } @ret_complex_double()

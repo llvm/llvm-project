@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/cstddef.h"
+#include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/fixedvector.h"
 
@@ -68,23 +69,35 @@ public:
   /// Removes a chunk from this freelist.
   bool remove_chunk(cpp::span<cpp::byte> chunk);
 
-private:
-  // For a given size, find which index into chunks_ the node should be written
-  // to.
-  size_t find_chunk_ptr_for_size(size_t size, bool non_null) const;
+  /// For a given size, find which index into chunks_ the node should be written
+  /// to.
+  constexpr size_t find_chunk_ptr_for_size(size_t size, bool non_null) const;
 
   struct FreeListNode {
     FreeListNode *next;
     size_t size;
   };
 
-public:
-  explicit FreeList(cpp::array<size_t, NUM_BUCKETS> sizes)
+  constexpr void set_freelist_node(FreeListNode &node,
+                                   cpp::span<cpp::byte> chunk);
+
+  constexpr explicit FreeList(const cpp::array<size_t, NUM_BUCKETS> &sizes)
       : chunks_(NUM_BUCKETS + 1, 0), sizes_(sizes.begin(), sizes.end()) {}
 
+private:
   FixedVector<FreeList::FreeListNode *, NUM_BUCKETS + 1> chunks_;
   FixedVector<size_t, NUM_BUCKETS> sizes_;
 };
+
+template <size_t NUM_BUCKETS>
+constexpr void FreeList<NUM_BUCKETS>::set_freelist_node(FreeListNode &node,
+                                                        span<cpp::byte> chunk) {
+  // Add it to the correct list.
+  size_t chunk_ptr = find_chunk_ptr_for_size(chunk.size(), false);
+  node.size = chunk.size();
+  node.next = chunks_[chunk_ptr];
+  chunks_[chunk_ptr] = &node;
+}
 
 template <size_t NUM_BUCKETS>
 bool FreeList<NUM_BUCKETS>::add_chunk(span<cpp::byte> chunk) {
@@ -92,19 +105,8 @@ bool FreeList<NUM_BUCKETS>::add_chunk(span<cpp::byte> chunk) {
   if (chunk.size() < sizeof(FreeListNode))
     return false;
 
-  union {
-    FreeListNode *node;
-    cpp::byte *bytes;
-  } aliased;
-
-  aliased.bytes = chunk.data();
-
-  size_t chunk_ptr = find_chunk_ptr_for_size(chunk.size(), false);
-
-  // Add it to the correct list.
-  aliased.node->size = chunk.size();
-  aliased.node->next = chunks_[chunk_ptr];
-  chunks_[chunk_ptr] = aliased.node;
+  FreeListNode *node = ::new (chunk.data()) FreeListNode;
+  set_freelist_node(*node, chunk);
 
   return true;
 }
@@ -123,17 +125,13 @@ span<cpp::byte> FreeList<NUM_BUCKETS>::find_chunk(size_t size) const {
 
   // Now iterate up the buckets, walking each list to find a good candidate
   for (size_t i = chunk_ptr; i < chunks_.size(); i++) {
-    union {
-      FreeListNode *node;
-      cpp::byte *data;
-    } aliased;
-    aliased.node = chunks_[static_cast<unsigned short>(i)];
+    FreeListNode *node = chunks_[static_cast<unsigned short>(i)];
 
-    while (aliased.node != nullptr) {
-      if (aliased.node->size >= size)
-        return span<cpp::byte>(aliased.data, aliased.node->size);
+    while (node != nullptr) {
+      if (node->size >= size)
+        return span<cpp::byte>(reinterpret_cast<cpp::byte *>(node), node->size);
 
-      aliased.node = aliased.node->next;
+      node = node->next;
     }
   }
 
@@ -146,42 +144,36 @@ template <size_t NUM_BUCKETS>
 bool FreeList<NUM_BUCKETS>::remove_chunk(span<cpp::byte> chunk) {
   size_t chunk_ptr = find_chunk_ptr_for_size(chunk.size(), true);
 
-  // Walk that list, finding the chunk.
-  union {
-    FreeListNode *node;
-    cpp::byte *data;
-  } aliased, aliased_next;
-
   // Check head first.
   if (chunks_[chunk_ptr] == nullptr)
     return false;
 
-  aliased.node = chunks_[chunk_ptr];
-  if (aliased.data == chunk.data()) {
-    chunks_[chunk_ptr] = aliased.node->next;
+  FreeListNode *node = chunks_[chunk_ptr];
+  if (reinterpret_cast<cpp::byte *>(node) == chunk.data()) {
+    chunks_[chunk_ptr] = node->next;
     return true;
   }
 
   // No? Walk the nodes.
-  aliased.node = chunks_[chunk_ptr];
+  node = chunks_[chunk_ptr];
 
-  while (aliased.node->next != nullptr) {
-    aliased_next.node = aliased.node->next;
-    if (aliased_next.data == chunk.data()) {
+  while (node->next != nullptr) {
+    if (reinterpret_cast<cpp::byte *>(node->next) == chunk.data()) {
       // Found it, remove this node out of the chain
-      aliased.node->next = aliased_next.node->next;
+      node->next = node->next->next;
       return true;
     }
 
-    aliased.node = aliased.node->next;
+    node = node->next;
   }
 
   return false;
 }
 
 template <size_t NUM_BUCKETS>
-size_t FreeList<NUM_BUCKETS>::find_chunk_ptr_for_size(size_t size,
-                                                      bool non_null) const {
+constexpr size_t
+FreeList<NUM_BUCKETS>::find_chunk_ptr_for_size(size_t size,
+                                               bool non_null) const {
   size_t chunk_ptr = 0;
   for (chunk_ptr = 0u; chunk_ptr < sizes_.size(); chunk_ptr++) {
     if (sizes_[chunk_ptr] >= size &&

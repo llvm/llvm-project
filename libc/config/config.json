@@ -49,6 +49,10 @@
     "LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT": {
       "value": 100,
       "doc": "Default number of spins before blocking if a mutex is in contention (default to 100)."
+    },
+    "LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT": {
+      "value": 100,
+      "doc": "Default number of spins before blocking if a rwlock is in contention (default to 100)."
     }
   }
 }
