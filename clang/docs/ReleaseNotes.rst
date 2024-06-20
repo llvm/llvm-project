@@ -887,6 +887,8 @@ Bug Fixes to C++ Support
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
 - Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
+- Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
+  Fixes (#GH85992).
 
 
 Bug Fixes to AST Handling
