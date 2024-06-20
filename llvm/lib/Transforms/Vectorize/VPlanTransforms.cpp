@@ -1428,8 +1428,8 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
   // of the VF directly. At the moment, widened inductions cannot be updated, so
   // bail out if the plan contains any.
   bool IncludeWidenInduction = any_of(Header->phis(), [](VPRecipeBase &Phi) {
-    return (isa<VPWidenIntOrFpInductionRecipe>(&Phi) ||
-            isa<VPWidenPointerInductionRecipe>(&Phi));
+    return isa<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
+        &Phi);
   });
   // FIXME: Remove this once we can transform (select header_mask, true_value,
   // false_value) into vp.merge.
