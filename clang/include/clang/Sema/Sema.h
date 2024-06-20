@@ -829,6 +829,11 @@ public:
   void diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
                                         SourceLocation Loc);
 
+  /// Warn and return true if adding an effect to a set would create a conflict.
+  bool diagnoseConflictingFunctionEffect(const FunctionEffectsRef &FX,
+                                         const FunctionEffectWithCondition &EC,
+                                         SourceLocation NewAttrLoc);
+
   void
   diagnoseFunctionEffectMergeConflicts(const FunctionEffectSet::Conflicts &Errs,
                                        SourceLocation NewLoc,

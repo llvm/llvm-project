@@ -5190,23 +5190,29 @@ void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
 bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
                                Conflicts &Errs) {
   FunctionEffect::Kind NewOppositeKind = NewEC.Effect.oppositeKind();
+  Expr *NewCondition = NewEC.Cond.getCondition();
 
   // The index at which insertion will take place; default is at end
   // but we might find an earlier insertion point.
   unsigned InsertIdx = Effects.size();
   unsigned Idx = 0;
   for (const FunctionEffectWithCondition &EC : *this) {
-    if (EC.Effect.kind() == NewEC.Effect.kind()) {
-      const Expr *PrevCond =
-          Conditions.empty() ? nullptr : Conditions[Idx].getCondition();
-      if (PrevCond != NewEC.Cond.getCondition())
-        Errs.push_back({EC, NewEC});
-      return false;
-    }
+    // Note about effects with conditions: They are considered distinct from
+    // those without conditions; they are potentially unique, redundant, or
+    // in conflict, but we can't tell which until the condition is evaluated.
+    if (EC.Cond.getCondition() == nullptr && NewCondition == nullptr) {
+      if (EC.Effect.kind() == NewEC.Effect.kind()) {
+        const Expr *PrevCond =
+            Conditions.empty() ? nullptr : Conditions[Idx].getCondition();
+        if (PrevCond != NewEC.Cond.getCondition())
+          Errs.push_back({EC, NewEC});
+        return false;
+      }
 
-    if (EC.Effect.kind() == NewOppositeKind) {
-      Errs.push_back({EC, NewEC});
-      return false;
+      if (EC.Effect.kind() == NewOppositeKind) {
+        Errs.push_back({EC, NewEC});
+        return false;
+      }
     }
 
     if (NewEC.Effect.kind() < EC.Effect.kind() && InsertIdx > Idx)
@@ -5215,7 +5221,7 @@ bool FunctionEffectSet::insert(const FunctionEffectWithCondition &NewEC,
     ++Idx;
   }
 
-  if (NewEC.Cond.getCondition()) {
+  if (NewCondition || !Conditions.empty()) {
     if (Conditions.empty() && !Effects.empty())
       Conditions.resize(Effects.size());
     Conditions.insert(Conditions.begin() + InsertIdx,
@@ -5229,20 +5235,6 @@ bool FunctionEffectSet::insert(const FunctionEffectsRef &Set, Conflicts &Errs) {
   for (const auto &Item : Set)
     insert(Item, Errs);
   return Errs.empty();
-}
-
-void FunctionEffectSet::replaceItem(unsigned Idx,
-                                    const FunctionEffectWithCondition &Item) {
-  assert(Idx < Conditions.size());
-  Effects[Idx] = Item.Effect;
-  Conditions[Idx] = Item.Cond;
-
-  // Maintain invariant: If all conditions are null, the vector should be empty.
-  if (llvm::all_of(Conditions, [](const EffectConditionExpr &C) {
-        return C.getCondition() == nullptr;
-      })) {
-    Conditions.clear();
-  }
 }
 
 FunctionEffectSet FunctionEffectSet::getIntersection(FunctionEffectsRef LHS,

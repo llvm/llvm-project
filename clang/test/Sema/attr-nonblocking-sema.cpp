@@ -174,9 +174,9 @@ void f5() [[clang::nonblocking(val /* NO ... here */)]] {} // expected-error {{e
 void f6() { f5<true, false>(); }
 
 template <bool B>
-void ambiguous() [[clang::nonblocking(B)]] [[clang::blocking]]; // expected-error {{'blocking' and 'nonblocking(expr)' attributes are not compatible}}
+void ambiguous() [[clang::nonblocking(B)]] [[clang::blocking]]; // expected-note {{candidate template ignored: substitution failure [with B = true]: 'blocking' and 'nonblocking' attributes are not compatible}}
 
 void f7() {
-  ambiguous<true>(); // Conflicting attributes
+  ambiguous<true>(); // expected-error {{no matching function for call to 'ambiguous'}}
 }
 #endif // __cplusplus

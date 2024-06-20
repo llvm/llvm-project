@@ -7608,49 +7608,10 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   const FunctionEffectWithCondition NewEC{FunctionEffect(FEKind),
                                           EffectConditionExpr(CondExpr)};
 
-  // Diagnose the newly parsed attribute as incompatible with a previous one.
-  auto Incompatible = [&](const FunctionEffectWithCondition &PrevEC) {
-    S.Diag(PAttr.getLoc(), diag::err_attributes_are_not_compatible)
-        << ("'" + NewEC.description() + "'")
-        << ("'" + PrevEC.description() + "'") << false;
-    // We don't necessarily have the location of the previous attribute,
-    // so no note.
+  if (S.diagnoseConflictingFunctionEffect(FPT->getFunctionEffects(), NewEC,
+                                          PAttr.getLoc())) {
     PAttr.setInvalid();
     return true;
-  };
-
-  // Find previous attributes.
-  std::optional<FunctionEffectWithCondition> PrevNonBlocking;
-  std::optional<FunctionEffectWithCondition> PrevNonAllocating;
-
-  for (const FunctionEffectWithCondition &PrevEC : FPT->getFunctionEffects()) {
-    if (PrevEC.Effect.kind() == FEKind ||
-        PrevEC.Effect.oppositeKind() == FEKind)
-      return Incompatible(PrevEC);
-    switch (PrevEC.Effect.kind()) {
-    case FunctionEffect::Kind::Blocking:
-    case FunctionEffect::Kind::NonBlocking:
-      PrevNonBlocking = PrevEC;
-      break;
-    case FunctionEffect::Kind::Allocating:
-    case FunctionEffect::Kind::NonAllocating:
-      PrevNonAllocating = PrevEC;
-      break;
-    default:
-      break;
-    }
-  }
-
-  if (IsNonBlocking) {
-    // A new nonblocking(true) is incompatible with a previous allocating.
-    if (NewMode == FunctionEffectMode::True && PrevNonAllocating &&
-        PrevNonAllocating->Effect.kind() == FunctionEffect::Kind::Allocating)
-      return Incompatible(*PrevNonAllocating);
-  } else {
-    // A new allocating is incompatible with a previous nonblocking(true).
-    if (NewMode == FunctionEffectMode::False && PrevNonBlocking &&
-        PrevNonBlocking->Effect.kind() == FunctionEffect::Kind::NonBlocking)
-      return Incompatible(*PrevNonBlocking);
   }
 
   // Add the effect to the FunctionProtoType.

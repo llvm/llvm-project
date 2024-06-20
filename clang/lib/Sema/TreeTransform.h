@@ -6264,42 +6264,45 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
   // may need to hold a FunctionEffectsRef pointing into it.
   std::optional<FunctionEffectSet> NewFX;
   if (ArrayRef FXConds = EPI.FunctionEffects.conditions(); !FXConds.empty()) {
-    NewFX.emplace(EPI.FunctionEffects);
+    NewFX.emplace();
     EnterExpressionEvaluationContext Unevaluated(
         getSema(), Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-    for (unsigned Idx = 0, Count = FXConds.size(); Idx != Count;) {
-      if (Expr *CondExpr = FXConds[Idx].getCondition()) {
+    for (const FunctionEffectWithCondition &PrevEC : EPI.FunctionEffects) {
+      FunctionEffectWithCondition NewEC = PrevEC;
+      if (Expr *CondExpr = PrevEC.Cond.getCondition()) {
         ExprResult NewExpr = getDerived().TransformExpr(CondExpr);
         if (NewExpr.isInvalid())
           return QualType();
-        const FunctionEffect Effect(EPI.FunctionEffects.effects()[Idx]);
         std::optional<FunctionEffectMode> Mode =
-            SemaRef.ActOnEffectExpression(NewExpr.get(), Effect.name());
+            SemaRef.ActOnEffectExpression(NewExpr.get(), PrevEC.Effect.name());
         if (!Mode)
           return QualType();
 
         // The condition expression has been transformed, and re-evaluated.
         // It may or may not have become constant.
-        FunctionEffectWithCondition EC;
         switch (*Mode) {
         case FunctionEffectMode::True:
-          EC.Effect = Effect;
+          NewEC.Cond = {};
           break;
         case FunctionEffectMode::False:
-          EC.Effect = FunctionEffect(Effect.oppositeKind());
+          NewEC.Effect = FunctionEffect(PrevEC.Effect.oppositeKind());
+          NewEC.Cond = {};
           break;
         case FunctionEffectMode::Dependent:
-          EC.Effect = Effect;
-          EC.Cond = EffectConditionExpr(NewExpr.get());
+          NewEC.Cond = EffectConditionExpr(NewExpr.get());
           break;
         case FunctionEffectMode::None:
           llvm_unreachable(
               "FunctionEffectMode::None shouldn't be possible here");
         }
-        NewFX->replaceItem(Idx, EC);
       }
-      ++Idx;
+      if (!SemaRef.diagnoseConflictingFunctionEffect(*NewFX, NewEC,
+                                                     TL.getBeginLoc())) {
+        FunctionEffectSet::Conflicts Errs;
+        NewFX->insert(NewEC, Errs);
+        assert(Errs.empty());
+      }
     }
     EPI.FunctionEffects = *NewFX;
     EPIChanged = true;

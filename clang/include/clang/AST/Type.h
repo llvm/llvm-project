@@ -4891,9 +4891,6 @@ public:
 ///
 /// Has the same invariants as FunctionEffectsRef.
 class FunctionEffectSet {
-  // TreeTransform is the only user of replaceItem.
-  template <typename> friend class TreeTransform;
-
   SmallVector<FunctionEffect> Effects;
   SmallVector<EffectConditionExpr> Conditions;
 
@@ -4939,10 +4936,6 @@ public:
                                     FunctionEffectsRef RHS, Conflicts &Errs);
   static FunctionEffectSet getIntersection(FunctionEffectsRef LHS,
                                            FunctionEffectsRef RHS);
-
-private:
-  // For the use of TreeTransform.
-  void replaceItem(unsigned Idx, const FunctionEffectWithCondition &Item);
 };
 
 /// Represents a prototype with parameter type info, e.g.
