@@ -1,6 +1,4 @@
   .globaltype __stack_pointer, i32
-  .text
-  .file  "signature-mismatch-debug-info-b.ll"
   .functype  foo (i32, i32) -> ()
   .functype  test1 () -> ()
   .section  .text.foo,"",@
@@ -129,48 +127,3 @@ test1:                                  # @test1
                                         # DW_AT_external
   .int8  0                               # End Of Children Mark
 .Ldebug_info_end0:
-  .section  .debug_ranges,"",@
-.Ldebug_ranges0:
-  .int32  .Lfunc_begin0
-  .int32  .Lfunc_end0
-  .int32  .Lfunc_begin1
-  .int32  .Lfunc_end1
-  .int32  0
-  .int32  0
-  .section  .debug_str,"S",@
-.Linfo_string0:
-  .asciz  "clang version 19.0.0git"       # string offset=0
-.Linfo_string1:
-  .asciz  "b.c"                           # string offset=24
-.Linfo_string2:
-  .asciz  "foo"                           # string offset=28
-.Linfo_string3:
-  .asciz  "test1"                         # string offset=32
-  .ident  "clang version 19.0.0git"
-  .section  .custom_section.producers,"",@
-  .int8  2
-  .int8  8
-  .ascii  "language"
-  .int8  1
-  .int8  3
-  .ascii  "C11"
-  .int8  0
-  .int8  12
-  .ascii  "processed-by"
-  .int8  1
-  .int8  5
-  .ascii  "clang"
-  .int8  9
-  .ascii  "19.0.0git"
-  .section  .debug_str,"S",@
-  .section  .custom_section.target_features,"",@
-  .int8  2
-  .int8  43
-  .int8  15
-  .ascii  "mutable-globals"
-  .int8  43
-  .int8  8
-  .ascii  "sign-ext"
-  .section  .debug_str,"S",@
-  .section  .debug_line,"",@
-.Lline_table_start0:
