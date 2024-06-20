@@ -72,24 +72,6 @@ public:
       return std::nullopt;
     }
 
-    // Returns the the CU offset for a foreign TU.
-    //
-    // Entries that represent foreign type units can have both a
-    // DW_IDX_compile_unit and a DW_IDX_type_unit. In this case the
-    // DW_IDX_compile_unit represents the skeleton CU offset for the .dwo file
-    // that matches this foreign type unit entry. The type unit will have a
-    // DW_AT_dwo_name attribute that must match the attribute in the skeleton
-    // CU. This function is needed be because the getCUOffset() method will
-    // return the first CU if there is no DW_IDX_compile_unit attribute in this
-    // entry, and it won't return a value CU offset if there is a
-    // DW_IDX_type_unit. But this function will return std::nullopt if there is
-    // no DW_IDX_compile_unit attribute or if this doesn't represent a foreign
-    // type unit.
-    virtual std::optional<uint64_t> getForeignTUSkeletonCUOffset() const {
-      // Default return for accelerator tables that don't support type units.
-      return std::nullopt;
-    }
-
     /// Returns the Tag of the Debug Info Entry associated with this
     /// Accelerator Entry or std::nullopt if the Tag is not recorded in this
     /// Accelerator Entry.
@@ -463,9 +445,12 @@ public:
     std::optional<uint64_t> getCUOffset() const override;
     std::optional<uint64_t> getLocalTUOffset() const override;
     std::optional<uint64_t> getForeignTUTypeSignature() const override;
-    std::optional<uint64_t> getForeignTUSkeletonCUOffset() const override;
-
     std::optional<dwarf::Tag> getTag() const override { return tag(); }
+
+    // Special function that will return the related CU offset needed type 
+    // units. This gets used to find the .dwo file that originated the entries
+    // for a given type unit.
+    std::optional<uint64_t> getRelatedCUOffset() const;
 
     /// Returns the Index into the Compilation Unit list of the owning Name
     /// Index or std::nullopt if this Accelerator Entry does not have an
@@ -477,6 +462,11 @@ public:
     /// DW_IDX_compile_unit attribute, unless there is a DW_IDX_type_unit
     /// attribute.
     std::optional<uint64_t> getCUIndex() const;
+
+    /// Similar functionality to getCUIndex() but without the DW_IDX_type_unit
+    /// restriction. This allows us to get the associated a compilation unit
+    /// index for an entry that is a type unit.
+    std::optional<uint64_t> getRelatedCUIndex() const;
 
     /// Returns the Index into the Local Type Unit list of the owning Name
     /// Index or std::nullopt if this Accelerator Entry does not have an
