@@ -71,3 +71,35 @@ loop:
 exit:
   ret void
 }
+
+define amdgpu_ps i32 @test_if(i1 inreg %cond) {
+; SDAG-LABEL: test_if:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    s_bitcmp0_b32 s0, 0
+; SDAG-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX9-GISEL-LABEL: test_if:
+; GFX9-GISEL:       ; %bb.0: ; %entry
+; GFX9-GISEL-NEXT:    s_mov_b32 s1, s0
+; GFX9-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; GFX9-GISEL-NEXT:    s_xor_b32 s1, s1, 1
+; GFX9-GISEL-NEXT:    s_and_b32 s1, s1, 1
+; GFX9-GISEL-NEXT:    ; return to shader part epilog
+;
+; GFX10-GISEL-LABEL: test_if:
+; GFX10-GISEL:       ; %bb.0: ; %entry
+; GFX10-GISEL-NEXT:    s_xor_b32 s0, s0, 1
+; GFX10-GISEL-NEXT:    s_and_b32 s1, s0, 1
+; GFX10-GISEL-NEXT:    s_mov_b32 s0, src_pops_exiting_wave_id
+; GFX10-GISEL-NEXT:    ; return to shader part epilog
+entry:
+  %id1 = call i32 @llvm.amdgcn.pops.exiting.wave.id()
+  br i1 %cond, label %body, label %exit
+body:
+  %id2 = call i32 @llvm.amdgcn.pops.exiting.wave.id()
+  br label %exit
+exit:
+  %id = phi i32 [ %id1, %entry ], [ %id2, %body ]
+  ret i32 %id
+}
