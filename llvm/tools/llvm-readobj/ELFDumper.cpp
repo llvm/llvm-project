@@ -796,6 +796,8 @@ public:
   void printDynamicTable() override;
 
 private:
+  void printAuxillaryDynamicTableEntryInfo(const Elf_Dyn &Entry);
+
   std::unique_ptr<DictScope> FileScope;
 };
 
@@ -7367,15 +7369,51 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printDynamicTable() {
   W.startLine() << "]\n";
 }
 
+template <class ELFT>
+void JSONELFDumper<ELFT>::printAuxillaryDynamicTableEntryInfo(
+    const Elf_Dyn &Entry) {
+  switch (Entry.getTag()) {
+  case DT_SONAME:
+    this->W.printString("Name", this->getDynamicString(Entry.getVal()));
+    break;
+  case DT_AUXILIARY:
+    LLVM_FALLTHROUGH;
+  case DT_FILTER:
+    LLVM_FALLTHROUGH;
+  case DT_NEEDED: {
+    ListScope L(this->W, "Libraries");
+    this->W.printString(this->getDynamicString(Entry.getVal()));
+  } break;
+  case DT_USED: {
+    ListScope L(this->W, "Objects");
+    this->W.printString(this->getDynamicString(Entry.getVal()));
+  } break;
+  case DT_RPATH:
+    LLVM_FALLTHROUGH;
+  case DT_RUNPATH: {
+    ListScope L(this->W, "Path");
+    this->W.printString(this->getDynamicString(Entry.getVal()));
+  } break;
+  case DT_FLAGS:
+    LLVM_FALLTHROUGH;
+  case DT_FLAGS_1:
+    this->W.printString("Flags",
+                        this->getDynamicEntry(Entry.getTag(), Entry.getVal()));
+    break;
+  default:
+    break;
+  }
+}
+
 template <class ELFT> void JSONELFDumper<ELFT>::printDynamicTable() {
   Elf_Dyn_Range Table = this->dynamic_table();
   ListScope L(this->W, "DynamicSection");
   for (const auto &Entry : Table) {
     DictScope D(this->W);
     uintX_t Tag = Entry.getTag();
-    std::string Value = this->getDynamicEntry(Tag, Entry.getVal());
     this->W.printHex("Tag", Tag);
-    this->W.printString("Value", Value);
+    this->W.printHex("Value", Entry.getVal());
+    this->printAuxillaryDynamicTableEntryInfo(Entry);
     this->W.printString("Type", this->Obj.getDynamicTagAsString(Tag));
   }
 }
