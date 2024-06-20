@@ -986,12 +986,12 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_floating_point(
     // the leading character excluding the sign must be a decimal digit
     if (!__is_leading_parsed) {
       if (__a_end - __a >= 1 && __a[0] != '-' && __a[0] != '+') {
-        if ('0' <= __a[0] && __a[0] <= '9')
+        if (('0' <= __a[0] && __a[0] <= '9') || __a[0] == '.')
           __is_leading_parsed = true;
         else
           break;
       } else if (__a_end - __a >= 2 && (__a[0] == '-' || __a[0] == '+')) {
-        if ('0' <= __a[1] && __a[1] <= '9')
+        if (('0' <= __a[1] && __a[1] <= '9') || __a[1] == '.')
           __is_leading_parsed = true;
         else
           break;
@@ -3148,24 +3148,24 @@ private:
   state_type __cvtstate_;
   size_t __cvtcount_;
 
-  wstring_convert(const wstring_convert& __wc);
-  wstring_convert& operator=(const wstring_convert& __wc);
-
 public:
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wstring_convert() : wstring_convert(new _Codecvt) {}
   _LIBCPP_HIDE_FROM_ABI explicit wstring_convert(_Codecvt* __pcvt);
-#else
+#  else
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXPLICIT_SINCE_CXX14 wstring_convert(_Codecvt* __pcvt = new _Codecvt);
-#endif
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt, state_type __state);
   _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wstring_convert(wstring_convert&& __wc);
-#endif
+#  endif
   _LIBCPP_HIDE_FROM_ABI ~wstring_convert();
+
+  wstring_convert(const wstring_convert& __wc)            = delete;
+  wstring_convert& operator=(const wstring_convert& __wc) = delete;
 
   _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(char __byte) { return from_bytes(&__byte, &__byte + 1); }
   _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const char* __ptr) {
@@ -3206,7 +3206,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert(
   __cvtptr_ = new _Codecvt;
 }
 
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
 
 template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 inline wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert(wstring_convert&& __wc)
@@ -3218,7 +3218,7 @@ inline wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert
   __wc.__cvtptr_ = nullptr;
 }
 
-#endif // _LIBCPP_CXX03_LANG
+#  endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
@@ -3371,18 +3371,15 @@ private:
   bool __owns_ib_;
   bool __always_noconv_;
 
-  wbuffer_convert(const wbuffer_convert&);
-  wbuffer_convert& operator=(const wbuffer_convert&);
-
 public:
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wbuffer_convert() : wbuffer_convert(nullptr) {}
   explicit _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
-#else
+#  else
   _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf = nullptr, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
-#endif
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI ~wbuffer_convert();
 
@@ -3392,6 +3389,9 @@ public:
     __bufptr_      = __bytebuf;
     return __r;
   }
+
+  wbuffer_convert(const wbuffer_convert&)            = delete;
+  wbuffer_convert& operator=(const wbuffer_convert&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI state_type state() const { return __st_; }
 

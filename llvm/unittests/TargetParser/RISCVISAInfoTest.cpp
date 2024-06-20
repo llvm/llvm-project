@@ -312,8 +312,6 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
 }
 
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
-  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64ib", true).takeError()),
-            "unsupported standard user-level extension 'b'");
   EXPECT_EQ(
       toString(
           RISCVISAInfo::parseArchString("rv32i_zmadeup", true).takeError()),
@@ -326,9 +324,6 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
       toString(
           RISCVISAInfo::parseArchString("rv64g_xmadeup", true).takeError()),
       "unsupported non-standard user-level extension 'xmadeup'");
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64ib1p0", true).takeError()),
-      "unsupported standard user-level extension 'b'");
   EXPECT_EQ(
       toString(
           RISCVISAInfo::parseArchString("rv32i_zmadeup1p0", true).takeError()),
@@ -344,8 +339,7 @@ TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
 }
 
 TEST(ParseArchString, IgnoresUnrecognizedExtensionNamesWithIgnoreUnknown) {
-  for (StringRef Input : {"rv32ib", "rv32i_zmadeup",
-                          "rv64i_smadeup", "rv64i_xmadeup"}) {
+  for (StringRef Input : {"rv32i_zmadeup", "rv64i_smadeup", "rv64i_xmadeup"}) {
     auto MaybeISAInfo = RISCVISAInfo::parseArchString(Input, true, false, true);
     ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
     RISCVISAInfo &Info = **MaybeISAInfo;
@@ -913,6 +907,7 @@ R"(All available -march extensions for RISC-V
     f                    2.2
     d                    2.2
     c                    2.0
+    b                    1.0
     v                    1.0
     h                    1.0
     zic64b               1.0
@@ -935,6 +930,7 @@ R"(All available -march extensions for RISC-V
     za128rs              1.0
     za64rs               1.0
     zaamo                1.0
+    zabha                1.0
     zacas                1.0
     zalrsc               1.0
     zama16b              1.0
@@ -1013,12 +1009,16 @@ R"(All available -march extensions for RISC-V
     shvstvala            1.0
     shvstvecd            1.0
     smaia                1.0
+    smcdeleg             1.0
+    smcsrind             1.0
     smepmp               1.0
     smstateen            1.0
     ssaia                1.0
+    ssccfg               1.0
     ssccptr              1.0
     sscofpmf             1.0
     sscounterenw         1.0
+    sscsrind             1.0
     ssstateen            1.0
     ssstrict             1.0
     sstc                 1.0
@@ -1062,7 +1062,6 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     zicfilp              0.4       This is a long dummy description
     zicfiss              0.4
-    zabha                1.0
     zalasr               0.1
     zfbfmin              1.0
     ztso                 0.1

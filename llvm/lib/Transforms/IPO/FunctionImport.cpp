@@ -1435,8 +1435,7 @@ void llvm::gatherImportedSummariesForModule(
     StringRef ModulePath,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
-    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex,
-    GVSummaryPtrSet &DecSummaries) {
+    std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
   // Include all summaries from the importing module.
   ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
@@ -1451,7 +1450,7 @@ void llvm::gatherImportedSummariesForModule(
       assert(DS != DefinedGVSummaries.end() &&
              "Expected a defined summary for imported global value");
       if (Type == GlobalValueSummary::Declaration)
-        DecSummaries.insert(DS->second);
+        continue;
 
       SummariesForIndex[GUID] = DS->second;
     }
@@ -1463,7 +1462,7 @@ std::error_code llvm::EmitImportsFiles(
     StringRef ModulePath, StringRef OutputFilename,
     const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
   std::error_code EC;
-  raw_fd_ostream ImportsOS(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  raw_fd_ostream ImportsOS(OutputFilename, EC, sys::fs::OpenFlags::OF_Text);
   if (EC)
     return EC;
   for (const auto &ILI : ModuleToSummariesForIndex)

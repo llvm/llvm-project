@@ -18,9 +18,46 @@ include "mlir/IR/OpBase.td"
 
 def TilingInterface : OpInterface<"TilingInterface"> {
   let description = [{
-    Interface for allowing operations to expose information needed to
-    tile them (similar to LinalgOp, but without having access to
-    indexing maps)
+    This interface allows operations to expose information needed to tile them.
+
+    The intent of this interface is to separate the generation of the loop
+    structure (and constructs used for it) from the information needed from
+    the operation to be able to tile them. As a result an implementation of
+    the tiling algorithm (like `scf::tileUsingSCF`) can generate the inter-tile
+    loop structure, and call into the methods of the interface to be able to
+    tile any operation that implements the interface.
+    
+    This interface is also meant to help with "tile and fuse", i.e. the process
+    of fusing a producer with a consumer by
+      a) Tiling the consumer
+      b) Based on the tile of the producer used by the tiled consumer,
+         materialize the tiled implementation of a producer to generate that
+         tile (and use it immediately in the consumer)
+    You could also fuse a consumer with a producer by
+      a) Tiling the producer
+      b) Based on the tile produced, materialize the tiled implementation of
+         a consumer that uses this tile.
+    Note that the tile and fuse does not make any calculation on whether it
+    is "profitable to do this", but simply provides a mechansim to implement
+    the transformation when such a fusion is needed by the caller.
+
+    For any operation to be tilable, an operation has to implement the
+    following two methods (see description below)
+      - `getLoopIteratorTypes`
+      - `getIterationDomain`
+      - `getTiledImplementation`
+      - `getResultTilePosition`
+
+    For an operation to be "tiled and fused" with its (already tiled) consumer,
+    an operation has to implement the following additional method (see
+    description below): 
+      - `generateResultTileValue
+
+    For an operation to be "tiled and fused" with its (already tiled) producer,
+    an operation has to implement the following additional methods (see
+    description below):
+      - `getTiledImplementationFromOperandTile`
+      - `getIterationDomainTileFromOperandTile`.
   }];
   let cppNamespace = "::mlir";
   let methods = [
@@ -49,21 +86,24 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*desc=*/[{
           Method to generate the tiled implementation of an operation.
 
-          The iteration space of the operation is returned by
-          `getIterationDomain`. The caller provides the information of the
-          tile within this iteration space whose implementation the
-          caller needs.
+          Given a tile of the iteration space (as returned by
+          `getIterationDomain`), generate in-place the code that represents
+          the computation corresponding to that tile of the iteration space.
+          It is the responsibility of the implementation of this method in
+          the operation to generate the slices of the operands needed for the
+          tiled implementation.
           - `offsets` provides the offset of the tile in the coordinate system
             of the original iteration space, i.e., if an iteration space
-            dimension had non-zero offset, it must be included in the offset
+            dimension had non-zero offset, it will be included in the offset
             provided here (as opposed to zero-based offset "relative" to the
             iteration space).
           - `sizes` provides the size of the tile.
 
-          The method returns the operation that is the tiled
-          implementation.
+          The returned `TilingResult` must return for each result of the
+          untiled operation, a `Value` that is the result of the tiled
+          operation.
         }],
-        /*retType=*/"FailureOr<TilingResult>",
+        /*retType=*/"FailureOr<::mlir::TilingResult>",
         /*methodName=*/"getTiledImplementation",
         /*args=*/(ins
             "OpBuilder &":$b,
@@ -76,13 +116,36 @@ def TilingInterface : OpInterface<"TilingInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Method to return the position of the result tile computed by the tiled operation.
+          Method to return the position of the result tile computed by the
+          tiled operation.
 
-          Specifies what tile of the result of the original tensor is computed
-          by the tiled implementation. Expects the same `offsets` and `sizes` as
-          used to obtain the tiled implementation of the operation.
+          For operations that return a value (typically a value of type
+          `RankedTensorType`), the generated tiled computation has to also
+          recompute a replacement for the results of the original operation.
+          The tiled implementation of the operation returns a tile of the
+          result(s). This methods returns information about what part of the
+          result tensor is computed by the tiled implementation. The manner in
+          which these tiles get put together to get the final result is upto
+          the surrounding loop construct. If an operation has no results, (for
+          example an operation that operates only on memrefs), then this method
+          need not be implemented by the operation.
+          - `resultNumber` is the result number of the original operation
+            being processed.
+          - `offsets` provides the offset of the tile in the coordinate system
+            of the original iteration space, i.e., if an iteration space
+            dimension had non-zero offset, it will be included in the offset
+            provided here (as opposed to zero-based offset "relative" to the
+            iteration space).
+          - `sizes` provides the size of the tile.
+          - `resultOffsets` is the offsets of the tile of the result generated
+            by the tiled implementation (returned by value).
+          - `resultSizes` is the size of the tile of the result generated
+            by the tiled implementation (returned by value).
+
+          Note: It is undefined behaviour if there is overlap between the
+          tiles of the result generated by the tiled implementation.
         }],
-        /*retType=*/"LogicalResult",
+        /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"getResultTilePosition",
         /*args=*/(ins
           "OpBuilder &":$b,
@@ -100,32 +163,140 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*desc=*/[{
           Method to generate the code that produces a tile of the result.
 
-          Generates the IR that computes the tile of a result of the
-          operation.  The `offsets` and `sizes` describe the tile of
-          the output required. This is different from
-          `getTiledImplementation` which generates the tiled
-          implementation of the operation given a tile of the
-          iteration space. This method generates a tiled
-          implementation of the operation based on the tile of the
-          result required. This method enables fusion by using tile
-          and fuse. The method returns failure if the operation can't be
-          tiled to generate the result tile. In practical terms this
-          implies it cannot be tiled and fused with its consumers.
+          This method is required to allow operations to be "tiled and fused"
+          with an (already tiled) consumer. Typically, for two operations with
+          producer -> consumer relation ship, to compute a tile of the
+          consumer a `slice` of the producer is needed. This method allows
+          computing that slice of the producer in-place, thereby "fusing"
+          the operations at tile-granularity. This method is different from
+          `getTiledImplementation`, which produces a tiled implementation
+          for a tile of the iteration space. This method produces a tiled
+          implementation based on the tile of producer required.
+          - `resultNumber` is the result of the producer used by the consumer.
+          - `offsets` is the offset of the slice of the producer result used by
+            the tiled implementation of the consumer.
+          - `sizes` is the size of the slice of the producer result used by the
+            consumer.
+          If fusion of the producer with the consumer is not legal for the
+          operation/result, this method should return failure.
 
-          - `offsets` provides the offset of the tile in the coordinate system
-            of the original iteration space, i.e., if an iteration space
-            dimension had non-zero offset, it must be included in the offset
-            provided here (as opposed to zero-based offset "relative" to the
-            iteration space).
-          - `sizes` provides the size of the tile.
+          Note: This method only deals with the mechanism of implementing the
+          fusion. In general the fusion might result in recomputation (based on
+          the way the result is produced by the producer and the access pattern
+          used in the consumer to access). This is upto the caller to handle
+          appropriately.
         }],
-        /*retType=*/"FailureOr<TilingResult>",
+        /*retType=*/"FailureOr<::mlir::TilingResult>",
         /*methodName=*/"generateResultTileValue",
         /*args=*/(ins
           "OpBuilder &":$b,
           "unsigned":$resultNumber,
           "ArrayRef<OpFoldResult>":$offsets,
           "ArrayRef<OpFoldResult>":$sizes),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to generate the tiled implementation of an operation that uses
+          exactly a tile of the given operand.
+
+          This method is required to allow operations to be "tiled and fused"
+          with an (already tiled) producer. Given a tile of the producer, this
+          method generates the tile of the consumer that uses exactly this
+          produced tile. In some sense it is the "reverse" of
+          `generateResultTileValue`.
+          - `operandNumber` is the result of the producer used by the consumer.
+          - `offsets` is the offset of the slice of the producer result used by
+            the tiled implementation of the consumer.
+          - `sizes` is the size of the slice of the producer result used by the
+            consumer.
+          If it is illegal to fuse with a producer along the given operand for
+          an operation, the implementation should return a failure.
+        }],
+        /*retType=*/"FailureOr<::mlir::TilingResult>",
+        /*methodName=*/"getTiledImplementationFromOperandTile",
+        /*args=*/(ins
+          "OpBuilder &":$b,
+          "unsigned":$operandNumber,
+          "ArrayRef<OpFoldResult>":$offsets,
+          "ArrayRef<OpFoldResult>":$sizes),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return failure();
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Method to return the tile of the iteration domain that uses a given
+          tile of the operand.
+
+          This method is required to allow operations to be "tiled and fused"
+          with an (already tiled) producer. Given a tile of an operand,
+          returns the tile of the iteration space that uses this tile.
+          - `operandNumber` is the result of the producer used by the consumer.
+          - `offsets` is the offset of the slice of the producer result used by
+            the tiled implementation of the consumer.
+          - `sizes` is the size of the slice of the producer result used by the
+            consumer.
+          If it is illegal to fuse with a producer along the given operand for
+          an operation, or if this mapping cannot be computed, the
+          implementation should return a failure.
+
+          Note that unlike the "tile consumer and fuse producer" case, the
+          "tile producer and fuse consumer" requires an additional method to get
+          the iteration tile space that encompasses all uses of the given operand
+          tile. The reason for this is, consider
+          ```mlir
+          %1 = scf.for...  {
+            %2 = <tiled_producer_op>
+            %3 = tensor.insert_slice %2 into ...
+            scf.yield %3
+          }
+          %4 = <consumer_op>)(... %1... )
+          ... <some_op>(... %4 ...)
+          ```
+
+          when fused this becomes
+          ```
+          %1 = scf.for...  {
+            %2 = <tiled_producer_op>
+            %3 = <tiled_consumer_op>(... %2...)
+            %4 = tensor.insert_slice %3 into ...
+            scf.yield %4
+          }
+          ... <some_op>(... %1 ...)
+          ```
+
+          i.e, when fusing the consumer, the replacement for the result of the
+          consumer needs to be returned to replace the uses of the consumer.
+          For the tile+fuse algorithm to do this it needs information about
+          which tile of the iteration space encompasses all uses of the tile
+          produced and use that to compute what are the results produced. Note
+          that this iteration space might be the entire iteration space of the
+          operation, or multiple operand tiles might map to intersecting
+          iteration spaces. It is upto the caller to make sure that it is still
+          fusable with producer in this scenario, or it must return a failure.
+
+          Note that this method is only used as a way to implement the
+          transformation. It does not provide guarantees on whether such a
+          transformation is profitable.
+
+          For most cases `getTiledImplementationFromOperandTile` could be a
+          implemented using `getIterationDomainTileFromOperandTile` +
+          `getTiledImplementation` methods.
+        }],
+        /*retType=*/"::mlir::LogicalResult",
+        /*methodName=*/"getIterationDomainTileFromOperandTile",
+        /*args=*/(ins
+          "OpBuilder &":$b,
+          "unsigned":$operandNumber,
+          "ArrayRef<OpFoldResult> ":$offsets,
+          "ArrayRef<OpFoldResult> ":$sizes,
+          "SmallVectorImpl<OpFoldResult> &":$iterDomainOffsets,
+          "SmallVectorImpl<OpFoldResult> &":$iterDomainSizes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -142,7 +313,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           transformations are done, this method can be used to lower to scalar
           code that can then be lowered to LLVM or SPIR-V dialects.
         }],
-        /*retType=*/"LogicalResult",
+        /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"generateScalarImplementation",
         /*args=*/(ins
             "OpBuilder &":$b,
@@ -189,7 +360,7 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
           less or equal to the tile size. This is meant to be used with
           `mergeReductions` method which will combine the partial reductions.
         }],
-        /*retType=*/"Operation*",
+        /*retType=*/"FailureOr<TilingResult>",
         /*methodName=*/"tileToPartialReduction",
         /*args=*/(ins
             "OpBuilder &":$b,
@@ -200,7 +371,7 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
             "ArrayRef<int>":$reductionDims),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return nullptr;
+          return failure();
         }]
       >,
       InterfaceMethod<
@@ -209,7 +380,7 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
           tiled along the reduction dimensions. This will only apply the
           reduction the operation.
         }],
-        /*retType=*/"Operation*",
+        /*retType=*/"FailureOr<MergeResult>",
         /*methodName=*/"mergeReductions",
         /*args=*/(ins
             "OpBuilder &":$b,
@@ -218,7 +389,7 @@ def PartialReductionOpInterface : OpInterface<"PartialReductionOpInterface"> {
             "ArrayRef<int>":$reductionDim),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return nullptr;
+          return failure();
         }]
       >
   ];

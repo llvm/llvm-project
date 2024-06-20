@@ -63,6 +63,16 @@ struct Factor {
   Factor(Value *Base, unsigned Power) : Base(Base), Power(Power) {}
 };
 
+struct OverflowTracking {
+  bool HasNUW;
+  bool HasNSW;
+  bool AllKnownNonNegative;
+  // Note: AllKnownNonNegative can be true in a case where one of the operands
+  // is negative, but one the operators is not NSW. AllKnownNonNegative should
+  // not be used independently of HasNSW
+  OverflowTracking() : HasNUW(true), HasNSW(true), AllKnownNonNegative(true) {}
+};
+
 class XorOpnd;
 
 } // end namespace reassociate
@@ -103,7 +113,7 @@ private:
   void ReassociateExpression(BinaryOperator *I);
   void RewriteExprTree(BinaryOperator *I,
                        SmallVectorImpl<reassociate::ValueEntry> &Ops,
-                       bool HasNUW);
+                       reassociate::OverflowTracking Flags);
   Value *OptimizeExpression(BinaryOperator *I,
                             SmallVectorImpl<reassociate::ValueEntry> &Ops);
   Value *OptimizeAdd(Instruction *I,

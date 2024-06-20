@@ -141,7 +141,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCExpandAtomicPseudoPass(PR);
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
-  initializePPCDAGToDAGISelPass(PR);
+  initializePPCDAGToDAGISelLegacyPass(PR);
   initializePPCMergeStringPoolPass(PR);
 }
 

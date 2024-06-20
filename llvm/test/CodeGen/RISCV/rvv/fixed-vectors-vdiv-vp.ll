@@ -9,12 +9,11 @@ declare <8 x i7> @llvm.vp.sdiv.v8i7(<8 x i7>, <8 x i7>, <8 x i1>, i32)
 define <8 x i7> @vdiv_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vdiv_vv_v8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vadd.vv v9, v9, v9
-; CHECK-NEXT:    vsra.vi v9, v9, 1
-; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsra.vi v8, v8, 1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsll.vi v9, v9, 1, v0.t
+; CHECK-NEXT:    vsra.vi v9, v9, 1, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vsra.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vdiv.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i7> @llvm.vp.sdiv.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)

@@ -912,3 +912,14 @@ func.func @test_rebox_assumed_rank(%arg0: !fir.box<!fir.array<*:f32>> ) {
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
   // CHECK: fir.rebox_assumed_rank %[[A]] lbs preserve : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+
+func.func @test_is_assumed_size(%arg0: !fir.class<!fir.array<*:none>>, %arg1 : !fir.box<!fir.array<?xf32>>) {
+  %1 = fir.is_assumed_size %arg0 : (!fir.class<!fir.array<*:none>>) -> i1
+  %2 = fir.is_assumed_size %arg1 : (!fir.box<!fir.array<?xf32>>) -> i1
+  return
+}
+// CHECK-LABEL: func.func @test_is_assumed_size(
+// CHECK-SAME: %[[A:.*]]: !fir.class<!fir.array<*:none>>,
+// CHECK-SAME: %[[B:.*]]: !fir.box<!fir.array<?xf32>>)
+  // CHECK: fir.is_assumed_size %[[A]] : (!fir.class<!fir.array<*:none>>) -> i1
+  // CHECK: fir.is_assumed_size %[[B]] : (!fir.box<!fir.array<?xf32>>) -> i1

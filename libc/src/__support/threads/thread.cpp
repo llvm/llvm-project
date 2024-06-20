@@ -54,7 +54,9 @@ class TSSKeyMgr {
   cpp::array<TSSKeyUnit, TSS_KEY_COUNT> units;
 
 public:
-  constexpr TSSKeyMgr() : mtx(false, false, false) {}
+  constexpr TSSKeyMgr()
+      : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+            /*pshared=*/false) {}
 
   cpp::optional<unsigned int> new_key(TSSDtor *dtor) {
     cpp::lock_guard lock(mtx);
@@ -111,7 +113,9 @@ class ThreadAtExitCallbackMgr {
   FixedVector<AtExitUnit, 1024> callback_list;
 
 public:
-  constexpr ThreadAtExitCallbackMgr() : mtx(false, false, false) {}
+  constexpr ThreadAtExitCallbackMgr()
+      : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+            /*pshared=*/false) {}
 
   int add_callback(AtExitCallback *callback, void *obj) {
     cpp::lock_guard lock(mtx);

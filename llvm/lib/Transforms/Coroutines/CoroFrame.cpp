@@ -44,6 +44,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> UseNewDbgInfoFormat;
+
 // The "coro-suspend-crossing" flag is very noisy. There is another debug type,
 // "coro-frame", which results in leaner debug spew.
 #define DEBUG_TYPE "coro-suspend-crossing"
@@ -2756,11 +2758,10 @@ static void sinkSpillUsesAfterCoroBegin(Function &F,
 /// after the suspend block. Doing so minimizes the lifetime of each variable,
 /// hence minimizing the amount of data we end up putting on the frame.
 static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
-                                     SuspendCrossingInfo &Checker) {
+                                     SuspendCrossingInfo &Checker,
+                                     const DominatorTree &DT) {
   if (F.hasOptNone())
     return;
-
-  DominatorTree DT(F);
 
   // Collect all possible basic blocks which may dominate all uses of allocas.
   SmallPtrSet<BasicBlock *, 4> DomSet;
@@ -3149,12 +3150,13 @@ void coro::buildCoroutineFrame(
 
   doRematerializations(F, Checker, MaterializableCallback);
 
+  const DominatorTree DT(F);
   FrameDataInfo FrameData;
   SmallVector<CoroAllocaAllocInst*, 4> LocalAllocas;
   SmallVector<Instruction*, 4> DeadInstructions;
   if (Shape.ABI != coro::ABI::Async && Shape.ABI != coro::ABI::Retcon &&
       Shape.ABI != coro::ABI::RetconOnce)
-    sinkLifetimeStartMarkers(F, Shape, Checker);
+    sinkLifetimeStartMarkers(F, Shape, Checker, DT);
 
   // Collect the spills for arguments and other not-materializable values.
   for (Argument &A : F.args())
@@ -3162,7 +3164,6 @@ void coro::buildCoroutineFrame(
       if (Checker.isDefinitionAcrossSuspend(A, U))
         FrameData.Spills[&A].push_back(cast<Instruction>(U));
 
-  const DominatorTree DT(F);
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.

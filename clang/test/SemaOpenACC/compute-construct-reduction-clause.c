@@ -104,4 +104,9 @@ void uses(unsigned Parm) {
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
 #pragma acc parallel reduction(&:HA.array[1:2])
   while (1);
+
+  // expected-error@+2{{OpenACC 'reduction' clause is not valid on 'init' directive}}
+  // expected-warning@+1{{OpenACC construct 'init' not yet implemented}}
+#pragma acc init reduction(+:I)
+  for(;;);
 }

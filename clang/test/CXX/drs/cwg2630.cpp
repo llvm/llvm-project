@@ -1,10 +1,10 @@
 // RUN: split-file --leading-lines %s %t
-// RUN: %clang_cc1 -std=c++20 -verify -emit-module-interface %t/module.cppm -o %t/module.pcm
-// RUN: %clang_cc1 -std=c++20 -verify -fmodule-file=A=%t/module.pcm %t/main.cpp
-// RUN: %clang_cc1 -std=c++23 -verify -emit-module-interface %t/module.cppm -o %t/module.pcm
-// RUN: %clang_cc1 -std=c++23 -verify -fmodule-file=A=%t/module.pcm %t/main.cpp
-// RUN: %clang_cc1 -std=c++2c -verify -emit-module-interface %t/module.cppm -o %t/module.pcm
-// RUN: %clang_cc1 -std=c++2c -verify -fmodule-file=A=%t/module.pcm %t/main.cpp
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify -emit-module-interface %t/module.cppm -o %t/module.pcm
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify -fmodule-file=A=%t/module.pcm %t/main.cpp
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify -emit-module-interface %t/module.cppm -o %t/module.pcm
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify -fmodule-file=A=%t/module.pcm %t/main.cpp
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify -emit-module-interface %t/module.cppm -o %t/module.pcm
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify -fmodule-file=A=%t/module.pcm %t/main.cpp
 
 //--- module.cppm
 // expected-no-diagnostics

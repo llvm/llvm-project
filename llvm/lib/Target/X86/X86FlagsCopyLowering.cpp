@@ -24,6 +24,7 @@
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -65,6 +66,7 @@ STATISTIC(NumCopiesEliminated, "Number of copies of EFLAGS eliminated");
 STATISTIC(NumSetCCsInserted, "Number of setCC instructions inserted");
 STATISTIC(NumTestsInserted, "Number of test instructions inserted");
 STATISTIC(NumAddsInserted, "Number of adds instructions inserted");
+STATISTIC(NumNFsConvertedTo, "Number of NF instructions converted to");
 
 namespace {
 
@@ -126,7 +128,7 @@ FunctionPass *llvm::createX86FlagsCopyLoweringPass() {
 char X86FlagsCopyLoweringPass::ID = 0;
 
 void X86FlagsCopyLoweringPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -235,6 +237,19 @@ static MachineBasicBlock &splitBlock(MachineBasicBlock &MBB,
   return NewMBB;
 }
 
+enum EFLAGSClobber { NoClobber, EvitableClobber, InevitableClobber };
+
+static EFLAGSClobber getClobberType(const MachineInstr &MI) {
+  const MachineOperand *FlagDef =
+      MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
+  if (!FlagDef)
+    return NoClobber;
+  if (FlagDef->isDead() && X86::getNFVariant(MI.getOpcode()))
+    return EvitableClobber;
+
+  return InevitableClobber;
+}
+
 bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
@@ -243,7 +258,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   PromoteRC = &X86::GR8RegClass;
 
   if (MF.empty())
@@ -254,14 +269,107 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   // turn copied again we visit the first one first. This ensures we can find
   // viable locations for testing the original EFLAGS that dominate all the
   // uses across complex CFGs.
-  SmallVector<MachineInstr *, 4> Copies;
+  SmallSetVector<MachineInstr *, 4> Copies;
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   for (MachineBasicBlock *MBB : RPOT)
     for (MachineInstr &MI : *MBB)
       if (MI.getOpcode() == TargetOpcode::COPY &&
           MI.getOperand(0).getReg() == X86::EFLAGS)
-        Copies.push_back(&MI);
+        Copies.insert(&MI);
 
+  // Try to elminate the copys by transform the instructions between copy and
+  // copydef to the NF (no flags update) variants, e.g.
+  //
+  // %1:gr64 = COPY $eflags
+  // OP1 implicit-def dead $eflags
+  // $eflags = COPY %1
+  // OP2 cc, implicit $eflags
+  //
+  // ->
+  //
+  // OP1_NF
+  // OP2 implicit $eflags
+  if (Subtarget->hasNF()) {
+    SmallSetVector<MachineInstr *, 4> RemovedCopies;
+    // CopyIIt may be invalidated by removing copies.
+    auto CopyIIt = Copies.begin(), CopyIEnd = Copies.end();
+    while (CopyIIt != CopyIEnd) {
+      auto NCopyIIt = std::next(CopyIIt);
+      SmallSetVector<MachineInstr *, 4> EvitableClobbers;
+      MachineInstr *CopyI = *CopyIIt;
+      MachineOperand &VOp = CopyI->getOperand(1);
+      MachineInstr *CopyDefI = MRI->getVRegDef(VOp.getReg());
+      MachineBasicBlock *CopyIMBB = CopyI->getParent();
+      MachineBasicBlock *CopyDefIMBB = CopyDefI->getParent();
+      // Walk all basic blocks reachable in depth-first iteration on the inverse
+      // CFG from CopyIMBB to CopyDefIMBB. These blocks are all the blocks that
+      // may be executed between the execution of CopyDefIMBB and CopyIMBB. On
+      // all execution paths, instructions from CopyDefI to CopyI (exclusive)
+      // has to be NF-convertible if it clobbers flags.
+      for (auto BI = idf_begin(CopyIMBB), BE = idf_end(CopyDefIMBB); BI != BE;
+           ++BI) {
+        MachineBasicBlock *MBB = *BI;
+        for (auto I = (MBB != CopyDefIMBB)
+                          ? MBB->begin()
+                          : std::next(MachineBasicBlock::iterator(CopyDefI)),
+                  E = (MBB != CopyIMBB) ? MBB->end()
+                                        : MachineBasicBlock::iterator(CopyI);
+             I != E; ++I) {
+          MachineInstr &MI = *I;
+          EFLAGSClobber ClobberType = getClobberType(MI);
+          if (ClobberType == NoClobber)
+            continue;
+
+          if (ClobberType == InevitableClobber)
+            goto ProcessNextCopyI;
+
+          assert(ClobberType == EvitableClobber && "unexpected workflow");
+          EvitableClobbers.insert(&MI);
+        }
+      }
+      // Covert evitable clobbers into NF variants and remove the copyies.
+      RemovedCopies.insert(CopyI);
+      CopyI->eraseFromParent();
+      if (MRI->use_nodbg_empty(CopyDefI->getOperand(0).getReg())) {
+        RemovedCopies.insert(CopyDefI);
+        CopyDefI->eraseFromParent();
+      }
+      ++NumCopiesEliminated;
+      for (auto *Clobber : EvitableClobbers) {
+        unsigned NewOpc = X86::getNFVariant(Clobber->getOpcode());
+        assert(NewOpc && "evitable clobber must have a NF variant");
+        Clobber->setDesc(TII->get(NewOpc));
+        Clobber->removeOperand(
+            Clobber->findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr)
+                ->getOperandNo());
+        ++NumNFsConvertedTo;
+      }
+      // Update liveins for basic blocks in the path
+      for (auto BI = idf_begin(CopyIMBB), BE = idf_end(CopyDefIMBB); BI != BE;
+           ++BI)
+        if (*BI != CopyDefIMBB)
+          BI->addLiveIn(X86::EFLAGS);
+    ProcessNextCopyI:
+      CopyIIt = NCopyIIt;
+    }
+    Copies.set_subtract(RemovedCopies);
+  }
+
+  // For the rest of copies that cannot be eliminated by NF transform, we use
+  // setcc to preserve the flags in GPR32 before OP1, and recheck its value
+  // before using the flags, e.g.
+  //
+  // %1:gr64 = COPY $eflags
+  // OP1 implicit-def dead $eflags
+  // $eflags = COPY %1
+  // OP2 cc, implicit $eflags
+  //
+  // ->
+  //
+  // %1:gr8 = SETCCr cc, implicit $eflags
+  // OP1 implicit-def dead $eflags
+  // TEST8rr %1, %1, implicit-def $eflags
+  // OP2 ne, implicit $eflags
   for (MachineInstr *CopyI : Copies) {
     MachineBasicBlock &MBB = *CopyI->getParent();
 

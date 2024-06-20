@@ -26,7 +26,7 @@ char MachineDominanceFrontier::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MachineDominanceFrontier, "machine-domfrontier",
                 "Machine Dominance Frontier Construction", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineDominanceFrontier, "machine-domfrontier",
                 "Machine Dominance Frontier Construction", true, true)
 
@@ -38,7 +38,8 @@ char &llvm::MachineDominanceFrontierID = MachineDominanceFrontier::ID;
 
 bool MachineDominanceFrontier::runOnMachineFunction(MachineFunction &) {
   releaseMemory();
-  Base.analyze(getAnalysis<MachineDominatorTree>().getBase());
+  Base.analyze(
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree().getBase());
   return false;
 }
 
@@ -48,6 +49,6 @@ void MachineDominanceFrontier::releaseMemory() {
 
 void MachineDominanceFrontier::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<MachineDominatorTree>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }

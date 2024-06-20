@@ -825,7 +825,7 @@ Type GEPOp::getResultPtrElementType() {
 void LoadOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), getAddr());
+  effects.emplace_back(MemoryEffects::Read::get(), &getAddrMutable());
   // Volatile operations can have target-specific read-write effects on
   // memory besides the one referred to by the pointer operand.
   // Similarly, atomic operations that are monotonic or stricter cause
@@ -902,7 +902,7 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
 void StoreOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(MemoryEffects::Write::get(), getAddr());
+  effects.emplace_back(MemoryEffects::Write::get(), &getAddrMutable());
   // Volatile operations can have target-specific read-write effects on
   // memory besides the one referred to by the pointer operand.
   // Similarly, atomic operations that are monotonic or stricter cause
@@ -2492,6 +2492,13 @@ LogicalResult LLVMFuncOp::verify() {
     return success();
   }
 
+  // In LLVM IR, these attributes are composed by convention, not by design.
+  if (isNoInline() && isAlwaysInline())
+    return emitError("no_inline and always_inline attributes are incompatible");
+
+  if (isOptimizeNone() && !isNoInline())
+    return emitOpError("with optimize_none must also be no_inline");
+
   Type landingpadResultTy;
   StringRef diagnosticMessage;
   bool isLandingpadTypeConsistent =
@@ -2556,6 +2563,24 @@ Region *LLVMFuncOp::getCallableRegion() {
 }
 
 //===----------------------------------------------------------------------===//
+// UndefOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold an undef operation to a dedicated undef attribute.
+OpFoldResult LLVM::UndefOp::fold(FoldAdaptor) {
+  return LLVM::UndefAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
+// PoisonOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a poison operation to a dedicated poison attribute.
+OpFoldResult LLVM::PoisonOp::fold(FoldAdaptor) {
+  return LLVM::PoisonAttr::get(getContext());
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroOp.
 //===----------------------------------------------------------------------===//
 
@@ -2566,6 +2591,15 @@ LogicalResult LLVM::ZeroOp::verify() {
              << "target extension type does not support zero-initializer";
 
   return success();
+}
+
+/// Fold a zero operation to a builtin zero attribute when possible and fall
+/// back to a dedicated zero attribute.
+OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
+  OpFoldResult result = Builder(getContext()).getZeroAttr(getType());
+  if (result)
+    return result;
+  return LLVM::ZeroAttr::get(getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3004,12 +3038,12 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
               DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
               DIGlobalVariableExpressionAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
-              DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
-              DISubroutineTypeAttr, LoopAnnotationAttr, LoopVectorizeAttr,
-              LoopInterleaveAttr, LoopUnrollAttr, LoopUnrollAndJamAttr,
-              LoopLICMAttr, LoopDistributeAttr, LoopPipelineAttr,
-              LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr, TBAATagAttr,
-              TBAATypeDescriptorAttr>([&](auto attr) {
+              DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,
+              DISubprogramAttr, DISubroutineTypeAttr, LoopAnnotationAttr,
+              LoopVectorizeAttr, LoopInterleaveAttr, LoopUnrollAttr,
+              LoopUnrollAndJamAttr, LoopLICMAttr, LoopDistributeAttr,
+              LoopPipelineAttr, LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr,
+              TBAATagAttr, TBAATypeDescriptorAttr>([&](auto attr) {
           os << decltype(attr)::getMnemonic();
           return AliasResult::OverridableAlias;
         })
@@ -3271,11 +3305,18 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
-  // If this was folded from an llvm.mlir.addressof operation, it should be
-  // materialized as such.
+  // If this was folded from an operation other than llvm.mlir.constant, it
+  // should be materialized as such. Note that an llvm.mlir.zero may fold into
+  // a builtin zero attribute and thus will materialize as a llvm.mlir.constant.
   if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
     if (isa<LLVM::LLVMPointerType>(type))
       return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+  if (isa<LLVM::UndefAttr>(value))
+    return builder.create<LLVM::UndefOp>(loc, type);
+  if (isa<LLVM::PoisonAttr>(value))
+    return builder.create<LLVM::PoisonOp>(loc, type);
+  if (isa<LLVM::ZeroAttr>(value))
+    return builder.create<LLVM::ZeroOp>(loc, type);
   // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }

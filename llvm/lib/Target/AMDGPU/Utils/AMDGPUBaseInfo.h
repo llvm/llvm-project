@@ -49,6 +49,7 @@ static constexpr unsigned GFX9 = 1;
 static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
+static constexpr unsigned GFX12 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -358,6 +359,10 @@ struct EncodingField {
   constexpr uint64_t encode() const { return Value; }
   static ValueType decode(uint64_t Encoded) { return Encoded; }
 };
+
+// Represents a single bit in an encoded value.
+template <unsigned Bit, unsigned D = 0>
+using EncodingBit = EncodingField<Bit, Bit, D>;
 
 // A helper for encoding and decoding multiple fields.
 template <typename... Fields> struct EncodingFields {
@@ -854,6 +859,12 @@ getVOPDInstInfo(unsigned VOPDOpcode, const MCInstrInfo *InstrInfo);
 
 LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);
+
+LLVM_READONLY
+bool isInvalidSingleUseConsumerInst(unsigned Opc);
+
+LLVM_READONLY
+bool isInvalidSingleUseProducerInst(unsigned Opc);
 
 LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);

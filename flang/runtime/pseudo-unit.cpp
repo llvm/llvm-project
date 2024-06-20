@@ -36,11 +36,11 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction direction, Fortran::common::optional<bool>,
-    const Terminator &terminator) {
+    IoErrorHandler &handler) {
   if (direction != Direction::Output) {
-    terminator.Crash("ExternalFileUnit only supports output IO");
+    handler.Crash("ExternalFileUnit only supports output IO");
   }
-  return New<ExternalFileUnit>{terminator}(unit).release();
+  return New<ExternalFileUnit>{handler}(unit).release();
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUp(const char *, std::size_t) {
