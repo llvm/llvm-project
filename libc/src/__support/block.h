@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_BLOCK_H
-#define LLVM_LIBC_SRC_STDLIB_BLOCK_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_BLOCK_H
+#define LLVM_LIBC_SRC___SUPPORT_BLOCK_H
 
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/cstddef.h"
@@ -481,4 +481,4 @@ internal::BlockStatus Block<OffsetType, kAlign>::check_status() const {
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDLIB_BLOCK_H
+#endif // LLVM_LIBC_SRC___SUPPORT_BLOCK_H

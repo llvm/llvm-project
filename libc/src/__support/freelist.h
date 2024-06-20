@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_FREELIST_H
-#define LLVM_LIBC_SRC_STDLIB_FREELIST_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FREELIST_H
+#define LLVM_LIBC_SRC___SUPPORT_FREELIST_H
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/cstddef.h"
@@ -187,4 +187,4 @@ FreeList<NUM_BUCKETS>::find_chunk_ptr_for_size(size_t size,
 
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_STDLIB_FREELIST_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FREELIST_H

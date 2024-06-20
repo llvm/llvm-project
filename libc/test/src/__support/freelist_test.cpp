@@ -10,7 +10,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/span.h"
-#include "src/stdlib/freelist.h"
+#include "src/__support/freelist.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::FreeList;

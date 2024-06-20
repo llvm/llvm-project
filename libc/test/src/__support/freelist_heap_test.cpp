@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/span.h"
-#include "src/stdlib/freelist_heap.h"
+#include "src/__support/freelist_heap.h"
 #include "src/string/memcmp.h"
 #include "src/string/memcpy.h"
 #include "test/UnitTest/Test.h"
