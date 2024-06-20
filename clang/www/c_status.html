@@ -115,7 +115,16 @@ conformance.</p>
     <tr>
       <td>restricted pointers</td>
       <td>N448</td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Clang's support for <code>restrict</code> is fully conforming but
+          considered only partially implemented. Clang implements all of the
+          constraints required for <code>restrict</code> support, but LLVM only
+          supports <code>restrict</code> optimization semantics for restricted
+          pointers used as function parameters; it does not fully support the
+          semantics for restrict on local variables or data members.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>variable length arrays</td>
