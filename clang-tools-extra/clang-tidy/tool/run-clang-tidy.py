@@ -350,7 +350,10 @@ def main():
         help="number of tidy instances to be run in parallel.",
     )
     parser.add_argument(
-        "files", nargs="*", default=[".*"], help="files to be processed (regex on path)."
+        "files",
+        nargs="*",
+        default=[".*"],
+        help="files to be processed (regex on path).",
     )
     parser.add_argument("-fix", action="store_true", help="apply fix-its.")
     parser.add_argument(
