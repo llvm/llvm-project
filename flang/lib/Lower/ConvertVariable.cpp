@@ -2036,11 +2036,6 @@ void Fortran::lower::mapSymbolAttributes(
     if (isUnusedEntryDummy) {
       assert(!Fortran::semantics::IsAllocatableOrPointer(sym) &&
              "handled above");
-      // Need to add support for allocatable assumed-rank to use
-      // logic below, or to simplify it and add codegen for fir.zero
-      // !fir.box<> instead.
-      if (isAssumedRank)
-        TODO(loc, "assumed rank in ENTRY");
       // The box is read right away because lowering code does not expect
       // a non pointer/allocatable symbol to be mapped to a MutableBox.
       mlir::Type ty = converter.genType(var);
