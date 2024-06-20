@@ -414,7 +414,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   // TODO: Add target specific flags, ABI, mtune option etc.
   if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
-    if (strcmp(A->getValue(), "native") == 0)
+    if (A->getValue() == StringRef{"native"})
       CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
     else
       CmdArgs.push_back(A->getValue());
@@ -810,7 +810,7 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   case CodeGenOptions::FramePointerKind::None:
     FPKeepKindStr = "-mframe-pointer=none";
     break;
-   case CodeGenOptions::FramePointerKind::Reserved:
+  case CodeGenOptions::FramePointerKind::Reserved:
     FPKeepKindStr = "-mframe-pointer=reserved";
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
