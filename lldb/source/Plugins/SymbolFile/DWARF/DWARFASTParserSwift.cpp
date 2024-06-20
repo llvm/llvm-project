@@ -169,7 +169,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   if (!compiler_type && die.Tag() == DW_TAG_typedef) {
     // Handle Archetypes, which are typedefs to RawPointerType.
     llvm::StringRef typedef_name = GetTypedefName(die);
-    if (typedef_name.startswith("$sBp")) {
+    if (typedef_name.starts_with("$sBp")) {
       preferred_name = name;
       compiler_type = m_swift_typesystem.GetTypeFromMangledTypename(
           ConstString(typedef_name));

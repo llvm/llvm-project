@@ -312,6 +312,11 @@ public:
   CompilerType GetNonReferenceType(lldb::opaque_compiler_type_t type) override {
     return {};
   }
+
+  unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
+  unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
+  bool GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) override;
+
   /// \}
 protected:
   /// Used in the logs.

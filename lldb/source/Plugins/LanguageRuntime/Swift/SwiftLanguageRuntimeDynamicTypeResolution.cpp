@@ -989,7 +989,7 @@ SwiftLanguageRuntimeImpl::GetIndexOfChildMemberWithName(
       //     An existential is a three-word buffer followed by value metadata...
       // The buffer is exposed as children named `payload_data_{0,1,2}`, and
       // the number of fields are increased to match.
-      if (name.startswith("payload_data_")) {
+      if (name.starts_with("payload_data_")) {
         uint32_t index;
         if (name.take_back().getAsInteger(10, index) && index < 3) {
           child_indexes.push_back(index);
@@ -1771,8 +1771,8 @@ static bool IsPrivateNSClass(NodePointer node) {
     return false;
   for (NodePointer child : *classNode)
     if (child->getKind() == Node::Kind::Identifier && child->hasText())
-      return child->getText().startswith("__NS") ||
-             child->getText().startswith("NSTaggedPointer");
+      return child->getText().starts_with("__NS") ||
+             child->getText().starts_with("NSTaggedPointer");
   return false;
 }
 
@@ -2604,7 +2604,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_ClangType(
   StringRef dyn_name = dyn_class_type_or_name.GetName().GetStringRef();
   // If this is an Objective-C runtime value, skip; this is handled elsewhere.
   if (swift::Demangle::isOldFunctionTypeMangling(dyn_name) ||
-      dyn_name.startswith("__NS"))
+      dyn_name.starts_with("__NS"))
     return false;
 
   SwiftNominalType swift_class;

@@ -69,7 +69,7 @@ static XcodeSDK::Type GetSDKType(const llvm::Triple &target,
 
   auto is_simulator = [&]() -> bool {
     return target.getEnvironment() == llvm::Triple::Simulator ||
-           !target.getArchName().startswith("arm");
+           !target.getArchName().starts_with("arm");
   };
 
   switch (target.getOS()) {

@@ -210,7 +210,7 @@ void SwiftASTManipulator::FindSpecialNames(
       if (auto *UDRE = llvm::dyn_cast<swift::UnresolvedDeclRefExpr>(E)) {
         swift::Identifier name = UDRE->getName().getBaseIdentifier();
 
-        if (m_prefix.empty() || name.str().startswith(m_prefix))
+        if (m_prefix.empty() || name.str().starts_with(m_prefix))
           m_names.push_back(name);
       }
 
@@ -540,7 +540,7 @@ void SwiftASTManipulator::FindVariableDeclarations(
   if (m_repl) {
     for (swift::Decl *decl : m_source_file.getTopLevelDecls()) {
       if (swift::VarDecl *var_decl = llvm::dyn_cast<swift::VarDecl>(decl)) {
-        if (!var_decl->getName().str().startswith("$")) {
+        if (!var_decl->getName().str().starts_with("$")) {
           register_one_var(var_decl);
         }
       }
@@ -562,7 +562,7 @@ void SwiftASTManipulator::FindVariableDeclarations(
           {
             swift::Identifier name = var_decl->getName();
 
-            if (name.str().startswith("$")) {
+            if (name.str().starts_with("$")) {
               var_decl->setDebuggerVar(true);
               register_one_var(var_decl);
             }

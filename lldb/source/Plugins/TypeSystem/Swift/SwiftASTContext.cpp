@@ -1519,7 +1519,7 @@ bool ConsumeIncludeOption(StringRef &arg, StringRef &prefix) {
 
   // We need special handling for -fmodule-file as we need to
   // split on the final = after the module name.
-  if (arg.startswith("-fmodule-file=")) {
+  if (arg.starts_with("-fmodule-file=")) {
     prefix = arg.substr(0, arg.rfind("=") + 1);
     arg.consume_front(prefix);
     return true;
@@ -1543,14 +1543,14 @@ bool IsMultiArgClangFlag(StringRef arg) {
 
 bool IsMacroDefinition(StringRef arg) {
   for (auto &flag : macro_flags)
-    if (arg.startswith(flag))
+    if (arg.starts_with(flag))
       return true;
   return false;
 }
 
 bool ShouldUnique(StringRef arg) {
   for (auto &flag : args_to_unique)
-    if (arg.startswith(flag))
+    if (arg.starts_with(flag))
       return true;
   return false;
 }
@@ -1765,7 +1765,7 @@ void SwiftASTContext::ApplyWorkingDir(
     // Ignore the option part of a double-arg include option.
     if (arg.empty())
       return;
-  } else if (arg.startswith("-")) {
+  } else if (arg.starts_with("-")) {
     // Assume this is a compiler arg and not a path starting with "-".
     return;
   }
@@ -1853,7 +1853,7 @@ void SwiftASTContext::FilterClangImporterOptions(
     // is not found. Since the Xcode build system tends to create a
     // lot of VFS overlays by default, stat them and emit a warning if
     // the yaml file couldn't be found.
-    if (arg_sr.startswith("-ivfs")) {
+    if (arg_sr.starts_with("-ivfs")) {
       // Stash the argument.
       ivfs_arg = arg;
       continue;
@@ -2053,10 +2053,10 @@ ProcessModule(Module &module, std::string m_description,
 
           // Never add framework paths pointing into the system. These
           // modules must be imported from the SDK instead.
-          if (!p.startswith("/System/Library") && !IsDeviceSupport(p) &&
-              !p.startswith(
+          if (!p.starts_with("/System/Library") && !IsDeviceSupport(p) &&
+              !p.starts_with(
                   "/Library/Apple/System/Library/PrivateFrameworks") &&
-              !p.startswith("/System/iOSSupport/System/Library/Frameworks")) {
+              !p.starts_with("/System/iOSSupport/System/Library/Frameworks")) {
             LOG_PRINTF(GetLog(LLDBLog::Types),
                        "adding framework path \"%s\"/.. .",
                        framework_path.c_str());

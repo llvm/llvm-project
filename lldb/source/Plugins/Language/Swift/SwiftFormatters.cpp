@@ -205,11 +205,11 @@ static bool makeStringGutsSummary(
     llvm::StringRef variantCase = variant_sp->GetValueAsCString();
 
     ValueObjectSP payload_sp;
-    if (variantCase.startswith("immortal")) {
+    if (variantCase.starts_with("immortal")) {
       payload_sp = variant_sp->GetChildAtNamePath({g_immortal, g__value});
-    } else if (variantCase.startswith("native")) {
+    } else if (variantCase.starts_with("native")) {
       payload_sp = variant_sp->GetChildAtNamePath({g_immortal, g__value});
-    } else if (variantCase.startswith("bridged")) {
+    } else if (variantCase.starts_with("bridged")) {
       static ConstString g_bridged("bridged");
       auto anyobject_sp = variant_sp->GetChildMemberWithName(g_bridged, true);
       if (!anyobject_sp)
@@ -1211,27 +1211,27 @@ bool lldb_private::formatters::swift::LegacySIMD_SummaryProvider(
   ConstString full_type_name = valobj.GetTypeName();
 
   llvm::StringRef type_name = full_type_name.GetStringRef();
-  if (type_name.startswith("simd."))
+  if (type_name.starts_with("simd."))
     type_name = type_name.drop_front(5);
-  if (type_name.startswith("simd_"))
+  if (type_name.starts_with("simd_"))
     type_name = type_name.drop_front(5);
 
   // Get the type of object this is.
-  bool is_quaternion = type_name.startswith("quat");
+  bool is_quaternion = type_name.starts_with("quat");
   bool is_matrix = type_name[type_name.size() - 2] == 'x';
   bool is_vector = !is_matrix && !is_quaternion;
 
   // Get the kind of SIMD element inside of this object.
   std::optional<SIMDElementKind> kind = std::nullopt;
-  if (type_name.startswith("int"))
+  if (type_name.starts_with("int"))
     kind = SIMDElementKind::Int32;
-  else if (type_name.startswith("uint"))
+  else if (type_name.starts_with("uint"))
     kind = SIMDElementKind::UInt32;
-  else if ((is_quaternion && type_name.endswith("f")) ||
-           type_name.startswith("float"))
+  else if ((is_quaternion && type_name.ends_with("f")) ||
+           type_name.starts_with("float"))
     kind = SIMDElementKind::Float32;
-  else if ((is_quaternion && type_name.endswith("d")) ||
-           type_name.startswith("double"))
+  else if ((is_quaternion && type_name.ends_with("d")) ||
+           type_name.starts_with("double"))
     kind = SIMDElementKind::Float64;
   if (!kind)
     return false;
@@ -1290,13 +1290,13 @@ bool lldb_private::formatters::swift::GLKit_SummaryProvider(
   // Get the type name without the "GLKit." prefix.
   ConstString full_type_name = valobj.GetTypeName();
   llvm::StringRef type_name = full_type_name.GetStringRef();
-  if (type_name.startswith("GLKit."))
+  if (type_name.starts_with("GLKit."))
     type_name = type_name.drop_front(6);
 
   // Get the type of object this is.
   bool is_quaternion = type_name == "GLKQuaternion";
-  bool is_matrix = type_name.startswith("GLKMatrix");
-  bool is_vector = type_name.startswith("GLKVector");
+  bool is_matrix = type_name.starts_with("GLKMatrix");
+  bool is_vector = type_name.starts_with("GLKVector");
 
   if (!(is_quaternion || is_matrix || is_vector))
     return false;

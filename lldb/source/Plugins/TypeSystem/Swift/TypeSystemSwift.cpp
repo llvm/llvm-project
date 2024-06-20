@@ -137,6 +137,20 @@ lldb::Format TypeSystemSwift::GetFormat(opaque_compiler_type_t type) {
   return eFormatBytes;
 }
 
+unsigned TypeSystemSwift::GetPtrAuthKey(lldb::opaque_compiler_type_t type) {
+  return 0;
+}
+
+unsigned
+TypeSystemSwift::GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) {
+  return 0;
+}
+
+bool TypeSystemSwift::GetPtrAuthAddressDiversity(
+    lldb::opaque_compiler_type_t type) {
+  return false;
+}
+
 namespace llvm {
 llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,

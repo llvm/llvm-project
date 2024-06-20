@@ -254,7 +254,7 @@ bool
 HashedCollectionConfig::IsNativeStorageName(ConstString name) const {
   assert(m_nativeStorage_demangledPrefix);
   auto n = name.GetStringRef();
-  return n.startswith(m_nativeStorage_demangledPrefix.GetStringRef());
+  return n.starts_with(m_nativeStorage_demangledPrefix.GetStringRef());
 }
 
 bool
@@ -267,7 +267,7 @@ bool
 HashedCollectionConfig::IsDeferredBridgedStorageName(ConstString name) const {
   assert(m_deferredBridgedStorage_demangledPrefix);
   auto n = name.GetStringRef();
-  return n.startswith(m_deferredBridgedStorage_demangledPrefix.GetStringRef());
+  return n.starts_with(m_deferredBridgedStorage_demangledPrefix.GetStringRef());
 }
 
 HashedStorageHandlerUP
@@ -365,7 +365,7 @@ HashedCollectionConfig::CreateNativeHandler(
     return CreateEmptyHandler();
   }
   
-  if (typeName.startswith(m_nativeStorage_demangledPrefix.GetStringRef())) {
+  if (typeName.starts_with(m_nativeStorage_demangledPrefix.GetStringRef())) {
     auto type_system = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwift>();
     if (!type_system)
       return nullptr;

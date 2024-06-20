@@ -1504,13 +1504,13 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
                node->getText() == swift::BUILTIN_TYPE_NAME_UNKNOWNOBJECT)
         swift_flags |=
             eTypeHasChildren | eTypeIsPointer | eTypeIsScalar | eTypeIsObjC;
-      else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT) ||
-               node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT_PPC))
+      else if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_FLOAT) ||
+               node->getText().starts_with(swift::BUILTIN_TYPE_NAME_FLOAT_PPC))
         swift_flags |= eTypeIsFloat | eTypeIsScalar;
-      else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC))
+      else if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_VEC))
         swift_flags |= eTypeHasChildren | eTypeIsVector;
-      else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT) ||
-               node->getText().startswith(swift::BUILTIN_TYPE_NAME_WORD))
+      else if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_INT) ||
+               node->getText().starts_with(swift::BUILTIN_TYPE_NAME_WORD))
         swift_flags |= eTypeIsInteger | eTypeIsScalar;
     }
     break;
@@ -1544,10 +1544,10 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
       // Builtin types.
       if (module->hasText() && module->getText() == swift::STDLIB_NAME) {
         if (ident->hasText() &&
-            ident->getText().startswith(swift::BUILTIN_TYPE_NAME_INT))
+            ident->getText().starts_with(swift::BUILTIN_TYPE_NAME_INT))
           swift_flags |= eTypeIsScalar | eTypeIsInteger;
         else if (ident->hasText() &&
-                 ident->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT))
+                 ident->getText().starts_with(swift::BUILTIN_TYPE_NAME_FLOAT))
           swift_flags |= eTypeIsScalar | eTypeIsFloat;
       }
     } else {
@@ -3251,18 +3251,18 @@ lldb::Encoding TypeSystemSwiftTypeRef::GetEncoding(opaque_compiler_type_t type,
 
     if (kind == Node::Kind::BuiltinTypeName) {
       assert(node->hasText());
-      if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT) ||
+      if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_INT) ||
           node->getText() == swift::BUILTIN_TYPE_NAME_WORD)
         return lldb::eEncodingSint;
-      if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT) ||
-          node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT_PPC))
+      if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_FLOAT) ||
+          node->getText().starts_with(swift::BUILTIN_TYPE_NAME_FLOAT_PPC))
         return lldb::eEncodingIEEE754;
       if (node->getText() == swift::BUILTIN_TYPE_NAME_RAWPOINTER ||
           node->getText() == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT ||
           node->getText() == swift::BUILTIN_TYPE_NAME_UNSAFEVALUEBUFFER ||
           node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT)
         return lldb::eEncodingUint;
-      if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC)) {
+      if (node->getText().starts_with(swift::BUILTIN_TYPE_NAME_VEC)) {
         count = 0;
         return lldb::eEncodingInvalid;
       }
@@ -3535,7 +3535,7 @@ TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
           // typedef to NSString *, but ClangImporter introduces an extra
           // layer of indirection that we simulate here.
           if (llvm::StringRef(AsMangledName(type))
-                  .endswith("sSo18NSNotificationNameaD"))
+                  .ends_with("sSo18NSNotificationNameaD"))
             return GetTypeFromMangledTypename(ConstString("$sSo8NSStringCD"));
           if (result->GetMangledTypeName().GetStringRef().count('$') > 1 &&
               get_ast_num_children() ==
@@ -4684,7 +4684,7 @@ static bool IsSIMDNode(NodePointer node) {
     return module->getKind() == Node::Kind::Module &&
            module->getText() == swift::MANGLING_MODULE_OBJC &&
            identifier->getKind() == Node::Kind::Identifier &&
-           identifier->getText().startswith("simd_");
+           identifier->getText().starts_with("simd_");
   }
   // A SIMD matrix is a BoundGenericStructure whose inner identifier starts with
   // SIMD.
@@ -4697,7 +4697,7 @@ static bool IsSIMDNode(NodePointer node) {
           structure->getNumChildren() >= 2) {
         NodePointer identifier = structure->getChild(1);
         return identifier->getKind() == Node::Kind::Identifier &&
-               identifier->getText().startswith("SIMD");
+               identifier->getText().starts_with("SIMD");
       }
     }
   }

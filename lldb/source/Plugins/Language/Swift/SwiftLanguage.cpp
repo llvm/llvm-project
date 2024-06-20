@@ -720,7 +720,7 @@ SwiftLanguage::GetHardcodedSummaries() {
       }
       llvm::StringRef tau_ = u8"$\u03C4_";
       if (valobj.GetName().GetLength() > 12 &&
-          valobj.GetName().GetStringRef().startswith(tau_) &&
+          valobj.GetName().GetStringRef().starts_with(tau_) &&
           type.GetTypeName() == g_RawPointerType) {
         if (!swift_metatype_summary_sp.get()) {
           TypeSummaryImpl::Flags flags;
@@ -1204,7 +1204,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
 }
 
 bool SwiftLanguage::IsSourceFile(llvm::StringRef file_path) const {
-  return file_path.endswith(".swift");
+  return file_path.ends_with(".swift");
 }
 
 std::vector<FormattersMatchCandidate>
