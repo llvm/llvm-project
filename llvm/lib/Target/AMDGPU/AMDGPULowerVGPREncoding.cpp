@@ -1,4 +1,4 @@
-//===- AMDGPULowerVGPREncoding.cpp - Insert s_delay_alu instructions ---------===//
+//===- AMDGPULowerVGPREncoding.cpp - Set MODE & Lower idx Pseudos ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,42 +7,50 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Lower VGPRs above first 256 on gfx1210.
+/// Lower VGPRs above first 256 on gfx1210+.
+/// Also lowers dynamic VGPR indexing pseudo instructions to subtarget
+/// instructions.
 ///
-/// The pass scans used VGPRs and inserts S_SET_VGPR_MSB instructions to switch
-/// VGPR addressing mode. The mode change is effective until the next change.
-/// This instruction provides high bits of a VGPR address for four of the
-/// operands: vdst, src0, src1, and src2, or other 4 operands depending on the
-/// instruction encoding. If bits are set they are added as MSB to the
-/// corresponding operand VGPR number.
+/// The pass scans used VGPRs and inserts S_SET_VGPR_MSB instructions on
+/// gfx1210 (or S_SET_VGPR_FRAMES on gfx13+) to switch VGPR addressing mode. The
+/// mode change is effective until the next change. This instruction provides
+/// high bits of a VGPR address for four of the operands: vdst, src0, src1, and
+/// src2, or other 4 operands depending on the instruction encoding. If bits are
+/// set they are added as MSB to the corresponding operand VGPR number.
 ///
 /// There is no need to replace actual register operands because encoding of the
-/// high and low VGPRs is the same. I.e. v0 has the encoding 0x100, so does v256.
-/// v1 has the encoding 0x101 and v257 has the same encoding. So high VGPRs will
-/// survive until actual encoding and will result in a same actual bit encoding.
+/// high and low VGPRs is the same. I.e. v0 has the encoding 0x100, so does
+/// v256. v1 has the encoding 0x101 and v257 has the same encoding. So high
+/// VGPRs will survive until actual encoding and will result in a same actual
+/// bit encoding.
 ///
-/// As a result the pass only inserts S_SET_VGPR_MSB to provide an actual offset
-/// to a VGPR address of the subseqent instructions. The InstPrinter will take
-/// care of the printing a low VGPR instead of a high one. In prinicple this
-/// shall be viable to print actual high VGPR numbers, but that would disagree
-/// with a disasm printing and create a situation where asm text is not
-/// deterministic.
+/// The InstPrinter will take care of the printing a low VGPR instead of a high
+/// one. In prinicple this shall be viable to print actual high VGPR numbers,
+/// but that would disagree with a disasm printing and create a situation where
+/// asm text is not deterministic.
+///
+/// Another part of the pass is lowering of dynamic VGPR indexing pseudo
+/// instructions. V_LOAD/STORE_IDX are be lowered to V_MOV_B32, and the index
+/// registers they use are encoded in a preceding update the index select bits
+/// in MODE using S_SET_VGPR_FRAMES.
 ///
 /// This pass creates a convention where non-fall through basic blocks shall
-/// start with all 4 MSBs zero. Otherwise a disassembly would not be readable.
-/// An optimization here is possible but deemed not desirable because of the
-/// readbility concerns.
+/// start with all MODE register bits 0. Otherwise a disassembly would not be
+/// readable. An optimization here is possible but deemed not desirable because
+/// of the readbility concerns.
 ///
-/// Consequentially the ABI is set to expect all 4 MSBs to be zero on entry.
-/// The pass must run very late in the pipeline to make sure no changes to VGPR
-/// operands will be made after it.
+/// Consequentially the ABI is set to expect all 16 MODE bits to be zero on
+/// entry. The pass must run very late in the pipeline to make sure no changes
+/// to VGPR operands will be made after it.
 //
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUResourceUsageAnalysis.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 
 using namespace llvm;
 
@@ -58,6 +66,11 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    // Preserving the resource usage analysis is required here, and in all
+    // following passes, because the VGPR usage cannot be computed properly
+    // after lowering dynamic indexing offsets to VGPRs (without a costly change
+    // to the analysis).
+    AU.addPreserved<AMDGPUResourceUsageAnalysis>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -67,6 +80,7 @@ private:
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
+  const SIMachineFunctionInfo *MFI;
 
   /// Current mode bits.
   unsigned Mode;
@@ -99,11 +113,15 @@ private:
   bool runOnMachineInstr(MachineInstr &MI);
 
   /// Handle single \p MI given \p Ops operands bit mapping.
-  /// \return true if changed. Optionally takes second array \p Ops2.
+  /// Optionally takes second array \p Ops2.
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
-  bool runOnMachineInstr(MachineInstr &MI, const unsigned Ops[4],
-                         const unsigned *Ops2 = nullptr);
+  /// \return true if any VGPRs are used in MI.
+  bool computeModeForMSBs(unsigned &NewMode, MachineInstr &MI,
+                          const unsigned Ops[4],
+                          const unsigned *Ops2 = nullptr);
+
+  bool lowerIDX(unsigned &NewMode, MachineInstr &MI);
 
   /// Check if an instruction \p I is within a clause and returns a suitable
   /// iterator to insert mode change. It may also modify the S_CLAUSE
@@ -118,13 +136,10 @@ bool AMDGPULowerVGPREncoding::setMode(unsigned NewMode,
     return false;
 
   I = handleClause(I);
-  if (ST->hasVGPRIndexingRegisters()) {
-    BuildMI(*I->getParent(), I, nullptr, TII->get(AMDGPU::S_SET_VGPR_FRAMES))
-        .addImm(NewMode << 8);
-  } else {
-    BuildMI(*I->getParent(), I, nullptr, TII->get(AMDGPU::S_SET_VGPR_MSB))
-        .addImm(NewMode);
-  }
+  BuildMI(*I->getParent(), I, nullptr,
+          TII->get(ST->hasVGPRIndexingRegisters() ? AMDGPU::S_SET_VGPR_FRAMES
+                                                  : AMDGPU::S_SET_VGPR_MSB))
+      .addImm(NewMode);
 
   Mode = NewMode;
   return true;
@@ -150,11 +165,72 @@ AMDGPULowerVGPREncoding::getLowRegister(const MachineOperand &MO) const {
   return std::pair(Idx >> 8, RC->getRegister(RegNum));
 }
 
-bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
-                                                const unsigned Ops[4],
-                                                const unsigned *Ops2) {
-  unsigned NewMode = Mode;
+// Abstraction between which index register is used and where the signifying
+// bits are stored.
+static void updateModeForIDX(unsigned &Mode,
+                             const SmallVectorImpl<unsigned> &IdxRegsUsed) {
+  for (unsigned I = 0; I < 4; ++I) {
+    Mode &= ~(3 << (I * 2));
+    Mode |= IdxRegsUsed[I] << (I * 2);
+  }
+}
 
+bool AMDGPULowerVGPREncoding::lowerIDX(unsigned &NewMode, MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  // TODO-GFX13: We can look at the actual operands to determine the index
+  // register, but for now IsLoad is enough.
+  assert(MI.getOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idx))
+             .getReg() == AMDGPU::IDX1);
+  bool IsLoad = Opc == AMDGPU::V_LOAD_IDX;
+  // src0, src1, src2, dst
+  SmallVector<unsigned, 4> IdxRegsUsed = {0, 0, 0, 1};
+  if (IsLoad)
+    IdxRegsUsed = {1, 0, 0, 0};
+  updateModeForIDX(NewMode, IdxRegsUsed);
+
+  // Synthesize the offset VGPR
+  int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
+  assert(OffsetIdx != -1 && "Malformed V_LOAD/STORE_IDX instruction");
+  unsigned Offset = MI.getOperand(OffsetIdx).getImm();
+  assert(Offset < MFI->getLaneSharedVGPRSize() && "Offset out of range");
+  // Laneshared allocation starts at VGPR0
+  unsigned OffsetVGPRReg = AMDGPU::VGPR0 + Offset;
+  MachineOperand OffsetVGPR = MachineOperand::CreateReg(OffsetVGPRReg, 0);
+
+  // Insert V_MOV
+  const MCInstrDesc &OpDesc = TII->get(AMDGPU::V_MOV_B32_e32);
+  auto MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), OpDesc);
+  if (IsLoad) {
+    // IsUndef because there may be no writes to the register from this function
+    OffsetVGPR.setIsUndef(true);
+    MIB.add(MI.getOperand(0)) // loaded value
+        .add(OffsetVGPR);
+  } else {
+    OffsetVGPR.setIsDef(true);
+    // clang-format off
+    MIB.add(OffsetVGPR)
+        .add(MI.getOperand(0)); // stored value
+    // clang-format on
+  }
+
+  // An earlier pass should have already inserted the SET_GPR_IDX before the
+  // V_LOAD/STORE_IDX
+
+  MI.eraseFromParent();
+
+  auto Ops = AMDGPU::getVGPRLoweringOperandTables(MIB->getDesc());
+  assert(Ops.first);
+  computeModeForMSBs(NewMode, *MIB, Ops.first, Ops.second);
+
+  return setMode(NewMode, MIB->getIterator());
+}
+
+bool AMDGPULowerVGPREncoding::computeModeForMSBs(unsigned &Mode,
+                                                 MachineInstr &MI,
+                                                 const unsigned Ops[4],
+                                                 const unsigned *Ops2) {
+  bool RegUsed = false;
+  unsigned NewMode = Mode;
   for (unsigned I = 0; I < 4; ++I) {
     MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
@@ -195,19 +271,36 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
           TII->hasVALU32BitEncoding(MI.getOpcode()))))
       continue;
 
-    NewMode &= ~(3 << (I * 2));
-    NewMode |= MSBits << (I * 2);
+    // If any registers are used, even if MSBs are unchanged, we need to update
+    // idx select bits.
+    RegUsed = true;
+
+    unsigned BitOffset = ST->hasVGPRIndexingRegisters() ? 8 : 0;
+    NewMode &= ~(3 << (I * 2 + BitOffset));
+    NewMode |= MSBits << (I * 2 + BitOffset);
   }
 
-  return setMode(NewMode, MI.getIterator());
+  Mode = NewMode;
+  return RegUsed;
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
+  unsigned NewMode = Mode;
+  unsigned Opc = MI.getOpcode();
+  // TODO-GFX13 Support BUNDLEs with multiple V_LOAD/STORE_IDX instructions
+  if (Opc == AMDGPU::V_LOAD_IDX || Opc == AMDGPU::V_STORE_IDX)
+    return lowerIDX(NewMode, MI);
+
   auto Ops = AMDGPU::getVGPRLoweringOperandTables(MI.getDesc());
-
-  if (Ops.first)
-    return runOnMachineInstr(MI, Ops.first, Ops.second);
-
+  if (Ops.first) {
+    bool VGPRAreUsed = computeModeForMSBs(NewMode, MI, Ops.first, Ops.second);
+    if (VGPRAreUsed && ST->hasVGPRIndexingRegisters()) {
+      // Idx registers are used, and we should reset them to 0.
+      SmallVector<unsigned, 4> IdxRegsUsed = {0, 0, 0, 0};
+      updateModeForIDX(NewMode, IdxRegsUsed);
+    }
+    return setMode(NewMode, MI.getIterator());
+  }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
 
   return false;
@@ -253,6 +346,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
 
   TII = ST->getInstrInfo();
   TRI = ST->getRegisterInfo();
+  MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;

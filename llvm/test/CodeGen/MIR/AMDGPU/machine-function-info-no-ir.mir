@@ -9,6 +9,7 @@
 # FULL-NEXT: maxKernArgAlign: 64
 # FULL-NEXT: ldsSize: 2048
 # FULL-NEXT: gdsSize: 256
+# FULL-NEXT: laneSharedVGPRSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: isChainFunction: false
@@ -114,6 +115,7 @@ body:             |
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
 # FULL-NEXT: gdsSize: 0
+# FULL-NEXT: laneSharedVGPRSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: isChainFunction: false
@@ -188,6 +190,7 @@ body:             |
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
 # FULL-NEXT: gdsSize: 0
+# FULL-NEXT: laneSharedVGPRSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
 # FULL-NEXT: isChainFunction: false
@@ -263,6 +266,7 @@ body:             |
 # FULL-NEXT: maxKernArgAlign: 1
 # FULL-NEXT: ldsSize: 0
 # FULL-NEXT: gdsSize: 0
+# FULL-NEXT: laneSharedVGPRSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
 # FULL-NEXT: isChainFunction: false
@@ -435,7 +439,7 @@ body:             |
 
 # FULL: ldsSize: 0
 # FULL-NEXT: gdsSize: 0
-# FULL-NEXT: dynLDSAlign: 8
+# FULL: dynLDSAlign: 8
 
 # SIMPLE: dynLDSAlign: 8
 name: dyn_lds_with_alignment

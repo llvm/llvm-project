@@ -9,6 +9,7 @@
 ; CHECK-NEXT: maxKernArgAlign: 8
 ; CHECK-NEXT: ldsSize: 0
 ; CHECK-NEXT: gdsSize: 0
+; CHECK-NEXT: laneSharedVGPRSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: isChainFunction: false

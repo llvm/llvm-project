@@ -1151,18 +1151,20 @@ def : Pat <
 // Indexed Instructions
 //===----------------------------------------------------------------------===//
 
-// The units of $idx and $ptr are in DWORDS.
+// The units of $idx and $offset are in DWORDS.
 // is_laneshared == 0 if the access is to a dynamically accessed private array.
 // That case and laneshared have different fence semantics.
 def V_LOAD_IDX : VPseudoInstSI <
   (outs STAGING_OR_VGPR:$data_op),
-  (ins IDX_REG_32:$idx, SSrc_b32:$ptr, i32imm:$is_laneshared)> {
+  (ins IDX_REG_32:$idx, SSrc_b32:$offset, i32imm:$is_laneshared)> {
     let mayLoad = 1;
+    let UseNamedOperandTable = 1;
 }
 def V_STORE_IDX : VPseudoInstSI <
   (outs),
-  (ins STAGING_OR_VGPR:$data_op, IDX_REG_32:$idx, SSrc_b32:$ptr, i32imm:$is_laneshared)> {
+  (ins STAGING_OR_VGPR:$data_op, IDX_REG_32:$idx, SSrc_b32:$offset, i32imm:$is_laneshared)> {
     let mayStore = 1;
+    let UseNamedOperandTable = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -674,6 +674,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
       GDSSize(MFI.getGDSSize()),
+      LaneSharedVGPRSize(MFI.getLaneSharedVGPRSize()),
       DynLDSAlign(MFI.getDynLDSAlign()), IsEntryFunction(MFI.isEntryFunction()),
       NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
@@ -687,8 +688,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       BytesInStackArgArea(MFI.getBytesInStackArgArea()),
       ReturnsVoid(MFI.returnsVoid()),
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
-      PSInputAddr(MFI.getPSInputAddr()),
-      PSInputEnable(MFI.getPSInputEnable()),
+      PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       Mode(MFI.getMode()) {
   for (Register Reg : MFI.getWWMReservedRegs())
     WWMReservedRegs.push_back(regToString(Reg, TRI));
@@ -717,6 +717,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   MaxKernArgAlign = YamlMFI.MaxKernArgAlign;
   LDSSize = YamlMFI.LDSSize;
   GDSSize = YamlMFI.GDSSize;
+  LaneSharedVGPRSize = YamlMFI.LaneSharedVGPRSize;
   DynLDSAlign = YamlMFI.DynLDSAlign;
   PSInputAddr = YamlMFI.PSInputAddr;
   PSInputEnable = YamlMFI.PSInputEnable;
