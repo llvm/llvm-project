@@ -25,6 +25,8 @@
 namespace mlir {
 namespace cir {
 
+using CallArgList = SmallVector<Value, 8>;
+
 class LowerFunction {
   LowerFunction(const LowerFunction &) = delete;
   void operator=(const LowerFunction &) = delete;
@@ -50,6 +52,34 @@ public:
   ~LowerFunction() = default;
 
   LowerModule &LM; // Per-module state.
+
+  const clang::TargetInfo &getTarget() const { return Target; }
+
+  // Build ABI/Target-specific function prologue.
+  LogicalResult buildFunctionProlog(const LowerFunctionInfo &FI, FuncOp Fn,
+                                    MutableArrayRef<BlockArgument> Args);
+
+  // Build ABI/Target-specific function epilogue.
+  LogicalResult buildFunctionEpilog(const LowerFunctionInfo &FI);
+
+  // Parity with CodeGenFunction::GenerateCode. Keep in mind that several
+  // sections in the original function are focused on codegen unrelated to the
+  // ABI. Such sections are handled in CIR's codegen, not here.
+  LogicalResult generateCode(FuncOp oldFn, FuncOp newFn,
+                             const LowerFunctionInfo &FnInfo);
+
+  /// Rewrite a call operation to abide to the ABI calling convention.
+  LogicalResult rewriteCallOp(CallOp op,
+                              ReturnValueSlot retValSlot = ReturnValueSlot());
+  Value rewriteCallOp(FuncType calleeTy, FuncOp origCallee, CallOp callOp,
+                      ReturnValueSlot retValSlot, Value Chain = nullptr);
+  Value rewriteCallOp(const LowerFunctionInfo &CallInfo, FuncOp Callee,
+                      CallOp Caller, ReturnValueSlot ReturnValue,
+                      CallArgList &CallArgs, CallOp CallOrInvoke,
+                      bool isMustTail, Location loc);
+
+  /// Get an appropriate 'undef' value for the given type.
+  Value getUndefRValue(Type Ty);
 };
 
 } // namespace cir

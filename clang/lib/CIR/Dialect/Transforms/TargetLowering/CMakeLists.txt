@@ -17,12 +17,15 @@ add_clang_library(TargetLowering
   Targets/LoweringPrepareItaniumCXXABI.cpp
 
   DEPENDS
+  clangBasic
 
   LINK_LIBS PUBLIC
 
+  clangBasic
+  LLVMTargetParser
   MLIRIR
   MLIRPass
-
+  MLIRDLTIDialect
   MLIRCIR
   MLIRCIRInterfaces
 )

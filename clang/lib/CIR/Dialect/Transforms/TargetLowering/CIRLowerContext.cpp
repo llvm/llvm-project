@@ -31,7 +31,7 @@ Type CIRLowerContext::initBuiltinType(clang::BuiltinType::Kind K) {
   Type Ty;
 
   // NOTE(cir): Clang does more stuff here. Not sure if we need to do the same.
-  assert(::cir::MissingFeatures::qualifiedTypes());
+  assert(!::cir::MissingFeatures::qualifiedTypes());
   switch (K) {
   case clang::BuiltinType::Char_S:
     Ty = IntType::get(getMLIRContext(), 8, true);

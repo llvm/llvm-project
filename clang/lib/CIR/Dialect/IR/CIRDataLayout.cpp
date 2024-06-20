@@ -1,19 +1,8 @@
-//===- CIRDialect.cpp - MLIR CIR ops implementation -----------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-//
-// This file defines the CIR DataLayout class and its functions.
-//
-//===----------------------------------------------------------------------===//a
-//
-
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace cir {
+
 CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp) : layout{modOp} {
   auto dlSpec = modOp->getAttr(mlir::DLTIDialect::kDataLayoutAttrName)
                     .dyn_cast<mlir::DataLayoutSpecAttr>();
@@ -39,5 +28,9 @@ CIRDataLayout::CIRDataLayout(mlir::ModuleOp modOp) : layout{modOp} {
     }
   }
 }
+
+void CIRDataLayout::reset(llvm::StringRef Desc) { clear(); }
+
+void CIRDataLayout::clear() {}
 
 } // namespace cir

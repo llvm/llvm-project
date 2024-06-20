@@ -14,8 +14,17 @@
 #ifndef LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_ABIINFOIMPL_H
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_ABIINFOIMPL_H
 
+#include "ABIInfo.h"
+#include "CIRCXXABI.h"
+#include "LowerFunctionInfo.h"
+
 namespace mlir {
-namespace cir {} // namespace cir
+namespace cir {
+
+bool classifyReturnType(const CIRCXXABI &CXXABI, LowerFunctionInfo &FI,
+                        const ABIInfo &Info);
+
+} // namespace cir
 } // namespace mlir
 
 #endif // LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_ABIINFOIMPL_H
