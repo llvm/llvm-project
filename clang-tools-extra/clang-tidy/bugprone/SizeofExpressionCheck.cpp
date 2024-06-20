@@ -348,6 +348,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     } else if (ElementSize > CharUnits::Zero() &&
                DenominatorSize > CharUnits::Zero() &&
                ElementSize != DenominatorSize) {
+      // FIXME: Apparently there are no testcases that cover this branch!
       diag(E->getOperatorLoc(),
            "suspicious usage of 'sizeof(array)/sizeof(...)';"
            " denominator differs from the size of array elements")
