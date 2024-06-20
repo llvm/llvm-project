@@ -595,7 +595,7 @@ TEST_F(FileManagerTest, CASProvider) {
     std::optional<ObjectRef> CASContents;
     auto Buf = Manager.getBufferForFile(Path, /*IsVolatile*/ false,
                                         /*RequiresNullTerminator*/ false,
-                                        &CASContents);
+                                        std::nullopt, &CASContents);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents, (*Buf)->getBuffer());
     ASSERT_TRUE(CASContents);
@@ -613,7 +613,7 @@ TEST_F(FileManagerTest, CASProvider) {
     std::optional<ObjectRef> CASContents;
     auto Buf = Manager.getBufferForFile(*FERef, /*IsVolatile*/ false,
                                         /*RequiresNullTerminator*/ false,
-                                        &CASContents);
+                                        std::nullopt, &CASContents);
     ASSERT_TRUE(Buf);
     EXPECT_EQ(Contents, (*Buf)->getBuffer());
     ASSERT_TRUE(CASContents);

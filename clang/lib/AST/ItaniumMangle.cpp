@@ -4769,6 +4769,7 @@ recurse:
   case Expr::PseudoObjectExprClass:
   case Expr::AtomicExprClass:
   case Expr::SourceLocExprClass:
+  case Expr::EmbedExprClass:
   case Expr::BuiltinBitCastExprClass:
   {
     NotPrimaryExpr();
