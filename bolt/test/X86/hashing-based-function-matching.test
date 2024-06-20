@@ -45,7 +45,7 @@ main:
 ---
 header:
   profile-version: 1
-  binary-name:     'profile-passthrough-block.s.tmp.exe'
+  binary-name:     'hashing-based-function-matching.s.tmp.exe'
   binary-build-id: '<unknown>'
   profile-flags:   [ lbr ]
   profile-origin:  branch profile reader
