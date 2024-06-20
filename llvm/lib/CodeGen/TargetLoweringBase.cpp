@@ -148,7 +148,7 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::ATAN_F128, "atanf128");
     setLibcallName(RTLIB::SINH_F128, "sinhf128");
     setLibcallName(RTLIB::COSH_F128, "coshf128");
-    setLibcallName(RTLIB::TANH_F128, "tanhf128");    
+    setLibcallName(RTLIB::TANH_F128, "tanhf128");
     setLibcallName(RTLIB::POW_F128, "powf128");
     setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
     setLibcallName(RTLIB::CEIL_F128, "ceilf128");
@@ -970,9 +970,8 @@ void TargetLoweringBase::initActions() {
       setOperationAction(
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN,
-           ISD::FACOS, ISD::FASIN, ISD::FATAN, 
-           ISD::FCOSH, ISD::FSINH, ISD::FTANH},
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN, ISD::FACOS,
+           ISD::FASIN, ISD::FATAN, ISD::FCOSH, ISD::FSINH, ISD::FTANH},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -1024,16 +1023,17 @@ void TargetLoweringBase::initActions() {
                      Expand);
 
   // These library functions default to expand.
-  setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
-                      ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
-                      ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
-                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN,
-                      ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN,
-                      ISD::FCOSH, ISD::FSINH, ISD::FTANH},
+  setOperationAction({ISD::FCBRT,      ISD::FLOG,    ISD::FLOG2,  ISD::FLOG10,
+                      ISD::FEXP,       ISD::FEXP2,   ISD::FEXP10, ISD::FFLOOR,
+                      ISD::FNEARBYINT, ISD::FCEIL,   ISD::FRINT,  ISD::FTRUNC,
+                      ISD::LROUND,     ISD::LLROUND, ISD::LRINT,  ISD::LLRINT,
+                      ISD::FROUNDEVEN, ISD::FTAN,    ISD::FACOS,  ISD::FASIN,
+                      ISD::FATAN,      ISD::FCOSH,   ISD::FSINH,  ISD::FTANH},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
-  setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN,
-                          ISD::FCOSH, ISD::FSINH, ISD::FTANH}, MVT::f16, Promote);
+  setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
+                      ISD::FSINH, ISD::FTANH},
+                     MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);
 

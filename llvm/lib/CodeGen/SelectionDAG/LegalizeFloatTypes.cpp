@@ -333,30 +333,21 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FADD(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FACOS(SDNode *N) {
-  return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                              RTLIB::ACOS_F32,
-                                              RTLIB::ACOS_F64,
-                                              RTLIB::ACOS_F80,
-                                              RTLIB::ACOS_F128,
-                                              RTLIB::ACOS_PPCF128));
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::ACOS_F32, RTLIB::ACOS_F64,
+                      RTLIB::ACOS_F80, RTLIB::ACOS_F128, RTLIB::ACOS_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FASIN(SDNode *N) {
-  return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                              RTLIB::ASIN_F32,
-                                              RTLIB::ASIN_F64,
-                                              RTLIB::ASIN_F80,
-                                              RTLIB::ASIN_F128,
-                                              RTLIB::ASIN_PPCF128));
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::ASIN_F32, RTLIB::ASIN_F64,
+                      RTLIB::ASIN_F80, RTLIB::ASIN_F128, RTLIB::ASIN_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FATAN(SDNode *N) {
-  return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                              RTLIB::ATAN_F32,
-                                              RTLIB::ATAN_F64,
-                                              RTLIB::ATAN_F80,
-                                              RTLIB::ATAN_F128,
-                                              RTLIB::ATAN_PPCF128));
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::ATAN_F32, RTLIB::ATAN_F64,
+                      RTLIB::ATAN_F80, RTLIB::ATAN_F128, RTLIB::ATAN_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCBRT(SDNode *N) {
@@ -435,12 +426,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCOS(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCOSH(SDNode *N) {
-  return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                              RTLIB::COSH_F32,
-                                              RTLIB::COSH_F64,
-                                              RTLIB::COSH_F80,
-                                              RTLIB::COSH_F128,
-                                              RTLIB::COSH_PPCF128));
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::COSH_F32, RTLIB::COSH_F64,
+                      RTLIB::COSH_F80, RTLIB::COSH_F128, RTLIB::COSH_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FDIV(SDNode *N) {
@@ -807,12 +795,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FSIN(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FSINH(SDNode *N) {
-  return SoftenFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                              RTLIB::SINH_F32,
-                                              RTLIB::SINH_F64,
-                                              RTLIB::SINH_F80,
-                                              RTLIB::SINH_F128,
-                                              RTLIB::SINH_PPCF128));
+  return SoftenFloatRes_Unary(
+      N, GetFPLibCall(N->getValueType(0), RTLIB::SINH_F32, RTLIB::SINH_F64,
+                      RTLIB::SINH_F80, RTLIB::SINH_F128, RTLIB::SINH_PPCF128));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FSQRT(SDNode *N) {
@@ -1584,28 +1569,31 @@ void DAGTypeLegalizer::ExpandFloatRes_FADD(SDNode *N, SDValue &Lo,
                                         RTLIB::ADD_PPCF128), Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandFloatRes_FACOS(SDNode *N,
-                                           SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                       RTLIB::ACOS_F32, RTLIB::ACOS_F64,
-                                       RTLIB::ACOS_F80, RTLIB::ACOS_F128,
-                                       RTLIB::ACOS_PPCF128), Lo, Hi);
+void DAGTypeLegalizer::ExpandFloatRes_FACOS(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ACOS_F32,
+                                    RTLIB::ACOS_F64, RTLIB::ACOS_F80,
+                                    RTLIB::ACOS_F128, RTLIB::ACOS_PPCF128),
+                       Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandFloatRes_FASIN(SDNode *N,
-                                           SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                       RTLIB::ASIN_F32, RTLIB::ASIN_F64,
-                                       RTLIB::ASIN_F80, RTLIB::ASIN_F128,
-                                       RTLIB::ASIN_PPCF128), Lo, Hi);
+void DAGTypeLegalizer::ExpandFloatRes_FASIN(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ASIN_F32,
+                                    RTLIB::ASIN_F64, RTLIB::ASIN_F80,
+                                    RTLIB::ASIN_F128, RTLIB::ASIN_PPCF128),
+                       Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandFloatRes_FATAN(SDNode *N,
-                                           SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                       RTLIB::ATAN_F32, RTLIB::ATAN_F64,
-                                       RTLIB::ATAN_F80, RTLIB::ATAN_F128,
-                                       RTLIB::ATAN_PPCF128), Lo, Hi);
+void DAGTypeLegalizer::ExpandFloatRes_FATAN(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::ATAN_F32,
+                                    RTLIB::ATAN_F64, RTLIB::ATAN_F80,
+                                    RTLIB::ATAN_F128, RTLIB::ATAN_PPCF128),
+                       Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FCBRT(SDNode *N, SDValue &Lo,
@@ -1642,12 +1630,13 @@ void DAGTypeLegalizer::ExpandFloatRes_FCOS(SDNode *N,
                                        RTLIB::COS_PPCF128), Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandFloatRes_FCOSH(SDNode *N,
-                                           SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                       RTLIB::COSH_F32, RTLIB::COSH_F64,
-                                       RTLIB::COSH_F80, RTLIB::COSH_F128,
-                                       RTLIB::COSH_PPCF128), Lo, Hi);
+void DAGTypeLegalizer::ExpandFloatRes_FCOSH(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::COSH_F32,
+                                    RTLIB::COSH_F64, RTLIB::COSH_F80,
+                                    RTLIB::COSH_F128, RTLIB::COSH_PPCF128),
+                       Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FDIV(SDNode *N, SDValue &Lo,
@@ -1868,12 +1857,13 @@ void DAGTypeLegalizer::ExpandFloatRes_FSIN(SDNode *N,
                                        RTLIB::SIN_PPCF128), Lo, Hi);
 }
 
-void DAGTypeLegalizer::ExpandFloatRes_FSINH(SDNode *N,
-                                           SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Unary(N, GetFPLibCall(N->getValueType(0),
-                                       RTLIB::SINH_F32, RTLIB::SINH_F64,
-                                       RTLIB::SINH_F80, RTLIB::SINH_F128,
-                                       RTLIB::SINH_PPCF128), Lo, Hi);
+void DAGTypeLegalizer::ExpandFloatRes_FSINH(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  ExpandFloatRes_Unary(N,
+                       GetFPLibCall(N->getValueType(0), RTLIB::SINH_F32,
+                                    RTLIB::SINH_F64, RTLIB::SINH_F80,
+                                    RTLIB::SINH_F128, RTLIB::SINH_PPCF128),
+                       Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FSQRT(SDNode *N,
@@ -1904,7 +1894,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FTAN(SDNode *N, SDValue &Lo,
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FTANH(SDNode *N, SDValue &Lo,
-                                           SDValue &Hi) {
+                                            SDValue &Hi) {
   ExpandFloatRes_Unary(N,
                        GetFPLibCall(N->getValueType(0), RTLIB::TANH_F32,
                                     RTLIB::TANH_F64, RTLIB::TANH_F80,

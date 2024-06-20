@@ -4534,15 +4534,13 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   case ISD::FASIN:
   case ISD::STRICT_FASIN:
-    ExpandFPLibCall(Node, RTLIB::ASIN_F32, RTLIB::ASIN_F64,
-                    RTLIB::ASIN_F80, RTLIB::ASIN_F128,
-                    RTLIB::ASIN_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::ASIN_F32, RTLIB::ASIN_F64, RTLIB::ASIN_F80,
+                    RTLIB::ASIN_F128, RTLIB::ASIN_PPCF128, Results);
     break;
   case ISD::FACOS:
   case ISD::STRICT_FACOS:
-    ExpandFPLibCall(Node, RTLIB::ACOS_F32, RTLIB::ACOS_F64,
-                    RTLIB::ACOS_F80, RTLIB::ACOS_F128,
-                    RTLIB::ACOS_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::ACOS_F32, RTLIB::ACOS_F64, RTLIB::ACOS_F80,
+                    RTLIB::ACOS_F128, RTLIB::ACOS_PPCF128, Results);
     break;
   case ISD::FATAN:
   case ISD::STRICT_FATAN:
@@ -4551,15 +4549,13 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   case ISD::FSINH:
   case ISD::STRICT_FSINH:
-    ExpandFPLibCall(Node, RTLIB::SINH_F32, RTLIB::SINH_F64,
-                    RTLIB::SINH_F80, RTLIB::SINH_F128,
-                    RTLIB::SINH_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::SINH_F32, RTLIB::SINH_F64, RTLIB::SINH_F80,
+                    RTLIB::SINH_F128, RTLIB::SINH_PPCF128, Results);
     break;
   case ISD::FCOSH:
   case ISD::STRICT_FCOSH:
-    ExpandFPLibCall(Node, RTLIB::COSH_F32, RTLIB::COSH_F64,
-                    RTLIB::COSH_F80, RTLIB::COSH_F128,
-                    RTLIB::COSH_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::COSH_F32, RTLIB::COSH_F64, RTLIB::COSH_F80,
+                    RTLIB::COSH_F128, RTLIB::COSH_PPCF128, Results);
     break;
   case ISD::FTANH:
   case ISD::STRICT_FTANH:
