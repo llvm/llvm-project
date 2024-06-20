@@ -44,14 +44,13 @@ struct _LIBCPP_TEMPLATE_VIS conditional<false, _If, _Then> {
   using type _LIBCPP_NODEBUG = _Then;
 };
 
+template <bool _Bp, class _IfRes, class _ElseRes>
+using __conditional_t _LIBCPP_NODEBUG = _If<_Bp, _IfRes, _ElseRes>;
+
 #if _LIBCPP_STD_VER >= 14
 template <bool _Bp, class _IfRes, class _ElseRes>
-using conditional_t _LIBCPP_NODEBUG = typename conditional<_Bp, _IfRes, _ElseRes>::type;
+using conditional_t _LIBCPP_NODEBUG = __conditional_t<_Bp, _IfRes, _ElseRes>;
 #endif
-
-// Helper so we can use "conditional_t" in all language versions.
-template <bool _Bp, class _If, class _Then>
-using __conditional_t _LIBCPP_NODEBUG = typename conditional<_Bp, _If, _Then>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
