@@ -20,6 +20,68 @@ static bool testIfIsVoidTy(QualType Ty) {
   return k == BuiltinType::Void;
 }
 
+static bool isAggregateTypeForABI(QualType T) {
+  return !CIRGenFunction::hasScalarEvaluationKind(T) ||
+         T->isMemberFunctionPointerType();
+}
+
+/// Pass transparent unions as if they were the type of the first element. Sema
+/// should ensure that all elements of the union have the same "machine type".
+static QualType useFirstFieldIfTransparentUnion(QualType Ty) {
+  assert(!Ty->getAsUnionType() && "NYI");
+  return Ty;
+}
+
+namespace {
+
+/// The default implementation for ABI specific
+/// details. This implementation provides information which results in
+/// self-consistent and sensible LLVM IR generation, but does not
+/// conform to any particular ABI.
+class DefaultABIInfo : public ABIInfo {
+public:
+  DefaultABIInfo(CIRGenTypes &CGT) : ABIInfo(CGT) {}
+
+  virtual ~DefaultABIInfo() = default;
+
+  ABIArgInfo classifyReturnType(QualType RetTy) const {
+    if (RetTy->isVoidType())
+      return ABIArgInfo::getIgnore();
+
+    llvm_unreachable("Non-void return type NYI");
+  }
+
+  ABIArgInfo classifyArgumentType(QualType Ty) const {
+    Ty = useFirstFieldIfTransparentUnion(Ty);
+
+    if (isAggregateTypeForABI(Ty)) {
+      llvm_unreachable("NYI");
+    }
+
+    // Treat an enum type as its underlying type.
+    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+      llvm_unreachable("NYI");
+
+    ASTContext &Context = getContext();
+    if (const auto *EIT = Ty->getAs<BitIntType>())
+      llvm_unreachable("NYI");
+
+    if (isPromotableIntegerTypeForABI(Ty)) {
+      llvm_unreachable("ArgInfo integer extend NYI");
+    } else {
+      return ABIArgInfo::getDirect();
+    }
+  }
+
+  void computeInfo(CIRGenFunctionInfo &FI) const override {
+    if (!getCXXABI().classifyReturnType(FI))
+      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    for (auto &I : FI.arguments())
+      I.info = classifyArgumentType(I.type);
+  }
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // AArch64 ABI Implementation
 //===----------------------------------------------------------------------===//
@@ -151,6 +213,66 @@ public:
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// Base ABI and target codegen info implementation common between SPIR and
+// SPIR-V.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class CommonSPIRABIInfo : public DefaultABIInfo {
+public:
+  CommonSPIRABIInfo(CIRGenTypes &CGT) : DefaultABIInfo(CGT) {}
+};
+
+class SPIRVABIInfo : public CommonSPIRABIInfo {
+public:
+  SPIRVABIInfo(CIRGenTypes &CGT) : CommonSPIRABIInfo(CGT) {}
+  void computeInfo(CIRGenFunctionInfo &FI) const override {
+    // The logic is same as in DefaultABIInfo with an exception on the kernel
+    // arguments handling.
+    llvm::CallingConv::ID CC = FI.getCallingConvention();
+
+    bool cxxabiHit = getCXXABI().classifyReturnType(FI);
+    assert(!cxxabiHit && "C++ ABI not considered");
+
+    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+
+    for (auto &I : FI.arguments()) {
+      if (CC == llvm::CallingConv::SPIR_KERNEL) {
+        I.info = classifyKernelArgumentType(I.type);
+      } else {
+        I.info = classifyArgumentType(I.type);
+      }
+    }
+  }
+
+private:
+  ABIArgInfo classifyKernelArgumentType(QualType Ty) const {
+    assert(!getContext().getLangOpts().CUDAIsDevice && "NYI");
+    return classifyArgumentType(Ty);
+  }
+};
+} // namespace
+namespace {
+
+class CommonSPIRTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  CommonSPIRTargetCIRGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
+      : TargetCIRGenInfo(std::move(ABIInfo)) {}
+
+  unsigned getOpenCLKernelCallingConv() const override {
+    return llvm::CallingConv::SPIR_KERNEL;
+  }
+};
+
+class SPIRVTargetCIRGenInfo : public CommonSPIRTargetCIRGenInfo {
+public:
+  SPIRVTargetCIRGenInfo(CIRGenTypes &CGT)
+      : CommonSPIRTargetCIRGenInfo(std::make_unique<SPIRVABIInfo>(CGT)) {}
+};
+
+} // namespace
+
 // TODO(cir): remove the attribute once this gets used.
 LLVM_ATTRIBUTE_UNUSED
 static bool classifyReturnType(const CIRGenCXXABI &CXXABI,
@@ -187,13 +309,6 @@ void X86_64ABIInfo::computeInfo(CIRGenFunctionInfo &FI) const {
     FI.getReturnInfo() = ABIArgInfo::getIgnore();
   else
     FI.getReturnInfo() = ABIArgInfo::getDirect(CGT.ConvertType(RetTy));
-}
-
-/// Pass transparent unions as if they were the type of the first element. Sema
-/// should ensure that all elements of the union have the same "machine type".
-static QualType useFirstFieldIfTransparentUnion(QualType Ty) {
-  assert(!Ty->getAsUnionType() && "NYI");
-  return Ty;
 }
 
 /// GetINTEGERTypeAtOffset - The ABI specifies that a value should be passed in
@@ -458,6 +573,10 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     case llvm::Triple::Linux:
       return SetCIRGenInfo(new X86_64TargetCIRGenInfo(genTypes, AVXLevel));
     }
+  }
+
+  case llvm::Triple::spirv64: {
+    return SetCIRGenInfo(new SPIRVTargetCIRGenInfo(genTypes));
   }
   }
 }
