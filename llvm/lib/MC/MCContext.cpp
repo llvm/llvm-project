@@ -325,7 +325,7 @@ MCSymbol *MCContext::createBlockSymbol(const Twine &Name, bool AlwaysEmit) {
   bool IsTemporary = !SaveTempLabels;
   if (IsTemporary && !UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, IsTemporary);
-  return createRenamableSymbol(MAI->getPrivateLabelPrefix() << Name,
+  return createRenamableSymbol(MAI->getPrivateLabelPrefix() + Name,
                                /*AlwaysAddSuffix=*/false, IsTemporary);
 }
 
