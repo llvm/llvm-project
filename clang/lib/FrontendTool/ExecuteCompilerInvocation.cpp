@@ -252,6 +252,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
 
   // Cratels: 打印 clang-cc1 的版本信息
   if (Clang->getFrontendOpts().ShowVersion) {
+    llvm::outs() << "打印版本信息......\n";
     llvm::cl::PrintVersionMessage();
     return true;
   }
@@ -272,6 +273,9 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
   }
 
+// clang-format off
+// Cratels: 是否打开 clang 的静态代码检测功能。只到 endif 的代码都在处理静态代码检测的问题，暂时不处理
+// clang-format on
 #if CLANG_ENABLE_STATIC_ANALYZER
   // These should happen AFTER plugins have been loaded!
 
@@ -308,13 +312,18 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   if (Clang->getDiagnostics().hasErrorOccurred())
     return false;
   // Create and execute the frontend action.
-  // Cratels: Clang
-  // 实例有需要的所有信息，但是开发者需要用这些信息做什么这需要使用前端 Action
-  // 来指定想要打印 ast 还是 token 等操作
+  // clang-format off
+  // Cratels: Clang 实例有需要的所有信息，但是开发者需要用这些信息做什么这需要使用前端 Action 来指定想要打印 ast 还是 token 等操作
+  // clang-format on
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
   if (!Act)
     return false;
+
+  // clang-format off
+  // Cratels: CreateFrontendAction创建出指定的 Action，然后调用ExecuteAction来执行 action
+  // clang-format on
   bool Success = Clang->ExecuteAction(*Act);
+
   if (Clang->getFrontendOpts().DisableFree)
     llvm::BuryPointer(std::move(Act));
   return Success;

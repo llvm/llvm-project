@@ -165,7 +165,11 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
   // Cratels: 编译器实例，类似 clang 编译器的上下文
+  // clang-format off
+  // Cratels: 单例模式，此处创建后后续就可以直接使用 getCompilerInstance 来获得对象
+  // clang-format on
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
+
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
@@ -191,6 +195,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                       diag::Severity::Remark, {});
 
   // Cratels: 解析参数，将参数解析之后塞进 Clang
+  // clang-format off
+  // Cratels: Invocation就是 option
+  // clang-format on
   // 实例中，可见后续Clang->getFrontendOpts()，Clang->getHeaderSearchOpts()等操作
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
@@ -231,9 +238,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   }
 
   // Execute the frontend actions.
-  // Cratels: 开始执行前端动作
+  // Cratels: 开始执行真正的前端动作
   {
     llvm::TimeTraceScope TimeScope("ExecuteCompiler");
+    llvm::outs() << "开始执行真正的前端解析动作......\n";
     Success = ExecuteCompilerInvocation(Clang.get());
   }
 
