@@ -799,7 +799,7 @@ def HasV8_9aOps : Architecture64<8, 9, "a", "v8.9a",
   !listconcat(HasV8_8aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
     FeatureRASv2])>;
 def HasV9_0aOps : Architecture64<9, 0, "a", "v9a",
-  [HasV8_5aOps, FeatureMEC, FeatureSVE2],
+  [HasV8_5aOps, FeatureMEC],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureFullFP16, FeatureSVE,
     FeatureSVE2])>;
 def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",

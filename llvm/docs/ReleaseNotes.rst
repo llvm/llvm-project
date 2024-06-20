@@ -118,6 +118,13 @@ Changes to the AArch64 Backend
   in ``standard`` being equal to ``bti+pac-ret+pc`` when ``+pauth-lr``
   is passed as part of ``-mcpu=`` options.
 
+* SVE and SVE2 have been moved to the default extensions list for ARMv9.0,
+  making them optional per the Arm ARM.  Existing v9.0+ CPUs in the backend that
+  support these extensions continue to have these features enabled by default
+  when specified via ``-march=`` or an ``-mcpu=`` that supports them.  The
+  attribute ``"target-features"="+v9a"`` no longer implies ``"+sve"`` and
+  ``"+sve2"`` respectively.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
