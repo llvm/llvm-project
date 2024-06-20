@@ -5287,9 +5287,14 @@ static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
     return BinaryOp(Op);
 
   case Instruction::Or: {
+    auto *Op0 = Op->getOperand(0);
+    auto *Op1 = Op->getOperand(1);
+    if (haveNoCommonBitsSet(Op0, Op1, SimplifyQuery(DL, &DT, &AC, CxtI)))
+      cast<PossiblyDisjointInst>(Op)->setIsDisjoint(true);
+
     // Convert or disjoint into add nuw nsw.
     if (cast<PossiblyDisjointInst>(Op)->isDisjoint())
-      return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1),
+      return BinaryOp(Instruction::Add, Op0, Op1,
                       /*IsNSW=*/true, /*IsNUW=*/true);
     return BinaryOp(Op);
   }

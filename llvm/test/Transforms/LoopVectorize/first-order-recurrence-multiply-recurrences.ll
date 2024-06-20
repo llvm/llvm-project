@@ -181,7 +181,7 @@ define void @test_pr54227(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[E_0]]
 ; CHECK-NEXT:    [[AND1]] = and i32 [[E_0]], [[F_0]]
 ; CHECK-NEXT:    [[MUL]] = shl nsw i32 [[OR]], 1
-; CHECK-NEXT:    [[ADD]] = or i32 [[AND1]], 1
+; CHECK-NEXT:    [[ADD]] = or disjoint i32 [[AND1]], 1
 ; CHECK-NEXT:    [[A_GEP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[A_GEP]], align 4
 ; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]

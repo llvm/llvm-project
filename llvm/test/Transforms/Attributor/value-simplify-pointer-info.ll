@@ -285,7 +285,7 @@ define void @local_alloca_simplifiable_2() {
 ; TUNIT-NEXT:    br label [[FOR_END11:%.*]]
 ; TUNIT:       for.body5:
 ; TUNIT-NEXT:    [[I17:%.*]] = mul nuw nsw i64 [[INDVARS_IV2]], 10
-; TUNIT-NEXT:    [[I18:%.*]] = or i64 [[I17]], 1
+; TUNIT-NEXT:    [[I18:%.*]] = or disjoint i64 [[I17]], 1
 ; TUNIT-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[BYTES]], i64 [[I18]]
 ; TUNIT-NEXT:    br label [[FOR_INC9]]
 ; TUNIT:       for.inc9:
@@ -360,7 +360,7 @@ define void @local_alloca_simplifiable_2() {
 ; CGSCC-NEXT:    br label [[FOR_END11:%.*]]
 ; CGSCC:       for.body5:
 ; CGSCC-NEXT:    [[I17:%.*]] = mul nuw nsw i64 [[INDVARS_IV2]], 10
-; CGSCC-NEXT:    [[I18:%.*]] = or i64 [[I17]], 1
+; CGSCC-NEXT:    [[I18:%.*]] = or disjoint i64 [[I17]], 1
 ; CGSCC-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[BYTES]], i64 [[I18]]
 ; CGSCC-NEXT:    store float 0.000000e+00, ptr [[ARRAYIDX8]], align 4, !tbaa [[TBAA18:![0-9]+]]
 ; CGSCC-NEXT:    br label [[FOR_INC9]]

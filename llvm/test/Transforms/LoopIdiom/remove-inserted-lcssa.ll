@@ -13,7 +13,7 @@ define void @test() {
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 1, [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT2:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[PHI]], 4
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i64 [[PHI]], 4
 ; CHECK-NEXT:    br i1 false, label [[LOOP_EXIT:%.*]], label [[LOOP]]
 ; CHECK:       loop.exit:
 ; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i64 [ [[OR]], [[LOOP_LATCH]] ]
