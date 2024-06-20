@@ -14,14 +14,14 @@ namespace cwg2811 { // cwg2811: 3.5
 void f() {
   (void)[&] {
     using T = decltype(main);
-    // expected-error@-1 {{expressions that refer to 'main' are a Clang extension}}
+    // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
   };
   using T2 = decltype(main);
-  // expected-error@-1 {{expressions that refer to 'main' are a Clang extension}}
+  // expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
 }
 
 using T = decltype(main);
-// expected-error@-1 {{expressions that refer to 'main' are a Clang extension}}
+// expected-error@-1 {{referring to 'main' within an expression is a Clang extension}}
 
 int main();
 
