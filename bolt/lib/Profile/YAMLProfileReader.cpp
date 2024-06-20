@@ -406,11 +406,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     std::unordered_map<size_t, BinaryFunction *> StrictHashToBF;
     StrictHashToBF.reserve(BC.getBinaryFunctions().size());
 
-    for (auto &[_, BF] : BC.getBinaryFunctions()) {
+    for (auto &[_, BF] : BC.getBinaryFunctions())
       StrictHashToBF[BF.getHash()] = &BF;
-    }
 
-    for (auto YamlBF : YamlBP.Functions) {
+    for (yaml::bolt::BinaryFunctionProfile& YamlBF : YamlBP.Functions) {
       if (YamlBF.Used)
         continue;
       auto It = StrictHashToBF.find(YamlBF.Hash);
