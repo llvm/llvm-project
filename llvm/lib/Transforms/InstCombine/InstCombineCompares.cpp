@@ -38,6 +38,10 @@ using namespace PatternMatch;
 // How many times is a select replaced by one of its operands?
 STATISTIC(NumSel, "Number of select opts");
 
+static cl::opt<bool> DisableInsertAssumeICmp(
+    "instcombine-disable-insert-assume-icmp",
+    cl::init(true),
+    cl::desc("Disable insertion of assume intrinsics derevied from known bits and icmp"));
 
 /// Compute Result = In1+In2, returning true if the result overflowed for this
 /// type.
@@ -6709,7 +6713,8 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
        (Op0Known.One.isNegative() && Op1Known.One.isNegative())))
     return new ICmpInst(I.getUnsignedPredicate(), Op0, Op1);
 
-  tryToInsertAssumeBasedOnICmpAndKnownBits(I, Op0Known, Op1Known, BitWidth);
+  if (!DisableInsertAssumeICmp)
+    tryToInsertAssumeBasedOnICmpAndKnownBits(I, Op0Known, Op1Known, BitWidth);
 
   return nullptr;
 }
