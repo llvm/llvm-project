@@ -922,11 +922,11 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
       return rewriter.notifyMatchFailure(contractionOp,
                                          "no reducable dims found");
 
-    auto collapsedOperands =
+    SmallVector<Value> collapsedOperands =
         collapseOperands(rewriter, operands, operandUnitDims);
-    auto collapsedLhs = collapsedOperands[0];
-    auto collapsedRhs = collapsedOperands[1];
-    auto collapsedInit = collapsedOperands[2];
+    Value collapsedLhs = collapsedOperands[0];
+    Value collapsedRhs = collapsedOperands[1];
+    Value collapsedInit = collapsedOperands[2];
     SmallVector<Type, 1> collapsedResultTy;
     if (isa<RankedTensorType>(collapsedInit.getType()))
       collapsedResultTy.push_back(collapsedInit.getType());
@@ -971,12 +971,13 @@ struct RankReduceToUnBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
   LogicalResult
   getOperandUnitDims(LinalgOp op,
                      SmallVectorImpl<int64_t> &operandUnitDims) const override {
-    auto maybeContractionDims = inferContractionDims(op);
+    FailureOr<ContractionDimensions> maybeContractionDims =
+        inferContractionDims(op);
     if (failed(maybeContractionDims)) {
       LLVM_DEBUG(llvm::dbgs() << "could not infer contraction dims");
       return failure();
     }
-    auto contractionDims = maybeContractionDims.value();
+    ContractionDimensions contractionDims = maybeContractionDims.value();
 
     if (contractionDims.batch.size() != 1)
       return failure();
@@ -1019,12 +1020,13 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
   LogicalResult
   getOperandUnitDims(LinalgOp op,
                      SmallVectorImpl<int64_t> &operandUnitDims) const override {
-    auto maybeContractionDims = inferContractionDims(op);
+    FailureOr<ContractionDimensions> maybeContractionDims =
+        inferContractionDims(op);
     if (failed(maybeContractionDims)) {
       LLVM_DEBUG(llvm::dbgs() << "could not infer contraction dims");
       return failure();
     }
-    auto contractionDims = maybeContractionDims.value();
+    ContractionDimensions contractionDims = maybeContractionDims.value();
 
     if constexpr (reduceLeft) {
       auto m = contractionDims.m[0];
