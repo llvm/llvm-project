@@ -1527,7 +1527,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_BASIC_TYPE: {
-    if (Record.size() < 6 || Record.size() > 7)
+    if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid record");
 
     IsDistinct = Record[0];
