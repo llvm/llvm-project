@@ -21,10 +21,6 @@ config.mlir_src_root = "@MLIR_SOURCE_DIR@"
 
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 
-# Facebook T92898286
-config.llvm_test_bolt = lit.util.pythonize_bool("@LLVM_TEST_BOLT@")
-# End Facebook T92898286
-
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
 

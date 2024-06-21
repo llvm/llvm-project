@@ -23,8 +23,8 @@ using namespace llvm;
 MCSection::MCSection(SectionVariant V, StringRef Name, SectionKind K,
                      MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      IsRegistered(false), DummyFragment(this), Name(Name), Variant(V),
-      Kind(K) {}
+      HasLayout(false), IsRegistered(false), DummyFragment(this), Name(Name),
+      Variant(V), Kind(K) {}
 
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)

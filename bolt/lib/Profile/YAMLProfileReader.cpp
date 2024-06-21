@@ -16,6 +16,8 @@
 #include "llvm/ADT/edit_distance.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <cxxabi.h>
+
 using namespace llvm;
 
 namespace opts {
@@ -421,27 +423,35 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       matchProfileToFunction(YamlBF, *BF);
 
   // Uses name similarity to match functions that were not matched by name.
-  for (auto YamlBF : YamlBP.Functions) {
-    if (YamlBF.Used)
-      continue;
+  uint64_t MatchedWithDemangledName = 0;
+  if (opts::NameSimilarityFunctionMatchingThreshold > 0) {
 
-    unsigned MinEditDistance = UINT_MAX;
-    BinaryFunction *ClosestNameBF = nullptr;
+    std::unordered_map<std::string, BinaryFunction *> NameToBinaryFunction;
+    NameToBinaryFunction.reserve(BC.getBinaryFunctions().size());
 
     for (auto &[_, BF] : BC.getBinaryFunctions()) {
-      if (ProfiledFunctions.count(&BF))
-        continue;
-
-      unsigned BFEditDistance = BF.getOneName().edit_distance(YamlBF.Name);
-      if (BFEditDistance < MinEditDistance) {
-        MinEditDistance = BFEditDistance;
-        ClosestNameBF = &BF;
-      }
+      int Status = 0;
+      char *DemangledName = abi::__cxa_demangle(BF.getOneName().str().c_str(),
+                                                nullptr, nullptr, &Status);
+      if (Status == 0)
+        NameToBinaryFunction[std::string(DemangledName)] = &BF;
     }
 
-    if (ClosestNameBF &&
-      MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold)
-      matchProfileToFunction(YamlBF, *ClosestNameBF);
+    for (auto YamlBF : YamlBP.Functions) {
+      if (YamlBF.Used)
+        continue;
+      int Status = 0;
+      char *DemangledName =
+          abi::__cxa_demangle(YamlBF.Name.c_str(), nullptr, nullptr, &Status);
+      if (Status != 0)
+        continue;
+      auto It = NameToBinaryFunction.find(DemangledName);
+      if (It == NameToBinaryFunction.end())
+        continue;
+      BinaryFunction *BF = It->second;
+      matchProfileToFunction(YamlBF, *BF);
+      ++MatchedWithDemangledName;
+    }
   }
 
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)

@@ -231,7 +231,7 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
       Weights[0] = BP.getCompl().getNumerator();
       Weights[1] = BP.getNumerator();
     }
-    setBranchWeights(*PredBr, Weights);
+    setBranchWeights(*PredBr, Weights, hasBranchWeightOrigin(*PredBr));
   }
 }
 
@@ -2618,7 +2618,7 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
       Weights.push_back(Prob.getNumerator());
 
     auto TI = BB->getTerminator();
-    setBranchWeights(*TI, Weights);
+    setBranchWeights(*TI, Weights, hasBranchWeightOrigin(*TI));
   }
 }
 
