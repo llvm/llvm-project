@@ -1,4 +1,4 @@
-;RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
+;RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
 
 ;Not checking arguments 2 and 3 to CNDE, because they may change between
 ;registers and literal.x depending on what the optimizer does.

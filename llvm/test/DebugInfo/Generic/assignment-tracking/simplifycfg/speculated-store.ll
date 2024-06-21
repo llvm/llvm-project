@@ -1,5 +1,7 @@
 ; RUN: opt -passes=simplifycfg %s -S  \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=simplifycfg %s -S  \
+; RUN: | FileCheck %s
 
 ;; Ensure that we correctly update the value component of dbg.assign intrinsics
 ;; after merging a conditional block with a store its the predecessor. The
@@ -23,7 +25,7 @@
 
 ; CHECK: %[[SELECT:.*]] = select i1 %tobool
 ; CHECK-NEXT: store i32 %[[SELECT]], ptr %c{{.*}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 %[[SELECT]], metadata ![[VAR_C:[0-9]+]], metadata !DIExpression(), metadata ![[ID]], metadata ptr %c, metadata !DIExpression()), !dbg
+; CHECK-NEXT: #dbg_assign(i32 %[[SELECT]], ![[VAR_C:[0-9]+]], !DIExpression(), ![[ID]], ptr %c, !DIExpression(),
 ; CHECK: ![[VAR_C]] = !DILocalVariable(name: "c",
 
 @a = dso_local global i32 0, align 4, !dbg !0
@@ -32,7 +34,7 @@ define dso_local void @b() !dbg !11 {
 entry:
   %c = alloca i32, align 4
   %0 = bitcast ptr %c to ptr, !dbg !16
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr %0), !dbg !16
+  call void @llvm.lifetime.start.p0(i64 4, ptr %0), !dbg !16
   store i32 0, ptr %c, align 4, !dbg !17, !DIAssignID !36
   call void @llvm.dbg.assign(metadata i32 0, metadata !15, metadata !DIExpression(), metadata !36, metadata ptr %c, metadata !DIExpression()), !dbg !17
   %1 = load i32, ptr @a, align 4, !dbg !22
@@ -46,13 +48,13 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.then, %entry
   %2 = bitcast ptr %c to ptr, !dbg !27
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr %2), !dbg !27
+  call void @llvm.lifetime.end.p0(i64 4, ptr %2), !dbg !27
   ret void, !dbg !27
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9, !1000}

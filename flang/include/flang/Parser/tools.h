@@ -40,6 +40,7 @@ const Name &GetFirstName(const ProcedureDesignator &);
 const Name &GetFirstName(const Call &);
 const Name &GetFirstName(const FunctionReference &);
 const Name &GetFirstName(const Variable &);
+const Name &GetFirstName(const EntityDecl &);
 
 // When a parse tree node is an instance of a specific type wrapped in
 // layers of packaging, return a pointer to that object.

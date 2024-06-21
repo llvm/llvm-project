@@ -93,7 +93,7 @@ struct AppProperties {
   AuxEntry *auxv_ptr;
 };
 
-extern AppProperties app;
+[[gnu::weak]] extern AppProperties app;
 
 // The descriptor of a thread's TLS area.
 struct TLSDescriptor {

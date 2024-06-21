@@ -19,26 +19,25 @@
 // This forces a copy for the values and positions.
 //
 // CHECK-LABEL: func.func @foo(
-// CHECK-SAME: %[[VAL:.*]]: memref<3xf64>,
 // CHECK-SAME: %[[CRD:.*]]: memref<3xi32>,
-// CHECK-SAME: %[[POS:.*]]: memref<11xi32>)
-// CHECK:      %[[ALLOC1:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3xf64>
-// CHECK:      memref.copy %[[VAL]], %[[ALLOC1]] : memref<3xf64> to memref<3xf64>
+// CHECK-SAME: %[[POS:.*]]: memref<11xi32>,
+// CHECK-SAME: %[[VAL:.*]]: memref<3xf64>)
 // CHECK:      %[[ALLOC2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<11xi32>
 // CHECK:      memref.copy %[[POS]], %[[ALLOC2]] : memref<11xi32> to memref<11xi32>
+// CHECK:      %[[ALLOC1:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3xf64>
+// CHECK:      memref.copy %[[VAL]], %[[ALLOC1]] : memref<3xf64> to memref<3xf64>
 // CHECK-NOT:  memref.copy
 // CHECK:      return
 //
-func.func @foo(%arg0: tensor<3xf64>  {bufferization.writable = false},
-               %arg1: tensor<3xi32>  {bufferization.writable = false},
-               %arg2: tensor<11xi32> {bufferization.writable = false}) -> (index) {
+func.func @foo(%arg1: tensor<3xi32>  {bufferization.writable = false},
+               %arg2: tensor<11xi32> {bufferization.writable = false},
+               %arg0: tensor<3xf64>  {bufferization.writable = false}) -> (index) {
     //
     // Pack the buffers into a sparse tensors.
     //
-    %pack = sparse_tensor.assemble %arg0, %arg2, %arg1
-      : tensor<3xf64>,
-        tensor<11xi32>,
-        tensor<3xi32> to tensor<10x10xf64, #CSR>
+    %pack = sparse_tensor.assemble (%arg2, %arg1), %arg0
+      : (tensor<11xi32>, tensor<3xi32>),
+         tensor<3xf64> to tensor<10x10xf64, #CSR>
 
     //
     // Scale the sparse tensor "in-place" (this has no impact on the final
@@ -64,22 +63,21 @@ func.func @foo(%arg0: tensor<3xf64>  {bufferization.writable = false},
 // Pass in the buffers of the sparse tensor, marked writable.
 //
 // CHECK-LABEL: func.func @bar(
-// CHECK-SAME: %[[VAL:.*]]: memref<3xf64>,
 // CHECK-SAME: %[[CRD:.*]]: memref<3xi32>,
-// CHECK-SAME: %[[POS:.*]]: memref<11xi32>)
+// CHECK-SAME: %[[POS:.*]]: memref<11xi32>,
+// CHECK-SAME: %[[VAL:.*]]: memref<3xf64>)
 // CHECK-NOT:  memref.copy
 // CHECK:      return
 //
-func.func @bar(%arg0: tensor<3xf64>  {bufferization.writable = true},
-               %arg1: tensor<3xi32>  {bufferization.writable = true},
-               %arg2: tensor<11xi32> {bufferization.writable = true}) -> (index) {
+func.func @bar(%arg1: tensor<3xi32>  {bufferization.writable = true},
+               %arg2: tensor<11xi32> {bufferization.writable = true},
+               %arg0: tensor<3xf64>  {bufferization.writable = true}) -> (index) {
     //
     // Pack the buffers into a sparse tensors.
     //
-    %pack = sparse_tensor.assemble %arg0, %arg2, %arg1
-      : tensor<3xf64>,
-        tensor<11xi32>,
-        tensor<3xi32> to tensor<10x10xf64, #CSR>
+    %pack = sparse_tensor.assemble (%arg2, %arg1), %arg0
+      : (tensor<11xi32>, tensor<3xi32>),
+         tensor<3xf64> to tensor<10x10xf64, #CSR>
 
     //
     // Scale the sparse tensor "in-place" (this has no impact on the final

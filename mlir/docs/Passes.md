@@ -16,6 +16,10 @@ This document describes the available MLIR passes and their contracts.
 
 [include "ConversionPasses.md"]
 
+## 'acc' Dialect Passes
+
+[include "OpenACCPasses.md"]
+
 ## 'affine' Dialect Passes
 
 [include "AffinePasses.md"]
@@ -115,3 +119,7 @@ This document describes the available MLIR passes and their contracts.
 ## TOSA Dialect Passes
 
 [include "TosaPasses.md"]
+
+## XeGPU Dialect Passes
+
+[include "XeGPUPasses.md"]

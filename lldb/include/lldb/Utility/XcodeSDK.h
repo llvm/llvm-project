@@ -34,6 +34,8 @@ public:
     AppleTVOS,
     WatchSimulator,
     watchOS,
+    XRSimulator,
+    XROS,
     bridgeOS,
     Linux,
     unknown = -1

@@ -12,8 +12,6 @@
 #define __UNWINDCURSOR_HPP__
 
 #include "cet_unwind.h"
-#include <errno.h>
-#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +33,8 @@
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
     (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
      defined(_LIBUNWIND_TARGET_S390X))
+#include <errno.h>
+#include <signal.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -2416,7 +2416,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     }
 
     // Reset LR in the current context.
-    newRegisters.setLR(NULL);
+    newRegisters.setLR(static_cast<uintptr_t>(NULL));
 
     _LIBUNWIND_TRACE_UNWINDING(
         "Extract info from lastStack=%p, returnAddress=%p",

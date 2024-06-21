@@ -25,6 +25,7 @@ namespace mlir::spirv {
 // Integer Dot Product ops
 //===----------------------------------------------------------------------===//
 
+template <typename IntegerDotProductOpTy>
 static LogicalResult verifyIntegerDotProduct(Operation *op) {
   assert(llvm::is_contained({2u, 3u}, op->getNumOperands()) &&
          "Not an integer dot product op?");
@@ -33,10 +34,12 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
   // ODS enforces that vector 1 and vector 2, and result and the accumulator
   // have the same types.
   Type factorTy = op->getOperand(0).getType();
+  StringAttr packedVectorFormatAttrName =
+      IntegerDotProductOpTy::getFormatAttrName(op->getName());
   if (auto intTy = llvm::dyn_cast<IntegerType>(factorTy)) {
     auto packedVectorFormat =
         llvm::dyn_cast_or_null<spirv::PackedVectorFormatAttr>(
-            op->getAttr(kPackedVectorFormatAttrName));
+            op->getAttr(packedVectorFormatAttrName));
     if (!packedVectorFormat)
       return op->emitOpError("requires Packed Vector Format attribute for "
                              "integer vector operands");
@@ -50,7 +53,7 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
                         "integer vector operands to be 32-bits wide",
                         packedVectorFormat.getValue()));
   } else {
-    if (op->hasAttr(kPackedVectorFormatAttrName))
+    if (op->hasAttr(packedVectorFormatAttrName))
       return op->emitOpError(llvm::formatv(
           "with invalid format attribute for vector operands of type '{0}'",
           factorTy));
@@ -84,6 +87,7 @@ getIntegerDotProductExtensions() {
   return {extension};
 }
 
+template <typename IntegerDotProductOpTy>
 static SmallVector<ArrayRef<spirv::Capability>, 1>
 getIntegerDotProductCapabilities(Operation *op) {
   // Requires the the DotProduct capability and capabilities that depend on
@@ -99,9 +103,11 @@ getIntegerDotProductCapabilities(Operation *op) {
   SmallVector<ArrayRef<spirv::Capability>, 1> capabilities = {dotProductCap};
 
   Type factorTy = op->getOperand(0).getType();
+  StringAttr packedVectorFormatAttrName =
+      IntegerDotProductOpTy::getFormatAttrName(op->getName());
   if (auto intTy = llvm::dyn_cast<IntegerType>(factorTy)) {
     auto formatAttr = llvm::cast<spirv::PackedVectorFormatAttr>(
-        op->getAttr(kPackedVectorFormatAttrName));
+        op->getAttr(packedVectorFormatAttrName));
     if (formatAttr.getValue() ==
         spirv::PackedVectorFormat::PackedVectorFormat4x8Bit)
       capabilities.push_back(dotProductInput4x8BitPackedCap);
@@ -120,12 +126,14 @@ getIntegerDotProductCapabilities(Operation *op) {
 }
 
 #define SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(OpName)                              \
-  LogicalResult OpName::verify() { return verifyIntegerDotProduct(*this); }    \
+  LogicalResult OpName::verify() {                                             \
+    return verifyIntegerDotProduct<OpName>(*this);                             \
+  }                                                                            \
   SmallVector<ArrayRef<spirv::Extension>, 1> OpName::getExtensions() {         \
     return getIntegerDotProductExtensions();                                   \
   }                                                                            \
   SmallVector<ArrayRef<spirv::Capability>, 1> OpName::getCapabilities() {      \
-    return getIntegerDotProductCapabilities(*this);                            \
+    return getIntegerDotProductCapabilities<OpName>(*this);                    \
   }                                                                            \
   std::optional<spirv::Version> OpName::getMinVersion() {                      \
     return getIntegerDotProductMinVersion();                                   \

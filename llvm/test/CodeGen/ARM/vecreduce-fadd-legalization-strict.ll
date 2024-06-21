@@ -43,9 +43,6 @@ define half @test_v1f16_neutral(<1 x half> %a) nounwind {
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
 ; CHECK-NEXT:    bl __aeabi_f2h
-; CHECK-NEXT:    mov r1, #255
-; CHECK-NEXT:    orr r1, r1, #65280
-; CHECK-NEXT:    and r0, r0, r1
 ; CHECK-NEXT:    pop {r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call half @llvm.vector.reduce.fadd.f16.v1f16(half -0.0, <1 x half> %a)

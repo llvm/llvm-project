@@ -28,6 +28,7 @@
 
 #ifdef __APPLE__
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ManagedStatic.h"
 #endif
 
 #include <string>
@@ -115,7 +116,8 @@ std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
 
   // Windows can't always handle long paths, so limit the length of the name.
   std::string N = Name.str();
-  N = N.substr(0, std::min<std::size_t>(N.size(), 140));
+  if (N.size() > 140)
+    N.resize(140);
 
   // Replace illegal characters in graph Filename with '_' if needed
   std::string CleansedName = replaceIllegalFilenameChars(N, '_');
@@ -128,7 +130,7 @@ std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
   }
 
   errs() << "Writing '" << Filename << "'... ";
-  return std::string(Filename.str());
+  return std::string(Filename);
 }
 
 // Execute the graph viewer. Return true if there were errors.

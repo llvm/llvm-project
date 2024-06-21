@@ -6,7 +6,7 @@
 @G = constant %T { i32 0, i32 0, i32 17, i32 25 }
 
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = constant [[T:%.*]] { i32 0, i32 0, i32 17, i32 25 }
+; CHECK: @G = constant %T { i32 0, i32 0, i32 17, i32 25 }
 ;.
 define internal i32 @test(ptr %p) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)

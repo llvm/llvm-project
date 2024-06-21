@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +v8a -fsyntax-only -verify -emit-llvm -o - %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +d128 -fsyntax-only -verify=d128 -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +v8a -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +d128 -verify=d128 -emit-llvm -o - %s
 
 // REQUIRES: aarch64-registered-target
 

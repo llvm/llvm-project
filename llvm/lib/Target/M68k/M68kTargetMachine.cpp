@@ -37,7 +37,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
   RegisterTargetMachine<M68kTargetMachine> X(getTheM68kTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
-  initializeM68kDAGToDAGISelPass(*PR);
+  initializeM68kDAGToDAGISelLegacyPass(*PR);
   initializeM68kExpandPseudoPass(*PR);
   initializeM68kGlobalBaseRegPass(*PR);
   initializeM68kCollapseMOVEMPass(*PR);
@@ -171,7 +171,7 @@ TargetPassConfig *M68kTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void M68kPassConfig::addIRPasses() {
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
   TargetPassConfig::addIRPasses();
 }
 

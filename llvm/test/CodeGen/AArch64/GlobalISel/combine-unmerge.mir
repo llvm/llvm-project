@@ -326,10 +326,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in_n_out
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $x0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[TRUNC]](s32)
-    ; CHECK-NEXT: $w0 = COPY [[BITCAST1]](<2 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
+    ; CHECK-NEXT: $w0 = COPY [[UV]](<2 x s16>)
     %0:_(<4 x s16>) = COPY $x0
     %1:_(<2 x s16>),%2:_(<2 x s16>) = G_UNMERGE_VALUES %0(<4 x s16>)
     $w0 = COPY %1(<2 x s16>)
@@ -343,9 +341,8 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_vec_in
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $x0
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s64)
-    ; CHECK-NEXT: $h0 = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: $h0 = COPY [[UV]](s16)
     %0:_(<2 x s32>) = COPY $x0
     %1:_(s16),%2:_(s16),%3:_(s16),%4:_(s16) = G_UNMERGE_VALUES %0(<2 x s32>)
     $h0 = COPY %1(s16)

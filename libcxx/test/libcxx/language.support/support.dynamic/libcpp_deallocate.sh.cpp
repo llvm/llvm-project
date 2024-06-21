@@ -11,7 +11,7 @@
 
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 // XFAIL: sanitizer-new-delete && !hwasan
 
@@ -20,6 +20,9 @@
 
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc
+
+// TODO(mordante) fix this test after updating clang in Docker
+// UNSUPPORTED: clang-15, clang-16, clang-17, clang-18, clang-19
 
 // RUN: %{build} -faligned-allocation -fsized-deallocation
 // RUN: %{run}

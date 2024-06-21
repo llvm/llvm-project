@@ -1,0 +1,100 @@
+## This test checks the functionality of options --skip-symbol and --skip-symbols.
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo 'foo[2-3]' > %t.skip.regex
+
+## Check --skip-symbol functionality when changing symbol bindings.
+# RUN: llvm-objcopy %t.o %t2.o --localize-hidden --skip-symbol=foo3
+# RUN: llvm-readelf -s %t2.o | FileCheck %s --check-prefix=LH-SYM
+# LH-SYM-DAG: LOCAL  HIDDEN      1 foo1
+# LH-SYM-DAG: LOCAL  HIDDEN      1 foo2
+# LH-SYM-DAG: GLOBAL HIDDEN      1 foo3
+# LH-SYM-DAG: LOCAL  HIDDEN      1 foo4
+# LH-SYM-DAG: LOCAL  HIDDEN      1 foo5
+
+## Check --skip-symbols functionality when changing symbol bindings.
+# RUN: llvm-objcopy %t.o %t1.o --localize-hidden --skip-symbols=%t.skip.regex --regex
+# RUN: llvm-readelf -s %t1.o | FileCheck %s --check-prefix=LH-SYMS
+# LH-SYMS-DAG: LOCAL  HIDDEN      1 foo1
+# LH-SYMS-DAG: GLOBAL HIDDEN      1 foo2
+# LH-SYMS-DAG: GLOBAL HIDDEN      1 foo3
+# LH-SYMS-DAG: LOCAL  HIDDEN      1 foo4
+# LH-SYMS-DAG: LOCAL  HIDDEN      1 foo5
+
+## Check --skip-symbol functionality when changing symbol names.
+# RUN: echo -e "foo1 bar1\nfoo2 bar2" > %t.renames.list
+# RUN: llvm-objcopy %t.o %t4.o --redefine-syms=%t.renames.list \
+# RUN:   --skip-symbol='fo*' --wildcard
+# RUN: llvm-readelf -s %t4.o | FileCheck %s --check-prefix=RS-SYM
+# RS-SYM-DAG: foo1
+# RS-SYM-DAG: foo2
+# RS-SYM-DAG: foo3
+# RS-SYM-DAG: foo4
+# RS-SYM-DAG: foo5
+
+## Check --skip-symbols functionality when changing symbol names.
+# RUN: llvm-objcopy %t.o %t3.o --redefine-syms=%t.renames.list \
+# RUN:   --skip-symbols=%t.skip.regex --regex
+# RUN: llvm-readelf -s %t3.o | FileCheck %s --check-prefix=RS-SYMS
+# RS-SYMS-DAG: bar1
+# RS-SYMS-DAG: foo2
+# RS-SYMS-DAG: foo3
+# RS-SYMS-DAG: foo4
+# RS-SYMS-DAG: foo5
+
+## Check the functionality when using skip options multiple times.
+# RUN: echo "foo3" > %t.symbol0.list
+# RUN: echo "foo4" > %t.symbol1.list
+# RUN: llvm-objcopy %t.o %t5.o --set-symbol-visibility='foo*'=internal --wildcard \
+# RUN:   --skip-symbol=foo1 --skip-symbol=foo2 \
+# RUN:   --skip-symbols=%t.symbol0.list --skip-symbols=%t.symbol1.list
+# RUN: llvm-readelf -s %t5.o | FileCheck %s --check-prefix=BOTH
+# BOTH-DAG: GLOBAL HIDDEN      1 foo1
+# BOTH-DAG: GLOBAL HIDDEN      1 foo2
+# BOTH-DAG: GLOBAL HIDDEN      1 foo3
+# BOTH-DAG: GLOBAL HIDDEN      1 foo4
+## Only foo5 is not skipped.
+# BOTH-DAG: GLOBAL INTERNAL    1 foo5
+
+## Check that using an invalid symbol name regex generates an error.
+# RUN: echo '*.' > %t.symbols.regex
+# RUN: not llvm-objcopy %t.o --skip-symbols=%t.symbols.regex --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# RUN: not llvm-objcopy %t.o --skip-symbol='*.' --regex 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SYMBOL
+# SYMBOL: error: cannot compile regular expression '*.': repetition-operator operand invalid
+
+## Check passing an invalid filename generates an error.
+# RUN: not llvm-objcopy %t.o --skip-symbols=no_file 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=FILE -DMSG=%errc_ENOENT
+# FILE: error: 'no_file': [[MSG]]
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    foo1
+    Section: .text
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
+  - Name:    foo2
+    Section: .text
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
+  - Name:    foo3
+    Section: .text
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
+  - Name:    foo4
+    Section: .text
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
+  - Name:    foo5
+    Section: .text
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]

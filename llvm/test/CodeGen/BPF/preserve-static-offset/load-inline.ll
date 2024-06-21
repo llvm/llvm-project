@@ -57,8 +57,8 @@ entry:
 ; CHECK:      define dso_local void @quux(ptr nocapture noundef readonly %[[p:.*]])
 ; CHECK:        %[[bb_i1:.*]] = tail call i32 (ptr, i1, i8, i8, i8, i1, ...)
 ; CHECK-SAME:     @llvm.bpf.getelementptr.and.load.i32
-; CHECK-SAME:       (ptr readonly elementtype(%struct.foo) %[[p]],
-; CHECK-SAME:        i1 false, i8 0, i8 1, i8 2, i1 true, i64 immarg 0, i32 immarg 1, i32 immarg 1)
+; CHECK-SAME:       (ptr readonly elementtype(i8) %[[p]],
+; CHECK-SAME:        i1 false, i8 0, i8 1, i8 2, i1 true, i64 immarg 8)
 ; CHECK-SAME:      #[[v2:.*]], !tbaa
 ; CHECK-NEXT:   tail call void @consume(i32 noundef %[[bb_i1]])
 ; CHECK:      attributes #[[v2]] = { memory(argmem: read) }

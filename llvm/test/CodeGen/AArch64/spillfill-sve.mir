@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=aarch64-linux-gnu -run-pass=greedy %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo %s -o - | FileCheck %s --check-prefix=EXPAND
+# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=EXPAND
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "<stdin>"
@@ -173,8 +173,8 @@ body:             |
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_pnr
-    ; EXPAND: STR_PXI $p0, $sp, 7
-    ; EXPAND: $p0 = LDR_PXI $sp, 7, implicit-def $pn0
+    ; EXPAND: STR_PXI $pn0, $sp, 7
+    ; EXPAND: $pn0 = LDR_PXI $sp, 7, implicit-def $pn0
 
     %0:pnr = COPY $pn0
 
@@ -213,11 +213,9 @@ body:             |
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_virtreg_pnr
     ; EXPAND: renamable $pn8 = WHILEGE_CXX_B
-    ; EXPAND: $p0 = ORR_PPzPP $p8, $p8, killed $p8
-    ; EXPAND: STR_PXI killed renamable $p0, $sp, 7
+    ; EXPAND: STR_PXI killed renamable $pn8, $sp, 7
     ;
-    ; EXPAND: renamable $p0 = LDR_PXI $sp, 7
-    ; EXPAND: $p8 = ORR_PPzPP $p0, $p0, killed $p0, implicit-def $pn8
+    ; EXPAND: renamable $pn8 = LDR_PXI $sp, 7
     ; EXPAND: $p0 = PEXT_PCI_B killed renamable $pn8, 0
 
 

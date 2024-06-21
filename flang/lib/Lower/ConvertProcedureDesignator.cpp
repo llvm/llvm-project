@@ -107,16 +107,16 @@ static hlfir::EntityWithAttributes designateProcedurePointerComponent(
                                                 procComponentSym);
   /// Passed argument may be a descriptor. This is a scalar reference, so the
   /// base address can be directly addressed.
-  if (base.getType().isa<fir::BaseBoxType>())
+  if (mlir::isa<fir::BaseBoxType>(base.getType()))
     base = builder.create<fir::BoxAddrOp>(loc, base);
   std::string fieldName = converter.getRecordTypeFieldName(procComponentSym);
   auto recordType =
-      hlfir::getFortranElementType(base.getType()).cast<fir::RecordType>();
+      mlir::cast<fir::RecordType>(hlfir::getFortranElementType(base.getType()));
   mlir::Type fieldType = recordType.getType(fieldName);
-  // FIXME: semantics is not expanding intermediate parent components in:
-  // call x%p() where p is a component of a parent type of x type.
+  // Note: semantics turns x%p() into x%t%p() when the procedure pointer
+  // component is part of parent component t.
   if (!fieldType)
-    TODO(loc, "reference to procedure pointer component from parent type");
+    TODO(loc, "passing type bound procedure (extension)");
   mlir::Type designatorType = fir::ReferenceType::get(fieldType);
   mlir::Value compRef = builder.create<hlfir::DesignateOp>(
       loc, designatorType, base, fieldName,
@@ -164,7 +164,7 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   mlir::Value funcAddr = fir::getBase(procExv);
-  if (!funcAddr.getType().isa<fir::BoxProcType>()) {
+  if (!mlir::isa<fir::BoxProcType>(funcAddr.getType())) {
     mlir::Type boxTy =
         Fortran::lower::getUntypedBoxProcType(&converter.getMLIRContext());
     if (auto host = Fortran::lower::argumentHostAssocs(converter, funcAddr))

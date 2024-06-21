@@ -36,7 +36,6 @@
 
 // RUN: %clangxx -### --target=hexagon-unknown-elf -fno-integrated-as    \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/qc/bin \
-// RUN:   --gcc-toolchain="" \
 // RUN:   -nostdlibinc %s 2>&1 | FileCheck -check-prefix=CHECK113 %s
 // CHECK113: "-cc1"
 // CHECK113-NOT: "-internal-isystem"
@@ -533,7 +532,6 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -fuse-ld=fake-value-to-ignore-CLANG_DEFAULT_LINKER %s 2>&1 | FileCheck -check-prefix=CHECK381 %s
-// REQUIRES: hexagon-registered-target
 // CHECK381:      "-march=hexagon"
 // CHECK381:      "-mcpu=hexagonv60"
 // -----------------------------------------------------------------------------

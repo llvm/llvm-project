@@ -1,6 +1,6 @@
 // RUN: mlir-opt --canonicalize %s | FileCheck %s
 
-mesh.cluster @mesh0(rank = 2, dim_sizes = 2x4)
+mesh.mesh @mesh0(shape = 2x4)
 
 // CHECK-LABEL: func @all_reduce_empty_mesh_axes
 func.func @all_reduce_empty_mesh_axes(
@@ -58,6 +58,19 @@ func.func @all_gather_empty_mesh_axes(
   %0 = mesh.all_gather %arg0 on @mesh0
     mesh_axes = []
     gather_axis = 0
+    : tensor<4xf32> -> tensor<4xf32>
+// CHECK: return %[[ARG]]
+  return %0 : tensor<4xf32>
+}
+
+// CHECK-LABEL: func @all_slice_empty_mesh_axes
+func.func @all_slice_empty_mesh_axes(
+// CHECK-SAME: %[[ARG:.*]]: tensor<4xf32>
+    %arg0 : tensor<4xf32>) -> tensor<4xf32> {
+// CHECK-NOT: mesh.scatter
+  %0 = mesh.all_slice %arg0 on @mesh0
+    mesh_axes = []
+    slice_axis = 0
     : tensor<4xf32> -> tensor<4xf32>
 // CHECK: return %[[ARG]]
   return %0 : tensor<4xf32>

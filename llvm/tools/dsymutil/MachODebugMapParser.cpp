@@ -186,6 +186,8 @@ void MachODebugMapParser::addCommonSymbols() {
 /// everything up to add symbols to the new one.
 void MachODebugMapParser::switchToNewDebugMapObject(
     StringRef Filename, sys::TimePoint<std::chrono::seconds> Timestamp) {
+  addCommonSymbols();
+  resetParserState();
 
   SmallString<80> Path(PathPrefix);
   sys::path::append(Path, Filename);
@@ -205,9 +207,6 @@ void MachODebugMapParser::switchToNewDebugMapObject(
             Path.str());
     return;
   }
-
-  addCommonSymbols();
-  resetParserState();
 
   CurrentDebugMapObject =
       &Result->addDebugMapObject(Path, Timestamp, MachO::N_OSO);
@@ -302,7 +301,7 @@ void MachODebugMapParser::switchToNewLibDebugMapObject(
 
     if (CurrentDebugMapObject &&
         CurrentDebugMapObject->getType() == MachO::N_LIB &&
-        CurrentDebugMapObject->getObjectFilename().compare(Path.str()) == 0) {
+        CurrentDebugMapObject->getObjectFilename() == Path) {
       return;
     }
 

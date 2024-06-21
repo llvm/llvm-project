@@ -26,13 +26,13 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GCStrategy.h"
@@ -339,6 +339,9 @@ static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
   // get_return_value can either be a sequence of CopyFromReg instructions
   // to grab the return value from the return register(s), or it can be a LOAD
   // to load a value returned by reference via a stack slot.
+
+  if (CallEnd->getOpcode() == ISD::EH_LABEL)
+    CallEnd = CallEnd->getOperand(0).getNode();
 
   bool HasDef = !SI.CLI.RetTy->isVoidTy();
   if (HasDef) {
@@ -1287,7 +1290,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
     // Lowering relocate(undef) as arbitrary constant. Current constant value
     // is chosen such that it's unlikely to be a valid pointer.
-    setValue(&Relocate, DAG.getTargetConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
+    setValue(&Relocate, DAG.getConstant(0xFEFEFEFE, SDLoc(SD), MVT::i64));
     return;
   }
 

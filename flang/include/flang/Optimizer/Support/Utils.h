@@ -16,6 +16,7 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -29,7 +30,9 @@
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
-  return cop.getValue().cast<mlir::IntegerAttr>().getValue().getSExtValue();
+  return mlir::cast<mlir::IntegerAttr>(cop.getValue())
+      .getValue()
+      .getSExtValue();
 }
 
 // Reconstruct binding tables for dynamic dispatch.
@@ -133,6 +136,7 @@ inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
            fir::numericMlirTypeToFortran(builder, type, loc, intrinsicName) +
            " in " + intrinsicName);
 }
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

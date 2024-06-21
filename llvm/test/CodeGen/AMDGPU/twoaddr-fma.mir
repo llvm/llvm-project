@@ -1,7 +1,7 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GCN %s
-# RUN: llc -march=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - | FileCheck --check-prefixes=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 %s -run-pass twoaddressinstruction -verify-machineinstrs -o - -early-live-intervals | FileCheck --check-prefixes=GCN %s
 
 # GCN-LABEL: name: test_fmamk_reg_imm_f32
 # GCN: %2:vgpr_32 = IMPLICIT_DEF

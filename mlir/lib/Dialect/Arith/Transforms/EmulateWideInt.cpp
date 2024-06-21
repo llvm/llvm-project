@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/WideIntEmulationConverter.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -56,35 +57,6 @@ static Type reduceInnermostDim(VectorType type) {
   auto newShape = to_vector(type.getShape());
   newShape.back() = 1;
   return VectorType::get(newShape, type.getElementType());
-}
-
-/// Returns a constant of integer of vector type filled with (repeated) `value`.
-static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
-                                         Location loc, Type type,
-                                         const APInt &value) {
-  TypedAttr attr;
-  if (dyn_cast<IntegerType>(type)) {
-    attr = rewriter.getIntegerAttr(type, value);
-  } else {
-    auto vecTy = cast<VectorType>(type);
-    attr = SplatElementsAttr::get(vecTy, value);
-  }
-
-  return rewriter.create<arith::ConstantOp>(loc, attr);
-}
-
-/// Returns a constant of integer of vector type filled with (repeated) `value`.
-static Value createScalarOrSplatConstant(ConversionPatternRewriter &rewriter,
-                                         Location loc, Type type,
-                                         int64_t value) {
-  unsigned elementBitWidth = 0;
-  if (auto intTy = dyn_cast<IntegerType>(type))
-    elementBitWidth = intTy.getWidth();
-  else
-    elementBitWidth = cast<VectorType>(type).getElementTypeBitWidth();
-
-  return createScalarOrSplatConstant(rewriter, loc, type,
-                                     APInt(elementBitWidth, value));
 }
 
 /// Extracts the `input` vector slice with elements at the last dimension offset

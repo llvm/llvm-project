@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -x c++ -std=c++20 -emit-module-interface a.h -o a.pcm -fms-extensions -verify
 // RUN: %clang_cc1 -std=c++20 a.cpp -fmodule-file=A=a.pcm -fms-extensions -fsyntax-only -verify
 
+// RUN: %clang_cc1 -x c++ -std=c++20 -emit-reduced-module-interface a.h -o a.pcm -fms-extensions -verify
+// RUN: %clang_cc1 -std=c++20 a.cpp -fmodule-file=A=a.pcm -fms-extensions -fsyntax-only -verify
+
 //--- a.h
 
 // expected-no-diagnostics

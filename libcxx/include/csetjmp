@@ -30,10 +30,15 @@ void longjmp(jmp_buf env, int val);
 
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 
-#include <setjmp.h>
+// <setjmp.h> is not provided by libc++
+#if __has_include(<setjmp.h>)
+#  include <setjmp.h>
+#  ifdef _LIBCPP_SETJMP_H
+#    error "If libc++ starts defining <setjmp.h>, the __has_include check should move to libc++'s <setjmp.h>"
+#  endif
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

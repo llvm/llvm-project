@@ -11,6 +11,7 @@ define zeroext i1 @f1(i128 %a, i128 %b, ptr %res) {
 ; CHECK-NEXT:    vscbiq %v2, %v1, %v0
 ; CHECK-NEXT:    vlgvg %r2, %v2, 1
 ; CHECK-NEXT:    vsq %v0, %v1, %v0
+; CHECK-NEXT:    xilf %r2, 1
 ; CHECK-NEXT:    vst %v0, 0(%r4), 3
 ; CHECK-NEXT:    br %r14
   %t = call {i128, i1} @llvm.usub.with.overflow.i128(i128 %a, i128 %b)
@@ -27,6 +28,7 @@ define zeroext i1 @f2(i128 %a, i128 %b) {
 ; CHECK-NEXT:    vl %v1, 0(%r2), 3
 ; CHECK-NEXT:    vscbiq %v0, %v1, %v0
 ; CHECK-NEXT:    vlgvg %r2, %v0, 1
+; CHECK-NEXT:    xilf %r2, 1
 ; CHECK-NEXT:    br %r14
   %t = call {i128, i1} @llvm.usub.with.overflow.i128(i128 %a, i128 %b)
   %obit = extractvalue {i128, i1} %t, 1
@@ -46,5 +48,25 @@ define i128 @f3(i128 %a, i128 %b) {
   ret i128 %val
 }
 
+define i128 @f4(i128 %a, i128 %b) {
+; CHECK-LABEL: f4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r3), 3
+; CHECK-NEXT:    vscbiq %v2, %v1, %v0
+; CHECK-NEXT:    vlgvf %r0, %v2, 3
+; CHECK-NEXT:    vgbm %v2, 0
+; CHECK-NEXT:    xilf %r0, 1
+; CHECK-NEXT:    jl .LBB3_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vsq %v2, %v1, %v0
+; CHECK-NEXT:  .LBB3_2:
+; CHECK-NEXT:    vst %v2, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %val = call i128 @llvm.usub.sat.i128(i128 %a, i128 %b)
+  ret i128 %val
+}
+
 declare {i128, i1} @llvm.usub.with.overflow.i128(i128, i128) nounwind readnone
+declare i128 @llvm.usub.sat.i128(i128, i128) nounwind readnone
 

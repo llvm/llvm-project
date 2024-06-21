@@ -18,12 +18,24 @@
 namespace __sanitizer {
 
 enum memory_order {
+// If the __atomic atomic builtins are supported (Clang/GCC), use the
+// compiler provided macro values so that we can map the atomic operations
+// to __atomic_* directly.
+#ifdef __ATOMIC_SEQ_CST
+  memory_order_relaxed = __ATOMIC_RELAXED,
+  memory_order_consume = __ATOMIC_CONSUME,
+  memory_order_acquire = __ATOMIC_ACQUIRE,
+  memory_order_release = __ATOMIC_RELEASE,
+  memory_order_acq_rel = __ATOMIC_ACQ_REL,
+  memory_order_seq_cst = __ATOMIC_SEQ_CST
+#else
   memory_order_relaxed = 1 << 0,
   memory_order_consume = 1 << 1,
   memory_order_acquire = 1 << 2,
   memory_order_release = 1 << 3,
   memory_order_acq_rel = 1 << 4,
   memory_order_seq_cst = 1 << 5
+#endif
 };
 
 struct atomic_uint8_t {

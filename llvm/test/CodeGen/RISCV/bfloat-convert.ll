@@ -84,12 +84,12 @@ define i16 @fcvt_si_bf16_sat(bfloat %a) nounwind {
 ; CHECK64ZFBFMIN:       # %bb.0: # %start
 ; CHECK64ZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK64ZFBFMIN-NEXT:    feq.s a0, fa5, fa5
+; CHECK64ZFBFMIN-NEXT:    neg a0, a0
 ; CHECK64ZFBFMIN-NEXT:    lui a1, %hi(.LCPI1_0)
 ; CHECK64ZFBFMIN-NEXT:    flw fa4, %lo(.LCPI1_0)(a1)
 ; CHECK64ZFBFMIN-NEXT:    lui a1, 815104
 ; CHECK64ZFBFMIN-NEXT:    fmv.w.x fa3, a1
 ; CHECK64ZFBFMIN-NEXT:    fmax.s fa5, fa5, fa3
-; CHECK64ZFBFMIN-NEXT:    neg a0, a0
 ; CHECK64ZFBFMIN-NEXT:    fmin.s fa5, fa5, fa4
 ; CHECK64ZFBFMIN-NEXT:    fcvt.l.s a1, fa5, rtz
 ; CHECK64ZFBFMIN-NEXT:    and a0, a0, a1
@@ -187,10 +187,10 @@ define i16 @fcvt_ui_bf16_sat(bfloat %a) nounwind {
 ;
 ; RV64ID-LABEL: fcvt_ui_bf16_sat:
 ; RV64ID:       # %bb.0: # %start
-; RV64ID-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV64ID-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
 ; RV64ID-NEXT:    fmv.x.w a0, fa0
 ; RV64ID-NEXT:    slli a0, a0, 16
+; RV64ID-NEXT:    lui a1, %hi(.LCPI3_0)
+; RV64ID-NEXT:    flw fa5, %lo(.LCPI3_0)(a1)
 ; RV64ID-NEXT:    fmv.w.x fa4, a0
 ; RV64ID-NEXT:    fmv.w.x fa3, zero
 ; RV64ID-NEXT:    fmax.s fa4, fa4, fa3

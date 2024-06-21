@@ -4,40 +4,40 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-  define void @load_s64_gpr(i64* %addr) { ret void }
-  define void @load_s32_gpr(i32* %addr) { ret void }
-  define void @load_s16_gpr_anyext(i16* %addr) { ret void }
-  define void @load_s16_gpr(i16* %addr) { ret void }
-  define void @load_s8_gpr_anyext(i8* %addr) { ret void }
-  define void @load_s8_gpr(i8* %addr) { ret void }
+  define void @load_s64_gpr(ptr %addr) { ret void }
+  define void @load_s32_gpr(ptr %addr) { ret void }
+  define void @load_s16_gpr_anyext(ptr %addr) { ret void }
+  define void @load_s16_gpr(ptr %addr) { ret void }
+  define void @load_s8_gpr_anyext(ptr %addr) { ret void }
+  define void @load_s8_gpr(ptr %addr) { ret void }
 
   define void @load_fi_s64_gpr() {
     %ptr0 = alloca i64
     ret void
   }
 
-  define void @load_gep_128_s64_gpr(i64* %addr) { ret void }
-  define void @load_gep_512_s32_gpr(i32* %addr) { ret void }
-  define void @load_gep_64_s16_gpr(i16* %addr) { ret void }
-  define void @load_gep_1_s8_gpr(i8* %addr) { ret void }
+  define void @load_gep_128_s64_gpr(ptr %addr) { ret void }
+  define void @load_gep_512_s32_gpr(ptr %addr) { ret void }
+  define void @load_gep_64_s16_gpr(ptr %addr) { ret void }
+  define void @load_gep_1_s8_gpr(ptr %addr) { ret void }
 
-  define void @load_s64_fpr(i64* %addr) { ret void }
-  define void @load_s32_fpr(i32* %addr) { ret void }
-  define void @load_s16_fpr(i16* %addr) { ret void }
-  define void @load_s8_fpr(i8* %addr) { ret void }
+  define void @load_s64_fpr(ptr %addr) { ret void }
+  define void @load_s32_fpr(ptr %addr) { ret void }
+  define void @load_s16_fpr(ptr %addr) { ret void }
+  define void @load_s8_fpr(ptr %addr) { ret void }
 
-  define void @load_gep_8_s64_fpr(i64* %addr) { ret void }
-  define void @load_gep_16_s32_fpr(i32* %addr) { ret void }
-  define void @load_gep_64_s16_fpr(i16* %addr) { ret void }
-  define void @load_gep_32_s8_fpr(i8* %addr) { ret void }
+  define void @load_gep_8_s64_fpr(ptr %addr) { ret void }
+  define void @load_gep_16_s32_fpr(ptr %addr) { ret void }
+  define void @load_gep_64_s16_fpr(ptr %addr) { ret void }
+  define void @load_gep_32_s8_fpr(ptr %addr) { ret void }
 
-  define void @load_v2s32(i64 *%addr) { ret void }
-  define void @load_v2s64(i64 *%addr) { ret void }
+  define void @load_v2s32(ptr %addr) { ret void }
+  define void @load_v2s64(ptr %addr) { ret void }
 
-  define void @load_4xi16(<4 x i16>* %ptr) { ret void }
-  define void @load_4xi32(<4 x i32>* %ptr) { ret void }
-  define void @load_8xi16(<8 x i16>* %ptr) { ret void }
-  define void @load_16xi8(<16 x i8>* %ptr) { ret void }
+  define void @load_4xi16(ptr %ptr) { ret void }
+  define void @load_4xi32(ptr %ptr) { ret void }
+  define void @load_8xi16(ptr %ptr) { ret void }
+  define void @load_16xi8(ptr %ptr) { ret void }
   define void @anyext_on_fpr() { ret void }
   define void @anyext_on_fpr8() { ret void }
 

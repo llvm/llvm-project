@@ -212,7 +212,7 @@ struct TypeBuilderImpl {
   }
 
   mlir::Type genTypelessExprType(const Fortran::lower::SomeExpr &expr) {
-    return std::visit(
+    return Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::BOZLiteralConstant &) -> mlir::Type {
               return mlir::NoneType::get(context);
@@ -263,10 +263,6 @@ struct TypeBuilderImpl {
         llvm::SmallVector<Fortran::lower::LenParameterTy> params;
         translateLenParameters(params, tySpec->category(), ultimate);
         ty = genFIRType(context, tySpec->category(), kind, params);
-      } else if (type->IsPolymorphic() &&
-                 !converter.getLoweringOptions().getPolymorphicTypeImpl()) {
-        // TODO is kept under experimental flag until feature is complete.
-        TODO(loc, "support for polymorphic types");
       } else if (type->IsUnlimitedPolymorphic()) {
         ty = mlir::NoneType::get(context);
       } else if (const Fortran::semantics::DerivedTypeSpec *tySpec =
@@ -284,10 +280,11 @@ struct TypeBuilderImpl {
     if (ultimate.IsObjectArray()) {
       auto shapeExpr =
           Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
-      if (!shapeExpr)
-        TODO(loc, "assumed rank symbol type");
       fir::SequenceType::Shape shape;
-      translateShape(shape, std::move(*shapeExpr));
+      // If there is no shapExpr, this is an assumed-rank, and the empty shape
+      // will build the desired fir.array<*:T> type.
+      if (shapeExpr)
+        translateShape(shape, std::move(*shapeExpr));
       ty = fir::SequenceType::get(shape, ty);
     }
     if (Fortran::semantics::IsPointer(symbol))
@@ -374,19 +371,20 @@ struct TypeBuilderImpl {
   mlir::Type genDerivedType(const Fortran::semantics::DerivedTypeSpec &tySpec) {
     std::vector<std::pair<std::string, mlir::Type>> ps;
     std::vector<std::pair<std::string, mlir::Type>> cs;
-    const Fortran::semantics::Symbol &typeSymbol = tySpec.typeSymbol();
-    if (mlir::Type ty = getTypeIfDerivedAlreadyInConstruction(typeSymbol))
-      return ty;
-
     if (tySpec.IsVectorType()) {
       return genVectorType(tySpec);
     }
 
+    const Fortran::semantics::Symbol &typeSymbol = tySpec.typeSymbol();
     const Fortran::semantics::Scope &derivedScope = DEREF(tySpec.GetScope());
+    if (mlir::Type ty = getTypeIfDerivedAlreadyInConstruction(derivedScope))
+      return ty;
 
     auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
-    // Maintain the stack of types for recursive references.
-    derivedTypeInConstruction.emplace_back(typeSymbol, rec);
+    // Maintain the stack of types for recursive references and to speed-up
+    // the derived type constructions that can be expensive for derived type
+    // with dozens of components/parents (modern Fortran).
+    derivedTypeInConstruction.try_emplace(&derivedScope, rec);
 
     // Gather the record type fields.
     // (1) The data components.
@@ -446,7 +444,6 @@ struct TypeBuilderImpl {
       }
 
     rec.finalize(ps, cs);
-    popDerivedTypeInConstruction();
 
     if (!ps.empty()) {
       // TODO: this type is a PDT (parametric derived type) with length
@@ -552,16 +549,8 @@ struct TypeBuilderImpl {
   /// type `t` have type `t`. This helper returns `t` if it is already being
   /// lowered to avoid infinite loops.
   mlir::Type getTypeIfDerivedAlreadyInConstruction(
-      const Fortran::lower::SymbolRef derivedSym) const {
-    for (const auto &[sym, type] : derivedTypeInConstruction)
-      if (sym == derivedSym)
-        return type;
-    return {};
-  }
-
-  void popDerivedTypeInConstruction() {
-    assert(!derivedTypeInConstruction.empty());
-    derivedTypeInConstruction.pop_back();
+      const Fortran::semantics::Scope &derivedScope) const {
+    return derivedTypeInConstruction.lookup(&derivedScope);
   }
 
   /// Stack derived type being processed to avoid infinite loops in case of

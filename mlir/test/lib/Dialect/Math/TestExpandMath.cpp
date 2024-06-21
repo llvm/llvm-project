@@ -42,12 +42,17 @@ void TestExpandMathPass::runOnOperation() {
   populateExpandSinhPattern(patterns);
   populateExpandCoshPattern(patterns);
   populateExpandTanhPattern(patterns);
+  populateExpandAsinhPattern(patterns);
+  populateExpandAcoshPattern(patterns);
+  populateExpandAtanhPattern(patterns);
   populateExpandFmaFPattern(patterns);
   populateExpandFloorFPattern(patterns);
   populateExpandCeilFPattern(patterns);
   populateExpandPowFPattern(patterns);
+  populateExpandFPowIPattern(patterns);
   populateExpandRoundFPattern(patterns);
   populateExpandRoundEvenPattern(patterns);
+  populateExpandRsqrtPattern(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 

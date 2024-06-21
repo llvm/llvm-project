@@ -73,5 +73,5 @@ define void @dead_masked_store_same_mask_bigger_type(<vscale x 4 x i16> %val, <v
   ret void
 }
 
-declare void @llvm.masked.store.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16>*, i32, <vscale x 4 x i1>)
-declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>*, i32, <vscale x 4 x i1>)
+declare void @llvm.masked.store.nxv4i16(<vscale x 4 x i16>, ptr, i32, <vscale x 4 x i1>)
+declare void @llvm.masked.store.nxv4i32(<vscale x 4 x i32>, ptr, i32, <vscale x 4 x i1>)

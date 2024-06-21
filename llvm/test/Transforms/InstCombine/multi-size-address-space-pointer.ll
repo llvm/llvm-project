@@ -5,7 +5,7 @@ target datalayout = "e-p:32:32:32-p1:64:64:64-p2:8:8:8-p3:16:16:16-p4:16:16:16-i
 
 define i32 @test_as0(ptr addrspace(0) %a) {
 ; CHECK-LABEL: @test_as0(
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 4
 ; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
@@ -16,7 +16,7 @@ define i32 @test_as0(ptr addrspace(0) %a) {
 
 define i32 @test_as1(ptr addrspace(1) %a) {
 ; CHECK-LABEL: @test_as1(
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr addrspace(1) [[A:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr addrspace(1) [[A:%.*]], i64 4
 ; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(1) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
@@ -27,7 +27,7 @@ define i32 @test_as1(ptr addrspace(1) %a) {
 
 define i32 @test_as2(ptr addrspace(2) %a) {
 ; CHECK-LABEL: @test_as2(
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr addrspace(2) [[A:%.*]], i8 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr addrspace(2) [[A:%.*]], i8 4
 ; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
@@ -38,7 +38,7 @@ define i32 @test_as2(ptr addrspace(2) %a) {
 
 define i32 @test_as3(ptr addrspace(3) %a) {
 ; CHECK-LABEL: @test_as3(
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr addrspace(3) [[A:%.*]], i16 1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr addrspace(3) [[A:%.*]], i16 4
 ; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(3) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
@@ -92,7 +92,7 @@ define <2 x i8> @test_combine_vector_inttoptr(<2 x i8> %a) {
 ; Check that the GEP index is changed to the address space integer type (i64 -> i8)
 define ptr addrspace(2) @shrink_gep_constant_index_64_as2(ptr addrspace(2) %p) {
 ; CHECK-LABEL: @shrink_gep_constant_index_64_as2(
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(2) [[P:%.*]], i8 1
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i8, ptr addrspace(2) [[P:%.*]], i8 4
 ; CHECK-NEXT:    ret ptr addrspace(2) [[RET]]
 ;
   %ret = getelementptr i32, ptr addrspace(2) %p, i64 1
@@ -101,7 +101,7 @@ define ptr addrspace(2) @shrink_gep_constant_index_64_as2(ptr addrspace(2) %p) {
 
 define ptr addrspace(2) @shrink_gep_constant_index_32_as2(ptr addrspace(2) %p) {
 ; CHECK-LABEL: @shrink_gep_constant_index_32_as2(
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(2) [[P:%.*]], i8 1
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i8, ptr addrspace(2) [[P:%.*]], i8 4
 ; CHECK-NEXT:    ret ptr addrspace(2) [[RET]]
 ;
   %ret = getelementptr i32, ptr addrspace(2) %p, i32 1
@@ -110,7 +110,7 @@ define ptr addrspace(2) @shrink_gep_constant_index_32_as2(ptr addrspace(2) %p) {
 
 define ptr addrspace(3) @shrink_gep_constant_index_64_as3(ptr addrspace(3) %p) {
 ; CHECK-LABEL: @shrink_gep_constant_index_64_as3(
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(3) [[P:%.*]], i16 1
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i8, ptr addrspace(3) [[P:%.*]], i16 4
 ; CHECK-NEXT:    ret ptr addrspace(3) [[RET]]
 ;
   %ret = getelementptr i32, ptr addrspace(3) %p, i64 1

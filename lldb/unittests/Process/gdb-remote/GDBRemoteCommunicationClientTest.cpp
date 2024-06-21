@@ -592,3 +592,30 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteMemoryTags) {
                  std::vector<uint8_t>{0x99}, "QMemTags:456789,0:80000000:99",
                  "E03", false);
 }
+
+// Prior to this verison, constructing a std::future for a type without a
+// default constructor is not possible.
+// https://developercommunity.visualstudio.com/t/c-shared-state-futuresstate-default-constructs-the/60897
+#if !defined(_MSC_VER) || _MSC_VER >= 1932
+TEST_F(GDBRemoteCommunicationClientTest, CalculateMD5) {
+  FileSpec file_spec("/foo/bar", FileSpec::Style::posix);
+  std::future<ErrorOr<MD5::MD5Result>> async_result = std::async(
+      std::launch::async, [&] { return client.CalculateMD5(file_spec); });
+
+  lldb_private::StreamString stream;
+  stream.PutCString("vFile:MD5:");
+  stream.PutStringAsRawHex8(file_spec.GetPath(false));
+  HandlePacket(server, stream.GetString().str(),
+               "F,"
+               "deadbeef01020304"
+               "05060708deadbeef");
+  auto result = async_result.get();
+
+  // Server and client puts/parses low, and then high
+  const uint64_t expected_low = 0xdeadbeef01020304;
+  const uint64_t expected_high = 0x05060708deadbeef;
+  ASSERT_TRUE(result);
+  EXPECT_EQ(expected_low, result->low());
+  EXPECT_EQ(expected_high, result->high());
+}
+#endif

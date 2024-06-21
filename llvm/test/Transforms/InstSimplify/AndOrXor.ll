@@ -12,11 +12,11 @@ define i8 @and0(i8 %x) {
   ret i8 %r
 }
 
-define <2 x i8> @and0_vec_undef_elt(<2 x i8> %x) {
-; CHECK-LABEL: @and0_vec_undef_elt(
+define <2 x i8> @and0_vec_poison_elt(<2 x i8> %x) {
+; CHECK-LABEL: @and0_vec_poison_elt(
 ; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
-  %r = and <2 x i8> %x, <i8 undef, i8 0>
+  %r = and <2 x i8> %x, <i8 poison, i8 0>
   ret <2 x i8> %r
 }
 
@@ -31,14 +31,14 @@ define <2 x i32> @add_nsw_signbit(<2 x i32> %x) {
   ret <2 x i32> %z
 }
 
-; Undef elements in either constant vector are ok.
+; Poison elements in either constant vector are ok.
 
-define <2 x i32> @add_nsw_signbit_undef(<2 x i32> %x) {
-; CHECK-LABEL: @add_nsw_signbit_undef(
+define <2 x i32> @add_nsw_signbit_poison(<2 x i32> %x) {
+; CHECK-LABEL: @add_nsw_signbit_poison(
 ; CHECK-NEXT:    ret <2 x i32> [[X:%.*]]
 ;
-  %y = xor <2 x i32> %x, <i32 undef, i32 -2147483648>
-  %z = add nsw <2 x i32> %y, <i32 -2147483648, i32 undef>
+  %y = xor <2 x i32> %x, <i32 poison, i32 -2147483648>
+  %z = add nsw <2 x i32> %y, <i32 -2147483648, i32 poison>
   ret <2 x i32> %z
 }
 
@@ -53,14 +53,14 @@ define <2 x i5> @add_nuw_signbit(<2 x i5> %x) {
   ret <2 x i5> %z
 }
 
-; Undef elements in either constant vector are ok.
+; Poison elements in either constant vector are ok.
 
-define <2 x i5> @add_nuw_signbit_undef(<2 x i5> %x) {
-; CHECK-LABEL: @add_nuw_signbit_undef(
+define <2 x i5> @add_nuw_signbit_poison(<2 x i5> %x) {
+; CHECK-LABEL: @add_nuw_signbit_poison(
 ; CHECK-NEXT:    ret <2 x i5> [[X:%.*]]
 ;
-  %y = xor <2 x i5> %x, <i5 -16, i5 undef>
-  %z = add nuw <2 x i5> %y, <i5 undef, i5 -16>
+  %y = xor <2 x i5> %x, <i5 -16, i5 poison>
+  %z = add nuw <2 x i5> %y, <i5 poison, i5 -16>
   ret <2 x i5> %z
 }
 
@@ -584,7 +584,7 @@ define <2 x i32> @or_xor_andn_commute2(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-NEXT:    ret <2 x i32> [[XOR]]
 ;
   %xor = xor <2 x i32> %a, %b
-  %neg = xor <2 x i32> %b, <i32 -1, i32 undef>
+  %neg = xor <2 x i32> %b, <i32 -1, i32 poison>
   %and = and <2 x i32> %a, %neg
   %or = or <2 x i32> %xor, %and
   ret <2 x i32> %or
@@ -708,15 +708,13 @@ define <2 x i32> @or_xorn_and_commute2_undef(<2 x i32> %a, <2 x i32> %b) {
   ret <2 x i32> %or
 }
 
-; TODO: Unlike the above test, this is safe to fold.
+; Unlike the above test, this is safe to fold.
 
 define <2 x i32> @or_xorn_and_commute2_poison(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @or_xorn_and_commute2_poison(
 ; CHECK-NEXT:    [[NEGA:%.*]] = xor <2 x i32> [[A:%.*]], <i32 poison, i32 -1>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], [[A]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[B]], [[NEGA]]
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[XOR]], [[AND]]
-; CHECK-NEXT:    ret <2 x i32> [[OR]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[B:%.*]], [[NEGA]]
+; CHECK-NEXT:    ret <2 x i32> [[XOR]]
 ;
   %nega = xor <2 x i32> %a, <i32 poison, i32 -1>
   %and = and <2 x i32> %b, %a

@@ -1,0 +1,8 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+program test
+  real, device :: b(100) ! ok
+  block
+    real, device :: a(100) ! ok
+  end block
+end program

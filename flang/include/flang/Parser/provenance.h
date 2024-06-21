@@ -151,6 +151,7 @@ public:
 
   void ClearSearchPath();
   void AppendSearchPathDirectory(std::string); // new last directory
+  const SourceFile *OpenPath(std::string path, llvm::raw_ostream &error);
   const SourceFile *Open(std::string path, llvm::raw_ostream &error,
       std::optional<std::string> &&prependPath = std::nullopt);
   const SourceFile *ReadStandardInput(llvm::raw_ostream &error);
@@ -160,6 +161,10 @@ public:
   ProvenanceRange AddMacroCall(
       ProvenanceRange def, ProvenanceRange use, const std::string &expansion);
   ProvenanceRange AddCompilerInsertion(std::string);
+
+  // If provenance is in an expanded macro, return the starting provenance of
+  // the replaced macro. Otherwise, return the input provenance.
+  Provenance GetReplacedProvenance(Provenance) const;
 
   bool IsValid(Provenance at) const { return range_.Contains(at); }
   bool IsValid(ProvenanceRange range) const {
@@ -225,6 +230,8 @@ private:
 // single instances of CookedSource.
 class CookedSource {
 public:
+  explicit CookedSource(AllSources &allSources) : allSources_{allSources} {};
+
   int number() const { return number_; }
   void set_number(int n) { number_ = n; }
 
@@ -250,17 +257,23 @@ public:
     provenanceMap_.Put(pm);
   }
 
+  void MarkPossibleFixedFormContinuation() {
+    possibleFixedFormContinuations_.push_back(BufferedBytes());
+  }
+
   std::size_t BufferedBytes() const;
   void Marshal(AllCookedSources &); // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings(AllSources &);
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
+  AllSources &allSources_;
   int number_{0}; // for sorting purposes
   CharBuffer buffer_; // before Marshal()
   std::string data_; // all of it, prescanned and preprocessed
   OffsetToProvenanceMappings provenanceMap_;
   ProvenanceRangeToOffsetMappings invertedMap_;
+  std::list<std::size_t> possibleFixedFormContinuations_;
 };
 
 class AllCookedSources {

@@ -505,11 +505,6 @@ public:
 
   bool IsFullySpecifiedTriple() const;
 
-  void PiecewiseTripleCompare(const ArchSpec &other, bool &arch_different,
-                              bool &vendor_different, bool &os_different,
-                              bool &os_version_different,
-                              bool &env_different) const;
-
   /// Detect whether this architecture uses thumb code exclusively
   ///
   /// Some embedded ARM chips (e.g. the ARM Cortex M0-7 line) can only execute

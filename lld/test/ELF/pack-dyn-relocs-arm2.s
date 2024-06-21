@@ -5,7 +5,7 @@
 
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
 // RUN: ld.lld -pie --pack-dyn-relocs=relr %t.o %t.so -o %t.exe
-// RUN: llvm-readobj -r %t.exe | FileCheck %s
+// RUN: llvm-readobj -r -x .data %t.exe | FileCheck %s
 
 // CHECK:      Section (5) .relr.dyn {
 // CHECK-NEXT:   0x301E8 R_ARM_RELATIVE -
@@ -43,6 +43,9 @@
 // CHECK-NEXT:   0x30268 R_ARM_RELATIVE -
 // CHECK-NEXT:   0x3026C R_ARM_RELATIVE -
 // CHECK-NEXT: }
+// CHECK:      Hex dump of section '.data':
+// CHECK-NEXT: 0x000301e8 00000000 01000000 02000000 ffffffff .
+// CHECK-NEXT: 0x000301f8 00000080 00000000 00000000 00000000 .
 
 // RUN: llvm-readobj -S --dynamic-table %t.exe | FileCheck --check-prefix=HEADER %s
 // HEADER: 0x00000023 RELRSZ 12 (bytes)
@@ -50,10 +53,10 @@
 .data
 .align 2
 .dc.a __ehdr_start
-.dc.a __ehdr_start
-.dc.a __ehdr_start
-.dc.a __ehdr_start
-.dc.a __ehdr_start
+.dc.a __ehdr_start+1
+.dc.a __ehdr_start+2
+.dc.a __ehdr_start-1
+.dc.a __ehdr_start-0x80000000
 .dc.a __ehdr_start
 .dc.a __ehdr_start
 .dc.a __ehdr_start

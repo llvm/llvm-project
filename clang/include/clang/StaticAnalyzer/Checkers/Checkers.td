@@ -36,12 +36,16 @@ def CoreAlpha : Package<"core">, ParentPackage<Alpha>;
 // Note: OptIn is *not* intended for checkers that are too noisy to be on by
 // default. Such checkers belong in the alpha package.
 def OptIn : Package<"optin">;
+
 def CoreOptIn : Package<"core">, ParentPackage<OptIn>;
 
 // In the Portability package reside checkers for finding code that relies on
 // implementation-defined behavior. Such checks are wanted for cross-platform
 // development, but unwanted for developers who target only a single platform.
 def PortabilityOptIn : Package<"portability">, ParentPackage<OptIn>;
+
+// Optional checkers related to taint security analysis.
+def TaintOptIn : Package<"taint">, ParentPackage<OptIn>;
 
 def Nullability : Package<"nullability">,
   PackageOptions<[
@@ -292,10 +296,6 @@ def PointerSubChecker : Checker<"PointerSub">,
            "different memory chunks">,
   Documentation<HasDocumentation>;
 
-def SizeofPointerChecker : Checker<"SizeofPtr">,
-  HelpText<"Warn about unintended use of sizeof() on pointer expressions">,
-  Documentation<HasDocumentation>;
-
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
   HelpText<"Check for division by variable that is later compared against 0. "
            "Either the comparison is useless or there is division by zero.">,
@@ -509,6 +509,10 @@ def UnixAPIMisuseChecker : Checker<"API">,
   HelpText<"Check calls to various UNIX/Posix functions">,
   Documentation<HasDocumentation>;
 
+def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
+  HelpText<"Check for calls to blocking functions inside a critical section">,
+  Documentation<HasDocumentation>;
+
 def DynamicMemoryModeling: Checker<"DynamicMemoryModeling">,
   HelpText<"The base of several malloc() related checkers. On it's own it "
            "emits no reports, but adds valuable information to the analysis "
@@ -563,6 +567,20 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
   Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
+// This must appear before StdCLibraryFunctionsChecker because a dependency.
+def StreamChecker : Checker<"Stream">,
+  HelpText<"Check stream handling functions">,
+  WeakDependencies<[NonNullParamChecker]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If false, assume that stream operations which are often not "
+                  "checked for error do not fail.",
+                  "false",
+                  InAlpha>
+  ]>,
+  Documentation<HasDocumentation>;
+
 def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   HelpText<"Check for invalid arguments of C standard library functions, "
            "and apply relations between arguments and return value">,
@@ -578,10 +596,10 @@ def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
                   "ModelPOSIX",
                   "If set to true, the checker models additional functions "
                   "from the POSIX standard.",
-                  "false",
+                  "true",
                   InAlpha>
   ]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
   Documentation<HasDocumentation>;
 
 def VforkChecker : Checker<"Vfork">,
@@ -601,17 +619,8 @@ def PthreadLockChecker : Checker<"PthreadLock">,
   Dependencies<[PthreadLockBase]>,
   Documentation<HasDocumentation>;
 
-def StreamChecker : Checker<"Stream">,
-  HelpText<"Check stream handling functions">,
-  WeakDependencies<[NonNullParamChecker]>,
-  Documentation<HasDocumentation>;
-
 def SimpleStreamChecker : Checker<"SimpleStream">,
   HelpText<"Check for misuses of stream APIs">,
-  Documentation<HasDocumentation>;
-
-def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
-  HelpText<"Check for calls to blocking functions inside a critical section">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"
@@ -621,6 +630,11 @@ def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = Cplusplus in {
+
+def ArrayDeleteChecker : Checker<"ArrayDelete">,
+  HelpText<"Reports destructions of arrays of polymorphic objects that are "
+           "destructed as their base class.">,
+  Documentation<HasDocumentation>;
 
 def InnerPointerChecker : Checker<"InnerPointer">,
   HelpText<"Check for inner pointers of C++ containers used after "
@@ -777,11 +791,6 @@ def ContainerModeling : Checker<"ContainerModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
-def CXXArrayDeleteChecker : Checker<"ArrayDelete">,
-  HelpText<"Reports destructions of arrays of polymorphic objects that are "
-           "destructed as their base class.">,
-  Documentation<HasDocumentation>;
-
 def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">,
@@ -908,7 +917,7 @@ def PaddingChecker : Checker<"Padding">,
                   "24",
                   Released>
   ]>,
-  Documentation<NotDocumented>;
+  Documentation<HasDocumentation>;
 
 } // end: "padding"
 
@@ -1002,6 +1011,16 @@ def FloatLoopCounter : Checker<"FloatLoopCounter">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def PutenvStackArray : Checker<"PutenvStackArray">,
+  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
+           "an automatic (stack-allocated) array as the argument.">,
+  Documentation<HasDocumentation>;
+
+def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
+  HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
+           "'setuid(getuid())' (CERT: POS36-C)">,
+  Documentation<HasDocumentation>;
+
 } // end "security"
 
 let ParentPackage = ENV in {
@@ -1021,15 +1040,6 @@ let ParentPackage = ENV in {
 
 } // end "security.cert.env"
 
-let ParentPackage = POSAlpha in {
-
-  def PutenvWithAuto : Checker<"34c">,
-  HelpText<"Finds calls to the 'putenv' function which pass a pointer to "
-           "an automatic variable as the argument.">,
-  Documentation<HasDocumentation>;
-
-} // end "alpha.cert.pos"
-
 let ParentPackage = SecurityAlpha in {
 
 def ArrayBoundChecker : Checker<"ArrayBound">,
@@ -1038,10 +1048,6 @@ def ArrayBoundChecker : Checker<"ArrayBound">,
 
 def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
   HelpText<"Warn about buffer overflows (newer checker)">,
-  Documentation<HasDocumentation>;
-
-def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
-  HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
 
 def MallocOverflowSecurityChecker : Checker<"MallocOverflow">,
@@ -1062,6 +1068,10 @@ def MmapWriteExecChecker : Checker<"MmapWriteExec">,
                   "0x01",
                   Released>
   ]>,
+  Documentation<HasDocumentation>;
+
+def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
+  HelpText<"Check for an out-of-bound pointer being returned to callers">,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security"
@@ -1388,7 +1398,7 @@ def CastValueChecker : Checker<"CastValue">,
   Documentation<NotDocumented>;
 
 def ReturnValueChecker : Checker<"ReturnValue">,
-  HelpText<"Model the guaranteed boolean return value of function calls">,
+  HelpText<"Model certain Error() methods that always return true by convention">,
   Documentation<NotDocumented>;
 
 } // end "apiModeling.llvm"
@@ -1619,6 +1629,7 @@ def TaintTesterChecker : Checker<"TaintTest">,
 def StreamTesterChecker : Checker<"StreamTester">,
   HelpText<"Add test functions to StreamChecker for test and debugging "
            "purposes.">,
+  WeakDependencies<[StreamChecker]>,
   Documentation<NotDocumented>;
 
 def ErrnoTesterChecker : Checker<"ErrnoTest">,
@@ -1652,6 +1663,10 @@ def StdCLibraryFunctionsTesterChecker : Checker<"StdCLibraryFunctionsTester">,
   HelpText<"Add test functions to the summary map, so testing of individual "
            "summary constituents becomes possible.">,
   WeakDependencies<[StdCLibraryFunctionsChecker]>,
+  Documentation<NotDocumented>;
+
+def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
+  HelpText<"Defines an empty checker callback for all possible handlers.">,
   Documentation<NotDocumented>;
 
 } // end "debug"
@@ -1702,6 +1717,23 @@ def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
   Documentation<NotDocumented>;
 
 } // end optin.portability
+
+
+//===----------------------------------------------------------------------===//
+// Taint checkers.
+//===----------------------------------------------------------------------===//
+
+let ParentPackage = TaintOptIn in {
+
+def TaintedAllocChecker: Checker<"TaintedAlloc">,
+  HelpText<"Check for memory allocations, where the size parameter "
+           "might be a tainted (attacker controlled) value.">,
+  Dependencies<[DynamicMemoryModeling]>,
+  //FIXME: GenericTaintChecker should be a dependency, but only after it
+  //is transformed into a modeling checker
+  Documentation<HasDocumentation>;
+
+} // end "optin.taint"
 
 //===----------------------------------------------------------------------===//
 // NonDeterminism checkers.

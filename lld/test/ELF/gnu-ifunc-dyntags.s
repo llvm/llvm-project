@@ -9,15 +9,13 @@
 
 # CHECK:  Name          Size   VMA
 # CHECK:  .rela.dyn   00000030 0000000000000248
-# CHECK:  .got.plt    00000010 00000000000033b0
+# CHECK:  .got.plt    00000010 0000000000003370
 
 # TAGS:   Tag                Type                 Name/Value
 # TAGS:   0x0000000000000007 RELA                 0x248
 # TAGS:   0x0000000000000008 RELASZ               48 (bytes)
-# TAGS:   0x0000000000000017 JMPREL               0x0
-# TAGS:   0x0000000000000002 PLTRELSZ             0 (bytes)
-# TAGS:   0x0000000000000003 PLTGOT               0x33B0
-# TAGS:   0x0000000000000014 PLTREL               RELA
+# TAGS-NOT: JMPREL
+# TAGS-NOT: PLTREL
 
 # TAGS:      Relocations [
 # TAGS-NEXT:   Section {{.*}} .rela.dyn {

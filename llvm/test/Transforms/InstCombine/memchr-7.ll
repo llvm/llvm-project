@@ -76,7 +76,7 @@ define ptr @memchr_no_zero_cmp2(i32 %c) {
 ; CHECK-LABEL: @memchr_no_zero_cmp2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 10
-; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds ([2 x i8], ptr @.str.1, i64 0, i64 1), ptr null
+; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds (i8, ptr @.str.1, i64 1), ptr null
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1]], 13
 ; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], ptr @.str.1, ptr [[MEMCHR_SEL1]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR_SEL2]]

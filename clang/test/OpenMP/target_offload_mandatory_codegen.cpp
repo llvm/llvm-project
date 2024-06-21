@@ -33,7 +33,7 @@ void host_dev(int device) {
 // MANDATORY-NEXT:  entry:
 // MANDATORY-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
 // MANDATORY-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 2, ptr [[TMP0]], align 4
+// MANDATORY-NEXT:    store i32 3, ptr [[TMP0]], align 4
 // MANDATORY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // MANDATORY-NEXT:    store i32 0, ptr [[TMP1]], align 4
 // MANDATORY-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -79,7 +79,7 @@ void host_dev(int device) {
 // MANDATORY-NEXT:    br i1 [[TOBOOL]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // MANDATORY:       omp_if.then:
 // MANDATORY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 2, ptr [[TMP1]], align 4
+// MANDATORY-NEXT:    store i32 3, ptr [[TMP1]], align 4
 // MANDATORY-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // MANDATORY-NEXT:    store i32 0, ptr [[TMP2]], align 4
 // MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -129,7 +129,7 @@ void host_dev(int device) {
 // MANDATORY-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
 // MANDATORY-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 // MANDATORY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// MANDATORY-NEXT:    store i32 2, ptr [[TMP3]], align 4
+// MANDATORY-NEXT:    store i32 3, ptr [[TMP3]], align 4
 // MANDATORY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // MANDATORY-NEXT:    store i32 0, ptr [[TMP4]], align 4
 // MANDATORY-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -160,12 +160,5 @@ void host_dev(int device) {
 // MANDATORY:       omp_offload.failed:
 // MANDATORY-NEXT:    unreachable
 // MANDATORY:       omp_offload.cont:
-// MANDATORY-NEXT:    ret void
-//
-//
-// MANDATORY-LABEL: define {{[^@]+}}@.omp_offloading.requires_reg
-// MANDATORY-SAME: () #[[ATTR3:[0-9]+]] {
-// MANDATORY-NEXT:  entry:
-// MANDATORY-NEXT:    call void @__tgt_register_requires(i64 1)
 // MANDATORY-NEXT:    ret void
 //

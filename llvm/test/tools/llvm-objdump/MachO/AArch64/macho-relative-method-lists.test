@@ -1,0 +1,86 @@
+RUN: llvm-objdump --macho --objc-meta-data    %p/Inputs/rel-method-lists-arm64_32.dylib | FileCheck %s --check-prefix=CHK32
+RUN: llvm-otool -ov                           %p/Inputs/rel-method-lists-arm64_32.dylib | FileCheck %s --check-prefix=CHK32
+
+RUN: llvm-objdump --macho --objc-meta-data    %p/Inputs/rel-method-lists-arm64.dylib    | FileCheck %s --check-prefix=CHK64
+RUN: llvm-otool -ov                           %p/Inputs/rel-method-lists-arm64.dylib    | FileCheck %s --check-prefix=CHK64
+
+CHK32:                 baseMethods 0x660 (struct method_list_t *)
+CHK32-NEXT:                 entsize 12 (relative)
+CHK32-NEXT:                   count 3
+CHK32-NEXT:                    name 0x144 (0x{{[0-9a-f]*}}) instance_method_00
+CHK32-NEXT:                   types 0x91 (0x{{[0-9a-f]*}}) v8@0:4
+CHK32-NEXT:                     imp 0xffffff18 (0x{{[0-9a-f]*}}) -[MyClass instance_method_00]
+CHK32-NEXT:                    name 0x13c (0x{{[0-9a-f]*}}) instance_method_01
+CHK32-NEXT:                   types 0x85 (0x{{[0-9a-f]*}}) v8@0:4
+CHK32-NEXT:                     imp 0xffffff28 (0x{{[0-9a-f]*}}) -[MyClass instance_method_01]
+CHK32-NEXT:                    name 0x134 (0x{{[0-9a-f]*}}) instance_method_02
+CHK32-NEXT:                   types 0x79 (0x{{[0-9a-f]*}}) v8@0:4
+CHK32-NEXT:                     imp 0xffffff38 (0x{{[0-9a-f]*}}) -[MyClass instance_method_02]
+
+CHK32:                 baseMethods 0x630 (struct method_list_t *)
+CHK32-NEXT:                 entsize 12 (relative)
+CHK32-NEXT:                   count 3
+CHK32-NEXT:                    name 0x180 (0x{{[0-9a-f]*}}) class_method_00
+CHK32-NEXT:                   types 0xc1 (0x{{[0-9a-f]*}}) v8@0:4
+CHK32-NEXT:                     imp 0xffffff9c (0x{{[0-9a-f]*}}) +[MyClass class_method_00]
+CHK32-NEXT:                    name 0x178 (0x{{[0-9a-f]*}}) class_method_01
+CHK32-NEXT:                   types 0xb5 (0x{{[0-9a-f]*}}) v8@0:4
+CHK32-NEXT:                     imp 0xffffffac (0x{{[0-9a-f]*}}) +[MyClass class_method_01]
+CHK32-NEXT:                    name 0x170 (0x{{[0-9a-f]*}}) class_method_02
+CHK32-NEXT:                   types 0xa9 (0x{{[0-9a-f]*}}) v8@0:4
+CHK32-NEXT:                     imp 0xffffffbc (0x{{[0-9a-f]*}}) +[MyClass class_method_02]
+
+CHK64:                  baseMethods 0x6e0 (struct method_list_t *)
+CHK64-NEXT:                  entsize 12 (relative)
+CHK64-NEXT:                    count 3
+CHK64-NEXT:                     name 0x188 (0x{{[0-9a-f]*}}) instance_method_00
+CHK64-NEXT:                    types 0x91 (0x{{[0-9a-f]*}}) v16@0:8
+CHK64-NEXT:                      imp 0xffffffa8 (0x{{[0-9a-f]*}}) -[MyClass instance_method_00]
+CHK64-NEXT:                     name 0x184 (0x{{[0-9a-f]*}}) instance_method_01
+CHK64-NEXT:                    types 0x85 (0x{{[0-9a-f]*}}) v16@0:8
+CHK64-NEXT:                      imp 0xffffffa0 (0x{{[0-9a-f]*}}) -[MyClass instance_method_01]
+CHK64-NEXT:                     name 0x180 (0x{{[0-9a-f]*}}) instance_method_02
+CHK64-NEXT:                    types 0x79 (0x{{[0-9a-f]*}}) v16@0:8
+CHK64-NEXT:                      imp 0xffffff98 (0x{{[0-9a-f]*}}) -[MyClass instance_method_02]
+
+CHK64:                  baseMethods 0x6b0 (struct method_list_t *)
+CHK64-NEXT:                  entsize 12 (relative)
+CHK64-NEXT:                    count 3
+CHK64-NEXT:                     name 0x1d0 (0x{{[0-9a-f]*}}) class_method_00
+CHK64-NEXT:                    types 0xc1 (0x{{[0-9a-f]*}}) v16@0:8
+CHK64-NEXT:                      imp 0xffffffe4 (0x{{[0-9a-f]*}}) +[MyClass class_method_00]
+CHK64-NEXT:                     name 0x1cc (0x{{[0-9a-f]*}}) class_method_01
+CHK64-NEXT:                    types 0xb5 (0x{{[0-9a-f]*}}) v16@0:8
+CHK64-NEXT:                      imp 0xffffffdc (0x{{[0-9a-f]*}}) +[MyClass class_method_01]
+CHK64-NEXT:                     name 0x1c8 (0x{{[0-9a-f]*}}) class_method_02
+CHK64-NEXT:                    types 0xa9 (0x{{[0-9a-f]*}}) v16@0:8
+CHK64-NEXT:                      imp 0xffffffd4 (0x{{[0-9a-f]*}}) +[MyClass class_method_02]
+
+######## Generate rel-method-lists-arm64.dylib ########
+// clang -c main.mm -o main.o -target arm64-apple-macos -arch arm64
+// ld64.ld64 -dylib -demangle -dynamic main.o -o rel-method-lists-arm64.dylib -syslibroot MacOSX14.2.sdk -segalign 0x10 -objc_relative_method_lists
+
+######## Generate rel-method-lists-arm64_32.dylib ########
+// clang -c main.mm -o main.o -target arm64_32-apple-watchos -arch arm64_32
+// ld64.ld64 -dylib -demangle -dynamic main.o -o rel-method-lists-arm64_32.dylib -syslibroot WatchOS.sdk -segalign 0x10 -objc_relative_method_lists
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~ main.mm ~~~~~~~~~~~~~~~~~~~~~~~~~
+__attribute__((objc_root_class))
+@interface MyClass
+- (void)instance_method_00;
+- (void)instance_method_01;
+- (void)instance_method_02;
++ (void)class_method_00;
++ (void)class_method_01;
++ (void)class_method_02;
+@end
+@implementation MyClass
+- (void)instance_method_00 {}
+- (void)instance_method_01 {}
+- (void)instance_method_02 {}
++ (void)class_method_00 {}
++ (void)class_method_01 {}
++ (void)class_method_02 {}
+@end
+void *_objc_empty_cache;
+void *_objc_empty_vtable;

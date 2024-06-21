@@ -172,8 +172,8 @@ namespace {
       AU.addRequired<MachineLoopInfo>();
       AU.addPreserved<MachineLoopInfo>();
       if (Aggressive) {
-        AU.addRequired<MachineDominatorTree>();
-        AU.addPreserved<MachineDominatorTree>();
+        AU.addRequired<MachineDominatorTreeWrapperPass>();
+        AU.addPreserved<MachineDominatorTreeWrapperPass>();
       }
     }
 
@@ -487,7 +487,7 @@ char &llvm::PeepholeOptimizerID = PeepholeOptimizer::ID;
 
 INITIALIZE_PASS_BEGIN(PeepholeOptimizer, DEBUG_TYPE,
                       "Peephole Optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(PeepholeOptimizer, DEBUG_TYPE,
                     "Peephole Optimizations", false, false)
@@ -1428,9 +1428,9 @@ bool PeepholeOptimizer::foldImmediate(
       continue;
     DenseMap<Register, MachineInstr *>::iterator II = ImmDefMIs.find(Reg);
     assert(II != ImmDefMIs.end() && "couldn't find immediate definition");
-    if (TII->FoldImmediate(MI, *II->second, Reg, MRI)) {
+    if (TII->foldImmediate(MI, *II->second, Reg, MRI)) {
       ++NumImmFold;
-      // FoldImmediate can delete ImmDefMI if MI was its only user. If ImmDefMI
+      // foldImmediate can delete ImmDefMI if MI was its only user. If ImmDefMI
       // is not deleted, and we happened to get a same MI, we can delete MI and
       // replace its users.
       if (MRI->getVRegDef(Reg) &&
@@ -1577,7 +1577,7 @@ bool PeepholeOptimizer::findTargetRecurrence(
     return false;
 
   MachineInstr &MI = *(MRI->use_instr_nodbg_begin(Reg));
-  unsigned Idx = MI.findRegisterUseOperandIdx(Reg);
+  unsigned Idx = MI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr);
 
   // Only interested in recurrences whose instructions have only one def, which
   // is a virtual register.
@@ -1670,7 +1670,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
-  DT  = Aggressive ? &getAnalysis<MachineDominatorTree>() : nullptr;
+  DT = Aggressive ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
+                  : nullptr;
   MLI = &getAnalysis<MachineLoopInfo>();
   MF.setDelegate(this);
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood %s -o - | FileCheck %s
+; RUN: llc -mtriple=r600 -mcpu=redwood %s -o - | FileCheck %s
 
 ; This tests for a bug where vertex fetch clauses right before an ENDIF
 ; instruction where being emitted after the ENDIF.  We were using ALU_POP_AFTER

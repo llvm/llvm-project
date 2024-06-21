@@ -154,10 +154,10 @@ struct DynamicDerivedMultiple;
 // CHECK-CTORS: call void @_ZN12DynamicBase2C2Ev(
 // CHECK-CTORS-NOT: @llvm.launder.invariant.group.p0
 
-// CHECK-CTORS: store {{.*}} @_ZTV22DynamicDerivedMultiple, i32 0, inrange i32 0, i32 2), {{.*}} %[[THIS0]]
+// CHECK-CTORS: store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV22DynamicDerivedMultiple, i32 0, i32 0, i32 2), ptr %[[THIS0]]
 // CHECK-CTORS: %[[THIS_ADD:.*]] = getelementptr inbounds i8, ptr %[[THIS0]], i64 16
 
-// CHECK-CTORS: store {{.*}} @_ZTV22DynamicDerivedMultiple, i32 0, inrange i32 1, i32 2), {{.*}} %[[THIS_ADD]]
+// CHECK-CTORS: store ptr getelementptr inbounds inrange(-16, 8) ({ [4 x ptr], [3 x ptr] }, ptr @_ZTV22DynamicDerivedMultiple, i32 0, i32 1, i32 2), ptr %[[THIS_ADD]]
 // CHECK-CTORS-LABEL: {{^}}}
 
 struct DynamicFromStatic;

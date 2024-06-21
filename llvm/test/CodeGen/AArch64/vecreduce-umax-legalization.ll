@@ -29,33 +29,21 @@ define i1 @test_v1i1(<1 x i1> %a) nounwind {
 }
 
 define i8 @test_v1i8(<1 x i8> %a) nounwind {
-; CHECK-SD-LABEL: test_v1i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    umov w0, v0.b[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_v1i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_v1i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    umov w0, v0.b[0]
+; CHECK-NEXT:    ret
   %b = call i8 @llvm.vector.reduce.umax.v1i8(<1 x i8> %a)
   ret i8 %b
 }
 
 define i16 @test_v1i16(<1 x i16> %a) nounwind {
-; CHECK-SD-LABEL: test_v1i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    umov w0, v0.h[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_v1i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_v1i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    umov w0, v0.h[0]
+; CHECK-NEXT:    ret
   %b = call i16 @llvm.vector.reduce.umax.v1i16(<1 x i16> %a)
   ret i16 %b
 }
@@ -77,8 +65,7 @@ define i32 @test_v1i32(<1 x i32> %a) nounwind {
 ;
 ; CHECK-GI-LABEL: test_v1i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    fmov x0, d0
-; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-GI-NEXT:    fmov w0, s0
 ; CHECK-GI-NEXT:    ret
   %b = call i32 @llvm.vector.reduce.umax.v1i32(<1 x i32> %a)
   ret i32 %b
@@ -200,27 +187,12 @@ define i8 @test_v9i8(<9 x i8> %a) nounwind {
 }
 
 define i32 @test_v3i32(<3 x i32> %a) nounwind {
-; CHECK-SD-LABEL: test_v3i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov v0.s[3], wzr
-; CHECK-SD-NEXT:    umaxv s0, v0.4s
-; CHECK-SD-NEXT:    fmov w0, s0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_v3i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov s2, v0.s[2]
-; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    fmov w9, s2
-; CHECK-GI-NEXT:    fcsel s0, s0, s1, hi
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    fcsel s0, s0, s2, hi
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_v3i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v0.s[3], wzr
+; CHECK-NEXT:    umaxv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
   %b = call i32 @llvm.vector.reduce.umax.v3i32(<3 x i32> %a)
   ret i32 %b
 }

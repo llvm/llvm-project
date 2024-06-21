@@ -56,10 +56,15 @@ public:
   using AdvanceFn = void (IteratorRangeChecker::*)(CheckerContext &, SVal,
                                                    SVal) const;
 
+  // FIXME: these three functions are also listed in IteratorModeling.cpp,
+  // perhaps unify their handling?
   CallDescriptionMap<AdvanceFn> AdvanceFunctions = {
-      {{{"std", "advance"}, 2}, &IteratorRangeChecker::verifyAdvance},
-      {{{"std", "prev"}, 2}, &IteratorRangeChecker::verifyPrev},
-      {{{"std", "next"}, 2}, &IteratorRangeChecker::verifyNext},
+      {{CDM::SimpleFunc, {"std", "advance"}, 2},
+       &IteratorRangeChecker::verifyAdvance},
+      {{CDM::SimpleFunc, {"std", "prev"}, 2},
+       &IteratorRangeChecker::verifyPrev},
+      {{CDM::SimpleFunc, {"std", "next"}, 2},
+       &IteratorRangeChecker::verifyNext},
   };
 };
 
@@ -68,7 +73,7 @@ bool isAheadOfRange(ProgramStateRef State, const IteratorPosition &Pos);
 bool isBehindPastTheEnd(ProgramStateRef State, const IteratorPosition &Pos);
 bool isZero(ProgramStateRef State, NonLoc Val);
 
-} //namespace
+} // namespace
 
 void IteratorRangeChecker::checkPreCall(const CallEvent &Call,
                                         CheckerContext &C) const {

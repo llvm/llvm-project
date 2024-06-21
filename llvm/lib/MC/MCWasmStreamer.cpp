@@ -39,19 +39,6 @@ using namespace llvm;
 
 MCWasmStreamer::~MCWasmStreamer() = default; // anchor.
 
-void MCWasmStreamer::mergeFragment(MCDataFragment *DF, MCDataFragment *EF) {
-  flushPendingLabels(DF, DF->getContents().size());
-
-  for (unsigned I = 0, E = EF->getFixups().size(); I != E; ++I) {
-    EF->getFixups()[I].setOffset(EF->getFixups()[I].getOffset() +
-                                 DF->getContents().size());
-    DF->getFixups().push_back(EF->getFixups()[I]);
-  }
-  if (DF->getSubtargetInfo() == nullptr && EF->getSubtargetInfo())
-    DF->setHasInstructions(*EF->getSubtargetInfo());
-  DF->getContents().append(EF->getContents().begin(), EF->getContents().end());
-}
-
 void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolWasm>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
@@ -275,11 +262,8 @@ void MCWasmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                     bool RelaxAll) {
+                                     std::unique_ptr<MCCodeEmitter> &&CE) {
   MCWasmStreamer *S =
       new MCWasmStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

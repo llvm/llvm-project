@@ -133,7 +133,8 @@ func.func @split_vector_transfer_read_mem_space(%A: memref<?x8xf32, 3>, %i: inde
 }
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
     } : !transform.op<"func.func">
@@ -193,7 +194,8 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
     } : !transform.op<"func.func">
@@ -257,7 +259,8 @@ func.func @split_vector_transfer_write_strided_2d(
 // CHECK:         }
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
     } : !transform.op<"func.func">
@@ -292,7 +295,8 @@ func.func @split_vector_transfer_write_mem_space(%V: vector<4x8xf32>, %A: memref
 
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
     } : !transform.op<"func.func">
@@ -337,7 +341,8 @@ func.func @transfer_read_within_scf_for(%A : memref<?x?xf32>, %lb : index, %ub :
 }
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
     } : !transform.op<"func.func">

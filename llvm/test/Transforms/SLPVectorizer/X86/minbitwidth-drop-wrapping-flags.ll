@@ -5,17 +5,22 @@ define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i8> poison, i8 [[A_PROMOTED]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i8> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP2]], <4 x i8> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i16> [[TMP5]], <i16 -1, i16 0, i16 0, i16 0>
-; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP7]] to i32
+; CHECK-NEXT:    [[DEC_4:%.*]] = add i8 [[A_PROMOTED]], 0
+; CHECK-NEXT:    [[CONV_I_4:%.*]] = zext i8 [[DEC_4]] to i32
+; CHECK-NEXT:    [[SUB_I_4:%.*]] = add nuw nsw i32 [[CONV_I_4]], 0
+; CHECK-NEXT:    [[DEC_5:%.*]] = add i8 [[A_PROMOTED]], 0
+; CHECK-NEXT:    [[CONV_I_5:%.*]] = zext i8 [[DEC_5]] to i32
+; CHECK-NEXT:    [[SUB_I_5:%.*]] = add nuw nsw i32 [[CONV_I_5]], 65535
+; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[SUB_I_4]], [[SUB_I_5]]
+; CHECK-NEXT:    [[DEC_6:%.*]] = or i8 [[A_PROMOTED]], 0
+; CHECK-NEXT:    [[CONV_I_6:%.*]] = zext i8 [[DEC_6]] to i32
+; CHECK-NEXT:    [[SUB_I_6:%.*]] = add nuw nsw i32 [[CONV_I_6]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[TMP0]], [[SUB_I_6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = or i8 [[A_PROMOTED]], 0
+; CHECK-NEXT:    [[CONV_I_7:%.*]] = zext i8 [[TMP10]] to i32
+; CHECK-NEXT:    [[SUB_I_7:%.*]] = add nuw nsw i32 [[CONV_I_7]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP1]], [[SUB_I_7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i32 [[TMP8]], 65535
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i8> [[TMP4]], i32 3
 ; CHECK-NEXT:    store i8 [[TMP10]], ptr null, align 1
 ; CHECK-NEXT:    [[CALL3:%.*]] = tail call i32 (ptr, ...) null(ptr null, i32 [[TMP9]])
 ; CHECK-NEXT:    ret i32 0

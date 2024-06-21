@@ -323,7 +323,7 @@ namespace clang {
 
     /// This can be used to restore the state early, before the dtor
     /// is run.
-    void restore() { P.OpenMPDirectiveParsing = OldVal; }
+    void restore() { P.OpenACCDirectiveParsing = OldVal; }
 
     ~ParsingOpenACCDirectiveRAII() { restore(); }
   };

@@ -11,76 +11,74 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PTR_START_1:%.*]], i64 10000
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x ptr> [[TMP2]], ptr [[NEXT_GEP1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP2]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[NEXT_GEP3]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <2 x ptr> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <2 x ptr> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP10]])
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP12]])
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP9]], i32 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
-; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP14]], align 1
-; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP15]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PTR_START_1:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x ptr> [[TMP10]], ptr [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <2 x ptr> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne <2 x ptr> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP12]], i32 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP14]])
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP12]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP15]])
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP13]], i32 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP16]])
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i1> [[TMP13]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP17]])
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP4]], i32 2
+; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP18]], align 1
+; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP19]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
+; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
-; CHECK-NEXT:    [[IND_END6:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 10000
+; CHECK-NEXT:    [[IND_END1:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 10000
 ; CHECK-NEXT:    br i1 true, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR_START_1]], [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 10000
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 10000
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX8:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX8]], 0
-; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX8]], 1
-; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP9]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x ptr> [[TMP19]], ptr [[NEXT_GEP10]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp ne <2 x ptr> [[TMP20]], zeroinitializer
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i1> [[TMP21]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP22]])
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP21]], i32 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP23]])
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[NEXT_GEP9]], i32 0
-; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP24]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX8]], 2
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT11]], 10000
-; CHECK-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK-NEXT:    [[INDEX3:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX3]], 0
+; CHECK-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX3]], 1
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[PTR_START_1]], i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP23]], i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <2 x ptr> [[TMP25]], ptr [[TMP24]], i32 1
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp ne <2 x ptr> [[TMP26]], zeroinitializer
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x i1> [[TMP27]], i32 0
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP28]])
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x i1> [[TMP27]], i32 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP29]])
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[TMP23]], i32 0
+; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP30]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX3]], 2
+; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 10000
+; CHECK-NEXT:    br i1 [[TMP31]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    br i1 false, label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi ptr [ [[IND_END5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END6]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR_START_1]], [[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 10000, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 10000, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi ptr [ [[IND_END]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[IND_END1]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[PTR_START_1]], [[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL4]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL7]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL2]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CMP_I_I_I_I:%.*]] = icmp ne ptr [[PTR_IV]], null
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP_I_I_I_I]])
 ; CHECK-NEXT:    store i8 0, ptr [[PTR_IV]], align 1

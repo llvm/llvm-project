@@ -38,7 +38,7 @@ define void @invalid_subprogram_declaration() !dbg !9 { ret void }
 define void @invalid_retained_nodes_list() !dbg !10 { ret void }
 !10 = distinct !DISubprogram(retainedNodes: !0)
 
-; CHECK: invalid retained nodes, expected DILocalVariable, DILabel, DIImportedEntity or DIType
+; CHECK: invalid retained nodes, expected DILocalVariable, DILabel or DIImportedEntity
 define void @invalid_retained_nodes_expected() !dbg !11 { ret void }
 !11 = distinct !DISubprogram(retainedNodes: !{!0})
 

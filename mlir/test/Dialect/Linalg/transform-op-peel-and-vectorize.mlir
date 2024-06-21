@@ -19,7 +19,7 @@ func.func @matmul(%A: tensor<1024x512xf32>,
 // CHECK-DAG:  %[[C16:.*]] = arith.constant 16 : index
 // CHECK:      %[[VSCALE:.*]] = vector.vscale
 // CHECK:      %[[STEP:.*]] = arith.muli %[[VSCALE]], %[[C16]] : index
-// CHECK:      %2 = scf.for {{.*}} %[[C0]] to %[[C1024]] step %[[C8]] iter_args(%arg4 = %arg2) -> (tensor<1024x2000xf32>) {
+// CHECK:      scf.for {{.*}} %[[C0]] to %[[C1024]] step %[[C8]] iter_args(%arg4 = %arg2) -> (tensor<1024x2000xf32>) {
 
 // Main loop after vectorisation (without masking)
 
@@ -52,9 +52,9 @@ func.func @matmul(%A: tensor<1024x512xf32>,
 // CHECK:           vector.mask %[[MASK_2]] { vector.transfer_write {{.*}} } : vector<8x[16]xi1> -> tensor<8x?xf32>
 // CHECK:           scf.yield %inserted_slice : tensor<1024x2000xf32>
 // CHECK:         }
-// CHECK:         scf.yield %7 : tensor<1024x2000xf32>
+// CHECK:         scf.yield {{.*}} : tensor<1024x2000xf32>
 // CHECK:       }
-// CHECK:       scf.yield %5 : tensor<1024x2000xf32>
+// CHECK:       scf.yield {{.*}} : tensor<1024x2000xf32>
 // CHECK-NEXT:    }
 
   %res = linalg.matmul ins(%A, %B: tensor<1024x512xf32>, tensor<512x2000xf32>)
@@ -67,7 +67,7 @@ module attributes {transform.with_named_sequence} {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %root : (!transform.any_op) -> !transform.any_op
     // 1. Scalable tiling
     %_, %loop_1, %loop_2, %loop_3 =
-      transform.structured.tile_using_for %matmul [8, [16], 1] : (!transform.any_op)
+      transform.structured.tile_using_for %matmul tile_sizes [8, [16], 1] : (!transform.any_op)
       -> (!transform.any_op, !transform.op<"scf.for">, !transform.op<"scf.for">,!transform.op<"scf.for">)
 
     // 2. Loop peeling (only the middle dimension)

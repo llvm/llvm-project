@@ -816,22 +816,15 @@ TEST_P(ImportExpr, ImportSizeOfPackExpr) {
           hasUnqualifiedDesugaredType(constantArrayType(hasSize(7))))))))));
 }
 
-const internal::VariadicDynCastAllOfMatcher<Stmt, CXXFoldExpr> cxxFoldExpr;
-
-AST_MATCHER_P(CXXFoldExpr, hasOperator, BinaryOperatorKind, Op) {
-  return Node.getOperator() == Op;
-}
-AST_MATCHER(CXXFoldExpr, hasInit) { return Node.getInit(); }
-AST_MATCHER(CXXFoldExpr, isRightFold) { return Node.isRightFold(); }
-AST_MATCHER(CXXFoldExpr, isLeftFold) { return Node.isLeftFold(); }
-
 TEST_P(ImportExpr, ImportCXXFoldExpr) {
-  auto Match1 =
-      cxxFoldExpr(hasOperator(BO_Add), isLeftFold(), unless(hasInit()));
-  auto Match2 = cxxFoldExpr(hasOperator(BO_Sub), isLeftFold(), hasInit());
-  auto Match3 =
-      cxxFoldExpr(hasOperator(BO_Mul), isRightFold(), unless(hasInit()));
-  auto Match4 = cxxFoldExpr(hasOperator(BO_Div), isRightFold(), hasInit());
+  auto Match1 = cxxFoldExpr(hasOperatorName("+"), isLeftFold(),
+                            unless(hasFoldInit(expr())));
+  auto Match2 =
+      cxxFoldExpr(hasOperatorName("-"), isLeftFold(), hasFoldInit(expr()));
+  auto Match3 = cxxFoldExpr(hasOperatorName("*"), isRightFold(),
+                            unless(hasFoldInit(expr())));
+  auto Match4 =
+      cxxFoldExpr(hasOperatorName("/"), isRightFold(), hasFoldInit(expr()));
 
   MatchVerifier<Decl> Verifier;
   testImport("template <typename... Ts>"
@@ -1195,7 +1188,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, TemplateTypeParmDeclDefaultArg) {
       FromTU, templateTypeParmDecl(hasName("T")));
   TemplateTypeParmDecl *To = Import(From, Lang_CXX03);
   ASSERT_TRUE(To->hasDefaultArgument());
-  QualType ToArg = To->getDefaultArgument();
+  QualType ToArg = To->getDefaultArgument().getArgument().getAsType();
   ASSERT_EQ(ToArg, QualType(To->getASTContext().IntTy));
 }
 
@@ -1267,7 +1260,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, NonTypeTemplateParmDeclDefaultArg) {
       FromTU, nonTypeTemplateParmDecl(hasName("S")));
   NonTypeTemplateParmDecl *To = Import(From, Lang_CXX03);
   ASSERT_TRUE(To->hasDefaultArgument());
-  Stmt *ToArg = To->getDefaultArgument();
+  Stmt *ToArg = To->getDefaultArgument().getArgument().getAsExpr();
   ASSERT_TRUE(isa<IntegerLiteral>(ToArg));
   ASSERT_EQ(cast<IntegerLiteral>(ToArg)->getValue().getLimitedValue(), 1U);
 }
@@ -1717,7 +1710,7 @@ TEST_P(ASTImporterOptionSpecificTestBase,
       R"s(
       struct declToImport {
         int a = d;
-        union { 
+        union {
           int b;
           int c;
         };
@@ -4012,7 +4005,7 @@ TEST_P(ImportVariables, ImportBindingDecl) {
         int a[2] = {1,2};
         auto [x1,y1] = a;
         auto& [x2,y2] = a;
-        
+
         struct S {
           mutable int x1 : 2;
           volatile double y1;
@@ -5188,7 +5181,7 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   }
 }
 
-TEST_P(ImportFriendClasses, RecordVarTemplateDecl) {
+TEST_P(ASTImporterOptionSpecificTestBase, RecordVarTemplateDecl) {
   Decl *ToTU = getToTuDecl(
       R"(
       template <class T>
@@ -5217,6 +5210,139 @@ TEST_P(ImportFriendClasses, RecordVarTemplateDecl) {
   auto *ToX = Import(FromX, Lang_CXX11);
   EXPECT_TRUE(ToX);
   EXPECT_EQ(ToTUX, ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateDeclConflict) {
+  getToTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = 1;
+      )",
+      Lang_CXX14);
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = 2;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX11);
+  // FIXME: This import should fail.
+  EXPECT_TRUE(ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateStaticDefinition) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      struct A {
+        template <class U>
+        static int X;
+      };
+      )",
+      Lang_CXX14);
+  auto *ToX = FirstDeclMatcher<VarTemplateDecl>().match(
+      ToTU, varTemplateDecl(hasName("X")));
+  ASSERT_FALSE(ToX->isThisDeclarationADefinition());
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct A {
+        template <class U>
+        static int X;
+      };
+      template <class U>
+      int A::X = 2;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromXDef = LastDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("X")));
+  ASSERT_TRUE(FromXDef->isThisDeclarationADefinition());
+  auto *ToXDef = Import(FromXDef, Lang_CXX14);
+  EXPECT_TRUE(ToXDef);
+  EXPECT_TRUE(ToXDef->isThisDeclarationADefinition());
+  EXPECT_EQ(ToXDef->getPreviousDecl(), ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateSpecializationDeclValue) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14);
+
+  auto *ToTUX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      ToTU, varTemplateSpecializationDecl(hasName("X")));
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      FromTU, varTemplateSpecializationDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX14);
+  EXPECT_TRUE(ToX);
+  EXPECT_EQ(ToTUX, ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       VarTemplateSpecializationDeclValueConflict) {
+  getToTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14);
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 2; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      FromTU, varTemplateSpecializationDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX14);
+  EXPECT_FALSE(ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateDeclInlineWithCXX17) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct S {
+        template <unsigned> static constexpr bool X = true;
+      };
+      )",
+      Lang_CXX17, "input1.cc");
+  Decl *FromTU2 = getTuDecl(
+      R"(
+      struct S {
+        template <unsigned> static constexpr bool X = true;
+        template <typename T> void get() { X<sizeof(T)>; }
+      };
+      template <typename U> U qvariant_cast(const S &v) { return v.get; }
+      )",
+      Lang_CXX17, "input2.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX17);
+  ASSERT_TRUE(ToX);
+  auto *FromX2 = FirstDeclMatcher<VarTemplateDecl>().match(
+      FromTU2, varTemplateDecl(hasName("X")));
+  auto *ToX2 = Import(FromX2, Lang_CXX17);
+  EXPECT_TRUE(ToX2);
+  EXPECT_EQ(ToX, ToX2);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateParameterDeclContext) {
@@ -6593,6 +6719,23 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionBody) {
   EXPECT_NE(ToLSize, 0u);
   EXPECT_EQ(ToLSize, FromLSize);
   EXPECT_FALSE(FromL->isDependentLambda());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ReturnTypeDeclaredInsideOfCXX11LambdaWithoutTrailingReturn) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+      void foo() {
+        (void) []() {
+          struct X {};
+          return X();
+        };
+      }
+      )",
+      Lang_CXX11, "", Lang_CXX11, "foo"); // c++11 only
+  auto *ToLambda = FirstDeclMatcher<LambdaExpr>().match(To, lambdaExpr());
+  EXPECT_TRUE(ToLambda);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {
@@ -9529,6 +9672,46 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportInstantiatedFromMember) {
   auto *ImportedPartialSpecialization =
       Import(FromPartialSpecialization, Lang_CXX11);
   EXPECT_TRUE(ImportedPartialSpecialization->getInstantiatedFromMember());
+}
+
+AST_MATCHER_P(EnumDecl, hasEnumConstName, StringRef, ConstName) {
+  for (EnumConstantDecl *D : Node.enumerators())
+    if (D->getName() == ConstName)
+      return true;
+  return false;
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportAnonymousEnum) {
+  const char *ToCode =
+      R"(
+      struct A {
+        enum { E1, E2} x;
+        enum { E3, E4} y;
+      };
+      )";
+  Decl *ToTU = getToTuDecl(ToCode, Lang_CXX11);
+  auto *ToE1 = FirstDeclMatcher<EnumDecl>().match(
+      ToTU, enumDecl(hasEnumConstName("E1")));
+  auto *ToE3 = FirstDeclMatcher<EnumDecl>().match(
+      ToTU, enumDecl(hasEnumConstName("E3")));
+  const char *Code =
+      R"(
+      struct A {
+        enum { E1, E2} x;
+        enum { E3, E4} y;
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromE1 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E1")));
+  auto *ImportedE1 = Import(FromE1, Lang_CXX11);
+  ASSERT_TRUE(ImportedE1);
+  EXPECT_EQ(ImportedE1, ToE1);
+  auto *FromE3 = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasEnumConstName("E3")));
+  auto *ImportedE3 = Import(FromE3, Lang_CXX11);
+  ASSERT_TRUE(ImportedE3);
+  EXPECT_EQ(ImportedE3, ToE3);
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,

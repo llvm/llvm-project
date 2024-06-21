@@ -41,6 +41,7 @@ gpu::setMappingAttr(ParallelOp ploopOp,
         specifiedMappings.count(processor))
       return ploopOp.emitError(
           "invalid mapping multiple loops to same processor");
+    specifiedMappings.insert(processor);
   }
   ArrayRef<Attribute> mappingAsAttrs(mapping.data(), mapping.size());
   ploopOp->setAttr(getMappingAttrName(),

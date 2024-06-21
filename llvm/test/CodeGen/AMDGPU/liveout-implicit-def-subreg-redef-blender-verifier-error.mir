@@ -22,17 +22,17 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %0.sub0:sgpr_128 = S_MOV_B32 0
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 0
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %0.sub0:sgpr_128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   S_NOP 0, implicit %0
-  ; CHECK-NEXT:   S_NOP 0, implicit %0.sub0
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]]
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_CBRANCH_SCC0 %bb.2, implicit undef $scc
@@ -68,17 +68,17 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %0.sub0:sgpr_128 = S_MOV_B32 0
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 0
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %0.sub0:sgpr_128 = S_MOV_B32 9
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 9
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   S_NOP 0, implicit %0
-  ; CHECK-NEXT:   S_NOP 0, implicit %0.sub0
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]]
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]].sub0
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_CBRANCH_SCC0 %bb.2, implicit undef $scc
@@ -116,17 +116,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def undef %0.sub1_sub2_sub3
-  ; CHECK-NEXT:   %0.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]].sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %0.sub0:vreg_128 = V_MOV_B32_e32 9, implicit $exec
+  ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub0:vreg_128 = V_MOV_B32_e32 9, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   S_NOP 0, implicit %0
-  ; CHECK-NEXT:   S_NOP 0, implicit %0.sub0
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_]]
+  ; CHECK-NEXT:   S_NOP 0, implicit [[V_MOV_B32_e32_]].sub0
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_CBRANCH_SCC0 %bb.2, implicit undef $scc

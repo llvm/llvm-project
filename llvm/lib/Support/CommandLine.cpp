@@ -164,10 +164,7 @@ public:
   // This collects the different subcommands that have been registered.
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
-  CommandLineParser() {
-    registerSubCommand(&SubCommand::getTopLevel());
-    registerSubCommand(&SubCommand::getAll());
-  }
+  CommandLineParser() { registerSubCommand(&SubCommand::getTopLevel()); }
 
   void ResetAllOptionOccurrences();
 
@@ -183,6 +180,7 @@ public:
     if (Opt.Subs.size() == 1 && *Opt.Subs.begin() == &SubCommand::getAll()) {
       for (auto *SC : RegisteredSubCommands)
         Action(*SC);
+      Action(SubCommand::getAll());
       return;
     }
     for (auto *SC : Opt.Subs) {
@@ -348,15 +346,15 @@ public:
 
     // For all options that have been registered for all subcommands, add the
     // option to this subcommand now.
-    if (sub != &SubCommand::getAll()) {
-      for (auto &E : SubCommand::getAll().OptionsMap) {
-        Option *O = E.second;
-        if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
-            O->hasArgStr())
-          addOption(O, sub);
-        else
-          addLiteralOption(*O, sub, E.first());
-      }
+    assert(sub != &SubCommand::getAll() &&
+           "SubCommand::getAll() should not be registered");
+    for (auto &E : SubCommand::getAll().OptionsMap) {
+      Option *O = E.second;
+      if ((O->isPositional() || O->isSink() || O->isConsumeAfter()) ||
+          O->hasArgStr())
+        addOption(O, sub);
+      else
+        addLiteralOption(*O, sub, E.first());
     }
   }
 
@@ -384,7 +382,6 @@ public:
     SubCommand::getTopLevel().reset();
     SubCommand::getAll().reset();
     registerSubCommand(&SubCommand::getTopLevel());
-    registerSubCommand(&SubCommand::getAll());
 
     DefaultOptions.clear();
   }
@@ -425,7 +422,7 @@ void Option::removeArgument() { GlobalParser->removeOption(this); }
 void Option::setArgStr(StringRef S) {
   if (FullyInitialized)
     GlobalParser->updateArgStr(this, S);
-  assert((S.empty() || S[0] != '-') && "Option can't start with '-");
+  assert(!S.starts_with("-") && "Option can't start with '-");
   ArgStr = S;
   if (ArgStr.size() == 1)
     setMiscFlag(Grouping);
@@ -458,10 +455,10 @@ void OptionCategory::registerCategory() {
 // initialization because it is referenced from cl::opt constructors, which run
 // dynamically in an arbitrary order.
 LLVM_REQUIRE_CONSTANT_INITIALIZATION
-ManagedStatic<SubCommand> llvm::cl::TopLevelSubCommand;
+static ManagedStatic<SubCommand> TopLevelSubCommand;
 
 // A special subcommand that can be used to put an option into all subcommands.
-ManagedStatic<SubCommand> llvm::cl::AllSubCommands;
+static ManagedStatic<SubCommand> AllSubCommands;
 
 SubCommand &SubCommand::getTopLevel() { return *TopLevelSubCommand; }
 
@@ -532,12 +529,12 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
   // Find a subcommand with the edit distance == 1.
   SubCommand *NearestMatch = nullptr;
   for (auto *S : RegisteredSubCommands) {
-    if (S == &SubCommand::getAll())
-      continue;
+    assert(S != &SubCommand::getAll() &&
+           "SubCommand::getAll() is not expected in RegisteredSubCommands");
     if (S->getName().empty())
       continue;
 
-    if (StringRef(S->getName()) == StringRef(Name))
+    if (S->getName() == Name)
       return S;
 
     if (!NearestMatch && S->getName().edit_distance(Name) < 2)
@@ -1633,10 +1630,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       // otherwise feed it to the eating positional.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-') {
+      if (ArgName.consume_front("-"))
         HaveDoubleDash = true;
-        ArgName = ArgName.substr(1);
-      }
 
       Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
                                  LongOptionsUseDoubleDash, HaveDoubleDash);
@@ -1647,10 +1642,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
     } else { // We start with a '-', must be an argument.
       ArgName = StringRef(argv[i] + 1);
       // Eat second dash.
-      if (!ArgName.empty() && ArgName[0] == '-') {
+      if (ArgName.consume_front("-"))
         HaveDoubleDash = true;
-        ArgName = ArgName.substr(1);
-      }
 
       Handler = LookupLongOption(*ChosenSubCommand, ArgName, Value,
                                  LongOptionsUseDoubleDash, HaveDoubleDash);
@@ -2739,6 +2732,52 @@ void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
     CommonOptions->UncategorizedHiddenPrinter.printHelp();
   else
     CommonOptions->CategorizedHiddenPrinter.printHelp();
+}
+
+ArrayRef<StringRef> cl::getCompilerBuildConfig() {
+  static const StringRef Config[] = {
+      // Placeholder to ensure the array always has elements, since it's an
+      // error to have a zero-sized array. Slice this off before returning.
+      "",
+  // Actual compiler build config feature list:
+#if LLVM_IS_DEBUG_BUILD
+      "+unoptimized",
+#endif
+#ifndef NDEBUG
+      "+assertions",
+#endif
+#ifdef EXPENSIVE_CHECKS
+      "+expensive-checks",
+#endif
+#if __has_feature(address_sanitizer)
+      "+asan",
+#endif
+#if __has_feature(dataflow_sanitizer)
+      "+dfsan",
+#endif
+#if __has_feature(hwaddress_sanitizer)
+      "+hwasan",
+#endif
+#if __has_feature(memory_sanitizer)
+      "+msan",
+#endif
+#if __has_feature(thread_sanitizer)
+      "+tsan",
+#endif
+#if __has_feature(undefined_behavior_sanitizer)
+      "+ubsan",
+#endif
+  };
+  return ArrayRef(Config).drop_front(1);
+}
+
+// Utility function for printing the build config.
+void cl::printBuildConfig(raw_ostream &OS) {
+#if LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
+  OS << "Build config: ";
+  llvm::interleaveComma(cl::getCompilerBuildConfig(), OS);
+  OS << '\n';
+#endif
 }
 
 /// Utility function for printing version number.

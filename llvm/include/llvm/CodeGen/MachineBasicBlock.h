@@ -74,10 +74,10 @@ private:
   MBBSectionID(SectionType T) : Type(T), Number(0) {}
 };
 
-// This structure represents the information for a basic block.
+// This structure represents the information for a basic block pertaining to
+// the basic block sections profile.
 struct UniqueBBID {
   unsigned BaseID;
-  // sections profile).
   unsigned CloneID;
 };
 
@@ -111,6 +111,10 @@ public:
 
     RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
         : PhysReg(PhysReg), LaneMask(LaneMask) {}
+
+    bool operator==(const RegisterMaskPair &other) const {
+      return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
+    }
   };
 
 private:
@@ -437,6 +441,10 @@ public:
   /// Clear live in list.
   void clearLiveIns();
 
+  /// Clear the live in list, and return the removed live in's in \p OldLiveIns.
+  /// Requires that the vector \p OldLiveIns is empty.
+  void clearLiveIns(std::vector<RegisterMaskPair> &OldLiveIns);
+
   /// Add PhysReg as live in to this block, and ensure that there is a copy of
   /// PhysReg to a virtual register of class RC. Return the virtual register
   /// that is a copy of the live in PhysReg.
@@ -472,6 +480,8 @@ public:
 
   /// Remove entry from the livein set and return iterator to the next.
   livein_iterator removeLiveIn(livein_iterator I);
+
+  const std::vector<RegisterMaskPair> &getLiveIns() const { return LiveIns; }
 
   class liveout_iterator {
   public:

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-eabi -target-feature +v8a -verify -S %s -o -
+// RUN: %clang_cc1 -triple aarch64 -target-feature +v8a -verify -S %s -o -
 // REQUIRES: aarch64-registered-target
 
 #include <arm_neon.h>

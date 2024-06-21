@@ -49,7 +49,6 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.6(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:f8rc = PHI [[LFD]], %bb.1, [[COPY3]], %bb.0
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:f8rc = PHI [[XXLXORdpz]], %bb.1, [[COPY2]], %bb.0

@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX256,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw | FileCheck %s --check-prefixes=AVX,AVX256,AVX512,AVX512BW
 
-define i32 @_Z10test_shortPsS_i_128(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @_Z10test_shortPsS_i_128(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z10test_shortPsS_i_128:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -61,13 +61,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <4 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <4 x i16>*
-  %wide.load = load <4 x i16>, <4 x i16>* %5, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <4 x i16>, ptr %5, align 2
   %6 = sext <4 x i16> %wide.load to <4 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <4 x i16>*
-  %wide.load14 = load <4 x i16>, <4 x i16>* %8, align 2
+  %7 = getelementptr inbounds i16, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <4 x i16>, ptr %8, align 2
   %9 = sext <4 x i16> %wide.load14 to <4 x i32>
   %10 = mul nsw <4 x i32> %9, %6
   %11 = add nsw <4 x i32> %10, %vec.phi
@@ -84,7 +84,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z10test_shortPsS_i_256(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @_Z10test_shortPsS_i_256(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z10test_shortPsS_i_256:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -167,13 +167,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <8 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %5, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <8 x i16>, ptr %5, align 2
   %6 = sext <8 x i16> %wide.load to <8 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <8 x i16>*
-  %wide.load14 = load <8 x i16>, <8 x i16>* %8, align 2
+  %7 = getelementptr inbounds i16, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <8 x i16>, ptr %8, align 2
   %9 = sext <8 x i16> %wide.load14 to <8 x i32>
   %10 = mul nsw <8 x i32> %9, %6
   %11 = add nsw <8 x i32> %10, %vec.phi
@@ -192,7 +192,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z10test_shortPsS_i_512(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @_Z10test_shortPsS_i_512(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z10test_shortPsS_i_512:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -319,13 +319,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <16 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <16 x i16>*
-  %wide.load = load <16 x i16>, <16 x i16>* %5, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <16 x i16>, ptr %5, align 2
   %6 = sext <16 x i16> %wide.load to <16 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <16 x i16>*
-  %wide.load14 = load <16 x i16>, <16 x i16>* %8, align 2
+  %7 = getelementptr inbounds i16, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <16 x i16>, ptr %8, align 2
   %9 = sext <16 x i16> %wide.load14 to <16 x i32>
   %10 = mul nsw <16 x i32> %9, %6
   %11 = add nsw <16 x i32> %10, %vec.phi
@@ -346,7 +346,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z10test_shortPsS_i_1024(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @_Z10test_shortPsS_i_1024(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z10test_shortPsS_i_1024:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -541,13 +541,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <32 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <32 x i16>*
-  %wide.load = load <32 x i16>, <32 x i16>* %5, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <32 x i16>, ptr %5, align 2
   %6 = sext <32 x i16> %wide.load to <32 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <32 x i16>*
-  %wide.load14 = load <32 x i16>, <32 x i16>* %8, align 2
+  %7 = getelementptr inbounds i16, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <32 x i16>, ptr %8, align 2
   %9 = sext <32 x i16> %wide.load14 to <32 x i32>
   %10 = mul nsw <32 x i32> %9, %6
   %11 = add nsw <32 x i32> %10, %vec.phi
@@ -570,7 +570,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z9test_charPcS_i_128(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @_Z9test_charPcS_i_128(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z9test_charPcS_i_128:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -629,13 +629,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <4 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i8, i8* %0, i64 %index
-  %5 = bitcast i8* %4 to <4 x i8>*
-  %wide.load = load <4 x i8>, <4 x i8>* %5, align 1
+  %4 = getelementptr inbounds i8, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <4 x i8>, ptr %5, align 1
   %6 = sext <4 x i8> %wide.load to <4 x i32>
-  %7 = getelementptr inbounds i8, i8* %1, i64 %index
-  %8 = bitcast i8* %7 to <4 x i8>*
-  %wide.load14 = load <4 x i8>, <4 x i8>* %8, align 1
+  %7 = getelementptr inbounds i8, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <4 x i8>, ptr %8, align 1
   %9 = sext <4 x i8> %wide.load14 to <4 x i32>
   %10 = mul nsw <4 x i32> %9, %6
   %11 = add nsw <4 x i32> %10, %vec.phi
@@ -652,7 +652,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z9test_charPcS_i_256(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z9test_charPcS_i_256:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -741,13 +741,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <8 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i8, i8* %0, i64 %index
-  %5 = bitcast i8* %4 to <8 x i8>*
-  %wide.load = load <8 x i8>, <8 x i8>* %5, align 1
+  %4 = getelementptr inbounds i8, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <8 x i8>, ptr %5, align 1
   %6 = sext <8 x i8> %wide.load to <8 x i32>
-  %7 = getelementptr inbounds i8, i8* %1, i64 %index
-  %8 = bitcast i8* %7 to <8 x i8>*
-  %wide.load14 = load <8 x i8>, <8 x i8>* %8, align 1
+  %7 = getelementptr inbounds i8, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <8 x i8>, ptr %8, align 1
   %9 = sext <8 x i8> %wide.load14 to <8 x i32>
   %10 = mul nsw <8 x i32> %9, %6
   %11 = add nsw <8 x i32> %10, %vec.phi
@@ -766,7 +766,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z9test_charPcS_i_512(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @_Z9test_charPcS_i_512(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z9test_charPcS_i_512:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -903,13 +903,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <16 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i8, i8* %0, i64 %index
-  %5 = bitcast i8* %4 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %5, align 1
+  %4 = getelementptr inbounds i8, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <16 x i8>, ptr %5, align 1
   %6 = sext <16 x i8> %wide.load to <16 x i32>
-  %7 = getelementptr inbounds i8, i8* %1, i64 %index
-  %8 = bitcast i8* %7 to <16 x i8>*
-  %wide.load14 = load <16 x i8>, <16 x i8>* %8, align 1
+  %7 = getelementptr inbounds i8, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <16 x i8>, ptr %8, align 1
   %9 = sext <16 x i8> %wide.load14 to <16 x i32>
   %10 = mul nsw <16 x i32> %9, %6
   %11 = add nsw <16 x i32> %10, %vec.phi
@@ -930,7 +930,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @_Z9test_charPcS_i_1024(i8* nocapture readonly, i8* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @_Z9test_charPcS_i_1024(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: _Z9test_charPcS_i_1024:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -1146,13 +1146,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <32 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i8, i8* %0, i64 %index
-  %5 = bitcast i8* %4 to <32 x i8>*
-  %wide.load = load <32 x i8>, <32 x i8>* %5, align 1
+  %4 = getelementptr inbounds i8, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <32 x i8>, ptr %5, align 1
   %6 = sext <32 x i8> %wide.load to <32 x i32>
-  %7 = getelementptr inbounds i8, i8* %1, i64 %index
-  %8 = bitcast i8* %7 to <32 x i8>*
-  %wide.load14 = load <32 x i8>, <32 x i8>* %8, align 1
+  %7 = getelementptr inbounds i8, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <32 x i8>, ptr %8, align 1
   %9 = sext <32 x i8> %wide.load14 to <32 x i32>
   %10 = mul nsw <32 x i32> %9, %6
   %11 = add nsw <32 x i32> %10, %vec.phi
@@ -1175,7 +1175,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @test_unsigned_short_128(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @test_unsigned_short_128(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: test_unsigned_short_128:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -1231,13 +1231,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <4 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <4 x i16>*
-  %wide.load = load <4 x i16>, <4 x i16>* %5, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <4 x i16>, ptr %5, align 2
   %6 = zext <4 x i16> %wide.load to <4 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <4 x i16>*
-  %wide.load14 = load <4 x i16>, <4 x i16>* %8, align 2
+  %7 = getelementptr inbounds i16, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <4 x i16>, ptr %8, align 2
   %9 = zext <4 x i16> %wide.load14 to <4 x i32>
   %10 = mul nsw <4 x i32> %9, %6
   %11 = add nsw <4 x i32> %10, %vec.phi
@@ -1254,7 +1254,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @test_unsigned_short_256(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @test_unsigned_short_256(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: test_unsigned_short_256:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -1350,13 +1350,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <8 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %5, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <8 x i16>, ptr %5, align 2
   %6 = zext <8 x i16> %wide.load to <8 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <8 x i16>*
-  %wide.load14 = load <8 x i16>, <8 x i16>* %8, align 2
+  %7 = getelementptr inbounds i16, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <8 x i16>, ptr %8, align 2
   %9 = zext <8 x i16> %wide.load14 to <8 x i32>
   %10 = mul nsw <8 x i32> %9, %6
   %11 = add nsw <8 x i32> %10, %vec.phi
@@ -1375,7 +1375,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @test_unsigned_short_512(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @test_unsigned_short_512(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: test_unsigned_short_512:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -1533,13 +1533,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <16 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <16 x i16>*
-  %wide.load = load <16 x i16>, <16 x i16>* %5, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <16 x i16>, ptr %5, align 2
   %6 = zext <16 x i16> %wide.load to <16 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <16 x i16>*
-  %wide.load14 = load <16 x i16>, <16 x i16>* %8, align 2
+  %7 = getelementptr inbounds i16, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <16 x i16>, ptr %8, align 2
   %9 = zext <16 x i16> %wide.load14 to <16 x i32>
   %10 = mul nsw <16 x i32> %9, %6
   %11 = add nsw <16 x i32> %10, %vec.phi
@@ -1560,7 +1560,7 @@ middle.block:
   ret i32 %13
 }
 
-define i32 @test_unsigned_short_1024(i16* nocapture readonly, i16* nocapture readonly, i32) local_unnamed_addr #0 {
+define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture readonly, i32) local_unnamed_addr #0 {
 ; SSE2-LABEL: test_unsigned_short_1024:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -1792,13 +1792,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <32 x i32> [ %11, %vector.body ], [ zeroinitializer, %entry ]
-  %4 = getelementptr inbounds i16, i16* %0, i64 %index
-  %5 = bitcast i16* %4 to <32 x i16>*
-  %wide.load = load <32 x i16>, <32 x i16>* %5, align 2
+  %4 = getelementptr inbounds i16, ptr %0, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load = load <32 x i16>, ptr %5, align 2
   %6 = zext <32 x i16> %wide.load to <32 x i32>
-  %7 = getelementptr inbounds i16, i16* %1, i64 %index
-  %8 = bitcast i16* %7 to <32 x i16>*
-  %wide.load14 = load <32 x i16>, <32 x i16>* %8, align 2
+  %7 = getelementptr inbounds i16, ptr %1, i64 %index
+  %8 = bitcast ptr %7 to ptr
+  %wide.load14 = load <32 x i16>, ptr %8, align 2
   %9 = zext <32 x i16> %wide.load14 to <32 x i32>
   %10 = mul nsw <32 x i32> %9, %6
   %11 = add nsw <32 x i32> %10, %vec.phi
@@ -1988,12 +1988,12 @@ define <16 x i32> @pmaddwd_32(<32 x i16> %A, <32 x i16> %B) {
 define <4 x i32> @pmaddwd_const(<8 x i16> %A) {
 ; SSE2-LABEL: pmaddwd_const:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [32767,32768,0,0,1,7,42,32]
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: pmaddwd_const:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32767,32768,0,0,1,7,42,32]
 ; AVX-NEXT:    retq
    %a = sext <8 x i16> %A to <8 x i32>
    %m = mul nsw <8 x i32> %a, <i32 32767, i32 -32768, i32 0, i32 0, i32 1, i32 7, i32 42, i32 32>
@@ -2059,7 +2059,7 @@ define <4 x i32> @pmaddwd_negative2(<8 x i16> %A) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,0,7,0,42,0,32,0]
 ; SSE2-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm0[0,2]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm0[1,3]
@@ -2275,7 +2275,7 @@ define <32 x i32> @jumbled_indices32(<64 x i16> %A, <64 x i16> %B) {
 
 ; NOTE: We're testing with loads because ABI lowering creates a concat_vectors that extract_vector_elt creation can see through.
 ; This would require the combine to recreate the concat_vectors.
-define <4 x i32> @pmaddwd_128(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
+define <4 x i32> @pmaddwd_128(ptr %Aptr, ptr %Bptr) {
 ; SSE2-LABEL: pmaddwd_128:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -2287,8 +2287,8 @@ define <4 x i32> @pmaddwd_128(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vpmaddwd (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %A = load <8 x i16>, <8 x i16>* %Aptr
-  %B = load <8 x i16>, <8 x i16>* %Bptr
+  %A = load <8 x i16>, ptr %Aptr
+  %B = load <8 x i16>, ptr %Bptr
   %A_even = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %A_odd = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %B_even = shufflevector <8 x i16> %B, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -2303,7 +2303,7 @@ define <4 x i32> @pmaddwd_128(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
   ret <4 x i32> %add
 }
 
-define <8 x i32> @pmaddwd_256(<16 x i16>* %Aptr, <16 x i16>* %Bptr) {
+define <8 x i32> @pmaddwd_256(ptr %Aptr, ptr %Bptr) {
 ; SSE2-LABEL: pmaddwd_256:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -2326,8 +2326,8 @@ define <8 x i32> @pmaddwd_256(<16 x i16>* %Aptr, <16 x i16>* %Bptr) {
 ; AVX256-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX256-NEXT:    vpmaddwd (%rsi), %ymm0, %ymm0
 ; AVX256-NEXT:    retq
-  %A = load <16 x i16>, <16 x i16>* %Aptr
-  %B = load <16 x i16>, <16 x i16>* %Bptr
+  %A = load <16 x i16>, ptr %Aptr
+  %B = load <16 x i16>, ptr %Bptr
   %A_even = shufflevector <16 x i16> %A, <16 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %A_odd = shufflevector <16 x i16> %A, <16 x i16> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %B_even = shufflevector <16 x i16> %B, <16 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -2342,7 +2342,7 @@ define <8 x i32> @pmaddwd_256(<16 x i16>* %Aptr, <16 x i16>* %Bptr) {
   ret <8 x i32> %add
 }
 
-define <16 x i32> @pmaddwd_512(<32 x i16>* %Aptr, <32 x i16>* %Bptr) {
+define <16 x i32> @pmaddwd_512(ptr %Aptr, ptr %Bptr) {
 ; SSE2-LABEL: pmaddwd_512:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -2391,8 +2391,8 @@ define <16 x i32> @pmaddwd_512(<32 x i16>* %Aptr, <32 x i16>* %Bptr) {
 ; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    vpmaddwd (%rsi), %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
-  %A = load <32 x i16>, <32 x i16>* %Aptr
-  %B = load <32 x i16>, <32 x i16>* %Bptr
+  %A = load <32 x i16>, ptr %Aptr
+  %B = load <32 x i16>, ptr %Bptr
   %A_even = shufflevector <32 x i16> %A, <32 x i16> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
   %A_odd = shufflevector <32 x i16> %A, <32 x i16> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
   %B_even = shufflevector <32 x i16> %B, <32 x i16> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -2407,7 +2407,7 @@ define <16 x i32> @pmaddwd_512(<32 x i16>* %Aptr, <32 x i16>* %Bptr) {
   ret <16 x i32> %add
 }
 
-define <32 x i32> @pmaddwd_1024(<64 x i16>* %Aptr, <64 x i16>* %Bptr) {
+define <32 x i32> @pmaddwd_1024(ptr %Aptr, ptr %Bptr) {
 ; SSE2-LABEL: pmaddwd_1024:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %rdi, %rax
@@ -2494,8 +2494,8 @@ define <32 x i32> @pmaddwd_1024(<64 x i16>* %Aptr, <64 x i16>* %Bptr) {
 ; AVX512BW-NEXT:    vpmaddwd (%rsi), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vpmaddwd 64(%rsi), %zmm1, %zmm1
 ; AVX512BW-NEXT:    retq
-  %A = load <64 x i16>, <64 x i16>* %Aptr
-  %B = load <64 x i16>, <64 x i16>* %Bptr
+  %A = load <64 x i16>, ptr %Aptr
+  %B = load <64 x i16>, ptr %Bptr
   %A_even = shufflevector <64 x i16> %A, <64 x i16> undef, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
   %A_odd = shufflevector <64 x i16> %A, <64 x i16> undef, <32 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
   %B_even = shufflevector <64 x i16> %B, <64 x i16> undef, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
@@ -2510,7 +2510,7 @@ define <32 x i32> @pmaddwd_1024(<64 x i16>* %Aptr, <64 x i16>* %Bptr) {
   ret <32 x i32> %add
 }
 
-define <4 x i32> @pmaddwd_commuted_mul(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
+define <4 x i32> @pmaddwd_commuted_mul(ptr %Aptr, ptr %Bptr) {
 ; SSE2-LABEL: pmaddwd_commuted_mul:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -2522,8 +2522,8 @@ define <4 x i32> @pmaddwd_commuted_mul(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vpmaddwd (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %A = load <8 x i16>, <8 x i16>* %Aptr
-  %B = load <8 x i16>, <8 x i16>* %Bptr
+  %A = load <8 x i16>, ptr %Aptr
+  %B = load <8 x i16>, ptr %Bptr
   %A_even = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %A_odd = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %B_even = shufflevector <8 x i16> %B, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -2538,7 +2538,7 @@ define <4 x i32> @pmaddwd_commuted_mul(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
   ret <4 x i32> %add
 }
 
-define <4 x i32> @pmaddwd_swapped_indices(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
+define <4 x i32> @pmaddwd_swapped_indices(ptr %Aptr, ptr %Bptr) {
 ; SSE2-LABEL: pmaddwd_swapped_indices:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
@@ -2550,8 +2550,8 @@ define <4 x i32> @pmaddwd_swapped_indices(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX-NEXT:    vpmaddwd (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %A = load <8 x i16>, <8 x i16>* %Aptr
-  %B = load <8 x i16>, <8 x i16>* %Bptr
+  %A = load <8 x i16>, ptr %Aptr
+  %B = load <8 x i16>, ptr %Bptr
   %A_even = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 1, i32 2, i32 5, i32 6> ; indices aren't all even
   %A_odd = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 0, i32 3, i32 4, i32 7> ; indices aren't all odd
   %B_even = shufflevector <8 x i16> %B, <8 x i16> undef, <4 x i32> <i32 1, i32 2, i32 5, i32 6> ; same indices as A
@@ -2567,7 +2567,7 @@ define <4 x i32> @pmaddwd_swapped_indices(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
 }
 
 ; Negative test where indices aren't paired properly
-define <4 x i32> @pmaddwd_bad_indices(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
+define <4 x i32> @pmaddwd_bad_indices(ptr %Aptr, ptr %Bptr) {
 ; SSE2-LABEL: pmaddwd_bad_indices:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = mem[1,0,2,3,4,5,6,7]
@@ -2581,8 +2581,8 @@ define <4 x i32> @pmaddwd_bad_indices(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
 ; AVX-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,4,6,7]
 ; AVX-NEXT:    vpmaddwd (%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %A = load <8 x i16>, <8 x i16>* %Aptr
-  %B = load <8 x i16>, <8 x i16>* %Bptr
+  %A = load <8 x i16>, ptr %Aptr
+  %B = load <8 x i16>, ptr %Bptr
   %A_even = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
   %A_odd = shufflevector <8 x i16> %A, <8 x i16> undef, <4 x i32> <i32 0, i32 3, i32 4, i32 7>
   %B_even = shufflevector <8 x i16> %B, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6> ; different indices than A
@@ -2599,7 +2599,7 @@ define <4 x i32> @pmaddwd_bad_indices(<8 x i16>* %Aptr, <8 x i16>* %Bptr) {
 
 ; This test contains two multiplies joined by an add. The result of that add is then reduced to a single element.
 ; SelectionDAGBuilder should tag the joining add as a vector reduction. We need to recognize that both sides can use pmaddwd
-define i32 @madd_double_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* %arg2, <8 x i16>* %arg3) {
+define i32 @madd_double_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 ; SSE2-LABEL: madd_double_reduction:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -2629,13 +2629,13 @@ define i32 @madd_double_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* 
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
-  %tmp = load <8 x i16>, <8 x i16>* %arg, align 1
-  %tmp6 = load <8 x i16>, <8 x i16>* %arg1, align 1
+  %tmp = load <8 x i16>, ptr %arg, align 1
+  %tmp6 = load <8 x i16>, ptr %arg1, align 1
   %tmp7 = sext <8 x i16> %tmp to <8 x i32>
   %tmp17 = sext <8 x i16> %tmp6 to <8 x i32>
   %tmp19 = mul nsw <8 x i32> %tmp7, %tmp17
-  %tmp20 = load <8 x i16>, <8 x i16>* %arg2, align 1
-  %tmp21 = load <8 x i16>, <8 x i16>* %arg3, align 1
+  %tmp20 = load <8 x i16>, ptr %arg2, align 1
+  %tmp21 = load <8 x i16>, ptr %arg3, align 1
   %tmp22 = sext <8 x i16> %tmp20 to <8 x i32>
   %tmp23 = sext <8 x i16> %tmp21 to <8 x i32>
   %tmp25 = mul nsw <8 x i32> %tmp22, %tmp23
@@ -2650,7 +2650,7 @@ define i32 @madd_double_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* 
   ret i32 %tmp35
 }
 
-define i32 @madd_quad_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* %arg2, <8 x i16>* %arg3, <8 x i16>* %arg4, <8 x i16>* %arg5, <8 x i16>* %arg6, <8 x i16>* %arg7) {
+define i32 @madd_quad_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg5, ptr %arg6, ptr %arg7) {
 ; SSE2-LABEL: madd_quad_reduction:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
@@ -2698,27 +2698,27 @@ define i32 @madd_quad_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* %a
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
-  %tmp = load <8 x i16>, <8 x i16>* %arg, align 1
-  %tmp6 = load <8 x i16>, <8 x i16>* %arg1, align 1
+  %tmp = load <8 x i16>, ptr %arg, align 1
+  %tmp6 = load <8 x i16>, ptr %arg1, align 1
   %tmp7 = sext <8 x i16> %tmp to <8 x i32>
   %tmp17 = sext <8 x i16> %tmp6 to <8 x i32>
   %tmp19 = mul nsw <8 x i32> %tmp7, %tmp17
-  %tmp20 = load <8 x i16>, <8 x i16>* %arg2, align 1
-  %tmp21 = load <8 x i16>, <8 x i16>* %arg3, align 1
+  %tmp20 = load <8 x i16>, ptr %arg2, align 1
+  %tmp21 = load <8 x i16>, ptr %arg3, align 1
   %tmp22 = sext <8 x i16> %tmp20 to <8 x i32>
   %tmp23 = sext <8 x i16> %tmp21 to <8 x i32>
   %tmp25 = mul nsw <8 x i32> %tmp22, %tmp23
   %tmp26 = add nuw nsw <8 x i32> %tmp25, %tmp19
 
-  %tmp40 = load <8 x i16>, <8 x i16>* %arg4, align 1
-  %tmp41 = load <8 x i16>, <8 x i16>* %arg5, align 1
+  %tmp40 = load <8 x i16>, ptr %arg4, align 1
+  %tmp41 = load <8 x i16>, ptr %arg5, align 1
   %tmp42 = sext <8 x i16> %tmp40 to <8 x i32>
   %tmp43 = sext <8 x i16> %tmp41 to <8 x i32>
   %tmp45 = mul nsw <8 x i32> %tmp42, %tmp43
   %tmp56 = add nuw nsw <8 x i32> %tmp26, %tmp45
 
-  %tmp50 = load <8 x i16>, <8 x i16>* %arg6, align 1
-  %tmp51 = load <8 x i16>, <8 x i16>* %arg7, align 1
+  %tmp50 = load <8 x i16>, ptr %arg6, align 1
+  %tmp51 = load <8 x i16>, ptr %arg7, align 1
   %tmp52 = sext <8 x i16> %tmp50 to <8 x i32>
   %tmp53 = sext <8 x i16> %tmp51 to <8 x i32>
   %tmp55 = mul nsw <8 x i32> %tmp52, %tmp53
@@ -2734,7 +2734,7 @@ define i32 @madd_quad_reduction(<8 x i16>* %arg, <8 x i16>* %arg1, <8 x i16>* %a
   ret i32 %tmp35
 }
 
-define i64 @sum_and_sum_of_squares(i8* %a, i32 %n) {
+define i64 @sum_and_sum_of_squares(ptr %a, i32 %n) {
 ; SSE2-LABEL: sum_and_sum_of_squares:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %esi, %eax
@@ -2860,9 +2860,9 @@ vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <8 x i32> [ %6, %vector.body ], [ zeroinitializer, %entry ]
   %sum.phi = phi <8 x i32> [ %4, %vector.body ], [ zeroinitializer, %entry ]
-  %1 = getelementptr inbounds i8, i8* %a, i64 %index
-  %2 = bitcast i8* %1 to <8 x i8>*
-  %wide.load = load <8 x i8>, <8 x i8>* %2, align 1
+  %1 = getelementptr inbounds i8, ptr %a, i64 %index
+  %2 = bitcast ptr %1 to ptr
+  %wide.load = load <8 x i8>, ptr %2, align 1
   %3 = zext <8 x i8> %wide.load to <8 x i32>
   %4 = add nsw <8 x i32> %3, %sum.phi
   %5 = mul nsw <8 x i32> %3, %3
@@ -2893,7 +2893,7 @@ middle.block:
   ret i64 %tmp30
 }
 
-define i32 @sum_of_square_differences(i8* %a, i8* %b, i32 %n) {
+define i32 @sum_of_square_differences(ptr %a, ptr %b, i32 %n) {
 ; SSE2-LABEL: sum_of_square_differences:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl %edx, %eax
@@ -2983,13 +2983,13 @@ entry:
 vector.body:
   %index = phi i64 [ %index.next, %vector.body ], [ 0, %entry ]
   %vec.phi = phi <8 x i32> [ %9, %vector.body ], [ zeroinitializer, %entry ]
-  %1 = getelementptr inbounds i8, i8* %a, i64 %index
-  %2 = bitcast i8* %1 to <8 x i8>*
-  %wide.load = load <8 x i8>, <8 x i8>* %2, align 1
+  %1 = getelementptr inbounds i8, ptr %a, i64 %index
+  %2 = bitcast ptr %1 to ptr
+  %wide.load = load <8 x i8>, ptr %2, align 1
   %3 = zext <8 x i8> %wide.load to <8 x i32>
-  %4 = getelementptr inbounds i8, i8* %b, i64 %index
-  %5 = bitcast i8* %4 to <8 x i8>*
-  %wide.load2 = load <8 x i8>, <8 x i8>* %5, align 1
+  %4 = getelementptr inbounds i8, ptr %b, i64 %index
+  %5 = bitcast ptr %4 to ptr
+  %wide.load2 = load <8 x i8>, ptr %5, align 1
   %6 = zext <8 x i8> %wide.load2 to <8 x i32>
   %7 = sub <8 x i32> %6, %3
   %8 = mul <8 x i32> %7, %7
@@ -3011,7 +3011,7 @@ middle.block:
 
 ; PR49716 - https://llvm.org/PR49716
 
-define <4 x i32> @input_size_mismatch(<16 x i16> %x, <16 x i16>* %p) {
+define <4 x i32> @input_size_mismatch(<16 x i16> %x, ptr %p) {
 ; SSE2-LABEL: input_size_mismatch:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pmaddwd (%rdi), %xmm0
@@ -3022,7 +3022,7 @@ define <4 x i32> @input_size_mismatch(<16 x i16> %x, <16 x i16>* %p) {
 ; AVX-NEXT:    vpmaddwd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %y = load <16 x i16>, <16 x i16>* %p, align 32
+  %y = load <16 x i16>, ptr %p, align 32
   %x0 = shufflevector <16 x i16> %x, <16 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %x1 = shufflevector <16 x i16> %x, <16 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %y0 = shufflevector <16 x i16> %y, <16 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -3096,7 +3096,7 @@ define <4 x i32> @output_size_mismatch_high_subvector(<16 x i16> %x, <16 x i16> 
   ret <4 x i32> %r
 }
 
-define i32 @add_used_by_loop_phi(i8* %a, i8* %b, i64 %offset_a, i64 %offset_b, i64 %k) {
+define i32 @add_used_by_loop_phi(ptr %a, ptr %b, i64 %offset_a, i64 %offset_b, i64 %k) {
 ; SSE2-LABEL: add_used_by_loop_phi:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    addq %rdx, %rdi
@@ -3231,19 +3231,19 @@ define i32 @add_used_by_loop_phi(i8* %a, i8* %b, i64 %offset_a, i64 %offset_b, i
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:
-  %scevgep_a = getelementptr i8, i8* %a, i64 %offset_a
-  %scevgep_b = getelementptr i8, i8* %b, i64 %offset_b
+  %scevgep_a = getelementptr i8, ptr %a, i64 %offset_a
+  %scevgep_b = getelementptr i8, ptr %b, i64 %offset_b
   br label %loop
 
 loop:
   %t0 = phi <16 x i32> [ %3, %loop ], [ zeroinitializer, %entry ]
   %ivloop = phi i64 [ %nextivloop, %loop ], [ 0, %entry ]
-  %scevgep_a1 = getelementptr i8, i8* %scevgep_a, i64 %ivloop
-  %scevgep_a2 = bitcast i8* %scevgep_a1 to <16 x i8>*
-  %gepload_a = load <16 x i8>, <16 x i8>* %scevgep_a2, align 1
-  %scevgep_b1 = getelementptr i8, i8* %scevgep_b, i64 %ivloop
-  %scevgep_b2 = bitcast i8* %scevgep_b1 to <16 x i8>*
-  %gepload_b = load <16 x i8>, <16 x i8>* %scevgep_b2, align 1
+  %scevgep_a1 = getelementptr i8, ptr %scevgep_a, i64 %ivloop
+  %scevgep_a2 = bitcast ptr %scevgep_a1 to ptr
+  %gepload_a = load <16 x i8>, ptr %scevgep_a2, align 1
+  %scevgep_b1 = getelementptr i8, ptr %scevgep_b, i64 %ivloop
+  %scevgep_b2 = bitcast ptr %scevgep_b1 to ptr
+  %gepload_b = load <16 x i8>, ptr %scevgep_b2, align 1
   %0 = sext <16 x i8> %gepload_a to <16 x i32>
   %1 = sext <16 x i8> %gepload_b to <16 x i32>
   %2 = mul nsw <16 x i32> %0, %1

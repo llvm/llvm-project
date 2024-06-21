@@ -27,7 +27,8 @@ LoongArchTargetELFStreamer::LoongArchTargetELFStreamer(
   auto &MAB = static_cast<LoongArchAsmBackend &>(
       getStreamer().getAssembler().getBackend());
   setTargetABI(LoongArchABI::computeTargetABI(
-      STI.getTargetTriple(), MAB.getTargetOptions().getABIName()));
+      STI.getTargetTriple(), STI.getFeatureBits(),
+      MAB.getTargetOptions().getABIName()));
 }
 
 MCELFStreamer &LoongArchTargetELFStreamer::getStreamer() {
@@ -82,11 +83,9 @@ namespace llvm {
 MCELFStreamer *createLoongArchELFStreamer(MCContext &C,
                                           std::unique_ptr<MCAsmBackend> MAB,
                                           std::unique_ptr<MCObjectWriter> MOW,
-                                          std::unique_ptr<MCCodeEmitter> MCE,
-                                          bool RelaxAll) {
+                                          std::unique_ptr<MCCodeEmitter> MCE) {
   LoongArchELFStreamer *S = new LoongArchELFStreamer(
       C, std::move(MAB), std::move(MOW), std::move(MCE));
-  S->getAssembler().setRelaxAll(RelaxAll);
   return S;
 }
 } // end namespace llvm

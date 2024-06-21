@@ -4,18 +4,18 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-unknown-linux-android"
 
-  define void @f(i64* nocapture %x) "target-features"="+mte" {
+  define void @f(ptr nocapture %x) "target-features"="+mte" {
   entry:
-    store i64 1, i64* %x, align 8
-    %0 = tail call i8* @llvm.aarch64.irg(i8* null, i64 0)
-    %1 = tail call i8* @llvm.aarch64.irg.sp(i64 0)
-    %arrayidx1 = getelementptr inbounds i64, i64* %x, i64 1
-    store i64 1, i64* %arrayidx1, align 8
+    store i64 1, ptr %x, align 8
+    %0 = tail call ptr @llvm.aarch64.irg(ptr null, i64 0)
+    %1 = tail call ptr @llvm.aarch64.irg.sp(i64 0)
+    %arrayidx1 = getelementptr inbounds i64, ptr %x, i64 1
+    store i64 1, ptr %arrayidx1, align 8
     ret void
   }
 
-  declare i8* @llvm.aarch64.irg(i8*, i64) nounwind
-  declare i8* @llvm.aarch64.irg.sp(i64) nounwind
+  declare ptr @llvm.aarch64.irg(ptr, i64) nounwind
+  declare ptr @llvm.aarch64.irg.sp(i64) nounwind
 ...
 ---
 name:            f

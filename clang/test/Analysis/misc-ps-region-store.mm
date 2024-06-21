@@ -2,9 +2,9 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -analyzer-checker=core,alpha.core -verify -fblocks   %s
 // expected-no-diagnostics
 
-//===------------------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // This files tests our path-sensitive handling of Objective-c++ files.
-//===------------------------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 // Test basic handling of references.
 char &test1_aux();

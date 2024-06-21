@@ -33,7 +33,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Haiku")
 endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
-  target_link_libraries(llvm-jitlink PRIVATE socket nsl)
+  target_link_libraries(llvm-jitlink PRIVATE socket)
 endif()
 
 export_executable_symbols(llvm-jitlink)

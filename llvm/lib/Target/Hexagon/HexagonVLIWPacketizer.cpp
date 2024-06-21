@@ -97,9 +97,9 @@ namespace {
       AU.setPreservesCFG();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfo>();
-      AU.addRequired<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineLoopInfo>();
-      AU.addPreserved<MachineDominatorTree>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineLoopInfo>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -124,7 +124,7 @@ char HexagonPacketizer::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonPacketizer, "hexagon-packetizer",
                       "Hexagon Packetizer", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -1180,7 +1180,7 @@ void HexagonPacketizerList::unpacketizeSoloInstrs(MachineFunction &MF) {
       bool InsertBeforeBundle;
       if (MI.isInlineAsm())
         InsertBeforeBundle = !hasWriteToReadDep(MI, *BundleIt, HRI);
-      else if (MI.isDebugValue())
+      else if (MI.isDebugInstr())
         InsertBeforeBundle = true;
       else
         continue;

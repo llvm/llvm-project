@@ -27,6 +27,8 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 
@@ -211,7 +213,7 @@ CreateStackTrace(ValueObjectSP o,
   auto trace_sp = std::make_shared<StructuredData::Array>();
   ValueObjectSP trace_value_object =
       o->GetValueForExpressionPath(trace_item_name.c_str());
-  size_t count = trace_value_object->GetNumChildren();
+  size_t count = trace_value_object->GetNumChildrenIgnoringErrors();
   for (size_t j = 0; j < count; j++) {
     addr_t trace_addr =
         trace_value_object->GetChildAtIndex(j)->GetValueAsUnsigned(0);

@@ -17,7 +17,7 @@ define void @pr34605(ptr nocapture %s, i32 %p) {
 ; CHECK-NEXT:    kmovd %ecx, %k1
 ; CHECK-NEXT:    kmovd %k1, %k1
 ; CHECK-NEXT:    kandq %k1, %k0, %k1
-; CHECK-NEXT:    vmovdqu8 {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqu8 {{.*#+}} zmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    vmovdqu64 %zmm0, (%eax)
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, 64(%eax)

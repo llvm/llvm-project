@@ -26,10 +26,8 @@ define <2 x double> @test_vp_reverse_v2f64(<2 x double> %src, i32 zeroext %evl) 
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <2 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <2 x i1> %head, <2 x i1> undef, <2 x i32> zeroinitializer
 
-  %dst = call <2 x double> @llvm.experimental.vp.reverse.v2f64(<2 x double> %src, <2 x i1> %allones, i32 %evl)
+  %dst = call <2 x double> @llvm.experimental.vp.reverse.v2f64(<2 x double> %src, <2 x i1> splat (i1 1), i32 %evl)
   ret <2 x double> %dst
 }
 
@@ -57,10 +55,8 @@ define <4 x float> @test_vp_reverse_v4f32(<4 x float> %src, i32 zeroext %evl) {
 ; CHECK-NEXT:    vrgather.vv v9, v8, v10
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
-  %head = insertelement <4 x i1> undef, i1 1, i32 0
-  %allones = shufflevector <4 x i1> %head, <4 x i1> undef, <4 x i32> zeroinitializer
 
-  %dst = call <4 x float> @llvm.experimental.vp.reverse.v4f32(<4 x float> %src, <4 x i1> %allones, i32 %evl)
+  %dst = call <4 x float> @llvm.experimental.vp.reverse.v4f32(<4 x float> %src, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x float> %dst
 }
 

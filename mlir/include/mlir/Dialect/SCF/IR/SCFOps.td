@@ -135,10 +135,11 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
 
 def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
-       ["getInitsMutable", "getSingleInductionVar", "getSingleLowerBound",
-        "getSingleStep", "getSingleUpperBound", "getYieldedValuesMutable",
-        "getLoopResults", "promoteIfSingleIteration",
-        "replaceWithAdditionalYields"]>,
+       ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
+        "getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
+        "getLoopUpperBounds", "getYieldedValuesMutable",
+        "promoteIfSingleIteration", "replaceWithAdditionalYields",
+        "yieldTiledValuesAndReplace"]>,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -259,10 +260,6 @@ def ForOp : SCF_Op<"for",
 
     Value getInductionVar() { return getBody()->getArgument(0); }
 
-    Block::BlockArgListType getRegionIterArgs() {
-      return getBody()->getArguments().drop_front(getNumInductionVars());
-    }
-
     /// Return the `index`-th region iteration argument.
     BlockArgument getRegionIterArg(unsigned index) {
       assert(index < getNumRegionIterArgs() &&
@@ -304,12 +301,14 @@ def ForallOp : SCF_Op<"forall", [
        AttrSizedOperandSegments,
        AutomaticAllocationScope,
        DeclareOpInterfaceMethods<LoopLikeOpInterface,
-          ["promoteIfSingleIteration", "getSingleInductionVar",
-          "getSingleLowerBound", "getSingleUpperBound", "getSingleStep"]>,
+          ["getInitsMutable", "getRegionIterArgs", "getLoopInductionVars", 
+           "getLoopLowerBounds", "getLoopUpperBounds", "getLoopSteps",
+           "promoteIfSingleIteration", "yieldTiledValuesAndReplace"]>,
        RecursiveMemoryEffects,
        SingleBlockImplicitTerminator<"scf::InParallelOp">,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-       DestinationStyleOpInterface
+       DestinationStyleOpInterface,
+       HasParallelRegion
      ]> {
   let summary = "evaluate a block multiple times in parallel";
   let description = [{
@@ -511,22 +510,31 @@ def ForallOp : SCF_Op<"forall", [
   ];
 
   let extraClassDeclaration = [{
-    // Get lower bounds as OpFoldResult.
+    /// Get induction variables.
+    SmallVector<Value> getInductionVars() {
+      std::optional<SmallVector<Value>> maybeInductionVars = getLoopInductionVars();
+      assert(maybeInductionVars.has_value() && "expected values");
+      return *maybeInductionVars;
+    }
+    /// Get lower bounds as OpFoldResult.
     SmallVector<OpFoldResult> getMixedLowerBound() {
-      Builder b(getOperation()->getContext());
-      return getMixedValues(getStaticLowerBound(), getDynamicLowerBound(), b);
+      std::optional<SmallVector<OpFoldResult>> maybeLowerBounds = getLoopLowerBounds();
+      assert(maybeLowerBounds.has_value() && "expected values");
+      return *maybeLowerBounds;
     }
 
-    // Get upper bounds as OpFoldResult.
+    /// Get upper bounds as OpFoldResult.
     SmallVector<OpFoldResult> getMixedUpperBound() {
-      Builder b(getOperation()->getContext());
-      return getMixedValues(getStaticUpperBound(), getDynamicUpperBound(), b);
+      std::optional<SmallVector<OpFoldResult>> maybeUpperBounds = getLoopUpperBounds();
+      assert(maybeUpperBounds.has_value() && "expected values");
+      return *maybeUpperBounds;
     }
 
-    // Get steps as OpFoldResult.
+    /// Get steps as OpFoldResult.
     SmallVector<OpFoldResult> getMixedStep() {
-      Builder b(getOperation()->getContext());
-      return getMixedValues(getStaticStep(), getDynamicStep(), b);
+      std::optional<SmallVector<OpFoldResult>> maybeSteps = getLoopSteps();
+      assert(maybeSteps.has_value() && "expected values");
+      return *maybeSteps;
     }
 
     /// Get lower bounds as values.
@@ -585,14 +593,6 @@ def ForallOp : SCF_Op<"forall", [
                                     getNumDynamicControlOperands() + getRank());
     }
 
-    ArrayRef<BlockArgument> getOutputBlockArguments() {
-      return getBody()->getArguments().drop_front(getRank());
-    }
-
-    ::mlir::ValueRange getInductionVars() {
-      return getBody()->getArguments().take_front(getRank());
-    }
-
     ::mlir::Value getInductionVar(int64_t idx) {
       return getInductionVars()[idx];
     }
@@ -614,6 +614,10 @@ def ForallOp : SCF_Op<"forall", [
 
     // Declare the shared_outs as inits/outs to DestinationStyleOpInterface.
     MutableOperandRange getDpsInitsMutable() { return getOutputsMutable(); }
+
+    /// Returns operations within scf.forall.in_parallel whose destination
+    /// operand is the block argument `bbArg`.
+    SmallVector<Operation*> getCombiningOps(BlockArgument bbArg);
   }];
 }
 
@@ -766,11 +770,12 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
 def ParallelOp : SCF_Op<"parallel",
     [AutomaticAllocationScope,
      AttrSizedOperandSegments,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getSingleInductionVar",
-          "getSingleLowerBound", "getSingleUpperBound", "getSingleStep"]>,
+     DeclareOpInterfaceMethods<LoopLikeOpInterface, ["getLoopInductionVars",
+          "getLoopLowerBounds", "getLoopUpperBounds", "getLoopSteps"]>,
      RecursiveMemoryEffects,
      DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-     SingleBlockImplicitTerminator<"scf::ReduceOp">]> {
+     SingleBlockImplicitTerminator<"scf::ReduceOp">,
+     HasParallelRegion]> {
   let summary = "parallel for operation";
   let description = [{
     The "scf.parallel" operation represents a loop nest taking 4 groups of SSA
@@ -846,8 +851,11 @@ def ParallelOp : SCF_Op<"parallel",
   ];
 
   let extraClassDeclaration = [{
-    ValueRange getInductionVars() {
-      return getBody()->getArguments();
+    /// Get induction variables.
+    SmallVector<Value> getInductionVars() {
+      std::optional<SmallVector<Value>> maybeInductionVars = getLoopInductionVars();;
+      assert(maybeInductionVars.has_value() && "expected values");
+      return *maybeInductionVars;
     }
     unsigned getNumLoops() { return getStep().size(); }
     unsigned getNumReductions() { return getInitVals().size(); }

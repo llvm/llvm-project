@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 #define LLVM_CLANG_LIB_CODEGEN_CGCALL_H
 
+#include "CGPointerAuthInfo.h"
 #include "CGValue.h"
 #include "EHScopeStack.h"
 #include "clang/AST/ASTFwd.h"
@@ -69,6 +70,10 @@ class CGCallee {
     Last = Virtual
   };
 
+  struct OrdinaryInfoStorage {
+    CGCalleeInfo AbstractInfo;
+    CGPointerAuthInfo PointerAuthInfo;
+  };
   struct BuiltinInfoStorage {
     const FunctionDecl *Decl;
     unsigned ID;
@@ -85,7 +90,7 @@ class CGCallee {
 
   SpecialKind KindOrFunctionPointer;
   union {
-    CGCalleeInfo AbstractInfo;
+    OrdinaryInfoStorage OrdinaryInfo;
     BuiltinInfoStorage BuiltinInfo;
     PseudoDestructorInfoStorage PseudoDestructorInfo;
     VirtualInfoStorage VirtualInfo;
@@ -104,10 +109,13 @@ public:
 
   /// Construct a callee.  Call this constructor directly when this
   /// isn't a direct call.
-  CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr)
+  CGCallee(const CGCalleeInfo &abstractInfo, llvm::Value *functionPtr,
+           /* FIXME: make parameter pointerAuthInfo mandatory */
+           const CGPointerAuthInfo &pointerAuthInfo = CGPointerAuthInfo())
       : KindOrFunctionPointer(
             SpecialKind(reinterpret_cast<uintptr_t>(functionPtr))) {
-    AbstractInfo = abstractInfo;
+    OrdinaryInfo.AbstractInfo = abstractInfo;
+    OrdinaryInfo.PointerAuthInfo = pointerAuthInfo;
     assert(functionPtr && "configuring callee without function pointer");
     assert(functionPtr->getType()->isPointerTy());
   }
@@ -173,7 +181,11 @@ public:
     if (isVirtual())
       return VirtualInfo.MD;
     assert(isOrdinary());
-    return AbstractInfo;
+    return OrdinaryInfo.AbstractInfo;
+  }
+  const CGPointerAuthInfo &getPointerAuthInfo() const {
+    assert(isOrdinary());
+    return OrdinaryInfo.PointerAuthInfo;
   }
   llvm::Value *getFunctionPointer() const {
     assert(isOrdinary());
@@ -183,6 +195,10 @@ public:
     assert(isOrdinary());
     KindOrFunctionPointer =
         SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
+  }
+  void setPointerAuthInfo(CGPointerAuthInfo PointerAuth) {
+    assert(isOrdinary());
+    OrdinaryInfo.PointerAuthInfo = PointerAuth;
   }
 
   bool isVirtual() const {
@@ -357,8 +373,11 @@ class ReturnValueSlot {
   Address Addr = Address::invalid();
 
   // Return value slot flags
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVolatile : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnused : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExternallyDestructed : 1;
 
 public:
@@ -374,6 +393,7 @@ public:
   Address getValue() const { return Addr; }
   bool isUnused() const { return IsUnused; }
   bool isExternallyDestructed() const { return IsExternallyDestructed; }
+  Address getAddress() const { return Addr; }
 };
 
 /// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as

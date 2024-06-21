@@ -32,11 +32,11 @@ define <8 x i8> @select_non_contiguous_v8i8(<8 x i8> %v, <8 x i8> %w) {
 
 define <8 x i64> @select_start_v8i64(<8 x i64> %v, <8 x i64> %w) {
 ; CHECK-LABEL: 'select_start_v8i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %res
 ;
 ; CHECK-SIZE-LABEL: 'select_start_v8i64'
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %res
 ;
   %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
@@ -45,11 +45,11 @@ define <8 x i64> @select_start_v8i64(<8 x i64> %v, <8 x i64> %w) {
 
 define <8 x i64> @select_non_contiguous_v8i64(<8 x i64> %v, <8 x i64> %w) {
 ; CHECK-LABEL: 'select_non_contiguous_v8i64'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 4, i32 13, i32 6, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 4, i32 13, i32 6, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %res
 ;
 ; CHECK-SIZE-LABEL: 'select_non_contiguous_v8i64'
-; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 4, i32 13, i32 6, i32 15>
+; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 4, i32 13, i32 6, i32 15>
 ; CHECK-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <8 x i64> %res
 ;
   %res = shufflevector <8 x i64> %v, <8 x i64> %w, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 4, i32 13, i32 6, i32 15>

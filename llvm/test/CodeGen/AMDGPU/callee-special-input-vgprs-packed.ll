@@ -509,13 +509,13 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; Local stack object initialize. Offset 0 is the emergency spill slot.
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
 ; GCN-DAG: s_movk_i32 s32, 0x400
-; GCN: buffer_store_dword [[K]], off, s[0:3], 0 offset:4
+; GCN: buffer_store_dword [[K]], off, s[0:3], 0
 
 ; Pass %arg31 on stack
 ; GCN: v_mov_b32_e32 [[K1:v[0-9]+]], 0x140{{$}}
 ; GCN: buffer_store_dword [[K1:v[0-9]+]], off, s[0:3], s32{{$}}
 
-; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], 0 offset:4
+; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], 0
 ; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4{{$}}
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],
 ; GCN: s_swappc_b64

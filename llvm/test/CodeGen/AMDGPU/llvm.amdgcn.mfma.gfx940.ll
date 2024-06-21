@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX940,VGPRCD %s
-; RUN: llc -march=amdgcn -mcpu=gfx942 -global-isel -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GISEL,VGPRCD %s
-; RUN: llc -march=amdgcn -mcpu=gfx942 -stress-regalloc=10 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX940,AGPRCD %s
-; RUN: llc -march=amdgcn -mcpu=gfx942 -stress-regalloc=10 -global-isel -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GISEL,AGPRCD %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX940,VGPRCD %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -global-isel -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GISEL,VGPRCD %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -stress-regalloc=10 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX940,AGPRCD %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -stress-regalloc=10 -global-isel -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GISEL,AGPRCD %s
 
 declare <4 x i32> @llvm.amdgcn.mfma.i32.16x16x32.i8(i64, i64, <4 x i32>, i32, i32, i32)
 declare <16 x i32> @llvm.amdgcn.mfma.i32.32x32x16.i8(i64, i64, <16 x i32>, i32, i32, i32)

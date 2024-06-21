@@ -36,8 +36,8 @@ MIR patterns use the DAG datatype in TableGen.
 
   (inst operand0, operand1, ...)
 
-``inst`` must be a def which inherits from ``Instruction`` (e.g. ``G_FADD``)
-or ``GICombinePatFrag``.
+``inst`` must be a def which inherits from ``Instruction`` (e.g. ``G_FADD``),
+``Intrinsic`` or ``GICombinePatFrag``.
 
 Operands essentially fall into one of two categories:
 
@@ -227,7 +227,6 @@ Limitations
 
 This a non-exhaustive list of known issues with MIR patterns at this time.
 
-* Matching intrinsics is not yet possible.
 * Using ``GICombinePatFrag`` within another ``GICombinePatFrag`` is not
   supported.
 * ``GICombinePatFrag`` can only have a single root.
@@ -275,8 +274,32 @@ it's less verbose.
 
 
 Combine Rules also allow mixing C++ code with MIR patterns, so that you
-may perform additional checks when matching, or run additional code after
-rewriting a pattern.
+may perform additional checks when matching, or run a C++ action after
+matching.
+
+Note that C++ code in ``apply`` pattern is mutually exclusive with
+other patterns. However, you can freely mix C++ code with other
+types of patterns in ``match`` patterns.
+C++ code in ``match`` patterns is always run last, after all other
+patterns matched.
+
+.. code-block:: text
+  :caption: Apply Pattern Examples with C++ code
+
+  // Valid
+  def Foo : GICombineRule<
+    (defs root:$root),
+    (match (G_ZEXT $tmp, (i32 0)),
+           (G_STORE $tmp, $ptr):$root,
+           "return myFinalCheck()"),
+    (apply "runMyAction(${root})")>;
+
+  // error: 'apply' patterns cannot mix C++ code with other types of patterns
+  def Bar : GICombineRule<
+    (defs root:$dst),
+    (match (G_ZEXT $dst, $src):$mi),
+    (apply (G_MUL $dst, $src, $src),
+           "runMyAction(${root})")>;
 
 The following expansions are available for MIR patterns:
 
@@ -515,3 +538,40 @@ of operands.
     (match (does_not_bind $tmp, $x)
            (G_MUL $dst, $x, $tmp)),
     (apply (COPY $dst, $x))>;
+
+
+
+
+Gallery
+=======
+
+We should use precise patterns that state our intentions. Please avoid
+using wip_match_opcode in patterns.
+
+.. code-block:: text
+  :caption: Example fold zext(trunc:nuw)
+
+  // Imprecise: matches any G_ZEXT
+  def zext : GICombineRule<
+    (defs root:$root),
+    (match (wip_match_opcode G_ZEXT):$root,
+    [{ return Helper.matchZextOfTrunc(*${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+
+  // Imprecise: matches G_ZEXT of G_TRUNC
+  def zext_of_trunc : GICombineRule<
+    (defs root:$root),
+    (match (G_TRUNC $src, $x),
+           (G_ZEXT $root, $src),
+    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
+
+
+  // Precise: matches G_ZEXT of G_TRUNC with nuw flag
+  def zext_of_trunc_nuw : GICombineRule<
+    (defs root:$root),
+    (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
+           (G_ZEXT $root, $src),
+    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
+    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;

@@ -74,7 +74,9 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         attr.getName() ==
             gpu::GPUFuncOp::getNumWorkgroupAttributionsAttrName() ||
         attr.getName() == gpuFuncOp.getWorkgroupAttribAttrsAttrName() ||
-        attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName())
+        attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName() ||
+        attr.getName() == gpuFuncOp.getKnownBlockSizeAttrName() ||
+        attr.getName() == gpuFuncOp.getKnownGridSizeAttrName())
       continue;
     if (attr.getName() == gpuFuncOp.getArgAttrsAttrName()) {
       argAttrs = gpuFuncOp.getArgAttrsAttr();
@@ -82,27 +84,28 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     }
     attributes.push_back(attr);
   }
+
+  DenseI32ArrayAttr knownBlockSize = gpuFuncOp.getKnownBlockSizeAttr();
+  DenseI32ArrayAttr knownGridSize = gpuFuncOp.getKnownGridSizeAttr();
+  // Ensure we don't lose information if the function is lowered before its
+  // surrounding context.
+  auto *gpuDialect = cast<gpu::GPUDialect>(gpuFuncOp->getDialect());
+  if (knownBlockSize)
+    attributes.emplace_back(gpuDialect->getKnownBlockSizeAttrHelper().getName(),
+                            knownBlockSize);
+  if (knownGridSize)
+    attributes.emplace_back(gpuDialect->getKnownGridSizeAttrHelper().getName(),
+                            knownGridSize);
+
   // Add a dialect specific kernel attribute in addition to GPU kernel
   // attribute. The former is necessary for further translation while the
   // latter is expected by gpu.launch_func.
   if (gpuFuncOp.isKernel()) {
     attributes.emplace_back(kernelAttributeName, rewriter.getUnitAttr());
-
-    // Set the block size attribute if it is present.
-    if (kernelBlockSizeAttributeName.has_value()) {
-      std::optional<int32_t> dimX =
-          gpuFuncOp.getKnownBlockSize(gpu::Dimension::x);
-      std::optional<int32_t> dimY =
-          gpuFuncOp.getKnownBlockSize(gpu::Dimension::y);
-      std::optional<int32_t> dimZ =
-          gpuFuncOp.getKnownBlockSize(gpu::Dimension::z);
-      if (dimX.has_value() || dimY.has_value() || dimZ.has_value()) {
-        // If any of the dimensions are missing, fill them in with 1.
-        attributes.emplace_back(
-            kernelBlockSizeAttributeName.value(),
-            rewriter.getDenseI32ArrayAttr(
-                {dimX.value_or(1), dimY.value_or(1), dimZ.value_or(1)}));
-      }
+    // Set the dialect-specific block size attribute if there is one.
+    if (kernelBlockSizeAttributeName.has_value() && knownBlockSize) {
+      attributes.emplace_back(kernelBlockSizeAttributeName.value(),
+                              knownBlockSize);
     }
   }
   auto llvmFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
@@ -214,7 +217,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
        llvm::enumerate(gpuFuncOp.getArgumentTypes())) {
     auto remapping = signatureConversion.getInputMapping(idx);
     NamedAttrList argAttr =
-        argAttrs ? argAttrs[idx].cast<DictionaryAttr>() : NamedAttrList();
+        argAttrs ? cast<DictionaryAttr>(argAttrs[idx]) : NamedAttrList();
     auto copyAttribute = [&](StringRef attrName) {
       Attribute attr = argAttr.erase(attrName);
       if (!attr)
@@ -234,9 +237,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         return;
       }
       for (size_t i = 0, e = remapping->size; i < e; ++i) {
-        if (llvmFuncOp.getArgument(remapping->inputNo + i)
-                .getType()
-                .isa<LLVM::LLVMPointerType>()) {
+        if (isa<LLVM::LLVMPointerType>(
+                llvmFuncOp.getArgument(remapping->inputNo + i).getType())) {
           llvmFuncOp.setArgAttr(remapping->inputNo + i, attrName, attr);
         }
       }
@@ -529,7 +531,8 @@ LogicalResult GPUPrintfOpToVPrintfLowering::matchAndRewrite(
                                       /*alignment=*/0);
   for (auto [index, arg] : llvm::enumerate(args)) {
     Value ptr = rewriter.create<LLVM::GEPOp>(
-        loc, ptrType, structType, tempAlloc, ArrayRef<LLVM::GEPArg>{0, index});
+        loc, ptrType, structType, tempAlloc,
+        ArrayRef<LLVM::GEPArg>{0, static_cast<int32_t>(index)});
     rewriter.create<LLVM::StoreOp>(loc, arg, ptr);
   }
   std::array<Value, 2> printfArgs = {stringStart, tempAlloc};
@@ -544,8 +547,7 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
                                       ConversionPatternRewriter &rewriter,
                                       const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
-  if (llvm::none_of(operandTypes,
-                    [](Type type) { return isa<VectorType>(type); })) {
+  if (llvm::none_of(operandTypes, llvm::IsaPred<VectorType>)) {
     return rewriter.notifyMatchFailure(op, "expected vector operand");
   }
   if (op->getNumRegions() != 0 || op->getNumSuccessors() != 0)

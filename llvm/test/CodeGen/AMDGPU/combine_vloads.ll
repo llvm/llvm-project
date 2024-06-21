@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
+; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
 
 ;
 ; kernel void combine_vloads(global char8 addrspace(5)* src, global char8 addrspace(5)* result) {

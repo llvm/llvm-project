@@ -1,5 +1,5 @@
 ; RUN: opt -data-layout=A5 -S -mtriple=amdgcn-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=IR %s
-; RUN: llc -march=amdgcn -mcpu=fiji -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=ASM %s
+; RUN: llc -mtriple=amdgcn -mcpu=fiji -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=ASM %s
 
 ; IR-LABEL: define amdgpu_vs void @promote_alloca_shaders(ptr addrspace(1) inreg %out, ptr addrspace(1) inreg %in) #0 {
 ; IR: alloca [5 x i32]
@@ -96,4 +96,4 @@ attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
 attributes #1 = { nounwind readnone }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

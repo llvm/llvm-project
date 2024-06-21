@@ -48,7 +48,7 @@ long long test__readfsqword(unsigned long Offset) {
 __int64 test__emul(int a, int b) {
   return __emul(a, b);
 }
-// CHECK-LABEL: define dso_local i64 @test__emul(i32 noundef %a, i32 noundef %b)
+// CHECK-LABEL: define dso_local range(i64 -4611686016279904256, 4611686018427387905) i64 @test__emul(i32 noundef %a, i32 noundef %b)
 // CHECK: [[X:%[0-9]+]] = sext i32 %a to i64
 // CHECK: [[Y:%[0-9]+]] = sext i32 %b to i64
 // CHECK: [[RES:%[0-9]+]] = mul nsw i64 [[Y]], [[X]]
@@ -57,11 +57,60 @@ __int64 test__emul(int a, int b) {
 unsigned __int64 test__emulu(unsigned int a, unsigned int b) {
   return __emulu(a, b);
 }
-// CHECK-LABEL: define dso_local i64 @test__emulu(i32 noundef %a, i32 noundef %b)
+// CHECK-LABEL: define dso_local range(i64 0, -8589934590) i64 @test__emulu(i32 noundef %a, i32 noundef %b)
 // CHECK: [[X:%[0-9]+]] = zext i32 %a to i64
 // CHECK: [[Y:%[0-9]+]] = zext i32 %b to i64
 // CHECK: [[RES:%[0-9]+]] = mul nuw i64 [[Y]], [[X]]
 // CHECK: ret i64 [[RES]]
+
+
+unsigned char test_inbyte(unsigned short port) {
+  return __inbyte(port);
+}
+// CHECK-LABEL: i8 @test_inbyte(i16 noundef
+// CHECK-SAME:  [[PORT:%.*]])
+// CHECK:       [[TMP0:%.*]] = tail call i8 asm sideeffect "inb ${1:w}, ${0:b}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-NEXT:  ret i8 [[TMP0]]
+
+unsigned short test_inword(unsigned short port) {
+  return __inword(port);
+}
+// CHECK-LABEL: i16 @test_inword(i16 noundef
+// CHECK-SAME:  [[PORT:%.*]])
+// CHECK:       [[TMP0:%.*]] = tail call i16 asm sideeffect "inw ${1:w}, ${0:w}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-NEXT:  ret i16 [[TMP0]]
+
+unsigned long test_indword(unsigned short port) {
+  return __indword(port);
+}
+// CHECK-LABEL: i32 @test_indword(i16 noundef
+// CHECK-SAME:  [[PORT:%.*]])
+// CHECK:       [[TMP0:%.*]] = tail call i32 asm sideeffect "inl ${1:w}, ${0:k}", "={ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[PORT]])
+// CHECK-NEXT:  ret i32 [[TMP0]]
+
+void test_outbyte(unsigned short port, unsigned char data) {
+    return __outbyte(port, data);
+}
+// CHECK-LABEL: void @test_outbyte(
+// CHECK-SAME:  [[PORT:%.*]],
+// CHECK-SAME:  [[DATA:%.*]])
+// CHECK:       tail call void asm sideeffect "outb ${0:b}, ${1:w}", "{ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i8 [[DATA]], i16 [[PORT]])
+
+void test_outword(unsigned short port, unsigned short data) {
+    return __outword(port, data);
+}
+// CHECK-LABEL: void @test_outword(
+// CHECK-SAME:  [[PORT:%.*]],
+// CHECK-SAME:  [[DATA:%.*]])
+// CHECK:       tail call void asm sideeffect "outw ${0:w}, ${1:w}", "{ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i16 [[DATA]], i16 [[PORT]])
+
+void test_outdword(unsigned short port, unsigned long data) {
+    return __outdword(port, data);
+}
+// CHECK-LABEL: void @test_outdword(
+// CHECK-SAME:  [[PORT:%.*]],
+// CHECK-SAME:  [[DATA:%.*]])
+// CHECK:       tail call void asm sideeffect "outl ${0:k}, ${1:w}", "{ax},N{dx},~{dirflag},~{fpsr},~{flags}"(i32 [[DATA]], i16 [[PORT]])
 
 #if defined(__x86_64__)
 
@@ -108,13 +157,13 @@ long long test__readgsqword(unsigned long Offset) {
 __int64 test__mulh(__int64 a, __int64 b) {
   return __mulh(a, b);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test__mulh(i64 noundef %a, i64 noundef %b)
+// CHECK-X64-LABEL: define dso_local range(i64 -4611686018427387904, 4611686018427387905) i64 @test__mulh(i64 noundef %a, i64 noundef %b)
 // CHECK-X64: = mul nsw i128 %
 
 unsigned __int64 test__umulh(unsigned __int64 a, unsigned __int64 b) {
   return __umulh(a, b);
 }
-// CHECK-X64-LABEL: define dso_local i64 @test__umulh(i64 noundef %a, i64 noundef %b)
+// CHECK-X64-LABEL: define dso_local range(i64 0, -1) i64 @test__umulh(i64 noundef %a, i64 noundef %b)
 // CHECK-X64: = mul nuw i128 %
 
 __int64 test_mul128(__int64 Multiplier,

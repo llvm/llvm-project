@@ -7,7 +7,7 @@ define i8 @fast_div_201(i8 %p) {
 ; CHECK-NEXT:    [[V3:%.*]] = zext i8 [[P:%.*]] to i16
 ; CHECK-NEXT:    [[V4:%.*]] = mul nuw nsw i16 [[V3]], 71
 ; CHECK-NEXT:    [[V5:%.*]] = lshr i16 [[V4]], 8
-; CHECK-NEXT:    [[V6:%.*]] = trunc i16 [[V5]] to i8
+; CHECK-NEXT:    [[V6:%.*]] = trunc nuw nsw i16 [[V5]] to i8
 ; CHECK-NEXT:    [[V7:%.*]] = sub i8 [[P]], [[V6]]
 ; CHECK-NEXT:    [[V8:%.*]] = lshr i8 [[V7]], 1
 ; CHECK-NEXT:    [[V13:%.*]] = add nuw i8 [[V8]], [[V6]]

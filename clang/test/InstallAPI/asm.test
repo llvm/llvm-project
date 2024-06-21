@@ -1,0 +1,90 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+
+// RUN: clang-installapi -target arm64-apple-macos13.1 \
+// RUN: -I%t/usr/include -dynamiclib \
+// RUN: -install_name @rpath/lib/libasm.dylib \
+// RUN: %t/inputs.json -o %t/output.tbd 2>&1 | FileCheck %s --allow-empty
+// RUN: llvm-readtapi -compare %t/output.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty
+
+// CHECK-NOT: error: 
+// CHECK-NOT: warning: 
+
+//--- usr/include/asm.h
+#ifndef ASM_H
+#define ASM_H
+
+extern int ivar __asm("_OBJC_IVAR_$_SomeClass._ivar1");
+extern int objcClass1 __asm("_OBJC_CLASS_$_SomeClass");
+extern int objcClass2 __asm("_OBJC_METACLASS_$_SomeClass");
+extern int objcClass3 __asm("_OBJC_EHTYPE_$_SomeClass");
+extern int objcClass4 __asm(".objc_class_name_SomeClass");
+
+__attribute__((visibility("hidden")))
+@interface NSString {
+}
+@end
+
+extern int ivarExtra __asm("_OBJC_IVAR_$_NSString._ivar1");
+#endif // ASM_H
+
+//--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/usr/include/asm.h",
+    "type" : "public"
+  }],
+  "version": "3"
+}
+
+//--- expected.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "current_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "objc_class": [
+            "SomeClass"
+          ],
+          "objc_eh_type": [
+            "SomeClass"
+          ],
+          "objc_ivar": [
+            "NSString._ivar1",
+            "SomeClass._ivar1"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/lib/libasm.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13.1",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

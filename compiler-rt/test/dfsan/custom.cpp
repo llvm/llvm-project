@@ -1,10 +1,7 @@
-// https://github.com/llvm/llvm-project/issues/60678
-// XFAIL: glibc-2.37
-
 // RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
-// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -no-pie %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 //
 // Tests custom implementations of various glibc functions.
 
@@ -178,7 +175,7 @@ void test_stat() {
 
   s.st_dev = i;
   SAVE_ORIGINS(s)
-  ret = stat("/nonexistent", &s);
+  ret = stat("/nonexistent_581cb021aba7", &s);
   assert(-1 == ret);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_LABEL(s.st_dev, i_label);
@@ -771,26 +768,53 @@ void test_recvmsg() {
   ssize_t sent = sendmsg(sockfds[0], &smsg, 0);
   assert(sent > 0);
 
-  char rbuf[128];
-  struct iovec riovs[2] = {{&rbuf[0], 4}, {&rbuf[4], 4}};
-  struct msghdr rmsg = {};
-  rmsg.msg_iov = riovs;
-  rmsg.msg_iovlen = 2;
+  {
+    char rpbuf[2];
+    struct iovec peek_iov;
+    peek_iov.iov_base = rpbuf;
+    peek_iov.iov_len = 2;
 
-  dfsan_set_label(i_label, rbuf, sizeof(rbuf));
-  dfsan_set_label(i_label, &rmsg, sizeof(rmsg));
+    struct msghdr peek_header = {};
+    peek_header.msg_iov = &peek_iov;
+    peek_header.msg_iovlen = 1;
 
-  DEFINE_AND_SAVE_ORIGINS(rmsg)
+    dfsan_set_label(i_label, rpbuf, sizeof(rpbuf));
+    dfsan_set_label(i_label, &peek_header, sizeof(peek_header));
 
-  ssize_t received = recvmsg(sockfds[1], &rmsg, 0);
-  assert(received == sent);
-  assert(memcmp(sbuf, rbuf, 8) == 0);
-  ASSERT_ZERO_LABEL(received);
-  ASSERT_READ_ZERO_LABEL(&rmsg, sizeof(rmsg));
-  ASSERT_READ_ZERO_LABEL(&rbuf[0], 8);
-  ASSERT_READ_LABEL(&rbuf[8], 1, i_label);
+    DEFINE_AND_SAVE_ORIGINS(peek_header)
 
-  ASSERT_SAVED_ORIGINS(rmsg)
+    ssize_t received = recvmsg(sockfds[1], &peek_header, MSG_PEEK | MSG_TRUNC);
+    assert(received == sent);
+    assert(memcmp(sbuf, rpbuf, 2) == 0);
+    ASSERT_ZERO_LABEL(received);
+    ASSERT_READ_ZERO_LABEL(&peek_header, sizeof(peek_header));
+    ASSERT_READ_ZERO_LABEL(&rpbuf[0], 0);
+
+    ASSERT_SAVED_ORIGINS(peek_header)
+  }
+
+  {
+    char rbuf[128];
+    struct iovec riovs[2] = {{&rbuf[0], 4}, {&rbuf[4], 4}};
+    struct msghdr rmsg = {};
+    rmsg.msg_iov = riovs;
+    rmsg.msg_iovlen = 2;
+
+    dfsan_set_label(i_label, rbuf, sizeof(rbuf));
+    dfsan_set_label(i_label, &rmsg, sizeof(rmsg));
+
+    DEFINE_AND_SAVE_ORIGINS(rmsg)
+
+    ssize_t received = recvmsg(sockfds[1], &rmsg, 0);
+    assert(received == sent);
+    assert(memcmp(sbuf, rbuf, 8) == 0);
+    ASSERT_ZERO_LABEL(received);
+    ASSERT_READ_ZERO_LABEL(&rmsg, sizeof(rmsg));
+    ASSERT_READ_ZERO_LABEL(&rbuf[0], 8);
+    ASSERT_READ_LABEL(&rbuf[8], 1, i_label);
+
+    ASSERT_SAVED_ORIGINS(rmsg)
+  }
 
   close(sockfds[0]);
   close(sockfds[1]);
@@ -2256,7 +2280,7 @@ void test_sscanf() {
   // %n, %s, %d, %f, and %% already tested
 }
 
-// Tested by a seperate source file.  This empty function is here to appease the
+// Tested by a separate source file.  This empty function is here to appease the
 // check-wrappers script.
 void test_fork() {}
 

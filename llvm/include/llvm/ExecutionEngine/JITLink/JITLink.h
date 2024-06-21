@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
@@ -567,7 +568,7 @@ public:
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
   void setOffset(orc::ExecutorAddrDiff NewOffset) {
-    assert(NewOffset < getBlock().getSize() && "Offset out of range");
+    assert(NewOffset <= getBlock().getSize() && "Offset out of range");
     Offset = NewOffset;
   }
 
@@ -847,7 +848,7 @@ private:
 
 class LinkGraph {
 private:
-  using SectionMap = DenseMap<StringRef, std::unique_ptr<Section>>;
+  using SectionMap = MapVector<StringRef, std::unique_ptr<Section>>;
   using ExternalSymbolMap = StringMap<Symbol *>;
   using AbsoluteSymbolSet = DenseSet<Symbol *>;
   using BlockSet = DenseSet<Block *>;
@@ -1007,6 +1008,16 @@ public:
             GetEdgeKindNameFunction GetEdgeKindName)
       : LinkGraph(std::move(Name), TT, SubtargetFeatures(), PointerSize,
                   Endianness, GetEdgeKindName) {}
+
+  LinkGraph(std::string Name, const Triple &TT,
+            GetEdgeKindNameFunction GetEdgeKindName)
+      : LinkGraph(std::move(Name), TT, SubtargetFeatures(),
+                  Triple::getArchPointerBitWidth(TT.getArch()) / 8,
+                  TT.isLittleEndian() ? endianness::little : endianness::big,
+                  GetEdgeKindName) {
+    assert(!(Triple::getArchPointerBitWidth(TT.getArch()) % 8) &&
+           "Arch bitwidth is not a multiple of 8");
+  }
 
   LinkGraph(const LinkGraph &) = delete;
   LinkGraph &operator=(const LinkGraph &) = delete;
@@ -1533,7 +1544,7 @@ private:
   unsigned PointerSize;
   llvm::endianness Endianness;
   GetEdgeKindNameFunction GetEdgeKindName = nullptr;
-  DenseMap<StringRef, std::unique_ptr<Section>> Sections;
+  MapVector<StringRef, std::unique_ptr<Section>> Sections;
   ExternalSymbolMap ExternalSymbols;
   AbsoluteSymbolSet AbsoluteSymbols;
   orc::shared::AllocActions AAs;

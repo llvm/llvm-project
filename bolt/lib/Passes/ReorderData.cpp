@@ -133,7 +133,7 @@ bool filterSymbol(const BinaryData *BD) {
 
 using DataOrder = ReorderData::DataOrder;
 
-void ReorderData::printOrder(const BinarySection &Section,
+void ReorderData::printOrder(BinaryContext &BC, const BinarySection &Section,
                              DataOrder::const_iterator Begin,
                              DataOrder::const_iterator End) const {
   uint64_t TotalSize = 0;
@@ -142,19 +142,20 @@ void ReorderData::printOrder(const BinarySection &Section,
     const BinaryData *BD = Begin->first;
 
     if (!PrintHeader) {
-      outs() << "BOLT-INFO: Hot global symbols for " << Section.getName()
-             << ":\n";
+      BC.outs() << "BOLT-INFO: Hot global symbols for " << Section.getName()
+                << ":\n";
       PrintHeader = true;
     }
 
-    outs() << "BOLT-INFO: " << *BD << ", moveable=" << BD->isMoveable()
-           << format(", weight=%.5f\n", double(Begin->second) / BD->getSize());
+    BC.outs() << "BOLT-INFO: " << *BD << ", moveable=" << BD->isMoveable()
+              << format(", weight=%.5f\n",
+                        double(Begin->second) / BD->getSize());
 
     TotalSize += BD->getSize();
     ++Begin;
   }
   if (TotalSize)
-    outs() << "BOLT-INFO: Total hot symbol size = " << TotalSize << "\n";
+    BC.outs() << "BOLT-INFO: Total hot symbol size = " << TotalSize << "\n";
 }
 
 DataOrder ReorderData::baseOrder(BinaryContext &BC,
@@ -208,19 +209,19 @@ void ReorderData::assignMemData(BinaryContext &BC) {
   }
 
   if (!Counts.empty()) {
-    outs() << "BOLT-INFO: Memory stats breakdown:\n";
+    BC.outs() << "BOLT-INFO: Memory stats breakdown:\n";
     for (const auto &KV : Counts) {
       StringRef Section = KV.first;
       const uint64_t Count = KV.second;
-      outs() << "BOLT-INFO:   " << Section << " = " << Count
-             << format(" (%.1f%%)\n", 100.0 * Count / TotalCount);
+      BC.outs() << "BOLT-INFO:   " << Section << " = " << Count
+                << format(" (%.1f%%)\n", 100.0 * Count / TotalCount);
       if (JumpTableCounts.count(Section) != 0) {
         const uint64_t JTCount = JumpTableCounts[Section];
-        outs() << "BOLT-INFO:     jump tables = " << JTCount
-               << format(" (%.1f%%)\n", 100.0 * JTCount / Count);
+        BC.outs() << "BOLT-INFO:     jump tables = " << JTCount
+                  << format(" (%.1f%%)\n", 100.0 * JTCount / Count);
       }
     }
-    outs() << "BOLT-INFO: Total memory events: " << TotalCount << "\n";
+    BC.outs() << "BOLT-INFO: Total memory events: " << TotalCount << "\n";
   }
 }
 
@@ -395,9 +396,9 @@ void ReorderData::setSectionOrder(BinaryContext &BC,
 
   OutputSection.reorderContents(NewOrder, opts::ReorderInplace);
 
-  outs() << "BOLT-INFO: reorder-data: " << Count << "/" << TotalCount
-         << format(" (%.1f%%)", 100.0 * Count / TotalCount) << " events, "
-         << Offset << " hot bytes\n";
+  BC.outs() << "BOLT-INFO: reorder-data: " << Count << "/" << TotalCount
+            << format(" (%.1f%%)", 100.0 * Count / TotalCount) << " events, "
+            << Offset << " hot bytes\n";
 }
 
 bool ReorderData::markUnmoveableSymbols(BinaryContext &BC,
@@ -435,17 +436,17 @@ bool ReorderData::markUnmoveableSymbols(BinaryContext &BC,
   return FoundUnmoveable;
 }
 
-void ReorderData::runOnFunctions(BinaryContext &BC) {
+Error ReorderData::runOnFunctions(BinaryContext &BC) {
   static const char *DefaultSections[] = {".rodata", ".data", ".bss", nullptr};
 
   if (!BC.HasRelocations || opts::ReorderData.empty())
-    return;
+    return Error::success();
 
   // For now
   if (opts::JumpTables > JTS_BASIC) {
-    outs() << "BOLT-WARNING: jump table support must be basic for "
-           << "data reordering to work.\n";
-    return;
+    BC.outs() << "BOLT-WARNING: jump table support must be basic for "
+              << "data reordering to work.\n";
+    return Error::success();
   }
 
   assignMemData(BC);
@@ -463,14 +464,14 @@ void ReorderData::runOnFunctions(BinaryContext &BC) {
 
     ErrorOr<BinarySection &> Section = BC.getUniqueSectionByName(SectionName);
     if (!Section) {
-      outs() << "BOLT-WARNING: Section " << SectionName
-             << " not found, skipping.\n";
+      BC.outs() << "BOLT-WARNING: Section " << SectionName
+                << " not found, skipping.\n";
       continue;
     }
 
     if (!isSupported(*Section)) {
-      outs() << "BOLT-ERROR: Section " << SectionName << " not supported.\n";
-      exit(1);
+      BC.errs() << "BOLT-ERROR: Section " << SectionName << " not supported.\n";
+      return createFatalBOLTError("");
     }
 
     Sections.push_back(&*Section);
@@ -483,23 +484,23 @@ void ReorderData::runOnFunctions(BinaryContext &BC) {
     unsigned SplitPointIdx;
 
     if (opts::ReorderAlgorithm == opts::ReorderAlgo::REORDER_COUNT) {
-      outs() << "BOLT-INFO: reorder-sections: ordering data by count\n";
+      BC.outs() << "BOLT-INFO: reorder-sections: ordering data by count\n";
       std::tie(Order, SplitPointIdx) = sortedByCount(BC, *Section);
     } else {
-      outs() << "BOLT-INFO: reorder-sections: ordering data by funcs\n";
+      BC.outs() << "BOLT-INFO: reorder-sections: ordering data by funcs\n";
       std::tie(Order, SplitPointIdx) =
           sortedByFunc(BC, *Section, BC.getBinaryFunctions());
     }
     auto SplitPoint = Order.begin() + SplitPointIdx;
 
     if (opts::PrintReorderedData)
-      printOrder(*Section, Order.begin(), SplitPoint);
+      printOrder(BC, *Section, Order.begin(), SplitPoint);
 
     if (!opts::ReorderInplace || FoundUnmoveable) {
       if (opts::ReorderInplace && FoundUnmoveable)
-        outs() << "BOLT-INFO: Found unmoveable symbols in "
-               << Section->getName() << " falling back to splitting "
-               << "instead of in-place reordering.\n";
+        BC.outs() << "BOLT-INFO: Found unmoveable symbols in "
+                  << Section->getName() << " falling back to splitting "
+                  << "instead of in-place reordering.\n";
 
       // Rename sections.
       BinarySection &Hot =
@@ -519,10 +520,12 @@ void ReorderData::runOnFunctions(BinaryContext &BC) {
         }
       }
     } else {
-      outs() << "BOLT-WARNING: Inplace section reordering not supported yet.\n";
+      BC.outs()
+          << "BOLT-WARNING: Inplace section reordering not supported yet.\n";
       setSectionOrder(BC, *Section, Order.begin(), Order.end());
     }
   }
+  return Error::success();
 }
 
 } // namespace bolt

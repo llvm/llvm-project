@@ -185,7 +185,7 @@ INITIALIZE_PASS(MachineModuleInfoWrapperPass, "machinemoduleinfo",
                 "Machine Module Information", false, false)
 char MachineModuleInfoWrapperPass::ID = 0;
 
-static unsigned getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
+static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
                              std::vector<const MDNode *> &LocInfos) {
   // Look up a LocInfo for the buffer this diagnostic is coming from.
   unsigned BufNum = SrcMgr.FindBufferContainingLoc(SMD.getLoc());
@@ -195,7 +195,7 @@ static unsigned getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 
   // If the inline asm had metadata associated with it, pull out a location
   // cookie corresponding to which line the error occurred on.
-  unsigned LocCookie = 0;
+  uint64_t LocCookie = 0;
   if (LocInfo) {
     unsigned ErrorLine = SMD.getLineNo() - 1;
     if (ErrorLine >= LocInfo->getNumOperands())
@@ -213,13 +213,12 @@ static unsigned getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
   MMI.initialize();
   MMI.TheModule = &M;
-  // FIXME: Do this for new pass manager.
   LLVMContext &Ctx = M.getContext();
   MMI.getContext().setDiagnosticHandler(
       [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
                  const SourceMgr &SrcMgr,
                  std::vector<const MDNode *> &LocInfos) {
-        unsigned LocCookie = 0;
+        uint64_t LocCookie = 0;
         if (IsInlineAsm)
           LocCookie = getLocCookie(SMD, SrcMgr, LocInfos);
         Ctx.diagnose(
@@ -237,11 +236,21 @@ bool MachineModuleInfoWrapperPass::doFinalization(Module &M) {
 
 AnalysisKey MachineModuleAnalysis::Key;
 
-MachineModuleInfo MachineModuleAnalysis::run(Module &M,
-                                             ModuleAnalysisManager &) {
-  MachineModuleInfo MMI(TM);
+MachineModuleAnalysis::Result
+MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
   MMI.TheModule = &M;
-  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
-                         !M.debug_compile_units().empty();
-  return MMI;
+  LLVMContext &Ctx = M.getContext();
+  MMI.getContext().setDiagnosticHandler(
+      [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
+                 const SourceMgr &SrcMgr,
+                 std::vector<const MDNode *> &LocInfos) {
+        unsigned LocCookie = 0;
+        if (IsInlineAsm)
+          LocCookie = getLocCookie(SMD, SrcMgr, LocInfos);
+        Ctx.diagnose(
+            DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
+      });
+  MMI.DbgInfoAvailable =
+      !DisableDebugInfoPrinting && !M.debug_compile_units().empty();
+  return Result(MMI);
 }

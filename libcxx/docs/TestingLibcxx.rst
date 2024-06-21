@@ -394,7 +394,7 @@ Custom Directives
 ~~~~~~~~~~~~~~~~~
 
 Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
-writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES`` and ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific directives.
+writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES``, ``ADDITIONAL_COMPILE_FLAGS``, and ``MODULE_DEPENDENCIES`` libc++-specific directives.
 
 .. _libc++-specific Lit Directives:
 .. list-table:: libc++-specific Lit Directives
@@ -417,6 +417,13 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
      - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``
        substitution for the test that contains it. This libc++-specific Lit directive makes it possible to add special compilation flags without having to resort to writing a ``.sh.cpp`` test (see
        `Lit Meaning of libc++ Test Filenames`_), more powerful but perhaps overkill.
+   * - ``MODULE_DEPENDENCIES``
+     - ``// MODULE_DEPENDENCIES: std std.compat``
+     - This directive will build the required C++23 standard library
+       modules and add the additional compiler flags in
+       %{compile_flags}. (Libc++ offers these modules in C++20 as an
+       extension.)
+
 
 Benchmarks
 ==========
@@ -473,3 +480,48 @@ For example:
   $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
 
 For more information about running benchmarks see `Google Benchmark`_.
+
+
+.. _testing-hardening-assertions:
+
+Testing hardening assertions
+============================
+
+Each hardening assertion should be tested using death tests (via the
+``TEST_LIBCPP_ASSERT_FAILURE`` macro). Use the ``libcpp-hardening-mode`` Lit
+feature to make sure the assertion is enabled in (and only in) the intended
+modes. The convention is to use `assert.` in the name of the test file to make
+it easier to identify as a hardening test, e.g. ``assert.my_func.pass.cpp``.
+A toy example:
+
+.. code-block:: cpp
+
+  // Note: the following three annotations are currently needed to use the
+  // `TEST_LIBCPP_ASSERT_FAILURE`.
+  // REQUIRES: has-unix-headers
+  // UNSUPPORTED: c++03
+  // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+
+  // Example: only run this test in `fast`/`extensive`/`debug` modes.
+  // UNSUPPORTED: libcpp-hardening-mode=none
+  // Example: only run this test in the `debug` mode.
+  // REQUIRES: libcpp-hardening-mode=debug
+  // Example: only run this test in `extensive`/`debug` modes.
+  // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
+
+  #include <header_being_tested>
+
+  #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
+
+  int main(int, char**) {
+    std::type_being_tested foo;
+    int bad_input = -1;
+    TEST_LIBCPP_ASSERT_FAILURE(foo.some_function_that_asserts(bad_input),
+        "The expected assertion message");
+
+    return 0;
+  }
+
+Note that error messages are only tested (matched) if the ``debug``
+hardening mode is used.
+

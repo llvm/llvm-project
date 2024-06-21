@@ -541,12 +541,12 @@ define float @fneg2(float %x) {
   ret float %sub
 }
 
-define <2 x float> @fneg2_vec_undef(<2 x float> %x) {
-; CHECK-LABEL: @fneg2_vec_undef(
+define <2 x float> @fneg2_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @fneg2_vec_poison(
 ; CHECK-NEXT:    [[SUB:%.*]] = fneg nsz <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[SUB]]
 ;
-  %sub = fsub nsz <2 x float> <float undef, float 0.0>, %x
+  %sub = fsub nsz <2 x float> <float poison, float 0.0>, %x
   ret <2 x float> %sub
 }
 
@@ -562,7 +562,7 @@ define float @fdiv1(float %x) {
 ; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast float [[X:%.*]], 0x3FD7303B60000000
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
-  %div = fdiv float %x, 0x3FF3333340000000
+  %div = fdiv fast float %x, 0x3FF3333340000000
   %div1 = fdiv fast float %div, 0x4002666660000000
   ret float %div1
 ; 0x3FF3333340000000 = 1.2f
@@ -603,7 +603,7 @@ define float @fdiv3(float %x) {
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv fast float [[TMP1]], 0x47EFFFFFE0000000
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
-  %div = fdiv float %x, 0x47EFFFFFE0000000
+  %div = fdiv fast float %x, 0x47EFFFFFE0000000
   %div1 = fdiv fast float %div, 0x4002666660000000
   ret float %div1
 }
@@ -922,8 +922,8 @@ define float @test55(i1 %which, float %a) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd float [[A:%.*]], 1.000000e+00
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[A:%.*]] = phi float [ 3.000000e+00, [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
-; CHECK-NEXT:    ret float [[A]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi float [ 3.000000e+00, [[ENTRY:%.*]] ], [ [[TMP0]], [[DELAY]] ]
+; CHECK-NEXT:    ret float [[PHI]]
 ;
 entry:
   br i1 %which, label %final, label %delay
@@ -932,7 +932,7 @@ delay:
   br label %final
 
 final:
-  %A = phi float [ 2.0, %entry ], [ %a, %delay ]
-  %value = fadd float %A, 1.0
+  %phi = phi float [ 2.0, %entry ], [ %a, %delay ]
+  %value = fadd float %phi, 1.0
   ret float %value
 }

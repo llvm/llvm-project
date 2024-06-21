@@ -29,20 +29,37 @@ SimpleRemoteEPC::loadDylib(const char *DylibPath) {
   return DylibMgr->open(DylibPath, 0);
 }
 
-Expected<std::vector<tpctypes::LookupResult>>
-SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
-  std::vector<tpctypes::LookupResult> Result;
+/// Async helper to chain together calls to DylibMgr::lookupAsync to fulfill all
+/// all the requests.
+/// FIXME: The dylib manager should support multiple LookupRequests natively.
+static void
+lookupSymbolsAsyncHelper(EPCGenericDylibManager &DylibMgr,
+                         ArrayRef<SimpleRemoteEPC::LookupRequest> Request,
+                         std::vector<tpctypes::LookupResult> Result,
+                         SimpleRemoteEPC::SymbolLookupCompleteFn Complete) {
+  if (Request.empty())
+    return Complete(std::move(Result));
 
-  for (auto &Element : Request) {
-    if (auto R = DylibMgr->lookup(Element.Handle, Element.Symbols)) {
-      Result.push_back({});
-      Result.back().reserve(R->size());
-      for (auto Addr : *R)
-        Result.back().push_back(Addr);
-    } else
-      return R.takeError();
-  }
-  return std::move(Result);
+  auto &Element = Request.front();
+  DylibMgr.lookupAsync(Element.Handle, Element.Symbols,
+                       [&DylibMgr, Request, Complete = std::move(Complete),
+                        Result = std::move(Result)](auto R) mutable {
+                         if (!R)
+                           return Complete(R.takeError());
+                         Result.push_back({});
+                         Result.back().reserve(R->size());
+                         for (auto Addr : *R)
+                           Result.back().push_back(Addr);
+
+                         lookupSymbolsAsyncHelper(
+                             DylibMgr, Request.drop_front(), std::move(Result),
+                             std::move(Complete));
+                       });
+}
+
+void SimpleRemoteEPC::lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
+                                         SymbolLookupCompleteFn Complete) {
+  lookupSymbolsAsyncHelper(*DylibMgr, Request, {}, std::move(Complete));
 }
 
 Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,

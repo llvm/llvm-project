@@ -10,9 +10,9 @@ void foo(int x) {
   // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0, i64 -1)
   if (x == 0)
     // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 2, i32 0, i64 -1)
-    bar();
+    bar();  // probe id : 3
   else
-    // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 3, i32 0, i64 -1)
-    go();
-  // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 4, i32 0, i64 -1)
+    // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 4, i32 0, i64 -1)
+    go(); // probe id : 5
+  // CHECK: call void @llvm.pseudoprobe(i64 [[#GUID]], i64 6, i32 0, i64 -1)
 }

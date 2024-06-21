@@ -9,7 +9,7 @@ function _T:TestLegacyFileOutScript()
     f:close()
 
     f = io.open(self.output, 'r')
-    assertEquals(read_file_non_empty_lines(f), {'2', 'FOO'})
+    assertEqual(read_file_non_empty_lines(f), {'2', 'FOO'})
     f:close()
 end
 

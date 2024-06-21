@@ -11,6 +11,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -360,7 +361,12 @@ void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
   size_t Offset = addString(Path);
   if (UseRelocs) {
     MCContext &Ctx = MCOS->getContext();
-    MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset), RefSize);
+    if (Ctx.getAsmInfo()->needsDwarfSectionOffsetDirective()) {
+      MCOS->emitCOFFSecRel32(LineStrLabel, Offset);
+    } else {
+      MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset),
+                      RefSize);
+    }
   } else
     MCOS->emitIntValue(Offset, RefSize);
 }
@@ -1858,6 +1864,14 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   const MCAsmInfo *AsmInfo = Context.getAsmInfo();
   FrameEmitterImpl Emitter(IsEH, Streamer);
   ArrayRef<MCDwarfFrameInfo> FrameArray = Streamer.getDwarfFrameInfos();
+
+  // Disable AttemptToFoldSymbolOffsetDifference folding of EmitCompactUnwind
+  // and fdeStart-cieStart for EmitFDE due to the the performance issue. The
+  // label differences will be evaluate at write time.
+  assert(Streamer.getUseAssemblerInfoForParsing());
+  Streamer.setUseAssemblerInfoForParsing(false);
+  auto Enable = llvm::make_scope_exit(
+      [&]() { Streamer.setUseAssemblerInfoForParsing(true); });
 
   // Emit the compact unwind info if available.
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();

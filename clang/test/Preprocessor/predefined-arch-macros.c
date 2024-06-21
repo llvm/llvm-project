@@ -793,9 +793,7 @@
 // CHECK_KNL_M32: #define __AES__ 1
 // CHECK_KNL_M32: #define __AVX2__ 1
 // CHECK_KNL_M32: #define __AVX512CD__ 1
-// CHECK_KNL_M32: #define __AVX512ER__ 1
 // CHECK_KNL_M32: #define __AVX512F__ 1
-// CHECK_KNL_M32: #define __AVX512PF__ 1
 // CHECK_KNL_M32: #define __AVX__ 1
 // CHECK_KNL_M32: #define __BMI2__ 1
 // CHECK_KNL_M32: #define __BMI__ 1
@@ -808,7 +806,6 @@
 // CHECK_KNL_M32: #define __MOVBE__ 1
 // CHECK_KNL_M32: #define __PCLMUL__ 1
 // CHECK_KNL_M32: #define __POPCNT__ 1
-// CHECK_KNL_M32: #define __PREFETCHWT1__ 1
 // CHECK_KNL_M32: #define __PRFCHW__ 1
 // CHECK_KNL_M32: #define __RDRND__ 1
 // CHECK_KNL_M32: #define __SSE2__ 1
@@ -832,9 +829,7 @@
 // CHECK_KNL_M64: #define __AES__ 1
 // CHECK_KNL_M64: #define __AVX2__ 1
 // CHECK_KNL_M64: #define __AVX512CD__ 1
-// CHECK_KNL_M64: #define __AVX512ER__ 1
 // CHECK_KNL_M64: #define __AVX512F__ 1
-// CHECK_KNL_M64: #define __AVX512PF__ 1
 // CHECK_KNL_M64: #define __AVX__ 1
 // CHECK_KNL_M64: #define __BMI2__ 1
 // CHECK_KNL_M64: #define __BMI__ 1
@@ -847,7 +842,6 @@
 // CHECK_KNL_M64: #define __MOVBE__ 1
 // CHECK_KNL_M64: #define __PCLMUL__ 1
 // CHECK_KNL_M64: #define __POPCNT__ 1
-// CHECK_KNL_M64: #define __PREFETCHWT1__ 1
 // CHECK_KNL_M64: #define __PRFCHW__ 1
 // CHECK_KNL_M64: #define __RDRND__ 1
 // CHECK_KNL_M64: #define __SSE2_MATH__ 1
@@ -874,9 +868,7 @@
 // CHECK_KNM_M32: #define __AES__ 1
 // CHECK_KNM_M32: #define __AVX2__ 1
 // CHECK_KNM_M32: #define __AVX512CD__ 1
-// CHECK_KNM_M32: #define __AVX512ER__ 1
 // CHECK_KNM_M32: #define __AVX512F__ 1
-// CHECK_KNM_M32: #define __AVX512PF__ 1
 // CHECK_KNM_M32: #define __AVX512VPOPCNTDQ__ 1
 // CHECK_KNM_M32: #define __AVX__ 1
 // CHECK_KNM_M32: #define __BMI2__ 1
@@ -890,7 +882,6 @@
 // CHECK_KNM_M32: #define __MOVBE__ 1
 // CHECK_KNM_M32: #define __PCLMUL__ 1
 // CHECK_KNM_M32: #define __POPCNT__ 1
-// CHECK_KNM_M32: #define __PREFETCHWT1__ 1
 // CHECK_KNM_M32: #define __PRFCHW__ 1
 // CHECK_KNM_M32: #define __RDRND__ 1
 // CHECK_KNM_M32: #define __SSE2__ 1
@@ -911,9 +902,7 @@
 // CHECK_KNM_M64: #define __AES__ 1
 // CHECK_KNM_M64: #define __AVX2__ 1
 // CHECK_KNM_M64: #define __AVX512CD__ 1
-// CHECK_KNM_M64: #define __AVX512ER__ 1
 // CHECK_KNM_M64: #define __AVX512F__ 1
-// CHECK_KNM_M64: #define __AVX512PF__ 1
 // CHECK_KNM_M64: #define __AVX512VPOPCNTDQ__ 1
 // CHECK_KNM_M64: #define __AVX__ 1
 // CHECK_KNM_M64: #define __BMI2__ 1
@@ -927,7 +916,6 @@
 // CHECK_KNM_M64: #define __MOVBE__ 1
 // CHECK_KNM_M64: #define __PCLMUL__ 1
 // CHECK_KNM_M64: #define __POPCNT__ 1
-// CHECK_KNM_M64: #define __PREFETCHWT1__ 1
 // CHECK_KNM_M64: #define __PRFCHW__ 1
 // CHECK_KNM_M64: #define __RDRND__ 1
 // CHECK_KNM_M64: #define __SSE2_MATH__ 1
@@ -4292,15 +4280,34 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SYSTEMZ_ZVECTOR
 // CHECK_SYSTEMZ_ZVECTOR: #define __VEC__ 10304
 
+// Begin nvptx tests ----------------
+
+// RUN: %clang -march=sm_75 -E -dM %s -o - 2>&1 \
+// RUN:     -target nvptx64-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_NVPTX,CHECK_ARCH_SM_75
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target nvptx64-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_NVPTX,CHECK_ARCH_UNSET
+// CHECK_ARCH_SM_75: #define __CUDA_ARCH__ 750
+// CHECK_ARCH_UNSET-NOT: #define __CUDA_ARCH__
+// CHECK_NVPTX: #define __NVPTX__ 1
+
 // Begin amdgcn tests ----------------
 
-// RUN: %clang -march=amdgcn -E -dM %s -o - 2>&1 \
+// RUN: %clang -mcpu=gfx803 -E -dM %s -o - 2>&1 \
 // RUN:     -target amdgcn-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_AMDGCN
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_803
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target amdgcn-unknown-unknown \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_AMDGCN,CHECK_AMDGCN_NONE
 // CHECK_AMDGCN: #define __AMDGCN__ 1
-// CHECK_AMDGCN: #define __HAS_FMAF__ 1
-// CHECK_AMDGCN: #define __HAS_FP64__ 1
-// CHECK_AMDGCN: #define __HAS_LDEXPF__ 1
+// CHECK_AMDGCN_803: #define __HAS_FMAF__ 1
+// CHECK_AMDGCN_803: #define __HAS_FP64__ 1
+// CHECK_AMDGCN_803: #define __HAS_LDEXPF__ 1
+// CHECK_AMDGCN_NONE-NOT: #define __HAS_FMAF__
+// CHECK_AMDGCN_NONE-NOT: #define __HAS_FP64__
+// CHECK_AMDGCN_NONE-NOT: #define __HAS_LDEXPF__
+// CHECK_AMDGCN_NONE-NOT: #define __AMDGCN_WAVEFRONT_SIZE__
 
 // Begin r600 tests ----------------
 
@@ -4315,6 +4322,15 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
 // CHECK_R600_FP64-DAG: #define __R600__ 1
 // CHECK_R600_FP64-DAG: #define __HAS_FMAF__ 1
+
+// Begin HIP host tests -----------
+
+// RUN: %clang -x hip -E -dM %s -o - 2>&1 --offload-host-only -nogpulib \
+// RUN:     -nogpuinc --offload-arch=gfx803 -target x86_64-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_HIP_HOST
+// CHECK_HIP_HOST: #define __AMDGCN_WAVEFRONT_SIZE__ 64
+// CHECK_HIP_HOST: #define __AMDGPU__ 1
+// CHECK_HIP_HOST: #define __AMD__ 1
 
 // Begin avr tests ----------------
 

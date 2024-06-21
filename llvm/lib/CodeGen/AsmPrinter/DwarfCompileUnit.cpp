@@ -32,6 +32,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MachineLocation.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -41,6 +42,20 @@
 #include <utility>
 
 using namespace llvm;
+
+/// Query value using AddLinkageNamesToDeclCallOriginsForTuning.
+cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
+    "add-linkage-names-to-declaration-call-origins", cl::Hidden,
+    cl::desc("Add DW_AT_linkage_name to function declaration DIEs "
+             "referenced by DW_AT_call_origin attributes. Enabled by default "
+             "for -gsce debugger tuning."));
+
+static bool AddLinkageNamesToDeclCallOriginsForTuning(const DwarfDebug *DD) {
+  bool EnabledByDefault = DD->tuneForSCE();
+  if (EnabledByDefault)
+    return AddLinkageNamesToDeclCallOrigins != cl::boolOrDefault::BOU_FALSE;
+  return AddLinkageNamesToDeclCallOrigins == cl::boolOrDefault::BOU_TRUE;
+}
 
 static dwarf::Tag GetCompileUnitType(UnitKind Kind, DwarfDebug *DW) {
 
@@ -594,9 +609,10 @@ void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
     return;
 
   // Emit lexical blocks.
-  DIE *ScopeDIE = getOrCreateLexicalBlockDIE(Scope, ParentScopeDIE);
+  DIE *ScopeDIE = constructLexicalScopeDIE(Scope);
   assert(ScopeDIE && "Scope DIE should not be null.");
 
+  ParentScopeDIE.addChild(ScopeDIE);
   createAndAddScopeChildren(Scope, *ScopeDIE);
 }
 
@@ -717,39 +733,24 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
   return ScopeDIE;
 }
 
-DIE *DwarfCompileUnit::getOrCreateLexicalBlockDIE(LexicalScope *Scope,
-                                                  DIE &ParentScopeDIE) {
+// Construct new DW_TAG_lexical_block for this scope and attach
+// DW_AT_low_pc/DW_AT_high_pc labels.
+DIE *DwarfCompileUnit::constructLexicalScopeDIE(LexicalScope *Scope) {
   if (DD->isLexicalScopeDIENull(Scope))
     return nullptr;
   const auto *DS = Scope->getScopeNode();
-  DIE *ScopeDIE = nullptr;
 
-  // FIXME: We may have a concrete DIE for this scope already created.
-  // This may happen when we emit local variables for an abstract tree of
-  // an inlined function: if a local variable has a templated type with
-  // a function-local type as a template parameter. See PR55680 for details
-  // (see also llvm/test/DebugInfo/Generic/local-type-as-template-parameter.ll).
-  if (!Scope->isAbstractScope() && !Scope->getInlinedAt()) {
-    if (auto It = LexicalBlockDIEs.find(DS); It != LexicalBlockDIEs.end()) {
-      ScopeDIE = It->second;
-      assert(!ScopeDIE->findAttribute(dwarf::DW_AT_low_pc) &&
-             !ScopeDIE->findAttribute(dwarf::DW_AT_ranges));
-      assert(ScopeDIE->getParent() == &ParentScopeDIE);
-    }
+  auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block);
+  if (Scope->isAbstractScope()) {
+    assert(!getAbstractScopeDIEs().count(DS) &&
+           "Abstract DIE for this scope exists!");
+    getAbstractScopeDIEs()[DS] = ScopeDIE;
+    return ScopeDIE;
   }
-  if (!ScopeDIE) {
-    ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_lexical_block);
-    ParentScopeDIE.addChild(ScopeDIE);
-
-    if (Scope->isAbstractScope()) {
-      assert(!getAbstractScopeDIEs().count(DS) &&
-             "Abstract DIE for this scope exists!");
-      getAbstractScopeDIEs()[DS] = ScopeDIE;
-      return ScopeDIE;
-    }
-
-    if (!Scope->getInlinedAt())
-      LexicalBlockDIEs[DS] = ScopeDIE;
+  if (!Scope->getInlinedAt()) {
+    assert(!LexicalBlockDIEs.count(DS) &&
+           "Concrete out-of-line DIE for this scope exists!");
+    LexicalBlockDIEs[DS] = ScopeDIE;
   }
 
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());
@@ -1274,6 +1275,12 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
   } else {
     DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
+    if (AddLinkageNamesToDeclCallOriginsForTuning(DD) &&
+        !CalleeSP->isDefinition() &&
+        !CalleeDIE->findAttribute(dwarf::DW_AT_linkage_name)) {
+      addLinkageName(*CalleeDIE, CalleeSP->getLinkageName());
+    }
+
     addDIEEntry(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_origin),
                 *CalleeDIE);
   }
@@ -1532,8 +1539,8 @@ void DwarfCompileUnit::addGlobalNameForTypeUnit(StringRef Name,
 }
 
 /// Add a new global type to the unit.
-void DwarfCompileUnit::addGlobalType(const DIType *Ty, const DIE &Die,
-                                     const DIScope *Context) {
+void DwarfCompileUnit::addGlobalTypeImpl(const DIType *Ty, const DIE &Die,
+                                         const DIScope *Context) {
   if (!hasDwarfPubSections())
     return;
   std::string FullName = getParentContextString(Context) + Ty->getName().str();
@@ -1712,21 +1719,15 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
   }
 }
 
-DIE *DwarfCompileUnit::getLocalContextDIE(const DILexicalBlock *LB) {
+DIE *DwarfCompileUnit::getLexicalBlockDIE(const DILexicalBlock *LB) {
   // Assume if there is an abstract tree all the DIEs are already emitted.
   bool isAbstract = getAbstractScopeDIEs().count(LB->getSubprogram());
   if (isAbstract && getAbstractScopeDIEs().count(LB))
     return getAbstractScopeDIEs()[LB];
   assert(!isAbstract && "Missed lexical block DIE in abstract tree!");
 
-  // Check if we have a concrete DIE.
-  if (auto It = LexicalBlockDIEs.find(LB); It != LexicalBlockDIEs.end())
-    return It->second;
-
-  // If nothing available found, we cannot just create a new lexical block,
-  // because it isn't known where to put it into the DIE tree.
-  // So, we may only try to find the most close avaiable parent DIE.
-  return getOrCreateContextDIE(LB->getScope()->getNonLexicalBlockFileScope());
+  // Return a concrete DIE if it exists or nullptr otherwise.
+  return LexicalBlockDIEs.lookup(LB);
 }
 
 DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
@@ -1734,7 +1735,7 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
     if (auto *LFScope = dyn_cast<DILexicalBlockFile>(Context))
       Context = LFScope->getNonLexicalBlockFileScope();
     if (auto *LScope = dyn_cast<DILexicalBlock>(Context))
-      return getLocalContextDIE(LScope);
+      return getLexicalBlockDIE(LScope);
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);

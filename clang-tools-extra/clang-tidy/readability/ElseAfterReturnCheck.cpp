@@ -113,7 +113,7 @@ static bool containsDeclInScope(const Stmt *Node) {
 }
 
 static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
-                           const Stmt *Else, SourceLocation ElseLoc) {
+                                  const Stmt *Else, SourceLocation ElseLoc) {
   auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
   };
@@ -172,7 +172,7 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
       breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
   Finder->addMatcher(
       compoundStmt(
-          forEach(ifStmt(unless(isConstexpr()),
+          forEach(ifStmt(unless(isConstexpr()), unless(isConsteval()),
                          hasThen(stmt(
                              anyOf(InterruptsControlFlow,
                                    compoundStmt(has(InterruptsControlFlow))))),
@@ -231,7 +231,7 @@ static StringRef getControlFlowString(const Stmt &Stmt) {
     return "break";
   if (isa<CXXThrowExpr>(Stmt))
     return "throw";
-  llvm_unreachable("Unknown control flow interruptor");
+  llvm_unreachable("Unknown control flow interrupter");
 }
 
 void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
@@ -247,12 +247,12 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   bool IsLastInScope = OuterScope->body_back() == If;
-  StringRef ControlFlowInterruptor = getControlFlowString(*Interrupt);
+  const StringRef ControlFlowInterrupter = getControlFlowString(*Interrupt);
 
   if (!IsLastInScope && containsDeclInScope(Else)) {
     if (WarnOnUnfixable) {
       // Warn, but don't attempt an autofix.
-      diag(ElseLoc, WarningMessage) << ControlFlowInterruptor;
+      diag(ElseLoc, WarningMessage) << ControlFlowInterrupter;
     }
     return;
   }
@@ -264,7 +264,7 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       // If the if statement is the last statement of its enclosing statements
       // scope, we can pull the decl out of the if statement.
       DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterruptor
+                               << ControlFlowInterrupter
                                << SourceRange(ElseLoc);
       if (checkInitDeclUsageInElse(If) != nullptr) {
         Diag << tooling::fixit::createReplacement(
@@ -288,7 +288,7 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
     } else if (WarnOnUnfixable) {
       // Warn, but don't attempt an autofix.
-      diag(ElseLoc, WarningMessage) << ControlFlowInterruptor;
+      diag(ElseLoc, WarningMessage) << ControlFlowInterrupter;
     }
     return;
   }
@@ -300,7 +300,7 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       // If the if statement is the last statement of its enclosing statements
       // scope, we can pull the decl out of the if statement.
       DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterruptor
+                               << ControlFlowInterrupter
                                << SourceRange(ElseLoc);
       Diag << tooling::fixit::createReplacement(
                   SourceRange(If->getIfLoc()),
@@ -312,13 +312,13 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
       removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
     } else if (WarnOnUnfixable) {
       // Warn, but don't attempt an autofix.
-      diag(ElseLoc, WarningMessage) << ControlFlowInterruptor;
+      diag(ElseLoc, WarningMessage) << ControlFlowInterrupter;
     }
     return;
   }
 
   DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                           << ControlFlowInterruptor << SourceRange(ElseLoc);
+                           << ControlFlowInterrupter << SourceRange(ElseLoc);
   removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
 }
 

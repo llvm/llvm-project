@@ -86,6 +86,9 @@ namespace CallingConv {
     /// their stack.
     SwiftTail = 20,
 
+    /// Used for runtime calls that preserves none general registers.
+    PreserveNone = 21,
+
     /// This is the start of the target-specific calling conventions, e.g.
     /// fastcall and thiscall on X86.
     FirstTargetCC = 64,
@@ -250,6 +253,22 @@ namespace CallingConv {
 
     /// Used by GraalVM. Two additional registers are reserved.
     GRAAL = 107,
+
+    /// Calling convention used in the ARM64EC ABI to implement calls between
+    /// x64 code and thunks. This is basically the x64 calling convention using
+    /// ARM64 register names. The first parameter is mapped to x9.
+    ARM64EC_Thunk_X64 = 108,
+
+    /// Calling convention used in the ARM64EC ABI to implement calls between
+    /// ARM64 code and thunks. This is just the ARM64 calling convention,
+    /// except that the first parameter is mapped to x9.
+    ARM64EC_Thunk_Native = 109,
+
+    /// Calling convention used for RISC-V V-extension.
+    RISCV_VectorCall = 110,
+
+    /// Preserve X1-X15, X19-X29, SP, Z0-Z31, P0-P15.
+    AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 = 111,
 
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023

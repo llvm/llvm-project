@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.module(func.func(canonicalize))' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.module(func.func(canonicalize{region-simplify=aggressive}))' | FileCheck %s
 
 // Test case: Simple case of deleting a dead pure op.
 
@@ -77,15 +77,15 @@ func.func @f(%arg0: f32, %pred: i1) {
 
 // Test case: Recursively DCE into enclosed regions.
 
-// CHECK:      func @f(%arg0: f32)
-// CHECK-NEXT:   func @g(%arg1: f32)
-// CHECK-NEXT:     return
+// CHECK:      func.func @f(%arg0: f32)
+// CHECK-NOT:     arith.addf
 
 func.func @f(%arg0: f32) {
-  func.func @g(%arg1: f32) {
-    %0 = "arith.addf"(%arg1, %arg1) : (f32, f32) -> f32
-    return
-  }
+  "test.region"() (
+    {
+      %0 = "arith.addf"(%arg0, %arg0) : (f32, f32) -> f32
+    }
+  ) : () -> ()
   return
 }
 

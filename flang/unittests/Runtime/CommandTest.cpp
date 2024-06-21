@@ -233,7 +233,7 @@ protected:
 };
 
 #if _WIN32 || _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || \
-    _SVID_SOURCE || _POSIX_SOURCE
+    _SVID_SOURCE || defined(_POSIX_SOURCE)
 TEST_F(NoArgv, FdateGetDate) {
   char input[]{"24LengthCharIsJustRight"};
   const std::size_t charLen = sizeof(input);
@@ -311,16 +311,16 @@ TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
 TEST_F(ZeroArguments, ECLValidCommandAndPadSync) {
   OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
   bool wait{true};
-  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
-  OwningPtr<Descriptor> cmdStat{EmptyIntDescriptor()};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
 
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
   std::string spaces(cmdMsg->ElementBytes(), ' ');
-  CheckDescriptorEqInt(exitStat.get(), 0);
-  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
@@ -334,45 +334,96 @@ TEST_F(ZeroArguments, ECLValidCommandStatusSetSync) {
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
-  CheckDescriptorEqInt(exitStat.get(), 0);
-  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
-TEST_F(ZeroArguments, ECLInvalidCommandErrorSync) {
-  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+TEST_F(ZeroArguments, ECLGeneralErrorCommandErrorSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("cat GeneralErrorCommand")};
   bool wait{true};
   OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
-  OwningPtr<Descriptor> cmdMsg{CharDescriptor("Message ChangedXXXXXXXXX")};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("cmd msg buffer XXXXXXXXXXXXXX")};
 
   RTNAME(ExecuteCommandLine)
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 #ifdef _WIN32
-  CheckDescriptorEqInt(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
+  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXXXX");
 #else
-  CheckDescriptorEqInt(exitStat.get(), 127);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 3);
+  CheckDescriptorEqStr(cmdMsg.get(), "Command line execution failed");
 #endif
-  CheckDescriptorEqInt(cmdStat.get(), 3);
-  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXX");
+}
+
+TEST_F(ZeroArguments, ECLNotExecutedCommandErrorSync) {
+  OwningPtr<Descriptor> command{CharDescriptor(
+      "touch NotExecutedCommandFile && chmod -x NotExecutedCommandFile && "
+      "./NotExecutedCommandFile")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("cmd msg buffer XXXXXXXX")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+#ifdef _WIN32
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
+  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXX");
+#else
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 126);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 4);
+  CheckDescriptorEqStr(cmdMsg.get(), "Command cannot be execu");
+  // removing the file only on Linux (file is not created on Win)
+  OwningPtr<Descriptor> commandClean{
+      CharDescriptor("rm -f NotExecutedCommandFile")};
+  OwningPtr<Descriptor> cmdMsgNoErr{CharDescriptor("No Error")};
+  RTNAME(ExecuteCommandLine)
+  (*commandClean.get(), wait, exitStat.get(), cmdStat.get(), cmdMsgNoErr.get());
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+  CheckDescriptorEqStr(cmdMsgNoErr.get(), "No Error");
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
+#endif
+}
+
+TEST_F(ZeroArguments, ECLNotFoundCommandErrorSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("NotFoundCommand")};
+  bool wait{true};
+  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  OwningPtr<Descriptor> cmdMsg{CharDescriptor("unmodified buffer XXXXXXXXX")};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
+#ifdef _WIN32
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 6);
+  CheckDescriptorEqStr(cmdMsg.get(), "Invalid command lineXXXXXXX");
+#else
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 5);
+  CheckDescriptorEqStr(cmdMsg.get(), "Command not found with exit");
+#endif
 }
 
 TEST_F(ZeroArguments, ECLInvalidCommandTerminatedSync) {
   OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
   bool wait{true};
-  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No Change")};
 
 #ifdef _WIN32
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
-                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
+                   *command.get(), wait, nullptr, nullptr, cmdMsg.get()),
       "Invalid command quit with exit status code: 1");
 #else
   EXPECT_DEATH(RTNAME(ExecuteCommandLine)(
-                   *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()),
-      "Invalid command quit with exit status code: 127");
+                   *command.get(), wait, nullptr, nullptr, cmdMsg.get()),
+      "Command not found with exit code: 127.");
 #endif
-  CheckDescriptorEqInt(exitStat.get(), 404);
   CheckDescriptorEqStr(cmdMsg.get(), "No Change");
 }
 
@@ -387,21 +438,90 @@ TEST_F(ZeroArguments, ECLValidCommandAndExitStatNoChangeAndCMDStatusSetAsync) {
   (*command.get(), wait, exitStat.get(), cmdStat.get(), cmdMsg.get());
 
   CheckDescriptorEqInt(exitStat.get(), 404);
-  CheckDescriptorEqInt(cmdStat.get(), 0);
+  CheckDescriptorEqInt<std::int64_t>(cmdStat.get(), 0);
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
 }
 
 TEST_F(ZeroArguments, ECLInvalidCommandParentNotTerminatedAsync) {
   OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
   bool wait{false};
-  OwningPtr<Descriptor> exitStat{IntDescriptor(404)};
   OwningPtr<Descriptor> cmdMsg{CharDescriptor("No change")};
 
   EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
-      *command.get(), wait, exitStat.get(), nullptr, cmdMsg.get()));
-
-  CheckDescriptorEqInt(exitStat.get(), 404);
+      *command.get(), wait, nullptr, nullptr, cmdMsg.get()));
   CheckDescriptorEqStr(cmdMsg.get(), "No change");
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectSync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), false, nullptr, nullptr, nullptr));
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), true, nullptr, nullptr, nullptr));
+}
+
+TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectAsync) {
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), false, nullptr, nullptr, nullptr));
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), false, nullptr, nullptr, nullptr));
+}
+
+TEST_F(ZeroArguments, SystemValidCommandExitStat) {
+  // envrionment setup for SYSTEM from EXECUTE_COMMAND_LINE runtime
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  bool wait{true};
+  // setup finished
+
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), nullptr);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+}
+
+TEST_F(ZeroArguments, SystemInvalidCommandExitStat) {
+  // envrionment setup for SYSTEM from EXECUTE_COMMAND_LINE runtime
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  bool wait{true};
+  // setup finished
+
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), nullptr);
+#ifdef _WIN32
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+#else
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
+#endif
+}
+
+TEST_F(ZeroArguments, SystemValidCommandOptionalExitStat) {
+  // envrionment setup for SYSTEM from EXECUTE_COMMAND_LINE runtime
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  bool wait{true};
+  // setup finished
+
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), wait, nullptr, cmdStat.get(), nullptr));
+}
+
+TEST_F(ZeroArguments, SystemInvalidCommandOptionalExitStat) {
+  // envrionment setup for SYSTEM from EXECUTE_COMMAND_LINE runtime
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  bool wait{true};
+  // setup finished
+
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), wait, nullptr, cmdStat.get(), nullptr););
 }
 
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
@@ -681,10 +801,7 @@ TEST_F(EnvironmentVariables, ErrMsgTooShort) {
 TEST_F(EnvironmentVariables, GetlogGetName) {
   const int charLen{3};
   char input[charLen]{"\0\0"};
-
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
-
+  FORTRAN_PROCEDURE_NAME(getlog)(input, charLen);
   EXPECT_NE(input[0], '\0');
 }
 
@@ -699,11 +816,8 @@ TEST_F(EnvironmentVariables, GetlogPadSpace) {
   if (charLen == -1)
     charLen = _POSIX_LOGIN_NAME_MAX + 2;
 #endif
-  char input[charLen];
-
-  FORTRAN_PROCEDURE_NAME(getlog)
-  (reinterpret_cast<std::byte *>(input), charLen);
-
+  std::vector<char> input(charLen);
+  FORTRAN_PROCEDURE_NAME(getlog)(input.data(), charLen);
   EXPECT_EQ(input[charLen - 1], ' ');
 }
 #endif
@@ -715,8 +829,7 @@ TEST_F(EnvironmentVariables, GetlogEnvGetName) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginName");
   }
@@ -728,8 +841,7 @@ TEST_F(EnvironmentVariables, GetlogEnvBufferShort) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginN");
   }
@@ -741,8 +853,7 @@ TEST_F(EnvironmentVariables, GetlogEnvPadSpace) {
         << "Environment variable USERNAME does not exist";
 
     char input[]{"XXXXXXXXXX"};
-    FORTRAN_PROCEDURE_NAME(getlog)
-    (reinterpret_cast<std::byte *>(input), sizeof(input));
+    FORTRAN_PROCEDURE_NAME(getlog)(input, sizeof(input));
 
     CheckCharEqStr(input, "loginName ");
   }

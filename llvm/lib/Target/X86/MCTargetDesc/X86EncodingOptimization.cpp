@@ -52,8 +52,8 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
   case X86::VCMPPDYrri:
   case X86::VCMPPSrri:
   case X86::VCMPPSYrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr: {
+  case X86::VCMPSDrri:
+  case X86::VCMPSSrri: {
     switch (MI.getOperand(3).getImm() & 0x7) {
     default:
       return false;
@@ -106,6 +106,12 @@ bool X86::optimizeShiftRotateWithImmediateOne(MCInst &MI) {
 #define TO_IMM1(FROM)                                                          \
   case X86::FROM##i:                                                           \
     NewOpc = X86::FROM##1;                                                     \
+    break;                                                                     \
+  case X86::FROM##i_EVEX:                                                      \
+    NewOpc = X86::FROM##1_EVEX;                                                \
+    break;                                                                     \
+  case X86::FROM##i_ND:                                                        \
+    NewOpc = X86::FROM##1_ND;                                                  \
     break;
   switch (MI.getOpcode()) {
   default:
@@ -118,6 +124,31 @@ bool X86::optimizeShiftRotateWithImmediateOne(MCInst &MI) {
     TO_IMM1(RCL16r)
     TO_IMM1(RCL32r)
     TO_IMM1(RCL64r)
+    TO_IMM1(RCR8m)
+    TO_IMM1(RCR16m)
+    TO_IMM1(RCR32m)
+    TO_IMM1(RCR64m)
+    TO_IMM1(RCL8m)
+    TO_IMM1(RCL16m)
+    TO_IMM1(RCL32m)
+    TO_IMM1(RCL64m)
+#undef TO_IMM1
+#define TO_IMM1(FROM)                                                          \
+  case X86::FROM##i:                                                           \
+    NewOpc = X86::FROM##1;                                                     \
+    break;                                                                     \
+  case X86::FROM##i_EVEX:                                                      \
+    NewOpc = X86::FROM##1_EVEX;                                                \
+    break;                                                                     \
+  case X86::FROM##i_NF:                                                        \
+    NewOpc = X86::FROM##1_NF;                                                  \
+    break;                                                                     \
+  case X86::FROM##i_ND:                                                        \
+    NewOpc = X86::FROM##1_ND;                                                  \
+    break;                                                                     \
+  case X86::FROM##i_NF_ND:                                                     \
+    NewOpc = X86::FROM##1_NF_ND;                                               \
+    break;
     TO_IMM1(ROR8r)
     TO_IMM1(ROR16r)
     TO_IMM1(ROR32r)
@@ -138,14 +169,6 @@ bool X86::optimizeShiftRotateWithImmediateOne(MCInst &MI) {
     TO_IMM1(SHL16r)
     TO_IMM1(SHL32r)
     TO_IMM1(SHL64r)
-    TO_IMM1(RCR8m)
-    TO_IMM1(RCR16m)
-    TO_IMM1(RCR32m)
-    TO_IMM1(RCR64m)
-    TO_IMM1(RCL8m)
-    TO_IMM1(RCL16m)
-    TO_IMM1(RCL32m)
-    TO_IMM1(RCL64m)
     TO_IMM1(ROR8m)
     TO_IMM1(ROR16m)
     TO_IMM1(ROR32m)

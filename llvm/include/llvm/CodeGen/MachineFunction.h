@@ -18,7 +18,6 @@
 #define LLVM_CODEGEN_MACHINEFUNCTION_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,6 +33,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Target/TargetOptions.h"
+#include <bitset>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -217,22 +217,21 @@ public:
   }
 
   MachineFunctionProperties &reset(const MachineFunctionProperties &MFP) {
-    Properties.reset(MFP.Properties);
+    Properties &= ~MFP.Properties;
     return *this;
   }
 
   // Returns true if all properties set in V (i.e. required by a pass) are set
   // in this.
   bool verifyRequiredProperties(const MachineFunctionProperties &V) const {
-    return !V.Properties.test(Properties);
+    return (Properties | ~V.Properties).all();
   }
 
   /// Print the MachineFunctionProperties in human-readable form.
   void print(raw_ostream &OS) const;
 
 private:
-  BitVector Properties =
-      BitVector(static_cast<unsigned>(Property::LastProperty)+1);
+  std::bitset<static_cast<unsigned>(Property::LastProperty) + 1> Properties;
 };
 
 struct SEHHandler {
@@ -481,9 +480,11 @@ public:
       assert(Arg < (1 << 16) && "Arg out of range");
     }
   };
-  /// Vector of call argument and its forwarding register.
-  using CallSiteInfo = SmallVector<ArgRegPair, 1>;
-  using CallSiteInfoImpl = SmallVectorImpl<ArgRegPair>;
+
+  struct CallSiteInfo {
+    /// Vector of call argument and its forwarding register.
+    SmallVector<ArgRegPair, 1> ArgRegPairs;
+  };
 
 private:
   Delegate *TheDelegate = nullptr;
@@ -1026,18 +1027,27 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
-      Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
-      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
-
-  MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
       Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
       const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
+    return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
+                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                FailureOrdering);
+  }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, adjusting by an offset and using the given size.
@@ -1046,9 +1056,17 @@ public:
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           int64_t Offset, LLT Ty);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
-                                          int64_t Offset, uint64_t Size) {
+                                          int64_t Offset, LocationSize Size) {
     return getMachineMemOperand(
-        MMO, Offset, Size == ~UINT64_C(0) ? LLT() : LLT::scalar(8 * Size));
+        MMO, Offset,
+        !Size.hasValue() ? LLT()
+        : Size.isScalable()
+            ? LLT::scalable_vector(1, 8 * Size.getValue().getKnownMinValue())
+            : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
+  }
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          int64_t Offset, uint64_t Size) {
+    return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
   }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
@@ -1057,10 +1075,15 @@ public:
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
-                                          uint64_t Size);
+                                          LocationSize Size);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
                                           LLT Ty);
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          const MachinePointerInfo &PtrInfo,
+                                          uint64_t Size) {
+    return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
+  }
 
   /// Allocate a new MachineMemOperand by copying an existing one,
   /// replacing only AliasAnalysis information. MachineMemOperands are owned
@@ -1101,7 +1124,8 @@ public:
   MachineInstr::ExtraInfo *createMIExtraInfo(
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
       MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
-      MDNode *PCSections = nullptr, uint32_t CFIType = 0);
+      MDNode *PCSections = nullptr, uint32_t CFIType = 0,
+      MDNode *MMRAs = nullptr);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);
@@ -1323,8 +1347,7 @@ public:
   }
 
   /// Start tracking the arguments passed to the call \p CallI.
-  void addCallArgsForwardingRegs(const MachineInstr *CallI,
-                                 CallSiteInfoImpl &&CallInfo) {
+  void addCallSiteInfo(const MachineInstr *CallI, CallSiteInfo &&CallInfo) {
     assert(CallI->isCandidateForCallSiteEntry());
     bool Inserted =
         CallSitesInfo.try_emplace(CallI, std::move(CallInfo)).second;
@@ -1423,9 +1446,7 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 };
 
-class MachineFunctionAnalysisManager;
-void verifyMachineFunction(MachineFunctionAnalysisManager *,
-                           const std::string &Banner,
+void verifyMachineFunction(const std::string &Banner,
                            const MachineFunction &MF);
 
 } // end namespace llvm

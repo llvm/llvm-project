@@ -210,6 +210,10 @@ def : Flag<["-"], "t">, Alias<syms>, HelpText<"Alias for --syms">;
 def symbolize_operands : Flag<["--"], "symbolize-operands">,
   HelpText<"Symbolize instruction operands when disassembling">;
 
+def pretty_pgo_analysis_map : Flag<["--"], "pretty-pgo-analysis-map">,
+                              HelpText<"Display PGO analysis values with "
+                                       "formatting rather than raw numbers">;
+
 def dynamic_syms : Flag<["--"], "dynamic-syms">,
   HelpText<"Display the contents of the dynamic symbol table">;
 def : Flag<["-"], "T">, Alias<dynamic_syms>,

@@ -4,7 +4,7 @@ function(add_macro_header name)
     "MACRO_HEADER"
     "" # Optional arguments
     "HDR" # Single value arguments
-    "" # Multi-value arguments
+    "DEPENDS" # Multi-value arguments
     ${ARGN}
   )
   if(TARGET libc.include.llvm-libc-macros.${LIBC_TARGET_OS}.${name})
@@ -14,12 +14,15 @@ function(add_macro_header name)
         ${MACRO_HEADER_HDR}
       DEPENDS
         .${LIBC_TARGET_OS}.${name}
+        ${MACRO_HEADER_DEPENDS}
     )
   else()
     add_header(
       ${name}
       HDR
         ${MACRO_HEADER_HDR}
+      DEPENDS
+        ${MACRO_HEADER_DEPENDS}
     )
   endif()
 endfunction(add_macro_header)
@@ -27,6 +30,18 @@ endfunction(add_macro_header)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
+
+add_macro_header(
+  assert_macros
+  HDR
+    assert-macros.h
+)
+
+add_macro_header(
+  error_number_macros
+  HDR
+    error-number-macros.h
+)
 
 add_macro_header(
   generic_error_number_macros
@@ -65,9 +80,49 @@ add_macro_header(
 )
 
 add_macro_header(
+  stdint_macros
+  HDR
+    stdint-macros.h
+)
+
+add_macro_header(
+  float_macros
+  HDR
+    float-macros.h
+)
+
+add_macro_header(
+  float16_macros
+  HDR
+    float16-macros.h
+)
+
+add_macro_header(
+  limits_macros
+  HDR
+    limits-macros.h
+)
+
+add_macro_header(
   math_macros
   HDR
     math-macros.h
+  DEPENDS
+    .limits_macros
+)
+
+add_macro_header(
+  offsetof_macro
+  HDR
+    offsetof-macro.h
+)
+
+add_macro_header(
+  containerof_macro
+  HDR
+    containerof-macro.h
+  DEPENDS
+    .offsetof_macro
 )
 
 add_macro_header(
@@ -80,6 +135,12 @@ add_macro_header(
   signal_macros
   HDR
     signal-macros.h
+)
+
+add_macro_header(
+  stdbit_macros
+  HDR
+    stdbit-macros.h
 )
 
 add_macro_header(
@@ -101,6 +162,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_epoll_macros
+  HDR
+    sys-epoll-macros.h
+)
+
+add_macro_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
@@ -116,6 +183,15 @@ add_macro_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
+)
+
+add_macro_header(
+  sys_queue_macros
+  HDR
+    sys-queue-macros.h
+  DEPENDS
+    .null_macro
+    .containerof_macro
 )
 
 add_macro_header(
@@ -176,4 +252,22 @@ add_macro_header(
   wchar_macros
   HDR
     wchar-macros.h
+)
+
+add_macro_header(
+  inttypes_macros
+  HDR
+    inttypes-macros.h
+)
+
+add_macro_header(
+  stdfix_macros
+  HDR
+    stdfix-macros.h
+)
+
+add_macro_header(
+  stdckdint_macros
+  HDR
+    stdckdint-macros.h
 )

@@ -6,6 +6,10 @@
 ; If we import func1 and not func2 we should only link DISubprogram for func1
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=func1:%t.bc -S | FileCheck %s
 
+;; Repeat runlines using "new" debuginfo iterators mode.
+; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc --try-experimental-debuginfo-iterators
+; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=func1:%t.bc -S --try-experimental-debuginfo-iterators | FileCheck %s
+
 ; CHECK: declare i32 @func2
 ; CHECK: define available_externally i32 @func1
 

@@ -59,6 +59,7 @@ FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *
 createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
+ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
 
@@ -80,7 +81,7 @@ struct AMDGPUUseNativeCallsPass : PassInfoMixin<AMDGPUUseNativeCallsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-void initializeAMDGPUDAGToDAGISelPass(PassRegistry&);
+void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
 
 void initializeAMDGPUMachineCFGStructurizerPass(PassRegistry&);
 extern char &AMDGPUMachineCFGStructurizerID;
@@ -136,6 +137,18 @@ struct AMDGPULowerModuleLDSPass : PassInfoMixin<AMDGPULowerModuleLDSPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+void initializeAMDGPULowerBufferFatPointersPass(PassRegistry &);
+extern char &AMDGPULowerBufferFatPointersID;
+
+struct AMDGPULowerBufferFatPointersPass
+    : PassInfoMixin<AMDGPULowerBufferFatPointersPass> {
+  AMDGPULowerBufferFatPointersPass(const TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  const TargetMachine &TM;
+};
+
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
 
@@ -165,6 +178,9 @@ extern char &SILowerI1CopiesID;
 
 void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
 extern char &AMDGPUGlobalISelDivergenceLoweringID;
+
+void initializeAMDGPUMarkLastScratchLoadPass(PassRegistry &);
+extern char &AMDGPUMarkLastScratchLoadID;
 
 void initializeSILowerSGPRSpillsPass(PassRegistry &);
 extern char &SILowerSGPRSpillsID;

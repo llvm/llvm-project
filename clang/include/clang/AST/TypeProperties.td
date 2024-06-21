@@ -25,6 +25,25 @@ let Class = PointerType in {
   def : Creator<[{ return ctx.getPointerType(pointeeType); }]>;
 }
 
+let Class = CountAttributedType in {
+  def : Property<"WrappedTy", QualType> {
+    let Read = [{ node->desugar() }];
+  }
+  def : Property<"CountExpr", ExprRef> {
+    let Read = [{ node->getCountExpr() }];
+  }
+  def : Property<"CountInBytes", Bool> {
+    let Read = [{ node->isCountInBytes() }];
+  }
+  def : Property<"OrNull", Bool> {
+    let Read = [{ node->isOrNull() }];
+  }
+  def : Property<"CoupledDecls", Array<TypeCoupledDeclRefInfo>> {
+    let Read = [{ node->getCoupledDecls() }];
+  }
+  def : Creator<[{ return ctx.getCountAttributedType(WrappedTy, CountExpr, CountInBytes, OrNull, CoupledDecls); }]>;
+}
+
 let Class = AdjustedType in {
   def : Property<"originalType", QualType> {
     let Read = [{ node->getOriginalType() }];
@@ -115,6 +134,13 @@ let Class = ConstantArrayType in {
                                     sizeModifier,
                                     indexQualifiers.getCVRQualifiers());
   }]>;
+}
+
+let Class = ArrayParameterType in {
+  def : Creator<[{ return ctx.getAdjustedParameterType(
+                              ctx.getConstantArrayType(elementType,sizeValue,
+                                    size,sizeModifier,
+                                    indexQualifiers.getCVRQualifiers())); }]>;
 }
 
 let Class = IncompleteArrayType in {
@@ -432,6 +458,20 @@ let Class = DecltypeType in {
     return ctx.getDecltypeType(expression, underlyingType);
   }]>;
 }
+
+let Class = PackIndexingType in {
+  def : Property<"pattern", QualType> {
+    let Read = [{ node->getPattern() }];
+  }
+  def : Property<"indexExpression", ExprRef> {
+    let Read = [{ node->getIndexExpr() }];
+  }
+
+  def : Creator<[{
+    return ctx.getPackIndexingType(pattern, indexExpression);
+  }]>;
+}
+
 
 let Class = UnaryTransformType in {
   def : Property<"baseType", QualType> {
@@ -820,6 +860,10 @@ let Class = BuiltinType in {
 #define WASM_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+
+#define AMDGPU_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/AMDGPUTypes.def"
 
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;

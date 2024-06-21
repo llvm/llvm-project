@@ -17,6 +17,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -39,64 +40,8 @@ MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
       SectionOrder.push_back(&Sec);
 }
 
-bool MCAsmLayout::isFragmentValid(const MCFragment *F) const {
-  const MCSection *Sec = F->getParent();
-  const MCFragment *LastValid = LastValidFragment.lookup(Sec);
-  if (!LastValid)
-    return false;
-  assert(LastValid->getParent() == Sec);
-  return F->getLayoutOrder() <= LastValid->getLayoutOrder();
-}
-
-bool MCAsmLayout::canGetFragmentOffset(const MCFragment *F) const {
-  MCSection *Sec = F->getParent();
-  MCSection::iterator I;
-  if (MCFragment *LastValid = LastValidFragment[Sec]) {
-    // Fragment already valid, offset is available.
-    if (F->getLayoutOrder() <= LastValid->getLayoutOrder())
-      return true;
-    I = ++MCSection::iterator(LastValid);
-  } else
-    I = Sec->begin();
-
-  // A fragment ordered before F is currently being laid out.
-  const MCFragment *FirstInvalidFragment = &*I;
-  if (FirstInvalidFragment->IsBeingLaidOut)
-    return false;
-
-  return true;
-}
-
 void MCAsmLayout::invalidateFragmentsFrom(MCFragment *F) {
-  // If this fragment wasn't already valid, we don't need to do anything.
-  if (!isFragmentValid(F))
-    return;
-
-  // Otherwise, reset the last valid fragment to the previous fragment
-  // (if this is the first fragment, it will be NULL).
-  LastValidFragment[F->getParent()] = F->getPrevNode();
-}
-
-void MCAsmLayout::ensureValid(const MCFragment *F) const {
-  MCSection *Sec = F->getParent();
-  MCSection::iterator I;
-  if (MCFragment *Cur = LastValidFragment[Sec])
-    I = ++MCSection::iterator(Cur);
-  else
-    I = Sec->begin();
-
-  // Advance the layout position until the fragment is valid.
-  while (!isFragmentValid(F)) {
-    assert(I != Sec->end() && "Layout bookkeeping error");
-    const_cast<MCAsmLayout *>(this)->layoutFragment(&*I);
-    ++I;
-  }
-}
-
-uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
-  ensureValid(F);
-  assert(F->Offset != ~UINT64_C(0) && "Address not set!");
-  return F->Offset;
+  F->getParent()->setHasLayout(false);
 }
 
 // Simple getSymbolOffset helper for the non-variable case.
@@ -197,7 +142,7 @@ const MCSymbol *MCAsmLayout::getBaseSymbol(const MCSymbol &Symbol) const {
 
 uint64_t MCAsmLayout::getSectionAddressSize(const MCSection *Sec) const {
   // The size is the last fragment's end offset.
-  const MCFragment &F = Sec->getFragmentList().back();
+  const MCFragment &F = *Sec->curFragList()->Tail;
   return getFragmentOffset(&F) + getAssembler().computeFragmentSize(*this, F);
 }
 
@@ -253,18 +198,16 @@ uint64_t llvm::computeBundlePadding(const MCAssembler &Assembler,
 
 /* *** */
 
-void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
-
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        MCSection *Parent)
-    : Parent(Parent), Atom(nullptr), Offset(~UINT64_C(0)), LayoutOrder(0),
-      Kind(Kind), IsBeingLaidOut(false), HasInstructions(HasInstructions) {
+    : Parent(Parent), Kind(Kind), HasInstructions(HasInstructions),
+      LinkerRelaxable(false) {
   if (Parent && !isa<MCDummyFragment>(*this))
-    Parent->getFragmentList().push_back(this);
+    Parent->addFragment(*this);
 }
 
 void MCFragment::destroy() {
-  // First check if we are the sentinal.
+  // First check if we are the sentinel.
   if (Kind == FragmentType(~0)) {
     delete this;
     return;
@@ -320,6 +263,10 @@ void MCFragment::destroy() {
       delete cast<MCDummyFragment>(this);
       return;
   }
+}
+
+const MCSymbol *MCFragment::getAtom() const {
+  return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
 }
 
 // Debugging methods

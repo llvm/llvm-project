@@ -42,6 +42,7 @@
 <header>Timeline</header>
 <template data-for="entry in timeline">
   <div id="{{entry.block}}:{{entry.iter}}" data-bb="{{entry.block}}" class="entry">
+    <span class="counter"></span>
     {{entry.block}}
     <template data-if="entry.post_visit">(post-visit)</template>
     <template data-if="!entry.post_visit">({{entry.iter}})</template>

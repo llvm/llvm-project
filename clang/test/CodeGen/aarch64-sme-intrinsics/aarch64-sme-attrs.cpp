@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme \
-// RUN:   -S -disable-O0-optnone -Werror -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +bf16 \
+// RUN:   -disable-O0-optnone -Werror -emit-llvm -o - %s \
 // RUN: | opt -S -passes=mem2reg \
 // RUN: | opt -S -passes=inline \
 // RUN: | FileCheck %s
@@ -12,8 +12,8 @@ extern int normal_callee();
 
 int streaming_decl(void) __arm_streaming;
 int streaming_compatible_decl(void) __arm_streaming_compatible;
-int shared_za_decl(void) __arm_shared_za;
-int preserves_za_decl(void) __arm_preserves_za;
+int shared_za_decl(void) __arm_inout("za");
+int preserves_za_decl(void) __arm_preserves("za");
 int private_za_decl(void);
 
 // == FUNCTION DEFINITIONS ==
@@ -78,7 +78,7 @@ __arm_locally_streaming int locally_streaming_callee() {
 // CHECK-SAME: #[[ZA_SHARED:[0-9]+]]
 // CHECK: call i32 @normal_callee()
 //
- int shared_za_caller() __arm_shared_za {
+ int shared_za_caller() __arm_inout("za") {
   return normal_callee();
 }
 
@@ -86,7 +86,7 @@ __arm_locally_streaming int locally_streaming_callee() {
 // CHECK-SAME: #[[ZA_SHARED]]
 // CHECK: call i32 @shared_za_decl() #[[ZA_SHARED_CALL:[0-9]+]]
 //
- int shared_za_callee() __arm_shared_za {
+ int shared_za_callee() __arm_inout("za") {
   return shared_za_decl();
 }
 
@@ -97,7 +97,7 @@ __arm_locally_streaming int locally_streaming_callee() {
 // CHECK-SAME: #[[ZA_PRESERVED:[0-9]+]]
 // CHECK: call i32 @normal_callee()
 //
- int preserves_za_caller() __arm_preserves_za {
+ int preserves_za_caller() __arm_preserves("za") {
   return normal_callee();
 }
 
@@ -105,7 +105,7 @@ __arm_locally_streaming int locally_streaming_callee() {
 // CHECK-SAME: #[[ZA_PRESERVED]]
 // CHECK: call i32 @preserves_za_decl() #[[ZA_PRESERVED_CALL:[0-9]+]]
 //
- int preserves_za_callee() __arm_preserves_za {
+ int preserves_za_callee() __arm_preserves("za") {
   return preserves_za_decl();
 }
 
@@ -116,7 +116,7 @@ __arm_locally_streaming int locally_streaming_callee() {
 // CHECK-SAME: #[[ZA_NEW:[0-9]+]]
 // CHECK: call i32 @normal_callee()
 //
-__arm_new_za int new_za_caller() {
+__arm_new("za") int new_za_caller() {
   return normal_callee();
 }
 
@@ -124,7 +124,7 @@ __arm_new_za int new_za_caller() {
 // CHECK-SAME: #[[ZA_NEW]]
 // CHECK: call i32 @private_za_decl()
 //
-__arm_new_za int new_za_callee() {
+__arm_new("za") int new_za_callee() {
   return private_za_decl();
 }
 
@@ -135,8 +135,8 @@ __arm_new_za int new_za_callee() {
 // and also to callsites.
 typedef void (*s_ptrty) (int, int) __arm_streaming;
 typedef void (*sc_ptrty) (int, int) __arm_streaming_compatible;
-typedef void (*sz_ptrty) (int, int) __arm_shared_za;
-typedef void (*pz_ptrty) (int, int) __arm_preserves_za;
+typedef void (*sz_ptrty) (int, int) __arm_inout("za");
+typedef void (*pz_ptrty) (int, int) __arm_preserves("za");
 
 // CHECK-LABEL: @test_streaming_ptrty(
 // CHECK-SAME: #[[NORMAL_DEF:[0-9]+]]
@@ -152,12 +152,12 @@ void test_streaming_compatible_ptrty(sc_ptrty f, int x, int y) { return f(x, y);
 // CHECK-SAME: #[[ZA_SHARED]]
 // CHECK: call void [[F:%.*]](i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ZA_SHARED_CALL]]
 //
-void  test_shared_za(sz_ptrty f, int x, int y) __arm_shared_za { return f(x, y); }
+void  test_shared_za(sz_ptrty f, int x, int y) __arm_inout("za") { return f(x, y); }
 // CHECK-LABEL: @test_preserved_za(
 // CHECK-SAME: #[[ZA_SHARED]]
 // CHECK: call void [[F:%.*]](i32 noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ZA_PRESERVED_CALL]]
 //
-void  test_preserved_za(pz_ptrty f, int x, int y) __arm_shared_za { return f(x, y); }
+void  test_preserved_za(pz_ptrty f, int x, int y) __arm_inout("za") { return f(x, y); }
 
 // CHECK-LABEL: @test_indirect_streaming_ptrty(
 // CHECK-SAME: #[[NORMAL_DEF:[0-9]+]]
@@ -255,7 +255,7 @@ int call() { return 0; }
 
 template <typename T, typename... Other>
 __attribute__((always_inline))
-int call(T f, Other... other) __arm_shared_za {
+int call(T f, Other... other) __arm_inout("za") {
     return f() + call(other...);
 }
 
@@ -270,7 +270,7 @@ int call(T f, Other... other) __arm_shared_za {
 // CHECK-NEXT: add nsw
 // CHECK-NEXT: add nsw
 // CHECK-NEXT: ret
-int test_variadic_template() __arm_shared_za {
+int test_variadic_template() __arm_inout("za") {
   return call(normal_callee,
               streaming_decl,
               streaming_compatible_decl,
@@ -284,20 +284,20 @@ int test_variadic_template() __arm_shared_za {
 // CHECK: attributes #[[SM_COMPATIBLE]] = { mustprogress noinline nounwind "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_COMPATIBLE_DECL]] = { "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_BODY]] = { mustprogress noinline nounwind "aarch64_pstate_sm_body" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_pstate_za_shared" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_pstate_za_preserved" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_pstate_za_preserved" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[ZA_NEW]] = { mustprogress noinline nounwind "aarch64_pstate_za_new" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[ZA_NEW]] = { mustprogress noinline nounwind "aarch64_new_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[NORMAL_DEF]] = { mustprogress noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_ENABLED_CALL]] = { "aarch64_pstate_sm_enabled" }
 // CHECK: attributes #[[SM_COMPATIBLE_CALL]] = { "aarch64_pstate_sm_compatible" }
 // CHECK: attributes #[[SM_BODY_CALL]] = { "aarch64_pstate_sm_body" }
-// CHECK: attributes #[[ZA_SHARED_CALL]] = { "aarch64_pstate_za_shared" }
-// CHECK: attributes #[[ZA_PRESERVED_CALL]] = { "aarch64_pstate_za_preserved" }
+// CHECK: attributes #[[ZA_SHARED_CALL]] = { "aarch64_inout_za" }
+// CHECK: attributes #[[ZA_PRESERVED_CALL]] = { "aarch64_preserves_za" }
 // CHECK: attributes #[[NOUNWIND_CALL]] = { nounwind }
 // CHECK: attributes #[[NOUNWIND_SM_ENABLED_CALL]] = { nounwind "aarch64_pstate_sm_enabled" }
 // CHECK: attributes #[[NOUNWIND_SM_COMPATIBLE_CALL]] = { nounwind "aarch64_pstate_sm_compatible" }
-// CHECK: attributes #[[NOUNWIND_ZA_SHARED_CALL]] = { nounwind "aarch64_pstate_za_shared" }
-// CHECK: attributes #[[NOUNWIND_ZA_PRESERVED_CALL]] = { nounwind "aarch64_pstate_za_preserved" }
+// CHECK: attributes #[[NOUNWIND_ZA_SHARED_CALL]] = { nounwind "aarch64_inout_za" }
+// CHECK: attributes #[[NOUNWIND_ZA_PRESERVED_CALL]] = { nounwind "aarch64_preserves_za" }
 

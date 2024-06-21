@@ -1,0 +1,69 @@
+; Test two trailing NOT strings
+; RUN: rm -f %t && \
+; RUN: echo "LEADING: placeholder1" >>%t && echo "MIDDLE-NOT: placeholder2" >>%t && echo "TRAILING-NOT: placeholder3" >>%t && \
+; RUN: %ProtectFileCheckOutput not FileCheck --strict-whitespace --check-prefixes LEADING,MIDDLE,TRAILING --dump-input=never --input-file  %t %t 2>&1 | \
+; RUN: FileCheck --check-prefix TEST1 %s
+
+; Test NOT string occurring in between two allowable strings
+; RUN: rm -f %t && \
+; RUN: echo "LEADING: placeholder1" >>%t && echo "MIDDLE-NOT: placeholder2" >>%t && echo "TRAILING: placeholder3" >>%t && \
+; RUN: %ProtectFileCheckOutput not FileCheck --strict-whitespace --check-prefixes LEADING,MIDDLE,TRAILING --dump-input=never --input-file  %t %t 2>&1 | \
+; RUN: FileCheck --check-prefix TEST2 %s
+
+; Test first prefix found being the NOT string
+; RUN: rm -f %t && \
+; RUN: echo "LEADING-NOT: placeholder1" >>%t && echo "MIDDLE: placeholder2" >>%t && echo "TRAILING: placeholder3" >>%t && \
+; RUN: %ProtectFileCheckOutput not FileCheck --strict-whitespace --check-prefixes LEADING,MIDDLE,TRAILING --dump-input=never --input-file  %t %t 2>&1 | \
+; RUN: FileCheck --check-prefix TEST3 %s
+
+; Test all given prefixes being NOT strings
+; RUN: rm -f %t && \
+; RUN: echo "LEADING-NOT: placeholder1" >>%t && echo "MIDDLE-NOT: placeholder2" >>%t && echo "TRAILING-NOT: placeholder3" >>%t && \
+; RUN: %ProtectFileCheckOutput not FileCheck --strict-whitespace --check-prefixes LEADING,MIDDLE,TRAILING --dump-input=never --input-file  %t %t 2>&1 | \
+; RUN: FileCheck --check-prefix TEST4 %s
+
+; TEST1:           error: MIDDLE-NOT: excluded string found in input
+; TEST1-NEXT:      MIDDLE-NOT: placeholder2
+; TEST1-NEXT: {{^}}            ^{{$}}
+; TEST1-NEXT:      note: found here
+; TEST1-NEXT:      MIDDLE-NOT: placeholder2
+; TEST1-NEXT: {{^}}            ^~~~~~~~~~~~{{$}}
+; TEST1-NEXT:      error: TRAILING-NOT: excluded string found in input
+; TEST1-NEXT:      TRAILING-NOT: placeholder3
+; TEST1-NEXT: {{^}}              ^{{$}}
+; TEST1-NEXT:      note: found here
+; TEST1-NEXT:      TRAILING-NOT: placeholder3
+; TEST1-NEXT: {{^}}              ^~~~~~~~~~~~{{$}}
+
+; TEST2:           error: MIDDLE-NOT: excluded string found in input
+; TEST2-NEXT:      MIDDLE-NOT: placeholder2
+; TEST2-NEXT: {{^}}            ^{{$}}
+; TEST2-NEXT:      note: found here
+; TEST2-NEXT:      MIDDLE-NOT: placeholder2
+; TEST2-NEXT: {{^}}            ^~~~~~~~~~~~{{$}}
+
+; TEST3:           error: LEADING-NOT: excluded string found in input
+; TEST3-NEXT:      LEADING-NOT: placeholder1
+; TEST3-NEXT: {{^}}            ^{{$}}
+; TEST3-NEXT:      note: found here
+; TEST3-NEXT:      LEADING-NOT: placeholder1
+; TEST3-NEXT: {{^}}            ^~~~~~~~~~~~{{$}}
+
+; TEST4:           error: LEADING-NOT: excluded string found in input
+; TEST4-NEXT:      LEADING-NOT: placeholder1
+; TEST4-NEXT: {{^}}            ^{{$}}
+; TEST4-NEXT:      note: found here
+; TEST4-NEXT:      LEADING-NOT: placeholder1
+; TEST4-NEXT: {{^}}            ^~~~~~~~~~~~{{$}}
+; TEST4-NEXT:      error: MIDDLE-NOT: excluded string found in input
+; TEST4-NEXT:      MIDDLE-NOT: placeholder2
+; TEST4-NEXT: {{^}}            ^{{$}}
+; TEST4-NEXT:      note: found here
+; TEST4-NEXT:      MIDDLE-NOT: placeholder2
+; TEST4-NEXT: {{^}}            ^~~~~~~~~~~~{{$}}
+; TEST4-NEXT:      error: TRAILING-NOT: excluded string found in input
+; TEST4-NEXT:      TRAILING-NOT: placeholder3
+; TEST4-NEXT: {{^}}              ^{{$}}
+; TEST4-NEXT:      note: found here
+; TEST4-NEXT:      TRAILING-NOT: placeholder3
+; TEST4-NEXT: {{^}}              ^~~~~~~~~~~~{{$}}

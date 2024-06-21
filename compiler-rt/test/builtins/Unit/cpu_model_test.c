@@ -1,6 +1,6 @@
 // REQUIRES: x86-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
-// REQUIRES: librt_has_cpu_model
+// REQUIRES: librt_has_x86
 
 // FIXME: XFAIL the test because it is expected to return non-zero value.
 // XFAIL: *

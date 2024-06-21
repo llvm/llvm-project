@@ -24,7 +24,6 @@
 #include "clang/AST/Mangle.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/Module.h"
 #include "clang/Basic/NoSanitizeList.h"
 #include "clang/Basic/ProfileList.h"
 #include "clang/Basic/TargetInfo.h"
@@ -70,6 +69,7 @@ class Expr;
 class Stmt;
 class StringLiteral;
 class NamedDecl;
+class PointerAuthSchema;
 class ValueDecl;
 class VarDecl;
 class LangOptions;
@@ -347,6 +347,8 @@ private:
   /// used. If a decl is in this, then it is known to have not been referenced
   /// yet.
   llvm::DenseMap<StringRef, GlobalDecl> DeferredDecls;
+
+  llvm::StringSet<llvm::BumpPtrAllocator> DeferredResolversToEmit;
 
   /// This is a list of deferred decls which we have seen that *are* actually
   /// referenced. These get code generated when the module is done.
@@ -936,6 +938,30 @@ public:
   // Return the function body address of the given function.
   llvm::Constant *GetFunctionStart(const ValueDecl *Decl);
 
+  /// Return a function pointer for a reference to the given function.
+  /// This correctly handles weak references, but does not apply a
+  /// pointer signature.
+  llvm::Constant *getRawFunctionPointer(GlobalDecl GD,
+                                        llvm::Type *Ty = nullptr);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary, caching the result for the given function.
+  llvm::Constant *getFunctionPointer(GlobalDecl GD, llvm::Type *Ty = nullptr);
+
+  /// Return the ABI-correct function pointer value for a reference
+  /// to the given function.  This will apply a pointer signature if
+  /// necessary.
+  llvm::Constant *getFunctionPointer(llvm::Constant *Pointer,
+                                     QualType FunctionType);
+
+  CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
+
+  llvm::Constant *
+  getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
+                           llvm::Constant *StorageAddress,
+                           llvm::ConstantInt *OtherDiscriminator);
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
     return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
@@ -1238,6 +1264,9 @@ public:
 
   /// Return true iff the given type uses 'sret' when used as a return type.
   bool ReturnTypeUsesSRet(const CGFunctionInfo &FI);
+
+  /// Return true iff the given type has `inreg` set.
+  bool ReturnTypeHasInReg(const CGFunctionInfo &FI);
 
   /// Return true iff the given type uses an argument slot when 'sret' is used
   /// as a return type.
@@ -1581,12 +1610,25 @@ public:
   void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
                      bool IsDtorAttrFunc = false);
 
+  // Return whether structured convergence intrinsics should be generated for
+  // this target.
+  bool shouldEmitConvergenceTokens() const {
+    // TODO: this should probably become unconditional once the controlled
+    // convergence becomes the norm.
+    return getTriple().isSPIRVLogical();
+  }
+
 private:
+  bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
+
   llvm::Constant *GetOrCreateLLVMFunction(
       StringRef MangledName, llvm::Type *Ty, GlobalDecl D, bool ForVTable,
       bool DontDefer = false, bool IsThunk = false,
       llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
       ForDefinition_t IsForDefinition = NotForDefinition);
+
+  // Adds a declaration to the list of multi version functions if not present.
+  void AddDeferredMultiVersionResolverToEmit(GlobalDecl GD);
 
   // References to multiversion functions are resolved through an implicitly
   // defined resolver function. This function is responsible for creating

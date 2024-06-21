@@ -1,5 +1,7 @@
 ; RUN: opt -passes=inline %s -S -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=inline %s -S -o - \
+; RUN: | FileCheck %s
 
 ;; Hand modified from:
 ;; $ cat test.c
@@ -30,7 +32,7 @@
 
 ; CHECK: define dso_local i32 @fun()
 ; CHECK-NEXT: entry
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %0
+; CHECK-NEXT: #dbg_value(i32 %0
 
 @g = dso_local local_unnamed_addr global i32 5, align 4, !dbg !0
 

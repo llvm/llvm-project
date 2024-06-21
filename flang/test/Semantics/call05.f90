@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Test 15.5.2.5 constraints and restrictions for POINTER & ALLOCATABLE
 ! arguments when both sides of the call have the same attributes.
 
@@ -73,9 +73,9 @@ module m
     call sma(ma) ! ok
     call spp(pp) ! ok
     call spa(pa) ! ok
-    !ERROR: If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so
+    !PORTABILITY: If a POINTER or ALLOCATABLE actual argument is polymorphic, the corresponding dummy argument should also be so
     call smp(pp)
-    !ERROR: If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so
+    !PORTABILITY: If a POINTER or ALLOCATABLE actual argument is polymorphic, the corresponding dummy argument should also be so
     call sma(pa)
     !ERROR: If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so
     call spp(mp)

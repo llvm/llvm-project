@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 #define LLVM_LIB_TARGET_AMDGPU_DISASSEMBLER_AMDGPUDISASSEMBLER_H
 
+#include "SIDefines.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -100,11 +101,19 @@ private:
   mutable uint64_t Literal64;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
+  unsigned CodeObjectVersion;
+  const MCExpr *UCVersionW64Expr;
+  const MCExpr *UCVersionW32Expr;
+  const MCExpr *UCVersionMDPExpr;
+
+  const MCExpr *createConstantSymbolExpr(StringRef Id, int64_t Val);
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                      MCInstrInfo const *MCII);
   ~AMDGPUDisassembler() override = default;
+
+  void setABIVersion(unsigned Version) override;
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -157,14 +166,15 @@ public:
     return MCDisassembler::Fail;
   }
 
-  std::optional<DecodeStatus>
-  onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size, ArrayRef<uint8_t> Bytes,
-                uint64_t Address, raw_ostream &CStream) const override;
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
 
-  DecodeStatus decodeKernelDescriptor(StringRef KdName, ArrayRef<uint8_t> Bytes,
-                                      uint64_t KdAddress) const;
+  Expected<bool> decodeKernelDescriptor(StringRef KdName,
+                                        ArrayRef<uint8_t> Bytes,
+                                        uint64_t KdAddress) const;
 
-  DecodeStatus
+  Expected<bool>
   decodeKernelDescriptorDirective(DataExtractor::Cursor &Cursor,
                                   ArrayRef<uint8_t> Bytes,
                                   raw_string_ostream &KdStream) const;
@@ -173,33 +183,34 @@ public:
   /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC1.
   /// \param KdStream       - Stream to write the disassembled directives to.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  DecodeStatus decodeCOMPUTE_PGM_RSRC1(uint32_t FourByteBuffer,
-                                       raw_string_ostream &KdStream) const;
+  Expected<bool> decodeCOMPUTE_PGM_RSRC1(uint32_t FourByteBuffer,
+                                         raw_string_ostream &KdStream) const;
 
   /// Decode as directives that handle COMPUTE_PGM_RSRC2.
   /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC2.
   /// \param KdStream       - Stream to write the disassembled directives to.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  DecodeStatus decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
-                                       raw_string_ostream &KdStream) const;
+  Expected<bool> decodeCOMPUTE_PGM_RSRC2(uint32_t FourByteBuffer,
+                                         raw_string_ostream &KdStream) const;
 
   /// Decode as directives that handle COMPUTE_PGM_RSRC3.
   /// \param FourByteBuffer - Bytes holding contents of COMPUTE_PGM_RSRC3.
   /// \param KdStream       - Stream to write the disassembled directives to.
   // NOLINTNEXTLINE(readability-identifier-naming)
-  DecodeStatus decodeCOMPUTE_PGM_RSRC3(uint32_t FourByteBuffer,
-                                       raw_string_ostream &KdStream) const;
+  Expected<bool> decodeCOMPUTE_PGM_RSRC3(uint32_t FourByteBuffer,
+                                         raw_string_ostream &KdStream) const;
 
-  DecodeStatus convertEXPInst(MCInst &MI) const;
-  DecodeStatus convertVINTERPInst(MCInst &MI) const;
-  DecodeStatus convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
-  DecodeStatus convertSDWAInst(MCInst &MI) const;
-  DecodeStatus convertDPP8Inst(MCInst &MI) const;
-  DecodeStatus convertMIMGInst(MCInst &MI) const;
-  DecodeStatus convertVOP3DPPInst(MCInst &MI) const;
-  DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
-  DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
+  void convertEXPInst(MCInst &MI) const;
+  void convertVINTERPInst(MCInst &MI) const;
+  void convertFMAanyK(MCInst &MI, int ImmLitIdx) const;
+  void convertSDWAInst(MCInst &MI) const;
+  void convertDPP8Inst(MCInst &MI) const;
+  void convertMIMGInst(MCInst &MI) const;
+  void convertVOP3DPPInst(MCInst &MI) const;
+  void convertVOP3PDPPInst(MCInst &MI) const;
+  void convertVOPCDPPInst(MCInst &MI) const;
   void convertMacDPPInst(MCInst &MI) const;
+  void convertTrue16OpSel(MCInst &MI) const;
 
   enum OpWidthTy {
     OPW32,
@@ -227,31 +238,38 @@ public:
   unsigned getTtmpClassId(const OpWidthTy Width) const;
 
   static MCOperand decodeIntImmed(unsigned Imm);
-  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm);
+  static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm,
+                                 AMDGPU::OperandSemantics Sema);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
 
-  MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
-                        bool MandatoryLiteral = false, unsigned ImmWidth = 0,
-                        bool IsFP = false) const;
+  MCOperand decodeSrcOp(
+      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
+      unsigned ImmWidth = 0,
+      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
 
-  MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
-                               bool MandatoryLiteral = false,
-                               unsigned ImmWidth = 0, bool IsFP = false) const;
+  MCOperand decodeNonVGPRSrcOp(
+      const OpWidthTy Width, unsigned Val, bool MandatoryLiteral = false,
+      unsigned ImmWidth = 0,
+      AMDGPU::OperandSemantics Sema = AMDGPU::OperandSemantics::INT) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;
   MCOperand decodeSpecialReg64(unsigned Val) const;
 
   MCOperand decodeSDWASrc(const OpWidthTy Width, unsigned Val,
-                          unsigned ImmWidth = 0) const;
+                          unsigned ImmWidth,
+                          AMDGPU::OperandSemantics Sema) const;
   MCOperand decodeSDWASrc16(unsigned Val) const;
   MCOperand decodeSDWASrc32(unsigned Val) const;
   MCOperand decodeSDWAVopcDst(unsigned Val) const;
 
   MCOperand decodeBoolReg(unsigned Val) const;
   MCOperand decodeSplitBarrier(unsigned Val) const;
+  MCOperand decodeDpp8FI(unsigned Val) const;
+
+  MCOperand decodeVersionImm(unsigned Imm) const;
 
   int getTTmpIdx(unsigned Val) const;
 
@@ -265,6 +283,7 @@ public:
   bool isGFX10Plus() const;
   bool isGFX11() const;
   bool isGFX11Plus() const;
+  bool isGFX12() const;
   bool isGFX12Plus() const;
 
   bool hasArchitectedFlatScratch() const;

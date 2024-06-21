@@ -1,0 +1,15 @@
+# RUN: not --crash llc -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+---
+name:            g_vscale
+body: |
+  bb.0:
+
+  %1:_(s32) = G_CONSTANT i32 4
+
+  ; CHECK: G_VSCALE operand must be cimm
+  %2:_(s32) = G_VSCALE %1
+
+  ; CHECK: G_VSCALE immediate cannot be zero
+  %3:_(s32) = G_VSCALE i32 0
+...

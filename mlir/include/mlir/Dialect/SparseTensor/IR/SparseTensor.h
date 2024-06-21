@@ -17,8 +17,12 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TensorEncoding.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+
+#include "llvm/ADT/bit.h"
 
 //===----------------------------------------------------------------------===//
 //
@@ -40,6 +44,55 @@ using Level = uint64_t;
 /// The type for individual components of a compile-time shape,
 /// including the value `ShapedType::kDynamic` (for shapes).
 using Size = int64_t;
+
+/// A simple structure that encodes a range of levels in the sparse tensors
+/// that forms a COO segment.
+struct COOSegment {
+  std::pair<Level, Level> lvlRange; // [low, high)
+  bool isSoA;
+
+  bool isAoS() const { return !isSoA; }
+  bool isSegmentStart(Level l) const { return l == lvlRange.first; }
+  bool inSegment(Level l) const {
+    return l >= lvlRange.first && l < lvlRange.second;
+  }
+};
+
+/// A simple wrapper to encode a bitset of (at most 64) levels, currently used
+/// by `sparse_tensor.iterate` operation for the set of levels on which the
+/// coordinates should be loaded.
+class LevelSet {
+  uint64_t bits = 0;
+
+public:
+  LevelSet() = default;
+  explicit LevelSet(uint64_t bits) : bits(bits) {}
+  operator uint64_t() const { return bits; }
+
+  LevelSet &set(unsigned i) {
+    assert(i < 64);
+    bits |= static_cast<uint64_t>(0x01u) << i;
+    return *this;
+  }
+
+  LevelSet &operator|=(LevelSet lhs) {
+    bits |= static_cast<uint64_t>(lhs);
+    return *this;
+  }
+
+  LevelSet &lshift(unsigned offset) {
+    bits = bits << offset;
+    return *this;
+  }
+
+  bool operator[](unsigned i) const {
+    assert(i < 64);
+    return (bits & (1 << i)) != 0;
+  }
+  unsigned max() const { return 64 - llvm::countl_zero(bits); }
+  unsigned count() const { return llvm::popcount(bits); }
+  bool empty() const { return bits == 0; }
+};
 
 } // namespace sparse_tensor
 } // namespace mlir
@@ -89,18 +142,21 @@ inline MemRefType getMemRefType(T &&t) {
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
+/// Returns true iff the type range has any sparse tensor type.
+inline bool hasAnySparseType(TypeRange types) {
+  return llvm::any_of(types, [](Type type) {
+    return getSparseTensorEncoding(type) != nullptr;
+  });
+}
+
 /// Returns true iff MLIR operand has any sparse operand.
 inline bool hasAnySparseOperand(Operation *op) {
-  return llvm::any_of(op->getOperands().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
+  return hasAnySparseType(op->getOperands().getTypes());
 }
 
 /// Returns true iff MLIR operand has any sparse result.
 inline bool hasAnySparseResult(Operation *op) {
-  return llvm::any_of(op->getResults().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
+  return hasAnySparseType(op->getResults().getTypes());
 }
 
 /// Returns true iff MLIR operand has any sparse operand or result.

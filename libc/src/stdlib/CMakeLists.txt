@@ -43,6 +43,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  quick_exit
+  SRCS
+    quick_exit.cpp
+  HDRS
+    quick_exit.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    .exit_handler
+)
+
+add_entrypoint_object(
   getenv
   SRCS
     getenv.cpp
@@ -50,6 +61,48 @@ add_entrypoint_object(
     getenv.h
   DEPENDS
     libc.config.linux.app_h
+)
+
+add_entrypoint_object(
+  strfromf
+  SRCS
+    strfromf.cpp
+  HDRS
+    strfromf.h
+  DEPENDS
+    .str_from_util
+)
+
+add_entrypoint_object(
+  strfromd
+  SRCS
+    strfromd.cpp
+  HDRS
+    strfromd.h
+  DEPENDS
+    .str_from_util
+)
+
+add_entrypoint_object(
+  strfroml
+  SRCS
+    strfroml.cpp
+  HDRS
+    strfroml.h
+  DEPENDS
+    .str_from_util
+)
+
+add_header_library(
+  str_from_util
+  HDRS
+    str_from_util.h
+  DEPENDS
+    libc.src.stdio.printf_core.converter
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.str_to_integer
+    libc.src.__support.CPP.type_traits
 )
 
 add_entrypoint_object(
@@ -268,7 +321,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   set(SCUDO_DEPS "")
 
   include(${LIBC_SOURCE_DIR}/../compiler-rt/cmake/Modules/AllSupportedArchDefs.cmake)
-  
+
   # scudo distinguishes riscv32 and riscv64, so we need to translate the architecture
   set(LIBC_TARGET_ARCHITECTURE_FOR_SCUDO ${LIBC_TARGET_ARCHITECTURE})
   if(LIBC_TARGET_ARCHITECTURE_IS_RISCV64)
@@ -278,7 +331,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
   endif()
 
   if(NOT (LIBC_TARGET_ARCHITECTURE_FOR_SCUDO IN_LIST ALL_SCUDO_STANDALONE_SUPPORTED_ARCH))
-    message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO} is not supported by SCUDO. 
+    message(FATAL_ERROR "Architecture ${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO} is not supported by SCUDO.
       Either disable LLVM_LIBC_INCLUDE_SCUDO or change your target architecture.")
   endif()
 
@@ -290,7 +343,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     RTGwpAsanBacktraceLibc.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
     RTGwpAsanSegvHandler.${LIBC_TARGET_ARCHITECTURE_FOR_SCUDO}
     )
-  
+
   add_entrypoint_external(
     malloc
     DEPENDS
@@ -316,7 +369,7 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
     DEPENDS
       ${SCUDO_DEPS}
   )
-elseif(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+elseif(LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_external(
     calloc
   )
@@ -327,9 +380,31 @@ elseif(LIBC_TARGET_ARCHITECTURE_IS_GPU)
     aligned_alloc
   )
 else()
-  add_entrypoint_external(
-    malloc
+  # Only use freelist malloc for baremetal targets.
+  add_entrypoint_object(
+    freelist_malloc
+    SRCS
+      freelist_malloc.cpp
+    HDRS
+      malloc.h
+    DEPENDS
+      libc.src.__support.freelist_heap
+    COMPILE_OPTIONS
+      -DLIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}
   )
+  if(LIBC_TARGET_OS_IS_BAREMETAL)
+    add_entrypoint_object(
+      malloc
+      ALIAS
+      DEPENDS
+        .freelist_malloc
+    )
+  else()
+    add_entrypoint_external(
+      malloc
+    )
+  endif()
+
   add_entrypoint_external(
     free
   )
@@ -363,19 +438,45 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
+# TODO: Move all exit functions to linux specific 
+
+if (TARGET libc.src.__support.threads.mutex)
+add_object_library(
+  exit_handler
+  SRCS
+    exit_handler.cpp
+  HDRS
+    exit_handler.h
+  CXX_STANDARD
+    20 # For constinit 
+  DEPENDS
+    libc.src.__support.CPP.mutex
+    libc.src.__support.CPP.new
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.blockstore
+    libc.src.__support.fixedvector
+    libc.src.__support.threads.mutex
+)
+endif()
+
 add_entrypoint_object(
   atexit
   SRCS
     atexit.cpp
   HDRS
     atexit.h
-  CXX_STANDARD
-    20 # For constinit of the atexit callback list.
   DEPENDS
-    libc.src.__support.fixedvector
-    libc.src.__support.blockstore
-    libc.src.__support.threads.mutex
-    libc.src.__support.CPP.new
+    .exit_handler
+)
+
+add_entrypoint_object(
+  at_quick_exit
+  SRCS
+    at_quick_exit.cpp
+  HDRS
+    at_quick_exit.h
+  DEPENDS
+    .exit_handler
 )
 
 add_entrypoint_object(
@@ -388,6 +489,7 @@ add_entrypoint_object(
     ._Exit
     .atexit
     libc.src.__support.OSUtil.osutil
+    .exit_handler
 )
 
 add_entrypoint_object(
@@ -397,7 +499,7 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.abort
 )
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
     malloc
     ALIAS

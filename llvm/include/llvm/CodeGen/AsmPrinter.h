@@ -38,6 +38,7 @@ class BasicBlock;
 class BlockAddress;
 class Constant;
 class ConstantArray;
+class ConstantPtrAuth;
 class DataLayout;
 class DIE;
 class DIEAbbrev;
@@ -235,10 +236,6 @@ private:
   /// .note.GNU-no-split-stack section when it also contains functions without a
   /// split stack prologue.
   bool HasNoSplitStack = false;
-
-  /// Raw FDOstream for outputting machine basic block frequncies if the
-  /// --mbb-profile-dump flag is set for downstream cost modelling applications
-  std::unique_ptr<raw_fd_ostream> MBBProfileDumpFileOutput;
 
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
@@ -589,6 +586,10 @@ public:
     emitGlobalConstant(DL, CV);
   }
 
+  virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
+    report_fatal_error("ptrauth constant lowering not implemented");
+  }
+
   /// Return true if the basic block has exactly one predecessor and the control
   /// transfer mechanism between the predecessor and this block is a
   /// fall-through.
@@ -872,6 +873,9 @@ private:
   /// This method emits a comment next to header for the current function.
   virtual void emitFunctionHeaderComment();
 
+  /// This method emits prefix-like data before the current function.
+  void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
+
   /// Emit a blob of inline asm to the output streamer.
   void
   emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
@@ -901,7 +905,7 @@ private:
   virtual void emitModuleCommandLines(Module &M);
 
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
-  void emitGlobalAlias(Module &M, const GlobalAlias &GA);
+  virtual void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
 private:

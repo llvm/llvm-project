@@ -301,9 +301,8 @@ void MangleContext::mangleBlock(const DeclContext *DC, const BlockDecl *BD,
   } else {
     assert((isa<NamedDecl>(DC) || isa<BlockDecl>(DC)) &&
            "expected a NamedDecl or BlockDecl");
-    if (isa<BlockDecl>(DC))
-      for (; DC && isa<BlockDecl>(DC); DC = DC->getParent())
-        (void) getBlockId(cast<BlockDecl>(DC), true);
+    for (; isa_and_nonnull<BlockDecl>(DC); DC = DC->getParent())
+      (void)getBlockId(cast<BlockDecl>(DC), true);
     assert((isa<TranslationUnitDecl>(DC) || isa<NamedDecl>(DC)) &&
            "expected a TranslationUnitDecl or a NamedDecl");
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(DC))
@@ -464,7 +463,7 @@ public:
       SmallString<40> Mangled;
       auto Prefix = getClassSymbolPrefix(Kind, OCD->getASTContext());
       llvm::Mangler::getNameWithPrefix(Mangled, Prefix + ClassName, DL);
-      return std::string(Mangled.str());
+      return std::string(Mangled);
     };
 
     return {

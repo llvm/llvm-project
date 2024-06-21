@@ -141,7 +141,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializePPCExpandAtomicPseudoPass(PR);
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
-  initializePPCDAGToDAGISelPass(PR);
+  initializePPCDAGToDAGISelLegacyPass(PR);
   initializePPCMergeStringPoolPass(PR);
 }
 
@@ -457,7 +457,7 @@ TargetPassConfig *PPCTargetMachine::createPassConfig(PassManagerBase &PM) {
 void PPCPassConfig::addIRPasses() {
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createPPCBoolRetToIntPass());
-  addPass(createAtomicExpandPass());
+  addPass(createAtomicExpandLegacyPass());
 
   // Lower generic MASSV routines to PowerPC subtarget-specific entries.
   addPass(createPPCLowerMASSVEntriesPass());

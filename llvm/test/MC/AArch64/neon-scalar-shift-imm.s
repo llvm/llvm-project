@@ -24,7 +24,7 @@
 // CHECK: srshr d19, d18, #7  // encoding: [0x53,0x26,0x79,0x5f]
 
 //----------------------------------------------------------------------
-// Scalar Unigned Rounding Shift Right (Immediate)
+// Scalar Unsigned Rounding Shift Right (Immediate)
 //----------------------------------------------------------------------
         urshr d20, d23, #31
 

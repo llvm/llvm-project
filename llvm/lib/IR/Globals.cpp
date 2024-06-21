@@ -21,6 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
@@ -69,6 +70,10 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
     setSanitizerMetadata(Src->getSanitizerMetadata());
   else
     removeSanitizerMetadata();
+}
+
+GlobalValue::GUID GlobalValue::getGUID(StringRef GlobalName) {
+  return MD5Hash(GlobalName);
 }
 
 void GlobalValue::removeFromParent() {
@@ -147,8 +152,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   // Value names may be prefixed with a binary '1' to indicate
   // that the backend should not modify the symbols due to any platform
   // naming convention. Do not include that '1' in the PGO profile name.
-  if (Name[0] == '\1')
-    Name = Name.substr(1);
+  Name.consume_front("\1");
 
   std::string GlobalName;
   if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
@@ -244,6 +248,13 @@ void GlobalValue::removeSanitizerMetadata() {
   HasSanitizerMetadata = false;
 }
 
+void GlobalValue::setNoSanitizeMetadata() {
+  SanitizerMetadata Meta;
+  Meta.NoAddress = true;
+  Meta.NoHWAddress = true;
+  setSanitizerMetadata(Meta);
+}
+
 StringRef GlobalObject::getSectionImpl() const {
   assert(hasSection());
   return getContext().pImpl->GlobalObjectSections[this];
@@ -323,6 +334,16 @@ bool GlobalObject::canIncreaseAlignment() const {
       (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatELF());
   if (isELF && !isDSOLocal())
     return false;
+
+  // GV with toc-data attribute is defined in a TOC entry. To mitigate TOC
+  // overflow, the alignment of such symbol should not be increased. Otherwise,
+  // padding is needed thus more TOC entries are wasted.
+  bool isXCOFF =
+      (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatXCOFF());
+  if (isXCOFF)
+    if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
+      if (GV->hasAttribute("toc-data"))
+        return false;
 
   return true;
 }

@@ -16,6 +16,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/Debug.h"
 
 namespace clang {
@@ -39,6 +40,43 @@ public:
   /// Returns the non-empty group of variables that include parameters of the
   /// analyzing function, if such a group exists.  An empty group, otherwise.
   virtual VarGrpRef getGroupOfParms() const =0;
+};
+
+// FixitStrategy is a map from variables to the way we plan to emit fixes for
+// these variables. It is figured out gradually by trying different fixes
+// for different variables depending on gadgets in which these variables
+// participate.
+class FixitStrategy {
+public:
+  enum class Kind {
+    Wontfix,  // We don't plan to emit a fixit for this variable.
+    Span,     // We recommend replacing the variable with std::span.
+    Iterator, // We recommend replacing the variable with std::span::iterator.
+    Array,    // We recommend replacing the variable with std::array.
+    Vector    // We recommend replacing the variable with std::vector.
+  };
+
+private:
+  using MapTy = llvm::DenseMap<const VarDecl *, Kind>;
+
+  MapTy Map;
+
+public:
+  FixitStrategy() = default;
+  FixitStrategy(const FixitStrategy &) = delete; // Let's avoid copies.
+  FixitStrategy &operator=(const FixitStrategy &) = delete;
+  FixitStrategy(FixitStrategy &&) = default;
+  FixitStrategy &operator=(FixitStrategy &&) = default;
+
+  void set(const VarDecl *VD, Kind K) { Map[VD] = K; }
+
+  Kind lookup(const VarDecl *VD) const {
+    auto I = Map.find(VD);
+    if (I == Map.end())
+      return Kind::Wontfix;
+
+    return I->second;
+  }
 };
 
 /// The interface that lets the caller handle unsafe buffer usage analysis
@@ -68,15 +106,22 @@ public:
   virtual void handleUnsafeOperation(const Stmt *Operation,
                                      bool IsRelatedToDecl, ASTContext &Ctx) = 0;
 
+  /// Invoked when an unsafe operation with a std container is found.
+  virtual void handleUnsafeOperationInContainer(const Stmt *Operation,
+                                                bool IsRelatedToDecl,
+                                                ASTContext &Ctx) = 0;
+
   /// Invoked when a fix is suggested against a variable. This function groups
   /// all variables that must be fixed together (i.e their types must be changed
   /// to the same target type to prevent type mismatches) into a single fixit.
   ///
   /// `D` is the declaration of the callable under analysis that owns `Variable`
   /// and all of its group mates.
-  virtual void handleUnsafeVariableGroup(const VarDecl *Variable,
-                                         const VariableGroupsManager &VarGrpMgr,
-                                         FixItList &&Fixes, const Decl *D) = 0;
+  virtual void
+  handleUnsafeVariableGroup(const VarDecl *Variable,
+                            const VariableGroupsManager &VarGrpMgr,
+                            FixItList &&Fixes, const Decl *D,
+                            const FixitStrategy &VarTargetTypes) = 0;
 
 #ifndef NDEBUG
 public:
@@ -98,8 +143,13 @@ public:
 #endif
 
 public:
-  /// Returns a reference to the `Preprocessor`:
+  /// \return true iff buffer safety is opt-out at `Loc`; false otherwise.
   virtual bool isSafeBufferOptOut(const SourceLocation &Loc) const = 0;
+
+  /// \return true iff unsafe uses in containers should NOT be reported at
+  /// `Loc`; false otherwise.
+  virtual bool
+  ignoreUnsafeBufferInContainer(const SourceLocation &Loc) const = 0;
 
   virtual std::string
   getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,

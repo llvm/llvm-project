@@ -79,7 +79,7 @@ define <3 x float> @vec_with_3elts_underaligned(ptr align 8 dereferenceable(16) 
 
 ; We don't know we can load 128 bits, but since it's aligned, we still can do wide load.
 ; FIXME: this should still get widened.
-define <3 x float> @vec_with_3elts_underdereferenceable(<3 x float>* align 16 dereferenceable(12) %p) {
+define <3 x float> @vec_with_3elts_underdereferenceable(ptr align 16 dereferenceable(12) %p) {
 ; CHECK-LABEL: @vec_with_3elts_underdereferenceable(
 ; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <3 x float> [[R]]

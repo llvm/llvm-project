@@ -7,17 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/free.h"
-#include "src/__support/RPC/rpc_client.h"
+
+#include "src/__support/GPU/allocator.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(void, free, (void *ptr)) {
-  rpc::Client::Port port = rpc::client.open<RPC_FREE>();
-  port.send([=](rpc::Buffer *buffer) {
-    buffer->data[0] = reinterpret_cast<uintptr_t>(ptr);
-  });
-  port.close();
-}
+LLVM_LIBC_FUNCTION(void, free, (void *ptr)) { gpu::deallocate(ptr); }
 
 } // namespace LIBC_NAMESPACE

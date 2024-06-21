@@ -28,17 +28,6 @@ namespace fir {
 static constexpr std::size_t unlimitedArraySize = ~static_cast<std::size_t>(0);
 
 namespace {
-struct MemoryAllocationOptions {
-  // Always move dynamic array allocations to the heap. This may result in more
-  // heap fragmentation, so may impact performance negatively.
-  bool dynamicArrayOnHeap = false;
-
-  // Number of elements in array threshold for moving to heap. In environments
-  // with limited stack size, moving large arrays to the heap can avoid running
-  // out of stack space.
-  std::size_t maxStackArraySize = unlimitedArraySize;
-};
-
 class ReturnAnalysis {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ReturnAnalysis)
@@ -68,14 +57,15 @@ private:
 
 /// Return `true` if this allocation is to remain on the stack (`fir.alloca`).
 /// Otherwise the allocation should be moved to the heap (`fir.allocmem`).
-static inline bool keepStackAllocation(fir::AllocaOp alloca, mlir::Block *entry,
-                                       const MemoryAllocationOptions &options) {
+static inline bool
+keepStackAllocation(fir::AllocaOp alloca, mlir::Block *entry,
+                    const fir::MemoryAllocationOptOptions &options) {
   // Limitation: only arrays allocated on the stack in the entry block are
   // considered for now.
   // TODO: Generalize the algorithm and placement of the freemem nodes.
   if (alloca->getBlock() != entry)
     return true;
-  if (auto seqTy = alloca.getInType().dyn_cast<fir::SequenceType>()) {
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(alloca.getInType())) {
     if (fir::hasDynamicSize(seqTy)) {
       // Move all arrays with runtime determined size to the heap.
       if (options.dynamicArrayOnHeap)
@@ -168,6 +158,9 @@ public:
     options = {dynOnHeap, maxStackSize};
   }
 
+  MemoryAllocationOpt(const fir::MemoryAllocationOptOptions &options)
+      : options{options} {}
+
   /// Override `options` if command-line options have been set.
   inline void useCommandLineOptions() {
     if (dynamicArrayOnHeap)
@@ -200,7 +193,8 @@ public:
       return keepStackAllocation(alloca, &func.front(), options);
     });
 
-    patterns.insert<AllocaOpConversion>(context, analysis.getReturns(func));
+    llvm::SmallVector<mlir::Operation *> returnOps = analysis.getReturns(func);
+    patterns.insert<AllocaOpConversion>(context, returnOps);
     if (mlir::failed(
             mlir::applyPartialConversion(func, target, std::move(patterns)))) {
       mlir::emitError(func.getLoc(),
@@ -210,15 +204,6 @@ public:
   }
 
 private:
-  MemoryAllocationOptions options;
+  fir::MemoryAllocationOptOptions options;
 };
 } // namespace
-
-std::unique_ptr<mlir::Pass> fir::createMemoryAllocationPass() {
-  return std::make_unique<MemoryAllocationOpt>();
-}
-
-std::unique_ptr<mlir::Pass>
-fir::createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize) {
-  return std::make_unique<MemoryAllocationOpt>(dynOnHeap, maxStackSize);
-}

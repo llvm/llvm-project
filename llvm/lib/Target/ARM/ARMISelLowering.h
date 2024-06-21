@@ -20,14 +20,13 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/CodeGen.h"
 #include <optional>
@@ -42,6 +41,7 @@ class FunctionLoweringInfo;
 class GlobalValue;
 class InstrItineraryData;
 class Instruction;
+class IRBuilderBase;
 class MachineBasicBlock;
 class MachineInstr;
 class SelectionDAG;
@@ -95,7 +95,6 @@ class VectorType;
     FMSTAT,   // ARM fmstat instruction.
 
     CMOV, // ARM conditional move instructions.
-    SUBS, // Flag-setting subtraction.
 
     SSAT, // Signed saturation
     USAT, // Unsigned saturation
@@ -244,7 +243,7 @@ class VectorType;
     VADDLVAps, // Same as VADDLVp[su] but with a v4i1 predicate mask
     VADDLVApu,
     VMLAVs, // sign- or zero-extend the elements of two vectors to i32, multiply
-    VMLAVu, //   them and add the results together, returning an i32 of their sum
+    VMLAVu, //   them and add the results together, returning an i32 of the sum
     VMLAVps, // Same as VMLAV[su] with a v4i1 predicate mask
     VMLAVpu,
     VMLALVs,  // Same as VMLAV but with i64, returning the low and
@@ -762,6 +761,10 @@ class VectorType;
         ComplexDeinterleavingRotation Rotation, Value *InputA, Value *InputB,
         Value *Accumulator = nullptr) const override;
 
+    bool softPromoteHalfType() const override { return true; }
+
+    bool useFPRegsForHalfType() const override { return true; }
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
@@ -891,7 +894,7 @@ class VectorType;
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                            SDValue ThisVal) const;
+                            SDValue ThisVal, bool isCmseNSCall) const;
 
     bool supportSplitCSR(MachineFunction *MF) const override {
       return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
@@ -939,12 +942,8 @@ class VectorType;
     /// for tail call optimization. Targets which want to do tail call
     /// optimization should implement this function.
     bool IsEligibleForTailCallOptimization(
-        SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
-        bool isCalleeStructRet, bool isCallerStructRet,
-        const SmallVectorImpl<ISD::OutputArg> &Outs,
-        const SmallVectorImpl<SDValue> &OutVals,
-        const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG,
-        const bool isIndirect) const;
+        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+        SmallVectorImpl<CCValAssign> &ArgLocs, const bool isIndirect) const;
 
     bool CanLowerReturn(CallingConv::ID CallConv,
                         MachineFunction &MF, bool isVarArg,

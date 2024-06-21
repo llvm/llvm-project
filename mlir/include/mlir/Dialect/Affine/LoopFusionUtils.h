@@ -27,9 +27,6 @@ namespace affine {
 class AffineForOp;
 struct ComputationSliceState;
 
-// TODO: Extend this module to include utility functions for querying fusion
-// cost/storage reduction, and for performing the loop fusion transformation.
-
 struct FusionResult {
   enum ResultEnum {
     Success,
@@ -49,7 +46,6 @@ struct FusionResult {
 /// strategies are also limited to scenarios where a single memref is involved
 /// in the producer-consume or sibling relationship between the candidate
 /// loops. We use 'memref' to keep track of such a memref.
-// TODO: Remove 'memref' when we support more generic scenarios.
 // TODO: Generalize utilities so that producer-consumer and sibling fusion
 // strategies can be used without the assumptions made in the AffineLoopFusion
 // pass.
@@ -145,7 +141,6 @@ bool getLoopNestStats(AffineForOp forOp, LoopNestStats *stats);
 /// Currently, the total cost is computed by counting the total operation
 /// instance count (i.e. total number of operations in the loop body * loop
 /// trip count) for the entire loop nest.
-// TODO: Improve this cost model.
 int64_t getComputeCost(AffineForOp forOp, LoopNestStats &stats);
 
 /// Computes and returns in 'computeCost', the total compute cost of fusing the
@@ -154,7 +149,6 @@ int64_t getComputeCost(AffineForOp forOp, LoopNestStats &stats);
 /// (i.e. total number of operations in the loop body * loop trip count) for
 /// the entire loop nest.
 /// Returns true on success, failure otherwise (e.g. non-constant trip counts).
-// TODO: Improve this cost model.
 bool getFusionComputeCost(AffineForOp srcForOp, LoopNestStats &srcStats,
                           AffineForOp dstForOp, LoopNestStats &dstStats,
                           const ComputationSliceState &slice,

@@ -2409,6 +2409,12 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case ARM::SEH_EpilogEnd:
     ATS.emitARMWinCFIEpilogEnd();
     return;
+
+  case ARM::PseudoARMInitUndefMQPR:
+  case ARM::PseudoARMInitUndefSPR:
+  case ARM::PseudoARMInitUndefDPR_VFP2:
+  case ARM::PseudoARMInitUndefGPR:
+    return;
   }
 
   MCInst TmpInst;

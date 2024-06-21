@@ -18,9 +18,9 @@ public:
   static int public_static;
 
 protected:
-  // CHECK-DAG: !DIDerivedType(tag: DW_TAG_typedef, name: "prot_using",{{.*}} line: [[@LINE+3]],{{.*}} flags: DIFlagProtected)
   // CHECK-DAG: !DIDerivedType(tag: DW_TAG_typedef, name: "prot_typedef",{{.*}} line: [[@LINE+1]],{{.*}} flags: DIFlagProtected)
   typedef int prot_typedef;
+  // CHECK-DAG: !DIDerivedType(tag: DW_TAG_typedef, name: "prot_using",{{.*}} line: [[@LINE+1]],{{.*}} flags: DIFlagProtected)
   using prot_using = prot_typedef;
   prot_using prot_member;
 

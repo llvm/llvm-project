@@ -1,5 +1,6 @@
 # REQUIRES: x86-registered-target
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=mir-check-debugify -o - %s 2>&1 | FileCheck %s
+# RUN: llc --experimental-debuginfo-iterators=false -mtriple=x86_64-unknown-linux-gnu -run-pass=mir-check-debugify -o - %s 2>&1 | FileCheck %s
 --- |
   ; ModuleID = 'check-line-and-variables.mir'
   source_filename = "check-line-and-variables.c"
@@ -13,7 +14,7 @@
     call void @llvm.dbg.value(metadata i32 %add, metadata !12, metadata !DIExpression()), !dbg !15
     %mul = shl nsw i32 %add, 1, !dbg !16
     call void @llvm.dbg.value(metadata i32 %mul, metadata !14, metadata !DIExpression()), !dbg !16
-    store i32 %mul, i32* @ga, align 4, !dbg !17
+    store i32 %mul, ptr @ga, align 4, !dbg !17
     ret i32 %add, !dbg !18
   }
 

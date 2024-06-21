@@ -27,7 +27,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
 
         address = frame.GetPCAddress()
         instructions = self.target.ReadInstructions(address, 2)
-        self.assertEquals(len(instructions), 2)
+        self.assertEqual(len(instructions), 2)
         self.bkpt_address = instructions[1].GetAddress()
         self.breakpoint2 = self.target.BreakpointCreateByAddress(
             self.bkpt_address.GetLoadAddress(self.target)
@@ -68,7 +68,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         self.thread.StepInstruction(step_over)
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(
+        self.assertEqual(
             self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(self.target),
             self.bkpt_address.GetLoadAddress(self.target),
         )
@@ -96,11 +96,11 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         self.thread.StepInstruction(step_over)
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(
+        self.assertEqual(
             self.thread.GetFrameAtIndex(0).GetPCAddress().GetLoadAddress(self.target),
             self.bkpt_address.GetLoadAddress(self.target),
         )
-        self.assertEquals(
+        self.assertEqual(
             self.thread.GetStopReason(),
             lldb.eStopReasonPlanComplete,
             "Stop reason should be 'plan complete'",

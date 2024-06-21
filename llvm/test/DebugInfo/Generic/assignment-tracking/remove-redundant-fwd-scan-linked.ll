@@ -1,5 +1,7 @@
 ; RUN: opt -passes=redundant-dbg-inst-elim -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=redundant-dbg-inst-elim -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; $ cat -n reduce.c
 ;;  1	void ext();
@@ -31,21 +33,21 @@
 ;; Check we don't delete that inserted unlinked dbg.assign.
 
 ; CHECK:      %a = alloca %struct.e, align 8, !DIAssignID ![[ID_0:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign({{.*}}, metadata ![[ID_0]],{{.*}})
+; CHECK-NEXT: #dbg_assign({{.*}}, ![[ID_0]],{{.*}})
 
 ;; This dbg.assign is linked to the memset.
-; CHECK:      call void @llvm.dbg.assign(metadata ptr null,{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[ID_1:[0-9]+]], metadata ptr %b, metadata !DIExpression())
+; CHECK:      #dbg_assign(ptr null,{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64), ![[ID_1:[0-9]+]], ptr %b, !DIExpression(),
 
 ;; Importantly, check this unlinked dbg.assign which is shadowed by the
 ;; dbg.assign above isn't deleted.
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata ptr null,{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[ID_2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(ptr null,{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64), ![[ID_2:[0-9]+]], ptr undef, !DIExpression(),
 
-; CHECK:      call void @llvm.dbg.assign(metadata ptr null,{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[ID_1]], metadata ptr %a2, metadata !DIExpression())
+; CHECK:      #dbg_assign(ptr null,{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 0, 64), ![[ID_1]], ptr %a2, !DIExpression(),
 
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID_1]]
 
 ; CHECK:      store ptr @d, ptr %b, align 8,{{.*}}!DIAssignID ![[ID_3:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata ptr @d,{{.*}}, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[ID_3]], metadata ptr %b, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(ptr @d,{{.*}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64), ![[ID_3]], ptr %b, !DIExpression(),
 
 ; CHECK-DAG: ![[ID_0]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[ID_1]] = distinct !DIAssignID()
@@ -61,26 +63,26 @@ define dso_local void @g() local_unnamed_addr #0 !dbg !12 {
 entry:
   %a = alloca %struct.e, align 8, !DIAssignID !29
   call void @llvm.dbg.assign(metadata i1 undef, metadata !16, metadata !DIExpression(), metadata !29, metadata ptr %a, metadata !DIExpression()), !dbg !30
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr nonnull %a) #5, !dbg !31
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %a) #5, !dbg !31
   %b = getelementptr inbounds %struct.e, ptr %a, i64 0, i32 0, i32 1, !dbg !32
   call void @llvm.dbg.assign(metadata ptr null, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !33, metadata ptr %b, metadata !DIExpression()), !dbg !30
   call void @llvm.dbg.assign(metadata ptr null, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !34, metadata ptr undef, metadata !DIExpression()), !dbg !30
   %a2 = getelementptr inbounds %struct.e, ptr %a, i64 0, i32 0, i32 0, !dbg !35
   call void @llvm.dbg.assign(metadata ptr null, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !33, metadata ptr %a2, metadata !DIExpression()), !dbg !30
-  call void @llvm.memset.p0i8.i64(ptr align 8 %a2, i8 0, i64 8, i1 false), !dbg !35, !DIAssignID !33
+  call void @llvm.memset.p0.i64(ptr align 8 %a2, i8 0, i64 8, i1 false), !dbg !35, !DIAssignID !33
   tail call void (...) @ext() #5, !dbg !36
   store ptr @d, ptr %b, align 8, !dbg !37, !DIAssignID !44
   call void @llvm.dbg.assign(metadata ptr @d, metadata !16, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !44, metadata ptr %b, metadata !DIExpression()), !dbg !30
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr nonnull %a) #5, !dbg !46
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %a) #5, !dbg !46
   ret void, !dbg !46
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 declare !dbg !47 dso_local void @ext(...) local_unnamed_addr #2
 declare dso_local void @f(...) local_unnamed_addr #2
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
-declare void @llvm.memset.p0i8.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #4
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #4
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!6, !7, !8, !9, !10, !1000}

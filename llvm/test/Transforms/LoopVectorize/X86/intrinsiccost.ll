@@ -7,11 +7,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-COST-LABEL: uaddsat
-; CHECK-COST: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i16 @llvm.uadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 2 For instruction:   %1 = tail call i16 @llvm.uadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 4 For instruction:   %1 = tail call i16 @llvm.uadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 8 For instruction:   %1 = tail call i16 @llvm.uadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 4 for VF 16 For instruction:   %1 = tail call i16 @llvm.uadd.sat.i16(i16 %0, i16 %offset)
 
 define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @uaddsat(
@@ -36,9 +31,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 16
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 32
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 48
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 64
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 96
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <16 x i16>, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <16 x i16>, ptr [[TMP4]], align 2
@@ -47,9 +42,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD9]], <16 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD10]], <16 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD11]], <16 x i16> [[BROADCAST_SPLAT]])
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[NEXT_GEP5]], i64 16
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[NEXT_GEP5]], i64 32
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[NEXT_GEP5]], i64 48
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP5]], i64 32
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[NEXT_GEP5]], i64 64
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP5]], i64 96
 ; CHECK-NEXT:    store <16 x i16> [[TMP6]], ptr [[NEXT_GEP5]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP7]], ptr [[TMP10]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP8]], ptr [[TMP11]], align 2
@@ -65,7 +60,7 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[IND_END24:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[IND_END21:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP15]]
-; CHECK-NEXT:    [[DOTCAST17:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[DOTCAST17:%.*]] = trunc nuw i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END18:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST17]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 56
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
@@ -73,7 +68,7 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_VEC15:%.*]] = and i64 [[TMP0]], 4294967288
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC15]] to i32
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nuw i64 [[N_VEC15]] to i32
 ; CHECK-NEXT:    [[IND_END16:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl nuw nsw i64 [[N_VEC15]], 1
 ; CHECK-NEXT:    [[IND_END20:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP16]]
@@ -106,10 +101,10 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[BLKCNT_09:%.*]] = phi i32 [ [[DEC:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL19]], [[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[PSRC_ADDR_08:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL22]], [[VEC_EPILOG_SCALAR_PH]] ]
 ; CHECK-NEXT:    [[PDST_ADDR_07:%.*]] = phi ptr [ [[INCDEC_PTR3:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL25]], [[VEC_EPILOG_SCALAR_PH]] ]
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i16, ptr [[PSRC_ADDR_08]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[PSRC_ADDR_08]], i64 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = load i16, ptr [[PSRC_ADDR_08]], align 2
 ; CHECK-NEXT:    [[TMP23:%.*]] = tail call i16 @llvm.uadd.sat.i16(i16 [[TMP22]], i16 [[OFFSET]])
-; CHECK-NEXT:    [[INCDEC_PTR3]] = getelementptr inbounds i16, ptr [[PDST_ADDR_07]], i64 1
+; CHECK-NEXT:    [[INCDEC_PTR3]] = getelementptr inbounds i8, ptr [[PDST_ADDR_07]], i64 2
 ; CHECK-NEXT:    store i16 [[TMP23]], ptr [[PDST_ADDR_07]], align 2
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_09]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
@@ -139,12 +134,6 @@ while.end:                                        ; preds = %while.body, %entry
 }
 
 ; CHECK-COST-LABEL: fshl
-; CHECK-COST: Found an estimated cost of 2 for VF 1 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 2 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 4 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 8 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 1 for VF 16 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
-; CHECK-COST: Found an estimated cost of 4 for VF 32 For instruction:   %1 = tail call i8 @llvm.fshl.i8(i8 %0, i8 %0, i8 %offset)
 
 define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocapture noalias %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @fshl(
@@ -194,7 +183,7 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[IND_END24:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[IND_END21:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[DOTCAST17:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[DOTCAST17:%.*]] = trunc nuw i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[IND_END18:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST17]]
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[TMP0]], 112
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
@@ -202,7 +191,7 @@ define void @fshl(ptr nocapture readonly %pSrc, i8 signext %offset, ptr nocaptur
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_VEC15:%.*]] = and i64 [[TMP0]], 4294967280
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC15]] to i32
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nuw i64 [[N_VEC15]] to i32
 ; CHECK-NEXT:    [[IND_END16:%.*]] = sub i32 [[BLOCKSIZE]], [[DOTCAST]]
 ; CHECK-NEXT:    [[IND_END20:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[N_VEC15]]
 ; CHECK-NEXT:    [[IND_END23:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[N_VEC15]]

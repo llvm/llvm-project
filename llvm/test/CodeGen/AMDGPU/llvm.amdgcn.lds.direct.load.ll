@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
-; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX12 %s
 
 ; GCN-LABEL: {{^}}lds_direct_load:
 ; GCN: s_mov_b32 m0
@@ -12,12 +12,16 @@
 ; GFX12: ds_direct_load v{{[0-9]+}}
 ; GCN: s_mov_b32 m0
 ; GFX11: lds_direct_load v{{[0-9]+}}
-; GCN: s_waitcnt expcnt(2)
+; GFX11: s_waitcnt expcnt(2)
+; GFX12: ds_direct_load v{{[0-9]+}}
+; GFX12: s_wait_expcnt 0x2
 ; GCN: v_add_f32
 ; GCN: buffer_store_b32
-; GCN: s_waitcnt expcnt(1)
+; GFX11: s_waitcnt expcnt(1)
+; GFX12: s_wait_expcnt 0x1
 ; GCN: buffer_store_b32
-; GCN: s_waitcnt expcnt(0)
+; GFX11: s_waitcnt expcnt(0)
+; GFX12: s_wait_expcnt 0x0
 ; GCN: buffer_store_b32
 ; GCN: buffer_store_b32
 ; GCN: buffer_store_b32

@@ -114,6 +114,14 @@
       "real_time": 1,
       "cpu_time": 1,
       "time_unit": "s"
+    },
+    {
+      "name": "BM_hasLabel",
+      "label": "a label",
+      "iterations": 1,
+      "real_time": 1,
+      "cpu_time": 1,
+      "time_unit": "s"
     }
   ]
 }

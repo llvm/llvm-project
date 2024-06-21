@@ -1,8 +1,8 @@
-; RUN: llc < %s -march=amdgcn -mcpu=tahiti -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=SI,GCN %s
-; RUN: llc < %s -march=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=CI,GCN,SICIVI %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=VI,GCN,SICIVI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=SI,GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=bonaire -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=CI,GCN,SICIVI %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -show-mc-encoding -verify-machineinstrs -global-isel | FileCheck --check-prefixes=VI,GCN,SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -show-mc-encoding -verify-machineinstrs -global-isel < %s | FileCheck --check-prefixes=GFX9_10,GCN,VIGFX9_10,SIVIGFX9_10  %s
 
 ; SMRD load with an immediate offset.
 ; GCN-LABEL: {{^}}smrd0:

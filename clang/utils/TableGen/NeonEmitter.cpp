@@ -735,20 +735,15 @@ Type Type::fromTypedefName(StringRef Name) {
   Type T;
   T.Kind = SInt;
 
-  if (Name.front() == 'u') {
+  if (Name.consume_front("u"))
     T.Kind = UInt;
-    Name = Name.drop_front();
-  }
 
-  if (Name.starts_with("float")) {
+  if (Name.consume_front("float")) {
     T.Kind = Float;
-    Name = Name.drop_front(5);
-  } else if (Name.starts_with("poly")) {
+  } else if (Name.consume_front("poly")) {
     T.Kind = Poly;
-    Name = Name.drop_front(4);
-  } else if (Name.starts_with("bfloat")) {
+  } else if (Name.consume_front("bfloat")) {
     T.Kind = BFloat16;
-    Name = Name.drop_front(6);
   } else {
     assert(Name.starts_with("int"));
     Name = Name.drop_front(3);
@@ -765,8 +760,7 @@ Type Type::fromTypedefName(StringRef Name) {
   T.Bitwidth = T.ElementBitwidth;
   T.NumVectors = 1;
 
-  if (Name.front() == 'x') {
-    Name = Name.drop_front();
+  if (Name.consume_front("x")) {
     unsigned I = 0;
     for (I = 0; I < Name.size(); ++I) {
       if (!isdigit(Name[I]))
@@ -780,8 +774,7 @@ Type Type::fromTypedefName(StringRef Name) {
     // Was scalar.
     T.NumVectors = 0;
   }
-  if (Name.front() == 'x') {
-    Name = Name.drop_front();
+  if (Name.consume_front("x")) {
     unsigned I = 0;
     for (I = 0; I < Name.size(); ++I) {
       if (!isdigit(Name[I]))
@@ -2273,7 +2266,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
       InIfdef = false;
     }
     if (!InIfdef && IsA64) {
-      OS << "#ifdef __aarch64__\n";
+      OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
       InIfdef = true;
     }
 
@@ -2306,7 +2299,7 @@ static void emitNeonTypeDefs(const std::string& types, raw_ostream &OS) {
         InIfdef = false;
       }
       if (!InIfdef && IsA64) {
-        OS << "#ifdef __aarch64__\n";
+        OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
         InIfdef = true;
       }
 
@@ -2388,7 +2381,7 @@ void NeonEmitter::run(raw_ostream &OS) {
   OS << "#include <arm_vector_types.h>\n";
 
   // For now, signedness of polynomial types depends on target
-  OS << "#ifdef __aarch64__\n";
+  OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
   OS << "typedef uint8_t poly8_t;\n";
   OS << "typedef uint16_t poly16_t;\n";
   OS << "typedef uint64_t poly64_t;\n";
@@ -2589,7 +2582,7 @@ void NeonEmitter::runVectorTypes(raw_ostream &OS) {
   OS << "typedef float float32_t;\n";
   OS << "typedef __fp16 float16_t;\n";
 
-  OS << "#ifdef __aarch64__\n";
+  OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
   OS << "typedef double float64_t;\n";
   OS << "#endif\n\n";
 

@@ -12,12 +12,11 @@
 #include "src/__support/CPP/type_traits/false_type.h"
 #include "src/__support/CPP/type_traits/true_type.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE::cpp {
 
 // is_rvalue_reference
-#if LIBC_HAS_BUILTIN(__is_rvalue_reference)
+#if __has_builtin(__is_rvalue_reference)
 template <typename T>
 struct is_rvalue_reference : bool_constant<__is_rvalue_reference(T)> {};
 #else

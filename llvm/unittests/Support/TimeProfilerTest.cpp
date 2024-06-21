@@ -54,6 +54,17 @@ TEST(TimeProfiler, Begin_End_Smoke) {
   ASSERT_TRUE(json.find(R"("detail":"detail")") != std::string::npos);
 }
 
+TEST(TimeProfiler, Async_Begin_End_Smoke) {
+  setupProfiler();
+
+  auto *Profiler = timeTraceAsyncProfilerBegin("event", "detail");
+  timeTraceProfilerEnd(Profiler);
+
+  std::string json = teardownProfiler();
+  ASSERT_TRUE(json.find(R"("name":"event")") != std::string::npos);
+  ASSERT_TRUE(json.find(R"("detail":"detail")") != std::string::npos);
+}
+
 TEST(TimeProfiler, Begin_End_Disabled) {
   // Nothing should be observable here. The test is really just making sure
   // we've not got a stray nullptr deref.

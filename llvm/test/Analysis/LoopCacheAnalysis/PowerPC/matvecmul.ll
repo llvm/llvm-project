@@ -17,29 +17,29 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK: Loop 'k_loop' has cost = 10200000000000000
 ; CHECK-NEXT: Loop 'j_loop' has cost = 102000000000000
 ; CHECK-NEXT: Loop 'i_loop' has cost = 1020000000000
-; CHECK-NEXT: Loop 'm_loop' has cost = 10700000000
-; CHECK-NEXT: Loop 'l_loop' has cost = 1300000000
+; CHECK-NEXT: Loop 'm_loop' has cost = 10800000000
+; CHECK-NEXT: Loop 'l_loop' has cost = 1500000000
 
 %_elem_type_of_double = type <{ double }>
 
 ; Function Attrs: norecurse nounwind
-define void @mat_vec_mpy([0 x %_elem_type_of_double]* noalias %y, [0 x %_elem_type_of_double]* noalias readonly %x,
-    [0 x %_elem_type_of_double]* noalias readonly %b, i32* noalias readonly %nb, i32* noalias readonly %nx, 
-    i32* noalias readonly %ny, i32* noalias readonly %nz) {
+define void @mat_vec_mpy(ptr noalias %y, ptr noalias readonly %x,
+    ptr noalias readonly %b, ptr noalias readonly %nb, ptr noalias readonly %nx, 
+    ptr noalias readonly %ny, ptr noalias readonly %nz) {
 mat_times_vec_entry:
-  %_ind_val = load i32, i32* %nb, align 4
+  %_ind_val = load i32, ptr %nb, align 4
   %_conv = sext i32 %_ind_val to i64
   %_grt_tmp.i = icmp sgt i64 %_conv, 0
   %a_b.i = select i1 %_grt_tmp.i, i64 %_conv, i64 0
-  %_ind_val1 = load i32, i32* %nx, align 4
+  %_ind_val1 = load i32, ptr %nx, align 4
   %_conv2 = sext i32 %_ind_val1 to i64
   %_grt_tmp.i266 = icmp sgt i64 %_conv2, 0
   %a_b.i267 = select i1 %_grt_tmp.i266, i64 %_conv2, i64 0
-  %_ind_val3 = load i32, i32* %ny, align 4
+  %_ind_val3 = load i32, ptr %ny, align 4
   %_conv4 = sext i32 %_ind_val3 to i64
   %_grt_tmp.i264 = icmp sgt i64 %_conv4, 0
   %a_b.i265 = select i1 %_grt_tmp.i264, i64 %_conv4, i64 0
-  %_ind_val5 = load i32, i32* %nz, align 4
+  %_ind_val5 = load i32, ptr %nz, align 4
   %_mult_tmp = shl nsw i64 %a_b.i, 3
   %_mult_tmp7 = mul i64 %_mult_tmp, %a_b.i267
   %_mult_tmp8 = mul i64 %_mult_tmp7, %a_b.i265
@@ -58,12 +58,12 @@ mat_times_vec_entry:
 k_loop.lr.ph:                                     ; preds = %mat_times_vec_entry
   %_grt_tmp851279 = icmp slt i32 %_ind_val3, 1
   %_grt_tmp847270 = icmp slt i32 %_ind_val, 1
-  %_aa_conv = bitcast [0 x %_elem_type_of_double]* %y to i8*
-  %_adda_ = getelementptr inbounds i8, i8* %_aa_conv, i64 %_sub_tmp23
-  %_aa_conv434 = bitcast [0 x %_elem_type_of_double]* %x to i8*
-  %_adda_435 = getelementptr inbounds i8, i8* %_aa_conv434, i64 %_sub_tmp23
-  %_aa_conv785 = bitcast [0 x %_elem_type_of_double]* %b to i8*
-  %_adda_786 = getelementptr inbounds i8, i8* %_aa_conv785, i64 %_sub_tmp97
+  %_aa_conv = bitcast ptr %y to ptr
+  %_adda_ = getelementptr inbounds i8, ptr %_aa_conv, i64 %_sub_tmp23
+  %_aa_conv434 = bitcast ptr %x to ptr
+  %_adda_435 = getelementptr inbounds i8, ptr %_aa_conv434, i64 %_sub_tmp23
+  %_aa_conv785 = bitcast ptr %b to ptr
+  %_adda_786 = getelementptr inbounds i8, ptr %_aa_conv785, i64 %_sub_tmp97
   br i1 %_grt_tmp851279, label %k_loop.us.preheader, label %k_loop.lr.ph.split
 
 k_loop.us.preheader:                              ; preds = %k_loop.lr.ph
@@ -118,26 +118,26 @@ m_loop:                                           ; preds = %m_loop, %l_loop
   %indvars.iv = phi i64 [ %indvars.iv.next, %m_loop ], [ 1, %l_loop ]
   %_ix_x_len424 = mul i64 %_mult_tmp, %indvars.iv
   %_ix_x_len454 = shl nuw nsw i64 %indvars.iv, 3
-  %_ixa_gep = getelementptr inbounds i8, i8* %_adda_, i64 %_ix_x_len
-  %_ixa_gep791 = getelementptr inbounds i8, i8* %_adda_786, i64 %_ix_x_len410
-  %_ixa_gep823 = getelementptr inbounds i8, i8* %_adda_435, i64 %_ix_x_len822
-  %_ixa_gep372 = getelementptr inbounds i8, i8* %_ixa_gep, i64 %_ix_x_len371
-  %_ixa_gep376 = getelementptr inbounds i8, i8* %_ixa_gep372, i64 %_ix_x_len375
-  %_ixa_gep796 = getelementptr inbounds i8, i8* %_ixa_gep791, i64 %_ix_x_len415
-  %_ixa_gep828 = getelementptr inbounds i8, i8* %_ixa_gep823, i64 %_ix_x_len371
-  %_ixa_gep379 = getelementptr inbounds i8, i8* %_ixa_gep376, i64 %_ix_x_len378
-  %_ixa_gep801 = getelementptr inbounds i8, i8* %_ixa_gep796, i64 %_ix_x_len420
-  %_ixa_gep833 = getelementptr inbounds i8, i8* %_ixa_gep828, i64 %_ix_x_len375
-  %_ixa_gep806 = getelementptr inbounds i8, i8* %_ixa_gep801, i64 %_ix_x_len378
-  %_ixa_gep810 = getelementptr inbounds i8, i8* %_ixa_gep806, i64 %_ix_x_len424
-  %_gepp = bitcast i8* %_ixa_gep379 to double*
-  %_gepp813 = bitcast i8* %_ixa_gep810 to double*
-  %_ind_val814 = load double, double* %_gepp813, align 8
-  %_ixa_gep837 = getelementptr inbounds i8, i8* %_ixa_gep833, i64 %_ix_x_len454
-  %_gepp840 = bitcast i8* %_ixa_gep837 to double*
-  %_ind_val841 = load double, double* %_gepp840, align 8
+  %_ixa_gep = getelementptr inbounds i8, ptr %_adda_, i64 %_ix_x_len
+  %_ixa_gep791 = getelementptr inbounds i8, ptr %_adda_786, i64 %_ix_x_len410
+  %_ixa_gep823 = getelementptr inbounds i8, ptr %_adda_435, i64 %_ix_x_len822
+  %_ixa_gep372 = getelementptr inbounds i8, ptr %_ixa_gep, i64 %_ix_x_len371
+  %_ixa_gep376 = getelementptr inbounds i8, ptr %_ixa_gep372, i64 %_ix_x_len375
+  %_ixa_gep796 = getelementptr inbounds i8, ptr %_ixa_gep791, i64 %_ix_x_len415
+  %_ixa_gep828 = getelementptr inbounds i8, ptr %_ixa_gep823, i64 %_ix_x_len371
+  %_ixa_gep379 = getelementptr inbounds i8, ptr %_ixa_gep376, i64 %_ix_x_len378
+  %_ixa_gep801 = getelementptr inbounds i8, ptr %_ixa_gep796, i64 %_ix_x_len420
+  %_ixa_gep833 = getelementptr inbounds i8, ptr %_ixa_gep828, i64 %_ix_x_len375
+  %_ixa_gep806 = getelementptr inbounds i8, ptr %_ixa_gep801, i64 %_ix_x_len378
+  %_ixa_gep810 = getelementptr inbounds i8, ptr %_ixa_gep806, i64 %_ix_x_len424
+  %_gepp = bitcast ptr %_ixa_gep379 to ptr
+  %_gepp813 = bitcast ptr %_ixa_gep810 to ptr
+  %_ind_val814 = load double, ptr %_gepp813, align 8
+  %_ixa_gep837 = getelementptr inbounds i8, ptr %_ixa_gep833, i64 %_ix_x_len454
+  %_gepp840 = bitcast ptr %_ixa_gep837 to ptr
+  %_ind_val841 = load double, ptr %_gepp840, align 8
   %_mult_tmp842 = fmul double %_ind_val814, %_ind_val841
-  store double %_mult_tmp842, double* %_gepp, align 8
+  store double %_mult_tmp842, ptr %_gepp, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %wide.trip.count = zext i32 %0 to i64
   %wide.trip.count305 = zext i32 %0 to i64

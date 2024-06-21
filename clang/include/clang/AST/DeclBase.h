@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -358,7 +359,7 @@ protected:
   /// \param Ctx The context in which we will allocate memory.
   /// \param ID The global ID of the deserialized declaration.
   /// \param Extra The amount of extra space to allocate after the object.
-  void *operator new(std::size_t Size, const ASTContext &Ctx, unsigned ID,
+  void *operator new(std::size_t Size, const ASTContext &Ctx, GlobalDeclID ID,
                      std::size_t Extra = 0);
 
   /// Allocate memory for a non-deserialized declaration.
@@ -548,16 +549,17 @@ public:
     return hasAttrs() ? getAttrs().end() : nullptr;
   }
 
-  template <typename T>
-  void dropAttr() {
+  template <typename... Ts> void dropAttrs() {
     if (!HasAttrs) return;
 
     AttrVec &Vec = getAttrs();
-    llvm::erase_if(Vec, [](Attr *A) { return isa<T>(A); });
+    llvm::erase_if(Vec, [](Attr *A) { return isa<Ts...>(A); });
 
     if (Vec.empty())
       HasAttrs = false;
   }
+
+  template <typename T> void dropAttr() { dropAttrs<T>(); }
 
   template <typename T>
   llvm::iterator_range<specific_attr_iterator<T>> specific_attrs() const {
@@ -668,9 +670,18 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
-  /// FIXME: Implement discarding declarations actually in global module
-  /// fragment. See [module.global.frag]p3,4 for details.
-  bool isDiscardedInGlobalModuleFragment() const { return false; }
+  /// Whether this declaration comes from the same module unit being compiled.
+  bool isInCurrentModuleUnit() const;
+
+  /// Whether the definition of the declaration should be emitted in external
+  /// sources.
+  bool shouldEmitInExternalSource() const;
+
+  /// Whether this declaration comes from a named module;
+  bool isInNamedModule() const;
+
+  /// Whether this declaration comes from explicit global module.
+  bool isFromExplicitGlobalModule() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -700,10 +711,7 @@ public:
 
   /// Set the owning module ID.  This may only be called for
   /// deserialized Decls.
-  void setOwningModuleID(unsigned ID) {
-    assert(isFromASTFile() && "Only works on a deserialized declaration");
-    *((unsigned*)this - 2) = ID;
-  }
+  void setOwningModuleID(unsigned ID);
 
 public:
   /// Determine the availability of the given declaration.
@@ -776,19 +784,11 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  unsigned getGlobalID() const {
-    if (isFromASTFile())
-      return *((const unsigned*)this - 1);
-    return 0;
-  }
+  GlobalDeclID getGlobalID() const;
 
   /// Retrieve the global ID of the module that owns this particular
   /// declaration.
-  unsigned getOwningModuleID() const {
-    if (isFromASTFile())
-      return *((const unsigned*)this - 2);
-    return 0;
-  }
+  unsigned getOwningModuleID() const;
 
 private:
   Module *getOwningModuleSlow() const;
@@ -1707,7 +1707,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsVirtualAsWritten : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t IsPure : 1;
+    uint64_t IsPureVirtual : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasInheritedPrototype : 1;
     LLVM_PREFERRED_TYPE(bool)
@@ -1729,7 +1729,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsExplicitlyDefaulted : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t HasDefaultedFunctionInfo : 1;
+    uint64_t HasDefaultedOrDeletedInfo : 1;
 
     /// For member functions of complete types, whether this is an ineligible
     /// special member function or an unselected destructor. See
@@ -2119,6 +2119,7 @@ public:
     case Decl::Block:
     case Decl::Captured:
     case Decl::ObjCMethod:
+    case Decl::TopLevelStmt:
       return true;
     default:
       return getDeclKind() >= Decl::firstFunction &&
@@ -2144,6 +2145,10 @@ public:
   bool isRecord() const {
     return getDeclKind() >= Decl::firstRecord &&
            getDeclKind() <= Decl::lastRecord;
+  }
+
+  bool isRequiresExprBody() const {
+    return getDeclKind() == Decl::RequiresExprBody;
   }
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }

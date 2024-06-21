@@ -17,9 +17,10 @@
 #endif
 
 #include <arm_acle.h>
-#include <fenv.h>
 #include <stdint.h>
 
+#include "hdr/fenv_macros.h"
+#include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 namespace LIBC_NAMESPACE {
@@ -52,19 +53,19 @@ struct FEnv {
   static constexpr uint32_t ExceptionControlFlagsBitPosition = 8;
 
   LIBC_INLINE static uint32_t getStatusValueForExcept(int excepts) {
-    return (excepts & FE_INVALID ? INVALID : 0) |
-           (excepts & FE_DIVBYZERO ? DIVBYZERO : 0) |
-           (excepts & FE_OVERFLOW ? OVERFLOW : 0) |
-           (excepts & FE_UNDERFLOW ? UNDERFLOW : 0) |
-           (excepts & FE_INEXACT ? INEXACT : 0);
+    return ((excepts & FE_INVALID) ? INVALID : 0) |
+           ((excepts & FE_DIVBYZERO) ? DIVBYZERO : 0) |
+           ((excepts & FE_OVERFLOW) ? OVERFLOW : 0) |
+           ((excepts & FE_UNDERFLOW) ? UNDERFLOW : 0) |
+           ((excepts & FE_INEXACT) ? INEXACT : 0);
   }
 
   LIBC_INLINE static int exceptionStatusToMacro(uint32_t status) {
-    return (status & INVALID ? FE_INVALID : 0) |
-           (status & DIVBYZERO ? FE_DIVBYZERO : 0) |
-           (status & OVERFLOW ? FE_OVERFLOW : 0) |
-           (status & UNDERFLOW ? FE_UNDERFLOW : 0) |
-           (status & INEXACT ? FE_INEXACT : 0);
+    return ((status & INVALID) ? FE_INVALID : 0) |
+           ((status & DIVBYZERO) ? FE_DIVBYZERO : 0) |
+           ((status & OVERFLOW) ? FE_OVERFLOW : 0) |
+           ((status & UNDERFLOW) ? FE_UNDERFLOW : 0) |
+           ((status & INEXACT) ? FE_INEXACT : 0);
   }
 
   static uint32_t getControlWord() {
@@ -155,8 +156,8 @@ LIBC_INLINE int set_except(int excepts) {
 LIBC_INLINE int raise_except(int excepts) {
   float zero = 0.0f;
   float one = 1.0f;
-  float largeValue = float(FPBits<float>(FPBits<float>::MAX_NORMAL));
-  float smallValue = float(FPBits<float>(FPBits<float>::MIN_NORMAL));
+  float largeValue = FPBits<float>::max_normal().get_val();
+  float smallValue = FPBits<float>::min_normal().get_val();
   auto divfunc = [](float a, float b) {
     __asm__ __volatile__("ldr  s0, %0\n\t"
                          "ldr  s1, %1\n\t"

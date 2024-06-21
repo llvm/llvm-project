@@ -17,19 +17,8 @@
 #define LLVM_CLANG_LIB_FORMAT_TOKENANALYZER_H
 
 #include "AffectedRangeManager.h"
-#include "Encoding.h"
-#include "FormatToken.h"
 #include "FormatTokenLexer.h"
 #include "TokenAnnotator.h"
-#include "UnwrappedLineParser.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Format/Format.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
-#include <memory>
 
 namespace clang {
 namespace format {
@@ -103,6 +92,7 @@ protected:
   void finishRun() override;
 
   FormatStyle Style;
+  LangOptions LangOpts;
   // Stores Style, FileID and SourceManager etc.
   const Environment &Env;
   // AffectedRangeMgr stores ranges to be fixed.

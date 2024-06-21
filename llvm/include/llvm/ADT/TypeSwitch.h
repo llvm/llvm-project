@@ -61,29 +61,9 @@ public:
   }
 
 protected:
-  /// Trait to check whether `ValueT` provides a 'dyn_cast' method with type
-  /// `CastT`.
-  template <typename ValueT, typename CastT>
-  using has_dyn_cast_t =
-      decltype(std::declval<ValueT &>().template dyn_cast<CastT>());
-
-  /// Attempt to dyn_cast the given `value` to `CastT`. This overload is
-  /// selected if `value` already has a suitable dyn_cast method.
+  /// Attempt to dyn_cast the given `value` to `CastT`.
   template <typename CastT, typename ValueT>
-  static decltype(auto) castValue(
-      ValueT &&value,
-      std::enable_if_t<is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
-          nullptr) {
-    return value.template dyn_cast<CastT>();
-  }
-
-  /// Attempt to dyn_cast the given `value` to `CastT`. This overload is
-  /// selected if llvm::dyn_cast should be used.
-  template <typename CastT, typename ValueT>
-  static decltype(auto) castValue(
-      ValueT &&value,
-      std::enable_if_t<!is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
-          nullptr) {
+  static decltype(auto) castValue(ValueT &&value) {
     return dyn_cast<CastT>(value);
   }
 

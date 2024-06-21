@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: llvm-lto2 run -r %t.o,_start,px %t.o -o %t.s
+; RUN: llvm-lto2 run -r %t.o,_start,px -r %t.o,_GLOBAL_OFFSET_TABLE_, %t.o -o %t.s
 ; RUN: llvm-objdump -d %t.s.0 | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"

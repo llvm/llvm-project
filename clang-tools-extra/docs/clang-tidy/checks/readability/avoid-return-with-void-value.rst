@@ -29,7 +29,7 @@ that should be written as
    g();
    return;
 
-to make clear that ``g()`` is called and immediately afterwards the function 
+to make clear that ``g()`` is called and immediately afterwards the function
 returns (nothing).
 
 In C, the same issue is detected by the compiler if the ``-Wpedantic`` mode
@@ -46,6 +46,6 @@ Options
 .. option::  StrictMode
 
   The value `false` specifies that a direct return statement shall
-  be excluded from the analysis if it is the only statement not 
-  contained in a block like ``if (cond) return g();``. The default
+  be excluded from the analysis if it is the only statement not
+  contained in a block, like ``if (cond) return g();``. The default
   value is `true`.

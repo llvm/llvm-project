@@ -1,0 +1,37 @@
+# RUN: not --crash llc -mtriple=amdgcn -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+---
+name:            basic
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2;
+    %0:sgpr_64 = CONVERGENCECTRL_ANCHOR
+    ; CHECK: Entry intrinsic cannot be preceded by a convergent operation in the same basic block.
+    ; CHECK: CONVERGENCECTRL_ENTRY
+    %1:sgpr_64 = CONVERGENCECTRL_ENTRY
+    ; CHECK: Loop intrinsic cannot be preceded by a convergent operation in the same basic block.
+    ; CHECK: CONVERGENCECTRL_LOOP
+    %2:sgpr_64 = CONVERGENCECTRL_LOOP %0:sgpr_64
+    S_CBRANCH_EXECZ %bb.1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.2;
+    ; CHECK: Entry intrinsic can occur only in the entry block.
+    ; CHECK: CONVERGENCECTRL_ENTRY
+    %5:sgpr_64 = CONVERGENCECTRL_ENTRY
+
+  bb.2:
+    ; CHECK: Convergence control tokens can only be used by convergent operations.
+    ; CHECK: G_PHI
+    %6:sgpr_64 = G_PHI %0:sgpr_64, %bb.0, %0:sgpr_64, %bb.1
+    %7:sgpr_64 = CONVERGENCECTRL_ANCHOR
+    %8:sgpr_64 = IMPLICIT_DEF
+    %4:sgpr_64 = SI_CALL %8:sgpr_64, 1, implicit %7:sgpr_64
+    ; CHECK: An operation can use at most one convergence control token.
+    ; CHECK: SI_CALL %{{[0-9]}}:sgpr_64, 2
+    %9:sgpr_64 = SI_CALL %8:sgpr_64, 2, implicit %7:sgpr_64, implicit %7:sgpr_64
+    ; CHECK: Cannot mix controlled and uncontrolled convergence in the same function.
+    ; CHECK: SI_CALL %{{[0-9]}}:sgpr_64, 3
+    %10:sgpr_64 = SI_CALL %8:sgpr_64, 3
+...

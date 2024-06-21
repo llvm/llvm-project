@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s
 
 RWBuffer<int16_t> BufI16;
 RWBuffer<uint16_t> BufU16;

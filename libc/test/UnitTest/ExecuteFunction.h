@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_TESTUTILS_EXECUTEFUNCTION_H
-#define LLVM_LIBC_UTILS_TESTUTILS_EXECUTEFUNCTION_H
+#ifndef LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
+#define LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H
 
 #include <stdint.h>
 
@@ -49,4 +49,4 @@ const char *signal_as_string(int signum);
 } // namespace testutils
 } // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_UTILS_TESTUTILS_EXECUTEFUNCTION_H
+#endif // LLVM_LIBC_TEST_UNITTEST_EXECUTEFUNCTION_H

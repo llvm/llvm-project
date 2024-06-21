@@ -402,4 +402,4 @@ declare void @llvm.debugtrap()
 attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-work-group-id-x" "amdgpu-no-work-group-id-y" "amdgpu-no-work-group-id-z" "amdgpu-no-work-item-id-x" "amdgpu-no-work-item-id-y" "amdgpu-no-work-item-id-z" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

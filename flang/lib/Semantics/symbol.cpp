@@ -192,12 +192,10 @@ void GenericDetails::AddSpecificProc(
 }
 void GenericDetails::set_specific(Symbol &specific) {
   CHECK(!specific_);
-  CHECK(!derivedType_);
   specific_ = &specific;
 }
 void GenericDetails::clear_specific() { specific_ = nullptr; }
 void GenericDetails::set_derivedType(Symbol &derivedType) {
-  CHECK(!specific_);
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
@@ -211,7 +209,7 @@ const Symbol *GenericDetails::CheckSpecific() const {
   return const_cast<GenericDetails *>(this)->CheckSpecific();
 }
 Symbol *GenericDetails::CheckSpecific() {
-  if (specific_) {
+  if (specific_ && !specific_->has<UseErrorDetails>()) {
     for (const Symbol &proc : specificProcs_) {
       if (&proc == specific_) {
         return nullptr;
@@ -377,6 +375,18 @@ void Symbol::SetIsExplicitBindName(bool yes) {
       details_);
 }
 
+void Symbol::SetIsCDefined(bool yes) {
+  common::visit(
+      [&](auto &x) {
+        if constexpr (HasBindName<decltype(&x)>) {
+          x.set_isCDefined(yes);
+        } else {
+          DIE("CDEFINED not allowed on this kind of symbol");
+        }
+      },
+      details_);
+}
+
 bool Symbol::IsFuncResult() const {
   return common::visit(
       common::visitors{[](const EntityDetails &x) { return x.isFuncResult(); },
@@ -387,9 +397,17 @@ bool Symbol::IsFuncResult() const {
       details_);
 }
 
+const ArraySpec *Symbol::GetShape() const {
+  if (const auto *details{std::get_if<ObjectEntityDetails>(&details_)}) {
+    return &details->shape();
+  } else {
+    return nullptr;
+  }
+}
+
 bool Symbol::IsObjectArray() const {
-  const auto *details{std::get_if<ObjectEntityDetails>(&details_)};
-  return details && details->IsArray();
+  const ArraySpec *shape{GetShape()};
+  return shape && !shape->empty();
 }
 
 bool Symbol::IsSubprogram() const {
@@ -416,6 +434,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const EntityDetails &x) {
     os << " type: " << *x.type();
   }
   DumpOptional(os, "bindName", x.bindName());
+  DumpBool(os, "CDEFINED", x.isCDefined());
   return os;
 }
 
@@ -454,6 +473,9 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const ProcEntityDetails &x) {
   if (x.procInterface_) {
+    if (x.rawProcInterface_ != x.procInterface_) {
+      os << ' ' << x.rawProcInterface_->name() << " ->";
+    }
     os << ' ' << x.procInterface_->name();
   } else {
     DumpType(os, x.type());

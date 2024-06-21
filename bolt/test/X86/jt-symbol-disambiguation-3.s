@@ -1,11 +1,11 @@
-# In this test case, we reproduce the behavior seen in gcc where the
-# base address of a jump table is decremented by some number and ends up
-# at the exact addess of a jump table from another function. After
-# linking, the instruction references another jump table and that
-# confuses BOLT.
-# We repro here the following issue:
-# Before assembler: Instruction operand is: jumptable - 32
-# After linking:    Instruction operand is: another_jumptable
+## In this test case, we reproduce the behavior seen in gcc where the
+## base address of a jump table is decremented by some number and ends up
+## at the exact addess of a jump table from another function. After
+## linking, the instruction references another jump table and that
+## confuses BOLT.
+## We repro here the following issue:
+## Before assembler: Instruction operand is: jumptable - 32
+## After linking:    Instruction operand is: another_jumptable
 
 # REQUIRES: system-linux, asserts
 
@@ -18,8 +18,8 @@
 # RUN: llvm-bolt %t.exe -o %t.exe.bolt --relocs=1 --lite=0 \
 # RUN:   --reorder-blocks=reverse
 
-# Useful when manually testing this. Currently we just check that
-# the test does not cause BOLT to assert.
+## Useful when manually testing this. Currently we just check that
+## the test does not cause BOLT to assert.
 # COM: %t.exe.bolt 1 2
 
   .file "jt-symbol-disambiguation-3.s"

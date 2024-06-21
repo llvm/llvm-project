@@ -4,8 +4,8 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  define i32 @ld_zext_i24(i24* %ptr, i24* %ptr2) {
-    %load = load i24, i24* %ptr, align 1
+  define i32 @ld_zext_i24(ptr %ptr, ptr %ptr2) {
+    %load = load i24, ptr %ptr, align 1
     %ext = zext i24 %load to i32
     ret i32 %ext
   }

@@ -27,9 +27,17 @@ static bool areEquivalentIndirectionValues(const Value &Val1,
 }
 
 bool areEquivalentValues(const Value &Val1, const Value &Val2) {
-  return &Val1 == &Val2 || (Val1.getKind() == Val2.getKind() &&
-                            (isa<TopBoolValue>(&Val1) ||
-                             areEquivalentIndirectionValues(Val1, Val2)));
+  if (&Val1 == &Val2)
+    return true;
+  if (Val1.getKind() != Val2.getKind())
+    return false;
+  // If values are distinct and have properties, we don't consider them equal,
+  // leaving equality up to the user model.
+  if (!Val1.properties().empty() || !Val2.properties().empty())
+    return false;
+  if (isa<TopBoolValue>(&Val1))
+    return true;
+  return areEquivalentIndirectionValues(Val1, Val2);
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Value &Val) {
@@ -38,8 +46,6 @@ raw_ostream &operator<<(raw_ostream &OS, const Value &Val) {
     return OS << "Integer(@" << &Val << ")";
   case Value::Kind::Pointer:
     return OS << "Pointer(" << &cast<PointerValue>(Val).getPointeeLoc() << ")";
-  case Value::Kind::Record:
-    return OS << "Record(" << &cast<RecordValue>(Val).getLoc() << ")";
   case Value::Kind::TopBool:
     return OS << "TopBool(" << cast<TopBoolValue>(Val).getAtom() << ")";
   case Value::Kind::AtomicBool:

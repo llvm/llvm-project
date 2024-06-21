@@ -4,9 +4,9 @@
 define void @mulhs_v16i8(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: mulhs_v16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmuh.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmuh.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -24,9 +24,9 @@ entry:
 define void @mulhu_v16i8(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: mulhu_v16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmuh.bu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmuh.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -44,9 +44,9 @@ entry:
 define void @mulhs_v8i16(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: mulhs_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmuh.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmuh.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -64,9 +64,9 @@ entry:
 define void @mulhu_v8i16(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: mulhu_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmuh.hu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmuh.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -84,9 +84,9 @@ entry:
 define void @mulhs_v4i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: mulhs_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmuh.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmuh.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -104,9 +104,9 @@ entry:
 define void @mulhu_v4i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: mulhu_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmuh.wu $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmuh.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -124,9 +124,9 @@ entry:
 define void @mulhs_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: mulhs_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmuh.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmuh.d $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -144,9 +144,9 @@ entry:
 define void @mulhu_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: mulhu_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vmuh.du $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmuh.du $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

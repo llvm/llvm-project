@@ -90,19 +90,19 @@
 
 --- |
   
-  %0 = type { i32 (...)**, i16, %1* }
-  %1 = type { i32 (...)** }
-  %2 = type { i32 (...)**, %1*, i8, i32, i32, i32, i16, i32, i16, i32, i16*, %3*, %6*, %9 }
+  %0 = type { ptr, i16, ptr }
+  %1 = type { ptr }
+  %2 = type { ptr, ptr, i8, i32, i32, i32, i16, i32, i16, i32, ptr, ptr, ptr, %9 }
   %3 = type { %4 }
-  %4 = type { i32 (...)**, i8, i32, i32, %5**, %1* }
+  %4 = type { ptr, i8, i32, i32, ptr, ptr }
   %5 = type { i32, i32 }
-  %6 = type { %7*, %0*, %0*, %0*, %0*, %0*, %0*, %0*, %0*, %0*, %0*, %0*, %0*, %0*, %0*, %1* }
+  %6 = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
   %7 = type { %8 }
-  %8 = type { i32 (...)**, i8, i32, i32, %0**, %1* }
-  %9 = type { i8* }
-  %10 = type { %0, i32, i32, %0* }
+  %8 = type { ptr, i8, i32, i32, ptr, ptr }
+  %9 = type { ptr }
+  %10 = type { %0, i32, i32, ptr }
   
-  define %0* @Fun(%2* %arg) #0 !dbg !7 {
+  define ptr @Fun(ptr %arg) #0 !dbg !7 {
   bb:
     switch i32 undef, label %bb3 [
       i32 58, label %bb1
@@ -113,22 +113,22 @@
     br label %bb4, !dbg !15
   
   bb2:                                              ; preds = %bb
-    %tmp = tail call %10* @hoge(%6* undef, %0* undef, i32 signext 0, i32 signext 0), !dbg !16
-    call void @llvm.dbg.value(metadata %10* %tmp, metadata !10, metadata !DIExpression()), !dbg !16
+    %tmp = tail call ptr @hoge(ptr undef, ptr undef, i32 signext 0, i32 signext 0), !dbg !16
+    call void @llvm.dbg.value(metadata ptr %tmp, metadata !10, metadata !DIExpression()), !dbg !16
     br label %bb4, !dbg !17
   
   bb3:                                              ; preds = %bb
     unreachable, !dbg !18
   
   bb4:                                              ; preds = %bb2, %bb1
-    %tmp5 = phi %10* [ undef, %bb1 ], [ %tmp, %bb2 ], !dbg !19
-    call void @llvm.dbg.value(metadata %10* %tmp5, metadata !12, metadata !DIExpression()), !dbg !19
-    %tmp6 = bitcast %10* %tmp5 to %0*, !dbg !20
-    call void @llvm.dbg.value(metadata %0* %tmp6, metadata !13, metadata !DIExpression()), !dbg !20
-    ret %0* %tmp6, !dbg !21
+    %tmp5 = phi ptr [ undef, %bb1 ], [ %tmp, %bb2 ], !dbg !19
+    call void @llvm.dbg.value(metadata ptr %tmp5, metadata !12, metadata !DIExpression()), !dbg !19
+    %tmp6 = bitcast ptr %tmp5 to ptr, !dbg !20
+    call void @llvm.dbg.value(metadata ptr %tmp6, metadata !13, metadata !DIExpression()), !dbg !20
+    ret ptr %tmp6, !dbg !21
   }
   
-  declare %10* @hoge(%6*, %0*, i32, i32) #0
+  declare ptr @hoge(ptr, ptr, i32, i32) #0
   
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #1

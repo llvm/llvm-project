@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -ast-dump %s | FileCheck %s
 
 #pragma clang attribute push (__attribute__((disable_sanitizer_instrumentation, annotate("test1"))), apply_to=variable(is_global))
 int var1;

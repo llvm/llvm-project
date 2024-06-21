@@ -9,7 +9,7 @@
 ; DBG-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
-; DBG-NEXT: ph:
+; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
@@ -179,19 +179,20 @@ exit:
 ; DBG-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; DBG-NEXT: vp<[[TC:%.+]]> = original trip-count
 ; DBG-EMPTY:
-; DBG-NEXT: ph:
+; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
+; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
 ; DBG-NEXT:   vector.body:
 ; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
-; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * ir<1> (truncated to i32)
-; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>
+; DBG-NEXT:     SCALAR-CAST vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
+; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, vp<[[CAST]]>
 ; DBG-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%for>, vp<[[SCALAR_STEPS]]>
 ; DBG-NEXT:     CLONE store vp<[[SPLICE]]>, ir<%dst>
 ; DBG-NEXT:     EMIT vp<[[IV_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -201,7 +202,10 @@ exit:
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
+; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end vp<[[SCALAR_STEPS]]>, ir<1>
 ; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_1]]>
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {

@@ -145,7 +145,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::FunctionParmPackExprClass:
   case Expr::MSPropertyRefExprClass:
   case Expr::MSPropertySubscriptExprClass:
-  case Expr::OMPArraySectionExprClass:
+  case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
   case Expr::OMPIteratorExprClass:
     return Cl::CL_LValue;
@@ -204,6 +204,11 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::RequiresExprClass:
     return Cl::CL_PRValue;
 
+  case Expr::EmbedExprClass:
+    // Nominally, this just goes through as a PRValue until we actually expand
+    // it and check it.
+    return Cl::CL_PRValue;
+
   // Make HLSL this reference-like
   case Expr::CXXThisExprClass:
     return Lang.HLSL ? Cl::CL_LValue : Cl::CL_PRValue;
@@ -215,6 +220,14 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::SubstNonTypeTemplateParmExprClass:
     return ClassifyInternal(Ctx,
                  cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement());
+
+  case Expr::PackIndexingExprClass: {
+    // A pack-index-expression always expands to an id-expression.
+    // Consider it as an LValue expression.
+    if (cast<PackIndexingExpr>(E)->isInstantiationDependent())
+      return Cl::CL_LValue;
+    return ClassifyInternal(Ctx, cast<PackIndexingExpr>(E)->getSelectedExpr());
+  }
 
     // C, C++98 [expr.sub]p1: The result is an lvalue of type "T".
     // C++11 (DR1213): in the case of an array operand, the result is an lvalue
