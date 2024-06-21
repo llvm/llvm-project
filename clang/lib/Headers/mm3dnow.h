@@ -7,16 +7,16 @@
  *===-----------------------------------------------------------------------===
  */
 
-// 3dNow intrinsics are no longer supported, and this header remains only as a
-// stub for users who were including it to get to _m_prefetch or
-// _m_prefetchw. Such uses should prefer x86intrin.h.
+// 3dNow intrinsics are no longer supported.
 
 #ifndef _MM3DNOW_H_INCLUDED
 #define _MM3DNOW_H_INCLUDED
 
+#ifndef _CLANG_DISABLE_CRT_DEPRECATION_WARNINGS
+#warning "The <mm3dnow.h> header is deprecated, and 3dNow! intrinsics are unsupported. For other intrinsics, include <x86intrin.h>, instead."
+#endif
+
 #include <mmintrin.h>
 #include <prfchwintrin.h>
-
-#undef __DEFAULT_FN_ATTRS
 
 #endif
