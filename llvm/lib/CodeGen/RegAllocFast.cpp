@@ -177,7 +177,7 @@ private:
 
 class RegAllocFastImpl {
 public:
-  RegAllocFastImpl(const RegClassFilterFunc F = allocateAllRegClasses,
+  RegAllocFastImpl(const RegClassFilterFunc F = nullptr,
                    bool ClearVirtRegs_ = true)
       : ShouldAllocateClass(F), StackSlotForVirtReg(-1),
         ClearVirtRegs(ClearVirtRegs_) {}
@@ -387,8 +387,7 @@ class RegAllocFast : public MachineFunctionPass {
 public:
   static char ID;
 
-  RegAllocFast(const RegClassFilterFunc F = allocateAllRegClasses,
-               bool ClearVirtRegs_ = true)
+  RegAllocFast(const RegClassFilterFunc F = nullptr, bool ClearVirtRegs_ = true)
       : MachineFunctionPass(ID), Impl(F, ClearVirtRegs_) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -431,6 +430,8 @@ INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
 
 bool RegAllocFastImpl::shouldAllocateRegister(const Register Reg) const {
   assert(Reg.isVirtual());
+  if (!ShouldAllocateClass)
+    return true;
   const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
   return ShouldAllocateClass(*TRI, RC);
 }
