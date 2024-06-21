@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -mconstructor-aliases -clangir-disable-emit-cxx-default -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
-// XFAIL: *
-
 
 enum class EFMode { Always, Verbose };
 
@@ -38,10 +36,10 @@ public:
 };
 
 // Class A
-// CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>
+// CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.record.decl.ast>
 
 // Class B
-// CHECK: ![[ClassB:ty_.*]] = !cir.struct<class "B" {!cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>}>
+// CHECK: ![[ClassB:ty_.*]] = !cir.struct<class "B" {![[ClassA]]}>
 
 // CHECK: cir.func @_Z4bluev()
 // CHECK:   %0 = cir.alloca !ty_22PSEvent22, !cir.ptr<!ty_22PSEvent22>, ["p", init] {alignment = 8 : i64}
@@ -63,7 +61,7 @@ public:
 // CHECK:     cir.call @_ZN1BD2Ev(%0) : (!cir.ptr<!ty_22B22>) -> ()
 
 // operator delete(void*) declaration
-// CHECK:   cir.func private @_ZdlPv(!cir.ptr<!void>)
+// CHECK:   cir.func private @_ZdlPvm(!cir.ptr<!void>, !u64i)
 
 // B dtor => @B::~B() #2
 // Calls dtor #1
@@ -75,7 +73,7 @@ public:
 // CHECK:     %1 = cir.load %0 : !cir.ptr<!cir.ptr<![[ClassB]]>>, !cir.ptr<![[ClassB]]>
 // CHECK:     cir.call @_ZN1BD2Ev(%1) : (!cir.ptr<![[ClassB]]>) -> ()
 // CHECK:     %2 = cir.cast(bitcast, %1 : !cir.ptr<![[ClassB]]>), !cir.ptr<!void>
-// CHECK:     cir.call @_ZdlPv(%2) : (!cir.ptr<!void>) -> ()
+// CHECK:     cir.call @_ZdlPvm(%2, %3) : (!cir.ptr<!void>, !u64i) -> ()
 // CHECK:     cir.return
 // CHECK:   }
 
