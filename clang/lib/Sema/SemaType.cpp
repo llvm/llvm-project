@@ -8077,17 +8077,9 @@ static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
 /// match one of the standard Neon vector types.
 static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                      Sema &S, VectorKind VecKind) {
-  bool IsTargetCUDAAndHostARM = false;
-  if (S.getLangOpts().CUDAIsDevice) {
-    const TargetInfo *AuxTI = S.getASTContext().getAuxTargetInfo();
-    IsTargetCUDAAndHostARM =
-        AuxTI && (AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM());
-  }
-
   // Target must have NEON (or MVE, whose vectors are similar enough
   // not to need a separate attribute)
-  if (!(S.Context.getTargetInfo().hasFeature("mve") ||
-        IsTargetCUDAAndHostARM) &&
+  if (!S.Context.getTargetInfo().hasFeature("mve") &&
       VecKind == VectorKind::Neon &&
       S.Context.getTargetInfo().getTriple().isArmMClass()) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported_m_profile)
@@ -8095,8 +8087,7 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     Attr.setInvalid();
     return;
   }
-  if (!(S.Context.getTargetInfo().hasFeature("mve") ||
-        IsTargetCUDAAndHostARM) &&
+  if (!S.Context.getTargetInfo().hasFeature("mve") &&
       VecKind == VectorKind::NeonPoly &&
       S.Context.getTargetInfo().getTriple().isArmMClass()) {
     S.Diag(Attr.getLoc(), diag::err_attribute_unsupported_m_profile)
