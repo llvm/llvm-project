@@ -37,12 +37,12 @@ LogicalResult passDriver(Operation *op,
   if (o.checkOnly) {
     return success();
   }
-  for (auto &[scope, traces] : (*tracesOrFail).scopeToTraces) {
+  for (auto &traces : (*tracesOrFail).scopeTraces) {
     auto schedule = o.planner(op, *traces, o);
     if (failed(schedule)) {
       return failure();
     }
-    if (failed(o.mutator(op, scope, *schedule, o))) {
+    if (failed(o.mutator(op, traces->getAllocScope(), *schedule, o))) {
       return failure();
     }
   }

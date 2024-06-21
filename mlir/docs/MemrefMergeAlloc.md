@@ -187,13 +187,15 @@ collected traces as below:
 /// which buffers are put into which "allocation scope".
 class LifetimeTrace {
 public:
-  virtual ~LifetimeTrace() = default;
+  virtual Block *getAllocScope() const = 0;
+  virtual Attribute getMemorySpace() const = 0;
 };
 
-/// top level memory trace info for multiple scopes. Each key-value is the
-///  "allocation scope" and the LifetimeTrace
+/// top level memory trace info for multiple scopes. Each element of scopeTraces
+/// should contain an "allocation scope" and the implementation-defined lifetime
+/// data
 struct MemoryTraceScopes {
-  llvm::DenseMap<Block *, std::unique_ptr<LifetimeTrace>> scopeToTraces;
+  llvm::SmallVector<std::unique_ptr<LifetimeTrace>> scopeTraces;
   MemoryTraceScopes() = default;
 };
 
@@ -216,6 +218,7 @@ interfaces are shown below:
 /// memref::AllocOp which are in the same LifetimeTrace.
 struct MemorySchedule {
   size_t totalSize;
+  Attribute memorySpace;
   llvm::DenseMap<Operation *, int64_t> allocToOffset;
   MemorySchedule() : totalSize{0} {}
 };

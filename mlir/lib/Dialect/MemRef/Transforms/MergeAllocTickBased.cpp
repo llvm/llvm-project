@@ -28,13 +28,7 @@ using namespace special_ticks;
 
 /// Return `true` if the given MemRef type has static shapes
 /// and default memory space.
-static bool isMemRefTypeOk(MemRefType type) {
-  IntegerAttr intMemorySpace =
-      llvm::dyn_cast_or_null<IntegerAttr>(type.getMemorySpace());
-  if (intMemorySpace && intMemorySpace.getValue() != 0)
-    return false;
-  return type.hasStaticShape() && type.getLayout().isIdentity();
-}
+static bool isMemRefTypeOk(MemRefType type) { return type.hasStaticShape(); }
 
 void Tick::update(int64_t tick) {
   if (tick == UNTRACEABLE_ACCESS) {
@@ -217,7 +211,9 @@ TickCollecter::getTrace(TickCollecterStates *s) const {
                   size_t size)
         : allocTick{allocTick}, tick{tick}, trace{bufferId, size} {}
   };
-  llvm::DenseMap<Block *, llvm::SmallVector<TraceWithTick, 8>> raw;
+  llvm::DenseMap<std::pair<Block *, Attribute>,
+                 llvm::SmallVector<TraceWithTick, 8>>
+      raw;
   for (auto &[op, tick] : s->allocTicks) {
     if (!isMergeableAlloc(s, op, tick.firstAccess)) {
       continue;
@@ -237,15 +233,18 @@ TickCollecter::getTrace(TickCollecterStates *s) const {
     if (failed(allocSize)) {
       return failure();
     }
+    auto key = std::make_pair(
+        block, cast<MemRefType>(op->getResultTypes().front()).getMemorySpace());
     // tick.firstAccess * 2 and tick.lastAccess * 2 + 1 to make sure "dealloc"
     // overlaps "alloc"
-    raw[block].emplace_back(tick.allocTick, tick.firstAccess * 2,
-                            reinterpret_cast<uintptr_t>(op), *allocSize);
-    raw[block].emplace_back(tick.allocTick, tick.lastAccess * 2 + 1,
-                            reinterpret_cast<uintptr_t>(op), 0);
+    raw[key].emplace_back(tick.allocTick, tick.firstAccess * 2,
+                          reinterpret_cast<uintptr_t>(op), *allocSize);
+    raw[key].emplace_back(tick.allocTick, tick.lastAccess * 2 + 1,
+                          reinterpret_cast<uintptr_t>(op), 0);
   }
   MemoryTraceScopes ret;
-  for (auto &[scope, trace] : raw) {
+  for (auto &[scopeAndSpace, trace] : raw) {
+    const auto &[scope, memSpace] = scopeAndSpace;
     std::stable_sort(trace.begin(), trace.end(),
                      [](const TraceWithTick &a, const TraceWithTick &b) {
                        if (a.tick == b.tick) {
@@ -253,13 +252,29 @@ TickCollecter::getTrace(TickCollecterStates *s) const {
                        }
                        return a.tick < b.tick;
                      });
-    auto retTrace = std::make_unique<TickTraceResult>();
+    auto retTrace = std::make_unique<TickTraceResult>(scope, memSpace);
     retTrace->traces.reserve(trace.size());
     for (auto &tr : trace) {
       retTrace->traces.emplace_back(tr.trace);
     }
-    ret.scopeToTraces[scope] = std::move(retTrace);
+    ret.scopeTraces.emplace_back(std::move(retTrace));
   }
+  // stablize the order of scopes for testing
+  std::stable_sort(
+      ret.scopeTraces.begin(), ret.scopeTraces.end(),
+      [](const std::unique_ptr<LifetimeTrace> &a,
+         const std::unique_ptr<LifetimeTrace> &b) {
+        int64_t aFirstSize = -1, bFirstSize = -1;
+        if (auto &traces = static_cast<TickTraceResult *>(a.get())->traces;
+            !traces.empty()) {
+          aFirstSize = traces.front().size;
+        }
+        if (auto &traces = static_cast<TickTraceResult *>(b.get())->traces;
+            !traces.empty()) {
+          bFirstSize = traces.front().size;
+        }
+        return aFirstSize < bFirstSize;
+      });
   return ret;
 }
 
@@ -337,6 +352,7 @@ FailureOr<MemorySchedule> tickBasedPlanMemory(Operation *op,
       outSchedule, dummy);
   MemorySchedule ret;
   ret.totalSize = total;
+  ret.memorySpace = tr.getMemorySpace();
   for (auto [k, offset] : outSchedule) {
     ret.allocToOffset[reinterpret_cast<Operation *>(k)] =
         static_cast<int64_t>(offset);
@@ -345,14 +361,17 @@ FailureOr<MemorySchedule> tickBasedPlanMemory(Operation *op,
 }
 
 Value MergeAllocDefaultMutator::buildAlloc(OpBuilder &builder, Block *block,
-                                           int64_t size,
-                                           int64_t alignmentInt) const {
+                                           int64_t size, int64_t alignmentInt,
+                                           Attribute memorySpace) const {
   builder.setInsertionPointToStart(block);
   auto alignment = builder.getIntegerAttr(
       IntegerType::get(builder.getContext(), 64), alignmentInt);
   auto alloc = builder.create<memref::AllocOp>(
       block->getParentOp()->getLoc(),
-      MemRefType::get({size}, builder.getI8Type()), alignment);
+      MemRefType::get({size}, builder.getI8Type(),
+                      /*layout*/ MemRefLayoutAttrInterface(), memorySpace),
+      alignment);
+
   return alloc;
 }
 Value MergeAllocDefaultMutator::buildView(OpBuilder &builder, Block *scope,
@@ -375,8 +394,9 @@ MergeAllocDefaultMutator::operator()(Operation *op, Block *scope,
     return success();
   }
   OpBuilder builder{op->getContext()};
-  auto alloc = buildAlloc(
-      builder, scope, static_cast<int64_t>(schedule.totalSize), o.alignment);
+  auto alloc =
+      buildAlloc(builder, scope, static_cast<int64_t>(schedule.totalSize),
+                 o.alignment, schedule.memorySpace);
   for (auto &[origBuf, offset] : schedule.allocToOffset) {
     origBuf->replaceAllUsesWith(
         buildView(builder, scope, origBuf, alloc, static_cast<int64_t>(offset))

@@ -128,3 +128,52 @@ func.func @withloop() {
   }
   return
 }
+
+
+// CHECK-LABEL: @different_mem_space
+func.func @different_mem_space() {
+  // CHECK-DAG: %[[BASE_DEFAULT:.*]] = memref.alloc() {alignment = 64 : i64} : memref<4096xi8>
+  // CHECK-DAG: %[[BASE_WG:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3584xi8, #gpu.address_space<workgroup>>
+  // CHECK-DAG: %[[BASE_PRIVATE:.*]] = memref.alloc() {alignment = 64 : i64} : memref<1280xi8, #gpu.address_space<private>>
+  // CHECK-DAG: %[[C0_4:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[defaultv:.*]] = memref.view %[[BASE_DEFAULT]][%[[C0_4]]][] : memref<4096xi8> to memref<8x64xf32>
+  %defaultv = memref.alloc() : memref<8x64xf32>
+  // CHECK:     "test.source"(%[[defaultv]])
+  "test.source"(%defaultv)  : (memref<8x64xf32>) -> ()
+  // CHECK-DAG: %[[C2048_4:.*]] = arith.constant 2048 : index
+  // CHECK-DAG: %[[defaultv2:.*]] = memref.view %[[BASE_DEFAULT]][%[[C2048_4]]][] : memref<4096xi8> to memref<8x64xf32>
+  %defaultv2 = memref.alloc() : memref<8x64xf32>
+  // CHECK-DAG: %[[C2048_4_2:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[priv:.*]] = memref.view %[[BASE_PRIVATE]][%[[C2048_4_2]]][] : memref<1280xi8, #gpu.address_space<private>> to memref<4x64xf32, #gpu.address_space<private>>
+  %priv = memref.alloc() : memref<4x64xf32, #gpu.address_space<private>>
+  // CHECK:     "test.source"(%[[priv]])
+  "test.source"(%priv)  : (memref<4x64xf32, #gpu.address_space<private>>) -> ()
+  // CHECK-DAG: %[[C0_4_2:.*]] = arith.constant 1024 : index
+  // CHECK-DAG: %[[priv2:.*]] = memref.view %[[BASE_PRIVATE]][%[[C0_4_2]]][] : memref<1280xi8, #gpu.address_space<private>> to memref<64xf32, #gpu.address_space<private>>
+  %priv2 = memref.alloc() : memref<64xf32,  #gpu.address_space<private>>
+  // CHECK:     "test.source"(%[[priv2]])
+  "test.source"(%priv2)  : (memref<64xf32, #gpu.address_space<private>>) -> ()
+  // CHECK:     "test.source"(%[[priv]])
+  "test.source"(%priv)  : (memref<4x64xf32, #gpu.address_space<private>>) -> ()
+
+
+  // CHECK-DAG: %[[C2048_4_3:.*]] = arith.constant 1536 : index
+  // CHECK-DAG: %[[sharedv:.*]] = memref.view %[[BASE_WG]][%[[C2048_4_3]]][] : memref<3584xi8, #gpu.address_space<workgroup>> to memref<8x64xf32, #gpu.address_space<workgroup>>
+  %sharedv = memref.alloc() : memref<8x64xf32, #gpu.address_space<workgroup>>
+  // CHECK-DAG: %[[C0_4_3:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[sharedv2:.*]] = memref.view %[[BASE_WG]][%[[C0_4_3]]][] : memref<3584xi8, #gpu.address_space<workgroup>> to memref<6x64xf32, #gpu.address_space<workgroup>>
+  %sharedv2 = memref.alloc() : memref<6x64xf32, #gpu.address_space<workgroup>>
+  // CHECK:     "test.source"(%[[sharedv2]])
+  // CHECK:     "test.source"(%[[sharedv]])
+  // CHECK:     "test.source"(%[[sharedv2]])
+  "test.source"(%sharedv2)  : (memref<6x64xf32, #gpu.address_space<workgroup>>) -> ()
+  "test.source"(%sharedv)  : (memref<8x64xf32, #gpu.address_space<workgroup>>) -> ()
+  "test.source"(%sharedv2)  : (memref<6x64xf32, #gpu.address_space<workgroup>>) -> ()
+
+
+  // CHECK:     "test.source"(%[[defaultv2]])
+  // CHECK:     "test.source"(%[[defaultv]])
+  "test.source"(%defaultv2)  : (memref<8x64xf32>) -> ()
+  "test.source"(%defaultv)  : (memref<8x64xf32>) -> ()
+  return
+}

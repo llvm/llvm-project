@@ -63,7 +63,12 @@ struct ComplexScope {
 /// the top-level collected lifetime trace for merge-alloc pass
 struct TickTraceResult : public LifetimeTrace {
   memoryplan::Traces traces;
-  TickTraceResult() : LifetimeTrace{TK_TICK} {}
+  Block *block;
+  Attribute memorySpace;
+  TickTraceResult(Block *block, Attribute memorySpace)
+      : LifetimeTrace{TK_TICK}, block{block}, memorySpace{memorySpace} {}
+  Block *getAllocScope() const override { return block; }
+  Attribute getMemorySpace() const override { return memorySpace; }
   static bool classof(const LifetimeTrace *S) {
     return S->getKind() == TK_TICK;
   }
@@ -156,7 +161,7 @@ struct MergeAllocDefaultMutator {
   /// builds an memory alloc op at the scope with given size and alignment in
   /// bytes
   virtual Value buildAlloc(OpBuilder &build, Block *scope, int64_t size,
-                           int64_t alignment) const;
+                           int64_t alignment, Attribute memorySpace) const;
   /// builds an memory view op for original memref.alloc op (origAllocOp) and
   /// the merged single allocation (mergedAlloc)
   virtual Value buildView(OpBuilder &build, Block *scope,
