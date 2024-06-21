@@ -98,7 +98,11 @@ public:
       assert(!builder.getNamedGlobal(globalName) &&
              "We should have a unique name here");
 
-      allocas.push_back(std::make_pair(alloca, store));
+      if (std::find_if(allocas.begin(), allocas.end(), [alloca](auto x) {
+            return x.first == alloca;
+          }) == allocas.end()) {
+        allocas.push_back(std::make_pair(alloca, store));
+      }
 
       auto loc = callOp.getLoc();
       fir::GlobalOp global = builder.createGlobalConstant(
@@ -132,14 +136,9 @@ public:
       rewriter.replaceOp(callOp, newOp);
 
       for (auto a : allocas) {
-        unsigned count = 0;
-
-        for ([[maybe_unused]] auto i : a.first->getUsers())
-          ++count;
-
-        // If the alloca is only used for a store and the call operand, the
-        // store is no longer required.
-        if (count == 1) {
+        if (a.first->hasOneUse()) {
+          // If the alloca is only used for a store and the call operand, the
+          // store is no longer required.
           rewriter.eraseOp(a.second);
           rewriter.eraseOp(a.first);
         }
