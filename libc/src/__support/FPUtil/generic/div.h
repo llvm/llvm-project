@@ -140,8 +140,7 @@ div(InType x, InType y) {
     result = OutFPBits::create_value(
                  result_sign,
                  static_cast<OutStorageType>(q_exponent + OutFPBits::EXP_BIAS),
-                 static_cast<OutStorageType>((q >> Q_EXTRA_FRACTION_LEN) &
-                                             OutFPBits::SIG_MASK))
+                 static_cast<OutStorageType>(q >> Q_EXTRA_FRACTION_LEN))
                  .uintval();
 
   } else {
