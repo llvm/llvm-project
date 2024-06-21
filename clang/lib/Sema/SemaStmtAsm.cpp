@@ -271,11 +271,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       OutputName = Names[i]->getName();
 
     TargetInfo::ConstraintInfo Info(Literal->getString(), OutputName);
-    if (!Context.getTargetInfo().validateOutputConstraint(Info) &&
+    diag::kind AsmDiag = diag::err_asm_invalid_constraint;
+    if (!Context.getTargetInfo().validateOutputConstraint(Info, &FeatureMap,
+                                                          AsmDiag) &&
         !(LangOpts.HIPStdPar && LangOpts.CUDAIsDevice)) {
-      targetDiag(Literal->getBeginLoc(),
-                 diag::err_asm_invalid_output_constraint)
-          << Info.getConstraintStr();
+      targetDiag(Literal->getBeginLoc(), AsmDiag)
+          << 1 << Info.getConstraintStr();
       return new (Context)
           GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
                      NumInputs, Names, Constraints, Exprs.data(), AsmString,
@@ -363,10 +364,11 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       InputName = Names[i]->getName();
 
     TargetInfo::ConstraintInfo Info(Literal->getString(), InputName);
-    if (!Context.getTargetInfo().validateInputConstraint(OutputConstraintInfos,
-                                                         Info)) {
-      targetDiag(Literal->getBeginLoc(), diag::err_asm_invalid_input_constraint)
-          << Info.getConstraintStr();
+    diag::kind AsmDiag = diag::err_asm_invalid_constraint;
+    if (!Context.getTargetInfo().validateInputConstraint(
+            OutputConstraintInfos, Info, &FeatureMap, AsmDiag)) {
+      targetDiag(Literal->getBeginLoc(), AsmDiag)
+          << 0 << Info.getConstraintStr();
       return new (Context)
           GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
                      NumInputs, Names, Constraints, Exprs.data(), AsmString,

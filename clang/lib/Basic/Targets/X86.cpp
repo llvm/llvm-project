@@ -1393,8 +1393,10 @@ static unsigned matchAsmCCConstraint(const char *Name) {
   return RV;
 }
 
-bool X86TargetInfo::validateAsmConstraint(
-    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+bool X86TargetInfo::validateAsmConstraint(const char *&Name,
+                                          TargetInfo::ConstraintInfo &Info,
+                                          llvm::StringMap<bool> *FeatureMap,
+                                          diag::kind &Diag) const {
   switch (*Name) {
   default:
     return false;

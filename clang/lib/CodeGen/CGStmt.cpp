@@ -2280,6 +2280,7 @@ static std::string
 SimplifyConstraint(const char *Constraint, const TargetInfo &Target,
                  SmallVectorImpl<TargetInfo::ConstraintInfo> *OutCons=nullptr) {
   std::string Result;
+  diag::kind Diag;
 
   while (*Constraint) {
     switch (*Constraint) {
@@ -2313,8 +2314,9 @@ SimplifyConstraint(const char *Constraint, const TargetInfo &Target,
       assert(OutCons &&
              "Must pass output names to constraints with a symbolic name");
       unsigned Index;
-      bool result = Target.resolveSymbolicName(Constraint, *OutCons, Index);
-      assert(result && "Could not resolve symbolic name"); (void)result;
+      [[maybe_unused]] bool result =
+          Target.resolveSymbolicName(Constraint, *OutCons, Index, Diag);
+      assert(result && "Could not resolve symbolic name");
       Result += llvm::utostr(Index);
       break;
     }
@@ -2351,7 +2353,8 @@ AddVariableConstraints(const std::string &Constraint, const Expr &AsmExpr,
   // We're using validateOutputConstraint here because we only care if
   // this is a register constraint.
   TargetInfo::ConstraintInfo Info(Constraint, "");
-  if (Target.validateOutputConstraint(Info) &&
+  diag::kind AsmDiag;
+  if (Target.validateOutputConstraint(Info, nullptr, AsmDiag) &&
       !Info.allowsRegister()) {
     CGM.ErrorUnsupported(&Stmt, "__asm__");
     return Constraint;
@@ -2626,14 +2629,20 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
   SmallVector<TargetInfo::ConstraintInfo, 4> InputConstraintInfos;
 
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  llvm::StringMap<bool> FeatureMap;
+  CGM.getContext().getFunctionFeatureMap(FeatureMap, FD);
+
   bool IsHipStdPar = getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice;
   bool IsValidTargetAsm = true;
+  diag::kind AsmDiag;
   for (unsigned i = 0, e = S.getNumOutputs(); i != e && IsValidTargetAsm; i++) {
     StringRef Name;
     if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(&S))
       Name = GAS->getOutputName(i);
     TargetInfo::ConstraintInfo Info(S.getOutputConstraint(i), Name);
-    bool IsValid = getTarget().validateOutputConstraint(Info); (void)IsValid;
+    bool IsValid =
+        getTarget().validateOutputConstraint(Info, &FeatureMap, AsmDiag);
     if (IsHipStdPar && !IsValid)
       IsValidTargetAsm = false;
     else
@@ -2646,8 +2655,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     if (const GCCAsmStmt *GAS = dyn_cast<GCCAsmStmt>(&S))
       Name = GAS->getInputName(i);
     TargetInfo::ConstraintInfo Info(S.getInputConstraint(i), Name);
-    bool IsValid =
-      getTarget().validateInputConstraint(OutputConstraintInfos, Info);
+    bool IsValid = getTarget().validateInputConstraint(
+        OutputConstraintInfos, Info, &FeatureMap, AsmDiag);
     if (IsHipStdPar && !IsValid)
       IsValidTargetAsm = false;
     else

@@ -144,47 +144,49 @@ ArrayRef<TargetInfo::GCCRegAlias> M68kTargetInfo::getGCCRegAliases() const {
   return llvm::ArrayRef(GCCRegAliases);
 }
 
-bool M68kTargetInfo::validateAsmConstraint(
-    const char *&Name, TargetInfo::ConstraintInfo &info) const {
+bool M68kTargetInfo::validateAsmConstraint(const char *&Name,
+                                           TargetInfo::ConstraintInfo &Info,
+                                           llvm::StringMap<bool> *FeatureMap,
+                                           diag::kind &Diag) const {
   switch (*Name) {
   case 'a': // address register
   case 'd': // data register
-    info.setAllowsRegister();
+    Info.setAllowsRegister();
     return true;
   case 'I': // constant integer in the range [1,8]
-    info.setRequiresImmediate(1, 8);
+    Info.setRequiresImmediate(1, 8);
     return true;
   case 'J': // constant signed 16-bit integer
-    info.setRequiresImmediate(std::numeric_limits<int16_t>::min(),
+    Info.setRequiresImmediate(std::numeric_limits<int16_t>::min(),
                               std::numeric_limits<int16_t>::max());
     return true;
   case 'K': // constant that is NOT in the range of [-0x80, 0x80)
-    info.setRequiresImmediate();
+    Info.setRequiresImmediate();
     return true;
   case 'L': // constant integer in the range [-8,-1]
-    info.setRequiresImmediate(-8, -1);
+    Info.setRequiresImmediate(-8, -1);
     return true;
   case 'M': // constant that is NOT in the range of [-0x100, 0x100]
-    info.setRequiresImmediate();
+    Info.setRequiresImmediate();
     return true;
   case 'N': // constant integer in the range [24,31]
-    info.setRequiresImmediate(24, 31);
+    Info.setRequiresImmediate(24, 31);
     return true;
   case 'O': // constant integer 16
-    info.setRequiresImmediate(16);
+    Info.setRequiresImmediate(16);
     return true;
   case 'P': // constant integer in the range [8,15]
-    info.setRequiresImmediate(8, 15);
+    Info.setRequiresImmediate(8, 15);
     return true;
   case 'C':
     ++Name;
     switch (*Name) {
     case '0': // constant integer 0
-      info.setRequiresImmediate(0);
+      Info.setRequiresImmediate(0);
       return true;
     case 'i': // constant integer
     case 'j': // integer constant that doesn't fit in 16 bits
-      info.setRequiresImmediate();
+      Info.setRequiresImmediate();
       return true;
     default:
       break;
@@ -194,7 +196,7 @@ bool M68kTargetInfo::validateAsmConstraint(
   case 'U': // address register indirect w/ constant offset addressing
     // TODO: Handle 'S' (basically 'm' when pc-rel is enforced) when
     // '-mpcrel' flag is properly handled by the driver.
-    info.setAllowsMemory();
+    Info.setAllowsMemory();
     return true;
   default:
     break;

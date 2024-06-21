@@ -53,8 +53,10 @@ ArrayRef<TargetInfo::AddlRegName> SystemZTargetInfo::getGCCAddlRegNames() const 
   return llvm::ArrayRef(GCCAddlRegNames);
 }
 
-bool SystemZTargetInfo::validateAsmConstraint(
-    const char *&Name, TargetInfo::ConstraintInfo &Info) const {
+bool SystemZTargetInfo::validateAsmConstraint(const char *&Name,
+                                              TargetInfo::ConstraintInfo &Info,
+                                              llvm::StringMap<bool> *FeatureMap,
+                                              diag::kind &Diag) const {
   switch (*Name) {
   default:
     return false;
