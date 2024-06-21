@@ -137,6 +137,8 @@ public:
     return nullptr;
   }
 
+  dwarf::Tag getTag() const { return OrigUnit.getUnitDIE().getTag(); }
+
   bool hasODR() const { return HasODR; }
   bool isClangModule() const { return !ClangModuleName.empty(); }
   uint16_t getLanguage();

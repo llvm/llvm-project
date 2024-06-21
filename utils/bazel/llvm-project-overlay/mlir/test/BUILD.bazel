@@ -438,6 +438,7 @@ cc_library(
     srcs = ["lib/Dialect/Test/TestToLLVMIRTranslation.cpp"],
     deps = [
         ":TestDialect",
+        "//llvm:Core",
         "//llvm:Support",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:IR",

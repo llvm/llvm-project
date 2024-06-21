@@ -849,7 +849,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
      for (unsigned i = 0; i < oldNumOperands; i++){
        auto *PredBB =PN.getIncomingBlock(i);
        if (PredBB == Latch)
-         // The latch exit is handled seperately, see connectX
+         // The latch exit is handled separately, see connectX
          continue;
        if (!L->contains(PredBB))
          // Even if we had dedicated exits, the code above inserted an

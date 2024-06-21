@@ -25,17 +25,24 @@ public:
   constexpr FixedVector() = default;
 
   using iterator = typename cpp::array<T, CAPACITY>::iterator;
-  constexpr FixedVector(iterator begin, iterator end) {
+  constexpr FixedVector(iterator begin, iterator end) : store{}, item_count{} {
     for (; begin != end; ++begin)
       push_back(*begin);
   }
 
-  constexpr FixedVector(size_t count, const T &value) {
+  using const_iterator = typename cpp::array<T, CAPACITY>::const_iterator;
+  constexpr FixedVector(const_iterator begin, const_iterator end)
+      : store{}, item_count{} {
+    for (; begin != end; ++begin)
+      push_back(*begin);
+  }
+
+  constexpr FixedVector(size_t count, const T &value) : store{}, item_count{} {
     for (size_t i = 0; i < count; ++i)
       push_back(value);
   }
 
-  bool push_back(const T &obj) {
+  constexpr bool push_back(const T &obj) {
     if (item_count == CAPACITY)
       return false;
     store[item_count] = obj;
@@ -43,27 +50,27 @@ public:
     return true;
   }
 
-  const T &back() const { return store[item_count - 1]; }
+  constexpr const T &back() const { return store[item_count - 1]; }
 
-  T &back() { return store[item_count - 1]; }
+  constexpr T &back() { return store[item_count - 1]; }
 
-  bool pop_back() {
+  constexpr bool pop_back() {
     if (item_count == 0)
       return false;
     --item_count;
     return true;
   }
 
-  T &operator[](size_t idx) { return store[idx]; }
+  constexpr T &operator[](size_t idx) { return store[idx]; }
 
-  const T &operator[](size_t idx) const { return store[idx]; }
+  constexpr const T &operator[](size_t idx) const { return store[idx]; }
 
-  bool empty() const { return item_count == 0; }
+  constexpr bool empty() const { return item_count == 0; }
 
-  size_t size() const { return item_count; }
+  constexpr size_t size() const { return item_count; }
 
   // Empties the store for all practical purposes.
-  void reset() { item_count = 0; }
+  constexpr void reset() { item_count = 0; }
 
   // This static method does not free up the resources held by |store|,
   // say by calling `free` or something similar. It just does the equivalent

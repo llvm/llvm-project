@@ -274,7 +274,7 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
 
 void InstrProfWriter::addMemProfRecord(
     const Function::GUID Id, const memprof::IndexedMemProfRecord &Record) {
-  auto [Iter, Inserted] = MemProfData.RecordData.insert({Id, Record});
+  auto [Iter, Inserted] = MemProfData.Records.insert({Id, Record});
   // If we inserted a new record then we are done.
   if (Inserted) {
     return;
@@ -286,7 +286,7 @@ void InstrProfWriter::addMemProfRecord(
 bool InstrProfWriter::addMemProfFrame(const memprof::FrameId Id,
                                       const memprof::Frame &Frame,
                                       function_ref<void(Error)> Warn) {
-  auto [Iter, Inserted] = MemProfData.FrameData.insert({Id, Frame});
+  auto [Iter, Inserted] = MemProfData.Frames.insert({Id, Frame});
   // If a mapping already exists for the current frame id and it does not
   // match the new mapping provided then reset the existing contents and bail
   // out. We don't support the merging of memprof data whose Frame -> Id
@@ -303,7 +303,7 @@ bool InstrProfWriter::addMemProfCallStack(
     const memprof::CallStackId CSId,
     const llvm::SmallVector<memprof::FrameId> &CallStack,
     function_ref<void(Error)> Warn) {
-  auto [Iter, Inserted] = MemProfData.CallStackData.insert({CSId, CallStack});
+  auto [Iter, Inserted] = MemProfData.CallStacks.insert({CSId, CallStack});
   // If a mapping already exists for the current call stack id and it does not
   // match the new mapping provided then reset the existing contents and bail
   // out. We don't support the merging of memprof data whose CallStack -> Id
@@ -390,22 +390,22 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
   addTemporalProfileTraces(IPW.TemporalProfTraces,
                            IPW.TemporalProfTraceStreamSize);
 
-  MemProfData.FrameData.reserve(IPW.MemProfData.FrameData.size());
-  for (auto &[FrameId, Frame] : IPW.MemProfData.FrameData) {
+  MemProfData.Frames.reserve(IPW.MemProfData.Frames.size());
+  for (auto &[FrameId, Frame] : IPW.MemProfData.Frames) {
     // If we weren't able to add the frame mappings then it doesn't make sense
     // to try to merge the records from this profile.
     if (!addMemProfFrame(FrameId, Frame, Warn))
       return;
   }
 
-  MemProfData.CallStackData.reserve(IPW.MemProfData.CallStackData.size());
-  for (auto &[CSId, CallStack] : IPW.MemProfData.CallStackData) {
+  MemProfData.CallStacks.reserve(IPW.MemProfData.CallStacks.size());
+  for (auto &[CSId, CallStack] : IPW.MemProfData.CallStacks) {
     if (!addMemProfCallStack(CSId, CallStack, Warn))
       return;
   }
 
-  MemProfData.RecordData.reserve(IPW.MemProfData.RecordData.size());
-  for (auto &[GUID, Record] : IPW.MemProfData.RecordData) {
+  MemProfData.Records.reserve(IPW.MemProfData.Records.size());
+  for (auto &[GUID, Record] : IPW.MemProfData.Records) {
     addMemProfRecord(GUID, Record);
   }
 }
@@ -605,11 +605,11 @@ static Error writeMemProfV0(ProfOStream &OS,
   auto Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
-  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
-                                                   &Schema, memprof::Version0);
+  uint64_t RecordTableOffset =
+      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version0);
 
   uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.Frames);
 
   uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
   OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
@@ -640,11 +640,11 @@ static Error writeMemProfV1(ProfOStream &OS,
   auto Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
-  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
-                                                   &Schema, memprof::Version1);
+  uint64_t RecordTableOffset =
+      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version1);
 
   uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.Frames);
 
   uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
   OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
@@ -683,15 +683,15 @@ static Error writeMemProfV2(ProfOStream &OS,
     Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
-  uint64_t RecordTableOffset = writeMemProfRecords(OS, MemProfData.RecordData,
-                                                   &Schema, memprof::Version2);
+  uint64_t RecordTableOffset =
+      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version2);
 
   uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.FrameData);
+  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.Frames);
 
   uint64_t CallStackPayloadOffset = OS.tell();
   uint64_t CallStackTableOffset =
-      writeMemProfCallStacks(OS, MemProfData.CallStackData);
+      writeMemProfCallStacks(OS, MemProfData.CallStacks);
 
   uint64_t Header[] = {
       RecordTableOffset,      FramePayloadOffset,   FrameTableOffset,
@@ -730,21 +730,21 @@ static Error writeMemProfV3(ProfOStream &OS,
   writeMemProfSchema(OS, Schema);
 
   llvm::DenseMap<memprof::FrameId, memprof::FrameStat> FrameHistogram =
-      memprof::computeFrameHistogram(MemProfData.CallStackData);
-  assert(MemProfData.FrameData.size() == FrameHistogram.size());
+      memprof::computeFrameHistogram(MemProfData.CallStacks);
+  assert(MemProfData.Frames.size() == FrameHistogram.size());
 
   llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId> MemProfFrameIndexes =
-      writeMemProfFrameArray(OS, MemProfData.FrameData, FrameHistogram);
+      writeMemProfFrameArray(OS, MemProfData.Frames, FrameHistogram);
 
   uint64_t CallStackPayloadOffset = OS.tell();
   llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
       MemProfCallStackIndexes = writeMemProfCallStackArray(
-          OS, MemProfData.CallStackData, MemProfFrameIndexes, FrameHistogram);
+          OS, MemProfData.CallStacks, MemProfFrameIndexes, FrameHistogram);
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfData.RecordData, &Schema,
-                          memprof::Version3, &MemProfCallStackIndexes);
+      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version3,
+                          &MemProfCallStackIndexes);
 
   uint64_t Header[] = {
       CallStackPayloadOffset,
@@ -920,8 +920,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   // Remove duplicate binary ids.
   llvm::sort(BinaryIds);
-  BinaryIds.erase(std::unique(BinaryIds.begin(), BinaryIds.end()),
-                  BinaryIds.end());
+  BinaryIds.erase(llvm::unique(BinaryIds), BinaryIds.end());
 
   for (const auto &BI : BinaryIds) {
     // Increment by binary id length data type size.
@@ -1035,16 +1034,13 @@ static const char *ValueProfKindStr[] = {
 
 Error InstrProfWriter::validateRecord(const InstrProfRecord &Func) {
   for (uint32_t VK = 0; VK <= IPVK_Last; VK++) {
-    uint32_t NS = Func.getNumValueSites(VK);
-    if (!NS)
+    if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
       continue;
+    uint32_t NS = Func.getNumValueSites(VK);
     for (uint32_t S = 0; S < NS; S++) {
-      uint32_t ND = Func.getNumValueDataForSite(VK, S);
-      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
       DenseSet<uint64_t> SeenValues;
-      for (uint32_t I = 0; I < ND; I++)
-        if ((VK != IPVK_IndirectCallTarget && VK != IPVK_VTableTarget) &&
-            !SeenValues.insert(VD[I].Value).second)
+      for (const auto &V : Func.getValueArrayForSite(VK, S))
+        if (!SeenValues.insert(V.Value).second)
           return make_error<InstrProfError>(instrprof_error::invalid_prof);
     }
   }
@@ -1088,15 +1084,14 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
     OS << "# ValueKind = " << ValueProfKindStr[VK] << ":\n" << VK << "\n";
     OS << "# NumValueSites:\n" << NS << "\n";
     for (uint32_t S = 0; S < NS; S++) {
-      uint32_t ND = Func.getNumValueDataForSite(VK, S);
-      OS << ND << "\n";
-      std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, S);
-      for (uint32_t I = 0; I < ND; I++) {
+      auto VD = Func.getValueArrayForSite(VK, S);
+      OS << VD.size() << "\n";
+      for (const auto &V : VD) {
         if (VK == IPVK_IndirectCallTarget || VK == IPVK_VTableTarget)
-          OS << Symtab.getFuncOrVarNameIfDefined(VD[I].Value) << ":"
-             << VD[I].Count << "\n";
+          OS << Symtab.getFuncOrVarNameIfDefined(V.Value) << ":" << V.Count
+             << "\n";
         else
-          OS << VD[I].Value << ":" << VD[I].Count << "\n";
+          OS << V.Value << ":" << V.Count << "\n";
       }
     }
   }
