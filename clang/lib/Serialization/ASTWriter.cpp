@@ -3270,17 +3270,18 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
 /// Write the representation of a type to the AST stream.
 void ASTWriter::WriteType(QualType T) {
   TypeIdx &IdxRef = TypeIdxs[T];
-  if (IdxRef.getIndex() == 0) // we haven't seen this type before.
-    IdxRef = TypeIdx(NextTypeID++);
+  if (IdxRef.getValue() == 0) // we haven't seen this type before.
+    IdxRef = TypeIdx(0, NextTypeID++);
   TypeIdx Idx = IdxRef;
 
-  assert(Idx.getIndex() >= FirstTypeID && "Re-writing a type from a prior AST");
+  assert(Idx.getModuleFileIndex() == 0 && "Re-writing a type from a prior AST");
+  assert(Idx.getValue() >= FirstTypeID && "Writing predefined type");
 
   // Emit the type's representation.
   uint64_t Offset = ASTTypeWriter(*this).write(T) - DeclTypesBlockStartOffset;
 
   // Record the offset for this type.
-  unsigned Index = Idx.getIndex() - FirstTypeID;
+  uint64_t Index = Idx.getValue() - FirstTypeID;
   if (TypeOffsets.size() == Index)
     TypeOffsets.emplace_back(Offset);
   else if (TypeOffsets.size() < Index) {
@@ -3353,12 +3354,10 @@ void ASTWriter::WriteTypeDeclOffsets() {
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(TYPE_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of types
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // base type index
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // types block
   unsigned TypeOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   {
-    RecordData::value_type Record[] = {TYPE_OFFSET, TypeOffsets.size(),
-                                       FirstTypeID - NUM_PREDEF_TYPE_IDS};
+    RecordData::value_type Record[] = {TYPE_OFFSET, TypeOffsets.size()};
     Stream.EmitRecordWithBlob(TypeOffsetAbbrev, Record, bytes(TypeOffsets));
   }
 
@@ -5464,7 +5463,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
                           M.NumPreprocessedEntities);
         writeBaseIDOrNone(M.BaseSubmoduleID, M.LocalNumSubmodules);
         writeBaseIDOrNone(M.BaseSelectorID, M.LocalNumSelectors);
-        writeBaseIDOrNone(M.BaseTypeIndex, M.LocalNumTypes);
       }
     }
     RecordData::value_type Record[] = {MODULE_OFFSET_MAP};
@@ -6138,9 +6136,9 @@ static TypeID MakeTypeID(ASTContext &Context, QualType T,
     return TypeIdxFromBuiltin(BT).asTypeID(FastQuals);
 
   if (T == Context.AutoDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
+    return TypeIdx(0, PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
   if (T == Context.AutoRRefDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
+    return TypeIdx(0, PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
 
   return IdxForType(T).asTypeID(FastQuals);
 }
@@ -6153,7 +6151,7 @@ TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
     assert(!T.getLocalFastQualifiers());
 
     TypeIdx &Idx = TypeIdxs[T];
-    if (Idx.getIndex() == 0) {
+    if (Idx.getValue() == 0) {
       if (DoneWritingDeclsAndTypes) {
         assert(0 && "New type seen after serializing all the types to emit!");
         return TypeIdx();
@@ -6161,7 +6159,7 @@ TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
 
       // We haven't seen this type before. Assign it a new ID and put it
       // into the queue of types to emit.
-      Idx = TypeIdx(NextTypeID++);
+      Idx = TypeIdx(0, NextTypeID++);
       DeclTypesToEmit.push(T);
     }
     return Idx;
@@ -6658,11 +6656,9 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 
   // Note, this will get called multiple times, once one the reader starts up
   // and again each time it's done reading a PCH or module.
-  FirstTypeID = NUM_PREDEF_TYPE_IDS + Chain->getTotalNumTypes();
   FirstMacroID = NUM_PREDEF_MACRO_IDS + Chain->getTotalNumMacros();
   FirstSubmoduleID = NUM_PREDEF_SUBMODULE_IDS + Chain->getTotalNumSubmodules();
   FirstSelectorID = NUM_PREDEF_SELECTOR_IDS + Chain->getTotalNumSelectors();
-  NextTypeID = FirstTypeID;
   NextMacroID = FirstMacroID;
   NextSelectorID = FirstSelectorID;
   NextSubmoduleID = FirstSubmoduleID;
@@ -6691,13 +6687,24 @@ void ASTWriter::MacroRead(serialization::MacroID ID, MacroInfo *MI) {
 }
 
 void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
-  // Always take the highest-numbered type index. This copes with an interesting
+  // Always take the type index that comes in later module files.
+  // This copes with an interesting
   // case for chained AST writing where we schedule writing the type and then,
   // later, deserialize the type from another AST. In this case, we want to
-  // keep the higher-numbered entry so that we can properly write it out to
+  // keep the entry from a later module so that we can properly write it out to
   // the AST file.
   TypeIdx &StoredIdx = TypeIdxs[T];
-  if (Idx.getIndex() >= StoredIdx.getIndex())
+
+  // Ignore it if the type comes from the current being written module file.
+  // Since the current module file being written logically has the highest
+  // index.
+  unsigned ModuleFileIndex = StoredIdx.getModuleFileIndex();
+  if (ModuleFileIndex == 0 && StoredIdx.getValue())
+    return;
+
+  // Otherwise, keep the highest ID since the module file comes later has
+  // higher module file indexes.
+  if (Idx.getModuleFileIndex() >= StoredIdx.getModuleFileIndex())
     StoredIdx = Idx;
 }
 
