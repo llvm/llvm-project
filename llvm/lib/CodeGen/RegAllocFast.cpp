@@ -253,11 +253,22 @@ private:
 
   SmallVector<MachineInstr *, 32> Coalesced;
 
-  using RegUnitSet = SparseSet<uint16_t, identity<uint16_t>>;
-  /// Set of register units that are used in the current instruction, and so
+  /// Track register units that are used in the current instruction, and so
   /// cannot be allocated.
-  RegUnitSet UsedInInstr;
-  RegUnitSet PhysRegUses;
+  ///
+  /// In the first phase (tied defs/early clobber), we consider also physical
+  /// uses, afterwards, we don't. If the lowest bit isn't set, it's a solely
+  /// physical use (markPhysRegUsedInInstr), otherwise, it's a normal use. To
+  /// avoid resetting the entire vector after every instruction, we track the
+  /// instruction "generation" in the remaining 31 bits -- this means, that if
+  /// UsedInInstr[Idx] < InstrGen, the register unit is unused. InstrGen is
+  /// never zero and always incremented by two.
+  ///
+  /// Don't allocate inline storage: the number of register units is typically
+  /// quite large (e.g., AArch64 > 100, X86 > 200, AMDGPU > 1000).
+  uint32_t InstrGen;
+  SmallVector<unsigned, 0> UsedInInstr;
+
   SmallVector<unsigned, 8> DefOperandIndexes;
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
@@ -271,7 +282,7 @@ private:
   /// Mark a physreg as used in this instruction.
   void markRegUsedInInstr(MCPhysReg PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
-      UsedInInstr.insert(Unit);
+      UsedInInstr[Unit] = InstrGen | 1;
   }
 
   // Check if physreg is clobbered by instruction's regmask(s).
@@ -285,26 +296,25 @@ private:
   bool isRegUsedInInstr(MCPhysReg PhysReg, bool LookAtPhysRegUses) const {
     if (LookAtPhysRegUses && isClobberedByRegMasks(PhysReg))
       return true;
-    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
-      if (UsedInInstr.count(Unit))
+    for (MCRegUnit Unit : TRI->regunits(PhysReg))
+      if (UsedInInstr[Unit] >= (InstrGen | !LookAtPhysRegUses))
         return true;
-      if (LookAtPhysRegUses && PhysRegUses.count(Unit))
-        return true;
-    }
     return false;
   }
 
   /// Mark physical register as being used in a register use operand.
   /// This is only used by the special livethrough handling code.
   void markPhysRegUsedInInstr(MCPhysReg PhysReg) {
-    for (MCRegUnit Unit : TRI->regunits(PhysReg))
-      PhysRegUses.insert(Unit);
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      assert(UsedInInstr[Unit] <= InstrGen && "non-phys use before phys use?");
+      UsedInInstr[Unit] = InstrGen;
+    }
   }
 
   /// Remove mark of physical register being used in the instruction.
   void unmarkRegUsedInInstr(MCPhysReg PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
-      UsedInInstr.erase(Unit);
+      UsedInInstr[Unit] = 0;
   }
 
   enum : unsigned {
@@ -1382,7 +1392,12 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // - The "free def operands" step has to come last instead of first for tied
   //   operands and early-clobbers.
 
-  UsedInInstr.clear();
+  InstrGen += 2;
+  // In the event we ever get more than 2**31 instructions...
+  if (LLVM_UNLIKELY(InstrGen == 0)) {
+    UsedInInstr.assign(UsedInInstr.size(), 0);
+    InstrGen = 2;
+  }
   RegMasks.clear();
   BundleVirtRegsMap.clear();
 
@@ -1443,8 +1458,6 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       //   heuristic to figure out a good operand order before doing
       //   assignments.
       if (NeedToAssignLiveThroughs) {
-        PhysRegUses.clear();
-
         while (ReArrangedImplicitOps) {
           ReArrangedImplicitOps = false;
           findAndSortDefOperandIndexes(MI);
@@ -1769,10 +1782,8 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   MRI->freezeReservedRegs();
   RegClassInfo.runOnMachineFunction(MF);
   unsigned NumRegUnits = TRI->getNumRegUnits();
-  UsedInInstr.clear();
-  UsedInInstr.setUniverse(NumRegUnits);
-  PhysRegUses.clear();
-  PhysRegUses.setUniverse(NumRegUnits);
+  InstrGen = 0;
+  UsedInInstr.assign(NumRegUnits, 0);
 
   // initialize the virtual->physical register map to have a 'null'
   // mapping for all virtual registers
