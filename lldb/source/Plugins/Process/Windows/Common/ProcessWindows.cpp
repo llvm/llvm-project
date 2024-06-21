@@ -442,6 +442,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
                site->GetID());
 
+      stop_thread->SetThreadHitBreakpointAtAddr(pc);
       if (site->ValidForThisThread(*stop_thread)) {
         LLDB_LOG(log,
                  "Breakpoint site {0} is valid for this thread ({1:x}), "
