@@ -1,4 +1,4 @@
-// RUN: cir-opt %s --pass-pipeline='builtin.module(cir-to-llvm,canonicalize{region-simplify=false})' -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s --pass-pipeline='builtin.module(cir-to-llvm,canonicalize{region-simplify=disabled})' -o - | FileCheck %s -check-prefix=MLIR
 
 !s32i = !cir.int<s, 32>
 
