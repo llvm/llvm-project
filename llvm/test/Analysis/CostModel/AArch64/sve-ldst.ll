@@ -9,6 +9,8 @@ define void @scalable_loads() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res.nxv16i8 = load <vscale x 16 x i8>, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res.nxv32i8 = load <vscale x 32 x i8>, ptr undef, align 32
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %res.nxv1i64 = load <vscale x 1 x i64>, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res.nxv32i1 = load <vscale x 32 x i1>, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %res.nxv16i1 = load <vscale x 16 x i1>, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %res.nxv4i1 = load <vscale x 4 x i1>, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -16,6 +18,8 @@ define void @scalable_loads() {
   %res.nxv16i8 = load <vscale x 16 x i8>, ptr undef
   %res.nxv32i8 = load <vscale x 32 x i8>, ptr undef
   %res.nxv1i64 = load <vscale x 1 x i64>, ptr undef
+  %res.nxv32i1 = load <vscale x 32 x i1>, ptr undef
+  %res.nxv16i1 = load <vscale x 16 x i1>, ptr undef
   %res.nxv4i1 = load <vscale x 4 x i1>, ptr undef
   ret void
 }
@@ -26,6 +30,8 @@ define void @scalable_stores() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <vscale x 16 x i8> undef, ptr undef, align 16
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <vscale x 32 x i8> undef, ptr undef, align 32
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: store <vscale x 1 x i64> undef, ptr undef, align 8
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <vscale x 32 x i1> undef, ptr undef, align 4
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store <vscale x 16 x i1> undef, ptr undef, align 2
 ; CHECK-NEXT:  Cost Model: Invalid cost for instruction: store <vscale x 4 x i1> undef, ptr undef, align 1
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -33,6 +39,8 @@ define void @scalable_stores() {
   store <vscale x 16 x i8> undef, ptr undef
   store <vscale x 32 x i8> undef, ptr undef
   store <vscale x 1 x i64> undef, ptr undef
+  store <vscale x 32 x i1> undef, ptr undef
+  store <vscale x 16 x i1> undef, ptr undef
   store <vscale x 4 x i1> undef, ptr undef
   ret void
 }
