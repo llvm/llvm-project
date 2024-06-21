@@ -1,38 +1,23 @@
-; The input at Inputs/discriminator.arm64 was produced by compiling
+; The input at Inputs/discriminator.arm64.dylib[.o] produced by compiling
 ;
-;   __attribute__((noinline))
-;   int foo(int a, int b, int c) {
-;     int x = a ? b : c;
-;     return x * a * b;
+;   int foo(int i, int a, int b) {
+;     return i ? a : a * b;
 ;   }
 ;
-;   int main(int argc, char** argv) {
-;     return foo(argc, 2, 3);
-;   }
-;
-; with -g -fdebug-info-for-profiling.
+; with -g -fdebug-info-for-profiling -O2.
 
-RUN: dsymutil --flat --linker=classic -o - --verify-dwarf=none %p/Inputs/discriminator.arm64 | llvm-dwarfdump -debug-line - | FileCheck %s
-RUN: dsymutil --flat --linker=parallel -o - --verify-dwarf=none %p/Inputs/discriminator.arm64 | llvm-dwarfdump -debug-line - | FileCheck %s
+RUN: dsymutil --flat --linker=classic -oso-prepend-path %p -o - \
+RUN:  --oso-prepend-path %p/Inputs --verify-dwarf=none \
+RUN:  %p/Inputs/discriminator.arm64.dylib | llvm-dwarfdump -debug-line - \
+RUN:  | FileCheck %s
 
-CHECK:         Address            Line   Column File   ISA Discriminator OpIndex Flags
-CHECK-NEXT:    ------------------ ------ ------ ------ --- ------------- ------- -------------
-CHECK-NEXT:    0x0000000100003f14      2      0      0   0             0       0  is_stmt
-CHECK-NEXT:    0x0000000100003f24      3     11      0   0             0       0  is_stmt prologue_end
-CHECK-NEXT:    0x0000000100003f30      3     15      0   0             2       0
-CHECK-NEXT:    0x0000000100003f38      3     11      0   0             0       0
-CHECK-NEXT:    0x0000000100003f3c      3     19      0   0             4       0
-CHECK-NEXT:    0x0000000100003f44      3     11      0   0             0       0
-CHECK-NEXT:    0x0000000100003f48      0     11      0   0             0       0
-CHECK-NEXT:    0x0000000100003f4c      3      7      0   0             6       0
-CHECK-NEXT:    0x0000000100003f50      4     10      0   0             0       0  is_stmt
-CHECK-NEXT:    0x0000000100003f54      4     14      0   0             0       0
-CHECK-NEXT:    0x0000000100003f58      4     12      0   0             0       0
-CHECK-NEXT:    0x0000000100003f5c      4     18      0   0             0       0
-CHECK-NEXT:    0x0000000100003f60      4     16      0   0             0       0
-CHECK-NEXT:    0x0000000100003f64      4      3      0   0             0       0  epilogue_begin
-CHECK-NEXT:    0x0000000100003f6c      7      0      0   0             0       0  is_stmt
-CHECK-NEXT:    0x0000000100003f84      8     14      0   0             0       0  is_stmt prologue_end
-CHECK-NEXT:    0x0000000100003f88      8     10      0   0             0       0
-CHECK-NEXT:    0x0000000100003f94      8      3      0   0             0       0  epilogue_begin
-CHECK-NEXT:    0x0000000100003fa0      8      3      0   0             0       0  end_sequence
+RUN: dsymutil --flat --linker=parallel -oso-prepend-path %p -o - \
+RUN:  --oso-prepend-path %p/Inputs --verify-dwarf=none \
+RUN:  %p/Inputs/discriminator.arm64.dylib | llvm-dwarfdump -debug-line - \
+RUN:  | FileCheck %s
+
+CHECK:          Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT:     ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT:     0x0000000000003f98      2     10      0   0             0       0  is_stmt prologue_end
+CHECK-NEXT:     0x0000000000003fa4      2      3      0   0             6       0
+CHECK-NEXT:     0x0000000000003fa8      2      3      0   0             0       0  end_sequence
