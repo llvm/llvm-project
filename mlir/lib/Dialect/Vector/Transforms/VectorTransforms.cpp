@@ -1823,9 +1823,7 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
       return false;
     // Avoid broadcast like f32 or vector<f32> -> ResType
     auto srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
-    if (!srcType || srcType.getRank() == 2)
-      return false;
-    return true;
+    return srcType && srcType.getRank() != 2;
   }
 
   LogicalResult matchAndRewrite(MulOpType mulOp,
@@ -1841,8 +1839,7 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
     auto matchOuterProduct =
         [&](Value operandA,
             Value operandB) -> FailureOr<vector::OuterProductOp> {
-      vector::TransposeOp transposedLhs =
-          dyn_cast_or_null<vector::TransposeOp>(operandA.getDefiningOp());
+      auto transposedLhs = operandA.getDefiningOp<vector::TransposeOp>();
       if (!transposedLhs)
         return failure();
       // Fail unless this is a true 2-D matrix transpose.
