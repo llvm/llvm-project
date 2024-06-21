@@ -16023,10 +16023,16 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       // FIXME: Needs to account for no fine-grained memory
       if (Subtarget->hasAtomicGlobalPkAddBF16Inst() && isBFloat2(Ty))
         return AtomicExpansionKind::None;
-    }
+    } else if (AS == AMDGPUAS::BUFFER_FAT_POINTER) {
+      // gfx90a, gfx940, gfx12
+      // FIXME: Needs to account for no fine-grained memory
+      if (Subtarget->hasAtomicBufferGlobalPkAddF16Insts() && isHalf2(Ty))
+        return AtomicExpansionKind::None;
 
-    // TODO: Handle buffer case. gfx90a and gfx940 supports <2 x half>. gfx12
-    // supports <2 x half> and <2 x bfloat>.
+      // TODO: Handle <2 x bfloat> case. While gfx90a/gfx940 supports it for
+      // global/flat, it does not for buffer. gfx12 does have the buffer
+      // version.
+    }
 
     if (unsafeFPAtomicsDisabled(RMW->getFunction()))
       return AtomicExpansionKind::CmpXChg;

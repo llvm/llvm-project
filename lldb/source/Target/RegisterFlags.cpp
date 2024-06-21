@@ -47,7 +47,7 @@ RegisterFlags::Field::Field(std::string name, unsigned start, unsigned end,
   }
 }
 
-void RegisterFlags::Field::log(Log *log) const {
+void RegisterFlags::Field::DumpToLog(Log *log) const {
   LLDB_LOG(log, "  Name: \"{0}\" Start: {1} End: {2}", m_name.c_str(), m_start,
            m_end);
 }
@@ -156,10 +156,10 @@ RegisterFlags::RegisterFlags(std::string id, unsigned size,
   SetFields(fields);
 }
 
-void RegisterFlags::log(Log *log) const {
+void RegisterFlags::DumpToLog(Log *log) const {
   LLDB_LOG(log, "ID: \"{0}\" Size: {1}", m_id.c_str(), m_size);
   for (const Field &field : m_fields)
-    field.log(log);
+    field.DumpToLog(log);
 }
 
 static StreamString FormatCell(const StreamString &content,

@@ -29338,7 +29338,7 @@ Lowering:
 Lowers to a call to `objc_storeWeak <https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-storeweak>`_.
 
 Preserving Debug Information Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------
 
 These intrinsics are used to carry certain debuginfo together with
 IR-level operations. For example, it may be desirable to
