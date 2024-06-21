@@ -689,14 +689,14 @@ DEFAULT_FEATURES += [
 # a libc++ flavor that enables availability markup. Similarly, a test could fail when
 # run against the system library of an older version of FreeBSD, even though FreeBSD
 # doesn't provide availability markup at the time of writing this.
-for version in ('11', '12', '13', '14', '15', '16', '17', '18', '19'):
+for version in ("11", "12", "13", "14", "15", "16", "17", "18", "19"):
     DEFAULT_FEATURES.append(
         Feature(
             name="using-built-library-before-llvm-{}".format(version),
             when=lambda cfg: BooleanExpression.evaluate(
                 "stdlib=system && _target-before-llvm-{}".format(version),
                 cfg.available_features,
-            )
+            ),
         )
     )
 
