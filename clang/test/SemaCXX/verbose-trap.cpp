@@ -27,6 +27,7 @@ void f(const char * arg) {
   __builtin_verbose_trap("", 0); // expected-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
   __builtin_verbose_trap(1, ""); // expected-error {{cannot initialize a parameter of type 'const char *' with an rvalue of type 'int'}}
   __builtin_verbose_trap(arg, ""); // expected-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
+  __builtin_verbose_trap("cat$1", "hel$lo"); // expected-error 2 {{argument to __builtin_verbose_trap must not contain $}}
   __builtin_verbose_trap(category, reason);
   __builtin_verbose_trap(u8"cat1", u8"hello");
 #if __cplusplus >= 202002L

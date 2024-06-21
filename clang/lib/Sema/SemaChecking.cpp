@@ -175,17 +175,23 @@ static bool checkArgCount(Sema &S, CallExpr *Call, unsigned DesiredArgCount) {
 static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
   bool HasError = false;
 
-  for (int I = 0; I < Call->getNumArgs(); ++I) {
+  for (unsigned I = 0; I < Call->getNumArgs(); ++I) {
     Expr *Arg = Call->getArg(I);
 
     if (Arg->isValueDependent())
       continue;
 
-    // FIXME: Add more checks and reject strings that can't be handled by
-    // debuggers.
-    if (!Arg->tryEvaluateString(S.Context).has_value()) {
+    std::optional<std::string> ArgString = Arg->tryEvaluateString(S.Context);
+    int DiagMsgKind = -1;
+    // Arguments must be pointers to constant strings and cannot use '$'.
+    if (!ArgString.has_value())
+      DiagMsgKind = 0;
+    else if (ArgString->find('$') != std::string::npos)
+      DiagMsgKind = 1;
+
+    if (DiagMsgKind >= 0) {
       S.Diag(Arg->getBeginLoc(), diag::err_builtin_verbose_trap_arg)
-          << Arg->getSourceRange();
+          << DiagMsgKind << Arg->getSourceRange();
       HasError = true;
     }
   }
