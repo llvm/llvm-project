@@ -2647,7 +2647,8 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
 
   if (getLangOpts().HLSL)
-    MaybeParseHLSLAnnotations(DeclaratorInfo);
+    MaybeParseHLSLAnnotations(DeclaratorInfo, nullptr,
+                              /*CouldBeBitField*/ true);
 
   if (!DeclaratorInfo.isFunctionDeclarator() && TryConsumeToken(tok::colon)) {
     assert(DeclaratorInfo.isPastIdentifier() &&
