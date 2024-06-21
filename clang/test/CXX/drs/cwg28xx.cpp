@@ -110,22 +110,18 @@ struct A {
 
 } // namespace cwg2858
 
-namespace cwg2877 { // cwg2877: no tentatively ready 2024-05-31
+namespace cwg2877 { // cwg2877: 19 tentatively ready 2024-05-31
 #if __cplusplus >= 202002L
 enum E { x };
 void f() {
   int E;
-  // FIXME: OK, names ::E
-  using enum E;
-  // since-cxx20-error@-1 {{unknown type name E}}
+  using enum E;   // OK, names ::E
 }
 using F = E;
 using enum F;     // OK, designates ::E
 template<class T> using EE = T;
 void g() {
-  // FIXME: OK, designates ::E
-  using enum EE<E>;
-  // since-cxx20-error@-1 {{using enum requires an enum or typedef name}}
+  using enum EE<E>;  // OK, designates ::E
 }
 #endif
 } // namespace cwg2877
