@@ -155,28 +155,21 @@ define <16 x i16> @combine_pmaddubsw_concat(<16 x i8> %a0, <16 x i8> %a1, <16 x 
   ret <16 x i16> %3
 }
 
-; TODO: Missing SimplifyDemandedVectorElts support
 define <8 x i16> @combine_pmaddubsw_demandedelts(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSE-LABEL: combine_pmaddubsw_demandedelts:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,8,8,8,8,8,8,8]
-; SSE-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,15,15,15,15,15,15,15,15]
 ; SSE-NEXT:    pmaddubsw %xmm1, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_pmaddubsw_demandedelts:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,8,8,8,8,8,8,8]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,15,15,15,15,15,15,15,15]
 ; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_pmaddubsw_demandedelts:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,8,8,8,8,8,8,8]
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,15,15,15,15,15,15,15,15]
 ; AVX2-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; AVX2-NEXT:    retq
