@@ -212,6 +212,15 @@ func.func @matmul_transpose_b_to_matvec(%arg0: memref<?x?xf32>, %arg1: memref<1x
 
 // -----
 
+func.func @batchmatmul_transpose_b_to_to_dot(%arg0: tensor<1x1x?xf32>, %arg1: tensor<1x1x?xf32>, %arg2: tensor<1x1x1xf32>) -> tensor<1x1x1xf32> {
+  // CHECK-LABEL: @batchmatmul_transpose_b_to_to_dot
+  // CHECK: linalg.dot
+    %0 = linalg.batch_matmul_transpose_b ins(%arg0, %arg1: tensor<1x1x?xf32>, tensor<1x1x?xf32>) outs(%arg2: tensor<1x1x1xf32>) -> tensor<1x1x1xf32> 
+    return %0 : tensor<1x1x1xf32>
+}
+
+// -----
+
 func.func @nonsingleton_batch_matmul(%arg0 : tensor<2x?x?xf32>, %arg1 : tensor<2x?x?xf32>, %arg2: tensor<2x?x?xf32>) -> tensor<2x?x?xf32> {
   // CHECK-LABEL: @nonsingleton_batch_matmul
   // CHECK-NOT:   collapse_shape

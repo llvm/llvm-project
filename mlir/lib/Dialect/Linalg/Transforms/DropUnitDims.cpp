@@ -838,10 +838,12 @@ struct LinalgFoldUnitExtentDimsPass
 
 namespace {
 
+/// Returns reassociation indices for collapsing/expanding a
+/// tensor of rank `rank` at position `pos`.
 static SmallVector<ReassociationIndices>
 getReassociationForReshapeAtDim(int64_t rank, int64_t pos) {
   SmallVector<ReassociationIndices> reassociation(rank - 1, {0, 1});
-  auto lastDim = pos == rank - 1;
+  bool lastDim = pos == rank - 1;
   if (rank > 2) {
     for (int64_t i = 0; i < rank - 1; i++) {
       if (i == pos || (lastDim && i == pos - 1))
@@ -855,6 +857,8 @@ getReassociationForReshapeAtDim(int64_t rank, int64_t pos) {
   return reassociation;
 }
 
+/// Returns a collapsed `val` where the collapsing occurs at dim `pos`.
+/// If `pos < 0`, then don't collapse.
 static Value collapseSingletonDimAt(PatternRewriter &rewriter, Value val,
                                     int64_t pos) {
   if (pos < 0)
@@ -868,22 +872,30 @@ static Value collapseSingletonDimAt(PatternRewriter &rewriter, Value val,
       ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape);
 }
 
+/// Base class for all rank reduction patterns for contraction ops
+/// with unit dimensions.  All patterns should convert one named op
+/// to another named op.  Intended to reduce only one iteration space dim
+/// at a time.
+/// Reducing multiple dims will happen with recusive application of
+/// pattern rewrites.
 template <typename FromOpTy, typename ToOpTy>
 struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
   using OpRewritePattern<FromOpTy>::OpRewritePattern;
 
-  SmallVector<Value, 3>
+  /// Collapse all collapsable operands.
+  SmallVector<Value>
   collapseOperands(PatternRewriter &rewriter, ArrayRef<Value> operands,
                    ArrayRef<int64_t> operandCollapseDims) const {
     assert(operandCollapseDims.size() == 3 && operands.size() == 3 &&
            "expected 3 operands and dims");
-    return llvm::to_vector(llvm::map_range(
+    return llvm::map_to_vector(
         llvm::zip(operands, operandCollapseDims), [&](auto pair) {
           return collapseSingletonDimAt(rewriter, std::get<0>(pair),
                                         std::get<1>(pair));
-        }));
+        });
   }
 
+  /// Expand result tensor.
   Value expandResult(PatternRewriter &rewriter, Value result,
                      RankedTensorType expandedType, int64_t dim) const {
     return rewriter.create<tensor::ExpandShapeOp>(
@@ -905,12 +917,6 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
     auto init = inits[0];
     SmallVector<Value> operands{lhs, rhs, init};
 
-    auto maybeContractionDims = inferContractionDims(contractionOp);
-    if (failed(maybeContractionDims))
-      return rewriter.notifyMatchFailure(contractionOp,
-                                         "could not infer contraction dims");
-
-    auto contractionDims = maybeContractionDims.value();
     SmallVector<int64_t> operandUnitDims;
     if (failed(getOperandUnitDims(contractionOp, operandUnitDims)))
       return rewriter.notifyMatchFailure(contractionOp,
@@ -935,80 +941,89 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
 
     auto results = contractionOp.getResults();
     assert(results.size() < 2 && "expected at most one result");
-    if (results.size() < 1)
+    if (results.empty()) {
       rewriter.replaceOp(contractionOp, collapsedOp);
-    else
+    } else {
       rewriter.replaceOp(
           contractionOp,
           expandResult(rewriter, collapsedOp.getResultTensors()[0],
                        cast<RankedTensorType>(results[0].getType()),
                        operandUnitDims[2]));
+    }
 
     return success();
   }
 
+  /// Populate `operandUnitDims` with 3 indices indicating the unit dim
+  /// for each operand that should be collapsed in this pattern.  If an
+  /// operand shouldn't be collapsed, the index should be negative.
   virtual LogicalResult
   getOperandUnitDims(LinalgOp op,
-                     SmallVectorImpl<int64_t> &operandUnitDindices) const = 0;
+                     SmallVectorImpl<int64_t> &operandUnitDims) const = 0;
 };
 
+/// Patterns for unbatching batched contraction ops
 template <typename FromOpTy, typename ToOpTy>
-struct RankReduceBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
+struct RankReduceToUnBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
   using RankReduceContractionOps<FromOpTy, ToOpTy>::RankReduceContractionOps;
 
-  LogicalResult getOperandUnitDims(
-      LinalgOp op,
-      SmallVectorImpl<int64_t> &operandUnitDindices) const override {
-    auto inputs = op.getDpsInputs();
-    auto inits = op.getDpsInits();
-    if (inputs.size() != 2 || inits.size() != 1)
-      return failure();
-
+  /// Look for unit batch dims to collapse.
+  LogicalResult
+  getOperandUnitDims(LinalgOp op,
+                     SmallVectorImpl<int64_t> &operandUnitDims) const override {
     auto maybeContractionDims = inferContractionDims(op);
-    if (failed(maybeContractionDims))
+    if (failed(maybeContractionDims)) {
+      LLVM_DEBUG(llvm::dbgs() << "could not infer contraction dims");
       return failure();
+    }
     auto contractionDims = maybeContractionDims.value();
 
     if (contractionDims.batch.size() != 1)
       return failure();
     auto batchDim = contractionDims.batch[0];
-    SmallVector<std::pair<Value, unsigned>, 2> bOperands;
+    SmallVector<std::pair<Value, unsigned>, 3> bOperands;
     op.mapIterationSpaceDimToAllOperandDims(batchDim, bOperands);
     if (bOperands.size() != 3 || llvm::any_of(bOperands, [](auto pair) {
           return cast<ShapedType>(std::get<0>(pair).getType())
                      .getShape()[std::get<1>(pair)] != 1;
-        }))
+        })) {
+      LLVM_DEBUG(llvm::dbgs() << "specified unit dims not found");
       return failure();
+    }
 
-    operandUnitDindices = SmallVector<int64_t>{std::get<1>(bOperands[0]),
-                                               std::get<1>(bOperands[1]),
-                                               std::get<1>(bOperands[2])};
+    operandUnitDims = SmallVector<int64_t>{std::get<1>(bOperands[0]),
+                                           std::get<1>(bOperands[1]),
+                                           std::get<1>(bOperands[2])};
     return success();
   }
 };
 
+/// Patterns for reducing non-batch dimensions
 template <typename FromOpTy, typename ToOpTy>
 struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
   using RankReduceContractionOps<FromOpTy, ToOpTy>::RankReduceContractionOps;
 
+  /// Helper for determining whether the lhs/init or rhs/init are reduced.
   static bool constexpr reduceLeft =
-      (std::is_same<FromOpTy, BatchMatmulOp>::value &&
-       std::is_same<ToOpTy, BatchVecmatOp>::value) ||
-      (std::is_same<FromOpTy, BatchMatmulTransposeAOp>::value &&
-       std::is_same<ToOpTy, BatchVecmatOp>::value) ||
-      (std::is_same<FromOpTy, MatmulOp>::value &&
-       std::is_same<ToOpTy, VecmatOp>::value) ||
-      (std::is_same<FromOpTy, MatmulTransposeAOp>::value &&
-       std::is_same<ToOpTy, VecmatOp>::value) ||
-      (std::is_same<FromOpTy, MatvecOp>::value &&
-       std::is_same<ToOpTy, DotOp>::value);
+      (std::is_same_v<FromOpTy, BatchMatmulOp> &&
+       std::is_same_v<ToOpTy, BatchVecmatOp>) ||
+      (std::is_same_v<FromOpTy, BatchMatmulTransposeAOp> &&
+       std::is_same_v<ToOpTy, BatchVecmatOp>) ||
+      (std::is_same_v<FromOpTy, MatmulOp> &&
+       std::is_same_v<ToOpTy, VecmatOp>) ||
+      (std::is_same_v<FromOpTy, MatmulTransposeAOp> &&
+       std::is_same_v<ToOpTy, VecmatOp>) ||
+      (std::is_same_v<FromOpTy, MatvecOp> && std::is_same_v<ToOpTy, DotOp>);
 
-  LogicalResult getOperandUnitDims(
-      LinalgOp op,
-      SmallVectorImpl<int64_t> &operandUnitDindices) const override {
+  /// Look for non-batch spatial dims to collapse.
+  LogicalResult
+  getOperandUnitDims(LinalgOp op,
+                     SmallVectorImpl<int64_t> &operandUnitDims) const override {
     auto maybeContractionDims = inferContractionDims(op);
-    if (failed(maybeContractionDims))
+    if (failed(maybeContractionDims)) {
+      LLVM_DEBUG(llvm::dbgs() << "could not infer contraction dims");
       return failure();
+    }
     auto contractionDims = maybeContractionDims.value();
 
     if constexpr (reduceLeft) {
@@ -1021,8 +1036,8 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
             return cast<ShapedType>(std::get<0>(pair).getType())
                        .getShape()[std::get<1>(pair)] == 1;
           })) {
-        operandUnitDindices = SmallVector<int64_t>{
-            std::get<1>(mOperands[0]), -1, std::get<1>(mOperands[1])};
+        operandUnitDims = SmallVector<int64_t>{std::get<1>(mOperands[0]), -1,
+                                               std::get<1>(mOperands[1])};
         return success();
       }
     } else {
@@ -1035,11 +1050,12 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
             return cast<ShapedType>(std::get<0>(pair).getType())
                        .getShape()[std::get<1>(pair)] == 1;
           })) {
-        operandUnitDindices = SmallVector<int64_t>{
-            -1, std::get<1>(nOperands[0]), std::get<1>(nOperands[1])};
+        operandUnitDims = SmallVector<int64_t>{-1, std::get<1>(nOperands[0]),
+                                               std::get<1>(nOperands[1])};
         return success();
       }
     }
+    LLVM_DEBUG(llvm::dbgs() << "specified unit dims not found");
     return failure();
   }
 };
@@ -1050,13 +1066,15 @@ void mlir::linalg::populateContractionOpRankReducingPatterns(
     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
   // Unbatching patterns for unit batch size
-  patterns.add<RankReduceBatched<BatchMatmulOp, MatmulOp>>(context);
-  patterns.add<RankReduceBatched<BatchMatmulTransposeAOp, MatmulTransposeAOp>>(
-      context);
-  patterns.add<RankReduceBatched<BatchMatmulTransposeBOp, MatmulTransposeBOp>>(
-      context);
-  patterns.add<RankReduceBatched<BatchMatvecOp, MatvecOp>>(context);
-  patterns.add<RankReduceBatched<BatchVecmatOp, VecmatOp>>(context);
+  patterns.add<RankReduceToUnBatched<BatchMatmulOp, MatmulOp>>(context);
+  patterns
+      .add<RankReduceToUnBatched<BatchMatmulTransposeAOp, MatmulTransposeAOp>>(
+          context);
+  patterns
+      .add<RankReduceToUnBatched<BatchMatmulTransposeBOp, MatmulTransposeBOp>>(
+          context);
+  patterns.add<RankReduceToUnBatched<BatchMatvecOp, MatvecOp>>(context);
+  patterns.add<RankReduceToUnBatched<BatchVecmatOp, VecmatOp>>(context);
 
   // Non-batch rank 1 reducing patterns
   patterns.add<RankReduceMatmul<MatmulOp, VecmatOp>>(context);

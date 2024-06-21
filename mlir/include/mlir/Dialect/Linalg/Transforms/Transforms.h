@@ -1692,8 +1692,8 @@ void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
 void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
                                      const ControlBlockPackMatmulFn &controlFn);
 
-/// Adds patterns that that reduce the rank of named contraction ops that have
-/// unit dimensions in the operand(s) by converting to a senquence of `collapse_shape`,
+/// Adds patterns that reduce the rank of named contraction ops that have
+/// unit dimensions in the operand(s) by converting to a sequence of `collapse_shape`,
 /// `<corresponding linalg named op>`, `expand_shape` (if on tensors).  For example a
 /// `linalg.batch_matmul` with unit batch size will convert to `linalg.matmul`
 /// and a `linalg.matvec` with with unit spatial dim in lhs will convert to a `linalg.dot`.
