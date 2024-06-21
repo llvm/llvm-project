@@ -284,7 +284,7 @@ class Foo {};
 // Verify that template template type parameter TTP is referenced/used in the
 // template arguments of the RHS.
 template <template<typename> typename TTP>
-using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<>>' against 'int'}}
+using Bar = Foo<K<TTP>>; // expected-note {{candidate template ignored: could not match 'Foo<K<template-parameter-0-0>>' against 'int'}}
 
 template <class T>
 class Container {};

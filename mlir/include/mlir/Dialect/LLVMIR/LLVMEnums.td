@@ -716,12 +716,15 @@ def FramePointerKindNonLeaf
     : LLVM_EnumAttrCase<"NonLeaf", "non-leaf", "NonLeaf", 1>;
 def FramePointerKindAll
     : LLVM_EnumAttrCase<"All", "all", "All", 2>;
+def FramePointerKindReserved
+    : LLVM_EnumAttrCase<"Reserved", "reserved", "Reserved", 3>;
 
 def FramePointerKindEnum : LLVM_EnumAttr<
     "FramePointerKind",
     "::llvm::FramePointerKind",
     "LLVM FramePointerKind",
-    [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
+    [FramePointerKindNone, FramePointerKindNonLeaf,
+     FramePointerKindAll, FramePointerKindReserved]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 

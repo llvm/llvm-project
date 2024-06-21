@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: not %flang -fsyntax-only -fopenmp %s 2>&1 | FileCheck %s
 ! REQUIRES: shell
 ! OpenMP Version 4.5

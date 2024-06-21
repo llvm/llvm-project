@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 ! RUN: %flang_fc1 -fopenmp -fdebug-dump-parse-tree %s 2>&1 | FileCheck %s
 ! Ensure that requires atomic_default_mem_order is used to update atomic
 ! operations with no explicit memory order set. ACQ_REL clause tested here.

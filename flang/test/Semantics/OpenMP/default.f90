@@ -1,5 +1,3 @@
-! UNSUPPORTED: system-windows
-! Marking as unsupported due to suspected long runtime on Windows
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp
 ! OpenMP Version 4.5
 ! 2.15.3.1 default Clause

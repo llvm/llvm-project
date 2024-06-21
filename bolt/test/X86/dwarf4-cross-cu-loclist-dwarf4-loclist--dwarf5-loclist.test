@@ -8,7 +8,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# Tests that BOLT correctly handles location list with DWARF5/DWARF4 when order of CUs is not the same as in input.
+## Tests that BOLT correctly handles location list with DWARF5/DWARF4 when order of CUs is not the same as in input.
 
 # PRECHECK: version = 0x0005
 # PRECHECK: version = 0x0004

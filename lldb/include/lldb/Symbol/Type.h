@@ -62,6 +62,8 @@ struct CompilerContext {
   CompilerContextKind kind;
   ConstString name;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+                              const CompilerContext &rhs);
 
 /// Match \p context_chain against \p pattern, which may contain "Any"
 /// kinds. The \p context_chain should *not* contain any "Any" kinds.

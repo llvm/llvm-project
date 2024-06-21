@@ -1,7 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: nvptx-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // Check that we enable LTO-mode properly with '-fopenmp-target-jit' and that it
 // still enabled LTO-mode if `-fno-offload-lto` is on.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-phases -fopenmp=libomp \

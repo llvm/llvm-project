@@ -5,8 +5,10 @@ import("//llvm/lib/Target/targets.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/utils/llvm-lit/lit_path_function.gni")
+import("//llvm/version.gni")
 import("clang_lit_site_cfg_files.gni")
 
 template("write_lit_config") {
@@ -63,12 +65,12 @@ write_lit_config("lit_site_cfg") {
     "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
     "ENABLE_SHARED=0",
-    "LLVM_ENABLE_ZSTD=0",
     "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_SANITIZER=",
+    "LLVM_VERSION_MAJOR=$llvm_version_major",
     "Python3_EXECUTABLE=$python_path",
     "USE_Z3_SOLVER=",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
@@ -90,6 +92,12 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "LLVM_ENABLE_ZLIB=1" ]
   } else {
     extra_values += [ "LLVM_ENABLE_ZLIB=0" ]  # Must be 0.
+  }
+
+  if (llvm_enable_zstd) {
+    extra_values += [ "LLVM_ENABLE_ZSTD=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_ZSTD=0" ]  # Must be 0.
   }
 
   if (host_cpu == "x64") {
@@ -193,6 +201,7 @@ group("test") {
     "//llvm/tools/llvm-readobj:symlinks",
     "//llvm/tools/llvm-readtapi:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
+    "//llvm/tools/obj2yaml",
     "//llvm/tools/opt",
     "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",

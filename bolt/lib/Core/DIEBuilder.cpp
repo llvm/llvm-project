@@ -461,32 +461,42 @@ getUnitForOffset(DIEBuilder &Builder, DWARFContext &DWCtx,
   return nullptr;
 }
 
-uint32_t DIEBuilder::finalizeDIEs(
-    DWARFUnit &CU, DIE &Die,
-    std::vector<std::optional<BOLTDWARF5AccelTableData *>> &Parents,
-    uint32_t &CurOffset) {
+uint32_t
+DIEBuilder::finalizeDIEs(DWARFUnit &CU, DIE &Die,
+                         std::optional<BOLTDWARF5AccelTableData *> Parent,
+                         uint32_t NumberParentsInChain, uint32_t &CurOffset) {
   getState().DWARFDieAddressesParsed.erase(Die.getOffset());
   uint32_t CurSize = 0;
   Die.setOffset(CurOffset);
   std::optional<BOLTDWARF5AccelTableData *> NameEntry =
       DebugNamesTable.addAccelTableEntry(
           CU, Die, SkeletonCU ? SkeletonCU->getDWOId() : std::nullopt,
-          Parents.back());
+          NumberParentsInChain, Parent);
   // It is possible that an indexed debugging information entry has a parent
   // that is not indexed (for example, if its parent does not have a name
   // attribute). In such a case, a parent attribute may point to a nameless
   // index entry (that is, one that cannot be reached from any entry in the name
   // table), or it may point to the nearest ancestor that does have an index
   // entry.
+  // Skipping entry is not very useful for LLDB. This follows clang where
+  // children of forward declaration won't have DW_IDX_parent.
+  // https://github.com/llvm/llvm-project/pull/91808
+
+  // If Parent is nullopt and NumberParentsInChain is not zero, then forward
+  // declaration was encountered in this DF traversal. Propagating nullopt for
+  // Parent to children.
+  if (!Parent && NumberParentsInChain)
+    NameEntry = std::nullopt;
   if (NameEntry)
-    Parents.push_back(std::move(NameEntry));
+    ++NumberParentsInChain;
   for (DIEValue &Val : Die.values())
     CurSize += Val.sizeOf(CU.getFormParams());
   CurSize += getULEB128Size(Die.getAbbrevNumber());
   CurOffset += CurSize;
 
   for (DIE &Child : Die.children()) {
-    uint32_t ChildSize = finalizeDIEs(CU, Child, Parents, CurOffset);
+    uint32_t ChildSize =
+        finalizeDIEs(CU, Child, NameEntry, NumberParentsInChain, CurOffset);
     CurSize += ChildSize;
   }
   // for children end mark.
@@ -496,9 +506,6 @@ uint32_t DIEBuilder::finalizeDIEs(
   }
 
   Die.setSize(CurSize);
-  if (NameEntry)
-    Parents.pop_back();
-
   return CurSize;
 }
 
@@ -510,7 +517,7 @@ void DIEBuilder::finish() {
     DebugNamesTable.setCurrentUnit(CU, UnitStartOffset);
     std::vector<std::optional<BOLTDWARF5AccelTableData *>> Parents;
     Parents.push_back(std::nullopt);
-    finalizeDIEs(CU, *UnitDIE, Parents, CurOffset);
+    finalizeDIEs(CU, *UnitDIE, std::nullopt, 0, CurOffset);
 
     DWARFUnitInfo &CurUnitInfo = getUnitInfoByDwarfUnit(CU);
     CurUnitInfo.UnitOffset = UnitStartOffset;

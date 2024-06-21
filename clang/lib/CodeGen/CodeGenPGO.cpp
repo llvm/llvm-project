@@ -167,8 +167,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   PGOHash Hash;
   /// The map of statements to counters.
   llvm::DenseMap<const Stmt *, unsigned> &CounterMap;
-  /// The next bitmap byte index to assign.
-  unsigned NextMCDCBitmapIdx;
   /// The state of MC/DC Coverage in this function.
   MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
@@ -183,7 +181,7 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
                     MCDC::State &MCDCState, unsigned MCDCMaxCond,
                     DiagnosticsEngine &Diag)
       : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
-        NextMCDCBitmapIdx(0), MCDCState(MCDCState), MCDCMaxCond(MCDCMaxCond),
+        MCDCState(MCDCState), MCDCMaxCond(MCDCMaxCond),
         ProfileVersion(ProfileVersion), Diag(Diag) {}
 
   // Blocks and lambdas are handled as separate functions, so we need not
@@ -314,11 +312,8 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
             return true;
           }
 
-          // Otherwise, allocate the number of bytes required for the bitmap
-          // based on the number of conditions. Must be at least 1-byte long.
-          MCDCState.DecisionByStmt[BinOp].BitmapIdx = NextMCDCBitmapIdx;
-          unsigned SizeInBits = std::max<unsigned>(1L << NumCond, CHAR_BIT);
-          NextMCDCBitmapIdx += SizeInBits / CHAR_BIT;
+          // Otherwise, allocate the Decision.
+          MCDCState.DecisionByStmt[BinOp].BitmapIdx = 0;
         }
         return true;
       }
@@ -1083,7 +1078,9 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   // for most embedded applications. Setting a maximum value prevents the
   // bitmap footprint from growing too large without the user's knowledge. In
   // the future, this value could be adjusted with a command-line option.
-  unsigned MCDCMaxConditions = (CGM.getCodeGenOpts().MCDCCoverage) ? 6 : 0;
+  unsigned MCDCMaxConditions =
+      (CGM.getCodeGenOpts().MCDCCoverage ? CGM.getCodeGenOpts().MCDCMaxConds
+                                         : 0);
 
   RegionCounterMap.reset(new llvm::DenseMap<const Stmt *, unsigned>);
   RegionMCDCState.reset(new MCDC::State);
@@ -1099,7 +1096,6 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
     Walker.TraverseDecl(const_cast<CapturedDecl *>(CD));
   assert(Walker.NextCounter > 0 && "no entry counter mapped for decl");
   NumRegionCounters = Walker.NextCounter;
-  RegionMCDCState->BitmapBytes = Walker.NextMCDCBitmapIdx;
   FunctionHash = Walker.Hash.finalize();
 }
 
@@ -1211,8 +1207,7 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                          ArrayRef(Args, 4));
     else
       Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step),
-          ArrayRef(Args));
+          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
   }
 }
 
@@ -1232,7 +1227,7 @@ void CodeGenPGO::emitMCDCParameters(CGBuilderTy &Builder) {
   // anything.
   llvm::Value *Args[3] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(RegionMCDCState->BitmapBytes)};
+                          Builder.getInt32(RegionMCDCState->BitmapBits)};
   Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_parameters), Args);
 }
@@ -1250,6 +1245,11 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
   if (DecisionStateIter == RegionMCDCState->DecisionByStmt.end())
     return;
 
+  // Don't create tvbitmap_update if the record is allocated but excluded.
+  // Or `bitmap |= (1 << 0)` would be wrongly executed to the next bitmap.
+  if (DecisionStateIter->second.Indices.size() == 0)
+    return;
+
   // Extract the offset of the global bitmap associated with this expression.
   unsigned MCDCTestVectorBitmapOffset = DecisionStateIter->second.BitmapIdx;
   auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
@@ -1259,9 +1259,8 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
   // from a pointer to a dedicated temporary value on the stack that is itself
   // updated via emitMCDCCondBitmapReset() and emitMCDCCondBitmapUpdate(). The
   // index represents an executed test vector.
-  llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+  llvm::Value *Args[4] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(RegionMCDCState->BitmapBytes),
                           Builder.getInt32(MCDCTestVectorBitmapOffset),
                           MCDCCondBitmapAddr.emitRawPointer(CGF)};
   Builder.CreateCall(
@@ -1305,19 +1304,22 @@ void CodeGenPGO::emitMCDCCondBitmapUpdate(CGBuilderTy &Builder, const Expr *S,
   // Extract the ID of the condition we are setting in the bitmap.
   const auto &Branch = BranchStateIter->second;
   assert(Branch.ID >= 0 && "Condition has no ID!");
+  assert(Branch.DecisionStmt);
 
-  auto *I8PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
+  // Cancel the emission if the Decision is erased after the allocation.
+  const auto DecisionIter =
+      RegionMCDCState->DecisionByStmt.find(Branch.DecisionStmt);
+  if (DecisionIter == RegionMCDCState->DecisionByStmt.end())
+    return;
 
-  // Emit intrinsic that updates a dedicated temporary value on the stack after
-  // a condition is evaluated. After the set of conditions has been updated,
-  // the resulting value is used to update the boolean expression's bitmap.
-  llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
-                          Builder.getInt64(FunctionHash),
-                          Builder.getInt32(Branch.ID),
-                          MCDCCondBitmapAddr.emitRawPointer(CGF), Val};
-  Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::instrprof_mcdc_condbitmap_update),
-      Args);
+  const auto &TVIdxs = DecisionIter->second.Indices[Branch.ID];
+
+  auto *CurTV = Builder.CreateLoad(MCDCCondBitmapAddr,
+                                   "mcdc." + Twine(Branch.ID + 1) + ".cur");
+  auto *NewTV = Builder.CreateAdd(CurTV, Builder.getInt32(TVIdxs[true]));
+  NewTV = Builder.CreateSelect(
+      Val, NewTV, Builder.CreateAdd(CurTV, Builder.getInt32(TVIdxs[false])));
+  Builder.CreateStore(NewTV, MCDCCondBitmapAddr);
 }
 
 void CodeGenPGO::setValueProfilingFlag(llvm::Module &M) {
@@ -1340,7 +1342,7 @@ void CodeGenPGO::setProfileVersion(llvm::Module &M) {
                                         llvm::APInt(64, ProfileVersion)),
         VarName);
 
-    IRLevelVersionVariable->setVisibility(llvm::GlobalValue::DefaultVisibility);
+    IRLevelVersionVariable->setVisibility(llvm::GlobalValue::HiddenVisibility);
     llvm::Triple TT(M.getTargetTriple());
     if (TT.supportsCOMDAT()) {
       IRLevelVersionVariable->setLinkage(llvm::GlobalValue::ExternalLinkage);

@@ -1,5 +1,5 @@
-# Check that we handle GNU_args_size correctly.
-# It is generated for throwing functions with LP that have parameters on stack.
+## Check that we handle GNU_args_size correctly.
+## It is generated for throwing functions with LP that have parameters on stack.
 
 RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -pie -shared -o %t.so
 RUN: %clangxx %cxxflags -no-pie %p/Inputs/exc_args.s -o %t %t.so -Wl,-z,notext

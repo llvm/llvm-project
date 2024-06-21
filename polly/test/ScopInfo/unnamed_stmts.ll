@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; This test case verifies that we generate numbered statement names in case
 ; no LLVM-IR names are used in the test case. We also verify, that we

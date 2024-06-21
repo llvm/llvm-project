@@ -120,6 +120,17 @@ struct AliasAnalysis {
       /// Source definition of a value.
       SourceUnion u;
 
+      /// A value definition denoting the place where the corresponding
+      /// source variable was instantiated by the front-end.
+      /// Currently, it is the result of [hl]fir.declare of the source,
+      /// if we can reach it.
+      /// It helps to identify the scope where the corresponding variable
+      /// was defined in the original Fortran source, e.g. when MLIR
+      /// inlining happens an inlined fir.declare of the callee's
+      /// dummy argument identifies the scope where the source
+      /// may be treated as a dummy argument.
+      mlir::Value instantiationPoint;
+
       /// Whether the source was reached following data or box reference
       bool isData{false};
     };
@@ -168,7 +179,10 @@ struct AliasAnalysis {
   mlir::ModRefResult getModRef(mlir::Operation *op, mlir::Value location);
 
   /// Return the memory source of a value.
-  Source getSource(mlir::Value);
+  /// If getInstantiationPoint is true, the search for the source
+  /// will stop at [hl]fir.declare if it represents a dummy
+  /// argument declaration (i.e. it has the dummy_scope operand).
+  Source getSource(mlir::Value, bool getInstantiationPoint = false);
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

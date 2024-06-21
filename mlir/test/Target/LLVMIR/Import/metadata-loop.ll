@@ -324,7 +324,7 @@ end:
 ; // -----
 
 ; Verify the unused access group is not imported.
-; CHECK-COUNT1: #llvm.access_group
+; CHECK-COUNT-1: #llvm.access_group
 
 ; CHECK-LABEL: @unused_parallel_access
 define void @unused_parallel_access(ptr %arg) {

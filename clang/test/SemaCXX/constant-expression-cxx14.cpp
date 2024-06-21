@@ -82,7 +82,7 @@ constexpr void k() {
 
 // If the return type is not 'void', no return statements => never a constant
 // expression, so still diagnose that case.
-[[noreturn]] constexpr int fn() { // expected-error {{no return statement in constexpr function}}
+[[noreturn]] constexpr int fn() { // cxx14_20-error {{no return statement in constexpr function}}
   fn();
 }
 

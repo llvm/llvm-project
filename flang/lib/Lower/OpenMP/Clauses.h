@@ -21,6 +21,10 @@
 #include <type_traits>
 #include <utility>
 
+namespace Fortran::semantics {
+class Symbol;
+}
+
 namespace Fortran::lower::omp {
 using namespace Fortran;
 using SomeExpr = semantics::SomeExpr;
@@ -32,29 +36,64 @@ struct TypeTy : public evaluate::SomeType {
   bool operator==(const TypeTy &t) const { return true; }
 };
 
-using IdTy = semantics::Symbol *;
+template <typename ExprTy>
+struct IdTyTemplate {
+  // "symbol" is always non-null for id's of actual objects.
+  Fortran::semantics::Symbol *symbol;
+  std::optional<ExprTy> designator;
+
+  bool operator==(const IdTyTemplate &other) const {
+    // If symbols are different, then the objects are different.
+    if (symbol != other.symbol)
+      return false;
+    if (symbol == nullptr)
+      return true;
+    // Equal symbols don't necessarily indicate identical objects,
+    // for example, a derived object component may use a single symbol,
+    // which will refer to different objects for different designators,
+    // e.g. a%c and b%c.
+    return designator == other.designator;
+  }
+
+  operator bool() const { return symbol != nullptr; }
+};
+
 using ExprTy = SomeExpr;
 
 template <typename T>
 using List = tomp::ListT<T>;
 } // namespace Fortran::lower::omp
 
+// Specialization of the ObjectT template
 namespace tomp::type {
 template <>
-struct ObjectT<Fortran::lower::omp::IdTy, Fortran::lower::omp::ExprTy> {
-  using IdTy = Fortran::lower::omp::IdTy;
+struct ObjectT<Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>,
+               Fortran::lower::omp::ExprTy> {
+  using IdTy = Fortran::lower::omp::IdTyTemplate<Fortran::lower::omp::ExprTy>;
   using ExprTy = Fortran::lower::omp::ExprTy;
 
-  const IdTy &id() const { return symbol; }
-  const std::optional<ExprTy> &ref() const { return designator; }
+  IdTy id() const { return identity; }
+  Fortran::semantics::Symbol *sym() const { return identity.symbol; }
+  const std::optional<ExprTy> &ref() const { return identity.designator; }
 
-  IdTy symbol;
-  std::optional<ExprTy> designator;
+  IdTy identity;
 };
 } // namespace tomp::type
 
 namespace Fortran::lower::omp {
+using IdTy = IdTyTemplate<ExprTy>;
+}
 
+namespace std {
+template <>
+struct hash<Fortran::lower::omp::IdTy> {
+  size_t operator()(const Fortran::lower::omp::IdTy &id) const {
+    return static_cast<size_t>(reinterpret_cast<uintptr_t>(id.symbol));
+  }
+};
+} // namespace std
+
+namespace Fortran::lower::omp {
 using Object = tomp::ObjectT<IdTy, ExprTy>;
 using ObjectList = tomp::ObjectListT<IdTy, ExprTy>;
 

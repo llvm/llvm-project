@@ -51,19 +51,28 @@ function(add_flang_library name)
       
   endif()
 
-  if (ARG_SHARED)
+  if(ARG_SHARED AND ARG_STATIC)
+    set(LIBTYPE SHARED STATIC)
+  elseif(ARG_SHARED)
     set(LIBTYPE SHARED)
   else()
     # llvm_add_library ignores BUILD_SHARED_LIBS if STATIC is explicitly set,
     # so we need to handle it here.
-    if (BUILD_SHARED_LIBS AND NOT ARG_STATIC)
-      set(LIBTYPE SHARED OBJECT)
+    if(BUILD_SHARED_LIBS)
+      set(LIBTYPE SHARED)
     else()
-      set(LIBTYPE STATIC OBJECT)
+      set(LIBTYPE STATIC)
     endif()
-    set_property(GLOBAL APPEND PROPERTY FLANG_STATIC_LIBS ${name})
+    if(NOT XCODE AND NOT MSVC_IDE)
+      # The Xcode generator doesn't handle object libraries correctly.
+      # The Visual Studio CMake generator does handle object libraries
+      # correctly, but it is preferable to list the libraries with their
+      # source files (instead of the object files and the source files in
+      # a separate target in the "Object Libraries" folder)
+      list(APPEND LIBTYPE OBJECT)
+    endif()
+    set_property(GLOBAL APPEND PROPERTY CLANG_STATIC_LIBS ${name})
   endif()
-
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
   clang_target_link_libraries(${name} PRIVATE ${ARG_CLANG_LIBS})
@@ -94,13 +103,12 @@ function(add_flang_library name)
     add_custom_target(${name})
   endif()
 
-  set_target_properties(${name} PROPERTIES FOLDER "Flang libraries")
+  set_target_properties(${name} PROPERTIES FOLDER "Flang/Libraries")
   set_flang_windows_version_resource_properties(${name})
 endfunction(add_flang_library)
 
 macro(add_flang_executable name)
   add_llvm_executable(${name} ${ARGN})
-  set_target_properties(${name} PROPERTIES FOLDER "Flang executables")
   set_flang_windows_version_resource_properties(${name})
 endmacro(add_flang_executable)
 

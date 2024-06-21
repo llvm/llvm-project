@@ -181,6 +181,10 @@ public:
 
   long double LongDouble(long double fail_value = 0.0) const;
 
+  llvm::APSInt GetAPSInt() const { return m_integer; }
+
+  llvm::APFloat GetAPFloat() const { return m_float; }
+
   Status SetValueFromCString(const char *s, lldb::Encoding encoding,
                              size_t byte_size);
 

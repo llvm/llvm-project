@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
+#include "mlir/Dialect/IRDL/IRDLSymbols.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
@@ -132,10 +133,14 @@ LogicalResult BaseOp::verify() {
   return success();
 }
 
+/// Finds whether the provided symbol is an IRDL type or attribute definition.
+/// The source operation must be within a DialectOp.
 static LogicalResult
 checkSymbolIsTypeOrAttribute(SymbolTableCollection &symbolTable,
                              Operation *source, SymbolRefAttr symbol) {
-  Operation *targetOp = symbolTable.lookupNearestSymbolFrom(source, symbol);
+  Operation *targetOp =
+      irdl::lookupSymbolNearDialect(symbolTable, source, symbol);
+
   if (!targetOp)
     return source->emitOpError() << "symbol '" << symbol << "' not found";
 

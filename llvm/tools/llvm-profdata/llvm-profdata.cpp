@@ -306,7 +306,8 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
     cl::init(memprof::Version0),
     cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
                clEnumValN(memprof::Version1, "1", "version 1"),
-               clEnumValN(memprof::Version2, "2", "version 2")));
+               clEnumValN(memprof::Version2, "2", "version 2"),
+               clEnumValN(memprof::Version3, "3", "version 3")));
 
 cl::opt<bool> MemProfFullSchema(
     "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
@@ -340,7 +341,7 @@ cl::opt<unsigned long long> OverlapValueCutoff(
         "profile with max count value greater then the parameter value"),
     cl::sub(OverlapSubcommand));
 
-// Options unique to show subcommand.
+// Options specific to show subcommand.
 cl::opt<bool> ShowCounts("counts", cl::init(false),
                          cl::desc("Show counter values for shown functions"),
                          cl::sub(ShowSubcommand));
@@ -438,6 +439,14 @@ cl::opt<bool>
 cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
                                  cl::desc("Show profile version. "),
                                  cl::sub(ShowSubcommand));
+
+// Options specific to order subcommand.
+cl::opt<unsigned>
+    NumTestTraces("num-test-traces", cl::init(0),
+                  cl::desc("Keep aside the last <num-test-traces> traces in "
+                           "the profile when computing the function order and "
+                           "instead use them to evaluate that order"),
+                  cl::sub(OrderSubcommand));
 
 // We use this string to indicate that there are
 // multiple static functions map to the same name.
@@ -2686,30 +2695,30 @@ static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
   uint32_t NS = Func.getNumValueSites(VK);
   Stats.TotalNumValueSites += NS;
   for (size_t I = 0; I < NS; ++I) {
-    uint32_t NV = Func.getNumValueDataForSite(VK, I);
-    std::unique_ptr<InstrProfValueData[]> VD = Func.getValueForSite(VK, I);
+    auto VD = Func.getValueArrayForSite(VK, I);
+    uint32_t NV = VD.size();
+    if (NV == 0)
+      continue;
     Stats.TotalNumValues += NV;
-    if (NV) {
-      Stats.TotalNumValueSitesWithValueProfile++;
-      if (NV > Stats.ValueSitesHistogram.size())
-        Stats.ValueSitesHistogram.resize(NV, 0);
-      Stats.ValueSitesHistogram[NV - 1]++;
-    }
+    Stats.TotalNumValueSitesWithValueProfile++;
+    if (NV > Stats.ValueSitesHistogram.size())
+      Stats.ValueSitesHistogram.resize(NV, 0);
+    Stats.ValueSitesHistogram[NV - 1]++;
 
     uint64_t SiteSum = 0;
-    for (uint32_t V = 0; V < NV; V++)
-      SiteSum += VD[V].Count;
+    for (const auto &V : VD)
+      SiteSum += V.Count;
     if (SiteSum == 0)
       SiteSum = 1;
 
-    for (uint32_t V = 0; V < NV; V++) {
+    for (const auto &V : VD) {
       OS << "\t[ " << format("%2u", I) << ", ";
       if (Symtab == nullptr)
-        OS << format("%4" PRIu64, VD[V].Value);
+        OS << format("%4" PRIu64, V.Value);
       else
-        OS << Symtab->getFuncOrVarName(VD[V].Value);
-      OS << ", " << format("%10" PRId64, VD[V].Count) << " ] ("
-         << format("%.2f%%", (VD[V].Count * 100.0 / SiteSum)) << ")\n";
+        OS << Symtab->getFuncOrVarName(V.Value);
+      OS << ", " << format("%10" PRId64, V.Count) << " ] ("
+         << format("%.2f%%", (V.Count * 100.0 / SiteSum)) << ")\n";
     }
   }
 }
@@ -3277,13 +3286,42 @@ static int order_main() {
     // Read all entries
     (void)I;
   }
-  auto &Traces = Reader->getTemporalProfTraces();
-  auto Nodes = TemporalProfTraceTy::createBPFunctionNodes(Traces);
+  ArrayRef Traces = Reader->getTemporalProfTraces();
+  if (NumTestTraces && NumTestTraces >= Traces.size())
+    exitWithError(
+        "--" + NumTestTraces.ArgStr +
+        " must be smaller than the total number of traces: expected: < " +
+        Twine(Traces.size()) + ", actual: " + Twine(NumTestTraces));
+  ArrayRef TestTraces = Traces.take_back(NumTestTraces);
+  Traces = Traces.drop_back(NumTestTraces);
+
+  std::vector<BPFunctionNode> Nodes;
+  TemporalProfTraceTy::createBPFunctionNodes(Traces, Nodes);
   BalancedPartitioningConfig Config;
   BalancedPartitioning BP(Config);
   BP.run(Nodes);
 
   OS << "# Ordered " << Nodes.size() << " functions\n";
+  if (!TestTraces.empty()) {
+    // Since we don't know the symbol sizes, we assume 32 functions per page.
+    DenseMap<BPFunctionNode::IDT, unsigned> IdToPageNumber;
+    for (auto &Node : Nodes)
+      IdToPageNumber[Node.Id] = IdToPageNumber.size() / 32;
+
+    SmallSet<unsigned, 0> TouchedPages;
+    unsigned Area = 0;
+    for (auto &Trace : TestTraces) {
+      for (auto Id : Trace.FunctionNameRefs) {
+        auto It = IdToPageNumber.find(Id);
+        if (It == IdToPageNumber.end())
+          continue;
+        TouchedPages.insert(It->getSecond());
+        Area += TouchedPages.size();
+      }
+      TouchedPages.clear();
+    }
+    OS << "# Total area under the page fault curve: " << (float)Area << "\n";
+  }
   OS << "# Warning: Mach-O may prefix symbols with \"_\" depending on the "
         "linkage and this output does not take that into account. Some "
         "post-processing may be required before passing to the linker via "
