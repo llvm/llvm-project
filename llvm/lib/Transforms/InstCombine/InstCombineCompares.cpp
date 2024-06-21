@@ -3930,54 +3930,46 @@ static Instruction *
 foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
                                    const APInt &C,
                                    InstCombiner::BuilderTy &Builder) {
-  bool IsScmp = I->getIntrinsicID() == Intrinsic::scmp;
-  Value *LHS = I->getOperand(0);
-  Value *RHS = I->getOperand(1);
-
+  std::optional<ICmpInst::Predicate> NewPredicate = std::nullopt;
   switch (Pred) {
   case ICmpInst::ICMP_EQ:
   case ICmpInst::ICMP_NE:
     if (C.isZero())
-      return new ICmpInst(Pred, LHS, RHS);
-    if (C.isOne()) {
-      if (Pred == ICmpInst::ICMP_EQ)
-        return new ICmpInst(IsScmp ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT,
-                            LHS, RHS);
-      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE, LHS,
-                          RHS);
-    }
-    if (C.isAllOnes()) {
-      if (Pred == ICmpInst::ICMP_EQ)
-        return new ICmpInst(IsScmp ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT,
-                            LHS, RHS);
-      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, LHS,
-                          RHS);
-    }
+      NewPredicate = Pred;
+    if (C.isOne())
+      NewPredicate =
+          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE;
+    if (C.isAllOnes())
+      NewPredicate =
+          Pred == ICmpInst::ICMP_EQ ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE;
     break;
 
   case ICmpInst::ICMP_SGT:
     if (C.isAllOnes())
-      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, LHS,
-                          RHS);
+      NewPredicate = ICmpInst::ICMP_UGE;
     if (C.isZero())
-      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, LHS,
-                          RHS);
+      NewPredicate = ICmpInst::ICMP_UGT;
     break;
 
   case ICmpInst::ICMP_SLT:
     if (C.isZero())
-      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, LHS,
-                          RHS);
+      NewPredicate = ICmpInst::ICMP_ULT;
     if (C.isOne())
-      return new ICmpInst(IsScmp ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE, LHS,
-                          RHS);
+      NewPredicate = ICmpInst::ICMP_ULE;
     break;
 
   default:
-    return nullptr;
+    break;
   }
 
-  return nullptr;
+  if (!NewPredicate)
+    return nullptr;
+
+  if (I->getIntrinsicID() == Intrinsic::scmp)
+    NewPredicate = ICmpInst::getSignedPredicate(NewPredicate.value());
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+  return new ICmpInst(NewPredicate.value(), LHS, RHS);
 }
 
 /// Fold an icmp with LLVM intrinsic and constant operand: icmp Pred II, C.
