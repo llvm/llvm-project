@@ -198,17 +198,18 @@ bool WindowScheduler::initialize() {
     // Two cases are checked here: (1)The virtual register defined by the
     // preceding phi is used by the succeeding phi;(2)The preceding phi uses the
     // virtual register defined by the succeeding phi.
-    for (auto MO : Phi.operands()) {
-      if (!MO.isReg())
-        continue;
-      if (MO.isDef()) {
-        if (PrevUses.count(MO.getReg()))
+    auto Def = Phi.getOperand(0);
+    if (Def.isReg()) {
+      if (PrevUses.count(Def.getReg()))
+        return true;
+      PrevDefs.insert(Def.getReg());
+    }
+    for (unsigned I = 1, E = Phi.getNumOperands(); I != E; I += 2) {
+      auto Use = Phi.getOperand(I);
+      if (Use.isReg()) {
+        if (PrevDefs.count(Use.getReg()))
           return true;
-        PrevDefs.insert(MO.getReg());
-      } else if (MO.isUse()) {
-        if (PrevDefs.count(MO.getReg()))
-          return true;
-        PrevUses.insert(MO.getReg());
+        PrevUses.insert(Use.getReg());
       }
     }
     return false;
