@@ -176,13 +176,13 @@ void t3() [[clang::nonblocking]]
   ValueDependent<false> x1;
   x1.nb_method();
 // CHECK: ClassTemplateSpecializationDecl {{.*}} ValueDependent
-// CHECK: TemplateArgument integral 0
+// CHECK: TemplateArgument integral 'false'
 // CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((blocking))'
 
    ValueDependent<true> x2;
    x2.nb_method();
 // CHECK: ClassTemplateSpecializationDecl {{.*}} ValueDependent
-// CHECK: TemplateArgument integral 1
+// CHECK: TemplateArgument integral 'true'
 // CHECK: CXXMethodDecl {{.*}} nb_method 'void () __attribute__((nonblocking))'
 }
 
