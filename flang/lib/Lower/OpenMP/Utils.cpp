@@ -11,18 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "Utils.h"
+#include "Clauses.h"
+#include "DirectivesCommon.h"
 
 #include "Clauses.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/PFTBuilder.h>
+#include <flang/Lower/Support/Utils.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
 #include <llvm/Support/CommandLine.h>
 
-#include <algorithm>
 #include <numeric>
 
 llvm::cl::opt<bool> treatIndexAsSection(
@@ -141,6 +143,110 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
   return op;
 }
 
+omp::ObjectList gatherObjects(omp::Object obj,
+                              semantics::SemanticsContext &semaCtx) {
+  omp::ObjectList objList;
+  std::optional<omp::Object> baseObj = getBaseObject(obj, semaCtx);
+  while (baseObj.has_value()) {
+    objList.push_back(baseObj.value());
+    baseObj = getBaseObject(baseObj.value(), semaCtx);
+  }
+  return omp::ObjectList{llvm::reverse(objList)};
+}
+
+bool duplicateMemberMapInfo(OmpMapMemberIndicesData &parentMembers,
+                            llvm::SmallVectorImpl<int> &memberIndices) {
+  // A variation of std:equal that supports non-equal length index lists for our
+  // specific use-case, if one is larger than the other, we use -1, the default
+  // filler element in place of the smaller vector, this prevents UB from over
+  // indexing and removes the need for us to do any filling of intermediate
+  // index lists we'll discard.
+  auto isEqual = [](auto first1, auto last1, auto first2, auto last2) {
+    int v1, v2;
+    for (; first1 != last1; ++first1, ++first2) {
+      v1 = (first1 == last1) ? -1 : *first1;
+      v2 = (first2 == last2) ? -1 : *first2;
+
+      if (!(v1 == v2))
+        return false;
+    }
+    return true;
+  };
+
+  for (auto memberData : parentMembers.memberPlacementIndices)
+    if (isEqual(memberData.begin(), memberData.end(), memberIndices.begin(),
+                memberIndices.end()))
+      return true;
+  return false;
+}
+
+// When mapping members of derived types, there is a chance that one of the
+// members along the way to a mapped member is an descriptor. In which case
+// we have to make sure we generate a map for those along the way otherwise
+// we will be missing a chunk of data required to actually map the member
+// type to device. This function effectively generates these maps and the
+// appropriate data accesses required to generate these maps. It will avoid
+// creating duplicate maps, as duplicates are just as bad as unmapped
+// descriptor data in a lot of cases for the runtime (and unnecessary
+// data movement should be avoided where possible)
+mlir::Value createParentSymAndGenIntermediateMaps(
+    mlir::Location clauseLocation, Fortran::lower::AbstractConverter &converter,
+    omp::ObjectList &objectList, llvm::SmallVector<int> &indices,
+    OmpMapMemberIndicesData &parentMemberIndices, std::string asFortran,
+    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  Fortran::lower::AddrAndBoundsInfo parentBaseAddr =
+      Fortran::lower::getDataOperandBaseAddr(
+          converter, firOpBuilder, *objectList[0].sym(), clauseLocation);
+  mlir::Value curValue = parentBaseAddr.addr;
+
+  for (size_t i = 0; i < objectList.size(); ++i) {
+    mlir::Type unwrappedTy =
+        fir::unwrapSequenceType(fir::unwrapPassByRefType(curValue.getType()));
+    if (fir::RecordType recordType =
+            mlir::dyn_cast_or_null<fir::RecordType>(unwrappedTy)) {
+      mlir::Value idxConst = firOpBuilder.createIntegerConstant(
+          clauseLocation, firOpBuilder.getIndexType(), indices[i]);
+      mlir::Type memberTy = recordType.getTypeList().at(indices[i]).second;
+      curValue = firOpBuilder.create<fir::CoordinateOp>(
+          clauseLocation, firOpBuilder.getRefType(memberTy), curValue,
+          idxConst);
+
+      if ((i != indices.size() - 1) && fir::isTypeWithDescriptor(memberTy)) {
+        llvm::SmallVector<int> intermIndices = indices;
+        std::fill(std::next(intermIndices.begin(), i + 1), intermIndices.end(),
+                  -1);
+        if (!duplicateMemberMapInfo(parentMemberIndices, intermIndices)) {
+          // TODO: Perhaps generate bounds for these intermediate maps, as it
+          // may be required for cases such as:
+          //    dtype(1)%second(3)%array
+          // where second is an allocatable (and dtype may be an allocatable as
+          // well, although in this case I am not sure the fortran syntax would
+          // be legal)
+          mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+              firOpBuilder, clauseLocation, curValue,
+              /*varPtrPtr=*/mlir::Value{}, asFortran,
+              /*bounds=*/llvm::SmallVector<mlir::Value>{},
+              /*members=*/{},
+              /*membersIndex=*/mlir::DenseIntElementsAttr{},
+              static_cast<
+                  std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+                  mapTypeBits),
+              mlir::omp::VariableCaptureKind::ByRef, curValue.getType());
+
+          parentMemberIndices.memberPlacementIndices.push_back(intermIndices);
+          parentMemberIndices.memberMap.push_back(mapOp);
+        }
+
+        if (i != indices.size() - 1)
+          curValue = firOpBuilder.create<fir::LoadOp>(clauseLocation, curValue);
+      }
+    }
+  }
+
+  return curValue;
+}
+
 static int
 getComponentPlacementInParent(const semantics::Symbol *componentSym) {
   const auto *derived = componentSym->owner()
@@ -189,85 +295,60 @@ generateMemberPlacementIndices(const Object &object,
   indices = llvm::SmallVector<int>{llvm::reverse(indices)};
 }
 
-void addChildIndexAndMapToParent(
-    const omp::Object &object,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
-    mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx) {
-  std::optional<evaluate::DataRef> dataRef = ExtractDataRef(object.ref());
-  assert(dataRef.has_value() &&
-         "DataRef could not be extracted during mapping of derived type "
-         "cannot proceed");
-  const semantics::Symbol *parentSym = &dataRef->GetFirstSymbol();
-  assert(parentSym && "Could not find parent symbol during lower of "
-                      "a component member in OpenMP map clause");
+void addChildIndexAndMapToParent(const omp::Object &object,
+                                 OmpMapMemberIndicesData &parentMemberIndices,
+                                 mlir::omp::MapInfoOp &mapOp,
+                                 semantics::SemanticsContext &semaCtx) {
   llvm::SmallVector<int> indices;
   generateMemberPlacementIndices(object, indices, semaCtx);
-  parentMemberIndices[parentSym].push_back({indices, mapOp});
+  parentMemberIndices.memberPlacementIndices.push_back(indices);
+  parentMemberIndices.memberMap.push_back(mapOp);
 }
 
-static void calculateShapeAndFillIndices(
-    llvm::SmallVectorImpl<int64_t> &shape,
-    llvm::SmallVectorImpl<OmpMapMemberIndicesData> &memberPlacementData) {
-  shape.push_back(memberPlacementData.size());
-  size_t largestIndicesSize =
-      std::max_element(memberPlacementData.begin(), memberPlacementData.end(),
-                       [](auto a, auto b) {
-                         return a.memberPlacementIndices.size() <
-                                b.memberPlacementIndices.size();
-                       })
-          ->memberPlacementIndices.size();
-  shape.push_back(largestIndicesSize);
-
-  // DenseElementsAttr expects a rectangular shape for the data, so all
-  // index lists have to be of the same length, this emplaces -1 as filler.
-  for (auto &v : memberPlacementData) {
-    if (v.memberPlacementIndices.size() < largestIndicesSize) {
-      auto *prevEnd = v.memberPlacementIndices.end();
-      v.memberPlacementIndices.resize(largestIndicesSize);
-      std::fill(prevEnd, v.memberPlacementIndices.end(), -1);
-    }
+llvm::SmallVector<int>
+generateMemberPlacementIndices(const Object &object,
+                               Fortran::semantics::SemanticsContext &semaCtx) {
+  std::list<int> indices;
+  auto compObj = getComponentObject(object, semaCtx);
+  while (compObj) {
+    indices.push_front(getComponentPlacementInParent(compObj->sym()));
+    compObj =
+        getComponentObject(getBaseObject(compObj.value(), semaCtx), semaCtx);
   }
+
+  return llvm::SmallVector<int>{std::begin(indices), std::end(indices)};
 }
 
-static mlir::DenseIntElementsAttr createDenseElementsAttrFromIndices(
-    llvm::SmallVectorImpl<OmpMapMemberIndicesData> &memberPlacementData,
-    fir::FirOpBuilder &builder) {
-  llvm::SmallVector<int64_t> shape;
-  calculateShapeAndFillIndices(shape, memberPlacementData);
+bool memberHasAllocatableParent(const Object &object,
+                                Fortran::semantics::SemanticsContext &semaCtx) {
+  auto compObj = getBaseObject(object, semaCtx);
+  while (compObj) {
+    if (compObj.has_value() &&
+        Fortran::semantics::IsAllocatableOrObjectPointer(compObj.value().sym()))
+      return true;
+    compObj = getBaseObject(compObj.value(), semaCtx);
+  }
 
-  llvm::SmallVector<int> indicesFlattened =
-      std::accumulate(memberPlacementData.begin(), memberPlacementData.end(),
-                      llvm::SmallVector<int>(),
-                      [](llvm::SmallVector<int> &x, OmpMapMemberIndicesData y) {
-                        x.insert(x.end(), y.memberPlacementIndices.begin(),
-                                 y.memberPlacementIndices.end());
-                        return x;
-                      });
-
-  return mlir::DenseIntElementsAttr::get(
-      mlir::VectorType::get(shape,
-                            mlir::IntegerType::get(builder.getContext(), 32)),
-      indicesFlattened);
+  return false;
 }
 
 void insertChildMapInfoIntoParent(
-    lower::AbstractConverter &converter,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    std::map<omp::Object, OmpMapMemberIndicesData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs) {
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols) {
   for (auto indices : parentMemberIndices) {
     bool parentExists = false;
     size_t parentIdx;
-    for (parentIdx = 0; parentIdx < mapSyms.size(); ++parentIdx) {
-      if (mapSyms[parentIdx] == indices.first) {
+
+    for (parentIdx = 0; parentIdx < mapSymbols->size(); ++parentIdx)
+      if ((*mapSymbols)[parentIdx] == indices.first.sym()) {
         parentExists = true;
         break;
       }
-    }
 
     if (parentExists) {
       auto mapOp = llvm::cast<mlir::omp::MapInfoOp>(
@@ -280,73 +361,64 @@ void insertChildMapInfoIntoParent(
       // precedes the children. An alternative, may be to do
       // delayed generation of map info operations from the clauses and
       // organize them first before generation.
-      mapOp->moveAfter(indices.second.back().memberMap);
+      mapOp->moveAfter(indices.second.memberMap.back());
 
-      for (auto memberIndicesData : indices.second)
-        mapOp.getMembersMutable().append(
-            memberIndicesData.memberMap.getResult());
+      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+        mapOp.getMembersMutable().append((mlir::Value)memberMap);
 
-      mapOp.setMembersIndexAttr(createDenseElementsAttrFromIndices(
-          indices.second, converter.getFirOpBuilder()));
+      Fortran::lower::omp::fillMemberIndices(
+          indices.second.memberPlacementIndices);
+      mapOp.setMembersIndexAttr(
+          Fortran::lower::omp::createDenseElementsAttrFromIndices(
+              indices.second.memberPlacementIndices,
+              converter.getFirOpBuilder()));
     } else {
       // NOTE: We take the map type of the first child, this may not
       // be the correct thing to do, however, we shall see. For the moment
       // it allows this to work with enter and exit without causing MLIR
       // verification issues. The more appropriate thing may be to take
       // the "main" map type clause from the directive being used.
-      uint64_t mapType = indices.second[0].memberMap.getMapType().value_or(0);
-
-      // create parent to emplace and bind members
-      mlir::Value origSymbol = converter.getSymbolAddress(*indices.first);
+      uint64_t mapType = indices.second.memberMap[0].getMapType().value_or(0);
 
       llvm::SmallVector<mlir::Value> members;
-      for (OmpMapMemberIndicesData memberIndicesData : indices.second)
-        members.push_back((mlir::Value)memberIndicesData.memberMap);
+      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+        members.push_back((mlir::Value)memberMap);
 
+      // create parent to emplace and bind members
+      llvm::SmallVector<mlir::Value> bounds;
+      std::stringstream asFortran;
+      auto origSymbol = converter.getSymbolAddress(*indices.first.sym());
+      Fortran::lower::AddrAndBoundsInfo info =
+          Fortran::lower::gatherDataOperandAddrAndBounds<
+              mlir::omp::MapBoundsOp, mlir::omp::MapBoundsType>(
+              converter, converter.getFirOpBuilder(), semaCtx,
+              converter.getFctCtx(), *indices.first.sym(), indices.first.ref(),
+              origSymbol.getLoc(), asFortran, bounds, treatIndexAsSection);
+
+      mlir::Value symAddr = info.addr;
+      if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
+        symAddr = origSymbol;
+
+      Fortran::lower::omp::fillMemberIndices(
+          indices.second.memberPlacementIndices);
       mlir::Value mapOp = createMapInfoOp(
-          converter.getFirOpBuilder(), origSymbol.getLoc(), origSymbol,
-          /*varPtrPtr=*/mlir::Value(), indices.first->name().ToString(),
-          /*bounds=*/{}, members,
-          createDenseElementsAttrFromIndices(indices.second,
-                                             converter.getFirOpBuilder()),
-          mapType, mlir::omp::VariableCaptureKind::ByRef, origSymbol.getType(),
+          converter.getFirOpBuilder(), symAddr.getLoc(), symAddr,
+          /*varPtrPtr=*/mlir::Value(), asFortran.str(), bounds, members,
+          Fortran::lower::omp::createDenseElementsAttrFromIndices(
+              indices.second.memberPlacementIndices,
+              converter.getFirOpBuilder()),
+          mapType, mlir::omp::VariableCaptureKind::ByRef, symAddr.getType(),
           /*partialMap=*/true);
 
       mapOperands.push_back(mapOp);
-      mapSyms.push_back(indices.first);
-
       if (mapSymTypes)
         mapSymTypes->push_back(mapOp.getType());
       if (mapSymLocs)
         mapSymLocs->push_back(mapOp.getLoc());
+      if (mapSymbols)
+        mapSymbols->push_back(indices.first.sym());
     }
   }
-}
-
-semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject) {
-  semantics::Symbol *sym = nullptr;
-  Fortran::common::visit(
-      common::visitors{
-          [&](const parser::Designator &designator) {
-            if (auto *arrayEle =
-                    parser::Unwrap<parser::ArrayElement>(designator)) {
-              // Use getLastName to retrieve the arrays symbol, this will
-              // provide the farthest right symbol (the last) in a designator,
-              // i.e. providing something like the following:
-              // "dtype1%dtype2%array[2:10]", will result in "array"
-              sym = GetLastName(arrayEle->base).symbol;
-            } else if (auto *structComp =
-                           parser::Unwrap<parser::StructureComponent>(
-                               designator)) {
-              sym = structComp->component.symbol;
-            } else if (const parser::Name *name =
-                           semantics::getDesignatorNameIfDataRef(designator)) {
-              sym = name->symbol;
-            }
-          },
-          [&](const parser::Name &name) { sym = name.symbol; }},
-      ompObject.u);
-  return sym;
 }
 
 } // namespace omp

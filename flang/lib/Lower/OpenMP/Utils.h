@@ -36,7 +36,7 @@ struct OmpObjectList;
 namespace lower {
 namespace pft {
 struct Evaluation;
-}
+} // namespace pft
 
 class AbstractConverter;
 
@@ -52,11 +52,21 @@ using DeclareTargetCapturePair =
 struct OmpMapMemberIndicesData {
   // The indices representing the component members placement in its derived
   // type parents hierarchy.
-  llvm::SmallVector<int> memberPlacementIndices;
+  llvm::SmallVector<llvm::SmallVector<int>> memberPlacementIndices;
 
   // Placement of the member in the member vector.
-  mlir::omp::MapInfoOp memberMap;
+  llvm::SmallVector<mlir::omp::MapInfoOp> memberMap;
 };
+
+llvm::SmallVector<int>
+generateMemberPlacementIndices(const Object &object,
+                               Fortran::semantics::SemanticsContext &semaCtx);
+
+bool memberHasAllocatableParent(const Object &object,
+                                Fortran::semantics::SemanticsContext &semaCtx);
+
+bool duplicateMemberMapInfo(OmpMapMemberIndicesData &parentMembers,
+                            llvm::SmallVectorImpl<int> &memberIndices);
 
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -67,20 +77,28 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool partialMap = false);
 
-void addChildIndexAndMapToParent(
-    const omp::Object &object,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
-    mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx);
+mlir::Value createParentSymAndGenIntermediateMaps(
+    mlir::Location clauseLocation, Fortran::lower::AbstractConverter &converter,
+    omp::ObjectList &objectList, llvm::SmallVector<int> &indices,
+    OmpMapMemberIndicesData &parentMemberIndices, std::string asFortran,
+    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits);
+
+omp::ObjectList gatherObjects(omp::Object obj,
+                              semantics::SemanticsContext &semaCtx);
+
+void addChildIndexAndMapToParent(const omp::Object &object,
+                                 OmpMapMemberIndicesData &parentMemberIndices,
+                                 mlir::omp::MapInfoOp &mapOp,
+                                 semantics::SemanticsContext &semaCtx);
 
 void insertChildMapInfoIntoParent(
-    lower::AbstractConverter &converter,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    std::map<omp::Object, OmpMapMemberIndicesData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs);
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols);
 
 mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
@@ -93,8 +111,6 @@ void gatherFuncAndVarSyms(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
 
 int64_t getCollapseValue(const List<Clause> &clauses);
-
-semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject);
 
 void genObjectList(const ObjectList &objects,
                    lower::AbstractConverter &converter,

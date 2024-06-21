@@ -2245,10 +2245,13 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
         mlir::dyn_cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
     int firstMemberIdx = getMapDataMemberIdx(
         mapData, getFirstOrLastMappedMemberPtr(mapOp, true));
-    lowAddr = builder.CreatePointerCast(mapData.Pointers[firstMemberIdx],
-                                        builder.getPtrTy());
     int lastMemberIdx = getMapDataMemberIdx(
         mapData, getFirstOrLastMappedMemberPtr(mapOp, false));
+
+    // NOTE/TODO: Should perhaps use OriginalValue here instead of Pointers to
+    // avoid offset or any manipulations interfering with the calculation.
+    lowAddr = builder.CreatePointerCast(mapData.Pointers[firstMemberIdx],
+                                        builder.getPtrTy());
     highAddr = builder.CreatePointerCast(
         builder.CreateGEP(mapData.BaseType[lastMemberIdx],
                           mapData.Pointers[lastMemberIdx], builder.getInt64(1)),
@@ -2331,6 +2334,24 @@ static void processMapMembersWithParent(
 
     assert(memberDataIdx >= 0 && "could not find mapped member of structure");
 
+    if (checkIfPointerMap(memberClause)) {
+      auto mapFlag = llvm::omp::OpenMPOffloadMappingFlags(
+          memberClause.getMapType().value());
+      mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
+      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
+      ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
+      combinedInfo.Types.emplace_back(mapFlag);
+      combinedInfo.DevicePointers.emplace_back(
+          llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+      combinedInfo.Names.emplace_back(
+          LLVM::createMappingInformation(memberClause.getLoc(), ompBuilder));
+      combinedInfo.BasePointers.emplace_back(
+          mapData.BasePointers[mapDataIndex]);
+      combinedInfo.Pointers.emplace_back(mapData.BasePointers[memberDataIdx]);
+      combinedInfo.Sizes.emplace_back(builder.getInt64(
+          moduleTranslation.getLLVMModule()->getDataLayout().getPointerSize()));
+    }
+
     // Same MemberOfFlag to indicate its link with parent and other members
     // of.
     auto mapFlag =
@@ -2346,7 +2367,14 @@ static void processMapMembersWithParent(
         llvm::OpenMPIRBuilder::DeviceInfoTy::None);
     combinedInfo.Names.emplace_back(
         LLVM::createMappingInformation(memberClause.getLoc(), ompBuilder));
-    combinedInfo.BasePointers.emplace_back(mapData.BasePointers[mapDataIndex]);
+
+    if (checkIfPointerMap(memberClause))
+      combinedInfo.BasePointers.emplace_back(
+          mapData.BasePointers[memberDataIdx]);
+    else
+      combinedInfo.BasePointers.emplace_back(
+          mapData.BasePointers[mapDataIndex]);
+
     combinedInfo.Pointers.emplace_back(mapData.Pointers[memberDataIdx]);
     combinedInfo.Sizes.emplace_back(mapData.Sizes[memberDataIdx]);
   }

@@ -14,9 +14,11 @@
 #include "Clauses.h"
 
 #include "flang/Lower/PFTBuilder.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include <cstddef>
 
 namespace Fortran {
 namespace lower {
@@ -888,9 +890,7 @@ bool ClauseProcessor::processMap(
   llvm::SmallVector<const semantics::Symbol *> localMapSyms;
   llvm::SmallVectorImpl<const semantics::Symbol *> *ptrMapSyms =
       mapSyms ? mapSyms : &localMapSyms;
-  std::map<const semantics::Symbol *,
-           llvm::SmallVector<OmpMapMemberIndicesData>>
-      parentMemberIndices;
+  std::map<omp::Object, OmpMapMemberIndicesData> parentMemberIndices;
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(
       [&](const omp::clause::Map &clause, const parser::CharBlock &source) {
@@ -940,6 +940,7 @@ bool ClauseProcessor::processMap(
         for (const omp::Object &object : std::get<omp::ObjectList>(clause.t)) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
+          std::optional<omp::Object> parentObj;
 
           lower::AddrAndBoundsInfo info =
               lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
@@ -952,6 +953,22 @@ bool ClauseProcessor::processMap(
           mlir::Value symAddr = info.addr;
           if (origSymbol && fir::isTypeWithDescriptor(origSymbol.getType()))
             symAddr = origSymbol;
+
+          if (object.sym()->owner().IsDerivedType()) {
+            omp::ObjectList objectList = gatherObjects(object, semaCtx);
+            parentObj = objectList[0];
+            parentMemberIndices.insert({parentObj.value(), {}});
+            if (Fortran::semantics::IsAllocatableOrObjectPointer(
+                    object.sym()) ||
+                memberHasAllocatableParent(object, semaCtx)) {
+              llvm::SmallVector<int> indices =
+                  generateMemberPlacementIndices(object, semaCtx);
+              symAddr = createParentSymAndGenIntermediateMaps(
+                  clauseLocation, converter, objectList, indices,
+                  parentMemberIndices[parentObj.value()], asFortran.str(),
+                  mapTypeBits);
+            }
+          }
 
           // Explicit map captures are captured ByRef by default,
           // optimisation passes may alter this to ByCopy or other capture
@@ -968,9 +985,9 @@ bool ClauseProcessor::processMap(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          if (object.sym()->owner().IsDerivedType()) {
-            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
-                                        semaCtx);
+          if (parentObj.has_value()) {
+            addChildIndexAndMapToParent(
+                object, parentMemberIndices[parentObj.value()], mapOp, semaCtx);
           } else {
             result.mapVars.push_back(mapOp);
             ptrMapSyms->push_back(object.sym());
@@ -982,9 +999,9 @@ bool ClauseProcessor::processMap(
         }
       });
 
-  insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
-                               *ptrMapSyms, mapSymTypes, mapSymLocs);
-
+  insertChildMapInfoIntoParent(converter, semaCtx, parentMemberIndices,
+                               result.mapVars, mapSymTypes, mapSymLocs,
+                               ptrMapSyms);
   return clauseFound;
 }
 
