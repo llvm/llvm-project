@@ -870,18 +870,17 @@ def FeatureAtomicBufferGlobalPkAddF16Insts : SubtargetFeature<"atomic-buffer-glo
  [FeatureFlatGlobalInsts]
 >;
 
-def FeatureAtomicBufferPkAddBF16Inst : SubtargetFeature<"atomic-buffer-pk-add-bf16-inst",
- "HasAtomicBufferPkAddBF16Inst",
- "true",
- "Has buffer_atomic_pk_add_f16 instruction",
- [FeatureFlatGlobalInsts]
->;
-
 def FeatureAtomicGlobalPkAddBF16Inst : SubtargetFeature<"atomic-global-pk-add-bf16-inst",
  "HasAtomicGlobalPkAddBF16Inst",
  "true",
  "Has global_atomic_pk_add_bf16 instruction",
  [FeatureFlatGlobalInsts]
+>;
+
+def FeatureAtomicBufferPkAddBF16Inst : SubtargetFeature<"atomic-buffer-pk-add-bf16-inst",
+ "HasAtomicBufferPkAddBF16Inst",
+ "true",
+ "Has buffer_atomic_pk_add_f16 instruction"
 >;
 
 def FeatureAtomicCSubNoRtnInsts : SubtargetFeature<"atomic-csub-no-rtn-insts",
