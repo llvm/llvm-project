@@ -1130,7 +1130,6 @@ public:
 #include "clang/Basic/OpenCLImageTypes.def"
   CanQualType OCLSamplerTy, OCLEventTy, OCLClkEventTy;
   CanQualType OCLQueueTy, OCLReserveIDTy;
-  CanQualType HLSLResourceTy;
   CanQualType IncompleteMatrixIdxTy;
   CanQualType ArraySectionTy;
   CanQualType OMPArrayShapingTy, OMPIteratorTy;
@@ -1150,6 +1149,8 @@ public:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.

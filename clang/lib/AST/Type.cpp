@@ -3481,8 +3481,6 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "queue_t";
   case OCLReserveID:
     return "reserve_id_t";
-  case HLSLResource:
-    return "__builtin_hlsl_resource_t";
   case IncompleteMatrixIdx:
     return "<incomplete matrix index type>";
   case ArraySection:
@@ -3515,6 +3513,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return Name;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case Id:                                                                     \
+    return Name;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   }
 
   llvm_unreachable("Invalid builtin type.");
@@ -4774,7 +4776,6 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     case BuiltinType::OCLClkEvent:
     case BuiltinType::OCLQueue:
     case BuiltinType::OCLReserveID:
-    case BuiltinType::HLSLResource:
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
@@ -4787,6 +4788,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 #define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:

@@ -3374,9 +3374,6 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << type_name.size() << type_name; \
     break;
 #include "clang/Basic/OpenCLExtensionTypes.def"
-  case BuiltinType::HLSLResource:
-    Out << "25__builtin_hlsl_resource_t";
-    break;
   // The SVE types are effectively target-specific.  The mangling scheme
   // is defined in the appendices to the Procedure Call Standard for the
   // Arm Architecture.
@@ -3432,6 +3429,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'u' << type_name.size() << type_name;                               \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    type_name = Name;                                                          \
+    Out << type_name.size() << type_name;                                      \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
   }
 }
 

@@ -77,7 +77,8 @@ static CXTypeKind GetBuiltinTypeKind(const BuiltinType *BT) {
     BTCASE(OCLEvent);
     BTCASE(OCLQueue);
     BTCASE(OCLReserveID);
-    BTCASE(HLSLResource);
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) BTCASE(Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
   default:
     return CXType_Unexposed;
   }
@@ -629,7 +630,8 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(OCLEvent);
     TKIND(OCLQueue);
     TKIND(OCLReserveID);
-    TKIND(HLSLResource);
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) TKIND(Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
     TKIND(Atomic);
   }
 #undef TKIND

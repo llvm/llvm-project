@@ -1358,7 +1358,11 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
-  InitBuiltinType(HLSLResourceTy, BuiltinType::HLSLResource);
+  if (LangOpts.HLSL) {
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+    InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/HLSLIntangibleTypes.def"
+  }
 
   if (Target.hasAArch64SVETypes()) {
 #define SVE_TYPE(Name, Id, SingletonId) \
@@ -2161,12 +2165,6 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getPointerWidth(AS);
       Align = Target->getPointerAlign(AS);
       break;
-    case BuiltinType::HLSLResource:
-      // TODO: We actually want this to have a size of zero, but for now we'll
-      // just treat it like a pointer to make progress.
-      Width = Target->getPointerWidth(LangAS::Default);
-      Align = Target->getPointerAlign(LangAS::Default);
-      break;
     // The SVE types are effectively target-specific.  The length of an
     // SVE_VECTOR_TYPE is only known at runtime, but it is always a multiple
     // of 128 bits.  There is one predicate bit for each vector byte, so the
@@ -2223,6 +2221,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = ALIGN;                                                             \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+      Width = 0;
+      Align = 8;
+      break;
     }
     break;
   case Type::ObjCObjectPointer:
@@ -8218,11 +8221,12 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::OCLQueue:
     case BuiltinType::OCLReserveID:
     case BuiltinType::OCLSampler:
-    case BuiltinType::HLSLResource:
     case BuiltinType::Dependent:
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
 #define BUILTIN_TYPE(KIND, ID)
 #define PLACEHOLDER_TYPE(KIND, ID) \
     case BuiltinType::KIND:

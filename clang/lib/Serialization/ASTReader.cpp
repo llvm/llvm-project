@@ -7377,9 +7377,6 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_RESERVE_ID_ID:
       T = Context.OCLReserveIDTy;
       break;
-    case PREDEF_TYPE_HLSL_RESOURCE_ID:
-      T = Context.HLSLResourceTy;
-      break;
     case PREDEF_TYPE_AUTO_DEDUCT:
       T = Context.getAutoDeductType();
       break;
@@ -7429,6 +7426,11 @@ QualType ASTReader::GetType(TypeID ID) {
     T = Context.SingletonId;                                                   \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case PREDEF_TYPE_##Id##_ID:                                                  \
+    T = Context.SingletonId;                                                   \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
     }
 
     assert(!T.isNull() && "Unknown predefined type");

@@ -1078,9 +1078,6 @@ enum PredefinedTypeIDs {
   /// \brief The '__ibm128' type
   PREDEF_TYPE_IBM128_ID = 74,
 
-  /// \brief The HLSL resource type
-  PREDEF_TYPE_HLSL_RESOURCE_ID = 75,
-
 /// OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
   PREDEF_TYPE_##Id##_ID,
@@ -1103,6 +1100,9 @@ enum PredefinedTypeIDs {
 // \brief AMDGPU types with auto numeration
 #define AMDGPU_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/AMDGPUTypes.def"
+// \brief HLSL intangible types with auto numeration
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   /// The placeholder type for unresolved templates.
   PREDEF_TYPE_UNRESOLVED_TEMPLATE,

@@ -444,9 +444,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::OCLReserveID:
       ResultType = CGM.getOpenCLRuntime().convertOpenCLSpecificType(Ty);
       break;
-    case BuiltinType::HLSLResource:
-      ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
-      break;
     case BuiltinType::SveInt8:
     case BuiltinType::SveUint8:
     case BuiltinType::SveInt8x2:
@@ -542,6 +539,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:                                                        \
     return llvm::PointerType::get(getLLVMContext(), AS);
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/HLSLIntangibleTypes.def"
+      ResultType = CGM.getHLSLRuntime().convertHLSLSpecificType(Ty);
+      break;
     case BuiltinType::Dependent:
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) \

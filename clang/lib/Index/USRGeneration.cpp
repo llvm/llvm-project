@@ -757,9 +757,8 @@ void USRGenerator::VisitType(QualType T) {
         case BuiltinType::OCLReserveID:
           Out << "@BT@OCLReserveID"; break;
         case BuiltinType::OCLSampler:
-          Out << "@BT@OCLSampler"; break;
-        case BuiltinType::HLSLResource:
-          Out << "@BT@HLSLResource"; break;
+          Out << "@BT@OCLSampler";
+          break;
 #define SVE_TYPE(Name, Id, SingletonId) \
         case BuiltinType::Id: \
           Out << "@BT@" << Name; break;
@@ -779,6 +778,11 @@ void USRGenerator::VisitType(QualType T) {
     Out << "@BT@" << #Name;                                                    \
     break;
 #include "clang/Basic/AMDGPUTypes.def"
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << Name;                                                     \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
         case BuiltinType::ShortAccum:
           Out << "@BT@ShortAccum"; break;
         case BuiltinType::Accum:

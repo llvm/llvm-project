@@ -2576,10 +2576,6 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/OpenCLExtensionTypes.def"
 
-  case BuiltinType::HLSLResource:
-    mangleArtificialTagType(TagTypeKind::Struct, "__builtin_hlsl_resource_t");
-    break;
-
   case BuiltinType::NullPtr:
     Out << "$$T";
     break;
@@ -2606,8 +2602,14 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, MangledName);                 \
     mangleArtificialTagType(TagTypeKind::Struct, MangledName, {"__clang"});    \
     break;
-
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
+  case BuiltinType::Id:                                                        \
+    mangleArtificialTagType(TagTypeKind::Struct, Name);                        \
+    break;
+#include "clang/Basic/HLSLIntangibleTypes.def"
+
 #define SVE_TYPE(Name, Id, SingletonId) \
   case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"

@@ -413,6 +413,11 @@ public:
     return nullptr;
   }
 
+  /// Return an LLVM type that corresponds to a HLSL type
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
+  }
+
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);
 
