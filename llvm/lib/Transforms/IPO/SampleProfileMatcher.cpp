@@ -20,11 +20,6 @@ using namespace sampleprof;
 
 #define DEBUG_TYPE "sample-profile-matcher"
 
-static cl::opt<bool> SalvageUnusedProfile(
-    "salvage-unused-profile", cl::Hidden, cl::init(false),
-    cl::desc(
-        "Salvage unused profile by matching new functions on call graph."));
-
 static cl::opt<unsigned> FuncProfileSimilarityThreshold(
     "func-profile-similarity-threshold", cl::Hidden, cl::init(80),
     cl::desc("Consider a profile matches a function if the similarity of their "
@@ -41,6 +36,7 @@ static cl::opt<unsigned> MinCallCountForCGMatching(
              "run stale profile call graph matching."));
 
 extern cl::opt<bool> SalvageStaleProfile;
+extern cl::opt<bool> SalvageUnusedProfile;
 extern cl::opt<bool> PersistProfileStaleness;
 extern cl::opt<bool> ReportProfileStaleness;
 
@@ -398,6 +394,16 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   // the maximum number of callsites, we merge the function profiles from all
   // contexts, aka, the flattened profile to find profile anchors.
   const auto *FSFlattened = getFlattenedSamplesFor(F);
+  if (SalvageUnusedProfile && !FSFlattened) {
+    // Apply the matching in place to find the new function's matched profile.
+    // TODO: For extended profile format, if a function profile is unused and
+    // it's top-level, even if the profile is matched, it's not found in the
+    // profile. This is because sample reader only read the used profile at the
+    // beginning, we need to support loading the profile on-demand in future.
+    auto R = FuncToProfileNameMap.find(&F);
+    if (R != FuncToProfileNameMap.end())
+      FSFlattened = getFlattenedSamplesFor(R->second);
+  }
   if (!FSFlattened)
     return;
 
@@ -415,32 +421,31 @@ void SampleProfileMatcher::runOnFunction(Function &F) {
   if (ReportProfileStaleness || PersistProfileStaleness)
     recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors, nullptr);
 
-  if (SalvageStaleProfile) {
-    // For probe-based profiles, run matching only when profile checksum is
-    // mismatched.
-    bool ChecksumMismatch = FunctionSamples::ProfileIsProbeBased &&
-                            !ProbeManager->profileIsValid(F, *FSFlattened);
-    bool RunCFGMatching =
-        !FunctionSamples::ProfileIsProbeBased || ChecksumMismatch;
-    bool RunCGMatching = SalvageUnusedProfile;
-    // For imported functions, the checksum metadata(pseudo_probe_desc) are
-    // dropped, so we leverage function attribute(profile-checksum-mismatch) to
-    // transfer the info: add the attribute during pre-link phase and check it
-    // during post-link phase(see "profileIsValid").
-    if (ChecksumMismatch && LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
-      F.addFnAttr("profile-checksum-mismatch");
+  if (!SalvageStaleProfile)
+    return;
+  // For probe-based profiles, run matching only when profile checksum is
+  // mismatched.
+  bool ChecksumMismatch = FunctionSamples::ProfileIsProbeBased &&
+                          !ProbeManager->profileIsValid(F, *FSFlattened);
+  bool RunCFGMatching =
+      !FunctionSamples::ProfileIsProbeBased || ChecksumMismatch;
+  bool RunCGMatching = SalvageUnusedProfile;
+  // For imported functions, the checksum metadata(pseudo_probe_desc) are
+  // dropped, so we leverage function attribute(profile-checksum-mismatch) to
+  // transfer the info: add the attribute during pre-link phase and check it
+  // during post-link phase(see "profileIsValid").
+  if (ChecksumMismatch && LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink)
+    F.addFnAttr("profile-checksum-mismatch");
 
-    // The matching result will be saved to IRToProfileLocationMap, create a
-    // new map for each function.
-    auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
-    runStaleProfileMatching(F, IRAnchors, ProfileAnchors,
-                            IRToProfileLocationMap, RunCFGMatching,
-                            RunCGMatching);
-    // Find and update callsite match states after matching.
-    if (RunCFGMatching && (ReportProfileStaleness || PersistProfileStaleness))
-      recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors,
-                                &IRToProfileLocationMap);
-  }
+  // The matching result will be saved to IRToProfileLocationMap, create a
+  // new map for each function.
+  auto &IRToProfileLocationMap = getIRToProfileLocationMap(F);
+  runStaleProfileMatching(F, IRAnchors, ProfileAnchors, IRToProfileLocationMap,
+                          RunCFGMatching, RunCGMatching);
+  // Find and update callsite match states after matching.
+  if (RunCFGMatching && (ReportProfileStaleness || PersistProfileStaleness))
+    recordCallsiteMatchStates(F, IRAnchors, ProfileAnchors,
+                              &IRToProfileLocationMap);
 }
 
 void SampleProfileMatcher::recordCallsiteMatchStates(
@@ -599,13 +604,30 @@ void SampleProfileMatcher::countMismatchCallsites(const FunctionSamples &FS) {
   }
 }
 
+void SampleProfileMatcher::countCallGraphRecoveredSamples(
+    const FunctionSamples &FS,
+    std::unordered_set<FunctionId> &CallGraphRecoveredProfiles) {
+  if (CallGraphRecoveredProfiles.count(FS.getFunction())) {
+    NumCallGraphRecoveredFuncSamples += FS.getTotalSamples();
+    return;
+  }
+
+  for (const auto &CM : FS.getCallsiteSamples()) {
+    for (const auto &CS : CM.second) {
+      countCallGraphRecoveredSamples(CS.second, CallGraphRecoveredProfiles);
+    }
+  }
+}
+
 void SampleProfileMatcher::computeAndReportProfileStaleness() {
   if (!ReportProfileStaleness && !PersistProfileStaleness)
     return;
 
+  std::unordered_set<FunctionId> CallGraphRecoveredProfiles;
   if (SalvageUnusedProfile) {
-    for (const auto &I : ProfileNameToFuncMap) {
-      if (GlobalValue::isAvailableExternallyLinkage(I.second->getLinkage()))
+    for (const auto &I : FuncToProfileNameMap) {
+      CallGraphRecoveredProfiles.insert(I.second);
+      if (GlobalValue::isAvailableExternallyLinkage(I.first->getLinkage()))
         continue;
       NumCallGraphRecoveredProfiledFunc++;
     }
@@ -624,6 +646,9 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
       continue;
     TotalProfiledFunc++;
     TotalFunctionSamples += FS->getTotalSamples();
+
+    if (SalvageUnusedProfile && !CallGraphRecoveredProfiles.empty())
+      countCallGraphRecoveredSamples(*FS, CallGraphRecoveredProfiles);
 
     // Checksum mismatch is only used in pseudo-probe mode.
     if (FunctionSamples::ProfileIsProbeBased)
@@ -741,9 +766,9 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
 
   const auto *FSFlattened = getFlattenedSamplesFor(ProfFunc);
   assert(FSFlattened && "Flattened profile sample is null");
-  // Similarity check may not be reliable if the function is tiny, we use the
-  // number of basic block as a proxy for the function complexity and skip the
-  // matching if it's too small.
+  // The check for similarity or checksum may not be reliable if the function is
+  // tiny, we use the number of basic block as a proxy for the function
+  // complexity and skip the matching if it's too small.
   if (IRFunc.size() < MinFuncCountForCGMatching ||
       FSFlattened->getBodySamples().size() < MinFuncCountForCGMatching)
     return false;
@@ -781,8 +806,9 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // Don't recursively match the callee function to avoid infinite matching,
   // callee functions will be handled later since it's processed in top-down
   // order .
-  LocToLocMap MatchedAnchors = longestCommonSequence(
-      FilteredIRAnchorsList, FilteredProfileAnchorList, false);
+  LocToLocMap MatchedAnchors =
+      longestCommonSequence(FilteredIRAnchorsList, FilteredProfileAnchorList,
+                            false /* Match unused functions */);
 
   Similarity =
       static_cast<float>(MatchedAnchors.size()) * 2 /
@@ -801,110 +827,22 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
 bool SampleProfileMatcher::functionMatchesProfile(Function &IRFunc,
                                                   const FunctionId &ProfFunc,
                                                   bool FindMatchedProfileOnly) {
-  auto R = FuncToProfileNameMap.find({&IRFunc, ProfFunc});
-  if (R != FuncToProfileNameMap.end())
+  auto R = FuncProfileMatchCache.find({&IRFunc, ProfFunc});
+  if (R != FuncProfileMatchCache.end())
     return R->second;
 
   if (FindMatchedProfileOnly)
     return false;
 
   bool Matched = functionMatchesProfileHelper(IRFunc, ProfFunc);
-  FuncToProfileNameMap[{&IRFunc, ProfFunc}] = Matched;
+  FuncProfileMatchCache[{&IRFunc, ProfFunc}] = Matched;
   if (Matched) {
-    ProfileNameToFuncMap[ProfFunc] = &IRFunc;
+    FuncToProfileNameMap[&IRFunc] = ProfFunc;
     LLVM_DEBUG(dbgs() << "Function:" << IRFunc.getName()
                       << " matches profile:" << ProfFunc << "\n");
   }
 
   return Matched;
-}
-
-void SampleProfileMatcher::updateProfileWithNewName(
-    FunctionSamples &FuncProfile) {
-  auto FindNewMatch =
-      [&](const FunctionId &ProfileName,
-          std::vector<std::pair<FunctionId, FunctionId>> &MatchResult,
-          [[maybe_unused]] const FunctionId &CallerName) {
-        auto P = ProfileNameToFuncMap.find(ProfileName);
-        if (P != ProfileNameToFuncMap.end()) {
-          FunctionId IRCallee(P->second->getName());
-          assert(IRCallee != ProfileName &&
-                 "New callee symbol is not a new function");
-          LLVM_DEBUG(dbgs()
-                     << "Profile name is updated from " << ProfileName << " to "
-                     << IRCallee << " under caller: " << CallerName << "\n");
-          MatchResult.emplace_back(IRCallee, ProfileName);
-        }
-      };
-
-  // A list of new function to old function pair.
-  std::vector<std::pair<FunctionId, FunctionId>> MatchResult;
-
-  // Update non-inline callees.
-  for (auto &BS : const_cast<BodySampleMap &>(FuncProfile.getBodySamples())) {
-    SampleRecord &SR = BS.second;
-    MatchResult.clear();
-    for (const auto &TS : SR.getCallTargets())
-      FindNewMatch(TS.first, MatchResult, FuncProfile.getFunction());
-    // Update the CallTargetMap.
-    for (const auto &P : MatchResult) {
-      uint64_t Samples = SR.removeCalledTarget(P.second);
-      SR.addCalledTarget(P.first, Samples);
-      if (ReportProfileStaleness || PersistProfileStaleness)
-        NumCallGraphRecoveredFuncSamples += Samples;
-    }
-  }
-
-  // Update inline callees recursively.
-  for (auto &CM :
-       const_cast<CallsiteSampleMap &>(FuncProfile.getCallsiteSamples())) {
-    auto &CalleeMap = CM.second;
-    MatchResult.clear();
-    for (auto &CS : CalleeMap) {
-      FindNewMatch(CS.second.getFunction(), MatchResult,
-                   FuncProfile.getFunction());
-      updateProfileWithNewName(CS.second);
-    }
-    // Update the CalleeMap using the new name and remove the old entry.
-    for (auto &P : MatchResult) {
-      assert(P.first != P.second &&
-             "Renamed function name should be different from the old map key");
-      FunctionSamples &FS = CalleeMap[P.second];
-      if (ReportProfileStaleness || PersistProfileStaleness)
-        NumCallGraphRecoveredFuncSamples += FS.getTotalSamples();
-      FS.setFunction(P.first);
-      CalleeMap[P.first] = FS;
-      CalleeMap.erase(P.second);
-    }
-  }
-}
-
-void SampleProfileMatcher::updateProfilesAndSymbolMap() {
-  if (ProfileNameToFuncMap.empty())
-    return;
-  for (auto &P : Reader.getProfiles())
-    updateProfileWithNewName(P.second);
-
-  // Add the new function to the SymbolMap, which will be used in
-  // SampleLoader.
-  for (auto &I : ProfileNameToFuncMap) {
-    assert(I.second && "New function is null");
-    SymbolMap->emplace(FunctionId(I.second->getName()), I.second);
-  }
-}
-
-std::vector<Function *> SampleProfileMatcher::buildTopDownFuncOrder() {
-  std::vector<Function *> FunctionOrderList;
-  FunctionOrderList.reserve(M.size());
-  ::buildBottomUpFuncOrder(CG, FunctionOrderList);
-  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
-  LLVM_DEBUG({
-    dbgs() << "Function processing order:\n";
-    for (auto F : FunctionOrderList) {
-      dbgs() << F->getName() << "\n";
-    }
-  });
-  return FunctionOrderList;
 }
 
 void SampleProfileMatcher::runOnModule() {
@@ -915,15 +853,22 @@ void SampleProfileMatcher::runOnModule() {
 
   // Process the matching in top-down order so that the caller matching result
   // can be used to the callee matching.
-  for (auto *F : buildTopDownFuncOrder()) {
+  std::vector<Function *> TopDownFunctionList;
+  TopDownFunctionList.reserve(M.size());
+  buildTopDownFuncOrder(CG, TopDownFunctionList);
+  for (auto *F : TopDownFunctionList) {
     if (skipProfileForFunction(*F))
       continue;
     runOnFunction(*F);
   }
 
-  // Update the profile map and symbol map with the new function name.
+  // Update the data in SampleLoader.
   if (SalvageUnusedProfile)
-    updateProfilesAndSymbolMap();
+    for (auto &I : FuncToProfileNameMap) {
+      assert(I.first && "New function is null");
+      FuncNameToProfNameMap->emplace(FunctionId(I.first->getName()), I.second);
+      SymbolMap->emplace(I.second, I.first);
+    }
 
   if (SalvageStaleProfile)
     distributeIRToProfileLocationMap();

@@ -157,8 +157,8 @@ static inline bool skipProfileForFunction(const Function &F) {
 }
 
 static inline void
-buildBottomUpFuncOrder(LazyCallGraph &CG,
-                       std::vector<Function *> &FunctionOrderList) {
+buildTopDownFuncOrder(LazyCallGraph &CG,
+                      std::vector<Function *> &FunctionOrderList) {
   CG.buildRefSCCs();
   for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
     for (LazyCallGraph::SCC &C : RC) {
@@ -169,6 +169,7 @@ buildBottomUpFuncOrder(LazyCallGraph &CG,
       }
     }
   }
+  std::reverse(FunctionOrderList.begin(), FunctionOrderList.end());
 }
 
 template <typename FT> class SampleProfileLoaderBaseImpl {

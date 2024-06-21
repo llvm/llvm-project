@@ -17,15 +17,7 @@
 ; CHECK: Run stale profile matching for baz
 ; CHECK: Run stale profile matching for bar
 
-; Verify profile new name update.
-; CHECK-DAG: Profile name is updated from foo to new_foo under caller: test_noninline
-; CHECK-DAG: Profile name is updated from block_only to new_block_only under caller: baz
-; CHECK-DAG: Profile name is updated from foo to new_foo under caller: main
-; CHECK-DAG: Profile name is updated from block_only to new_block_only under caller: baz
-; CHECK-DAG: Profile name is updated from block_only to new_block_only under caller: baz
-; CHECK-DAG: Profile name is updated from block_only to new_block_only under caller: cold_func
-
-; CHECK: (2/3) of functions' profile are matched and (78/81) of samples are reused by call graph matching.
+; CHECK: (2/3) of functions' profile are matched and (55/81) of samples are reused by call graph matching.
 
 ; Verify the matched function is updated correctly by checking the inlining.
 ; CHECK: 'new_foo' inlined into 'main' to match profiling context with (cost=110, threshold=3000) at callsite main:2:7.5;
@@ -33,7 +25,7 @@
 ; CHECK: 'new_block_only' inlined into 'main' to match profiling context with (cost=75, threshold=3000) at callsite baz:1:3.2 @ new_foo:2:3.3 @ main:2:7.5;
 ; CHECK: 'new_foo' inlined into 'test_noninline' to match profiling context with (cost=110, threshold=3000) at callsite test_noninline:1:3.2;
 
-; CHECK: !"NumCallGraphRecoveredProfiledFunc", i64 2, !"NumCallGraphRecoveredFuncSamples", i64 78
+; CHECK: !"NumCallGraphRecoveredProfiledFunc", i64 2, !"NumCallGraphRecoveredFuncSamples", i64 55
 
 ; TINY-FUNC-NOT: Function:new_foo matches profile:foo
 ; TINY-FUNC-NOT: Function:new_block_only matches profile:block_only
