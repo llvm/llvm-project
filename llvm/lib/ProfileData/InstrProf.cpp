@@ -1001,6 +1001,7 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
   }
   std::vector<InstrProfValueSiteRecord> &ValueSites =
       getOrCreateValueSitesForKind(ValueKind);
+  assert(ValueSites.size() == Site);
   if (N == 0)
     ValueSites.emplace_back();
   else
