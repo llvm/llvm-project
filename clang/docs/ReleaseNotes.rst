@@ -912,7 +912,7 @@ Bug Fixes to C++ Support
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
 - Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
-
+- Fix parsing of built-in type-traits such as ``__is_pointer`` in libstdc++ headers. (#GH95598)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
