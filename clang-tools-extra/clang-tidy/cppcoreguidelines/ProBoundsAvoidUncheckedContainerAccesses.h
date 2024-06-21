@@ -32,7 +32,7 @@ public:
 
 private:
   // A list of class names that are excluded from the warning
-  std::vector<llvm::StringRef> ExcludedClasses;
+  std::vector<llvm::StringRef> SubscriptExcludedClasses;
 };
 
 } // namespace clang::tidy::cppcoreguidelines
