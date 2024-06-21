@@ -1225,11 +1225,19 @@ struct FoldI1Select : public OpRewritePattern<arith::SelectOp> {
 
 /// Returns the number of dims can be folded away from transfer ops. It returns
 /// a failure if it can not determine the number of dims to be folded.
-/// Example 1: it returns "2" if `srcType` is memref<512x16x1x1xf32> and
-/// `vectorType` is vector<16x16x1x1xf32>. Because there two inner most dims
-/// can be dropped by memref.subview ops.
-/// Example 2: it returns "1" if `srcType` is the same memref type with
-/// [8192, 16, 8, 1] strides.
+///
+/// Ex 1: returns "2" if `srcType` is memref<512x16x1x1xf32> and
+/// `vectorType` is vector<16x16x1x1xf32>
+/// (there two inner most dims can be dropped by memref.subview ops)
+///
+/// Ex 2: returns "1" if `srcType` is memref<512x16x1x1xf32> with
+/// [8192, 16, 8, 1] strides and `vectorType` is vector<16x16x1x1xf32>
+/// (only the inner most unit dim of `srcType` can be dropped)
+///
+/// Ex 3: return "0" if `srcType` is memref<512x16x1x1xf32> and
+/// `vectorType` is vector<16x16x1x[1]xf32>
+/// (the most inner dim in `vectorType` is not a unit dim (it's a "scalable
+/// unit")
 static FailureOr<size_t>
 getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
   SmallVector<int64_t> srcStrides;
@@ -1351,6 +1359,8 @@ class DropInnerMostUnitDimsTransferRead
 ///    vector.transfer_write %0, %subview[%c0, %arg2, %c0]
 ///      {in_bounds = [true, true, true]}
 ///      : vector<1x16x16xf32>, memref<1x512x16xf32>
+///
+/// Note, this pattern will not collapse "scalable unit" dims (i.e. `[1]`).
 class DropInnerMostUnitDimsTransferWrite
     : public OpRewritePattern<vector::TransferWriteOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -1803,6 +1813,84 @@ private:
   unsigned maxNumElementsToExtract = 0;
 };
 
+/// Fold `mulf(tr(broadcast(A)), broadcast(B))` into `vector.outerproduct(A,
+/// B)`.
+/// Example:
+///  %lhsBcast = vector.broadcast %lhs : vector<4xi32> to vector<4x4xi32>
+///  %lhsT = vector.transpose %lhsBcast, [1, 0] : vector<4x4xi32> to
+///  vector<4x4xi32> %rhsBcast = vector.broadcast %rhs : vector<4xi32> to
+///  vector<4x4xi32> %mul = arith.muli %lhsT, %rhsBcast : vector<4x4xi32>
+///
+/// Becomes :
+///
+///  %res = vector.outerproduct %lhs, %rhs : vector<4xi32>, vector<4xi32>
+///
+/// Supports only 1D-to-2D broadcasts. The following cases are not supported.
+/// %ex1 = vector.broadcast %lhsCast : vector<1x4xf32> to vector<4x4xf32>
+/// %ex2 = vector.broadcast %lhsCast : f32 to vector<4x4xf32>
+/// %ex3 = vector.broadcast %lhsCast : vector<1x1xf32> to vector<4x4xf32>
+template <typename MulOpType>
+struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
+  using OpRewritePattern<MulOpType>::OpRewritePattern;
+  // Returns whether a vector.broadcast matches requirements for an outerproduct
+  // pattern. aka a 1D-to-2D broadcastOp without broadcasted unit dimension.
+  bool isValidBroadcastSource(vector::BroadcastOp broadcastOp) const {
+    // Fail if it is not a 1-to-2 dimension to broadcast to avoid generating
+    // shape_casts/broadcasts which does not belong in this pattern.
+    if (!broadcastOp.computeBroadcastedUnitDims().empty())
+      return false;
+    // Avoid broadcast like f32 or vector<f32> -> ResType
+    auto srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    return srcType && srcType.getRank() != 2;
+  }
+
+  LogicalResult matchAndRewrite(MulOpType mulOp,
+                                PatternRewriter &rewriter) const override {
+    auto resType = llvm::cast<VectorType>(mulOp.getResult().getType());
+    if (!resType)
+      return failure();
+    if (resType.getRank() != 2)
+      return failure();
+    /// If operandA can be written as tr(broadcast(A)) and operandB as
+    /// broadcast(B) where broadcasts are 1D-to-2D, create and return
+    /// vector.outerproduct(A, B). Returns failure() otherwise.
+    auto matchOuterProduct =
+        [&](Value operandA,
+            Value operandB) -> FailureOr<vector::OuterProductOp> {
+      auto transposedLhs = operandA.getDefiningOp<vector::TransposeOp>();
+      if (!transposedLhs)
+        return failure();
+      // Fail unless this is a true 2-D matrix transpose.
+      ArrayRef<int64_t> permutation = transposedLhs.getPermutation();
+      if (permutation.size() != 2 || permutation[0] != 1 || permutation[1] != 0)
+        return failure();
+
+      auto broadcastedLhs =
+          transposedLhs.getVector().getDefiningOp<vector::BroadcastOp>();
+      if (!broadcastedLhs || !isValidBroadcastSource(broadcastedLhs))
+        return failure();
+
+      auto broadcastedRhs = operandB.getDefiningOp<vector::BroadcastOp>();
+      if (!broadcastedRhs || !isValidBroadcastSource(broadcastedRhs))
+        return failure();
+
+      return rewriter.create<vector::OuterProductOp>(
+          mulOp->getLoc(), resType, broadcastedLhs.getSource(),
+          broadcastedRhs.getSource(), Value(), vector::CombiningKind::ADD);
+    };
+
+    Value lhs = mulOp->getOperand(0), rhs = mulOp->getOperand(1);
+    auto maybeOuterP = matchOuterProduct(lhs, rhs);
+    // Handle commutativity, the transposed op is the outerproduct LHS.
+    if (failed(maybeOuterP))
+      maybeOuterP = matchOuterProduct(rhs, lhs);
+    if (failed(maybeOuterP))
+      return failure();
+    rewriter.replaceOp(mulOp, maybeOuterP->getResult());
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::vector::populateFoldArithExtensionPatterns(
@@ -1888,6 +1976,13 @@ void mlir::vector::populateBreakDownVectorReductionPatterns(
     PatternBenefit benefit) {
   patterns.add<BreakDownVectorReduction>(patterns.getContext(),
                                          maxNumElementsToExtract, benefit);
+}
+
+void mlir::vector::populateElementwiseToVectorOpsPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<FoldArithToVectorOuterProduct<arith::MulFOp>,
+               FoldArithToVectorOuterProduct<arith::MulIOp>>(
+      patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
