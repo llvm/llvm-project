@@ -258,7 +258,7 @@ private:
   /// cannot be allocated.
   RegUnitSet UsedInInstr;
   RegUnitSet PhysRegUses;
-  SmallVector<uint16_t, 8> DefOperandIndexes;
+  SmallVector<unsigned, 8> DefOperandIndexes;
   // Register masks attached to the current instruction.
   SmallVector<const uint32_t *> RegMasks;
 
@@ -1314,7 +1314,7 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
     }
   }
 
-  llvm::sort(DefOperandIndexes, [&](uint16_t I0, uint16_t I1) {
+  llvm::sort(DefOperandIndexes, [&](unsigned I0, unsigned I1) {
     const MachineOperand &MO0 = MI.getOperand(I0);
     const MachineOperand &MO1 = MI.getOperand(I1);
     Register Reg0 = MO0.getReg();
@@ -1439,7 +1439,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
         while (ReArrangedImplicitOps) {
           ReArrangedImplicitOps = false;
           findAndSortDefOperandIndexes(MI);
-          for (uint16_t OpIdx : DefOperandIndexes) {
+          for (unsigned OpIdx : DefOperandIndexes) {
             MachineOperand &MO = MI.getOperand(OpIdx);
             LLVM_DEBUG(dbgs() << "Allocating " << MO << '\n');
             Register Reg = MO.getReg();
