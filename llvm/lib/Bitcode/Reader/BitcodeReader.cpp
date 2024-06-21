@@ -7333,7 +7333,13 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
                                               bool IsOldProfileFormat,
                                               bool HasProfile, bool HasRelBF) {
   std::vector<FunctionSummary::EdgeTy> Ret;
-  Ret.reserve(Record.size());
+  // In the case of new profile formats, there are two Record entries per
+  // Edge. Otherwise, conservatively reserve up to Record.size.
+  if (!IsOldProfileFormat && (HasProfile || HasRelBF))
+    Ret.reserve(Record.size() / 2);
+  else
+    Ret.reserve(Record.size());
+
   for (unsigned I = 0, E = Record.size(); I != E; ++I) {
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     bool HasTailCall = false;
