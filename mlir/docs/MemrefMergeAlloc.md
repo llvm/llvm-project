@@ -7,11 +7,9 @@ memory usage and improve memory locality.
 Bufferization is a process in the current MLIR of converting ops with tensor
 semantics to ops with memref semantics. One-Shot Bufferize is a new tensor
 bufferization pass designed for IR in destination-passing style, and with
-aggressive in-place bufferization. The older/partial bufferization was built
-around multiple dialects. The community is trying to gradually deprecate the
-older bufferization and replace them with one-shot bufferization. The goal of
+aggressive in-place bufferization. The goal of
 bufferization is to use as little memory as possible and copy as little memory
-as possible, as a result, the exsiting focus is to determine in-place or
+as possible, as a result, the existing focus is to determine in-place or
 out-of-place among the OpOperand and OpResult of individual ops, while not
 considering much about the overall memory reuse across Operators within a
 sub-graph (or partition).
@@ -34,7 +32,7 @@ func.func @mlp(%x: tensor<128x128xf32>, %y: tensor<128x128xf32>) -> tensor<128x1
 ```
 
 The bufferization pass will create an `memref.alloc` for each of the tensor
-`a0`, `b0` and `c0`. The bufferization result should be like:
+`a0`, `b0` and `c0`. The bufferization result is like:
 
 ```mlir
 func.func @mlp(%x: memref<128x128xf32>, %y: memref<128x128xf32>) -> memref<128x128xf32> {
@@ -62,16 +60,16 @@ total size and better locality.
 
 ## Merge-alloc pass
 An optimization pass has been introduced to consolidate multiple allocations
-(`memref.alloc` ops) into a single `memref.alloc` op and each static-shaped
-`memref.alloc` op will be transformed into a "slice" from the `single allocated
-buffer` with `memref.view` and some compile-time decided `offsets`. This
+(`memref.alloc` ops) into a single `memref.alloc` op and each "mergeable"
+`memref.alloc` op will be transformed into a "slice" from the "single allocated
+buffer" with `memref.view` and some compile-time decided `offsets`. This
 optimization works on `memref` instead of `tensor` ops, so it should be executed
 after bufferization pass, and before adding buffer deallocation ops.
 
 While merging the memory allocations, the transform should consider the lifetime
 of each allocated `memref`s. By lifetime, we mean the range of time when the
-memory allocated from `memref.alloc` is actively used. The references on `view`s
-of a "base" `memref` should contribute to the lifetime of the "base". A later
+memory allocated from `memref.alloc` is actively used. Views (aliases) into a
+"base" memref should contribute to the lifetime of the "base". A later
 `memref.alloc` should consider to reuse the memory of a previously allocated
 memref, if the lifetime of these two does not overlap. The transform will
 perform the "reusing" of memory by setting the `offset` of the later
@@ -154,15 +152,14 @@ for their own use cases. A tick-based pipeline of the pass is provided as the
 default implementation, which will be discussed in the next section. 
 
 The following concepts should be defined by the implementation of the pass:
- * Mergeable alloction: the memref.alloc operations that should be merged by the
-   pass. Other memref.alloc operations that are not "mergeable" should be
+ * Mergeable allocation: the memref.alloc operations that should be merged by
+   the pass. Other memref.alloc operations that are not "mergeable" should be
    untouched by the pass
  * Allocation scope: for each mergeable memref.alloc operation, there should be
-   one ancestor surrounding operation called "allocation scope". The memory
+   one ancestor surrounding basic blocking called "allocation scope". The memory
    allocation after merge-alloc for that memref.alloc operation should be
-   hoisted and merged to the block of that "allocation scope". A "allocation
-   scope" should contain a single merged allocation for the mergeable allocation
-   in it.
+   hoisted and merged to that basic blocking. A "allocation scope" should
+   contain a single merged allocation for the mergeable allocation in it.
  * Lifetime trace: for each mergeable memref.alloc operation, the "lifetime
    trace" should be collected, indicating the "allocation scope" and the
    liveness of the buffer allocated. The contents of a "lifetime trace" is
@@ -196,7 +193,7 @@ public:
 /// top level memory trace info for multiple scopes. Each key-value is the
 ///  "allocation scope" and the LifetimeTrace
 struct MemoryTraceScopes {
-  llvm::DenseMap<Operation *, std::unique_ptr<LifetimeTrace>> scopeToTraces;
+  llvm::DenseMap<Block *, std::unique_ptr<LifetimeTrace>> scopeToTraces;
   MemoryTraceScopes() = default;
 };
 
@@ -237,7 +234,7 @@ calculated in the `MemorySchedule`. This step is abstracted in a
 
 ```c++
 using MemoryMergeMutatorFunc = std::function<LogicalResult(
-    Operation *toplevel, Operation *scope, const MemorySchedule &,
+    Operation *toplevel, Block *scope, const MemorySchedule &,
     const MergeAllocationOptions &)>;
 ```
 
@@ -260,23 +257,24 @@ idea of the tick-based allocation merging is that
 Limitations of Tick-based merge-alloc:
  * only contiguous, static shaped and identical layout memrefs are considered.
    Others are disregarded
- * only `RegionBranchOpInterface` or `LoopLikeOpInterface` operations are
+ * only `RegionBranchOpInterface` operations are
    allowed to access memref inside the operations' children regions. Other
    operaions containing regions should not access memref inside. Otherwise, a
    pass error could occur.
 
 ### Basic concepts
 
-In the context of tick-based merge-alloc, mergeable alloction and allocation
+In the context of tick-based merge-alloc, mergeable allocation and allocation
 scope are defined as follows
 
-#### Mergeable alloction
+#### Mergeable allocation
 
 The pass should only consider to merge a `memref.alloc` only if
- * the ownership of the memref does not escape from the function. That is, the
-   current function is responsible to alloc and dealloc this memref
- * and the allocated memref is contiguous and has static shape and identical
-   layout.
+ * the ownership of the memref does not escape from the function or the body of
+   the loop. That is, the memref and its alias should not be returned or
+   yielded by a function or a loop.
+ * and the memref is "dense" in its strides (points to a contiguous range of
+   memory) and it has static shape
  * and memref is in the default memory space (this restriction may be removed in
    the future)
 
@@ -288,11 +286,11 @@ untouched by this optimization.
 
 #### Allocation scopes
 
-The transformation first needs to identify the allocation scopes, which are mlir
-operaions containing non-zero regions, and
- * implementing `AutomaticAllocationScope`
- * and is not `scf.for` (allocations in an `scf.for` can be hoisted to parent
-   `AutomaticAllocationScope`)
+The transformation first needs to identify the allocation scopes, which are
+single basic blocks of parent operaions which
+ * implement `AutomaticAllocationScope`
+ * and are not `scf.for` (allocations in an `scf.for` can be hoisted to
+ parent `AutomaticAllocationScope`)
 
 For example, below is an example IR of a function with nested `scf.forall` ops.
 

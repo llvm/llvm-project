@@ -127,3 +127,31 @@ func.func @escape_from_if() {
   "test.source"(%c)  : (memref<8x64xf32>) -> ()
   return
 }
+
+// CHECK-DAG: func.func @escape_from_for()  attributes {__mergealloc_scope = [[TOPSCOPE6:[0-9]+]]
+func.func @escape_from_for() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  // check that f has untraceable lifetime, due to being yielded by for loop
+  // CHECK-DAG: %[[F:.*]] = memref.alloc() {__mergealloc_lifetime = array<i64: [[TOPSCOPE6]], -2, -2>}
+  %f = memref.alloc() : memref<8x64xf32>
+  %out = scf.for %i = %c0 to %c5 step %c1 iter_args(%buf = %f) -> (memref<8x64xf32>) {
+    "test.source"(%buf)  : (memref<8x64xf32>) -> ()
+    // check that f has untraceable lifetime, due to being yielded by for loop
+    // CHECK-DAG: %[[G:.*]] = memref.alloc() {__mergealloc_lifetime = array<i64: [[TOPSCOPE6]], -2, -2>}
+    %g = memref.alloc() : memref<8x64xf32>
+    "test.source"(%g)  : (memref<8x64xf32>) -> ()
+    %ctrue = "test.source"()  : () -> i1
+    %c = scf.if %ctrue -> memref<8x64xf32> {
+      scf.yield %g : memref<8x64xf32>
+    } else {
+      scf.yield %buf : memref<8x64xf32>
+    }
+    scf.yield %c : memref<8x64xf32>
+  }
+  "test.source"(%out)  : (memref<8x64xf32>) -> ()
+  return
+}

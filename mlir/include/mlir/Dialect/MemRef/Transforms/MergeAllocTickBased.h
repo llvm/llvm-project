@@ -155,14 +155,14 @@ struct TickCollecter {
 struct MergeAllocDefaultMutator {
   /// builds an memory alloc op at the scope with given size and alignment in
   /// bytes
-  virtual Value buildAlloc(OpBuilder &build, Operation *scope, int64_t size,
+  virtual Value buildAlloc(OpBuilder &build, Block *scope, int64_t size,
                            int64_t alignment) const;
   /// builds an memory view op for original memref.alloc op (origAllocOp) and
   /// the merged single allocation (mergedAlloc)
-  virtual Value buildView(OpBuilder &build, Operation *scope,
+  virtual Value buildView(OpBuilder &build, Block *scope,
                           Operation *origAllocOp, Value mergedAlloc,
                           int64_t byteOffset) const;
-  virtual LogicalResult operator()(Operation *op, Operation *scope,
+  virtual LogicalResult operator()(Operation *op, Block *scope,
                                    const MemorySchedule &schedule,
                                    const MergeAllocationOptions &o) const;
   MergeAllocDefaultMutator() = default;

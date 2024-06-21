@@ -60,6 +60,40 @@ func.func @basic() -> memref<8x64xf32> {
   return %b : memref<8x64xf32>
 }
 
+// CHECK-LABEL: @different_size_and_dtype
+func.func @different_size_and_dtype() {
+  // CHECK-DAG: %[[BASE_3:.*]] = memref.alloc() {alignment = 64 : i64} : memref<3072xi8>
+  // c and d has overlapping lifetime
+  // CHECK-DAG: %[[C0_3:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C_3:.*]] = memref.view %[[BASE_3]][%[[C0_3]]][] : memref<3072xi8> to memref<8x64xf32>
+  %c = memref.alloc() : memref<8x64xf32>
+  // CHECK:     "test.source"(%[[C_3]])
+  "test.source"(%c)  : (memref<8x64xf32>) -> ()
+  // CHECK-DAG: %[[C2048_3:.*]] = arith.constant 2048 : index
+  // CHECK-DAG: %[[D_3:.*]] = memref.view %[[BASE_3]][%[[C2048_3]]][] : memref<3072xi8> to memref<64xf32>
+  %d = memref.alloc() : memref<64xf32>
+  // CHECK:     "test.source"(%[[D_3]])
+  "test.source"(%d)  : (memref<64xf32>) -> ()
+  // last use of d
+  // e can reuse the d's memory
+  // CHECK-DAG: %[[C2048_3_2:.*]] = arith.constant 2048 : index
+  // CHECK-DAG: %[[E_3:.*]] = memref.view %[[BASE_3]][%[[C2048_3_2]]][] : memref<3072xi8> to memref<2x2x32xf64>
+  %e = memref.alloc() : memref<2x2x32xf64>
+  // CHECK:     "test.source"(%[[E_3]])
+  "test.source"(%e)  : (memref<2x2x32xf64>) -> ()
+  // CHECK:     "test.source"(%[[C_3]])
+  "test.source"(%c)  : (memref<8x64xf32>) -> ()
+
+  // e and c are free'd. f can reuse the memory across e and c
+  // CHECK-DAG: %[[C0_3_2:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[F_3:.*]] = memref.view %[[BASE_3]][%[[C0_3_2]]][] : memref<3072xi8> to memref<2x4x32xf64>
+  %f = memref.alloc() : memref<2x4x32xf64>
+  // CHECK:     "test.source"(%[[F_3]])
+  "test.source"(%f)  : (memref<2x4x32xf64>) -> ()
+  // CHECK:     return
+  return
+}
+
 // CHECK-LABEL: @withloop
 func.func @withloop() {
   // CHECK-DAG: %[[BASE2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<6144xi8>

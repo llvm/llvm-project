@@ -96,7 +96,7 @@ private:
 /// top level memory trace info for multiple scopes. Each key-value is the
 ///  "allocation scope" and the LifetimeTrace
 struct MemoryTraceScopes {
-  llvm::DenseMap<Operation *, std::unique_ptr<LifetimeTrace>> scopeToTraces;
+  llvm::DenseMap<Block *, std::unique_ptr<LifetimeTrace>> scopeToTraces;
   MemoryTraceScopes() = default;
 };
 
@@ -116,7 +116,7 @@ using TraceCollectorFunc = std::function<FailureOr<MemoryTraceScopes>(
 using MemoryPlannerFunc = std::function<FailureOr<MemorySchedule>(
     Operation *, const LifetimeTrace &, const MergeAllocationOptions &)>;
 using MemoryMergeMutatorFunc = std::function<LogicalResult(
-    Operation *toplevel, Operation *scope, const MemorySchedule &,
+    Operation *toplevel, Block *scope, const MemorySchedule &,
     const MergeAllocationOptions &)>;
 
 struct MergeAllocationOptions {

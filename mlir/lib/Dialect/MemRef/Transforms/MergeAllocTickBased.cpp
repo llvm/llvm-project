@@ -26,8 +26,8 @@ namespace memref {
 
 using namespace special_ticks;
 
-/// Return `true` if the given MemRef type has a static identity layout (i.e.,
-/// no layout) and default memory space.
+/// Return `true` if the given MemRef type has static shapes
+/// and default memory space.
 static bool isMemRefTypeOk(MemRefType type) {
   IntegerAttr intMemorySpace =
       llvm::dyn_cast_or_null<IntegerAttr>(type.getMemorySpace());
@@ -74,10 +74,9 @@ LogicalResult TickCollecter::onPopComplexScope(TickCollecterStates *s,
   const auto &scope = s->complexScopeStack.back();
   // if the complex scope is not recognized by us, and if it accesses memory,
   // raise an error
-  if (!isa<RegionBranchOpInterface>(scope.scope) &&
-      !isa<LoopLikeOpInterface>(scope.scope) && !scope.operations.empty()) {
-    return scope.scope->emitOpError("expecting RegionBranchOpInterface or "
-                                    "LoopLikeOpInterface for merge-alloc");
+  if (!isa<RegionBranchOpInterface>(scope.scope) && !scope.operations.empty()) {
+    return scope.scope->emitOpError(
+        "expecting RegionBranchOpInterface for merge-alloc");
   }
   for (auto op : scope.operations) {
     if (needsResetTick(s, scope.scope, op)) {
@@ -136,9 +135,12 @@ void TickCollecter::onMemrefViews(TickCollecterStates *s,
 }
 
 void TickCollecter::onReturnOp(TickCollecterStates *s, Operation *op) const {
-  bool isTopLevel = isa<func::FuncOp>(op->getParentOp());
+  // if a memref escapes from a function or a loop, we need to mark it
+  // unmergeable
+  bool isEscape = isa<func::FuncOp>(op->getParentOp()) ||
+                  isa<LoopLikeOpInterface>(op->getParentOp());
   for (auto val : op->getOperands()) {
-    accessValue(s, val, isTopLevel);
+    accessValue(s, val, isEscape);
   }
 }
 
@@ -215,7 +217,7 @@ TickCollecter::getTrace(TickCollecterStates *s) const {
                   size_t size)
         : allocTick{allocTick}, tick{tick}, trace{bufferId, size} {}
   };
-  llvm::DenseMap<Operation *, llvm::SmallVector<TraceWithTick, 8>> raw;
+  llvm::DenseMap<Block *, llvm::SmallVector<TraceWithTick, 8>> raw;
   for (auto &[op, tick] : s->allocTicks) {
     if (!isMergeableAlloc(s, op, tick.firstAccess)) {
       continue;
@@ -225,15 +227,21 @@ TickCollecter::getTrace(TickCollecterStates *s) const {
       return op->emitError(
           "This op should be surrounded by an AutomaticAllocationScope");
     }
+    if (scope->getNumRegions() != 1 ||
+        scope->getRegion(0).getBlocks().size() != 1) {
+      return op->emitError("This op should be surrounded by an "
+                           "AutomaticAllocationScope of single block");
+    }
+    auto block = &*scope->getRegion(0).getBlocks().begin();
     auto allocSize = getAllocSize(s, op);
     if (failed(allocSize)) {
       return failure();
     }
     // tick.firstAccess * 2 and tick.lastAccess * 2 + 1 to make sure "dealloc"
     // overlaps "alloc"
-    raw[scope].emplace_back(tick.allocTick, tick.firstAccess * 2,
+    raw[block].emplace_back(tick.allocTick, tick.firstAccess * 2,
                             reinterpret_cast<uintptr_t>(op), *allocSize);
-    raw[scope].emplace_back(tick.allocTick, tick.lastAccess * 2 + 1,
+    raw[block].emplace_back(tick.allocTick, tick.lastAccess * 2 + 1,
                             reinterpret_cast<uintptr_t>(op), 0);
   }
   MemoryTraceScopes ret;
@@ -336,18 +344,18 @@ FailureOr<MemorySchedule> tickBasedPlanMemory(Operation *op,
   return std::move(ret);
 }
 
-Value MergeAllocDefaultMutator::buildAlloc(OpBuilder &builder, Operation *scope,
+Value MergeAllocDefaultMutator::buildAlloc(OpBuilder &builder, Block *block,
                                            int64_t size,
                                            int64_t alignmentInt) const {
-  auto &block = scope->getRegion(0).getBlocks().front();
-  builder.setInsertionPointToStart(&block);
+  builder.setInsertionPointToStart(block);
   auto alignment = builder.getIntegerAttr(
       IntegerType::get(builder.getContext(), 64), alignmentInt);
   auto alloc = builder.create<memref::AllocOp>(
-      scope->getLoc(), MemRefType::get({size}, builder.getI8Type()), alignment);
+      block->getParentOp()->getLoc(),
+      MemRefType::get({size}, builder.getI8Type()), alignment);
   return alloc;
 }
-Value MergeAllocDefaultMutator::buildView(OpBuilder &builder, Operation *scope,
+Value MergeAllocDefaultMutator::buildView(OpBuilder &builder, Block *scope,
                                           Operation *origAllocOp,
                                           Value mergedAlloc,
                                           int64_t byteOffset) const {
@@ -360,7 +368,7 @@ Value MergeAllocDefaultMutator::buildView(OpBuilder &builder, Operation *scope,
 }
 
 LogicalResult
-MergeAllocDefaultMutator::operator()(Operation *op, Operation *scope,
+MergeAllocDefaultMutator::operator()(Operation *op, Block *scope,
                                      const MemorySchedule &schedule,
                                      const MergeAllocationOptions &o) const {
   if (schedule.allocToOffset.empty()) {
