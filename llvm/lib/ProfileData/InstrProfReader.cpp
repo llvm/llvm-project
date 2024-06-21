@@ -378,7 +378,7 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
         CurrentValues.push_back({Value, TakenCount});
         Line++;
       }
-      Record.addValueData(ValueKind, CurrentValues.data(), NumValueData,
+      Record.addValueData(ValueKind, S, CurrentValues.data(), NumValueData,
                           nullptr);
     }
   }

@@ -860,8 +860,10 @@ struct InstrProfRecord {
   /// Reserve space for NumValueSites sites.
   inline void reserveSites(uint32_t ValueKind, uint32_t NumValueSites);
 
-  /// Add ValueData for ValueKind at value Site.
-  void addValueData(uint32_t ValueKind, InstrProfValueData *VData, uint32_t N,
+  /// Add ValueData for ValueKind at value Site.  We do not support adding sites
+  /// out of order.  Site must go up from 0 one by one.
+  void addValueData(uint32_t ValueKind, uint32_t Site,
+                    InstrProfValueData *VData, uint32_t N,
                     InstrProfSymtab *SymTab);
 
   /// Merge the counts in \p Other into this one.
