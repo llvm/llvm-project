@@ -25,6 +25,12 @@ The classes ``std::map``, ``std::unordered_map`` and ``std::flat_map`` are
 excluded from this check, because for them the subscript operator has a defined
 behaviour when a key does not exist (inserting a new element).
 
+This check enforces part of the `SL.con.3
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>`
+guideline and is part of the `Bounds Safety (Bounds 4)
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-bounds-arrayindex>` profile 
+profile from the C++ Core Guidelines.
+
 Options
 -------
 
@@ -32,9 +38,3 @@ Options
 
     Semicolon-delimited list of class names that should additionally be
     excluded from this check. By default empty.
-
-This check enforces part of the `SL.con.3
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>`
-guideline and is part of the `Bounds Safety (Bounds 4)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-bounds-arrayindex>` profile 
-profile from the C++ Core Guidelines.
