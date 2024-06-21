@@ -237,46 +237,24 @@ static int mmapForContinuousMode(uint64_t CurrentFileOffset, FILE *File) {
   const char *CountersEnd = __llvm_profile_end_counters();
   const char *BitmapBegin = __llvm_profile_begin_bitmap();
   const char *BitmapEnd = __llvm_profile_end_bitmap();
-  const char *NamesBegin = __llvm_profile_begin_names();
-  const char *NamesEnd = __llvm_profile_end_names();
-  const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
   uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
-  uint64_t CountersSize =
-      __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
-  uint64_t NumBitmapBytes =
-      __llvm_profile_get_num_bitmap_bytes(BitmapBegin, BitmapEnd);
   /* Get the file size. */
   uint64_t FileSize = 0;
   if (getProfileFileSizeForMerging(File, &FileSize))
     return 1;
 
-  int Fileno = fileno(File);
-  /* Determine how much padding is needed before/after the counters and
-   * after the names. */
-  uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes,
-      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
-  __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NumBitmapBytes, NamesSize, /*VTableSize=*/0,
-      /*VNameSize=*/0, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames,
-      &PaddingBytesAfterVTable, &PaddingBytesAfterVNames);
-
-  CurrentFileOffset = 0;
-  uint64_t FileOffsetToCounters = CurrentFileOffset +
-                                  sizeof(__llvm_profile_header) + DataSize +
-                                  PaddingBytesBeforeCounters;
-
   /* Map the profile. */
   char *Profile = (char *)mmap(NULL, FileSize, PROT_READ | PROT_WRITE,
-                               MAP_SHARED, Fileno, 0);
+                               MAP_SHARED, fileno(File), 0);
   if (Profile == MAP_FAILED) {
     PROF_ERR("Unable to mmap profile: %s\n", strerror(errno));
     return 1;
   }
+  const uint64_t CountersOffsetInBiasMode =
+      sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) + DataSize;
   /* Update the profile fields based on the current mapping. */
   INSTR_PROF_PROFILE_COUNTER_BIAS_VAR =
-      (intptr_t)Profile - (uintptr_t)CountersBegin + FileOffsetToCounters;
+      (intptr_t)Profile - (uintptr_t)CountersBegin + CountersOffsetInBiasMode;
 
   /* Return the memory allocated for counters to OS. */
   lprofReleaseMemoryPagesToOS((uintptr_t)CountersBegin, (uintptr_t)CountersEnd);
