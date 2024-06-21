@@ -1076,7 +1076,7 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
 
 bool mlir::checkFusionStructuralLegality(LoopLikeOpInterface &target,
                                          LoopLikeOpInterface &source) {
-  auto iterSpaceEq =
+  bool iterSpaceEq =
       target.getLoopLowerBounds() == source.getLoopLowerBounds() &&
       target.getLoopUpperBounds() == source.getLoopUpperBounds() &&
       target.getLoopSteps() == source.getLoopSteps();
@@ -1125,6 +1125,7 @@ void fuseTerminator(RewriterBase &rewriter, LoopLikeOpInterface source,
     fuseTerminator(rewriter, cast<scf::ParallelOp>(source),
                    cast<scf::ParallelOp>(fused), mapping);
   } else {
+    llvm_unreachable("unsupported loop types.");
     return;
   }
 }
@@ -1239,13 +1240,11 @@ scf::ParallelOp mlir::fuseIndependentSiblingParallelLoops(
                                  newRedBlock.begin(),
                                  newRedBlock.getArguments());
     }
-    target.replaceAllUsesWith(results.take_front(inits1.size()));
-    source.replaceAllUsesWith(results.take_back(inits2.size()));
   }
-  term1->erase();
-  term2->erase();
-  target.erase();
-  source.erase();
+  rewriter.replaceOp(target, results.take_front(inits1.size()));
+  rewriter.replaceOp(source, results.take_back(inits2.size()));
+  rewriter.eraseOp(term1);
+  rewriter.eraseOp(term2);
 
   return fusedLoop;
 }

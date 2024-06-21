@@ -261,8 +261,10 @@ loopScheduling(scf::ForOp forOp,
     return 1;
   };
 
-  std::optional<int64_t> ubConstant = getConstantIntValue(forOp.getUpperBound());
-  std::optional<int64_t> lbConstant = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ubConstant =
+      getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> lbConstant =
+      getConstantIntValue(forOp.getLowerBound());
   DenseMap<Operation *, unsigned> opCycles;
   std::map<unsigned, std::vector<Operation *>> wrappedSchedule;
   for (Operation &op : forOp.getBody()->getOperations()) {
@@ -528,7 +530,8 @@ transform::LoopFuseSiblingOp::apply(transform::TransformRewriter &rewriter,
            << "operations cannot be fused";
 
   Operation *fusedLoop;
-  /// TODO: Support fusion for loop-like ops besides scf.for and scf.forall.
+  // TODO: Support fusion for loop-like ops besides scf.for, scf.forall
+  // and scf.parallel.
   if (isa<scf::ForOp>(target) && isa<scf::ForOp>(source)) {
     fusedLoop = fuseIndependentSiblingForLoops(
         cast<scf::ForOp>(target), cast<scf::ForOp>(source), rewriter);

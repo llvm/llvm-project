@@ -626,7 +626,7 @@ FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(getOperation());
   SmallVector<Value> inits(getOutputs());
-  inits.append(newInitOperands.begin(), newInitOperands.end());
+  llvm::append_range(inits, newInitOperands);
   scf::ForallOp newLoop = rewriter.create<scf::ForallOp>(
       getLoc(), getMixedLowerBound(), getMixedUpperBound(), getMixedStep(),
       inits, getMapping());
@@ -640,14 +640,13 @@ FailureOr<LoopLikeOpInterface> ForallOp::replaceWithAdditionalYields(
   if (replaceInitOperandUsesInLoop) {
     // Replace all uses of `newInitOperands` with the corresponding basic block
     // arguments.
-    for (auto it :
+    for (auto &&[newOperand, oldOperand] :
          llvm::zip(newInitOperands, newLoop.getBody()->getArguments().take_back(
                                         newInitOperands.size()))) {
-      rewriter.replaceUsesWithIf(std::get<0>(it), std::get<1>(it),
-                                 [&](OpOperand &use) {
-                                   Operation *user = use.getOwner();
-                                   return newLoop->isProperAncestor(user);
-                                 });
+      rewriter.replaceUsesWithIf(newOperand, oldOperand, [&](OpOperand &use) {
+        Operation *user = use.getOwner();
+        return newLoop->isProperAncestor(user);
+      });
     }
   }
 
