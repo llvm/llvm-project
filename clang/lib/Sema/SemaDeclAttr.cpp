@@ -6283,33 +6283,33 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
 
 static void handleVTablePointerAuthentication(Sema &S, Decl *D,
                                               const ParsedAttr &AL) {
-  CXXRecordDecl *decl = cast<CXXRecordDecl>(D);
-  const uint32_t numArgs = AL.getNumArgs();
-  if (numArgs > 4) {
+  CXXRecordDecl *Decl = cast<CXXRecordDecl>(D);
+  const uint32_t NumArgs = AL.getNumArgs();
+  if (NumArgs > 4) {
     S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 4;
     AL.setInvalid();
   }
 
-  if (numArgs == 0) {
+  if (NumArgs == 0) {
     S.Diag(AL.getLoc(), diag::err_attribute_too_few_arguments) << AL;
     AL.setInvalid();
     return;
   }
 
   if (D->getAttr<VTablePointerAuthenticationAttr>()) {
-    S.Diag(AL.getLoc(), diag::err_duplicated_vtable_pointer_auth) << decl;
+    S.Diag(AL.getLoc(), diag::err_duplicated_vtable_pointer_auth) << Decl;
     AL.setInvalid();
   }
 
-  auto keyType = VTablePointerAuthenticationAttr::VPtrAuthKeyType::DefaultKey;
+  auto KeyType = VTablePointerAuthenticationAttr::VPtrAuthKeyType::DefaultKey;
   if (AL.isArgIdent(0)) {
     IdentifierLoc *IL = AL.getArgAsIdent(0);
     if (!VTablePointerAuthenticationAttr::ConvertStrToVPtrAuthKeyType(
-            IL->Ident->getName(), keyType)) {
+            IL->Ident->getName(), KeyType)) {
       S.Diag(IL->Loc, diag::err_invalid_authentication_key) << IL->Ident;
       AL.setInvalid();
     }
-    if (keyType == VTablePointerAuthenticationAttr::DefaultKey &&
+    if (KeyType == VTablePointerAuthenticationAttr::DefaultKey &&
         !S.getLangOpts().PointerAuthCalls) {
       S.Diag(AL.getLoc(), diag::err_no_default_vtable_pointer_auth) << 0;
       AL.setInvalid();
@@ -6320,18 +6320,18 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
     return;
   }
 
-  auto addressDiversityMode = VTablePointerAuthenticationAttr::
+  auto AddressDiversityMode = VTablePointerAuthenticationAttr::
       AddressDiscriminationMode::DefaultAddressDiscrimination;
   if (AL.getNumArgs() > 1) {
     if (AL.isArgIdent(1)) {
       IdentifierLoc *IL = AL.getArgAsIdent(1);
       if (!VTablePointerAuthenticationAttr::
               ConvertStrToAddressDiscriminationMode(IL->Ident->getName(),
-                                                    addressDiversityMode)) {
+                                                    AddressDiversityMode)) {
         S.Diag(IL->Loc, diag::err_invalid_address_discrimination) << IL->Ident;
         AL.setInvalid();
       }
-      if (addressDiversityMode ==
+      if (AddressDiversityMode ==
               VTablePointerAuthenticationAttr::DefaultAddressDiscrimination &&
           !S.getLangOpts().PointerAuthCalls) {
         S.Diag(IL->Loc, diag::err_no_default_vtable_pointer_auth) << 1;
@@ -6343,18 +6343,17 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
     }
   }
 
-  auto extraDiscrimination = VTablePointerAuthenticationAttr::
-      ExtraDiscrimination::DefaultExtraDiscrimination;
+  auto ED = VTablePointerAuthenticationAttr::ExtraDiscrimination::
+      DefaultExtraDiscrimination;
   if (AL.getNumArgs() > 2) {
     if (AL.isArgIdent(2)) {
       IdentifierLoc *IL = AL.getArgAsIdent(2);
       if (!VTablePointerAuthenticationAttr::ConvertStrToExtraDiscrimination(
-              IL->Ident->getName(), extraDiscrimination)) {
+              IL->Ident->getName(), ED)) {
         S.Diag(IL->Loc, diag::err_invalid_extra_discrimination) << IL->Ident;
         AL.setInvalid();
       }
-      if (extraDiscrimination ==
-              VTablePointerAuthenticationAttr::DefaultExtraDiscrimination &&
+      if (ED == VTablePointerAuthenticationAttr::DefaultExtraDiscrimination &&
           !S.getLangOpts().PointerAuthCalls) {
         S.Diag(AL.getLoc(), diag::err_no_default_vtable_pointer_auth) << 2;
         AL.setInvalid();
@@ -6365,32 +6364,31 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
     }
   }
 
-  uint32_t customDiscriminationValue = 0;
-  if (extraDiscrimination ==
-      VTablePointerAuthenticationAttr::CustomDiscrimination) {
-    if (numArgs < 4) {
+  uint32_t CustomDiscriminationValue = 0;
+  if (ED == VTablePointerAuthenticationAttr::CustomDiscrimination) {
+    if (NumArgs < 4) {
       S.Diag(AL.getLoc(), diag::err_missing_custom_discrimination) << AL << 4;
       AL.setInvalid();
       return;
     }
-    if (numArgs > 4) {
+    if (NumArgs > 4) {
       S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 4;
       AL.setInvalid();
     }
 
     if (!AL.isArgExpr(3) || !S.checkUInt32Argument(AL, AL.getArgAsExpr(3),
-                                                   customDiscriminationValue)) {
+                                                   CustomDiscriminationValue)) {
       S.Diag(AL.getLoc(), diag::err_invalid_custom_discrimination);
       AL.setInvalid();
     }
-  } else if (numArgs > 3) {
+  } else if (NumArgs > 3) {
     S.Diag(AL.getLoc(), diag::err_attribute_too_many_arguments) << AL << 3;
     AL.setInvalid();
   }
 
-  decl->addAttr(::new (S.Context) VTablePointerAuthenticationAttr(
-      S.Context, AL, keyType, addressDiversityMode, extraDiscrimination,
-      customDiscriminationValue));
+  Decl->addAttr(::new (S.Context) VTablePointerAuthenticationAttr(
+      S.Context, AL, KeyType, AddressDiversityMode, ED,
+      CustomDiscriminationValue));
 }
 
 //===----------------------------------------------------------------------===//

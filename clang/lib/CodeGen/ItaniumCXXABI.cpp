@@ -1482,11 +1482,16 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   // Emit the call to __dynamic_cast.
   llvm::Value *Value = ThisAddr.emitRawPointer(CGF);
   if (CGM.getCodeGenOpts().PointerAuth.CXXVTablePointers) {
-    llvm::Value *vtable =
+    // We perform a no-op load of the vtable pointer here to force an
+    // authentication. In environments that do not support pointer
+    // authentication this is a an actual no-op that will be elided. When
+    // pointer authentication is supported and enforced on vtable pointers this
+    // load can trap.
+    llvm::Value *Vtable =
         CGF.GetVTablePtr(ThisAddr, CGM.Int8PtrTy, SrcDecl,
                          CodeGenFunction::VTableAuthMode::MustTrap);
-    assert(vtable);
-    (void)vtable;
+    assert(Vtable);
+    (void)Vtable;
   }
 
   llvm::Value *args[] = {Value, SrcRTTI, DestRTTI, OffsetHint};

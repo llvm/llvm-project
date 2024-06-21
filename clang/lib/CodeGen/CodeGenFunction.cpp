@@ -3065,64 +3065,64 @@ void CodeGenFunction::EmitPointerAuthOperandBundle(
 }
 
 static llvm::Value *EmitPointerAuthCommon(CodeGenFunction &CGF,
-                                          const CGPointerAuthInfo &pointerAuth,
-                                          llvm::Value *pointer,
-                                          unsigned intrinsicID) {
-  if (!pointerAuth)
-    return pointer;
+                                          const CGPointerAuthInfo &PointerAuth,
+                                          llvm::Value *Pointer,
+                                          unsigned IntrinsicID) {
+  if (!PointerAuth)
+    return Pointer;
 
-  auto key = CGF.Builder.getInt32(pointerAuth.getKey());
+  auto Key = CGF.Builder.getInt32(PointerAuth.getKey());
 
-  llvm::Value *discriminator = pointerAuth.getDiscriminator();
-  if (!discriminator) {
-    discriminator = CGF.Builder.getSize(0);
+  llvm::Value *Discriminator = PointerAuth.getDiscriminator();
+  if (!Discriminator) {
+    Discriminator = CGF.Builder.getSize(0);
   }
 
   // Convert the pointer to intptr_t before signing it.
-  auto origType = pointer->getType();
-  pointer = CGF.Builder.CreatePtrToInt(pointer, CGF.IntPtrTy);
+  auto OrigType = Pointer->getType();
+  Pointer = CGF.Builder.CreatePtrToInt(Pointer, CGF.IntPtrTy);
 
   // call i64 @llvm.ptrauth.sign.i64(i64 %pointer, i32 %key, i64 %discriminator)
-  auto intrinsic = CGF.CGM.getIntrinsic(intrinsicID);
-  pointer = CGF.EmitRuntimeCall(intrinsic, {pointer, key, discriminator});
+  auto Intrinsic = CGF.CGM.getIntrinsic(IntrinsicID);
+  Pointer = CGF.EmitRuntimeCall(Intrinsic, {Pointer, Key, Discriminator});
 
   // Convert back to the original type.
-  pointer = CGF.Builder.CreateIntToPtr(pointer, origType);
-  return pointer;
+  Pointer = CGF.Builder.CreateIntToPtr(Pointer, OrigType);
+  return Pointer;
 }
 
 llvm::Value *
-CodeGenFunction::EmitPointerAuthSign(const CGPointerAuthInfo &pointerAuth,
-                                     llvm::Value *pointer) {
-  if (!pointerAuth.shouldSign())
-    return pointer;
-  return EmitPointerAuthCommon(*this, pointerAuth, pointer,
+CodeGenFunction::EmitPointerAuthSign(const CGPointerAuthInfo &PointerAuth,
+                                     llvm::Value *Pointer) {
+  if (!PointerAuth.shouldSign())
+    return Pointer;
+  return EmitPointerAuthCommon(*this, PointerAuth, Pointer,
                                llvm::Intrinsic::ptrauth_sign);
 }
 
 static llvm::Value *EmitStrip(CodeGenFunction &CGF,
-                              const CGPointerAuthInfo &pointerAuth,
-                              llvm::Value *pointer) {
-  auto stripIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::ptrauth_strip);
+                              const CGPointerAuthInfo &PointerAuth,
+                              llvm::Value *Pointer) {
+  auto StripIntrinsic = CGF.CGM.getIntrinsic(llvm::Intrinsic::ptrauth_strip);
 
-  auto key = CGF.Builder.getInt32(pointerAuth.getKey());
+  auto Key = CGF.Builder.getInt32(PointerAuth.getKey());
   // Convert the pointer to intptr_t before signing it.
-  auto origType = pointer->getType();
-  pointer = CGF.EmitRuntimeCall(
-      stripIntrinsic, {CGF.Builder.CreatePtrToInt(pointer, CGF.IntPtrTy), key});
-  return CGF.Builder.CreateIntToPtr(pointer, origType);
+  auto OrigType = Pointer->getType();
+  Pointer = CGF.EmitRuntimeCall(
+      StripIntrinsic, {CGF.Builder.CreatePtrToInt(Pointer, CGF.IntPtrTy), Key});
+  return CGF.Builder.CreateIntToPtr(Pointer, OrigType);
 }
 
 llvm::Value *
-CodeGenFunction::EmitPointerAuthAuth(const CGPointerAuthInfo &pointerAuth,
-                                     llvm::Value *pointer) {
-  if (pointerAuth.shouldStrip()) {
-    return EmitStrip(*this, pointerAuth, pointer);
+CodeGenFunction::EmitPointerAuthAuth(const CGPointerAuthInfo &PointerAuth,
+                                     llvm::Value *Pointer) {
+  if (PointerAuth.shouldStrip()) {
+    return EmitStrip(*this, PointerAuth, Pointer);
   }
-  if (!pointerAuth.shouldAuth()) {
-    return pointer;
+  if (!PointerAuth.shouldAuth()) {
+    return Pointer;
   }
 
-  return EmitPointerAuthCommon(*this, pointerAuth, pointer,
+  return EmitPointerAuthCommon(*this, PointerAuth, Pointer,
                                llvm::Intrinsic::ptrauth_auth);
 }

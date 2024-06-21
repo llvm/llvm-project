@@ -10512,30 +10512,30 @@ void Sema::checkIncorrectVTablePointerAuthenticationAttribute(
     return;
   }
 
-  const CXXRecordDecl *primaryBase = &RD;
-  if (primaryBase->hasAnyDependentBases()) {
+  const CXXRecordDecl *PrimaryBase = &RD;
+  if (PrimaryBase->hasAnyDependentBases()) {
     return;
   }
 
   while (1) {
-    assert(primaryBase);
-    const CXXRecordDecl *base = nullptr;
-    for (auto basePtr : primaryBase->bases()) {
-      if (!basePtr.getType()->getAsCXXRecordDecl()->isDynamicClass())
+    assert(PrimaryBase);
+    const CXXRecordDecl *Base = nullptr;
+    for (auto BasePtr : PrimaryBase->bases()) {
+      if (!BasePtr.getType()->getAsCXXRecordDecl()->isDynamicClass())
         continue;
-      base = basePtr.getType()->getAsCXXRecordDecl();
+      Base = BasePtr.getType()->getAsCXXRecordDecl();
       break;
     }
-    if (!base || base == primaryBase || !base->isPolymorphic())
+    if (!Base || Base == PrimaryBase || !Base->isPolymorphic())
       break;
-    if (base->isPolymorphic()) {
+    if (Base->isPolymorphic()) {
       Diag(RD.getAttr<VTablePointerAuthenticationAttr>()->getLocation(),
            diag::err_non_top_level_vtable_pointer_auth)
-          << &RD << base;
+          << &RD << Base;
     } else {
       break;
     }
-    primaryBase = base;
+    PrimaryBase = Base;
   }
 
   if (!RD.isPolymorphic()) {
