@@ -125,10 +125,6 @@ static kmp_nested_nthreads_t *__kmp_override_nested_nth(kmp_info_t *thr,
   for (int i = level + 1, j = 1; i < new_size; ++i, ++j)
     new_nested_nth->nth[i] = thr->th.th_set_nested_nth[j];
   new_nested_nth->size = new_nested_nth->used = new_size;
-  new_nested_nth->strict = thr->th.th_nt_strict;
-  new_nested_nth->loc = thr->th.th_nt_loc;
-  new_nested_nth->sev = thr->th.th_nt_sev;
-  new_nested_nth->msg = thr->th.th_nt_msg;
   return new_nested_nth;
 }
 
@@ -950,8 +946,7 @@ static int __kmp_reserve_threads(kmp_root_t *root, kmp_team_t *parent_team,
   }
 #endif // KMP_DEBUG
 
-  if ((this_thr->th.th_nt_strict || parent_team->t.t_nested_nth->strict) &&
-      new_nthreads < set_nthreads) {
+  if (this_thr->th.th_nt_strict && new_nthreads < set_nthreads) {
     __kmpc_error(this_thr->th.th_nt_loc, this_thr->th.th_nt_sev,
                  this_thr->th.th_nt_msg);
   }
@@ -8354,10 +8349,7 @@ void __kmp_cleanup(void) {
   __kmp_nested_nth.nth = NULL;
   __kmp_nested_nth.size = 0;
   __kmp_nested_nth.used = 0;
-  __kmp_nested_nth.strict = false;
-  __kmp_nested_nth.loc = NULL;
-  __kmp_nested_nth.sev = 0;
-  __kmp_nested_nth.msg = NULL;
+
   KMP_INTERNAL_FREE(__kmp_nested_proc_bind.bind_types);
   __kmp_nested_proc_bind.bind_types = NULL;
   __kmp_nested_proc_bind.size = 0;

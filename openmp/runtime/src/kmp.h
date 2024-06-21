@@ -537,10 +537,6 @@ typedef struct kmp_nested_nthreads_t {
   int *nth;
   int size;
   int used;
-  bool strict; // num_threads clause has strict modifier
-  ident_t *loc; // loc for strict modifier
-  int sev; // error severity for strict modifier
-  const char *msg; // error message for strict modifier
 } kmp_nested_nthreads_t;
 
 extern kmp_nested_nthreads_t __kmp_nested_nth;
