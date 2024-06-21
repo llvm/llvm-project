@@ -580,8 +580,8 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
 
-- Clang now emits implicit deduction guides corresponding to non-user-defined constructors while at a failure
-  of overload resolution.
+- Clang now shows implicit deduction guides corresponding to implcitly defined constructors when 
+  diagnosing overload resolution failure.
 
 Improvements to Clang's time-trace
 ----------------------------------

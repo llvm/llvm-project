@@ -12115,15 +12115,15 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     return;
   }
 
-  // If this is an implicit deduction guide against a non-user-defined
-  // constructor, add a note for it. These deduction guides nor their
-  // corresponding constructors are not explicitly spelled in the source code,
+  // If this is an implicit deduction guide against an implicitly defined
+  // constructor, add a note for it. Neither these deduction guides nor their
+  // corresponding constructors are explicitly spelled in the source code,
   // and simply producing a deduction failure note around the heading of the
-  // enclosing RecordDecl is confusing.
+  // enclosing RecordDecl would be confusing.
   //
   // We prefer adding such notes at the end of the last deduction failure
   // reason because duplicate code snippets appearing in the diagnostic
-  // are likely becoming noisy.
+  // would likely become noisy.
   auto _ = llvm::make_scope_exit([&] {
     auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
     if (!DG || !DG->isImplicit() || DG->getCorrespondingConstructor())
