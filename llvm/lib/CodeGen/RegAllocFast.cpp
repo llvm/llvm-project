@@ -257,12 +257,15 @@ private:
   /// cannot be allocated.
   ///
   /// In the first phase (tied defs/early clobber), we consider also physical
-  /// uses, afterwards, we don't. if the lowest bit isn't set, it's a solely
+  /// uses, afterwards, we don't. If the lowest bit isn't set, it's a solely
   /// physical use (markPhysRegUsedInInstr), otherwise, it's a normal use. To
   /// avoid resetting the entire vector after every instruction, we track the
-  /// instruction "generation" in the remaining 31 bits -- this meands, that if
+  /// instruction "generation" in the remaining 31 bits -- this means, that if
   /// UsedInInstr[Idx] < InstrGen, the register unit is unused. InstrGen is
   /// never zero and always incremented by two.
+  ///
+  /// Don't allocate inline storage: the number of register units is typically
+  /// quite large (e.g., AArch64 > 100, X86 > 200, AMDGPU > 1000).
   uint32_t InstrGen;
   SmallVector<unsigned, 0> UsedInInstr;
 
@@ -1391,7 +1394,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
 
   InstrGen += 2;
   // In the event we ever get more than 2**31 instructions...
-  if (InstrGen == 0) {
+  if (LLVM_UNLIKELY(InstrGen == 0)) {
     UsedInInstr.assign(UsedInInstr.size(), 0);
     InstrGen = 2;
   }
