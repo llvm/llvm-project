@@ -125,6 +125,16 @@ let TargetPrefix = "riscv" in {
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
+// 'Zawrs' (Wait on Reservation Set)
+
+let TargetPrefix = "riscv" in {
+  def int_riscv_wrs_nto
+      : DefaultAttrsIntrinsic<[], [], [IntrHasSideEffects]>;
+  def int_riscv_wrs_sto
+      : DefaultAttrsIntrinsic<[], [], [IntrHasSideEffects]>;
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
 // Vectors
 
 // The intrinsic does not have any operand that must be extended.
