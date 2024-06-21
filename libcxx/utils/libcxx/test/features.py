@@ -586,21 +586,21 @@ DEFAULT_FEATURES += [
     Feature(
         name="_target-before-llvm-11",
         when=lambda cfg: BooleanExpression.evaluate(
-            "target={{.+}}-apple-macosx{{(10.9|10.10|10.11|10.12|10.13|10.14|10.15)(.0)?}}",
+            "target={{.+}}-apple-macosx{{(10.13|10.14|10.15)(.0)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-before-llvm-12",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-11 || target={{.+}}-apple-macosx12.{{(0|1|2)}}.0",
+            "_target-before-llvm-11 || target={{.+}}-apple-macosx{{(11(.\d+)?|12.[0-2])(.0)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-before-llvm-13",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-12 || target={{.+}}-apple-macosx{{((12.(3|4|5|6|7))|(13.(0|1|2|3)))}}.0",
+            "_target-before-llvm-12 || target={{.+}}-apple-macosx{{(12.[3-7]|13.[0-3])(.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -614,14 +614,14 @@ DEFAULT_FEATURES += [
     Feature(
         name="_target-before-llvm-15",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-14 || target={{.+}}-apple-macosx13.{{(4|5|6)}}.0",
+            "_target-before-llvm-14 || target={{.+}}-apple-macosx{{13.[4-6](.0)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-before-llvm-16",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-before-llvm-15 || target={{.+}}-apple-macosx14.{{(0|1|2|3)}}.0",
+            "_target-before-llvm-15 || target={{.+}}-apple-macosx{{12.[0-3](.0)?}}",
             cfg.available_features,
         ),
     ),
@@ -689,94 +689,31 @@ DEFAULT_FEATURES += [
 # a libc++ flavor that enables availability markup. Similarly, a test could fail when
 # run against the system library of an older version of FreeBSD, even though FreeBSD
 # doesn't provide availability markup at the time of writing this.
+for version in ('11', '12', '13', '14', '15', '16', '17', '18', '19'):
+    DEFAULT_FEATURES.append(
+        Feature(
+            name="using-built-library-before-llvm-{}".format(version),
+            when=lambda cfg: BooleanExpression.evaluate(
+                "stdlib=system && _target-before-llvm-{}".format(version),
+                cfg.available_features,
+            )
+        )
+    )
+
 DEFAULT_FEATURES += [
-    #
-    # Runtime backdeployment features
-    #
+    # Tests that require std::filesystem support in the built library
     Feature(
-        name="using-built-library-before-llvm-11",
+        name="availability-filesystem-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=system && _target-before-llvm-11",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(13|14)(.0)?}})",
             cfg.available_features,
         ),
     ),
+    # Tests that require the C++20 synchronization library (P1135R6 implemented by https://llvm.org/D68480) in the built library
     Feature(
-        name="using-built-library-before-llvm-12",
+        name="availability-synchronization_library-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=system && _target-before-llvm-12",
-            cfg.available_features,
-        ),
-    ),
-
-    Feature(
-        name="using-built-library-before-llvm-13",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=system && _target-before-llvm-13",
-            cfg.available_features,
-        ),
-    ),
-
-    Feature(
-        name="using-built-library-before-llvm-14",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=system && _target-before-llvm-14",
-            cfg.available_features,
-        ),
-    ),
-
-    Feature(
-        name="using-built-library-before-llvm-15",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=system && _target-before-llvm-15",
-            cfg.available_features,
-        ),
-    ),
-
-    Feature(
-        name="using-built-library-before-llvm-16",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=system && _target-before-llvm-16",
-            cfg.available_features,
-        ),
-    ),
-
-    Feature(
-        name="using-built-library-before-llvm-17",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "stdlib=system && _target-before-llvm-17",
-            cfg.available_features,
-        ),
-    ),
-
-    Feature(
-        name="using-built-library-before-llvm-18",
-        when=lambda cfg: BooleanExpression.evaluate(
-            # For now, no released version of macOS contains LLVM 18
-            # TODO(ldionne) Please provide the correct value.
-            "stdlib=system && _target-before-llvm-18",
-            cfg.available_features,
-        ),
-    ),
-
-    Feature(
-        name="using-built-library-before-llvm-19",
-        when=lambda cfg: BooleanExpression.evaluate(
-            # For now, no released version of macOS contains LLVM 19
-            # TODO(ldionne) Please provide the correct value.
-            "stdlib=system && _target-before-llvm-19",
-            cfg.available_features,
-        ),
-    ),
-
-    #
-    # Availability markup features
-    #
-
-    # Tests that require std::to_chars(floating-point) in the built library
-    Feature(
-        name="availability-fp_to_chars-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-13)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-11)",
             cfg.available_features,
         ),
     ),
@@ -784,7 +721,7 @@ DEFAULT_FEATURES += [
     Feature(
         name="availability-char8_t_support-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-11)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-12)",
             cfg.available_features,
         ),
     ),
@@ -804,27 +741,11 @@ DEFAULT_FEATURES += [
             cfg.available_features,
         ),
     ),
-    # Tests that require std::filesystem support in the built library
+    # Tests that require std::to_chars(floating-point) in the built library
     Feature(
-        name="availability-filesystem-missing",
+        name="availability-fp_to_chars-missing",
         when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{(13|14)(.0)?}})",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require the C++20 synchronization library (P1135R6 implemented by https://llvm.org/D68480) in the built library
-    Feature(
-        name="availability-synchronization_library-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-11)",
-            cfg.available_features,
-        ),
-    ),
-    # Tests that require time zone database support in the built library
-    Feature(
-        name="availability-tzdb-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-19)",
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-14)",
             cfg.available_features,
         ),
     ),
@@ -833,6 +754,14 @@ DEFAULT_FEATURES += [
         name="availability-print-missing",
         when=lambda cfg: BooleanExpression.evaluate(
             "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-18)",
+            cfg.available_features,
+        ),
+    ),
+    # Tests that require time zone database support in the built library
+    Feature(
+        name="availability-tzdb-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && _target-before-llvm-19)",
             cfg.available_features,
         ),
     ),

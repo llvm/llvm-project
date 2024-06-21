@@ -95,8 +95,8 @@
 #  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_PUSH /* nothing */
 #  define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP  /* nothing */
 
-#  define _LIBCPP_INTRODUCED_IN_LLVM_10 1
-#  define _LIBCPP_INTRODUCED_IN_LLVM_10_ATTRIBUTE /* nothing */
+#  define _LIBCPP_INTRODUCED_IN_LLVM_11 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE /* nothing */
 
 #  define _LIBCPP_INTRODUCED_IN_LLVM_12 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_12_ATTRIBUTE /* nothing */
@@ -159,22 +159,22 @@
 #    define _LIBCPP_INTRODUCED_IN_LLVM_9_ATTRIBUTE_POP  /* nothing */
 #  endif
 
-// LLVM 10
+// LLVM 11
 // clang-format off
 #  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 110000) ||   \
       (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 140000) || \
       (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 140000) ||         \
       (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 70000)
 // clang-format on
-#    define _LIBCPP_INTRODUCED_IN_LLVM_10 0
-#    define _LIBCPP_INTRODUCED_IN_LLVM_10_ATTRIBUTE                                                                    \
+#    define _LIBCPP_INTRODUCED_IN_LLVM_11 0
+#    define _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE                                                                    \
       __attribute__((availability(macos, strict, introduced = 11.0)))                                                  \
       __attribute__((availability(ios, strict, introduced = 14.0)))                                                    \
       __attribute__((availability(tvos, strict, introduced = 14.0)))                                                   \
       __attribute__((availability(watchos, strict, introduced = 7.0)))
 #  else
-#    define _LIBCPP_INTRODUCED_IN_LLVM_10 1
-#    define _LIBCPP_INTRODUCED_IN_LLVM_10_ATTRIBUTE /* nothing */
+#    define _LIBCPP_INTRODUCED_IN_LLVM_11 1
+#    define _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE /* nothing */
 #  endif
 
 // LLVM 12
@@ -290,8 +290,8 @@
 // which requires shared library support for various operations
 // (see libcxx/src/atomic.cpp). This includes <barier>, <latch>,
 // <semaphore>, and notification functions on std::atomic.
-#define _LIBCPP_AVAILABILITY_HAS_SYNC _LIBCPP_INTRODUCED_IN_LLVM_10
-#define _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INTRODUCED_IN_LLVM_10_ATTRIBUTE
+#define _LIBCPP_AVAILABILITY_HAS_SYNC _LIBCPP_INTRODUCED_IN_LLVM_11
+#define _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INTRODUCED_IN_LLVM_11_ATTRIBUTE
 
 // Enable additional explicit instantiations of iostreams components. This
 // reduces the number of weak definitions generated in programs that use
