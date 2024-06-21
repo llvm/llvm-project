@@ -437,6 +437,12 @@ public:
     return result;
   }
 
+  MPFRNumber sinpi() const {
+    MPFRNumber result(*this);
+    mpfr_sinpi(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber sinh() const {
     MPFRNumber result(*this);
     mpfr_sinh(result.value, value, mpfr_rounding);

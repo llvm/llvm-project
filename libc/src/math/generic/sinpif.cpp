@@ -101,6 +101,9 @@ LLVM_LIBC_FUNCTION(float, sinpif, (float x)) {
       // do need fma(x, -2^-25, x) to prevent underflow caused by -2^-25*x when
       // |x| < 2^-125. For targets without FMA instructions, we simply use
       // double for intermediate results as it is more efficient than using an
+      double xdpi =  xd * 3.1415926535897;
+      return static_cast<float>(fputil::multiply_add(xd, -0x1.65p-34, xdpi));
+
       // emulated version of FMA.
 #if defined(LIBC_TARGET_CPU_HAS_FMA)
       return fputil::multiply_add(x, -0x1.0p-25f, x);

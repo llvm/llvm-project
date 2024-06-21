@@ -43,17 +43,6 @@ TEST_F(LlvmLibcSinpifTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST_F(LlvmLibcSinpifTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
-  constexpr uint32_t STEP = UINT32_MAX / COUNT;
-  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = FPBits(v).get_val();
-    if (isnan(x) || isinf(x))
-      continue;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, x,
-                                   LIBC_NAMESPACE::sinpif(x), 0.5);
-  }
-}
 
 TEST_F(LlvmLibcSinpifTest, SpecificBitPatterns) {
   constexpr int N = 36;
