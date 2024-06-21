@@ -1108,8 +1108,9 @@ MinidumpFileBuilder::AddMemoryList_64(Process::CoreFileMemoryRanges &ranges) {
       descriptors[region_index].DataSize = 0;
     }
     if (bytes_read != size) {
-      LLDB_LOGF(log, "Memory region at: %" PRIx64 " failed to read %zu bytes",
-                addr, size);
+      LLDB_LOGF(
+          log, "Memory region at: %" PRIx64 " failed to read %" PRIx64 " bytes",
+          addr, size);
       cleanup_required = true;
       descriptors[region_index].DataSize = bytes_read;
     }
