@@ -325,8 +325,11 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     assert(isPtrType(*FromT));
     assert(isPtrType(*ToT));
-    if (FromT == ToT)
+    if (FromT == ToT) {
+      if (SubExpr->getType()->isVoidPointerType())
+        return this->visit(SubExpr) && this->emitVoidPtrCast(CE);
       return this->delegate(SubExpr);
+    }
 
     if (!this->visit(SubExpr))
       return false;
@@ -1833,6 +1836,9 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   std::optional<PrimType> LT = classify(LHS->getType());
   std::optional<PrimType> RT = classify(RHS->getType());
   std::optional<PrimType> ResultT = classify(E->getType());
+
+  if (!Ctx.getLangOpts().CPlusPlus14)
+    return this->visit(RHS) && this->visit(LHS) && this->emitError(E);
 
   if (!LT || !RT || !ResultT || !LHSComputationT)
     return false;
@@ -3826,6 +3832,21 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
     // Since our _Complex implementation does not map to a primitive type,
     // we sometimes have to do the lvalue-to-rvalue conversion here manually.
     return this->emitArrayElemPop(classifyPrim(E->getType()), 1, E);
+
+  case UO_Not: // ~x
+    if (!this->visit(SubExpr))
+      return false;
+    // Negate the imaginary component.
+    if (!this->emitArrayElem(ElemT, 1, E))
+      return false;
+    if (!this->emitNeg(ElemT, E))
+      return false;
+    if (!this->emitInitElem(ElemT, 1, E))
+      return false;
+    return DiscardResult ? this->emitPopPtr(E) : true;
+
+  case UO_Extension:
+    return this->delegate(SubExpr);
 
   default:
     return this->emitInvalid(E);

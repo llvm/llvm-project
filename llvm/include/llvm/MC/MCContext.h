@@ -371,7 +371,7 @@ private:
                     std::function<void(SMDiagnostic &, const SourceMgr *)>);
 
   MCSymbol *createSymbolImpl(const StringMapEntry<bool> *Name,
-                             bool CanBeUnnamed);
+                             bool IsTemporary);
   MCSymbol *createSymbol(StringRef Name, bool AlwaysAddSuffix,
                          bool IsTemporary);
 

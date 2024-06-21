@@ -6551,17 +6551,17 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
   ElementCount NumElts = VT.getVectorElementCount();
 
-  // See if we can fold through bitcasted integer ops.
+  // See if we can fold through any bitcasted integer ops.
   if (NumOps == 2 && VT.isFixedLengthVector() && VT.isInteger() &&
       Ops[0].getValueType() == VT && Ops[1].getValueType() == VT &&
-      Ops[0].getOpcode() == ISD::BITCAST &&
-      Ops[1].getOpcode() == ISD::BITCAST) {
+      (Ops[0].getOpcode() == ISD::BITCAST ||
+       Ops[1].getOpcode() == ISD::BITCAST)) {
     SDValue N1 = peekThroughBitcasts(Ops[0]);
     SDValue N2 = peekThroughBitcasts(Ops[1]);
     auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
     auto *BV2 = dyn_cast<BuildVectorSDNode>(N2);
-    EVT BVVT = N1.getValueType();
-    if (BV1 && BV2 && BVVT.isInteger() && BVVT == N2.getValueType()) {
+    if (BV1 && BV2 && N1.getValueType().isInteger() &&
+        N2.getValueType().isInteger()) {
       bool IsLE = getDataLayout().isLittleEndian();
       unsigned EltBits = VT.getScalarSizeInBits();
       SmallVector<APInt> RawBits1, RawBits2;
@@ -6577,15 +6577,22 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           RawBits.push_back(*Fold);
         }
         if (RawBits.size() == NumElts.getFixedValue()) {
-          // We have constant folded, but we need to cast this again back to
-          // the original (possibly legalized) type.
+          // We have constant folded, but we might need to cast this again back
+          // to the original (possibly legalized) type.
+          EVT BVVT, BVEltVT;
+          if (N1.getValueType() == VT) {
+            BVVT = N1.getValueType();
+            BVEltVT = BV1->getOperand(0).getValueType();
+          } else {
+            BVVT = N2.getValueType();
+            BVEltVT = BV2->getOperand(0).getValueType();
+          }
+          unsigned BVEltBits = BVEltVT.getSizeInBits();
           SmallVector<APInt> DstBits;
           BitVector DstUndefs;
           BuildVectorSDNode::recastRawBits(IsLE, BVVT.getScalarSizeInBits(),
                                            DstBits, RawBits, DstUndefs,
                                            BitVector(RawBits.size(), false));
-          EVT BVEltVT = BV1->getOperand(0).getValueType();
-          unsigned BVEltBits = BVEltVT.getSizeInBits();
           SmallVector<SDValue> Ops(DstBits.size(), getUNDEF(BVEltVT));
           for (unsigned I = 0, E = DstBits.size(); I != E; ++I) {
             if (DstUndefs[I])

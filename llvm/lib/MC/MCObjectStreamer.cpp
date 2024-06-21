@@ -175,8 +175,11 @@ void MCObjectStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
 }
 
 void MCObjectStreamer::reset() {
-  if (Assembler)
+  if (Assembler) {
     Assembler->reset();
+    if (getContext().getTargetOptions())
+      Assembler->setRelaxAll(getContext().getTargetOptions()->MCRelaxAll);
+  }
   CurInsertionPoint = MCSection::iterator();
   EmitEHFrame = true;
   EmitDebugFrame = false;
@@ -656,11 +659,6 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
                                          unsigned MaxBytesToEmit) {
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   cast<MCAlignFragment>(getCurrentFragment())->setEmitNops(true, STI);
-}
-
-void MCObjectStreamer::emitNeverAlignCodeAtEnd(unsigned ByteAlignment,
-                                               const MCSubtargetInfo &STI) {
-  insert(new MCNeverAlignFragment(ByteAlignment, STI));
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

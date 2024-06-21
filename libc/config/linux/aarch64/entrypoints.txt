@@ -516,12 +516,18 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fminimum_magf16
     libc.src.math.fminimum_mag_numf16
     libc.src.math.fminimum_numf16
+    libc.src.math.frexpf16
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
+    libc.src.math.ilogbf16
+    libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
+    libc.src.math.logbf16
     libc.src.math.lrintf16
     libc.src.math.lroundf16
+    # libc.src.math.modff16
+    libc.src.math.nanf16
     libc.src.math.nearbyintf16
     libc.src.math.nextafterf16
     libc.src.math.nextdownf16
@@ -530,6 +536,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     # clang-12 and after: https://godbolt.org/z/8ceT9454c
     # libc.src.math.nexttowardf16
     libc.src.math.nextupf16
+    libc.src.math.remainderf16
+    libc.src.math.remquof16
     libc.src.math.rintf16
     libc.src.math.roundf16
     libc.src.math.roundevenf16

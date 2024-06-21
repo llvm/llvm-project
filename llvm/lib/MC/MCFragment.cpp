@@ -39,64 +39,8 @@ MCAsmLayout::MCAsmLayout(MCAssembler &Asm) : Assembler(Asm) {
       SectionOrder.push_back(&Sec);
 }
 
-bool MCAsmLayout::isFragmentValid(const MCFragment *F) const {
-  const MCSection *Sec = F->getParent();
-  const MCFragment *LastValid = LastValidFragment.lookup(Sec);
-  if (!LastValid)
-    return false;
-  assert(LastValid->getParent() == Sec);
-  return F->getLayoutOrder() <= LastValid->getLayoutOrder();
-}
-
-bool MCAsmLayout::canGetFragmentOffset(const MCFragment *F) const {
-  MCSection *Sec = F->getParent();
-  MCSection::iterator I;
-  if (MCFragment *LastValid = LastValidFragment[Sec]) {
-    // Fragment already valid, offset is available.
-    if (F->getLayoutOrder() <= LastValid->getLayoutOrder())
-      return true;
-    I = ++MCSection::iterator(LastValid);
-  } else
-    I = Sec->begin();
-
-  // A fragment ordered before F is currently being laid out.
-  const MCFragment *FirstInvalidFragment = &*I;
-  if (FirstInvalidFragment->IsBeingLaidOut)
-    return false;
-
-  return true;
-}
-
 void MCAsmLayout::invalidateFragmentsFrom(MCFragment *F) {
-  // If this fragment wasn't already valid, we don't need to do anything.
-  if (!isFragmentValid(F))
-    return;
-
-  // Otherwise, reset the last valid fragment to the previous fragment
-  // (if this is the first fragment, it will be NULL).
-  LastValidFragment[F->getParent()] = F->getPrevNode();
-}
-
-void MCAsmLayout::ensureValid(const MCFragment *F) const {
-  MCSection *Sec = F->getParent();
-  MCSection::iterator I;
-  if (MCFragment *Cur = LastValidFragment[Sec])
-    I = ++MCSection::iterator(Cur);
-  else
-    I = Sec->begin();
-
-  // Advance the layout position until the fragment is valid.
-  while (!isFragmentValid(F)) {
-    assert(I != Sec->end() && "Layout bookkeeping error");
-    const_cast<MCAsmLayout *>(this)->layoutFragment(&*I);
-    ++I;
-  }
-}
-
-uint64_t MCAsmLayout::getFragmentOffset(const MCFragment *F) const {
-  ensureValid(F);
-  assert(F->Offset != ~UINT64_C(0) && "Address not set!");
-  return F->Offset;
+  F->getParent()->setHasLayout(false);
 }
 
 // Simple getSymbolOffset helper for the non-variable case.
@@ -258,7 +202,7 @@ void ilist_alloc_traits<MCFragment>::deleteNode(MCFragment *V) { V->destroy(); }
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        MCSection *Parent)
     : Parent(Parent), Atom(nullptr), Offset(~UINT64_C(0)), LayoutOrder(0),
-      Kind(Kind), IsBeingLaidOut(false), HasInstructions(HasInstructions) {
+      Kind(Kind), HasInstructions(HasInstructions) {
   if (Parent && !isa<MCDummyFragment>(*this))
     Parent->addFragment(*this);
 }
@@ -273,9 +217,6 @@ void MCFragment::destroy() {
   switch (Kind) {
     case FT_Align:
       delete cast<MCAlignFragment>(this);
-      return;
-    case FT_NeverAlign:
-      delete cast<MCNeverAlignFragment>(this);
       return;
     case FT_Data:
       delete cast<MCDataFragment>(this);
@@ -345,9 +286,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   OS << "<";
   switch (getKind()) {
   case MCFragment::FT_Align: OS << "MCAlignFragment"; break;
-  case MCFragment::FT_NeverAlign:
-    OS << "MCNeverAlignFragment";
-    break;
   case MCFragment::FT_Data:  OS << "MCDataFragment"; break;
   case MCFragment::FT_CompactEncodedInst:
     OS << "MCCompactEncodedInstFragment"; break;
@@ -385,12 +323,6 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     OS << " Alignment:" << AF->getAlignment().value()
        << " Value:" << AF->getValue() << " ValueSize:" << AF->getValueSize()
        << " MaxBytesToEmit:" << AF->getMaxBytesToEmit() << ">";
-    break;
-  }
-  case MCFragment::FT_NeverAlign: {
-    const MCNeverAlignFragment *NAF = cast<MCNeverAlignFragment>(this);
-    OS << "\n       ";
-    OS << " Alignment:" << NAF->getAlignment() << ">";
     break;
   }
   case MCFragment::FT_Data:  {

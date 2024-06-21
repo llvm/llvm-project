@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "flang/Runtime/reduce.h"
 #include "flang/Runtime/reduction.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
@@ -462,6 +463,106 @@ struct ForcedIParity16 {
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
       return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
                                      {ty});
+    };
+  }
+};
+
+/// Placeholder for real*10 version of Reduce Intrinsic
+struct ForcedReduceReal10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ReduceReal10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF80(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refTy = fir::ReferenceType::get(ty);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of Reduce Intrinsic
+struct ForcedReduceReal16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ReduceReal16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::FloatType::getF128(ctx);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refTy = fir::ReferenceType::get(ty);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for integer*16 version of Reduce Intrinsic
+struct ForcedReduceInteger16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(ReduceInteger16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::IntegerType::get(ctx, 128);
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refTy = fir::ReferenceType::get(ty);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty}, {ty});
+    };
+  }
+};
+
+/// Placeholder for complex(10) version of Reduce Intrinsic
+struct ForcedReduceComplex10 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF80(ctx));
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refTy = fir::ReferenceType::get(ty);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
+    };
+  }
+};
+
+/// Placeholder for complex(16) version of Reduce Intrinsic
+struct ForcedReduceComplex16 {
+  static constexpr const char *name =
+      ExpandAndQuoteKey(RTNAME(CppReduceComplex16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto ty = mlir::ComplexType::get(mlir::FloatType::getF128(ctx));
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto opTy = mlir::FunctionType::get(ctx, {ty, ty}, ty);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      auto refTy = fir::ReferenceType::get(ty);
+      auto i1Ty = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {refTy, boxTy, opTy, strTy, intTy, intTy, boxTy, refTy, i1Ty},
+          {});
     };
   }
 };
@@ -1237,3 +1338,126 @@ void fir::runtime::genIParityDim(fir::FirOpBuilder &builder, mlir::Location loc,
 /// Generate call to `IParity` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
 GEN_IALL_IANY_IPARITY(IParity)
+
+/// Generate call to `Reduce` intrinsic runtime routine. This is the version
+/// that does not take a DIM argument and store result in the passed result
+/// value.
+void fir::runtime::genReduce(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value arrayBox, mlir::Value operation,
+                             mlir::Value maskBox, mlir::Value identity,
+                             mlir::Value ordered, mlir::Value resultBox) {
+  mlir::func::FuncOp func;
+  auto ty = arrayBox.getType();
+  auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto dim = builder.createIntegerConstant(loc, builder.getI32Type(), 1);
+
+  assert(resultBox && "expect non null value for the result");
+  assert((fir::isa_char(eleTy) || fir::isa_complex(eleTy) ||
+          fir::isa_derived(eleTy)) &&
+         "expect character, complex or derived-type");
+
+  mlir::MLIRContext *ctx = builder.getContext();
+  fir::factory::CharacterExprHelper charHelper{builder, loc};
+
+  if (eleTy == fir::ComplexType::get(ctx, 2))
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex2)>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(ctx, 3))
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex3)>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(ctx, 4))
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex4)>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(ctx, 8))
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(CppReduceComplex8)>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(ctx, 10))
+    func = fir::runtime::getRuntimeFunc<ForcedReduceComplex10>(loc, builder);
+  else if (eleTy == fir::ComplexType::get(ctx, 16))
+    func = fir::runtime::getRuntimeFunc<ForcedReduceComplex16>(loc, builder);
+  else if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 1)
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceChar1)>(loc, builder);
+  else if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 2)
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceChar2)>(loc, builder);
+  else if (fir::isa_char(eleTy) && charHelper.getCharacterKind(eleTy) == 4)
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceChar4)>(loc, builder);
+  else if (fir::isa_derived(eleTy))
+    func =
+        fir::runtime::getRuntimeFunc<mkRTKey(ReduceDerivedType)>(loc, builder);
+  else
+    fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
+
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto opAddr = builder.create<fir::BoxAddrOp>(loc, fTy.getInput(2), operation);
+  auto args = fir::runtime::createArguments(
+      builder, loc, fTy, resultBox, arrayBox, opAddr, sourceFile, sourceLine,
+      dim, maskBox, identity, ordered);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// Generate call to `Reduce` intrinsic runtime routine. This is the version
+/// that does not take DIM argument and return a scalar result.
+mlir::Value fir::runtime::genReduce(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value arrayBox,
+                                    mlir::Value operation, mlir::Value maskBox,
+                                    mlir::Value identity, mlir::Value ordered) {
+  mlir::func::FuncOp func;
+  auto ty = arrayBox.getType();
+  auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  auto dim = builder.createIntegerConstant(loc, builder.getI32Type(), 1);
+
+  mlir::MLIRContext *ctx = builder.getContext();
+  fir::factory::CharacterExprHelper charHelper{builder, loc};
+
+  assert((fir::isa_real(eleTy) || fir::isa_integer(eleTy) ||
+          mlir::isa<fir::LogicalType>(eleTy)) &&
+         "expect real, interger or logical");
+
+  if (eleTy.isF16())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal2)>(loc, builder);
+  else if (eleTy.isBF16())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal3)>(loc, builder);
+  else if (eleTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal4)>(loc, builder);
+  else if (eleTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceReal8)>(loc, builder);
+  else if (eleTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedReduceReal10>(loc, builder);
+  else if (eleTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedReduceReal16>(loc, builder);
+  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger1)>(loc, builder);
+  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(2)))
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger2)>(loc, builder);
+  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(4)))
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger4)>(loc, builder);
+  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(8)))
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceInteger8)>(loc, builder);
+  else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
+    func = fir::runtime::getRuntimeFunc<ForcedReduceInteger16>(loc, builder);
+  else if (eleTy == fir::LogicalType::get(ctx, 1))
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical1)>(loc, builder);
+  else if (eleTy == fir::LogicalType::get(ctx, 2))
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical2)>(loc, builder);
+  else if (eleTy == fir::LogicalType::get(ctx, 4))
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical4)>(loc, builder);
+  else if (eleTy == fir::LogicalType::get(ctx, 8))
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ReduceLogical8)>(loc, builder);
+  else
+    fir::intrinsicTypeTODO(builder, eleTy, loc, "REDUCE");
+
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
+  auto opAddr = builder.create<fir::BoxAddrOp>(loc, fTy.getInput(1), operation);
+  auto args = fir::runtime::createArguments(builder, loc, fTy, arrayBox, opAddr,
+                                            sourceFile, sourceLine, dim,
+                                            maskBox, identity, ordered);
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}

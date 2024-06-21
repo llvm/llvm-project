@@ -91,6 +91,8 @@ class SparcAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseASITag(OperandVector &Operands);
 
+  ParseStatus parsePrefetchTag(OperandVector &Operands);
+
   template <TailRelocKind Kind>
   ParseStatus parseTailRelocSym(OperandVector &Operands);
 
@@ -209,7 +211,8 @@ private:
     k_Immediate,
     k_MemoryReg,
     k_MemoryImm,
-    k_ASITag
+    k_ASITag,
+    k_PrefetchTag,
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -240,6 +243,7 @@ private:
     struct ImmOp Imm;
     struct MemOp Mem;
     unsigned ASI;
+    unsigned Prefetch;
   };
 
 public:
@@ -253,6 +257,7 @@ public:
   bool isMEMri() const { return Kind == k_MemoryImm; }
   bool isMembarTag() const { return Kind == k_Immediate; }
   bool isASITag() const { return Kind == k_ASITag; }
+  bool isPrefetchTag() const { return Kind == k_PrefetchTag; }
   bool isTailRelocSym() const { return Kind == k_Immediate; }
 
   bool isCallTarget() const {
@@ -337,6 +342,11 @@ public:
     return ASI;
   }
 
+  unsigned getPrefetchTag() const {
+    assert((Kind == k_PrefetchTag) && "Invalid access!");
+    return Prefetch;
+  }
+
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override {
     return StartLoc;
@@ -359,6 +369,9 @@ public:
          << "\n"; break;
     case k_ASITag:
       OS << "ASI tag: " << getASITag() << "\n";
+      break;
+    case k_PrefetchTag:
+      OS << "Prefetch tag: " << getPrefetchTag() << "\n";
       break;
     }
   }
@@ -416,6 +429,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getASITag()));
   }
 
+  void addPrefetchTagOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getPrefetchTag()));
+  }
+
   void addMembarTagOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const MCExpr *Expr = getImm();
@@ -464,6 +482,15 @@ public:
                                                     SMLoc E) {
     auto Op = std::make_unique<SparcOperand>(k_ASITag);
     Op->ASI = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = E;
+    return Op;
+  }
+
+  static std::unique_ptr<SparcOperand> CreatePrefetchTag(unsigned Val, SMLoc S,
+                                                         SMLoc E) {
+    auto Op = std::make_unique<SparcOperand>(k_PrefetchTag);
+    Op->Prefetch = Val;
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -1085,6 +1112,44 @@ ParseStatus SparcAsmParser::parseASITag(OperandVector &Operands) {
   }
 
   Operands.push_back(SparcOperand::CreateASITag(ASIVal, S, E));
+  return ParseStatus::Success;
+}
+
+ParseStatus SparcAsmParser::parsePrefetchTag(OperandVector &Operands) {
+  SMLoc S = Parser.getTok().getLoc();
+  SMLoc E = Parser.getTok().getEndLoc();
+  int64_t PrefetchVal = 0;
+
+  switch (getLexer().getKind()) {
+  case AsmToken::LParen:
+  case AsmToken::Integer:
+  case AsmToken::Identifier:
+  case AsmToken::Plus:
+  case AsmToken::Minus:
+  case AsmToken::Tilde:
+    if (getParser().parseAbsoluteExpression(PrefetchVal) ||
+        !isUInt<5>(PrefetchVal))
+      return Error(S, "invalid prefetch number, must be between 0 and 31");
+    break;
+  case AsmToken::Hash: {
+    SMLoc TagStart = getLexer().peekTok(false).getLoc();
+    Parser.Lex(); // Eat the '#'.
+    const StringRef PrefetchName = Parser.getTok().getString();
+    const SparcPrefetchTag::PrefetchTag *PrefetchTag =
+        SparcPrefetchTag::lookupPrefetchTagByName(PrefetchName);
+    Parser.Lex(); // Eat the identifier token.
+
+    if (!PrefetchTag)
+      return Error(TagStart, "unknown prefetch tag");
+
+    PrefetchVal = PrefetchTag->Encoding;
+    break;
+  }
+  default:
+    return ParseStatus::NoMatch;
+  }
+
+  Operands.push_back(SparcOperand::CreatePrefetchTag(PrefetchVal, S, E));
   return ParseStatus::Success;
 }
 
