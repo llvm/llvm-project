@@ -3082,9 +3082,9 @@ multiclass MUBUF_Real_vi_gfx90a<bits<7> op, bit isTFE = 0> : MUBUF_Real_vi<op> {
   }
 
   if ps.FPAtomic then {
-    let SubtargetPredicate = isGFX90AOnly,
-        AssemblerPredicate = isGFX90AOnly in
-    defm NAME : MUBUF_Real_gfx90a<op, 0>;
+    let AssemblerPredicate = isGFX90AOnly in
+      defm NAME : MUBUF_Real_gfx90a<op, 0>;
+
     def _gfx940 : MUBUF_Real_gfx940<op, ps>;
   }
 }
