@@ -1893,7 +1893,8 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
     SPIRVType *OpDefine = MRI->getVRegDef(OpReg);
     SPIRVType *OpType = GR.getSPIRVTypeForVReg(OpReg);
     if (!OpDefine || !OpType || isConstReg(MRI, OpDefine) ||
-        OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST) {
+        OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
+        GR.isAggregateType(OpType)) {
       // The case of G_ADDRSPACE_CAST inside spv_const_composite() is processed
       // by selectAddrSpaceCast()
       CompositeArgs.push_back(OpReg);
