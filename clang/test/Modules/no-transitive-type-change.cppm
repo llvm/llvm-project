@@ -1,4 +1,4 @@
-// Testing that adding an new identifier in an unused module file won't change 
+// Testing that changing a type in an unused module file won't change 
 // the BMI of the current module file.
 //
 // RUN: rm -rf %t
@@ -29,55 +29,27 @@
 // RUN: %clang_cc1 -std=c++20 %t/useAOnly.cppm -emit-reduced-module-interface -o %t/useAOnly.v1.pcm \
 // RUN:     -fmodule-file=m=%t/m.v1.pcm -fmodule-file=m:partA=%t/m-partA.v1.pcm \
 // RUN:     -fmodule-file=m:partB=%t/m-partB.pcm
-// useAOnly should differ
+// Since useAOnly uses partA from module M, the change in partA should affect useAOnly.
 // RUN: not diff %t/useAOnly.pcm %t/useAOnly.v1.pcm &> /dev/null
 
 //--- m-partA.cppm
 export module m:partA;
 
-export inline int getA() {
-    return 43;
-}
-
-export class A {
-public:
-    int getMem();
-};
-
-export template <typename T>
-class ATempl {
-public:
-    T getT();
-};
+export int getValueFromA() { return 43; }
 
 //--- m-partA.v1.cppm
 export module m:partA;
 
-export inline int getA() {
-    return 43;
+export int getValueFromA() { return 43; }
+
+namespace NS {
+    class A {
+        public:
+            int getValue() {
+                return 43;
+            }
+    };
 }
-
-// The consuming module which didn't use m:partA completely is expected to be
-// not changed.
-export inline int getA2() {
-    return 88;
-}
-
-export class A {
-public:
-    int getMem();
-
-    // The consuming module which didn't use m:partA completely is expected to be
-    // not changed.
-    int getMem2();
-};
-
-export template <typename T>
-class ATempl {
-public:
-    T getT();
-    T getT2();
-};
 
 //--- m-partB.cppm
 export module m:partB;
@@ -104,5 +76,5 @@ export module useAOnly;
 import m;
 
 export inline int get() {
-    return getA();
+    return getValueFromA();
 }
