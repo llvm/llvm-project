@@ -283,7 +283,9 @@ static const LLT S1 = LLT::scalar(1);
 static const LLT S8 = LLT::scalar(8);
 static const LLT S16 = LLT::scalar(16);
 static const LLT S32 = LLT::scalar(32);
+static const LLT F32 = LLT::float32();
 static const LLT S64 = LLT::scalar(64);
+static const LLT F64 = LLT::float64();
 static const LLT S96 = LLT::scalar(96);
 static const LLT S128 = LLT::scalar(128);
 static const LLT S160 = LLT::scalar(160);
@@ -1648,6 +1650,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   if (ST.hasFlatAtomicFaddF32Inst())
     Atomic.legalFor({{S32, FlatPtr}});
 
+  getActionDefinitionsBuilder({G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAX})
+    .legalFor({{F32, LocalPtr}, {F64, LocalPtr}});
+
   if (ST.hasGFX90AInsts()) {
     // These are legal with some caveats, and should have undergone expansion in
     // the IR in most situations
@@ -1658,6 +1663,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         {S64, FlatPtr}
       });
   }
+
+  if (ST.hasAtomicBufferGlobalPkAddF16Insts())
+    Atomic.legalFor({{V2F16, GlobalPtr}});
+  if (ST.hasAtomicGlobalPkAddBF16Inst())
+    Atomic.legalFor({{V2BF16, GlobalPtr}});
+  if (ST.hasAtomicFlatPkAdd16Insts())
+    Atomic.legalFor({{V2F16, FlatPtr}, {V2BF16, FlatPtr}});
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling, and output
   // demarshalling
@@ -5394,9 +5406,9 @@ static unsigned getDSFPAtomicOpcode(Intrinsic::ID IID) {
   case Intrinsic::amdgcn_ds_fadd:
     return AMDGPU::G_ATOMICRMW_FADD;
   case Intrinsic::amdgcn_ds_fmin:
-    return AMDGPU::G_AMDGPU_ATOMIC_FMIN;
+    return AMDGPU::G_ATOMICRMW_FMIN;
   case Intrinsic::amdgcn_ds_fmax:
-    return AMDGPU::G_AMDGPU_ATOMIC_FMAX;
+    return AMDGPU::G_ATOMICRMW_FMAX;
   default:
     llvm_unreachable("not a DS FP intrinsic");
   }
@@ -6011,9 +6023,6 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD;
-  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
-    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD_BF16;
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmin:
@@ -7321,10 +7330,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
-  case Intrinsic::amdgcn_raw_buffer_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_struct_buffer_atomic_fadd_v2bf16:
-  case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd_v2bf16:
     return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
