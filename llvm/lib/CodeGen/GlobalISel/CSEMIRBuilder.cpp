@@ -245,6 +245,8 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   case TargetOpcode::G_FMAXNUM_IEEE:
   case TargetOpcode::G_FMINIMUM:
   case TargetOpcode::G_FMAXIMUM:
+  case TargetOpcode::G_FMINIMUMNUM:
+  case TargetOpcode::G_FMAXIMUMNUM:
   case TargetOpcode::G_FCOPYSIGN: {
     // Try to constant fold these.
     assert(SrcOps.size() == 2 && "Invalid sources");
