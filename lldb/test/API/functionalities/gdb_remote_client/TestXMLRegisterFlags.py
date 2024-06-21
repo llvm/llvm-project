@@ -936,13 +936,14 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
     @skipIfRemote
     def test_evalue_value_limits(self):
         """Check that lldb can handle an evalue for a field up to 64 bits
-        in size."""
+        in size and anything greater is ignored."""
 
         self.setup_register_test(
             """\
           <enum id="some_enum" size="8">
             <evalue name="min" value="0"/>
             <evalue name="max" value="0xffffffffffffffff"/>
+            <evalue name="invalid" value="0xfffffffffffffffff"/>
           </enum>
           <flags id="x0_flags" size="8">
             <field name="foo" start="0" end="63" type="some_enum"/>
