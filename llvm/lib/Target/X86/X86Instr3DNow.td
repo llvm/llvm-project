@@ -27,19 +27,26 @@ class I3DNow_conv<bits<8> o, Format F, dag ins, string Mnemonic, list<dag> pat>
 
 multiclass I3DNow_binop_rm<bits<8> opc, string Mn,
                            X86FoldableSchedWrite sched, bit Commutable = 0> {
-  let isCommutable = Commutable in
-  def rr : I3DNow_binop<opc, MRMSrcReg, (ins VR64:$src1, VR64:$src2), Mn,
-    []>, Sched<[sched]>;
-  def rm : I3DNow_binop<opc, MRMSrcMem, (ins VR64:$src1, i64mem:$src2), Mn,
-    []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
+  let mayStore=0, hasSideEffects=0 in {
+    let isCommutable = Commutable, mayLoad=0 in
+    def rr : I3DNow_binop<opc, MRMSrcReg, (ins VR64:$src1, VR64:$src2), Mn,
+      []>, Sched<[sched]>;
+    let mayLoad=1 in
+    def rm : I3DNow_binop<opc, MRMSrcMem, (ins VR64:$src1, i64mem:$src2), Mn,
+      []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
+  }
 }
 
 multiclass I3DNow_conv_rm<bits<8> opc, string Mn,
                               X86FoldableSchedWrite sched> {
-  def rr : I3DNow_conv<opc, MRMSrcReg, (ins VR64:$src), Mn,
-    []>, Sched<[sched]>;
-  def rm : I3DNow_conv<opc, MRMSrcMem, (ins i64mem:$src), Mn,
-    []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
+  let mayStore=0, hasSideEffects=0 in {
+    let mayLoad=0 in
+    def rr : I3DNow_conv<opc, MRMSrcReg, (ins VR64:$src), Mn,
+      []>, Sched<[sched]>;
+    let mayLoad=1 in
+    def rm : I3DNow_conv<opc, MRMSrcMem, (ins i64mem:$src), Mn,
+      []>, Sched<[sched.Folded, sched.ReadAfterFold]>;
+  }
 }
 
 defm PAVGUSB  : I3DNow_binop_rm<0xBF, "pavgusb", SchedWriteVecALU.MMX, 1>;
@@ -62,11 +69,11 @@ defm PFSUBR   : I3DNow_binop_rm<0xAA, "pfsubr", WriteFAdd, 1>;
 defm PI2FD    : I3DNow_conv_rm<0x0D, "pi2fd", WriteCvtI2PS>;
 defm PMULHRW  : I3DNow_binop_rm<0xB7, "pmulhrw", SchedWriteVecIMul.MMX, 1>;
 
-let SchedRW = [WriteEMMS] in
+let SchedRW = [WriteEMMS], mayLoad=1, mayStore=1, hasSideEffects=1 in
 def FEMMS : I3DNow<0x0E, RawFrm, (outs), (ins), "femms",
                    []>, TB;
 
-let SchedRW = [WriteLoad] in {
+let SchedRW = [WriteLoad], mayLoad=1, mayStore=1, hasSideEffects=0 in {
 def PREFETCH : I3DNow<0x0D, MRM0m, (outs), (ins i8mem:$addr),
                       "prefetch\t$addr",
                       []>, TB;
