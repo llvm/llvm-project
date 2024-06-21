@@ -1987,8 +1987,8 @@ bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
                                                      bool Imm32Only,
                                                      bool IsBuffer,
                                                      int64_t ImmOffset) const {
-  if (AMDGPU::hasSMRDSignedImmOffset(*Subtarget) && !IsBuffer & !Imm32Only &&
-      ImmOffset < 0) {
+  if (!IsBuffer && !Imm32Only && ImmOffset < 0 &&
+      AMDGPU::hasSMRDSignedImmOffset(*Subtarget)) {
     KnownBits SKnown = CurDAG->computeKnownBits(*SOffset);
     if (ImmOffset + SKnown.getMinValue().getSExtValue() < 0)
       return false;
