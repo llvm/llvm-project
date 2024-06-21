@@ -647,6 +647,8 @@ Improvements to Clang's diagnostics
 
 - Clang now shows implicit deduction guides when diagnosing overload resolution failure. #GH92393.
 
+- Clang now emits ``-Wnewline-eof`` when the last newline is deleted by a preceding backslash.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
