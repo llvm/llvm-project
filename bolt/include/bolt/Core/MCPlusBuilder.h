@@ -439,7 +439,20 @@ public:
   }
 
   /// Check whether this conditional branch can be reversed
-  virtual bool isReversibleBranch(const MCInst &Inst) const { return true; }
+  virtual bool isReversibleBranch(const MCInst &Inst) const {
+    assert(!isUnsupportedInstruction(Inst) && isConditionalBranch(Inst) &&
+           "Instruction is not known conditional branch");
+
+    if (isDynamicBranch(Inst))
+      return false;
+    return true;
+  }
+
+  /// Return true if this instruction inhibits analysis of the containing
+  /// function.
+  virtual bool isUnsupportedInstruction(const MCInst &Inst) const {
+    return false;
+  }
 
   /// Return true of the instruction is of pseudo kind.
   virtual bool isPseudo(const MCInst &Inst) const {
