@@ -128,6 +128,11 @@ public:
         register_backup_sp; // You need to restore the registers, of course...
     uint32_t current_inlined_depth;
     lldb::addr_t current_inlined_pc;
+    lldb::addr_t
+        hit_bp_at_addr; // Set to the address of a breakpoint that we have hit.
+    lldb::addr_t bpsite_at_stop_pc; // Set to the address of a breakpoint
+                                    // instruction that we have not yet hit, but
+                                    // will hit when we resume.
   };
 
   /// Constructor
@@ -376,6 +381,19 @@ public:
   }
 
   virtual void SetQueueLibdispatchQueueAddress(lldb::addr_t dispatch_queue_t) {}
+
+  /// When a thread has executed/trapped a breakpoint, set the address of that
+  /// breakpoint so we know it has been hit already, and should be silently
+  /// stepped past on resume.
+  void SetThreadHitBreakpointAtAddr(lldb::addr_t pc) { m_hit_bp_at_addr = pc; }
+
+  /// When a thread stops at a breakpoint instruction/address, but has not yet
+  /// executed/triggered it, record that so we can detect when a user adds a
+  /// breakpoint (or changes a thread to a breakpoint site) and we need to
+  /// silently step past that when resuming.
+  void SetThreadStoppedAtBreakpointSite(lldb::addr_t pc) {
+    m_bpsite_at_stop_pc = pc;
+  }
 
   /// Whether this Thread already has all the Queue information cached or not
   ///
@@ -1311,6 +1329,17 @@ protected:
   bool m_should_run_before_public_stop;  // If this thread has "stop others" 
                                          // private work to do, then it will
                                          // set this.
+  lldb::addr_t m_hit_bp_at_addr;    // If this thread originally stopped at a
+                                    // breakpoint instruction, AND HIT IT,
+                                    // record the address of that breakpoint.
+                                    // LLDB_INVALID_ADDRESS if this thread did
+                                    // not stop at a breakpoint insn, or did not
+                                    // hit it yet.
+  lldb::addr_t m_bpsite_at_stop_pc; // If this thread originally stopped at a
+                                    // breakpoint site, record the address of
+                                    // that breakpoint site.
+                                    // LLDB_INVALID_ADDRESS if this thread did
+                                    // not stop at a breakpoint site.
   const uint32_t m_index_id; ///< A unique 1 based index assigned to each thread
                              /// for easy UI/command line access.
   lldb::RegisterContextSP m_reg_context_sp; ///< The register context for this

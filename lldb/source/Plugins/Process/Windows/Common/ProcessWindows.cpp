@@ -382,19 +382,8 @@ void ProcessWindows::RefreshStateAfterStop() {
     RegisterContextSP register_context = stop_thread->GetRegisterContext();
     const uint64_t pc = register_context->GetPC();
     BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-    if (site && site->ValidForThisThread(*stop_thread)) {
-      LLDB_LOG(log,
-               "Single-stepped onto a breakpoint in process {0} at "
-               "address {1:x} with breakpoint site {2}",
-               m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
-               site->GetID());
-      stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(*stop_thread,
-                                                                 site->GetID());
-      stop_thread->SetStopInfo(stop_info);
-
-      return;
-    }
-
+    if (site)
+      stop_thread->SetThreadStoppedAtBreakpointSite(pc);
     auto *reg_ctx = static_cast<RegisterContextWindows *>(
         stop_thread->GetRegisterContext().get());
     uint32_t slot_id = reg_ctx->GetTriggeredHardwareBreakpointSlotId();
@@ -462,6 +451,7 @@ void ProcessWindows::RefreshStateAfterStop() {
         stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(
             *stop_thread, site->GetID());
         register_context->SetPC(pc);
+        stop_thread->SetThreadHitBreakpointAtAddr(pc);
       } else {
         LLDB_LOG(log,
                  "Breakpoint site {0} is not valid for this thread, "

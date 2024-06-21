@@ -217,6 +217,8 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
       m_process_wp(process.shared_from_this()), m_stop_info_sp(),
       m_stop_info_stop_id(0), m_stop_info_override_stop_id(0),
       m_should_run_before_public_stop(false),
+      m_hit_bp_at_addr(LLDB_INVALID_ADDRESS),
+      m_bpsite_at_stop_pc(LLDB_INVALID_ADDRESS),
       m_index_id(use_invalid_index_id ? LLDB_INVALID_INDEX32
                                       : process.GetNextThreadIndexID(tid)),
       m_reg_context_sp(), m_state(eStateUnloaded), m_state_mutex(),
@@ -519,6 +521,8 @@ bool Thread::CheckpointThreadState(ThreadStateCheckpoint &saved_state) {
   saved_state.current_inlined_depth = GetCurrentInlinedDepth();
   saved_state.m_completed_plan_checkpoint =
       GetPlans().CheckpointCompletedPlans();
+  saved_state.hit_bp_at_addr = m_hit_bp_at_addr;
+  saved_state.bpsite_at_stop_pc = m_bpsite_at_stop_pc;
 
   return true;
 }
@@ -554,6 +558,8 @@ void Thread::RestoreThreadStateFromCheckpoint(
       saved_state.current_inlined_depth);
   GetPlans().RestoreCompletedPlanCheckpoint(
       saved_state.m_completed_plan_checkpoint);
+  m_hit_bp_at_addr = saved_state.hit_bp_at_addr;
+  m_bpsite_at_stop_pc = saved_state.bpsite_at_stop_pc;
 }
 
 StateType Thread::GetState() const {
@@ -622,7 +628,12 @@ void Thread::SetupForResume() {
       const addr_t thread_pc = reg_ctx_sp->GetPC();
       BreakpointSiteSP bp_site_sp =
           GetProcess()->GetBreakpointSiteList().FindByAddress(thread_pc);
-      if (bp_site_sp) {
+      // Only step over a breakpoint if the thread stopped by hitting the
+      // BreakpointSite at this pc value, or if we're at a breakpoint site
+      // that was added at this pc while stopped/we jumped to a breakpoint
+      // site.
+      if (bp_site_sp &&
+          (thread_pc == m_hit_bp_at_addr || thread_pc != m_bpsite_at_stop_pc)) {
         // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
         // target may not require anything special to step over a breakpoint.
 
@@ -711,6 +722,8 @@ bool Thread::ShouldResume(StateType resume_state) {
 
   if (need_to_resume) {
     ClearStackFrames();
+    m_hit_bp_at_addr = LLDB_INVALID_ADDRESS;
+    m_bpsite_at_stop_pc = LLDB_INVALID_ADDRESS;
     // Let Thread subclasses do any special work they need to prior to resuming
     WillResume(resume_state);
   }
@@ -1894,6 +1907,8 @@ Unwind &Thread::GetUnwinder() {
 void Thread::Flush() {
   ClearStackFrames();
   m_reg_context_sp.reset();
+  m_hit_bp_at_addr = LLDB_INVALID_ADDRESS;
+  m_bpsite_at_stop_pc = LLDB_INVALID_ADDRESS;
 }
 
 bool Thread::IsStillAtLastBreakpointHit() {
