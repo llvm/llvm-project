@@ -3966,10 +3966,10 @@ foldICmpOfCmpIntrinsicWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *I,
     return nullptr;
 
   if (I->getIntrinsicID() == Intrinsic::scmp)
-    NewPredicate = ICmpInst::getSignedPredicate(NewPredicate.value());
+    NewPredicate = ICmpInst::getSignedPredicate(*NewPredicate);
   Value *LHS = I->getOperand(0);
   Value *RHS = I->getOperand(1);
-  return new ICmpInst(NewPredicate.value(), LHS, RHS);
+  return new ICmpInst(*NewPredicate, LHS, RHS);
 }
 
 /// Fold an icmp with LLVM intrinsic and constant operand: icmp Pred II, C.
