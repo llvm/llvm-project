@@ -29,8 +29,9 @@ Status ExpressionParser::PrepareForExecution(
   return status;
 }
 
-Status ExpressionParser::RunStaticInitializers(
-    IRExecutionUnitSP &execution_unit_sp, ExecutionContext &exe_ctx) {
+Status
+ExpressionParser::RunStaticInitializers(IRExecutionUnitSP &execution_unit_sp,
+                                        ExecutionContext &exe_ctx) {
   Status err;
 
   if (!execution_unit_sp.get()) {
