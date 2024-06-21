@@ -108,10 +108,6 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     for (Attribute attr : files.getValue())
       if (auto file = dyn_cast<StringAttr>(attr))
         fileList.push_back(file.str());
-
-  // By default add all libraries if the toolkit path is not empty.
-  if (!getToolkitPath().empty())
-    deviceLibs = AMDGCNLibraries::All;
 }
 
 void SerializeGPUModuleBase::init() {
@@ -149,8 +145,8 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
 
   // Fail if the path is invalid.
   if (!llvm::sys::fs::is_directory(pathRef)) {
-    getOperation().emitRemark() << "ROCm amdgcn bitcode path: " << pathRef
-                                << " does not exist or is not a directory";
+    getOperation().emitError() << "ROCm amdgcn bitcode path: " << pathRef
+                               << " does not exist or is not a directory";
     return failure();
   }
 
@@ -227,6 +223,8 @@ void SerializeGPUModuleBase::handleModulePreLink(llvm::Module &module) {
           deviceLibs |= AMDGCNLibraries::Ockl;
         if (funcName.starts_with("__ocml_"))
           deviceLibs |= AMDGCNLibraries::Ocml;
+        if (funcName == "__atomic_work_item_fence")
+          deviceLibs |= AMDGCNLibraries::Hip;
       }
     }
   }
