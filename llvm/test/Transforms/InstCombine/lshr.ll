@@ -739,7 +739,7 @@ define i32 @mul_splat_fold_wrong_lshr_const(i32 %x) {
   ret i32 %t
 }
 
-define i32 @mul_splat_fold_no_nuw(i32 %x) {
+define i32 @mul_splat_fold_no_nuw(i32 noundef %x) {
 ; CHECK-LABEL: @mul_splat_fold_no_nuw(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 16
 ; CHECK-NEXT:    [[T:%.*]] = add nsw i32 [[TMP1]], [[X]]
