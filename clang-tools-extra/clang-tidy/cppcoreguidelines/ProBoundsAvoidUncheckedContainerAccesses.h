@@ -1,4 +1,4 @@
-//===--- PreferAtOverSubscriptOperatorCheck.h - clang-tidy ------*- C++ -*-===//
+//===--- ProBoundsAvoidUncheckedContainerAccesses.h - clang-tidy *- C++ -*-===//
 //===--- PreferMemberInitializerCheck.h - clang-tidy ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PREFERATOVERSUBSCRIPTOPERATORCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PREFERATOVERSUBSCRIPTOPERATORCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESSES_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESSES_H
 
 #include "../ClangTidyCheck.h"
 
@@ -19,10 +19,11 @@ namespace clang::tidy::cppcoreguidelines {
 /// See
 /// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/prefer-at-over-subscript-operator.html
-class PreferAtOverSubscriptOperatorCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses.html
+class ProBoundsAvoidUncheckedContainerAccesses : public ClangTidyCheck {
 public:
-  PreferAtOverSubscriptOperatorCheck(StringRef Name, ClangTidyContext *Context);
+  ProBoundsAvoidUncheckedContainerAccesses(StringRef Name,
+                                           ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -37,4 +38,4 @@ private:
 
 } // namespace clang::tidy::cppcoreguidelines
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PREFERATOVERSUBSCRIPTOPERATORCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESSES_H

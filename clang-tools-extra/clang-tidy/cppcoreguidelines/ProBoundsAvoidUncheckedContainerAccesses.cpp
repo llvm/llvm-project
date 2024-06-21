@@ -1,4 +1,4 @@
-//===--- PreferAtOverSubscriptOperatorCheck.cpp - clang-tidy --------------===//
+//===--- ProBoundsAvoidUncheckedContainerAccesses.cpp - clang-tidy --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PreferAtOverSubscriptOperatorCheck.h"
+#include "ProBoundsAvoidUncheckedContainerAccesses.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -21,8 +21,9 @@ static constexpr std::array<llvm::StringRef, 3> DefaultExclusions = {
     llvm::StringRef("::std::map"), llvm::StringRef("::std::unordered_map"),
     llvm::StringRef("::std::flat_map")};
 
-PreferAtOverSubscriptOperatorCheck::PreferAtOverSubscriptOperatorCheck(
-    StringRef Name, ClangTidyContext *Context)
+ProBoundsAvoidUncheckedContainerAccesses::
+    ProBoundsAvoidUncheckedContainerAccesses(StringRef Name,
+                                             ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {
 
   ExcludedClasses = clang::tidy::utils::options::parseStringList(
@@ -31,7 +32,7 @@ PreferAtOverSubscriptOperatorCheck::PreferAtOverSubscriptOperatorCheck(
                          DefaultExclusions.end());
 }
 
-void PreferAtOverSubscriptOperatorCheck::storeOptions(
+void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
 
   if (ExcludedClasses.size() == DefaultExclusions.size()) {
@@ -83,7 +84,8 @@ const CXXMethodDecl *findAlternative(const CXXRecordDecl *MatchedParent,
   return static_cast<CXXMethodDecl *>(nullptr);
 }
 
-void PreferAtOverSubscriptOperatorCheck::registerMatchers(MatchFinder *Finder) {
+void ProBoundsAvoidUncheckedContainerAccesses::registerMatchers(
+    MatchFinder *Finder) {
   // Need a callExpr here to match CXXOperatorCallExpr ``(&a)->operator[](0)``
   // and CXXMemberCallExpr ``a[0]``.
   Finder->addMatcher(
@@ -97,7 +99,7 @@ void PreferAtOverSubscriptOperatorCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void PreferAtOverSubscriptOperatorCheck::check(
+void ProBoundsAvoidUncheckedContainerAccesses::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("caller");
   const auto *MatchedOperator =
