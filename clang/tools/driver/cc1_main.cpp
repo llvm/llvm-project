@@ -167,6 +167,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Cratels: 编译器实例，类似 clang 编译器的上下文
   // clang-format off
   // Cratels: 单例模式，此处创建后后续就可以直接使用 getCompilerInstance 来获得对象
+  // 编译器实例最终会拥有一次编译过程的所有信息，包括源代码路径，用户输入的options等所有信息
   // clang-format on
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
 
@@ -197,8 +198,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Cratels: 解析参数，将参数解析之后塞进 Clang
   // clang-format off
   // Cratels: Invocation就是 option
-  // clang-format on
   // 实例中，可见后续Clang->getFrontendOpts()，Clang->getHeaderSearchOpts()等操作
+  // 这里CreateFromArgs实际返回值是bool是用来显示创建过程是否正确，实际代码的side effect是改变了Clang->getInvocation()
+  // 经过该方法调用后用户调用编译时的option等信息就写入到了Clang对象中，比如源码路径，include路径，options（包括Action种类）等信息。
+  // clang-format on
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
 
@@ -208,8 +211,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0);
   }
   // --print-supported-cpus takes priority over the actual compilation.
-  if (Clang->getFrontendOpts().PrintSupportedCPUs)
+  if (Clang->getFrontendOpts().PrintSupportedCPUs) {
+    llvm::outs() << Clang->getTargetOpts().Triple;
     return PrintSupportedCPUs(Clang->getTargetOpts().Triple);
+  }
 
   // --print-supported-extensions takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedExtensions)
@@ -242,6 +247,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   {
     llvm::TimeTraceScope TimeScope("ExecuteCompiler");
     llvm::outs() << "开始执行真正的前端解析动作......\n";
+    // clang-format off
+    // Cratels: 上面的步骤初始化了Clang对象持有的CompilerInvocation对象，并且为其准备了一次编译的所有信息，在这里就是执行这个CompilerInvocation，即执行这一次编译。
+    // clang-format on
     Success = ExecuteCompilerInvocation(Clang.get());
   }
 

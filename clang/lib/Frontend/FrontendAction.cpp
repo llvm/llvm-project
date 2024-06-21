@@ -131,9 +131,8 @@ public:
   void DeclRead(GlobalDeclID ID, const Decl *D) override {
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
       if (NamesToCheck.find(ND->getNameAsString()) != NamesToCheck.end()) {
-        unsigned DiagID
-          = Ctx.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Error,
-                                                 "%0 was deserialized");
+        unsigned DiagID = Ctx.getDiagnostics().getCustomDiagID(
+            DiagnosticsEngine::Error, "%0 was deserialized");
         Ctx.getDiagnostics().Report(Ctx.getFullLoc(D->getLocation()), DiagID)
             << ND;
       }
@@ -157,7 +156,7 @@ void FrontendAction::setCurrentInput(const FrontendInputFile &CurrentInput,
 Module *FrontendAction::getCurrentModule() const {
   CompilerInstance &CI = getCompilerInstance();
   return CI.getPreprocessor().getHeaderSearchInfo().lookupModule(
-      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch*/false);
+      CI.getLangOpts().CurrentModule, SourceLocation(), /*AllowSearch*/ false);
 }
 
 std::unique_ptr<ASTConsumer>
@@ -217,7 +216,8 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
         P->ParseArgs(
             CI,
             CI.getFrontendOpts().PluginArgs[std::string(Plugin.getName())])) {
-      std::unique_ptr<ASTConsumer> PluginConsumer = P->CreateASTConsumer(CI, InFile);
+      std::unique_ptr<ASTConsumer> PluginConsumer =
+          P->CreateASTConsumer(CI, InFile);
       if (ActionType == PluginASTAction::AddBeforeMainAction) {
         Consumers.push_back(std::move(PluginConsumer));
       } else {
@@ -303,16 +303,15 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
   return T.getLocation();
 }
 
-static SmallVectorImpl<char> &
-operator+=(SmallVectorImpl<char> &Includes, StringRef RHS) {
+static SmallVectorImpl<char> &operator+=(SmallVectorImpl<char> &Includes,
+                                         StringRef RHS) {
   Includes.append(RHS.begin(), RHS.end());
   return Includes;
 }
 
 static void addHeaderInclude(StringRef HeaderName,
                              SmallVectorImpl<char> &Includes,
-                             const LangOptions &LangOpts,
-                             bool IsExternC) {
+                             const LangOptions &LangOpts, bool IsExternC) {
   if (IsExternC && LangOpts.CPlusPlus)
     Includes += "extern \"C\" {\n";
   if (LangOpts.ObjC)
@@ -352,7 +351,7 @@ static std::error_code collectModuleHeaderIncludes(
   if (!Module->MissingHeaders.empty()) {
     auto &MissingHeader = Module->MissingHeaders.front();
     Diag.Report(MissingHeader.FileNameLoc, diag::err_module_header_missing)
-      << MissingHeader.IsUmbrella << MissingHeader.FileName;
+        << MissingHeader.IsUmbrella << MissingHeader.FileName;
     return std::error_code();
   }
 
@@ -504,7 +503,7 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
                               /*AllowSearch=*/true);
   if (!M) {
     CI.getDiagnostics().Report(diag::err_missing_module)
-      << CI.getLangOpts().CurrentModule << ModuleMapFilename;
+        << CI.getLangOpts().CurrentModule << ModuleMapFilename;
 
     return nullptr;
   }
@@ -529,7 +528,7 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
                                                /*openFile*/ true);
     if (!OriginalModuleMap) {
       CI.getDiagnostics().Report(diag::err_module_map_not_found)
-        << OriginalModuleMapName;
+          << OriginalModuleMapName;
       return nullptr;
     }
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
@@ -575,7 +574,7 @@ getInputBufferForModule(CompilerInstance &CI, Module *M) {
 
   if (Err) {
     CI.getDiagnostics().Report(diag::err_module_cannot_create_includes)
-      << M->getFullModuleName() << Err.message();
+        << M->getFullModuleName() << Err.message();
     return nullptr;
   }
 
@@ -616,10 +615,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
 
     // The AST unit populates its own diagnostics engine rather than ours.
-    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(
-        new DiagnosticsEngine(Diags->getDiagnosticIDs(),
-                              &Diags->getDiagnosticOptions()));
-    ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
+    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(new DiagnosticsEngine(
+        Diags->getDiagnosticIDs(), &Diags->getDiagnosticOptions()));
+    ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/ false);
 
     // FIXME: What if the input is a memory buffer?
     StringRef InputFile = Input.getFile();
@@ -747,7 +745,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // Set up embedding for any specified files. Do this before we load any
   // source files, including the primary module map for the compilation.
   for (const auto &F : CI.getFrontendOpts().ModulesEmbedFiles) {
-    if (auto FE = CI.getFileManager().getOptionalFileRef(F, /*openFile*/true))
+    if (auto FE = CI.getFileManager().getOptionalFileRef(F, /*openFile*/ true))
       CI.getSourceManager().setFileIsTransient(*FE);
     else
       CI.getDiagnostics().Report(diag::err_modules_embed_file_not_found) << F;
@@ -926,7 +924,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   for (const auto &Filename : CI.getFrontendOpts().ModuleMapFiles) {
     if (auto File = CI.getFileManager().getOptionalFileRef(Filename))
       CI.getPreprocessor().getHeaderSearchInfo().loadModuleMapFile(
-          *File, /*IsSystem*/false);
+          *File, /*IsSystem*/ false);
     else
       CI.getDiagnostics().Report(diag::err_module_map_not_found) << Filename;
   }
@@ -961,7 +959,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // FIXME: should not overwrite ASTMutationListener when parsing model files?
     if (!isModelParsingAction())
-      CI.getASTContext().setASTMutationListener(Consumer->GetASTMutationListener());
+      CI.getASTContext().setASTMutationListener(
+          Consumer->GetASTMutationListener());
 
     if (!CI.getPreprocessorOpts().ChainedIncludes.empty()) {
       // Convert headers to PCH and chain them.
@@ -1045,9 +1044,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // provides the layouts from that file.
   if (!CI.getFrontendOpts().OverrideRecordLayoutsFile.empty() &&
       CI.hasASTContext() && !CI.getASTContext().getExternalSource()) {
-    IntrusiveRefCntPtr<ExternalASTSource>
-      Override(new LayoutOverrideSource(
-                     CI.getFrontendOpts().OverrideRecordLayoutsFile));
+    IntrusiveRefCntPtr<ExternalASTSource> Override(new LayoutOverrideSource(
+        CI.getFrontendOpts().OverrideRecordLayoutsFile));
     CI.getASTContext().setExternalSource(Override);
   }
 
@@ -1071,11 +1069,14 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 llvm::Error FrontendAction::Execute() {
   CompilerInstance &CI = getCompilerInstance();
 
+  // clang-format off
+  // Cratels:ExecuteAction是一个纯虚方法，具体实现由各个action来实现。
+  // clang-format on
   if (CI.hasFrontendTimer()) {
     llvm::TimeRegion Timer(CI.getFrontendTimer());
     ExecuteAction();
-  }
-  else ExecuteAction();
+  } else
+    ExecuteAction();
 
   // If we are supposed to rebuild the global module index, do so now unless
   // there were any module-build failures.
@@ -1125,7 +1126,8 @@ void FrontendAction::EndSourceFile() {
   }
 
   if (CI.getFrontendOpts().ShowStats) {
-    llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFileOrBufferName() << "':\n";
+    llvm::errs() << "\nSTATISTICS FOR '" << getCurrentFileOrBufferName()
+                 << "':\n";
     CI.getPreprocessor().PrintStats();
     CI.getPreprocessor().getIdentifierTable().PrintStats();
     CI.getPreprocessor().getHeaderSearchInfo().PrintStats();
@@ -1193,7 +1195,7 @@ void ASTFrontendAction::ExecuteAction() {
            CI.getFrontendOpts().SkipFunctionBodies);
 }
 
-void PluginASTAction::anchor() { }
+void PluginASTAction::anchor() {}
 
 std::unique_ptr<ASTConsumer>
 PreprocessorFrontendAction::CreateASTConsumer(CompilerInstance &CI,
@@ -1220,9 +1222,7 @@ bool WrapperFrontendAction::BeginSourceFileAction(CompilerInstance &CI) {
   setCurrentInput(WrappedAction->getCurrentInput());
   return Ret;
 }
-void WrapperFrontendAction::ExecuteAction() {
-  WrappedAction->ExecuteAction();
-}
+void WrapperFrontendAction::ExecuteAction() { WrappedAction->ExecuteAction(); }
 void WrapperFrontendAction::EndSourceFile() { WrappedAction->EndSourceFile(); }
 void WrapperFrontendAction::EndSourceFileAction() {
   WrappedAction->EndSourceFileAction();
@@ -1252,4 +1252,4 @@ bool WrapperFrontendAction::hasCodeCompletionSupport() const {
 
 WrapperFrontendAction::WrapperFrontendAction(
     std::unique_ptr<FrontendAction> WrappedAction)
-  : WrappedAction(std::move(WrappedAction)) {}
+    : WrappedAction(std::move(WrappedAction)) {}

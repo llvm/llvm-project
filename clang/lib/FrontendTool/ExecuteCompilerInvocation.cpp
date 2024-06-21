@@ -319,6 +319,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Create and execute the frontend action.
   // clang-format off
   // Cratels: Clang 实例有需要的所有信息，但是开发者需要用这些信息做什么这需要使用前端 Action 来指定想要打印 ast 还是 token 等操作
+  // Clang持有Action的信息，CreateFrontendAction会根据该action创建出正确的FrontedAction对象
   // clang-format on
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
   if (!Act)
