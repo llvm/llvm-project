@@ -487,8 +487,6 @@ def vecreduce_fmin  : SDNode<"ISD::VECREDUCE_FMIN", SDTFPVecReduce>;
 def vecreduce_fmax  : SDNode<"ISD::VECREDUCE_FMAX", SDTFPVecReduce>;
 def vecreduce_fminimum : SDNode<"ISD::VECREDUCE_FMINIMUM", SDTFPVecReduce>;
 def vecreduce_fmaximum : SDNode<"ISD::VECREDUCE_FMAXIMUM", SDTFPVecReduce>;
-def vecreduce_fminimumnum : SDNode<"ISD::VECREDUCE_FMINIMUMNUM", SDTFPVecReduce>;
-def vecreduce_fmaximumnum : SDNode<"ISD::VECREDUCE_FMAXIMUMNUM", SDTFPVecReduce>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -509,10 +507,6 @@ def fmaxnum_ieee  : SDNode<"ISD::FMAXNUM_IEEE", SDTFPBinOp,
 def fminimum   : SDNode<"ISD::FMINIMUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fmaximum   : SDNode<"ISD::FMAXIMUM"   , SDTFPBinOp,
-                        [SDNPCommutative, SDNPAssociative]>;
-def fminimumnum   : SDNode<"ISD::FMINIMUMNUM"   , SDTFPBinOp,
-                        [SDNPCommutative, SDNPAssociative]>;
-def fmaximumnum   : SDNode<"ISD::FMAXIMUMNUM"   , SDTFPBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def fgetsign   : SDNode<"ISD::FGETSIGN"   , SDTFPToIntOp>;
 def fcanonicalize : SDNode<"ISD::FCANONICALIZE", SDTFPUnaryOp>;
@@ -616,12 +610,6 @@ def strict_fminimum   : SDNode<"ISD::STRICT_FMINIMUM",
                                SDTFPBinOp, [SDNPHasChain,
                                             SDNPCommutative, SDNPAssociative]>;
 def strict_fmaximum   : SDNode<"ISD::STRICT_FMAXIMUM",
-                               SDTFPBinOp, [SDNPHasChain,
-                                            SDNPCommutative, SDNPAssociative]>;
-def strict_fminimumnum   : SDNode<"ISD::STRICT_FMINIMUMNUM",
-                               SDTFPBinOp, [SDNPHasChain,
-                                            SDNPCommutative, SDNPAssociative]>;
-def strict_fmaximumnum   : SDNode<"ISD::STRICT_FMAXIMUMNUM",
                                SDTFPBinOp, [SDNPHasChain,
                                             SDNPCommutative, SDNPAssociative]>;
 def strict_fpround    : SDNode<"ISD::STRICT_FP_ROUND",
@@ -1597,12 +1585,6 @@ def any_fmaximum   : PatFrags<(ops node:$lhs, node:$rhs),
 def any_fminimum   : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fminimum node:$lhs, node:$rhs),
                                (fminimum node:$lhs, node:$rhs)]>;
-def any_fmaximumnum   : PatFrags<(ops node:$lhs, node:$rhs),
-                              [(strict_fmaximumnum node:$lhs, node:$rhs),
-                               (fmaximumnum node:$lhs, node:$rhs)]>;
-def any_fminimumnum   : PatFrags<(ops node:$lhs, node:$rhs),
-                              [(strict_fminimumnum node:$lhs, node:$rhs),
-                               (fminimumnum node:$lhs, node:$rhs)]>;
 def any_fpround    : PatFrags<(ops node:$src),
                               [(strict_fpround node:$src),
                                (fpround node:$src)]>;

@@ -1210,8 +1210,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
-  case ISD::VECREDUCE_FMAXIMUMNUM:
-  case ISD::VECREDUCE_FMINIMUMNUM:
   case ISD::IS_FPCLASS:
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(0).getValueType());
@@ -1233,8 +1231,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_FMAXIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
-  case ISD::VP_REDUCE_FMAXIMUMNUM:
-  case ISD::VP_REDUCE_FMINIMUMNUM:
   case ISD::VP_REDUCE_SEQ_FADD:
   case ISD::VP_REDUCE_SEQ_FMUL:
     Action = TLI.getOperationAction(
@@ -3639,12 +3635,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Expanded);
     break;
   }
-  case ISD::FMINIMUMNUM:
-  case ISD::FMAXIMUMNUM: {
-    if (SDValue Expanded = TLI.expandFMINIMUMNUM_FMAXIMUMNUM(Node, DAG))
-      Results.push_back(Expanded);
-    break;
-  }
   case ISD::FSIN:
   case ISD::FCOS: {
     EVT VT = Node->getValueType(0);
@@ -4320,8 +4310,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
-  case ISD::VECREDUCE_FMAXIMUMNUM:
-  case ISD::VECREDUCE_FMINIMUMNUM:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     break;
   case ISD::VP_CTTZ_ELTS:
@@ -4515,18 +4503,6 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandFPLibCall(Node, RTLIB::FMAX_F32, RTLIB::FMAX_F64,
                     RTLIB::FMAX_F80, RTLIB::FMAX_F128,
                     RTLIB::FMAX_PPCF128, Results);
-    break;
-  case ISD::FMINIMUMNUM:
-  case ISD::STRICT_FMINIMUMNUM:
-    ExpandFPLibCall(Node, RTLIB::FMINIMUMNUM_F32, RTLIB::FMINIMUMNUM_F64,
-                    RTLIB::FMINIMUMNUM_F80, RTLIB::FMINIMUMNUM_F128,
-                    RTLIB::FMINIMUMNUM_PPCF128, Results);
-    break;
-  case ISD::FMAXIMUMNUM:
-  case ISD::STRICT_FMAXIMUMNUM:
-    ExpandFPLibCall(Node, RTLIB::FMAXIMUMNUM_F32, RTLIB::FMAXIMUMNUM_F64,
-                    RTLIB::FMAXIMUMNUM_F80, RTLIB::FMAXIMUMNUM_F128,
-                    RTLIB::FMAXIMUMNUM_PPCF128, Results);
     break;
   case ISD::FSQRT:
   case ISD::STRICT_FSQRT:
@@ -5090,8 +5066,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::VP_REDUCE_FMIN ||
       Node->getOpcode() == ISD::VP_REDUCE_FMAXIMUM ||
       Node->getOpcode() == ISD::VP_REDUCE_FMINIMUM ||
-      Node->getOpcode() == ISD::VP_REDUCE_FMAXIMUMNUM ||
-      Node->getOpcode() == ISD::VP_REDUCE_FMINIMUMNUM ||
       Node->getOpcode() == ISD::VP_REDUCE_SEQ_FADD)
     OVT = Node->getOperand(1).getSimpleValueType();
   if (Node->getOpcode() == ISD::BR_CC ||
@@ -5407,8 +5381,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FMAXNUM:
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
-  case ISD::FMINIMUMNUM:
-  case ISD::FMAXIMUMNUM:
   case ISD::FPOW:
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
@@ -5424,8 +5396,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::STRICT_FDIV:
   case ISD::STRICT_FMINNUM:
   case ISD::STRICT_FMAXNUM:
-  case ISD::STRICT_FMINIMUMNUM:
-  case ISD::STRICT_FMAXIMUMNUM:
   case ISD::STRICT_FREM:
   case ISD::STRICT_FPOW:
     Tmp1 = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NVT, MVT::Other},
@@ -5774,8 +5744,6 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_FMAXIMUM:
   case ISD::VP_REDUCE_FMINIMUM:
-  case ISD::VP_REDUCE_FMAXIMUMNUM:
-  case ISD::VP_REDUCE_FMINIMUMNUM:
   case ISD::VP_REDUCE_SEQ_FADD:
     Results.push_back(PromoteReduction(Node));
     break;
