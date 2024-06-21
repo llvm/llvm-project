@@ -1,9 +1,11 @@
 {
     "root": "/home/thebesttv/vul/llvm-project/graph-generation/npe",
     "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/npe/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/npe/input.json",
     "results": [
         {
             "type": "test-source-in-header",
+            "sourceIndex": 0,
             "nodes": [
                 3,
                 2
@@ -32,6 +34,7 @@
         },
         {
             "type": "test-no-sink",
+            "sourceIndex": 1,
             "nodes": [
                 7,
                 40,
@@ -186,6 +189,7 @@
         },
         {
             "type": "npe-bug",
+            "sourceIndex": 2,
             "nodes": [
                 8,
                 33,
@@ -414,6 +418,7 @@
         },
         {
             "type": "npe-fix",
+            "sourceIndex": 2,
             "nodes": [
                 8,
                 33,

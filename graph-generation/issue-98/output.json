@@ -1,9 +1,11 @@
 {
     "root": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98",
     "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/issue-98/input.json",
     "results": [
         {
             "type": "npe-bug",
+            "sourceIndex": 0,
             "nodes": [
                 29,
                 21,

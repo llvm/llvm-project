@@ -1,9 +1,11 @@
 {
     "root": "/home/thebesttv/vul/llvm-project/graph-generation/same-name",
     "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/input.json",
     "results": [
         {
             "type": "test_1",
+            "sourceIndex": 0,
             "nodes": [
                 1
             ],
@@ -42,6 +44,7 @@
         },
         {
             "type": "test_2",
+            "sourceIndex": 1,
             "nodes": [
                 7,
                 5,

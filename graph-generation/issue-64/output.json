@@ -2,9 +2,11 @@
     "project": "demo",
     "root": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64",
     "compile_commands": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/compile_commands.json",
+    "source": "/home/thebesttv/vul/llvm-project/graph-generation/issue-64/input.json",
     "results": [
         {
             "type": "npe-bug",
+            "sourceIndex": 0,
             "nodes": [
                 2,
                 0,
@@ -97,6 +99,7 @@
         },
         {
             "type": "npe-fix",
+            "sourceIndex": 0,
             "nodes": [
                 2,
                 0,
