@@ -626,9 +626,6 @@ def OMP_DeclareVariant : Directive<"declare variant"> {
   let association = AS_Declaration;
   let category = CA_Declarative;
 }
-def OMP_Reverse : Directive<"reverse"> {
-  let association = AS_Loop;
-}
 def OMP_EndDeclareVariant : Directive<"end declare variant"> {
   let association = AS_Delimited;
   let category = OMP_DeclareVariant.category;
@@ -838,6 +835,10 @@ def OMP_Requires : Directive<"requires"> {
   ];
   let association = AS_None;
   let category = CA_Informational;
+}
+def OMP_Reverse : Directive<"reverse"> {
+  let association = AS_Loop;
+  let category = CA_Executable;
 }
 def OMP_Scan : Directive<"scan"> {
   let allowedClauses = [
