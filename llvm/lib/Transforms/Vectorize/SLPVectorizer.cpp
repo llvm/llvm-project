@@ -17443,7 +17443,6 @@ public:
       // Iterate through all not-vectorized reduction values/extra arguments.
       bool InitStep = true;
       while (ExtraReductions.size() > 1) {
-        VectorizedTree = ExtraReductions.front().second;
         SmallVector<std::pair<Instruction *, Value *>> NewReds =
             FinalGen(ExtraReductions, InitStep);
         ExtraReductions.swap(NewReds);
