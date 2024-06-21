@@ -176,6 +176,8 @@ C++17 Feature Support
   the values produced by GCC, so these macros should not be used from header
   files because they may not be stable across multiple TUs (the values may vary
   based on compiler version as well as CPU tuning). #GH60174
+- The implementation of the relaxed template template argument matching rules is
+  more complete and reliable, and should provide more accurate diagnostics.
 
 C++14 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -589,6 +591,10 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
 
+- Clang now properly explains the reason a template template argument failed to
+  match a template template parameter, in terms of the C++17 relaxed matching rules
+  instead of the old ones.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -887,7 +893,8 @@ Bug Fixes to C++ Support
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
 - Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
-
+- Fixes to several issues in partial ordering of template template parameters, which
+  were documented in the test suite.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

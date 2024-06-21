@@ -18,5 +18,9 @@
 #include <array>
 #include <utility>
 
-// expected-error@+1 {{template template argument has different template parameters than its corresponding template template parameter}}
-static_assert(!std::__is_specialization_v<std::pair<int, std::size_t>, std::array>);
+#if defined(__clang__) && __clang_major__ >= 19
+// expected-error@array:* {{could not match _Size against 'type-parameter-0-0'}}
+#else
+// expected-error@#SA {{template template argument has different template parameters than its corresponding template template parameter}}
+#endif
+static_assert(!std::__is_specialization_v<std::pair<int, std::size_t>, std::array>); // #SA
