@@ -26,7 +26,7 @@ function(merge_relocatable_object name)
   )
   # Pass -r to the driver is much cleaner than passing -Wl,-r: the compiler knows it is
   # a relocatable linking and will not pass other irrelevant flags to the linker.
-  target_link_options(${relocatable_target} PRIVATE -r -nostdlib)
+  target_link_options(${relocatable_target} PRIVATE -r -nostdlib --target=${explicit_target_triple})
   set_target_properties(
     ${relocatable_target}
     PROPERTIES
