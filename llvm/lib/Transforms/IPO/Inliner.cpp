@@ -223,8 +223,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   InlineAdvisor &Advisor = getAdvisor(MAMProxy, FAM, M);
   Advisor.onPassEntry(&InitialC);
 
-  auto AdvisorOnExit = make_scope_exit([&] { Advisor.onPassExit(&InitialC); });
-
   // We use a single common worklist for calls across the entire SCC. We
   // process these in-order and append new calls introduced during inlining to
   // the end. The PriorityInlineOrder is optional here, in which the smaller
@@ -563,6 +561,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
     ++NumDeleted;
   }
+
+  Advisor.onPassExit(C);
 
   if (!Changed)
     return PreservedAnalyses::all();
