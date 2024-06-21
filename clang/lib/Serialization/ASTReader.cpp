@@ -1201,7 +1201,7 @@ unsigned DeclarationNameKey::getHash() const {
     break;
   }
 
-  return ID.ComputeHash();
+  return ID.computeStableHash();
 }
 
 ModuleFile *
@@ -2033,7 +2033,10 @@ const FileEntry *HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
 }
 
 unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
-  return llvm::hash_combine(ikey.Size, ikey.ModTime);
+  uint8_t buf[sizeof(ikey.Size) + sizeof(ikey.ModTime)];
+  memcpy(buf, &ikey.Size, sizeof(ikey.Size));
+  memcpy(buf + sizeof(ikey.Size), &ikey.ModTime, sizeof(ikey.ModTime));
+  return llvm::xxh3_64bits(buf);
 }
 
 HeaderFileInfoTrait::internal_key_type
@@ -2640,8 +2643,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       return OriginalChange;
     }
 
-    // FIXME: hash_value is not guaranteed to be stable!
-    auto ContentHash = hash_value(MemBuffOrError.get()->getBuffer());
+    auto ContentHash = xxh3_64bits(MemBuffOrError.get()->getBuffer());
     if (StoredContentHash == static_cast<uint64_t>(ContentHash))
       return Change{Change::None};
 
