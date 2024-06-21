@@ -839,31 +839,32 @@ struct LinalgFoldUnitExtentDimsPass
 namespace {
 
 static SmallVector<ReassociationIndices>
-getReassociationForReshapeAtDim(int64_t rank, int64_t pos,
-                                bool fromRight = false) {
+getReassociationForReshapeAtDim(int64_t rank, int64_t pos) {
   SmallVector<ReassociationIndices> reassociation(rank - 1, {0, 1});
+  auto lastDim = pos == rank - 1;
   if (rank > 2) {
-    int64_t offsetPos = pos - (int64_t)fromRight;
     for (int64_t i = 0; i < rank - 1; i++) {
-      if (i == offsetPos)
+      if (i == pos || (lastDim && i == pos - 1))
         reassociation[i] = ReassociationIndices{i, i + 1};
-      else if (i < offsetPos)
+      else if (i < pos)
         reassociation[i] = ReassociationIndices{i};
       else
-        reassociation[i] = ReassociationIndices{i + offsetPos + 1};
+        reassociation[i] = ReassociationIndices{i + 1};
     }
   }
   return reassociation;
 }
 
 static Value collapseSingletonDimAt(PatternRewriter &rewriter, Value val,
-                                    int64_t pos, bool fromRight = false) {
+                                    int64_t pos) {
+  if (pos < 0)
+    return val;
   auto valType = cast<ShapedType>(val.getType());
   SmallVector<int64_t> collapsedShape(valType.getShape());
   collapsedShape.erase(collapsedShape.begin() + pos);
   return collapseValue(
       rewriter, val.getLoc(), val, collapsedShape,
-      getReassociationForReshapeAtDim(valType.getRank(), pos, fromRight),
+      getReassociationForReshapeAtDim(valType.getRank(), pos),
       ControlDropUnitDims::RankReductionStrategy::ReassociativeReshape);
 }
 
@@ -871,24 +872,52 @@ template <typename FromOpTy, typename ToOpTy>
 struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
   using OpRewritePattern<FromOpTy>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(FromOpTy batchMatmulOp,
+  SmallVector<Value, 3>
+  collapseOperands(PatternRewriter &rewriter, ArrayRef<Value> operands,
+                   ArrayRef<int64_t> operandCollapseDims) const {
+    assert(operandCollapseDims.size() == 3 && operands.size() == 3 &&
+           "expected 3 operands and dims");
+    return llvm::to_vector(llvm::map_range(
+        llvm::zip(operands, operandCollapseDims), [&](auto pair) {
+          return collapseSingletonDimAt(rewriter, std::get<0>(pair),
+                                        std::get<1>(pair));
+        }));
+  }
+
+  Value expandResult(PatternRewriter &rewriter, Value result,
+                     RankedTensorType expandedType, int64_t dim) const {
+    return rewriter.create<tensor::ExpandShapeOp>(
+        result.getLoc(), expandedType, result,
+        getReassociationForReshapeAtDim(expandedType.getRank(), dim));
+  }
+
+  LogicalResult matchAndRewrite(FromOpTy contractionOp,
                                 PatternRewriter &rewriter) const override {
 
-    auto loc = batchMatmulOp.getLoc();
-    auto inputs = batchMatmulOp.getDpsInputs();
-    auto inits = batchMatmulOp.getDpsInits();
+    auto loc = contractionOp.getLoc();
+    auto inputs = contractionOp.getDpsInputs();
+    auto inits = contractionOp.getDpsInits();
     if (inputs.size() != 2 || inits.size() != 1)
-      return rewriter.notifyMatchFailure(batchMatmulOp,
+      return rewriter.notifyMatchFailure(contractionOp,
                                          "expected 2 inputs and 1 init");
     auto lhs = inputs[0];
     auto rhs = inputs[1];
     auto init = inits[0];
+    SmallVector<Value> operands{lhs, rhs, init};
 
-    if (!checkTypes(lhs, rhs, init))
-      return rewriter.notifyMatchFailure(batchMatmulOp,
+    auto maybeContractionDims = inferContractionDims(contractionOp);
+    if (failed(maybeContractionDims))
+      return rewriter.notifyMatchFailure(contractionOp,
+                                         "could not infer contraction dims");
+
+    auto contractionDims = maybeContractionDims.value();
+    SmallVector<int64_t> operandUnitDims;
+    if (failed(getOperandUnitDims(contractionOp, operandUnitDims)))
+      return rewriter.notifyMatchFailure(contractionOp,
                                          "no reducable dims found");
 
-    auto collapsedOperands = collapseOperands(rewriter, lhs, rhs, init);
+    auto collapsedOperands =
+        collapseOperands(rewriter, operands, operandUnitDims);
     auto collapsedLhs = collapsedOperands[0];
     auto collapsedRhs = collapsedOperands[1];
     auto collapsedInit = collapsedOperands[2];
@@ -898,84 +927,69 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
     auto collapsedOp = rewriter.create<ToOpTy>(
         loc, collapsedResultTy, ValueRange{collapsedLhs, collapsedRhs},
         ValueRange{collapsedInit});
-    for (auto attr : batchMatmulOp->getAttrs()) {
+    for (auto attr : contractionOp->getAttrs()) {
       if (attr.getName() == LinalgDialect::kMemoizedIndexingMapsAttrName)
         continue;
       collapsedOp->setAttr(attr.getName(), attr.getValue());
     }
 
-    auto results = batchMatmulOp.getResults();
+    auto results = contractionOp.getResults();
     assert(results.size() < 2 && "expected at most one result");
     if (results.size() < 1)
-      rewriter.replaceOp(batchMatmulOp, collapsedOp);
+      rewriter.replaceOp(contractionOp, collapsedOp);
     else
       rewriter.replaceOp(
-          batchMatmulOp,
+          contractionOp,
           expandResult(rewriter, collapsedOp.getResultTensors()[0],
-                       cast<RankedTensorType>(results[0].getType())));
+                       cast<RankedTensorType>(results[0].getType()),
+                       operandUnitDims[2]));
 
     return success();
   }
 
-  virtual bool checkTypes(Value lhs, Value rhs, Value init) const = 0;
-  virtual SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter,
-                                                 Value lhs, Value rhs,
-                                                 Value init) const = 0;
-  virtual Value expandResult(PatternRewriter &rewriter, Value result,
-                             RankedTensorType expandedType) const = 0;
+  virtual LogicalResult
+  getOperandUnitDims(LinalgOp op,
+                     SmallVectorImpl<int64_t> &operandUnitDindices) const = 0;
 };
 
 template <typename FromOpTy, typename ToOpTy>
 struct RankReduceBatched : RankReduceContractionOps<FromOpTy, ToOpTy> {
   using RankReduceContractionOps<FromOpTy, ToOpTy>::RankReduceContractionOps;
 
-  bool checkTypes(Value lhs, Value rhs, Value init) const override {
-    auto lhsType = cast<ShapedType>(lhs.getType());
-    auto rhsType = cast<ShapedType>(rhs.getType());
-    auto initType = cast<ShapedType>(init.getType());
-    return lhsType.getShape()[0] == 1 && rhsType.getShape()[0] == 1 &&
-           initType.getShape()[0] == 1;
-  }
+  LogicalResult getOperandUnitDims(
+      LinalgOp op,
+      SmallVectorImpl<int64_t> &operandUnitDindices) const override {
+    auto inputs = op.getDpsInputs();
+    auto inits = op.getDpsInits();
+    if (inputs.size() != 2 || inits.size() != 1)
+      return failure();
 
-  SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter, Value lhs,
-                                         Value rhs, Value init) const override {
-    auto collapsedLhs = collapseSingletonDimAt(rewriter, lhs, 0);
-    auto collapsedRhs = collapseSingletonDimAt(rewriter, rhs, 0);
-    auto collapsedInit = collapseSingletonDimAt(rewriter, init, 0);
-    return SmallVector<Value, 3>{collapsedLhs, collapsedRhs, collapsedInit};
-  }
-  Value expandResult(PatternRewriter &rewriter, Value result,
-                     RankedTensorType expandedType) const override {
-    return rewriter.create<tensor::ExpandShapeOp>(
-        result.getLoc(), expandedType, result,
-        getReassociationForReshapeAtDim(expandedType.getRank(), 0));
+    auto maybeContractionDims = inferContractionDims(op);
+    if (failed(maybeContractionDims))
+      return failure();
+    auto contractionDims = maybeContractionDims.value();
+
+    if (contractionDims.batch.size() != 1)
+      return failure();
+    auto batchDim = contractionDims.batch[0];
+    SmallVector<std::pair<Value, unsigned>, 2> bOperands;
+    op.mapIterationSpaceDimToAllOperandDims(batchDim, bOperands);
+    if (bOperands.size() != 3 || llvm::any_of(bOperands, [](auto pair) {
+          return cast<ShapedType>(std::get<0>(pair).getType())
+                     .getShape()[std::get<1>(pair)] != 1;
+        }))
+      return failure();
+
+    operandUnitDindices = SmallVector<int64_t>{std::get<1>(bOperands[0]),
+                                               std::get<1>(bOperands[1]),
+                                               std::get<1>(bOperands[2])};
+    return success();
   }
 };
 
 template <typename FromOpTy, typename ToOpTy>
 struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
   using RankReduceContractionOps<FromOpTy, ToOpTy>::RankReduceContractionOps;
-
-  static bool constexpr isBatched =
-      std::is_same<FromOpTy, BatchMatmulOp>::value ||
-      std::is_same<FromOpTy, BatchMatvecOp>::value ||
-      std::is_same<FromOpTy, BatchVecmatOp>::value ||
-      std::is_same<FromOpTy, BatchMatmulTransposeAOp>::value ||
-      std::is_same<FromOpTy, BatchMatmulTransposeBOp>::value;
-
-  static bool constexpr isLHSTransposed =
-      std::is_same<FromOpTy, BatchMatmulTransposeAOp>::value ||
-      std::is_same<FromOpTy, MatmulTransposeAOp>::value;
-
-  static bool constexpr isRHSTransposed =
-      std::is_same<FromOpTy, BatchMatmulTransposeBOp>::value ||
-      std::is_same<FromOpTy, MatmulTransposeBOp>::value;
-
-  static bool constexpr isTranspose =
-      std::is_same<FromOpTy, BatchMatmulTransposeAOp>::value ||
-      std::is_same<FromOpTy, BatchMatmulTransposeBOp>::value ||
-      std::is_same<FromOpTy, MatmulTransposeAOp>::value ||
-      std::is_same<FromOpTy, MatmulTransposeBOp>::value;
 
   static bool constexpr reduceLeft =
       (std::is_same<FromOpTy, BatchMatmulOp>::value &&
@@ -989,57 +1003,44 @@ struct RankReduceMatmul : RankReduceContractionOps<FromOpTy, ToOpTy> {
       (std::is_same<FromOpTy, MatvecOp>::value &&
        std::is_same<ToOpTy, DotOp>::value);
 
-  static int constexpr lhsTransposeOffset = (int)isLHSTransposed;
-  static int constexpr rhsTransposeOffset = (int)isRHSTransposed;
-  static int constexpr batchOffset = (int)isBatched;
-
-  bool checkTypes(Value lhs, Value rhs, Value init) const override {
-    auto lhsType = cast<ShapedType>(lhs.getType());
-    auto rhsType = cast<ShapedType>(rhs.getType());
-    auto initType = cast<ShapedType>(init.getType());
-    if constexpr (reduceLeft)
-      return lhsType.getShape().begin()[lhsTransposeOffset + batchOffset] ==
-                 1 &&
-             initType.getShape().begin()[lhsTransposeOffset + batchOffset] == 1;
-    else
-      return rhsType.getShape().rbegin()[rhsTransposeOffset] == 1 &&
-             initType.getShape().rbegin()[rhsTransposeOffset] == 1;
-  }
-
-  SmallVector<Value, 3> collapseOperands(PatternRewriter &rewriter, Value lhs,
-                                         Value rhs, Value init) const override {
+  LogicalResult getOperandUnitDims(
+      LinalgOp op,
+      SmallVectorImpl<int64_t> &operandUnitDindices) const override {
+    auto maybeContractionDims = inferContractionDims(op);
+    if (failed(maybeContractionDims))
+      return failure();
+    auto contractionDims = maybeContractionDims.value();
 
     if constexpr (reduceLeft) {
-      lhs = collapseSingletonDimAt(rewriter, lhs,
-                                   lhsTransposeOffset + batchOffset,
-                                   /*fromRight=*/isLHSTransposed);
-      init = collapseSingletonDimAt(rewriter, init,
-                                    lhsTransposeOffset + batchOffset,
-                                    /*fromRight*/ isLHSTransposed);
+      auto m = contractionDims.m[0];
+      SmallVector<std::pair<Value, unsigned>, 2> mOperands;
+      op.mapIterationSpaceDimToAllOperandDims(m, mOperands);
+      if (mOperands.size() != 2)
+        return failure();
+      if (llvm::all_of(mOperands, [](auto pair) {
+            return cast<ShapedType>(std::get<0>(pair).getType())
+                       .getShape()[std::get<1>(pair)] == 1;
+          })) {
+        operandUnitDindices = SmallVector<int64_t>{
+            std::get<1>(mOperands[0]), -1, std::get<1>(mOperands[1])};
+        return success();
+      }
     } else {
-      auto rhsRank = cast<ShapedType>(rhs.getType()).getRank();
-      auto initRank = cast<ShapedType>(init.getType()).getRank();
-      rhs = collapseSingletonDimAt(
-          rewriter, rhs, rhsRank - rhsTransposeOffset - 1, /*fromRight=*/true);
-      init = collapseSingletonDimAt(rewriter, init,
-                                    initRank - rhsTransposeOffset - 1,
-                                    /*fromRight=*/true);
+      auto n = contractionDims.n[0];
+      SmallVector<std::pair<Value, unsigned>, 2> nOperands;
+      op.mapIterationSpaceDimToAllOperandDims(n, nOperands);
+      if (nOperands.size() != 2)
+        return failure();
+      if (llvm::all_of(nOperands, [](auto pair) {
+            return cast<ShapedType>(std::get<0>(pair).getType())
+                       .getShape()[std::get<1>(pair)] == 1;
+          })) {
+        operandUnitDindices = SmallVector<int64_t>{
+            -1, std::get<1>(nOperands[0]), std::get<1>(nOperands[1])};
+        return success();
+      }
     }
-    return SmallVector<Value, 3>{lhs, rhs, init};
-  }
-
-  Value expandResult(PatternRewriter &rewriter, Value result,
-                     RankedTensorType expandedType) const override {
-    if constexpr (reduceLeft)
-      return rewriter.create<tensor::ExpandShapeOp>(
-          result.getLoc(), expandedType, result,
-          getReassociationForReshapeAtDim(expandedType.getRank(), 0));
-    else
-      return rewriter.create<tensor::ExpandShapeOp>(
-          result.getLoc(), expandedType, result,
-          getReassociationForReshapeAtDim(expandedType.getRank(),
-                                          expandedType.getRank() - 1,
-                                          /*fromRight=*/true));
+    return failure();
   }
 };
 

@@ -1,23 +1,19 @@
 //RUN: mlir-opt -test-linalg-rank-reduce-contraction-ops --canonicalize -split-input-file %s | FileCheck %s
 
-func.func @singleton_batch_matmul_tensor(%arg0 : tensor<1x?x?xf32>, %arg1 : tensor<1x?x?xf32>, %arg2: tensor<1x?x?xf32>) -> tensor<1x?x?xf32> {
+func.func @singleton_batch_matmul_tensor(%arg0 : tensor<1x128x512xf32>, %arg1 : tensor<1x512x256xf32>, %arg2: tensor<1x128x256xf32>) -> tensor<1x128x256xf32> {
   // CHECK-LABEL: @singleton_batch_matmul_tensor
-  //  CHECK-SAME:     %[[LHS:[a-zA-Z0-9]+]]: tensor<1x?x?xf32>
-  //  CHECK-SAME:     %[[RHS:[a-zA-Z0-9]+]]: tensor<1x?x?xf32>
-  //  CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<1x?x?xf32>
-  //  CHECK-DAG:    %[[C1:.*]] = arith.constant 1
-  //  CHECK-DAG:    %[[C2:.*]] = arith.constant 2
+  //  CHECK-SAME:     %[[LHS:[a-zA-Z0-9]+]]: tensor<1x128x512xf32>
+  //  CHECK-SAME:     %[[RHS:[a-zA-Z0-9]+]]: tensor<1x512x256xf32>
+  //  CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<1x128x256xf32>
   //  CHECK-NEXT:   %[[COLLAPSED_LHS:.*]] = tensor.collapse_shape %[[LHS]] {{\[}}[0, 1], [2]]
   //  CHECK-NEXT:   %[[COLLAPSED_RHS:.*]] = tensor.collapse_shape %[[RHS]] {{\[}}[0, 1], [2]]
   //  CHECK-NEXT:   %[[COLLAPSED_INIT:.*]] = tensor.collapse_shape %[[INIT]] {{\[}}[0, 1], [2]]
-  //  CHECK-NEXT:   %[[MATMUL:.+]] = linalg.matmul ins(%[[COLLAPSED_LHS]], %[[COLLAPSED_RHS]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[COLLAPSED_INIT]] : tensor<?x?xf32>)
-  //  CHECK-NEXT:   %[[DIM1:.*]] = tensor.dim %[[INIT]], %[[C1]]
-  //  CHECK-NEXT:   %[[DIM2:.*]] = tensor.dim %[[INIT]], %[[C2]]
-  //  CHECK-NEXT:   %[[RES:.*]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0, 1], [2]] output_shape [1, %[[DIM1]], %[[DIM2]]]
+  //  CHECK-NEXT:   %[[MATMUL:.+]] = linalg.matmul ins(%[[COLLAPSED_LHS]], %[[COLLAPSED_RHS]] : tensor<128x512xf32>, tensor<512x256xf32>) outs(%[[COLLAPSED_INIT]] : tensor<128x256xf32>)
+  //  CHECK-NEXT:   %[[RES:.*]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0, 1], [2]] output_shape [1, 128, 256]
   //  CHECK-NEXT:   return %[[RES]]
-  %1 = linalg.batch_matmul ins(%arg0, %arg1 : tensor<1x?x?xf32>, tensor<1x?x?xf32>)
-      outs(%arg2 : tensor<1x?x?xf32>) -> tensor<1x?x?xf32>
-  return %1 : tensor<1x?x?xf32>
+  %1 = linalg.batch_matmul ins(%arg0, %arg1 : tensor<1x128x512xf32>, tensor<1x512x256xf32>)
+      outs(%arg2 : tensor<1x128x256xf32>) -> tensor<1x128x256xf32>
+  return %1 : tensor<1x128x256xf32>
 }
 
 // -----
@@ -39,22 +35,20 @@ func.func @singleton_batch_matmul_memref(%arg0 : memref<1x?x?xf32>, %arg1 : memr
 
 // -----
 
-func.func @singleton_batch_matvec(%arg0 : tensor<1x?x?xf32>, %arg1 : tensor<1x?xf32>, %arg2: tensor<1x?xf32>) -> tensor<1x?xf32> {
+func.func @singleton_batch_matvec(%arg0 : tensor<1x128x512xf32>, %arg1 : tensor<1x512xf32>, %arg2: tensor<1x128xf32>) -> tensor<1x128xf32> {
   // CHECK-LABEL: @singleton_batch_matvec
-  //  CHECK-SAME:     %[[LHS:[a-zA-Z0-9]+]]: tensor<1x?x?xf32>
-  //  CHECK-SAME:     %[[RHS:[a-zA-Z0-9]+]]: tensor<1x?xf32>
-  //  CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<1x?xf32>
-  //  CHECK-DAG:    %[[C1:.*]] = arith.constant 1
+  //  CHECK-SAME:     %[[LHS:[a-zA-Z0-9]+]]: tensor<1x128x512xf32>
+  //  CHECK-SAME:     %[[RHS:[a-zA-Z0-9]+]]: tensor<1x512xf32>
+  //  CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<1x128xf32>
   //  CHECK-NEXT:   %[[COLLAPSED_LHS:.*]] = tensor.collapse_shape %[[LHS]] {{\[}}[0, 1], [2]]
   //  CHECK-NEXT:   %[[COLLAPSED_RHS:.*]] = tensor.collapse_shape %[[RHS]] {{\[}}[0, 1]]
   //  CHECK-NEXT:   %[[COLLAPSED_INIT:.*]] = tensor.collapse_shape %[[INIT]] {{\[}}[0, 1]]
-  //  CHECK-NEXT:   %[[MATMUL:.+]] = linalg.matvec ins(%[[COLLAPSED_LHS]], %[[COLLAPSED_RHS]] : tensor<?x?xf32>, tensor<?xf32>) outs(%[[COLLAPSED_INIT]] : tensor<?xf32>)
-  //  CHECK-NEXT:   %[[DIM1:.*]] = tensor.dim %[[INIT]], %[[C1]]
-  //  CHECK-NEXT:   %[[RES:.*]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0, 1]] output_shape [1, %[[DIM1]]]
+  //  CHECK-NEXT:   %[[MATMUL:.+]] = linalg.matvec ins(%[[COLLAPSED_LHS]], %[[COLLAPSED_RHS]] : tensor<128x512xf32>, tensor<512xf32>) outs(%[[COLLAPSED_INIT]] : tensor<128xf32>)
+  //  CHECK-NEXT:   %[[RES:.*]] = tensor.expand_shape %[[MATMUL]] {{\[}}[0, 1]] output_shape [1, 128]
   //  CHECK-NEXT:   return %[[RES]]
-  %1 = linalg.batch_matvec ins(%arg0, %arg1 : tensor<1x?x?xf32>, tensor<1x?xf32>)
-      outs(%arg2 : tensor<1x?xf32>) -> tensor<1x?xf32>
-  return %1 : tensor<1x?xf32>
+  %1 = linalg.batch_matvec ins(%arg0, %arg1 : tensor<1x128x512xf32>, tensor<1x512xf32>)
+      outs(%arg2 : tensor<1x128xf32>) -> tensor<1x128xf32>
+  return %1 : tensor<1x128xf32>
 }
 
 // -----
@@ -197,19 +191,22 @@ func.func @matvec_to_dot_tensor(%arg0: tensor<1x?xf32>, %arg1: tensor<?xf32>, %a
 
 // -----
 
-func.func @matmul_transpose_a_to_vecmat(%arg0: memref<?x1xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x1xf32>) {
+func.func @matmul_transpose_a_to_vecmat(%arg0: tensor<256x1xf32>, %arg1: tensor<256x512xf32>, %arg2: tensor<1x512xf32>) -> tensor<1x512xf32> {
   // CHECK-LABEL: @matmul_transpose_a_to_vecmat
+  // CHECK: collapse_shape {{.*}} into tensor<256xf32>
+  // CHECK: collapse_shape {{.*}} into tensor<512xf32>
   // CHECK: linalg.vecmat
-    linalg.matmul_transpose_a ins(%arg0, %arg1: memref<?x1xf32>, memref<?x?xf32>) outs(%arg2: memref<?x1xf32>)
-    return
+  // CHECK: expand_shape {{.*}} into tensor<1x512xf32>
+    %0 = linalg.matmul_transpose_a ins(%arg0, %arg1: tensor<256x1xf32>, tensor<256x512xf32>) outs(%arg2: tensor<1x512xf32>) -> tensor<1x512xf32>
+    return %0 : tensor<1x512xf32>
 }
 
 // -----
 
-func.func @matmul_transpose_b_to_matvec(%arg0: memref<?x?xf32>, %arg1: memref<1x?xf32>, %arg2: memref<1x?xf32>) {
+func.func @matmul_transpose_b_to_matvec(%arg0: memref<?x?xf32>, %arg1: memref<1x?xf32>, %arg2: memref<?x1xf32>) {
   // CHECK-LABEL: @matmul_transpose_b_to_matvec
   // CHECK: linalg.matvec
-    linalg.matmul_transpose_b ins(%arg0, %arg1: memref<?x?xf32>, memref<1x?xf32>) outs(%arg2: memref<1x?xf32>)
+    linalg.matmul_transpose_b ins(%arg0, %arg1: memref<?x?xf32>, memref<1x?xf32>) outs(%arg2: memref<?x1xf32>)
     return
 }
 
