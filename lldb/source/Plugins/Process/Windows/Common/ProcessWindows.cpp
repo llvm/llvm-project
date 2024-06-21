@@ -451,7 +451,6 @@ void ProcessWindows::RefreshStateAfterStop() {
         stop_info = StopInfo::CreateStopReasonWithBreakpointSiteID(
             *stop_thread, site->GetID());
         register_context->SetPC(pc);
-        stop_thread->SetThreadHitBreakpointAtAddr(pc);
       } else {
         LLDB_LOG(log,
                  "Breakpoint site {0} is not valid for this thread, "
