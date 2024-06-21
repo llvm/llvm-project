@@ -297,7 +297,7 @@ const PlatformInfo& HipBinNvidia::getPlatformInfo() const {
 // returns the cpp config
 string HipBinNvidia::getCppConfig() {
   string cppConfig =
-  " - D__HIP_PLATFORM_NVCC__ = -D__HIP_PLATFORM_NVIDIA__ = -I";
+  " -D__HIP_PLATFORM_NVCC__= -D__HIP_PLATFORM_NVIDIA__= -I";
   string hipPath;
   hipPath = getHipPath();
   cppConfig += hipPath;
