@@ -8,6 +8,10 @@
 
 #include <stddef.h>
 
+#if __has_feature(ptrauth_init_fini)
+#include <ptrauth.h>
+#endif
+
 __attribute__((visibility("hidden"))) void *__dso_handle = &__dso_handle;
 
 #ifdef EH_USE_FRAME_REGISTRY
@@ -46,8 +50,14 @@ static void __attribute__((used)) __do_init(void) {
 }
 
 #ifdef CRT_HAS_INITFINI_ARRAY
+#if __has_feature(ptrauth_init_fini)
+__attribute__((section(".init_array"),
+               used)) static void *__ptrauth_init_fini_pointer __init =
+    __do_init;
+#else
 __attribute__((section(".init_array"),
                used)) static void (*__init)(void) = __do_init;
+#endif
 #elif defined(__i386__) || defined(__x86_64__)
 __asm__(".pushsection .init,\"ax\",@progbits\n\t"
         "call __do_init\n\t"
@@ -103,8 +113,14 @@ static void __attribute__((used)) __do_fini(void) {
 }
 
 #ifdef CRT_HAS_INITFINI_ARRAY
+#if __has_feature(ptrauth_init_fini)
+__attribute__((section(".fini_array"),
+               used)) static void *__ptrauth_init_fini_pointer __fini =
+    __do_fini;
+#else
 __attribute__((section(".fini_array"),
                used)) static void (*__fini)(void) = __do_fini;
+#endif
 #elif defined(__i386__) || defined(__x86_64__)
 __asm__(".pushsection .fini,\"ax\",@progbits\n\t"
         "call __do_fini\n\t"
