@@ -72,8 +72,8 @@ class InstrBuilder {
            std::unique_ptr<const InstrDesc>>
       Descriptors;
 
-  // Key is the instruction address and SchedClassID the describe the value
-  // InstrDesc
+  // Key is a hash of the MCInstruction and a SchedClassID that describe the
+  // value InstrDesc
   DenseMap<std::pair<hash_code, unsigned>, std::unique_ptr<const InstrDesc>>
       VariantDescriptors;
 
