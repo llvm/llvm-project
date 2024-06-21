@@ -130,6 +130,26 @@ function generate-cmake() {
           "${@}"
 }
 
+function generate-cmake-openmp() {
+    echo "--- Generating CMake"
+    ${CMAKE} \
+          -S "${MONOREPO_ROOT}/llvm" \
+          -B "${BUILD_DIR}" \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLIBCXX_ENABLE_WERROR=YES \
+          -DLIBCXXABI_ENABLE_WERROR=YES \
+          -DLIBUNWIND_ENABLE_WERROR=YES \
+          -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
+          -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
+          -DLLVM_ENABLE_PROJECTS="clang;openmp" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;offload" \
+          -DLIBCXX_PSTL_BACKEND="openmp" \
+          -DLIBCXX_CXX_ABI=libcxxabi \
+          "${@}"
+}
+
 function generate-cmake-libcxx-win() {
     generate-cmake-base \
           -DLLVM_ENABLE_RUNTIMES="libcxx" \
@@ -512,6 +532,18 @@ generic-abi-unstable)
 generic-optimized-speed)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
+    check-runtimes
+;;
+generic-pstl-openmp)
+    clean
+    # TODO: Pass different host and device triples to the test configuration.
+    # For now, the OpenMP buildbot offloads to the host. To set the correct host target triple,
+    # we pass it via the LIBCXX test parameters.
+    PARAMS="target_triple=$(${CXX} --print-target-triple)"
+    generate-cmake-openmp -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-pstl-openmp.cmake" \
+                          ${MONOREPO_ROOT}/llvm -DLIBCXX_TEST_PARAMS="${PARAMS}"
+    echo "+++ Installing OpenMP and Clang"
+    ${NINJA} -vC "${BUILD_DIR}" install
     check-runtimes
 ;;
 apple-system)
