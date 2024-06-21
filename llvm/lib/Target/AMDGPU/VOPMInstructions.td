@@ -41,11 +41,13 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : Enc64 {
   let Inst{31-24} = 0xdc; // encoding
 
   // TODO-GFX13: Inst{42-32} = src0;
-  let Inst{40-32} = src0{8-0};
+  let Inst{39-32} = src0{7-0};
+  let Inst{42} = src0{8};
   let Inst{44-43} = ?;    // src0_idx
 
   // TODO-GFX13: Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
-  let Inst{53-45} = !if(pfl.HasSrc1, src1{8-0}, ?);
+  let Inst{52-45} = !if(pfl.HasSrc1, src1{7-0}, ?);
+  let Inst{55} = !if(pfl.HasSrc1, src1{8}, ?);
   let Inst{57-56} = ?;    // src1_idx
 
   let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
@@ -56,36 +58,40 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : Enc96 {
   bits<10> vdst;
   bits<11> src0;
   bits<11> src1;
-  bits<11> src2;
+  bits<10> src2;
   bits<8> ssrc;
-  bits<6> aux_data;
+  bits<18> aux_data;
 
   bit clamp;
 
-  bit clamp;
-
+  // TODO-GFX13: Inst{9-0} = vdst;
   let Inst{7-0} = vdst{7-0};
   let Inst{9-8} = ?;      // vdst cont
   let Inst{11-10} = ?;    // vdst_idx
+
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = ?;       // supr
 
-  let Inst{23-16} = op;
+  let Inst{22-15} = op;
   let Inst{31-24} = 0xdd; // encoding
 
-  let Inst{40-32} = src0{8-0};
-  let Inst{42-41} = ?;    // src0 cont
+  // TODO-GFX13: Inst{42-32} = src0;
+  let Inst{39-32} = src0{7-0};
+  let Inst{42} = src0{8};
   let Inst{44-43} = ?;    // src0_idx
-  let Inst{53-45} = !if(pfl.HasSrc1, src1{8-0}, ?);
-  let Inst{55-54} = ?;    // src1 cont
-  let Inst{57-56} = ?;    // src1_idx
-  let Inst{63-58} = !if(pfl.HasAux, aux_data, ?);
-  let Inst{72-64} = !if(pfl.HasSrc2, src2{8-0}, ?);
-  let Inst{74-73} = ?;    // src2 cont
-  let Inst{76-75} = ?;    // src2_idx
 
-  let Inst{78-77} = ?;    // sparse_sel
-  let Inst{87-79} = ?;    // aux_data1
+  // TODO-GFX13: Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
+  let Inst{52-45} = !if(pfl.HasSrc1, src1{7-0}, ?);
+  let Inst{55} = !if(pfl.HasSrc1, src1{8}, ?);
+  let Inst{57-56} = ?;    // src1_idx
+
+  let Inst{63-58} = !if(pfl.HasAux, aux_data{5-0}, ?); // mod0
+
+  // TODO-GFX13: Inst{73-64} = !if(pfl.HasSrc2, src2{8-0}, ?);
+  let Inst{72-64} = !if(pfl.HasSrc2, src2{8-0}, ?);
+  let Inst{75-74} = ?;    // src2_idx
+
+  let Inst{87-76} = !if(pfl.HasAux, aux_data{17-6}, ?); // mod1
 
   let Inst{95-88} = !if(pfl.HasSSrc, ssrc, ?);
 }
@@ -300,6 +306,8 @@ class SBA_Profile<list<ValueType> ArgTy, int Scatter> : VOPMProfile<ArgTy, 1, 1,
   string SrcAsm = !if(HasSrc1, "$src0, $ssrc, $src1$aux_data$clamp",
                                "$src0, $ssrc$aux_data$clamp");
   let Asm64 = DestAsm#", "#SrcAsm;
+
+  bit PixelShape4x2 = !or(!eq(Scatter, 2), !eq(ArgTy[0], v4f32));
 }
 
 class WMMA_SWMMAC_Profile<list<ValueType> ArgTy, int K>
@@ -897,6 +905,21 @@ multiclass VOP3M_Cvt_To_Tensor_Real_Base<GFXGen Gen, bits<8> op,
   }
 }
 
+multiclass VOP3M_SBA_Real_Base<GFXGen Gen, bits<8> op,
+                               string backing_ps_name = NAME,
+                               string asmName = !cast<VOPM_Pseudo>(NAME).Mnemonic> {
+  defvar ps = !cast<VOPM_Pseudo>(backing_ps_name);
+
+  def Gen.Suffix :
+    VOPM_Real_Gen<ps, Gen, asmName>,
+    VOP3Me<op, !cast<VOPMProfile>(ps.Pfl)> {
+      let AsmString = asmName # ps.Pfl.Asm64;
+
+      defvar PixelShape4x2 = !cast<SBA_Profile>(ps.Pfl).PixelShape4x2;
+      let Inst{59} = !if(PixelShape4x2, aux_data{1}, 0);
+  }
+}
+
 multiclass VOP3M_Real_gfx13 <bits<8> op> : VOP3M_Real_Base <GFX13Gen, op>;
 
 multiclass VOP5M_Real_Base<GFXGen Gen, bits<8> op,
@@ -1060,14 +1083,12 @@ defm V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOP2M_Real_gfx13 <0x0>;
 defm V_PERMUTE_PAIR_GENSGPR_B32           : VOP2M_Real_gfx13 <0x1>;
 defm V_PERMUTE_PAIR_BCAST_B32             : VOP2M_Real_gfx13 <0x2>;
 defm V_BPERMUTE_B32                       : VOP2M_Real_gfx13 <0x3>;
-
-// TODO-GFX13: Replace invented opcodes
-
 defm V_MOV_2SRC_B64                       : VOP2M_Real_gfx13 <0x4>;
 
-defm V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOP3M_Real_gfx13 <0x3E>;
-defm V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOP3M_Real_gfx13 <0x3F>;
+defm V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOP3M_Real_gfx13 <0x80>;
+defm V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOP3M_Real_gfx13 <0x81>;
 
+// TODO-GFX13: Replace invented opcodes
 
 defm V_WCONV_FP16_FP16 : Conv_Real_gfx13 <0x30>;
 defm V_WCONV_BF16_BF16 : Conv_Real_gfx13 <0x31>;
@@ -1132,20 +1153,19 @@ defm V_CVT_TO_TENSOR_BF16_FP32 : Cvt_To_Tensor_16b_Real_gfx13<0xa5>;
 defm V_CVT_TO_TENSOR_BF16_FP16 : Cvt_To_Tensor_16b_Real_gfx13<0xa6>;
 defm V_CVT_TO_TENSOR_BF16_BF16 : Cvt_To_Tensor_16b_Real_gfx13<0xa7>;
 
-defm V_SCALE_BIAS_ACTIVATE_F32 : VOP3M_Real_gfx13 <0x80>;
-defm V_SCALE_BIAS_ACTIVATE_F16 : VOP3M_Real_gfx13 <0x81>;
-defm V_SCALE_BIAS_ACTIVATE_BF16 : VOP3M_Real_gfx13 <0x82>;
-defm V_SCALE_BIAS_ACTIVATE_SCATTER2_F16 : VOP3M_Real_gfx13 <0x83>;
-defm V_SCALE_BIAS_ACTIVATE_SCATTER2_BF16 : VOP3M_Real_gfx13 <0x84>;
-defm V_SCALE_BIAS_ACTIVATE_SCATTER4_F16 : VOP5M_Real_gfx13 <0x85>;
-defm V_SCALE_BIAS_ACTIVATE_SCATTER4_BF16 : VOP5M_Real_gfx13 <0x86>;
-defm V_UNIFORM_SCALE_ACTIVATE_F32 : VOP3M_Real_gfx13 <0x87>;
-defm V_UNIFORM_SCALE_ACTIVATE_F16 : VOP3M_Real_gfx13 <0x88>;
-defm V_UNIFORM_SCALE_ACTIVATE_BF16 : VOP3M_Real_gfx13 <0x89>;
-defm V_UNIFORM_SCALE_ACTIVATE_SCATTER2_F16 : VOP3M_Real_gfx13 <0x8a>;
-defm V_UNIFORM_SCALE_ACTIVATE_SCATTER2_BF16 : VOP3M_Real_gfx13 <0x8b>;
-defm V_UNIFORM_SCALE_ACTIVATE_SCATTER4_F16 : VOP5M_Real_gfx13 <0x8c>;
-defm V_UNIFORM_SCALE_ACTIVATE_SCATTER4_BF16 : VOP5M_Real_gfx13 <0x8d>;
+multiclass SBA<string Suffix, bits<8> op> {
+  defm NAME # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op>;
+  defm NAME # "_SCATTER2" # "_" # Suffix : VOP3M_SBA_Real_Base<GFX13Gen, op>;
+  defm NAME # "_SCATTER4" # "_" # Suffix : VOP5M_Real_gfx13<op>;
+}
+
+defm V_SCALE_BIAS_ACTIVATE_F32 : VOP3M_SBA_Real_Base <GFX13Gen, 0x82>;
+defm V_SCALE_BIAS_ACTIVATE : SBA<"F16", 0x83>;
+defm V_SCALE_BIAS_ACTIVATE : SBA<"BF16", 0x84>;
+
+defm V_UNIFORM_SCALE_ACTIVATE_F32 : VOP3M_SBA_Real_Base <GFX13Gen, 0x87>;
+defm V_UNIFORM_SCALE_ACTIVATE : SBA<"F16", 0x88>;
+defm V_UNIFORM_SCALE_ACTIVATE : SBA<"BF16", 0x89>;
 
 multiclass VOP3M_WMMA_K1_K2_Real<bits<8> op> {
   defm !subst("_16X16_", "_16X16X16_", NAME) : VOP3M_WMMA_Real_gfx13<op, !tolower(NAME)>;

@@ -3010,6 +3010,15 @@ def int_amdgcn_wave_id_in_wavegroup :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_wave_id_in_wavegroup">;
 
+// ML Intrinsics
+//
+// Most ML intrinsics take aux_data argument, which maps to multiple fields
+// in instruction encoding.
+//
+// aux_data[ 5: 0] maps to instr[ 63: 58] for VOP2M-VOP6M (MOD0)
+// aux_data[17: 6] maps to instr[ 87: 76] for VOP3M-VOP6M (MOD1)
+// aux_data[25:18] maps to instr[127:120] for VOP5M-VOP6M (MOD2)
+
 def int_amdgcn_permute_pair_2src_rotate_group_b32 :
   ClangBuiltin<"__builtin_amdgcn_permute_pair_2src_rotate_group_b32">,
   DefaultAttrsIntrinsic<
