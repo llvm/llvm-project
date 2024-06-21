@@ -11,12 +11,12 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Passes/MCF.h"
 #include "bolt/Profile/ProfileYAMLMapping.h"
+#include "bolt/Utils/NameResolver.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/edit_distance.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
-
-#include <cxxabi.h>
 
 using namespace llvm;
 
@@ -426,43 +426,40 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   uint64_t MatchedWithDemangledName = 0;
 
   if (opts::NameSimilarityFunctionMatchingThreshold > 0) {
-    auto DemangleName = [&](const char* String) {
-      int Status = 0;
-      char *DemangledName = abi::__cxa_demangle(String,
-                                                nullptr, nullptr, &Status);
-      return Status == 0 ? new std::string(DemangledName) : nullptr;
+    auto DemangleName = [&](std::string &FunctionName) {
+      StringRef RestoredName = NameResolver::restore(FunctionName);
+      return demangle(RestoredName);
     };
 
+    ItaniumPartialDemangler ItaniumPartialDemangler;
     auto DeriveNameSpace = [&](std::string DemangledName) {
-      size_t LParen = std::string(DemangledName).find("(");
-      std::string FunctionName = std::string(DemangledName).substr(0, LParen);
-      size_t ScopeResolutionOperator = std::string(FunctionName).rfind("::");
-      return ScopeResolutionOperator == std::string::npos ? std::string("") : std::string(DemangledName).substr(0, ScopeResolutionOperator);
+      std::vector<char> Buffer(DemangledName.begin(), DemangledName.end());
+      size_t BufferSize = Buffer.size();
+      char *NameSpace = ItaniumPartialDemangler.getFunctionDeclContextName(
+          &Buffer[0], &BufferSize);
+      return NameSpace ? std::string(NameSpace) : std::string("");
     };
 
-    std::unordered_map<std::string, std::vector<BinaryFunction *>> NamespaceToBFs;
+    std::unordered_map<std::string, std::vector<BinaryFunction *>>
+        NamespaceToBFs;
+
     NamespaceToBFs.reserve(BC.getBinaryFunctions().size());
 
     for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
-      std::string* DemangledName = DemangleName(BF->getOneName().str().c_str());
-      if (!DemangledName)
-        continue;
-      std::string Namespace = DeriveNameSpace(*DemangledName);
+      std::string DemangledName = BF->getDemangledName();
+      std::string Namespace = DeriveNameSpace(DemangledName);
       auto It = NamespaceToBFs.find(Namespace);
       if (It == NamespaceToBFs.end())
         NamespaceToBFs[Namespace] = {BF};
       else
         It->second.push_back(BF);
     }
-
     for (auto YamlBF : YamlBP.Functions) {
       if (YamlBF.Used)
         continue;
-      std::string* YamlBFDemangledName = DemangleName(YamlBF.Name.c_str());
-      if (!YamlBFDemangledName)
-        continue;
-      std::string Namespace = DeriveNameSpace(*YamlBFDemangledName);
-      auto It = NamespaceToBFs.find(Namespace);
+      std::string YamlBFDemangledName = DemangleName(YamlBF.Name);
+      std::string YamlBFNamespace = DeriveNameSpace(YamlBFDemangledName);
+      auto It = NamespaceToBFs.find(YamlBFNamespace);
       if (It == NamespaceToBFs.end())
         continue;
       std::vector<BinaryFunction *> BFs = It->second;
@@ -473,10 +470,11 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       for (BinaryFunction *BF : BFs) {
         if (ProfiledFunctions.count(BF))
           continue;
-        std::string *BFDemangledName = DemangleName(BF->getOneName().str().c_str());
-        if (!BFDemangledName)
+        if (BF->size() != YamlBF.NumBasicBlocks)
           continue;
-        unsigned BFEditDistance = StringRef(*BFDemangledName).edit_distance(*YamlBFDemangledName);
+        std::string BFDemangledName = BF->getDemangledName();
+        unsigned BFEditDistance =
+            StringRef(BFDemangledName).edit_distance(YamlBFDemangledName);
         if (BFEditDistance < MinEditDistance) {
           MinEditDistance = BFEditDistance;
           ClosestNameBF = BF;
@@ -484,7 +482,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
       }
 
       if (ClosestNameBF &&
-        MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold) {
+          MinEditDistance < opts::NameSimilarityFunctionMatchingThreshold) {
         matchProfileToFunction(YamlBF, *ClosestNameBF);
         ++MatchedWithDemangledName;
       }
