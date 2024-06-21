@@ -491,8 +491,6 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
     }
   }
 
-  outs() << MatchedWithDemangledName  << ": functions matched by name similarity\n";
-
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     if (!YamlBF.Used && opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: profile ignored for function " << YamlBF.Name
