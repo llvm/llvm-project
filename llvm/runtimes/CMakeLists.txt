@@ -487,46 +487,46 @@ if(build_runtimes)
     if(NOT hdrgen_exe)
       message(FATAL_ERROR "libc-hdrgen executable missing")
     endif()
-    list(APPEND libc_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
+    list(APPEND extra_cmake_args "-DLIBC_HDRGEN_EXE=${hdrgen_exe}")
     list(APPEND extra_deps ${hdrgen_deps})
   endif()
   if(LLVM_LIBC_GPU_BUILD)
-    list(APPEND libc_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
+    list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
     if("libc" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES)
       if(TARGET amdhsa-loader)
-        list(APPEND libc_cmake_args
+        list(APPEND extra_cmake_args
              "-DRUNTIMES_amdgcn-amd-amdhsa_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:amdhsa-loader>")
         list(APPEND extra_deps amdhsa-loader amdgpu-arch)
       endif()
-      list(APPEND libc_cmake_args "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_LIBC_FULL_BUILD=ON")
+      list(APPEND extra_cmake_args "-DRUNTIMES_amdgcn-amd-amdhsa_LLVM_LIBC_FULL_BUILD=ON")
     endif()
     if("libc" IN_LIST RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES)
       if(TARGET nvptx-loader)
-        list(APPEND libc_cmake_args
+        list(APPEND extra_cmake_args
              "-DRUNTIMES_nvptx64-nvidia-cuda_LIBC_GPU_LOADER_EXECUTABLE=$<TARGET_FILE:nvptx-loader>")
         list(APPEND extra_deps nvptx-loader nvptx-arch)
       endif()
-      list(APPEND libc_cmake_args "-DRUNTIMES_nvptx64-nvidia-cuda_LLVM_LIBC_FULL_BUILD=ON")
+      list(APPEND extra_cmake_args "-DRUNTIMES_nvptx64-nvidia-cuda_LLVM_LIBC_FULL_BUILD=ON")
     endif()
     if(TARGET clang-offload-packager)
       list(APPEND extra_deps clang-offload-packager)
     endif()
   endif()
   if(LLVM_LIBC_FULL_BUILD)
-    list(APPEND libc_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
+    list(APPEND extra_cmake_args "-DLLVM_LIBC_FULL_BUILD=ON")
   endif()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
-      CMAKE_ARGS ${extra_cmake_args} ${libc_cmake_args}
+      CMAKE_ARGS ${extra_cmake_args}
       PREFIXES ${prefixes})
     set(test_targets check-runtimes)
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
-        CMAKE_ARGS ${extra_cmake_args} ${libc_cmake_args}
+        CMAKE_ARGS ${extra_cmake_args}
         PREFIXES ${prefixes})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
@@ -573,7 +573,7 @@ if(build_runtimes)
 
       runtime_register_target(${name}
         DEPENDS ${builtins_dep_name} ${extra_deps}
-        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args} ${libc_cmake_args}
+        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
     endforeach()
 
