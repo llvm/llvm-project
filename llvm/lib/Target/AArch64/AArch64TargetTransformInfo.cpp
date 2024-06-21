@@ -3265,7 +3265,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
-  // We also cannot handle loads or stores involving scalable vectors of i1.
+  // We also only support full register predicate loads and stores.
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
     if (VTy->getElementCount() == ElementCount::getScalable(1) ||
         (VTy->getElementType()->isIntegerTy(1) &&
