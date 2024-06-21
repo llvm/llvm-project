@@ -1004,8 +1004,6 @@ protected:
 
   virtual const char *GetCacheHostname();
 
-  /// The method is virtual for mocking in the unit tests.
-
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;
 
