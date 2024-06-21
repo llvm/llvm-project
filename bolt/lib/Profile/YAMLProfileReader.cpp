@@ -369,20 +369,12 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   uint64_t MatchedWithLTOCommonName = 0;
 
   // Computes hash for binary functions.
-  if (opts::MatchingFunctionsWithHash) {
+ if (opts::MatchingFunctionsWithHash)
     for (auto &[_, BF] : BC.getBinaryFunctions())
       BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
-  } else {
-    for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
-      if (!BF)
-        continue;
-      BinaryFunction &Function = *BF;
-
-      if (!opts::IgnoreHash)
-        Function.computeHash(YamlBP.Header.IsDFSOrder,
-                             YamlBP.Header.HashFunction);
-    }
-  }
+  else if (!opts::IgnoreHash)
+    for (BinaryFunction *BF : ProfileBFs)
+      BF->computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
 
   // This first pass assigns profiles that match 100% by name and by hash.
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs)) {
