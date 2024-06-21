@@ -102,8 +102,6 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
   //  + Just call PopulateExceptionBreakpoints() to get a fresh list  everytime
   //    we query (a bit overkill since it's not likely to change?)
   PopulateExceptionBreakpoints();
-  assert(exception_breakpoints.has_value() &&
-         "exception_breakpoints must have been populated");
 
   for (auto &bp : *exception_breakpoints) {
     if (bp.filter == filter)
@@ -115,8 +113,6 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   // See comment in the other GetExceptionBreakpoint().
   PopulateExceptionBreakpoints();
-  assert(exception_breakpoints.has_value() &&
-         "exception_breakpoints must have been populated");
 
   for (auto &bp : *exception_breakpoints) {
     if (bp.bp.GetID() == bp_id)
