@@ -92,7 +92,7 @@ class ComposedAOTModel final {
     return Selector[0] == Words.first && Selector[1] == Words.second;
   }
   MockAOTModelBase *getModel() {
-    if (isHashSameAsSelector(Hash1.words()) || (!Selector[0] && !Selector[1]))
+    if (isHashSameAsSelector(Hash1.words()))
       return &M1;
     if (isHashSameAsSelector(Hash2.words()))
       return &M2;
@@ -194,7 +194,7 @@ TEST(ReleaseModeRunner, ExtraFeaturesOutOfOrder) {
 
 // We expect an error to be reported early if the user tried to specify a model
 // selector, but the model in fact doesn't support that.
-TEST(ReleaseModelRunner, ModelSelectorNoInput) {
+TEST(ReleaseModelRunner, ModelSelectorNoInputFeaturePresent) {
   LLVMContext Ctx;
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
@@ -202,6 +202,17 @@ TEST(ReleaseModelRunner, ModelSelectorNoInput) {
                    Ctx, Inputs, "", makeOptions().setModelSelector(M2Selector)),
                "A model selector was specified but the underlying model does "
                "not expose a _model_selector input");
+}
+
+TEST(ReleaseModelRunner, ModelSelectorNoSelectorGiven) {
+  LLVMContext Ctx;
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
+                                 TensorSpec::createSpec<int64_t>("b", {1})};
+  EXPECT_DEATH(
+      std::make_unique<ReleaseModeModelRunner<ComposedAOTModel>>(
+          Ctx, Inputs, "", makeOptions()),
+      "A model selector was not specified but the underlying model requires "
+      "selecting one because it exposes a _model_selector input");
 }
 
 // Test that we correctly set up the _model_selector tensor value. We are only
@@ -213,16 +224,8 @@ TEST(ReleaseModelRunner, ModelSelector) {
   LLVMContext Ctx;
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
-  auto Evaluator = std::make_unique<ReleaseModeModelRunner<ComposedAOTModel>>(
-      Ctx, Inputs, "", makeOptions());
-  *Evaluator->getTensor<int64_t>(0) = 1;
-  *Evaluator->getTensor<int64_t>(1) = 2;
-  // No selector was specified, so we'll use the default one, which in this case
-  // is M1 in ComposedAOTModel's implementation.
-  EXPECT_EQ(Evaluator->evaluate<int64_t>(), -1);
-
   // This explicitly asks for M1
-  Evaluator = std::make_unique<ReleaseModeModelRunner<ComposedAOTModel>>(
+  auto Evaluator = std::make_unique<ReleaseModeModelRunner<ComposedAOTModel>>(
       Ctx, Inputs, "", makeOptions().setModelSelector(M1Selector));
   *Evaluator->getTensor<int64_t>(0) = 1;
   *Evaluator->getTensor<int64_t>(1) = 2;

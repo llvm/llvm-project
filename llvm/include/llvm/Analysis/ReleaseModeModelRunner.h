@@ -33,7 +33,7 @@ struct EmbeddedModelRunnerOptions {
   StringRef FetchPrefix = "fetch_";
 
   /// ModelSelector is the name (recognized by the AOT-ed model) of a sub-model
-  /// to use. "" is an alias for a default model to select.
+  /// to use. "" is allowed if the model doesn't support sub-models.
   StringRef ModelSelector = "";
 
   EmbeddedModelRunnerOptions &setFeedPrefix(StringRef Value) {
@@ -64,25 +64,28 @@ public:
     assert(CompiledModel && "The CompiledModel should be valid");
     // Set up the model_selector past all the InputSpecs in all cases.
     //   - if the model doesn't have such a feature, but the user requested it,
-    //   we report error
-    //   - otherwise, if the user doesn't specify it, we set the selector to {0,
-    //   0} which the model should handle as a "default".
+    //   we report error. Same if the model supports it but the user didn't
+    //   specify it
     //   - finally, we compute the MD5 hash of the user input and set the value
     //   of the model selector to {high, low}
     bool InputIsPresent = true;
     populateTensor(InputSpec.size(),
                    TensorSpec::createSpec<uint64_t>("_model_selector", {2}),
                    Options.FeedPrefix, InputIsPresent);
+
+    // If we hit the "report an error" cases outlined above, continue with the
+    // set up in case there's some custom diagnostics handler installed and it
+    // doesn't promptly exit.
+    if (Options.ModelSelector.empty() && InputIsPresent)
+      Ctx.emitError(
+          "A model selector was not specified but the underlying model "
+          "requires selecting one because it exposes a _model_selector input");
     uint64_t High = 0;
     uint64_t Low = 0;
     if (!Options.ModelSelector.empty()) {
-      if (!InputIsPresent) {
+      if (!InputIsPresent)
         Ctx.emitError("A model selector was specified but the underlying model "
                       "does not expose a _model_selector input");
-        // continue with the set up in case there's some custom diagnostics
-        // handler installed. Since the model has no idea what a model selector
-        // input feature is, it'll be ignored. Otherwise we exited above.
-      }
       const auto Hash = MD5::hash(
           {reinterpret_cast<const uint8_t *>(Options.ModelSelector.data()),
            Options.ModelSelector.size()});
@@ -93,9 +96,8 @@ public:
     getTensor<uint64_t>(InputSpec.size())[0] = High;
     getTensor<uint64_t>(InputSpec.size())[1] = Low;
     // At this point, the model selector is set up. If the user didn't provide
-    // one, it'll be (0, 0) which the composite model should treat as "default"
-    // - whichever that is. If the model isn't composite, the rest of the set up
-    // continues normally, but an error would be emitted.
+    // one, but the model has a _model_selector, it'll be set to (0, 0) which
+    // the composite model should treat as error as part of its implementation.
     for (size_t I = 0; I < InputSpec.size(); ++I)
       populateTensor(I, InputSpec[I], Options.FeedPrefix, InputIsPresent);
 
@@ -111,6 +113,9 @@ public:
   }
 
 private:
+  // fetch the model-provided buffer for the given Spec, or let MLModelRunner
+  // create a scratch buffer. Indicate back to the caller if the model had that
+  // input in the first place.
   void populateTensor(size_t Pos, const TensorSpec &Spec, StringRef Prefix,
                       bool &InputIsPresent) {
     const int Index =
