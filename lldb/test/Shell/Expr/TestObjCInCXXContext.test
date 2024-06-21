@@ -1,0 +1,21 @@
+// UNSUPPORTED: system-linux, system-windows
+
+// Tests that we don't consult the the Objective-C runtime
+// plugin when in a purely C++ context.
+//
+// RUN: %clangxx_host %p/Inputs/objc-cast.cpp -g -o %t
+// RUN: %lldb %t \
+// RUN:   -o "b main" -o run \
+// RUN:   -o "expression --language objective-c -- NSString * a; a" \
+// RUN:   -o "expression --language objective-c++ -- NSString * b; b" \
+// RUN:   -o "expression NSString" \
+// RUN:   2>&1 | FileCheck %s
+
+// CHECK:      (lldb) expression --language objective-c -- NSString * a; a
+// CHECK-NEXT: (NSString *){{.*}}= nil
+
+// CHECK:      (lldb) expression --language objective-c++ -- NSString * b; b
+// CHECK-NEXT: (NSString *){{.*}}= nil
+
+// CHECK:      (lldb) expression NSString
+// CHECK-NEXT: error:{{.*}} use of undeclared identifier 'NSString'
