@@ -258,3 +258,191 @@ define i32 @neg_range_int(i32 %a, i32 %b, i32 %c) {
   ret i32 %retval.0
 }
 
+; (b > -(d | 1) && a < c)
+define i32 @neg_range_int_comp(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: neg_range_int_comp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w3, #0x1
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    ccmp w1, w8, #4, lt
+; CHECK-NEXT:    csel w0, w1, w0, gt
+; CHECK-NEXT:    ret
+  %dor = or i32 %d, 1
+  %negd = sub i32 0, %dor
+  %cmp = icmp sgt i32 %b, %negd
+  %cmp1 = icmp slt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %retval.0 = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %retval.0
+}
+
+; (b >u -(d | 1) && a < c)
+define i32 @neg_range_int_comp_u(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: neg_range_int_comp_u:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w3, #0x1
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    ccmp w1, w8, #0, lt
+; CHECK-NEXT:    csel w0, w1, w0, hi
+; CHECK-NEXT:    ret
+  %dor = or i32 %d, 1
+  %negd = sub i32 0, %dor
+  %cmp = icmp ugt i32 %b, %negd
+  %cmp1 = icmp slt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %retval.0 = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %retval.0
+}
+
+; (b > -(d | 1) && a u < c)
+define i32 @neg_range_int_comp_ua(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: neg_range_int_comp_ua:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w3, #0x1
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    ccmp w1, w8, #4, lo
+; CHECK-NEXT:    csel w0, w1, w0, gt
+; CHECK-NEXT:    ret
+  %dor = or i32 %d, 1
+  %negd = sub i32 0, %dor
+  %cmp = icmp sgt i32 %b, %negd
+  %cmp1 = icmp ult i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %retval.0 = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %retval.0
+}
+
+; (b <= -3 && a > c)
+define i32 @neg_range_int_2(i32 %a, i32 %b, i32 %c) {
+; SDISEL-LABEL: neg_range_int_2:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    cmp w0, w2
+; SDISEL-NEXT:    ccmn w1, #4, #4, gt
+; SDISEL-NEXT:    csel w0, w1, w0, gt
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_2:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    cmp w0, w2
+; GISEL-NEXT:    ccmn w1, #3, #8, gt
+; GISEL-NEXT:    csel w0, w1, w0, ge
+; GISEL-NEXT:    ret
+  %cmp = icmp sge i32 %b, -3
+  %cmp1 = icmp sgt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %retval.0 = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %retval.0
+}
+
+; (b < -(d | 1) && a >= c)
+define i32 @neg_range_int_comp2(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: neg_range_int_comp2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w3, #0x1
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    ccmp w1, w8, #0, ge
+; CHECK-NEXT:    csel w0, w1, w0, lt
+; CHECK-NEXT:    ret
+  %dor = or i32 %d, 1
+  %negd = sub i32 0, %dor
+  %cmp = icmp slt i32 %b, %negd
+  %cmp1 = icmp sge i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %retval.0 = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %retval.0
+}
+
+; (b <u -(d | 1) && a > c)
+define i32 @neg_range_int_comp_u2(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: neg_range_int_comp_u2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w3, #0x1
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    ccmp w1, w8, #2, gt
+; CHECK-NEXT:    csel w0, w1, w0, lo
+; CHECK-NEXT:    ret
+  %dor = or i32 %d, 1
+  %negd = sub i32 0, %dor
+  %cmp = icmp ult i32 %b, %negd
+  %cmp1 = icmp sgt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %retval.0 = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %retval.0
+}
+
+; (b > -(d | 1) && a u > c)
+define i32 @neg_range_int_comp_ua2(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: neg_range_int_comp_ua2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w3, #0x1
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    ccmp w1, w8, #4, hi
+; CHECK-NEXT:    csel w0, w1, w0, gt
+; CHECK-NEXT:    ret
+  %dor = or i32 %d, 1
+  %negd = sub i32 0, %dor
+  %cmp = icmp sgt i32 %b, %negd
+  %cmp1 = icmp ugt i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %retval.0 = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %retval.0
+}
+
+; (b > -(d | 1) && a u == c)
+define i32 @neg_range_int_comp_ua3(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-LABEL: neg_range_int_comp_ua3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w8, w3, #0x1
+; CHECK-NEXT:    cmp w0, w2
+; CHECK-NEXT:    neg w8, w8
+; CHECK-NEXT:    ccmp w1, w8, #4, eq
+; CHECK-NEXT:    csel w0, w1, w0, gt
+; CHECK-NEXT:    ret
+  %dor = or i32 %d, 1
+  %negd = sub i32 0, %dor
+  %cmp = icmp sgt i32 %b, %negd
+  %cmp1 = icmp eq i32 %a, %c
+  %or.cond = and i1 %cmp, %cmp1
+  %retval.0 = select i1 %or.cond, i32 %b, i32 %a
+  ret i32 %retval.0
+}
+
+; -(a | 1) > (b | 3) && a < c
+define i32 @neg_range_int_c(i32 %a, i32 %b, i32 %c) {
+; SDISEL-LABEL: neg_range_int_c:
+; SDISEL:       // %bb.0: // %entry
+; SDISEL-NEXT:    orr w8, w0, #0x1
+; SDISEL-NEXT:    orr w9, w1, #0x3
+; SDISEL-NEXT:    neg w8, w8
+; SDISEL-NEXT:    cmp w9, w8
+; SDISEL-NEXT:    ccmp w2, w0, #2, lo
+; SDISEL-NEXT:    cset w0, lo
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: neg_range_int_c:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    orr w8, w0, #0x1
+; GISEL-NEXT:    orr w9, w1, #0x3
+; GISEL-NEXT:    neg w8, w8
+; GISEL-NEXT:    cmp w9, w8
+; GISEL-NEXT:    cset w8, lo
+; GISEL-NEXT:    cmp w2, w0
+; GISEL-NEXT:    cset w9, lo
+; GISEL-NEXT:    and w0, w8, w9
+; GISEL-NEXT:    ret
+entry:
+  %or = or i32 %a, 1
+  %sub = sub i32 0, %or
+  %or1 = or i32 %b, 3
+  %cmp = icmp ult i32 %or1, %sub
+  %cmp2 = icmp ult i32 %c, %a
+  %0 = and i1 %cmp, %cmp2
+  %land.ext = zext i1 %0 to i32
+  ret i32 %land.ext
+}
